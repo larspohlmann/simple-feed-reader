@@ -142,10 +142,12 @@ SSRF boundary spirit even though it deliberately egresses through the proxy.
 
 ### 5. Fetch integration — universal egress through two builders
 
-The owner's decision: when the proxy is enabled, **every** outbound feed/page/
-resource fetch goes through it — refresh, discovery, preview, favicon resolution,
-the reader's full-page fetch, and the catalog favicon bytes. In this codebase all
-of those funnel through exactly **two** low-level request builders:
+The owner's decision: when the proxy is enabled, **every content egress** goes
+through it, with **no exceptions** — refresh, single feed fetch, discovery,
+preview, favicon resolution, the reader's full-page fetch, the catalog favicon
+bytes, and the catalog rot-check. In this codebase all content fetches funnel
+through exactly **two** low-level request builders, plus one command that uses its
+own scoped client:
 
 - `ConcurrentFeedFetcher` — the multiplexed batch fetch behind refresh, single
   feed fetch (`HttpFeedFetcher`), discovery scrape-fallback, feed preview, and
@@ -153,13 +155,26 @@ of those funnel through exactly **two** low-level request builders:
 - `FailoverRequestSender::send()` — the single-request helper behind the reader
   page fetch (`HtmlPageFetcher`) and the catalog favicon bytes
   (`CatalogFaviconFetcher`).
+- `CheckCatalogUrlsCommand` — the scheduled catalog rot-check, which uses its own
+  scoped `catalog.rot_check.http_client`, not either builder.
 
-So the proxy branch lands in those two builders, and `ProxyEgressResolver` is
-injected into each of them — covering all flows at once, with **no** changes
-rippling into `RefreshRunner`, `HttpFeedFetcher`, `WellKnownFeedProbe`,
-`FaviconResolver`, `FeedPreviewService`, `HtmlPageFetcher`, or
-`CatalogFaviconFetcher`. The resolver reads once per top-level operation (see
-below), so the per-request database cost stays bounded.
+So `ProxyEgressResolver` is injected into those **three** points — covering all
+content egress at once, with **no** changes rippling into `RefreshRunner`,
+`HttpFeedFetcher`, `WellKnownFeedProbe`, `FaviconResolver`, `FeedPreviewService`,
+`HtmlPageFetcher`, or `CatalogFaviconFetcher`. The resolver reads once per
+top-level operation (see below), so the per-request database cost stays bounded.
+
+**What is NOT proxied, and why it is not an exception to the rule.** The app-wide
+`HttpClientInterface` is shared by traffic that is *not* content egress and must
+stay direct: the **Meilisearch** search index (an internal container — a remote
+proxy cannot reach it), **AI provider** calls (a local model server such as
+LM Studio lives on `localhost`), **OAuth/OIDC** token exchange and discovery
+(routing a login through a foreign-country IP risks provider flags), and the
+**GitHub** latest-release check. These are integration/internal calls, a
+different category from fetching a user's feeds and pages. This is why the proxy
+is applied at the content-fetch choke points rather than globally on the shared
+client: a global proxy would break search and local AI. The boundary is "content
+egress," and within that boundary there are no exceptions.
 
 Shared pieces:
 
@@ -170,6 +185,15 @@ Shared pieces:
   `dsn(): string` builds the curl proxy URL (`socks5h://…` for SOCKS5 — remote
   DNS — or `http://…`), URL-encoding any credentials. This is the only place the
   opened password lives at fetch time.
+- `src/Service/Fetch/EgressOptions.php` — the one place the "proxy vs pin" request
+  options are built, so the "keep the host guard, drop only the IP pin when
+  proxied" invariant lives in a single spot instead of duplicated across the
+  builders. `static proxied(ProxyConfig $proxy): array` returns
+  `['proxy' => $proxy->dsn()]`; `static pinned(GuardedUrl $guarded, int $pinAttempt): array`
+  returns `['resolve' => [host => …], ...CrossFamilyFailover::freshConnectionAfter($pinAttempt)]`.
+  Both builders spread the chosen array into their own base options
+  (headers/timeout/on_progress differ per builder, so only the egress keys are
+  shared).
 - `src/Service/Fetch/ProxyEgressResolver.php` — `resolve(): ?ProxyConfig`. Returns
   the instance `ProxyConfig` when the singleton is `enabled` **and** configured;
   else `null`. Global — takes no `Feed` argument. It wraps
@@ -186,29 +210,39 @@ Shared pieces:
   and `withProxy()`. `FetchAttempt` gains `effectiveProxy(): ?ProxyConfig` (the
   ticket's proxy unless stripped), `isProxied(): bool`, and `withoutProxy(): self`
   (sets a `proxyStripped` flag — the direct-fallback attempt).
-- `ConcurrentFeedFetcher::send()` splits on `$attempt->effectiveProxy()`:
-  - **direct path** — unchanged: `UrlGuard::assertSafe` + IP pin (`resolve`) +
-    cross-family extra.
-  - **proxied path** — still calls `UrlGuard::assertSafe` (the host guard is kept
-    on both paths — see Security notes) but issues the request with
-    `proxy => $config->dsn()` and **without** the `resolve` pin or the
-    cross-family extra (the IP pin is impossible through `socks5h`; only the pin
-    is dropped, not the guard). The size cap (`on_progress`), timeout, and
-    `max_redirects: 0` stay identical.
+- `ConcurrentFeedFetcher::send()` still calls `UrlGuard::assertSafe` (the host
+  guard is kept on both paths — see Security notes), then chooses the egress
+  options via the shared helper: `EgressOptions::proxied($config)` when
+  `effectiveProxy()` is set (`proxy => dsn`, no pin, no cross-family extra — the
+  IP pin is impossible through `socks5h`) or `EgressOptions::pinned($guarded, $attempt->pinnedAddressAttempt)`
+  otherwise (`resolve` pin + cross-family extra, unchanged). The size cap
+  (`on_progress`), timeout, and `max_redirects: 0` stay identical on both.
 
 **Builder B — `FailoverRequestSender` (single request: reader page, catalog favicon):**
 
 - The sender gains a `ProxyEgressResolver` dependency and resolves `?ProxyConfig`
   once at the top of `send()`. When non-null it first issues one **proxied**
-  request (`proxy => dsn`, no `resolve`) and forces the status line
-  (`getStatusCode()`); on a warranted `TransportExceptionInterface` it cancels and
-  **falls through to the existing pinned-address family loop** — which is the
-  direct fallback, guard+pin intact. A proxied response that returns a status
-  (even 4xx/5xx) stands, exactly as the final-family answer stands today. When the
-  resolver returns `null`, behaviour is byte-for-byte the current loop.
+  request (`EgressOptions::proxied($config)` — `proxy => dsn`, no `resolve`) and
+  forces the status line (`getStatusCode()`); on a warranted
+  `TransportExceptionInterface` it cancels and **falls through to the existing
+  pinned-address family loop** (which now builds its per-family options via
+  `EgressOptions::pinned(...)`) — the direct fallback, guard+pin intact. A proxied
+  response that returns a status (even 4xx/5xx) stands, exactly as the final-family
+  answer stands today. When the resolver returns `null`, behaviour is byte-for-byte
+  the current loop.
 - Both callers (`HtmlPageFetcher`, `CatalogFaviconFetcher`) are unchanged — they
   get proxying for free, and each already runs `UrlGuard::assertSafe` before
   calling `send()`, so the host guard is kept on the proxied path here too.
+
+**Builder C — `CheckCatalogUrlsCommand` (scheduled catalog rot-check):**
+
+- The command gains a `ProxyEgressResolver` dependency. In `check()`, when
+  `resolve()` returns a proxy it adds `proxy => $config->dsn()` to its single
+  request; otherwise the request is unchanged. No guard and no direct fallback: the
+  URLs come from our own shipped catalog OPML (trusted), and the command is a
+  maintainer report, so "reachable through this instance's egress" is exactly the
+  signal wanted. Its scoped `catalog.rot_check.http_client` (kept for test
+  mockability) is untouched.
 
 ### 6. Direct fallback when the proxy fetch fails
 
@@ -226,18 +260,21 @@ Shared pieces:
 - Either way the fallback fires **once** and only for proxied attempts. A direct
   attempt that fails is terminal, exactly as today. No proxy → direct → proxy loop.
 
-### 6a. The one deliberate exclusion
+### 6a. Content egress has no exceptions
 
-Every outbound feed/page/resource fetch that flows through the two builders is
-proxied: refresh, single feed fetch, discovery scrape-fallback, feed preview,
-favicon resolution, the reader page fetch, and catalog favicon bytes.
+Every content fetch is proxied when the switch is on: refresh, single feed fetch,
+discovery scrape-fallback, feed preview, favicon resolution, the reader page
+fetch, catalog favicon bytes, and the catalog rot-check
+(`CheckCatalogUrlsCommand`). The rot-check resolves the egress and adds
+`proxy => dsn` to its one request when a proxy is enabled; it reads the shipped
+catalog (trusted, our own OPML — no SSRF concern), so it does not need the guard
+or the direct fallback. This matters for the feature's own goal: a user's feed is
+marked `Erroring`/`Gone` by `FeedScheduler` from the **refresh** outcome, which is
+proxied — so a feed reachable only through the proxy stays `Active`, not rotten.
 
-The single exception is the **catalog rot-check command**
-(`CheckCatalogUrlsCommand`), which uses its own scoped HTTP client, not either
-builder, and stays direct **on purpose**: it is a monitoring probe whose job is
-to check real, un-proxied reachability of catalog URLs. Routing it through the
-proxy would test the proxy's reachability instead of the source's. If a proxied
-rot-check is ever wanted, it is a separate, explicit change.
+The traffic that stays direct (Meilisearch, AI provider, OAuth/OIDC, GitHub) is
+**not** an exception to this rule — it is not content egress at all, and proxying
+it would break internal/local services. See §5 for the full rationale.
 
 ### 7. Migration
 
@@ -308,7 +345,8 @@ on error; no browser-only coupling; no CSRF token. The Test endpoint is a plain
   `ProxyEgressResolver` (disabled → null, enabled-but-unconfigured → null,
   enabled+configured → config); `ProxyConnectionTester` result mapping
   (ok+egressIp, connect fail, auth reject, timeout, not-configured);
-  `FetchTicket::withProxy()`; `FetchAttempt`
+  `EgressOptions::proxied()`/`pinned()` (proxied → only `proxy`; pinned → `resolve`
+  + cross-family, no `proxy`); `FetchTicket::withProxy()`; `FetchAttempt`
   (`effectiveProxy`/`isProxied`/`withoutProxy` + `proxyStripped`);
   `ConcurrentFeedFetcher` (Builder A) — resolves once per `fetchAll()` and enriches
   every ticket; `send()` proxied branch omits `resolve` but keeps the guard,
@@ -323,6 +361,9 @@ on error; no browser-only coupling; no CSRF token. The Test endpoint is a plain
 - **Functional:** admin proxy settings round-trip — `PUT` then `GET`, password
   write-only, `hasPassword`/`passwordHint` reflected, blank password keeps the
   stored one, admin-guarded (401/403 without `ROLE_ADMIN`); `POST /test` shape.
+- **Rot-check (Builder C):** with a `MockHttpClient` in the scoped client, assert
+  `CheckCatalogUrlsCommand` adds `proxy => dsn` to its request when the resolver
+  returns a proxy, and omits it when the resolver returns `null`.
 - **Migration leg:** new `proxy_server_settings` table on both SQLite and MySQL,
   then `doctrine:schema:validate`.
 - **Mutation:** cover the `send()` branch and the resolver decision
