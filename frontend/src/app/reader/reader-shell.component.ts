@@ -26,6 +26,7 @@ import { RefreshService } from './refresh.service';
 import { RecommendationsService } from './recommendations.service';
 import { refreshFailureKey } from './refresh-message';
 import { AiAvailabilityService } from '../core/ai-availability.service';
+import { VersionService } from '../core/version.service';
 import { ReadingLayoutService } from './reading-layout.service';
 import { LayoutService } from './layout.service';
 import {
@@ -103,6 +104,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly refreshSvc = inject(RefreshService);
   readonly recs = inject(RecommendationsService);
   readonly ai = inject(AiAvailabilityService);
+  private readonly versions = inject(VersionService);
   readonly layout = inject(ReadingLayoutService);
   readonly screen = inject(LayoutService);
   private readonly skip = inject(OnboardingSkip);
@@ -516,6 +518,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!this.auth.user()) this.auth.loadMe().subscribe({ error: () => undefined });
     // Reopening the app resumes a for-you run left in flight by an earlier session.
     this.recs.resume();
+    // Check once for a newer release; the sidebar shows the badge if there is
+    // one. The backend caches the upstream lookup, so this call is cheap.
+    this.versions.load();
   }
 
   ngAfterViewInit(): void {

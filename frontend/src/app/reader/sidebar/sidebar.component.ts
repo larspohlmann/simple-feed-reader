@@ -35,6 +35,7 @@ import { RefreshService } from '../refresh.service';
 import { RecommendationsService } from '../recommendations.service';
 import { AuthService } from '../../core/auth.service';
 import { AiAvailabilityService } from '../../core/ai-availability.service';
+import { VersionService } from '../../core/version.service';
 import { LayoutService } from '../layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { buildVersion } from '../../../environments/version';
@@ -65,6 +66,16 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
 export class SidebarComponent {
   /** Baked in at build time, so it names the bundle actually running. */
   readonly version = buildVersion.version;
+
+  private readonly versions = inject(VersionService);
+
+  /** The release to update to, or null when the running build is current. The
+   *  update badge renders only when this is set. The shell triggers the check
+   *  on app load; the sidebar only reads its result — the same way it reads the
+   *  refresh, AI and recommendation services. */
+  readonly availableUpdate = computed(() =>
+    this.versions.updateAvailable() ? this.versions.latest() : null,
+  );
 
   protected readonly selectionQueryParams = selectionQueryParams;
 

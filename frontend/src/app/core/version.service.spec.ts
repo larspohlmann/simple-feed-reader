@@ -63,4 +63,64 @@ describe('VersionService', () => {
 
     expect(svc.unavailable()).toBe(false);
   });
+
+  const latest = { version: 'v0.6.0', notesUrl: 'https://github.test/releases/tag/v0.6.0' };
+
+  it('surfaces an available update from the response', () => {
+    svc.load();
+    ctrl
+      .expectOne('https://api.test/api/version')
+      .flush({ ...release, updateAvailable: true, latest });
+
+    expect(svc.updateAvailable()).toBe(true);
+    expect(svc.latest()).toEqual(latest);
+  });
+
+  it('reports no update when the server signals none', () => {
+    svc.load();
+    ctrl
+      .expectOne('https://api.test/api/version')
+      .flush({ ...release, updateAvailable: false, latest: null });
+
+    expect(svc.updateAvailable()).toBe(false);
+    expect(svc.latest()).toBeNull();
+  });
+
+  it('treats a response without the update fields as no update', () => {
+    svc.load();
+    ctrl.expectOne('https://api.test/api/version').flush(release);
+
+    expect(svc.updateAvailable()).toBe(false);
+    expect(svc.latest()).toBeNull();
+  });
+
+  it('clears a stale update signal once a later check reports none', () => {
+    svc.load();
+    ctrl
+      .expectOne('https://api.test/api/version')
+      .flush({ ...release, updateAvailable: true, latest });
+    expect(svc.updateAvailable()).toBe(true);
+
+    svc.load();
+    ctrl
+      .expectOne('https://api.test/api/version')
+      .flush({ ...release, updateAvailable: false, latest: null });
+
+    expect(svc.updateAvailable()).toBe(false);
+    expect(svc.latest()).toBeNull();
+  });
+
+  it('drops any update signal when the call fails', () => {
+    svc.load();
+    ctrl
+      .expectOne('https://api.test/api/version')
+      .flush({ ...release, updateAvailable: true, latest });
+    expect(svc.updateAvailable()).toBe(true);
+
+    svc.load();
+    ctrl.expectOne('https://api.test/api/version').flush(null, { status: 503, statusText: 'down' });
+
+    expect(svc.updateAvailable()).toBe(false);
+    expect(svc.latest()).toBeNull();
+  });
 });

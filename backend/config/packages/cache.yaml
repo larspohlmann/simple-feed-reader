@@ -48,3 +48,11 @@ framework:
             # expiring would put the schedule right back where it started.
             scheduler.state.cache:
                 adapter: cache.adapter.filesystem
+
+            # The newest GitHub release, so "is there an update?" costs one
+            # request per window however many users ask. The reader sets an
+            # explicit six-hour expiry on each entry; this lifetime is only a
+            # backstop for an entry whose expiry was somehow lost.
+            github.release.cache:
+                adapter: cache.adapter.filesystem
+                default_lifetime: 21600
