@@ -20,7 +20,7 @@ final readonly class ProxySettingsRequest
         public bool $enabled = false,
         #[Assert\Type('bool')]
         public bool $directFallback = true,
-        #[Assert\Choice(['SOCKS5', 'HTTP'])]
+        #[Assert\Choice(choices: ['SOCKS5', 'HTTP'])]
         public string $type = 'SOCKS5',
         #[Assert\NotBlank]
         #[Assert\Length(max: 255)]
