@@ -321,14 +321,12 @@
   </app-settings-group>
 
   <!-- ============ FOR YOU ============ -->
+  <!-- The card owns its own "For You" and "Clear recommendations" groups, so it
+       is rendered directly here rather than wrapped in a second group -- one
+       group header per concern, no nesting. Readiness and the active model are
+       already shown by the Provider summary above. -->
   @if (activeReady()) {
-    <app-settings-group
-      icon="tune"
-      [title]="'settings.ai.recommendations.title' | transloco"
-      [caption]="'settings.ai.ready' | transloco: { model: activeModel() }"
-    >
-      <app-recommendation-settings-card />
-    </app-settings-group>
+    <app-recommendation-settings-card />
 
     <!-- ============ DIAGNOSTICS ============ -->
     <app-settings-group

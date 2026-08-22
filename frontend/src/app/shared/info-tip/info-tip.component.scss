@@ -37,11 +37,13 @@
   position: absolute;
   top: 100%;
 
-  /* Right-aligned to the trigger and capped to the viewport, so the panel keeps
-     off the right edge and, clamped by the second `min()` term, can never clip
-     on a narrow phone. `100vw` viewport math and the `rem` measure are allowed
-     literals — the measure is a tuned line length, not a spacing value. */
-  right: 0;
+  /* Left-aligned to the trigger, so the panel extends rightward: every consumer
+     places the ⓘ just after a left-aligned label, where a right-aligned panel
+     would run off the left edge of the viewport. The second `min()` term caps
+     the width to the viewport so it can never clip on a narrow phone. `100vw`
+     viewport math and the `rem` measure are allowed literals — the measure is a
+     tuned line length, not a spacing value. */
+  left: 0;
   z-index: 5;
   width: max-content;
 
