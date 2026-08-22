@@ -101,6 +101,15 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   margin-right: var(--space-2);
 }
 
+/* The fixed-view lead icon (All items, Favorites, …), spaced and baseline-
+   nudged to match the tag glyph above so all three heading leads sit
+   identically. `> app-icon` — a direct child — so it never reaches the
+   app-icon the tag glyph nests, which the host already nudges once (#411). */
+.list-header h2 > app-icon {
+  margin-right: var(--space-2);
+  transform: translateY(-0.1em);
+}
+
 .list-header h2 {
   margin: 0;
   font-size: var(--fs-lg);
