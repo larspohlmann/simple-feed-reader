@@ -35,4 +35,5 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     labelKey: 'settings.instance.title',
     group: 'admin',
   },
+  { path: 'admin/proxy', icon: 'vpn_lock', labelKey: 'settings.proxy.title', group: 'admin' },
 ];

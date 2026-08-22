@@ -296,6 +296,40 @@
       "requireApproval": "Admin-Freigabe erforderlich",
       "requireApprovalHint": "Neue Konten bleiben ausstehend, bis ein Admin sie freigibt.",
       "mailDisabledHint": "Diese Instanz versendet keine E-Mails, daher kann die E-Mail-Bestätigung nicht laufen — gib Konten stattdessen manuell frei."
+    },
+    "proxy": {
+      "title": "Ausgehender Proxy",
+      "caption": "Feeds und Artikelseiten über einen SOCKS5- oder HTTP-Proxy abrufen.",
+      "enabled": "Datenverkehr über den Proxy leiten",
+      "enabledHint": "Wenn aktiviert, läuft jede Feed-Aktualisierung und jeder vollständige Artikelabruf über den unten stehenden Proxy.",
+      "enabledDisabledHint": "Speichere zuerst Host und Port, dann kannst du den Proxy aktivieren.",
+      "directFallback": "Bei Fehler direkt verbinden",
+      "directFallbackDesc": "Standardmäßig aktiviert — bei einem Proxy-Fehler wird der Abruf direkt wiederholt.",
+      "directFallbackTip": "Standardmäßig aktiviert. Schlägt der Proxy fehl, wird der Abruf direkt wiederholt. Schalte dies aus, um deine echte Server-IP zu verbergen — ein Proxy-Fehler lässt den Abruf dann fehlschlagen, statt deine Adresse preiszugeben.",
+      "type": "Proxy-Typ",
+      "typeDesc": "SOCKS5 oder HTTP.",
+      "host": "Host",
+      "port": "Port",
+      "username": "Benutzername",
+      "usernameTip": "Private Internet Access benötigt einen separat erzeugten Proxy-Benutzernamen und ein Proxy-Passwort — nicht deine Kontoanmeldedaten.",
+      "password": "Passwort",
+      "storedPassword": "Ein Passwort ist gespeichert (endet auf {{hint}}). Gib ein neues ein, um es zu ersetzen.",
+      "noStoredPassword": "Kein Passwort gespeichert.",
+      "remoteDnsTip": "SOCKS5 löst DNS-Namen beim Proxy auf, sodass geobeschränkte Namen von dessen Standort aus aufgelöst werden.",
+      "test": "Verbindung testen",
+      "testDesc": "Prüft den Proxy mit den zuletzt gespeicherten Einstellungen.",
+      "testing": "Wird getestet…",
+      "testOk": "Verbunden. Die Welt sieht {{ip}}.",
+      "testFailed": "Verbindung über den Proxy fehlgeschlagen: {{reason}}",
+      "saved": "Proxy-Einstellungen gespeichert",
+      "save": "Speichern",
+      "reset": "Zurücksetzen",
+      "unsaved": "Nicht gespeicherte Änderungen",
+      "info": {
+        "directFallback": "Standardmäßig aktiviert. Schlägt der Proxy fehl, wird der Abruf direkt wiederholt. Schalte dies aus, um deine echte Server-IP zu verbergen — ein Proxy-Fehler lässt den Abruf dann fehlschlagen, statt deine Adresse preiszugeben.",
+        "remoteDns": "SOCKS5 löst DNS-Namen beim Proxy auf, sodass geobeschränkte Namen von dessen Standort aus aufgelöst werden.",
+        "piaCredentials": "Private Internet Access benötigt einen separat erzeugten Proxy-Benutzernamen und ein Proxy-Passwort — nicht deine Kontoanmeldedaten."
+      }
     }
   },
   "dialog": {

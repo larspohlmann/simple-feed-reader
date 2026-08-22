@@ -66,6 +66,12 @@ export const SETTINGS_ROUTES: Routes = [
             (m) => m.AdminSettingsComponent,
           ),
       },
+      {
+        path: 'admin/proxy',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./admin/proxy/proxy-section.component').then((m) => m.ProxySectionComponent),
+      },
     ],
   },
 ];
