@@ -1,52 +1,53 @@
 @use '../theme/breakpoints' as bp;
 
+// Layout glue only. The Grouped chrome (card surface, rows, dividers, drill-in
+// row, save bar) comes from the shared primitives; what stays here is the
+// two-column caps grid, the padding for the drill-in body and inset, and the
+// read-only code blocks the primitives do not model.
+
+// Each settings group is one block in the stack; space them apart.
+app-settings-group {
+  display: block;
+}
+
+app-settings-group + app-settings-group {
+  margin-block-start: var(--space-5);
+}
+
+// The drill-in's projected summary: heading over description on the left, the
+// disclosure's own chevron trails via `order` (see disclosure.scss).
+.drill-summary {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-0);
+  min-width: 0;
+}
+
+.drill-title {
+  font-weight: 550;
+  letter-spacing: -0.01em;
+}
+
+.drill-desc {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+// The disclosure only styles its summary; its projected body needs its own
+// inset so the expert fields align to the card content box.
+.expert-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: 0 var(--space-5) var(--space-4);
+}
+
 .group {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   align-items: flex-start;
-  margin-bottom: var(--space-3);
-}
-
-app-disclosure {
-  display: block;
-  margin-bottom: var(--space-3);
-}
-
-/* The debug switch carries a visible legend, not just an aria-label, so it is
-   clear what the knob turns on. Label and hint on the left, switch on the
-   right. */
-.debug-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.debug-text {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-/* Wraps so the info tip's panel takes a line under the label rather than a
-   share of its width (#433). */
-.debug-title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.debug-label {
-  color: var(--text-primary);
-  font-size: var(--fs-sm);
-  cursor: pointer;
-}
-
-.debug-hint {
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
 }
 
 app-field {
@@ -59,32 +60,10 @@ textarea {
   resize: vertical;
 }
 
-select {
-  width: 100%;
-}
-
-.no-worker {
-  margin: var(--space-2) 0 0;
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-}
-
-.cron-example {
-  margin: var(--space-2) 0 var(--space-3);
-  padding: var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-0);
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-  white-space: pre-wrap;
-}
-
 .expert-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-3) var(--space-4);
-  margin-bottom: var(--space-3);
 }
 
 @media (width <= bp.$bp-sm) {
@@ -93,8 +72,8 @@ select {
   }
 }
 
-/* Read-only, so it spans both columns rather than taking a single field's
-   half-width cell. */
+// Read-only, so it spans both columns rather than taking a single field's
+// half-width cell.
 .expert-row {
   grid-column: 1 / -1;
   display: flex;
@@ -107,18 +86,9 @@ select {
   font-size: var(--fs-sm);
 }
 
-.expert-profile-text {
-  margin: 0;
-  padding: var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-0);
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-  white-space: pre-wrap;
-}
-
-.fixed {
+.expert-profile-text,
+.fixed,
+.cron-example {
   margin: var(--space-2) 0 0;
   padding: var(--space-3);
   border: 1px solid var(--border);
@@ -129,28 +99,62 @@ select {
   white-space: pre-wrap;
 }
 
-/* The tip contributes no box of its own (#433), so the row around it carries
-   the spacing and gives the panel its line. */
+.expert-profile-text {
+  margin: 0;
+}
+
+// The tip contributes no box of its own, so the row around it carries the
+// spacing and gives the panel its line.
 .fixed-info {
   display: flex;
   flex-wrap: wrap;
-  margin-bottom: var(--space-3);
 }
 
-.saved {
+// The debug switch sits in a soft well, set apart from the fields above it.
+.inset {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-0);
+}
+
+// The external-cron help note, shown only when no worker heartbeat is fresh.
+.cron-hint {
+  padding: 0 var(--space-5) var(--space-4);
+}
+
+.no-worker {
   margin: 0;
   font-size: var(--fs-sm);
-  color: var(--success);
+  color: var(--text-muted);
 }
 
-.danger-zone {
-  margin-block-start: var(--space-5);
-  padding-block-start: var(--space-4);
-  border-block-start: 1px solid var(--border);
+// The save/purge banners need the card's own horizontal inset; the error
+// banner brings no margin of its own.
+.panel-banner {
+  padding: 0 var(--space-5) var(--space-4);
 }
 
-.danger-zone__note {
-  margin-block-end: var(--space-3);
+.danger {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+}
+
+.danger-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.danger-note {
+  margin: 0;
   font-size: var(--fs-sm);
   color: var(--text-muted);
+}
+
+.purged {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--success);
 }

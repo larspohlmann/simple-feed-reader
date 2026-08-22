@@ -4,6 +4,7 @@ import {
   Component,
   WritableSignal,
   computed,
+  effect,
   inject,
   linkedSignal,
 } from '@angular/core';
@@ -18,23 +19,35 @@ import { DisclosureComponent } from '../shared/disclosure/disclosure.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../shared/field/field.component';
 import { InfoTipComponent } from '../shared/info-tip/info-tip.component';
+import { SettingsGroupComponent } from '../shared/settings/settings-group/settings-group.component';
+import { SettingsRowComponent } from '../shared/settings/settings-row/settings-row.component';
+import { SettingsSaveBarComponent } from '../shared/settings/save-bar/save-bar.component';
 import { ToggleComponent } from '../shared/toggle/toggle.component';
+import { ToastService } from '../shared/toast/toast.service';
 import { LanguageService } from '../core/language.service';
 import { formatInteger } from '../reader/format';
-import { RecommendationSettingsService } from './recommendation-settings.service';
+import {
+  RecommendationSettingsService,
+  TypedRecommendationEdits,
+} from './recommendation-settings.service';
 
 /**
- * The "For you" tuning card: the account's own guidance prompt, the history
- * caps and context window that shape a run, and the debug-persistence
- * switch. The fixed prompt layers are read-only here — they ship with the
- * app, not with the account — so they sit in a `<details>` rather than a
- * form field. The six numeric tuning fields, the context window and the
- * fixed prompt fold into one "Expert settings" disclosure (#321 decision
- * 6A); the auto-generate cadence and the look-back window (#386) stay
- * outside it, because they are the two choices an ordinary account does
- * make. The purge below is its own
- * danger zone, always visible, copying the confirm-then-act pattern from
- * `account-section.component.ts`.
+ * The "For You" tuning card, rebuilt on the settings primitives (#541). The
+ * group's first row is the "show reasons" switch; the auto-generate cadence and
+ * the look-back window (#386) are the two ordinary choices below it. All three
+ * — plus the debug switch — persist the instant they change through
+ * `saveInstant`. Everything the user types (the guidance prompt, the six caps,
+ * the context window, the batch count) folds into one "Expert settings"
+ * drill-in and is held as a pending draft until the save bar's Save; Reset drops
+ * that draft and reseeds the inputs from the last-saved state. The fixed prompt
+ * layers ship with the app, not the account, so they stay read-only in a nested
+ * disclosure. The purge below is its own always-visible danger zone, copying
+ * the confirm-then-act pattern from `account-section.component.ts`.
+ *
+ * Success is the global toast, fired uniformly off the service's `saved` flag:
+ * every persist — instant or explicit — sets `saved`, an `effect` here toasts
+ * once and resets the flag. Keying the toast on the actual HTTP success (not on
+ * the click) is what keeps a rejected save silent.
  */
 @Component({
   selector: 'app-recommendation-settings-card',
@@ -44,6 +57,9 @@ import { RecommendationSettingsService } from './recommendation-settings.service
     ErrorBannerComponent,
     FieldComponent,
     InfoTipComponent,
+    SettingsGroupComponent,
+    SettingsRowComponent,
+    SettingsSaveBarComponent,
     ToggleComponent,
     TranslocoPipe,
   ],
@@ -57,7 +73,11 @@ export class RecommendationSettingsCardComponent {
   private readonly dialog = inject(Dialog);
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);
+  private readonly toast = inject(ToastService);
 
+  // Typed fields: displayed here, held as a pending draft in the service until
+  // the explicit Save. Each seeds from server truth and recomputes when the
+  // state does (after a save); a keystroke overrides the seed via `.set`.
   readonly guidance = linkedSignal<string>(() => this.svc.state()?.guidancePrompt ?? '');
   readonly favoritesCap = linkedSignal<number>(() => this.svc.state()?.favoritesCap ?? 0);
   readonly keptCap = linkedSignal<number>(() => this.svc.state()?.keptCap ?? 0);
@@ -70,6 +90,9 @@ export class RecommendationSettingsCardComponent {
   readonly contextWindow = linkedSignal<number | null>(
     () => this.svc.state()?.contextWindowOverride ?? null,
   );
+
+  // Instant fields: persisted the moment they change, never held in the draft.
+  readonly showReasons = linkedSignal<boolean>(() => this.svc.state()?.showReasons ?? false);
   readonly debugEnabled = linkedSignal<boolean>(() => this.svc.state()?.debugEnabled ?? false);
   readonly autoGenerateIntervalHours = linkedSignal<number | null>(
     () => this.svc.state()?.autoGenerateIntervalHours ?? null,
@@ -129,54 +152,107 @@ export class RecommendationSettingsCardComponent {
 
   constructor() {
     this.svc.load();
+    // One success signal, fired on the actual HTTP success rather than the
+    // click: every persist sets `saved`, so this toasts once and resets the
+    // flag. A rejected save never sets `saved`, so it stays silent — the
+    // `failure()` guard only hardens that.
+    effect(() => {
+      if (this.svc.saved() && !this.svc.failure()) {
+        this.toast.show({ message: this.i18n.translate('settings.ai.recommendations.saved') });
+        this.svc.saved.set(false);
+      }
+    });
   }
 
   /** Blank input is not zero: `+'' === 0` would silently coerce a cleared
    *  field to a value below every cap's minimum and ship a raw 422 on save.
    *  Leaving the signal untouched keeps its last valid value instead. */
-  setNumber(target: WritableSignal<number>, event: Event): void {
+  onCapInput(
+    field: keyof TypedRecommendationEdits,
+    target: WritableSignal<number>,
+    event: Event,
+  ): void {
     const raw = (event.target as HTMLInputElement).value;
     if (raw === '') return;
-    target.set(+raw);
+    const value = +raw;
+    target.set(value);
+    this.svc.setTypedField(field, value);
   }
 
-  setAutoGenerate(event: Event): void {
+  onGuidanceInput(event: Event): void {
+    const value = (event.target as HTMLTextAreaElement).value;
+    this.guidance.set(value);
+    const trimmed = value.trim();
+    this.svc.setTypedField('guidancePrompt', trimmed === '' ? null : trimmed);
+  }
+
+  onBatchCountInput(event: Event): void {
+    const value = this.nullableNumberValue(event);
+    this.batchCount.set(value);
+    this.svc.setTypedField('batchCount', value);
+  }
+
+  onContextWindowInput(event: Event): void {
+    const value = this.nullableNumberValue(event);
+    this.contextWindow.set(value);
+    this.svc.setTypedField('contextWindow', value);
+  }
+
+  onShowReasons(value: boolean): void {
+    this.showReasons.set(value);
+    this.svc.setShowReasons(value);
+  }
+
+  onDebug(value: boolean): void {
+    this.debugEnabled.set(value);
+    this.svc.saveInstant({ debugEnabled: value });
+  }
+
+  onAutoGenerate(event: Event): void {
     const raw = (event.target as HTMLSelectElement).value;
-    this.autoGenerateIntervalHours.set(raw === '' ? null : +raw);
+    const value = raw === '' ? null : +raw;
+    this.autoGenerateIntervalHours.set(value);
+    this.svc.saveInstant({ autoGenerateIntervalHours: value });
   }
 
-  setLookbackDays(event: Event): void {
-    this.lookbackDays.set(+(event.target as HTMLSelectElement).value);
+  onLookbackDays(event: Event): void {
+    const value = +(event.target as HTMLSelectElement).value;
+    this.lookbackDays.set(value);
+    this.svc.saveInstant({ lookbackDays: value });
   }
 
-  nullableNumberValue(event: Event): number | null {
+  private nullableNumberValue(event: Event): number | null {
     const raw = (event.target as HTMLInputElement).value;
     return raw === '' ? null : +raw;
   }
 
-  textValue(event: Event): string {
-    return (event.target as HTMLTextAreaElement).value;
-  }
-
+  /** Empties the guidance prompt back to the app default; recorded as a pending
+   *  edit (`guidancePrompt: null`) that the save bar persists. */
   resetGuidance(): void {
     this.guidance.set('');
+    this.svc.setTypedField('guidancePrompt', null);
   }
 
-  save(): void {
-    const trimmed = this.guidance().trim();
-    this.svc.save({
-      guidancePrompt: trimmed === '' ? null : trimmed,
-      favoritesCap: this.favoritesCap(),
-      keptCap: this.keptCap(),
-      viewedCap: this.viewedCap(),
-      candidatePoolSize: this.candidatePoolSize(),
-      lookbackDays: this.lookbackDays(),
-      picksLimit: this.picksLimit(),
-      batchCount: this.batchCount(),
-      contextWindow: this.contextWindow(),
-      debugEnabled: this.debugEnabled(),
-      autoGenerateIntervalHours: this.autoGenerateIntervalHours(),
-    });
+  /** The explicit Save flushes the accumulated typed draft over the last-saved
+   *  baseline; the service builds the body. */
+  onSave(): void {
+    this.svc.save();
+  }
+
+  /** Drops the pending typed edits and reseeds every typed input from the last
+   *  saved state, so a Reset with no intervening save still visibly restores
+   *  the inputs (a `linkedSignal` only recomputes when `state` changes). */
+  onReset(): void {
+    this.svc.discardDraft();
+    const state = this.svc.state();
+    this.guidance.set(state?.guidancePrompt ?? '');
+    this.favoritesCap.set(state?.favoritesCap ?? 0);
+    this.keptCap.set(state?.keptCap ?? 0);
+    this.viewedCap.set(state?.viewedCap ?? 0);
+    this.candidatePoolSize.set(state?.candidatePoolSize ?? 0);
+    this.picksLimit.set(state?.picksLimit ?? 0);
+    this.batchCount.set(state?.batchCount ?? null);
+    this.contextWindow.set(state?.contextWindowOverride ?? null);
   }
 
   /** Same confirm-then-act shape as `AccountSectionComponent.confirmThenDelete()`:

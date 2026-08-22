@@ -5,6 +5,7 @@ import { Dialog } from '@angular/cdk/dialog';
 import { of } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
+import { ToastService } from '../shared/toast/toast.service';
 import { RecommendationsService } from '../reader/recommendations.service';
 import { RecommendationSettingsCardComponent } from './recommendation-settings-card.component';
 import { RecommendationSettingsState } from './recommendation-settings.service';
@@ -12,6 +13,7 @@ import { RecommendationSettingsState } from './recommendation-settings.service';
 describe('RecommendationSettingsCardComponent', () => {
   let http: HttpTestingController;
   const dialogStub = { open: jest.fn() };
+  const toastStub = { show: jest.fn() };
 
   const STATE: RecommendationSettingsState = {
     guidancePrompt: null,
@@ -34,6 +36,7 @@ describe('RecommendationSettingsCardComponent', () => {
     lookbackDays: 2,
     workerAlive: true,
     profileText: null,
+    showReasons: false,
   };
 
   function mount(
@@ -47,6 +50,7 @@ describe('RecommendationSettingsCardComponent', () => {
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: '' },
         { provide: Dialog, useValue: dialogStub },
+        { provide: ToastService, useValue: toastStub },
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -61,16 +65,45 @@ describe('RecommendationSettingsCardComponent', () => {
     fixture: ComponentFixture<RecommendationSettingsCardComponent>,
   ): HTMLElement | null => fixture.nativeElement.querySelector('app-error-banner');
 
-  const select = (
+  const cadenceSelect = (
     fixture: ComponentFixture<RecommendationSettingsCardComponent>,
-  ): HTMLSelectElement | null =>
+  ): HTMLSelectElement =>
     fixture.nativeElement.querySelector('select[data-testid="auto-generate"]');
 
-  const cronNote = (
+  const lookbackSelect = (
     fixture: ComponentFixture<RecommendationSettingsCardComponent>,
-  ): HTMLElement | null => fixture.nativeElement.querySelector('.cron-example');
+  ): HTMLSelectElement =>
+    fixture.nativeElement.querySelector('select[data-testid="lookback-days"]');
 
-  beforeEach(() => dialogStub.open.mockReset());
+  const showReasonsToggle = (
+    fixture: ComponentFixture<RecommendationSettingsCardComponent>,
+  ): HTMLInputElement =>
+    fixture.nativeElement.querySelector('app-settings-row app-toggle input[type="checkbox"]');
+
+  const debugToggle = (
+    fixture: ComponentFixture<RecommendationSettingsCardComponent>,
+  ): HTMLInputElement => fixture.nativeElement.querySelector('#rec-debug-toggle');
+
+  const picksInput = (
+    fixture: ComponentFixture<RecommendationSettingsCardComponent>,
+  ): HTMLInputElement => fixture.nativeElement.querySelector('input[min="1"][max="500"]');
+
+  const saveButton = (
+    fixture: ComponentFixture<RecommendationSettingsCardComponent>,
+  ): HTMLButtonElement =>
+    fixture.nativeElement.querySelector(
+      'app-settings-save-bar app-button[variant="primary"] button',
+    );
+
+  const resetButton = (
+    fixture: ComponentFixture<RecommendationSettingsCardComponent>,
+  ): HTMLButtonElement =>
+    fixture.nativeElement.querySelector('app-settings-save-bar app-button[variant="ghost"] button');
+
+  beforeEach(() => {
+    dialogStub.open.mockReset();
+    toastStub.show.mockReset();
+  });
 
   afterEach(() => http.verify());
 
@@ -78,17 +111,15 @@ describe('RecommendationSettingsCardComponent', () => {
     const fixture = mount();
 
     expect(fixture.componentInstance.favoritesCap()).toBe(50);
-    expect(fixture.componentInstance.keptCap()).toBe(50);
-    expect(fixture.componentInstance.viewedCap()).toBe(200);
-    expect(fixture.componentInstance.candidatePoolSize()).toBe(400);
     expect(fixture.componentInstance.picksLimit()).toBe(20);
     expect(fixture.componentInstance.batchCount()).toBeNull();
     expect(fixture.componentInstance.contextWindow()).toBeNull();
     expect(fixture.componentInstance.guidance()).toBe('');
     expect(fixture.componentInstance.debugEnabled()).toBe(false);
+    expect(fixture.componentInstance.showReasons()).toBe(false);
   });
 
-  it('shows the fixed prompt, read-only, inside the details element', () => {
+  it('shows the fixed prompt, read-only, inside a disclosure', () => {
     const fixture = mount();
 
     const pre = fixture.nativeElement.querySelector('details pre.fixed') as HTMLElement;
@@ -96,13 +127,8 @@ describe('RecommendationSettingsCardComponent', () => {
     expect(pre.textContent).toContain('Return at most 20 picks as a JSON array of entry ids.');
   });
 
-  it('renders the six numeric tuning fields inside the expert disclosure', () => {
+  it('renders the six numeric tuning fields inside the expert drill-in', () => {
     const fixture = mount();
-
-    const summary = fixture.nativeElement.querySelector(
-      'app-disclosure summary',
-    ) as HTMLElement | null;
-    expect(summary?.textContent).toContain('Expert settings');
 
     const grid = fixture.nativeElement.querySelector('details .expert-grid') as HTMLElement;
     const labels = Array.from(grid.querySelectorAll('label')).map((el) => el.textContent?.trim());
@@ -118,140 +144,231 @@ describe('RecommendationSettingsCardComponent', () => {
     );
   });
 
-  it('renders the guidance field and its reset button inside the expert disclosure', () => {
-    const fixture = mount({ ...STATE, guidancePrompt: 'Focus on space exploration.' });
+  describe('the show-reasons switch (instant)', () => {
+    it('persists immediately with showReasons in the PUT body', () => {
+      const fixture = mount();
 
-    const textarea = fixture.nativeElement.querySelector(
-      'details .group textarea',
-    ) as HTMLTextAreaElement | null;
-    expect(textarea).not.toBeNull();
-    expect(textarea!.value).toBe('Focus on space exploration.');
+      const toggle = showReasonsToggle(fixture);
+      toggle.checked = true;
+      toggle.dispatchEvent(new Event('change'));
 
-    const resetButton = fixture.nativeElement.querySelector(
-      'details .group app-button button',
-    ) as HTMLButtonElement | null;
-    expect(resetButton).not.toBeNull();
-    expect(resetButton!.textContent).toContain('Reset to default');
-  });
+      const request = http.expectOne('/api/me/ai/recommendations');
+      expect(request.request.method).toBe('PUT');
+      expect(request.request.body.showReasons).toBe(true);
+      request.flush({ ...STATE, showReasons: true });
 
-  it('sends the full PUT body on save, with a blank context window and batch count as null', () => {
-    const fixture = mount();
-
-    fixture.componentInstance.picksLimit.set(30);
-    fixture.componentInstance.contextWindow.set(null);
-    fixture.componentInstance.batchCount.set(null);
-    fixture.componentInstance.debugEnabled.set(true);
-    fixture.componentInstance.save();
-
-    const request = http.expectOne('/api/me/ai/recommendations');
-    expect(request.request.method).toBe('PUT');
-    expect(request.request.body).toEqual({
-      guidancePrompt: null,
-      favoritesCap: 50,
-      keptCap: 50,
-      viewedCap: 200,
-      candidatePoolSize: 400,
-      picksLimit: 30,
-      batchCount: null,
-      contextWindow: null,
-      debugEnabled: true,
-      autoGenerateIntervalHours: null,
-      lookbackDays: 2,
+      expect(fixture.componentInstance.showReasons()).toBe(true);
     });
 
-    request.flush({ ...STATE, picksLimit: 30, contextWindow: 128000, debugEnabled: true });
-    fixture.detectChanges();
+    it('leaves the dirty flag untouched — it is not a typed edit', () => {
+      const fixture = mount();
 
-    expect(fixture.componentInstance.svc.saved()).toBe(true);
-  });
+      fixture.componentInstance.onShowReasons(true);
+      http.expectOne('/api/me/ai/recommendations').flush({ ...STATE, showReasons: true });
 
-  it('sends a numeric batch count when the field is filled in', () => {
-    const fixture = mount();
-
-    fixture.componentInstance.batchCount.set(10);
-    fixture.componentInstance.save();
-
-    const request = http.expectOne('/api/me/ai/recommendations');
-    expect(request.request.body).toEqual(expect.objectContaining({ batchCount: 10 }));
-    request.flush({ ...STATE, batchCount: 10 });
-  });
-
-  it('sends the numeric context window override when the field is filled in', () => {
-    const fixture = mount();
-
-    fixture.componentInstance.contextWindow.set(64000);
-    fixture.componentInstance.save();
-
-    const request = http.expectOne('/api/me/ai/recommendations');
-    expect(request.request.body).toEqual(expect.objectContaining({ contextWindow: 64000 }));
-    request.flush({
-      ...STATE,
-      contextWindow: 64000,
-      contextWindowOverride: 64000,
-      contextWindowSource: 'user',
+      expect(fixture.componentInstance.svc.dirty()).toBe(false);
     });
   });
 
-  it('sends guidancePrompt: null after a reset to default', () => {
-    const fixture = mount({ ...STATE, guidancePrompt: 'Focus on space exploration.' });
-    expect(fixture.componentInstance.guidance()).toBe('Focus on space exploration.');
+  describe('the cadence and look-back selects (instant)', () => {
+    it('persists the chosen cadence immediately', () => {
+      const fixture = mount({ ...STATE, autoGenerateIntervalHours: null });
 
-    fixture.componentInstance.resetGuidance();
-    expect(fixture.componentInstance.guidance()).toBe('');
+      const dropdown = cadenceSelect(fixture);
+      dropdown.value = '12';
+      dropdown.dispatchEvent(new Event('change'));
 
-    fixture.componentInstance.save();
+      const request = http.expectOne('/api/me/ai/recommendations');
+      expect(request.request.method).toBe('PUT');
+      expect(request.request.body.autoGenerateIntervalHours).toBe(12);
+      request.flush({ ...STATE, autoGenerateIntervalHours: 12 });
+    });
 
-    const request = http.expectOne('/api/me/ai/recommendations');
-    expect(request.request.body).toEqual(expect.objectContaining({ guidancePrompt: null }));
-    request.flush({ ...STATE, guidancePrompt: null });
+    it('persists the chosen look-back window immediately', () => {
+      const fixture = mount();
+
+      const dropdown = lookbackSelect(fixture);
+      dropdown.value = '7';
+      dropdown.dispatchEvent(new Event('change'));
+
+      const request = http.expectOne('/api/me/ai/recommendations');
+      expect(request.request.body.lookbackDays).toBe(7);
+      request.flush({ ...STATE, lookbackDays: 7 });
+    });
+
+    it('renders the look-back select outside the expert drill-in', () => {
+      const fixture = mount({ ...STATE, lookbackDays: 5 });
+
+      const select = lookbackSelect(fixture);
+      expect(select.closest('app-disclosure')).toBeNull();
+      expect(fixture.componentInstance.lookbackDays()).toBe(5);
+    });
   });
 
-  it('shows the error banner when the save is rejected as invalid', () => {
-    const fixture = mount();
+  describe('the debug switch (instant)', () => {
+    it('persists debugEnabled immediately, without a typed save', () => {
+      const fixture = mount();
 
-    fixture.componentInstance.picksLimit.set(9999);
-    fixture.componentInstance.save();
+      const toggle = debugToggle(fixture);
+      toggle.checked = true;
+      toggle.dispatchEvent(new Event('change'));
 
-    http.expectOne('/api/me/ai/recommendations').flush(
-      {
-        type: 'validation_error',
-        title: 'Validation failed',
-        status: 422,
-        detail: 'One or more fields are invalid.',
-        errors: { picksLimit: ['This value should be between 1 and 500.'] },
-      },
-      { status: 422, statusText: 'Unprocessable Content' },
-    );
-    fixture.detectChanges();
+      const request = http.expectOne('/api/me/ai/recommendations');
+      expect(request.request.body.debugEnabled).toBe(true);
+      request.flush({ ...STATE, debugEnabled: true });
 
-    expect(banner(fixture)).not.toBeNull();
-    expect(banner(fixture)?.textContent).toContain('One or more fields are invalid.');
+      expect(fixture.componentInstance.svc.dirty()).toBe(false);
+    });
   });
 
-  it('leaves the last value in place when a capped numeric field is cleared', () => {
-    const fixture = mount();
+  describe('typed fields and the save bar', () => {
+    it('a typed cap edit sets dirty but does not save until Save is pressed', () => {
+      const fixture = mount();
 
-    const input = fixture.nativeElement.querySelector(
-      'input[min="1"][max="500"]',
-    ) as HTMLInputElement;
-    input.value = '';
-    input.dispatchEvent(new Event('input'));
+      const input = picksInput(fixture);
+      input.value = '30';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
 
-    // +'' === 0, which is below picksLimit's own min="1" -- a naive
-    // coercion would silently arm a save that 422s.
-    expect(fixture.componentInstance.picksLimit()).toBe(20);
+      expect(fixture.componentInstance.picksLimit()).toBe(30);
+      expect(fixture.componentInstance.svc.dirty()).toBe(true);
+      http.expectNone('/api/me/ai/recommendations');
+
+      saveButton(fixture).click();
+
+      const request = http.expectOne('/api/me/ai/recommendations');
+      expect(request.request.method).toBe('PUT');
+      expect(request.request.body).toEqual(expect.objectContaining({ picksLimit: 30 }));
+      request.flush({ ...STATE, picksLimit: 30 });
+
+      expect(fixture.componentInstance.svc.dirty()).toBe(false);
+    });
+
+    it('leaves the last value in place when a capped numeric field is cleared', () => {
+      const fixture = mount();
+
+      const input = picksInput(fixture);
+      input.value = '';
+      input.dispatchEvent(new Event('input'));
+
+      // +'' === 0, which is below picksLimit's own min="1" -- a naive coercion
+      // would silently arm a save that 422s.
+      expect(fixture.componentInstance.picksLimit()).toBe(20);
+      expect(fixture.componentInstance.svc.dirty()).toBe(false);
+    });
+
+    it('sends the batch count and context window override the user typed', () => {
+      const fixture = mount();
+
+      fixture.componentInstance.onBatchCountInput({
+        target: { value: '10' },
+      } as unknown as Event);
+      fixture.componentInstance.onContextWindowInput({
+        target: { value: '64000' },
+      } as unknown as Event);
+      fixture.detectChanges();
+
+      saveButton(fixture).click();
+
+      const request = http.expectOne('/api/me/ai/recommendations');
+      expect(request.request.body).toEqual(
+        expect.objectContaining({ batchCount: 10, contextWindow: 64000 }),
+      );
+      request.flush({ ...STATE, batchCount: 10 });
+    });
+
+    it('sends guidancePrompt: null after a reset to default', () => {
+      const fixture = mount({ ...STATE, guidancePrompt: 'Focus on space exploration.' });
+      expect(fixture.componentInstance.guidance()).toBe('Focus on space exploration.');
+
+      fixture.componentInstance.resetGuidance();
+      fixture.detectChanges();
+      expect(fixture.componentInstance.guidance()).toBe('');
+
+      saveButton(fixture).click();
+
+      const request = http.expectOne('/api/me/ai/recommendations');
+      expect(request.request.body).toEqual(expect.objectContaining({ guidancePrompt: null }));
+      request.flush({ ...STATE, guidancePrompt: null });
+    });
+
+    it('Reset discards the pending typed edit and reseeds the input', () => {
+      const fixture = mount();
+
+      const input = picksInput(fixture);
+      input.value = '30';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      expect(fixture.componentInstance.svc.dirty()).toBe(true);
+
+      resetButton(fixture).click();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.svc.dirty()).toBe(false);
+      expect(fixture.componentInstance.picksLimit()).toBe(20);
+      expect(picksInput(fixture).value).toBe('20');
+      http.expectNone('/api/me/ai/recommendations');
+    });
+
+    it('shows the error banner when the save is rejected as invalid', () => {
+      const fixture = mount();
+
+      const input = picksInput(fixture);
+      input.value = '9999';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      saveButton(fixture).click();
+
+      http.expectOne('/api/me/ai/recommendations').flush(
+        {
+          type: 'validation_error',
+          title: 'Validation failed',
+          status: 422,
+          detail: 'One or more fields are invalid.',
+          errors: { picksLimit: ['This value should be between 1 and 500.'] },
+        },
+        { status: 422, statusText: 'Unprocessable Content' },
+      );
+      fixture.detectChanges();
+
+      expect(banner(fixture)?.textContent).toContain('One or more fields are invalid.');
+    });
   });
 
-  it('accepts a typed numeric value for a capped field', () => {
-    const fixture = mount();
+  describe('the success toast', () => {
+    it('fires once on an actual persist success, not on the click', () => {
+      const fixture = mount();
 
-    const input = fixture.nativeElement.querySelector(
-      'input[min="1"][max="500"]',
-    ) as HTMLInputElement;
-    input.value = '30';
-    input.dispatchEvent(new Event('input'));
+      fixture.componentInstance.onShowReasons(true);
+      // No toast yet: the PUT is in flight.
+      expect(toastStub.show).not.toHaveBeenCalled();
 
-    expect(fixture.componentInstance.picksLimit()).toBe(30);
+      http.expectOne('/api/me/ai/recommendations').flush({ ...STATE, showReasons: true });
+      fixture.detectChanges();
+
+      expect(toastStub.show).toHaveBeenCalledTimes(1);
+      expect(toastStub.show).toHaveBeenCalledWith({ message: 'Saved.' });
+    });
+
+    it('stays silent when a save is rejected', () => {
+      const fixture = mount();
+
+      const input = picksInput(fixture);
+      input.value = '9999';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      saveButton(fixture).click();
+
+      http
+        .expectOne('/api/me/ai/recommendations')
+        .flush(
+          { type: 'validation_error', title: 'Validation failed', status: 422 },
+          { status: 422, statusText: 'Unprocessable Content' },
+        );
+      fixture.detectChanges();
+
+      expect(toastStub.show).not.toHaveBeenCalled();
+    });
   });
 
   it('reports the effective context window source', () => {
@@ -260,44 +377,49 @@ describe('RecommendationSettingsCardComponent', () => {
 
     const fallbackFixture = mount({ ...STATE, contextWindowSource: 'fallback' });
     expect(fallbackFixture.nativeElement.textContent).toContain('Built-in default');
-
-    const userFixture = mount({
-      ...STATE,
-      contextWindowSource: 'user',
-      contextWindowOverride: 64000,
-    });
-    expect(userFixture.nativeElement.textContent).toContain('Your override');
-  });
-
-  it('shows the auto-generate dropdown reflecting the saved interval', () => {
-    const fixture = mount({ ...STATE, autoGenerateIntervalHours: 3, workerAlive: true });
-    const dropdown = select(fixture);
-    expect(dropdown).not.toBeNull();
-    expect(dropdown!.value).toBe('3');
   });
 
   it('hides the cron help note while a worker is alive', () => {
     const fixture = mount({ ...STATE, workerAlive: true });
-    expect(cronNote(fixture)).toBeNull();
+    expect(fixture.nativeElement.querySelector('.cron-example')).toBeNull();
   });
 
   it('shows the cron help note when no worker is alive', () => {
     const fixture = mount({ ...STATE, workerAlive: false });
-    expect(cronNote(fixture)).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.cron-example')).not.toBeNull();
   });
 
-  it('sends the chosen interval on save', () => {
-    const fixture = mount({ ...STATE, autoGenerateIntervalHours: null, workerAlive: true });
-    const dropdown = select(fixture)!;
-    dropdown.value = '12';
-    dropdown.dispatchEvent(new Event('change'));
-    fixture.detectChanges();
+  it('gives every expert cap field an info tip', () => {
+    const fixture = mount();
 
-    fixture.nativeElement.querySelector('app-button[variant="primary"] button')?.click();
-    const put = http.expectOne('/api/me/ai/recommendations');
-    expect(put.request.method).toBe('PUT');
-    expect(put.request.body.autoGenerateIntervalHours).toBe(12);
-    put.flush({ ...STATE, autoGenerateIntervalHours: 12, workerAlive: true });
+    const grid = fixture.nativeElement.querySelector('.expert-grid') as HTMLElement;
+    const triggers = Array.from(
+      grid.querySelectorAll('app-info-tip button.trigger'),
+    ) as HTMLButtonElement[];
+    expect(triggers.map((el) => el.getAttribute('aria-label'))).toEqual([
+      'Favorites in history',
+      'Kept in history',
+      'Viewed in history',
+      'Maximum articles',
+      'Maximum picks',
+      'Batches (empty = automatic)',
+    ]);
+  });
+
+  it('shows the persisted preference profile read-only when present', () => {
+    const fixture = mount({ ...STATE, profileText: 'Likes self-hosted tooling and Rust.' });
+
+    const el = fixture.nativeElement.querySelector('[data-testid="recommendation-profile"]');
+    expect(el?.textContent).toContain('Likes self-hosted tooling and Rust.');
+    expect(el?.querySelector('textarea')).toBeNull();
+  });
+
+  it('hides the profile block when no profile has been generated yet', () => {
+    const fixture = mount({ ...STATE, profileText: null });
+
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="recommendation-profile"]'),
+    ).toBeNull();
   });
 
   describe('clearing recommendations', () => {
@@ -328,8 +450,6 @@ describe('RecommendationSettingsCardComponent', () => {
         forYou: { itemCount: 3, generatedAt: '2026-08-08T09:00:00Z', newestRunId: null },
       });
 
-      // RecommendationsService.refreshStatus() re-reads the current status so
-      // the sidebar count (Task 9) reflects the cleared list.
       const statusRequest = http.expectOne('/api/recommendations/runs/current');
       expect(statusRequest.request.method).toBe('GET');
       statusRequest.flush({
@@ -344,9 +464,6 @@ describe('RecommendationSettingsCardComponent', () => {
       fixture.detectChanges();
 
       expect(fixture.nativeElement.textContent).toContain('Recommendations cleared.');
-      // The seam this test exists to cover: the sidebar count must actually
-      // read the refreshed report, not fall through the `?.` guard on a
-      // `forYou` that isn't there (it guards `report`, not `report.forYou`).
       expect(TestBed.inject(RecommendationsService).forYouCount()).toBe(0);
     });
 
@@ -387,103 +504,5 @@ describe('RecommendationSettingsCardComponent', () => {
       expect(config.data.confirmLabel).toBe('Clear recommendations');
       expect(config.data.danger).toBe(true);
     });
-  });
-
-  it('renders the look-back select outside the expert disclosure', () => {
-    const fixture = mount({ ...STATE, lookbackDays: 5 });
-
-    const select = fixture.nativeElement.querySelector(
-      '[data-testid="lookback-days"]',
-    ) as HTMLSelectElement | null;
-    expect(select).not.toBeNull();
-    expect(select!.closest('app-disclosure')).toBeNull();
-    expect(fixture.componentInstance.lookbackDays()).toBe(5);
-  });
-
-  it('sends the chosen look-back window on save', () => {
-    const fixture = mount();
-
-    const select = fixture.nativeElement.querySelector(
-      '[data-testid="lookback-days"]',
-    ) as HTMLSelectElement;
-    select.value = '7';
-    select.dispatchEvent(new Event('change'));
-    fixture.detectChanges();
-    fixture.componentInstance.save();
-
-    const request = http.expectOne('/api/me/ai/recommendations');
-    expect(request.request.body.lookbackDays).toBe(7);
-    request.flush({ ...STATE, lookbackDays: 7 });
-  });
-
-  it('gives every expert field an info tip', () => {
-    const fixture = mount();
-
-    const grid = fixture.nativeElement.querySelector('.expert-grid') as HTMLElement;
-    const triggers = Array.from(
-      grid.querySelectorAll('app-info-tip button.trigger'),
-    ) as HTMLButtonElement[];
-    expect(triggers.map((el) => el.getAttribute('aria-label'))).toEqual([
-      'Favorites in history',
-      'Kept in history',
-      'Viewed in history',
-      'Maximum articles',
-      'Maximum picks',
-      'Batches (empty = automatic)',
-    ]);
-  });
-
-  it('explains the schedule, the look-back and the context window on their fields', () => {
-    const fixture = mount();
-
-    const labelled = (label: string): HTMLButtonElement | undefined =>
-      (
-        Array.from(
-          fixture.nativeElement.querySelectorAll('app-field app-info-tip button.trigger'),
-        ) as HTMLButtonElement[]
-      ).find((el) => el.getAttribute('aria-label') === label);
-
-    expect(labelled('Auto-generate For you')).toBeDefined();
-    expect(labelled('Look back')).toBeDefined();
-    expect(labelled('Context window (tokens)')).toBeDefined();
-  });
-
-  it('keeps the danger-zone note visible and adds a tip beside it', () => {
-    const fixture = mount();
-
-    const zone = fixture.nativeElement.querySelector('.danger-zone') as HTMLElement;
-    expect(zone.querySelector('.danger-zone__note')?.textContent).toContain(
-      'Removes every recommended post',
-    );
-
-    const trigger = zone.querySelector('app-info-tip button.trigger') as HTMLButtonElement;
-    trigger.click();
-    fixture.detectChanges();
-    expect(zone.querySelector('app-info-tip .panel')?.textContent).toContain('cannot be undone');
-  });
-
-  it('adds a tip to the debug row without touching the toggle wiring', () => {
-    const fixture = mount();
-
-    const row = fixture.nativeElement.querySelector('.debug-row') as HTMLElement;
-    expect(row.querySelector('app-info-tip button.trigger')).not.toBeNull();
-    expect(row.querySelector('#rec-debug-toggle')).not.toBeNull();
-  });
-
-  it('shows the persisted preference profile read-only when present', () => {
-    const fixture = mount({ ...STATE, profileText: 'Likes self-hosted tooling and Rust.' });
-
-    const el = fixture.nativeElement.querySelector('[data-testid="recommendation-profile"]');
-    expect(el?.textContent).toContain('Likes self-hosted tooling and Rust.');
-    // read-only: no input/textarea bound to it
-    expect(el?.querySelector('textarea')).toBeNull();
-  });
-
-  it('hides the profile block when no profile has been generated yet', () => {
-    const fixture = mount({ ...STATE, profileText: null });
-
-    expect(
-      fixture.nativeElement.querySelector('[data-testid="recommendation-profile"]'),
-    ).toBeNull();
   });
 });

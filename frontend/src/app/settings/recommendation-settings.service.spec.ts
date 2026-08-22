@@ -108,4 +108,30 @@ describe('RecommendationSettingsService', () => {
     put.flush(state({ showReasons: true }));
     expect(service.dirty()).toBe(true);
   });
+
+  it('discardDraft clears the pending typed edits and the dirty flag', () => {
+    loadState();
+
+    service.setTypedField('favoritesCap', 99);
+    expect(service.dirty()).toBe(true);
+
+    service.discardDraft();
+    expect(service.dirty()).toBe(false);
+
+    // The dropped edit must not resurface: a later save sends server truth.
+    service.save();
+    const put = http.expectOne(ENDPOINT);
+    expect(put.request.body.favoritesCap).toBe(50);
+    put.flush(state());
+  });
+
+  it('saveInstant flips saved on success, so the card toasts uniformly', () => {
+    loadState();
+    expect(service.saved()).toBe(false);
+
+    service.setShowReasons(true);
+    http.expectOne(ENDPOINT).flush(state({ showReasons: true }));
+
+    expect(service.saved()).toBe(true);
+  });
 });

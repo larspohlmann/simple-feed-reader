@@ -120,11 +120,18 @@ export class RecommendationSettingsService {
 
   /** The instant path for toggles and selects: it composes the override over
    *  the last-saved state, so it never carries pending typed edits — and it
-   *  leaves any pending typed edits in the draft untouched. */
+   *  leaves any pending typed edits in the draft untouched. `saved` flips true
+   *  on success here too, so the card's one success signal is uniform across
+   *  the instant and the explicit path (#541): the card toasts off `saved`
+   *  rather than guessing which write finished. It does not clear the draft:
+   *  an instant toggle must never discard a pending typed edit. */
   saveInstant(partial: Partial<SaveRecommendationSettings>): void {
     const current = this.state();
     if (!current) return;
-    this.put({ ...this.bodyFromState(current), ...partial }, (state) => this.state.set(state));
+    this.put({ ...this.bodyFromState(current), ...partial }, (state) => {
+      this.state.set(state);
+      this.saved.set(true);
+    });
   }
 
   setShowReasons(value: boolean): void {
@@ -139,6 +146,14 @@ export class RecommendationSettingsService {
   ): void {
     this.draft.update((draft) => ({ ...draft, [field]: value }));
     this.dirty.set(true);
+  }
+
+  /** Drops every pending typed edit and restores the clean baseline, without a
+   *  write. The card's Reset calls this, then reseeds its typed inputs from
+   *  `state`. Mirrors the draft/dirty half of `commit`. */
+  discardDraft(): void {
+    this.draft.set({});
+    this.dirty.set(false);
   }
 
   /** The single mapping from server truth to the writable body. `contextWindow`
