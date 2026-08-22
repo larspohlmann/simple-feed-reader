@@ -2,25 +2,60 @@
 @use '../theme/breakpoints' as bp;
 
 .bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
   height: var(--bar-h);
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-3);
   padding: 0 var(--space-4);
   border-bottom: 1px solid var(--border);
+
+  /* A translucent, blurred bar so content scrolls under it rather than
+     meeting a hard opaque edge; the solid colour is the fallback where
+     backdrop-filter is unsupported. */
   background: var(--surface-1);
+  background: color-mix(in srgb, var(--surface-1) 82%, transparent);
+  backdrop-filter: blur(12px) saturate(1.4);
 }
 
 .back {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  margin-left: calc(var(--space-2) * -1);
+  border-radius: var(--radius);
   color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  font-weight: 550;
   text-decoration: none;
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+
+.back:hover,
+.back:focus-visible {
+  color: var(--accent);
+  background: var(--accent-soft);
+  outline: none;
+}
+
+/* A hairline divider sets the back-link apart from the title. It is its own
+   element (not a pseudo on the link) so it stays outside the clickable area. */
+.divider {
+  align-self: center;
+  width: 0;
+  height: var(--space-4);
+  border-left: 1px solid var(--border-strong);
 }
 
 h1 {
   font-size: var(--fs-lg);
+  font-weight: 620;
+  letter-spacing: -0.01em;
   margin: 0;
 }
 
@@ -47,9 +82,11 @@ h1 {
   width: 220px;
   flex-shrink: 0;
   position: sticky;
-  top: var(--space-5);
+
+  /* Sits below the now-sticky top bar rather than under it. */
+  top: calc(var(--bar-h) + var(--space-5));
   align-self: flex-start;
-  max-height: 100dvh;
+  max-height: calc(100dvh - var(--bar-h) - var(--space-5));
   overflow-y: auto;
   overscroll-behavior: contain;
 }
