@@ -25,6 +25,7 @@ final readonly class FetchAttempt
         public bool $permanentRedirect,
         private int $hop,
         public int $pinnedAddressAttempt = 0,
+        private bool $proxyStripped = false,
     ) {
     }
 
@@ -47,6 +48,7 @@ final readonly class FetchAttempt
             $this->permanentRedirect || $permanent,
             $this->hop + 1,
             // A redirect lands on a fresh host, so the address pins start over.
+            proxyStripped: $this->proxyStripped,
         );
     }
 
@@ -66,6 +68,23 @@ final readonly class FetchAttempt
             $this->permanentRedirect,
             $this->hop,
             $this->pinnedAddressAttempt + 1,
+            $this->proxyStripped,
         );
+    }
+
+    public function effectiveProxy(): ?ProxyConfig
+    {
+        return $this->proxyStripped ? null : $this->ticket->proxy;
+    }
+
+    public function isProxied(): bool
+    {
+        return null !== $this->effectiveProxy();
+    }
+
+    /** The single direct fallback for a proxied attempt: same URL, proxy dropped. */
+    public function withoutProxy(): self
+    {
+        return new self($this->key, $this->ticket, $this->url, $this->permanentRedirect, $this->hop, 0, true);
     }
 }

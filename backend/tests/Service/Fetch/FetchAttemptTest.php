@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch;
 
+use App\Enum\ProxyType;
 use App\Service\Fetch\FetchAttempt;
 use App\Service\Fetch\FetchTicket;
+use App\Service\Fetch\ProxyConfig;
 use PHPUnit\Framework\TestCase;
 
 final class FetchAttemptTest extends TestCase
@@ -56,5 +58,43 @@ final class FetchAttemptTest extends TestCase
         }
 
         self::assertFalse($attempt->canFollowRedirect());
+    }
+
+    public function testProxiedTicketMakesTheAttemptProxied(): void
+    {
+        $proxy = new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null);
+        $attempt = FetchAttempt::start(1, new FetchTicket('https://feed.example', proxy: $proxy));
+
+        self::assertTrue($attempt->isProxied());
+        self::assertSame($proxy, $attempt->effectiveProxy());
+    }
+
+    public function testWithoutProxyStripsTheEgressOnce(): void
+    {
+        $proxy = new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null);
+        $attempt = FetchAttempt::start(1, new FetchTicket('https://feed.example', proxy: $proxy));
+
+        $direct = $attempt->withoutProxy();
+
+        self::assertFalse($direct->isProxied());
+        self::assertNull($direct->effectiveProxy());
+        self::assertSame('https://feed.example', $direct->url);
+    }
+
+    public function testDirectTicketIsNotProxied(): void
+    {
+        $attempt = FetchAttempt::start(1, new FetchTicket('https://feed.example'));
+
+        self::assertFalse($attempt->isProxied());
+    }
+
+    public function testWithProxyEnrichesAPlainTicket(): void
+    {
+        $proxy = new ProxyConfig(ProxyType::Http, 'p', 8080, null, null);
+        $ticket = (new FetchTicket('https://feed.example', 'etag', 'lm'))->withProxy($proxy);
+
+        self::assertSame($proxy, $ticket->proxy);
+        self::assertSame('etag', $ticket->etag);
+        self::assertSame('lm', $ticket->lastModified);
     }
 }
