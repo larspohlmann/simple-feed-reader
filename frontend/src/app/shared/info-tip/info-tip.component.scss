@@ -34,23 +34,12 @@
 }
 
 .panel {
-  position: absolute;
-  top: 100%;
-
-  /* Left-aligned to the trigger, so the panel extends rightward: every consumer
-     places the ⓘ just after a left-aligned label, where a right-aligned panel
-     would run off the left edge of the viewport. The second `min()` term caps
-     the width to the viewport so it can never clip on a narrow phone. `100vw`
-     viewport math and the `rem` measure are allowed literals — the measure is a
-     tuned line length, not a spacing value. */
-  left: 0;
-  z-index: 5;
+  /* Fixed to the viewport and positioned by the component on open: its top,
+     left and max-width are computed from the trigger's rect and clamped to the
+     screen, so the panel never clips off either edge on a narrow phone. */
+  position: fixed;
+  z-index: 30;
   width: max-content;
-
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     tuned reading measure, not a spacing value. */
-  max-width: min(20rem, calc(100vw - var(--space-4)));
-  margin-top: var(--space-1);
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border);
   border-radius: var(--radius);

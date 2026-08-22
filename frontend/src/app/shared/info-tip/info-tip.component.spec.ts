@@ -57,12 +57,11 @@ describe('InfoTipComponent', () => {
   });
 
   /**
-   * The panel floats as a popover anchored to the trigger (#541): `.wrap` is the
-   * positioning context and the panel is absolutely positioned inside it, so
-   * opening it never shifts sibling layout. The panel must therefore stay a
+   * The panel floats as a popover (#541): it is `position: fixed`, placed from
+   * the trigger's rect on open, so it never shifts sibling layout. It stays a
    * child of `.wrap`, beside the trigger. jsdom resolves no stylesheet, so this
-   * pins only that structure; the out-of-flow geometry is verified in a real
-   * browser.
+   * pins only that structure; the out-of-flow geometry and viewport clamping
+   * are verified in a real browser.
    */
   it('keeps the panel a sibling of the trigger, inside the positioning wrapper', () => {
     const fixture = mount();

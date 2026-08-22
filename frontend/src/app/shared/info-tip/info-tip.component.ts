@@ -9,15 +9,15 @@ let nextId = 0;
  * explanation panel. Click-to-toggle, never hover: hover does not exist on
  * touch.
  *
- * The panel floats as a popover anchored to the trigger (#541). `.wrap` is the
- * positioning context — an inline anchor, not `display: contents` — and the
- * panel is absolutely positioned inside it, so opening the tip never shifts the
+ * The panel floats as a popover (#541), so opening the tip never shifts the
  * sibling layout. This reverses the earlier in-flow arrangement (#433/#372),
  * where host and wrapper were `display: contents` and the panel claimed a
  * full-width line below the row. That choice avoided viewport-collision
- * handling on phones; #541 accepts it and edge-clamps the panel in CSS instead
- * (a viewport-capped `max-width`, right-aligned to the trigger), so a settings
- * row no longer grows a full-width block when a tip opens.
+ * handling on phones; #541 does the collision handling instead: the panel is
+ * `position: fixed`, and on open its top/left are computed from the trigger's
+ * rect and clamped to the viewport, so it never clips off either edge no matter
+ * where the trigger sits on the line — the case a pure-CSS left/right anchor
+ * could not cover on a narrow screen.
  *
  * Only one tip is open at a time: opening one closes any other. A module-level
  * reference to the currently open instance carries this — it is a plain field,
@@ -45,6 +45,12 @@ export class InfoTipComponent implements OnDestroy {
 
   readonly open = signal(false);
 
+  /** The fixed-position panel geometry, computed from the trigger on open and
+   *  clamped so the panel stays fully within the viewport. */
+  protected readonly panelTop = signal(0);
+  protected readonly panelLeft = signal(0);
+  protected readonly panelMaxWidth = signal(0);
+
   /** Ties the trigger to its panel; unique so several tips can coexist. */
   protected readonly panelId = `info-tip-panel-${nextId++}`;
 
@@ -60,14 +66,34 @@ export class InfoTipComponent implements OnDestroy {
       this.close();
       return;
     }
-    this.reveal();
+    this.reveal(event.currentTarget as HTMLElement | null);
   }
 
   /** Opens this tip and closes any other that is open, so only one shows. */
-  private reveal(): void {
+  private reveal(trigger: HTMLElement | null): void {
     InfoTipComponent.openTip?.close();
     InfoTipComponent.openTip = this;
+    if (trigger) {
+      this.positionAgainst(trigger);
+    }
     this.open.set(true);
+  }
+
+  /**
+   * Places the panel just below the trigger and clamps it to the viewport: the
+   * width is capped to the screen, and the left edge is pulled back from either
+   * margin so the panel never clips — on a phone the trigger can sit anywhere
+   * on the line, which a fixed left- or right-anchor could not handle.
+   */
+  private positionAgainst(trigger: HTMLElement): void {
+    const gutter = 8;
+    const gap = 6;
+    const rect = trigger.getBoundingClientRect();
+    const maxWidth = Math.min(320, window.innerWidth - gutter * 2);
+    const maxLeft = window.innerWidth - maxWidth - gutter;
+    this.panelMaxWidth.set(maxWidth);
+    this.panelLeft.set(Math.round(Math.max(gutter, Math.min(rect.left, maxLeft))));
+    this.panelTop.set(Math.round(rect.bottom + gap));
   }
 
   /**
