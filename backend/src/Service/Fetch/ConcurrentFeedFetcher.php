@@ -29,6 +29,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
         private readonly ResponseClassifier $classifier,
         private readonly int $concurrency,
         private readonly string $userAgent,
+        private readonly ProxyEgressResolver $proxyEgressResolver,
     ) {
         // A cap below one opens no requests at all, and the engine would report
         // an empty run as a clean one: the sweep's `remaining` never decrements
@@ -54,7 +55,8 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
      */
     public function fetchAll(iterable $tickets): \Generator
     {
-        $queue = new FetchQueue($this->iterator($tickets));
+        $batchProxy = $this->proxyEgressResolver->resolve();
+        $queue = new FetchQueue($this->iterator($tickets, $batchProxy));
         /** @var \SplObjectStorage<ResponseInterface, FetchAttempt> $inFlight */
         $inFlight = new \SplObjectStorage();
 
@@ -93,6 +95,12 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
             try {
                 $inFlight[$this->send($attempt)] = $attempt;
             } catch (FetchException $e) {
+                $fallback = $this->fallbackFor($attempt);
+                if (null !== $fallback) {
+                    $queue->requeue($fallback);
+                    continue;
+                }
+
                 yield $attempt->key => FetchOutcome::failed($e);
             }
         }
@@ -118,9 +126,9 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
             } catch (FetchException $e) {
                 $this->retire($inFlight, $response);
 
-                $overNextFamily = $this->overNextFamily($attempt, $e);
-                if (null !== $overNextFamily) {
-                    $queue->requeue($overNextFamily);
+                $requeue = $this->fallbackFor($attempt) ?? $this->overNextFamily($attempt, $e);
+                if (null !== $requeue) {
+                    $queue->requeue($requeue);
 
                     return;
                 }
@@ -214,12 +222,17 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
         $response->cancel();
     }
 
-    /** @throws FetchException when the URL fails the SSRF guard */
+    /** @throws FetchException when a direct URL fails the SSRF guard */
     private function send(FetchAttempt $attempt): ResponseInterface
     {
+        $proxy = $attempt->effectiveProxy();
+
+        // The host guard runs on both paths; only the IP pin is proxy-incompatible.
         $guarded = $this->urlGuard->assertSafe($attempt->url);
-        $pins = $guarded->pinnedAddressAttempts();
-        $pinnedAddresses = $pins[min($attempt->pinnedAddressAttempt, \count($pins) - 1)];
+
+        $egress = null !== $proxy
+            ? EgressOptions::proxied($proxy)
+            : EgressOptions::pinned($guarded, $attempt->pinnedAddressAttempt);
 
         try {
             return $this->httpClient->request('GET', $attempt->url, [
@@ -227,15 +240,22 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
                 'max_redirects' => 0,
                 'timeout' => self::TIMEOUT_SECONDS,
                 'max_duration' => self::TIMEOUT_SECONDS * 2,
-                'resolve' => [$guarded->host => $pinnedAddresses],
                 'on_progress' => static function (int $downloaded): void {
                     ResponseTooLargeException::throwIfExceeded($downloaded);
                 },
-                ...CrossFamilyFailover::freshConnectionAfter($attempt->pinnedAddressAttempt),
+                ...$egress,
             ]);
         } catch (ExceptionInterface $e) {
             throw FetchException::from($attempt->url, $e);
         }
+    }
+
+    /** The one direct fallback for a proxied attempt, or null when none applies. */
+    private function fallbackFor(FetchAttempt $attempt): ?FetchAttempt
+    {
+        $proxy = $attempt->effectiveProxy();
+
+        return null !== $proxy && $proxy->directFallback ? $attempt->withoutProxy() : null;
     }
 
     /**
@@ -310,8 +330,10 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
      *
      * @return \Iterator<int|string, FetchTicket>
      */
-    private function iterator(iterable $tickets): \Iterator
+    private function iterator(iterable $tickets, ?ProxyConfig $batchProxy): \Iterator
     {
-        yield from $tickets;
+        foreach ($tickets as $key => $ticket) {
+            yield $key => null === $batchProxy ? $ticket : $ticket->withProxy($batchProxy);
+        }
     }
 }
