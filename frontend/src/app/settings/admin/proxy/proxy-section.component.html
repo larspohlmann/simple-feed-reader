@@ -99,14 +99,21 @@
       <div class="test-control" data-testid="proxy-test-button">
         <app-button
           [loading]="probe().status === 'loading'"
-          [disabled]="svc.dirty()"
+          [disabled]="svc.dirty() || !configured()"
+          [ariaLabel]="
+            probe().status === 'loading'
+              ? ('settings.proxy.testing' | transloco)
+              : ('settings.proxy.test' | transloco)
+          "
           (click)="test()"
         >
           {{ 'settings.proxy.test' | transloco }}
         </app-button>
         @if (probe(); as probeResult) {
           @if (probeResult.status === 'ok') {
-            <span class="egress-ip" data-testid="proxy-egress-ip">{{ probeResult.egressIp }}</span>
+            <span class="egress-ip" data-testid="proxy-egress-ip">{{
+              'settings.proxy.testOk' | transloco: { ip: probeResult.egressIp }
+            }}</span>
           }
         }
       </div>
@@ -115,7 +122,9 @@
     @if (probe(); as probeResult) {
       @if (probeResult.status === 'error') {
         <div class="panel-banner">
-          <app-error-banner [message]="probeResult.message" />
+          <app-error-banner
+            [message]="'settings.proxy.testFailed' | transloco: { reason: probeResult.message }"
+          />
         </div>
       }
     }

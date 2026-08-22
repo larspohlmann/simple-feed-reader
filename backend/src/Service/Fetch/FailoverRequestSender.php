@@ -12,6 +12,12 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * Sends a guard-validated request and fails over across address families when a
  * family cannot serve the request.
  *
+ * When a proxy is resolved, the proxied route is attempted first; the pinned
+ * direct families exist only as its fallback, and only once direct fallback is
+ * on and the failure is one direct can plausibly fix (§CrossFamilyFailover) --
+ * a proxy is opted into to hide the real IP, so a transport failure with direct
+ * fallback off is terminal rather than silently leaking that IP.
+ *
  * The client's own happy-eyeballs races the two families only at the TCP
  * connect; once one connects it is committed, so a family that resets during
  * the TLS handshake (heise's IPv6 from Strato) takes the whole request down with
@@ -33,7 +39,10 @@ final readonly class FailoverRequestSender
      * @param array<string, mixed> $options request options; any `resolve` is
      *                                       overridden per family attempt
      *
-     * @throws TransportExceptionInterface when the final family's connection fails
+     * @throws TransportExceptionInterface when the proxied attempt fails with no
+     *                                      direct fallback (terminal, before any
+     *                                      pinned family is tried), or when the
+     *                                      final pinned family's connection fails
      */
     public function send(string $method, string $url, GuardedUrl $guarded, array $options): ResponseInterface
     {
@@ -97,7 +106,7 @@ final readonly class FailoverRequestSender
         $attempts = $guarded->pinnedAddressAttempts();
         $finalAttempt = \count($attempts) - 1;
 
-        foreach ($attempts as $index => $pinnedAddresses) {
+        foreach (array_keys($attempts) as $index) {
             $response = $this->httpClient->request($method, $url, [
                 ...$options,
                 ...EgressOptions::pinned($guarded, $index),
