@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, input, signal } from '@angular/core';
 import { DismissOnOutsideDirective } from '../dismiss-on-outside.directive';
 import { IconComponent } from '../icon/icon.component';
 
@@ -6,19 +6,22 @@ let nextId = 0;
 
 /**
  * The one info affordance (#372): a small ⓘ button that toggles an
- * explanation panel. The panel renders in normal flow and pushes content
- * down rather than floating — a floating popover needs viewport-collision
- * handling on phones, while an in-flow panel cannot clip or overflow by
- * construction. Click-to-toggle, never hover: hover does not exist on touch.
+ * explanation panel. Click-to-toggle, never hover: hover does not exist on
+ * touch.
  *
- * The component contributes no box of its own (#433). Host and wrapper are
- * `display: contents`, so the consumer's row lays out the trigger and the
- * panel as its own children and the panel can take a full-width line beneath
- * that row. The earlier arrangement — a boxed wrapper holding both, plus a
- * `corner` mode that absolutely positioned the trigger away from its panel —
- * made the panel one flex item beside the label in a row, and in `app-field`
- * opened it under the control rather than under the ⓘ that was clicked.
- * Neither matched the in-flow contract this component documents.
+ * The panel floats as a popover anchored to the trigger (#541). `.wrap` is the
+ * positioning context — an inline anchor, not `display: contents` — and the
+ * panel is absolutely positioned inside it, so opening the tip never shifts the
+ * sibling layout. This reverses the earlier in-flow arrangement (#433/#372),
+ * where host and wrapper were `display: contents` and the panel claimed a
+ * full-width line below the row. That choice avoided viewport-collision
+ * handling on phones; #541 accepts it and edge-clamps the panel in CSS instead
+ * (a viewport-capped `max-width`, right-aligned to the trigger), so a settings
+ * row no longer grows a full-width block when a tip opens.
+ *
+ * Only one tip is open at a time: opening one closes any other. A module-level
+ * reference to the currently open instance carries this — it is a plain field,
+ * not a listener, so nothing leaks; `close` and `ngOnDestroy` null it.
  *
  * `text` and `label` take already-translated strings, not i18n keys — this
  * component lives in `shared/` and must not hardcode a feature's translation
@@ -33,7 +36,10 @@ let nextId = 0;
   styleUrl: './info-tip.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class InfoTipComponent {
+export class InfoTipComponent implements OnDestroy {
+  /** The tip whose panel is open, or null. Only one is ever open at a time. */
+  private static openTip: InfoTipComponent | null = null;
+
   readonly text = input.required<string>();
   readonly label = input.required<string>();
 
@@ -50,7 +56,18 @@ export class InfoTipComponent {
    */
   toggle(event: Event): void {
     this.swallow(event);
-    this.open.update((value) => !value);
+    if (this.open()) {
+      this.close();
+      return;
+    }
+    this.reveal();
+  }
+
+  /** Opens this tip and closes any other that is open, so only one shows. */
+  private reveal(): void {
+    InfoTipComponent.openTip?.close();
+    InfoTipComponent.openTip = this;
+    this.open.set(true);
   }
 
   /**
@@ -64,6 +81,15 @@ export class InfoTipComponent {
   }
 
   close(): void {
+    if (InfoTipComponent.openTip === this) {
+      InfoTipComponent.openTip = null;
+    }
     this.open.set(false);
+  }
+
+  ngOnDestroy(): void {
+    if (InfoTipComponent.openTip === this) {
+      InfoTipComponent.openTip = null;
+    }
   }
 }

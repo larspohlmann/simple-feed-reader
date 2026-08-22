@@ -1,12 +1,18 @@
-/* The tip owns no box of its own: the host and .wrap are `display: contents`,
-   so the trigger and the panel are laid out by the consumer's row directly.
-   That is what lets the panel take a line of its own below the row instead of
-   becoming one squeezed item inside it (#433). .wrap still exists in the DOM —
-   DismissOnOutsideDirective asks it whether a press landed inside — and DOM
-   containment survives `display: contents`. */
-:host,
-.wrap {
+/* The tip anchors a floating popover (#541). The host stays `display: contents`
+   so it adds no box to the consumer's row, and `.wrap` is the positioning
+   context: an inline anchor holding the trigger, with the panel absolutely
+   positioned against it. Opening the tip therefore never shifts sibling layout.
+   This reverses the earlier in-flow arrangement (#433/#372); `.wrap` also still
+   answers DismissOnOutsideDirective, which asks it whether a press landed
+   inside. */
+:host {
   display: contents;
+}
+
+.wrap {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
 }
 
 .trigger {
@@ -28,23 +34,26 @@
 }
 
 .panel {
-  display: block;
+  position: absolute;
+  top: 100%;
 
-  /* Claims a whole line, so in a flex row the panel drops below the row that
-     holds the trigger rather than competing with it for width. The consumer's
-     row owes it `flex-wrap: wrap` — see design-language.md. `min-width` is
-     what makes the break deterministic: flex sizes a line from each item's
-     hypothetical size, and a `flex-basis` clamped by a `max-width` can still
-     fit beside a short label, which is how the panel used to share the label's
-     line. A minimum is not clamped that way. In block flow both are inert and
-     `display: block` already puts the panel underneath. */
-  flex-basis: 100%;
-  min-width: 100%;
+  /* Right-aligned to the trigger and capped to the viewport, so the panel keeps
+     off the right edge and, clamped by the second `min()` term, can never clip
+     on a narrow phone. `100vw` viewport math and the `rem` measure are allowed
+     literals — the measure is a tuned line length, not a spacing value. */
+  right: 0;
+  z-index: 5;
+  width: max-content;
+
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned reading measure, not a spacing value. */
+  max-width: min(20rem, calc(100vw - var(--space-4)));
   margin-top: var(--space-1);
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface-2);
+  box-shadow: var(--panel-shadow);
   color: var(--text-primary);
   font-size: var(--fs-sm);
 }

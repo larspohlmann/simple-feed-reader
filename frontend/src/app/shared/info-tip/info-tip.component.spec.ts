@@ -17,6 +17,13 @@ class HostComponent {}
 })
 class LabelRowHostComponent {}
 
+@Component({
+  imports: [InfoTipComponent],
+  template: `<app-info-tip [text]="'First.'" [label]="'First'" />
+    <app-info-tip [text]="'Second.'" [label]="'Second'" />`,
+})
+class TwoTipsHostComponent {}
+
 describe('InfoTipComponent', () => {
   function mount(): ComponentFixture<HostComponent> {
     const fixture = TestBed.createComponent(HostComponent);
@@ -50,16 +57,14 @@ describe('InfoTipComponent', () => {
   });
 
   /**
-   * The panel is laid out by the consumer's own row rather than by a box of
-   * the tip's, so it can take a line of its own below that row; a wrapper with
-   * a box made it one squeezed flex item beside the label it was explaining
-   * (#433). Two elements stand between the row and these two — the host and
-   * `.wrap` — and both are `display: contents`. jsdom resolves no stylesheet,
-   * so this pins only the structure that arrangement rests on: the trigger and
-   * the panel are siblings, with nothing else in between. The geometry is
-   * verified in a real browser.
+   * The panel floats as a popover anchored to the trigger (#541): `.wrap` is the
+   * positioning context and the panel is absolutely positioned inside it, so
+   * opening it never shifts sibling layout. The panel must therefore stay a
+   * child of `.wrap`, beside the trigger. jsdom resolves no stylesheet, so this
+   * pins only that structure; the out-of-flow geometry is verified in a real
+   * browser.
    */
-  it('keeps the panel a sibling of the trigger, with nothing boxed between them', () => {
+  it('keeps the panel a sibling of the trigger, inside the positioning wrapper', () => {
     const fixture = mount();
 
     trigger(fixture).click();
@@ -137,6 +142,25 @@ describe('InfoTipComponent', () => {
     document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
     fixture.detectChanges();
     expect(panel(fixture)).toBeNull();
+  });
+
+  it('closes an already-open tip when another one opens: one panel at a time', () => {
+    const fixture = TestBed.createComponent(TwoTipsHostComponent);
+    fixture.detectChanges();
+    const triggers = fixture.nativeElement.querySelectorAll(
+      'button.trigger',
+    ) as NodeListOf<HTMLButtonElement>;
+    const panels = (): NodeListOf<HTMLElement> => fixture.nativeElement.querySelectorAll('.panel');
+
+    triggers[0].click();
+    fixture.detectChanges();
+    expect(panels().length).toBe(1);
+    expect(panels()[0].textContent).toContain('First.');
+
+    triggers[1].click();
+    fixture.detectChanges();
+    expect(panels().length).toBe(1);
+    expect(panels()[0].textContent).toContain('Second.');
   });
 
   it('swallows the trigger click so a wrapping summary or label never activates', () => {
