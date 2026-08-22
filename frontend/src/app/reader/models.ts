@@ -137,11 +137,13 @@ export interface FeedCandidate {
 
 export interface FeedPreviewItem {
   title: string;
-  publishedAt: string | null;
+  url: string | null;
   author: string | null;
-  hasImage: boolean;
-  textLength: number;
-  snippet: string;
+  summary: string | null;
+  imageUrl: string | null;
+  imageWidth: number | null;
+  imageHeight: number | null;
+  publishedAt: string | null;
 }
 
 /** A pre-subscribe preview of a candidate feed's content shape. */
