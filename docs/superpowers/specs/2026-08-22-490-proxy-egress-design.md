@@ -140,13 +140,26 @@ password is opened only inside the two `*Proxy()` methods.
 `{ ok:false, reason }`). Admin-only, fixed target URL, so it stays within the
 SSRF boundary spirit even though it deliberately egresses through the proxy.
 
-### 5. Fetch integration — two egress paths
+### 5. Fetch integration — universal egress through two builders
 
-The owner extended the scope: the proxy must cover **both** the feed pull **and
-the reader's full-page article fetch**. Those are two independent HTTP builders
-in the codebase, so the proxy branch lands in both. Egress is global, so one
-`ProxyConfig` is resolved once at the top of each flow and passed down; the
-low-level fetchers stay database-free.
+The owner's decision: when the proxy is enabled, **every** outbound feed/page/
+resource fetch goes through it — refresh, discovery, preview, favicon resolution,
+the reader's full-page fetch, and the catalog favicon bytes. In this codebase all
+of those funnel through exactly **two** low-level request builders:
+
+- `ConcurrentFeedFetcher` — the multiplexed batch fetch behind refresh, single
+  feed fetch (`HttpFeedFetcher`), discovery scrape-fallback, feed preview, and
+  favicon resolution.
+- `FailoverRequestSender::send()` — the single-request helper behind the reader
+  page fetch (`HtmlPageFetcher`) and the catalog favicon bytes
+  (`CatalogFaviconFetcher`).
+
+So the proxy branch lands in those two builders, and `ProxyEgressResolver` is
+injected into each of them — covering all flows at once, with **no** changes
+rippling into `RefreshRunner`, `HttpFeedFetcher`, `WellKnownFeedProbe`,
+`FaviconResolver`, `FeedPreviewService`, `HtmlPageFetcher`, or
+`CatalogFaviconFetcher`. The resolver reads once per top-level operation (see
+below), so the per-request database cost stays bounded.
 
 Shared pieces:
 
@@ -159,22 +172,20 @@ Shared pieces:
   opened password lives at fetch time.
 - `src/Service/Fetch/ProxyEgressResolver.php` — `resolve(): ?ProxyConfig`. Returns
   the instance `ProxyConfig` when the singleton is `enabled` **and** configured;
-  else `null`. Global — takes no `Feed` argument, so it resolves once per flow.
-  It wraps `ProxySettings::egressProxy()` (which opens the sealed password). It is
-  injected only into the two higher-level flow owners below, never into the
-  low-level `ConcurrentFeedFetcher` / `FailoverRequestSender`.
+  else `null`. Global — takes no `Feed` argument. It wraps
+  `ProxySettings::egressProxy()` (which opens the sealed password).
 
-**Path A — feed pull (`ConcurrentFeedFetcher`):**
+**Builder A — `ConcurrentFeedFetcher` (batch: refresh, discovery, preview, favicon resolution):**
 
-- `FetchTicket` gains an optional immutable `?ProxyConfig $proxy`. `RefreshRunner`
-  calls `ProxyEgressResolver::resolve()` once and passes the result into
-  `BudgetedFeedQueue`, which attaches it to every ticket it yields. Every other
-  `new FetchTicket(...)` site (discovery, preview, favicon, single-fetch) keeps
-  the default `null` — those flows stay direct (see "Out of scope" below). The
-  value is read in `send()`, not threaded through a long chain — not tramp data.
-- `FetchAttempt` gains `effectiveProxy(): ?ProxyConfig` (the ticket's proxy unless
-  stripped), `isProxied(): bool`, and `withoutProxy(): self` (sets a
-  `proxyStripped` flag; the direct-fallback attempt).
+- The fetcher gains a `ProxyEgressResolver` dependency. It resolves **once** at
+  the top of `fetchAll()` and enriches the incoming ticket stream: its private
+  `iterator()` yields `$ticket->withProxy($batchProxy)` when a proxy is resolved
+  (a new `FetchTicket::withProxy(?ProxyConfig): self`), so callers keep building
+  plain tickets and every flow through the batch is covered automatically.
+- `FetchTicket` gains an optional immutable `?ProxyConfig $proxy` (default `null`)
+  and `withProxy()`. `FetchAttempt` gains `effectiveProxy(): ?ProxyConfig` (the
+  ticket's proxy unless stripped), `isProxied(): bool`, and `withoutProxy(): self`
+  (sets a `proxyStripped` flag — the direct-fallback attempt).
 - `ConcurrentFeedFetcher::send()` splits on `$attempt->effectiveProxy()`:
   - **direct path** — unchanged: `UrlGuard::assertSafe` + IP pin (`resolve`) +
     cross-family extra.
@@ -185,45 +196,48 @@ Shared pieces:
     is dropped, not the guard). The size cap (`on_progress`), timeout, and
     `max_redirects: 0` stay identical.
 
-**Path B — reader full-page fetch (`FailoverRequestSender` / `HtmlPageFetcher`):**
+**Builder B — `FailoverRequestSender` (single request: reader page, catalog favicon):**
 
-- `FailoverRequestSender::send()` gains a trailing `?ProxyConfig $proxy = null`.
-  When non-null it first issues one **proxied** request (`proxy => dsn`, no
-  `resolve`) and forces the status line (`getStatusCode()`); on a warranted
-  `TransportExceptionInterface` it cancels and **falls through to the existing
-  pinned-address family loop** — which is the direct fallback, guard+pin intact.
-  A proxied response that returns a status (even 4xx/5xx) stands, exactly as the
-  final-family answer stands today. When `$proxy` is `null`, behaviour is
-  byte-for-byte the current loop, so `CatalogFaviconFetcher` (the other caller,
-  out of scope) is untouched.
-- `HtmlPageFetcher` gains a `ProxyEgressResolver` dependency, resolves once at the
-  top of `fetch()`, and threads the `?ProxyConfig` into each `request()` → `send()`
-  call across the redirect loop.
+- The sender gains a `ProxyEgressResolver` dependency and resolves `?ProxyConfig`
+  once at the top of `send()`. When non-null it first issues one **proxied**
+  request (`proxy => dsn`, no `resolve`) and forces the status line
+  (`getStatusCode()`); on a warranted `TransportExceptionInterface` it cancels and
+  **falls through to the existing pinned-address family loop** — which is the
+  direct fallback, guard+pin intact. A proxied response that returns a status
+  (even 4xx/5xx) stands, exactly as the final-family answer stands today. When the
+  resolver returns `null`, behaviour is byte-for-byte the current loop.
+- Both callers (`HtmlPageFetcher`, `CatalogFaviconFetcher`) are unchanged — they
+  get proxying for free, and each already runs `UrlGuard::assertSafe` before
+  calling `send()`, so the host guard is kept on the proxied path here too.
 
 ### 6. Direct fallback when the proxy fetch fails
 
-- **Path A:** on **any** failure of a proxied attempt — a `send()` throw caught in
-  `fill()`, or a stream/status failure caught in `awaitNext()` — the fetcher
+- **Builder A:** on **any** failure of a proxied attempt — a `send()` throw caught
+  in `fill()`, or a stream/status failure caught in `awaitNext()` — the fetcher
   requeues `$attempt->withoutProxy()` **once** instead of failing or trying the
   cross-family retry. That direct-fallback attempt then runs the full guard + IP
   pin and its own cross-family failover underneath. A private `fallbackFor(attempt)`
   helper (proxied-and-not-stripped → `withoutProxy()`, else `null`) centralises the
   "fire once" decision at both catch sites; cross-family applies only to attempts
   that are not proxied.
-- **Path B:** the fallback is the fall-through inside `FailoverRequestSender::send()`
-  described above — the proxied attempt is "attempt 0", and a warranted transport
-  failure drops to the pinned direct families.
+- **Builder B:** the fallback is the fall-through inside
+  `FailoverRequestSender::send()` described above — the proxied attempt is "attempt
+  0", and a warranted transport failure drops to the pinned direct families.
 - Either way the fallback fires **once** and only for proxied attempts. A direct
   attempt that fails is terminal, exactly as today. No proxy → direct → proxy loop.
 
-### 6a. Out of scope (outbound sites that stay direct)
+### 6a. The one deliberate exclusion
 
-The proxy covers the two flows the owner named: the refresh feed pull and the
-reader article fetch. These other outbound sites keep the default `null` and are
-**not** proxied in this change (noted so it is a conscious boundary, not an
-oversight): feed **discovery** scrape-fallback, feed **preview**, **favicon**
-resolution and catalog favicon bytes, and the catalog **rot-check** command. They
-can be folded in later behind the same resolver if wanted.
+Every outbound feed/page/resource fetch that flows through the two builders is
+proxied: refresh, single feed fetch, discovery scrape-fallback, feed preview,
+favicon resolution, the reader page fetch, and catalog favicon bytes.
+
+The single exception is the **catalog rot-check command**
+(`CheckCatalogUrlsCommand`), which uses its own scoped HTTP client, not either
+builder, and stays direct **on purpose**: it is a monitoring probe whose job is
+to check real, un-proxied reachability of catalog URLs. Routing it through the
+proxy would test the proxy's reachability instead of the source's. If a proxied
+rot-check is ever wanted, it is a separate, explicit change.
 
 ### 7. Migration
 
@@ -294,16 +308,18 @@ on error; no browser-only coupling; no CSRF token. The Test endpoint is a plain
   `ProxyEgressResolver` (disabled → null, enabled-but-unconfigured → null,
   enabled+configured → config); `ProxyConnectionTester` result mapping
   (ok+egressIp, connect fail, auth reject, timeout, not-configured);
-  `FetchAttempt` (`effectiveProxy`/`isProxied`/`withoutProxy` + `proxyStripped`);
-  `ConcurrentFeedFetcher::send()` branch (Path A) — proxied omits `resolve` +
-  guard, direct keeps both; proxied failure requeues exactly one direct attempt
-  and that fallback re-runs guard + pin; direct failure stays terminal; fallback
-  fires at most once (assert via a `MockHttpClient` that a proxied failure yields
-  one direct request with `resolve` set and no `proxy`);
-  `FailoverRequestSender::send()` branch (Path B) — with a proxy it issues one
-  `proxy`/no-`resolve` request first, a warranted transport failure falls through
-  to the pinned direct loop, and a null proxy is byte-for-byte the current
-  behaviour; `HtmlPageFetcher` threads the resolved config into `send()`.
+  `FetchTicket::withProxy()`; `FetchAttempt`
+  (`effectiveProxy`/`isProxied`/`withoutProxy` + `proxyStripped`);
+  `ConcurrentFeedFetcher` (Builder A) — resolves once per `fetchAll()` and enriches
+  every ticket; `send()` proxied branch omits `resolve` but keeps the guard,
+  direct keeps both; a proxied failure requeues exactly one direct attempt and that
+  fallback re-runs guard + pin; direct failure stays terminal; fallback fires at
+  most once (assert via a `MockHttpClient` that a proxied failure yields one direct
+  request with `resolve` set and no `proxy`); a null-resolver run is unchanged;
+  `FailoverRequestSender::send()` (Builder B) — with the resolver returning a proxy
+  it issues one `proxy`/no-`resolve` request first, a warranted transport failure
+  falls through to the pinned direct loop, and a null resolver is byte-for-byte the
+  current behaviour.
 - **Functional:** admin proxy settings round-trip — `PUT` then `GET`, password
   write-only, `hasPassword`/`passwordHint` reflected, blank password keeps the
   stored one, admin-guarded (401/403 without `ROLE_ADMIN`); `POST /test` shape.
