@@ -2,6 +2,7 @@
   <input
     type="checkbox"
     [checked]="checked()"
+    [disabled]="disabled()"
     [attr.id]="inputId() || null"
     [attr.aria-label]="label()"
     (change)="onChange($event)"

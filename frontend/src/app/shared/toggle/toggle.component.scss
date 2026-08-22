@@ -9,6 +9,11 @@
   cursor: pointer;
 }
 
+.toggle:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 // Visually hidden but still focusable: opacity (never display/visibility)
 // keeps the checkbox in the tab order and reachable by assistive technology.
 .toggle input {

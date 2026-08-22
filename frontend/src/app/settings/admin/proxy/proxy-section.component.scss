@@ -1,0 +1,19 @@
+// src/app/settings/admin/proxy/proxy-section.component.scss
+// Layout glue only. The Grouped chrome (card surface, rows, dividers, save
+// bar) comes from the shared primitives; what stays here is the Test row's
+// button-plus-result layout and the failure/error banner inset.
+
+.test-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.egress-ip {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.panel-banner {
+  padding: 0 var(--space-5) var(--space-4);
+}
