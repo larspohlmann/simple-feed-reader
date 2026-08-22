@@ -6,6 +6,7 @@ namespace App\Tests\Http;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Http\FeedAnnotationVisibility;
 use App\Http\RecommendationFeedJson;
 use App\Repository\EntryListRow;
 use App\Repository\RecommendationFeedRow;
@@ -13,44 +14,75 @@ use PHPUnit\Framework\TestCase;
 
 final class RecommendationFeedJsonTest extends TestCase
 {
-    public function testPageOmitsBothDebugAnnotations(): void
+    public function testReasonOnlyIncludesTheReasonAndOmitsTheScore(): void
     {
-        $result = RecommendationFeedJson::page([$this->row()], null);
+        $result = RecommendationFeedJson::page(
+            [$this->row()],
+            null,
+            new FeedAnnotationVisibility(showReasons: true, showScores: false),
+        );
 
-        // Debug off keeps neither the score nor the reason (#342): the reason
-        // used to leak through with the score hidden, which read as inconsistent.
+        self::assertSame('Matches your interest in g1', $result['entries'][0]['recommendationReason']);
         self::assertArrayNotHasKey('recommendationScore', $result['entries'][0]);
+    }
+
+    public function testScoreOnlyIncludesTheScoreAndOmitsTheReason(): void
+    {
+        $result = RecommendationFeedJson::page(
+            [$this->row()],
+            null,
+            new FeedAnnotationVisibility(showReasons: false, showScores: true),
+        );
+
+        self::assertSame(77, $result['entries'][0]['recommendationScore']);
         self::assertArrayNotHasKey('recommendationReason', $result['entries'][0]);
     }
 
-    public function testPageWithScoresIncludesBothDebugAnnotations(): void
+    public function testBothHiddenOmitsBothAnnotations(): void
     {
-        $result = RecommendationFeedJson::pageWithScores([$this->row()], null);
+        $result = RecommendationFeedJson::page(
+            [$this->row()],
+            null,
+            new FeedAnnotationVisibility(showReasons: false, showScores: false),
+        );
 
-        self::assertSame(77, $result['entries'][0]['recommendationScore']);
+        self::assertArrayNotHasKey('recommendationReason', $result['entries'][0]);
+        self::assertArrayNotHasKey('recommendationScore', $result['entries'][0]);
+    }
+
+    public function testBothShownIncludesBothAnnotations(): void
+    {
+        $result = RecommendationFeedJson::page(
+            [$this->row()],
+            null,
+            new FeedAnnotationVisibility(showReasons: true, showScores: true),
+        );
+
         self::assertSame('Matches your interest in g1', $result['entries'][0]['recommendationReason']);
+        self::assertSame(77, $result['entries'][0]['recommendationScore']);
     }
 
-    public function testPageAlwaysCarriesRunIdAndGeneratedAt(): void
+    public function testPageAlwaysCarriesRunIdAndGeneratedAtRegardlessOfVisibility(): void
     {
-        $result = RecommendationFeedJson::page([$this->row()], null);
+        $result = RecommendationFeedJson::page(
+            [$this->row()],
+            null,
+            new FeedAnnotationVisibility(showReasons: false, showScores: false),
+        );
 
-        // Present even with debug OFF — the divider is a normal-user feature.
-        self::assertSame(1, $result['entries'][0]['runId']);
-        self::assertSame('2026-08-07T09:05:00+00:00', $result['entries'][0]['runGeneratedAt']);
-    }
-
-    public function testPageWithScoresAlsoCarriesRunIdAndGeneratedAt(): void
-    {
-        $result = RecommendationFeedJson::pageWithScores([$this->row()], null);
-
+        // Present even with both annotations hidden — the divider is a
+        // normal-user feature (#348).
         self::assertSame(1, $result['entries'][0]['runId']);
         self::assertSame('2026-08-07T09:05:00+00:00', $result['entries'][0]['runGeneratedAt']);
     }
 
     public function testRunGeneratedAtIsNullWhenTheRowCarriesNoGenerationTime(): void
     {
-        $result = RecommendationFeedJson::page([$this->rowWithoutGenerationTime()], null);
+        $result = RecommendationFeedJson::page(
+            [$this->rowWithoutGenerationTime()],
+            null,
+            new FeedAnnotationVisibility(showReasons: false, showScores: false),
+        );
 
         // Defensive: the field is nullable, so a row lacking a completion time
         // serialises the key as null rather than dereferencing null.
@@ -58,9 +90,13 @@ final class RecommendationFeedJsonTest extends TestCase
         self::assertNull($result['entries'][0]['runGeneratedAt']);
     }
 
-    public function testPageWithScoresCarriesANullScoreForRowsWrittenBeforeTheColumnExisted(): void
+    public function testScoreKeyIsNullForRowsWrittenBeforeTheColumnExisted(): void
     {
-        $result = RecommendationFeedJson::pageWithScores([$this->row(null)], null);
+        $result = RecommendationFeedJson::page(
+            [$this->row(null)],
+            null,
+            new FeedAnnotationVisibility(showReasons: false, showScores: true),
+        );
 
         self::assertArrayHasKey('recommendationScore', $result['entries'][0]);
         self::assertNull($result['entries'][0]['recommendationScore']);

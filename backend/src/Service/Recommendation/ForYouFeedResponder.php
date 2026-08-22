@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 use App\Entity\User;
+use App\Http\FeedAnnotationVisibility;
 use App\Http\RecommendationFeedJson;
 
 /**
  * What JSON the for-you feed page returns for a user — paginates their
- * recommendation feed, then picks the debug-aware or plain shape depending
- * on their recommendation settings (#321).
+ * recommendation feed, then annotates each entry according to their
+ * recommendation settings (#321).
  */
 final readonly class ForYouFeedResponder
 {
@@ -25,8 +26,9 @@ final readonly class ForYouFeedResponder
     {
         $page = $this->pager->page((int) $user->getId(), $cursor, $limit);
 
-        return $this->settings->forUser($user)->debugEnabled
-            ? RecommendationFeedJson::pageWithScores($page->rows, $page->nextCursor)
-            : RecommendationFeedJson::page($page->rows, $page->nextCursor);
+        $debugEnabled = $this->settings->forUser($user)->debugEnabled;
+        $visibility = new FeedAnnotationVisibility(showReasons: $debugEnabled, showScores: $debugEnabled);
+
+        return RecommendationFeedJson::page($page->rows, $page->nextCursor, $visibility);
     }
 }

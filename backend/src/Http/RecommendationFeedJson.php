@@ -9,34 +9,21 @@ use App\Repository\RecommendationFeedRow;
 final class RecommendationFeedJson
 {
     /**
-     * @param list<RecommendationFeedRow> $rows
-     *
-     * @return array{entries: list<array<string, mixed>>, nextCursor: string|null}
-     */
-    public static function page(array $rows, ?string $nextCursor): array
-    {
-        return [
-            'entries' => self::entries($rows, withDebugAnnotations: false),
-            'nextCursor' => $nextCursor,
-        ];
-    }
-
-    /**
-     * Same shape as page(), plus each entry's `recommendationReason` and
-     * `recommendationScore` — the run's debug annotations, sent only while the
-     * caller's debug setting is on (#321; the reason joined the score behind the
-     * debug flag in #342, so "keep debug data off" hides both, not just the
-     * score). `runId` and `runGeneratedAt` are NOT debug-gated: both pages carry
-     * them, because the run-boundary divider is a normal-user feature (#348).
+     * A page of the for-you feed. Each entry carries `runId` and
+     * `runGeneratedAt` unconditionally — the run-boundary divider is a
+     * normal-user feature (#348) — then the two debug annotations on
+     * independent axes (#541, superseding #342's single-flag coupling):
+     * `recommendationReason` iff the reader asked to see reasons, and
+     * `recommendationScore` iff the debug setting is on.
      *
      * @param list<RecommendationFeedRow> $rows
      *
      * @return array{entries: list<array<string, mixed>>, nextCursor: string|null}
      */
-    public static function pageWithScores(array $rows, ?string $nextCursor): array
+    public static function page(array $rows, ?string $nextCursor, FeedAnnotationVisibility $visibility): array
     {
         return [
-            'entries' => self::entries($rows, withDebugAnnotations: true),
+            'entries' => self::entries($rows, $visibility),
             'nextCursor' => $nextCursor,
         ];
     }
@@ -46,9 +33,9 @@ final class RecommendationFeedJson
      *
      * @return list<array<string, mixed>>
      */
-    private static function entries(array $rows, bool $withDebugAnnotations): array
+    private static function entries(array $rows, FeedAnnotationVisibility $visibility): array
     {
-        return array_map(static function (RecommendationFeedRow $row) use ($withDebugAnnotations): array {
+        return array_map(static function (RecommendationFeedRow $row) use ($visibility): array {
             // runId + runGeneratedAt are unconditional: the divider needs the
             // run's identity and generation time on every row. The ATOM format
             // matches the run report's forYou.generatedAt, so the client can tell
@@ -57,14 +44,14 @@ final class RecommendationFeedJson
                 'runId' => $row->runId,
                 'runGeneratedAt' => $row->runGeneratedAt?->format(\DateTimeInterface::ATOM),
             ];
-            if (!$withDebugAnnotations) {
-                return $entry;
+            if ($visibility->showReasons) {
+                $entry += ['recommendationReason' => $row->reason];
+            }
+            if ($visibility->showScores) {
+                $entry += ['recommendationScore' => $row->score];
             }
 
-            return $entry + [
-                'recommendationReason' => $row->reason,
-                'recommendationScore' => $row->score,
-            ];
+            return $entry;
         }, $rows);
     }
 }
