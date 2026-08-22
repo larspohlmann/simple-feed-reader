@@ -440,7 +440,10 @@ describe('RecommendationDebugLogComponent', () => {
     expect(summaryText).toContain('0/5');
 
     const timeline = el.querySelector('.debug-panel__timeline')!.textContent ?? '';
-    expect(timeline.trim()).toMatch(/^\d{2}:\d{2} → \d{2}:\d{2}$/);
+    // Date beside the clock time on both ends of the timeline (#541).
+    expect(timeline.trim()).toMatch(
+      /^[A-Za-z]{3,} \d{1,2} \d{2}:\d{2} → [A-Za-z]{3,} \d{1,2} \d{2}:\d{2}$/,
+    );
   });
 
   it('shows the run-level error on a failed run, styled as danger', () => {
@@ -467,7 +470,7 @@ describe('RecommendationDebugLogComponent', () => {
     debugLog.mockReturnValue(of({ run: RUNNING_RUN_SUMMARY, runs: [], entries: [BATCH_ENTRY] }));
     const f = mount();
     const timeline = (f.nativeElement as HTMLElement).querySelector('.debug-panel__timeline');
-    expect(timeline!.textContent!.trim()).toMatch(/^\d{2}:\d{2} → …$/);
+    expect(timeline!.textContent!.trim()).toMatch(/^[A-Za-z]{3,} \d{1,2} \d{2}:\d{2} → …$/);
   });
 
   it("renders a transport-failed row's errorDetail as a full-width danger line", () => {

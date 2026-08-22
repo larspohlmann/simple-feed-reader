@@ -20,7 +20,6 @@ import {
 } from '../reader/models';
 import { RecommendationsService } from '../reader/recommendations.service';
 import { LanguageService } from '../core/language.service';
-import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
 import { IconComponent } from '../shared/icon/icon.component';
 import { RecommendationRunHistoryMonthComponent } from './recommendation-run-history-month.component';
 import {
@@ -66,12 +65,7 @@ interface MonthSection {
 @Component({
   selector: 'app-recommendation-run-history',
   standalone: true,
-  imports: [
-    SettingsCardComponent,
-    RecommendationRunHistoryMonthComponent,
-    IconComponent,
-    TranslocoModule,
-  ],
+  imports: [RecommendationRunHistoryMonthComponent, IconComponent, TranslocoModule],
   templateUrl: './recommendation-run-history.component.html',
   styleUrl: './recommendation-run-history.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -138,7 +138,7 @@ describe('RecommendationRunHistoryComponent', () => {
   it('renders nothing until the account has run at least once', () => {
     const el = mount(EMPTY_OVERVIEW);
 
-    expect(el.querySelector('app-settings-card')).toBeNull();
+    expect(el.querySelector('.run-history')).toBeNull();
   });
 
   it('shows the all-time total, not the sum of the rows on screen', () => {

@@ -14,7 +14,8 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoModule } from '@jsverse/transloco';
 import { ReaderApi } from '../reader/reader-api';
-import { bytesToKb, formatTime } from '../reader/format';
+import { bytesToKb, formatDayInMonth, formatTime } from '../reader/format';
+import { LanguageService } from '../core/language.service';
 import {
   DebugLogDetail,
   DebugLogEntry,
@@ -22,7 +23,6 @@ import {
   DebugLogRunSummary,
 } from '../reader/models';
 import { RecommendationsService } from '../reader/recommendations.service';
-import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
 
 const POLL_MS = 2000;
 
@@ -46,7 +46,7 @@ export interface RunGroup {
 @Component({
   selector: 'app-recommendation-debug-log',
   standalone: true,
-  imports: [SettingsCardComponent, TranslocoModule],
+  imports: [TranslocoModule],
   templateUrl: './recommendation-debug-log.component.html',
   styleUrl: './recommendation-debug-log.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -55,6 +55,7 @@ export class RecommendationDebugLogComponent implements OnInit {
   private readonly api = inject(ReaderApi);
   private readonly recs = inject(RecommendationsService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly language = inject(LanguageService);
 
   readonly entries = signal<DebugLogEntry[]>([]);
   /** The entries clustered by run, newest run first. The log can span more
@@ -155,8 +156,10 @@ export class RecommendationDebugLogComponent implements OnInit {
     return bytesToKb(bytes);
   }
 
+  /** Date and clock time together, e.g. "21 Aug 22:54": the debug log spans
+     several days of runs, so the day is shown beside every time (#541). */
   time(iso: string): string {
-    return formatTime(iso);
+    return `${formatDayInMonth(iso, this.language.lang())} ${formatTime(iso)}`;
   }
 
   /** Seconds a settled call took, or null while it is still streaming --
