@@ -1,0 +1,47 @@
+// The shared save/reset row for a settings surface, ported from the Grouped
+// mockup's `.savebar`. A leading "unsaved changes" indicator, a right-aligned
+// Reset/Save pair pushed over by the spacer, and a top border that seats the
+// bar against the panel above it.
+:host {
+  display: block;
+}
+
+.savebar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--border);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.unsaved {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+// The pulsing accent dot that draws the eye to the pending change. The ring
+// expands and fades on a loop; the solid dot itself holds still.
+.pulse {
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: 50%;
+  background: var(--accent);
+  animation: save-bar-ping 1.6s ease-out infinite;
+}
+
+@keyframes save-bar-ping {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+
+  100% {
+    box-shadow: 0 0 0 var(--space-2) transparent;
+  }
+}

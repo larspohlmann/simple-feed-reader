@@ -1,0 +1,15 @@
+<div class="savebar" [class.dirty]="dirty()">
+  @if (dirty()) {
+    <span class="unsaved"><span class="pulse"></span>{{ unsavedLabel() }}</span>
+  }
+  <span class="spacer"></span>
+  <app-button variant="ghost" size="sm" (click)="onReset()">{{ resetLabel() }}</app-button>
+  <app-button
+    variant="primary"
+    size="sm"
+    [disabled]="!dirty()"
+    [loading]="saving()"
+    (click)="onSave()"
+    >{{ saveLabel() }}</app-button
+  >
+</div>
