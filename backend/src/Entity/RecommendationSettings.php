@@ -78,6 +78,12 @@ class RecommendationSettings
     #[ORM\Column(nullable: true)]
     private ?int $autoGenerateIntervalHours = null;
 
+    /**
+     * Whether each pick's one-line reason is shown in the reader UI (#541).
+     */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $showReasons = false;
+
     public function __construct(User $user)
     {
         $this->user = $user;
@@ -102,6 +108,7 @@ class RecommendationSettings
         $this->batchCount = $values->batchCount;
         $this->debugEnabled = $values->debugEnabled;
         $this->autoGenerateIntervalHours = $values->autoGenerateIntervalHours;
+        $this->showReasons = $values->showReasons;
     }
 
     public function values(): RecommendationSettingsValues
@@ -119,6 +126,7 @@ class RecommendationSettings
             batchCount: $this->batchCount,
             debugEnabled: $this->debugEnabled,
             autoGenerateIntervalHours: $this->autoGenerateIntervalHours,
+            showReasons: $this->showReasons,
         );
     }
 }

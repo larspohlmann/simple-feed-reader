@@ -35,6 +35,12 @@ final readonly class RecommendationSettingsValues
          * #493 keep compiling unchanged.
          */
         public ?string $profileText = null,
+        /**
+         * Whether the reader wants each pick's one-line reason shown in the
+         * UI (#541). Defaulted to false, like the additive params above it,
+         * so the many callers that predate #541 keep compiling unchanged.
+         */
+        public bool $showReasons = false,
     ) {
     }
 }
