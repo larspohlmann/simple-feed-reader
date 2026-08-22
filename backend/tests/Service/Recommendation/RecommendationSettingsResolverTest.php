@@ -169,6 +169,22 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         self::assertSame('Likes self-hosted home automation.', $settings->profileText);
     }
 
+    public function testShowReasonsDefaultsToFalseWhenNoRowExists(): void
+    {
+        $settings = $this->resolver()->forUser($this->userWithoutSettingsRow());
+
+        self::assertFalse($settings->showReasons);
+    }
+
+    public function testShowReasonsIsReadFromTheSettingsRow(): void
+    {
+        $this->settingsRowFor($this->user, showReasons: true);
+
+        $settings = $this->resolver()->forUser($this->user);
+
+        self::assertTrue($settings->showReasons);
+    }
+
     /**
      * A fresh user out of setUp() never had a settings row created for it;
      * this name exists to make that precondition explicit at the call site.
@@ -178,8 +194,11 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         return $this->user;
     }
 
-    private function settingsRowFor(User $user, ?string $profileText = null): RecommendationSettings
-    {
+    private function settingsRowFor(
+        User $user,
+        ?string $profileText = null,
+        bool $showReasons = false,
+    ): RecommendationSettings {
         $row = new RecommendationSettings($user);
         $row->update(new RecommendationSettingsValues(
             guidancePrompt: null,
@@ -193,6 +212,7 @@ final class RecommendationSettingsResolverTest extends DbTestCase
             batchCount: null,
             debugEnabled: false,
             profileText: $profileText,
+            showReasons: $showReasons,
         ));
         $this->em->persist($row);
         $this->em->flush();
