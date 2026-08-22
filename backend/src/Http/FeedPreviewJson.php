@@ -17,11 +17,13 @@ final class FeedPreviewJson
      *   hasImages: bool,
      *   items: list<array{
      *     title: string,
-     *     publishedAt: string|null,
+     *     url: string|null,
      *     author: string|null,
-     *     hasImage: bool,
-     *     textLength: int,
-     *     snippet: string,
+     *     summary: string|null,
+     *     imageUrl: string|null,
+     *     imageWidth: int|null,
+     *     imageHeight: int|null,
+     *     publishedAt: string|null,
      *   }>,
      * }}
      */
@@ -35,11 +37,13 @@ final class FeedPreviewJson
             'items' => array_map(
                 static fn (FeedPreviewItem $i) => [
                     'title' => $i->title,
-                    'publishedAt' => $i->publishedAt?->format(\DateTimeInterface::ATOM),
+                    'url' => $i->url,
                     'author' => $i->author,
-                    'hasImage' => $i->imageUrl !== null,
-                    'textLength' => mb_strlen($i->summary ?? ''),
-                    'snippet' => $i->summary ?? '',
+                    'summary' => $i->summary,
+                    'imageUrl' => $i->imageUrl,
+                    'imageWidth' => $i->imageWidth,
+                    'imageHeight' => $i->imageHeight,
+                    'publishedAt' => $i->publishedAt?->format(\DateTimeInterface::ATOM),
                 ],
                 $preview->items,
             ),
