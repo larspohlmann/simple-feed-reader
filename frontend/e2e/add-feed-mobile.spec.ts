@@ -116,6 +116,7 @@ test.describe('Add feed on a phone', () => {
     // viewport, and the overflow had nowhere to go.
     const box = (await dialog.boundingBox())!;
     expect(box.height).toBeLessThanOrEqual(PHONE.height);
+    expect(box.width).toBeLessThanOrEqual(PHONE.width);
     expect(box.y).toBeGreaterThanOrEqual(0);
 
     // The dialog's body, not the page, is what scrolls: it must actually be

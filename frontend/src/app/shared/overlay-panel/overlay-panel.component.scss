@@ -77,19 +77,26 @@ h2 {
 
 // Phone: only a surface that opts in (a route-level picker that IS the page,
 // not a modal over it) becomes the screen. Every ordinary dialog stays a card,
-// so a short confirm no longer opens as a mostly-empty full page. Viewport
-// units, not `100%` -- a CDK dialog's pane (`.cdk-overlay-pane`) is
-// shrink-to-fit with no definite height, so a percentage here resolves
-// against nothing and is a no-op; worse, `max-height: 100%` would still
-// override the 90dvh cap above with an unbounded auto height, letting a tall
-// dialog overflow the screen. `vw`/`vh` bypass the ancestor chain entirely, so
-// this works whether the host is a route (discover) or a CDK pane
-// (add-feed-dialog). `vh` first as the fallback for browsers without `dvh`,
-// same as the cap above.
+// so a short confirm no longer opens as a mostly-empty full page. The two axes
+// need different units, because they hit different layout mechanics:
+// -- Width stays `100%`. It resolves against the flex container's cross axis,
+//    which both hosts (discover's route, the CDK's `.cdk-overlay-pane`) size
+//    to their own width regardless of content, so `%` works everywhere; `vw`
+//    would still be correct on a phone (no classic scrollbar) but on a narrow
+//    *desktop* window it overshoots discover's host by a classic
+//    space-reserving scrollbar's width, which `%` does not.
+// -- Height needs `vh`/`dvh`. It resolves against the flex main axis, which a
+//    CDK pane leaves content-sized (shrink-to-fit, no definite height), so
+//    `height: 100%` is a no-op there -- worse, `max-height: 100%` would still
+//    override the 90dvh cap above with an unbounded auto height, letting a
+//    tall dialog overflow the screen. Viewport units bypass that ancestor
+//    chain entirely, so they work for both the route host (discover) and the
+//    CDK pane (add-feed-dialog). `vh` first as the fallback for browsers
+//    without `dvh`, same as the cap above.
 @media (width <= bp.$bp-sm) {
   .panel.fill-mobile {
-    width: 100vw;
-    max-width: 100vw;
+    width: 100%;
+    max-width: 100%;
     height: 100vh;
     height: 100dvh;
     max-height: 100vh;
