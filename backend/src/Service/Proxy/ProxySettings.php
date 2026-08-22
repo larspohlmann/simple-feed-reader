@@ -18,7 +18,7 @@ use Doctrine\ORM\EntityManagerInterface;
  * when no row exists. The rest of the app depends on this, never on the entity
  * or repository directly, so "no row yet" and the sealing both live in one place.
  */
-final readonly class ProxySettings
+readonly class ProxySettings
 {
     private const int HINT_LENGTH = 4;
 
