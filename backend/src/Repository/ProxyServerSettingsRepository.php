@@ -9,9 +9,12 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
+ * Not final: ProxySettings unit-tests against a mock of this repository rather
+ * than a real database, so it needs to stay doubleable.
+ *
  * @extends ServiceEntityRepository<ProxyServerSettings>
  */
-final class ProxyServerSettingsRepository extends ServiceEntityRepository
+class ProxyServerSettingsRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
