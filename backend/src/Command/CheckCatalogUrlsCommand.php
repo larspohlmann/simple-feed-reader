@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Service\Catalog\CatalogDocument;
+use App\Service\Fetch\EgressOptions;
+use App\Service\Fetch\ProxyEgressResolver;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -33,6 +35,7 @@ final class CheckCatalogUrlsCommand extends Command
         private readonly HttpClientInterface $httpClient,
         private readonly CatalogDocument $parser,
         private readonly string $userAgent,
+        private readonly ProxyEgressResolver $proxyEgressResolver,
     ) {
         parent::__construct();
     }
@@ -97,6 +100,8 @@ final class CheckCatalogUrlsCommand extends Command
      */
     private function check(string $url): ?string
     {
+        $proxy = $this->proxyEgressResolver->resolve();
+
         try {
             $response = $this->httpClient->request('GET', $url, [
                 'timeout' => self::TIMEOUT_SECONDS,
@@ -105,6 +110,7 @@ final class CheckCatalogUrlsCommand extends Command
                 // the reader but tolerates an unfamiliar checker would otherwise
                 // let this command report a healthy catalog nobody can subscribe to.
                 'headers' => ['User-Agent' => $this->userAgent],
+                ...(null !== $proxy ? EgressOptions::proxied($proxy) : []),
             ]);
 
             if (200 !== $response->getStatusCode()) {
