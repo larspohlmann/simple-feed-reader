@@ -389,8 +389,15 @@ an overlay) passes `1`.
 
 Width and max-height are per-consumer and come from `--panel-w` / `--panel-max-h`
 set on the consumer's host — not from inputs, so they stay in the stylesheet with
-the rest of the sizing. In use: 400px (confirm), 440px (add feed, edit
-subscription), 460px (tag form, and the component default), 1040px (discover).
+the rest of the sizing. In use: 400px (confirm), 440px (edit subscription), 460px
+(tag form, and the component default), 520px (add feed), 1040px (discover).
+
+The add-feed dialog is the wide variant: `--panel-w: 520px`, sized so a preview
+row's 88×66 thumbnail and four-line snippet sit comfortably. It sets
+`fillOnMobile`, so on a phone it becomes the full screen rather than a 92vw card
+— a card would squeeze the row's title to ~125px. This is the first non-default
+`--panel-w`; keep new panels on the 460px default unless their content needs the
+room, and record the exception here.
 
 **Not for:** a non-modal popover or dropdown menu. The panel declares
 `role="dialog" aria-modal="true"`.
