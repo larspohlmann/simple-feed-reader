@@ -49,6 +49,8 @@ final class RequestBodyLimitAgreementTest extends TestCase
 
     public function testEveryStackDeclaresTheSameRequestBodyLimit(): void
     {
+        $this->requireStackConfigs();
+
         $limitsByFile = [];
         foreach (self::NGINX_FILES as $path) {
             $limitsByFile[$path] = $this->declaredLimitIn($path, self::NGINX_PATTERN);
@@ -62,6 +64,24 @@ final class RequestBodyLimitAgreementTest extends TestCase
             array_unique($limitsByFile),
             'The nginx and PHP body limits have drifted apart: ' . json_encode($limitsByFile),
         );
+    }
+
+    /**
+     * The five config files live under the repository root, which is present in
+     * the CI runner and on a developer host but NOT inside the app container —
+     * it mounts only backend/ (see docker-compose.yml). Where the whole docker/
+     * tree is absent there is nothing to compare, so skip rather than fail. A
+     * single file that goes missing WHILE the tree is present is a real drift
+     * and still fails in declaredLimitIn().
+     */
+    private function requireStackConfigs(): void
+    {
+        if (!is_dir(\dirname(__DIR__, 2) . '/docker')) {
+            self::markTestSkipped(
+                'The Docker stack configs (repo-root docker/) are not mounted here '
+                . '(e.g. inside the app container); this static check runs on the host / CI leg.',
+            );
+        }
     }
 
     /**
