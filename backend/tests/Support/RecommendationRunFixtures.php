@@ -209,8 +209,20 @@ final readonly class RecommendationRunFixtures
         return $this->recommendationSettings($user, false);
     }
 
-    private function recommendationSettings(User $user, bool $debugEnabled): RecommendationSettings
+    /**
+     * Reasons on, debug off: the #541 combination that proves reason visibility
+     * no longer rides on the debug flag.
+     */
+    public function showReasonsEnabledSettings(User $user): RecommendationSettings
     {
+        return $this->recommendationSettings($user, false, showReasons: true);
+    }
+
+    private function recommendationSettings(
+        User $user,
+        bool $debugEnabled,
+        bool $showReasons = false,
+    ): RecommendationSettings {
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: null,
@@ -223,6 +235,7 @@ final readonly class RecommendationRunFixtures
             contextWindow: null,
             batchCount: null,
             debugEnabled: $debugEnabled,
+            showReasons: $showReasons,
         ));
         $this->em->persist($settings);
         $this->em->flush();

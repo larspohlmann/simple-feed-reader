@@ -24,6 +24,9 @@ final class RecommendationFeedJsonTest extends TestCase
 
         self::assertSame('Matches your interest in g1', $result['entries'][0]['recommendationReason']);
         self::assertArrayNotHasKey('recommendationScore', $result['entries'][0]);
+        // The reason augments the entry, it does not replace it: the base keys
+        // (here runId) must survive alongside the appended annotation.
+        self::assertSame(1, $result['entries'][0]['runId']);
     }
 
     public function testScoreOnlyIncludesTheScoreAndOmitsTheReason(): void
