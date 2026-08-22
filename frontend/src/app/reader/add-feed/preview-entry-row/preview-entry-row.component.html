@@ -11,7 +11,7 @@
       <p class="snippet">{{ item().summary }}</p>
     }
   </div>
-  @if (item().imageUrl && !imgError()) {
+  @if (showThumb()) {
     <img
       class="thumb"
       [src]="item().imageUrl"
@@ -19,7 +19,7 @@
       loading="lazy"
       decoding="async"
       referrerpolicy="no-referrer"
-      (error)="imgError.set(true)"
+      (error)="failedImageUrl.set(item().imageUrl)"
     />
   }
 </article>

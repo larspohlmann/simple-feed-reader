@@ -92,7 +92,7 @@ final class FeedPreviewServiceTest extends KernelTestCase
             XML;
     }
 
-    public function testFullTextFeedYieldsFullVerdictAndCapsItemsAtEight(): void
+    public function testFullTextFeedYieldsFullVerdictAndCapsDisplayedItemsAtThree(): void
     {
         $items = '';
         for ($i = 1; $i <= 9; ++$i) {
@@ -113,7 +113,8 @@ final class FeedPreviewServiceTest extends KernelTestCase
         self::assertSame('Example Feed', $preview->title);
         self::assertSame(9, $preview->itemCount);
         self::assertSame('full', $preview->content);
-        self::assertCount(8, $preview->items);
+        // The verdict reads eight entries, but the dialog only shows three.
+        self::assertCount(3, $preview->items);
         self::assertSame('Post 1', $preview->items[0]->title);
     }
 

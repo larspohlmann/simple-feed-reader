@@ -56,10 +56,9 @@ async function stubDiscovery(page: Page): Promise<void> {
           itemCount: 12,
           content: 'full',
           hasImages: true,
-          // The feed carries eight items; the preview caps the render at three,
-          // so the count assertion below proves the cap while the expanded card
-          // plus the candidate list still outgrow the screen and scroll.
-          items: Array.from({ length: 8 }, (_unused, index) => ({
+          // The backend caps the preview payload at three items; the expanded
+          // card plus the candidate list still outgrow the screen and scroll.
+          items: Array.from({ length: 3 }, (_unused, index) => ({
             title: `Sample headline ${index + 1}`,
             url: `https://example.com/a${index + 1}`,
             author: null,

@@ -98,7 +98,7 @@
                   } @else if (p) {
                     @if (p.items.length) {
                       <div class="preview-rows">
-                        @for (it of p.items.slice(0, 3); track $index) {
+                        @for (it of p.items; track $index) {
                           <app-preview-entry-row
                             [item]="it"
                             [source]="p.title || c.title || c.url"

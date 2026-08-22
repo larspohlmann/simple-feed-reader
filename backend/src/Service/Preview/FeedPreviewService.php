@@ -26,7 +26,10 @@ use App\Service\Text\PlainText;
  */
 final readonly class FeedPreviewService
 {
+    // The content/has-images verdict reads a wider sample than the dialog shows,
+    // so the badges reflect the feed, not just its first few rendered rows.
     private const int SAMPLE_SIZE = 8;
+    private const int PREVIEW_ITEMS = 3;
     private const int FULL_TEXT_MIN = 600;
 
     /** Richest tier first: ties in the verdict resolve to whichever comes first here. */
@@ -85,14 +88,15 @@ final readonly class FeedPreviewService
         }
 
         $sample = \array_slice($feed->entries, 0, self::SAMPLE_SIZE);
-        $items = array_map(fn (ParsedEntry $e): FeedPreviewItem => $this->item($e), $sample);
         $tiers = array_map(fn (ParsedEntry $e): string => $this->tier($e), $sample);
+        $displayed = \array_slice($sample, 0, self::PREVIEW_ITEMS);
+        $items = array_map(fn (ParsedEntry $e): FeedPreviewItem => $this->item($e), $displayed);
 
         return new FeedPreview(
             title: $feed->title,
             itemCount: \count($feed->entries),
             content: $this->verdict($tiers),
-            hasImages: array_any($items, static fn (FeedPreviewItem $i): bool => $i->imageUrl !== null),
+            hasImages: array_any($sample, fn (ParsedEntry $e): bool => $this->httpsImageUrl($e->image) !== null),
             items: $items,
         );
     }

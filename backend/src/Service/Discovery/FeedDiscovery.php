@@ -16,10 +16,11 @@ use App\Service\Scraper\HtmlItemExtractor;
 
 /**
  * Turns a user-entered URL into something to subscribe to, trying five sources
- * in decreasing order of certainty: the URL itself parsed as a feed; a
- * WordPress REST posts endpoint (WordPressRestProbe, offered first alongside
- * the page's advertised feeds) and the feeds the page points at (FeedLinkScanner,
- * exact first and guessed second); a feed under one of the conventional paths
+ * in decreasing order of certainty: the URL itself parsed as a feed; the feeds
+ * the page points at (FeedLinkScanner, exact first and guessed second) followed
+ * by a WordPress REST posts endpoint (WordPressRestProbe) as a fallback — the
+ * page's own advertised feeds lead, the REST alternative trails; a feed under
+ * one of the conventional paths
  * (WellKnownFeedProbe) — which is also the only source left when the page
  * never arrives, as on the sites that refuse every non-browser client; and
  * finally a synthetic 'scraped' candidate built from the page's own article
