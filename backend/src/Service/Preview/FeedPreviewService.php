@@ -105,6 +105,8 @@ final readonly class FeedPreviewService
             title: $entry->title,
             url: $entry->url,
             author: $entry->author,
+            // Prefers the feed's own summary/teaser field; tier()/plainText() deliberately
+            // reverse this precedence (contentHtml ?? summary) to measure the full body.
             summary: EntrySnippet::from($entry->summary ?? $entry->contentHtml),
             imageUrl: $imageUrl,
             imageWidth: $imageUrl === null ? null : $entry->image?->width,

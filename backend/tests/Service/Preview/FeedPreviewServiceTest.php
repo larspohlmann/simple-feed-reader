@@ -220,6 +220,33 @@ final class FeedPreviewServiceTest extends KernelTestCase
         self::assertNull($preview->items[0]->imageUrl);
         self::assertNull($preview->items[0]->imageWidth);
         self::assertNull($preview->items[0]->imageHeight);
+        // The only image on offer is http-only and gets dropped, so the feed as a
+        // whole must not claim to have images either.
+        self::assertFalse($preview->hasImages);
+    }
+
+    public function testItemSummaryPrefersTheFeedsOwnSummaryOverContentHtml(): void
+    {
+        // summary and contentHtml carry distinct, recognizable text so the assertion
+        // proves the precedence rather than merely tolerating either field: item()
+        // must prefer the feed's own summary/teaser, not fall back to the full body.
+        $items = <<<XML
+            <item>
+              <title>Precedence check</title>
+              <link>https://example.com/precedence</link>
+              <guid>https://example.com/precedence</guid>
+              <description>TEASER-FROM-SUMMARY</description>
+              <content:encoded><![CDATA[<p>BODY-FROM-CONTENT</p>]]></content:encoded>
+            </item>
+            XML;
+
+        $fetcher = $this->fetcherWithBody($this->rss($items));
+        $preview = $this->service($fetcher)->preview($this->user(), self::URL);
+
+        $summary = $preview->items[0]->summary;
+        self::assertNotNull($summary);
+        self::assertStringContainsString('TEASER-FROM-SUMMARY', $summary);
+        self::assertStringNotContainsString('BODY-FROM-CONTENT', $summary);
     }
 
     public function testSummaryIsTruncatedForLongItemsAndUntouchedForShortOnes(): void

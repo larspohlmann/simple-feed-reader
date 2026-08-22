@@ -50,6 +50,7 @@
                 class="card-head"
                 (click)="toggle(c)"
                 [attr.aria-expanded]="expanded() === c.url"
+                [attr.aria-controls]="'preview-' + $index"
               >
                 <span class="card-title">{{ p?.title || c.title || c.url }}</span>
                 @if (p) {
@@ -77,21 +78,26 @@
                 <p class="muted scraped-hint">{{ 'dialog.addFeed.scrapedHint' | transloco }}</p>
               }
               @if (expanded() === c.url) {
-                @if (state?.status === 'loading') {
-                  <p class="muted">{{ 'dialog.addFeed.loadingPreview' | transloco }}</p>
-                } @else if (state?.status === 'error') {
-                  <p class="muted">{{ errorMessage(state) }}</p>
-                } @else if (p) {
-                  @if (p.items.length) {
-                    <div class="preview-rows">
-                      @for (it of p.items; track $index) {
-                        <app-preview-entry-row [item]="it" [source]="p.title || c.title || c.url" />
-                      }
-                    </div>
-                  } @else {
-                    <p class="muted">{{ 'dialog.addFeed.noRecentItems' | transloco }}</p>
+                <div [id]="'preview-' + $index">
+                  @if (state?.status === 'loading') {
+                    <p class="muted">{{ 'dialog.addFeed.loadingPreview' | transloco }}</p>
+                  } @else if (state?.status === 'error') {
+                    <p class="muted">{{ errorMessage(state) }}</p>
+                  } @else if (p) {
+                    @if (p.items.length) {
+                      <div class="preview-rows">
+                        @for (it of p.items; track $index) {
+                          <app-preview-entry-row
+                            [item]="it"
+                            [source]="p.title || c.title || c.url"
+                          />
+                        }
+                      </div>
+                    } @else {
+                      <p class="muted">{{ 'dialog.addFeed.noRecentItems' | transloco }}</p>
+                    }
                   }
-                }
+                </div>
               }
               <button type="button" class="subscribe primary" (click)="pick(c)">
                 {{ 'dialog.addFeed.subscribe' | transloco }}
