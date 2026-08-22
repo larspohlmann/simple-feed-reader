@@ -29,6 +29,15 @@ final class EgressOptionsTest extends TestCase
         self::assertArrayNotHasKey('proxy', $options);
     }
 
+    public function testPinnedClampsAnOutOfRangeAttemptToTheLastAvailablePin(): void
+    {
+        $guarded = new GuardedUrl('single-family.example.com', ['93.184.216.34']);
+
+        $options = EgressOptions::pinned($guarded, 1);
+
+        self::assertSame(['single-family.example.com' => '93.184.216.34'], $options['resolve']);
+    }
+
     public function testPinnedOnASecondAttemptAddsTheFreshConnectionExtra(): void
     {
         $guarded = new GuardedUrl('dual.example.com', ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34']);
@@ -37,6 +46,11 @@ final class EgressOptionsTest extends TestCase
 
         self::assertSame(['dual.example.com' => '93.184.216.34'], $options['resolve']);
         self::assertArrayNotHasKey('proxy', $options);
-        self::assertTrue($options['extra']['curl'][\CURLOPT_FRESH_CONNECT] ?? false);
+
+        $extra = $options['extra'];
+        self::assertIsArray($extra);
+        $curlOptions = $extra['curl'];
+        self::assertIsArray($curlOptions);
+        self::assertTrue($curlOptions[\CURLOPT_FRESH_CONNECT] ?? false);
     }
 }

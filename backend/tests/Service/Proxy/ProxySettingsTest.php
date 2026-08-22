@@ -22,8 +22,13 @@ final class ProxySettingsTest extends TestCase
         $settings = $this->service($stored);
 
         $settings->update(new ProxySettingsRequest(
-            enabled: true, directFallback: true, type: 'SOCKS5',
-            host: 'proxy.example', port: 1080, username: 'user', password: 'sw0rdfish',
+            enabled: true,
+            directFallback: true,
+            type: 'SOCKS5',
+            host: 'proxy.example',
+            port: 1080,
+            username: 'user',
+            password: 'sw0rdfish',
         ));
 
         $view = $settings->view();
@@ -31,6 +36,8 @@ final class ProxySettingsTest extends TestCase
         self::assertTrue($view['directFallback']);
         self::assertSame('SOCKS5', $view['type']);
         self::assertSame('proxy.example', $view['host']);
+        self::assertSame(1080, $view['port']);
+        self::assertSame('user', $view['username']);
         self::assertTrue($view['hasPassword']);
         self::assertSame('fish', $view['passwordHint']);
         self::assertArrayNotHasKey('password', $view);
@@ -40,13 +47,23 @@ final class ProxySettingsTest extends TestCase
     {
         $settings = $this->service($stored);
         $settings->update(new ProxySettingsRequest(
-            enabled: true, directFallback: true, type: 'SOCKS5',
-            host: 'a', port: 1, username: null, password: 'sw0rdfish',
+            enabled: true,
+            directFallback: true,
+            type: 'SOCKS5',
+            host: 'a',
+            port: 1,
+            username: null,
+            password: 'sw0rdfish',
         ));
 
         $settings->update(new ProxySettingsRequest(
-            enabled: false, directFallback: false, type: 'HTTP',
-            host: 'b', port: 2, username: null, password: null,
+            enabled: false,
+            directFallback: false,
+            type: 'HTTP',
+            host: 'b',
+            port: 2,
+            username: null,
+            password: null,
         ));
 
         $egress = $settings->configuredProxy();
@@ -60,8 +77,13 @@ final class ProxySettingsTest extends TestCase
     {
         $settings = $this->service($stored);
         $settings->update(new ProxySettingsRequest(
-            enabled: false, directFallback: true, type: 'SOCKS5',
-            host: 'a', port: 1, username: null, password: 'pw123456',
+            enabled: false,
+            directFallback: true,
+            type: 'SOCKS5',
+            host: 'a',
+            port: 1,
+            username: null,
+            password: 'pw123456',
         ));
 
         self::assertNull($settings->egressProxy());
@@ -73,12 +95,38 @@ final class ProxySettingsTest extends TestCase
         self::assertNull($this->service($stored)->configuredProxy());
     }
 
+    public function testUpdateFlushesTheEntityManager(): void
+    {
+        $repository = $this->createStub(ProxyServerSettingsRepository::class);
+        $repository->method('findSingleton')->willReturn(new ProxyServerSettings());
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects(self::once())->method('flush');
+
+        $settings = new ProxySettings($repository, $em, new ProxyPasswordCipher(self::SECRET));
+
+        $settings->update(new ProxySettingsRequest(
+            enabled: true,
+            directFallback: true,
+            type: 'SOCKS5',
+            host: 'proxy.example',
+            port: 1080,
+            username: null,
+            password: 'pw123456',
+        ));
+    }
+
     public function testDirectFallbackSurvivesTheRoundTrip(): void
     {
         $settings = $this->service($stored);
         $settings->update(new ProxySettingsRequest(
-            enabled: true, directFallback: false, type: 'SOCKS5',
-            host: 'proxy.example', port: 1080, username: null, password: 'pw123456',
+            enabled: true,
+            directFallback: false,
+            type: 'SOCKS5',
+            host: 'proxy.example',
+            port: 1080,
+            username: null,
+            password: 'pw123456',
         ));
 
         $egress = $settings->configuredProxy();

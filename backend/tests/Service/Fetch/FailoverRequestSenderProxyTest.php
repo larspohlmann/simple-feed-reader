@@ -10,9 +10,12 @@ use App\Service\Fetch\GuardedUrl;
 use App\Service\Fetch\ProxyConfig;
 use App\Service\Fetch\ProxyEgressResolver;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 final class FailoverRequestSenderProxyTest extends TestCase
 {
@@ -26,10 +29,13 @@ final class FailoverRequestSenderProxyTest extends TestCase
         });
         $sender = new FailoverRequestSender($client, $this->resolver($this->proxy()));
 
-        $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
+        $sender
+            ->send('GET', 'https://page.example', $this->guarded(), ['timeout' => 7.0])
+            ->getStatusCode();
 
         self::assertCount(1, $calls);
         self::assertSame('socks5h://p:1080', $calls[0]['proxy'] ?? null);
+        self::assertSame(7.0, $calls[0]['timeout'] ?? null);
         self::assertArrayNotHasKey('resolve', $calls[0]);
     }
 
@@ -51,6 +57,32 @@ final class FailoverRequestSenderProxyTest extends TestCase
         self::assertSame(200, $status);
         self::assertArrayHasKey('proxy', $calls[0]);
         self::assertArrayHasKey('resolve', $calls[1]);
+    }
+
+    /**
+     * MockHttpClient wraps every response in a fresh object, so a canceled flag
+     * set on the mock template is invisible from the test. A hand-built
+     * ResponseInterface double is the only way to observe that the failed proxy
+     * attempt is actually released rather than left open.
+     */
+    public function testProxyTransportFailureCancelsTheFailedResponse(): void
+    {
+        $failedResponse = $this->createMock(ResponseInterface::class);
+        $failedResponse->method('getStatusCode')
+            ->willThrowException(new TransportException('proxy down'));
+        $failedResponse->expects(self::once())->method('cancel');
+
+        $okResponse = $this->createStub(ResponseInterface::class);
+        $okResponse->method('getStatusCode')->willReturn(200);
+
+        $httpClient = $this->createStub(HttpClientInterface::class);
+        $httpClient->method('request')->willReturnOnConsecutiveCalls($failedResponse, $okResponse);
+
+        $sender = new FailoverRequestSender($httpClient, $this->resolver($this->proxy()));
+
+        $status = $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
+
+        self::assertSame(200, $status);
     }
 
     public function testNullResolverIsByteForByteTheCurrentLoop(): void

@@ -30,7 +30,16 @@ readonly class ProxySettings
     }
 
     /**
-     * @return array{enabled: bool, directFallback: bool, type: string, host: string, port: int, username: string|null, hasPassword: bool, passwordHint: string}
+     * @return array{
+     *     enabled: bool,
+     *     directFallback: bool,
+     *     type: string,
+     *     host: string,
+     *     port: int,
+     *     username: string|null,
+     *     hasPassword: bool,
+     *     passwordHint: string,
+     * }
      */
     public function view(): array
     {

@@ -15,7 +15,8 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class CheckCatalogUrlsCommandProxyTest extends KernelTestCase
 {
-    private const string FEED_BODY = '<?xml version="1.0"?><rss version="2.0"><channel><title>x</title></channel></rss>';
+    private const string FEED_BODY
+        = '<?xml version="1.0"?><rss version="2.0"><channel><title>x</title></channel></rss>';
 
     /**
      * @param array<int, array<string, mixed>> $recordedOptions
@@ -69,5 +70,6 @@ final class CheckCatalogUrlsCommandProxyTest extends KernelTestCase
         self::assertSame(0, $tester->getStatusCode());
         self::assertNotEmpty($recordedOptions);
         self::assertArrayNotHasKey('proxy', $recordedOptions[0]);
+        self::assertSame(20.0, $recordedOptions[0]['timeout'] ?? null);
     }
 }

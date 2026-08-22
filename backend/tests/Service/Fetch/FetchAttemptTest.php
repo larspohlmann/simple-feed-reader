@@ -79,6 +79,8 @@ final class FetchAttemptTest extends TestCase
         self::assertFalse($direct->isProxied());
         self::assertNull($direct->effectiveProxy());
         self::assertSame('https://feed.example', $direct->url);
+        // A redirect lands on a fresh host, so the pin restarts at the first address.
+        self::assertSame(0, $direct->pinnedAddressAttempt);
     }
 
     public function testDirectTicketIsNotProxied(): void

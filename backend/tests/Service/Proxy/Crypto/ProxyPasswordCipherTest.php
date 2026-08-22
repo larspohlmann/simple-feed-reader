@@ -43,4 +43,11 @@ final class ProxyPasswordCipherTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         new ProxyPasswordCipher('too-short');
     }
+
+    public function testASecretAtExactlyTheMinimumLengthIsAccepted(): void
+    {
+        $cipher = new ProxyPasswordCipher(str_repeat('a', 32));
+
+        self::assertSame('pw', $cipher->open($cipher->seal('pw')));
+    }
 }

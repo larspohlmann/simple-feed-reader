@@ -28,11 +28,13 @@ final class ProxyConnectionTesterTest extends TestCase
     public function testReturnsEgressIpOnSuccessAndRoutesThroughTheProxy(): void
     {
         $seenProxy = null;
-        $client = new MockHttpClient(function (string $method, string $url, array $options) use (&$seenProxy): MockResponse {
-            $seenProxy = $options['proxy'] ?? null;
+        $client = new MockHttpClient(
+            function (string $method, string $url, array $options) use (&$seenProxy): MockResponse {
+                $seenProxy = $options['proxy'] ?? null;
 
-            return new MockResponse('203.0.113.7');
-        });
+                return new MockResponse('203.0.113.7');
+            }
+        );
         $tester = new ProxyConnectionTester($this->configuredSettings(), $client);
 
         $result = $tester->test();
@@ -63,6 +65,79 @@ final class ProxyConnectionTesterTest extends TestCase
 
         self::assertFalse($result->ok);
         self::assertNotNull($result->reason);
+    }
+
+    public function testRequestDisablesRedirectsAndAsksForPlainText(): void
+    {
+        $seenOptions = null;
+        $client = new MockHttpClient(
+            function (string $method, string $url, array $options) use (&$seenOptions): MockResponse {
+                $seenOptions = $options;
+
+                return new MockResponse('203.0.113.7');
+            }
+        );
+        $tester = new ProxyConnectionTester($this->configuredSettings(), $client);
+
+        $tester->test();
+
+        self::assertIsArray($seenOptions);
+        self::assertSame(0, $seenOptions['max_redirects'] ?? null);
+        $headers = $seenOptions['headers'] ?? [];
+        self::assertIsArray($headers);
+        self::assertContains('Accept: text/plain', $headers);
+    }
+
+    public function testHttpStatusOutsideTheSuccessRangeIsReportedByCode(): void
+    {
+        $client = new MockHttpClient(static function (): MockResponse {
+            return new MockResponse('nope', ['http_code' => 404]);
+        });
+        $tester = new ProxyConnectionTester($this->configuredSettings(), $client);
+
+        $result = $tester->test();
+
+        self::assertFalse($result->ok);
+        self::assertSame('HTTP 404', $result->reason);
+    }
+
+    public function testAStatusOfExactlyThreeHundredIsAlreadyAFailure(): void
+    {
+        $client = new MockHttpClient(static function (): MockResponse {
+            return new MockResponse('nope', ['http_code' => 300]);
+        });
+        $tester = new ProxyConnectionTester($this->configuredSettings(), $client);
+
+        $result = $tester->test();
+
+        self::assertFalse($result->ok);
+        self::assertSame('HTTP 300', $result->reason);
+    }
+
+    public function testEgressIpIsTruncatedToTheByteCapBeforeTrimming(): void
+    {
+        $client = new MockHttpClient(static function (): MockResponse {
+            return new MockResponse(str_repeat('9', 2000) . "\n");
+        });
+        $tester = new ProxyConnectionTester($this->configuredSettings(), $client);
+
+        $result = $tester->test();
+
+        self::assertTrue($result->ok);
+        self::assertSame(str_repeat('9', 1024), $result->egressIp);
+    }
+
+    public function testEgressIpHasSurroundingWhitespaceTrimmed(): void
+    {
+        $client = new MockHttpClient(static function (): MockResponse {
+            return new MockResponse(" 203.0.113.7 \n");
+        });
+        $tester = new ProxyConnectionTester($this->configuredSettings(), $client);
+
+        $result = $tester->test();
+
+        self::assertTrue($result->ok);
+        self::assertSame('203.0.113.7', $result->egressIp);
     }
 
     private function configuredSettings(): ProxySettings
