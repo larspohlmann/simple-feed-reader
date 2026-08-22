@@ -8,13 +8,16 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
+use App\Entity\RecommendationSettings;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\RecommendationItemRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\ForYouFeedResponder;
 use App\Service\Recommendation\RecommendationFeedPager;
 use App\Service\Recommendation\RecommendationSettingsResolver;
+use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 
@@ -70,6 +73,52 @@ final class ForYouFeedResponderTest extends DbTestCase
         self::assertIsArray($first);
 
         self::assertSame(88, $first['recommendationScore']);
+    }
+
+    public function testReasonsShownWithoutDebugWhenShowReasonsOn(): void
+    {
+        $this->persistSettings(showReasons: true, debugEnabled: false);
+
+        $page = $this->responder()->page($this->user, null, 50);
+        self::assertIsArray($page['entries']);
+        $first = $page['entries'][0];
+        self::assertIsArray($first);
+
+        self::assertSame('reason g1', $first['recommendationReason']);
+        self::assertArrayNotHasKey('recommendationScore', $first);
+    }
+
+    public function testScoreShownWithoutReasonsWhenOnlyDebugOn(): void
+    {
+        $this->persistSettings(showReasons: false, debugEnabled: true);
+
+        $page = $this->responder()->page($this->user, null, 50);
+        self::assertIsArray($page['entries']);
+        $first = $page['entries'][0];
+        self::assertIsArray($first);
+
+        self::assertSame(88, $first['recommendationScore']);
+        self::assertArrayNotHasKey('recommendationReason', $first);
+    }
+
+    private function persistSettings(bool $showReasons, bool $debugEnabled): void
+    {
+        $settings = new RecommendationSettings($this->user);
+        $settings->update(new RecommendationSettingsValues(
+            guidancePrompt: null,
+            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
+            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
+            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
+            candidatePoolSize: EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
+            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
+            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
+            contextWindow: null,
+            batchCount: null,
+            debugEnabled: $debugEnabled,
+            showReasons: $showReasons,
+        ));
+        $this->em->persist($settings);
+        $this->em->flush();
     }
 
     private function responder(): ForYouFeedResponder
