@@ -23,8 +23,10 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  */
 final readonly class FailoverRequestSender
 {
-    public function __construct(private HttpClientInterface $httpClient)
-    {
+    public function __construct(
+        private HttpClientInterface $httpClient,
+        private ProxyEgressResolver $proxyEgressResolver,
+    ) {
     }
 
     /**
@@ -35,14 +37,70 @@ final readonly class FailoverRequestSender
      */
     public function send(string $method, string $url, GuardedUrl $guarded, array $options): ResponseInterface
     {
+        $proxy = $this->proxyEgressResolver->resolve();
+
+        if (null !== $proxy) {
+            $proxiedResponse = $this->attemptProxied($method, $url, $options, $proxy);
+            if (null !== $proxiedResponse) {
+                return $proxiedResponse;
+            }
+            // fall through to the pinned direct families
+        }
+
+        return $this->sendPinnedFamilies($method, $url, $guarded, $options);
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     *
+     * @return ResponseInterface|null the proxied answer, or null to fall
+     *                                 through to a pinned direct attempt
+     *
+     * @throws TransportExceptionInterface when direct fallback is unavailable
+     */
+    private function attemptProxied(
+        string $method,
+        string $url,
+        array $options,
+        ProxyConfig $proxy,
+    ): ?ResponseInterface {
+        $response = $this->httpClient->request($method, $url, [...$options, ...EgressOptions::proxied($proxy)]);
+
+        try {
+            $response->getStatusCode();
+
+            return $response;
+        } catch (TransportExceptionInterface $transportError) {
+            $response->cancel();
+            // No direct fallback when the admin turned it off: falling back to
+            // a pinned direct request would leak the real server IP.
+            if (!$proxy->directFallback || !CrossFamilyFailover::isWarranted($transportError)) {
+                throw $transportError;
+            }
+
+            return null;
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $options request options; any `resolve` is
+     *                                       overridden per family attempt
+     *
+     * @throws TransportExceptionInterface when the final family's connection fails
+     */
+    private function sendPinnedFamilies(
+        string $method,
+        string $url,
+        GuardedUrl $guarded,
+        array $options,
+    ): ResponseInterface {
         $attempts = $guarded->pinnedAddressAttempts();
         $finalAttempt = \count($attempts) - 1;
 
         foreach ($attempts as $index => $pinnedAddresses) {
             $response = $this->httpClient->request($method, $url, [
                 ...$options,
-                'resolve' => [$guarded->host => $pinnedAddresses],
-                ...CrossFamilyFailover::freshConnectionAfter($index),
+                ...EgressOptions::pinned($guarded, $index),
             ]);
             $canFailOver = $index < $finalAttempt;
 

@@ -1,0 +1,110 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Fetch;
+
+use App\Enum\ProxyType;
+use App\Service\Fetch\FailoverRequestSender;
+use App\Service\Fetch\GuardedUrl;
+use App\Service\Fetch\ProxyConfig;
+use App\Service\Fetch\ProxyEgressResolver;
+use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+
+final class FailoverRequestSenderProxyTest extends TestCase
+{
+    public function testProxyRequestOmitsResolveAndIsTriedFirst(): void
+    {
+        $calls = [];
+        $client = new MockHttpClient(function (string $m, string $u, array $o) use (&$calls): MockResponse {
+            $calls[] = $o;
+
+            return new MockResponse('ok');
+        });
+        $sender = new FailoverRequestSender($client, $this->resolver($this->proxy()));
+
+        $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
+
+        self::assertCount(1, $calls);
+        self::assertSame('socks5h://p:1080', $calls[0]['proxy'] ?? null);
+        self::assertArrayNotHasKey('resolve', $calls[0]);
+    }
+
+    public function testProxyTransportFailureFallsThroughToPinnedDirect(): void
+    {
+        $calls = [];
+        $client = new MockHttpClient(function (string $m, string $u, array $o) use (&$calls): MockResponse {
+            $calls[] = $o;
+            if (isset($o['proxy'])) {
+                return new MockResponse('', ['error' => 'proxy down']);
+            }
+
+            return new MockResponse('ok');
+        });
+        $sender = new FailoverRequestSender($client, $this->resolver($this->proxy()));
+
+        $status = $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
+
+        self::assertSame(200, $status);
+        self::assertArrayHasKey('proxy', $calls[0]);
+        self::assertArrayHasKey('resolve', $calls[1]);
+    }
+
+    public function testNullResolverIsByteForByteTheCurrentLoop(): void
+    {
+        $calls = [];
+        $client = new MockHttpClient(function (string $m, string $u, array $o) use (&$calls): MockResponse {
+            $calls[] = $o;
+
+            return new MockResponse('ok');
+        });
+        $sender = new FailoverRequestSender($client, $this->resolver(null));
+
+        $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
+
+        self::assertArrayHasKey('resolve', $calls[0]);
+        self::assertArrayNotHasKey('proxy', $calls[0]);
+    }
+
+    public function testDirectFallbackDisabledThrowsInsteadOfFallingThrough(): void
+    {
+        $calls = [];
+        $client = new MockHttpClient(function (string $m, string $u, array $o) use (&$calls): MockResponse {
+            $calls[] = $o;
+
+            return new MockResponse('', ['error' => 'proxy down']);
+        });
+        $sender = new FailoverRequestSender($client, $this->resolver($this->proxy(directFallback: false)));
+
+        $this->expectException(TransportExceptionInterface::class);
+
+        try {
+            $sender->send('GET', 'https://page.example', $this->guarded(), []);
+        } finally {
+            self::assertCount(1, $calls);
+            self::assertArrayHasKey('proxy', $calls[0]);
+            self::assertArrayNotHasKey('resolve', $calls[0]);
+        }
+    }
+
+    private function resolver(?ProxyConfig $config): ProxyEgressResolver
+    {
+        $resolver = $this->createStub(ProxyEgressResolver::class);
+        $resolver->method('resolve')->willReturn($config);
+
+        return $resolver;
+    }
+
+    private function proxy(bool $directFallback = true): ProxyConfig
+    {
+        return new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null, $directFallback);
+    }
+
+    private function guarded(): GuardedUrl
+    {
+        return new GuardedUrl('page.example', ['203.0.113.9']);
+    }
+}
