@@ -22,13 +22,22 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
 {
     /**
      * @param callable|iterable<MockResponse> $responses
+     * @param array<string, list<string>>     $dnsOverrides
      */
-    private function fetcher(callable|iterable $responses, ?ProxyConfig $resolvedProxy): ConcurrentFeedFetcher
-    {
-        $resolver = new class implements DnsResolverInterface {
+    private function fetcher(
+        callable|iterable $responses,
+        ?ProxyConfig $resolvedProxy,
+        array $dnsOverrides = [],
+    ): ConcurrentFeedFetcher {
+        $resolver = new class ($dnsOverrides) implements DnsResolverInterface {
+            /** @param array<string, list<string>> $overrides */
+            public function __construct(private readonly array $overrides)
+            {
+            }
+
             public function resolve(string $hostname): array
             {
-                return ['93.184.216.34'];
+                return $this->overrides[$hostname] ?? ['93.184.216.34'];
             }
         };
 
@@ -123,6 +132,34 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
         );
 
         $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://example.com/feed')]));
+
+        self::assertNotNull($outcomes[1]->failure());
+        self::assertCount(1, $seenOptions);
+        self::assertSame('socks5h://p:1080', $seenOptions[0]['proxy']);
+    }
+
+    /**
+     * SECURITY: a dual-stack host must not let the cross-family retry smuggle a
+     * still-proxied attempt back onto the wire. With directFallback off, the
+     * proxied failure has to be terminal after exactly one request, regardless
+     * of how many address families the guard could otherwise walk through.
+     */
+    public function testProxiedFailureOnADualStackHostIsTerminalWhenDirectFallbackIsDisabled(): void
+    {
+        $proxy = new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null, false);
+        /** @var list<array<string, mixed>> $seenOptions */
+        $seenOptions = [];
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use (&$seenOptions): MockResponse {
+                $seenOptions[] = $options;
+
+                return new MockResponse('', ['error' => 'Connection reset by peer']);
+            },
+            $proxy,
+            dnsOverrides: ['dual.example.com' => ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34']],
+        );
+
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://dual.example.com/feed')]));
 
         self::assertNotNull($outcomes[1]->failure());
         self::assertCount(1, $seenOptions);

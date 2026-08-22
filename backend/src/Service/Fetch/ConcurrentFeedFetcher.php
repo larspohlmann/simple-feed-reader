@@ -126,7 +126,12 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
             } catch (FetchException $e) {
                 $this->retire($inFlight, $response);
 
-                $requeue = $this->fallbackFor($attempt) ?? $this->overNextFamily($attempt, $e);
+                // A still-proxied attempt (directFallback off, so no fallback
+                // applies) must not fall through to a cross-family retry: that
+                // would re-send the same proxied request per address family,
+                // when the spec requires the failure to be terminal instead.
+                $requeue = $this->fallbackFor($attempt)
+                    ?? ($attempt->isProxied() ? null : $this->overNextFamily($attempt, $e));
                 if (null !== $requeue) {
                     $queue->requeue($requeue);
 
