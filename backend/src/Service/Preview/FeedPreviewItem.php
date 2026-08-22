@@ -8,11 +8,13 @@ final readonly class FeedPreviewItem
 {
     public function __construct(
         public string $title,
-        public ?\DateTimeImmutable $publishedAt,
+        public ?string $url,
         public ?string $author,
-        public bool $hasImage,
-        public int $textLength,
-        public string $snippet,
+        public ?string $summary,
+        public ?string $imageUrl,
+        public ?int $imageWidth,
+        public ?int $imageHeight,
+        public ?\DateTimeImmutable $publishedAt,
     ) {
     }
 }

@@ -16,10 +16,11 @@ use App\Service\Scraper\HtmlItemExtractor;
 
 /**
  * Turns a user-entered URL into something to subscribe to, trying five sources
- * in decreasing order of certainty: the URL itself parsed as a feed; a
- * WordPress REST posts endpoint (WordPressRestProbe, offered first alongside
- * the page's advertised feeds) and the feeds the page points at (FeedLinkScanner,
- * exact first and guessed second); a feed under one of the conventional paths
+ * in decreasing order of certainty: the URL itself parsed as a feed; the feeds
+ * the page points at (FeedLinkScanner, exact first and guessed second) followed
+ * by a WordPress REST posts endpoint (WordPressRestProbe) as a fallback — the
+ * page's own advertised feeds lead, the REST alternative trails; a feed under
+ * one of the conventional paths
  * (WellKnownFeedProbe) — which is also the only source left when the page
  * never arrives, as on the sites that refuse every non-browser client; and
  * finally a synthetic 'scraped' candidate built from the page's own article
@@ -95,10 +96,14 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
             return FeedDiscoveryResult::scrapeFailed('blocked');
         }
 
+        // Native feeds first: an <link rel="alternate"> RSS/Atom is the site's
+        // own declared feed, so it leads the list and is the one the dialog
+        // opens expanded. The WordPress REST alternative follows as a fallback
+        // for sites whose RSS is truncated.
         $restCandidate = $this->wordPressRest->offer($body, $response->finalUrl);
         $candidates = array_values(array_filter([
-            $restCandidate,
             ...$this->links->scan($body, $response->finalUrl),
+            $restCandidate,
         ]));
 
         return [] !== $candidates

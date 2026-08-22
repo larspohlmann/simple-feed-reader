@@ -75,7 +75,7 @@ describe('AddFeedDialogComponent', () => {
     const pills = (f.nativeElement as HTMLElement).querySelectorAll('button.tag-pill');
     expect(pills.length).toBe(2);
 
-    f.componentInstance.toggle(2);
+    f.componentInstance.toggleTag(2);
     f.componentInstance.form.setValue({ url: 'https://example.com/feed' });
     f.componentInstance.submit();
 
@@ -87,11 +87,11 @@ describe('AddFeedDialogComponent', () => {
 
   it('carries the selected tags through to a picked candidate', () => {
     const f = create();
-    f.componentInstance.toggle(1);
+    f.componentInstance.toggleTag(1);
     f.componentInstance.form.setValue({ url: 'https://example.com' });
     f.componentInstance.submit();
-    // The first POST resolves to candidates, not a subscription, so no tags are
-    // applied yet — they must ride along on the follow-up pick.
+    // The first POST resolves to a SINGLE candidate, which auto-expands and
+    // previews — tags are not applied yet, they ride along on the follow-up pick.
     ctrl
       .expectOne('https://api.test/api/subscriptions')
       .flush({ candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss' }] });
@@ -110,24 +110,18 @@ describe('AddFeedDialogComponent', () => {
     expect(close).toHaveBeenCalledWith({ id: 4 });
   });
 
-  it('lists candidates as cards with previews and subscribes via the Subscribe button', () => {
+  it('auto-expands and previews a single candidate', () => {
     const f = create();
     f.componentInstance.form.setValue({ url: 'https://example.com' });
     f.componentInstance.submit();
     ctrl.expectOne('https://api.test/api/subscriptions').flush({
-      candidates: [
-        { url: 'https://f/rss', title: 'RSS', format: 'rss' },
-        { url: 'https://f/atom', title: 'ATOM', format: 'atom' },
-      ],
+      candidates: [{ url: 'https://f/rss', title: 'RSS', format: 'rss' }],
     });
     f.detectChanges();
-    expect(f.componentInstance.candidates().length).toBe(2);
+    expect(f.componentInstance.candidates().length).toBe(1);
 
     const rssReq = ctrl.expectOne(
       (r) => r.url.endsWith('/api/feeds/preview') && r.body.url === 'https://f/rss',
-    );
-    const atomReq = ctrl.expectOne(
-      (r) => r.url.endsWith('/api/feeds/preview') && r.body.url === 'https://f/atom',
     );
     // XML candidates preview with the bare URL — only scraped ones carry a format.
     expect(rssReq.request.body).toEqual({ url: 'https://f/rss' });
@@ -141,46 +135,128 @@ describe('AddFeedDialogComponent', () => {
         items: [
           {
             title: 'First headline',
+            url: 'https://f/rss/1',
             publishedAt: null,
             author: null,
-            hasImage: true,
-            textLength: 500,
-            snippet: 'snip',
+            summary: 'snip',
+            imageUrl: 'https://img.example/a.jpg',
+            imageWidth: 800,
+            imageHeight: 600,
           },
           {
             title: 'Second headline',
+            url: 'https://f/rss/2',
             publishedAt: null,
             author: null,
-            hasImage: false,
-            textLength: 300,
-            snippet: 'snip2',
+            summary: 'snip2',
+            imageUrl: null,
+            imageWidth: null,
+            imageHeight: null,
           },
         ],
       },
     });
-    atomReq.flush('x', { status: 500, statusText: 'err' });
     f.detectChanges();
 
     const cards = (f.nativeElement as HTMLElement).querySelectorAll('.card');
-    expect(cards.length).toBe(2);
+    expect(cards.length).toBe(1);
     // The footer "Add" submit is hidden once cards (each with Subscribe) show.
     expect((f.nativeElement as HTMLElement).querySelector('button[type="submit"]')).toBeNull();
-    const [rssCard, atomCard] = Array.from(cards);
+    const rssCard = cards[0];
     expect(rssCard.textContent).toContain('Full text');
     expect(rssCard.textContent).toContain('With images');
     expect(rssCard.textContent).toContain('First headline');
-    expect(atomCard.textContent).toContain('Preview unavailable');
-    expect(atomCard.querySelector('.subscribe')).toBeTruthy();
-    // The format label shows on every card regardless of preview state —
-    // it comes from discovery, so a failed preview still tells you the type.
     expect(rssCard.querySelector('.badge.format')?.textContent?.trim()).toBe('RSS');
-    expect(atomCard.querySelector('.badge.format')?.textContent?.trim()).toBe('Atom');
+    // Exactly one preview request was made — a second unmatched one here would
+    // fail afterEach's ctrl.verify().
+    const rows = (f.nativeElement as HTMLElement).querySelectorAll('app-preview-entry-row');
+    expect(rows.length).toBeGreaterThan(0);
 
     (rssCard.querySelector('.subscribe') as HTMLButtonElement).click();
     const subReq = ctrl.expectOne('https://api.test/api/subscriptions');
     expect(subReq.request.body).toEqual({ url: 'https://f/rss' });
     subReq.flush({ subscription: { id: 3 } }, { status: 201, statusText: 'Created' });
     expect(close).toHaveBeenCalledWith({ id: 3 });
+  });
+
+  it('auto-previews the first candidate and previews the rest lazily on click', () => {
+    const f = create();
+    f.componentInstance.form.setValue({ url: 'https://example.com' });
+    f.componentInstance.submit();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      candidates: [
+        { url: 'https://f/rss', title: 'RSS', format: 'rss' },
+        { url: 'https://f/atom', title: 'ATOM', format: 'atom' },
+      ],
+    });
+    f.detectChanges();
+    expect(f.componentInstance.candidates().length).toBe(2);
+
+    // The first candidate auto-expands, so its preview is fetched immediately;
+    // the second is not previewed until the user opens it.
+    const rssReq = ctrl.expectOne(
+      (r) => r.url.endsWith('/api/feeds/preview') && r.body.url === 'https://f/rss',
+    );
+    ctrl.expectNone((r) => r.url.endsWith('/api/feeds/preview') && r.body.url === 'https://f/atom');
+    rssReq.flush({
+      feed: {
+        title: 'RSS Feed',
+        itemCount: 2,
+        content: 'full',
+        hasImages: true,
+        items: [
+          {
+            title: 'First headline',
+            url: 'https://f/rss/1',
+            publishedAt: null,
+            author: null,
+            summary: 'snip',
+            imageUrl: 'https://img.example/a.jpg',
+            imageWidth: 800,
+            imageHeight: 600,
+          },
+        ],
+      },
+    });
+    f.detectChanges();
+
+    const cards = (f.nativeElement as HTMLElement).querySelectorAll('.card');
+    expect(cards.length).toBe(2);
+    const [rssCard, atomCard] = Array.from(cards);
+    expect(rssCard.textContent).toContain('First headline');
+    expect(rssCard.querySelector('app-preview-entry-row')).not.toBeNull();
+    // The second candidate has not been fetched or rendered yet.
+    expect(atomCard.querySelector('app-preview-entry-row')).toBeNull();
+
+    // Opening the second candidate via its Preview pill fetches its preview
+    // now (and collapses the first, since only one expands at a time).
+    (atomCard.querySelector('.preview-toggle') as HTMLButtonElement).click();
+    f.detectChanges();
+    const atomReq = ctrl.expectOne(
+      (r) => r.url.endsWith('/api/feeds/preview') && r.body.url === 'https://f/atom',
+    );
+    atomReq.flush({
+      feed: {
+        title: 'ATOM Feed',
+        itemCount: 1,
+        content: 'full',
+        hasImages: false,
+        items: [
+          {
+            title: 'Second headline',
+            url: 'https://f/atom/1',
+            publishedAt: null,
+            author: null,
+            summary: 'snip',
+            imageUrl: null,
+            imageWidth: null,
+            imageHeight: null,
+          },
+        ],
+      },
+    });
+    f.detectChanges();
+    expect(atomCard.querySelector('app-preview-entry-row')).not.toBeNull();
   });
 
   it('labels a scraped candidate and subscribes/previews with the scraped format', () => {

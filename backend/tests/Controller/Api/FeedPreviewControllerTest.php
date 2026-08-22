@@ -131,12 +131,18 @@ final class FeedPreviewControllerTest extends WebTestCase
         self::assertCount(1, $feed['items']);
         $item = $feed['items'][0];
         self::assertIsArray($item);
+        self::assertSame(
+            ['title', 'url', 'author', 'summary', 'imageUrl', 'imageWidth', 'imageHeight', 'publishedAt'],
+            array_keys($item),
+        );
         self::assertSame('First post', $item['title']);
+        self::assertSame('https://example.com/1', $item['url']);
         self::assertSame('A. Writer', $item['author']);
-        self::assertTrue($item['hasImage']);
-        self::assertArrayHasKey('textLength', $item);
-        self::assertArrayHasKey('snippet', $item);
-        self::assertArrayHasKey('publishedAt', $item);
+        self::assertSame('A short teaser for the first post.', $item['summary']);
+        self::assertSame('https://example.com/pic.jpg', $item['imageUrl']);
+        self::assertArrayHasKey('imageWidth', $item);
+        self::assertArrayHasKey('imageHeight', $item);
+        self::assertSame('2026-07-01T10:00:00+00:00', $item['publishedAt']);
     }
 
     public function testScrapedFormatPreviewsTheHtmlPageAsAFeed(): void

@@ -64,7 +64,7 @@ final class FeedDiscoveryTest extends KernelTestCase
         }
     }
 
-    public function testOffersTheRestCandidateBeforeTheRssCandidate(): void
+    public function testOffersTheNativeRssCandidateBeforeTheRestCandidate(): void
     {
         // @lang TEXT
         $html = /** @lang TEXT */ <<<'HTML'
@@ -92,9 +92,9 @@ final class FeedDiscoveryTest extends KernelTestCase
         $result = $this->discovery($fetcher)->discover('https://wp.example/', ScrapeFallback::Enabled);
 
         self::assertCount(2, $result->candidates);
-        self::assertSame('wp-json', $result->candidates[0]->format);
-        self::assertSame('https://wp.example/feed/', $result->candidates[1]->url);
-        self::assertSame('rss', $result->candidates[1]->format);
+        self::assertSame('https://wp.example/feed/', $result->candidates[0]->url);
+        self::assertSame('rss', $result->candidates[0]->format);
+        self::assertSame('wp-json', $result->candidates[1]->format);
     }
 
     public function testAGatedRestApiLeavesOnlyTheRssCandidate(): void

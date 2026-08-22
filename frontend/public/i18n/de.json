@@ -316,6 +316,8 @@
       "noRecentItems": "Keine aktuellen Einträge",
       "subscribe": "Abonnieren",
       "noneFound": "Unter dieser Adresse wurden keine Feeds gefunden.",
+      "preview": "Vorschau",
+      "hidePreview": "Vorschau ausblenden",
       "previewUnavailable": "Vorschau nicht verfügbar",
       "contentFull": "Volltext",
       "contentSummary": "Nur Zusammenfassung",

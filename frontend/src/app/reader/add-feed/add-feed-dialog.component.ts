@@ -11,6 +11,8 @@ import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { FieldComponent } from '../../shared/field/field.component';
 import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
+import { SkeletonComponent } from '../../shared/skeleton/skeleton.component';
+import { PreviewEntryRowComponent } from './preview-entry-row/preview-entry-row.component';
 import { parseProblem } from '../../core/problem';
 import { ReaderApi } from '../reader-api';
 import { TagsStore } from '../tags.store';
@@ -33,6 +35,8 @@ type PreviewState =
     ButtonComponent,
     OverlayPanelComponent,
     SpinnerComponent,
+    SkeletonComponent,
+    PreviewEntryRowComponent,
     TranslocoPipe,
   ],
   templateUrl: './add-feed-dialog.component.html',
@@ -55,6 +59,8 @@ export class AddFeedDialogComponent implements OnInit {
   /** Tags to apply to the new feed; they persist across a search so picking a
    *  discovered candidate carries the same selection through. */
   readonly checked = signal<Set<number>>(new Set());
+  /** The one candidate card currently showing its preview rows, by URL. */
+  readonly expanded = signal<string | null>(null);
 
   constructor() {
     // A scrape failure is about the URL as typed; editing it starts over.
@@ -67,7 +73,7 @@ export class AddFeedDialogComponent implements OnInit {
     if (this.tagsStore.tags().length === 0) this.tagsStore.load();
   }
 
-  toggle(id: number): void {
+  toggleTag(id: number): void {
     this.checked.update((set) => {
       const next = new Set(set);
       if (next.has(id)) {
@@ -140,6 +146,17 @@ export class AddFeedDialogComponent implements OnInit {
     this.subscribe(c.url, this.storedFormat(c));
   }
 
+  /** Expands or collapses a candidate's preview rows; expanding fetches the
+   *  preview lazily, only for the candidate the user actually opens. */
+  toggle(candidate: FeedCandidate): void {
+    if (this.expanded() === candidate.url) {
+      this.expanded.set(null);
+      return;
+    }
+    this.expanded.set(candidate.url);
+    this.ensurePreview(candidate);
+  }
+
   /** Formats the backend must persist verbatim (it cannot re-derive them by
    *  parsing): scraped pages and WordPress REST endpoints. Others re-run
    *  discovery, so they pass no format. */
@@ -168,7 +185,15 @@ export class AddFeedDialogComponent implements OnInit {
         } else {
           this.candidates.set(res.candidates);
           this.searched.set(true);
-          this.loadPreviews(res.candidates);
+          this.previews.set({});
+          this.expanded.set(null);
+          // Open the first candidate immediately so a preview is always in
+          // view — discovery orders native feeds first, so the leading card is
+          // the recommended one. The rest stay collapsed and fetch lazily when
+          // the user opens them.
+          if (res.candidates.length > 0) {
+            this.toggle(res.candidates[0]);
+          }
         }
       },
       error: (e: HttpErrorResponse) => {
@@ -179,18 +204,24 @@ export class AddFeedDialogComponent implements OnInit {
     });
   }
 
-  private loadPreviews(candidates: FeedCandidate[]): void {
-    this.previews.set(Object.fromEntries(candidates.map((c) => [c.url, { status: 'loading' }])));
-    for (const c of candidates) {
-      this.api.previewFeed(c.url, this.storedFormat(c)).subscribe({
-        next: (r) =>
-          this.previews.update((m) => ({ ...m, [c.url]: { status: 'ok', preview: r.feed } })),
-        error: (e: HttpErrorResponse) =>
-          this.previews.update((m) => ({
-            ...m,
-            [c.url]: { status: 'error', message: parseProblem(e).detail },
-          })),
-      });
+  /** Fetches a candidate's preview once, the first time it is expanded — a
+   *  second expand of the same candidate must not re-fetch. */
+  private ensurePreview(candidate: FeedCandidate): void {
+    if (this.previews()[candidate.url]) {
+      return;
     }
+    this.previews.update((m) => ({ ...m, [candidate.url]: { status: 'loading' } }));
+    this.api.previewFeed(candidate.url, this.storedFormat(candidate)).subscribe({
+      next: (r) =>
+        this.previews.update((m) => ({
+          ...m,
+          [candidate.url]: { status: 'ok', preview: r.feed },
+        })),
+      error: (e: HttpErrorResponse) =>
+        this.previews.update((m) => ({
+          ...m,
+          [candidate.url]: { status: 'error', message: parseProblem(e).detail },
+        })),
+    });
   }
 }

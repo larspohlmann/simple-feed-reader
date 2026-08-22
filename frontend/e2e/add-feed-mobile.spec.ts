@@ -56,15 +56,17 @@ async function stubDiscovery(page: Page): Promise<void> {
           itemCount: 12,
           content: 'full',
           hasImages: true,
-          // Three sample headlines per card is what the template renders, and
-          // it is what makes the list outgrow the screen.
-          items: ['First headline', 'Second headline', 'Third headline'].map((title) => ({
-            title,
-            publishedAt: null,
+          // The backend caps the preview payload at three items; the expanded
+          // card plus the candidate list still outgrow the screen and scroll.
+          items: Array.from({ length: 3 }, (_unused, index) => ({
+            title: `Sample headline ${index + 1}`,
+            url: `https://example.com/a${index + 1}`,
             author: null,
-            hasImage: true,
-            textLength: 800,
-            snippet: 'snippet',
+            summary: 'A short snippet of the article body.',
+            imageUrl: 'https://img.example/a.jpg',
+            imageWidth: 800,
+            imageHeight: 600,
+            publishedAt: '2026-08-20T10:00:00+00:00',
           })),
         },
       },
@@ -105,18 +107,27 @@ test.describe('Add feed on a phone', () => {
     const subscribes = dialog.getByRole('button', { name: 'Subscribe' });
     await expect(subscribes).toHaveCount(CANDIDATES.length);
 
+    // The first candidate opens automatically, so its sample entries render as
+    // preview rows without a click — capped at three even though the feed
+    // carries eight.
+    await expect(dialog.locator('app-preview-entry-row').first()).toBeVisible();
+    await expect(dialog.locator('app-preview-entry-row')).toHaveCount(3);
+
     // The dialog itself must fit the screen. Before the fix it was ~1.5x the
     // viewport, and the overflow had nowhere to go.
     const box = (await dialog.boundingBox())!;
     expect(box.height).toBeLessThanOrEqual(PHONE.height);
+    expect(box.width).toBeLessThanOrEqual(PHONE.width);
     expect(box.y).toBeGreaterThanOrEqual(0);
 
     // The dialog's body, not the page, is what scrolls: it must actually be
     // overflowing here, or this test would pass for the wrong reason. The body
     // is app-overlay-panel's — every interrupt surface shares that one frame
     // and its one scroll region (#126), so the candidate list itself no longer
-    // scrolls on its own.
-    const list = dialog.locator('.body');
+    // scrolls on its own. `.first()`: the expanded candidate's own
+    // app-preview-entry-row rows each carry a `.body` class too, and they
+    // nest inside the panel's, so the panel's is first in document order.
+    const list = dialog.locator('.body').first();
     const { scrollHeight, clientHeight } = await list.evaluate((el) => ({
       scrollHeight: el.scrollHeight,
       clientHeight: el.clientHeight,
@@ -150,7 +161,12 @@ test.describe('Add feed on a phone', () => {
 
     const cancel = dialog.getByRole('button', { name: 'Cancel' });
     const before = (await cancel.boundingBox())!;
-    await dialog.locator('.body').evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    // `.first()`: the panel's own scroll body, not the `.body` divs the expanded
+    // candidate's preview rows also carry.
+    await dialog
+      .locator('.body')
+      .first()
+      .evaluate((el) => el.scrollTo(0, el.scrollHeight));
     const after = (await cancel.boundingBox())!;
     expect(after.y).toBeCloseTo(before.y, 0);
 
