@@ -127,7 +127,9 @@ final class VersionControllerTest extends WebTestCase
             {
             }
 
-            public function read(): ?LatestRelease
+            // Narrowed to non-null on purpose: this stub always reports a
+            // release, which is the whole point of the mapping it drives.
+            public function read(): LatestRelease
             {
                 return $this->latest;
             }

@@ -52,6 +52,15 @@ final class SemanticVersionTest extends TestCase
         self::assertNull(SemanticVersion::tryParse('v1.2'));
     }
 
+    public function testTryParseRejectsAVersionBuriedInOtherText(): void
+    {
+        // The pattern is anchored at both ends: a version must be the WHOLE
+        // string, not a fragment of it.
+        self::assertNull(SemanticVersion::tryParse('release 1.2.3'));
+        self::assertNull(SemanticVersion::tryParse('1.2.3.4'));
+        self::assertNull(SemanticVersion::tryParse('1.2.3-beta'));
+    }
+
     public function testTryParseAcceptsAReleaseAndAPrerelease(): void
     {
         self::assertNotNull(SemanticVersion::tryParse('v1.4.2'));

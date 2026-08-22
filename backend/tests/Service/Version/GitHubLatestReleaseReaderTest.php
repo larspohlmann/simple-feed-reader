@@ -41,6 +41,24 @@ final class GitHubLatestReleaseReaderTest extends TestCase
         self::assertNull($this->reader($client)->read());
     }
 
+    public function testReturnsNullWhenTheReleaseIsMissingItsTag(): void
+    {
+        $client = new MockHttpClient(new MockResponse((string) json_encode([
+            'html_url' => 'https://github.com/larspohlmann/simple-feed-reader/releases/tag/v1.4.2',
+        ])));
+
+        self::assertNull($this->reader($client)->read());
+    }
+
+    public function testReturnsNullWhenTheReleaseIsMissingItsNotesUrl(): void
+    {
+        $client = new MockHttpClient(new MockResponse((string) json_encode([
+            'tag_name' => 'v1.4.2',
+        ])));
+
+        self::assertNull($this->reader($client)->read());
+    }
+
     public function testReturnsNullWhenGitHubCannotBeReached(): void
     {
         $client = new MockHttpClient(static function (): MockResponse {

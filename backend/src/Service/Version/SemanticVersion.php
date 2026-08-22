@@ -56,7 +56,7 @@ final readonly class SemanticVersion
         return $candidateVersion->isNewerThan($currentVersion);
     }
 
-    public function isNewerThan(self $other): bool
+    private function isNewerThan(self $other): bool
     {
         if ($this->major !== $other->major) {
             return $this->major > $other->major;
