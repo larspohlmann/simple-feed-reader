@@ -77,6 +77,19 @@ export const REFRESH_REVEAL = 48;
 // sooner would only flash one, which reads as a glitch rather than as progress.
 const RELOAD_SPINNER_DELAY_MS = 150;
 
+/** The heading icon for each fixed view, held to the very glyph its sidebar row
+ *  shows so the list a reader lands in reads as the row they clicked (#411). A
+ *  tag and a subscription are absent on purpose: their heading already carries a
+ *  tag glyph and a favicon, so a fixed icon would double up. */
+const FIXED_VIEW_ICON: Partial<Record<Selection['kind'], string>> = {
+  all: 'inbox',
+  favorites: 'star',
+  kept: 'bookmark',
+  viewed: 'history',
+  'for-you': 'auto_awesome',
+  search: 'search',
+};
+
 /** A for-you run-boundary divider — a rendering-only block the entry list
  *  interleaves between per-run magazine block groups (#348). Kept out of
  *  MagazineBlock so the planner, which never emits it, stays unaware. */
@@ -222,6 +235,10 @@ export class EntryListComponent implements OnDestroy {
     const s = this.selection();
     return s.kind === 'search' && isWholeWordTerm(s.term ?? '');
   });
+
+  /** The heading's leading icon for a fixed view, or null for a tag or a
+   *  subscription (their glyph and favicon already lead the heading) (#411). */
+  readonly titleIcon = computed(() => FIXED_VIEW_ICON[this.selection().kind] ?? null);
 
   /** A search never renders as a magazine — its rows carry marked terms, and a
    *  spread would scatter them across eight block templates. */

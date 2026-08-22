@@ -23,6 +23,13 @@
                long the name is. -->
           <app-favicon [url]="titleFaviconUrl()" [size]="collapsed() ? 16 : 20" />
         }
+        @if (titleIcon(); as icon) {
+          <!-- The fixed views (All items, Favorites, Kept, Recently read, For
+               you, search) lead with the same glyph their sidebar row shows.
+               Sized like the tag glyph, and stepped down on collapse for the
+               same reason: a fixed px would tower over the 13px heading (#411). -->
+          <app-icon [name]="icon" [size]="collapsed() ? 'xs' : 'md'" />
+        }
         <span>{{ title() }}</span>
         @if (showWholeWordBadge()) {
           <!-- Carries the mode into the heading's own accessible name, so a

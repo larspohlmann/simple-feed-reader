@@ -527,6 +527,8 @@
     "kept": "Kept",
     "viewed": "Recently read",
     "forYou": "For you",
+    "tagFallback": "Tag",
+    "feedFallback": "Feed",
     "forYouGeneratedAt": "Generated {{ago}}",
     "tags": "Tags",
     "feeds": "Feeds",
