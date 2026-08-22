@@ -43,6 +43,19 @@ describe('SearchableSelectComponent', () => {
     expect(fixture.nativeElement.querySelector('[role="listbox"]')).toBeNull();
   });
 
+  it('renders the filter as a typeable text input', () => {
+    const fixture = mount();
+    open(fixture);
+    const search = fixture.nativeElement.querySelector('.search') as HTMLInputElement;
+    expect(search.tagName).toBe('INPUT');
+    expect(search.type).toBe('text');
+
+    search.value = 'gpt';
+    search.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.filter()).toBe('gpt');
+  });
+
   it('lists every option when opened', () => {
     const fixture = mount();
     open(fixture);

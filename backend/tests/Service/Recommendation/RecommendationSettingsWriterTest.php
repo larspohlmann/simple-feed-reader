@@ -93,6 +93,33 @@ final class RecommendationSettingsWriterTest extends DbTestCase
     }
 
     /**
+     * Regression (#541): save() rebuilds the values twice on the way to the row
+     * -- once to normalise the guidance, once to re-attach the stored profile --
+     * and both rebuilds must carry showReasons, or the incoming flag is silently
+     * reset to its constructor default and the toggle never sticks.
+     */
+    public function testSavingSettingsPersistsShowReasons(): void
+    {
+        $this->writer->save($this->user, new RecommendationSettingsValues(
+            guidancePrompt: 'Only cats.',
+            favoritesCap: 10,
+            keptCap: 20,
+            viewedCap: 30,
+            candidatePoolSize: 500,
+            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
+            picksLimit: 50,
+            contextWindow: 65536,
+            batchCount: 12,
+            debugEnabled: false,
+            showReasons: true,
+        ));
+
+        $reloaded = $this->settingsRepository->findForUser($this->user);
+        self::assertNotNull($reloaded);
+        self::assertTrue($reloaded->values()->showReasons);
+    }
+
+    /**
      * The regression case: save() is the settings-form path, and the form
      * never carries profileText (it is read-only there), so
      * SaveRecommendationSettingsRequest::values() always hands save() a

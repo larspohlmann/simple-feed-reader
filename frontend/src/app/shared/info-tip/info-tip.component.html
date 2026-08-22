@@ -17,6 +17,15 @@
          nothing for a key handler to do — the panel is not operable, and a
          keyboard user never activates a label by way of its text. -->
     <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events -->
-    <span class="panel" [id]="panelId" role="note" (click)="swallow($event)">{{ text() }}</span>
+    <span
+      class="panel"
+      [id]="panelId"
+      role="note"
+      [style.top.px]="panelTop()"
+      [style.left.px]="panelLeft()"
+      [style.max-width.px]="panelMaxWidth()"
+      (click)="swallow($event)"
+      >{{ text() }}</span
+    >
   }
 </span>

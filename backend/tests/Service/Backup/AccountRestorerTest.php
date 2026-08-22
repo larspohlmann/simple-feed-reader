@@ -98,6 +98,7 @@ final class AccountRestorerTest extends DbTestCase
             batchCount: 3,
             debugEnabled: true,
             autoGenerateIntervalHours: 8,
+            showReasons: true,
         );
     }
 

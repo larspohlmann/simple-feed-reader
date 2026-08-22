@@ -650,9 +650,12 @@ The one wrapper for a native `<details>`/`<summary>` collapsed-content pattern:
 a summary line and the projected body. No open/closed signal, no animation, no
 ARIA reimplementation — `<details>` already gives all three for free.
 
-| Input | Type | Default |
+| Input / output | Type | Default |
 |---|---|---|
-| `label` | `string` (required) | — |
+| `label` | `string` | `''` — an already-translated summary line |
+| `appearance` | `'pill' \| 'row' \| 'card-header' \| 'drill-in'` | `'pill'` |
+| `startOpen` | `boolean` | `false` — one-way; the caller's state decides the initial open state |
+| `opened` | `output<void>` | — fires when the body is revealed, and only then |
 
 ```html
 <app-disclosure [label]="'Show the fixed prompt' | transloco">
@@ -661,30 +664,46 @@ ARIA reimplementation — `<details>` already gives all three for free.
 ```
 
 `label` takes an already-translated string, not an i18n key — the component
-lives in `shared/` and must not hardcode a feature's translation keys.
-Extracted in #321 from the two places this shape had been hand-rolled
-(`recommendation-settings-card`'s fixed-prompt panel,
+lives in `shared/` and must not hardcode a feature's translation keys. A caller
+that needs a richer summary projects its own markup into the `[summary]` slot
+and leaves `label` unset. Extracted in #321 from the two places this shape had
+been hand-rolled (`recommendation-settings-card`'s fixed-prompt panel,
 `recommendation-debug-log`'s panel shell). It owns only the toggle line
 (cursor, colour, size, full-width block); a host that needs panel-level
 layout — margin, base font-size, the bordered entry rows — keeps that on its
 own wrapping class, the same way `recommendation-debug-log.component.scss`'s
 `.debug-panel` still does.
 
+`appearance` picks the summary chrome. `pill` (default) is the bordered toggle
+button. `row` is a flat, full-width list row for one disclosure per list item.
+`card-header` is a flat, full-width heading with no horizontal padding, so it
+aligns to a card's content box (`<app-settings-card>`'s collapsible mode).
+`drill-in` (#541) is a full-width Grouped list row: the projected heading/label
+sits on the left, a trailing chevron rotates when the `<details>` opens. It
+reuses the same `startOpen`/`opened`/`label`/`[summary]` API. Use `drill-in`
+for an advanced or Expert section that expands in place inside a settings
+group.
+
 ---
 
 ### `<app-info-tip>`
 
 The one info affordance (#372): a small ⓘ icon button that toggles an
-explanation panel. The panel renders **in flow** and pushes content down —
-deliberately not a floating popover, so it cannot clip or overflow on a
-phone. Click/tap to toggle; Escape or a press outside dismisses (via
-`DismissOnOutsideDirective`). The trigger is a real button with
-`aria-expanded`/`aria-controls`; the panel is `role="note"`. Under
-`pointer: coarse` the trigger grows to `--tap-target`.
+explanation panel. The panel is a **floating popover** (#541): it is
+`position: absolute`, anchored to the ⓘ trigger, right-aligned and
+viewport-clamped (`max-width: min(20rem, calc(100vw - var(--space-4)))`), so it
+never clips on a phone. Opening it does not shift the sibling layout. Click/tap
+to toggle; Escape or a press outside dismisses (via `DismissOnOutsideDirective`).
+Only one tip is open at a time — a module-level reference closes the previous
+one when a new one opens. The trigger is a real button with
+`aria-expanded`/`aria-controls`. Under `pointer: coarse` the trigger grows to
+`--tap-target`.
 
-**The component contributes no box of its own.** Host and wrapper are
-`display: contents`, so the trigger and the panel are laid out by the
-consumer's row directly (#433).
+`.wrap` is the positioning context: an inline anchor holding the trigger, with
+the panel absolutely positioned against it. This supersedes the earlier in-flow
+arrangement (#433/#372), where host and wrapper were `display: contents` and the
+panel claimed a full-width line below the row; #541 clamps the popover in CSS
+instead, so a settings row no longer grows a full-width block when a tip opens.
 
 | Input | Type | Default |
 |---|---|---|
@@ -692,32 +711,15 @@ consumer's row directly (#433).
 | `label` | `string` (required) | — |
 
 ```html
-<div class="row">
-  <label …>…</label>
-  <app-info-tip
-    [text]="'settings.ai.info.rowActions' | transloco"
-    [label]="'settings.ai.info.actionsLabel' | transloco"
-  />
-</div>
-```
-```scss
-.row {
-  display: flex;
-  flex-wrap: wrap; /* the panel's own line */
-}
+<app-info-tip
+  [text]="'settings.ai.info.rowActions' | transloco"
+  [label]="'settings.ai.info.actionsLabel' | transloco"
+/>
 ```
 
 `text` and `label` take **already-translated strings** (shared component, no
 feature keys). `label` is the accessible name of the trigger — pass the label
 of the control being explained.
-
-**A flex row owes the tip `flex-wrap: wrap`.** The panel carries
-`flex-basis: 100%`, so in a wrapping row it drops to a full-width line under
-the row that holds the ⓘ. In a row that does not wrap it stays on the line
-instead and takes width from the label — the #433 bug. In block flow nothing is
-owed: `display: block` already puts the panel underneath. Give a tip that has
-no row of its own a wrapping `<div>` rather than leaving it a bare child of a
-column: the column's `gap` would otherwise split the trigger from its panel.
 
 A tip inside a `<summary>` or a wrapping `<label>` is fine — both the trigger
 and the panel call `preventDefault` and `stopPropagation`, so no click of
@@ -728,6 +730,111 @@ theirs reaches the container to collapse the `<details>` or toggle the control.
 **Not for:** validation or state messages (that is `app-field`'s `error`/
 `hint`), or anything that must be visible without interaction — a danger
 zone keeps its always-visible note.
+
+---
+
+### Settings design system
+
+These primitives live in `frontend/src/app/shared/settings/` and are the
+canonical building blocks every settings and admin section composes. The
+"Grouped" look lives inside them and in the tokens — never in a feature `.scss`.
+A feature section stacks these components; its own stylesheet holds only layout
+glue. Introduced by #541.
+
+### `<app-settings-group>`
+
+One grouped-settings section: a header (a tinted icon chip, a title and an
+optional caption) above a card surface that projects the group's rows or
+disclosures.
+
+| Input | Type | Default |
+|---|---|---|
+| `icon` | `string` | `''` — a Material Symbol name, rendered via `<app-icon>` |
+| `title` | `string` | `''` |
+| `caption` | `string` | `''` — omits the caption line when empty |
+
+```html
+<app-settings-group
+  [icon]="'smart_toy'"
+  [title]="'settings.ai.forYou.title' | transloco"
+  [caption]="'settings.ai.forYou.caption' | transloco"
+>
+  <app-settings-row …>…</app-settings-row>
+</app-settings-group>
+```
+
+`icon`, `title` and `caption` take already-translated strings, not i18n keys —
+the component lives in `shared/` and must not hardcode a feature's translation
+keys. The body (rows, disclosures) projects through the default `<ng-content>`
+into a `.panel` card surface: `--surface-1`, `1px --border`, `--radius-lg`, and
+the new `--panel-shadow` token (defined for both modes in `theme/tokens.scss`).
+
+**Not for:** a section that is one flat card with no group header — that is
+still `<app-settings-card>`.
+
+### `<app-settings-row>`
+
+One settings row: a title and an optional description stacked on the left, a
+projected control on the right, vertically centred. It is the primitive a group
+stacks.
+
+| Input | Type | Default |
+|---|---|---|
+| `title` | `string` | `''` |
+| `description` | `string` | `''` — omits the `.row-desc` element when empty |
+| `stackable` | `boolean` | `false` |
+
+```html
+<app-settings-row
+  [title]="'settings.ai.length.title' | transloco"
+  [description]="'settings.ai.length.desc' | transloco"
+  [stackable]="true"
+>
+  <app-info-tip rowTitleTip [text]="…" [label]="…" />
+  <select>…</select>
+</app-settings-row>
+```
+
+The control projects through the default `<ng-content>`. A named
+`<ng-content select="[rowTitleTip]">` slot places an info-tip immediately after
+the title text inside `.row-title`. The inset hairline divider between rows is
+automatic — `:host(:not(:last-child))` draws it, so the parent group supplies
+only the box. When `stackable`, on a narrow viewport (`bp.$bp-sm`) a select or
+number control fills the row width while a toggle keeps its natural size.
+
+### `<app-settings-save-bar>`
+
+The shared save/reset affordance for a settings surface: an "unsaved changes"
+indicator, a ghost Reset and a primary Save.
+
+| Input / output | Type | Default |
+|---|---|---|
+| `dirty` | `boolean` | `false` |
+| `saving` | `boolean` | `false` |
+| `saveLabel` | `string` | `''` |
+| `resetLabel` | `string` | `''` |
+| `unsavedLabel` | `string` | `''` |
+| `save` | `output<void>` | — |
+| `reset` | `output<void>` | — |
+
+```html
+<app-settings-save-bar
+  [dirty]="dirty()"
+  [saving]="saving()"
+  [saveLabel]="'settings.save' | transloco"
+  [resetLabel]="'settings.reset' | transloco"
+  [unsavedLabel]="'settings.unsaved' | transloco"
+  (save)="persist()"
+  (reset)="revert()"
+/>
+```
+
+`saveLabel`, `resetLabel` and `unsavedLabel` take already-translated strings, not
+i18n keys. The unsaved indicator shows only when `dirty`. Save is disabled unless
+`dirty` and shows a spinner while `saving`. This bar does **not** own the success
+confirmation: the consumer decides when a persist succeeded and fires the global
+`shared/toast` itself. Coupling the toast in here would make the bar guess at an
+outcome it never sees.
 
 ---
 
@@ -1052,6 +1159,22 @@ because Angular's `ViewEncapsulation` does not style projected content, and
 because a bare `<input>` outside a field should still look like the rest of the
 app.
 
+### Settings (#541)
+
+**Save by control type.** A toggle or a select saves on change — an instant
+persist confirmed by the one global toast. A text or number field is
+dirty-tracked behind the `<app-settings-save-bar>`'s explicit Save, with the
+"unsaved changes" indicator until the user saves. This is the settled save
+model for settings; do not mix the two on one control.
+
+**Feature sections compose the primitives, they never restyle.** The Grouped
+look lives in the `shared/settings/` primitives and the tokens. A feature
+settings section composes `<app-settings-group>` + `<app-settings-row>` +
+`<app-disclosure appearance="drill-in">` + `<app-settings-save-bar>` +
+`<app-info-tip>`. It does not re-implement the look in its own `.scss`, which
+holds only layout glue. If a section needs a new visual pattern, that pattern
+becomes (or extends) a `shared/settings/` primitive first.
+
 ---
 
 ## 4. Enforcement and escape hatches
@@ -1247,3 +1370,55 @@ drops the icons onto a second line without any error.
 6. **Styles go in a sibling `.scss` file**, never inline in the `.ts` — inline
    styles are invisible to Stylelint.
 7. **Run `npm run check`** from `frontend/`.
+
+## 8. Adding a new settings section
+
+Compose the `shared/settings/` primitives; do not restyle the look (see
+[§3 Settings](#settings-541)).
+
+1. **One `<app-settings-group>` per concern** — an icon, a title, an optional
+   caption, and the rows inside it.
+2. **One `<app-settings-row>` per control**, with the control projected on the
+   right. Add an `<app-info-tip rowTitleTip>` for help on the title.
+3. **`<app-disclosure appearance="drill-in">`** for an advanced or Expert
+   grouping that expands in place inside the group.
+4. **`<app-settings-save-bar>`** for the typed fields (text, number). Toggles
+   and selects save on change instead — confirm those with the global toast.
+
+```html
+<app-settings-group
+  [icon]="'smart_toy'"
+  [title]="'settings.ai.forYou.title' | transloco"
+>
+  <app-settings-row [title]="'settings.ai.enabled.title' | transloco">
+    <app-info-tip
+      rowTitleTip
+      [text]="'settings.ai.enabled.info' | transloco"
+      [label]="'settings.ai.enabled.title' | transloco"
+    />
+    <input type="checkbox" [checked]="enabled()" (change)="toggle()" />
+  </app-settings-row>
+
+  <app-disclosure
+    appearance="drill-in"
+    [label]="'settings.ai.expert.title' | transloco"
+  >
+    <app-settings-row
+      [title]="'settings.ai.temperature.title' | transloco"
+      [stackable]="true"
+    >
+      <input type="number" [value]="temperature()" (input)="onTemperature($event)" />
+    </app-settings-row>
+  </app-disclosure>
+</app-settings-group>
+
+<app-settings-save-bar
+  [dirty]="dirty()"
+  [saving]="saving()"
+  [saveLabel]="'settings.save' | transloco"
+  [resetLabel]="'settings.reset' | transloco"
+  [unsavedLabel]="'settings.unsaved' | transloco"
+  (save)="persist()"
+  (reset)="revert()"
+/>
+```

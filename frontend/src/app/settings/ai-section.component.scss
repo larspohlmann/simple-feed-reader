@@ -1,9 +1,13 @@
+/* Layout glue only. The Grouped chrome -- the header chip, the card surface and
+   the drill-in rows -- now lives in `app-settings-group` and `app-disclosure`
+   (appearance="drill-in"). What stays here is the column that stacks the groups,
+   the ruled list of connection rows, and the internals of one connection row,
+   which are not a primitive's job. */
+
 /* This component's host is a flex item of `settings-shell`'s `.content`
    (a `flex-direction: column` container) -- and a flex item's `min-width`
    defaults to `auto`, which refuses to shrink the item below its content's
-   own intrinsic width. `.content` already carries `min-width: 0` on itself,
-   but that only clamps `.content` against *its* parent, not this host
-   against `.content`; without this rule too, a wide descendant (the #409
+   own intrinsic width. Without this rule a wide descendant (the #409
    run-history row grid, in particular) can widen this whole host past the
    viewport instead of clipping and scrolling the way its own `overflow-x:
    auto` intends (#409). */
@@ -12,16 +16,10 @@
   min-width: 0;
 }
 
-.group {
+.groups {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  align-items: flex-start;
-  margin-bottom: var(--space-3);
-}
-
-.group:last-child {
-  margin-bottom: 0;
+  gap: var(--space-7);
 }
 
 app-field {
@@ -33,23 +31,72 @@ app-searchable-select {
   display: block;
 }
 
+/* ===== Folded provider summary ===== */
+.conn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+}
+
+.conn-dot {
+  display: grid;
+  place-items: center;
+  flex: none;
+  padding: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--bg-success);
+  color: var(--success);
+}
+
+.conn-who {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.conn-who .model {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.manage {
+  flex: none;
+}
+
+/* ===== Connection manager: a ruled list of drill-in rows ===== */
 .configs {
   list-style: none;
-  margin: 0 0 var(--space-4);
+  margin: 0;
   padding: 0;
   width: 100%;
 }
 
-.config-row {
-  border-bottom: 1px solid var(--border-strong);
-}
-
 .config-row.is-active {
-  border-left: 2px solid var(--accent);
   background: var(--accent-soft);
-  padding-left: var(--space-3);
 }
 
+/* Inset hairlines turn the stacked drill-in rows into one ruled list: between
+   connection rows, and between the list and the add/guide sections below it. */
+.config-row + .config-row,
+.conn-list:not(:empty) + app-disclosure,
+app-disclosure + app-disclosure,
+.manager-foot {
+  border-top: 1px solid var(--border);
+}
+
+app-disclosure {
+  display: block;
+}
+
+.manager-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-3) var(--space-5);
+}
+
+/* ===== One connection row's body ===== */
 .summary-line {
   display: flex;
   flex-wrap: wrap;
@@ -63,7 +110,7 @@ app-searchable-select {
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-3);
-  padding: 0 var(--row-pad-comfy-x) var(--row-pad-comfy-y);
+  padding: 0 var(--space-5) var(--space-5);
 }
 
 .label {
@@ -91,9 +138,8 @@ app-searchable-select {
   gap: var(--space-2);
 }
 
-/* The tip contributes no box of its own (#433), so this row holds the trigger
-   and gives its panel a line directly underneath. Without it the two would
-   become separate items of the column around them, split by its gap. */
+/* The tip contributes no box of its own, so this row holds the trigger on its
+   own line under the action bar. */
 .acts-info {
   display: flex;
   flex-wrap: wrap;
@@ -105,9 +151,6 @@ app-searchable-select {
   gap: var(--space-1);
 }
 
-/* Wraps because the info tip's panel claims a whole line: the explanation
-   opens under the checkbox instead of squeezing it sideways (#433). The row
-   is left to stretch for the same reason — the panel is as wide as the row. */
 .reasoning-toggle-row {
   display: flex;
   flex-wrap: wrap;
@@ -129,13 +172,10 @@ app-searchable-select {
 }
 
 /* A three-digit ceiling never needs the full row width the other controls
-   claim; a fixed character count keeps it from stretching across the row
-   like a text field would. The count has to pay for the control's own
-   chrome, though: the box is border-box, so `--space-3` of padding on each
-   side and the number input's stepper come out of it — a bare `5ch` left
-   part of one digit visible (measured: 45px of client width against 66px of
-   content). The padding is added back by name, and 6ch buys the three digits
-   plus the stepper. */
+   claim; a fixed character count keeps it from stretching across the row like a
+   text field would. The count has to pay for the control's own chrome: the box
+   is border-box, so `--space-3` of padding on each side and the number input's
+   stepper come out of it. 6ch buys the three digits plus the stepper. */
 .batch-cap-input {
   width: calc(6ch + 2 * var(--space-3));
 }
@@ -153,7 +193,18 @@ app-searchable-select {
   width: 100%;
 }
 
+/* ===== Add-connection form ===== */
+.add-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  align-items: flex-start;
+  padding: 0 var(--space-5) var(--space-5);
+}
+
+/* ===== Setup guide ===== */
 .guide {
+  padding: 0 var(--space-5) var(--space-5);
   font-size: var(--fs-sm);
   line-height: var(--lh-normal);
   color: var(--text-secondary);

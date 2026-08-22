@@ -1,9 +1,9 @@
 @if (sections().length > 0) {
-  <app-settings-card
-    class="run-history"
-    [heading]="'settings.ai.recommendations.historyTitle' | transloco"
-    [description]="'settings.ai.recommendations.historyHint' | transloco"
-  >
+  <!-- No card wrapper: this panel already sits inside the Diagnostics group's
+       "Run history" drill-in (#541), so a heading and surface of its own would
+       nest a card in a card. The drill-in label names it; the hint stays. -->
+  <div class="run-history">
+    <p class="run-history__hint">{{ 'settings.ai.recommendations.historyHint' | transloco }}</p>
     <p class="run-history__total">
       <span class="run-history__total-label">
         {{ 'settings.ai.recommendations.historyTotal' | transloco }}
@@ -46,5 +46,5 @@
         }
       </ul>
     </div>
-  </app-settings-card>
+  </div>
 }

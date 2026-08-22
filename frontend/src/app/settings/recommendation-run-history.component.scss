@@ -10,12 +10,17 @@
 }
 
 .run-history {
-  /* The base's `app-settings-card + app-settings-card` gap cannot reach across
-     this component's host wrapper, so the card carries the same separation
-     from the card above it here. */
-  margin-block-start: var(--space-5);
+  /* Rendered inside the Diagnostics "Run history" drill-in (#541). The drill-in
+     does not pad its projected body, so this panel insets itself to the same
+     horizontal measure as the drill-in label above it (`--space-5`). */
+  padding: var(--space-3) var(--space-5) var(--space-5);
   font-size: var(--fs-sm);
   color: var(--text-secondary);
+
+  &__hint {
+    margin: 0 0 var(--space-3);
+    color: var(--text-secondary);
+  }
 
   &__total {
     display: flex;

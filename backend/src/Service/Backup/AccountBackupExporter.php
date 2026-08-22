@@ -208,6 +208,7 @@ final readonly class AccountBackupExporter
             'batchCount' => $values->batchCount,
             'debugEnabled' => $values->debugEnabled,
             'autoGenerateIntervalHours' => $values->autoGenerateIntervalHours,
+            'showReasons' => $values->showReasons,
         ];
     }
 

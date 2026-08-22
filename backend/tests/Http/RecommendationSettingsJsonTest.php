@@ -58,8 +58,27 @@ final class RecommendationSettingsJsonTest extends TestCase
         self::assertNull($state['profileText']);
     }
 
-    private function effectiveSettings(?string $profileText = null): EffectiveRecommendationSettings
+    public function testStateEmitsShowReasons(): void
     {
+        $state = RecommendationSettingsJson::state(
+            $this->effectiveSettings(showReasons: true),
+            workerAlive: true,
+        );
+
+        self::assertTrue($state['showReasons']);
+    }
+
+    public function testStateEmitsShowReasonsFalseByDefault(): void
+    {
+        $state = RecommendationSettingsJson::state($this->effectiveSettings(), workerAlive: true);
+
+        self::assertFalse($state['showReasons']);
+    }
+
+    private function effectiveSettings(
+        ?string $profileText = null,
+        bool $showReasons = false,
+    ): EffectiveRecommendationSettings {
         return new EffectiveRecommendationSettings(
             guidancePrompt: null,
             favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
@@ -76,6 +95,7 @@ final class RecommendationSettingsJsonTest extends TestCase
             ),
             debugEnabled: false,
             profileText: $profileText,
+            showReasons: $showReasons,
         );
     }
 }

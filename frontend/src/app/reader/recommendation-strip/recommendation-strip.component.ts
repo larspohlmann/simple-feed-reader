@@ -2,11 +2,13 @@ import { Component, input } from '@angular/core';
 import { EntryDto } from '../models';
 
 /** Wraps one entry's card and, only for a for-you result, renders the
- *  recommender's reason beneath it — plus the score when the user's debug
- *  setting is on and the backend therefore sent it. The model scores on
- *  0-1000 (#403), which is room for it to separate candidates rather than
- *  stack them on one round number; a reader does not need that resolution,
- *  so the strip shows it out of 100.
+ *  recommender's reason and score beneath it. Since #541 the two are
+ *  independent: the "show why" setting gates the reason, debug mode gates the
+ *  score, and the backend sends each on its own. The strip appears when either
+ *  is present, so a debug-on/reasons-off reader still sees a bare score. The
+ *  model scores on 0-1000 (#403), which is room for it to separate candidates
+ *  rather than stack them on one round number; a reader does not need that
+ *  resolution, so the strip shows it out of 100.
  *
  *  The card is projected, so no card component knows about recommendations.
  *  The input is nullable so the magazine layout can wrap group blocks, which

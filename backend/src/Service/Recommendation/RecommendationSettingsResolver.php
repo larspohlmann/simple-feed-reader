@@ -52,6 +52,7 @@ final readonly class RecommendationSettingsResolver
             ),
             debugEnabled: $row?->values()->debugEnabled ?? false,
             autoGenerateIntervalHours: $row?->values()->autoGenerateIntervalHours,
+            showReasons: $row?->values()->showReasons ?? false,
         );
     }
 

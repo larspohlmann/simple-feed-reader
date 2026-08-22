@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, input, signal } from '@angular/core';
 import { DismissOnOutsideDirective } from '../dismiss-on-outside.directive';
 import { IconComponent } from '../icon/icon.component';
 
@@ -6,19 +6,22 @@ let nextId = 0;
 
 /**
  * The one info affordance (#372): a small ⓘ button that toggles an
- * explanation panel. The panel renders in normal flow and pushes content
- * down rather than floating — a floating popover needs viewport-collision
- * handling on phones, while an in-flow panel cannot clip or overflow by
- * construction. Click-to-toggle, never hover: hover does not exist on touch.
+ * explanation panel. Click-to-toggle, never hover: hover does not exist on
+ * touch.
  *
- * The component contributes no box of its own (#433). Host and wrapper are
- * `display: contents`, so the consumer's row lays out the trigger and the
- * panel as its own children and the panel can take a full-width line beneath
- * that row. The earlier arrangement — a boxed wrapper holding both, plus a
- * `corner` mode that absolutely positioned the trigger away from its panel —
- * made the panel one flex item beside the label in a row, and in `app-field`
- * opened it under the control rather than under the ⓘ that was clicked.
- * Neither matched the in-flow contract this component documents.
+ * The panel floats as a popover (#541), so opening the tip never shifts the
+ * sibling layout. This reverses the earlier in-flow arrangement (#433/#372),
+ * where host and wrapper were `display: contents` and the panel claimed a
+ * full-width line below the row. That choice avoided viewport-collision
+ * handling on phones; #541 does the collision handling instead: the panel is
+ * `position: fixed`, and on open its top/left are computed from the trigger's
+ * rect and clamped to the viewport, so it never clips off either edge no matter
+ * where the trigger sits on the line — the case a pure-CSS left/right anchor
+ * could not cover on a narrow screen.
+ *
+ * Only one tip is open at a time: opening one closes any other. A module-level
+ * reference to the currently open instance carries this — it is a plain field,
+ * not a listener, so nothing leaks; `close` and `ngOnDestroy` null it.
  *
  * `text` and `label` take already-translated strings, not i18n keys — this
  * component lives in `shared/` and must not hardcode a feature's translation
@@ -33,11 +36,20 @@ let nextId = 0;
   styleUrl: './info-tip.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class InfoTipComponent {
+export class InfoTipComponent implements OnDestroy {
+  /** The tip whose panel is open, or null. Only one is ever open at a time. */
+  private static openTip: InfoTipComponent | null = null;
+
   readonly text = input.required<string>();
   readonly label = input.required<string>();
 
   readonly open = signal(false);
+
+  /** The fixed-position panel geometry, computed from the trigger on open and
+   *  clamped so the panel stays fully within the viewport. */
+  protected readonly panelTop = signal(0);
+  protected readonly panelLeft = signal(0);
+  protected readonly panelMaxWidth = signal(0);
 
   /** Ties the trigger to its panel; unique so several tips can coexist. */
   protected readonly panelId = `info-tip-panel-${nextId++}`;
@@ -50,7 +62,38 @@ export class InfoTipComponent {
    */
   toggle(event: Event): void {
     this.swallow(event);
-    this.open.update((value) => !value);
+    if (this.open()) {
+      this.close();
+      return;
+    }
+    this.reveal(event.currentTarget as HTMLElement | null);
+  }
+
+  /** Opens this tip and closes any other that is open, so only one shows. */
+  private reveal(trigger: HTMLElement | null): void {
+    InfoTipComponent.openTip?.close();
+    InfoTipComponent.openTip = this;
+    if (trigger) {
+      this.positionAgainst(trigger);
+    }
+    this.open.set(true);
+  }
+
+  /**
+   * Places the panel just below the trigger and clamps it to the viewport: the
+   * width is capped to the screen, and the left edge is pulled back from either
+   * margin so the panel never clips — on a phone the trigger can sit anywhere
+   * on the line, which a fixed left- or right-anchor could not handle.
+   */
+  private positionAgainst(trigger: HTMLElement): void {
+    const gutter = 8;
+    const gap = 6;
+    const rect = trigger.getBoundingClientRect();
+    const maxWidth = Math.min(320, window.innerWidth - gutter * 2);
+    const maxLeft = window.innerWidth - maxWidth - gutter;
+    this.panelMaxWidth.set(maxWidth);
+    this.panelLeft.set(Math.round(Math.max(gutter, Math.min(rect.left, maxLeft))));
+    this.panelTop.set(Math.round(rect.bottom + gap));
   }
 
   /**
@@ -64,6 +107,15 @@ export class InfoTipComponent {
   }
 
   close(): void {
+    if (InfoTipComponent.openTip === this) {
+      InfoTipComponent.openTip = null;
+    }
     this.open.set(false);
+  }
+
+  ngOnDestroy(): void {
+    if (InfoTipComponent.openTip === this) {
+      InfoTipComponent.openTip = null;
+    }
   }
 }

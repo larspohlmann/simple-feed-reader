@@ -84,6 +84,7 @@ final readonly class RecommendationSettingsWriter
             batchCount: $values->batchCount,
             debugEnabled: $values->debugEnabled,
             autoGenerateIntervalHours: $values->autoGenerateIntervalHours,
+            showReasons: $values->showReasons,
         );
     }
 
@@ -104,6 +105,7 @@ final readonly class RecommendationSettingsWriter
             debugEnabled: $values->debugEnabled,
             autoGenerateIntervalHours: $values->autoGenerateIntervalHours,
             profileText: $profileText,
+            showReasons: $values->showReasons,
         );
     }
 }

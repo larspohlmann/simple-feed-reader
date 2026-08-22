@@ -76,6 +76,16 @@ final class EntryControllerTest extends WebTestCase
         (new RecommendationRunFixtures($em, $cipher))->debugEnabledSettings($user);
     }
 
+    private function seedShowReasonsSettings(User $user): void
+    {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $cipher = self::getContainer()->get(ApiKeyCipher::class);
+        self::assertInstanceOf(ApiKeyCipher::class, $cipher);
+
+        (new RecommendationRunFixtures($em, $cipher))->showReasonsEnabledSettings($user);
+    }
+
     public function testAnonymousIsRejected(): void
     {
         $client = self::createClient();
@@ -353,7 +363,39 @@ final class EntryControllerTest extends WebTestCase
         $first = $body['entries'][0];
         self::assertIsArray($first);
         self::assertSame(42, $first['recommendationScore']);
+        // Debug governs the score alone since #541: the reason now rides its own
+        // showReasons flag, so debug-on-alone shows the score without the reason.
+        self::assertArrayNotHasKey('recommendationReason', $first);
+    }
+
+    public function testForYouViewIncludesTheRecommendationReasonOnlyWhenShowReasonsIsEnabled(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-foryou-reasons@example.com');
+        $sub = $this->seedFeedWithEntries($user, 1);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed(), 'guid' => 'g1']);
+        self::assertInstanceOf(Entry::class, $entry);
+
+        $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
+        $run->snapshot([[1]]);
+        $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+        $em->persist($run);
+        $em->persist(new RecommendationItem($run, $entry, 1, 'Matches your interest in g1', 42));
+        $this->seedShowReasonsSettings($user);
+        $em->flush();
+
+        $client->request('GET', '/api/entries?view=for-you', server: $headers);
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entries']);
+        $first = $body['entries'][0];
+        self::assertIsArray($first);
+        // showReasons on, debug off: the reason shows, the raw score stays hidden.
         self::assertSame('Matches your interest in g1', $first['recommendationReason']);
+        self::assertArrayNotHasKey('recommendationScore', $first);
     }
 
     public function testForYouViewPaginatesWithCursor(): void

@@ -49,13 +49,25 @@
   box-shadow: 0 12px 32px rgb(0 0 0 / 24%);
 }
 
+/* A real bordered text input, not a bare line: the same chrome as `.trigger`
+   above, so the filter reads as a control the moment the panel opens. It sits
+   inset from the panel edges with its own margin, and lifts a visible accent
+   ring on focus the way the app's other bordered inputs do. */
 .search {
-  width: 100%;
+  display: block;
+  width: auto;
+  margin: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  border: 0;
-  border-bottom: 1px solid var(--border);
-  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-1);
   color: var(--text-primary);
+}
+
+.search:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .list {

@@ -3,6 +3,7 @@
   <a class="back" [routerLink]="backTarget()">
     <app-icon name="arrow_back" size="sm" /> {{ backLabelKey() | transloco }}
   </a>
+  <span class="divider" aria-hidden="true"></span>
   <h1>{{ 'settings.title' | transloco }}</h1>
 </header>
 <div class="layout" [class.wide]="wideSection()">

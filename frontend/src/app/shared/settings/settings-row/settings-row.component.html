@@ -1,0 +1,15 @@
+<!-- src/app/shared/settings/settings-row/settings-row.component.html -->
+<div class="row" [class.stackable]="stackable()">
+  <div class="row-main">
+    <div class="row-title">
+      {{ title() }}
+      <ng-content select="[rowTitleTip]" />
+    </div>
+    @if (description()) {
+      <div class="row-desc">{{ description() }}</div>
+    }
+  </div>
+  <div class="row-control">
+    <ng-content />
+  </div>
+</div>

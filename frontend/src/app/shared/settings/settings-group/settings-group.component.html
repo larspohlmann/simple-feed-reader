@@ -1,0 +1,10 @@
+<div class="g-head">
+  <span class="g-icon"><app-icon [name]="icon()" size="sm" /></span>
+  <div class="g-text">
+    <h2 class="g-title">{{ title() }}</h2>
+    @if (caption()) {
+      <p class="g-caption">{{ caption() }}</p>
+    }
+  </div>
+</div>
+<div class="panel"><ng-content /></div>

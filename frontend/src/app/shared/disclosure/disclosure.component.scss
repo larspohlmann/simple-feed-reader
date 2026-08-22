@@ -101,3 +101,34 @@ summary.is-card-header::before {
 details[open] > summary.is-card-header {
   margin-bottom: var(--space-3);
 }
+
+// Drill-in appearance: a full-width Grouped-list row for an advanced section
+// that expands in place. The projected heading (and optional description) sits
+// on the left and the shared chevron moves to the trailing edge, the same way
+// `is-row` repositions it; the rotation still rides the shared
+// `details[open] > summary::before` rule above. The pill's border, radius and
+// muted text chrome are reset so the projected heading keeps its own weight and
+// the row reads as part of the list rather than as a button.
+summary.is-drill-in {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  padding: var(--space-4) var(--space-5);
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+summary.is-drill-in::before {
+  order: 1;
+  margin-left: auto;
+}
+
+summary.is-drill-in:hover {
+  border-color: transparent;
+  background: var(--surface-1);
+}
