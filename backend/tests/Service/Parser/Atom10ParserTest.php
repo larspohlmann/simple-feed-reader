@@ -251,6 +251,55 @@ final class Atom10ParserTest extends TestCase
         self::assertSame(640, $image->width);
     }
 
+    public function testEntryUrlFallsBackToAnHttpIdWhenNoLinkIsPresent(): void
+    {
+        // Jacobin and other WordPress-generated Atom feeds omit the per-entry
+        // <link> and carry the article permalink only in <id>. A urn:/tag: id is
+        // not a fetchable URL and must stay out of ->url.
+        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
+        // starts with whitespace and it wrongly flags the declaration. The
+        // closing marker strips that indentation before the parser sees it.
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0" encoding="utf-8"?>
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>Linkless Atom Example</title>
+              <link href="https://atom.example.com/" rel="alternate"/>
+              <entry>
+                <title>Permalink in id</title>
+                <id>https://jacobin.com/2026/08/utopia-is-a-promise</id>
+              </entry>
+              <entry>
+                <title>Opaque id</title>
+                <id>urn:uuid:opaque</id>
+              </entry>
+              <entry>
+                <title>Real link still wins over id</title>
+                <link rel="alternate" href="https://e/real"/>
+                <id>https://e/from-id</id>
+              </entry>
+              <entry>
+                <title>Uppercase scheme in id</title>
+                <id>HTTPS://jacobin.com/2026/08/upper-scheme</id>
+              </entry>
+              <entry>
+                <title>Url embedded mid-id is not a permalink</title>
+                <id>urn:x:https://not-the-permalink.example/mid</id>
+              </entry>
+            </feed>
+            XML;
+
+        $feed = $this->parse($xml);
+
+        self::assertSame('https://jacobin.com/2026/08/utopia-is-a-promise', $feed->entries[0]->url);
+        self::assertNull($feed->entries[1]->url);
+        self::assertSame('https://e/real', $feed->entries[2]->url);
+        // The scheme is case-insensitive, so an uppercase id is still a URL.
+        self::assertSame('HTTPS://jacobin.com/2026/08/upper-scheme', $feed->entries[3]->url);
+        // Only a leading scheme counts: a urn: id that merely contains a URL is
+        // opaque, not a fetchable permalink.
+        self::assertNull($feed->entries[4]->url);
+    }
+
     public function testTitlesAreReducedToPlainText(): void
     {
         // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects

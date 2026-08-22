@@ -78,7 +78,12 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
     private function parseEntry(\DOMElement $entry, string $ns): ?ParsedEntry
     {
         $title = XmlHelper::childText($entry, 'title', $ns);
-        $link = $this->alternateLink($entry, $ns);
+        $id = XmlHelper::childText($entry, 'id', $ns);
+        // Some WordPress-generated Atom feeds (Jacobin) omit the per-entry <link>
+        // and carry the article permalink only in <id>. Fall back to it, but only
+        // when it is an absolute http(s) URL: a urn:/tag: id is not fetchable and
+        // must never become the article URL.
+        $link = $this->alternateLink($entry, $ns) ?? self::httpUrlOrNull($id);
         if ($title === null && $link === null) {
             return null;
         }
@@ -91,7 +96,7 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
             ?? ItemImageExtractor::fromHtml($this->elementMarkup($entry, $ns, 'summary'));
 
         return new ParsedEntry(
-            guid: GuidFallback::for(XmlHelper::childText($entry, 'id', $ns), $link, $title),
+            guid: GuidFallback::for($id, $link, $title),
             url: $link,
             title: PlainText::from($title) ?? '(untitled)',
             author: $this->authorName($entry, $ns),
@@ -144,6 +149,12 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
         }
 
         return $fallback;
+    }
+
+    /** The value when it is an absolute http(s) URL, otherwise null. */
+    private static function httpUrlOrNull(?string $value): ?string
+    {
+        return $value !== null && preg_match('#^https?://#i', $value) === 1 ? $value : null;
     }
 
     private function authorName(\DOMElement $entry, string $ns): ?string
