@@ -1211,7 +1211,22 @@ describe('ReaderShellComponent', () => {
       ctrl.match(() => true).forEach((r) => r.flush({ entries: [], nextCursor: null }));
     });
 
-    it("onSearch('') clears q along with every other selection param", () => {
+    it('layers a search over the current list, keeping view/tag/subscription in the URL to return to (#542)', () => {
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const f = boot();
+
+      f.componentInstance.onSearch('angular');
+
+      expect(nav).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({
+          queryParams: { q: 'angular', entry: null },
+          queryParamsHandling: 'merge',
+        }),
+      );
+    });
+
+    it("onSearch('') drops only the search, so closing it returns to the list it was started from rather than All items (#542)", () => {
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
       const f = boot();
 
@@ -1220,7 +1235,8 @@ describe('ReaderShellComponent', () => {
       expect(nav).toHaveBeenCalledWith(
         [],
         expect.objectContaining({
-          queryParams: { view: null, tag: null, subscription: null, entry: null, q: null },
+          queryParams: { q: null, entry: null },
+          queryParamsHandling: 'merge',
         }),
       );
     });

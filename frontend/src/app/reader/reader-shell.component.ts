@@ -805,12 +805,19 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  /** A term navigates; an empty term returns to All items. Both go through the
-   *  URL, so Back leaves a search the same way it leaves any other list. */
+  /** A term layers a search over the current list; an empty term drops only the
+   *  search, so closing it returns to the list it was started from — a feed,
+   *  tag, folder or view — instead of All items (#542). The list params
+   *  (view/tag/subscription and the unread refinement) are left in the URL
+   *  untouched: `selectionFromParams` gives a searchable `q` priority over them,
+   *  so they change nothing while the search is active but are still there to
+   *  return to once it clears. An open article is closed either way — the
+   *  results, or the restored list, are a new thing to look at. Both go through
+   *  the URL, so Back leaves a search the same way it leaves any other list. */
   onSearch(term: string): void {
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: selectionQueryParams({ q: term || null }),
+      queryParams: { q: term || null, entry: null },
       queryParamsHandling: 'merge',
     });
   }

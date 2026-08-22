@@ -142,7 +142,7 @@ describe('selectionQueryParams', () => {
       q: null,
     });
   });
-  it("clears q along with everything else, e.g. for onSearch('')", () => {
+  it('clears q along with everything else when nothing is set', () => {
     expect(selectionQueryParams({ q: null })).toEqual({
       view: null,
       tag: null,
