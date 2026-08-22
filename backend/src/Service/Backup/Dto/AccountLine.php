@@ -52,6 +52,7 @@ final readonly class AccountLine
             batchCount: LineField::intOrNull($settings, 'batchCount'),
             debugEnabled: LineField::bool($settings, 'debugEnabled'),
             autoGenerateIntervalHours: LineField::intOrNull($settings, 'autoGenerateIntervalHours'),
+            showReasons: LineField::boolWithDefault($settings, 'showReasons', false),
         );
     }
 }
