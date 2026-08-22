@@ -61,6 +61,15 @@ describe('RecommendationStripComponent', () => {
     expect(el.querySelector('.reason')!.textContent).toContain('because you read heise');
   });
 
+  // Debug on, "show why" off (#541): the backend sends a score with no reason.
+  // The strip must still appear and show the score on its own.
+  it('renders the score alone when there is a score but no reason', () => {
+    const el = mount(entry({ recommendationScore: 823 }));
+    expect(el.querySelector('.reason')).not.toBeNull();
+    expect(el.querySelector('.reason .score')!.textContent).toContain('82');
+    expect(el.querySelector('.reason')!.textContent).not.toContain('undefined');
+  });
+
   it('renders the score pill only when the score is a number', () => {
     const withScore = mount(entry({ recommendationReason: 'r', recommendationScore: 823 }));
     expect(withScore.querySelector('.reason .score')!.textContent).toContain('82');

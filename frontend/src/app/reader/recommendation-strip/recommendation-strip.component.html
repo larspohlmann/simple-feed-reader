@@ -1,11 +1,20 @@
 <ng-content />
 @if (entry(); as e) {
-  @if (e.recommendationReason) {
+  <!-- Reason and score are independent since #541: the "show why" setting gates
+       the reason, debug mode gates the score. Render the strip when EITHER is
+       present, and each part on its own condition -- a debug-on/reasons-off
+       reader still sees the score with no reason beside it. -->
+  @if (
+    e.recommendationReason ||
+    (e.recommendationScore !== null && e.recommendationScore !== undefined)
+  ) {
     <p class="reason">
       @if (e.recommendationScore !== null && e.recommendationScore !== undefined) {
         <span class="score">Score: {{ displayScore(e.recommendationScore) }}</span>
       }
-      {{ e.recommendationReason }}
+      @if (e.recommendationReason) {
+        {{ e.recommendationReason }}
+      }
     </p>
   }
 }
