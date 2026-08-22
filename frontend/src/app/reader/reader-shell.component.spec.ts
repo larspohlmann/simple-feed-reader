@@ -137,6 +137,15 @@ describe('ReaderShellComponent', () => {
       streamedChars: 0,
       forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
     });
+    // The sidebar's update badge: the shell checks once on load. No release to
+    // report here, so no badge — the request just has to be drained.
+    ctrl.expectOne('https://api.test/api/version').flush({
+      version: 'dev',
+      commit: 'local',
+      builtAt: '',
+      latest: null,
+      updateAvailable: false,
+    });
     f.detectChanges();
     return f;
   }
@@ -179,6 +188,15 @@ describe('ReaderShellComponent', () => {
       background: false,
       streamedChars: 0,
       forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+    });
+    // The sidebar's update badge: the shell checks once on load. No release to
+    // report here, so no badge — the request just has to be drained.
+    ctrl.expectOne('https://api.test/api/version').flush({
+      version: 'dev',
+      commit: 'local',
+      builtAt: '',
+      latest: null,
+      updateAvailable: false,
     });
     f.detectChanges();
     return f;

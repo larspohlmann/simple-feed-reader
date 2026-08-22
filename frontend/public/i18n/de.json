@@ -597,6 +597,8 @@
       "system": "System"
     },
     "versionLabel": "Version {{version}} — Einstellungen öffnen",
+    "updateAvailable": "Update {{version}}",
+    "updateAvailableLabel": "Update verfügbar: Version {{version}} — Versionshinweise öffnen",
     "trialDaysLeft": "Testphase · noch {{days}} Tage",
     "trialDayLeft": "Testphase · noch 1 Tag",
     "forYouReady": "Empfehlungen sind fertig",

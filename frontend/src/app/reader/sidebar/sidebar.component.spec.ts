@@ -15,6 +15,7 @@ import { Selection } from '../query';
 import { SubscriptionDto, TagDto } from '../models';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { buildVersion } from '../../../environments/version';
+import { VersionService } from '../../core/version.service';
 import { LayoutService } from '../layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { of } from 'rxjs';
@@ -479,6 +480,31 @@ describe('SidebarComponent', () => {
 
     expect(version?.textContent?.trim()).toBe(buildVersion.version);
     expect(version?.getAttribute('href')).toBe('/settings');
+  });
+
+  it('shows an update badge linking to the release notes when an update is available', () => {
+    const f = mount();
+    const versions = TestBed.inject(VersionService);
+    versions.latest.set({ version: 'v9.9.9', notesUrl: 'https://github.test/releases/tag/v9.9.9' });
+    versions.updateAvailable.set(true);
+    f.detectChanges();
+
+    const badge = (f.nativeElement as HTMLElement).querySelector('.update-badge');
+    expect(badge).not.toBeNull();
+    expect(badge?.textContent).toContain('v9.9.9');
+    expect(badge?.getAttribute('href')).toBe('https://github.test/releases/tag/v9.9.9');
+    expect(badge?.getAttribute('target')).toBe('_blank');
+    expect(badge?.getAttribute('rel')).toBe('noopener noreferrer');
+  });
+
+  it('shows no update badge when the running build is current', () => {
+    const f = mount();
+    const versions = TestBed.inject(VersionService);
+    versions.updateAvailable.set(false);
+    versions.latest.set(null);
+    f.detectChanges();
+
+    expect((f.nativeElement as HTMLElement).querySelector('.update-badge')).toBeNull();
   });
 
   it('shows the trial countdown when a trial is active', () => {

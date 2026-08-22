@@ -126,6 +126,31 @@
   color: var(--text-secondary);
 }
 
+/* The version link and, when one exists, the update badge sit together at the
+   left of the meta row; Feedback stays at the right. */
+.version-group {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.update-badge {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.update-badge:hover {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
 .act {
   flex: 1;
   display: inline-flex;

@@ -28,6 +28,14 @@ parameters:
     # the value moves in config instead of in three classes.
     outbound_user_agent: 'SimpleFeedReader/1.0'
 
+    # Which GitHub repository the "update available" check reads its releases
+    # from — see GITHUB_RELEASE_REPOSITORY in backend/.env for the default and
+    # what an empty value means. Read straight from the env, deliberately NOT via
+    # the `default:` processor: that processor treats an empty value as "unset"
+    # and substitutes its fallback, which would make the test suite's forced-empty
+    # var reach GitHub instead of switching the check off.
+    github_release_repository: '%env(GITHUB_RELEASE_REPOSITORY)%'
+
 services:
     # default configuration for services in *this* file
     _defaults:
@@ -37,6 +45,7 @@ services:
             Psr\Cache\CacheItemPoolInterface $altchaReplayCache: '@altcha.replay.cache'
             Psr\Cache\CacheItemPoolInterface $oauthStateCache: '@oauth.state.cache'
             Psr\Cache\CacheItemPoolInterface $loginCodeCache: '@oauth.login_code.cache'
+            Psr\Cache\CacheItemPoolInterface $githubReleaseCache: '@github.release.cache'
             Symfony\Contracts\Cache\CacheInterface $schedulerStateCache: '@scheduler.state.cache'
             # A name-matched bind, unlike the $concurrency case further down: there
             # the global match was the objection, here it is the point. Any service
@@ -86,6 +95,13 @@ services:
     App\Service\Search\Index\SearchIndexReader: '@App\Service\Search\Index\MeilisearchIndex'
     App\Service\Search\Index\SearchIndexWriter: '@App\Service\Search\Index\MeilisearchIndex'
     App\Service\Version\ReleaseVersionReader: '@App\Service\Version\FileReleaseVersionReader'
+    App\Service\Version\LatestReleaseReader: '@App\Service\Version\GitHubLatestReleaseReader'
+    # $repository is set here rather than as a `bind`: a binding matches by
+    # parameter NAME, and `$repository` is a name a Doctrine-shaped service could
+    # easily reuse, so a global bind would leak this string into unrelated code.
+    App\Service\Version\GitHubLatestReleaseReader:
+        arguments:
+            $repository: '%github_release_repository%'
     App\Service\Ai\ModelCatalog: '@App\Service\Ai\OpenAiCompatibleCatalog'
     App\Service\Recommendation\ChatCompletionClient: '@App\Service\Recommendation\OpenAiCompatibleChatClient'
     # The transport pings one heartbeat per chunk and must not learn how many

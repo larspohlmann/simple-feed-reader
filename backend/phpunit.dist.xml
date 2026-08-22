@@ -44,6 +44,12 @@
         <env name="MEILISEARCH_KEY" value="" force="true" />
         <server name="MEILISEARCH_URL" value="" />
         <server name="MEILISEARCH_KEY" value="" />
+
+        <!-- Empty turns the "update available" check off, so no test run ever
+             calls GitHub. Forced in all three lookups for the same reason as
+             MEILISEARCH_* above. -->
+        <env name="GITHUB_RELEASE_REPOSITORY" value="" force="true" />
+        <server name="GITHUB_RELEASE_REPOSITORY" value="" />
     </php>
 
     <testsuites>
