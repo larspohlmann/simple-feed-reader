@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Dto\Admin\ProxySettingsRequest;
+use App\Service\Proxy\ProxyConnectionTester;
 use App\Service\Proxy\ProxySettings;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -33,5 +34,11 @@ final readonly class AdminProxyController
         $this->settings->update($request);
 
         return new JsonResponse($this->settings->view());
+    }
+
+    #[Route('/test', name: 'api_admin_proxy_test', methods: ['POST'])]
+    public function test(ProxyConnectionTester $tester): JsonResponse
+    {
+        return new JsonResponse($tester->test()->toArray());
     }
 }

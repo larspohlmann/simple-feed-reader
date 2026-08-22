@@ -153,4 +153,19 @@ final class AdminProxyControllerTest extends WebTestCase
         self::assertTrue($body['hasPassword']);
         self::assertSame('fish', $body['passwordHint']);
     }
+
+    public function testTestConnectionReportsNotConfiguredWhenNoProxyIsStored(): void
+    {
+        $admin = $this->admin();
+
+        $this->client->request(
+            'POST',
+            self::PROXY . '/test',
+            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin)],
+        );
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload();
+        self::assertFalse($body['ok']);
+    }
 }
