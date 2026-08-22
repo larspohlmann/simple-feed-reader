@@ -20,6 +20,7 @@ import { BehaviorSubject, Subject, of } from 'rxjs';
 import { WritableSignal, signal } from '@angular/core';
 import { API_BASE_URL } from '../core/api';
 import { AuthService } from '../core/auth.service';
+import { LanguageService } from '../core/language.service';
 import { OnboardingSkip } from '../discover/onboarding-skip';
 import { ReaderShellComponent } from './reader-shell.component';
 import { EntryListComponent } from './entry-list/entry-list.component';
@@ -94,6 +95,7 @@ describe('ReaderShellComponent', () => {
 
   beforeEach(() => {
     sessionStorage.clear(); // OnboardingSkip persists here; don't leak across tests
+    localStorage.clear(); // LanguageService caches the chosen lang here — a de test must not leak into the next
     auth.isAdmin.mockReturnValue(false); // default non-admin; a test opting in overrides it
     qp.next(convertToParamMap({}));
     // Provided rather than left to the real service: jsdom's matchMedia answers
@@ -945,6 +947,37 @@ describe('ReaderShellComponent', () => {
     f.detectChanges();
 
     expect(f.componentInstance.title()).toBe('For you');
+  });
+
+  // The heading used to hold hardcoded English literals, so a German user saw
+  // "All items"/"Favorites" while the sidebar row beside it was translated. It
+  // now reuses the sidebar's own keys and reacts to a language switch (#411).
+  describe('translated heading (#411)', () => {
+    it('titles the default list with the translated all-items label', () => {
+      const f = boot();
+      expect(f.componentInstance.title()).toBe('All items');
+
+      TestBed.inject(LanguageService).set('de');
+      f.detectChanges();
+
+      // The crux of #411: TranslocoService.translate() is one-shot, so without a
+      // language signal in the computed's dependency graph the heading would
+      // freeze on the English string a switch never revisits.
+      expect(f.componentInstance.title()).toBe('Alle Einträge');
+    });
+
+    it('titles the favorites list with the translated label', () => {
+      const f = boot();
+      TestBed.inject(LanguageService).set('de');
+      qp.next(convertToParamMap({ view: 'favorites' }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({ entries: [], nextCursor: null });
+      f.detectChanges();
+
+      expect(f.componentInstance.title()).toBe('Favoriten');
+    });
   });
 
   describe('searching (#408 follow-up)', () => {

@@ -288,6 +288,44 @@ describe('EntryListComponent', () => {
     });
   });
 
+  // Each fixed view's heading carries the very icon its sidebar row shows, so
+  // the list a reader lands in reads as the row they clicked (#411).
+  describe('the fixed-view heading icon (#411)', () => {
+    const iconByKind: readonly (readonly [string, string])[] = [
+      ['all', 'inbox'],
+      ['favorites', 'star'],
+      ['kept', 'bookmark'],
+      ['viewed', 'history'],
+      ['for-you', 'auto_awesome'],
+      ['search', 'search'],
+    ];
+
+    for (const [kind, iconName] of iconByKind) {
+      it(`shows the ${kind} heading with the ${iconName} icon`, () => {
+        const el = mount({ selection: { kind, id: null, unread: true, term: 'daft' } })
+          .nativeElement as HTMLElement;
+        // A direct child of the h2, so it is never confused with the icon a tag
+        // glyph nests, nor with the header's tool buttons further down.
+        const icon = el.querySelector<HTMLElement>('.list-header h2 > app-icon');
+        expect(icon).not.toBeNull();
+        expect(icon!.textContent!.trim()).toBe(iconName);
+      });
+    }
+
+    it('shows no fixed-view icon for a tag heading — its glyph stands in', () => {
+      const tag = { id: 4, name: 'Wissenschaft', color: '#c2410c', icon: 'science', position: 0 };
+      const el = mount({ selection: { kind: 'tag', id: 4, unread: true }, titleTag: tag })
+        .nativeElement as HTMLElement;
+      expect(el.querySelector('.list-header h2 > app-icon')).toBeNull();
+    });
+
+    it('shows no fixed-view icon for a subscription heading — its favicon stands in', () => {
+      const el = mount({ selection: { kind: 'subscription', id: 5, unread: true } })
+        .nativeElement as HTMLElement;
+      expect(el.querySelector('.list-header h2 > app-icon')).toBeNull();
+    });
+  });
+
   // #87: the collapsing list header is a second bar with the same defect as the
   // app header — it used to shrink the list's own box, resizing the scroller
   // mid-gesture. It floats over reserved padding now.

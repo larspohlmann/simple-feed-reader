@@ -17,6 +17,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { Dialog } from '@angular/cdk/dialog';
 import { Title } from '@angular/platform-browser';
 import { AuthService } from '../core/auth.service';
+import { LanguageService } from '../core/language.service';
 import { ReaderApi } from './reader-api';
 import { SubscriptionsStore } from './subscriptions.store';
 import { TagsStore } from './tags.store';
@@ -90,6 +91,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly dialog = inject(Dialog);
   private readonly actionSheet = inject(ActionSheet);
   private readonly i18n = inject(TranslocoService);
+  private readonly language = inject(LanguageService);
   private readonly api = inject(ReaderApi);
   private readonly auth = inject(AuthService);
   private readonly hostRef = inject(ElementRef<HTMLElement>);
@@ -289,15 +291,24 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   });
 
   readonly title = computed(() => {
+    // Read as a dependency, not used directly: TranslocoService.translate() is
+    // one-shot, so the heading would keep the language it was first computed in
+    // unless a language signal pulls this computed through a re-evaluation on a
+    // switch. Every arm below reads a translation, so every arm needs it (#411).
+    this.language.lang();
     const s = this.selection();
-    if (s.kind === 'favorites') return 'Favorites';
-    if (s.kind === 'kept') return 'Kept';
-    if (s.kind === 'viewed') return 'Recently read';
-    if (s.kind === 'for-you') return 'For you';
-    if (s.kind === 'all') return 'All items';
-    if (s.kind === 'tag') return this.selectedTag()?.name ?? 'Tag';
+    if (s.kind === 'favorites') return this.i18n.translate('reader.favorites');
+    if (s.kind === 'kept') return this.i18n.translate('reader.kept');
+    if (s.kind === 'viewed') return this.i18n.translate('reader.viewed');
+    if (s.kind === 'for-you') return this.i18n.translate('reader.forYou');
+    if (s.kind === 'all') return this.i18n.translate('reader.allItems');
+    if (s.kind === 'tag')
+      return this.selectedTag()?.name ?? this.i18n.translate('reader.tagFallback');
     if (s.kind === 'search') return this.searchTitle(s.term ?? '');
-    return this.subs.subscriptions().find((x) => x.id === s.id)?.title ?? 'Feed';
+    return (
+      this.subs.subscriptions().find((x) => x.id === s.id)?.title ??
+      this.i18n.translate('reader.feedFallback')
+    );
   });
 
   /** The search heading, which unlike every other title carries a result count
