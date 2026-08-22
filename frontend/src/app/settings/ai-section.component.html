@@ -1,296 +1,353 @@
-<app-settings-card [heading]="'settings.ai.guide.title' | transloco" [collapsible]="true">
-  <div class="guide">
-    <p class="guide-intro">{{ 'settings.ai.guide.intro' | transloco }}</p>
-
-    <h3>{{ 'settings.ai.guide.connectionTitle' | transloco }}</h3>
-    <ol>
-      <li>{{ 'settings.ai.guide.connectionStep1' | transloco }}</li>
-      <li>{{ 'settings.ai.guide.connectionStep2' | transloco }}</li>
-      <li>{{ 'settings.ai.guide.connectionStep3' | transloco }}</li>
-      <li>{{ 'settings.ai.guide.connectionStep4' | transloco }}</li>
-      <li>{{ 'settings.ai.guide.connectionStep5' | transloco }}</li>
-    </ol>
-
-    <h3>{{ 'settings.ai.guide.recommendationsTitle' | transloco }}</h3>
-    <ol>
-      <li>{{ 'settings.ai.guide.recommendationsStep1' | transloco }}</li>
-      <li>{{ 'settings.ai.guide.recommendationsStep2' | transloco }}</li>
-      <li>{{ 'settings.ai.guide.recommendationsStep3' | transloco }}</li>
-      <li>{{ 'settings.ai.guide.recommendationsStep4' | transloco }}</li>
-      <li>{{ 'settings.ai.guide.recommendationsStep5' | transloco }}</li>
-    </ol>
-  </div>
-</app-settings-card>
-
-<app-settings-card
-  [heading]="'settings.ai.title' | transloco"
-  [description]="'settings.ai.lead' | transloco"
->
-  @if (ai.configs().length) {
-    <ul class="configs">
-      @for (config of ai.configs(); track config.id) {
-        <li class="config-row" [class.is-active]="config.active">
-          <app-disclosure appearance="row">
-            <div summary class="summary-line">
-              <span class="label">{{ label(config) }}</span>
-              @if (config.active) {
-                <span class="badge">{{ 'settings.ai.configs.active' | transloco }}</span>
-              }
-              @if (config.model) {
-                <span class="model">{{ 'settings.ai.model' | transloco }}: {{ config.model }}</span>
-              }
-            </div>
-
-            <div class="config-body">
-              @if (config.apiKeyHint) {
-                <span class="hint">{{
-                  'settings.ai.storedKey' | transloco: { hint: config.apiKeyHint }
-                }}</span>
-              } @else {
-                <span class="hint">{{ 'settings.ai.noStoredKey' | transloco }}</span>
-              }
-
-              @if (renamingId() === config.id) {
-                <app-field [label]="'settings.ai.configs.namePlaceholder' | transloco">
-                  <input
-                    type="text"
-                    autocomplete="off"
-                    [value]="renameText()"
-                    (input)="renameText.set(value($event))"
-                  />
-                </app-field>
-                <div class="acts">
-                  <app-button
-                    variant="primary"
-                    class="rename-save"
-                    [disabled]="ai.busy()"
-                    (click)="confirmRename(config.id)"
-                  >
-                    {{ 'settings.ai.configs.renameSave' | transloco }}
-                  </app-button>
-                  <app-button class="rename-cancel" (click)="cancelRename()">
-                    {{ 'common.cancel' | transloco }}
-                  </app-button>
-                </div>
-              } @else {
-                <div class="reasoning-toggle">
-                  <span class="reasoning-toggle-row">
-                    <label class="reasoning-check">
-                      <input
-                        type="checkbox"
-                        [checked]="config.suppressReasoning"
-                        [disabled]="ai.busy()"
-                        (change)="toggleReasoning(config, $event)"
-                      />
-                      <span>{{ 'settings.ai.configs.reasoning' | transloco }}</span>
-                    </label>
-                    <app-info-tip
-                      [text]="'settings.ai.info.reasoning' | transloco"
-                      [label]="'settings.ai.configs.reasoning' | transloco"
-                    />
-                  </span>
-                  <span class="reasoning-toggle-row">
-                    <label class="reasoning-check">
-                      <input
-                        type="checkbox"
-                        [checked]="config.slowModel"
-                        [disabled]="ai.busy()"
-                        (change)="toggleSlowModel(config, $event)"
-                      />
-                      <span>{{ 'settings.ai.configs.slowModel' | transloco }}</span>
-                    </label>
-                    <app-info-tip
-                      [text]="'settings.ai.info.slowModel' | transloco"
-                      [label]="'settings.ai.configs.slowModel' | transloco"
-                    />
-                  </span>
-                  <span class="reasoning-toggle-row">
-                    <label class="batch-cap-label">
-                      <span>{{ 'settings.ai.configs.maxBatchSize' | transloco }}</span>
-                      <input
-                        type="number"
-                        min="5"
-                        max="200"
-                        class="batch-cap-input"
-                        [placeholder]="defaultMaxBatchSize()"
-                        [value]="config.maxBatchSize ?? ''"
-                        [disabled]="ai.busy()"
-                        (change)="setMaxBatchSize(config, $event)"
-                      />
-                    </label>
-                    <app-info-tip
-                      [text]="
-                        'settings.ai.info.maxBatchSize'
-                          | transloco: { default: ai.defaultMaxBatchSize() }
-                      "
-                      [label]="'settings.ai.configs.maxBatchSize' | transloco"
-                    />
-                  </span>
-                </div>
-                <app-field
-                  [label]="'settings.ai.configs.batchConcurrency' | transloco"
-                  [info]="'settings.ai.info.batchConcurrency' | transloco"
-                >
-                  <select [disabled]="ai.busy()" (change)="setBatchConcurrency(config, $event)">
-                    @for (option of concurrencyOptions; track option) {
-                      <option [value]="option" [selected]="config.batchConcurrency === option">
-                        {{ option }}
-                      </option>
-                    }
-                  </select>
-                </app-field>
-                @if (ai.savedConcurrencyId() === config.id) {
-                  <span class="saved">{{ 'settings.ai.configs.saved' | transloco }}</span>
-                }
-              }
-
-              @if (ai.choosingModelFor() === config.id && ai.models().length) {
-                <div class="model-picker">
-                  <app-field
-                    [label]="'settings.ai.model' | transloco"
-                    [info]="'settings.ai.info.modelPicker' | transloco"
-                  >
-                    <app-searchable-select
-                      [inputId]="'ai-model-' + config.id"
-                      [options]="modelOptions()"
-                      [placeholder]="'settings.ai.modelPlaceholder' | transloco"
-                      [value]="chosenModel()"
-                      (valueChange)="chosenModel.set($event)"
-                    />
-                  </app-field>
-                  <app-button
-                    variant="primary"
-                    class="save-model"
-                    [disabled]="!chosenModel() || ai.busy()"
-                    (click)="saveModel(config.id)"
-                  >
-                    {{ 'settings.ai.saveModel' | transloco }}
-                  </app-button>
-                </div>
-              }
-
-              @if (renamingId() !== config.id) {
-                <div class="acts">
-                  <app-button
-                    class="activate"
-                    [disabled]="config.active || !config.ready || ai.busy()"
-                    (click)="ai.activate(config.id)"
-                  >
-                    {{ 'settings.ai.configs.activate' | transloco }}
-                  </app-button>
-                  <app-button
-                    class="change-model"
-                    [disabled]="ai.busy()"
-                    (click)="ai.loadModels(config.id)"
-                  >
-                    {{ 'settings.ai.configs.changeModel' | transloco }}
-                  </app-button>
-                  <app-button
-                    class="duplicate"
-                    [disabled]="ai.busy()"
-                    (click)="ai.duplicate(config.id)"
-                  >
-                    {{ 'settings.ai.configs.duplicate' | transloco }}
-                  </app-button>
-                  <app-button class="rename" (click)="startRename(config)">
-                    {{ 'settings.ai.configs.rename' | transloco }}
-                  </app-button>
-                  <app-button
-                    variant="danger"
-                    class="delete"
-                    [disabled]="ai.busy()"
-                    (click)="confirmDelete(config)"
-                  >
-                    {{ 'settings.ai.configs.delete' | transloco }}
-                  </app-button>
-                </div>
-                <div class="acts-info">
-                  <app-info-tip
-                    [text]="'settings.ai.info.rowActions' | transloco"
-                    [label]="'settings.ai.info.actionsLabel' | transloco"
-                  />
-                </div>
-              }
-
-              @if (rowFailure(config.id); as message) {
-                <app-error-banner [message]="message" />
-              }
-            </div>
-          </app-disclosure>
-        </li>
-      }
-    </ul>
-  }
-
-  @if (listFailure(); as message) {
-    <app-error-banner [message]="message" />
-  }
-</app-settings-card>
-
-<app-settings-card [heading]="'settings.ai.addTitle' | transloco" [collapsible]="true">
-  <div class="group add-group">
-    <app-field
-      [label]="'settings.ai.configs.namePlaceholder' | transloco"
-      [info]="'settings.ai.info.name' | transloco"
-    >
-      <input
-        type="text"
-        autocomplete="off"
-        [value]="newName()"
-        (input)="newName.set(value($event))"
-      />
-    </app-field>
-
-    <app-field
-      [label]="'settings.ai.baseUrl' | transloco"
-      [hint]="'settings.ai.baseUrlHint' | transloco"
-      [info]="'settings.ai.info.baseUrl' | transloco"
-    >
-      <input
-        type="url"
-        autocomplete="off"
-        placeholder="https://api.openai.com/v1"
-        [value]="newBaseUrl()"
-        (input)="newBaseUrl.set(value($event))"
-      />
-    </app-field>
-
-    <app-field
-      [label]="'settings.ai.apiKey' | transloco"
-      [hint]="'settings.ai.apiKeyHint' | transloco"
-      [info]="'settings.ai.info.apiKey' | transloco"
-    >
-      <input
-        type="password"
-        autocomplete="off"
-        [value]="newApiKey()"
-        (input)="newApiKey.set(value($event))"
-      />
-    </app-field>
-
-    <app-button
-      variant="primary"
-      class="add-config"
-      [loading]="ai.busy()"
-      [disabled]="!canAdd()"
-      (click)="add()"
-    >
-      {{ 'settings.ai.configs.add' | transloco }}
-    </app-button>
-
-    @if (addFailure(); as message) {
-      <app-error-banner [message]="message" />
-    }
-  </div>
-</app-settings-card>
-
-@if (activeReady()) {
-  <app-settings-card
-    [heading]="'settings.ai.recommendations.title' | transloco"
-    [description]="'settings.ai.ready' | transloco: { model: activeModel() }"
+<div class="groups">
+  <!-- ============ PROVIDER ============ -->
+  <app-settings-group
+    icon="smart_toy"
+    [title]="'settings.ai.provider.title' | transloco"
+    [caption]="'settings.ai.provider.caption' | transloco"
   >
-    <app-recommendation-settings-card />
-  </app-settings-card>
-  <app-recommendation-run-history />
-  <app-recommendation-debug-log />
-}
+    @if (activeReady() && !managing() && activeConfig(); as active) {
+      <div class="conn provider-summary">
+        <span class="conn-dot"><app-icon name="check_circle" size="sm" /></span>
+        <div class="conn-who">
+          <span class="label">{{ label(active) }}</span>
+          <span class="model">
+            {{ active.model }} · {{ 'settings.ai.provider.connected' | transloco }}
+          </span>
+        </div>
+        <app-button class="manage" (click)="managing.set(true)">
+          {{ 'settings.ai.provider.manage' | transloco }}
+        </app-button>
+      </div>
+    } @else {
+      <div class="conn-list">
+        @if (ai.configs().length) {
+          <ul class="configs">
+            @for (config of ai.configs(); track config.id) {
+              <li class="config-row" [class.is-active]="config.active">
+                <app-disclosure appearance="drill-in">
+                  <div summary class="summary-line">
+                    <span class="label">{{ label(config) }}</span>
+                    @if (config.active) {
+                      <span class="badge">{{ 'settings.ai.configs.active' | transloco }}</span>
+                    }
+                    @if (config.model) {
+                      <span class="model"
+                        >{{ 'settings.ai.model' | transloco }}: {{ config.model }}</span
+                      >
+                    }
+                  </div>
+
+                  <div class="config-body">
+                    @if (config.apiKeyHint) {
+                      <span class="hint">{{
+                        'settings.ai.storedKey' | transloco: { hint: config.apiKeyHint }
+                      }}</span>
+                    } @else {
+                      <span class="hint">{{ 'settings.ai.noStoredKey' | transloco }}</span>
+                    }
+
+                    @if (renamingId() === config.id) {
+                      <app-field [label]="'settings.ai.configs.namePlaceholder' | transloco">
+                        <input
+                          type="text"
+                          autocomplete="off"
+                          [value]="renameText()"
+                          (input)="renameText.set(value($event))"
+                        />
+                      </app-field>
+                      <div class="acts">
+                        <app-button
+                          variant="primary"
+                          class="rename-save"
+                          [disabled]="ai.busy()"
+                          (click)="confirmRename(config.id)"
+                        >
+                          {{ 'settings.ai.configs.renameSave' | transloco }}
+                        </app-button>
+                        <app-button class="rename-cancel" (click)="cancelRename()">
+                          {{ 'common.cancel' | transloco }}
+                        </app-button>
+                      </div>
+                    } @else {
+                      <div class="reasoning-toggle">
+                        <span class="reasoning-toggle-row">
+                          <label class="reasoning-check">
+                            <input
+                              type="checkbox"
+                              [checked]="config.suppressReasoning"
+                              [disabled]="ai.busy()"
+                              (change)="toggleReasoning(config, $event)"
+                            />
+                            <span>{{ 'settings.ai.configs.reasoning' | transloco }}</span>
+                          </label>
+                          <app-info-tip
+                            [text]="'settings.ai.info.reasoning' | transloco"
+                            [label]="'settings.ai.configs.reasoning' | transloco"
+                          />
+                        </span>
+                        <span class="reasoning-toggle-row">
+                          <label class="reasoning-check">
+                            <input
+                              type="checkbox"
+                              [checked]="config.slowModel"
+                              [disabled]="ai.busy()"
+                              (change)="toggleSlowModel(config, $event)"
+                            />
+                            <span>{{ 'settings.ai.configs.slowModel' | transloco }}</span>
+                          </label>
+                          <app-info-tip
+                            [text]="'settings.ai.info.slowModel' | transloco"
+                            [label]="'settings.ai.configs.slowModel' | transloco"
+                          />
+                        </span>
+                        <span class="reasoning-toggle-row">
+                          <label class="batch-cap-label">
+                            <span>{{ 'settings.ai.configs.maxBatchSize' | transloco }}</span>
+                            <input
+                              type="number"
+                              min="5"
+                              max="200"
+                              class="batch-cap-input"
+                              [placeholder]="defaultMaxBatchSize()"
+                              [value]="config.maxBatchSize ?? ''"
+                              [disabled]="ai.busy()"
+                              (change)="setMaxBatchSize(config, $event)"
+                            />
+                          </label>
+                          <app-info-tip
+                            [text]="
+                              'settings.ai.info.maxBatchSize'
+                                | transloco: { default: ai.defaultMaxBatchSize() }
+                            "
+                            [label]="'settings.ai.configs.maxBatchSize' | transloco"
+                          />
+                        </span>
+                      </div>
+                      <app-field
+                        [label]="'settings.ai.configs.batchConcurrency' | transloco"
+                        [info]="'settings.ai.info.batchConcurrency' | transloco"
+                      >
+                        <select
+                          [disabled]="ai.busy()"
+                          (change)="setBatchConcurrency(config, $event)"
+                        >
+                          @for (option of concurrencyOptions; track option) {
+                            <option
+                              [value]="option"
+                              [selected]="config.batchConcurrency === option"
+                            >
+                              {{ option }}
+                            </option>
+                          }
+                        </select>
+                      </app-field>
+                      @if (ai.savedConcurrencyId() === config.id) {
+                        <span class="saved">{{ 'settings.ai.configs.saved' | transloco }}</span>
+                      }
+                    }
+
+                    @if (ai.choosingModelFor() === config.id && ai.models().length) {
+                      <div class="model-picker">
+                        <app-field
+                          [label]="'settings.ai.model' | transloco"
+                          [info]="'settings.ai.info.modelPicker' | transloco"
+                        >
+                          <app-searchable-select
+                            [inputId]="'ai-model-' + config.id"
+                            [options]="modelOptions()"
+                            [placeholder]="'settings.ai.modelPlaceholder' | transloco"
+                            [value]="chosenModel()"
+                            (valueChange)="chosenModel.set($event)"
+                          />
+                        </app-field>
+                        <app-button
+                          variant="primary"
+                          class="save-model"
+                          [disabled]="!chosenModel() || ai.busy()"
+                          (click)="saveModel(config.id)"
+                        >
+                          {{ 'settings.ai.saveModel' | transloco }}
+                        </app-button>
+                      </div>
+                    }
+
+                    @if (renamingId() !== config.id) {
+                      <div class="acts">
+                        <app-button
+                          class="activate"
+                          [disabled]="config.active || !config.ready || ai.busy()"
+                          (click)="ai.activate(config.id)"
+                        >
+                          {{ 'settings.ai.configs.activate' | transloco }}
+                        </app-button>
+                        <app-button
+                          class="change-model"
+                          [disabled]="ai.busy()"
+                          (click)="ai.loadModels(config.id)"
+                        >
+                          {{ 'settings.ai.configs.changeModel' | transloco }}
+                        </app-button>
+                        <app-button
+                          class="duplicate"
+                          [disabled]="ai.busy()"
+                          (click)="ai.duplicate(config.id)"
+                        >
+                          {{ 'settings.ai.configs.duplicate' | transloco }}
+                        </app-button>
+                        <app-button class="rename" (click)="startRename(config)">
+                          {{ 'settings.ai.configs.rename' | transloco }}
+                        </app-button>
+                        <app-button
+                          variant="danger"
+                          class="delete"
+                          [disabled]="ai.busy()"
+                          (click)="confirmDelete(config)"
+                        >
+                          {{ 'settings.ai.configs.delete' | transloco }}
+                        </app-button>
+                      </div>
+                      <div class="acts-info">
+                        <app-info-tip
+                          [text]="'settings.ai.info.rowActions' | transloco"
+                          [label]="'settings.ai.info.actionsLabel' | transloco"
+                        />
+                      </div>
+                    }
+
+                    @if (rowFailure(config.id); as message) {
+                      <app-error-banner [message]="message" />
+                    }
+                  </div>
+                </app-disclosure>
+              </li>
+            }
+          </ul>
+        }
+
+        @if (listFailure(); as message) {
+          <app-error-banner [message]="message" />
+        }
+      </div>
+
+      <app-disclosure appearance="drill-in" [label]="'settings.ai.addTitle' | transloco">
+        <div class="add-group">
+          <app-field
+            [label]="'settings.ai.configs.namePlaceholder' | transloco"
+            [info]="'settings.ai.info.name' | transloco"
+          >
+            <input
+              type="text"
+              autocomplete="off"
+              [value]="newName()"
+              (input)="newName.set(value($event))"
+            />
+          </app-field>
+
+          <app-field
+            [label]="'settings.ai.baseUrl' | transloco"
+            [hint]="'settings.ai.baseUrlHint' | transloco"
+            [info]="'settings.ai.info.baseUrl' | transloco"
+          >
+            <input
+              type="url"
+              autocomplete="off"
+              placeholder="https://api.openai.com/v1"
+              [value]="newBaseUrl()"
+              (input)="newBaseUrl.set(value($event))"
+            />
+          </app-field>
+
+          <app-field
+            [label]="'settings.ai.apiKey' | transloco"
+            [hint]="'settings.ai.apiKeyHint' | transloco"
+            [info]="'settings.ai.info.apiKey' | transloco"
+          >
+            <input
+              type="password"
+              autocomplete="off"
+              [value]="newApiKey()"
+              (input)="newApiKey.set(value($event))"
+            />
+          </app-field>
+
+          <app-button
+            variant="primary"
+            class="add-config"
+            [loading]="ai.busy()"
+            [disabled]="!canAdd()"
+            (click)="add()"
+          >
+            {{ 'settings.ai.configs.add' | transloco }}
+          </app-button>
+
+          @if (addFailure(); as message) {
+            <app-error-banner [message]="message" />
+          }
+        </div>
+      </app-disclosure>
+
+      <app-disclosure appearance="drill-in" [label]="'settings.ai.guide.title' | transloco">
+        <div class="guide">
+          <p class="guide-intro">{{ 'settings.ai.guide.intro' | transloco }}</p>
+
+          <h3>{{ 'settings.ai.guide.connectionTitle' | transloco }}</h3>
+          <ol>
+            <li>{{ 'settings.ai.guide.connectionStep1' | transloco }}</li>
+            <li>{{ 'settings.ai.guide.connectionStep2' | transloco }}</li>
+            <li>{{ 'settings.ai.guide.connectionStep3' | transloco }}</li>
+            <li>{{ 'settings.ai.guide.connectionStep4' | transloco }}</li>
+            <li>{{ 'settings.ai.guide.connectionStep5' | transloco }}</li>
+          </ol>
+
+          <h3>{{ 'settings.ai.guide.recommendationsTitle' | transloco }}</h3>
+          <ol>
+            <li>{{ 'settings.ai.guide.recommendationsStep1' | transloco }}</li>
+            <li>{{ 'settings.ai.guide.recommendationsStep2' | transloco }}</li>
+            <li>{{ 'settings.ai.guide.recommendationsStep3' | transloco }}</li>
+            <li>{{ 'settings.ai.guide.recommendationsStep4' | transloco }}</li>
+            <li>{{ 'settings.ai.guide.recommendationsStep5' | transloco }}</li>
+          </ol>
+        </div>
+      </app-disclosure>
+
+      @if (activeReady()) {
+        <div class="manager-foot">
+          <app-button class="manage-done" (click)="managing.set(false)">
+            {{ 'settings.ai.provider.done' | transloco }}
+          </app-button>
+        </div>
+      }
+    }
+  </app-settings-group>
+
+  <!-- ============ FOR YOU ============ -->
+  @if (activeReady()) {
+    <app-settings-group
+      icon="tune"
+      [title]="'settings.ai.recommendations.title' | transloco"
+      [caption]="'settings.ai.ready' | transloco: { model: activeModel() }"
+    >
+      <app-recommendation-settings-card />
+    </app-settings-group>
+
+    <!-- ============ DIAGNOSTICS ============ -->
+    <app-settings-group
+      icon="monitoring"
+      [title]="'settings.ai.diagnostics.title' | transloco"
+      [caption]="'settings.ai.diagnostics.caption' | transloco"
+    >
+      <app-disclosure
+        appearance="drill-in"
+        [label]="'settings.ai.recommendations.historyTitle' | transloco"
+      >
+        <app-recommendation-run-history />
+      </app-disclosure>
+      <app-disclosure
+        appearance="drill-in"
+        [label]="'settings.ai.recommendations.debugPanelTitle' | transloco"
+      >
+        <app-recommendation-debug-log />
+      </app-disclosure>
+    </app-settings-group>
+  }
+</div>

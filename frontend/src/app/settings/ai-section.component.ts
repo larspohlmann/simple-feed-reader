@@ -18,12 +18,13 @@ import {
 import { DisclosureComponent } from '../shared/disclosure/disclosure.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../shared/field/field.component';
+import { IconComponent } from '../shared/icon/icon.component';
 import { InfoTipComponent } from '../shared/info-tip/info-tip.component';
 import {
   SearchableSelectComponent,
   SelectOption,
 } from '../shared/searchable-select/searchable-select.component';
-import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
+import { SettingsGroupComponent } from '../shared/settings/settings-group/settings-group.component';
 import { AiFailure, SERVER_TEXT_KINDS } from './ai-failure';
 import { AiConfig, AiSettingsService } from './ai-settings.service';
 import { RecommendationDebugLogComponent } from './recommendation-debug-log.component';
@@ -48,12 +49,13 @@ import { RecommendationSettingsCardComponent } from './recommendation-settings-c
     DisclosureComponent,
     ErrorBannerComponent,
     FieldComponent,
+    IconComponent,
     InfoTipComponent,
     RecommendationDebugLogComponent,
     RecommendationRunHistoryComponent,
     RecommendationSettingsCardComponent,
     SearchableSelectComponent,
-    SettingsCardComponent,
+    SettingsGroupComponent,
     TranslocoPipe,
   ],
   providers: [AiSettingsService],
@@ -103,10 +105,21 @@ export class AiSectionComponent {
    *  address gates the button. */
   readonly canAdd = computed(() => this.newBaseUrl().trim().length > 0 && !this.ai.busy());
 
-  private readonly activeConfig = computed(() => this.ai.configs().find((config) => config.active));
+  readonly activeConfig = computed(() => this.ai.configs().find((config) => config.active));
 
   readonly activeReady = computed(() => this.activeConfig()?.ready ?? false);
   readonly activeModel = computed(() => this.activeConfig()?.model ?? null);
+
+  /**
+   * Folds the provider group down to a one-line summary once a ready active
+   * connection exists; the full connection manager is shown otherwise. Starts
+   * `false`, so a ready account opens folded and a first-time account (no ready
+   * active connection) sees the manager expanded for setup. "Manage" sets it
+   * `true`; "Done" sets it back to `false`. A plain signal keeps it OnPush-safe:
+   * the folded summary shows only while `activeReady()` is also true, so the
+   * flag never strands the account with neither view.
+   */
+  readonly managing = signal(false);
 
   /** The list card answers for the initial load; a row's own write answers
    *  in the row, and the add form answers under itself. One shared banner

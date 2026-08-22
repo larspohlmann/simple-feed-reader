@@ -134,20 +134,15 @@ describe('AiSectionComponent', () => {
       (banner.textContent ?? '').trim(),
     );
 
-  // Same idiom as the pre-existing card-layout test at line 519: find the card
-  // by the thing only that card contains.
-  const card = (fixture: ComponentFixture<AiSectionComponent>, marker: string): HTMLElement =>
-    (
-      Array.from(
-        (fixture.nativeElement as HTMLElement).querySelectorAll('app-settings-card'),
-      ) as HTMLElement[]
-    ).find((each) => each.querySelector(marker)) as HTMLElement;
-
+  // The connection manager is now a set of Grouped regions rather than three
+  // `app-settings-card`s (#541): the add form is its own drill-in, so the add
+  // failure banner scopes to `.add-group`; the list and its load-failure banner
+  // scope to `.conn-list`.
   const addCard = (fixture: ComponentFixture<AiSectionComponent>): HTMLElement =>
-    card(fixture, '.add-config');
+    (fixture.nativeElement as HTMLElement).querySelector('.add-group') as HTMLElement;
 
   const listCard = (fixture: ComponentFixture<AiSectionComponent>): HTMLElement =>
-    card(fixture, '.configs');
+    (fixture.nativeElement as HTMLElement).querySelector('.conn-list') as HTMLElement;
 
   const scoped = (failure: AiFailure, scope: ScopedAiFailure['scope']): ScopedAiFailure => ({
     failure,
@@ -532,6 +527,9 @@ describe('AiSectionComponent', () => {
   it('disables activation for a row that is already active, not ready, or while busy', () => {
     const fixture = mount();
     ai.configs.set([config({ id: 1, active: true, ready: true }), config({ id: 2, ready: false })]);
+    // A ready active connection folds the provider group to its summary, so the
+    // per-connection rows only exist once the manager is opened (#541).
+    fixture.componentInstance.managing.set(true);
     fixture.detectChanges();
 
     // Row 1 is the active, ready configuration, so it is the one the
@@ -778,22 +776,21 @@ describe('AiSectionComponent', () => {
     expect(acts.querySelector('.delete')).not.toBeNull();
   });
 
-  it('puts the add-configuration form in its own titled card, separate from the configs list', () => {
+  it('puts the add-configuration form in its own drill-in, separate from the configs list', () => {
     const fixture = mount();
     ai.configs.set([config({ id: 1 })]);
     fixture.detectChanges();
 
-    const cards = Array.from(
-      fixture.nativeElement.querySelectorAll('app-settings-card'),
-    ) as HTMLElement[];
-    expect(cards.length).toBe(3);
+    const listRegion = fixture.nativeElement.querySelector('.conn-list') as HTMLElement;
+    const addForm = fixture.nativeElement.querySelector('.add-group') as HTMLElement;
+    expect(listRegion.querySelector('.add-config')).toBeNull();
+    expect(addForm.querySelector('.configs')).toBeNull();
 
-    const listCard = cards.find((card) => card.querySelector('.configs')) as HTMLElement;
-    const addCard = cards.find((card) => card.querySelector('.add-config')) as HTMLElement;
-    expect(listCard).not.toBe(addCard);
-    expect(listCard.querySelector('.add-config')).toBeNull();
-    expect(addCard.querySelector('.configs')).toBeNull();
-    expect(addCard.querySelector('h2')?.textContent).toBe('Add a configuration');
+    // The add form lives inside its own collapsed drill-in labelled "Add a
+    // configuration"; the configs list is not inside that same drill-in.
+    const addDrillIn = addDetails(fixture);
+    expect(addDrillIn.querySelector('summary')?.textContent).toContain('Add a configuration');
+    expect(addDrillIn.querySelector('.configs')).toBeNull();
   });
 
   it('collapses the add-configuration card by default', () => {
@@ -826,6 +823,62 @@ describe('AiSectionComponent', () => {
     expect(fixture.nativeElement.querySelector('app-recommendation-settings-card')).not.toBeNull();
   });
 
+  // The recommendation card, run history and debug log all fetch on
+  // construction once the active config is ready; a ready-state test must drain
+  // those three requests before `http.verify()`.
+  const flushReady = (): void => {
+    http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
+    http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
+    http
+      .expectOne((req) => req.url === '/api/recommendations/runs/history')
+      .flush({ totalCostNanoCredits: null, months: [], latest: null });
+  };
+
+  it('folds the provider group to a one-line summary when a ready active connection exists', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1, name: 'OpenAI', active: true, ready: true, model: 'gpt-4o' })]);
+    fixture.detectChanges();
+    flushReady();
+    fixture.detectChanges();
+
+    const summary = fixture.nativeElement.querySelector('.provider-summary') as HTMLElement;
+    expect(summary).not.toBeNull();
+    expect(summary.textContent).toContain('OpenAI');
+    expect(summary.textContent).toContain('gpt-4o');
+    expect(summary.textContent).toContain('connected');
+    // The manager, and every per-connection row, stays hidden while folded.
+    expect(fixture.nativeElement.querySelector('.config-row')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.add-group')).toBeNull();
+  });
+
+  it('opens the connection manager on Manage and folds back on Done', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1, active: true, ready: true, model: 'gpt-4o' })]);
+    fixture.detectChanges();
+    flushReady();
+    fixture.detectChanges();
+
+    (fixture.nativeElement.querySelector('.manage') as HTMLElement).click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.config-row')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.provider-summary')).toBeNull();
+
+    (fixture.nativeElement.querySelector('.manage-done') as HTMLElement).click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.provider-summary')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.config-row')).toBeNull();
+  });
+
+  it('shows the connection manager, not a summary, when no ready active connection exists', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1, active: false, ready: false })]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.provider-summary')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.add-group')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.config-row')).not.toBeNull();
+  });
+
   it('gives the add-form fields info tips and keeps the short hints', () => {
     const fixture = mountWithConfigs([]);
 
@@ -848,16 +901,17 @@ describe('AiSectionComponent', () => {
     ]);
   });
 
-  it('renders the setup guide as the first card, collapsed by default', () => {
+  it('renders the setup guide as a collapsed drill-in inside the provider group', () => {
     const fixture = mountWithConfigs([]);
 
-    const firstCard = fixture.nativeElement.querySelector('app-settings-card') as HTMLElement;
-    expect(firstCard.querySelector('h2')?.textContent).toContain('Step-by-step setup');
+    const guideDetails = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('details'),
+    ).find((details) => details.querySelector('.guide')) as HTMLDetailsElement;
+    expect(guideDetails).not.toBeUndefined();
+    expect(guideDetails.querySelector('summary')?.textContent).toContain('Step-by-step setup');
+    expect(guideDetails.open).toBe(false);
 
-    const details = firstCard.querySelector('details') as HTMLDetailsElement;
-    expect(details.open).toBe(false);
-
-    const steps = firstCard.querySelectorAll('.guide ol li');
+    const steps = guideDetails.querySelectorAll('.guide ol li');
     expect(steps.length).toBe(10);
   });
 

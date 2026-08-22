@@ -105,6 +105,17 @@
       "modelPlaceholder": "Select a model",
       "saveModel": "Save model",
       "ready": "AI features are available and use {{model}}.",
+      "provider": {
+        "title": "Provider",
+        "caption": "The model that generates your recommendations.",
+        "connected": "connected and ready",
+        "manage": "Manage",
+        "done": "Done"
+      },
+      "diagnostics": {
+        "title": "Diagnostics",
+        "caption": "Run history and logs. Collapsed by default."
+      },
       "addTitle": "Add a configuration",
       "configs": {
         "active": "Active",

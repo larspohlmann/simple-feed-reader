@@ -105,6 +105,17 @@
       "modelPlaceholder": "Modell auswählen",
       "saveModel": "Modell speichern",
       "ready": "KI-Funktionen sind verfügbar und nutzen {{model}}.",
+      "provider": {
+        "title": "Anbieter",
+        "caption": "Das Modell, das deine Empfehlungen erzeugt.",
+        "connected": "verbunden und bereit",
+        "manage": "Verwalten",
+        "done": "Fertig"
+      },
+      "diagnostics": {
+        "title": "Diagnose",
+        "caption": "Laufverlauf und Protokolle. Standardmäßig eingeklappt."
+      },
       "addTitle": "Konfiguration hinzufügen",
       "configs": {
         "active": "Aktiv",
