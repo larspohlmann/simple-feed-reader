@@ -51,6 +51,7 @@ Columns:
 |---|---|---|
 | `id` | int, auto-increment | one row only; repository reads first by id asc |
 | `enabled` | bool, default `0` | the master switch |
+| `direct_fallback` | bool, default `1` | on by default; when off, a proxy failure is terminal so the real server IP never leaks |
 | `type` | string enum `SOCKS5` \| `HTTP` | egress protocol |
 | `host` | string | proxy host |
 | `port` | int | proxy port |
@@ -98,9 +99,9 @@ per-action attribute.
 
 - `GET /api/admin/proxy` → JSON view built by `src/Http/Admin/ProxySettingsJson.php`
   (hand-built static factory, never auto-serialized). Returns
-  `{ enabled, type, host, port, username, hasPassword, passwordHint }`. The secret
-  is **absent by construction**; only the 4-char hint and a `hasPassword` boolean
-  are exposed.
+  `{ enabled, directFallback, type, host, port, username, hasPassword, passwordHint }`.
+  The secret is **absent by construction**; only the 4-char hint and a
+  `hasPassword` boolean are exposed.
 - `PUT /api/admin/proxy` → full-replace via `#[MapRequestPayload]`
   `src/Dto/Admin/ProxySettingsRequest.php` (`final readonly`, `#[Assert\...]`,
   constructor defaults). The plaintext `password` is inbound-only, sealed
@@ -181,10 +182,11 @@ Shared pieces:
 - `src/Enum/ProxyType.php` — `enum ProxyType: string { case Socks5 = 'SOCKS5';
   case Http = 'HTTP'; }` (matches the `src/Enum` convention).
 - `src/Service/Fetch/ProxyConfig.php` — `final readonly` value object holding the
-  resolved egress: `ProxyType $type`, `host`, `port`, `?username`, `?password`.
-  `dsn(): string` builds the curl proxy URL (`socks5h://…` for SOCKS5 — remote
-  DNS — or `http://…`), URL-encoding any credentials. This is the only place the
-  opened password lives at fetch time.
+  resolved egress: `ProxyType $type`, `host`, `port`, `?username`, `?password`,
+  and `bool $directFallback` (default `true`). `dsn(): string` builds the curl
+  proxy URL (`socks5h://…` for SOCKS5 — remote DNS — or `http://…`), URL-encoding
+  any credentials; `directFallback` is behavioural and never enters the DSN. This
+  is the only place the opened password lives at fetch time.
 - `src/Service/Fetch/EgressOptions.php` — the one place the "proxy vs pin" request
   options are built, so the "keep the host guard, drop only the IP pin when
   proxied" invariant lives in a single spot instead of duplicated across the
@@ -244,21 +246,30 @@ Shared pieces:
   signal wanted. Its scoped `catalog.rot_check.http_client` (kept for test
   mockability) is untouched.
 
-### 6. Direct fallback when the proxy fetch fails
+### 6. Direct fallback when the proxy fetch fails (opt-out)
+
+The fallback is a per-connection setting, **on by default** (`directFallback`).
+When the admin turns it off, a proxied fetch that fails is **terminal** — the
+fetchers never retry directly, so the real server IP is never revealed. This is
+the "I want to hide my IP" mode: better to miss a feed than to leak the egress.
+`ProxyConfig->directFallback` carries the flag to both builders.
 
 - **Builder A:** on **any** failure of a proxied attempt — a `send()` throw caught
   in `fill()`, or a stream/status failure caught in `awaitNext()` — the fetcher
   requeues `$attempt->withoutProxy()` **once** instead of failing or trying the
-  cross-family retry. That direct-fallback attempt then runs the full guard + IP
-  pin and its own cross-family failover underneath. A private `fallbackFor(attempt)`
-  helper (proxied-and-not-stripped → `withoutProxy()`, else `null`) centralises the
-  "fire once" decision at both catch sites; cross-family applies only to attempts
-  that are not proxied.
-- **Builder B:** the fallback is the fall-through inside
-  `FailoverRequestSender::send()` described above — the proxied attempt is "attempt
-  0", and a warranted transport failure drops to the pinned direct families.
-- Either way the fallback fires **once** and only for proxied attempts. A direct
-  attempt that fails is terminal, exactly as today. No proxy → direct → proxy loop.
+  cross-family retry, **but only when `directFallback` is on**. A private
+  `fallbackFor(attempt)` helper (proxied, not stripped, **and** `directFallback` →
+  `withoutProxy()`, else `null`) centralises the decision at both catch sites; the
+  direct-fallback attempt then runs the full guard + IP pin and cross-family
+  failover. With `directFallback` off, `fallbackFor()` returns `null` and the
+  proxied failure is yielded as failed.
+- **Builder B:** the fall-through inside `FailoverRequestSender::send()` — the
+  proxied "attempt 0", on a warranted transport failure, drops to the pinned direct
+  families **only when `directFallback` is on**; with it off, the transport error
+  is rethrown (terminal), never reaching the direct loop.
+- Either way the fallback fires **at most once** and only for proxied attempts. A
+  direct attempt that fails is terminal, exactly as today. No proxy → direct →
+  proxy loop.
 
 ### 6a. Content egress has no exceptions
 
@@ -310,6 +321,10 @@ Composition, one `app-settings-group`:
 - **Enable** row → `app-settings-row` + `app-toggle`. **Instant save + toast**
   (design-language rule: a toggle saves on change). The toggle is **disabled until
   a config has been saved** — enabling an unconfigured proxy is meaningless.
+- **Direct fallback** row → `app-settings-row` + `app-toggle`, **instant save**,
+  on by default. An `app-info-tip` explains the trade-off: off means a proxy
+  failure fails the fetch instead of retrying directly, so the real server IP is
+  never revealed.
 - **Type** → `app-settings-row` + a select. Instant save (design-language rule: a
   select saves on change).
 - **Host / Port / Username / Password** → `app-settings-row` typed fields,
@@ -353,14 +368,18 @@ on error; no browser-only coupling; no CSRF token. The Test endpoint is a plain
   direct keeps both; a proxied failure requeues exactly one direct attempt and that
   fallback re-runs guard + pin; direct failure stays terminal; fallback fires at
   most once (assert via a `MockHttpClient` that a proxied failure yields one direct
-  request with `resolve` set and no `proxy`); a null-resolver run is unchanged;
+  request with `resolve` set and no `proxy`); with `directFallback` **off** a
+  proxied failure is terminal (one proxied request, no direct request, failed
+  outcome); a null-resolver run is unchanged;
   `FailoverRequestSender::send()` (Builder B) — with the resolver returning a proxy
   it issues one `proxy`/no-`resolve` request first, a warranted transport failure
-  falls through to the pinned direct loop, and a null resolver is byte-for-byte the
+  falls through to the pinned direct loop when `directFallback` is on and is
+  rethrown (no direct request) when off, and a null resolver is byte-for-byte the
   current behaviour.
 - **Functional:** admin proxy settings round-trip — `PUT` then `GET`, password
-  write-only, `hasPassword`/`passwordHint` reflected, blank password keeps the
-  stored one, admin-guarded (401/403 without `ROLE_ADMIN`); `POST /test` shape.
+  write-only, `hasPassword`/`passwordHint` reflected, `enabled` and
+  `directFallback` reflected, blank password keeps the stored one, admin-guarded
+  (401/403 without `ROLE_ADMIN`); `POST /test` shape.
 - **Rot-check (Builder C):** with a `MockHttpClient` in the scoped client, assert
   `CheckCatalogUrlsCommand` adds `proxy => dsn` to its request when the resolver
   returns a proxy, and omits it when the resolver returns `null`.
