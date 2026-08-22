@@ -142,7 +142,7 @@ final class FeedPreviewControllerTest extends WebTestCase
         self::assertSame('https://example.com/pic.jpg', $item['imageUrl']);
         self::assertArrayHasKey('imageWidth', $item);
         self::assertArrayHasKey('imageHeight', $item);
-        self::assertArrayHasKey('publishedAt', $item);
+        self::assertSame('2026-07-01T10:00:00+00:00', $item['publishedAt']);
     }
 
     public function testScrapedFormatPreviewsTheHtmlPageAsAFeed(): void
