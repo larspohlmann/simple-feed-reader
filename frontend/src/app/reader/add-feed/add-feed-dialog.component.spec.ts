@@ -179,7 +179,7 @@ describe('AddFeedDialogComponent', () => {
     expect(close).toHaveBeenCalledWith({ id: 3 });
   });
 
-  it('previews a candidate lazily only when it is expanded', () => {
+  it('auto-previews the first candidate and previews the rest lazily on click', () => {
     const f = create();
     f.componentInstance.form.setValue({ url: 'https://example.com' });
     f.componentInstance.submit();
@@ -191,18 +191,13 @@ describe('AddFeedDialogComponent', () => {
     });
     f.detectChanges();
     expect(f.componentInstance.candidates().length).toBe(2);
-    // Nothing is previewed until a candidate is expanded.
-    ctrl.expectNone((r) => r.url.endsWith('/api/feeds/preview'));
 
-    const head = (f.nativeElement as HTMLElement).querySelector('.card .card-head') as
-      HTMLButtonElement | undefined;
-    expect(head).toBeTruthy();
-    head!.click();
-    f.detectChanges();
-
+    // The first candidate auto-expands, so its preview is fetched immediately;
+    // the second is not previewed until the user opens it.
     const rssReq = ctrl.expectOne(
       (r) => r.url.endsWith('/api/feeds/preview') && r.body.url === 'https://f/rss',
     );
+    ctrl.expectNone((r) => r.url.endsWith('/api/feeds/preview') && r.body.url === 'https://f/atom');
     rssReq.flush({
       feed: {
         title: 'RSS Feed',
@@ -227,12 +222,41 @@ describe('AddFeedDialogComponent', () => {
 
     const cards = (f.nativeElement as HTMLElement).querySelectorAll('.card');
     expect(cards.length).toBe(2);
-    expect((f.nativeElement as HTMLElement).querySelectorAll('app-preview-entry-row').length).toBe(
-      1,
-    );
     const [rssCard, atomCard] = Array.from(cards);
     expect(rssCard.textContent).toContain('First headline');
+    expect(rssCard.querySelector('app-preview-entry-row')).not.toBeNull();
+    // The second candidate has not been fetched or rendered yet.
     expect(atomCard.querySelector('app-preview-entry-row')).toBeNull();
+
+    // Opening the second candidate via its Preview pill fetches its preview
+    // now (and collapses the first, since only one expands at a time).
+    (atomCard.querySelector('.preview-toggle') as HTMLButtonElement).click();
+    f.detectChanges();
+    const atomReq = ctrl.expectOne(
+      (r) => r.url.endsWith('/api/feeds/preview') && r.body.url === 'https://f/atom',
+    );
+    atomReq.flush({
+      feed: {
+        title: 'ATOM Feed',
+        itemCount: 1,
+        content: 'full',
+        hasImages: false,
+        items: [
+          {
+            title: 'Second headline',
+            url: 'https://f/atom/1',
+            publishedAt: null,
+            author: null,
+            summary: 'snip',
+            imageUrl: null,
+            imageWidth: null,
+            imageHeight: null,
+          },
+        ],
+      },
+    });
+    f.detectChanges();
+    expect(atomCard.querySelector('app-preview-entry-row')).not.toBeNull();
   });
 
   it('labels a scraped candidate and subscribes/previews with the scraped format', () => {

@@ -316,6 +316,8 @@
       "noRecentItems": "No recent items",
       "subscribe": "Subscribe",
       "noneFound": "No feeds found at that address.",
+      "preview": "Preview",
+      "hidePreview": "Hide preview",
       "previewUnavailable": "Preview unavailable",
       "contentFull": "Full text",
       "contentSummary": "Summary only",

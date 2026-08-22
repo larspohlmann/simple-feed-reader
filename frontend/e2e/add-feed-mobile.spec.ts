@@ -56,8 +56,9 @@ async function stubDiscovery(page: Page): Promise<void> {
           itemCount: 12,
           content: 'full',
           hasImages: true,
-          // Eight sample rows per card is what makes the expanded card's
-          // list outgrow the screen, so the dialog body actually scrolls.
+          // The feed carries eight items; the preview caps the render at three,
+          // so the count assertion below proves the cap while the expanded card
+          // plus the candidate list still outgrow the screen and scroll.
           items: Array.from({ length: 8 }, (_unused, index) => ({
             title: `Sample headline ${index + 1}`,
             url: `https://example.com/a${index + 1}`,
@@ -107,10 +108,11 @@ test.describe('Add feed on a phone', () => {
     const subscribes = dialog.getByRole('button', { name: 'Subscribe' });
     await expect(subscribes).toHaveCount(CANDIDATES.length);
 
-    // Several candidates come back, so none auto-expands: expand the first
-    // one and confirm its sample entries render as preview rows.
-    await dialog.locator('.card-head').first().click();
+    // The first candidate opens automatically, so its sample entries render as
+    // preview rows without a click — capped at three even though the feed
+    // carries eight.
     await expect(dialog.locator('app-preview-entry-row').first()).toBeVisible();
+    await expect(dialog.locator('app-preview-entry-row')).toHaveCount(3);
 
     // The dialog itself must fit the screen. Before the fix it was ~1.5x the
     // viewport, and the overflow had nowhere to go.
@@ -160,7 +162,12 @@ test.describe('Add feed on a phone', () => {
 
     const cancel = dialog.getByRole('button', { name: 'Cancel' });
     const before = (await cancel.boundingBox())!;
-    await dialog.locator('.body').evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    // `.first()`: the panel's own scroll body, not the `.body` divs the expanded
+    // candidate's preview rows also carry.
+    await dialog
+      .locator('.body')
+      .first()
+      .evaluate((el) => el.scrollTo(0, el.scrollHeight));
     const after = (await cancel.boundingBox())!;
     expect(after.y).toBeCloseTo(before.y, 0);
 

@@ -122,22 +122,16 @@ form {
 }
 
 .card-head {
-  /* A full-width toggle: expands the candidate's preview. */
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--space-2);
   width: 100%;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
 }
 
 .card-title {
+  /* Take the row so the count and the Preview pill sit at the trailing edge. */
+  flex: 1;
+  min-width: 0;
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -147,6 +141,44 @@ form {
   font-size: var(--fs-sm);
   color: var(--text-secondary);
   white-space: nowrap;
+}
+
+.preview-toggle {
+  /* The explicit affordance: a pill that reads "Preview ›", so the reader
+     knows the card opens — a bare chevron was too easy to miss. */
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.preview-toggle:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+/* A CSS caret so no icon asset is needed; it points right when collapsed and
+   rotates down when the card is expanded (mirrors app-disclosure's chevron). */
+.chev {
+  width: 0;
+  height: 0;
+  border-top: 0.3em solid transparent;
+  border-bottom: 0.3em solid transparent;
+  border-left: 0.4em solid currentcolor;
+  transition: transform 0.15s ease;
+}
+
+.card.expanded .chev {
+  transform: rotate(90deg);
 }
 
 .badges {

@@ -45,20 +45,27 @@
             @let state = previews()[c.url];
             @let p = okPreview(state);
             <li class="card" [class.expanded]="expanded() === c.url">
-              <button
-                type="button"
-                class="card-head"
-                (click)="toggle(c)"
-                [attr.aria-expanded]="expanded() === c.url"
-                [attr.aria-controls]="'preview-' + $index"
-              >
+              <div class="card-head">
                 <span class="card-title">{{ p?.title || c.title || c.url }}</span>
                 @if (p) {
                   <span class="count">{{
                     'dialog.addFeed.items' | transloco: { count: p.itemCount }
                   }}</span>
                 }
-              </button>
+                <button
+                  type="button"
+                  class="preview-toggle"
+                  (click)="toggle(c)"
+                  [attr.aria-expanded]="expanded() === c.url"
+                  [attr.aria-controls]="'preview-' + $index"
+                >
+                  {{
+                    (expanded() === c.url ? 'dialog.addFeed.hidePreview' : 'dialog.addFeed.preview')
+                      | transloco
+                  }}
+                  <span class="chev" aria-hidden="true"></span>
+                </button>
+              </div>
               <div class="badges">
                 <span class="badge format">{{ formatLabel(c.format) }}</span>
                 @if (p) {
@@ -80,13 +87,18 @@
               @if (expanded() === c.url) {
                 <div [id]="'preview-' + $index">
                   @if (state?.status === 'loading') {
-                    <p class="muted">{{ 'dialog.addFeed.loadingPreview' | transloco }}</p>
+                    <div class="preview-rows">
+                      <app-skeleton
+                        [label]="'dialog.addFeed.loadingPreview' | transloco"
+                        [rows]="3"
+                      />
+                    </div>
                   } @else if (state?.status === 'error') {
                     <p class="muted">{{ errorMessage(state) }}</p>
                   } @else if (p) {
                     @if (p.items.length) {
                       <div class="preview-rows">
-                        @for (it of p.items; track $index) {
+                        @for (it of p.items.slice(0, 3); track $index) {
                           <app-preview-entry-row
                             [item]="it"
                             [source]="p.title || c.title || c.url"

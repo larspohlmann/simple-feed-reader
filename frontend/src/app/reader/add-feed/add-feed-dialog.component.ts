@@ -11,6 +11,7 @@ import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { FieldComponent } from '../../shared/field/field.component';
 import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
+import { SkeletonComponent } from '../../shared/skeleton/skeleton.component';
 import { PreviewEntryRowComponent } from './preview-entry-row/preview-entry-row.component';
 import { parseProblem } from '../../core/problem';
 import { ReaderApi } from '../reader-api';
@@ -34,6 +35,7 @@ type PreviewState =
     ButtonComponent,
     OverlayPanelComponent,
     SpinnerComponent,
+    SkeletonComponent,
     PreviewEntryRowComponent,
     TranslocoPipe,
   ],
@@ -185,9 +187,11 @@ export class AddFeedDialogComponent implements OnInit {
           this.searched.set(true);
           this.previews.set({});
           this.expanded.set(null);
-          // A single hit is almost certainly the one the user wants — open and
-          // preview it immediately rather than making them click to confirm.
-          if (res.candidates.length === 1) {
+          // Open the first candidate immediately so a preview is always in
+          // view — discovery orders native feeds first, so the leading card is
+          // the recommended one. The rest stay collapsed and fetch lazily when
+          // the user opens them.
+          if (res.candidates.length > 0) {
             this.toggle(res.candidates[0]);
           }
         }
