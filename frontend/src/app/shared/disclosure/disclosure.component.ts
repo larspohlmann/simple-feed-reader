@@ -21,7 +21,9 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
  * `'card-header'` is a flat, full-width heading with no horizontal padding, so
  * it aligns to a card's content box when it wraps a card body (see
  * `<app-settings-card>`'s collapsible mode) rather than inheriting the row's
- * own inset.
+ * own inset; `'drill-in'` is a full-width Grouped-list row with the heading
+ * (and optional description) on the left and a trailing chevron, for an
+ * advanced section that expands in place (see the Expert-settings panel).
  */
 @Component({
   selector: 'app-disclosure',
@@ -31,7 +33,7 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 })
 export class DisclosureComponent {
   readonly label = input<string>('');
-  readonly appearance = input<'pill' | 'row' | 'card-header'>('pill');
+  readonly appearance = input<'pill' | 'row' | 'card-header' | 'drill-in'>('pill');
 
   /**
    * One-way: the caller's own state decides whether `<details>` starts open,

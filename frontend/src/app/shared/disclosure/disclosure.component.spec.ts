@@ -36,6 +36,18 @@ class RowAppearanceHostComponent {}
 @Component({
   imports: [DisclosureComponent],
   template: `
+    <app-disclosure [label]="'Expert settings'" appearance="drill-in" [startOpen]="startOpen">
+      <p class="projected">body</p>
+    </app-disclosure>
+  `,
+})
+class DrillInAppearanceHostComponent {
+  startOpen = false;
+}
+
+@Component({
+  imports: [DisclosureComponent],
+  template: `
     <app-disclosure [label]="'Show fixed prompt'" (opened)="openedCount = openedCount + 1">
       <p class="projected">body</p>
     </app-disclosure>
@@ -81,6 +93,15 @@ describe('DisclosureComponent', () => {
     const fixture = TestBed.createComponent(RowAppearanceHostComponent);
     fixture.detectChanges();
     return { el: fixture.nativeElement as HTMLElement, fixture };
+  }
+
+  async function renderDrillInAppearance() {
+    await TestBed.configureTestingModule({
+      imports: [DrillInAppearanceHostComponent],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(DrillInAppearanceHostComponent);
+    fixture.detectChanges();
+    return { el: fixture.nativeElement as HTMLElement, fixture, host: fixture.componentInstance };
   }
 
   async function renderWithOpenedListener() {
@@ -150,6 +171,31 @@ describe('DisclosureComponent', () => {
     const summary = el.querySelector('summary') as HTMLElement;
 
     expect(summary.classList.contains('is-row')).toBe(false);
+  });
+
+  it('applies the drill-in appearance class when appearance is "drill-in"', async () => {
+    const { el } = await renderDrillInAppearance();
+    const summary = el.querySelector('summary') as HTMLElement;
+
+    expect(summary.classList.contains('is-drill-in')).toBe(true);
+  });
+
+  it('does not apply the drill-in appearance class for the default pill appearance', async () => {
+    const { el } = await render();
+    const summary = el.querySelector('summary') as HTMLElement;
+
+    expect(summary.classList.contains('is-drill-in')).toBe(false);
+  });
+
+  it('opens the drill-in details when startOpen is true', async () => {
+    const { el, host, fixture } = await renderDrillInAppearance();
+    const details = el.querySelector('details') as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+
+    host.startOpen = true;
+    fixture.detectChanges();
+
+    expect(details.open).toBe(true);
   });
 
   it('announces when it is opened', async () => {

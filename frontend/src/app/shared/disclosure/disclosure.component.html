@@ -3,6 +3,7 @@
   <summary
     [class.is-row]="appearance() === 'row'"
     [class.is-card-header]="appearance() === 'card-header'"
+    [class.is-drill-in]="appearance() === 'drill-in'"
   >
     <ng-content select="[summary]">{{ label() }}</ng-content>
   </summary>
