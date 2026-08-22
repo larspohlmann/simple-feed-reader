@@ -79,22 +79,6 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
       </div>
 
       <div class="expert-body">
-        <div class="group">
-          <app-field
-            [label]="'settings.ai.recommendations.guidance' | transloco"
-            [info]="'settings.ai.info.guidance' | transloco"
-          >
-            <textarea
-              [placeholder]="state.defaultGuidancePrompt"
-              [value]="guidance()"
-              (input)="onGuidanceInput($event)"
-            ></textarea>
-          </app-field>
-          <app-button size="sm" (click)="resetGuidance()">
-            {{ 'settings.ai.recommendations.guidanceReset' | transloco }}
-          </app-button>
-        </div>
-
         <div class="expert-grid">
           <app-field
             [label]="'settings.ai.recommendations.favoritesCap' | transloco"
@@ -173,15 +157,6 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
               (input)="onBatchCountInput($event)"
             />
           </app-field>
-
-          @if (state.profileText; as profile) {
-            <div class="expert-row" data-testid="recommendation-profile">
-              <span class="expert-label">{{
-                'settings.ai.recommendations.profileLabel' | transloco
-              }}</span>
-              <p class="expert-profile-text">{{ profile }}</p>
-            </div>
-          }
         </div>
 
         <app-field
@@ -198,18 +173,47 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
           />
         </app-field>
 
-        <div class="fixed-info">
-          <app-info-tip
-            [text]="'settings.ai.info.fixedPrompt' | transloco"
+        <div class="reference-refs">
+          <div class="group">
+            <app-field [label]="'settings.ai.recommendations.guidance' | transloco">
+              <p class="prompt-info">{{ 'settings.ai.info.guidance' | transloco }}</p>
+              <textarea
+                [placeholder]="state.defaultGuidancePrompt"
+                [value]="guidance()"
+                (input)="onGuidanceInput($event)"
+              ></textarea>
+            </app-field>
+            <app-button size="sm" (click)="resetGuidance()">
+              {{ 'settings.ai.recommendations.guidanceReset' | transloco }}
+            </app-button>
+          </div>
+
+          @if (state.profileText; as profile) {
+            <app-disclosure
+              appearance="drill-in"
+              data-testid="recommendation-profile"
+              [label]="'settings.ai.recommendations.profileLabel' | transloco"
+            >
+              <div class="prompt-body">
+                <p class="prompt-info">{{ 'settings.ai.info.profile' | transloco }}</p>
+                <p class="expert-profile-text">{{ profile }}</p>
+              </div>
+            </app-disclosure>
+          }
+
+          <app-disclosure
+            appearance="drill-in"
             [label]="'settings.ai.recommendations.fixedShow' | transloco"
-          />
-        </div>
-        <app-disclosure [label]="'settings.ai.recommendations.fixedShow' | transloco">
-          <pre class="fixed"
-            >{{ state.fixedPrompt.role }}
+          >
+            <div class="prompt-body">
+              <p class="prompt-info">{{ 'settings.ai.info.fixedPrompt' | transloco }}</p>
+              <pre class="fixed"
+                >{{ state.fixedPrompt.role }}
 
 {{ state.fixedPrompt.outputContract }}</pre>
-        </app-disclosure>
+            </div>
+          </app-disclosure>
+        </div>
 
         <div class="inset">
           <app-settings-row

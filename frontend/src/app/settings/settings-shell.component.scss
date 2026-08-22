@@ -1,6 +1,13 @@
 // src/app/settings/settings-shell.component.scss
 @use '../theme/breakpoints' as bp;
 
+/* A block host is the containing block the sticky top bar needs: a custom
+   element defaults to `display: inline`, and an inline containing block makes
+   `position: sticky` release partway down a long page. */
+:host {
+  display: block;
+}
+
 .bar {
   position: sticky;
   top: 0;
@@ -100,6 +107,10 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
+
+  /* Breathing room so the last section never sits flush against the bottom of
+     the viewport when the page is scrolled to its end. */
+  padding-bottom: var(--space-7);
 }
 
 .layout.wide .content {

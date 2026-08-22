@@ -36,18 +36,30 @@ app-settings-group + app-settings-group {
 
 // The disclosure only styles its summary; its projected body needs its own
 // inset so the expert fields align to the card content box.
+// The expanded Expert section is boxed so its start and end are unmistakable
+// against the rows above it and the save bar below.
 .expert-body {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding: 0 var(--space-5) var(--space-4);
+  margin: var(--space-3) var(--space-4) var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-0);
 }
 
 .group {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  align-items: flex-start;
+  align-items: stretch;
+
+  // Keep the "reset to default" affordance tucked under its own field, not
+  // stranded between the guidance box and the caps grid below it.
+  app-button {
+    align-self: flex-end;
+  }
 }
 
 app-field {
@@ -70,44 +82,57 @@ textarea {
   .expert-grid {
     grid-template-columns: 1fr;
   }
-}
 
-// Read-only, so it spans both columns rather than taking a single field's
-// half-width cell.
-.expert-row {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.expert-label {
-  color: var(--text-primary);
-  font-size: var(--fs-sm);
+  // Stack the danger zone on a phone: the explanation takes the full width and
+  // the button sits beneath it, rather than the text squashing into a narrow
+  // column beside a wide button.
+  .danger {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 .expert-profile-text,
 .fixed,
 .cron-example {
-  margin: var(--space-2) 0 0;
+  margin: 0;
   padding: var(--space-3);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-0);
+  background: var(--surface-1);
   color: var(--text-muted);
   font-size: var(--fs-sm);
   white-space: pre-wrap;
 }
 
-.expert-profile-text {
-  margin: 0;
+// The profile prose and the fixed prompt read in the same body font -- the
+// fixed prompt is instructions, not code, so its default monospace is dropped.
+.expert-profile-text,
+.fixed {
+  font-family: inherit;
 }
 
-// The tip contributes no box of its own, so the row around it carries the
-// spacing and gives the panel its line.
-.fixed-info {
+// The three prompt areas (guidance, profile, fixed) stack one above the other.
+.reference-refs {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+// The always-on explanation shown above each prompt's content. Matches the
+// app's other description text: muted, small, with a comfortable line height.
+.prompt-info {
+  margin: 0 0 var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+
+// A drill-in prompt's body. No horizontal padding, so the content box uses the
+// full width of the row -- the same width as the fields above it -- rather than
+// being inset a second time under the header.
+.prompt-body {
+  padding: var(--space-1) 0 var(--space-4);
 }
 
 // The debug switch sits in a soft well, set apart from the fields above it.
