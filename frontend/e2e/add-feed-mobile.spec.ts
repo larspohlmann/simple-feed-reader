@@ -56,15 +56,17 @@ async function stubDiscovery(page: Page): Promise<void> {
           itemCount: 12,
           content: 'full',
           hasImages: true,
-          // Three sample headlines per card is what the template renders, and
-          // it is what makes the list outgrow the screen.
-          items: ['First headline', 'Second headline', 'Third headline'].map((title) => ({
-            title,
-            publishedAt: null,
+          // Eight sample rows per card is what makes the expanded card's
+          // list outgrow the screen, so the dialog body actually scrolls.
+          items: Array.from({ length: 8 }, (_unused, index) => ({
+            title: `Sample headline ${index + 1}`,
+            url: `https://example.com/a${index + 1}`,
             author: null,
-            hasImage: true,
-            textLength: 800,
-            snippet: 'snippet',
+            summary: 'A short snippet of the article body.',
+            imageUrl: 'https://img.example/a.jpg',
+            imageWidth: 800,
+            imageHeight: 600,
+            publishedAt: '2026-08-20T10:00:00+00:00',
           })),
         },
       },
@@ -105,6 +107,11 @@ test.describe('Add feed on a phone', () => {
     const subscribes = dialog.getByRole('button', { name: 'Subscribe' });
     await expect(subscribes).toHaveCount(CANDIDATES.length);
 
+    // Several candidates come back, so none auto-expands: expand the first
+    // one and confirm its sample entries render as preview rows.
+    await dialog.locator('.card-head').first().click();
+    await expect(dialog.locator('app-preview-entry-row').first()).toBeVisible();
+
     // The dialog itself must fit the screen. Before the fix it was ~1.5x the
     // viewport, and the overflow had nowhere to go.
     const box = (await dialog.boundingBox())!;
@@ -115,8 +122,10 @@ test.describe('Add feed on a phone', () => {
     // overflowing here, or this test would pass for the wrong reason. The body
     // is app-overlay-panel's — every interrupt surface shares that one frame
     // and its one scroll region (#126), so the candidate list itself no longer
-    // scrolls on its own.
-    const list = dialog.locator('.body');
+    // scrolls on its own. `.first()`: the expanded candidate's own
+    // app-preview-entry-row rows each carry a `.body` class too, and they
+    // nest inside the panel's, so the panel's is first in document order.
+    const list = dialog.locator('.body').first();
     const { scrollHeight, clientHeight } = await list.evaluate((el) => ({
       scrollHeight: el.scrollHeight,
       clientHeight: el.clientHeight,
