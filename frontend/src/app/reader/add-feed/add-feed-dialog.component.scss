@@ -9,7 +9,7 @@
 :host {
   display: contents;
 
-  --panel-w: 440px;
+  --panel-w: 520px;
 }
 
 form {
@@ -122,10 +122,19 @@ form {
 }
 
 .card-head {
+  /* A full-width toggle: expands the candidate's preview. */
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-2);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .card-title {
@@ -169,15 +178,10 @@ form {
   text-transform: uppercase;
 }
 
-.samples {
-  list-style: disc;
-  margin: 0;
-  padding-left: var(--space-4);
-  font-size: var(--fs-sm);
-  color: var(--text-secondary);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+.preview-rows {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 
 .muted {
