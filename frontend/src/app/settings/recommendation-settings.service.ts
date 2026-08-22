@@ -1,6 +1,6 @@
 // src/app/settings/recommendation-settings.service.ts
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
 import { Problem, parseProblem } from '../core/problem';
@@ -45,10 +45,7 @@ export interface RecommendationSettingsState {
 
 /** The writable fields of the PUT body. `showReasons` is the twelfth field;
  *  every write built through this service (`bodyFromState`, `saveInstant`,
- *  `save`) always sends it. It stays optional on the type only so the current
- *  card's hand-built `save({...})` literal keeps compiling until Task 15 routes
- *  the card through the service; the backend defaults an absent value, so the
- *  wire stays compatible either way. */
+ *  `save`) always sends it. */
 export interface SaveRecommendationSettings {
   readonly guidancePrompt: string | null;
   readonly favoritesCap: number;
@@ -61,7 +58,7 @@ export interface SaveRecommendationSettings {
   readonly contextWindow: number | null;
   readonly debugEnabled: boolean;
   readonly autoGenerateIntervalHours: number | null;
-  readonly showReasons?: boolean;
+  readonly showReasons: boolean;
 }
 
 /** The typed text/number fields the explicit Save persists; the toggles and
@@ -89,7 +86,7 @@ export class RecommendationSettingsService {
    *  the form matches the last-saved `state`. */
   readonly draft = signal<TypedRecommendationEdits>({});
   /** True while `draft` holds unsaved typed edits; the Save affordance reads it. */
-  readonly dirty = signal(false);
+  readonly dirty = computed(() => Object.keys(this.draft()).length > 0);
 
   /** Kept apart from `busy`/`failure`/`saved`: the purge is a danger-zone
    *  action with its own confirmation line, not another outcome of the save
@@ -105,13 +102,12 @@ export class RecommendationSettingsService {
     );
   }
 
-  /** The explicit Save: last-saved baseline plus the pending typed edits. The
-   *  card may still pass a fully-built body; it takes precedence over `draft`.
-   *  On success the pending edits are now server truth, so the draft clears. */
-  save(body?: SaveRecommendationSettings): void {
+  /** The explicit Save: last-saved baseline plus the pending typed edits. On
+   *  success the pending edits are now server truth, so the draft clears. */
+  save(): void {
     const current = this.state();
     if (!current) return;
-    const payload = body ?? { ...this.bodyFromState(current), ...this.draft() };
+    const payload = { ...this.bodyFromState(current), ...this.draft() };
     this.put(payload, (state) => {
       this.commit(state);
       this.saved.set(true);
@@ -134,10 +130,6 @@ export class RecommendationSettingsService {
     });
   }
 
-  setShowReasons(value: boolean): void {
-    this.saveInstant({ showReasons: value });
-  }
-
   /** Records one pending typed edit without a write; the explicit Save flushes
    *  the accumulated `draft`. */
   setTypedField<Field extends keyof TypedRecommendationEdits>(
@@ -145,15 +137,13 @@ export class RecommendationSettingsService {
     value: TypedRecommendationEdits[Field],
   ): void {
     this.draft.update((draft) => ({ ...draft, [field]: value }));
-    this.dirty.set(true);
   }
 
   /** Drops every pending typed edit and restores the clean baseline, without a
    *  write. The card's Reset calls this, then reseeds its typed inputs from
-   *  `state`. Mirrors the draft/dirty half of `commit`. */
+   *  `state`. Mirrors the draft half of `commit`. */
   discardDraft(): void {
     this.draft.set({});
-    this.dirty.set(false);
   }
 
   /** The single mapping from server truth to the writable body. `contextWindow`
@@ -191,7 +181,6 @@ export class RecommendationSettingsService {
   private commit(state: RecommendationSettingsState): void {
     this.state.set(state);
     this.draft.set({});
-    this.dirty.set(false);
   }
 
   /** Clears every persisted recommendation. On success, refreshes the

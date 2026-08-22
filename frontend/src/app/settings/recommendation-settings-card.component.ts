@@ -200,7 +200,7 @@ export class RecommendationSettingsCardComponent {
 
   onShowReasons(value: boolean): void {
     this.showReasons.set(value);
-    this.svc.setShowReasons(value);
+    this.svc.saveInstant({ showReasons: value });
   }
 
   onDebug(value: boolean): void {

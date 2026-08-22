@@ -63,10 +63,10 @@ describe('RecommendationSettingsService', () => {
     http.expectOne(ENDPOINT).flush(state(over));
   }
 
-  it('saveInstant path: setShowReasons issues an immediate PUT with the full body', () => {
+  it('saveInstant path: showReasons issues an immediate PUT with the full body', () => {
     loadState();
 
-    service.setShowReasons(true);
+    service.saveInstant({ showReasons: true });
 
     const put = http.expectOne(ENDPOINT);
     expect(put.request.method).toBe('PUT');
@@ -100,7 +100,7 @@ describe('RecommendationSettingsService', () => {
     service.setTypedField('favoritesCap', 99);
     expect(service.dirty()).toBe(true);
 
-    service.setShowReasons(true);
+    service.saveInstant({ showReasons: true });
     const put = http.expectOne(ENDPOINT);
     expect(put.request.body.showReasons).toBe(true);
     expect(put.request.body.favoritesCap).toBe(50);
@@ -129,7 +129,7 @@ describe('RecommendationSettingsService', () => {
     loadState();
     expect(service.saved()).toBe(false);
 
-    service.setShowReasons(true);
+    service.saveInstant({ showReasons: true });
     http.expectOne(ENDPOINT).flush(state({ showReasons: true }));
 
     expect(service.saved()).toBe(true);
