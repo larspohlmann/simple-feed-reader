@@ -8,12 +8,20 @@
   color-scheme: light;
 
   @include graphite.light;
+
+  /* Soft elevation for a raised card surface -- the grouped-settings panel
+     (#541) is the first consumer. Mode-specific like the graphite colours it
+     sits with: a light UI needs only a hair of shadow, a dark one needs a
+     deeper cast to lift the surface off its near-black ground. */
+  --panel-shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 6px 20px rgb(0 0 0 / 5%);
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
 
   @include graphite.dark;
+
+  --panel-shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 30%);
 }
 
 // Mode-invariant tokens (same in every theme).
