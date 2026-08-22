@@ -92,10 +92,10 @@ final class FeedPreviewServiceTest extends KernelTestCase
             XML;
     }
 
-    public function testFullTextFeedYieldsFullVerdictAndCapsItemsAtFour(): void
+    public function testFullTextFeedYieldsFullVerdictAndCapsItemsAtEight(): void
     {
         $items = '';
-        for ($i = 1; $i <= 5; ++$i) {
+        for ($i = 1; $i <= 9; ++$i) {
             $items .= <<<XML
                 <item>
                   <title>Post {$i}</title>
@@ -111,11 +111,10 @@ final class FeedPreviewServiceTest extends KernelTestCase
         $preview = $this->service($fetcher)->preview($this->user(), self::URL);
 
         self::assertSame('Example Feed', $preview->title);
-        self::assertSame(5, $preview->itemCount);
+        self::assertSame(9, $preview->itemCount);
         self::assertSame('full', $preview->content);
-        self::assertCount(4, $preview->items);
+        self::assertCount(8, $preview->items);
         self::assertSame('Post 1', $preview->items[0]->title);
-        self::assertGreaterThanOrEqual(600, $preview->items[0]->textLength);
     }
 
     public function testSummaryOnlyFeedYieldsSummaryVerdict(): void
@@ -156,9 +155,8 @@ final class FeedPreviewServiceTest extends KernelTestCase
         $preview = $this->service($fetcher)->preview($this->user(), self::URL);
 
         self::assertSame('title-only', $preview->content);
-        self::assertSame(0, $preview->items[0]->textLength);
-        self::assertSame('', $preview->items[0]->snippet);
-        self::assertFalse($preview->items[0]->hasImage);
+        self::assertNull($preview->items[0]->summary);
+        self::assertNull($preview->items[0]->imageUrl);
     }
 
     public function testEmptyButTitledFeedYieldsTitleOnlyVerdict(): void
@@ -182,7 +180,7 @@ final class FeedPreviewServiceTest extends KernelTestCase
               <link>https://example.com/1</link>
               <guid>https://example.com/1</guid>
               <description>Has a picture.</description>
-              <media:content url="https://example.com/pic.jpg" medium="image" />
+              <media:content url="https://img.example/a.jpg" medium="image" width="800" height="600" />
             </item>
             <item>
               <title>Without image</title>
@@ -197,13 +195,40 @@ final class FeedPreviewServiceTest extends KernelTestCase
         $preview = $this->service($fetcher)->preview($this->user(), self::URL);
 
         self::assertTrue($preview->hasImages);
-        self::assertTrue($preview->items[0]->hasImage);
-        self::assertFalse($preview->items[1]->hasImage);
+        self::assertSame('https://img.example/a.jpg', $preview->items[0]->imageUrl);
+        self::assertSame(800, $preview->items[0]->imageWidth);
+        self::assertSame(600, $preview->items[0]->imageHeight);
+        self::assertNull($preview->items[1]->imageUrl);
     }
 
-    public function testSnippetIsTruncatedOnWordBoundaryForLongItemsAndUntouchedForShortOnes(): void
+    public function testHttpImageIsDroppedFromPreviewItem(): void
     {
-        $longText = str_repeat('word ', 80); // 400 chars, well over the 200-char snippet limit
+        $items = <<<'XML'
+            <item>
+              <title>With image</title>
+              <link>https://example.com/1</link>
+              <guid>https://example.com/1</guid>
+              <description>Has a picture.</description>
+              <media:content url="http://img.example/a.jpg" medium="image" width="800" height="600" />
+            </item>
+            XML;
+
+        $xml = $this->rss($items, ' xmlns:media="http://search.yahoo.com/mrss/"');
+        $fetcher = $this->fetcherWithBody($xml);
+        $preview = $this->service($fetcher)->preview($this->user(), self::URL);
+
+        self::assertNull($preview->items[0]->imageUrl);
+        self::assertNull($preview->items[0]->imageWidth);
+        self::assertNull($preview->items[0]->imageHeight);
+    }
+
+    public function testSummaryIsTruncatedForLongItemsAndUntouchedForShortOnes(): void
+    {
+        // EntrySnippet::from caps a body at 500 characters (its own MAX_LENGTH);
+        // this only checks that FeedPreviewService::item() delegates to it
+        // rather than reimplementing its own truncation, so 1000 chars of
+        // filler is comfortably over that cap.
+        $longText = str_repeat('word ', 200);
         $items = <<<XML
             <item>
               <title>Long</title>
@@ -222,13 +247,11 @@ final class FeedPreviewServiceTest extends KernelTestCase
         $fetcher = $this->fetcherWithBody($this->rss($items));
         $preview = $this->service($fetcher)->preview($this->user(), self::URL);
 
-        $longSnippet = $preview->items[0]->snippet;
-        self::assertStringEndsWith('…', $longSnippet);
-        self::assertLessThanOrEqual(201, mb_strlen($longSnippet));
+        $longSnippet = $preview->items[0]->summary;
+        self::assertNotNull($longSnippet);
+        self::assertSame(500, mb_strlen($longSnippet));
 
-        $shortSnippet = $preview->items[1]->snippet;
-        self::assertSame('A short teaser.', $shortSnippet);
-        self::assertStringEndsNotWith('…', $shortSnippet);
+        self::assertSame('A short teaser.', $preview->items[1]->summary);
     }
 
     public function testFetchFailureBecomesFeedPreviewException(): void

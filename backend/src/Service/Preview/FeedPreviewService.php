@@ -10,9 +10,11 @@ use App\Exception\FeedPreviewException;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcherInterface;
+use App\Service\Ingest\EntrySnippet;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;
 use App\Service\Parser\ParsedEntry;
+use App\Service\Parser\ParsedImage;
 use App\Service\Parser\WordPressJsonParser;
 use App\Service\Scraper\HtmlItemExtractor;
 use App\Service\Text\PlainText;
@@ -24,9 +26,8 @@ use App\Service\Text\PlainText;
  */
 final readonly class FeedPreviewService
 {
-    private const int SAMPLE_SIZE = 4;
+    private const int SAMPLE_SIZE = 8;
     private const int FULL_TEXT_MIN = 600;
-    private const int SNIPPET_LEN = 200;
 
     /** Richest tier first: ties in the verdict resolve to whichever comes first here. */
     private const array TIERS_BY_RICHNESS = ['full', 'summary', 'title-only'];
@@ -91,23 +92,36 @@ final readonly class FeedPreviewService
             title: $feed->title,
             itemCount: \count($feed->entries),
             content: $this->verdict($tiers),
-            hasImages: array_any($items, static fn (FeedPreviewItem $i): bool => $i->hasImage),
+            hasImages: array_any($items, static fn (FeedPreviewItem $i): bool => $i->imageUrl !== null),
             items: $items,
         );
     }
 
     private function item(ParsedEntry $entry): FeedPreviewItem
     {
-        $text = $this->plainText($entry);
+        $imageUrl = $this->httpsImageUrl($entry->image);
 
         return new FeedPreviewItem(
             title: $entry->title,
-            publishedAt: $entry->publishedAt,
+            url: $entry->url,
             author: $entry->author,
-            hasImage: $entry->image !== null,
-            textLength: mb_strlen($text),
-            snippet: $this->snippet($text),
+            summary: EntrySnippet::from($entry->summary ?? $entry->contentHtml),
+            imageUrl: $imageUrl,
+            imageWidth: $imageUrl === null ? null : $entry->image?->width,
+            imageHeight: $imageUrl === null ? null : $entry->image?->height,
+            publishedAt: $entry->publishedAt,
         );
+    }
+
+    // The SPA is https, so an http/relative/data image is useless in an <img>.
+    // Mirrors the reader's firstPreviewImage rule.
+    private function httpsImageUrl(?ParsedImage $image): ?string
+    {
+        if ($image === null) {
+            return null;
+        }
+
+        return str_starts_with($image->url, 'https://') ? $image->url : null;
     }
 
     private function tier(ParsedEntry $entry): string
@@ -146,20 +160,5 @@ final readonly class FeedPreviewService
     private function plainText(ParsedEntry $entry): string
     {
         return PlainText::from($entry->contentHtml ?? $entry->summary) ?? '';
-    }
-
-    private function snippet(string $text): string
-    {
-        if (mb_strlen($text) <= self::SNIPPET_LEN) {
-            return $text;
-        }
-
-        $truncated = mb_substr($text, 0, self::SNIPPET_LEN);
-        $lastSpace = mb_strrpos($truncated, ' ');
-        if ($lastSpace !== false) {
-            $truncated = mb_substr($truncated, 0, $lastSpace);
-        }
-
-        return rtrim($truncated) . '…';
     }
 }
