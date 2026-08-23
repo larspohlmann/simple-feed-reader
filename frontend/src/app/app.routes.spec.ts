@@ -1,6 +1,9 @@
 // src/app/app.routes.spec.ts
+import { Route } from '@angular/router';
+import { hasTranslation } from '../testing/translation-keys';
 import { routes } from './app.routes';
 import { guestGuard } from './core/auth.guard';
+import { DYNAMIC_TITLE } from './core/translated-title.strategy';
 import { setupRedirectGuard } from './setup/setup.guard';
 
 describe('routes', () => {
@@ -40,4 +43,26 @@ describe('routes', () => {
       ]);
     }
   });
+
+  it('titles every routed page, so none can keep the title of the one before it', () => {
+    for (const route of routes.filter(isRouted)) {
+      expect(route.title).toBeDefined();
+    }
+  });
+
+  it('titles pages by a key the dictionary holds, not by finished text', () => {
+    for (const route of routes.filter(isRouted)) {
+      if (route.title === DYNAMIC_TITLE) continue;
+      expect(hasTranslation(String(route.title))).toBe(true);
+    }
+  });
+
+  it('leaves the reader to title itself after the article or list on screen', () => {
+    expect(routes.find((r) => r.path === '')?.title).toBe(DYNAMIC_TITLE);
+  });
 });
+
+/** A route that puts a page on screen — as opposed to a redirect. */
+function isRouted(route: Route): boolean {
+  return route.loadComponent !== undefined || route.loadChildren !== undefined;
+}

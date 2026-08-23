@@ -7,7 +7,7 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZoneChangeDetection,
 } from '@angular/core';
-import { provideRouter, withNavigationErrorHandler } from '@angular/router';
+import { TitleStrategy, provideRouter, withNavigationErrorHandler } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { TranslocoService, provideTransloco } from '@jsverse/transloco';
 import { routes } from './app.routes';
@@ -19,6 +19,7 @@ import { startNavigationWatchdog } from './core/navigation-watchdog';
 import { HttpLocaleWriter } from './core/http-locale-writer';
 import { HttpPreferencesWriter } from './core/http-preferences-writer';
 import { HttpTranslocoLoader } from './core/transloco-loader';
+import { TranslatedTitleStrategy } from './core/translated-title.strategy';
 import { FALLBACK_LANG, LANGS } from './core/language';
 import { LanguageService } from './core/language.service';
 import { LOCALE_WRITER } from './core/locale-writer';
@@ -40,6 +41,9 @@ export const appConfig: ApplicationConfig = {
       routes,
       withNavigationErrorHandler((event) => inject(NavigationFailureReporter).report(event.error)),
     ),
+    // Every navigation writes the document title, so a page can never keep the
+    // title of the page before it.
+    { provide: TitleStrategy, useExisting: TranslatedTitleStrategy },
     provideHttpClient(withInterceptors([authInterceptor])),
     { provide: API_BASE_URL, useValue: environment.apiBaseUrl },
     // LOCALE_WRITER defaults to a no-op (see locale-writer.ts) so most of the

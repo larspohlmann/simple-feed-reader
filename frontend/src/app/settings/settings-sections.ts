@@ -14,7 +14,7 @@ export interface SettingsSection {
 /** The one list both nav renderings (rail and hub) draw from. Adding a section
  *  means one entry here plus one route in settings.routes.ts — the shell stays
  *  untouched (#180's extensibility criterion). */
-export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
+export const SETTINGS_SECTIONS = [
   { path: 'tags', icon: 'sell', labelKey: 'settings.tags.title', group: 'general' },
   { path: 'import', icon: 'import_export', labelKey: 'settings.opml.title', group: 'general' },
   { path: 'preferences', icon: 'tune', labelKey: 'settings.preferences', group: 'general' },
@@ -35,4 +35,16 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     labelKey: 'settings.instance.title',
     group: 'admin',
   },
-];
+] as const satisfies readonly SettingsSection[];
+
+/** The path of a section that exists. A typo in a caller is a compile error,
+ *  not a settings area that throws on load. */
+export type SettingsSectionPath = (typeof SETTINGS_SECTIONS)[number]['path'];
+
+/** The label of one section, by route path. The route table titles each page
+ *  through this, so a section's tab title and its nav entry cannot drift. */
+export function sectionLabelKey(path: SettingsSectionPath): string {
+  const section = SETTINGS_SECTIONS.find((s) => s.path === path);
+  if (section === undefined) throw new Error(`No settings section for path "${path}"`);
+  return section.labelKey;
+}
