@@ -1,7 +1,7 @@
 import { ApplicationRef, ChangeDetectionStrategy, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { OverlayContainer } from '@angular/cdk/overlay';
-import { ToastService } from './toast.service';
+import { CONFIRMATION_DURATION_MS, ToastService } from './toast.service';
 
 describe('ToastService', () => {
   let toast: ToastService;
@@ -75,6 +75,23 @@ describe('ToastService', () => {
     tick();
 
     expect(el()).toBeNull();
+  });
+
+  it('clears a confirmation sooner than a toast on the default duration', () => {
+    jest.useFakeTimers();
+    toast.show({ message: 'Saved.', durationMs: CONFIRMATION_DURATION_MS });
+    tick();
+
+    jest.advanceTimersByTime(CONFIRMATION_DURATION_MS);
+    tick();
+    expect(el()).toBeNull();
+
+    toast.show({ message: 'Undo the mark-read?' });
+    tick();
+
+    jest.advanceTimersByTime(CONFIRMATION_DURATION_MS);
+    tick();
+    expect(el()).not.toBeNull();
   });
 
   it('clears the previous timer when replaced, so it cannot dismiss the new toast early', () => {

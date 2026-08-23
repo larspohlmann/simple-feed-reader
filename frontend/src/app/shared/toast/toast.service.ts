@@ -6,6 +6,13 @@ import { ToastComponent, ToastData } from './toast.component';
 
 const DEFAULT_DURATION_MS = 6000;
 
+/** How long a bare confirmation stays up. Shorter than the default on purpose:
+ *  a "Saved." carries no action and nothing to read past the word itself, and
+ *  the user is still working on the surface it sits over -- six seconds of it
+ *  reads as a toast that never leaves (#554). A toast that offers an action, or
+ *  reports a failure, keeps the longer default. */
+export const CONFIRMATION_DURATION_MS = 3000;
+
 /**
  * The app's one toast: a message -- or a feature's own component -- with an
  * optional single action, replacing whatever is currently visible. Rendered

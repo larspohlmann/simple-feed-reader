@@ -5,7 +5,7 @@ import { Dialog } from '@angular/cdk/dialog';
 import { of } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
-import { ToastService } from '../shared/toast/toast.service';
+import { CONFIRMATION_DURATION_MS, ToastService } from '../shared/toast/toast.service';
 import { RecommendationsService } from '../reader/recommendations.service';
 import { RecommendationSettingsCardComponent } from './recommendation-settings-card.component';
 import { RecommendationSettingsState } from './recommendation-settings.service';
@@ -347,7 +347,10 @@ describe('RecommendationSettingsCardComponent', () => {
       fixture.detectChanges();
 
       expect(toastStub.show).toHaveBeenCalledTimes(1);
-      expect(toastStub.show).toHaveBeenCalledWith({ message: 'Saved.' });
+      expect(toastStub.show).toHaveBeenCalledWith({
+        message: 'Saved.',
+        durationMs: CONFIRMATION_DURATION_MS,
+      });
     });
 
     it('stays silent when a save is rejected', () => {
