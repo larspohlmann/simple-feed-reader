@@ -34,6 +34,15 @@ class Feed
     #[ORM\Column(length: 2048, nullable: true)]
     private ?string $faviconUrl = null;
 
+    /**
+     * The image the feed publishes for ITSELF — its logo or banner, from RSS
+     * <channel><image> or Atom <logo>. Not $faviconUrl: that one is the site's
+     * icon, resolved by RefreshRunner from the page rather than read from the
+     * feed document.
+     */
+    #[ORM\Column(length: 2048, nullable: true)]
+    private ?string $imageUrl = null;
+
     #[ORM\Column(length: 20, enumType: FeedStatus::class)]
     private FeedStatus $status = FeedStatus::Active;
 
@@ -115,6 +124,16 @@ class Feed
     public function setFaviconUrl(?string $faviconUrl): void
     {
         $this->faviconUrl = $faviconUrl;
+    }
+
+    public function getImageUrl(): ?string
+    {
+        return $this->imageUrl;
+    }
+
+    public function setImageUrl(?string $imageUrl): void
+    {
+        $this->imageUrl = $imageUrl;
     }
 
     public function getStatus(): FeedStatus
