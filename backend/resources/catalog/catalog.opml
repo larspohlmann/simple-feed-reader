@@ -879,6 +879,10 @@
                xmlUrl="https://magneticmag.com/feed/"
                htmlUrl="https://magneticmag.com"
                description="Electronic music, culture and production tips"/>
+      <outline type="rss" text="Mixmag"
+               xmlUrl="https://mixmag.net/rss.xml"
+               htmlUrl="https://mixmag.net"
+               description="Dance music and club culture: news, reviews, mixes"/>
       <outline type="rss" text="Psybient.org"
                xmlUrl="https://www.psybient.org/feed/"
                htmlUrl="https://www.psybient.org"
