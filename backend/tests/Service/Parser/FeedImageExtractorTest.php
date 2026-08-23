@@ -87,6 +87,35 @@ final class FeedImageExtractorTest extends TestCase
         self::assertNull(FeedImageExtractor::fromRss2Channel($channel));
     }
 
+    public function testKeepsAUrlAtExactlyTheColumnLimit(): void
+    {
+        // URL_MAX itself must still round-trip: only a length OVER the limit
+        // is unusable, and the boundary is exactly where an off-by-one in the
+        // comparison would flip.
+        $prefix = 'https://example.com/';
+        $atLimit = $prefix . str_repeat('a', 2048 - mb_strlen($prefix));
+        self::assertSame(2048, mb_strlen($atLimit));
+        $channel = $this->rss2Channel('<image><url>' . $atLimit . '</url></image>');
+
+        self::assertSame($atLimit, FeedImageExtractor::fromRss2Channel($channel));
+    }
+
+    public function testCountsTheLimitInCharactersNotBytes(): void
+    {
+        // 'ü' is one character but two UTF-8 bytes. At exactly URL_MAX
+        // characters this URL is comfortably over URL_MAX bytes, so a
+        // byte-counting check would wrongly reject it while the
+        // character-counting one the persisted column actually needs stays
+        // within range.
+        $prefix = 'https://example.com/';
+        $atLimit = $prefix . str_repeat('ü', 2048 - mb_strlen($prefix));
+        self::assertSame(2048, mb_strlen($atLimit));
+        self::assertGreaterThan(2048, strlen($atLimit));
+        $channel = $this->rss2Channel('<image><url>' . $atLimit . '</url></image>');
+
+        self::assertSame($atLimit, FeedImageExtractor::fromRss2Channel($channel));
+    }
+
     public function testReadsTheRss1ImageFromTheRdfRoot(): void
     {
         $document = $this->document(/** @lang TEXT */ <<<'XML'
@@ -99,6 +128,37 @@ final class FeedImageExtractorTest extends TestCase
                 </channel>
                 <image rdf:about="https://example.com/logo.png">
                     <title>Example</title>
+                    <url>https://example.com/logo.png</url>
+                </image>
+            </rdf:RDF>
+            XML);
+
+        self::assertSame(
+            'https://example.com/logo.png',
+            FeedImageExtractor::fromRss1Document($document, self::RSS1_NS),
+        );
+    }
+
+    public function testSkipsAnRdfRootImageElementInADifferentNamespaceToFindTheRealOne(): void
+    {
+        // A same-local-name, same-position (direct child of the RDF root)
+        // decoy comes FIRST, in a different namespace, with a deliberately
+        // different URL. Proves two things at once: that
+        // XmlHelper::childElement()'s namespace filter actually rejects a
+        // wrong-namespace candidate rather than matching by local name alone,
+        // and that rejecting it SKIPS to the next sibling rather than
+        // abandoning the search — a decoy earlier in document order must not
+        // hide the real image later in it.
+        $document = $this->document(/** @lang TEXT */ <<<'XML'
+            <?xml version="1.0"?>
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                     xmlns:other="urn:example:other"
+                     xmlns="http://purl.org/rss/1.0/">
+                <channel rdf:about="https://example.com/"><title>Example</title></channel>
+                <other:image rdf:about="https://wrong.example/">
+                    <url>https://wrong.example/should-be-skipped.png</url>
+                </other:image>
+                <image rdf:about="https://example.com/logo.png">
                     <url>https://example.com/logo.png</url>
                 </image>
             </rdf:RDF>
