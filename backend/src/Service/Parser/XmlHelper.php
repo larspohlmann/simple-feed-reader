@@ -34,4 +34,29 @@ final class XmlHelper
 
         return null;
     }
+
+    /**
+     * First matching direct child element, or null when absent. When
+     * $namespaceUri is null, any namespace matches. childText() cannot serve
+     * here: a feed's <image> holds its address in a grandchild <url>, so the
+     * element itself has to be handed back to be descended into.
+     */
+    public static function childElement(
+        \DOMElement $parent,
+        string $localName,
+        ?string $namespaceUri = null,
+    ): ?\DOMElement {
+        foreach ($parent->childNodes as $child) {
+            if (!$child instanceof \DOMElement || $child->localName !== $localName) {
+                continue;
+            }
+            if ($namespaceUri !== null && $child->namespaceURI !== $namespaceUri) {
+                continue;
+            }
+
+            return $child;
+        }
+
+        return null;
+    }
 }
