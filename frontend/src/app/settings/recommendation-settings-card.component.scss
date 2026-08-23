@@ -3,16 +3,9 @@
 // Layout glue only. The Grouped chrome (card surface, rows, dividers, drill-in
 // row, save bar) comes from the shared primitives; what stays here is the
 // two-column caps grid, the padding for the drill-in body and inset, and the
-// read-only code blocks the primitives do not model.
-
-// Each settings group is one block in the stack; space them apart.
-app-settings-group {
-  display: block;
-}
-
-app-settings-group + app-settings-group {
-  margin-block-start: var(--space-5);
-}
+// read-only code blocks the primitives do not model. The gap between this
+// component's own two groups comes from the `<app-settings-stack>` its
+// template roots in now, not from a margin here.
 
 // The drill-in's projected summary: heading over description on the left, the
 // disclosure's own chevron trails via `order` (see disclosure.scss).
