@@ -3,220 +3,226 @@
   <app-icon name="arrow_back" size="sm" /> {{ 'admin.detail.backToUsers' | transloco }}
 </a>
 
-<app-settings-card [heading]="cardHeading()">
-  @if (hasActions()) {
-    <div cardActions class="acts">
-      @if (canApprove()) {
-        <app-button size="sm" (click)="act('approve')">
-          {{ 'admin.approve' | transloco }}
+<app-settings-stack>
+  <app-settings-group icon="person" [title]="cardHeading()">
+    @if (hasActions()) {
+      <div groupActions class="acts">
+        @if (canApprove()) {
+          <app-button size="sm" (click)="act('approve')">
+            {{ 'admin.approve' | transloco }}
+          </app-button>
+        }
+        @if (canReject()) {
+          <app-button size="sm" variant="danger-outline" (click)="confirmThenAct('reject')">
+            {{ 'admin.reject' | transloco }}
+          </app-button>
+        }
+        @if (canSuspend()) {
+          <app-button size="sm" variant="danger-outline" (click)="confirmThenAct('suspend')">
+            {{ 'admin.suspend' | transloco }}
+          </app-button>
+        }
+        <app-button size="sm" variant="danger-outline" (click)="confirmThenDelete()">
+          {{ 'admin.delete' | transloco }}
         </app-button>
-      }
-      @if (canReject()) {
-        <app-button size="sm" variant="danger-outline" (click)="confirmThenAct('reject')">
-          {{ 'admin.reject' | transloco }}
-        </app-button>
-      }
-      @if (canSuspend()) {
-        <app-button size="sm" variant="danger-outline" (click)="confirmThenAct('suspend')">
-          {{ 'admin.suspend' | transloco }}
-        </app-button>
-      }
-      <app-button size="sm" variant="danger-outline" (click)="confirmThenDelete()">
-        {{ 'admin.delete' | transloco }}
-      </app-button>
-    </div>
-  }
+      </div>
+    }
 
-  @if (loading()) {
-    <app-skeleton [label]="'admin.loadingUser' | transloco" [rows]="5" />
-  } @else if (error()) {
-    <app-error-banner
-      [message]="error()!.detail || error()!.title"
-      [actionLabel]="'admin.retry' | transloco"
-      (action)="load()"
-    />
-  } @else if (detail(); as d) {
-    @if (actionError()) {
+    @if (loading()) {
+      <app-skeleton [label]="'admin.loadingUser' | transloco" [rows]="5" />
+    } @else if (error()) {
       <app-error-banner
-        [message]="actionError()!.detail || actionError()!.title"
-        [actionLabel]="'admin.dismiss' | transloco"
-        (action)="actionError.set(null)"
+        [message]="error()!.detail || error()!.title"
+        [actionLabel]="'admin.retry' | transloco"
+        (action)="load()"
       />
-    }
+    } @else if (detail(); as d) {
+      @if (actionError()) {
+        <app-error-banner
+          [message]="actionError()!.detail || actionError()!.title"
+          [actionLabel]="'admin.dismiss' | transloco"
+          (action)="actionError.set(null)"
+        />
+      }
 
-    <div class="cards">
-      <div class="card account">
-        <h3>{{ 'admin.detail.account' | transloco }}</h3>
-        <dl>
-          <dt>{{ 'admin.detail.status' | transloco }}</dt>
-          <dd>
-            <span class="badge" [attr.data-s]="d.user.status">{{
-              'admin.status.' + d.user.status | transloco
-            }}</span>
-          </dd>
-          <dt>{{ 'admin.detail.roles' | transloco }}</dt>
-          <dd>{{ d.user.roles.join(', ') }}</dd>
-          <dt>{{ 'admin.detail.locale' | transloco }}</dt>
-          <dd>{{ d.user.locale }}</dd>
-          <dt>{{ 'admin.detail.created' | transloco }}</dt>
-          <dd>
-            {{ formatDate(d.user.createdAt) }}
-            <span class="age">({{ ageLabel(d.user.createdAt) }})</span>
-          </dd>
-          <dt>{{ 'admin.detail.approved' | transloco }}</dt>
-          <dd>{{ approvedLabel(d.user.approvedAt) }}</dd>
-          @if (d.user.identities.length) {
-            <dt>{{ 'admin.detail.identities' | transloco }}</dt>
-            <dd>{{ d.user.identities.join(', ') }}</dd>
+      <div class="cards">
+        <div class="card account">
+          <h3>{{ 'admin.detail.account' | transloco }}</h3>
+          <dl>
+            <dt>{{ 'admin.detail.status' | transloco }}</dt>
+            <dd>
+              <span class="badge" [attr.data-s]="d.user.status">{{
+                'admin.status.' + d.user.status | transloco
+              }}</span>
+            </dd>
+            <dt>{{ 'admin.detail.roles' | transloco }}</dt>
+            <dd>{{ d.user.roles.join(', ') }}</dd>
+            <dt>{{ 'admin.detail.locale' | transloco }}</dt>
+            <dd>{{ d.user.locale }}</dd>
+            <dt>{{ 'admin.detail.created' | transloco }}</dt>
+            <dd>
+              {{ formatDate(d.user.createdAt) }}
+              <span class="age">({{ ageLabel(d.user.createdAt) }})</span>
+            </dd>
+            <dt>{{ 'admin.detail.approved' | transloco }}</dt>
+            <dd>{{ approvedLabel(d.user.approvedAt) }}</dd>
+            @if (d.user.identities.length) {
+              <dt>{{ 'admin.detail.identities' | transloco }}</dt>
+              <dd>{{ d.user.identities.join(', ') }}</dd>
+            }
+          </dl>
+        </div>
+
+        <div class="card activity">
+          <h3>{{ 'admin.detail.activity' | transloco }}</h3>
+          <dl>
+            <dt>{{ 'admin.lastLogin' | transloco }}</dt>
+            <dd>{{ loginLabel(d.user.lastLoginAt) }}</dd>
+            <dt>{{ 'admin.detail.lastRefresh' | transloco }}</dt>
+            <dd>{{ lastFetchedLabel(d.footprint.lastRefreshAt) }}</dd>
+          </dl>
+          @if (d.footprint.dormant) {
+            <p class="flag">{{ 'admin.detail.dormant' | transloco }}</p>
           }
-        </dl>
-      </div>
+        </div>
 
-      <div class="card activity">
-        <h3>{{ 'admin.detail.activity' | transloco }}</h3>
-        <dl>
-          <dt>{{ 'admin.lastLogin' | transloco }}</dt>
-          <dd>{{ loginLabel(d.user.lastLoginAt) }}</dd>
-          <dt>{{ 'admin.detail.lastRefresh' | transloco }}</dt>
-          <dd>{{ lastFetchedLabel(d.footprint.lastRefreshAt) }}</dd>
-        </dl>
-        @if (d.footprint.dormant) {
-          <p class="flag">{{ 'admin.detail.dormant' | transloco }}</p>
-        }
-      </div>
-
-      <div class="card footprint">
-        <h3>{{ 'admin.detail.footprint' | transloco }}</h3>
-        <p>
-          {{
-            'admin.detail.feedsOfLimit'
-              | transloco: { used: d.footprint.feedsCount, limit: d.footprint.feedsLimit }
-          }}
-        </p>
-        <p>{{ d.footprint.tagsCount }} {{ 'admin.tagsLabel' | transloco }}</p>
-        @if (d.footprint.staleFeedsCount > 0) {
-          <p class="muted">
-            {{ 'admin.detail.staleFeeds' | transloco: { count: d.footprint.staleFeedsCount } }}
+        <div class="card footprint">
+          <h3>{{ 'admin.detail.footprint' | transloco }}</h3>
+          <p>
+            {{
+              'admin.detail.feedsOfLimit'
+                | transloco: { used: d.footprint.feedsCount, limit: d.footprint.feedsLimit }
+            }}
           </p>
-        }
-        <p class="limits-label">{{ 'admin.detail.limits' | transloco }}</p>
+          <p>{{ d.footprint.tagsCount }} {{ 'admin.tagsLabel' | transloco }}</p>
+          @if (d.footprint.staleFeedsCount > 0) {
+            <p class="muted">
+              {{ 'admin.detail.staleFeeds' | transloco: { count: d.footprint.staleFeedsCount } }}
+            </p>
+          }
+          <p class="limits-label">{{ 'admin.detail.limits' | transloco }}</p>
 
-        @switch (trialState()) {
-          @case ('none') {
-            <p class="muted" data-testid="trial-status">
-              {{ 'admin.detail.trialNone' | transloco }}
-            </p>
+          @switch (trialState()) {
+            @case ('none') {
+              <p class="muted" data-testid="trial-status">
+                {{ 'admin.detail.trialNone' | transloco }}
+              </p>
+            }
+            @case ('active') {
+              <p data-testid="trial-status">
+                {{
+                  'admin.detail.trialActive'
+                    | transloco: { date: formatDate(d.limits.trialEndsAt!), days: trialDaysLeft() }
+                }}
+              </p>
+            }
+            @case ('expired') {
+              <p [class.flag]="suspendedByTrial()" data-testid="trial-status">
+                {{
+                  (suspendedByTrial() ? 'admin.detail.trialSuspended' : 'admin.detail.trialExpired')
+                    | transloco: { date: formatDate(d.limits.trialEndsAt!) }
+                }}
+              </p>
+            }
           }
-          @case ('active') {
-            <p data-testid="trial-status">
-              {{
-                'admin.detail.trialActive'
-                  | transloco: { date: formatDate(d.limits.trialEndsAt!), days: trialDaysLeft() }
-              }}
-            </p>
-          }
-          @case ('expired') {
-            <p [class.flag]="suspendedByTrial()" data-testid="trial-status">
-              {{
-                (suspendedByTrial() ? 'admin.detail.trialSuspended' : 'admin.detail.trialExpired')
-                  | transloco: { date: formatDate(d.limits.trialEndsAt!) }
-              }}
-            </p>
-          }
-        }
 
-        <div class="limit-control">
-          <app-field [label]="'admin.detail.trialDays' | transloco">
-            <input
-              type="number"
-              min="1"
-              max="3650"
-              [value]="trialDays()"
-              (input)="trialDays.set(+$any($event.target).value)"
-            />
-          </app-field>
-          <app-button size="sm" (click)="startTrial()">
-            {{ 'admin.detail.startTrial' | transloco }}
-          </app-button>
-          @if (trialState() !== 'none') {
-            <app-button size="sm" variant="danger-outline" (click)="clearTrial()">
-              {{ 'admin.detail.makePermanent' | transloco }}
+          <div class="limit-control">
+            <app-field [label]="'admin.detail.trialDays' | transloco">
+              <input
+                type="number"
+                min="1"
+                max="3650"
+                [value]="trialDays()"
+                (input)="trialDays.set(+$any($event.target).value)"
+              />
+            </app-field>
+            <app-button size="sm" (click)="startTrial()">
+              {{ 'admin.detail.startTrial' | transloco }}
             </app-button>
-          }
-        </div>
+            @if (trialState() !== 'none') {
+              <app-button size="sm" variant="danger-outline" (click)="clearTrial()">
+                {{ 'admin.detail.makePermanent' | transloco }}
+              </app-button>
+            }
+          </div>
 
-        <div class="limit-control">
-          <app-field [label]="'admin.detail.maxFeeds' | transloco">
-            <input
-              type="number"
-              min="1"
-              [placeholder]="
-                'admin.detail.maxFeedsDefault' | transloco: { limit: d.footprint.feedsLimit }
-              "
-              [value]="maxFeeds() ?? ''"
-              (input)="
-                maxFeeds.set($any($event.target).value === '' ? null : +$any($event.target).value)
-              "
-            />
-          </app-field>
-          <app-button size="sm" (click)="saveMaxFeeds()">
-            {{ 'admin.detail.saveLimit' | transloco }}
-          </app-button>
+          <div class="limit-control">
+            <app-field [label]="'admin.detail.maxFeeds' | transloco">
+              <input
+                type="number"
+                min="1"
+                [placeholder]="
+                  'admin.detail.maxFeedsDefault' | transloco: { limit: d.footprint.feedsLimit }
+                "
+                [value]="maxFeeds() ?? ''"
+                (input)="
+                  maxFeeds.set($any($event.target).value === '' ? null : +$any($event.target).value)
+                "
+              />
+            </app-field>
+            <app-button size="sm" (click)="saveMaxFeeds()">
+              {{ 'admin.detail.saveLimit' | transloco }}
+            </app-button>
+          </div>
         </div>
       </div>
-    </div>
-
-    <h3>{{ 'admin.detail.tagsTitle' | transloco }}</h3>
-    @if (d.tags.length === 0) {
-      <p class="muted">{{ 'admin.detail.noTags' | transloco }}</p>
-    } @else {
-      <ul class="rows">
-        @for (tag of d.tags; track tag.id) {
-          <li>
-            <app-tag-glyph [name]="tag.icon" [color]="tag.color" size="sm" />
-            <span class="name">{{ tag.name }}</span>
-            <span class="count">{{ tag.feedsCount }} {{ 'admin.feedsLabel' | transloco }}</span>
-          </li>
-        }
-      </ul>
     }
+  </app-settings-group>
 
-    <h3>{{ 'admin.detail.feedsTitle' | transloco }}</h3>
-    @if (d.subscriptions.length === 0) {
-      <p class="muted">{{ 'admin.detail.noFeeds' | transloco }}</p>
-    } @else {
-      <ul class="rows">
-        @for (sub of d.subscriptions; track sub.id) {
-          <li class="feed">
-            <span class="ident">
-              <span class="name">{{ sub.customTitle || sub.title || sub.url }}</span>
-              @if (sub.customTitle && sub.title) {
-                <span class="original">
-                  <span class="sr-only">{{ 'admin.detail.originalTitle' | transloco }}: </span
-                  >{{ sub.title }}
+  @if (detail(); as d) {
+    <app-settings-group icon="sell" [title]="'admin.detail.tagsTitle' | transloco">
+      @if (d.tags.length === 0) {
+        <p class="muted">{{ 'admin.detail.noTags' | transloco }}</p>
+      } @else {
+        <ul class="rows">
+          @for (tag of d.tags; track tag.id) {
+            <li>
+              <app-tag-glyph [name]="tag.icon" [color]="tag.color" size="sm" />
+              <span class="name">{{ tag.name }}</span>
+              <span class="count">{{ tag.feedsCount }} {{ 'admin.feedsLabel' | transloco }}</span>
+            </li>
+          }
+        </ul>
+      }
+    </app-settings-group>
+
+    <app-settings-group icon="rss_feed" [title]="'admin.detail.feedsTitle' | transloco">
+      @if (d.subscriptions.length === 0) {
+        <p class="muted">{{ 'admin.detail.noFeeds' | transloco }}</p>
+      } @else {
+        <ul class="rows">
+          @for (sub of d.subscriptions; track sub.id) {
+            <li class="feed">
+              <span class="ident">
+                <span class="name">{{ sub.customTitle || sub.title || sub.url }}</span>
+                @if (sub.customTitle && sub.title) {
+                  <span class="original">
+                    <span class="sr-only">{{ 'admin.detail.originalTitle' | transloco }}: </span
+                    >{{ sub.title }}
+                  </span>
+                }
+                <span class="url">{{ sub.url }}</span>
+                <span class="subscribed">
+                  <span class="sr-only">{{ 'admin.detail.subscribedOn' | transloco }}: </span
+                  >{{ formatDate(sub.createdAt) }}
                 </span>
-              }
-              <span class="url">{{ sub.url }}</span>
-              <span class="subscribed">
-                <span class="sr-only">{{ 'admin.detail.subscribedOn' | transloco }}: </span
-                >{{ formatDate(sub.createdAt) }}
               </span>
-            </span>
-            <span class="tags">
-              @for (tag of sub.tags; track tag.id) {
-                <span class="chip">
-                  <app-tag-glyph [name]="tag.icon" [color]="tag.color" size="xs" />
-                  {{ tag.name }}
-                </span>
-              }
-            </span>
-            <span class="count">
-              <span class="sr-only">{{ 'admin.detail.lastRefresh' | transloco }}: </span>
-              {{ lastFetchedLabel(sub.lastFetchedAt) }}
-            </span>
-          </li>
-        }
-      </ul>
-    }
+              <span class="tags">
+                @for (tag of sub.tags; track tag.id) {
+                  <span class="chip">
+                    <app-tag-glyph [name]="tag.icon" [color]="tag.color" size="xs" />
+                    {{ tag.name }}
+                  </span>
+                }
+              </span>
+              <span class="count">
+                <span class="sr-only">{{ 'admin.detail.lastRefresh' | transloco }}: </span>
+                {{ lastFetchedLabel(sub.lastFetchedAt) }}
+              </span>
+            </li>
+          }
+        </ul>
+      }
+    </app-settings-group>
   }
-</app-settings-card>
+</app-settings-stack>

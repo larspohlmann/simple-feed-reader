@@ -20,11 +20,15 @@ h3 {
   margin: 0 0 var(--space-2);
 }
 
-// The card's own content is no longer wrapped in a flex column with a gap
-// (the `<section>` that carried it was replaced by the shared card), so each
-// block below the heading row needs its own bottom spacing.
+// The group's panel is unpadded by design (its rows pad themselves); each
+// block below the header needs its own spacing and, since it isn't a row,
+// its own inset. `.cards` and `.rows` keep their own rules below (each needs
+// a different padding shape), so they take the inset there instead of
+// through this shared rule.
+app-skeleton,
 app-error-banner {
   display: block;
+  padding: var(--space-4) var(--space-5);
   margin-bottom: var(--space-4);
 }
 
@@ -32,7 +36,7 @@ app-error-banner {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
   gap: var(--space-4);
-  margin-bottom: var(--space-4);
+  padding: var(--space-4) var(--space-5);
 }
 
 // Layout only, not the box chrome — the border/radius/padding this used to
@@ -46,6 +50,15 @@ app-error-banner {
 
 .card p {
   margin: 0;
+}
+
+// `.muted` also marks the compact status lines nested inside these sub-cards
+// (stale-feeds notice, "no trial" line); this card's own flex `gap` already
+// sets their rhythm, so the panel-inset padding `.muted` takes below would
+// only crowd them. `.cards .muted` outranks the bare `.muted` selector on
+// specificity, so this holds regardless of source order.
+.cards .muted {
+  padding: 0;
 }
 
 dl {
@@ -91,10 +104,14 @@ dd {
   color: var(--text-muted);
 }
 
+// The panel-level empty states (tags/feeds groups with nothing to list) are
+// plain paragraphs, not rows, so they carry the panel inset directly. The
+// nested, compact `.muted` lines inside `.cards` opt back out above.
 .muted {
+  display: block;
+  padding: var(--space-4) var(--space-5);
   color: var(--text-muted);
   font-size: var(--fs-sm);
-  margin-bottom: var(--space-4);
 }
 
 .limits-label {
@@ -120,8 +137,8 @@ dd {
 
 .rows {
   list-style: none;
-  margin: 0 0 var(--space-4);
-  padding: 0;
+  margin: 0;
+  padding: var(--space-4) var(--space-5);
 }
 
 .rows li {
