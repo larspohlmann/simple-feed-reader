@@ -16,11 +16,15 @@
     <app-icon name="close" size="md" />
   </button>
 
-  <!-- The subtitle and the category chips do not fit the panel's head, which is
-       one row of heading plus actions. They lead the body instead; the chips
-       stay pinned because they stick to the body's own scrollport. -->
-  <p class="subtitle">{{ 'discover.subtitle' | transloco }}</p>
+  <!-- The chips do not fit the panel's head, which is one row of heading plus
+       actions. They lead the body instead, and stay pinned because they stick
+       to the body's own scrollport.
 
+       The subtitle sits inside the sections column, NOT here above .cols
+       (#561): anything in flow above .cols pushes the sticky rail down by its
+       height, and the rail then overhangs the scrollport by exactly that much.
+       The chips get away with it only because they and the rail are never
+       displayed at the same width. -->
   <app-category-chips
     [categories]="categories()"
     [activeId]="active.activeId()"
@@ -38,6 +42,8 @@
     />
 
     <main class="sections">
+      <p class="subtitle">{{ 'discover.subtitle' | transloco }}</p>
+
       @if (error()) {
         <p class="error" role="alert">{{ 'discover.subscribeFailed' | transloco }}</p>
       }

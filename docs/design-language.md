@@ -392,6 +392,14 @@ set on the consumer's host — not from inputs, so they stay in the stylesheet w
 the rest of the sizing. In use: 400px (confirm), 440px (edit subscription), 460px
 (tag form, and the component default), 520px (add feed), 1040px (discover).
 
+Two further knobs exist, and both are **opt-in and useless apart** (#561):
+`--panel-h` gives the panel a definite height, and `--panel-body-container: size`
+makes its body a size container. Set them only when a descendant must size itself
+against the body — the price is a panel that is always that tall, empty space
+included, so no content-sized dialog should ever set them. Discover sets both, so
+its category rail can cap itself with `100cqh`; see "Sticky and scroll" for why a
+percentage cannot do that job.
+
 The add-feed dialog is the wide variant: `--panel-w: 520px`, sized so a preview
 row's 88×66 thumbnail and four-line snippet sit comfortably. It sets
 `fillOnMobile`, so on a phone it becomes the full screen rather than a 92vw card
@@ -1118,11 +1126,42 @@ when the categories outrun it:
   top: 0;
   display: block;
   align-self: flex-start;
-  max-height: 100%;
+  max-height: 100cqh; /* NOT 100% -- see below */
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 ```
+
+**A percentage height inside an overlay panel silently resolves to `auto`.** The
+panel is sized by `max-height` alone, and a `max-height` does not make a box's
+height definite — so every `height: 100%` / `max-height: 100%` below it computes
+to `auto` with no warning, no lint and no visible breakage until the content
+outgrows the screen. The rail carried `max-height: 100%` for two years and it
+never once applied; the cap only appeared to work because the categories
+happened to fit (#561). The same fact is recorded from the other direction in
+the `fill-mobile` note in `overlay-panel.component.scss`.
+
+A descendant that must measure the panel body therefore needs the consumer to
+opt in to **both** `--panel-h` (gives the panel a definite height) and
+`--panel-body-container: size` (makes the body a size container), and then to
+measure with `cqh` rather than `%`. Only discover does this today.
+
+**A horizontal strip is not a navigation list once it outgrows a screen.** The
+picker's category chips are the only way to reach a category on a phone — the
+rail is hidden below the breakpoint — and as one nowrap strip 23 categories ran
+to **eight screenfuls** of sideways swiping, with nothing on screen to say more
+existed. A category sitting 13th was reported as missing from the live instance
+(#561). Chips that serve as navigation wrap into rows and scroll down, capped so
+a cut-off row does the "there is more" signalling a cut-off strip cannot.
+
+**A sticky box's cap and its travel want opposite things from its parent.** Cap
+it with a percentage and the parent must be one screenful — which is also the
+end of the sticky range, so the box scrolls away the moment it is short enough
+to fit. Give the parent its content height instead and the travel is right but
+the cap is gone. `cqh` is what breaks the tie: it measures the scrollport while
+leaving the containing block tall. Both directions are regression-tested in
+`frontend/e2e/discover-rail-scroll.spec.ts`, one test each — a fix for either
+one alone re-breaks the other.
 
 **A sticky box only travels inside its containing block's _content_ box, so
 padding on the parent strands it early.** The article's progress bar is sticky to
@@ -1140,11 +1179,25 @@ instead (the trap #100 documents for the back-to-top button, and the reading pan
 carries a transform through its return gestures). Sticky is scoped to the pane by
 construction and immune to both.
 
-**Every internal scroller gets `overscroll-behavior: contain`.** Reaching the end
-of a rail must not hand the wheel to the panel body behind it — the sections
-would scroll and the rail would appear to jump to a category the reader never
-picked. In use by the overlay panel body, the category rail, the category chips,
-the icon picker grid, and the add-feed and edit-subscription dialogs.
+**An internal scroller gets `overscroll-behavior: contain` only where chaining
+would give the wrong answer.** Reaching the end of the category rail must not
+hand the wheel to the panel body behind it — the sections would scroll and the
+rail would appear to jump to a category the reader never picked. The panel body
+contains for the same reason: the reader behind the dialog must not move. In use
+by the overlay panel body, the category rail, the category chips and the icon
+picker grid.
+
+**It does not belong on a nested list whose only outer scroller is the dialog
+body.** The edit-subscription tag list capped itself at 220px and contained its
+overscroll; on a short phone the dialog body was still left needing a few pixels
+of its own scroll, and containment swallowed exactly that remainder. Because the
+list fills most of the dialog, nearly every touch starts inside it — so the last
+tag was unreachable for good (#561). Chaining is the only fix: the cap cannot
+adapt, because sizing the list against "what is left" would need the dialog to
+have a definite height, which it does not. Stopping the gesture at the dialog is
+already the panel body's job, and it still does it. The add-feed dialog's tag
+list has the same shape with a 160px cap; it has not been reported, but it is
+the same trap.
 
 **Content beneath a floating bar offsets by the measured height plus `--bar-gap`,
 never by a literal:**

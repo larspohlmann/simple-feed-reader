@@ -80,7 +80,11 @@ form {
   max-height: 220px;
   min-height: 0;
   overflow: auto;
-  overscroll-behavior: contain;
+
+  /* Chaining stays ON, deliberately (#561): the dialog body behind this list
+     still needs a few pixels of its own scroll, and containment swallowed
+     exactly that remainder, stranding the last tag. Stopping the gesture at
+     the dialog is the panel body's job, and it still does it. */
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);

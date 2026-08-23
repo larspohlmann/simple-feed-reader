@@ -28,6 +28,13 @@
      through --panel-max-h (discover does). */
   max-height: 90vh;
   max-height: var(--panel-max-h, 90dvh);
+
+  /* Opt-in DEFINITE height, `auto` for everyone else (#561). A cap alone leaves
+     the panel content-sized, and nothing below a content-sized box can measure
+     itself against it. Set this only together with --panel-body-container
+     below, and only when a descendant must size itself to the body; it costs a
+     panel that is always this tall, empty space included. */
+  height: var(--panel-h, auto);
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -62,6 +69,19 @@ h2 {
   padding: 0 var(--space-5);
   overflow-y: auto;
   overscroll-behavior: contain;
+
+  /* Opt-in SIZE container, so a descendant can cap itself at the scrollport
+     with `cqh` (#561). `%` cannot do this job: it measures the containing
+     block, and a sticky sidebar needs a tall containing block to travel in
+     while still being capped at one screenful -- two requirements one
+     percentage cannot satisfy at once.
+
+     Size containment makes this box ignore its own content when sizing, which
+     is why it is opt-in and why it is useless without --panel-h: together they
+     say "this panel has a height of its own, and the body fills what is left".
+     Turning it on for a content-sized dialog would collapse it to its heading
+     and buttons, exactly as the flex note above warns. */
+  container-type: var(--panel-body-container, normal);
 }
 
 .footer {
