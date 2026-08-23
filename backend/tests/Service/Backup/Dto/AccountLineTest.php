@@ -16,7 +16,7 @@ final class AccountLineTest extends TestCase
      */
     public function testAnOldBackupWithoutShowReasonsImportsAsFalse(): void
     {
-        $line = self::lineWithRecommendationSettings(self::recommendationSettingsWithoutShowReasons());
+        $line = self::lineWithRecommendationSettings(self::recommendationSettingsWithoutOptionalFields());
 
         $account = AccountLine::fromLine($line);
 
@@ -26,13 +26,39 @@ final class AccountLineTest extends TestCase
 
     public function testShowReasonsIsReadFromTheLine(): void
     {
-        $settings = self::recommendationSettingsWithoutShowReasons();
+        $settings = self::recommendationSettingsWithoutOptionalFields();
         $settings['showReasons'] = true;
 
         $account = AccountLine::fromLine(self::lineWithRecommendationSettings($settings));
 
         self::assertNotNull($account->recommendationSettings);
         self::assertTrue($account->recommendationSettings->showReasons);
+    }
+
+    /**
+     * A backup written before #493 has no `profileText` key. It must import
+     * as null — the reader's inferred preference profile simply was not
+     * captured yet — rather than being rejected as malformed.
+     */
+    public function testTreatsAnAbsentPreferenceProfileAsNull(): void
+    {
+        $line = self::lineWithRecommendationSettings(self::recommendationSettingsWithoutOptionalFields());
+
+        $account = AccountLine::fromLine($line);
+
+        self::assertNotNull($account->recommendationSettings);
+        self::assertNull($account->recommendationSettings->profileText);
+    }
+
+    public function testReadsTheStoredPreferenceProfile(): void
+    {
+        $settings = self::recommendationSettingsWithoutOptionalFields();
+        $settings['profileText'] = 'Likes cartography.';
+
+        $account = AccountLine::fromLine(self::lineWithRecommendationSettings($settings));
+
+        self::assertNotNull($account->recommendationSettings);
+        self::assertSame('Likes cartography.', $account->recommendationSettings->profileText);
     }
 
     /**
@@ -50,9 +76,15 @@ final class AccountLineTest extends TestCase
     }
 
     /**
+     * The minimal recommendation settings shape: no `showReasons` (#541) and
+     * no `profileText` (#493), the two fields added to this object after its
+     * original release. Tests build on this to prove each addition imports
+     * as its default when the key is absent, and reads back correctly when
+     * present.
+     *
      * @return array<string, mixed>
      */
-    private static function recommendationSettingsWithoutShowReasons(): array
+    private static function recommendationSettingsWithoutOptionalFields(): array
     {
         return [
             'guidancePrompt' => 'Only long reads, please.',
