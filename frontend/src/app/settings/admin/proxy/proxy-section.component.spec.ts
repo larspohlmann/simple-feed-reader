@@ -136,6 +136,71 @@ describe('ProxySectionComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('203.0.113.9');
   });
 
+  // The outcome used to sit beside the button inside the control slot, so the
+  // button jumped left the moment a result arrived.
+  it('reports the outcome in the row description, leaving the button in place', () => {
+    const fixture = mount(state({ host: 'proxy.example.com' }));
+
+    testButton(fixture).click();
+    fixture.detectChanges();
+    http.expectOne(TEST_ENDPOINT).flush({ ok: true, egressIp: '203.0.113.9', reason: null });
+    fixture.detectChanges();
+
+    const row = testButton(fixture).closest('app-settings-row');
+    expect(row?.querySelector('.row-desc')?.textContent).toContain('203.0.113.9');
+    expect(row?.querySelector('.row-control')?.textContent).not.toContain('203.0.113.9');
+  });
+
+  const probeGlyph = (fixture: ComponentFixture<ProxySectionComponent>): HTMLElement | null =>
+    fixture.nativeElement.querySelector('.probe-status app-icon');
+
+  it('marks a successful probe with a tick', () => {
+    const fixture = mount(state({ host: 'proxy.example.com' }));
+
+    testButton(fixture).click();
+    fixture.detectChanges();
+    http.expectOne(TEST_ENDPOINT).flush({ ok: true, egressIp: '203.0.113.9', reason: null });
+    fixture.detectChanges();
+
+    expect(probeGlyph(fixture)?.textContent?.trim()).toBe('check');
+    expect(probeGlyph(fixture)?.className).toContain('ok');
+  });
+
+  it('marks a failed probe with a cross', () => {
+    const fixture = mount(state({ host: 'proxy.example.com' }));
+
+    testButton(fixture).click();
+    fixture.detectChanges();
+    http.expectOne(TEST_ENDPOINT).flush({ ok: false, egressIp: null, reason: 'refused' });
+    fixture.detectChanges();
+
+    expect(probeGlyph(fixture)?.textContent?.trim()).toBe('close');
+    expect(probeGlyph(fixture)?.className).toContain('failed');
+  });
+
+  // The slot is there before any probe runs, so the glyph cannot widen the
+  // control and shove the button sideways when it appears.
+  it('keeps the glyph slot in place before any probe has run', () => {
+    const fixture = mount(state({ host: 'proxy.example.com' }));
+
+    expect(fixture.nativeElement.querySelector('.probe-status')).not.toBeNull();
+    expect(probeGlyph(fixture)).toBeNull();
+  });
+
+  it('weights the test button once it can actually run', () => {
+    const fixture = mount(state({ host: 'proxy.example.com' }));
+
+    expect(testButton(fixture).disabled).toBe(false);
+    expect(testButton(fixture).className).toContain('accent-outline');
+  });
+
+  it('leaves the test button unweighted while it cannot run', () => {
+    const fixture = mount(state());
+
+    expect(testButton(fixture).disabled).toBe(true);
+    expect(testButton(fixture).className).toContain('default');
+  });
+
   it('renders an error banner on a failed probe', () => {
     const fixture = mount(state({ host: 'proxy.example.com' }));
 

@@ -11,6 +11,7 @@ import {
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { ButtonComponent } from '../../../shared/button/button.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
+import { IconComponent } from '../../../shared/icon/icon.component';
 import { InfoTipComponent } from '../../../shared/info-tip/info-tip.component';
 import { SettingsGroupComponent } from '../../../shared/settings/settings-group/settings-group.component';
 import { SettingsRowComponent } from '../../../shared/settings/settings-row/settings-row.component';
@@ -40,6 +41,7 @@ const DEFAULT_PORT = 1080;
   imports: [
     ButtonComponent,
     ErrorBannerComponent,
+    IconComponent,
     InfoTipComponent,
     SettingsGroupComponent,
     SettingsRowComponent,
@@ -81,6 +83,9 @@ export class ProxySectionComponent {
   /** Only SOCKS5 leaves the client a choice -- an HTTP proxy always resolves
    *  the name itself, so the switch would describe nothing on that type. */
   readonly dnsIsChoosable = computed(() => this.type() === 'SOCKS5');
+  /** The probe runs against the SAVED row, so a pending edit would test
+   *  something other than what is on screen. */
+  readonly canTest = computed(() => this.configured() && !this.svc.dirty());
   /** Empty exactly when no password is stored, so it doubles as the "is one on
    *  record?" test the password field's placeholder needs. */
   readonly passwordHint = computed(() => this.svc.state()?.passwordHint ?? '');

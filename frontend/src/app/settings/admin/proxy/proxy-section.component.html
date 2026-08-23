@@ -118,16 +118,29 @@
       />
     </app-settings-row>
 
+    @let probeResult = probe();
     <app-settings-row
       [title]="'settings.proxy.test' | transloco"
-      [description]="'settings.proxy.testDesc' | transloco"
+      [description]="
+        probeResult.status === 'ok'
+          ? ('settings.proxy.testOk' | transloco: { ip: probeResult.egressIp })
+          : ('settings.proxy.testDesc' | transloco)
+      "
     >
       <div class="test-control" data-testid="proxy-test-button">
+        <span class="probe-status">
+          @if (probeResult.status === 'ok') {
+            <app-icon class="ok" name="check" size="sm" />
+          } @else if (probeResult.status === 'error') {
+            <app-icon class="failed" name="close" size="sm" />
+          }
+        </span>
         <app-button
-          [loading]="probe().status === 'loading'"
-          [disabled]="svc.dirty() || !configured()"
+          [variant]="canTest() ? 'accent-outline' : 'default'"
+          [loading]="probeResult.status === 'loading'"
+          [disabled]="!canTest()"
           [ariaLabel]="
-            probe().status === 'loading'
+            probeResult.status === 'loading'
               ? ('settings.proxy.testing' | transloco)
               : ('settings.proxy.test' | transloco)
           "
@@ -135,20 +148,13 @@
         >
           {{ 'settings.proxy.test' | transloco }}
         </app-button>
-        @let probeResult = probe();
-        @if (probeResult.status === 'ok') {
-          <span class="egress-ip" data-testid="proxy-egress-ip">{{
-            'settings.proxy.testOk' | transloco: { ip: probeResult.egressIp }
-          }}</span>
-        }
       </div>
     </app-settings-row>
 
-    @let probeFailure = probe();
-    @if (probeFailure.status === 'error') {
+    @if (probeResult.status === 'error') {
       <div class="panel-banner">
         <app-error-banner
-          [message]="'settings.proxy.testFailed' | transloco: { reason: probeFailure.message }"
+          [message]="'settings.proxy.testFailed' | transloco: { reason: probeResult.message }"
         />
       </div>
     }
