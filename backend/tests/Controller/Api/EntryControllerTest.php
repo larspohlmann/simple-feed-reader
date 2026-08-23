@@ -337,7 +337,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertNull($body['nextCursor']);
     }
 
-    public function testForYouViewIncludesTheRecommendationScoreOnlyWhenDebugIsEnabled(): void
+    public function testForYouViewWithholdsBothAnnotationsFromDebugAlone(): void
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-foryou-debug@example.com');
@@ -362,13 +362,14 @@ final class EntryControllerTest extends WebTestCase
         self::assertIsArray($body['entries']);
         $first = $body['entries'][0];
         self::assertIsArray($first);
-        self::assertSame(42, $first['recommendationScore']);
-        // Debug governs the score alone since #541: the reason now rides its own
-        // showReasons flag, so debug-on-alone shows the score without the reason.
+        // Debug keeps the per-run call logs and reaches nothing in the feed
+        // (#576): it is not a second way to reveal an explanation the reader
+        // asked to keep hidden, not even half of one.
         self::assertArrayNotHasKey('recommendationReason', $first);
+        self::assertArrayNotHasKey('recommendationScore', $first);
     }
 
-    public function testForYouViewIncludesTheRecommendationReasonOnlyWhenShowReasonsIsEnabled(): void
+    public function testForYouViewIncludesTheReasonAndItsScoreWhenShowReasonsIsEnabled(): void
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-foryou-reasons@example.com');
@@ -393,9 +394,10 @@ final class EntryControllerTest extends WebTestCase
         self::assertIsArray($body['entries']);
         $first = $body['entries'][0];
         self::assertIsArray($first);
-        // showReasons on, debug off: the reason shows, the raw score stays hidden.
+        // showReasons on, debug off: the reason and the score beside it both
+        // show — one explanation, one switch (#576).
         self::assertSame('Matches your interest in g1', $first['recommendationReason']);
-        self::assertArrayNotHasKey('recommendationScore', $first);
+        self::assertSame(42, $first['recommendationScore']);
     }
 
     public function testForYouViewPaginatesWithCursor(): void

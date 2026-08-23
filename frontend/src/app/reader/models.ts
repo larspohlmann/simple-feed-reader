@@ -83,9 +83,9 @@ export interface EntryDto {
   isViewed: boolean;
   /** Why the recommender picked this entry; set only on for-you results. */
   recommendationReason?: string | null;
-  /** The model's 0-1000 score for this entry (0-100 before #403); present
-   *  only on for-you results
-   *  and only when the user's debug setting is on. */
+  /** The model's 0-1000 score for this entry (0-100 before #403); present on
+   *  for-you results whenever the reason is, because one setting sends both
+   *  (#576). Null on rows written before the column existed. */
   recommendationScore?: number | null;
   /** The recommendation run this entry belongs to; set only on for-you results.
    *  Consecutive entries with different runIds mark a run boundary (#348). */

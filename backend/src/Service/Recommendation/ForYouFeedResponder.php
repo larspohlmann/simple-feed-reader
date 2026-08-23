@@ -11,9 +11,10 @@ use App\Http\RecommendationFeedJson;
 /**
  * What JSON the for-you feed page returns for a user — paginates their
  * recommendation feed, then annotates each entry according to their
- * recommendation settings (#321). The two annotations vary on independent
- * axes (#541): the reason follows the reader's "show reasons" preference,
- * the score stays behind the debug setting.
+ * recommendation settings (#321). The reason and its score are one
+ * explanation and follow one switch — the reader's "show reasons" preference.
+ * Debug is deliberately not consulted here: it keeps the per-run call logs,
+ * not a second way into the feed's annotations (#576).
  */
 final readonly class ForYouFeedResponder
 {
@@ -28,10 +29,8 @@ final readonly class ForYouFeedResponder
     {
         $page = $this->pager->page((int) $user->getId(), $cursor, $limit);
 
-        $effective = $this->settings->forUser($user);
         $visibility = new FeedAnnotationVisibility(
-            showReasons: $effective->showReasons,
-            showScores: $effective->debugEnabled,
+            showExplanation: $this->settings->forUser($user)->showReasons,
         );
 
         return RecommendationFeedJson::page($page->rows, $page->nextCursor, $visibility);

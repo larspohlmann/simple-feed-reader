@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { RecommendationStripComponent } from './recommendation-strip.component';
 import { EntryDto } from '../models';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
@@ -44,7 +45,7 @@ function mount(e: EntryDto | null) {
 }
 
 describe('RecommendationStripComponent', () => {
-  beforeEach(() => TestBed.configureTestingModule({ imports: [Host] }));
+  beforeEach(() => TestBed.configureTestingModule({ imports: [Host, provideTranslocoTesting()] }));
 
   it('always projects its card content', () => {
     expect(mount(null).querySelector('.card')!.textContent).toContain('card');
@@ -61,9 +62,10 @@ describe('RecommendationStripComponent', () => {
     expect(el.querySelector('.reason')!.textContent).toContain('because you read heise');
   });
 
-  // Debug on, "show why" off (#541): the backend sends a score with no reason.
-  // The strip must still appear and show the score on its own.
-  it('renders the score alone when there is a score but no reason', () => {
+  // Not a wire state any more (#576 sends the pair together) but a real data
+  // state: the salvager stores '' for a pick whose reason came back blank, so
+  // the strip must still appear and carry the score on its own.
+  it('renders the score alone when the reason is blank', () => {
     const el = mount(entry({ recommendationScore: 823 }));
     expect(el.querySelector('.reason')).not.toBeNull();
     expect(el.querySelector('.reason .score')!.textContent).toContain('82');

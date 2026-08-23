@@ -7,16 +7,20 @@ namespace App\Http;
 /**
  * Which per-entry recommendation annotations a for-you feed page carries.
  *
- * The two annotations vary on independent axes (#541): the human-readable
- * `recommendationReason` follows the user's own "show reasons" preference,
- * while the numeric `recommendationScore` stays behind the debug setting.
- * This supersedes #342, where a single debug flag gated both together.
+ * One switch, because the reason and its score are one explanation: the score
+ * is rendered beside the reason it belongs to, so a reader who asked not to be
+ * told why an article was picked has not asked to be told how strongly (#576).
+ *
+ * #342 gated both behind the debug setting. #541 split them onto independent
+ * axes so the reason could follow the reader's own preference while the score
+ * stayed with debug. That left debug as a second, unrelated way to reveal half
+ * the explanation, which is what this supersedes — debug now keeps the per-run
+ * call logs and nothing else.
  */
 final readonly class FeedAnnotationVisibility
 {
     public function __construct(
-        public bool $showReasons,
-        public bool $showScores,
+        public bool $showExplanation,
     ) {
     }
 }

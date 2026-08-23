@@ -79,7 +79,9 @@ class RecommendationSettings
     private ?int $autoGenerateIntervalHours = null;
 
     /**
-     * Whether each pick's one-line reason is shown in the reader UI (#541).
+     * Whether the reader UI explains each pick — the one-line reason and the
+     * score beside it, which travel together (#541, widened to the score by
+     * #576). Debug mode does not reach either.
      */
     #[ORM\Column(options: ['default' => false])]
     private bool $showReasons = false;

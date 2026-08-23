@@ -45,9 +45,11 @@ final readonly class EffectiveRecommendationSettings
          */
         public ?string $profileText = null,
         /**
-         * Whether the reader wants each pick's one-line reason shown in the
-         * UI (#541). Defaulted to false here, like the additive params above
-         * it, so the many callers that predate #541 keep compiling unchanged.
+         * Whether the reader wants each pick explained in the UI — the
+         * one-line reason and the score beside it, which travel together
+         * (#541, widened to the score by #576). Defaulted to false here, like
+         * the additive params above it, so the many callers that predate #541
+         * keep compiling unchanged.
          */
         public bool $showReasons = false,
     ) {
