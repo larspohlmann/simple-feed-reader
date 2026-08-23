@@ -4,6 +4,7 @@ import {
   isSearchableTerm,
   isTooShortToSearch,
   isWholeWordTerm,
+  listSelectionFrom,
   markReadTarget,
   normalizeSearchInput,
   queryFromSelection,
@@ -101,6 +102,40 @@ describe('selectionFromParams', () => {
       // 'ab ' is 3 raw characters but 2 once the trailing space is set aside.
       expect(selectionFromParams(pm({ q: 'ab ' })).selection.kind).toBe('all');
     });
+  });
+});
+
+describe('listSelectionFrom (#579)', () => {
+  it('reads the list a search is layered over', () => {
+    expect(listSelectionFrom({ tag: '5', q: 'angular' })).toEqual({
+      kind: 'tag',
+      id: 5,
+      unread: true,
+    });
+  });
+
+  it('keeps the unread refinement the search hid', () => {
+    expect(listSelectionFrom({ tag: '5', unread: '0', q: 'angular' })).toEqual({
+      kind: 'tag',
+      id: 5,
+      unread: false,
+    });
+  });
+
+  it('reads a plain list unchanged', () => {
+    expect(listSelectionFrom({ view: 'favorites' })).toEqual({
+      kind: 'favorites',
+      id: null,
+      unread: false,
+    });
+  });
+
+  it('does not touch the parameters it is given', () => {
+    const params = { tag: '5', q: 'angular' };
+
+    listSelectionFrom(params);
+
+    expect(params).toEqual({ tag: '5', q: 'angular' });
   });
 });
 
