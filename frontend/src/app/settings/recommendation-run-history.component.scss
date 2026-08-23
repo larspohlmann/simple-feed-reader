@@ -47,9 +47,9 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Flat sibling rows, not nested cards -- the same lesson `app-settings-card`
-     itself records: a card wraps a section, not a row, and a border on every
-     row here would read as one card per month rather than one list. */
+  /* Flat sibling rows, not nested cards: a panel wraps a section, not a row,
+     and a border on every row here would read as one card per month rather
+     than one list. */
   &__months {
     margin: 0;
     padding: 0;
