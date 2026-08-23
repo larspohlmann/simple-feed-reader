@@ -56,7 +56,7 @@ final class GoldenBackupRestoreTest extends DbTestCase
         return $restorer;
     }
 
-    private function settingsFor(User $user): RecommendationSettingsRepository
+    private function settingsRepository(): RecommendationSettingsRepository
     {
         $repository = self::getContainer()->get(RecommendationSettingsRepository::class);
         self::assertInstanceOf(RecommendationSettingsRepository::class, $repository);
@@ -103,7 +103,7 @@ final class GoldenBackupRestoreTest extends DbTestCase
         $this->restorer()->restore($user, $this->fixture('oldest-supported.ndjson'), self::CONFIRMATION);
         $this->em->clear();
 
-        $settings = $this->settingsFor($user)->findForUser($user);
+        $settings = $this->settingsRepository()->findForUser($user);
         self::assertNotNull($settings);
         self::assertFalse($settings->values()->showReasons);
         self::assertNull($settings->values()->profileText);
