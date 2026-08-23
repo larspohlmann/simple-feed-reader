@@ -111,6 +111,7 @@
           [newestRunId]="listNewestRunId()"
           [headerActions]="forYouActions"
           [leadingActions]="listEditAction"
+          [topBlock]="feedIntro"
           (loadMore)="entries.loadMore()"
           (markAllRead)="onMarkAllRead()"
           (refresh)="onScopedRefresh()"
@@ -158,6 +159,7 @@
           [newestRunId]="listNewestRunId()"
           [headerActions]="forYouActions"
           [leadingActions]="listEditAction"
+          [topBlock]="feedIntro"
           (scrolled)="onListScrolled($event)"
           (loadMore)="entries.loadMore()"
           (markAllRead)="onMarkAllRead()"
@@ -227,6 +229,19 @@
     >
       <app-icon name="edit" size="sm" />
     </button>
+  }
+</ng-template>
+
+<!-- Rendered through the list's `topBlock` outlet, so it sits above the first
+     row and scrolls away with them instead of growing the sticky header (#321,
+     #419). Declared once and handed to both list instances. -->
+<ng-template #feedIntro>
+  @if (feedIntroSubscription(); as sub) {
+    <app-feed-intro
+      [description]="sub.description"
+      [imageUrl]="sub.imageUrl"
+      [siteUrl]="sub.siteUrl"
+    />
   }
 </ng-template>
 

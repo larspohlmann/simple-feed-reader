@@ -67,6 +67,7 @@ import { OnboardingSkip } from '../discover/onboarding-skip';
 import { ProgressHairlineComponent } from '../shared/progress-hairline/progress-hairline.component';
 import { IconComponent } from '../shared/icon/icon.component';
 import { ButtonComponent } from '../shared/button/button.component';
+import { FeedIntroComponent } from './feed-intro/feed-intro.component';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 @Component({
@@ -80,6 +81,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
     ProgressHairlineComponent,
     IconComponent,
     ButtonComponent,
+    FeedIntroComponent,
     RouterLink,
     TranslocoPipe,
   ],
@@ -289,6 +291,15 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     const s = this.selection();
     if (s.kind !== 'subscription') return null;
     return this.subs.subscriptions().find((x) => x.id === s.id) ?? null;
+  });
+
+  /** The selected feed, but only when it has something to introduce itself
+   *  with. A feed with no description, image or site URL renders no block at
+   *  all rather than an empty box above the first row. */
+  readonly feedIntroSubscription = computed(() => {
+    const sub = this.selectedSubscription();
+    if (sub === null) return null;
+    return sub.description !== null || sub.imageUrl !== null || sub.siteUrl !== null ? sub : null;
   });
 
   readonly title = computed(() => {
