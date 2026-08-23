@@ -574,27 +574,18 @@ final class BackupSchemaCoverageTest extends DbTestCase
     }
 
     /**
-     * Seeds one fully populated account and reports which JSON keys the
-     * exporter writes on each kind of line.
+     * Which JSON keys the exporter writes on each kind of line — the key half
+     * of {@see exportedValuesByKind()}, derived from it rather than walking
+     * the export a second time: the two questions ("which keys" and "which
+     * values") share the exact same traversal, and a key list kept in step by
+     * hand would be exactly the kind of drift this test suite exists to catch
+     * elsewhere.
      *
      * @return array<string, list<string>>
      */
     private function exportedKeysByKind(string $email): array
     {
-        $user = $this->fullyPopulatedAccount()->create($email);
-
-        $keysByKind = [];
-        foreach ($this->exporter()->lines($user, 'https://coverage.example') as $line) {
-            $decoded = json_decode($line, true, flags: \JSON_THROW_ON_ERROR);
-            self::assertIsArray($decoded);
-            /** @var array<string, mixed> $decoded */
-            $kind = $decoded['kind'] ?? '';
-            self::assertIsString($kind);
-            $merged = array_merge($keysByKind[$kind] ?? [], $this->keysOfOneLine($decoded));
-            $keysByKind[$kind] = array_values(array_unique($merged));
-        }
-
-        return $keysByKind;
+        return array_map(array_keys(...), $this->exportedValuesByKind($email));
     }
 
     /**
@@ -626,37 +617,12 @@ final class BackupSchemaCoverageTest extends DbTestCase
     }
 
     /**
-     * A line's own keys, plus a dotted key for each key of a nested object —
-     * `recommendationSettings.profileText`, `tags.position`. One level only:
-     * the format nests no deeper, and a flattener that recursed would invent
-     * key names the exporter cannot produce.
-     *
-     * Derived from {@see valuesOfOneLine()} rather than walking the line a
-     * second time: the two questions ("which keys" and "which values") share
-     * the exact same traversal, and a key list kept in step by hand would be
-     * exactly the kind of drift this test suite exists to catch elsewhere.
-     *
-     * @param array<string, mixed> $line
-     *
-     * @return list<string>
-     */
-    private function keysOfOneLine(array $line): array
-    {
-        $keys = [];
-        foreach ($this->valuesOfOneLine($line) as $key => $values) {
-            foreach ($values as $ignoredValue) {
-                $keys[] = $key;
-            }
-        }
-
-        return $keys;
-    }
-
-    /**
-     * A line's own values, keyed the same way {@see keysOfOneLine()} names
-     * them — plain keys, and a dotted key per key of a nested object. A key
-     * maps to a list because a nested key repeats once per element: two
-     * subscription tags both contribute a `tags.position` value.
+     * A line's own values, keyed by its own keys, plus a dotted key for each
+     * key of a nested object — `recommendationSettings.profileText`,
+     * `tags.position`. One level only: the format nests no deeper, and a
+     * flattener that recursed would invent key names the exporter cannot
+     * produce. A key maps to a list because a nested key repeats once per
+     * element: two subscription tags both contribute a `tags.position` value.
      *
      * @param array<string, mixed> $line
      *
