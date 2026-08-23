@@ -237,6 +237,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
      * The headings the user-facing tables live under. A dropped thing is
      * looked for under its own heading and nowhere else.
      */
+    private const string SECTION_INSTANCE_SCOPED = '### 6.1';
     private const string SECTION_WHOLLY_DROPPED = '### 6.2';
     private const string SECTION_DROPPED_FIELDS = '### 6.3';
     private const string SECTION_NEVER_WRITTEN = '## 7.';
@@ -391,22 +392,32 @@ final class BackupSchemaCoverageTest extends DbTestCase
     {
         $doc = (string) file_get_contents(__DIR__ . '/../../../../docs/backup.md');
 
-        $whollyDropped = $this->sectionOf($doc, self::SECTION_WHOLLY_DROPPED);
-        foreach (array_keys(self::ACCOUNT_SCOPED_WHOLLY_DROPPED) as $entityClass) {
+        $this->assertEveryEntityIsMentioned(self::INSTANCE_SCOPED, $doc, self::SECTION_INSTANCE_SCOPED);
+        $this->assertEveryEntityIsMentioned(self::ACCOUNT_SCOPED_WHOLLY_DROPPED, $doc, self::SECTION_WHOLLY_DROPPED);
+
+        $this->assertEveryFieldHasARow(self::NOT_BACKED_UP, $doc, self::SECTION_DROPPED_FIELDS);
+        $this->assertEveryFieldHasARow(self::NEVER_BACKED_UP, $doc, self::SECTION_NEVER_WRITTEN);
+    }
+
+    /**
+     * @param array<class-string, string> $declarations
+     */
+    private function assertEveryEntityIsMentioned(array $declarations, string $doc, string $sectionMarker): void
+    {
+        $section = $this->sectionOf($doc, $sectionMarker);
+
+        foreach (array_keys($declarations) as $entityClass) {
             $shortName = (new \ReflectionClass($entityClass))->getShortName();
             self::assertStringContainsString(
                 $shortName,
-                $whollyDropped,
+                $section,
                 sprintf(
                     'docs/backup.md section "%s" never mentions %s, which a backup drops.',
-                    self::SECTION_WHOLLY_DROPPED,
+                    $sectionMarker,
                     $shortName,
                 ),
             );
         }
-
-        $this->assertEveryFieldHasARow(self::NOT_BACKED_UP, $doc, self::SECTION_DROPPED_FIELDS);
-        $this->assertEveryFieldHasARow(self::NEVER_BACKED_UP, $doc, self::SECTION_NEVER_WRITTEN);
     }
 
     /**
