@@ -3,7 +3,14 @@
 /* The host is the flex child of the scrolling body, so the stickiness must
    live here — a sticky <nav> inside a content-height host has no room to
    stick and scrolls away with it. Cap the height to the body and let the
-   rail scroll internally when the categories outrun it. */
+   rail scroll internally when the categories outrun it.
+
+   `cqh`, not `%` (#561). A percentage measures `.cols`, and `.cols` has to
+   stay as tall as the sections or this sticky host would run out of travel
+   and scroll away whenever the categories were few enough to fit. `cqh`
+   measures the panel body instead — the scrollport this host is pinned to —
+   so the cap and the travel stop fighting each other. It needs the body to
+   be a size container: discover opts in with --panel-body-container. */
 :host {
   position: sticky;
   top: 0;
@@ -13,7 +20,10 @@
   /* stylelint-disable-next-line declaration-property-unit-allowed-list --
      tuned rail measure, not a spacing value. */
   width: 220px;
-  max-height: 100%;
+
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     container height, deliberately not a spacing value; see the note above. */
+  max-height: 100cqh;
   overflow-y: auto;
 
   /* Reaching the end of the rail must not hand the wheel to the panel body

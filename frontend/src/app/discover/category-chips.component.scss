@@ -11,11 +11,23 @@
   z-index: 2;
 }
 
+/* Wraps, and scrolls DOWN rather than sideways (#561). As one nowrap strip the
+   chips are the only way to reach a category on a phone, and 23 of them run to
+   eight screenfuls of horizontal swiping with nothing on screen to say more
+   exists — the 13th category was simply never found. Wrapped into rows the
+   whole set is scannable, and the cap keeps the strip from eating the picker:
+   roughly two and a half rows are visible, which reads as "there is more" the
+   way a cut-off row does and a cut-off strip does not. */
 .chips {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-1);
   padding: var(--space-2) var(--space-3);
-  overflow-x: auto;
+
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     tuned to show ~2.5 chip rows, not a spacing value. */
+  max-height: 104px;
+  overflow-y: auto;
 
   /* Swiping past the last chip must not chain into the panel body, which on a
      phone would scroll the sections away under the reader's thumb. */
