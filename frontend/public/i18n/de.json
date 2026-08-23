@@ -87,6 +87,7 @@
       "memberSince": "Mitglied seit",
       "adminQueue": "Admin – Benutzerliste",
       "signOut": "Abmelden",
+      "dangerZone": "Gefahrenbereich",
       "delete": "Mein Konto löschen",
       "deleteTitle": "Dein Konto löschen?",
       "deleteNote": "Das Löschen deines Kontos entfernt deine Abonnements, Tags und Lesezustände dauerhaft. Exportiere deine Feeds vorher, wenn du sie behalten möchtest.",
@@ -446,6 +447,7 @@
       "backToUsers": "Benutzer"
     },
     "catalog": "Feed-Katalog",
+    "catalogImport": "Katalog-Import",
     "catalogEmpty": "Dieser Katalog ist leer, daher werden neuen Benutzern keine Vorschläge angeboten.",
     "importBundled": "Mitgelieferten Katalog importieren ({{categories}} Kategorien, {{feeds}} Feeds)",
     "importUpload": "Katalogdatei importieren",

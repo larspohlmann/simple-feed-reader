@@ -600,14 +600,14 @@ describe('AdminUserDetailComponent', () => {
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
   });
 
-  it('renders the account inside a settings card', () => {
+  it('renders the user, their tags and their feeds as three settings groups', () => {
     const f = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
     f.detectChanges();
-    expect((f.nativeElement as HTMLElement).querySelector('app-settings-card')).not.toBeNull();
+    expect((f.nativeElement as HTMLElement).querySelectorAll('app-settings-group').length).toBe(3);
   });
 
-  it("projects the account actions into the card's heading row, not its body", () => {
+  it("projects the account actions into the group's header, not its panel", () => {
     const f = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush({
       ...detail,
@@ -616,13 +616,13 @@ describe('AdminUserDetailComponent', () => {
     f.detectChanges();
     const el = f.nativeElement as HTMLElement;
 
-    // `cardActions` only projects from a direct child of app-settings-card:
-    // one `@if` level deep is tolerated, two silently drops the content out
-    // of `.head` and into the body instead. Asserting the buttons live
-    // inside `.head .acts` -- not merely that `.acts` exists somewhere on
-    // the page -- is what catches that regression.
-    const actionsInHead = el.querySelectorAll('.head .acts app-button');
+    // `groupActions` only projects from a direct child of app-settings-group:
+    // one `@if` level deep is tolerated, two silently drop the content out of
+    // `.g-head` and into the panel instead. Asserting the buttons live inside
+    // `.g-head .acts` -- not merely that `.acts` exists somewhere on the page
+    // -- is what catches that regression.
+    const actionsInHead = el.querySelectorAll('.g-head .acts app-button');
     expect(actionsInHead.length).toBeGreaterThan(0);
-    expect(el.querySelector('.head .acts')?.textContent).toContain('Approve');
+    expect(el.querySelector('.g-head .acts')?.textContent).toContain('Approve');
   });
 });

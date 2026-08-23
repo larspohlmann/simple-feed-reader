@@ -1,8 +1,7 @@
 /* Layout glue only. The Grouped chrome -- the header chip, the card surface and
    the drill-in rows -- now lives in `app-settings-group` and `app-disclosure`
-   (appearance="drill-in"). What stays here is the column that stacks the groups,
-   the ruled list of connection rows, and the internals of one connection row,
-   which are not a primitive's job. */
+   (appearance="drill-in"). What stays here is the ruled list of connection rows
+   and the internals of one connection row, which are not a primitive's job. */
 
 /* This component's host is a flex item of `settings-shell`'s `.content`
    (a `flex-direction: column` container) -- and a flex item's `min-width`
@@ -14,12 +13,6 @@
 :host {
   display: block;
   min-width: 0;
-}
-
-.groups {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-7);
 }
 
 app-field {
@@ -36,7 +29,7 @@ app-searchable-select {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-4) var(--space-5);
+  padding: var(--panel-inset-y) var(--panel-inset-x);
 }
 
 .conn-dot {

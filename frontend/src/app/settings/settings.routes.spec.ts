@@ -20,6 +20,13 @@ describe('SETTINGS_ROUTES', () => {
       expect(hasTranslation(String(section.title))).toBe(true);
     }
   });
+
+  it('loads the import page, not one of the two sections it composes', async () => {
+    const route = sections.find((r) => r.path === 'import')!;
+    const loaded = await (route.loadComponent as () => Promise<unknown>)();
+
+    expect((loaded as { name: string }).name).toBe('ImportSectionComponent');
+  });
 });
 
 /** The hub answers on the area's own path and takes the area's title with it. */

@@ -87,6 +87,7 @@
       "memberSince": "Member since",
       "adminQueue": "Admin — user queue",
       "signOut": "Sign out",
+      "dangerZone": "Danger zone",
       "delete": "Delete my account",
       "deleteTitle": "Delete your account?",
       "deleteNote": "Deleting your account removes your subscriptions, tags and read state permanently. Export your feeds first if you want to keep them.",
@@ -446,6 +447,7 @@
       "backToUsers": "Users"
     },
     "catalog": "Feed catalog",
+    "catalogImport": "Catalog import",
     "catalogEmpty": "This catalog is empty, so new users are not being offered any suggestions.",
     "importBundled": "Import the bundled catalog ({{categories}} categories, {{feeds}} feeds)",
     "importUpload": "Import a catalog file",

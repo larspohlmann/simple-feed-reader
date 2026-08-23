@@ -604,54 +604,6 @@ finished, a bulk action applied) that the user does not have to act on.
 
 ---
 
-### `<app-settings-card>`
-
-The one surface a settings or admin section sits in: a heading, an optional
-description line, and the section's own projected content. A `cardActions`
-slot puts a control (a "New tag" button, a filter) on the heading row.
-
-| Input | Type | Default |
-|---|---|---|
-| `heading` | `string` (required) | — |
-| `description` | `string \| null` | `null` — omits the line |
-
-```html
-<app-settings-card [heading]="'settings.tags.title' | transloco">
-  <app-button cardActions size="sm" variant="primary" (click)="manage.createTag()">
-    {{ 'settings.tags.new' | transloco }}
-  </app-button>
-  <ul class="list">
-    …
-  </ul>
-</app-settings-card>
-```
-
-`heading` and `description` take already-translated strings, not i18n keys — the
-component lives in `shared/` and must not hardcode a feature's translation keys.
-Extracted in #180 Phase 4, when five card/panel treatments had accumulated
-across seven stylesheets.
-
-**`cardActions` content must be a direct child of `<app-settings-card>`.**
-Angular's content projection only looks one `@if` level deep to find a
-projectable node; wrap it in two (e.g. an outer `@else if (data(); as d)`
-around an inner `@if (hasActions())`) and the block silently stops being
-projected — it renders mid-body below the heading instead of beside it,
-with no error anywhere. If the actions depend on data that only exists once
-loaded, compute a single boolean (or resolve what you need from a signal
-directly) so the `cardActions` element itself sits one level below
-`<app-settings-card>`, not nested inside another control-flow block first.
-This bit `admin-user-detail.component.html` once already — see its
-`hasActions` computed for the shape.
-
-**A card wraps a section, not a row.** Rows stay plain rows inside one card.
-Giving each row its own border reads as nested cards — that is what the tags
-list did before this component existed.
-
-**Not for:** a dialog surface (use the CDK dialog with `panelClass: 'app-dialog'`)
-or an overlay (`<app-overlay-panel>`).
-
----
-
 ### `<app-disclosure>`
 
 The one wrapper for a native `<details>`/`<summary>` collapsed-content pattern:
@@ -661,7 +613,7 @@ ARIA reimplementation — `<details>` already gives all three for free.
 | Input / output | Type | Default |
 |---|---|---|
 | `label` | `string` | `''` — an already-translated summary line |
-| `appearance` | `'pill' \| 'row' \| 'card-header' \| 'drill-in'` | `'pill'` |
+| `appearance` | `'pill' \| 'row' \| 'drill-in'` | `'pill'` |
 | `startOpen` | `boolean` | `false` — one-way; the caller's state decides the initial open state |
 | `opened` | `output<void>` | — fires when the body is revealed, and only then |
 
@@ -684,8 +636,6 @@ own wrapping class, the same way `recommendation-debug-log.component.scss`'s
 
 `appearance` picks the summary chrome. `pill` (default) is the bordered toggle
 button. `row` is a flat, full-width list row for one disclosure per list item.
-`card-header` is a flat, full-width heading with no horizontal padding, so it
-aligns to a card's content box (`<app-settings-card>`'s collapsible mode).
 `drill-in` (#541) is a full-width Grouped list row: the projected heading/label
 sits on the left, a trailing chevron rotates when the `<details>` opens. It
 reuses the same `startOpen`/`opened`/`label`/`[summary]` API. Use `drill-in`
@@ -749,6 +699,32 @@ canonical building blocks every settings and admin section composes. The
 A feature section stacks these components; its own stylesheet holds only layout
 glue. Introduced by #541.
 
+### `<app-settings-stack>`
+
+The vertical rhythm of one settings or admin page: a flex column that stacks the
+page's groups with the one canonical gap. It is the template root of every
+settings and admin route component, and it takes no inputs.
+
+```html
+<app-settings-stack>
+  <app-settings-group …>…</app-settings-group>
+  <app-settings-group …>…</app-settings-group>
+</app-settings-stack>
+```
+
+**Why a container and not an adjacent-sibling rule.** The gap it replaces was
+`app-settings-card + app-settings-card` in `src/styles/_base.scss`. A sibling
+selector cannot cross a component host boundary, so the moment one card was
+rendered from inside another component the gap vanished and the child carried a
+compensating `margin-block-start` (#454). A stack's children are flex items, so
+a child that is another component's host element is spaced identically to a
+group written inline. **A section must never carry spacing to sit correctly in a
+stack** — if it seems to need one, the stack is missing, not the margin.
+
+`min-width: 0` on the host keeps a wide descendant (a scrolling table, the #409
+run-history grid) from widening the page instead of scrolling inside its own
+container.
+
 ### `<app-settings-group>`
 
 One grouped-settings section: a header (a tinted icon chip, a title and an
@@ -777,8 +753,25 @@ keys. The body (rows, disclosures) projects through the default `<ng-content>`
 into a `.panel` card surface: `--surface-1`, `1px --border`, `--radius-lg`, and
 the new `--panel-shadow` token (defined for both modes in `theme/tokens.scss`).
 
-**Not for:** a section that is one flat card with no group header — that is
-still `<app-settings-card>`.
+**`.panel` is unpadded by design.** `app-settings-row` pads itself, so a group
+that stacks only rows needs nothing here. Any *other* direct panel child — a
+banner, a skeleton, a loading state, a bordered sub-block — is not a row and
+must supply its own inset by reading `--panel-inset-y`/`--panel-inset-x`
+(`theme/tokens.scss`, mode-invariant, narrowing at the same `bp.$bp-sm` step
+`app-settings-row` does) rather than writing a padding literal. That pair is
+the inset's one owner; a feature stylesheet that reaches for
+`padding: var(--space-4) var(--space-5)` instead is the twelfth section
+about to forget it (#547).
+
+**Not for:** nothing. Every settings and admin section composes a group; the
+flat `app-settings-card` it replaced was deleted in #547.
+
+A named `<ng-content select="[groupActions]">` slot sits at the trailing edge of
+the header and takes one element — a "New" button, a filter group. The header
+wraps, so actions that do not fit drop to their own line instead of crushing the
+title. Projection matches only a **direct** child of the group (one `@if` deep
+is tolerated, two silently fall through to the panel), so keep the marked
+element at the top of the group's content.
 
 ### `<app-settings-row>`
 
@@ -791,6 +784,7 @@ stacks.
 | `title` | `string` | `''` |
 | `description` | `string` | `''` — omits the `.row-desc` element when empty |
 | `stackable` | `boolean` | `false` |
+| `labelFor` | `string` | `''` |
 
 ```html
 <app-settings-row
@@ -804,11 +798,18 @@ stacks.
 ```
 
 The control projects through the default `<ng-content>`. A named
-`<ng-content select="[rowTitleTip]">` slot places an info-tip immediately after
-the title text inside `.row-title`. The inset hairline divider between rows is
+`<ng-content select="[rowTitleTip]">` slot places an inline adornment
+immediately after the title text inside `.row-title` — an `<app-info-tip>`, or a
+small badge such as the preferences page's "Experimental" chip. The slot is
+positional, not typed. The inset hairline divider between rows is
 automatic — `:host(:not(:last-child))` draws it, so the parent group supplies
 only the box. When `stackable`, on a narrow viewport (`bp.$bp-sm`) a select or
 number control fills the row width while a toggle keeps its natural size.
+
+`labelFor` takes the `id` of the control the row holds; the title text then
+renders as a `<label for>`, so clicking it operates the control. A toggle row
+should always set it — the row title is the larger click target, and a switch
+alone is a small one.
 
 ### `<app-settings-save-bar>`
 

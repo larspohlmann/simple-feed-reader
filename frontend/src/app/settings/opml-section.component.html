@@ -1,4 +1,4 @@
-<app-settings-card [heading]="'settings.opml.title' | transloco">
+<app-settings-group icon="import_export" [title]="'settings.opml.title' | transloco">
   <div class="group">
     <p class="lead">{{ 'settings.opml.exportLead' | transloco }}</p>
     <app-button [disabled]="exporting()" (click)="exportOpml()">
@@ -44,6 +44,4 @@
       </p>
     }
   </div>
-</app-settings-card>
-
-<app-backup-section />
+</app-settings-group>

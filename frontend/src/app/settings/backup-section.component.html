@@ -1,4 +1,4 @@
-<app-settings-card class="backup" [heading]="'settings.backup.title' | transloco">
+<app-settings-group icon="backup" [title]="'settings.backup.title' | transloco">
   <div class="group">
     <p class="lead">{{ 'settings.backup.lead' | transloco }}</p>
     <app-button [disabled]="exporting()" (click)="downloadBackup()">
@@ -110,4 +110,4 @@
       </p>
     }
   </div>
-</app-settings-card>
+</app-settings-group>

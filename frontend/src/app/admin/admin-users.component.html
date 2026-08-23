@@ -1,81 +1,98 @@
-<app-settings-card [heading]="'admin.title' | transloco">
-  <div class="filters" role="group" [attr.aria-label]="'admin.filterByStatus' | transloco">
-    @for (f of filters; track f.status) {
-      <button [class.active]="filter() === f.status" (click)="setFilter(f.status)">
-        {{ 'admin.status.' + (f.status ?? 'all') | transloco }}
-      </button>
-    }
-  </div>
-
-  @if (actionError()) {
-    <app-error-banner
-      [message]="actionError()!.detail || actionError()!.title"
-      [actionLabel]="'admin.dismiss' | transloco"
-      (action)="actionError.set(null)"
-    />
-  }
-
-  @if (loading()) {
-    <app-skeleton [label]="'admin.loadingUsers' | transloco" [rows]="5" />
-  } @else if (error()) {
-    <app-error-banner
-      [message]="error()!.detail || error()!.title"
-      [actionLabel]="'admin.retry' | transloco"
-      (action)="load()"
-    />
-  } @else if (users().length === 0) {
-    <p class="pad muted">{{ 'admin.noMatch' | transloco }}</p>
-  } @else {
-    <ul class="users">
-      @for (u of users(); track u.id) {
-        <li>
-          <div class="who">
-            <a
-              class="email"
-              [routerLink]="['/settings/admin/users', u.id]"
-              [attr.aria-label]="emailLinkLabel(u)"
-            >
-              <span class="email-text">{{ u.email }}</span>
-              <app-icon class="chev" name="chevron_right" size="sm" />
-            </a>
-            <span class="meta">
-              <span class="badge" [attr.data-s]="u.status">{{
-                'admin.status.' + u.status | transloco
-              }}</span>
-              @if (trialExpired(u)) {
-                <span class="trial-expired">{{ 'admin.trialExpiredBadge' | transloco }}</span>
-              }
-              @if (u.identities.length) {
-                <span class="prov">{{ u.identities.join(', ') }}</span>
-              }
-            </span>
-            <span class="footprint">
-              <span>{{ u.feedsCount }} {{ 'admin.feedsLabel' | transloco }}</span>
-              <span>·</span>
-              <span>{{ u.tagsCount }} {{ 'admin.tagsLabel' | transloco }}</span>
-              <span>·</span>
-              <span>{{ 'admin.lastLogin' | transloco }}: {{ lastLoginLabel(u) }}</span>
-            </span>
-          </div>
-          <div class="acts">
-            @if (canApprove(u)) {
-              <app-button size="sm" (click)="act(u, 'approve')">
-                {{ 'admin.approve' | transloco }}
-              </app-button>
-            }
-            @if (canReject(u)) {
-              <app-button size="sm" variant="danger-outline" (click)="confirmThenAct(u, 'reject')">
-                {{ 'admin.reject' | transloco }}
-              </app-button>
-            }
-            @if (canSuspend(u)) {
-              <app-button size="sm" variant="danger-outline" (click)="confirmThenAct(u, 'suspend')">
-                {{ 'admin.suspend' | transloco }}
-              </app-button>
-            }
-          </div>
-        </li>
+<app-settings-stack>
+  <app-settings-group icon="shield_person" [title]="'admin.title' | transloco">
+    <div
+      groupActions
+      class="filters"
+      role="group"
+      [attr.aria-label]="'admin.filterByStatus' | transloco"
+    >
+      @for (f of filters; track f.status) {
+        <button [class.active]="filter() === f.status" (click)="setFilter(f.status)">
+          {{ 'admin.status.' + (f.status ?? 'all') | transloco }}
+        </button>
       }
-    </ul>
-  }
-</app-settings-card>
+    </div>
+
+    @if (actionError()) {
+      <app-error-banner
+        class="state"
+        [message]="actionError()!.detail || actionError()!.title"
+        [actionLabel]="'admin.dismiss' | transloco"
+        (action)="actionError.set(null)"
+      />
+    }
+
+    @if (loading()) {
+      <app-skeleton class="state" [label]="'admin.loadingUsers' | transloco" [rows]="5" />
+    } @else if (error()) {
+      <app-error-banner
+        class="state"
+        [message]="error()!.detail || error()!.title"
+        [actionLabel]="'admin.retry' | transloco"
+        (action)="load()"
+      />
+    } @else if (users().length === 0) {
+      <p class="pad muted">{{ 'admin.noMatch' | transloco }}</p>
+    } @else {
+      <ul class="users">
+        @for (u of users(); track u.id) {
+          <li>
+            <div class="who">
+              <a
+                class="email"
+                [routerLink]="['/settings/admin/users', u.id]"
+                [attr.aria-label]="emailLinkLabel(u)"
+              >
+                <span class="email-text">{{ u.email }}</span>
+                <app-icon class="chev" name="chevron_right" size="sm" />
+              </a>
+              <span class="meta">
+                <span class="badge" [attr.data-s]="u.status">{{
+                  'admin.status.' + u.status | transloco
+                }}</span>
+                @if (trialExpired(u)) {
+                  <span class="trial-expired">{{ 'admin.trialExpiredBadge' | transloco }}</span>
+                }
+                @if (u.identities.length) {
+                  <span class="prov">{{ u.identities.join(', ') }}</span>
+                }
+              </span>
+              <span class="footprint">
+                <span>{{ u.feedsCount }} {{ 'admin.feedsLabel' | transloco }}</span>
+                <span>·</span>
+                <span>{{ u.tagsCount }} {{ 'admin.tagsLabel' | transloco }}</span>
+                <span>·</span>
+                <span>{{ 'admin.lastLogin' | transloco }}: {{ lastLoginLabel(u) }}</span>
+              </span>
+            </div>
+            <div class="acts">
+              @if (canApprove(u)) {
+                <app-button size="sm" (click)="act(u, 'approve')">
+                  {{ 'admin.approve' | transloco }}
+                </app-button>
+              }
+              @if (canReject(u)) {
+                <app-button
+                  size="sm"
+                  variant="danger-outline"
+                  (click)="confirmThenAct(u, 'reject')"
+                >
+                  {{ 'admin.reject' | transloco }}
+                </app-button>
+              }
+              @if (canSuspend(u)) {
+                <app-button
+                  size="sm"
+                  variant="danger-outline"
+                  (click)="confirmThenAct(u, 'suspend')"
+                >
+                  {{ 'admin.suspend' | transloco }}
+                </app-button>
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </app-settings-group>
+</app-settings-stack>

@@ -1,4 +1,5 @@
 // src/app/theme/tokens.scss
+@use './breakpoints' as bp;
 @use './themes/graphite';
 
 // Light is the fallback when no attribute is set yet (before the no-flash
@@ -37,6 +38,16 @@
   --space-5: 24px;
   --space-6: 32px;
   --space-7: 48px;
+
+  /* The grouped-settings panel's own inset (#547). `.panel` on
+     `app-settings-group` is unpadded by design -- `app-settings-row` pads
+     itself, so a group of rows needs nothing here. Any *other* direct panel
+     child (a banner, a skeleton, a loading state, a bordered sub-block) reads
+     this pair instead of a literal, so the inset has one owner and narrows at
+     the same breakpoint the row does. See "Settings design system" in
+     docs/design-language.md. */
+  --panel-inset-y: var(--space-4);
+  --panel-inset-x: var(--space-5);
 
   /* Radii. --radius-sm for elements nested inside an already-rounded
      container, --radius for controls, --radius-lg for a large surface that
@@ -110,4 +121,15 @@
   --fs-xl: 24px;
   --lh-tight: 1.25;
   --lh-normal: 1.5;
+}
+
+// Phone: the settings row narrows its own padding to a single --space-4 on
+// every side (see settings-row.component.scss); the panel inset follows so
+// every other panel-level block narrows with it instead of drifting to a
+// different left offset.
+@media (width <= bp.$bp-sm) {
+  :root {
+    --panel-inset-y: var(--space-4);
+    --panel-inset-x: var(--space-4);
+  }
 }

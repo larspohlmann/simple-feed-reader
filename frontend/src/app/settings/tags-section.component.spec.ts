@@ -120,18 +120,20 @@ describe('TagsSectionComponent', () => {
     expect(el.textContent).not.toContain(en.settings.tags.none);
   });
 
-  it('renders the section inside the shared settings card', async () => {
+  it('renders the section as a settings group', async () => {
     const { el } = await render();
 
-    expect(el.querySelector('app-settings-card')).not.toBeNull();
+    expect(el.querySelector('app-settings-group')).not.toBeNull();
   });
 
-  it('projects the New tag button into the card actions slot', async () => {
+  // `groupActions` only projects from a direct child of the group: one `@if`
+  // level deep is tolerated, two silently drop the content into the panel body
+  // instead. Asserting the button lives inside `.g-head` -- not merely that it
+  // exists somewhere on the page -- is what catches that regression.
+  it('projects the New tag button into the group header', async () => {
     const { el } = await render();
 
-    const card = el.querySelector('app-settings-card');
-    expect(card).not.toBeNull();
-    expect(card!.querySelector('header.head .new')).not.toBeNull();
+    expect(el.querySelector('.g-head .new')).not.toBeNull();
   });
 
   it('loads tags and subscriptions on init', async () => {

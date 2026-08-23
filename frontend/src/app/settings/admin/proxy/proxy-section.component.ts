@@ -16,6 +16,7 @@ import { InfoTipComponent } from '../../../shared/info-tip/info-tip.component';
 import { SettingsGroupComponent } from '../../../shared/settings/settings-group/settings-group.component';
 import { SettingsRowComponent } from '../../../shared/settings/settings-row/settings-row.component';
 import { SettingsSaveBarComponent } from '../../../shared/settings/save-bar/save-bar.component';
+import { SettingsStackComponent } from '../../../shared/settings/stack/settings-stack.component';
 import { ToggleComponent } from '../../../shared/toggle/toggle.component';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../../shared/toast/toast.service';
 import { ProxySettingsService, ProxyType, TypedProxyEdits } from './proxy-settings.service';
@@ -46,6 +47,7 @@ const DEFAULT_PORT = 1080;
     SettingsGroupComponent,
     SettingsRowComponent,
     SettingsSaveBarComponent,
+    SettingsStackComponent,
     ToggleComponent,
     TranslocoPipe,
   ],

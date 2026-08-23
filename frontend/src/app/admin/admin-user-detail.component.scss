@@ -20,11 +20,15 @@ h3 {
   margin: 0 0 var(--space-2);
 }
 
-// The card's own content is no longer wrapped in a flex column with a gap
-// (the `<section>` that carried it was replaced by the shared card), so each
-// block below the heading row needs its own bottom spacing.
-app-error-banner {
-  display: block;
+// The group's panel is unpadded by design (its rows pad themselves); each
+// block below the header needs its own spacing and, since it isn't a row,
+// its own inset. `.cards` and `.rows` keep their own rules below (each needs
+// a different padding shape), so they take the inset there instead of
+// through this shared rule. `.state` marks only these panel-level blocks,
+// never the element type.
+// `.state` itself lives in `theme/_utilities.scss`; what is local here is
+// only the gap before the list that follows it.
+.state {
   margin-bottom: var(--space-4);
 }
 
@@ -32,7 +36,7 @@ app-error-banner {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
   gap: var(--space-4);
-  margin-bottom: var(--space-4);
+  padding: var(--panel-inset-y) var(--panel-inset-x);
 }
 
 // Layout only, not the box chrome — the border/radius/padding this used to
@@ -91,10 +95,23 @@ dd {
   color: var(--text-muted);
 }
 
+// The panel-level empty states (tags/feeds groups with nothing to list) are
+// plain paragraphs, not rows, so they carry the panel inset directly.
 .muted {
+  display: block;
+  padding: var(--panel-inset-y) var(--panel-inset-x);
   color: var(--text-muted);
   font-size: var(--fs-sm);
-  margin-bottom: var(--space-4);
+}
+
+// The compact status lines inside a sub-card -- the dormant notice, the trial
+// line. They read as muted text too, but they are not panel-level: the card's
+// own flex `gap` sets their rhythm, and the panel inset would only crowd them.
+// Their own class, rather than a `.cards .muted` override that would have to
+// out-specify `.muted` for every property it sets.
+.note {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
 }
 
 .limits-label {
@@ -120,8 +137,8 @@ dd {
 
 .rows {
   list-style: none;
-  margin: 0 0 var(--space-4);
-  padding: 0;
+  margin: 0;
+  padding: var(--panel-inset-y) var(--panel-inset-x);
 }
 
 .rows li {

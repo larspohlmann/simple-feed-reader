@@ -1,24 +1,35 @@
-<app-settings-card [heading]="'settings.account.title' | transloco">
+<app-settings-stack>
   @if (auth.user(); as u) {
-    <div class="who">
-      <app-user-avatar [email]="u.email" [size]="48" />
-      <span class="who-email">{{ u.email }}</span>
-    </div>
-    <dl class="grid">
-      <dt>{{ 'settings.account.memberSince' | transloco }}</dt>
-      <dd>{{ memberSince(u.createdAt) }}</dd>
-    </dl>
-    <app-button class="signout" (click)="auth.logout()">
-      {{ 'settings.account.signOut' | transloco }}
-    </app-button>
-    <div class="danger-zone">
-      <p class="danger-zone__note">{{ 'settings.account.deleteNote' | transloco }}</p>
-      <app-button variant="danger-outline" (click)="confirmThenDelete()">
-        {{ 'settings.account.delete' | transloco }}
-      </app-button>
-      @if (deleteError(); as error) {
-        <app-error-banner [message]="error.detail || error.title" />
-      }
-    </div>
+    <app-settings-group icon="person" [title]="'settings.account.title' | transloco">
+      <div class="who">
+        <app-user-avatar [email]="u.email" [size]="48" />
+        <span class="who-email">{{ u.email }}</span>
+      </div>
+
+      <app-settings-row [title]="'settings.account.memberSince' | transloco">
+        <span class="value">{{ memberSince(u.createdAt) }}</span>
+      </app-settings-row>
+
+      <div class="actions">
+        <app-button (click)="auth.logout()">
+          {{ 'settings.account.signOut' | transloco }}
+        </app-button>
+      </div>
+    </app-settings-group>
+
+    <app-settings-group
+      icon="warning"
+      [title]="'settings.account.dangerZone' | transloco"
+      [caption]="'settings.account.deleteNote' | transloco"
+    >
+      <div class="actions">
+        <app-button variant="danger-outline" (click)="confirmThenDelete()">
+          {{ 'settings.account.delete' | transloco }}
+        </app-button>
+        @if (deleteError(); as error) {
+          <app-error-banner [message]="error.detail || error.title" />
+        }
+      </div>
+    </app-settings-group>
   }
-</app-settings-card>
+</app-settings-stack>

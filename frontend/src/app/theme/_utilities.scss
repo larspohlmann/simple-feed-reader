@@ -28,3 +28,21 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* A panel-level loading or error block: an `<app-skeleton>` or an
+   `<app-error-banner>` projected straight into an `<app-settings-group>`'s
+   panel, rather than into one of its rows.
+
+   The panel is unpadded by design because `app-settings-row` pads itself, so
+   content that is not a row has to supply the inset. Six settings and admin
+   sections needed exactly this rule and each hand-wrote it, which is the same
+   copy-paste the `--panel-inset-*` tokens were introduced to end; the class
+   belongs here, once, beside the tokens it reads.
+
+   It is a class and never an element type selector: `app-error-banner` also
+   appears nested inside padded blocks (the catalog's import section, the tag
+   editor), where a second inset would misalign it from its own controls. */
+.state {
+  display: block;
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+}

@@ -14,14 +14,18 @@ import {
   ConfirmDialogComponent,
 } from '../shared/confirm-dialog/confirm-dialog.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
-import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
+import { SettingsGroupComponent } from '../shared/settings/settings-group/settings-group.component';
+import { SettingsRowComponent } from '../shared/settings/settings-row/settings-row.component';
+import { SettingsStackComponent } from '../shared/settings/stack/settings-stack.component';
 
 @Component({
   selector: 'app-account-section',
   imports: [
     ButtonComponent,
     ErrorBannerComponent,
-    SettingsCardComponent,
+    SettingsGroupComponent,
+    SettingsRowComponent,
+    SettingsStackComponent,
     TranslocoPipe,
     UserAvatarComponent,
   ],

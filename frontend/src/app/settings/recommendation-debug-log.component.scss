@@ -2,8 +2,8 @@
 
 /* This panel's own layout: a summary strip for the latest run, then the calls
    grouped by run, each run's calls an aligned grid -- `time | call | duration |
-   verdict | req/resp KB | expander`. The panel is its own `app-settings-card`
-   (#327), a non-hideable sibling of the recommendations card above it. */
+   verdict | req/resp KB | expander`. Rendered inside the Diagnostics
+   "Debug log" drill-in (#541), not a card of its own. */
 :host {
   display: block;
 }

@@ -13,6 +13,12 @@ import { IconComponent } from '../../icon/icon.component';
  * translation keys. `icon` is a Material Symbol name rendered through
  * `<app-icon>`. `caption` is optional: the caption element is omitted when it
  * is empty.
+ *
+ * A `[groupActions]` slot in the header takes one trailing element -- a "New"
+ * button, a filter group. Angular's content projection only matches a *direct*
+ * child of the component (one `@if` level deep is tolerated, two silently drop
+ * the content into the default slot instead), so keep the marked element at the
+ * top of the group's content.
  */
 @Component({
   selector: 'app-settings-group',

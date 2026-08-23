@@ -103,4 +103,32 @@ describe('AdminSettingsComponent', () => {
       .expectOne('https://api.test/api/admin/settings')
       .flush({ requireEmailConfirmation: false, requireApproval: false, mailEnabled: true });
   });
+
+  it('renders both switches as settings rows in one group', () => {
+    const f = mount();
+    flushInitial(f, { requireEmailConfirmation: false, requireApproval: false, mailEnabled: true });
+    const el = f.nativeElement as HTMLElement;
+
+    expect(el.querySelectorAll('app-settings-group').length).toBe(1);
+    expect(el.querySelectorAll('app-settings-row app-toggle').length).toBe(2);
+  });
+
+  it('toggles the control when the visible label text is clicked, not only the switch', () => {
+    const f = mount();
+    flushInitial(f, { requireEmailConfirmation: false, requireApproval: false, mailEnabled: true });
+    const el = f.nativeElement as HTMLElement;
+
+    const labels = el.querySelectorAll<HTMLLabelElement>('.row-title label');
+    const checkboxes = el.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
+    expect(labels.length).toBe(2);
+    expect(labels[0].htmlFor).toBe(checkboxes[0].id);
+    expect(labels[1].htmlFor).toBe(checkboxes[1].id);
+
+    labels[1].click();
+    f.detectChanges();
+
+    const req = ctrl.expectOne('https://api.test/api/admin/settings');
+    expect(req.request.body).toEqual({ requireEmailConfirmation: false, requireApproval: true });
+    req.flush({ requireEmailConfirmation: false, requireApproval: true, mailEnabled: true });
+  });
 });

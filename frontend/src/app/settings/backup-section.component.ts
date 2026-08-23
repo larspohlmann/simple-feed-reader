@@ -13,7 +13,7 @@ import { RefreshService } from '../reader/refresh.service';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { ButtonComponent } from '../shared/button/button.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
-import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
+import { SettingsGroupComponent } from '../shared/settings/settings-group/settings-group.component';
 
 const CONFIRM_PHRASE = 'REPLACE';
 
@@ -40,7 +40,7 @@ function outcomeIsUnproven(problem: Problem): boolean {
 
 @Component({
   selector: 'app-backup-section',
-  imports: [ButtonComponent, ErrorBannerComponent, SettingsCardComponent, TranslocoPipe],
+  imports: [ButtonComponent, ErrorBannerComponent, SettingsGroupComponent, TranslocoPipe],
   templateUrl: './backup-section.component.html',
   styleUrl: './backup-section.component.scss',
 })

@@ -1,28 +1,27 @@
-<app-settings-card [heading]="'settings.preferences' | transloco">
-  <div class="row">
-    <span class="lang-label">{{ 'lang.label' | transloco }}</span>
-    <app-language-switcher />
-  </div>
-  @if (language.saveFailed()) {
-    <app-error-banner [message]="'settings.languageSaveFailed' | transloco" />
-  }
+<app-settings-stack>
+  <app-settings-group icon="tune" [title]="'settings.preferences' | transloco">
+    <app-settings-row [title]="'lang.label' | transloco" [stackable]="true">
+      <app-language-switcher />
+    </app-settings-row>
+    @if (language.saveFailed()) {
+      <app-error-banner class="state" [message]="'settings.languageSaveFailed' | transloco" />
+    }
 
-  <div class="row">
-    <span class="setting">
-      <label class="setting-label" for="scrape-fallback-toggle">
-        {{ 'settings.scraping' | transloco }}
-        <span class="badge">{{ 'settings.experimental' | transloco }}</span>
-      </label>
-      <span class="setting-hint">{{ 'settings.scrapingHint' | transloco }}</span>
-    </span>
-    <app-toggle
-      inputId="scrape-fallback-toggle"
-      [checked]="preferences.scrapeFallbackEnabled()"
-      [label]="'settings.scraping' | transloco"
-      (toggled)="preferences.setScrapeFallbackEnabled($event)"
-    />
-  </div>
-  @if (preferences.saveFailed()) {
-    <app-error-banner [message]="'settings.scrapingSaveFailed' | transloco" />
-  }
-</app-settings-card>
+    <app-settings-row
+      [title]="'settings.scraping' | transloco"
+      [description]="'settings.scrapingHint' | transloco"
+      labelFor="scrape-fallback-toggle"
+    >
+      <span rowTitleTip class="badge">{{ 'settings.experimental' | transloco }}</span>
+      <app-toggle
+        inputId="scrape-fallback-toggle"
+        [checked]="preferences.scrapeFallbackEnabled()"
+        [label]="'settings.scraping' | transloco"
+        (toggled)="preferences.setScrapeFallbackEnabled($event)"
+      />
+    </app-settings-row>
+    @if (preferences.saveFailed()) {
+      <app-error-banner class="state" [message]="'settings.scrapingSaveFailed' | transloco" />
+    }
+  </app-settings-group>
+</app-settings-stack>

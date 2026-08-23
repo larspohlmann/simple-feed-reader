@@ -1,9 +1,27 @@
+// Layout glue only. The `.grid` definition list, the `.signout` wrapper and the
+// `.danger-zone` block are gone: those were a card's internal layout, and the
+// row and the second group carry it now.
+// `.who` is not an `app-settings-row`, and rows are what draw the panel's
+// dividers -- so this block draws its own. It mirrors the row's technique
+// exactly (a pseudo-element inset from the left, flush right) rather than a
+// box-model border, because a full-width line stacked above the row's inset
+// one would put two different hairline shapes in the same panel.
 .who {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  margin: 0 0 var(--space-4);
+  padding: var(--panel-inset-y) var(--panel-inset-x);
   min-width: 0;
+}
+
+.who::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: var(--panel-inset-x);
+  border-top: 1px solid var(--border);
 }
 
 .who-email {
@@ -14,35 +32,17 @@
   white-space: nowrap;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: var(--space-2) var(--space-4);
-  margin: 0 0 var(--space-3);
-}
-
-dt {
-  color: var(--text-muted);
-}
-
-dd {
-  margin: 0;
+.value {
   color: var(--text-primary);
 }
 
-.signout {
+// A bare action is not a settings row: a row is a label beside a value or a
+// control, and a button carrying its own label has no second half. The panel is
+// unpadded (its rows pad themselves), so the action block supplies the inset.
+.actions {
   display: flex;
-  width: fit-content;
-}
-
-.danger-zone {
-  margin-block-start: var(--space-5);
-  padding-block-start: var(--space-4);
-  border-block-start: 1px solid var(--border);
-}
-
-.danger-zone__note {
-  margin-block-end: var(--space-3);
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--panel-inset-y) var(--panel-inset-x);
 }

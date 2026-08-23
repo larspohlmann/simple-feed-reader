@@ -9,7 +9,8 @@ import { TagsStore } from '../reader/tags.store';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { ManageActions } from '../reader/manage/manage-actions.service';
 import { ButtonComponent } from '../shared/button/button.component';
-import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
+import { SettingsGroupComponent } from '../shared/settings/settings-group/settings-group.component';
+import { SettingsStackComponent } from '../shared/settings/stack/settings-stack.component';
 import { SkeletonComponent } from '../shared/skeleton/skeleton.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../shared/field/field.component';
@@ -26,7 +27,8 @@ import { TagDto } from '../reader/models';
     IconComponent,
     TagGlyphComponent,
     TranslocoPipe,
-    SettingsCardComponent,
+    SettingsGroupComponent,
+    SettingsStackComponent,
     SkeletonComponent,
     ErrorBannerComponent,
     FieldComponent,

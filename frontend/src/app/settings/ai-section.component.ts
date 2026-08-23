@@ -25,6 +25,7 @@ import {
   SelectOption,
 } from '../shared/searchable-select/searchable-select.component';
 import { SettingsGroupComponent } from '../shared/settings/settings-group/settings-group.component';
+import { SettingsStackComponent } from '../shared/settings/stack/settings-stack.component';
 import { AiFailure, SERVER_TEXT_KINDS } from './ai-failure';
 import { AiConfig, AiSettingsService } from './ai-settings.service';
 import { RecommendationDebugLogComponent } from './recommendation-debug-log.component';
@@ -56,6 +57,7 @@ import { RecommendationSettingsCardComponent } from './recommendation-settings-c
     RecommendationSettingsCardComponent,
     SearchableSelectComponent,
     SettingsGroupComponent,
+    SettingsStackComponent,
     TranslocoPipe,
   ],
   providers: [AiSettingsService],

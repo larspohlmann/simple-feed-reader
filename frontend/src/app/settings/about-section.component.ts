@@ -5,7 +5,9 @@ import { ReleaseVersion, VersionService } from '../core/version.service';
 import { LanguageService } from '../core/language.service';
 import { formatLongDate } from '../reader/format';
 import { DEVELOPMENT_VERSION, buildVersion } from '../../environments/version';
-import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
+import { SettingsGroupComponent } from '../shared/settings/settings-group/settings-group.component';
+import { SettingsRowComponent } from '../shared/settings/settings-row/settings-row.component';
+import { SettingsStackComponent } from '../shared/settings/stack/settings-stack.component';
 import { SpinnerComponent } from '../shared/spinner/spinner.component';
 
 /** One line of the About table: which half of the app, and what it reports. */
@@ -16,7 +18,13 @@ interface VersionRow {
 
 @Component({
   selector: 'app-about-section',
-  imports: [SettingsCardComponent, SpinnerComponent, TranslocoPipe],
+  imports: [
+    SettingsGroupComponent,
+    SettingsRowComponent,
+    SettingsStackComponent,
+    SpinnerComponent,
+    TranslocoPipe,
+  ],
   templateUrl: './about-section.component.html',
   styleUrl: './about-section.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

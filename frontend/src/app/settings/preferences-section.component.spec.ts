@@ -4,6 +4,7 @@ import { LanguageService } from '../core/language.service';
 import { PreferencesService } from '../core/preferences.service';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { PreferencesSectionComponent } from './preferences-section.component';
+import en from '../../../public/i18n/en.json';
 
 describe('PreferencesSectionComponent', () => {
   let saveFailed: ReturnType<typeof signal<boolean>>;
@@ -24,9 +25,16 @@ describe('PreferencesSectionComponent', () => {
     return f;
   }
 
-  it('renders inside a settings card', () => {
+  it('renders the section as a settings group', () => {
     const el = mount().nativeElement as HTMLElement;
-    expect(el.querySelector('app-settings-card')).not.toBeNull();
+    expect(el.querySelector('app-settings-group')).not.toBeNull();
+  });
+
+  it('shows the experimental badge beside the scraping row title', () => {
+    const el = mount().nativeElement as HTMLElement;
+    expect(el.querySelector('.row-title .badge')?.textContent?.trim()).toBe(
+      en.settings.experimental,
+    );
   });
 
   it('offers the language switcher', () => {
@@ -72,7 +80,7 @@ describe('PreferencesSectionComponent', () => {
   it('toggles the control when the visible label text is clicked, not only the switch', () => {
     const fixture = mount();
     const el = fixture.nativeElement as HTMLElement;
-    const label = el.querySelector('label.setting-label') as HTMLLabelElement;
+    const label = el.querySelector('.row-title label') as HTMLLabelElement;
     const input = el.querySelector('app-toggle input[type="checkbox"]') as HTMLInputElement;
 
     expect(label.htmlFor).toBe(input.id);

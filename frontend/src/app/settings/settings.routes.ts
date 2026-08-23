@@ -22,7 +22,8 @@ export const SETTINGS_ROUTES: Routes = [
       {
         path: 'import',
         title: sectionLabelKey('import'),
-        loadComponent: () => import('./opml-section.component').then((m) => m.OpmlSectionComponent),
+        loadComponent: () =>
+          import('./import-section.component').then((m) => m.ImportSectionComponent),
       },
       {
         path: 'preferences',

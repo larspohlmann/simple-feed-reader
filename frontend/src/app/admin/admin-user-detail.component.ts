@@ -17,7 +17,8 @@ import { ButtonComponent } from '../shared/button/button.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../shared/field/field.component';
 import { IconComponent } from '../shared/icon/icon.component';
-import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
+import { SettingsGroupComponent } from '../shared/settings/settings-group/settings-group.component';
+import { SettingsStackComponent } from '../shared/settings/stack/settings-stack.component';
 import { SkeletonComponent } from '../shared/skeleton/skeleton.component';
 import { TagGlyphComponent } from '../shared/tag-glyph/tag-glyph.component';
 import { AdminApi } from './admin-api';
@@ -34,7 +35,8 @@ import { AdminAction, AdminUserDetailDto } from './admin.models';
     FieldComponent,
     IconComponent,
     RouterLink,
-    SettingsCardComponent,
+    SettingsGroupComponent,
+    SettingsStackComponent,
     SkeletonComponent,
     TagGlyphComponent,
     TranslocoPipe,
@@ -113,11 +115,11 @@ export class AdminUserDetailComponent {
     return !this.isSelf() && this.detail()?.user.status === 'active';
   }
 
-  /** Whether the heading row has anything to project into `cardActions`.
+  /** Whether the heading row has anything to project into `groupActions`.
    *  Kept as one condition, rather than three separate `@if`s each wrapping
    *  their own button, so the projected content stays a single block one
-   *  level below `<app-settings-card>` — see docs/design-language.md's
-   *  `<app-settings-card>` entry for why that depth matters. */
+   *  level below `<app-settings-group>` — see docs/design-language.md's
+   *  `<app-settings-group>` entry for why that depth matters. */
   readonly hasActions = computed(() => this.canApprove() || this.canReject() || this.canSuspend());
 
   act(action: AdminAction): void {

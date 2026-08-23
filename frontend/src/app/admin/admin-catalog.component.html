@@ -1,109 +1,116 @@
-<app-settings-card [heading]="'admin.catalog' | transloco">
-  @if (actionError()) {
-    <app-error-banner
-      [message]="actionError()!.detail || actionError()!.title"
-      [actionLabel]="'admin.dismiss' | transloco"
-      (action)="actionError.set(null)"
-    />
-  }
-
-  @if (loading()) {
-    <app-skeleton [label]="'admin.loadingCatalog' | transloco" [rows]="5" />
-  } @else if (error()) {
-    <app-error-banner
-      [message]="error()!.detail || error()!.title"
-      [actionLabel]="'admin.retry' | transloco"
-      (action)="load()"
-    />
-  } @else {
-    @if (!hasFeeds()) {
-      <p class="notice">{{ 'admin.catalogEmpty' | transloco }}</p>
+<app-settings-stack>
+  <app-settings-group icon="upload" [title]="'admin.catalogImport' | transloco">
+    @if (actionError()) {
+      <app-error-banner
+        class="state"
+        [message]="actionError()!.detail || actionError()!.title"
+        [actionLabel]="'admin.dismiss' | transloco"
+        (action)="actionError.set(null)"
+      />
     }
 
-    <section class="import">
-      @if (bundled()?.available) {
-        <app-button variant="primary" data-testid="import-bundled" (click)="importBundled()">
-          {{
-            'admin.importBundled'
-              | transloco: { categories: bundled()!.categories, feeds: bundled()!.feeds }
-          }}
-        </app-button>
+    @if (loading()) {
+      <app-skeleton class="state" [label]="'admin.loadingCatalog' | transloco" [rows]="5" />
+    } @else if (error()) {
+      <app-error-banner
+        class="state"
+        [message]="error()!.detail || error()!.title"
+        [actionLabel]="'admin.retry' | transloco"
+        (action)="load()"
+      />
+    } @else {
+      @if (!hasFeeds()) {
+        <p class="notice">{{ 'admin.catalogEmpty' | transloco }}</p>
       }
 
-      <div class="upload">
-        <app-field [label]="'admin.importUpload' | transloco">
-          <input
-            #fileInput
-            type="file"
-            accept=".opml,.xml"
-            data-testid="import-file"
-            (change)="onFileSelected($event)"
-          />
-        </app-field>
-        <app-field [label]="'admin.importMode' | transloco">
-          <select data-testid="import-mode" (change)="setMode($event)">
-            <option value="merge" [selected]="importMode() === 'merge'">
-              {{ 'admin.importModeMerge' | transloco }}
-            </option>
-            <option value="replace" [selected]="importMode() === 'replace'">
-              {{ 'admin.importModeReplace' | transloco }}
-            </option>
-          </select>
-        </app-field>
-        <app-button
-          variant="primary"
-          data-testid="import-run"
-          [disabled]="pendingDocument() === null"
-          (click)="importUpload()"
-        >
-          {{ 'admin.importUpload' | transloco }}
-        </app-button>
-      </div>
-
-      @if (importError()) {
-        <app-error-banner [message]="importError()!.detail || importError()!.title" />
-      }
-
-      @if (importCounts(); as counts) {
-        <p class="counts">
-          {{
-            'admin.importDone'
-              | transloco
-                : {
-                    categoriesCreated: counts.categoriesCreated,
-                    categoriesUpdated: counts.categoriesUpdated,
-                    categoriesRemoved: counts.categoriesRemoved,
-                    feedsCreated: counts.feedsCreated,
-                    feedsUpdated: counts.feedsUpdated,
-                    feedsRemoved: counts.feedsRemoved,
-                  }
-          }}
-          @if (counts.lockedSkipped > 0) {
-            — {{ 'admin.importLockedSkipped' | transloco: { count: counts.lockedSkipped } }}
-          }
-        </p>
-      }
-
-      <div class="warm">
-        <app-button [disabled]="warming()" (click)="warm()">
-          {{ 'admin.warmIcons' | transloco }}
-        </app-button>
-        @if (warming()) {
-          <span class="progress">
-            {{ 'admin.warmingIcons' | transloco: { remaining: warmRemaining() } }}
-          </span>
-        } @else if (warmReport(); as report) {
-          <span class="progress">
-            {{ 'admin.warmDone' | transloco: { warmed: report.warmed, failed: report.failed } }}
-          </span>
+      <section class="import">
+        @if (bundled()?.available) {
+          <app-button variant="primary" data-testid="import-bundled" (click)="importBundled()">
+            {{
+              'admin.importBundled'
+                | transloco: { categories: bundled()!.categories, feeds: bundled()!.feeds }
+            }}
+          </app-button>
         }
-      </div>
-    </section>
 
-    <p class="hint">{{ 'admin.lockedHint' | transloco }}</p>
+        <div class="upload">
+          <app-field [label]="'admin.importUpload' | transloco">
+            <input
+              #fileInput
+              type="file"
+              accept=".opml,.xml"
+              data-testid="import-file"
+              (change)="onFileSelected($event)"
+            />
+          </app-field>
+          <app-field [label]="'admin.importMode' | transloco">
+            <select data-testid="import-mode" (change)="setMode($event)">
+              <option value="merge" [selected]="importMode() === 'merge'">
+                {{ 'admin.importModeMerge' | transloco }}
+              </option>
+              <option value="replace" [selected]="importMode() === 'replace'">
+                {{ 'admin.importModeReplace' | transloco }}
+              </option>
+            </select>
+          </app-field>
+          <app-button
+            variant="primary"
+            data-testid="import-run"
+            [disabled]="pendingDocument() === null"
+            (click)="importUpload()"
+          >
+            {{ 'admin.importUpload' | transloco }}
+          </app-button>
+        </div>
 
-    <div class="list-head">
+        @if (importError()) {
+          <app-error-banner [message]="importError()!.detail || importError()!.title" />
+        }
+
+        @if (importCounts(); as counts) {
+          <p class="counts">
+            {{
+              'admin.importDone'
+                | transloco
+                  : {
+                      categoriesCreated: counts.categoriesCreated,
+                      categoriesUpdated: counts.categoriesUpdated,
+                      categoriesRemoved: counts.categoriesRemoved,
+                      feedsCreated: counts.feedsCreated,
+                      feedsUpdated: counts.feedsUpdated,
+                      feedsRemoved: counts.feedsRemoved,
+                    }
+            }}
+            @if (counts.lockedSkipped > 0) {
+              — {{ 'admin.importLockedSkipped' | transloco: { count: counts.lockedSkipped } }}
+            }
+          </p>
+        }
+
+        <div class="warm">
+          <app-button [disabled]="warming()" (click)="warm()">
+            {{ 'admin.warmIcons' | transloco }}
+          </app-button>
+          @if (warming()) {
+            <span class="progress">
+              {{ 'admin.warmingIcons' | transloco: { remaining: warmRemaining() } }}
+            </span>
+          } @else if (warmReport(); as report) {
+            <span class="progress">
+              {{ 'admin.warmDone' | transloco: { warmed: report.warmed, failed: report.failed } }}
+            </span>
+          }
+        </div>
+      </section>
+
+      <p class="hint">{{ 'admin.lockedHint' | transloco }}</p>
+    }
+  </app-settings-group>
+
+  <app-settings-group icon="category" [title]="'admin.catalog' | transloco">
+    @if (!loading() && !error()) {
       <app-button
+        groupActions
         size="sm"
         variant="primary"
         data-testid="add-category"
@@ -111,125 +118,131 @@
       >
         <app-icon name="add" size="sm" /> {{ 'admin.addCategory' | transloco }}
       </app-button>
-    </div>
 
-    <ul class="categories">
-      @for (category of categories(); track category.id; let ci = $index) {
-        <li class="category" data-testid="admin-category">
-          <div class="row">
-            <span class="swatch" [style.background]="category.color"></span>
-            @if (category.icon) {
-              <app-icon [name]="category.icon" size="sm" />
-            }
-            <span class="name">{{ category.name }}</span>
-            @if (category.locked) {
-              <app-icon class="lock" name="lock" size="sm" />
-            }
-            @if (!category.enabled) {
-              <span class="badge">{{ 'admin.inactive' | transloco }}</span>
-            }
-            <span class="count">
-              {{
-                (feedsFor(category.id).length === 1 ? 'admin.feedCountOne' : 'admin.feedCountOther')
-                  | transloco: { count: feedsFor(category.id).length }
-              }}
-            </span>
-            <span class="acts">
-              <button
-                class="icon-act"
-                (click)="moveCategory(ci, -1)"
-                [attr.aria-label]="'admin.moveUp' | transloco"
-              >
-                <app-icon name="keyboard_arrow_up" size="md" />
-              </button>
-              <button
-                class="icon-act"
-                (click)="moveCategory(ci, 1)"
-                [attr.aria-label]="'admin.moveDown' | transloco"
-              >
-                <app-icon name="keyboard_arrow_down" size="md" />
-              </button>
-              <app-button
-                size="sm"
-                data-testid="category-edit"
-                (click)="openCategoryDialog(category)"
-              >
-                {{ 'admin.edit' | transloco }}
-              </app-button>
-              <app-button
-                size="sm"
-                variant="danger-outline"
-                (click)="confirmDeleteCategory(category)"
-              >
-                {{ 'common.delete' | transloco }}
-              </app-button>
-            </span>
-          </div>
+      <ul class="categories">
+        @for (category of categories(); track category.id; let ci = $index) {
+          <li class="category" data-testid="admin-category">
+            <div class="row">
+              <span class="swatch" [style.background]="category.color"></span>
+              @if (category.icon) {
+                <app-icon [name]="category.icon" size="sm" />
+              }
+              <span class="name">{{ category.name }}</span>
+              @if (category.locked) {
+                <app-icon class="lock" name="lock" size="sm" />
+              }
+              @if (!category.enabled) {
+                <span class="badge">{{ 'admin.inactive' | transloco }}</span>
+              }
+              <span class="count">
+                {{
+                  (feedsFor(category.id).length === 1
+                    ? 'admin.feedCountOne'
+                    : 'admin.feedCountOther'
+                  ) | transloco: { count: feedsFor(category.id).length }
+                }}
+              </span>
+              <span class="acts">
+                <button
+                  class="icon-act"
+                  (click)="moveCategory(ci, -1)"
+                  [attr.aria-label]="'admin.moveUp' | transloco"
+                >
+                  <app-icon name="keyboard_arrow_up" size="md" />
+                </button>
+                <button
+                  class="icon-act"
+                  (click)="moveCategory(ci, 1)"
+                  [attr.aria-label]="'admin.moveDown' | transloco"
+                >
+                  <app-icon name="keyboard_arrow_down" size="md" />
+                </button>
+                <app-button
+                  size="sm"
+                  data-testid="category-edit"
+                  (click)="openCategoryDialog(category)"
+                >
+                  {{ 'admin.edit' | transloco }}
+                </app-button>
+                <app-button
+                  size="sm"
+                  variant="danger-outline"
+                  (click)="confirmDeleteCategory(category)"
+                >
+                  {{ 'common.delete' | transloco }}
+                </app-button>
+              </span>
+            </div>
 
-          <ul class="feeds">
-            @for (feed of feedsFor(category.id); track feed.id) {
-              <li class="feed" data-testid="admin-feed">
-                <span class="ident">
-                  <span class="title">
-                    {{ feed.title }}
-                    @if (feed.locked) {
-                      <app-icon class="lock" name="lock" size="text" />
-                    }
-                    @if (!feed.enabled) {
-                      <span class="badge">{{ 'admin.inactive' | transloco }}</span>
-                    }
+            <ul class="feeds">
+              @for (feed of feedsFor(category.id); track feed.id) {
+                <li class="feed" data-testid="admin-feed">
+                  <span class="ident">
+                    <span class="title">
+                      {{ feed.title }}
+                      @if (feed.locked) {
+                        <app-icon class="lock" name="lock" size="text" />
+                      }
+                      @if (!feed.enabled) {
+                        <span class="badge">{{ 'admin.inactive' | transloco }}</span>
+                      }
+                    </span>
+                    <span class="url">{{ feed.url }}</span>
                   </span>
-                  <span class="url">{{ feed.url }}</span>
-                </span>
-                <span class="acts">
-                  <button
-                    class="icon-act"
-                    (click)="moveFeed(feed, -1)"
-                    [attr.aria-label]="'admin.moveUp' | transloco"
-                  >
-                    <app-icon name="keyboard_arrow_up" size="md" />
-                  </button>
-                  <button
-                    class="icon-act"
-                    (click)="moveFeed(feed, 1)"
-                    [attr.aria-label]="'admin.moveDown' | transloco"
-                  >
-                    <app-icon name="keyboard_arrow_down" size="md" />
-                  </button>
-                  <button
-                    class="icon-act"
-                    data-testid="refresh-favicon"
-                    (click)="refreshFavicon(feed)"
-                    [attr.aria-label]="'admin.refreshFavicon' | transloco"
-                  >
-                    <app-icon name="refresh" size="md" />
-                  </button>
-                  <app-button
-                    size="sm"
-                    data-testid="feed-edit"
-                    (click)="openFeedDialog(feed, feed.categoryId)"
-                  >
-                    {{ 'admin.edit' | transloco }}
-                  </app-button>
-                  <app-button size="sm" variant="danger-outline" (click)="confirmDeleteFeed(feed)">
-                    {{ 'common.delete' | transloco }}
-                  </app-button>
-                </span>
-              </li>
-            }
+                  <span class="acts">
+                    <button
+                      class="icon-act"
+                      (click)="moveFeed(feed, -1)"
+                      [attr.aria-label]="'admin.moveUp' | transloco"
+                    >
+                      <app-icon name="keyboard_arrow_up" size="md" />
+                    </button>
+                    <button
+                      class="icon-act"
+                      (click)="moveFeed(feed, 1)"
+                      [attr.aria-label]="'admin.moveDown' | transloco"
+                    >
+                      <app-icon name="keyboard_arrow_down" size="md" />
+                    </button>
+                    <button
+                      class="icon-act"
+                      data-testid="refresh-favicon"
+                      (click)="refreshFavicon(feed)"
+                      [attr.aria-label]="'admin.refreshFavicon' | transloco"
+                    >
+                      <app-icon name="refresh" size="md" />
+                    </button>
+                    <app-button
+                      size="sm"
+                      data-testid="feed-edit"
+                      (click)="openFeedDialog(feed, feed.categoryId)"
+                    >
+                      {{ 'admin.edit' | transloco }}
+                    </app-button>
+                    <app-button
+                      size="sm"
+                      variant="danger-outline"
+                      (click)="confirmDeleteFeed(feed)"
+                    >
+                      {{ 'common.delete' | transloco }}
+                    </app-button>
+                  </span>
+                </li>
+              }
 
-            <li class="feed-add">
-              <app-button
-                size="sm"
-                data-testid="add-feed"
-                (click)="openFeedDialog(null, category.id)"
-              >
-                <app-icon name="add" size="sm" /> {{ 'admin.addFeed' | transloco }}
-              </app-button>
-            </li>
-          </ul>
-        </li>
-      }
-    </ul>
-  }
-</app-settings-card>
+              <li class="feed-add">
+                <app-button
+                  size="sm"
+                  data-testid="add-feed"
+                  (click)="openFeedDialog(null, category.id)"
+                >
+                  <app-icon name="add" size="sm" /> {{ 'admin.addFeed' | transloco }}
+                </app-button>
+              </li>
+            </ul>
+          </li>
+        }
+      </ul>
+    }
+  </app-settings-group>
+</app-settings-stack>

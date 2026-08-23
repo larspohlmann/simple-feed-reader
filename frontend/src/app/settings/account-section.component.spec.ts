@@ -68,14 +68,22 @@ describe('AccountSectionComponent', () => {
 
   it('shows the email and a sign-out button', () => {
     const f = mount(user);
-    expect((f.nativeElement as HTMLElement).textContent).toContain('me@x');
-    (f.nativeElement.querySelector('.signout') as HTMLButtonElement).click();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('me@x');
+    // The sign-out button carries no class hook of its own, so it is found by
+    // its own label rather than by DOM position among the two `.actions`
+    // blocks (account and danger zone both have one).
+    const buttons = Array.from(el.querySelectorAll('button'));
+    const signOut = buttons.find((button) => button.textContent?.includes('Sign out'));
+    (signOut as HTMLButtonElement).click();
     expect(logoutSpy).toHaveBeenCalled();
   });
 
-  it('renders inside a settings card', () => {
+  it('renders the account and the danger zone as separate settings groups', () => {
     const f = mount(user);
-    expect((f.nativeElement as HTMLElement).querySelector('app-settings-card')).not.toBeNull();
+    const el = f.nativeElement as HTMLElement;
+
+    expect(el.querySelectorAll('app-settings-group').length).toBe(2);
   });
 
   it('deletes the account and logs out once confirmed', () => {

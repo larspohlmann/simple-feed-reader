@@ -1,37 +1,10 @@
-.row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-}
+// Layout glue only: `.row`, `.setting`, `.setting-label` and `.setting-hint`
+// are gone -- `app-settings-row` draws the line, the title and the description.
+// The two save-error banners are panel-level blocks and take their inset from
+// the shared `.state` utility, so nothing about them lives here either.
 
-// Scoped to the language row's own label, not every span in a row — the
-// scraping row below has its own label colour and must not be muted by this.
-.row .lang-label {
-  color: var(--text-muted);
-}
-
-.setting {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-// A <label for> now, not a <span>, so clicking the text toggles the control
-// the same way clicking the switch itself does.
-.setting-label {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.setting-hint {
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-}
-
+// The badge is the one piece of chrome the primitives do not own; it rides the
+// row's `[rowTitleTip]` slot.
 .badge {
   padding: 0 var(--space-2);
   border: 1px solid var(--border);
@@ -39,4 +12,5 @@
   color: var(--text-secondary);
   font-size: var(--fs-xs);
   text-transform: uppercase;
+  white-space: nowrap;
 }

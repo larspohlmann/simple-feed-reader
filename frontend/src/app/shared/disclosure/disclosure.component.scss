@@ -73,35 +73,6 @@ summary.is-row::before {
   margin-left: auto;
 }
 
-// Card-header appearance: like `is-row` (flat, full-width, trailing chevron) but
-// with no horizontal padding, so the heading aligns to the card's own content
-// box instead of adding a second inset on top of the card padding. The pill's
-// muted text chrome is reset too, so a projected heading (e.g. an <h2>) keeps
-// its own size, weight and colour. When open, it carries the same gap to the
-// body that a static card header's margin gives.
-summary.is-card-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  width: 100%;
-  padding: 0;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  color: inherit;
-  font-size: inherit;
-  font-weight: inherit;
-}
-
-summary.is-card-header::before {
-  order: 1;
-  margin-left: auto;
-}
-
-details[open] > summary.is-card-header {
-  margin-bottom: var(--space-3);
-}
-
 // Drill-in appearance: a full-width Grouped-list row for an advanced section
 // that expands in place. The projected heading (and optional description) sits
 // on the left and the shared chevron moves to the trailing edge, the same way
@@ -114,7 +85,7 @@ summary.is-drill-in {
   align-items: center;
   gap: var(--space-4);
   width: 100%;
-  padding: var(--space-4) var(--space-5);
+  padding: var(--panel-inset-y) var(--panel-inset-x);
   border: none;
   border-radius: 0;
   background: transparent;
