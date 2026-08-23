@@ -90,8 +90,16 @@ articles that are older than the retention window.
 
 ## 4. When a restore fails
 
-There are two failure groups. The difference between them is important, because
-the two groups leave the account in different states.
+There are three failure groups. The difference between them is important,
+because the three groups leave the account in different states.
+
+**The web server refuses the upload. Nothing is deleted.** A file larger than
+the server's own upload limit never reaches the application. The server
+answers with a raw HTTP 413 status. The response has no `problem+json` body,
+because the application never runs. The app shows its own message instead, so
+you still get a plain reason. This failure costs the account nothing: the
+account is unchanged. Ask an operator to raise the server's upload limit, or
+export a smaller account.
 
 **The restore refuses the file. Nothing is deleted.** The application answers
 with `invalid_backup` or with `backup_does_not_fit`. The first answer means the
@@ -217,8 +225,8 @@ subscription and each article mark all hold one pointer to their owner.
 
 ## 7. Fields a restore must never write
 
-These four fields are a security boundary. They are not a product decision. No
-backup carries them, and no restore writes them.
+The fields in the table below are a security boundary. They are not a product
+decision. No backup carries them, and no restore writes them.
 
 A restore writes what the file says. The file comes from you. You can open the
 file, edit one line and upload it again. Therefore each of these fields must
@@ -248,11 +256,16 @@ entity.
   mapping and demands a decision for each persisted field of each backed-up
   entity. A new column on a backed-up table makes this test red. The test also
   asserts that this page names each dropped entity and each dropped field, so
-  the tables above cannot fall behind the code.
+  the dropped-field tables above (6.2, 6.3, 7) cannot fall behind the code.
 - `backend/tests/Service/Backup/AccountBackupExporterTest.php` guards what the
   exporter writes.
 - `backend/tests/Service/Backup/GoldenBackupRestoreTest.php` restores two frozen
   files on each run. They guard what the reader still accepts.
+
+Section 5 is different: no test couples it to the code. A field that stays
+`BACKED_UP` never has to change section 5, so nothing forces a red test when a
+new carried field is missing its row there. Keep it accurate by hand when you
+add a row under "Where a new decision goes" below.
 
 **The rule for an additive field.** When you add a field to the format, add
 nothing to the golden corpus in `backend/tests/Fixtures/backup/`. The file
