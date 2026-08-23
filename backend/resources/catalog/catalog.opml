@@ -26,6 +26,10 @@
                xmlUrl="https://feeds.arstechnica.com/arstechnica/index"
                htmlUrl="https://arstechnica.com"
                description="Technology news and analysis"/>
+      <outline type="rss" text="Citation Needed"
+               xmlUrl="https://www.citationneeded.news/rss/"
+               htmlUrl="https://www.citationneeded.news"
+               description="Molly White on crypto, AI hype and the business of technology"/>
       <outline type="rss" text="Daring Fireball"
                xmlUrl="https://daringfireball.net/feeds/main"
                htmlUrl="https://daringfireball.net"
@@ -80,6 +84,10 @@
                xmlUrl="https://bair.berkeley.edu/blog/feed.xml"
                htmlUrl="https://bair.berkeley.edu"
                description="Berkeley AI Research blog"/>
+      <outline type="rss" text="Dwarkesh Podcast"
+               xmlUrl="https://www.dwarkesh.com/feed"
+               htmlUrl="https://www.dwarkesh.com"
+               description="Long-form interviews with AI researchers, economists and historians"/>
       <outline type="rss" text="Google AI Blog"
                xmlUrl="https://blog.google/technology/ai/rss/"
                htmlUrl="https://blog.google"
@@ -96,6 +104,10 @@
                xmlUrl="https://importai.substack.com/feed"
                htmlUrl="https://importai.substack.com"
                description="Weekly AI research newsletter"/>
+      <outline type="rss" text="Interconnects"
+               xmlUrl="https://www.interconnects.ai/feed"
+               htmlUrl="https://www.interconnects.ai"
+               description="Nathan Lambert on open models, post-training and the frontier labs"/>
       <outline type="rss" text="Last Week in AI"
                xmlUrl="https://lastweekin.ai/feed"
                htmlUrl="https://lastweekin.ai"
@@ -190,6 +202,10 @@
                xmlUrl="https://overreacted.io/rss.xml"
                htmlUrl="https://overreacted.io"
                description="Writing on React by Dan Abramov"/>
+      <outline type="rss" text="stitcher.io"
+               xmlUrl="https://stitcher.io/rss"
+               htmlUrl="https://stitcher.io"
+               description="Brent Roose on modern PHP, static analysis and language design"/>
     </outline>
     <outline text="Security &amp; Privacy" key="security_privacy" icon="security" color="#ef4444">
       <outline type="rss" text="BleepingComputer"
@@ -268,6 +284,14 @@
                xmlUrl="https://grist.org/feed/"
                htmlUrl="https://grist.org"
                description="Climate solutions journalism"/>
+      <outline type="rss" text="HEATED"
+               xmlUrl="https://heated.world/feed"
+               htmlUrl="https://heated.world"
+               description="Emily Atkin's accountability reporting on the climate crisis"/>
+      <outline type="rss" text="Inside Climate News"
+               xmlUrl="https://insideclimatenews.org/feed/"
+               htmlUrl="https://insideclimatenews.org"
+               description="Non-profit newsroom covering climate, energy and the environment"/>
       <outline type="rss" text="Low-Tech Magazine"
                xmlUrl="https://solar.lowtechmagazine.com/posts/index.xml"
                htmlUrl="https://solar.lowtechmagazine.com"
@@ -276,6 +300,10 @@
                xmlUrl="https://news.mongabay.com/feed/"
                htmlUrl="https://news.mongabay.com"
                description="Conservation and environmental science"/>
+      <outline type="rss" text="Utopia.de"
+               xmlUrl="https://utopia.de/feed/"
+               htmlUrl="https://utopia.de"
+               description="Nachhaltiger Konsum, Ratgeber und Umwelttipps"/>
       <outline type="rss" text="Volts"
                xmlUrl="https://www.volts.wtf/feed"
                htmlUrl="https://www.volts.wtf"
@@ -284,6 +312,10 @@
                xmlUrl="https://e360.yale.edu/feed.xml"
                htmlUrl="https://e360.yale.edu"
                description="Long-form environment reporting"/>
+      <outline type="rss" text="klimareporter°"
+               xmlUrl="https://klimareporter.de/?format=feed&amp;type=rss"
+               htmlUrl="https://www.klimareporter.de"
+               description="Unabhängiges Onlinemagazin zu Klimakrise und Energiewende"/>
     </outline>
     <outline text="World News" key="world_news" icon="public" color="#0ea5e9">
       <outline type="rss" text="Al Jazeera"
@@ -320,10 +352,26 @@
                description="World news from The Washington Post"/>
     </outline>
     <outline text="Politics &amp; Activism" key="politics_activism" icon="campaign" color="#f43f5e">
+      <outline type="rss" text="CrimethInc."
+               xmlUrl="https://crimethinc.com/feed"
+               htmlUrl="https://crimethinc.com"
+               description="Anarchist collective publishing analysis, field reports and tools"/>
       <outline type="rss" text="Democracy Now!"
                xmlUrl="https://www.democracynow.org/democracynow.rss"
                htmlUrl="https://www.democracynow.org"
                description="Independent daily news program"/>
+      <outline type="rss" text="Dissent Magazine"
+               xmlUrl="https://dissentmagazine.org/feed/"
+               htmlUrl="https://dissentmagazine.org"
+               description="Quarterly of politics and culture from the democratic left"/>
+      <outline type="rss" text="Freedom News"
+               xmlUrl="https://freedomnews.org.uk/feed/"
+               htmlUrl="https://freedomnews.org.uk"
+               description="Britain's oldest anarchist publication, founded 1886"/>
+      <outline type="rss" text="In These Times"
+               xmlUrl="https://inthesetimes.com/rss"
+               htmlUrl="https://inthesetimes.com"
+               description="Independent US reporting on labour, politics and inequality"/>
       <outline type="rss" text="Jacobin"
                xmlUrl="https://jacobin.com/feed/"
                htmlUrl="https://jacobin.com"
@@ -340,6 +388,18 @@
                xmlUrl="https://www.propublica.org/feeds/propublica/main"
                htmlUrl="https://www.propublica.org"
                description="Non-profit investigative journalism"/>
+      <outline type="rss" text="Red Pepper"
+               xmlUrl="https://www.redpepper.org.uk/feed/"
+               htmlUrl="https://www.redpepper.org.uk"
+               description="British magazine of radical politics, culture and green thinking"/>
+      <outline type="rss" text="The Anarchist Library"
+               xmlUrl="https://theanarchistlibrary.org/feed"
+               htmlUrl="https://theanarchistlibrary.org"
+               description="Growing archive of anarchist texts, essays and pamphlets"/>
+      <outline type="rss" text="The Baffler"
+               xmlUrl="https://thebaffler.com/feed"
+               htmlUrl="https://thebaffler.com"
+               description="Salvos against the consensus, on business, culture and power"/>
       <outline type="rss" text="The Intercept"
                xmlUrl="https://theintercept.com/feed/?rss"
                htmlUrl="https://theintercept.com"
@@ -348,6 +408,10 @@
                xmlUrl="https://www.thenation.com/feed/?post_type=article"
                htmlUrl="https://www.thenation.com"
                description="Oldest US progressive weekly"/>
+      <outline type="rss" text="Verso Books"
+               xmlUrl="https://www.versobooks.com/blogs/news.atom"
+               htmlUrl="https://www.versobooks.com/blogs"
+               description="Essays and interviews from the radical publisher"/>
       <outline type="rss" text="Waging Nonviolence"
                xmlUrl="https://wagingnonviolence.org/feed/"
                htmlUrl="https://wagingnonviolence.org"
@@ -432,6 +496,10 @@
                description="PC gaming news and commentary"/>
     </outline>
     <outline text="Culture &amp; Longreads" key="culture_longreads" icon="menu_book" color="#f97316">
+      <outline type="rss" text="Adbusters"
+               xmlUrl="https://adbusters.substack.com/feed"
+               htmlUrl="https://adbusters.substack.com"
+               description="Anti-consumerist magazine on media, culture and the mental environment"/>
       <outline type="rss" text="Aeon"
                xmlUrl="https://aeon.co/feed.rss"
                htmlUrl="https://aeon.co"
@@ -444,6 +512,10 @@
                xmlUrl="https://longreads.com/feed/"
                htmlUrl="https://longreads.com"
                description="Best long-form storytelling on the web"/>
+      <outline type="rss" text="Missy Magazine"
+               xmlUrl="https://missy-magazine.de/feed/"
+               htmlUrl="https://missy-magazine.de"
+               description="Feministisches Magazin für Popkultur, Politik und Style"/>
       <outline type="rss" text="Noema"
                xmlUrl="https://www.noemamag.com/feed/"
                htmlUrl="https://www.noemamag.com"
@@ -472,6 +544,48 @@
                xmlUrl="https://feeds.kottke.org/main"
                htmlUrl="https://kottke.org"
                description="Curated web miscellany"/>
+    </outline>
+    <outline text="Psychedelics &amp; Consciousness" key="psychedelics_consciousness" icon="psychology" color="#7e22ce">
+      <outline type="rss" text="Burning Shore"
+               xmlUrl="https://www.burningshore.com/feed"
+               htmlUrl="https://www.burningshore.com"
+               description="Erik Davis on psychedelia, mysticism, media and weird California"/>
+      <outline type="rss" text="Chacruna"
+               xmlUrl="https://chacruna.net/feed/"
+               htmlUrl="https://chacruna.net"
+               description="Plant medicines, indigenous reciprocity and psychedelic ethics"/>
+      <outline type="rss" text="Ecstatic Integration"
+               xmlUrl="https://www.ecstaticintegration.org/feed"
+               htmlUrl="https://www.ecstaticintegration.org"
+               description="Jules Evans on psychedelic harm, ethics and integration research"/>
+      <outline type="rss" text="Lion's Roar"
+               xmlUrl="https://www.lionsroar.com/feed/"
+               htmlUrl="https://www.lionsroar.com"
+               description="Buddhist wisdom for everyday life, practice and teachings"/>
+      <outline type="rss" text="Lucid News"
+               xmlUrl="https://www.lucid.news/feed/"
+               htmlUrl="https://www.lucid.news"
+               description="Reporting on psychedelics, consciousness and spiritual culture"/>
+      <outline type="rss" text="MAPS"
+               xmlUrl="https://maps.org/feed/"
+               htmlUrl="https://maps.org"
+               description="Multidisciplinary Association for Psychedelic Studies: research news"/>
+      <outline type="rss" text="Psychedelic Alpha"
+               xmlUrl="https://psychedelicalpha.com/feed/"
+               htmlUrl="https://psychedelicalpha.com"
+               description="Data-driven news and analysis on psychedelic science and policy"/>
+      <outline type="rss" text="Psychedelic Press"
+               xmlUrl="https://psychedelicpress.substack.com/feed"
+               htmlUrl="https://psychedelicpress.substack.com"
+               description="UK publisher on psychedelic history, literature and culture"/>
+      <outline type="rss" text="The Microdose"
+               xmlUrl="https://themicrodose.substack.com/feed"
+               htmlUrl="https://themicrodose.substack.com"
+               description="Journalism from the UC Berkeley Center for the Science of Psychedelics"/>
+      <outline type="rss" text="Tricycle"
+               xmlUrl="https://tricycle.org/feed/"
+               htmlUrl="https://tricycle.org"
+               description="The Buddhist Review: teachings, interviews and practice"/>
     </outline>
     <outline text="Bicycle Culture" key="bicycle_culture" icon="pedal_bike" color="#06b6d4">
       <outline type="rss" text="BicycleDutch"
@@ -504,12 +618,56 @@
                xmlUrl="https://www.ifixit.com/News/rss"
                htmlUrl="https://www.ifixit.com/News"
                description="Repair culture and right to repair"/>
+      <outline type="rss" text="smarticular"
+               xmlUrl="https://www.smarticular.net/feed/"
+               htmlUrl="https://www.smarticular.net"
+               description="Selbermachen statt kaufen: Hausmittel, Rezepte und Reparaturen"/>
     </outline>
     <outline text="Electronic Music" key="electronic_music" icon="graphic_eq" color="#0e7490">
+      <outline type="rss" text="5 Magazine"
+               xmlUrl="https://5mag.net/feed/"
+               htmlUrl="https://5mag.net"
+               description="Chicago house magazine: interviews, mixes and record reviews"/>
+      <outline type="rss" text="Ableton Blog"
+               xmlUrl="https://www.ableton.com/en/blog/feeds/latest/"
+               htmlUrl="https://www.ableton.com/en/blog/"
+               description="Production technique, artist features and news from Ableton"/>
       <outline type="rss" text="Attack Magazine"
                xmlUrl="https://www.attackmagazine.com/feed/"
                htmlUrl="https://www.attackmagazine.com"
                description="Electronic music production deep dives"/>
+      <outline type="rss" text="Beat"
+               xmlUrl="https://www.beat.de/rss.xml"
+               htmlUrl="https://www.beat.de"
+               description="Deutsches Magazin für Musikproduktion, Studiotechnik und Software"/>
+      <outline type="rss" text="Bedroom Producers Blog"
+               xmlUrl="https://bedroomproducersblog.com/feed/"
+               htmlUrl="https://bedroomproducersblog.com"
+               description="Free plugins, sample packs and deals for home studio producers"/>
+      <outline type="rss" text="Crack Magazine"
+               xmlUrl="https://crackmagazine.net/feed/"
+               htmlUrl="https://crackmagazine.net"
+               description="Independent music and culture magazine from Bristol"/>
+      <outline type="rss" text="DJ Mag"
+               xmlUrl="https://djmag.com/feed"
+               htmlUrl="https://djmag.com"
+               description="Dance music and club culture: news, reviews and DJ charts"/>
+      <outline type="rss" text="Decoded Magazine"
+               xmlUrl="https://www.decodedmagazine.com/feed/"
+               htmlUrl="https://www.decodedmagazine.com"
+               description="House and techno features, artist interviews and label profiles"/>
+      <outline type="rss" text="Electronic Groove"
+               xmlUrl="https://electronicgroove.com/feed/"
+               htmlUrl="https://electronicgroove.com"
+               description="Electronic music news, premieres and interviews since 1998"/>
+      <outline type="rss" text="FAZEmag"
+               xmlUrl="https://www.fazemag.de/feed/"
+               htmlUrl="https://www.fazemag.de"
+               description="Deutsches Magazin für elektronische Musik und Clubkultur"/>
+      <outline type="rss" text="Fact Magazine"
+               xmlUrl="https://www.factmag.com/feed/"
+               htmlUrl="https://www.factmag.com"
+               description="Electronic and experimental music, film series and mixes"/>
       <outline type="rss" text="Groove"
                xmlUrl="https://groove.de/feed/"
                htmlUrl="https://groove.de"
@@ -518,10 +676,26 @@
                xmlUrl="https://inverted-audio.com/feed/"
                htmlUrl="https://inverted-audio.com"
                description="Underground electronic music reviews"/>
+      <outline type="rss" text="Loop Rituals"
+               xmlUrl="https://looprituals.de/feed/"
+               htmlUrl="https://looprituals.de"
+               description="Elektronische Musik, Technik und Studio-Rituale"/>
+      <outline type="rss" text="Magnetic Magazine"
+               xmlUrl="https://magneticmag.com/feed/"
+               htmlUrl="https://magneticmag.com"
+               description="Electronic music, culture and production tips"/>
       <outline type="rss" text="Psybient.org"
                xmlUrl="https://www.psybient.org/feed/"
                htmlUrl="https://www.psybient.org"
                description="Psychill and psybient releases"/>
+      <outline type="rss" text="Ransom Note"
+               xmlUrl="https://www.theransomnote.com/feed/"
+               htmlUrl="https://www.theransomnote.com"
+               description="London music magazine: features, mixes and record digging"/>
+      <outline type="rss" text="TRANCE NEXUS"
+               xmlUrl="https://trance-nexus.com/rss.en.xml"
+               htmlUrl="https://trance-nexus.com"
+               description="Psytrance releases, artist interviews and scene reports"/>
       <outline type="rss" text="Trancentral"
                xmlUrl="https://trancentral.tv/feed/"
                htmlUrl="https://trancentral.tv"
@@ -530,6 +704,10 @@
                xmlUrl="https://xlr8r.com/feed/"
                htmlUrl="https://xlr8r.com"
                description="Electronic music and culture"/>
+      <outline type="rss" text="frohfroh"
+               xmlUrl="https://www.frohfroh.de/feed"
+               htmlUrl="https://www.frohfroh.de"
+               description="Elektronische Musik aus Leipzig: Konzerte, Releases, Porträts"/>
     </outline>
     <outline text="Punk &amp; Metal" key="punk_metal" icon="skull" color="#7f1d1d">
       <outline type="rss" text="Angry Metal Guy"
@@ -544,6 +722,10 @@
                xmlUrl="https://www.ox-fanzine.de/rssNewsFeed.xml"
                htmlUrl="https://www.ox-fanzine.de"
                description="German punk fanzine since 1988"/>
+      <outline type="rss" text="TRUST Fanzine"
+               xmlUrl="https://www.trust-zine.de/feed/"
+               htmlUrl="https://www.trust-zine.de"
+               description="Deutsches Punk- und Hardcore-Fanzine seit 1986"/>
       <outline type="rss" text="Visions"
                xmlUrl="https://www.visions.de/feed/"
                htmlUrl="https://www.visions.de"
@@ -568,6 +750,18 @@
                description="German football news"/>
     </outline>
     <outline text="Nachrichten (DE)" key="nachrichten_de" icon="newspaper" color="#64748b">
+      <outline type="rss" text="Belltower.News"
+               xmlUrl="https://www.belltower.news/feed/"
+               htmlUrl="https://www.belltower.news"
+               description="Recherchen zu Rechtsextremismus, Rassismus und digitaler Gewalt"/>
+      <outline type="rss" text="Blätter"
+               xmlUrl="https://www.blaetter.de/rss.xml"
+               htmlUrl="https://www.blaetter.de"
+               description="Blätter für deutsche und internationale Politik: Essays und Analysen"/>
+      <outline type="rss" text="CORRECTIV"
+               xmlUrl="https://correctiv.org/feed/"
+               htmlUrl="https://correctiv.org"
+               description="Gemeinnütziges Recherchezentrum und Faktencheck-Redaktion"/>
       <outline type="rss" text="DW Deutsch"
                xmlUrl="https://rss.dw.com/rdf/rss-de-all"
                htmlUrl="https://www.dw.com"
@@ -588,10 +782,38 @@
                xmlUrl="https://jungle.world/rss.xml"
                htmlUrl="https://jungle.world"
                description="Undogmatic left German weekly"/>
+      <outline type="rss" text="Lower Class Magazine"
+               xmlUrl="https://lowerclassmag.com/feed/"
+               htmlUrl="https://lowerclassmag.com"
+               description="Unabhängiger Journalismus von der Straße, aus Berlin"/>
+      <outline type="rss" text="Moment.at"
+               xmlUrl="https://www.moment.at/feed/"
+               htmlUrl="https://www.moment.at"
+               description="Österreichisches Magazin über Verteilung, Arbeit und Gerechtigkeit"/>
+      <outline type="rss" text="Rosa-Luxemburg-Stiftung"
+               xmlUrl="https://www.rosalux.de/rss.xml"
+               htmlUrl="https://www.rosalux.de"
+               description="Analysen, Studien und Veranstaltungen der Stiftung"/>
       <outline type="rss" text="Sueddeutsche Zeitung"
                xmlUrl="https://rss.sueddeutsche.de/rss/Topthemen"
                htmlUrl="https://www.sueddeutsche.de"
                description="Munich-based German daily newspaper"/>
+      <outline type="rss" text="Untergrund-Blättle"
+               xmlUrl="https://www.xn--untergrund-blttle-2qb.ch/rss.xml"
+               htmlUrl="https://www.xn--untergrund-blttle-2qb.ch"
+               description="Schweizer Onlinemagazin für linke Politik, Kultur und Gegenöffentlichkeit"/>
+      <outline type="rss" text="Volksverpetzer"
+               xmlUrl="https://volksverpetzer.de/feed/"
+               htmlUrl="https://volksverpetzer.de"
+               description="Blog gegen Fake News und Desinformation"/>
+      <outline type="rss" text="WOZ"
+               xmlUrl="https://www.woz.ch/t/startseite/feed"
+               htmlUrl="https://www.woz.ch"
+               description="Die Wochenzeitung: linke Schweizer Wochenzeitung aus Zürich"/>
+      <outline type="rss" text="ZDFheute"
+               xmlUrl="https://www.zdfheute.de/rss/zdf/nachrichten"
+               htmlUrl="https://www.zdfheute.de"
+               description="Nachrichten und Hintergründe des ZDF"/>
       <outline type="rss" text="Zeit Online"
                xmlUrl="https://newsfeed.zeit.de/index"
                htmlUrl="https://www.zeit.de"
@@ -604,6 +826,18 @@
                xmlUrl="https://www.freitag.de/rss.xml"
                htmlUrl="https://www.freitag.de"
                description="Left-liberal German weekly"/>
+      <outline type="rss" text="der rechte rand"
+               xmlUrl="https://www.der-rechte-rand.de/feed/"
+               htmlUrl="https://www.der-rechte-rand.de"
+               description="Antifaschistisches Magazin über die extreme Rechte"/>
+      <outline type="rss" text="junge Welt"
+               xmlUrl="https://www.jungewelt.de/feeds/newsticker.rss"
+               htmlUrl="https://www.jungewelt.de"
+               description="Linke überregionale Tageszeitung aus Berlin"/>
+      <outline type="rss" text="konkret"
+               xmlUrl="https://konkret-magazin.de/feed/"
+               htmlUrl="https://konkret-magazin.de"
+               description="Linkes Monatsmagazin für Politik und Kultur aus Hamburg"/>
       <outline type="rss" text="nd-aktuell"
                xmlUrl="https://www.nd-aktuell.de/rss/aktuell.php"
                htmlUrl="https://www.nd-aktuell.de"
@@ -626,14 +860,26 @@
                xmlUrl="https://www.dnn.de/arc/outboundfeeds/rss/"
                htmlUrl="https://www.dnn.de"
                description="Dresden local news"/>
+      <outline type="rss" text="Hamburger Morgenpost"
+               xmlUrl="https://www.mopo.de/hamburg?lab_viewport=rss"
+               htmlUrl="https://www.mopo.de/hamburg"
+               description="Nachrichten aus Hamburg von der MOPO"/>
       <outline type="rss" text="Hannoversche Allgemeine"
                xmlUrl="https://www.haz.de/arc/outboundfeeds/rss/"
                htmlUrl="https://www.haz.de"
                description="Hanover local news"/>
+      <outline type="rss" text="Hinz&amp;Kunzt"
+               xmlUrl="https://www.hinzundkunzt.de/feed/"
+               htmlUrl="https://www.hinzundkunzt.de"
+               description="Hamburger Straßenmagazin über Wohnungslosigkeit und Soziales"/>
       <outline type="rss" text="Mit Vergnügen Köln"
                xmlUrl="https://koeln.mitvergnuegen.com/feed/"
                htmlUrl="https://koeln.mitvergnuegen.com"
                description="Cologne city magazine"/>
+      <outline type="rss" text="NDR Hamburg"
+               xmlUrl="https://www.ndr.de/nachrichten/hamburg/index~rss2.xml"
+               htmlUrl="https://www.ndr.de/nachrichten/hamburg/"
+               description="Nachrichten aus Hamburg vom NDR"/>
       <outline type="rss" text="OXMOX"
                xmlUrl="https://www.oxmoxhh.de/feed/"
                htmlUrl="https://www.oxmoxhh.de"
@@ -671,7 +917,7 @@
                htmlUrl="https://kreuzer-leipzig.de"
                description="Leipzig city magazine"/>
       <outline type="rss" text="rbb24"
-               xmlUrl="https://www.rbb24.de/aktuell/index.xml/feed=rss.xml"
+               xmlUrl="https://www.rbb24.de/index.xml/feed=rss.xml/feed"
                htmlUrl="https://www.rbb24.de"
                description="Berlin and Brandenburg news"/>
       <outline type="rss" text="tip Berlin"
@@ -692,7 +938,11 @@
                xmlUrl="https://www.spektrum.de/alias/rss/spektrum-de-rss-feed/996406"
                htmlUrl="https://www.spektrum.de"
                description="German science magazine"/>
-      <outline type="rss" text="c&apos;t Magazin"
+      <outline type="rss" text="Telepolis"
+               xmlUrl="https://www.telepolis.de/feed.xml"
+               htmlUrl="https://www.telepolis.de"
+               description="Magazin für Netzkultur, Wissenschaft und Politik"/>
+      <outline type="rss" text="c't Magazin"
                xmlUrl="https://www.heise.de/ct/rss/artikel-atom.xml"
                htmlUrl="https://www.heise.de"
                description="German computing magazine"/>
