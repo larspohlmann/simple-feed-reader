@@ -7,10 +7,12 @@ namespace App\Tests\Service\Backup;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\RecommendationSettings;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Backup\AccountBackupExporter;
+use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -245,5 +247,34 @@ final class AccountBackupExporterTest extends DbTestCase
             self::assertLessThanOrEqual(500, $held, 'entry hydration is not batched');
         }
         self::assertSame(1201, $entryLines);
+    }
+
+    public function testExportsTheStoredPreferenceProfileOnTheAccountLine(): void
+    {
+        $user = $this->makeUser('profile-export@example.com');
+        $settings = new RecommendationSettings($user);
+        $settings->update(new RecommendationSettingsValues(
+            guidancePrompt: null,
+            favoritesCap: 40,
+            keptCap: 40,
+            viewedCap: 80,
+            candidatePoolSize: 1000,
+            lookbackDays: 2,
+            picksLimit: 50,
+            contextWindow: null,
+            batchCount: null,
+            debugEnabled: false,
+            profileText: 'Reads long-form essays about urban planning.',
+        ));
+        $this->em->persist($settings);
+        $this->em->flush();
+
+        $accountLine = $this->decodedLines($user)[1];
+
+        self::assertIsArray($accountLine['recommendationSettings']);
+        self::assertSame(
+            'Reads long-form essays about urban planning.',
+            $accountLine['recommendationSettings']['profileText'],
+        );
     }
 }

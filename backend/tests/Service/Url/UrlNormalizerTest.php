@@ -104,4 +104,20 @@ final class UrlNormalizerTest extends TestCase
     {
         self::assertNull($this->normalizer->normalize('not a url'));
     }
+
+    public function testHashesTheNormalisedFormSoTrackingParametersDoNotChangeIt(): void
+    {
+        $plain = $this->normalizer->hash('https://example.com/article');
+        $decorated = $this->normalizer->hash('https://EXAMPLE.com:443/article?utm_source=rss#top');
+
+        self::assertSame($plain, $decorated);
+        self::assertSame(hash('sha256', 'https://example.com/article'), $plain);
+    }
+
+    public function testHashesNullWhenTheUrlDoesNotNormalise(): void
+    {
+        self::assertNull($this->normalizer->hash(null));
+        self::assertNull($this->normalizer->hash(''));
+        self::assertNull($this->normalizer->hash('not a url'));
+    }
 }

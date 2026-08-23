@@ -194,6 +194,8 @@ The manual walkthrough lives in [docs/local-docker.md](docs/local-docker.md).
   (MySQL, PHP, nginx with TLS, Mailpit) in Docker.
 - [How a "For you" run works](docs/recommendations-runs.md) — what happens
   after "Get recommendations", closing the browser, stopping, resuming.
+- [Account backup and restore](docs/backup.md) — what a backup file carries,
+  what it deliberately drops, and what a restore does to the account.
 - [Running in production (Docker)](docs/docker-production.md) — the prod
   stack: MySQL or SQLite, real mail transport, TLS or reverse proxy, updates,
   backups.

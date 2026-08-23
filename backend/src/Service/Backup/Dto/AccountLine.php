@@ -42,6 +42,7 @@ final readonly class AccountLine
 
         return new RecommendationSettingsValues(
             guidancePrompt: LineField::stringOrNull($settings, 'guidancePrompt'),
+            profileText: LineField::stringOrNull($settings, 'profileText'),
             favoritesCap: LineField::int($settings, 'favoritesCap'),
             keptCap: LineField::int($settings, 'keptCap'),
             viewedCap: LineField::int($settings, 'viewedCap'),

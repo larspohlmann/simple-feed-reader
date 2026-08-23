@@ -43,6 +43,20 @@ final class UrlNormalizer
         return $canonical;
     }
 
+    /**
+     * The stable identity of an article URL: sha256 over the normalised form.
+     *
+     * Shared rather than duplicated because two writers of this value must
+     * agree byte for byte. A divergence would not raise anything — dedupe
+     * would simply stop matching, silently (#556).
+     */
+    public function hash(?string $url): ?string
+    {
+        $normalized = $this->normalize($url);
+
+        return $normalized === null ? null : hash('sha256', $normalized);
+    }
+
     private function port(string $scheme, ?int $port): string
     {
         if ($port === null || $port === (self::DEFAULT_PORTS[$scheme] ?? null)) {

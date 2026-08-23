@@ -198,6 +198,7 @@ final readonly class AccountBackupExporter
 
         return [
             'guidancePrompt' => $values->guidancePrompt,
+            'profileText' => $values->profileText,
             'favoritesCap' => $values->favoritesCap,
             'keptCap' => $values->keptCap,
             'viewedCap' => $values->viewedCap,

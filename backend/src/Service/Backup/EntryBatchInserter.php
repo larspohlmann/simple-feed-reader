@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Backup;
 
 use App\Service\Backup\Dto\EntryLine;
+use App\Service\Url\UrlNormalizer;
 use Doctrine\DBAL\Connection;
 
 /**
@@ -13,6 +14,16 @@ use Doctrine\DBAL\Connection;
  * scale, see the spec appendix). Raw SQL by necessity, which is exactly why
  * guid_hash travels IN the backup file: no Entry constructor runs here, so
  * nothing could recompute it.
+ *
+ * url_hash goes the other way: it is a pure function of a field the file
+ * already carries, so it is recomputed here rather than stored. Carrying
+ * derived data is how a format grows fields it can never drop (#556).
+ *
+ * The two hashes are not inconsistent — they answer different questions.
+ * guid_hash is a reference: entryState lines address their entry by the pair
+ * (feedUrl, guidHash), so the file has to carry the exact value the restore
+ * will look up by. url_hash is referenced by nothing; it is pure storage, so
+ * recomputing it here is free and keeps it from ever going stale.
  *
  * The column list is spelled out once; values bind positionally per row.
  * Dates are formatted as the naive-UTC wall-clock strings Doctrine's
@@ -24,13 +35,15 @@ final readonly class EntryBatchInserter
     private const int ROWS_PER_STATEMENT = 500;
 
     private const array COLUMNS = [
-        'feed_id', 'guid', 'guid_hash', 'url', 'title', 'author', 'summary',
-        'content_html', 'image_url', 'image_width', 'image_height',
+        'feed_id', 'guid', 'guid_hash', 'url', 'url_hash', 'title', 'author',
+        'summary', 'content_html', 'image_url', 'image_width', 'image_height',
         'published_at', 'created_at', 'effective_date',
     ];
 
-    public function __construct(private Connection $connection)
-    {
+    public function __construct(
+        private Connection $connection,
+        private UrlNormalizer $urlNormalizer,
+    ) {
     }
 
     /** @param list<EntryLine> $lines */
@@ -62,7 +75,8 @@ final readonly class EntryBatchInserter
     private function row(int $feedId, EntryLine $line): array
     {
         return [
-            $feedId, $line->guid, $line->guidHash, $line->url, $line->title,
+            $feedId, $line->guid, $line->guidHash, $line->url,
+            $this->urlNormalizer->hash($line->url), $line->title,
             $line->author, $line->summary, $line->contentHtml, $line->imageUrl,
             $line->imageWidth, $line->imageHeight,
             self::storageDate($line->publishedAt),
