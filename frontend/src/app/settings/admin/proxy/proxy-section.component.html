@@ -1,178 +1,180 @@
-@if (svc.state()) {
-  <app-settings-group
-    icon="lan"
-    [title]="'settings.proxy.title' | transloco"
-    [caption]="'settings.proxy.caption' | transloco"
-  >
-    <app-settings-row
-      [title]="'settings.proxy.enabled' | transloco"
-      [description]="configured() ? '' : ('settings.proxy.enabledDisabledHint' | transloco)"
+<app-settings-stack>
+  @if (svc.state()) {
+    <app-settings-group
+      icon="lan"
+      [title]="'settings.proxy.title' | transloco"
+      [caption]="'settings.proxy.caption' | transloco"
     >
-      <app-toggle
-        inputId="proxy-enabled-toggle"
-        [label]="'settings.proxy.enabled' | transloco"
-        [checked]="enabled()"
-        [disabled]="!configured()"
-        (toggled)="onEnabled($event)"
-      />
-    </app-settings-row>
-
-    <app-settings-row
-      [title]="'settings.proxy.directFallback' | transloco"
-      [description]="'settings.proxy.directFallbackDesc' | transloco"
-    >
-      <app-info-tip
-        rowTitleTip
-        [text]="'settings.proxy.info.directFallback' | transloco"
-        [label]="'settings.proxy.directFallback' | transloco"
-      />
-      <app-toggle
-        inputId="proxy-direct-fallback-toggle"
-        [label]="'settings.proxy.directFallback' | transloco"
-        [checked]="directFallback()"
-        (toggled)="onDirectFallback($event)"
-      />
-    </app-settings-row>
-
-    <app-settings-row
-      [stackable]="true"
-      [title]="'settings.proxy.type' | transloco"
-      [description]="'settings.proxy.typeDesc' | transloco"
-    >
-      <select class="type-field" data-testid="proxy-type" (change)="onType($event)">
-        @for (option of typeOptions; track option) {
-          <option [value]="option" [selected]="type() === option">{{ option }}</option>
-        }
-      </select>
-    </app-settings-row>
-
-    <app-settings-row
-      [title]="'settings.proxy.remoteDns' | transloco"
-      [description]="
-        dnsIsChoosable()
-          ? ('settings.proxy.remoteDnsDesc' | transloco)
-          : ('settings.proxy.remoteDnsHttpHint' | transloco)
-      "
-    >
-      <app-info-tip
-        rowTitleTip
-        [text]="'settings.proxy.info.remoteDns' | transloco"
-        [label]="'settings.proxy.remoteDns' | transloco"
-      />
-      <app-toggle
-        inputId="proxy-remote-dns-toggle"
-        [label]="'settings.proxy.remoteDns' | transloco"
-        [checked]="remoteDns()"
-        [disabled]="!dnsIsChoosable()"
-        (toggled)="onRemoteDns($event)"
-      />
-    </app-settings-row>
-
-    <app-settings-row [stackable]="true" [title]="'settings.proxy.host' | transloco">
-      <input
-        type="text"
-        class="host-field"
-        data-testid="proxy-host"
-        [value]="host()"
-        (input)="onHost($event)"
-      />
-    </app-settings-row>
-
-    <app-settings-row [stackable]="true" [title]="'settings.proxy.port' | transloco">
-      <input
-        type="number"
-        class="port-field"
-        min="1"
-        max="65535"
-        data-testid="proxy-port"
-        [value]="port()"
-        (input)="onPort($event)"
-      />
-    </app-settings-row>
-
-    <app-settings-row [stackable]="true" [title]="'settings.proxy.username' | transloco">
-      <app-info-tip
-        rowTitleTip
-        [text]="'settings.proxy.info.piaCredentials' | transloco"
-        [label]="'settings.proxy.username' | transloco"
-      />
-      <input
-        type="text"
-        class="credential-field"
-        autocomplete="off"
-        data-testid="proxy-username"
-        [value]="username()"
-        (input)="onUsername($event)"
-      />
-    </app-settings-row>
-
-    <app-settings-row [stackable]="true" [title]="'settings.proxy.password' | transloco">
-      <input
-        type="password"
-        class="credential-field"
-        autocomplete="off"
-        data-testid="proxy-password"
-        [placeholder]="passwordHint()"
-        [value]="password()"
-        (input)="onPassword($event)"
-      />
-    </app-settings-row>
-
-    @let probeResult = probe();
-    <app-settings-row
-      [title]="'settings.proxy.test' | transloco"
-      [description]="
-        probeResult.status === 'ok'
-          ? ('settings.proxy.testOk' | transloco: { ip: probeResult.egressIp })
-          : ('settings.proxy.testDesc' | transloco)
-      "
-    >
-      <div class="test-control" data-testid="proxy-test-button">
-        <span class="probe-status">
-          @if (probeResult.status === 'ok') {
-            <app-icon class="ok" name="check" size="sm" />
-          } @else if (probeResult.status === 'error') {
-            <app-icon class="failed" name="close" size="sm" />
-          }
-        </span>
-        <app-button
-          [variant]="canTest() ? 'accent-outline' : 'default'"
-          [loading]="probeResult.status === 'loading'"
-          [disabled]="!canTest()"
-          [ariaLabel]="
-            probeResult.status === 'loading'
-              ? ('settings.proxy.testing' | transloco)
-              : ('settings.proxy.test' | transloco)
-          "
-          (click)="test()"
-        >
-          {{ 'settings.proxy.test' | transloco }}
-        </app-button>
-      </div>
-    </app-settings-row>
-
-    @if (probeResult.status === 'error') {
-      <div class="panel-banner">
-        <app-error-banner
-          [message]="'settings.proxy.testFailed' | transloco: { reason: probeResult.message }"
+      <app-settings-row
+        [title]="'settings.proxy.enabled' | transloco"
+        [description]="configured() ? '' : ('settings.proxy.enabledDisabledHint' | transloco)"
+      >
+        <app-toggle
+          inputId="proxy-enabled-toggle"
+          [label]="'settings.proxy.enabled' | transloco"
+          [checked]="enabled()"
+          [disabled]="!configured()"
+          (toggled)="onEnabled($event)"
         />
-      </div>
-    }
+      </app-settings-row>
 
-    @if (failureMessage(); as message) {
-      <div class="panel-banner">
-        <app-error-banner [message]="message" />
-      </div>
-    }
+      <app-settings-row
+        [title]="'settings.proxy.directFallback' | transloco"
+        [description]="'settings.proxy.directFallbackDesc' | transloco"
+      >
+        <app-info-tip
+          rowTitleTip
+          [text]="'settings.proxy.info.directFallback' | transloco"
+          [label]="'settings.proxy.directFallback' | transloco"
+        />
+        <app-toggle
+          inputId="proxy-direct-fallback-toggle"
+          [label]="'settings.proxy.directFallback' | transloco"
+          [checked]="directFallback()"
+          (toggled)="onDirectFallback($event)"
+        />
+      </app-settings-row>
 
-    <app-settings-save-bar
-      [dirty]="svc.dirty()"
-      [saving]="svc.busy()"
-      [saveLabel]="'settings.proxy.save' | transloco"
-      [resetLabel]="'settings.proxy.reset' | transloco"
-      [unsavedLabel]="'settings.proxy.unsaved' | transloco"
-      (save)="onSave()"
-      (reset)="onReset()"
-    />
-  </app-settings-group>
-}
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.proxy.type' | transloco"
+        [description]="'settings.proxy.typeDesc' | transloco"
+      >
+        <select class="type-field" data-testid="proxy-type" (change)="onType($event)">
+          @for (option of typeOptions; track option) {
+            <option [value]="option" [selected]="type() === option">{{ option }}</option>
+          }
+        </select>
+      </app-settings-row>
+
+      <app-settings-row
+        [title]="'settings.proxy.remoteDns' | transloco"
+        [description]="
+          dnsIsChoosable()
+            ? ('settings.proxy.remoteDnsDesc' | transloco)
+            : ('settings.proxy.remoteDnsHttpHint' | transloco)
+        "
+      >
+        <app-info-tip
+          rowTitleTip
+          [text]="'settings.proxy.info.remoteDns' | transloco"
+          [label]="'settings.proxy.remoteDns' | transloco"
+        />
+        <app-toggle
+          inputId="proxy-remote-dns-toggle"
+          [label]="'settings.proxy.remoteDns' | transloco"
+          [checked]="remoteDns()"
+          [disabled]="!dnsIsChoosable()"
+          (toggled)="onRemoteDns($event)"
+        />
+      </app-settings-row>
+
+      <app-settings-row [stackable]="true" [title]="'settings.proxy.host' | transloco">
+        <input
+          type="text"
+          class="host-field"
+          data-testid="proxy-host"
+          [value]="host()"
+          (input)="onHost($event)"
+        />
+      </app-settings-row>
+
+      <app-settings-row [stackable]="true" [title]="'settings.proxy.port' | transloco">
+        <input
+          type="number"
+          class="port-field"
+          min="1"
+          max="65535"
+          data-testid="proxy-port"
+          [value]="port()"
+          (input)="onPort($event)"
+        />
+      </app-settings-row>
+
+      <app-settings-row [stackable]="true" [title]="'settings.proxy.username' | transloco">
+        <app-info-tip
+          rowTitleTip
+          [text]="'settings.proxy.info.piaCredentials' | transloco"
+          [label]="'settings.proxy.username' | transloco"
+        />
+        <input
+          type="text"
+          class="credential-field"
+          autocomplete="off"
+          data-testid="proxy-username"
+          [value]="username()"
+          (input)="onUsername($event)"
+        />
+      </app-settings-row>
+
+      <app-settings-row [stackable]="true" [title]="'settings.proxy.password' | transloco">
+        <input
+          type="password"
+          class="credential-field"
+          autocomplete="off"
+          data-testid="proxy-password"
+          [placeholder]="passwordHint()"
+          [value]="password()"
+          (input)="onPassword($event)"
+        />
+      </app-settings-row>
+
+      @let probeResult = probe();
+      <app-settings-row
+        [title]="'settings.proxy.test' | transloco"
+        [description]="
+          probeResult.status === 'ok'
+            ? ('settings.proxy.testOk' | transloco: { ip: probeResult.egressIp })
+            : ('settings.proxy.testDesc' | transloco)
+        "
+      >
+        <div class="test-control" data-testid="proxy-test-button">
+          <span class="probe-status">
+            @if (probeResult.status === 'ok') {
+              <app-icon class="ok" name="check" size="sm" />
+            } @else if (probeResult.status === 'error') {
+              <app-icon class="failed" name="close" size="sm" />
+            }
+          </span>
+          <app-button
+            [variant]="canTest() ? 'accent-outline' : 'default'"
+            [loading]="probeResult.status === 'loading'"
+            [disabled]="!canTest()"
+            [ariaLabel]="
+              probeResult.status === 'loading'
+                ? ('settings.proxy.testing' | transloco)
+                : ('settings.proxy.test' | transloco)
+            "
+            (click)="test()"
+          >
+            {{ 'settings.proxy.test' | transloco }}
+          </app-button>
+        </div>
+      </app-settings-row>
+
+      @if (probeResult.status === 'error') {
+        <div class="panel-banner">
+          <app-error-banner
+            [message]="'settings.proxy.testFailed' | transloco: { reason: probeResult.message }"
+          />
+        </div>
+      }
+
+      @if (failureMessage(); as message) {
+        <div class="panel-banner">
+          <app-error-banner [message]="message" />
+        </div>
+      }
+
+      <app-settings-save-bar
+        [dirty]="svc.dirty()"
+        [saving]="svc.busy()"
+        [saveLabel]="'settings.proxy.save' | transloco"
+        [resetLabel]="'settings.proxy.reset' | transloco"
+        [unsavedLabel]="'settings.proxy.unsaved' | transloco"
+        (save)="onSave()"
+        (reset)="onReset()"
+      />
+    </app-settings-group>
+  }
+</app-settings-stack>
