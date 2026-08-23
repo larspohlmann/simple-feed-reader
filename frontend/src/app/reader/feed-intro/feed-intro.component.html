@@ -33,8 +33,13 @@
         <span class="description">{{ text }}</span>
       }
       @if (siteUrl(); as site) {
-        <a class="homepage" [href]="site" target="_blank" rel="noopener noreferrer"
-          >{{ 'reader.feedHomepage' | transloco }} <app-icon name="open_in_new" size="text"
+        <a
+          class="homepage"
+          [href]="site"
+          [attr.title]="site"
+          target="_blank"
+          rel="noopener noreferrer"
+          >{{ homepageLabel() }} <app-icon name="open_in_new" size="text"
         /></a>
       }
     </p>

@@ -94,6 +94,49 @@ final class SubscriptionJsonTest extends TestCase
         self::assertSame('https://www.example.org/', SubscriptionJson::one($this->subscriptionTo($feed))['siteUrl']);
     }
 
+    public function testIgnoresAPublishedLinkThatNamesNoPublicHost(): void
+    {
+        // ZDFheute really does publish an internal Kubernetes service name.
+        $feed = new Feed('https://www.zdfheute.de/rss/zdf/nachrichten');
+        $feed->setSiteUrl('https://ssi-proxy-backends.default.svc.futura-prod/rss/zdf/nachrichten');
+
+        self::assertSame('https://www.zdfheute.de', SubscriptionJson::one($this->subscriptionTo($feed))['siteUrl']);
+    }
+
+    public function testIgnoresASingleLabelPublishedLink(): void
+    {
+        $feed = new Feed('https://www.example.com/feed.xml');
+        $feed->setSiteUrl('http://localhost/');
+
+        self::assertSame('https://www.example.com', SubscriptionJson::one($this->subscriptionTo($feed))['siteUrl']);
+    }
+
+    public function testIgnoresAPublishedLinkThatIsABareAddress(): void
+    {
+        $feed = new Feed('https://www.example.com/feed.xml');
+        $feed->setSiteUrl('http://192.168.1.10/');
+
+        self::assertSame('https://www.example.com', SubscriptionJson::one($this->subscriptionTo($feed))['siteUrl']);
+    }
+
+    public function testKeepsAPublishedLinkOnAPunycodeDomain(): void
+    {
+        $feed = new Feed('https://feeds.example.com/feed.xml');
+        $feed->setSiteUrl('https://example.xn--p1ai/');
+
+        self::assertSame('https://example.xn--p1ai/', SubscriptionJson::one($this->subscriptionTo($feed))['siteUrl']);
+    }
+
+    public function testIgnoresAPublishedLinkThatPointsAtTheFeedItself(): void
+    {
+        // Telepolis points its channel <link> at the feed document; offering it
+        // as "the website" sends the reader to raw XML.
+        $feed = new Feed('https://www.telepolis.de/feed.xml');
+        $feed->setSiteUrl('https://www.telepolis.de/feed.xml');
+
+        self::assertSame('https://www.telepolis.de', SubscriptionJson::one($this->subscriptionTo($feed))['siteUrl']);
+    }
+
     public function testSendsTheFeedImage(): void
     {
         $feed = new Feed('https://example.com/feed.xml');

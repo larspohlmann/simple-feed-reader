@@ -72,8 +72,13 @@
 }
 
 .homepage {
-  margin-left: var(--space-2);
   white-space: nowrap;
+}
+
+/* Separation from the blurb, and only from the blurb: applied unconditionally
+   it also indented the link past the title on the feeds that carry no blurb. */
+.description + .homepage {
+  margin-left: var(--space-2);
 }
 
 /* The for-you run divider, reproduced: a short uppercase label, then a 1px

@@ -587,7 +587,6 @@
     "tagFallback": "Tag",
     "feedFallback": "Feed",
     "forYouGeneratedAt": "Erstellt {{ago}}",
-    "feedHomepage": "Website",
     "feedPosts": "Beiträge",
     "tags": "Tags",
     "feeds": "Feeds",

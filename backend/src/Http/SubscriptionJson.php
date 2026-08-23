@@ -6,7 +6,7 @@ namespace App\Http;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
-use App\Service\Fetch\UrlResolver;
+use App\Service\Url\FeedWebsite;
 use App\Service\Text\PlainText;
 
 final class SubscriptionJson
@@ -68,19 +68,12 @@ final class SubscriptionJson
     }
 
     /**
-     * Where the feed's website is. Just under half the feeds in a real library
-     * publish no <link> at all, which left their intro block with no homepage
-     * to offer, so the feed's own address stands in: a feed lives on the site
-     * it describes, and its origin is that site far more often than not.
-     *
-     * Derived here rather than at ingest on purpose. Feed.siteUrl keeps only
-     * what the feed actually said — the backup carries that column, and a
-     * guess written into it would restore as though the publisher had stated
-     * it.
+     * Where the feed's website is. FeedWebsite holds the rule, because it took
+     * four separate feed pathologies to arrive at and deserves its own tests.
      */
     private static function siteUrl(Feed $feed): ?string
     {
-        return $feed->getSiteUrl() ?? UrlResolver::origin($feed->getUrl());
+        return FeedWebsite::of($feed->getUrl(), $feed->getSiteUrl());
     }
 
     /**

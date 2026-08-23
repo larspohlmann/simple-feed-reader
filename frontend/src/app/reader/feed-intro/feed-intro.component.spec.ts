@@ -28,6 +28,16 @@ describe('FeedIntroComponent', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
+  // The link's own words, without the icon's ligature text, which lives in a
+  // child element and would otherwise land in textContent.
+  function linkLabel(link: Element | null): string {
+    return [...(link?.childNodes ?? [])]
+      .filter((n) => n.nodeType === Node.TEXT_NODE)
+      .map((n) => n.textContent ?? '')
+      .join('')
+      .trim();
+  }
+
   it('renders the description', () => {
     expect(render({ description: 'A feed about things.' }).textContent).toContain(
       'A feed about things.',
@@ -54,6 +64,19 @@ describe('FeedIntroComponent', () => {
     expect(link?.getAttribute('href')).toBe('https://example.com/');
     expect(link?.getAttribute('target')).toBe('_blank');
     expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
+  });
+
+  it('labels the homepage with its own address, not a generic word', () => {
+    const link = render({ siteUrl: 'https://www.djmag.com/' }).querySelector('a');
+    // Scheme and bare trailing slash dropped: identical on every feed, so they
+    // cost width and say nothing. The full URL stays reachable on the title.
+    expect(linkLabel(link)).toBe('www.djmag.com');
+    expect(link?.getAttribute('title')).toBe('https://www.djmag.com/');
+  });
+
+  it('keeps a path in the label', () => {
+    const link = render({ siteUrl: 'https://example.com/news' }).querySelector('a');
+    expect(linkLabel(link)).toBe('example.com/news');
   });
 
   it('omits each part whose value is null', () => {

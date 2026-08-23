@@ -41,6 +41,14 @@ export class FeedIntroComponent {
    *  to nothing. */
   protected readonly logoUrl = computed(() => (this.broken() ? null : this.imageUrl()));
 
+  /** The homepage shown as its own address rather than behind a generic word.
+   *  The scheme and a bare trailing slash are dropped: they are the same on
+   *  every feed, so they cost width without telling the reader anything. The
+   *  full URL stays on the link's title and in its href. */
+  protected readonly homepageLabel = computed(() =>
+    (this.siteUrl() ?? '').replace(/^https?:\/\//i, '').replace(/\/$/, ''),
+  );
+
   /** Whether there is anything at all to show. The caller uses this to leave
    *  the block out entirely rather than render an empty box above the rows. */
   readonly hasContent = computed(
