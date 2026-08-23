@@ -14,55 +14,31 @@ use PHPUnit\Framework\TestCase;
 
 final class RecommendationFeedJsonTest extends TestCase
 {
-    public function testReasonOnlyIncludesTheReasonAndOmitsTheScore(): void
+    public function testShownIncludesTheReasonAndItsScoreTogether(): void
     {
         $result = RecommendationFeedJson::page(
             [$this->row()],
             null,
-            new FeedAnnotationVisibility(showReasons: true, showScores: false),
+            new FeedAnnotationVisibility(showExplanation: true),
         );
 
         self::assertSame('Matches your interest in g1', $result['entries'][0]['recommendationReason']);
-        self::assertArrayNotHasKey('recommendationScore', $result['entries'][0]);
-        // The reason augments the entry, it does not replace it: the base keys
-        // (here runId) must survive alongside the appended annotation.
+        self::assertSame(77, $result['entries'][0]['recommendationScore']);
+        // The annotations augment the entry, they do not replace it: the base
+        // keys (here runId) must survive alongside what is appended.
         self::assertSame(1, $result['entries'][0]['runId']);
     }
 
-    public function testScoreOnlyIncludesTheScoreAndOmitsTheReason(): void
+    public function testHiddenOmitsTheReasonAndItsScoreTogether(): void
     {
         $result = RecommendationFeedJson::page(
             [$this->row()],
             null,
-            new FeedAnnotationVisibility(showReasons: false, showScores: true),
-        );
-
-        self::assertSame(77, $result['entries'][0]['recommendationScore']);
-        self::assertArrayNotHasKey('recommendationReason', $result['entries'][0]);
-    }
-
-    public function testBothHiddenOmitsBothAnnotations(): void
-    {
-        $result = RecommendationFeedJson::page(
-            [$this->row()],
-            null,
-            new FeedAnnotationVisibility(showReasons: false, showScores: false),
+            new FeedAnnotationVisibility(showExplanation: false),
         );
 
         self::assertArrayNotHasKey('recommendationReason', $result['entries'][0]);
         self::assertArrayNotHasKey('recommendationScore', $result['entries'][0]);
-    }
-
-    public function testBothShownIncludesBothAnnotations(): void
-    {
-        $result = RecommendationFeedJson::page(
-            [$this->row()],
-            null,
-            new FeedAnnotationVisibility(showReasons: true, showScores: true),
-        );
-
-        self::assertSame('Matches your interest in g1', $result['entries'][0]['recommendationReason']);
-        self::assertSame(77, $result['entries'][0]['recommendationScore']);
     }
 
     public function testPageAlwaysCarriesRunIdAndGeneratedAtRegardlessOfVisibility(): void
@@ -70,7 +46,7 @@ final class RecommendationFeedJsonTest extends TestCase
         $result = RecommendationFeedJson::page(
             [$this->row()],
             null,
-            new FeedAnnotationVisibility(showReasons: false, showScores: false),
+            new FeedAnnotationVisibility(showExplanation: false),
         );
 
         // Present even with both annotations hidden — the divider is a
@@ -84,7 +60,7 @@ final class RecommendationFeedJsonTest extends TestCase
         $result = RecommendationFeedJson::page(
             [$this->rowWithoutGenerationTime()],
             null,
-            new FeedAnnotationVisibility(showReasons: false, showScores: false),
+            new FeedAnnotationVisibility(showExplanation: false),
         );
 
         // Defensive: the field is nullable, so a row lacking a completion time
@@ -98,7 +74,7 @@ final class RecommendationFeedJsonTest extends TestCase
         $result = RecommendationFeedJson::page(
             [$this->row(null)],
             null,
-            new FeedAnnotationVisibility(showReasons: false, showScores: true),
+            new FeedAnnotationVisibility(showExplanation: true),
         );
 
         self::assertArrayHasKey('recommendationScore', $result['entries'][0]);

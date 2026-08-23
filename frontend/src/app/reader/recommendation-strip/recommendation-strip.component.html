@@ -1,16 +1,18 @@
 <ng-content />
 @if (entry(); as e) {
-  <!-- Reason and score are independent since #541: the "show why" setting gates
-       the reason, debug mode gates the score. Render the strip when EITHER is
-       present, and each part on its own condition -- a debug-on/reasons-off
-       reader still sees the score with no reason beside it. -->
+  <!-- One switch sends both (#576), but either part can still be blank on its
+       own: a pre-#403 row has a null score, and a pick whose reason came back
+       blank is stored as ''. So the strip renders when EITHER has something to
+       show, and each part keeps its own condition. -->
   @if (
     e.recommendationReason ||
     (e.recommendationScore !== null && e.recommendationScore !== undefined)
   ) {
     <p class="reason">
       @if (e.recommendationScore !== null && e.recommendationScore !== undefined) {
-        <span class="score">Score: {{ displayScore(e.recommendationScore) }}</span>
+        <span class="score">{{
+          'reader.recommendationScore' | transloco: { score: displayScore(e.recommendationScore) }
+        }}</span>
       }
       @if (e.recommendationReason) {
         {{ e.recommendationReason }}

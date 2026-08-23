@@ -11,10 +11,10 @@ final class RecommendationFeedJson
     /**
      * A page of the for-you feed. Each entry carries `runId` and
      * `runGeneratedAt` unconditionally — the run-boundary divider is a
-     * normal-user feature (#348) — then the two debug annotations on
-     * independent axes (#541, superseding #342's single-flag coupling):
-     * `recommendationReason` iff the reader asked to see reasons, and
-     * `recommendationScore` iff the debug setting is on.
+     * normal-user feature (#348) — then `recommendationReason` and
+     * `recommendationScore` together, iff the reader asked to see why an
+     * article was picked (#576; see FeedAnnotationVisibility for why the two
+     * travel as one).
      *
      * @param list<RecommendationFeedRow> $rows
      *
@@ -44,14 +44,14 @@ final class RecommendationFeedJson
                 'runId' => $row->runId,
                 'runGeneratedAt' => $row->runGeneratedAt?->format(\DateTimeInterface::ATOM),
             ];
-            if ($visibility->showReasons) {
-                $entry += ['recommendationReason' => $row->reason];
-            }
-            if ($visibility->showScores) {
-                $entry += ['recommendationScore' => $row->score];
+            if (!$visibility->showExplanation) {
+                return $entry;
             }
 
-            return $entry;
+            return $entry + [
+                'recommendationReason' => $row->reason,
+                'recommendationScore' => $row->score,
+            ];
         }, $rows);
     }
 }

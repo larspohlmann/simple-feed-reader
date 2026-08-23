@@ -192,12 +192,13 @@ final readonly class RecommendationRunFixtures
     }
 
     /**
-     * The default-valued settings row three tests need only to flip the
-     * debug switch on: EntryControllerTest, ForYouFeedResponderTest and
-     * RecommendationCallRecorderTest each assert on debug-only behaviour
-     * (the score column, the debug-log rows) and don't care about any other
-     * field. Two named methods instead of a boolean flag, so a call site
-     * reads as what it means rather than what it passes.
+     * The default-valued settings row the tests need only to flip the debug
+     * switch on. Debug's one remaining job is the per-run call log (#576 took
+     * the score off it), so the callers that matter are the recorder, the
+     * distiller and the consolidation resolver — plus the two feed tests that
+     * assert debug now reaches nothing in the payload. Two named methods
+     * instead of a boolean flag, so a call site reads as what it means rather
+     * than what it passes.
      */
     public function debugEnabledSettings(User $user): RecommendationSettings
     {
@@ -209,13 +210,20 @@ final readonly class RecommendationRunFixtures
         return $this->recommendationSettings($user, false);
     }
 
-    /**
-     * Reasons on, debug off: the #541 combination that proves reason visibility
-     * no longer rides on the debug flag.
-     */
+    /** Reasons on, debug off: the combination that proves the explanation —
+     *  the reason and its score both — rides on the reader's own preference
+     *  and needs nothing from debug (#576). */
     public function showReasonsEnabledSettings(User $user): RecommendationSettings
     {
         return $this->recommendationSettings($user, false, showReasons: true);
+    }
+
+    /** Both on: proves debug does not take away what showReasons reveals. The
+     *  two flags are independent settings that simply no longer meet in the
+     *  feed payload, so the combination has to be exercised, not assumed. */
+    public function showReasonsAndDebugEnabledSettings(User $user): RecommendationSettings
+    {
+        return $this->recommendationSettings($user, true, showReasons: true);
     }
 
     private function recommendationSettings(

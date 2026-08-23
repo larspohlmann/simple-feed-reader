@@ -8,16 +8,13 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
-use App\Entity\RecommendationSettings;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\RecommendationItemRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\ForYouFeedResponder;
 use App\Service\Recommendation\RecommendationFeedPager;
 use App\Service\Recommendation\RecommendationSettingsResolver;
-use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 
@@ -53,72 +50,61 @@ final class ForYouFeedResponderTest extends DbTestCase
         $this->em->flush();
     }
 
-    public function testOmitsTheRecommendationScoreWhenDebugIsOff(): void
+    public function testOmitsBothAnnotationsWhenShowReasonsIsOff(): void
     {
-        $page = $this->responder()->page($this->user, null, 50);
-        self::assertIsArray($page['entries']);
-        $first = $page['entries'][0];
-        self::assertIsArray($first);
+        $first = $this->firstEntry();
 
+        self::assertArrayNotHasKey('recommendationReason', $first);
         self::assertArrayNotHasKey('recommendationScore', $first);
     }
 
-    public function testIncludesTheRecommendationScoreWhenDebugIsOn(): void
+    public function testShowsTheReasonAndItsScoreWhenShowReasonsIsOn(): void
+    {
+        $this->fixtures->showReasonsEnabledSettings($this->user);
+
+        $first = $this->firstEntry();
+
+        self::assertSame('reason g1', $first['recommendationReason']);
+        self::assertSame(88, $first['recommendationScore']);
+    }
+
+    /** Debug keeps the per-run call logs and nothing else — it is not a second
+     *  way to reveal what the reader asked to keep hidden (#576). */
+    public function testDebugAloneRevealsNeitherAnnotation(): void
     {
         $this->fixtures->debugEnabledSettings($this->user);
 
-        $page = $this->responder()->page($this->user, null, 50);
-        self::assertIsArray($page['entries']);
-        $first = $page['entries'][0];
-        self::assertIsArray($first);
+        $first = $this->firstEntry();
 
-        self::assertSame(88, $first['recommendationScore']);
-    }
-
-    public function testReasonsShownWithoutDebugWhenShowReasonsOn(): void
-    {
-        $this->persistSettings(showReasons: true, debugEnabled: false);
-
-        $page = $this->responder()->page($this->user, null, 50);
-        self::assertIsArray($page['entries']);
-        $first = $page['entries'][0];
-        self::assertIsArray($first);
-
-        self::assertSame('reason g1', $first['recommendationReason']);
+        self::assertArrayNotHasKey('recommendationReason', $first);
         self::assertArrayNotHasKey('recommendationScore', $first);
     }
 
-    public function testScoreShownWithoutReasonsWhenOnlyDebugOn(): void
+    /** Debug does not take anything away either: with reasons on, the pair is
+     *  shown whether or not the reader is also collecting call logs. */
+    public function testDebugDoesNotChangeWhatShowReasonsReveals(): void
     {
-        $this->persistSettings(showReasons: false, debugEnabled: true);
+        $this->fixtures->showReasonsAndDebugEnabledSettings($this->user);
 
+        $first = $this->firstEntry();
+
+        self::assertSame('reason g1', $first['recommendationReason']);
+        self::assertSame(88, $first['recommendationScore']);
+    }
+
+    /** `assertIsArray()` narrows to a plain array, not to a keyed shape, so
+     *  this says what the assertion actually proves.
+     *
+     *  @return array<mixed>
+     */
+    private function firstEntry(): array
+    {
         $page = $this->responder()->page($this->user, null, 50);
         self::assertIsArray($page['entries']);
         $first = $page['entries'][0];
         self::assertIsArray($first);
 
-        self::assertSame(88, $first['recommendationScore']);
-        self::assertArrayNotHasKey('recommendationReason', $first);
-    }
-
-    private function persistSettings(bool $showReasons, bool $debugEnabled): void
-    {
-        $settings = new RecommendationSettings($this->user);
-        $settings->update(new RecommendationSettingsValues(
-            guidancePrompt: null,
-            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
-            candidatePoolSize: EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
-            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
-            contextWindow: null,
-            batchCount: null,
-            debugEnabled: $debugEnabled,
-            showReasons: $showReasons,
-        ));
-        $this->em->persist($settings);
-        $this->em->flush();
+        return $first;
     }
 
     private function responder(): ForYouFeedResponder

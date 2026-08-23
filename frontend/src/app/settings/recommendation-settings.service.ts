@@ -40,6 +40,8 @@ export interface RecommendationSettingsState {
    *  here, null until a run has generated one. */
   readonly profileText: string | null;
   /** Whether "For you" shows each pick's one-line reason (#541). */
+  /** Shows each pick's reason AND the score beside it — one switch for the
+   *  whole explanation; debug mode reaches neither (#576). */
   readonly showReasons: boolean;
 }
 
