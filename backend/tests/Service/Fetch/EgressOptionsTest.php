@@ -12,11 +12,23 @@ use PHPUnit\Framework\TestCase;
 
 final class EgressOptionsTest extends TestCase
 {
-    public function testProxiedYieldsOnlyTheProxyOption(): void
+    public function testProxiedYieldsTheProxyOption(): void
     {
         $proxy = new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null);
 
-        self::assertSame(['proxy' => 'socks5h://p:1080'], EgressOptions::proxied($proxy));
+        self::assertSame('socks5h://p:1080', EgressOptions::proxied($proxy)['proxy']);
+    }
+
+    /**
+     * Left unset, curl reads no_proxy/NO_PROXY from the environment and sends a
+     * matching host direct — succeeding silently, with no transport failure for
+     * the caller to see, which would defeat `directFallback` off entirely.
+     */
+    public function testProxiedPinsNoProxyEmptySoTheEnvironmentCannotBypassIt(): void
+    {
+        $proxy = new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null);
+
+        self::assertSame('', EgressOptions::proxied($proxy)['no_proxy']);
     }
 
     public function testPinnedYieldsTheResolvePinAndTheCrossFamilyKeyButNoProxy(): void

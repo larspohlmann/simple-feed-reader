@@ -9,6 +9,7 @@ use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\GuardedUrl;
 use App\Service\Fetch\ProxyConfig;
 use App\Service\Fetch\ProxyEgressResolver;
+use App\Service\Proxy\Crypto\Exception\ProxyPasswordUnreadableException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -119,6 +120,35 @@ final class FailoverRequestSenderProxyTest extends TestCase
             self::assertCount(1, $calls);
             self::assertArrayHasKey('proxy', $calls[0]);
             self::assertArrayNotHasKey('resolve', $calls[0]);
+        }
+    }
+
+    /**
+     * A proxy that is enabled but whose stored password cannot be opened must
+     * not silently degrade to a direct request — that would reveal the very IP
+     * the proxy exists to hide. It arrives as a transport failure instead, which
+     * is what the callers already know how to report.
+     */
+    public function testAnUnreadableProxyPasswordFailsTheSendAndNeverGoesDirect(): void
+    {
+        $calls = [];
+        $client = new MockHttpClient(function (string $m, string $u, array $o) use (&$calls): MockResponse {
+            $calls[] = $o;
+
+            return new MockResponse('ok');
+        });
+        $resolver = $this->createStub(ProxyEgressResolver::class);
+        $resolver->method('resolve')->willThrowException(
+            new ProxyPasswordUnreadableException('The stored proxy password failed its integrity check.'),
+        );
+        $sender = new FailoverRequestSender($client, $resolver);
+
+        $this->expectException(TransportExceptionInterface::class);
+
+        try {
+            $sender->send('GET', 'https://page.example', $this->guarded(), []);
+        } finally {
+            self::assertSame([], $calls, 'no request may be sent, least of all a direct one');
         }
     }
 

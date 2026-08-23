@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Proxy;
 
+use App\Service\Fetch\EgressOptions;
+use App\Service\Proxy\Crypto\Exception\ProxyPasswordUnreadableException;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -28,7 +30,13 @@ final readonly class ProxyConnectionTester
 
     public function test(): ProxyTestResult
     {
-        $proxy = $this->settings->configuredProxy();
+        try {
+            $proxy = $this->settings->configuredProxy();
+        } catch (ProxyPasswordUnreadableException $e) {
+            // Diagnosing exactly this is what the Test button is for, so it
+            // reports the unreadable secret rather than crashing on it.
+            return ProxyTestResult::failed($e->getMessage());
+        }
 
         if (null === $proxy) {
             return ProxyTestResult::failed('not_configured');
@@ -36,10 +44,10 @@ final readonly class ProxyConnectionTester
 
         try {
             $response = $this->httpClient->request('GET', self::EGRESS_ECHO_URL, [
-                'proxy' => $proxy->dsn(),
                 'timeout' => self::TIMEOUT_SECONDS,
                 'max_redirects' => 0,
                 'headers' => ['Accept' => 'text/plain'],
+                ...EgressOptions::proxied($proxy),
             ]);
             $status = $response->getStatusCode();
             $body = substr($response->getContent(false), 0, self::MAX_BYTES);

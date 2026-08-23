@@ -24,6 +24,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 final class ProxyConnectionTesterTest extends TestCase
 {
     private const string SECRET = 'test-master-secret-at-least-32-chars-long!!';
+    private const string ROTATED_SECRET = 'a-DIFFERENT-master-secret-at-least-32-chars!';
 
     public function testReturnsEgressIpOnSuccessAndRoutesThroughTheProxy(): void
     {
@@ -138,6 +139,46 @@ final class ProxyConnectionTesterTest extends TestCase
 
         self::assertTrue($result->ok);
         self::assertSame('203.0.113.7', $result->egressIp);
+    }
+
+    /**
+     * Diagnosing exactly this is what the Test button is for: the row was sealed
+     * under one master secret and is being read under another (a rotated
+     * AI_KEY_SECRET, or a dump restored onto a fresh instance), so it reports
+     * the unreadable secret rather than crashing the endpoint.
+     */
+    public function testAnUnreadableStoredPasswordIsReportedRatherThanThrown(): void
+    {
+        $stored = null;
+        $repository = $this->createStub(ProxyServerSettingsRepository::class);
+        $repository->method('findSingleton')->willReturnCallback(static function () use (&$stored) {
+            return $stored;
+        });
+        $em = $this->createStub(EntityManagerInterface::class);
+        $em->method('persist')->willReturnCallback(static function (object $entity) use (&$stored): void {
+            if ($entity instanceof ProxyServerSettings) {
+                $stored = $entity;
+            }
+        });
+
+        (new ProxySettings($repository, $em, new ProxyPasswordCipher(self::SECRET)))->update(
+            new ProxySettingsRequest(
+                enabled: true,
+                directFallback: true,
+                type: 'SOCKS5',
+                host: 'proxy.example',
+                port: 1080,
+                username: 'user',
+                password: 'pw',
+            ),
+        );
+
+        $afterRotation = new ProxySettings($repository, $em, new ProxyPasswordCipher(self::ROTATED_SECRET));
+        $result = (new ProxyConnectionTester($afterRotation, new MockHttpClient()))->test();
+
+        self::assertFalse($result->ok);
+        self::assertNull($result->egressIp);
+        self::assertNotNull($result->reason);
     }
 
     private function configuredSettings(): ProxySettings

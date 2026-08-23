@@ -13,10 +13,17 @@ namespace App\Service\Fetch;
  */
 final class EgressOptions
 {
-    /** @return array{proxy: string} */
+    /**
+     * `no_proxy` is pinned empty on purpose. Left unset, curl falls back to the
+     * ambient no_proxy/NO_PROXY environment variable and sends a matching host
+     * DIRECT — succeeding silently, with no transport failure for the caller to
+     * notice, which would defeat the whole point of `directFallback` off.
+     *
+     * @return array{proxy: string, no_proxy: string}
+     */
     public static function proxied(ProxyConfig $proxy): array
     {
-        return ['proxy' => $proxy->dsn()];
+        return ['proxy' => $proxy->dsn(), 'no_proxy' => ''];
     }
 
     /**

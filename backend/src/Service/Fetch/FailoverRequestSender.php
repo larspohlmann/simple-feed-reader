@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Fetch;
 
+use App\Service\Proxy\Crypto\Exception\ProxyPasswordUnreadableException;
+use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -46,7 +48,7 @@ final readonly class FailoverRequestSender
      */
     public function send(string $method, string $url, GuardedUrl $guarded, array $options): ResponseInterface
     {
-        $proxy = $this->proxyEgressResolver->resolve();
+        $proxy = $this->resolveProxy();
 
         if (null !== $proxy) {
             $proxiedResponse = $this->attemptProxied($method, $url, $options, $proxy);
@@ -57,6 +59,28 @@ final readonly class FailoverRequestSender
         }
 
         return $this->sendPinnedFamilies($method, $url, $guarded, $options);
+    }
+
+    /**
+     * An enabled proxy whose stored password cannot be opened is a transport
+     * failure, not a reason to fall through to a direct request: falling
+     * through would leak the real server IP that the proxy exists to hide. The
+     * translation keeps this method's contract, so the callers' existing
+     * transport-error handling reports it instead of a raw RuntimeException
+     * escaping into a 500.
+     *
+     * @throws TransportExceptionInterface when the egress cannot be resolved
+     */
+    private function resolveProxy(): ?ProxyConfig
+    {
+        try {
+            return $this->proxyEgressResolver->resolve();
+        } catch (ProxyPasswordUnreadableException $e) {
+            throw new TransportException(
+                sprintf('The instance egress proxy is unusable: %s', $e->getMessage()),
+                previous: $e,
+            );
+        }
     }
 
     /**
