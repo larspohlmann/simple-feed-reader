@@ -139,6 +139,13 @@ final class EntryIngestor
         if ($parsed->description !== null) {
             $feed->setDescription($parsed->description);
         }
+        // Guarded like the fields above: a feed that stops sending its <image>
+        // on one fetch must not erase the logo the reader already shows.
+        // FeedImageExtractor has already applied the scheme and length rules,
+        // so no truncation belongs here.
+        if ($parsed->imageUrl !== null) {
+            $feed->setImageUrl($parsed->imageUrl);
+        }
     }
 
     /**

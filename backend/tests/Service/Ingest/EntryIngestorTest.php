@@ -532,6 +532,27 @@ final class EntryIngestorTest extends DbTestCase
         self::assertSame('https://existing.example.com/', $feed->getSiteUrl());
     }
 
+    public function testAFetchStoresTheFeedImage(): void
+    {
+        $feed = $this->feed();
+        $parsed = new ParsedFeed('Example', 'https://example.com/', 'Desc', 'https://example.com/logo.png', []);
+
+        $this->ingestor->ingest($feed, $parsed, self::context());
+
+        self::assertSame('https://example.com/logo.png', $feed->getImageUrl());
+    }
+
+    public function testALaterFetchWithoutAnImageKeepsTheStoredOne(): void
+    {
+        $feed = $this->feed();
+        $feed->setImageUrl('https://example.com/logo.png');
+        $parsed = new ParsedFeed('Example', 'https://example.com/', 'Desc', null, []);
+
+        $this->ingestor->ingest($feed, $parsed, self::context());
+
+        self::assertSame('https://example.com/logo.png', $feed->getImageUrl());
+    }
+
     public function testAnArticleTheFeedAlreadyServedKeepsItsPublishedDate(): void
     {
         $feed = $this->feed();
