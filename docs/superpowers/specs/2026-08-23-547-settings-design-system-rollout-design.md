@@ -175,7 +175,7 @@ one exists.
 | `admin-settings` (instance) | One group, `toggle_on`. The two raw `<input type="checkbox">` become `app-settings-row` + `app-toggle`, matching the rest of the application. Instant save is already the behaviour and stays. |
 | `admin-users` | One group, `shield_person`. Status filters move to `[groupActions]`. User list unchanged. |
 | `admin-catalog` | **Two groups.** `upload` "Catalog import" — the upload and warm blocks. `category` "Categories & feeds" — the category/feed list. |
-| `admin-user-detail` | One group per existing `<h3>` subsection: Account, Activity, Footprint, Tags, Feeds. |
+| `admin-user-detail` | **Three groups, not five.** The user's own group holds the loading/error/detail chain plus the account/activity/footprint sub-cards; then Tags; then Feeds. Five groups (one per `<h3>`) would have split the loading and error states across sections that cannot hold them, since those states belong to the page, not to a subsection. |
 | `proxy-section` | Already Grouped (#490, merged as PR #553). Adopts `app-settings-stack` as its template root; nothing else changes. |
 
 ### Save-by-control-type
