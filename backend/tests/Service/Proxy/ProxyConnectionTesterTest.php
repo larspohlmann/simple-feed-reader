@@ -181,6 +181,26 @@ final class ProxyConnectionTesterTest extends TestCase
         self::assertNotNull($result->reason);
     }
 
+    /**
+     * The reported defect: the page showed curl's raw RFC 1928 reply byte, so
+     * the admin saw "(4)" where a reason belonged.
+     */
+    public function testASocks5HandshakeRefusalIsExplainedNotJustNumbered(): void
+    {
+        $client = new MockHttpClient(static function (): MockResponse {
+            return new MockResponse('', [
+                'error' => 'cannot complete SOCKS5 connection to api.ipify.org. (4)',
+            ]);
+        });
+        $tester = new ProxyConnectionTester($this->configuredSettings(), $client);
+
+        $result = $tester->test();
+
+        self::assertFalse($result->ok);
+        self::assertIsString($result->reason);
+        self::assertStringContainsString('does not resolve host names', $result->reason);
+    }
+
     private function configuredSettings(): ProxySettings
     {
         $settings = $this->settings();

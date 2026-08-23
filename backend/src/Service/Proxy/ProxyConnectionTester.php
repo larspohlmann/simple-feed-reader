@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Proxy;
 
 use App\Service\Fetch\EgressOptions;
+use App\Service\Fetch\ProxyHandshakeFailure;
 use App\Service\Proxy\Crypto\Exception\ProxyPasswordUnreadableException;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -52,7 +53,7 @@ final readonly class ProxyConnectionTester
             $status = $response->getStatusCode();
             $body = substr($response->getContent(false), 0, self::MAX_BYTES);
         } catch (ExceptionInterface $e) {
-            return ProxyTestResult::failed($e->getMessage());
+            return ProxyTestResult::failed(ProxyHandshakeFailure::explain($e->getMessage()));
         }
 
         if ($status < 200 || $status >= 300) {
