@@ -36,10 +36,9 @@ final class BackupFieldDeclarations
      * reference is a feed URL and a GUID hash together, and neither half
      * identifies an entry on its own].
      *
-     * Mirrors `BackupSchemaCoverageTest::BACKED_UP` exactly; that class
-     * carries the reasoning behind each row, since it also owns the
-     * `NOT_BACKED_UP` and `NEVER_BACKED_UP` counterparts this list has no
-     * need of.
+     * Mirrors what used to live inline in `BackupSchemaCoverageTest::BACKED_UP`;
+     * that class still owns the `NOT_BACKED_UP` and `NEVER_BACKED_UP`
+     * counterparts this list has no need of.
      */
     public const array BACKED_UP = [
         User::class => [
@@ -93,6 +92,10 @@ final class BackupFieldDeclarations
             'effectiveDate' => 'effectiveDate',
         ],
         EntryState::class => [
+            // Both halves, because both are load-bearing: guidHash picks the
+            // entry out of a feed, feedUrl says which feed. Declaring only one
+            // would leave the other claimed by nothing, and deleting it from
+            // entryStateLine() would still pass.
             'entry' => ['feedUrl', 'guidHash'],
             'isRead' => 'isRead', 'isFavorite' => 'isFavorite', 'isKept' => 'isKept',
             'readAt' => 'readAt', 'isViewed' => 'isViewed', 'viewedAt' => 'viewedAt',
