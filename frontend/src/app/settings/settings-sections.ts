@@ -36,3 +36,11 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     group: 'admin',
   },
 ];
+
+/** The label of one section, by route path. The nav, the hub and the document
+ *  title all read the same entry, so a renamed section renames everywhere. */
+export function sectionLabelKey(path: string): string {
+  const section = SETTINGS_SECTIONS.find((s) => s.path === path);
+  if (section === undefined) throw new Error(`No settings section for path "${path}"`);
+  return section.labelKey;
+}

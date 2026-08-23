@@ -1,4 +1,4 @@
-import { SETTINGS_SECTIONS } from './settings-sections';
+import { SETTINGS_SECTIONS, sectionLabelKey } from './settings-sections';
 
 describe('SETTINGS_SECTIONS', () => {
   it('has unique paths', () => {
@@ -17,5 +17,15 @@ describe('SETTINGS_SECTIONS', () => {
       expect(s.icon).not.toBe('');
       expect(s.labelKey).toMatch(/^\w+\./);
     }
+  });
+
+  it('reads a label back by path, so the nav and the document title cannot drift', () => {
+    for (const s of SETTINGS_SECTIONS) {
+      expect(sectionLabelKey(s.path)).toBe(s.labelKey);
+    }
+  });
+
+  it('rejects a path no section owns rather than titling a page with nothing', () => {
+    expect(() => sectionLabelKey('admin/nowhere')).toThrow();
   });
 });
