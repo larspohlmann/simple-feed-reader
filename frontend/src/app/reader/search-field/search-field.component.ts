@@ -52,11 +52,14 @@ export class SearchFieldComponent {
   // Semantic "settled search term" output, not a DOM element's search event.
   // eslint-disable-next-line @angular-eslint/no-output-native
   readonly search = output<string>();
-  /** Whether this mount is one the user can leave. The mobile header bar is —
-   *  it collapses back into the header — so its trailing ✕ stays on screen
-   *  with the field empty, as the only way out a finger can reach. The
-   *  sidebar's copy is permanent, has nothing to leave, and so keeps the ✕
-   *  only while there is text to clear. */
+  /** Whether the trailing ✕ survives an empty field — and nothing else; the
+   *  `dismissed` output fires from Escape regardless of this flag. The mobile
+   *  header bar sets it, because there the ✕ is the whole exit: a phone has no
+   *  Escape key, and the bar deliberately carries no close button of its own
+   *  beside the field's (#550 — two ✕ side by side, one clearing and one
+   *  closing, read as one control that behaved differently depending on where
+   *  it was tapped). The sidebar's copy is permanent, has nothing to leave,
+   *  and so keeps the ✕ only while there is text to clear. */
   readonly dismissible = input(false);
   /** The user asked to leave the search with nothing left to clear — the
    *  second step of the two-step contract, reached either by Escape or by the
@@ -70,6 +73,11 @@ export class SearchFieldComponent {
   readonly text = signal('');
 
   readonly tooShort = computed(() => isTooShortToSearch(this.text()));
+  /** Which step of the two-step exit the field is in. One predicate for all
+   *  three readers — the trailing button's visibility, its label, and what a
+   *  click on it does — so a later change to what counts as "nothing left to
+   *  clear" cannot leave the ✕ announcing one thing and doing the other. */
+  readonly hasTextToClear = computed(() => this.text() !== '');
 
   private readonly inputEl = viewChild<ElementRef<HTMLInputElement>>('inputEl');
 
@@ -147,13 +155,10 @@ export class SearchFieldComponent {
     this.typed.next('');
   }
 
-  /** The trailing ✕ and Escape are the same two-step contract, so they run the
-   *  same code: clear whatever is there, and report a field that was already
-   *  empty so the caller can leave. Giving the ✕ this second step is what let
-   *  the mobile bar drop the separate close button beside it (#550) — a phone
-   *  has no Escape key, so the button is the only step-two a finger has. */
+  /** Escape and the trailing ✕ are the same two-step contract, so they run the
+   *  same code. */
   clearOrDismiss(): void {
-    if (this.text() !== '') {
+    if (this.hasTextToClear()) {
       this.clear();
       return;
     }

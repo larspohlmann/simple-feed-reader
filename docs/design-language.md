@@ -925,7 +925,7 @@ know the shape of what is coming.
 
 The entry-search input. It owns every timing rule the search has, so no caller
 repeats one: a 300 ms debounce, the three-character floor, the too-short hint,
-the clear button, and `Escape`.
+the trailing clear-or-close button, and `Escape`.
 
 | Input | Type | Default |
 |---|---|---|

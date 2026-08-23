@@ -143,15 +143,10 @@ header {
 
 /* Replaces .left and .right for the span of an open search: the field wants
    the whole bar's width, not just the middle spacer the brand and account
-   controls otherwise leave it. */
+   controls otherwise leave it. The class sits on the field itself — with
+   nothing beside it any more (#550), a flex wrapper around one child had
+   nothing left to arrange. */
 .search-bar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-}
-
-.search-bar app-search-field {
   flex: 1;
   min-width: 0;
 }

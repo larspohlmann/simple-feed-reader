@@ -327,8 +327,9 @@ describe('ReaderHeaderComponent', () => {
       (el.querySelector('[aria-label="Search"]') as HTMLButtonElement).click();
       f.detectChanges();
 
-      const bar = el.querySelector('.search-bar') as HTMLElement;
-      const buttons = Array.from(bar.querySelectorAll('button'));
+      // The open bar replaces the whole header, so every button in it belongs
+      // to the search. Exactly one, and it is the field's own.
+      const buttons = Array.from(el.querySelectorAll('header button'));
       expect(buttons).toHaveLength(1);
       expect(buttons[0].closest('app-search-field')).not.toBeNull();
     });

@@ -61,7 +61,7 @@ describe('SearchFieldComponent', () => {
     expect(emitted).toEqual(['angular']);
 
     const clearButton: HTMLButtonElement = fixture.debugElement.query(
-      By.css('.clear'),
+      By.css('.clear-or-dismiss'),
     ).nativeElement;
     clearButton.click();
     expect(emitted).toEqual(['angular', '']);
@@ -104,7 +104,7 @@ describe('SearchFieldComponent', () => {
     tick(100); // well inside the 300 ms window: the debounce is still pending
 
     const clearButton: HTMLButtonElement = fixture.debugElement.query(
-      By.css('.clear'),
+      By.css('.clear-or-dismiss'),
     ).nativeElement;
     clearButton.click();
 
@@ -159,7 +159,7 @@ describe('SearchFieldComponent', () => {
     expect(emitted).toEqual(['cats']);
 
     const clearButton: HTMLButtonElement = fixture.debugElement.query(
-      By.css('.clear'),
+      By.css('.clear-or-dismiss'),
     ).nativeElement;
     clearButton.click();
 
@@ -171,7 +171,7 @@ describe('SearchFieldComponent', () => {
     const fixture = mount();
     typeInto(fixture, 'cats');
 
-    const clearButton = fixture.debugElement.query(By.css('.clear')).nativeElement;
+    const clearButton = fixture.debugElement.query(By.css('.clear-or-dismiss')).nativeElement;
     expect(clearButton.getAttribute('aria-label')).toBe('Clear search');
   });
 
@@ -207,34 +207,16 @@ describe('SearchFieldComponent', () => {
   it('hides the trailing button on an empty field that cannot be left', () => {
     const fixture = mount();
 
-    expect(fixture.debugElement.query(By.css('.clear'))).toBeNull();
+    expect(fixture.debugElement.query(By.css('.clear-or-dismiss'))).toBeNull();
   });
 
   it('keeps the trailing button on an empty field that can be left, labelled as the way out', () => {
     const fixture = mountDismissible();
 
-    const button = fixture.debugElement.query(By.css('.clear'));
+    const button = fixture.debugElement.query(By.css('.clear-or-dismiss'));
     expect(button).not.toBeNull();
     expect(button.nativeElement.getAttribute('aria-label')).toBe('Close search');
   });
-
-  it('clears rather than dismisses when the trailing button is clicked over text', fakeAsync(() => {
-    const fixture = mountDismissible();
-    const emitted: string[] = [];
-    fixture.componentInstance.search.subscribe((term) => emitted.push(term));
-    const dismissed = jest.fn();
-    fixture.componentInstance.dismissed.subscribe(dismissed);
-
-    typeInto(fixture, 'cats');
-    tick(300);
-    expect(emitted).toEqual(['cats']);
-
-    fixture.debugElement.query(By.css('.clear')).nativeElement.click();
-    fixture.detectChanges();
-
-    expect(emitted).toEqual(['cats', '']);
-    expect(dismissed).not.toHaveBeenCalled();
-  }));
 
   it('dismisses on a second click of the trailing button, once there is nothing left to clear', () => {
     const fixture = mountDismissible();
@@ -242,11 +224,11 @@ describe('SearchFieldComponent', () => {
     fixture.componentInstance.dismissed.subscribe(dismissed);
 
     typeInto(fixture, 'cats');
-    fixture.debugElement.query(By.css('.clear')).nativeElement.click();
+    fixture.debugElement.query(By.css('.clear-or-dismiss')).nativeElement.click();
     fixture.detectChanges();
     expect(dismissed).not.toHaveBeenCalled();
 
-    fixture.debugElement.query(By.css('.clear')).nativeElement.click();
+    fixture.debugElement.query(By.css('.clear-or-dismiss')).nativeElement.click();
     fixture.detectChanges();
 
     expect(dismissed).toHaveBeenCalledTimes(1);
