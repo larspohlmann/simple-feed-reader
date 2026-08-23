@@ -749,6 +749,32 @@ canonical building blocks every settings and admin section composes. The
 A feature section stacks these components; its own stylesheet holds only layout
 glue. Introduced by #541.
 
+### `<app-settings-stack>`
+
+The vertical rhythm of one settings or admin page: a flex column that stacks the
+page's groups with the one canonical gap. It is the template root of every
+settings and admin route component, and it takes no inputs.
+
+```html
+<app-settings-stack>
+  <app-settings-group …>…</app-settings-group>
+  <app-settings-group …>…</app-settings-group>
+</app-settings-stack>
+```
+
+**Why a container and not an adjacent-sibling rule.** The gap it replaces was
+`app-settings-card + app-settings-card` in `src/styles/_base.scss`. A sibling
+selector cannot cross a component host boundary, so the moment one card was
+rendered from inside another component the gap vanished and the child carried a
+compensating `margin-block-start` (#454). A stack's children are flex items, so
+a child that is another component's host element is spaced identically to a
+group written inline. **A section must never carry spacing to sit correctly in a
+stack** — if it seems to need one, the stack is missing, not the margin.
+
+`min-width: 0` on the host keeps a wide descendant (a scrolling table, the #409
+run-history grid) from widening the page instead of scrolling inside its own
+container.
+
 ### `<app-settings-group>`
 
 One grouped-settings section: a header (a tinted icon chip, a title and an
