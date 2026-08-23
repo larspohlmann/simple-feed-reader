@@ -70,9 +70,12 @@ describe('AccountSectionComponent', () => {
     const f = mount(user);
     const el = f.nativeElement as HTMLElement;
     expect(el.textContent).toContain('me@x');
-    // The sign-out button carries no class hook of its own -- it is the first
-    // action in the first (account) settings group's `.actions` block.
-    (el.querySelector('.actions button') as HTMLButtonElement).click();
+    // The sign-out button carries no class hook of its own, so it is found by
+    // its own label rather than by DOM position among the two `.actions`
+    // blocks (account and danger zone both have one).
+    const buttons = Array.from(el.querySelectorAll('button'));
+    const signOut = buttons.find((button) => button.textContent?.includes('Sign out'));
+    (signOut as HTMLButtonElement).click();
     expect(logoutSpy).toHaveBeenCalled();
   });
 

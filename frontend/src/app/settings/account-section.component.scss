@@ -1,17 +1,27 @@
 // Layout glue only. The `.grid` definition list, the `.signout` wrapper and the
 // `.danger-zone` block are gone: those were a card's internal layout, and the
 // row and the second group carry it now.
+// `.who` is not an `app-settings-row`, and rows are what draw the panel's
+// dividers -- so this block draws its own. It mirrors the row's technique
+// exactly (a pseudo-element inset from the left, flush right) rather than a
+// box-model border, because a full-width line stacked above the row's inset
+// one would put two different hairline shapes in the same panel.
 .who {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-4) var(--space-5);
   min-width: 0;
+}
 
-  // `.who` is not a row, so it draws no divider of its own; without this it
-  // reads as fused to the member-since row that follows, which does draw one
-  // below itself. Matching hairline above and below keeps the rhythm even.
-  border-bottom: 1px solid var(--border);
+.who::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: var(--space-5);
+  border-top: 1px solid var(--border);
 }
 
 .who-email {
