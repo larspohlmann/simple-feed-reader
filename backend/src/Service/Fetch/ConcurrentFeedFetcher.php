@@ -7,6 +7,7 @@ namespace App\Service\Fetch;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Proxy\Crypto\Exception\ProxyPasswordUnreadableException;
 use Symfony\Contracts\HttpClient\ChunkInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -30,6 +31,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
         private readonly int $concurrency,
         private readonly string $userAgent,
         private readonly ProxyEgressResolver $proxyEgressResolver,
+        private readonly FetchRetryPolicy $retryPolicy,
     ) {
         // A cap below one opens no requests at all, and the engine would report
         // an empty run as a clean one: the sweep's `remaining` never decrements
@@ -43,20 +45,25 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
     }
 
     /**
-     * The inspection only recognises a bare `yield`. This method delegates
-     * exclusively through `yield from`, which makes it a generator just the
-     * same, so the hint is wrong here.
-     *
-     * @noinspection PhpInconsistentReturnPointsInspection
-     *
      * @param iterable<int|string, FetchTicket> $tickets
      *
      * @return \Generator<int|string, FetchOutcome>
      */
     public function fetchAll(iterable $tickets): \Generator
     {
-        $batchProxy = $this->proxyEgressResolver->resolve();
-        $queue = new FetchQueue($this->iterator($tickets, $batchProxy));
+        try {
+            $batchProxy = $this->proxyEgressResolver->resolve();
+        } catch (ProxyPasswordUnreadableException $e) {
+            // The proxy is enabled but its stored password cannot be opened, so
+            // no feed in this batch can be reached. Report that per feed instead
+            // of letting it escape: the sweep's `remaining` only decrements on a
+            // yielded outcome, so an abort here would strand the whole run.
+            yield from $this->failEvery($tickets, $e);
+
+            return;
+        }
+
+        $queue = new FetchQueue($this->iterator($tickets), $batchProxy);
         /** @var \SplObjectStorage<ResponseInterface, FetchAttempt> $inFlight */
         $inFlight = new \SplObjectStorage();
 
@@ -95,7 +102,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
             try {
                 $inFlight[$this->send($attempt)] = $attempt;
             } catch (FetchException $e) {
-                $fallback = $this->fallbackFor($attempt);
+                $fallback = $this->retryPolicy->directFallbackFor($attempt);
                 if (null !== $fallback) {
                     $queue->requeue($fallback);
                     continue;
@@ -126,12 +133,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
             } catch (FetchException $e) {
                 $this->retire($inFlight, $response);
 
-                // A still-proxied attempt (directFallback off, so no fallback
-                // applies) must not fall through to a cross-family retry: that
-                // would re-send the same proxied request per address family,
-                // when the spec requires the failure to be terminal instead.
-                $requeue = $this->fallbackFor($attempt)
-                    ?? ($attempt->isProxied() ? null : $this->overNextFamily($attempt, $e));
+                $requeue = $this->retryPolicy->nextAttemptAfter($attempt, $e);
                 if (null !== $requeue) {
                     $queue->requeue($requeue);
 
@@ -227,10 +229,10 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
         $response->cancel();
     }
 
-    /** @throws FetchException when a direct URL fails the SSRF guard */
+    /** @throws FetchException when the URL fails the SSRF guard */
     private function send(FetchAttempt $attempt): ResponseInterface
     {
-        $proxy = $attempt->effectiveProxy();
+        $proxy = $attempt->proxy;
 
         // The host guard runs on both paths; only the IP pin is proxy-incompatible.
         $guarded = $this->urlGuard->assertSafe($attempt->url);
@@ -253,56 +255,6 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
         } catch (ExceptionInterface $e) {
             throw FetchException::from($attempt->url, $e);
         }
-    }
-
-    /** The one direct fallback for a proxied attempt, or null when none applies. */
-    private function fallbackFor(FetchAttempt $attempt): ?FetchAttempt
-    {
-        $proxy = $attempt->effectiveProxy();
-
-        return null !== $proxy && $proxy->directFallback ? $attempt->withoutProxy() : null;
-    }
-
-    /**
-     * The same attempt pinned to the next address family, or null when a
-     * different family cannot help (see warrantsAnotherFamily). A single-family
-     * host has nothing left to try, so the guard's attempt list bounds the retry.
-     */
-    private function overNextFamily(FetchAttempt $attempt, FetchException $failure): ?FetchAttempt
-    {
-        if (!$this->warrantsAnotherFamily($failure)) {
-            return null;
-        }
-
-        try {
-            $familyCount = \count($this->urlGuard->assertSafe($attempt->url)->pinnedAddressAttempts());
-        } catch (FetchException) {
-            return null;
-        }
-
-        return $attempt->pinnedAddressAttempt + 1 < $familyCount
-            ? $attempt->overNextPinnedAddress()
-            : null;
-    }
-
-    /**
-     * Whether this failure could clear on a different address family. An error
-     * status (any non-2xx the classifier raised — a 4xx/5xx, or the 410/429 it
-     * singles out) can be tied to the source address, so the other family is
-     * worth a try. With no status it is a transport failure: a dead-route reset
-     * qualifies, a timeout does not. An oversized body would repeat on any family.
-     */
-    private function warrantsAnotherFamily(FetchException $failure): bool
-    {
-        if ($failure instanceof ResponseTooLargeException) {
-            return false;
-        }
-
-        if ($failure instanceof FeedUnreachableException && null === $failure->statusCode) {
-            return CrossFamilyFailover::isWarranted($failure->getPrevious());
-        }
-
-        return true;
     }
 
     /** @return array<string, string> */
@@ -335,10 +287,27 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
      *
      * @return \Iterator<int|string, FetchTicket>
      */
-    private function iterator(iterable $tickets, ?ProxyConfig $batchProxy): \Iterator
+    private function iterator(iterable $tickets): \Iterator
+    {
+        yield from $tickets;
+    }
+
+    /**
+     * Every ticket in the batch, failed with the same cause. Used when the
+     * egress cannot be resolved at all, which is a property of the run rather
+     * than of any one feed.
+     *
+     * @param iterable<int|string, FetchTicket> $tickets
+     *
+     * @return \Generator<int|string, FetchOutcome>
+     */
+    private function failEvery(iterable $tickets, \Throwable $cause): \Generator
     {
         foreach ($tickets as $key => $ticket) {
-            yield $key => null === $batchProxy ? $ticket : $ticket->withProxy($batchProxy);
+            yield $key => FetchOutcome::failed(new FeedUnreachableException(
+                sprintf('%s: the instance egress proxy is unusable: %s', $ticket->url, $cause->getMessage()),
+                previous: $cause,
+            ));
         }
     }
 }

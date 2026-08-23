@@ -8,11 +8,13 @@ use App\Enum\ProxyType;
 use App\Service\Fetch\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\FetchTicket;
+use App\Service\Fetch\FetchRetryPolicy;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\ProxyConfig;
 use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
+use App\Service\Proxy\Crypto\Exception\ProxyPasswordUnreadableException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -29,7 +31,28 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
         ?ProxyConfig $resolvedProxy,
         array $dnsOverrides = [],
     ): ConcurrentFeedFetcher {
-        $resolver = new class ($dnsOverrides) implements DnsResolverInterface {
+        $resolver = $this->dns($dnsOverrides);
+
+        $proxyEgressResolver = $this->createMock(ProxyEgressResolver::class);
+        $proxyEgressResolver->method('resolve')->willReturn($resolvedProxy);
+
+        $urlGuard = new UrlGuard($resolver, new IpValidator());
+
+        return new ConcurrentFeedFetcher(
+            new MockHttpClient($responses),
+            $urlGuard,
+            new ResponseClassifier(new MockClock()),
+            4,
+            'TestAgent/1.0',
+            $proxyEgressResolver,
+            new FetchRetryPolicy($urlGuard),
+        );
+    }
+
+    /** @param array<string, list<string>> $dnsOverrides */
+    private function dns(array $dnsOverrides = []): DnsResolverInterface
+    {
+        return new class ($dnsOverrides) implements DnsResolverInterface {
             /** @param array<string, list<string>> $overrides */
             public function __construct(private readonly array $overrides)
             {
@@ -40,18 +63,6 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
                 return $this->overrides[$hostname] ?? ['93.184.216.34'];
             }
         };
-
-        $proxyEgressResolver = $this->createMock(ProxyEgressResolver::class);
-        $proxyEgressResolver->method('resolve')->willReturn($resolvedProxy);
-
-        return new ConcurrentFeedFetcher(
-            new MockHttpClient($responses),
-            new UrlGuard($resolver, new IpValidator()),
-            new ResponseClassifier(new MockClock()),
-            4,
-            'TestAgent/1.0',
-            $proxyEgressResolver,
-        );
     }
 
     /**
@@ -67,6 +78,46 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
         }
 
         return $collected;
+    }
+
+    /**
+     * The sweep's `remaining` only decrements on a yielded outcome, so letting
+     * the resolver's failure escape would strand the whole run rather than
+     * report it. Every feed comes back failed instead.
+     */
+    public function testAnUnreadableProxyPasswordFailsEveryFeedInsteadOfAbortingTheSweep(): void
+    {
+        $seen = [];
+        $client = new MockHttpClient(function (string $m, string $u, array $o) use (&$seen): MockResponse {
+            $seen[] = $u;
+
+            return new MockResponse('ok');
+        });
+        $proxyEgressResolver = $this->createMock(ProxyEgressResolver::class);
+        $proxyEgressResolver->method('resolve')->willThrowException(
+            new ProxyPasswordUnreadableException('The stored proxy password failed its integrity check.'),
+        );
+        $urlGuard = new UrlGuard($this->dns(), new IpValidator());
+        $fetcher = new ConcurrentFeedFetcher(
+            $client,
+            $urlGuard,
+            new ResponseClassifier(new MockClock()),
+            4,
+            'TestAgent/1.0',
+            $proxyEgressResolver,
+            new FetchRetryPolicy($urlGuard),
+        );
+
+        $outcomes = $this->collect($fetcher->fetchAll([
+            7 => new FetchTicket('https://one.example/feed'),
+            9 => new FetchTicket('https://two.example/feed'),
+        ]));
+
+        self::assertSame([7, 9], array_keys($outcomes));
+        foreach ($outcomes as $outcome) {
+            self::assertNotNull($outcome->failure());
+        }
+        self::assertSame([], $seen, 'nothing may go out while the egress is unusable');
     }
 
     public function testEnabledResolverProxiesPlainTickets(): void

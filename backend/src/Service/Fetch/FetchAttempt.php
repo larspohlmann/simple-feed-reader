@@ -25,13 +25,13 @@ final readonly class FetchAttempt
         public bool $permanentRedirect,
         private int $hop,
         public int $pinnedAddressAttempt = 0,
-        private bool $proxyStripped = false,
+        public ?ProxyConfig $proxy = null,
     ) {
     }
 
-    public static function start(int|string $key, FetchTicket $ticket): self
+    public static function start(int|string $key, FetchTicket $ticket, ?ProxyConfig $proxy = null): self
     {
-        return new self($key, $ticket, $ticket->url, false, 0);
+        return new self($key, $ticket, $ticket->url, false, 0, proxy: $proxy);
     }
 
     public function canFollowRedirect(): bool
@@ -48,7 +48,7 @@ final readonly class FetchAttempt
             $this->permanentRedirect || $permanent,
             $this->hop + 1,
             // A redirect lands on a fresh host, so the address pins start over.
-            proxyStripped: $this->proxyStripped,
+            proxy: $this->proxy,
         );
     }
 
@@ -68,23 +68,18 @@ final readonly class FetchAttempt
             $this->permanentRedirect,
             $this->hop,
             $this->pinnedAddressAttempt + 1,
-            $this->proxyStripped,
+            $this->proxy,
         );
-    }
-
-    public function effectiveProxy(): ?ProxyConfig
-    {
-        return $this->proxyStripped ? null : $this->ticket->proxy;
     }
 
     public function isProxied(): bool
     {
-        return null !== $this->effectiveProxy();
+        return null !== $this->proxy;
     }
 
     /** The single direct fallback for a proxied attempt: same URL, proxy dropped. */
     public function withoutProxy(): self
     {
-        return new self($this->key, $this->ticket, $this->url, $this->permanentRedirect, $this->hop, 0, true);
+        return new self($this->key, $this->ticket, $this->url, $this->permanentRedirect, $this->hop);
     }
 }

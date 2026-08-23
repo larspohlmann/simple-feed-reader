@@ -60,24 +60,24 @@ final class FetchAttemptTest extends TestCase
         self::assertFalse($attempt->canFollowRedirect());
     }
 
-    public function testProxiedTicketMakesTheAttemptProxied(): void
+    public function testTheBatchProxyMakesTheAttemptProxied(): void
     {
         $proxy = new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null);
-        $attempt = FetchAttempt::start(1, new FetchTicket('https://feed.example', proxy: $proxy));
+        $attempt = FetchAttempt::start(1, new FetchTicket('https://feed.example'), $proxy);
 
         self::assertTrue($attempt->isProxied());
-        self::assertSame($proxy, $attempt->effectiveProxy());
+        self::assertSame($proxy, $attempt->proxy);
     }
 
     public function testWithoutProxyStripsTheEgressOnce(): void
     {
         $proxy = new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null);
-        $attempt = FetchAttempt::start(1, new FetchTicket('https://feed.example', proxy: $proxy));
+        $attempt = FetchAttempt::start(1, new FetchTicket('https://feed.example'), $proxy);
 
         $direct = $attempt->withoutProxy();
 
         self::assertFalse($direct->isProxied());
-        self::assertNull($direct->effectiveProxy());
+        self::assertNull($direct->proxy);
         self::assertSame('https://feed.example', $direct->url);
         // A redirect lands on a fresh host, so the pin restarts at the first address.
         self::assertSame(0, $direct->pinnedAddressAttempt);
@@ -90,13 +90,14 @@ final class FetchAttemptTest extends TestCase
         self::assertFalse($attempt->isProxied());
     }
 
-    public function testWithProxyEnrichesAPlainTicket(): void
+    public function testTheProxySurvivesARedirectAndAFamilyRetry(): void
     {
         $proxy = new ProxyConfig(ProxyType::Http, 'p', 8080, null, null);
-        $ticket = (new FetchTicket('https://feed.example', 'etag', 'lm'))->withProxy($proxy);
+        $attempt = FetchAttempt::start(1, new FetchTicket('https://feed.example', 'etag', 'lm'), $proxy);
 
-        self::assertSame($proxy, $ticket->proxy);
-        self::assertSame('etag', $ticket->etag);
-        self::assertSame('lm', $ticket->lastModified);
+        $redirected = $attempt->followedTo('https://feed.example/moved', permanent: true);
+        self::assertSame($proxy, $redirected->proxy);
+
+        self::assertSame($proxy, $redirected->overNextPinnedAddress()->proxy);
     }
 }

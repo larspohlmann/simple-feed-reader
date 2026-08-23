@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch;
 
+use App\Enum\ProxyType;
 use App\Service\Fetch\FetchQueue;
 use App\Service\Fetch\FetchTicket;
+use App\Service\Fetch\ProxyConfig;
 use PHPUnit\Framework\TestCase;
 
 final class FetchQueueTest extends TestCase
@@ -116,5 +118,24 @@ final class FetchQueueTest extends TestCase
         // Only the first yield has run: pulling one ticket must not resume the
         // generator body up to the second yield's deadline check.
         self::assertSame([1], $resumptions);
+    }
+
+    public function testStampsTheBatchProxyOnToEveryAttemptItStarts(): void
+    {
+        $proxy = new ProxyConfig(ProxyType::Socks5, 'proxy.example.com', 1080, null, null);
+        $queue = new FetchQueue(new \ArrayIterator([
+            11 => new FetchTicket('https://one.example.com/feed'),
+            22 => new FetchTicket('https://two.example.com/feed'),
+        ]), $proxy);
+
+        self::assertSame($proxy, $queue->next()->proxy);
+        self::assertSame($proxy, $queue->next()->proxy);
+    }
+
+    public function testStartsDirectAttemptsWhenNoProxyIsResolved(): void
+    {
+        $queue = $this->queue([11 => new FetchTicket('https://one.example.com/feed')]);
+
+        self::assertNull($queue->next()->proxy);
     }
 }
