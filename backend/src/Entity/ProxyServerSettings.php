@@ -37,8 +37,10 @@ class ProxyServerSettings
     #[ORM\Column(length: 255)]
     private string $host = '';
 
+    // The SOCKS5 default, so a fresh instance and the "no row yet" payload
+    // agree on what an unconfigured proxy looks like.
     #[ORM\Column]
-    private int $port = 0;
+    private int $port = ProxyConnection::DEFAULT_PORT;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $username = null;
@@ -110,7 +112,7 @@ class ProxyServerSettings
 
     public function apply(ProxyConnection $connection, SealedProxyPassword $sealed, string $passwordHint): void
     {
-        $this->applyConnection($connection);
+        $this->applyWithoutPassword($connection);
         $this->passwordCiphertext = $sealed->ciphertext;
         $this->passwordNonce = $sealed->nonce;
         $this->passwordSalt = $sealed->salt;
@@ -119,11 +121,6 @@ class ProxyServerSettings
     }
 
     public function applyWithoutPassword(ProxyConnection $connection): void
-    {
-        $this->applyConnection($connection);
-    }
-
-    private function applyConnection(ProxyConnection $connection): void
     {
         $this->enabled = $connection->enabled;
         $this->directFallback = $connection->directFallback;

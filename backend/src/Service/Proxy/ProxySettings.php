@@ -63,7 +63,10 @@ readonly class ProxySettings
             $settings->apply(
                 $connection,
                 $this->cipher->seal($request->password),
-                substr($request->password, -self::HINT_LENGTH),
+                // Cut on characters, not bytes: substr() would split a
+                // multibyte password mid-codepoint and store a hint that no
+                // JSON response can encode.
+                mb_substr($request->password, -self::HINT_LENGTH),
             );
         }
 
@@ -73,8 +76,24 @@ readonly class ProxySettings
     /** The stored connection regardless of the enable switch — the tester probes this. */
     public function configuredProxy(): ?ProxyConfig
     {
+        return $this->proxyFrom($this->repository->findSingleton());
+    }
+
+    /** The connection only when it is turned on — the fetch paths resolve this. */
+    public function egressProxy(): ?ProxyConfig
+    {
         $settings = $this->repository->findSingleton();
 
+        return null !== $settings && $settings->isEnabled() ? $this->proxyFrom($settings) : null;
+    }
+
+    /**
+     * Built from a row already in hand, so a caller that had to load the row to
+     * read the enable switch does not pay for a second lookup and a second
+     * password decryption to reach the same connection.
+     */
+    private function proxyFrom(?ProxyServerSettings $settings): ?ProxyConfig
+    {
         if (null === $settings || '' === $settings->getHost()) {
             return null;
         }
@@ -87,14 +106,6 @@ readonly class ProxySettings
             $settings->hasPassword() ? $this->cipher->open($settings->getSealedPassword()) : null,
             $settings->isDirectFallback(),
         );
-    }
-
-    /** The connection only when it is turned on — the fetch paths resolve this. */
-    public function egressProxy(): ?ProxyConfig
-    {
-        $settings = $this->repository->findSingleton();
-
-        return null !== $settings && $settings->isEnabled() ? $this->configuredProxy() : null;
     }
 
     private function connectionFrom(ProxySettingsRequest $request): ProxyConnection

@@ -5,19 +5,16 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Admin;
 
 use App\Entity\User;
-use App\Tests\Support\UserFactory;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Tests\Support\ApiTestCase;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
  * `/api/admin/proxy` is covered by the existing `^/api/admin/` ROLE_ADMIN
  * prefix rule in security.yaml — no new access_control entry needed, confirmed
  * by reading it before writing this test (see AdminSettingsControllerTest).
  */
-final class AdminProxyControllerTest extends WebTestCase
+final class AdminProxyControllerTest extends ApiTestCase
 {
     private const string PROXY = '/api/admin/proxy';
 
@@ -28,16 +25,6 @@ final class AdminProxyControllerTest extends WebTestCase
         parent::setUp();
 
         $this->client = self::createClient();
-    }
-
-    private function factory(): UserFactory
-    {
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-
-        return new UserFactory($em, $hasher);
     }
 
     private function tokenFor(User $user): string
@@ -51,16 +38,6 @@ final class AdminProxyControllerTest extends WebTestCase
     private function admin(string $email = 'boss@example.com'): User
     {
         return $this->factory()->create($email, roles: ['ROLE_ADMIN']);
-    }
-
-    /** @return array<string, mixed> */
-    private function payload(): array
-    {
-        $decoded = json_decode((string) $this->client->getResponse()->getContent(), true);
-        self::assertIsArray($decoded);
-
-        /** @var array<string, mixed> $decoded */
-        return $decoded;
     }
 
     /** @param array<string, mixed> $body */
@@ -119,7 +96,7 @@ final class AdminProxyControllerTest extends WebTestCase
         );
 
         self::assertResponseIsSuccessful();
-        $body = $this->payload();
+        $body = $this->payload($this->client);
         self::assertTrue($body['hasPassword']);
         self::assertSame('fish', $body['passwordHint']);
         self::assertArrayNotHasKey('password', $body);
@@ -149,7 +126,7 @@ final class AdminProxyControllerTest extends WebTestCase
         ]);
         self::assertResponseIsSuccessful();
 
-        $body = $this->payload();
+        $body = $this->payload($this->client);
         self::assertTrue($body['hasPassword']);
         self::assertSame('fish', $body['passwordHint']);
     }
@@ -165,7 +142,7 @@ final class AdminProxyControllerTest extends WebTestCase
         );
 
         self::assertResponseIsSuccessful();
-        $body = $this->payload();
+        $body = $this->payload($this->client);
         self::assertFalse($body['ok']);
     }
 }

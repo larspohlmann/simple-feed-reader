@@ -26,18 +26,10 @@ final readonly class ProxySettingsJson
      */
     public static function from(?ProxyServerSettings $settings): array
     {
-        if (null === $settings) {
-            return [
-                'enabled' => false,
-                'directFallback' => true,
-                'type' => 'SOCKS5',
-                'host' => '',
-                'port' => 1080,
-                'username' => null,
-                'hasPassword' => false,
-                'passwordHint' => '',
-            ];
-        }
+        // No row yet means "not configured", which is exactly what a fresh
+        // entity describes — so the defaults are read from the one place that
+        // declares them rather than restated here.
+        $settings ??= new ProxyServerSettings();
 
         return [
             'enabled' => $settings->isEnabled(),

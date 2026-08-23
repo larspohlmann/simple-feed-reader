@@ -13,6 +13,13 @@ use App\Enum\ProxyType;
  */
 final readonly class ProxyConnection
 {
+    /**
+     * The SOCKS5 well-known port. The one definition the entity default, the
+     * request DTO and the "not configured yet" payload all read, so a fresh
+     * instance cannot describe itself three different ways.
+     */
+    public const int DEFAULT_PORT = 1080;
+
     public function __construct(
         public bool $enabled,
         public bool $directFallback,

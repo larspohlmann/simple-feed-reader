@@ -43,6 +43,33 @@ final class ProxySettingsTest extends TestCase
         self::assertArrayNotHasKey('password', $view);
     }
 
+    /**
+     * A byte-wise substr() would cut a multibyte password mid-codepoint, and the
+     * malformed hint that produced could not be JSON-encoded — so the row saved
+     * but every later GET of the admin payload threw on it.
+     */
+    public function testAMultibytePasswordYieldsAHintThatSurvivesJsonEncoding(): void
+    {
+        $settings = $this->service($stored);
+
+        $settings->update(new ProxySettingsRequest(
+            enabled: true,
+            directFallback: true,
+            type: 'SOCKS5',
+            host: 'proxy.example',
+            port: 1080,
+            username: null,
+            password: 'a😀b',
+        ));
+
+        $view = $settings->view();
+        self::assertSame('a😀b', $view['passwordHint']);
+        self::assertTrue(mb_check_encoding($view['passwordHint'], 'UTF-8'));
+        // The original defect: json_encode() returned false on the malformed
+        // hint, so JsonResponse threw and the admin payload could not be sent.
+        self::assertNotFalse(json_encode($view));
+    }
+
     public function testBlankPasswordKeepsTheStoredSecret(): void
     {
         $settings = $this->service($stored);

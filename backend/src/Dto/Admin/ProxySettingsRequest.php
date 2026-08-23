@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Dto\Admin;
 
+use App\Enum\ProxyType;
+use App\Service\Proxy\ProxyConnection;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -20,13 +22,13 @@ final readonly class ProxySettingsRequest
         public bool $enabled = false,
         #[Assert\Type('bool')]
         public bool $directFallback = true,
-        #[Assert\Choice(choices: ['SOCKS5', 'HTTP'])]
-        public string $type = 'SOCKS5',
+        #[Assert\Choice(choices: [ProxyType::Socks5->value, ProxyType::Http->value])]
+        public string $type = ProxyType::Socks5->value,
         #[Assert\NotBlank]
         #[Assert\Length(max: 255)]
         public string $host = '',
         #[Assert\Range(min: 1, max: 65535)]
-        public int $port = 1080,
+        public int $port = ProxyConnection::DEFAULT_PORT,
         #[Assert\Length(max: 255)]
         public ?string $username = null,
         #[Assert\Length(max: 512)]
