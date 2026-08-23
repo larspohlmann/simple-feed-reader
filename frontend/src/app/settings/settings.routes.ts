@@ -1,6 +1,7 @@
 // src/app/settings/settings.routes.ts
 import { Routes } from '@angular/router';
 import { adminGuard } from '../core/admin.guard';
+import { sectionLabelKey } from './settings-sections';
 
 /** Children of /settings. Every section is lazy; the admin pair repeats the
  *  adminGuard because the parent authGuard only proves a session, not a role. */
@@ -15,51 +16,61 @@ export const SETTINGS_ROUTES: Routes = [
       },
       {
         path: 'tags',
+        title: sectionLabelKey('tags'),
         loadComponent: () => import('./tags-section.component').then((m) => m.TagsSectionComponent),
       },
       {
         path: 'import',
+        title: sectionLabelKey('import'),
         loadComponent: () => import('./opml-section.component').then((m) => m.OpmlSectionComponent),
       },
       {
         path: 'preferences',
+        title: sectionLabelKey('preferences'),
         loadComponent: () =>
           import('./preferences-section.component').then((m) => m.PreferencesSectionComponent),
       },
       {
         path: 'account',
+        title: sectionLabelKey('account'),
         loadComponent: () =>
           import('./account-section.component').then((m) => m.AccountSectionComponent),
       },
       {
         path: 'ai',
+        title: sectionLabelKey('ai'),
         loadComponent: () => import('./ai-section.component').then((m) => m.AiSectionComponent),
       },
       {
         path: 'about',
+        title: sectionLabelKey('about'),
         loadComponent: () =>
           import('./about-section.component').then((m) => m.AboutSectionComponent),
       },
       {
         path: 'admin/users',
+        title: sectionLabelKey('admin/users'),
         canActivate: [adminGuard],
         loadComponent: () =>
           import('../admin/admin-users.component').then((m) => m.AdminUsersComponent),
       },
       {
         path: 'admin/users/:id',
+        title: 'admin.detail.title',
         canActivate: [adminGuard],
         loadComponent: () =>
           import('../admin/admin-user-detail.component').then((m) => m.AdminUserDetailComponent),
       },
       {
         path: 'admin/catalog',
+        title: sectionLabelKey('admin/catalog'),
         canActivate: [adminGuard],
         loadComponent: () =>
           import('../admin/admin-catalog.component').then((m) => m.AdminCatalogComponent),
       },
       {
         path: 'admin/settings',
+        title: sectionLabelKey('admin/settings'),
         canActivate: [adminGuard],
         loadComponent: () =>
           import('./admin/admin-settings/admin-settings.component').then(
@@ -68,6 +79,7 @@ export const SETTINGS_ROUTES: Routes = [
       },
       {
         path: 'admin/proxy',
+        title: sectionLabelKey('admin/proxy'),
         canActivate: [adminGuard],
         loadComponent: () =>
           import('./admin/proxy/proxy-section.component').then((m) => m.ProxySectionComponent),

@@ -1,4 +1,4 @@
-import { SETTINGS_SECTIONS } from './settings-sections';
+import { SETTINGS_SECTIONS, SettingsSectionPath, sectionLabelKey } from './settings-sections';
 
 describe('SETTINGS_SECTIONS', () => {
   it('has unique paths', () => {
@@ -17,5 +17,11 @@ describe('SETTINGS_SECTIONS', () => {
       expect(s.icon).not.toBe('');
       expect(s.labelKey).toMatch(/^\w+\./);
     }
+  });
+
+  it('rejects a path no section owns rather than titling a page with nothing', () => {
+    // The parameter type keeps a caller from asking in the first place; the
+    // cast is how a spec reaches the guard behind it.
+    expect(() => sectionLabelKey('admin/nowhere' as SettingsSectionPath)).toThrow();
   });
 });

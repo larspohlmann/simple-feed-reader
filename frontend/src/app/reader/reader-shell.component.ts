@@ -15,8 +15,8 @@ import {
 import { ActivatedRoute, Router, RouterLink, convertToParamMap } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Dialog } from '@angular/cdk/dialog';
-import { Title } from '@angular/platform-browser';
 import { AuthService } from '../core/auth.service';
+import { PageTitleService } from '../core/page-title.service';
 import { LanguageService } from '../core/language.service';
 import { ReaderApi } from './reader-api';
 import { SubscriptionsStore } from './subscriptions.store';
@@ -109,13 +109,12 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly screen = inject(LayoutService);
   private readonly skip = inject(OnboardingSkip);
   private readonly catalog = inject(CatalogStore);
-  private readonly titleService = inject(Title);
+  private readonly pageTitle = inject(PageTitleService);
   /** Injected for its effect: it watches navigations so that a clicked list
    *  starts at the top while a list returned to keeps its place (#286). The
    *  reader is the only place that imports it, which is what keeps it out of
    *  the initial bundle. */
   private readonly listScrollReset = inject(ListScrollReset);
-  private readonly baseTitle = 'simple feed reader';
 
   /** Is the picker worth showing at all? Nothing seeds the catalog — it arrives
    *  by admin import — so a deployment without one must not redirect anybody
@@ -395,18 +394,12 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       });
     });
 
-    // Set the document title to reflect the current selection or open article.
+    // Name the tab after the open article, or after the list when none is open.
+    // The reader route carries no title of its own, so this is the only writer
+    // while the reader is on screen.
     effect(() => {
       const entry = this.openEntry();
-      const name = this.title();
-      const page = entry
-        ? entry.title.length > 60
-          ? entry.title.slice(0, 60) + '…'
-          : entry.title
-        : name;
-      this.titleService.setTitle(
-        page === this.baseTitle ? this.baseTitle : `${page} | ${this.baseTitle}`,
-      );
+      this.pageTitle.useText(entry ? entry.title : this.title());
     });
 
     // Nothing to read and nothing skipped: send the user to the picker. Purely
