@@ -12,6 +12,7 @@ use App\Service\Backup\Exception\BackupLoadFailedException;
 use App\Service\Backup\RestoreEntryLoader;
 use App\Service\Backup\RestoreLoadPass;
 use App\Service\Search\EntryIndexer;
+use App\Service\Url\UrlNormalizer;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception as DbalException;
@@ -66,7 +67,7 @@ final class RestoreLoadPassTest extends TestCase
         return new RestoreEntryLoader(
             $em,
             $this->createStub(EntryRepository::class),
-            new EntryBatchInserter($this->createStub(Connection::class)),
+            new EntryBatchInserter($this->createStub(Connection::class), new UrlNormalizer()),
             new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
             new MockClock('2026-08-01 00:00:00', 'UTC'),
         );

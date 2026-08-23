@@ -12,13 +12,29 @@ use App\Tests\DbTestCase;
 
 final class EntryBatchInserterTest extends DbTestCase
 {
-    private static function line(string $guid, string $title): EntryLine
+    /**
+     * Sentinel default for entryLine()'s $url: distinguishes "not given"
+     * (generate one from the guid) from an explicit `null`, which `??`
+     * cannot do.
+     */
+    private const string GENERATED_URL = "\0generated";
+
+    private function createFeed(string $url): int
+    {
+        $feed = new Feed($url);
+        $this->em->persist($feed);
+        $this->em->flush();
+
+        return (int) $feed->getId();
+    }
+
+    private function entryLine(string $guid, string $title = 'Entry', ?string $url = self::GENERATED_URL): EntryLine
     {
         return new EntryLine(
             feedUrl: 'https://batch.example/feed.xml',
             guid: $guid,
             guidHash: hash('sha256', $guid),
-            url: 'https://batch.example/' . $guid,
+            url: $url === self::GENERATED_URL ? 'https://batch.example/' . $guid : $url,
             title: $title,
             author: 'Ann Author',
             summary: 'sum',
@@ -32,20 +48,23 @@ final class EntryBatchInserterTest extends DbTestCase
         );
     }
 
-    public function testInsertsMoreRowsThanOneStatementHolds(): void
+    private function inserter(): EntryBatchInserter
     {
-        $feed = new Feed('https://batch.example/feed.xml');
-        $this->em->persist($feed);
-        $this->em->flush();
-        $feedId = (int) $feed->getId();
-        $lines = [];
-        for ($i = 0; $i < 501; ++$i) {
-            $lines[] = self::line('guid-' . $i, 'Entry ' . $i);
-        }
-
         $inserter = self::getContainer()->get(EntryBatchInserter::class);
         self::assertInstanceOf(EntryBatchInserter::class, $inserter);
-        $inserter->insert($feedId, $lines);
+
+        return $inserter;
+    }
+
+    public function testInsertsMoreRowsThanOneStatementHolds(): void
+    {
+        $feedId = $this->createFeed('https://batch.example/feed.xml');
+        $lines = [];
+        for ($i = 0; $i < 501; ++$i) {
+            $lines[] = $this->entryLine('guid-' . $i, 'Entry ' . $i);
+        }
+
+        $this->inserter()->insert($feedId, $lines);
 
         $this->em->clear();
         $rows = $this->em->getRepository(Entry::class)->findBy(['feed' => $feedId]);
@@ -54,13 +73,9 @@ final class EntryBatchInserterTest extends DbTestCase
 
     public function testARowRoundTripsFieldForFieldThroughTheOrm(): void
     {
-        $feed = new Feed('https://batch.example/feed.xml');
-        $this->em->persist($feed);
-        $this->em->flush();
+        $feedId = $this->createFeed('https://batch.example/feed.xml');
 
-        $inserter = self::getContainer()->get(EntryBatchInserter::class);
-        self::assertInstanceOf(EntryBatchInserter::class, $inserter);
-        $inserter->insert((int) $feed->getId(), [self::line('one-guid', 'One')]);
+        $this->inserter()->insert($feedId, [$this->entryLine('one-guid', 'One')]);
 
         $this->em->clear();
         $entry = $this->em->getRepository(Entry::class)->findOneBy(['guidHash' => hash('sha256', 'one-guid')]);
@@ -81,11 +96,29 @@ final class EntryBatchInserterTest extends DbTestCase
 
     public function testAnEmptyListDoesNothing(): void
     {
-        $inserter = self::getContainer()->get(EntryBatchInserter::class);
-        self::assertInstanceOf(EntryBatchInserter::class, $inserter);
-
-        $inserter->insert(999, []);
+        $this->inserter()->insert(999, []);
 
         $this->addToAssertionCount(1);
+    }
+
+    public function testRecomputesTheStableUrlHashForEveryInsertedRow(): void
+    {
+        $feedId = $this->createFeed('https://hash.example/feed.xml');
+        $this->inserter()->insert($feedId, [
+            $this->entryLine(guid: 'a', url: 'https://hash.example/one?utm_source=rss'),
+            $this->entryLine(guid: 'b', url: null),
+        ]);
+
+        $rows = $this->em->getConnection()->fetchAllAssociative(
+            'SELECT guid, url_hash FROM entry WHERE feed_id = ? ORDER BY guid',
+            [$feedId],
+        );
+
+        self::assertSame(
+            hash('sha256', 'https://hash.example/one'),
+            $rows[0]['url_hash'],
+            'A decorated URL must hash to its normalised form, exactly as ingest hashes it.',
+        );
+        self::assertNull($rows[1]['url_hash'], 'A url-less entry dedupes on guid alone.');
     }
 }
