@@ -925,16 +925,17 @@ know the shape of what is coming.
 
 The entry-search input. It owns every timing rule the search has, so no caller
 repeats one: a 300 ms debounce, the three-character floor, the too-short hint,
-the clear button, and `Escape`.
+the trailing clear-or-close button, and `Escape`.
 
 | Input | Type | Default |
 |---|---|---|
 | `term` | `string` | `''` — the term currently in the URL |
+| `dismissible` | `boolean` | `false` — whether this mount can be left |
 
 | Output | Type | Fires |
 |---|---|---|
 | `search` | `string` | a settled term, or `''` when cleared |
-| `escapedWhileEmpty` | `void` | `Escape` pressed while the field is already empty |
+| `dismissed` | `void` | the user asked to leave a field that was already empty |
 
 ```html
 @if (!screen.isNarrow()) {
@@ -952,9 +953,19 @@ component tracks the term already in effect and moves it from both directions �
 its own emissions and the `term` input — so a term retyped after clearing, or
 after a Back navigation, still emits.
 
-`escapedWhileEmpty` exists so the mobile bar can implement the two-step
-`Escape` (first press clears, second closes) without the field knowing a bar
-exists, or the bar reading the field's text.
+`dismissed` exists so the mobile bar can implement the two-step exit (first
+step clears, second closes) without the field knowing a bar exists, or the bar
+reading the field's text. Both steps run through one control and one contract:
+`Escape`, and the field's own trailing ✕.
+
+`dismissible` decides only whether that ✕ survives an empty field. The mobile
+bar sets it, because on a phone the ✕ is the whole exit — there is no `Escape`
+key, and the bar deliberately carries no close button of its own beside the
+field's (#550: two ✕ side by side, one clearing and one closing, read as one
+control that behaved differently depending on where it was tapped). The
+sidebar's permanent mount leaves it `false`: there, the ✕ appears with text and
+goes with it. On a coarse pointer the button's hit box grows to `--tap-target`
+while the glyph stays put.
 
 A bare `/` anywhere in the document focuses the field. It is ignored when a
 modifier is held or when the event target is an `input`, `textarea` or

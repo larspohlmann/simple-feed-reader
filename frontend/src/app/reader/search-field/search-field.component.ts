@@ -52,17 +52,32 @@ export class SearchFieldComponent {
   // Semantic "settled search term" output, not a DOM element's search event.
   // eslint-disable-next-line @angular-eslint/no-output-native
   readonly search = output<string>();
-  /** Escape pressed while the field was already empty — the second step of the
-   *  two-step Escape contract (first clears, second leaves). The field knows
-   *  nothing about what "leaves" means for its caller; it only reports that
-   *  there was nothing left to clear. */
-  readonly escapedWhileEmpty = output<void>();
+  /** Whether the trailing ✕ survives an empty field — and nothing else; the
+   *  `dismissed` output fires from Escape regardless of this flag. The mobile
+   *  header bar sets it, because there the ✕ is the whole exit: a phone has no
+   *  Escape key, and the bar deliberately carries no close button of its own
+   *  beside the field's (#550 — two ✕ side by side, one clearing and one
+   *  closing, read as one control that behaved differently depending on where
+   *  it was tapped). The sidebar's copy is permanent, has nothing to leave,
+   *  and so keeps the ✕ only while there is text to clear. */
+  readonly dismissible = input(false);
+  /** The user asked to leave the search with nothing left to clear — the
+   *  second step of the two-step contract, reached either by Escape or by the
+   *  trailing ✕ of a dismissible field. The field knows nothing about what
+   *  "leaves" means for its caller; it only reports that there was nothing
+   *  left to clear. */
+  readonly dismissed = output<void>();
 
   /** What the field currently shows — updates on every keystroke, unlike the
    *  debounced `search` output, so the too-short hint reacts immediately. */
   readonly text = signal('');
 
   readonly tooShort = computed(() => isTooShortToSearch(this.text()));
+  /** Which step of the two-step exit the field is in. One predicate for all
+   *  three readers — the trailing button's visibility, its label, and what a
+   *  click on it does — so a later change to what counts as "nothing left to
+   *  clear" cannot leave the ✕ announcing one thing and doing the other. */
+  readonly hasTextToClear = computed(() => this.text() !== '');
 
   private readonly inputEl = viewChild<ElementRef<HTMLInputElement>>('inputEl');
 
@@ -140,6 +155,16 @@ export class SearchFieldComponent {
     this.typed.next('');
   }
 
+  /** Escape and the trailing ✕ are the same two-step contract, so they run the
+   *  same code. */
+  clearOrDismiss(): void {
+    if (this.hasTextToClear()) {
+      this.clear();
+      return;
+    }
+    this.dismissed.emit();
+  }
+
   onKeydown(event: KeyboardEvent): void {
     if (event.key !== 'Escape') return;
     // Stop the key here: a caller wrapping this field in a dismiss-on-Escape
@@ -147,11 +172,7 @@ export class SearchFieldComponent {
     // would skip straight to closing instead of clearing first.
     event.preventDefault();
     event.stopPropagation();
-    if (this.text() !== '') {
-      this.clear();
-      return;
-    }
-    this.escapedWhileEmpty.emit();
+    this.clearOrDismiss();
   }
 
   private emitSettled(raw: string): void {

@@ -132,8 +132,9 @@ export class ReaderHeaderComponent {
         this.searchFieldHost()?.nativeElement.querySelector('input')?.focus();
         return;
       }
-      // A user-initiated close (Escape, the close button, an outside click)
-      // always has a trigger button back on screen to receive focus. A
+      // A user-initiated close (the field's trailing ✕, or Escape — both
+      // arrive as `dismissed`) always has a trigger button back on screen to
+      // receive focus. A
       // layout-initiated close does not: the trigger is itself narrow-gated,
       // so it is absent on exactly the wide layout this close lands on.
       // Chasing focus onto a nonexistent element would only drop it to

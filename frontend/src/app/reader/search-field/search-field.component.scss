@@ -40,7 +40,7 @@
 // whether the fix below is present, wrong, or later reverted — see
 // search-field.component.spec.ts for where that test used to live and why it
 // was removed instead of kept as a check that could not fail.
-.clear {
+.clear-or-dismiss {
   display: flex;
   align-items: center;
 
@@ -54,8 +54,23 @@
   cursor: pointer;
 }
 
-.clear:hover {
+.clear-or-dismiss:hover {
   color: var(--text-primary);
+}
+
+// On a phone this button is the only way out of the search bar (#550), so it
+// has to be a real touch target rather than a 16px glyph. The icon stays its
+// size; only the hit box grows, and the negative right margin gives it back
+// the row's own padding, so the box reaches the field edge without moving the
+// text inside it. Keyed on the pointer, not the viewport, per the design
+// language.
+@media (pointer: coarse) {
+  .clear-or-dismiss {
+    align-self: stretch;
+    justify-content: center;
+    min-width: var(--tap-target);
+    margin-right: calc(var(--space-3) * -1);
+  }
 }
 
 .hint {
