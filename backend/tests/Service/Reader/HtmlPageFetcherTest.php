@@ -7,6 +7,7 @@ namespace App\Tests\Service\Reader;
 use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
+use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\HtmlPageFetcher;
@@ -37,10 +38,18 @@ final class HtmlPageFetcherTest extends TestCase
         };
 
         return new HtmlPageFetcher(
-            new FailoverRequestSender(new MockHttpClient($responses)),
+            new FailoverRequestSender(new MockHttpClient($responses), $this->noProxyResolver()),
             new UrlGuard($resolver, new IpValidator()),
             'TestAgent/1.0',
         );
+    }
+
+    private function noProxyResolver(): ProxyEgressResolver
+    {
+        $resolver = $this->createStub(ProxyEgressResolver::class);
+        $resolver->method('resolve')->willReturn(null);
+
+        return $resolver;
     }
 
     public function testReturnsBodyAndFinalUrlOnSuccess(): void

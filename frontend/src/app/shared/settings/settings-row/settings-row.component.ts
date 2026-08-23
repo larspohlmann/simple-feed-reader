@@ -12,7 +12,10 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
  * `.row-desc` element entirely.
  *
  * `stackable` marks a row whose control (a select or number input) may take the
- * full width on a narrow viewport; a toggle keeps its natural size regardless.
+ * full width on a narrow viewport: the row wraps and the control slot widens to
+ * the full line. The control itself must be widened by the component that
+ * declares it -- projected content carries that component's style scope, not
+ * this one's -- so a stackable row alone does not stretch the field.
  *
  * The control projects into the default `<ng-content>` slot. An info-tip
  * trigger for the title projects into the named `[rowTitleTip]` slot, which

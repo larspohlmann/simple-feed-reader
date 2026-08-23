@@ -12,7 +12,9 @@ use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
 use App\Service\Fetch\FetchOutcome;
 use App\Service\Fetch\FetchTicket;
+use App\Service\Fetch\FetchRetryPolicy;
 use App\Service\Fetch\IpValidator;
+use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
 use PHPUnit\Framework\TestCase;
@@ -49,12 +51,19 @@ final class ConcurrentFeedFetcherTest extends TestCase
             }
         };
 
+        $proxyEgressResolver = $this->createMock(ProxyEgressResolver::class);
+        $proxyEgressResolver->method('resolve')->willReturn(null);
+
+        $urlGuard = new UrlGuard($resolver, new IpValidator());
+
         return new ConcurrentFeedFetcher(
             new MockHttpClient($responses),
-            new UrlGuard($resolver, new IpValidator()),
+            $urlGuard,
             new ResponseClassifier(new MockClock()),
             $concurrency,
             'TestAgent/1.0',
+            $proxyEgressResolver,
+            new FetchRetryPolicy($urlGuard),
         );
     }
 

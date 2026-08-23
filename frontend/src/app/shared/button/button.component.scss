@@ -44,6 +44,13 @@ button.primary {
   border-color: var(--accent);
 }
 
+// The accent counterpart to danger-outline: live, but not the surface's one
+// action. Used where a primary fill is already spoken for elsewhere on the card.
+button.accent-outline {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 // Filled danger confirms a destructive action -- it is the moment of
 // destruction, and it should carry the weight of one.
 button.danger {
@@ -77,6 +84,10 @@ button.default:hover:not(:disabled) {
 button.primary:hover:not(:disabled),
 button.danger:hover:not(:disabled) {
   filter: brightness(1.08);
+}
+
+button.accent-outline:hover:not(:disabled) {
+  background: var(--accent-soft);
 }
 
 button.danger-outline:hover:not(:disabled) {

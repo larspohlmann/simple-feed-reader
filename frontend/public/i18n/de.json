@@ -296,6 +296,37 @@
       "requireApproval": "Admin-Freigabe erforderlich",
       "requireApprovalHint": "Neue Konten bleiben ausstehend, bis ein Admin sie freigibt.",
       "mailDisabledHint": "Diese Instanz versendet keine E-Mails, daher kann die E-Mail-Bestätigung nicht laufen — gib Konten stattdessen manuell frei."
+    },
+    "proxy": {
+      "title": "Ausgehender Proxy",
+      "caption": "Feeds und Artikelseiten über einen SOCKS5- oder HTTP-Proxy abrufen.",
+      "enabled": "Datenverkehr über den Proxy leiten",
+      "enabledDisabledHint": "Speichere zuerst Host und Port, dann kannst du den Proxy aktivieren.",
+      "directFallback": "Bei Fehler direkt verbinden",
+      "directFallbackDesc": "Standardmäßig aktiviert — bei einem Proxy-Fehler wird der Abruf direkt wiederholt.",
+      "type": "Proxy-Typ",
+      "typeDesc": "SOCKS5 oder HTTP.",
+      "remoteDns": "DNS beim Proxy auflösen",
+      "remoteDnsDesc": "Standardmäßig aus — Hostnamen werden hier aufgelöst, dann bekommt der Proxy die Adresse.",
+      "remoteDnsHttpHint": "Ein HTTP-Proxy löst Hostnamen immer selbst auf.",
+      "host": "Host",
+      "port": "Port",
+      "username": "Benutzername",
+      "password": "Passwort",
+      "test": "Verbindung testen",
+      "testDesc": "Prüft den Proxy mit den zuletzt gespeicherten Einstellungen.",
+      "testing": "Wird getestet…",
+      "testOk": "Verbunden. Die Welt sieht {{ip}}.",
+      "testFailed": "Verbindung über den Proxy fehlgeschlagen: {{reason}}",
+      "saved": "Proxy-Einstellungen gespeichert",
+      "save": "Speichern",
+      "reset": "Zurücksetzen",
+      "unsaved": "Nicht gespeicherte Änderungen",
+      "info": {
+        "directFallback": "Standardmäßig aktiviert. Schlägt der Proxy fehl, wird der Abruf direkt wiederholt. Schalte dies aus, um deine echte Server-IP zu verbergen — ein Proxy-Fehler lässt den Abruf dann fehlschlagen, statt deine Adresse preiszugeben.",
+        "remoteDns": "Standardmäßig aus. Wenn aktiviert, bekommt der Proxy den Hostnamen und löst ihn auf. Dein DNS-Resolver sieht dann nicht, welche Feeds du abrufst, und geobeschränkte Namen werden vom Standort des Proxys aus aufgelöst. Viele SOCKS5-Proxys lösen überhaupt keine Namen auf — Private Internet Access ist einer davon — und beantworten jeden Namen mit „Host nicht erreichbar“. Lass dies aus, wenn der Verbindungstest so fehlschlägt.",
+        "piaCredentials": "Private Internet Access benötigt einen separat erzeugten Proxy-Benutzernamen und ein Proxy-Passwort — nicht deine Kontoanmeldedaten."
+      }
     }
   },
   "dialog": {

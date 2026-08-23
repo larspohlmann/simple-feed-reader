@@ -296,6 +296,37 @@
       "requireApproval": "Require admin approval",
       "requireApprovalHint": "New accounts stay pending until an admin approves them.",
       "mailDisabledHint": "This instance sends no mail, so email confirmation cannot run — approve accounts by hand instead."
+    },
+    "proxy": {
+      "title": "Egress proxy",
+      "caption": "Fetch feeds and article pages through a SOCKS5 or HTTP proxy.",
+      "enabled": "Route traffic through the proxy",
+      "enabledDisabledHint": "Save a host and port first, then you can turn the proxy on.",
+      "directFallback": "Fall back to a direct connection",
+      "directFallbackDesc": "On by default — a proxy failure retries the fetch directly.",
+      "type": "Proxy type",
+      "typeDesc": "SOCKS5 or HTTP.",
+      "remoteDns": "Resolve DNS at the proxy",
+      "remoteDnsDesc": "Off by default — host names are resolved here, then the address is given to the proxy.",
+      "remoteDnsHttpHint": "An HTTP proxy always resolves host names itself.",
+      "host": "Host",
+      "port": "Port",
+      "username": "Username",
+      "password": "Password",
+      "test": "Test connection",
+      "testDesc": "Checks the proxy with the last-saved settings.",
+      "testing": "Testing…",
+      "testOk": "Connected. The world sees {{ip}}.",
+      "testFailed": "Could not connect through the proxy: {{reason}}",
+      "saved": "Proxy settings saved",
+      "save": "Save",
+      "reset": "Reset",
+      "unsaved": "Unsaved changes",
+      "info": {
+        "directFallback": "On by default. If the proxy fails, retry the fetch directly. Turn this off to keep your real server IP hidden — a proxy failure then fails the fetch instead of revealing your address.",
+        "remoteDns": "Off by default. When on, the proxy is given the host name and resolves it, so your DNS resolver never sees which feeds you fetch and geo-restricted names resolve from the proxy’s location. Many SOCKS5 proxies do not resolve names at all — Private Internet Access is one — and answer every name with \"host unreachable\". Leave this off if the connection test fails that way.",
+        "piaCredentials": "Private Internet Access needs a separately generated proxy username and password — not your account login."
+      }
     }
   },
   "dialog": {

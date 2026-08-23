@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Fetch\Exception;
 
+use App\Service\Fetch\ProxyHandshakeFailure;
+
 abstract class FetchException extends \RuntimeException
 {
     /**
@@ -22,6 +24,12 @@ abstract class FetchException extends \RuntimeException
             }
         }
 
-        return new FeedUnreachableException(sprintf('%s: %s', $url, $previous->getMessage()), previous: $previous);
+        // A proxied sweep can fail every feed on the same handshake, so the
+        // reason is translated here rather than once at the top: the report the
+        // admin reads is built from these messages.
+        return new FeedUnreachableException(
+            sprintf('%s: %s', $url, ProxyHandshakeFailure::explain($previous->getMessage())),
+            previous: $previous,
+        );
     }
 }

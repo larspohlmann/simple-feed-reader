@@ -15,7 +15,9 @@ use App\Service\Fetch\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\FetchRetryPolicy;
 use App\Service\Fetch\IpValidator;
+use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Ingest\EntryIngestor;
@@ -151,12 +153,19 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
             }
         };
 
+        $proxyEgressResolver = $this->createMock(ProxyEgressResolver::class);
+        $proxyEgressResolver->method('resolve')->willReturn(null);
+
+        $urlGuard = new UrlGuard($resolver, new IpValidator());
+
         return new ConcurrentFeedFetcher(
             $httpClient,
-            new UrlGuard($resolver, new IpValidator()),
+            $urlGuard,
             new ResponseClassifier($this->clock),
             $concurrency,
             'TestAgent/1.0',
+            $proxyEgressResolver,
+            new FetchRetryPolicy($urlGuard),
         );
     }
 

@@ -445,7 +445,7 @@ weights.
 | Input | Type | Default |
 |---|---|---|
 | `type` | `'button' \| 'submit'` | `'button'` |
-| `variant` | `'default' \| 'primary' \| 'danger' \| 'danger-outline' \| 'ghost'` | `'default'` |
+| `variant` | `'default' \| 'primary' \| 'accent-outline' \| 'danger' \| 'danger-outline' \| 'ghost'` | `'default'` |
 | `size` | `'sm' \| 'md'` | `'md'` |
 | `loading` | `boolean` | `false` — swaps the label for a spinner and disables |
 | `disabled` | `boolean` | `false` |
@@ -456,6 +456,7 @@ weights.
 |---|---|---|
 | `default` | bordered, surface fill | the ordinary action |
 | `primary` | accent fill | the one action the surface exists for |
+| `accent-outline` | accent border, accent text | live, but not that one action — a secondary action on a card whose save bar already owns `primary` |
 | `danger` | filled danger | **confirming** a destructive action |
 | `danger-outline` | danger border, danger text | **initiating** a destructive action |
 | `ghost` | no chrome at rest | the quiet way out — Cancel, Skip |

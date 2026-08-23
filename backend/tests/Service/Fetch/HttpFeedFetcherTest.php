@@ -11,7 +11,9 @@ use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
 use App\Service\Fetch\HttpFeedFetcher;
+use App\Service\Fetch\FetchRetryPolicy;
 use App\Service\Fetch\IpValidator;
+use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
 use PHPUnit\Framework\TestCase;
@@ -41,12 +43,19 @@ final class HttpFeedFetcherTest extends TestCase
             }
         };
 
+        $proxyEgressResolver = $this->createMock(ProxyEgressResolver::class);
+        $proxyEgressResolver->method('resolve')->willReturn(null);
+
+        $urlGuard = new UrlGuard($resolver, new IpValidator());
+
         return new HttpFeedFetcher(new ConcurrentFeedFetcher(
             new MockHttpClient($responses),
-            new UrlGuard($resolver, new IpValidator()),
+            $urlGuard,
             new ResponseClassifier(new MockClock()),
             1,
             'TestAgent/1.0',
+            $proxyEgressResolver,
+            new FetchRetryPolicy($urlGuard),
         ));
     }
 

@@ -19,9 +19,17 @@ final class FetchQueue
 
     private bool $currentConsumed = false;
 
-    /** @param \Iterator<int|string, FetchTicket> $tickets */
-    public function __construct(private readonly \Iterator $tickets)
-    {
+    /**
+     * The batch proxy is a field here rather than a value copied onto every
+     * ticket: it is resolved once per run and is the same for every feed, so
+     * this is the one place that has to know it.
+     *
+     * @param \Iterator<int|string, FetchTicket> $tickets
+     */
+    public function __construct(
+        private readonly \Iterator $tickets,
+        private readonly ?ProxyConfig $batchProxy = null,
+    ) {
     }
 
     public function requeue(FetchAttempt $attempt): void
@@ -51,7 +59,7 @@ final class FetchQueue
             throw new \LogicException('next() called on an exhausted queue; guard with hasMore().');
         }
 
-        $attempt = FetchAttempt::start($this->tickets->key(), $this->tickets->current());
+        $attempt = FetchAttempt::start($this->tickets->key(), $this->tickets->current(), $this->batchProxy);
         $this->currentConsumed = true;
 
         return $attempt;

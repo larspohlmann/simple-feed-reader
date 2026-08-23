@@ -9,6 +9,7 @@ use App\Service\Catalog\Exception\FaviconUnavailableException;
 use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
+use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\UrlGuard;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -43,9 +44,17 @@ final class CatalogFaviconFetcherTest extends TestCase
         };
 
         return new CatalogFaviconFetcher(
-            new FailoverRequestSender($client),
+            new FailoverRequestSender($client, $this->noProxyResolver()),
             new UrlGuard($resolver, new IpValidator()),
         );
+    }
+
+    private function noProxyResolver(): ProxyEgressResolver
+    {
+        $resolver = $this->createStub(ProxyEgressResolver::class);
+        $resolver->method('resolve')->willReturn(null);
+
+        return $resolver;
     }
 
     public function testReturnsTheBytesAndContentTypeOfAnImageResponse(): void

@@ -1,0 +1,417 @@
+# Optional SOCKS5/HTTP proxy egress for feed fetching — design (#490)
+
+Status: approved for spec review
+Branch: `feature/490-proxy-egress`
+Milestone: v0.7.0
+
+## Summary
+
+Add an optional outbound SOCKS5/HTTP proxy for feed fetching so feeds can be
+fetched through a VPN egress (for example a Private Internet Access SOCKS5
+proxy). The proxy is configured once, instance-wide, in the admin area. A single
+global **enable/disable** switch decides whether feeds are fetched through it. A
+**Test connection** button probes the saved config through the proxy and reports
+the observed egress IP.
+
+## Scope decision (supersedes the issue text)
+
+The issue proposed a **per-subscription** "Fetch via proxy" toggle. During
+brainstorming the owner chose a **hard global master switch with no
+per-subscription toggle**. This is the governing decision:
+
+- **In scope:** the admin config surface, the global enable/disable switch, the
+  Test-connection button, and the fetch integration with a direct fallback.
+- **Dropped:** the per-subscription toggle, the `subscription.use_proxy` column,
+  and any subscription-UI change.
+
+**Resolution rule (final):** a feed is fetched through the proxy when the proxy is
+**enabled** and **configured**; otherwise it is fetched directly, exactly as
+today. There is no per-feed decision — when the switch is on, every feed fetch
+goes through the proxy.
+
+### Why a single instance-wide setting
+
+Feeds are fetched once per shared `Feed`, not per subscription
+(`Service/Refresh/BudgetedFeedQueue.php` yields one ticket per feed id; the ETag /
+Last-Modified live on the shared `Feed` row). The egress is therefore inherently
+shared, so one global switch is the correct model and removes any "whose proxy
+wins" ambiguity.
+
+## Backend design
+
+### 1. `ProxyServerSettings` singleton entity
+
+New entity `src/Entity/ProxyServerSettings.php`, table `proxy_server_settings`,
+following the `InstanceSetting` singleton shape (load-or-create, absence of the
+row means "not configured, disabled").
+
+Columns:
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | int, auto-increment | one row only; repository reads first by id asc |
+| `enabled` | bool, default `0` | the master switch |
+| `direct_fallback` | bool, default `1` | on by default; when off, a proxy failure is terminal so the real server IP never leaks |
+| `type` | string enum `SOCKS5` \| `HTTP` | egress protocol |
+| `host` | string | proxy host |
+| `port` | int | proxy port |
+| `username` | string, nullable | proxy auth user (PIA needs a generated proxy user) |
+| `password_ciphertext` | VARCHAR(1024) | sealed, base64 |
+| `password_nonce` | VARCHAR(64) | sealed, base64 |
+| `password_salt` | VARCHAR(64) | sealed, base64 |
+| `password_hint` | VARCHAR(8) | last 4 chars, cleartext, on purpose |
+| `key_version` | int, default `1` | seal key version |
+
+The sealed password reuses the `AiProviderSettings` shape exactly: four flat
+columns plus a version, flattened in a single `replaceConnection()`-style
+re-seal path and reconstituted into a `SealedApiKey` value object on read.
+
+The entity holds a single `apply(...)` mutator (no setters) and stays
+`final`. A `ProxyType` PHP enum (`SOCKS5`, `HTTP`) models `type`.
+
+### 2. Sealing the password without a user id
+
+The existing `ApiKeyCipher::binding()` embeds the owning user id
+(`"ai-api-key|v%d|user:%d"`) so a sealed row cannot be moved between accounts.
+`ProxyServerSettings` is a singleton with no user.
+
+Add a dedicated cipher for this secret rather than overloading the AI one, so the
+two secrets never share a binding namespace:
+
+- `src/Service/Proxy/Crypto/ProxyPasswordCipher.php` — same XChaCha20-Poly1305
+  AEAD via libsodium, master secret from an env var, a fixed binding string
+  (for example `"proxy-password|v%d|instance"`), `seal(string): SealedProxyPassword`
+  / `open(SealedProxyPassword): string`.
+- Reuse the `SealedApiKey` value object shape under a proxy-local name
+  (`SealedProxyPassword`) to keep the boundary types separate from the AI area.
+- Master secret env var: **reuse `AI_KEY_SECRET`** (owner-approved), the same
+  env the AI cipher reads (`#[Autowire('%env(AI_KEY_SECRET)%')]`), so no new
+  deploy secret is introduced. The distinct binding string
+  (`proxy-password|v%d|instance`) keeps the two secrets cryptographically
+  separate even under a shared master key.
+
+### 3. Admin endpoints — `AdminProxyController`
+
+New `src/Controller/Admin/AdminProxyController.php`, `final readonly`, thin.
+Route prefix `/api/admin/proxy`. Admin-guarding is automatic: `security.yaml`
+already gates `^/api/admin/` to `ROLE_ADMIN` under the stateless JWT firewall. No
+per-action attribute.
+
+- `GET /api/admin/proxy` → JSON view built by `src/Http/Admin/ProxySettingsJson.php`
+  (hand-built static factory, never auto-serialized). Returns
+  `{ enabled, directFallback, type, host, port, username, hasPassword, passwordHint }`.
+  The secret is **absent by construction**; only the 4-char hint and a
+  `hasPassword` boolean are exposed.
+- `PUT /api/admin/proxy` → full-replace via `#[MapRequestPayload]`
+  `src/Dto/Admin/ProxySettingsRequest.php` (`final readonly`, `#[Assert\...]`,
+  constructor defaults). The plaintext `password` is inbound-only, sealed
+  immediately, never re-serialized. **Blank password keeps the stored one**;
+  a present password replaces it. Re-returns the GET JSON view.
+- `POST /api/admin/proxy/test` → the Test-connection probe (below).
+
+Controllers stay thin (`ThinControllerRule`): read request, delegate to a
+service, return a response. `src/Service/Proxy/ProxySettings.php` owns the
+load-or-create + sealing (mirroring `InstanceSettings`) and exposes:
+`view(): array` (the JSON view, no secret), `update(ProxySettingsRequest)`,
+`configuredProxy(): ?ProxyConfig` (config when a host is stored, regardless of
+`enabled` — used by the tester), and `egressProxy(): ?ProxyConfig`
+(`enabled ? configuredProxy() : null` — used by `ProxyEgressResolver`). The
+password is opened only inside the two `*Proxy()` methods.
+
+### 4. Test connection probe
+
+`src/Service/Proxy/ProxyConnectionTester.php`:
+
+- Reads the **saved** config via `ProxySettings::configuredProxy(): ?ProxyConfig`
+  (opens the password) and builds the DSN through the shared `ProxyConfig::dsn()`
+  — one DSN builder for the tester and both fetch paths.
+- Fetches a fixed neutral IP-echo endpoint through the proxy with a short timeout
+  (10s), a small response cap, `max_redirects: 0`, `Accept-Encoding: identity`.
+- The echo endpoint is a **class constant**, not a config field:
+  `public const EGRESS_ECHO_URL = 'https://api.ipify.org';` (owner decision). One
+  place to change it; no user-facing field.
+- Returns a small result value object: `{ ok: true, egressIp }` or
+  `{ ok: false, reason }`. Maps a connect failure, an auth rejection, and a
+  timeout to distinct, translatable reasons.
+- Requires a saved config; if none is stored it returns a "not configured"
+  reason. It does **not** require `enabled` to be on — the admin tests before
+  flipping the switch on.
+
+`POST /api/admin/proxy/test` returns this result as JSON (`{ ok, egressIp }` or
+`{ ok:false, reason }`). Admin-only, fixed target URL, so it stays within the
+SSRF boundary spirit even though it deliberately egresses through the proxy.
+
+### 5. Fetch integration — universal egress through two builders
+
+The owner's decision: when the proxy is enabled, **every content egress** goes
+through it, with **no exceptions** — refresh, single feed fetch, discovery,
+preview, favicon resolution, the reader's full-page fetch, the catalog favicon
+bytes, and the catalog rot-check. In this codebase all content fetches funnel
+through exactly **two** low-level request builders, plus one command that uses its
+own scoped client:
+
+- `ConcurrentFeedFetcher` — the multiplexed batch fetch behind refresh, single
+  feed fetch (`HttpFeedFetcher`), discovery scrape-fallback, feed preview, and
+  favicon resolution.
+- `FailoverRequestSender::send()` — the single-request helper behind the reader
+  page fetch (`HtmlPageFetcher`) and the catalog favicon bytes
+  (`CatalogFaviconFetcher`).
+- `CheckCatalogUrlsCommand` — the scheduled catalog rot-check, which uses its own
+  scoped `catalog.rot_check.http_client`, not either builder.
+
+So `ProxyEgressResolver` is injected into those **three** points — covering all
+content egress at once, with **no** changes rippling into `RefreshRunner`,
+`HttpFeedFetcher`, `WellKnownFeedProbe`, `FaviconResolver`, `FeedPreviewService`,
+`HtmlPageFetcher`, or `CatalogFaviconFetcher`. The resolver reads once per
+top-level operation (see below), so the per-request database cost stays bounded.
+
+**What is NOT proxied, and why it is not an exception to the rule.** The app-wide
+`HttpClientInterface` is shared by traffic that is *not* content egress and must
+stay direct: the **Meilisearch** search index (an internal container — a remote
+proxy cannot reach it), **AI provider** calls (a local model server such as
+LM Studio lives on `localhost`), **OAuth/OIDC** token exchange and discovery
+(routing a login through a foreign-country IP risks provider flags), and the
+**GitHub** latest-release check. These are integration/internal calls, a
+different category from fetching a user's feeds and pages. This is why the proxy
+is applied at the content-fetch choke points rather than globally on the shared
+client: a global proxy would break search and local AI. The boundary is "content
+egress," and within that boundary there are no exceptions.
+
+Shared pieces:
+
+- `src/Enum/ProxyType.php` — `enum ProxyType: string { case Socks5 = 'SOCKS5';
+  case Http = 'HTTP'; }` (matches the `src/Enum` convention).
+- `src/Service/Fetch/ProxyConfig.php` — `final readonly` value object holding the
+  resolved egress: `ProxyType $type`, `host`, `port`, `?username`, `?password`,
+  and `bool $directFallback` (default `true`). `dsn(): string` builds the curl
+  proxy URL (`socks5h://…` for SOCKS5 — remote DNS — or `http://…`), URL-encoding
+  any credentials; `directFallback` is behavioural and never enters the DSN. This
+  is the only place the opened password lives at fetch time.
+- `src/Service/Fetch/EgressOptions.php` — the one place the "proxy vs pin" request
+  options are built, so the "keep the host guard, drop only the IP pin when
+  proxied" invariant lives in a single spot instead of duplicated across the
+  builders. `static proxied(ProxyConfig $proxy): array` returns
+  `['proxy' => $proxy->dsn()]`; `static pinned(GuardedUrl $guarded, int $pinAttempt): array`
+  returns `['resolve' => [host => …], ...CrossFamilyFailover::freshConnectionAfter($pinAttempt)]`.
+  Both builders spread the chosen array into their own base options
+  (headers/timeout/on_progress differ per builder, so only the egress keys are
+  shared).
+- `src/Service/Fetch/ProxyEgressResolver.php` — `resolve(): ?ProxyConfig`. Returns
+  the instance `ProxyConfig` when the singleton is `enabled` **and** configured;
+  else `null`. Global — takes no `Feed` argument. It wraps
+  `ProxySettings::egressProxy()` (which opens the sealed password).
+
+**Builder A — `ConcurrentFeedFetcher` (batch: refresh, discovery, preview, favicon resolution):**
+
+- The fetcher gains a `ProxyEgressResolver` dependency. It resolves **once** at
+  the top of `fetchAll()` and enriches the incoming ticket stream: its private
+  `iterator()` yields `$ticket->withProxy($batchProxy)` when a proxy is resolved
+  (a new `FetchTicket::withProxy(?ProxyConfig): self`), so callers keep building
+  plain tickets and every flow through the batch is covered automatically.
+- `FetchTicket` gains an optional immutable `?ProxyConfig $proxy` (default `null`)
+  and `withProxy()`. `FetchAttempt` gains `effectiveProxy(): ?ProxyConfig` (the
+  ticket's proxy unless stripped), `isProxied(): bool`, and `withoutProxy(): self`
+  (sets a `proxyStripped` flag — the direct-fallback attempt).
+- `ConcurrentFeedFetcher::send()` still calls `UrlGuard::assertSafe` (the host
+  guard is kept on both paths — see Security notes), then chooses the egress
+  options via the shared helper: `EgressOptions::proxied($config)` when
+  `effectiveProxy()` is set (`proxy => dsn`, no pin, no cross-family extra — the
+  IP pin is impossible through `socks5h`) or `EgressOptions::pinned($guarded, $attempt->pinnedAddressAttempt)`
+  otherwise (`resolve` pin + cross-family extra, unchanged). The size cap
+  (`on_progress`), timeout, and `max_redirects: 0` stay identical on both.
+
+**Builder B — `FailoverRequestSender` (single request: reader page, catalog favicon):**
+
+- The sender gains a `ProxyEgressResolver` dependency and resolves `?ProxyConfig`
+  once at the top of `send()`. When non-null it first issues one **proxied**
+  request (`EgressOptions::proxied($config)` — `proxy => dsn`, no `resolve`) and
+  forces the status line (`getStatusCode()`); on a warranted
+  `TransportExceptionInterface` it cancels and **falls through to the existing
+  pinned-address family loop** (which now builds its per-family options via
+  `EgressOptions::pinned(...)`) — the direct fallback, guard+pin intact. A proxied
+  response that returns a status (even 4xx/5xx) stands, exactly as the final-family
+  answer stands today. When the resolver returns `null`, behaviour is byte-for-byte
+  the current loop.
+- Both callers (`HtmlPageFetcher`, `CatalogFaviconFetcher`) are unchanged — they
+  get proxying for free, and each already runs `UrlGuard::assertSafe` before
+  calling `send()`, so the host guard is kept on the proxied path here too.
+
+**Builder C — `CheckCatalogUrlsCommand` (scheduled catalog rot-check):**
+
+- The command gains a `ProxyEgressResolver` dependency. In `check()`, when
+  `resolve()` returns a proxy it adds `proxy => $config->dsn()` to its single
+  request; otherwise the request is unchanged. No guard and no direct fallback: the
+  URLs come from our own shipped catalog OPML (trusted), and the command is a
+  maintainer report, so "reachable through this instance's egress" is exactly the
+  signal wanted. Its scoped `catalog.rot_check.http_client` (kept for test
+  mockability) is untouched.
+
+### 6. Direct fallback when the proxy fetch fails (opt-out)
+
+The fallback is a per-connection setting, **on by default** (`directFallback`).
+When the admin turns it off, a proxied fetch that fails is **terminal** — the
+fetchers never retry directly, so the real server IP is never revealed. This is
+the "I want to hide my IP" mode: better to miss a feed than to leak the egress.
+`ProxyConfig->directFallback` carries the flag to both builders.
+
+- **Builder A:** on **any** failure of a proxied attempt — a `send()` throw caught
+  in `fill()`, or a stream/status failure caught in `awaitNext()` — the fetcher
+  requeues `$attempt->withoutProxy()` **once** instead of failing or trying the
+  cross-family retry, **but only when `directFallback` is on**. A private
+  `fallbackFor(attempt)` helper (proxied, not stripped, **and** `directFallback` →
+  `withoutProxy()`, else `null`) centralises the decision at both catch sites; the
+  direct-fallback attempt then runs the full guard + IP pin and cross-family
+  failover. With `directFallback` off, `fallbackFor()` returns `null` and the
+  proxied failure is yielded as failed.
+- **Builder B:** the fall-through inside `FailoverRequestSender::send()` — the
+  proxied "attempt 0", on a warranted transport failure, drops to the pinned direct
+  families **only when `directFallback` is on**; with it off, the transport error
+  is rethrown (terminal), never reaching the direct loop.
+- Either way the fallback fires **at most once** and only for proxied attempts. A
+  direct attempt that fails is terminal, exactly as today. No proxy → direct →
+  proxy loop.
+
+### 6a. Content egress has no exceptions
+
+Every content fetch is proxied when the switch is on: refresh, single feed fetch,
+discovery scrape-fallback, feed preview, favicon resolution, the reader page
+fetch, catalog favicon bytes, and the catalog rot-check
+(`CheckCatalogUrlsCommand`). The rot-check resolves the egress and adds
+`proxy => dsn` to its one request when a proxy is enabled; it reads the shipped
+catalog (trusted, our own OPML — no SSRF concern), so it does not need the guard
+or the direct fallback. This matters for the feature's own goal: a user's feed is
+marked `Erroring`/`Gone` by `FeedScheduler` from the **refresh** outcome, which is
+proxied — so a feed reachable only through the proxy stays `Active`, not rotten.
+
+The traffic that stays direct (Meilisearch, AI provider, OAuth/OIDC, GitHub) is
+**not** an exception to this rule — it is not content egress at all, and proxying
+it would break internal/local services. See §5 for the full rationale.
+
+### 7. Migration
+
+Platform-aware, hand-written DDL branching on `AbstractMySQLPlatform` vs
+`SQLitePlatform`, throwing on anything else; additive-only; `skipIf(hasTable)`.
+Create `proxy_server_settings` with the columns above. No `subscription` change.
+`isTransactional(): false` following the sealed-secret table precedent
+(`Version20260806120000.php`). A dedicated CI leg migrates from empty on both
+SQLite and MySQL, then runs `doctrine:schema:validate`.
+
+## Frontend design (new #541 grouped design language)
+
+The `settings/ai` page is the only surface on the #541 grouped language; it and
+`recommendation-settings-card` are the templates. Feature sections **compose**
+the shared primitives and never restyle them.
+
+New files:
+
+- `frontend/src/app/settings/proxy-section.component.{ts,html,scss,spec.ts}`
+- `frontend/src/app/settings/proxy-settings.service.ts` (mirrors
+  `RecommendationSettingsService`: instant-save + dirty-tracked-draft split, a
+  one-shot `saved` signal the component toasts off real HTTP success).
+
+Wiring (two files, shell untouched — the documented #180 extensibility criterion):
+
+- `frontend/src/app/settings/settings.routes.ts` — add a lazy `proxy` route
+  behind `adminGuard`.
+- `frontend/src/app/settings/settings-sections.ts` — add
+  `{ path: 'proxy', icon: 'vpn_lock', labelKey: 'settings.proxy.title', group: 'admin' }`.
+
+Composition, one `app-settings-group`:
+
+- **Enable** row → `app-settings-row` + `app-toggle`. **Instant save + toast**
+  (design-language rule: a toggle saves on change). The toggle is **disabled until
+  a config has been saved** — enabling an unconfigured proxy is meaningless.
+- **Direct fallback** row → `app-settings-row` + `app-toggle`, **instant save**,
+  on by default. An `app-info-tip` explains the trade-off: off means a proxy
+  failure fails the fetch instead of retrying directly, so the real server IP is
+  never revealed.
+- **Type** → `app-settings-row` + a select. Instant save (design-language rule: a
+  select saves on change).
+- **Host / Port / Username / Password** → `app-settings-row` typed fields,
+  **dirty-tracked behind `app-settings-save-bar`** (typed fields never save
+  instantly). Password is write-only: a blank `type="password"` field with a
+  "•••• stored" hint from `passwordHint`; typing a value replaces the stored
+  secret; leaving it blank keeps it. Never round-trip the secret.
+- **Test connection** → `app-button [loading]`, driving an add-feed-style
+  discriminated-union `probeState = signal<'idle' | 'loading' | { ok; egressIp } |
+  { error }>`. On ok, show the egress IP; on failure, an `app-error-banner` with
+  the mapped reason. **Disabled while there are unsaved changes** (it tests the
+  saved config) and while no config is stored.
+- **Info-tips** (`app-info-tip`, `rowTitleTip`) note: PIA needs a separately
+  generated proxy username/password (not the account login); SOCKS5 uses remote
+  DNS so geo-content resolves at the proxy.
+
+States follow the area conventions: `app-spinner` for load, `app-error-banner`
+for errors (`problem.detail || problem.title`), `ToastService` for success fired
+on real HTTP success, `[disabled]` gating during writes.
+
+New i18n keys under `settings.proxy.*` in the transloco catalogs.
+
+## Native-iOS readiness
+
+Config is plain JSON settings; secret is write-only; `application/problem+json`
+on error; no browser-only coupling; no CSRF token. The Test endpoint is a plain
+`POST` returning JSON. Passes the §6 checklist.
+
+## Testing
+
+- **Unit (backend):** `ProxyConfig::dsn()` build (SOCKS5 → `socks5h://`, HTTP →
+  `http://`, with/without credentials, credential URL-encoding); `ProxyType` enum;
+  `ProxyEgressResolver` (disabled → null, enabled-but-unconfigured → null,
+  enabled+configured → config); `ProxyConnectionTester` result mapping
+  (ok+egressIp, connect fail, auth reject, timeout, not-configured);
+  `EgressOptions::proxied()`/`pinned()` (proxied → only `proxy`; pinned → `resolve`
+  + cross-family, no `proxy`); `FetchTicket::withProxy()`; `FetchAttempt`
+  (`effectiveProxy`/`isProxied`/`withoutProxy` + `proxyStripped`);
+  `ConcurrentFeedFetcher` (Builder A) — resolves once per `fetchAll()` and enriches
+  every ticket; `send()` proxied branch omits `resolve` but keeps the guard,
+  direct keeps both; a proxied failure requeues exactly one direct attempt and that
+  fallback re-runs guard + pin; direct failure stays terminal; fallback fires at
+  most once (assert via a `MockHttpClient` that a proxied failure yields one direct
+  request with `resolve` set and no `proxy`); with `directFallback` **off** a
+  proxied failure is terminal (one proxied request, no direct request, failed
+  outcome); a null-resolver run is unchanged;
+  `FailoverRequestSender::send()` (Builder B) — with the resolver returning a proxy
+  it issues one `proxy`/no-`resolve` request first, a warranted transport failure
+  falls through to the pinned direct loop when `directFallback` is on and is
+  rethrown (no direct request) when off, and a null resolver is byte-for-byte the
+  current behaviour.
+- **Functional:** admin proxy settings round-trip — `PUT` then `GET`, password
+  write-only, `hasPassword`/`passwordHint` reflected, `enabled` and
+  `directFallback` reflected, blank password keeps the stored one, admin-guarded
+  (401/403 without `ROLE_ADMIN`); `POST /test` shape.
+- **Rot-check (Builder C):** with a `MockHttpClient` in the scoped client, assert
+  `CheckCatalogUrlsCommand` adds `proxy => dsn` to its request when the resolver
+  returns a proxy, and omits it when the resolver returns `null`.
+- **Migration leg:** new `proxy_server_settings` table on both SQLite and MySQL,
+  then `doctrine:schema:validate`.
+- **Mutation:** cover the `send()` branch and the resolver decision
+  (`composer infection:diff`).
+- **Frontend unit (Jest):** `proxy-settings.service` instant-save vs dirty-draft
+  split; component renders the group, toggle disabled until configured, Test
+  button disabled while dirty, probe success shows egress IP, probe failure shows
+  the banner.
+- **Quality gates on every touched file:** `composer check` (cs + stan + tramp),
+  `composer md` PHPMD-clean, PhpStorm inspections ERROR/WARNING-free on changed
+  PHP, `npm run check` (ESLint + Prettier + Stylelint — no hex/raw px outside
+  `theme/` — + Jest). Component styles in a sibling `.scss` (`styleUrl`).
+
+## Security notes
+
+- The SSRF guard + IP pin are bypassed only on the **proxied** path, on both
+  fetch flows (accepted trade-off: a `socks5h` egress cannot be IP-pinned). The
+  `UrlGuard::assertSafe` host check still runs before every request on both paths
+  (feed and reader) — only the address **pin** is dropped when proxied. The direct
+  path and the direct fallback keep the full guard + pin.
+- The proxy password is encrypted at rest and never returned by the API.
+- The Test endpoint egresses through the proxy to a **fixed** class-constant URL,
+  admin-only.
+
+## Validation / risks
+
+- curl-on-Strato SOCKS5 support is already confirmed (issue #490 comment: ext-curl
+  8.19.0, `CURLPROXY_SOCKS5_HOSTNAME` defined, `socks5h` routes). Build risk
+  retired.
+- Conditional-GET validators (ETag / Last-Modified) live on the shared `Feed`;
+  switching the whole instance between direct and proxied egress can change the
+  body/validator. Low risk; the next fetch reconciles.

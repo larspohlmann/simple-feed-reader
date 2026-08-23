@@ -8,8 +8,14 @@ import { SpinnerComponent } from '../spinner/spinner.component';
  * confirm), the outlined one to the row action that merely opens that dialog.
  * Both existed before the component absorbed them; flattening them would have
  * made every Delete in a list shout as loudly as the confirmation.
+ *
+ * `accent-outline` is the same pairing on the accent: it marks an action as
+ * live without taking the accent fill, which belongs to the one action a
+ * surface exists for. A settings card whose save bar already owns `primary`
+ * can still show that a secondary action is ready to be used.
  */
-export type ButtonVariant = 'default' | 'primary' | 'danger' | 'danger-outline' | 'ghost';
+export type ButtonVariant =
+  'default' | 'primary' | 'accent-outline' | 'danger' | 'danger-outline' | 'ghost';
 export type ButtonSize = 'sm' | 'md';
 
 /**

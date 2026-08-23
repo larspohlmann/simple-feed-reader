@@ -16,6 +16,9 @@ export class ToggleComponent {
   readonly label = input.required<string>();
   /** Optional: lets a caller's own `<label for>` reach the native checkbox. */
   readonly inputId = input<string>();
+  /** Blocks interaction -- e.g. a switch that only makes sense once its
+   *  prerequisite config is saved (see the proxy enable toggle, #490). */
+  readonly disabled = input(false);
   readonly toggled = output<boolean>();
 
   onChange(event: Event): void {

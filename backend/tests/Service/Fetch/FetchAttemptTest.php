@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch;
 
+use App\Enum\ProxyType;
 use App\Service\Fetch\FetchAttempt;
 use App\Service\Fetch\FetchTicket;
+use App\Service\Fetch\ProxyConfig;
 use PHPUnit\Framework\TestCase;
 
 final class FetchAttemptTest extends TestCase
@@ -56,5 +58,46 @@ final class FetchAttemptTest extends TestCase
         }
 
         self::assertFalse($attempt->canFollowRedirect());
+    }
+
+    public function testTheBatchProxyMakesTheAttemptProxied(): void
+    {
+        $proxy = new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null);
+        $attempt = FetchAttempt::start(1, new FetchTicket('https://feed.example'), $proxy);
+
+        self::assertTrue($attempt->isProxied());
+        self::assertSame($proxy, $attempt->proxy);
+    }
+
+    public function testWithoutProxyStripsTheEgressOnce(): void
+    {
+        $proxy = new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null);
+        $attempt = FetchAttempt::start(1, new FetchTicket('https://feed.example'), $proxy);
+
+        $direct = $attempt->withoutProxy();
+
+        self::assertFalse($direct->isProxied());
+        self::assertNull($direct->proxy);
+        self::assertSame('https://feed.example', $direct->url);
+        // A redirect lands on a fresh host, so the pin restarts at the first address.
+        self::assertSame(0, $direct->pinnedAddressAttempt);
+    }
+
+    public function testDirectTicketIsNotProxied(): void
+    {
+        $attempt = FetchAttempt::start(1, new FetchTicket('https://feed.example'));
+
+        self::assertFalse($attempt->isProxied());
+    }
+
+    public function testTheProxySurvivesARedirectAndAFamilyRetry(): void
+    {
+        $proxy = new ProxyConfig(ProxyType::Http, 'p', 8080, null, null);
+        $attempt = FetchAttempt::start(1, new FetchTicket('https://feed.example', 'etag', 'lm'), $proxy);
+
+        $redirected = $attempt->followedTo('https://feed.example/moved', permanent: true);
+        self::assertSame($proxy, $redirected->proxy);
+
+        self::assertSame($proxy, $redirected->overNextPinnedAddress()->proxy);
     }
 }
