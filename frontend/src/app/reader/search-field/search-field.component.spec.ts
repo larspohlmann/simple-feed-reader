@@ -14,6 +14,15 @@ function mount() {
   return fixture;
 }
 
+/** The mobile header bar's mount: the one that can be left, and therefore the
+ *  one whose trailing button doubles as the way out (#550). */
+function mountDismissible() {
+  const fixture = mount();
+  fixture.componentRef.setInput('dismissible', true);
+  fixture.detectChanges();
+  return fixture;
+}
+
 function typeInto(fixture: ReturnType<typeof mount>, value: string): void {
   const input: HTMLInputElement = fixture.debugElement.query(By.css('input')).nativeElement;
   input.value = value;
@@ -180,19 +189,67 @@ describe('SearchFieldComponent', () => {
     expect(emitted).toEqual(['']);
   }));
 
-  it('emits escapedWhileEmpty on Escape when the field is already empty, without clearing again', () => {
+  it('emits dismissed on Escape when the field is already empty, without clearing again', () => {
     const fixture = mount();
     const emitted: string[] = [];
     fixture.componentInstance.search.subscribe((term) => emitted.push(term));
-    const escapedWhileEmpty = jest.fn();
-    fixture.componentInstance.escapedWhileEmpty.subscribe(escapedWhileEmpty);
+    const dismissed = jest.fn();
+    fixture.componentInstance.dismissed.subscribe(dismissed);
 
     const input: HTMLInputElement = fixture.debugElement.query(By.css('input')).nativeElement;
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     fixture.detectChanges();
 
-    expect(escapedWhileEmpty).toHaveBeenCalledTimes(1);
+    expect(dismissed).toHaveBeenCalledTimes(1);
     expect(emitted).toEqual([]);
+  });
+
+  it('hides the trailing button on an empty field that cannot be left', () => {
+    const fixture = mount();
+
+    expect(fixture.debugElement.query(By.css('.clear'))).toBeNull();
+  });
+
+  it('keeps the trailing button on an empty field that can be left, labelled as the way out', () => {
+    const fixture = mountDismissible();
+
+    const button = fixture.debugElement.query(By.css('.clear'));
+    expect(button).not.toBeNull();
+    expect(button.nativeElement.getAttribute('aria-label')).toBe('Close search');
+  });
+
+  it('clears rather than dismisses when the trailing button is clicked over text', fakeAsync(() => {
+    const fixture = mountDismissible();
+    const emitted: string[] = [];
+    fixture.componentInstance.search.subscribe((term) => emitted.push(term));
+    const dismissed = jest.fn();
+    fixture.componentInstance.dismissed.subscribe(dismissed);
+
+    typeInto(fixture, 'cats');
+    tick(300);
+    expect(emitted).toEqual(['cats']);
+
+    fixture.debugElement.query(By.css('.clear')).nativeElement.click();
+    fixture.detectChanges();
+
+    expect(emitted).toEqual(['cats', '']);
+    expect(dismissed).not.toHaveBeenCalled();
+  }));
+
+  it('dismisses on a second click of the trailing button, once there is nothing left to clear', () => {
+    const fixture = mountDismissible();
+    const dismissed = jest.fn();
+    fixture.componentInstance.dismissed.subscribe(dismissed);
+
+    typeInto(fixture, 'cats');
+    fixture.debugElement.query(By.css('.clear')).nativeElement.click();
+    fixture.detectChanges();
+    expect(dismissed).not.toHaveBeenCalled();
+
+    fixture.debugElement.query(By.css('.clear')).nativeElement.click();
+    fixture.detectChanges();
+
+    expect(dismissed).toHaveBeenCalledTimes(1);
   });
 
   it('carries role="search" on its wrapper', () => {

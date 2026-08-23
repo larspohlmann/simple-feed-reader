@@ -52,11 +52,18 @@ export class SearchFieldComponent {
   // Semantic "settled search term" output, not a DOM element's search event.
   // eslint-disable-next-line @angular-eslint/no-output-native
   readonly search = output<string>();
-  /** Escape pressed while the field was already empty — the second step of the
-   *  two-step Escape contract (first clears, second leaves). The field knows
-   *  nothing about what "leaves" means for its caller; it only reports that
-   *  there was nothing left to clear. */
-  readonly escapedWhileEmpty = output<void>();
+  /** Whether this mount is one the user can leave. The mobile header bar is —
+   *  it collapses back into the header — so its trailing ✕ stays on screen
+   *  with the field empty, as the only way out a finger can reach. The
+   *  sidebar's copy is permanent, has nothing to leave, and so keeps the ✕
+   *  only while there is text to clear. */
+  readonly dismissible = input(false);
+  /** The user asked to leave the search with nothing left to clear — the
+   *  second step of the two-step contract, reached either by Escape or by the
+   *  trailing ✕ of a dismissible field. The field knows nothing about what
+   *  "leaves" means for its caller; it only reports that there was nothing
+   *  left to clear. */
+  readonly dismissed = output<void>();
 
   /** What the field currently shows — updates on every keystroke, unlike the
    *  debounced `search` output, so the too-short hint reacts immediately. */
@@ -140,6 +147,19 @@ export class SearchFieldComponent {
     this.typed.next('');
   }
 
+  /** The trailing ✕ and Escape are the same two-step contract, so they run the
+   *  same code: clear whatever is there, and report a field that was already
+   *  empty so the caller can leave. Giving the ✕ this second step is what let
+   *  the mobile bar drop the separate close button beside it (#550) — a phone
+   *  has no Escape key, so the button is the only step-two a finger has. */
+  clearOrDismiss(): void {
+    if (this.text() !== '') {
+      this.clear();
+      return;
+    }
+    this.dismissed.emit();
+  }
+
   onKeydown(event: KeyboardEvent): void {
     if (event.key !== 'Escape') return;
     // Stop the key here: a caller wrapping this field in a dismiss-on-Escape
@@ -147,11 +167,7 @@ export class SearchFieldComponent {
     // would skip straight to closing instead of clearing first.
     event.preventDefault();
     event.stopPropagation();
-    if (this.text() !== '') {
-      this.clear();
-      return;
-    }
-    this.escapedWhileEmpty.emit();
+    this.clearOrDismiss();
   }
 
   private emitSettled(raw: string): void {

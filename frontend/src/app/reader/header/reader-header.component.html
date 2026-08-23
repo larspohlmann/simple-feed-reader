@@ -94,24 +94,19 @@
     <!-- No dismiss-on-outside here: on a phone the results list is "outside", so
          a scroll touch on it would fire pointerdown and collapse the bar the
          moment the user scrolls the very results they searched for (#486). The
-         bar closes on its own ✕, or on Escape once the field is empty
-         (`escapedWhileEmpty`). -->
+         bar closes through the field's own trailing ✕ once the field is empty,
+         or on Escape at that same point — both arrive as `dismissed`. The bar
+         carries no ✕ of its own: beside the field's it read as a second,
+         differently-behaved close button (#550). -->
     <div class="search-bar">
       <app-search-field
         #searchField
         [term]="searchTerm()"
         [loading]="searchLoading()"
+        [dismissible]="true"
         (search)="search.emit($event)"
-        (escapedWhileEmpty)="closeSearch()"
+        (dismissed)="closeSearch()"
       />
-      <button
-        type="button"
-        class="search-close"
-        [attr.aria-label]="'reader.searchClose' | transloco"
-        (click)="closeSearch()"
-      >
-        <app-icon name="close" size="md" />
-      </button>
     </div>
   }
 </header>

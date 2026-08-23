@@ -320,6 +320,19 @@ describe('ReaderHeaderComponent', () => {
       expect(el.querySelector('[aria-haspopup="menu"]')).not.toBeNull();
     });
 
+    it("carries a single ✕: the field's own, with none beside it (#550)", () => {
+      const f = create();
+      const el = f.nativeElement as HTMLElement;
+
+      (el.querySelector('[aria-label="Search"]') as HTMLButtonElement).click();
+      f.detectChanges();
+
+      const bar = el.querySelector('.search-bar') as HTMLElement;
+      const buttons = Array.from(bar.querySelectorAll('button'));
+      expect(buttons).toHaveLength(1);
+      expect(buttons[0].closest('app-search-field')).not.toBeNull();
+    });
+
     it('stays open on a pointerdown outside the bar, so scrolling the results does not dismiss it (#486)', () => {
       const f = create();
       const el = f.nativeElement as HTMLElement;

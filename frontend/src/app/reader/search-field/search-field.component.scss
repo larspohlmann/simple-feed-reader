@@ -58,6 +58,20 @@
   color: var(--text-primary);
 }
 
+// On a phone this button is the only way out of the search bar (#550), so it
+// has to be a real touch target rather than a 16px glyph. The icon stays its
+// size; only the hit box grows, and the negative end margin gives it back the
+// row's own padding so the box reaches the field edge without moving the text
+// inside it. Keyed on the pointer, not the viewport, per the design language.
+@media (pointer: coarse) {
+  .clear {
+    align-self: stretch;
+    justify-content: center;
+    min-width: var(--tap-target);
+    margin-right: calc(var(--space-3) * -1);
+  }
+}
+
 .hint {
   margin: var(--space-1) 0 0;
   color: var(--text-muted);

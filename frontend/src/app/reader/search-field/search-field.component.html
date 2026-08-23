@@ -15,12 +15,17 @@
       (input)="onInput($any($event.target).value)"
       (keydown)="onKeydown($event)"
     />
-    @if (text()) {
+    <!-- One ✕ for both steps: it clears a term, and on a dismissible field it
+         leaves the search once there is nothing left to clear. The label moves
+         with the meaning, so assistive tech never announces "Clear" for a
+         click that closes. A permanent field keeps the button only while there
+         is text — an always-present ✕ there would promise an exit it has not. -->
+    @if (text() || dismissible()) {
       <button
         type="button"
         class="clear"
-        [attr.aria-label]="'reader.searchClear' | transloco"
-        (click)="clear()"
+        [attr.aria-label]="(text() ? 'reader.searchClear' : 'reader.searchClose') | transloco"
+        (click)="clearOrDismiss()"
       >
         <app-icon name="close" size="sm" />
       </button>

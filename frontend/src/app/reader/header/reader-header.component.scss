@@ -156,17 +156,6 @@ header {
   min-width: 0;
 }
 
-.search-close {
-  display: inline-flex;
-  align-items: center;
-  flex: none;
-  background: none;
-  border: none;
-  color: var(--text-primary);
-  cursor: pointer;
-  padding: var(--space-1);
-}
-
 .account > button {
   display: inline-flex;
   align-items: center;
