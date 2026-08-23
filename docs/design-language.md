@@ -604,54 +604,6 @@ finished, a bulk action applied) that the user does not have to act on.
 
 ---
 
-### `<app-settings-card>`
-
-The one surface a settings or admin section sits in: a heading, an optional
-description line, and the section's own projected content. A `cardActions`
-slot puts a control (a "New tag" button, a filter) on the heading row.
-
-| Input | Type | Default |
-|---|---|---|
-| `heading` | `string` (required) | — |
-| `description` | `string \| null` | `null` — omits the line |
-
-```html
-<app-settings-card [heading]="'settings.tags.title' | transloco">
-  <app-button cardActions size="sm" variant="primary" (click)="manage.createTag()">
-    {{ 'settings.tags.new' | transloco }}
-  </app-button>
-  <ul class="list">
-    …
-  </ul>
-</app-settings-card>
-```
-
-`heading` and `description` take already-translated strings, not i18n keys — the
-component lives in `shared/` and must not hardcode a feature's translation keys.
-Extracted in #180 Phase 4, when five card/panel treatments had accumulated
-across seven stylesheets.
-
-**`cardActions` content must be a direct child of `<app-settings-card>`.**
-Angular's content projection only looks one `@if` level deep to find a
-projectable node; wrap it in two (e.g. an outer `@else if (data(); as d)`
-around an inner `@if (hasActions())`) and the block silently stops being
-projected — it renders mid-body below the heading instead of beside it,
-with no error anywhere. If the actions depend on data that only exists once
-loaded, compute a single boolean (or resolve what you need from a signal
-directly) so the `cardActions` element itself sits one level below
-`<app-settings-card>`, not nested inside another control-flow block first.
-This bit `admin-user-detail.component.html` once already — see its
-`hasActions` computed for the shape.
-
-**A card wraps a section, not a row.** Rows stay plain rows inside one card.
-Giving each row its own border reads as nested cards — that is what the tags
-list did before this component existed.
-
-**Not for:** a dialog surface (use the CDK dialog with `panelClass: 'app-dialog'`)
-or an overlay (`<app-overlay-panel>`).
-
----
-
 ### `<app-disclosure>`
 
 The one wrapper for a native `<details>`/`<summary>` collapsed-content pattern:
@@ -685,7 +637,7 @@ own wrapping class, the same way `recommendation-debug-log.component.scss`'s
 `appearance` picks the summary chrome. `pill` (default) is the bordered toggle
 button. `row` is a flat, full-width list row for one disclosure per list item.
 `card-header` is a flat, full-width heading with no horizontal padding, so it
-aligns to a card's content box (`<app-settings-card>`'s collapsible mode).
+aligns to a card's content box (see `appearance="drill-in"`).
 `drill-in` (#541) is a full-width Grouped list row: the projected heading/label
 sits on the left, a trailing chevron rotates when the `<details>` opens. It
 reuses the same `startOpen`/`opened`/`label`/`[summary]` API. Use `drill-in`
@@ -803,8 +755,8 @@ keys. The body (rows, disclosures) projects through the default `<ng-content>`
 into a `.panel` card surface: `--surface-1`, `1px --border`, `--radius-lg`, and
 the new `--panel-shadow` token (defined for both modes in `theme/tokens.scss`).
 
-**Not for:** a section that is one flat card with no group header — that is
-still `<app-settings-card>`.
+**Not for:** nothing. Every settings and admin section composes a group; the
+flat `app-settings-card` it replaced was deleted in #547.
 
 A named `<ng-content select="[groupActions]">` slot sits at the trailing edge of
 the header and takes one element — a "New" button, a filter group. The header
