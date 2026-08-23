@@ -4,8 +4,11 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../../../core/problem';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
-import { SettingsCardComponent } from '../../../shared/settings-card/settings-card.component';
+import { SettingsGroupComponent } from '../../../shared/settings/settings-group/settings-group.component';
+import { SettingsRowComponent } from '../../../shared/settings/settings-row/settings-row.component';
+import { SettingsStackComponent } from '../../../shared/settings/stack/settings-stack.component';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
+import { ToggleComponent } from '../../../shared/toggle/toggle.component';
 import { AdminSettingsApi, InstanceSettings } from './admin-settings-api';
 
 /** The registration-gate toggles (#224): whether a new signup needs email
@@ -14,9 +17,16 @@ import { AdminSettingsApi, InstanceSettings } from './admin-settings-api';
  *  there is no separate save step to forget. */
 @Component({
   selector: 'app-admin-settings',
-  imports: [ErrorBannerComponent, SettingsCardComponent, SkeletonComponent, TranslocoPipe],
+  imports: [
+    ErrorBannerComponent,
+    SettingsGroupComponent,
+    SettingsRowComponent,
+    SettingsStackComponent,
+    SkeletonComponent,
+    ToggleComponent,
+    TranslocoPipe,
+  ],
   templateUrl: './admin-settings.component.html',
-  styleUrl: './admin-settings.component.scss',
 })
 export class AdminSettingsComponent implements OnInit {
   private readonly api = inject(AdminSettingsApi);

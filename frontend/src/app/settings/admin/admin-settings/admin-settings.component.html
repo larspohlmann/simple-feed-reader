@@ -1,39 +1,43 @@
-<app-settings-card [heading]="'settings.instance.title' | transloco">
-  @if (loading()) {
-    <app-skeleton [label]="'settings.instance.loading' | transloco" [rows]="2" />
-  } @else if (error()) {
-    <app-error-banner
-      [message]="error()!.detail || error()!.title"
-      [actionLabel]="'settings.instance.retry' | transloco"
-      (action)="load()"
-    />
-  } @else {
-    <div class="toggle">
-      <label class="check" [class.disabled]="!mailEnabled()">
-        <input
-          type="checkbox"
-          [checked]="requireEmailConfirmation()"
-          [disabled]="!mailEnabled()"
-          (change)="toggleEmailConfirmation()"
-        />
-        {{ 'settings.instance.requireEmailConfirmation' | transloco }}
-      </label>
-      <p class="hint">
-        {{
+<app-settings-stack>
+  <app-settings-group icon="toggle_on" [title]="'settings.instance.title' | transloco">
+    @if (loading()) {
+      <app-skeleton [label]="'settings.instance.loading' | transloco" [rows]="2" />
+    } @else if (error()) {
+      <app-error-banner
+        [message]="error()!.detail || error()!.title"
+        [actionLabel]="'settings.instance.retry' | transloco"
+        (action)="load()"
+      />
+    } @else {
+      <app-settings-row
+        [title]="'settings.instance.requireEmailConfirmation' | transloco"
+        [description]="
           (mailEnabled()
             ? 'settings.instance.requireEmailConfirmationHint'
             : 'settings.instance.mailDisabledHint'
           ) | transloco
-        }}
-      </p>
-    </div>
+        "
+      >
+        <app-toggle
+          inputId="require-email-confirmation-toggle"
+          [checked]="requireEmailConfirmation()"
+          [disabled]="!mailEnabled()"
+          [label]="'settings.instance.requireEmailConfirmation' | transloco"
+          (toggled)="toggleEmailConfirmation()"
+        />
+      </app-settings-row>
 
-    <div class="toggle">
-      <label class="check">
-        <input type="checkbox" [checked]="requireApproval()" (change)="toggleApproval()" />
-        {{ 'settings.instance.requireApproval' | transloco }}
-      </label>
-      <p class="hint">{{ 'settings.instance.requireApprovalHint' | transloco }}</p>
-    </div>
-  }
-</app-settings-card>
+      <app-settings-row
+        [title]="'settings.instance.requireApproval' | transloco"
+        [description]="'settings.instance.requireApprovalHint' | transloco"
+      >
+        <app-toggle
+          inputId="require-approval-toggle"
+          [checked]="requireApproval()"
+          [label]="'settings.instance.requireApproval' | transloco"
+          (toggled)="toggleApproval()"
+        />
+      </app-settings-row>
+    }
+  </app-settings-group>
+</app-settings-stack>

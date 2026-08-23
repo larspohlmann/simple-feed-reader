@@ -103,4 +103,13 @@ describe('AdminSettingsComponent', () => {
       .expectOne('https://api.test/api/admin/settings')
       .flush({ requireEmailConfirmation: false, requireApproval: false, mailEnabled: true });
   });
+
+  it('renders both switches as settings rows in one group', () => {
+    const f = mount();
+    flushInitial(f, { requireEmailConfirmation: false, requireApproval: false, mailEnabled: true });
+    const el = f.nativeElement as HTMLElement;
+
+    expect(el.querySelectorAll('app-settings-group').length).toBe(1);
+    expect(el.querySelectorAll('app-settings-row app-toggle').length).toBe(2);
+  });
 });
