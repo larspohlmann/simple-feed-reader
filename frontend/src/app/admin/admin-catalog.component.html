@@ -118,9 +118,7 @@
       >
         <app-icon name="add" size="sm" /> {{ 'admin.addCategory' | transloco }}
       </app-button>
-    }
 
-    @if (!loading() && !error()) {
       <ul class="categories">
         @for (category of categories(); track category.id; let ci = $index) {
           <li class="category" data-testid="admin-category">

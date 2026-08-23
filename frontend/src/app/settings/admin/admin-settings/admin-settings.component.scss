@@ -1,9 +1,0 @@
-// src/app/settings/admin/admin-settings/admin-settings.component.scss
-// The group's panel is unpadded by design (its rows pad themselves); the
-// loading skeleton and the load-error banner are direct panel children, not
-// rows, so `.state` gives them the panel inset instead of rendering flush
-// against the panel border.
-.state {
-  display: block;
-  padding: var(--panel-inset-y) var(--panel-inset-x);
-}

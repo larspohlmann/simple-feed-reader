@@ -72,9 +72,9 @@
 // those two panel-level blocks -- never the element type -- so the
 // import-failure banner nested inside `.import` above, which already carries
 // its own inset and gap, is untouched by it.
+// `.state` itself lives in `theme/_utilities.scss`; what is local here is
+// only the gap before the list that follows it.
 .state {
-  display: block;
-  padding: var(--panel-inset-y) var(--panel-inset-x);
   margin-bottom: var(--space-4);
 }
 

@@ -8,9 +8,9 @@
 // follows, now that the filters live in the group header rather than as the
 // panel's own first flex child. `.state` marks only these panel-level
 // blocks, never the element type.
+// `.state` itself lives in `theme/_utilities.scss`; what is local here is
+// only the gap before the list that follows it.
 .state {
-  display: block;
-  padding: var(--panel-inset-y) var(--panel-inset-x);
   margin-bottom: var(--space-4);
 }
 

@@ -26,9 +26,9 @@ h3 {
 // a different padding shape), so they take the inset there instead of
 // through this shared rule. `.state` marks only these panel-level blocks,
 // never the element type.
+// `.state` itself lives in `theme/_utilities.scss`; what is local here is
+// only the gap before the list that follows it.
 .state {
-  display: block;
-  padding: var(--panel-inset-y) var(--panel-inset-x);
   margin-bottom: var(--space-4);
 }
 
@@ -50,15 +50,6 @@ h3 {
 
 .card p {
   margin: 0;
-}
-
-// `.muted` also marks the compact status lines nested inside these sub-cards
-// (stale-feeds notice, "no trial" line); this card's own flex `gap` already
-// sets their rhythm, so the panel-inset padding `.muted` takes below would
-// only crowd them. `.cards .muted` outranks the bare `.muted` selector on
-// specificity, so this holds regardless of source order.
-.cards .muted {
-  padding: 0;
 }
 
 dl {
@@ -105,11 +96,20 @@ dd {
 }
 
 // The panel-level empty states (tags/feeds groups with nothing to list) are
-// plain paragraphs, not rows, so they carry the panel inset directly. The
-// nested, compact `.muted` lines inside `.cards` opt back out above.
+// plain paragraphs, not rows, so they carry the panel inset directly.
 .muted {
   display: block;
   padding: var(--panel-inset-y) var(--panel-inset-x);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+// The compact status lines inside a sub-card -- the dormant notice, the trial
+// line. They read as muted text too, but they are not panel-level: the card's
+// own flex `gap` sets their rhythm, and the panel inset would only crowd them.
+// Their own class, rather than a `.cards .muted` override that would have to
+// out-specify `.muted` for every property it sets.
+.note {
   color: var(--text-muted);
   font-size: var(--fs-sm);
 }

@@ -2,18 +2,12 @@
 
 // The group's panel is unpadded by design (its rows pad themselves), and this
 // list is a list, not a stack of `app-settings-row`s -- so the inset the card
-// used to supply lives here now. `.list` keeps its own rule below (it needs
-// `display: flex`, not `block`), so it takes the padding there instead of
-// through this shared block. `.state` marks only the panel-level loading and
-// error blocks -- never the element type -- so the save-error banner nested
-// inside the inline tag editor below is untouched by it.
-.muted,
-.state {
+// used to supply lives here. `.list` takes it in its own rule below, which
+// needs `display: flex` rather than `block`; the empty-state paragraph takes it
+// here. The loading and error blocks take it from the shared `.state` utility.
+.muted {
   display: block;
   padding: var(--panel-inset-y) var(--panel-inset-x);
-}
-
-.muted {
   color: var(--text-muted);
 }
 

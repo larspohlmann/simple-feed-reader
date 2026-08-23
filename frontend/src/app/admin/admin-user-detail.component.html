@@ -98,7 +98,7 @@
           </p>
           <p>{{ d.footprint.tagsCount }} {{ 'admin.tagsLabel' | transloco }}</p>
           @if (d.footprint.staleFeedsCount > 0) {
-            <p class="muted">
+            <p class="note">
               {{ 'admin.detail.staleFeeds' | transloco: { count: d.footprint.staleFeedsCount } }}
             </p>
           }
@@ -106,7 +106,7 @@
 
           @switch (trialState()) {
             @case ('none') {
-              <p class="muted" data-testid="trial-status">
+              <p class="note" data-testid="trial-status">
                 {{ 'admin.detail.trialNone' | transloco }}
               </p>
             }
