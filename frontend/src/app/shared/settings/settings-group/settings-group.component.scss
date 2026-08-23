@@ -1,5 +1,6 @@
 .g-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
@@ -27,6 +28,25 @@
   margin: var(--space-0) 0 0;
   color: var(--text-muted);
   font-size: var(--fs-sm);
+}
+
+// The header's action slot. `margin-left: auto` pushes it to the trailing edge
+// on a wide header; when the actions do not fit, `.g-head`'s `flex-wrap` drops
+// them onto their own line rather than crushing the title -- the admin user
+// queue projects four status filters in here.
+.g-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+// An empty slot must not claim the row: with nothing projected the wrapper is
+// still in the DOM, and a `gap` before a zero-width box would read as a stray
+// trailing space on every group that projects no actions.
+.g-actions:empty {
+  display: none;
 }
 
 .panel {

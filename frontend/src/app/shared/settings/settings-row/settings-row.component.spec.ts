@@ -33,6 +33,17 @@ class NoDescriptionHostComponent {}
 })
 class TitleTipHostComponent {}
 
+@Component({
+  imports: [SettingsRowComponent],
+  template: `
+    <app-settings-row title="Scraping">
+      <span rowTitleTip class="badge" data-badge>Experimental</span>
+      <button data-control>on</button>
+    </app-settings-row>
+  `,
+})
+class BadgeHostComponent {}
+
 describe('SettingsRowComponent', () => {
   async function render() {
     await TestBed.configureTestingModule({ imports: [HostComponent] }).compileComponents();
@@ -92,5 +103,18 @@ describe('SettingsRowComponent', () => {
   it('projects a title info-tip next to the title', async () => {
     const { el } = await renderTitleTip();
     expect(el.querySelector('.row-title .tip')?.textContent).toBe('?');
+  });
+
+  // The slot is positional, not typed: it is "an inline adornment after the
+  // title". An info-tip was its first consumer; the Experimental badge on the
+  // preferences page is its second (#547).
+  it('places a badge in the title slot, after the title text', async () => {
+    await TestBed.configureTestingModule({ imports: [BadgeHostComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(BadgeHostComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('.row-title [data-badge]')?.textContent).toBe('Experimental');
+    expect(el.querySelector('.row-control [data-control]')).not.toBeNull();
   });
 });

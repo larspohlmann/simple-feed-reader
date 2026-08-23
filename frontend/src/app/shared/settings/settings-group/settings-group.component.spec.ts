@@ -22,6 +22,17 @@ class HostComponent {}
 })
 class NoCaptionHostComponent {}
 
+@Component({
+  imports: [SettingsGroupComponent],
+  template: `
+    <app-settings-group icon="sell" title="Tags">
+      <button groupActions data-action>New tag</button>
+      <div data-projected>row</div>
+    </app-settings-group>
+  `,
+})
+class ActionsHostComponent {}
+
 describe('SettingsGroupComponent', () => {
   async function render() {
     await TestBed.configureTestingModule({ imports: [HostComponent] }).compileComponents();
@@ -61,5 +72,24 @@ describe('SettingsGroupComponent', () => {
   it('omits the caption element when no caption is given', async () => {
     const { el } = await renderNoCaption();
     expect(el.querySelector('.g-caption')).toBeNull();
+  });
+
+  it('projects a groupActions element into the header, not the panel', async () => {
+    await TestBed.configureTestingModule({ imports: [ActionsHostComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(ActionsHostComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('.g-head [data-action]')).not.toBeNull();
+    expect(el.querySelector('.panel [data-action]')).toBeNull();
+  });
+
+  it('still projects the body into the panel when actions are present', async () => {
+    await TestBed.configureTestingModule({ imports: [ActionsHostComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(ActionsHostComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('.panel [data-projected]')?.textContent).toBe('row');
   });
 });

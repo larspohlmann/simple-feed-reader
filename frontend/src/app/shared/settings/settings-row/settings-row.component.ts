@@ -17,9 +17,11 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
  * declares it -- projected content carries that component's style scope, not
  * this one's -- so a stackable row alone does not stretch the field.
  *
- * The control projects into the default `<ng-content>` slot. An info-tip
- * trigger for the title projects into the named `[rowTitleTip]` slot, which
- * renders immediately after the title text inside `.row-title`.
+ * The control projects into the default `<ng-content>` slot. A named
+ * `[rowTitleTip]` slot places an inline adornment immediately after the
+ * title text inside `.row-title` -- an `<app-info-tip>`, which was its first
+ * consumer, or a small badge such as the preferences page's "Experimental"
+ * chip. The slot is positional, not typed.
  */
 @Component({
   selector: 'app-settings-row',

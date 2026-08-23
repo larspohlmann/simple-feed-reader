@@ -806,6 +806,13 @@ the new `--panel-shadow` token (defined for both modes in `theme/tokens.scss`).
 **Not for:** a section that is one flat card with no group header — that is
 still `<app-settings-card>`.
 
+A named `<ng-content select="[groupActions]">` slot sits at the trailing edge of
+the header and takes one element — a "New" button, a filter group. The header
+wraps, so actions that do not fit drop to their own line instead of crushing the
+title. Projection matches only a **direct** child of the group (one `@if` deep
+is tolerated, two silently fall through to the panel), so keep the marked
+element at the top of the group's content.
+
 ### `<app-settings-row>`
 
 One settings row: a title and an optional description stacked on the left, a
@@ -830,8 +837,10 @@ stacks.
 ```
 
 The control projects through the default `<ng-content>`. A named
-`<ng-content select="[rowTitleTip]">` slot places an info-tip immediately after
-the title text inside `.row-title`. The inset hairline divider between rows is
+`<ng-content select="[rowTitleTip]">` slot places an inline adornment
+immediately after the title text inside `.row-title` — an `<app-info-tip>`, or a
+small badge such as the preferences page's "Experimental" chip. The slot is
+positional, not typed. The inset hairline divider between rows is
 automatic — `:host(:not(:last-child))` draws it, so the parent group supplies
 only the box. When `stackable`, on a narrow viewport (`bp.$bp-sm`) a select or
 number control fills the row width while a toggle keeps its natural size.
