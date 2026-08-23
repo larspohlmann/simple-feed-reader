@@ -8,6 +8,7 @@
       <app-settings-row
         [title]="'settings.proxy.enabled' | transloco"
         [description]="configured() ? '' : ('settings.proxy.enabledDisabledHint' | transloco)"
+        labelFor="proxy-enabled-toggle"
       >
         <app-toggle
           inputId="proxy-enabled-toggle"
@@ -21,6 +22,7 @@
       <app-settings-row
         [title]="'settings.proxy.directFallback' | transloco"
         [description]="'settings.proxy.directFallbackDesc' | transloco"
+        labelFor="proxy-direct-fallback-toggle"
       >
         <app-info-tip
           rowTitleTip
@@ -54,6 +56,7 @@
             ? ('settings.proxy.remoteDnsDesc' | transloco)
             : ('settings.proxy.remoteDnsHttpHint' | transloco)
         "
+        labelFor="proxy-remote-dns-toggle"
       >
         <app-info-tip
           rowTitleTip

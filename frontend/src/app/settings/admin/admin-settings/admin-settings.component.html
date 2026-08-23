@@ -18,6 +18,7 @@
             : 'settings.instance.mailDisabledHint'
           ) | transloco
         "
+        labelFor="require-email-confirmation-toggle"
       >
         <app-toggle
           inputId="require-email-confirmation-toggle"
@@ -31,6 +32,7 @@
       <app-settings-row
         [title]="'settings.instance.requireApproval' | transloco"
         [description]="'settings.instance.requireApprovalHint' | transloco"
+        labelFor="require-approval-toggle"
       >
         <app-toggle
           inputId="require-approval-toggle"
