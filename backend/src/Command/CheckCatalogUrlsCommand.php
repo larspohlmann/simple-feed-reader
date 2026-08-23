@@ -6,6 +6,7 @@ namespace App\Command;
 
 use App\Service\Catalog\CatalogDocument;
 use App\Service\Fetch\EgressOptions;
+use App\Service\Fetch\ProxyConfig;
 use App\Service\Fetch\ProxyEgressResolver;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -65,9 +66,14 @@ final class CheckCatalogUrlsCommand extends Command
             $feeds = \array_slice($feeds, 0, $limit);
         }
 
+        // Resolved once for the whole sweep, not per URL: the instance proxy
+        // cannot change mid-run, and re-reading it would cost one row lookup and
+        // one password decryption for every catalog entry.
+        $proxy = $this->proxyEgressResolver->resolve();
+
         $broken = [];
         foreach ($feeds as $feed) {
-            $failure = $this->check($feed->url);
+            $failure = $this->check($feed->url, $proxy);
             if (null !== $failure) {
                 $broken[] = \sprintf('%s (%s): %s', $feed->title, $feed->url, $failure);
             }
@@ -98,10 +104,8 @@ final class CheckCatalogUrlsCommand extends Command
     /**
      * @return string|null the reason it is broken, or null when it is fine
      */
-    private function check(string $url): ?string
+    private function check(string $url, ?ProxyConfig $proxy): ?string
     {
-        $proxy = $this->proxyEgressResolver->resolve();
-
         try {
             $response = $this->httpClient->request('GET', $url, [
                 'timeout' => self::TIMEOUT_SECONDS,
