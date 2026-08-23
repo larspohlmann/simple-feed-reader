@@ -106,15 +106,17 @@
   </app-settings-group>
 
   <app-settings-group icon="category" [title]="'admin.catalog' | transloco">
-    <app-button
-      groupActions
-      size="sm"
-      variant="primary"
-      data-testid="add-category"
-      (click)="openCategoryDialog(null)"
-    >
-      <app-icon name="add" size="sm" /> {{ 'admin.addCategory' | transloco }}
-    </app-button>
+    @if (!loading() && !error()) {
+      <app-button
+        groupActions
+        size="sm"
+        variant="primary"
+        data-testid="add-category"
+        (click)="openCategoryDialog(null)"
+      >
+        <app-icon name="add" size="sm" /> {{ 'admin.addCategory' | transloco }}
+      </app-button>
+    }
 
     @if (!loading() && !error()) {
       <ul class="categories">

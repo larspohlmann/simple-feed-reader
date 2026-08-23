@@ -295,4 +295,40 @@ describe('AdminCatalogComponent', () => {
     const fixture = mountLoaded();
     expect(fixture.nativeElement.querySelectorAll('app-settings-group').length).toBe(2);
   });
+
+  // The button acts on a list that is hidden while the catalog is loading or
+  // errored, and `openCategoryDialog` has no guard of its own -- so a save made
+  // from an error state succeeds into a list the user cannot see. Before #547 the
+  // button lived inside the same `@else` as the list; this pins that.
+  it('hides the add-category button while the catalog is loading or errored', () => {
+    TestBed.configureTestingModule({
+      imports: [AdminCatalogComponent, provideTranslocoTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: API_BASE_URL, useValue: 'https://api.test' },
+        { provide: Dialog, useValue: { open: dialogOpen } },
+      ],
+    });
+    const fixture = TestBed.createComponent(AdminCatalogComponent);
+    ctrl = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="add-category"]')).toBeNull();
+
+    ctrl
+      .expectOne('https://api.test/api/admin/catalog')
+      .flush(
+        { type: 'about:blank', title: 'Down', status: 500 },
+        { status: 500, statusText: 'Server Error' },
+      );
+    ctrl
+      .expectOne('https://api.test/api/admin/catalog/bundled')
+      .flush({ available: false, categories: 0, feeds: 0 });
+    fixture.detectChanges();
+
+    expect(el.querySelector('[data-testid="add-category"]')).toBeNull();
+  });
 });
