@@ -265,9 +265,9 @@ final class FirstFetchRecorderTest extends DbTestCase
      * bug withEntries() exists to prevent). This drives the real, wired
      * recorder's own capping method with 250 entries — over
      * FIRST_FETCH_MAX_ENTRIES, so a cap actually happens — and a non-null
-     * image. There is no Feed::$imageUrl yet for record() to persist the
-     * image into, so this reaches newest() through reflection: it is the
-     * private method record() itself calls, not a duplicate of it.
+     * image. Feed::$imageUrl now exists and EntryIngestor persists it, so the
+     * assertion reads the capped image back from the public surface (the
+     * persisted Feed) instead of reaching newest() through reflection.
      */
     public function testCappingTheEntryListKeepsTheFeedImage(): void
     {
@@ -276,11 +276,6 @@ final class FirstFetchRecorderTest extends DbTestCase
 
         self::assertSame(200, $this->recorder->record($feed, $discovered));
 
-        /** @var ParsedFeed $capped */
-        $capped = (new \ReflectionMethod(FirstFetchRecorder::class, 'newest'))
-            ->invoke($this->recorder, $discovered->document);
-
-        self::assertCount(200, $capped->entries);
-        self::assertSame('https://example.com/logo.png', $capped->imageUrl);
+        self::assertSame('https://example.com/logo.png', $feed->getImageUrl());
     }
 }
