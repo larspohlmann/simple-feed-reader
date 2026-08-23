@@ -6,7 +6,8 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { IconComponent } from '../shared/icon/icon.component';
-import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
+import { SettingsGroupComponent } from '../shared/settings/settings-group/settings-group.component';
+import { SettingsStackComponent } from '../shared/settings/stack/settings-stack.component';
 import { SkeletonComponent } from '../shared/skeleton/skeleton.component';
 import { FieldComponent } from '../shared/field/field.component';
 import { ButtonComponent } from '../shared/button/button.component';
@@ -33,7 +34,8 @@ import {
     ButtonComponent,
     ErrorBannerComponent,
     IconComponent,
-    SettingsCardComponent,
+    SettingsGroupComponent,
+    SettingsStackComponent,
     SkeletonComponent,
     TranslocoPipe,
   ],

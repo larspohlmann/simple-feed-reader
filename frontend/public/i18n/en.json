@@ -447,6 +447,7 @@
       "backToUsers": "Users"
     },
     "catalog": "Feed catalog",
+    "catalogImport": "Catalog import",
     "catalogEmpty": "This catalog is empty, so new users are not being offered any suggestions.",
     "importBundled": "Import the bundled catalog ({{categories}} categories, {{feeds}} feeds)",
     "importUpload": "Import a catalog file",

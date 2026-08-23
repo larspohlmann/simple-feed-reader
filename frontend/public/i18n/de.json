@@ -447,6 +447,7 @@
       "backToUsers": "Benutzer"
     },
     "catalog": "Feed-Katalog",
+    "catalogImport": "Katalog-Import",
     "catalogEmpty": "Dieser Katalog ist leer, daher werden neuen Benutzern keine Vorschläge angeboten.",
     "importBundled": "Mitgelieferten Katalog importieren ({{categories}} Kategorien, {{feeds}} Feeds)",
     "importUpload": "Katalogdatei importieren",

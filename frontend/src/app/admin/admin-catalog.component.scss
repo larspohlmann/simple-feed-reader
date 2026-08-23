@@ -1,31 +1,37 @@
 @use '../theme/breakpoints' as bp;
 
+// The group's panel is unpadded by design (its rows pad themselves); this
+// page projects blocks and a list, not rows. Every one of `.notice`, `.hint`,
+// `.import`, `app-skeleton`/`app-error-banner` and `.categories` already has
+// its own rule for its own box styling, so the inset is merged into each of
+// those rules below instead of living in one shared block: a shared block
+// would sit earlier in this file and lose to each element's own later,
+// equal-specificity padding rule -- CSS breaks that tie by source order, not
+// by which rule looks more "shared".
 .notice {
-  padding: var(--space-3);
+  padding: var(--space-4) var(--space-5);
   border-radius: var(--radius);
   background: var(--accent-soft);
   color: var(--text-primary);
-  margin-bottom: var(--space-4);
 }
 
 .hint {
   color: var(--text-muted);
   font-size: var(--fs-sm);
-  margin: var(--space-1) 0 var(--space-4);
+  padding: var(--space-4) var(--space-5);
 }
 
-// A panel nested inside the settings card, which is itself --surface-1 --
-// so this needs its own background and a border to still read as a panel,
-// not the card's own surface colour again.
+// A panel nested inside the settings group's own panel, which is itself
+// --surface-1 -- so this needs its own background and a border to still read
+// as a panel, not the group's own surface colour again.
 .import {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-4);
+  padding: var(--space-4) var(--space-5);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface-0);
-  margin-bottom: var(--space-4);
 }
 
 .upload {
@@ -58,25 +64,20 @@
   font-size: var(--fs-sm);
 }
 
-// The card's own content is no longer wrapped in a flex column with a gap
-// (the `<section>` that carried it was replaced by the shared card), so the
+// The group's own content is no longer wrapped in a flex column with a gap
+// (the `<section>` that carried it was replaced by the shared group), so the
 // banner and skeleton need their own spacing.
 app-error-banner,
 app-skeleton {
   display: block;
-  margin-bottom: var(--space-4);
-}
-
-.list-head {
-  display: flex;
-  justify-content: flex-end;
+  padding: var(--space-4) var(--space-5);
   margin-bottom: var(--space-4);
 }
 
 .categories {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: var(--space-4) var(--space-5);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);

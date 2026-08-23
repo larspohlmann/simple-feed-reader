@@ -291,8 +291,8 @@ describe('AdminCatalogComponent', () => {
       .flush({ available: true, categories: 13, feeds: 111 });
   });
 
-  it('renders the catalog inside a settings card', () => {
+  it('renders the import block and the catalog as two settings groups', () => {
     const fixture = mountLoaded();
-    expect(fixture.nativeElement.querySelector('app-settings-card')).not.toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('app-settings-group').length).toBe(2);
   });
 });
