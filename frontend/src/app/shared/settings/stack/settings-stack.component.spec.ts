@@ -13,10 +13,36 @@ import { SettingsStackComponent } from './settings-stack.component';
 })
 class HostComponent {}
 
+/** Stands in for a feature section whose host element is a stack child --
+ *  `app-opml-section` and friends, without dragging their dependencies in. */
+@Component({
+  selector: 'app-fake-section',
+  template: `<div class="panel">section</div>`,
+})
+class FakeSectionComponent {}
+
+@Component({
+  imports: [SettingsStackComponent, FakeSectionComponent],
+  template: `
+    <app-settings-stack>
+      <div data-inline>inline group</div>
+      <app-fake-section />
+    </app-settings-stack>
+  `,
+})
+class MixedHostComponent {}
+
 describe('SettingsStackComponent', () => {
   async function render() {
     await TestBed.configureTestingModule({ imports: [HostComponent] }).compileComponents();
     const fixture = TestBed.createComponent(HostComponent);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  async function renderMixed() {
+    await TestBed.configureTestingModule({ imports: [MixedHostComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(MixedHostComponent);
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   }
@@ -28,17 +54,21 @@ describe('SettingsStackComponent', () => {
     expect(el.querySelector('app-settings-stack [data-second]')?.textContent).toBe('two');
   });
 
-  // The gap lives on the stack host, not on the children, so a child that is
-  // another component's host element is spaced exactly like an inline one.
-  // That is the whole point of the primitive: `app-settings-card +
-  // app-settings-card` was a sibling selector and died at a host boundary
-  // (#454). Asserting the children carry no spacing of their own is what stops
-  // a future compensating margin from creeping back in.
-  it('keeps its children free of their own spacing', async () => {
-    const el = await render();
-    const first = el.querySelector<HTMLElement>('[data-first]')!;
+  // The stack spaces its children with a flex `gap`, so every child has to be a
+  // direct element child of the stack host. That is what makes a child which
+  // happens to be another component's host element a flex item spaced exactly
+  // like an inline one. `app-settings-card + app-settings-card` was an adjacent-
+  // sibling rule and could not do this: it died at the host boundary, and the
+  // child had to carry a compensating margin (#454). A wrapper element inside
+  // this component's template would silently bring that back -- one flex item
+  // holding everything, and no gap between groups.
+  it('makes a component host a direct child, exactly like an inline element', async () => {
+    const el = await renderMixed();
+    const stack = el.querySelector('app-settings-stack')!;
 
-    expect(first.style.marginBlockStart).toBe('');
-    expect(first.style.marginTop).toBe('');
+    expect(Array.from(stack.children).map((child) => child.tagName.toLowerCase())).toEqual([
+      'div',
+      'app-fake-section',
+    ]);
   });
 });
