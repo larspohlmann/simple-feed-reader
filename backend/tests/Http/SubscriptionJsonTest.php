@@ -30,13 +30,19 @@ final class SubscriptionJsonTest extends TestCase
 
     public function testCapsALongDescription(): void
     {
+        // 3-byte-per-character text: a byte-based substr(…, 0, 300) would cut
+        // roughly 100 characters plus a broken trailing byte sequence, not the
+        // 300-character prefix mb_substr produces. That divergence is the
+        // point — an ASCII fixture cannot tell mb_substr and substr apart.
         $feed = new Feed('https://example.com/feed.xml');
-        $feed->setDescription(str_repeat('a', 400));
+        $feed->setDescription(str_repeat('あ', 400));
 
         $description = SubscriptionJson::one($this->subscriptionTo($feed))['description'];
 
         self::assertIsString($description);
         self::assertSame(300, mb_strlen($description));
+        self::assertSame(str_repeat('あ', 300), $description);
+        self::assertTrue(mb_check_encoding($description, 'UTF-8'));
     }
 
     public function testAMissingDescriptionStaysNull(): void
