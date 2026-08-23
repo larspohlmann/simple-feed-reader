@@ -156,11 +156,11 @@ final class FirstFetchRecorderTest extends DbTestCase
     }
 
     /** @param list<ParsedEntry> $entries */
-    private function discovered(Feed $feed, array $entries): DiscoveredFeed
+    private function discovered(Feed $feed, array $entries, ?string $imageUrl = null): DiscoveredFeed
     {
         return new DiscoveredFeed(
             $feed->getUrl(),
-            new ParsedFeed('Discovered', null, null, null, $entries),
+            new ParsedFeed('Discovered', null, null, $imageUrl, $entries),
         );
     }
 
@@ -234,7 +234,13 @@ final class FirstFetchRecorderTest extends DbTestCase
         return array_map(static fn (Entry $entry): string => $entry->getGuid(), $entries);
     }
 
-    public function testCappingTheEntryListKeepsTheFeedImage(): void
+    /**
+     * The unit-level guarantee withEntries() itself must hold: every field
+     * but $entries survives the copy. It says nothing about the capping path
+     * — FirstFetchRecorder::newest(), what a real first fetch actually runs
+     * — which testCappingTheEntryListKeepsTheFeedImage below covers instead.
+     */
+    public function testWithEntriesCopiesEveryFeedField(): void
     {
         $document = new ParsedFeed(
             'Example',
@@ -250,5 +256,31 @@ final class FirstFetchRecorderTest extends DbTestCase
         self::assertSame('Example', $capped->title);
         self::assertSame('https://example.com/', $capped->siteUrl);
         self::assertSame('Example feed', $capped->description);
+    }
+
+    /**
+     * The regression testWithEntriesCopiesEveryFeedField() cannot catch on its
+     * own: it never calls FirstFetchRecorder::newest(), so it would still pass
+     * if newest() reverted to rebuilding ParsedFeed field by field (the exact
+     * bug withEntries() exists to prevent). This drives the real, wired
+     * recorder's own capping method with 250 entries — over
+     * FIRST_FETCH_MAX_ENTRIES, so a cap actually happens — and a non-null
+     * image. There is no Feed::$imageUrl yet for record() to persist the
+     * image into, so this reaches newest() through reflection: it is the
+     * private method record() itself calls, not a duplicate of it.
+     */
+    public function testCappingTheEntryListKeepsTheFeedImage(): void
+    {
+        $feed = $this->feed();
+        $discovered = $this->discovered($feed, $this->parsedEntries(250), 'https://example.com/logo.png');
+
+        self::assertSame(200, $this->recorder->record($feed, $discovered));
+
+        /** @var ParsedFeed $capped */
+        $capped = (new \ReflectionMethod(FirstFetchRecorder::class, 'newest'))
+            ->invoke($this->recorder, $discovered->document);
+
+        self::assertCount(200, $capped->entries);
+        self::assertSame('https://example.com/logo.png', $capped->imageUrl);
     }
 }
