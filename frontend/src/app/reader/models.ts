@@ -29,6 +29,11 @@ export interface SubscriptionDto {
   customTitle: string | null;
   feedUrl: string;
   siteUrl: string | null;
+  /** The feed's own description, already plain text and capped by the API. */
+  description: string | null;
+  /** The image the feed publishes for itself (its logo or banner), https-only,
+   *  or null. Not `faviconUrl` — that is the site's icon. */
+  imageUrl: string | null;
   status: 'active' | 'erroring' | 'gone';
   /** Where entries come from: 'xml' (a real RSS/Atom feed) or 'scraped'
    *  (generated from the page's article list) today; stays an open string. */

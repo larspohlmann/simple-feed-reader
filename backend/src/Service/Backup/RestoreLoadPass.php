@@ -141,6 +141,7 @@ final class RestoreLoadPass
         $feed->setTitle($line->title);
         $feed->setDescription($line->description);
         $feed->setFaviconUrl($line->faviconUrl);
+        $feed->setImageUrl($line->imageUrl);
         $feed->setSourceFormat($line->sourceFormat);
         $this->em->persist($feed);
         $this->feedsByUrl[$line->url] = $feed;

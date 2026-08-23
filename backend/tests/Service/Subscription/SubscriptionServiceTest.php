@@ -79,7 +79,7 @@ final class SubscriptionServiceTest extends DbTestCase
 
         return FeedDiscoveryResult::directFeed(new DiscoveredFeed(
             $url,
-            new ParsedFeed($title, null, null, [$entry]),
+            new ParsedFeed($title, null, null, null, [$entry]),
         ));
     }
 

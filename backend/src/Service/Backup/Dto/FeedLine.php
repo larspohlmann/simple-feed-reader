@@ -15,6 +15,7 @@ final readonly class FeedLine
         public ?string $title,
         public ?string $description,
         public ?string $faviconUrl,
+        public ?string $imageUrl,
         public string $sourceFormat,
     ) {
     }
@@ -30,6 +31,7 @@ final readonly class FeedLine
             title: LineField::stringOrNull($line, 'title'),
             description: LineField::stringOrNull($line, 'description'),
             faviconUrl: LineField::stringOrNull($line, 'faviconUrl'),
+            imageUrl: LineField::stringOrNull($line, 'imageUrl'),
             sourceFormat: LineField::string($line, 'sourceFormat'),
         );
     }

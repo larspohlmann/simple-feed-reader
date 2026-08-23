@@ -43,6 +43,8 @@ const sub = (id: number, unread = 0): SubscriptionDto => ({
   customTitle: null,
   feedUrl: `https://f/${id}`,
   siteUrl: null,
+  description: null,
+  imageUrl: null,
   status: 'active',
   sourceFormat: 'xml',
   createdAt: 'x',

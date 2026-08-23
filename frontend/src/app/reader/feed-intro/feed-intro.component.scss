@@ -1,0 +1,117 @@
+@use '../../theme/breakpoints' as bp;
+
+/* An undeclared host is `display: inline`, which ignores the width its wrapper
+   gives it and lets the magazine column's `align-items: center` shrink-wrap and
+   centre the whole block. The measure itself is not this component's business —
+   the entry list wraps its outlet and sizes it. */
+:host {
+  display: block;
+}
+
+/* Top-aligned, not centred: a wrapped blurb runs several lines and the logo
+    belongs beside the first of them. */
+.lead {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.logo {
+  flex: none;
+  max-height: var(--feed-logo-max-h);
+  max-width: 40%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  object-position: left center;
+  border-radius: var(--radius-sm);
+
+  /* The same chip app-favicon paints behind the site icon. A feed's own image
+     needs it just as badly: SZ publishes its favicon as the channel image, and
+     dark ink on a transparent background vanishes against the dark surface.
+     A full-bleed opaque logo simply covers it. */
+  background: var(--favicon-backdrop);
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+/* line-height 1 so the glyphs start at the box top. With the default leading the
+   title's cap sits a few px below its own box, and the image beside it — which
+   does start at the box top — reads as hanging above the text. */
+.title {
+  margin: 0;
+  font-size: var(--fs-base);
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* One inline flow, so the blurb wraps freely and the link trails its last line.
+   Nothing is clipped: the server's character cap is the only bound, and it is
+   set high enough that no real feed description reaches it. */
+.text {
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+
+.description {
+  color: var(--text-muted);
+}
+
+.homepage {
+  white-space: nowrap;
+}
+
+/* Separation from the blurb, and only from the blurb: applied unconditionally
+   it also indented the link past the title on the feeds that carry no blurb. */
+.description + .homepage {
+  margin-left: var(--space-2);
+}
+
+/* The for-you run divider, reproduced: a short uppercase label, then a 1px
+   accent rule filling the rest of the width. The one deliberate departure from
+   `.run-header` is the horizontal padding, which is zero here — that component
+   insets itself by `--space-4`, and this block has to hold the posts' left
+   edge. */
+.rule {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0 var(--space-2);
+}
+
+.rule::after {
+  flex: 1;
+  border-top: 1px solid var(--accent);
+  content: '';
+}
+
+.rule__label {
+  font-size: var(--fs-xs, var(--fs-sm));
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* A logo beside the text leaves a phone too narrow for either, and the blurb
+   and link cannot share a line at that width. Stack all three. */
+@media (width <= bp.$bp-sm) {
+  .lead {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .logo {
+    max-width: 100%;
+  }
+
+  .body {
+    width: 100%;
+  }
+}

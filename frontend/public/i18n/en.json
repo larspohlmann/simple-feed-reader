@@ -587,6 +587,7 @@
     "tagFallback": "Tag",
     "feedFallback": "Feed",
     "forYouGeneratedAt": "Generated {{ago}}",
+    "feedPosts": "Posts",
     "tags": "Tags",
     "feeds": "Feeds",
     "organise": "Organise",

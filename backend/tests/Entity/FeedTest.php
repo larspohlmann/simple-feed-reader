@@ -16,4 +16,17 @@ final class FeedTest extends TestCase
         $feed->setSourceFormat('scraped');
         self::assertSame('scraped', $feed->getSourceFormat());
     }
+
+    public function testAFeedStartsWithNoImage(): void
+    {
+        self::assertNull((new Feed('https://example.com/feed.xml'))->getImageUrl());
+    }
+
+    public function testTheImageUrlRoundTrips(): void
+    {
+        $feed = new Feed('https://example.com/feed.xml');
+        $feed->setImageUrl('https://example.com/logo.png');
+
+        self::assertSame('https://example.com/logo.png', $feed->getImageUrl());
+    }
 }

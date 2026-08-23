@@ -103,6 +103,7 @@ final readonly class FullyPopulatedAccount
         $feed->setSiteUrl('https://populated.example');
         $feed->setDescription('Every backed-up feed field, set.');
         $feed->setFaviconUrl('https://populated.example/favicon.ico');
+        $feed->setImageUrl('https://populated.example/logo.png');
         $feed->setSourceFormat(SourceFormat::SCRAPED);
 
         return $feed;

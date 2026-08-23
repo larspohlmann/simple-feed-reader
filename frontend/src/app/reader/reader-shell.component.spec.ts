@@ -32,6 +32,7 @@ import { ReaderHeaderComponent } from './header/reader-header.component';
 import { headerHiddenAtRest } from './header-scroll';
 import { RefreshService } from './refresh.service';
 import { LayoutService } from './layout.service';
+import { ReadingLayout } from './reading-layout.service';
 import { ManageActions } from './manage/manage-actions.service';
 import { TagsStore } from './tags.store';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
@@ -2042,6 +2043,97 @@ describe('ReaderShellComponent', () => {
         .flush({ entries: [], nextCursor: null });
 
       expect(f.componentInstance.leavingIds().size).toBe(0);
+    });
+  });
+
+  describe('feed intro (#568)', () => {
+    // Boots the shell with one subscription carrying the given intro fields
+    // and selects it, so `selectedSubscription()`/`feedIntroSubscription()`
+    // see it rather than the empty list `boot()` starts with.
+    function mountWithSubscriptionSelected(
+      overrides: {
+        description: string | null;
+        imageUrl: string | null;
+        siteUrl: string | null;
+      },
+      layout: ReadingLayout = 'magazine',
+    ): HTMLElement {
+      const f = bootWith([{ ...SUBSCRIPTION_FIXTURE, ...overrides }]);
+      f.componentInstance.layout.set(layout);
+      const id = String(SUBSCRIPTION_FIXTURE.id);
+      qp.next(convertToParamMap({ subscription: id }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.params.get('subscription') === id)
+        .flush({ entries: [], nextCursor: null });
+      f.detectChanges();
+      return f.nativeElement as HTMLElement;
+    }
+
+    // Drives the shell to the given selection kind through the same query
+    // params the URL would carry, draining the entries request the change
+    // triggers. 'all' is boot()'s own starting selection, so it needs none.
+    // Resets `qp` first: this runs inside a loop over several kinds, and
+    // `qp` is the shared BehaviorSubject the whole file mounts against — left
+    // at a previous iteration's params, the NEXT boot() would read a stale
+    // selection (e.g. still 'search') on init and fire the wrong request.
+    function mountWithSelectionKind(kind: string): HTMLElement {
+      qp.next(convertToParamMap({}));
+      const f = boot();
+      if (kind === 'all') return f.nativeElement as HTMLElement;
+
+      const params =
+        kind === 'tag' ? { tag: '7' } : kind === 'search' ? { q: 'angular' } : { view: kind };
+      qp.next(convertToParamMap(params));
+      f.detectChanges();
+      const url =
+        kind === 'search' ? 'https://api.test/api/entries/search' : 'https://api.test/api/entries';
+      ctrl.expectOne((r) => r.url === url).flush({ entries: [], nextCursor: null });
+      f.detectChanges();
+      return f.nativeElement as HTMLElement;
+    }
+
+    it('shows the feed intro at the top of the list for a single-feed selection', () => {
+      const host = mountWithSubscriptionSelected({
+        description: 'A feed about things.',
+        imageUrl: 'https://example.com/logo.png',
+        siteUrl: 'https://example.com/',
+      });
+
+      expect(host.querySelector('app-feed-intro')).not.toBeNull();
+    });
+
+    it('shows no feed intro in the list layout', () => {
+      // The block is a member of the magazine column — it takes that column's
+      // measure and left edge. The list layout has no such measure, so the same
+      // block would be a wide slab sitting on top of dense rows.
+      const host = mountWithSubscriptionSelected(
+        {
+          description: 'A feed about things.',
+          imageUrl: 'https://example.com/logo.png',
+          siteUrl: 'https://example.com/',
+        },
+        'list',
+      );
+
+      expect(host.querySelector('app-feed-intro')).toBeNull();
+    });
+
+    it('shows no feed intro for the aggregated and saved views', () => {
+      for (const view of ['all', 'tag', 'search', 'favorites', 'kept', 'viewed', 'for-you']) {
+        const host = mountWithSelectionKind(view);
+        expect(host.querySelector('app-feed-intro')).toBeNull();
+      }
+    });
+
+    it('shows no feed intro for a feed that has none of the three values', () => {
+      const host = mountWithSubscriptionSelected({
+        description: null,
+        imageUrl: null,
+        siteUrl: null,
+      });
+
+      expect(host.querySelector('app-feed-intro')).toBeNull();
     });
   });
 });

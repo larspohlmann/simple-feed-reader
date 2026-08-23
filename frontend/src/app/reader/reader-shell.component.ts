@@ -67,6 +67,7 @@ import { OnboardingSkip } from '../discover/onboarding-skip';
 import { ProgressHairlineComponent } from '../shared/progress-hairline/progress-hairline.component';
 import { IconComponent } from '../shared/icon/icon.component';
 import { ButtonComponent } from '../shared/button/button.component';
+import { FeedIntroComponent } from './feed-intro/feed-intro.component';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 @Component({
@@ -80,6 +81,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
     ProgressHairlineComponent,
     IconComponent,
     ButtonComponent,
+    FeedIntroComponent,
     RouterLink,
     TranslocoPipe,
   ],
@@ -289,6 +291,26 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     const s = this.selection();
     if (s.kind !== 'subscription') return null;
     return this.subs.subscriptions().find((x) => x.id === s.id) ?? null;
+  });
+
+  /** The selected feed, but only where the intro block belongs: the magazine
+   *  layout, and only when the feed has something to introduce itself with.
+   *
+   *  Magazine only because the block is a member of that column — it takes the
+   *  column's measure and its left edge, and reads as the card above the cards.
+   *  The list layout is a dense stack with no such measure, where the same
+   *  block would be a wide slab sitting on top of the rows.
+   *
+   *  A feed with no description, image or site URL renders no block at all
+   *  rather than an empty box above the first row. The check belongs here and
+   *  nowhere else: a component cannot decline to be created, so a self-guard
+   *  inside FeedIntroComponent could never suppress the host element's own
+   *  padding. */
+  readonly feedIntroSubscription = computed(() => {
+    if (this.layout.mode() !== 'magazine') return null;
+    const sub = this.selectedSubscription();
+    if (sub === null) return null;
+    return sub.description !== null || sub.imageUrl !== null || sub.siteUrl !== null ? sub : null;
   });
 
   readonly title = computed(() => {

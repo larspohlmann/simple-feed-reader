@@ -332,4 +332,18 @@ final class Atom10ParserTest extends TestCase
             $feed->entries[1]->title,
         );
     }
+
+    public function testReadsTheFeedLogo(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0"?>
+            <feed xmlns="http://www.w3.org/2005/Atom">
+                <title>Example</title>
+                <logo>https://example.com/banner.png</logo>
+                <entry><title>One</title><id>urn:1</id></entry>
+            </feed>
+            XML;
+
+        self::assertSame('https://example.com/banner.png', $this->parse($xml)->imageUrl);
+    }
 }
