@@ -291,6 +291,14 @@ final class BackupSchemaCoverageTest extends DbTestCase
         EntryState::class => BackupSchema::KIND_ENTRY_STATE,
     ];
 
+    /**
+     * The headings the user-facing tables live under. A dropped thing is
+     * looked for under its own heading and nowhere else.
+     */
+    private const string SECTION_WHOLLY_DROPPED = '### 6.2';
+    private const string SECTION_DROPPED_FIELDS = '### 6.3';
+    private const string SECTION_NEVER_WRITTEN = '## 7.';
+
     public function testEveryPersistedFieldOfACoveredEntityCarriesADecision(): void
     {
         foreach (array_keys(self::BACKED_UP) as $entityClass) {
@@ -382,35 +390,90 @@ final class BackupSchemaCoverageTest extends DbTestCase
      * The reason strings above are for whoever hits a red test. This asserts
      * the user-facing table cannot silently fall behind them — the coupling is
      * mechanical, the wording stays hand-written.
+     *
+     * Scoped per section because a backticked name is not unique across the
+     * page: unscoped, section 5's `createdAt` would answer for a User row that
+     * 6.3 had lost. Two declarations of one name inside a single section still
+     * alias each other — User's and Feed's `status` rows both sit in 6.3 — so
+     * the floor this holds is one row per name per section.
      */
     public function testEveryDroppedThingAppearsInTheUserFacingDoc(): void
     {
         $doc = (string) file_get_contents(__DIR__ . '/../../../../docs/backup.md');
 
+        $whollyDropped = $this->sectionOf($doc, self::SECTION_WHOLLY_DROPPED);
         foreach (array_keys(self::ACCOUNT_SCOPED_WHOLLY_DROPPED) as $entityClass) {
             $shortName = (new \ReflectionClass($entityClass))->getShortName();
             self::assertStringContainsString(
                 $shortName,
-                $doc,
-                sprintf('docs/backup.md never mentions %s, which a backup drops.', $shortName),
+                $whollyDropped,
+                sprintf(
+                    'docs/backup.md section "%s" never mentions %s, which a backup drops.',
+                    self::SECTION_WHOLLY_DROPPED,
+                    $shortName,
+                ),
             );
         }
 
-        foreach ([self::NOT_BACKED_UP, self::NEVER_BACKED_UP] as $declarations) {
-            foreach ($declarations as $entityClass => $fields) {
-                foreach (array_keys($fields) as $field) {
-                    self::assertStringContainsString(
-                        '`' . $field . '`',
-                        $doc,
-                        sprintf(
-                            'docs/backup.md has no row for %s::$%s, which a backup drops.',
-                            $entityClass,
-                            $field,
-                        ),
-                    );
-                }
+        $this->assertEveryFieldHasARow(self::NOT_BACKED_UP, $doc, self::SECTION_DROPPED_FIELDS);
+        $this->assertEveryFieldHasARow(self::NEVER_BACKED_UP, $doc, self::SECTION_NEVER_WRITTEN);
+    }
+
+    /**
+     * @param array<class-string, array<string, string>> $declarations
+     */
+    private function assertEveryFieldHasARow(array $declarations, string $doc, string $sectionMarker): void
+    {
+        $section = $this->sectionOf($doc, $sectionMarker);
+
+        foreach ($declarations as $entityClass => $fields) {
+            foreach (array_keys($fields) as $field) {
+                self::assertStringContainsString(
+                    '`' . $field . '`',
+                    $section,
+                    sprintf(
+                        'docs/backup.md section "%s" has no row for %s::$%s, which a backup drops.',
+                        $sectionMarker,
+                        $entityClass,
+                        $field,
+                    ),
+                );
             }
         }
+    }
+
+    /**
+     * The lines under one heading, down to the next heading of the same or a
+     * higher level. Empty is not a passing state: a renumbered page has to
+     * fail here, rather than let every search run against nothing and pass.
+     */
+    private function sectionOf(string $doc, string $marker): string
+    {
+        $level = \strlen(explode(' ', $marker, 2)[0]);
+        $collected = [];
+        $inside = false;
+
+        foreach (explode("\n", $doc) as $line) {
+            if (!$inside) {
+                $inside = str_starts_with($line, $marker);
+                continue;
+            }
+            if ($this->startsANewSection($line, $level)) {
+                break;
+            }
+            $collected[] = $line;
+        }
+
+        self::assertNotSame([], $collected, sprintf('docs/backup.md has no section "%s".', $marker));
+
+        return implode("\n", $collected);
+    }
+
+    private function startsANewSection(string $line, int $level): bool
+    {
+        $hashes = strspn($line, '#');
+
+        return 0 < $hashes && $hashes <= $level;
     }
 
     /**

@@ -104,12 +104,16 @@ the first pass runs before the deletion. **A refused file costs the account
 nothing.** The account is unchanged. You can correct the file and try again.
 
 **The restore fails after the deletion. The account is empty.** The application
-answers with `backup_load_failed`. This happens when the database refuses a
-value that the format accepts — a title that is longer than the column, a number
-that is too wide for its type, a duplicate key. The message of this answer says
-that the account is now empty, because that is the fact you must know. Correct
-the file, or export it again, then run the restore again with the same file. The
-deletion is repeatable, so a second attempt starts from the same clean state.
+answers with `backup_load_failed`. Two causes give this answer. Usually the
+database refuses a value that the format accepts — a title that is longer than
+the column, a number that is too wide for its type, a duplicate key. More
+rarely, the file points at a row that the same file never declares. The first
+pass must already refuse such a file, so this second cause is a backstop. It
+stays because a partial load that keeps quiet is much worse than a load that
+stops and reports. The message of this answer says that the account is now
+empty, because that is the fact you must know. Correct the file, or export it
+again, then run the restore again with the same file. The deletion is
+repeatable, so a second attempt starts from the same clean state.
 
 The restore is not one transaction. This is deliberate. If the load stops in the
 middle, the account holds a part of the file. The remedy is the same: run the
@@ -123,8 +127,8 @@ restore again with the same file.
 | `account` | Your language (`locale`), the scrape fallback setting (`scrapeFallbackEnabled`), and all "For you" settings (`recommendationSettings`). |
 | `tag` | Each tag: `name`, `color`, `icon` and `position`. |
 | `feed` | Each feed you subscribe to: `url`, `siteUrl`, `title`, `description`, `faviconUrl` and `sourceFormat`. |
-| `subscription` | Each subscription: `customTitle`, `position`, `markedReadUntil`, the date the subscription started, and the tags on the subscription with their order. |
-| `entry` | Each article, with the address of the feed it came from: `guid`, `url`, `title`, `author`, `summary`, `contentHtml`, the image (`imageUrl`, `imageWidth`, `imageHeight`), `publishedAt` and `effectiveDate`. |
+| `subscription` | Each subscription: `customTitle`, `position`, `markedReadUntil`, `createdAt` (the date the subscription started), and the tags on the subscription with their order. |
+| `entry` | Each article, with the address of the feed it came from: `guid`, `url`, `title`, `author`, `summary`, `contentHtml`, the image (`imageUrl`, `imageWidth`, `imageHeight`), `publishedAt`, `createdAt` (the date this instance first saw the article) and `effectiveDate`. |
 | `entryState` | Each article mark: `isRead`, `isViewed`, `isFavorite`, `isKept`, `readAt` and `viewedAt`. Each mark names its article by feed and by article identifier. |
 | `footer` | The number of lines of each kind. The restore uses these numbers to show you what the file holds. |
 
