@@ -23,6 +23,13 @@ function mountDismissible() {
   return fixture;
 }
 
+/** The trailing ✕, whose whole point is that one click does not mean one
+ *  thing: what it does depends on which step the field is in. */
+function clickTrailing(fixture: ReturnType<typeof mount>): void {
+  fixture.debugElement.query(By.css('.clear-or-dismiss')).nativeElement.click();
+  fixture.detectChanges();
+}
+
 function typeInto(fixture: ReturnType<typeof mount>, value: string): void {
   const input: HTMLInputElement = fixture.debugElement.query(By.css('input')).nativeElement;
   input.value = value;
@@ -60,10 +67,7 @@ describe('SearchFieldComponent', () => {
     tick(300);
     expect(emitted).toEqual(['angular']);
 
-    const clearButton: HTMLButtonElement = fixture.debugElement.query(
-      By.css('.clear-or-dismiss'),
-    ).nativeElement;
-    clearButton.click();
+    clickTrailing(fixture);
     expect(emitted).toEqual(['angular', '']);
 
     typeInto(fixture, 'angular');
@@ -103,10 +107,7 @@ describe('SearchFieldComponent', () => {
     typeInto(fixture, 'angular');
     tick(100); // well inside the 300 ms window: the debounce is still pending
 
-    const clearButton: HTMLButtonElement = fixture.debugElement.query(
-      By.css('.clear-or-dismiss'),
-    ).nativeElement;
-    clearButton.click();
+    clickTrailing(fixture);
 
     tick(300); // drain the pending debounce — "angular" must not resurface
 
@@ -158,10 +159,7 @@ describe('SearchFieldComponent', () => {
     tick(300);
     expect(emitted).toEqual(['cats']);
 
-    const clearButton: HTMLButtonElement = fixture.debugElement.query(
-      By.css('.clear-or-dismiss'),
-    ).nativeElement;
-    clearButton.click();
+    clickTrailing(fixture);
 
     // No tick() at all: a debounced clear would leave `emitted` unchanged here.
     expect(emitted).toEqual(['cats', '']);
@@ -218,21 +216,71 @@ describe('SearchFieldComponent', () => {
     expect(button.nativeElement.getAttribute('aria-label')).toBe('Close search');
   });
 
-  it('dismisses on a second click of the trailing button, once there is nothing left to clear', () => {
+  it('empties the box on the first click and only ends the search on the second', fakeAsync(() => {
     const fixture = mountDismissible();
-    const dismissed = jest.fn();
-    fixture.componentInstance.dismissed.subscribe(dismissed);
+    const events: string[] = [];
+    fixture.componentInstance.search.subscribe((term) => events.push(`search:${term}`));
+    fixture.componentInstance.dismissed.subscribe(() => events.push('dismissed'));
 
     typeInto(fixture, 'cats');
-    fixture.debugElement.query(By.css('.clear-or-dismiss')).nativeElement.click();
-    fixture.detectChanges();
-    expect(dismissed).not.toHaveBeenCalled();
+    tick(300);
+    expect(events).toEqual(['search:cats']);
 
-    fixture.debugElement.query(By.css('.clear-or-dismiss')).nativeElement.click();
-    fixture.detectChanges();
+    clickTrailing(fixture);
 
-    expect(dismissed).toHaveBeenCalledTimes(1);
-  });
+    // The box is empty, and that is ALL that happened: the results the user is
+    // reading stay up until they actually leave. Asserting the events after
+    // each click, not once at the end, is what pins the split — the aggregate
+    // is the same either way.
+    expect(fixture.debugElement.query(By.css('input')).nativeElement.value).toBe('');
+    expect(events).toEqual(['search:cats']);
+
+    clickTrailing(fixture);
+
+    // The search ends first and the caller is told to leave second: what the
+    // user is leaving is the results the first click left standing.
+    expect(events).toEqual(['search:cats', 'search:', 'dismissed']);
+  }));
+
+  it('leaves the results up when the box is emptied by backspace rather than by the button', fakeAsync(() => {
+    const fixture = mountDismissible();
+    const emitted: string[] = [];
+    fixture.componentInstance.search.subscribe((term) => emitted.push(term));
+
+    typeInto(fixture, 'cats');
+    tick(300);
+    typeInto(fixture, '');
+    tick(300);
+
+    expect(emitted).toEqual(['cats']);
+  }));
+
+  it('does not search for a term left in the debounce when the box is emptied first', fakeAsync(() => {
+    const fixture = mountDismissible();
+    const emitted: string[] = [];
+    fixture.componentInstance.search.subscribe((term) => emitted.push(term));
+
+    typeInto(fixture, 'cats');
+    tick(100); // well inside the 300 ms window: the debounce is still pending
+    clickTrailing(fixture);
+    tick(300);
+
+    expect(emitted).toEqual([]);
+  }));
+
+  it('drops a term left in the debounce when the route moves the field on under it', fakeAsync(() => {
+    const fixture = mount();
+    const emitted: string[] = [];
+    fixture.componentInstance.search.subscribe((term) => emitted.push(term));
+
+    typeInto(fixture, 'cats');
+    tick(100); // the debounce is still pending
+    fixture.componentRef.setInput('term', 'python');
+    fixture.detectChanges();
+    tick(300);
+
+    expect(emitted).toEqual([]);
+  }));
 
   it('carries role="search" on its wrapper', () => {
     const fixture = mount();
