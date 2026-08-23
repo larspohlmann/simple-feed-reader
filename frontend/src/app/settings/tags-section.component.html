@@ -5,9 +5,10 @@
     </app-button>
 
     @if (tagsStore.loading()) {
-      <app-skeleton [label]="'settings.tags.loading' | transloco" [rows]="4" />
+      <app-skeleton class="state" [label]="'settings.tags.loading' | transloco" [rows]="4" />
     } @else if (tagsStore.error(); as problem) {
       <app-error-banner
+        class="state"
         [message]="problem.detail || problem.title"
         [actionLabel]="'settings.tags.retry' | transloco"
         (action)="tagsStore.load()"

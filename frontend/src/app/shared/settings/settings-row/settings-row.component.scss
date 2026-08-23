@@ -14,7 +14,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-5);
-  padding: var(--space-4) var(--space-5);
+  padding: var(--panel-inset-y) var(--panel-inset-x);
 
   // A comfortable, even row height so a toggle-only row is not shorter than one
   // that also carries a description. No 60px token exists; compose it.
@@ -65,7 +65,7 @@
   position: absolute;
   right: 0;
   bottom: 0;
-  left: var(--space-5);
+  left: var(--panel-inset-x);
   border-top: 1px solid var(--border);
 }
 
@@ -73,16 +73,11 @@
 // width. Widening the control inside that slot is the caller's job, not this
 // component's: the control is projected content, so emulated encapsulation
 // stamps it with the caller's scope attribute and a selector written here can
-// never reach it. A toggle keeps its natural size regardless.
+// never reach it. A toggle keeps its natural size regardless. The row's own
+// padding and its divider's inset already narrowed with it -- both read
+// `--panel-inset-y`/`--panel-inset-x`, which step down at this same
+// breakpoint in theme/tokens.scss.
 @media (width <= bp.$bp-sm) {
-  .row {
-    padding: var(--space-4);
-  }
-
-  :host(:not(:last-child)) .row::after {
-    left: var(--space-4);
-  }
-
   .row.stackable {
     flex-wrap: wrap;
   }

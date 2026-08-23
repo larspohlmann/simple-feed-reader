@@ -29,7 +29,7 @@ app-searchable-select {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-4) var(--space-5);
+  padding: var(--panel-inset-y) var(--panel-inset-x);
 }
 
 .conn-dot {

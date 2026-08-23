@@ -2,14 +2,14 @@
 
 // The group's panel is unpadded by design (its rows pad themselves); this
 // page projects blocks and a list, not rows. Every one of `.notice`, `.hint`,
-// `.import`, `app-skeleton`/`app-error-banner` and `.categories` already has
-// its own rule for its own box styling, so the inset is merged into each of
-// those rules below instead of living in one shared block: a shared block
-// would sit earlier in this file and lose to each element's own later,
-// equal-specificity padding rule -- CSS breaks that tie by source order, not
-// by which rule looks more "shared".
+// `.import`, `.state` and `.categories` already has its own rule for its own
+// box styling, so the inset is merged into each of those rules below instead
+// of living in one shared block: a shared block would sit earlier in this
+// file and lose to each element's own later, equal-specificity padding rule
+// -- CSS breaks that tie by source order, not by which rule looks more
+// "shared".
 .notice {
-  padding: var(--space-4) var(--space-5);
+  padding: var(--panel-inset-y) var(--panel-inset-x);
   border-radius: var(--radius);
   background: var(--accent-soft);
   color: var(--text-primary);
@@ -18,7 +18,7 @@
 .hint {
   color: var(--text-muted);
   font-size: var(--fs-sm);
-  padding: var(--space-4) var(--space-5);
+  padding: var(--panel-inset-y) var(--panel-inset-x);
 }
 
 // A panel nested inside the settings group's own panel, which is itself
@@ -28,7 +28,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-4) var(--space-5);
+  padding: var(--panel-inset-y) var(--panel-inset-x);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface-0);
@@ -66,20 +66,22 @@
 
 // The group's own content is no longer wrapped in a flex column with a gap
 // (the `<section>` that carried it was replaced by the shared group), so the
-// banner and skeleton need their own spacing: `padding` is this element's own
-// panel inset (see the top-of-file comment), `margin-bottom` is the gap
-// before whatever sibling content follows it.
-app-error-banner,
-app-skeleton {
+// panel-level banner and skeleton need their own spacing: `padding` is this
+// element's own panel inset (see the top-of-file comment), `margin-bottom` is
+// the gap before whatever sibling content follows it. `.state` marks only
+// those two panel-level blocks -- never the element type -- so the
+// import-failure banner nested inside `.import` above, which already carries
+// its own inset and gap, is untouched by it.
+.state {
   display: block;
-  padding: var(--space-4) var(--space-5);
+  padding: var(--panel-inset-y) var(--panel-inset-x);
   margin-bottom: var(--space-4);
 }
 
 .categories {
   list-style: none;
   margin: 0;
-  padding: var(--space-4) var(--space-5);
+  padding: var(--panel-inset-y) var(--panel-inset-x);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);

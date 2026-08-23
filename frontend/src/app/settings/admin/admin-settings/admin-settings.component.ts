@@ -27,6 +27,7 @@ import { AdminSettingsApi, InstanceSettings } from './admin-settings-api';
     TranslocoPipe,
   ],
   templateUrl: './admin-settings.component.html',
+  styleUrl: './admin-settings.component.scss',
 })
 export class AdminSettingsComponent implements OnInit {
   private readonly api = inject(AdminSettingsApi);

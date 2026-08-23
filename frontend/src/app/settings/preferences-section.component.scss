@@ -1,5 +1,13 @@
 // Layout glue only: `.row`, `.setting`, `.setting-label` and `.setting-hint`
 // are gone -- `app-settings-row` draws the line, the title and the description.
+// The group's panel is unpadded by design (its rows pad themselves); the two
+// save-error banners are direct panel children, not rows, so `.state` gives
+// them the panel inset.
+.state {
+  display: block;
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+}
+
 // The badge is the one piece of chrome the primitives do not own; it rides the
 // row's `[rowTitleTip]` slot.
 .badge {

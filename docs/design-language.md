@@ -755,6 +755,16 @@ keys. The body (rows, disclosures) projects through the default `<ng-content>`
 into a `.panel` card surface: `--surface-1`, `1px --border`, `--radius-lg`, and
 the new `--panel-shadow` token (defined for both modes in `theme/tokens.scss`).
 
+**`.panel` is unpadded by design.** `app-settings-row` pads itself, so a group
+that stacks only rows needs nothing here. Any *other* direct panel child — a
+banner, a skeleton, a loading state, a bordered sub-block — is not a row and
+must supply its own inset by reading `--panel-inset-y`/`--panel-inset-x`
+(`theme/tokens.scss`, mode-invariant, narrowing at the same `bp.$bp-sm` step
+`app-settings-row` does) rather than writing a padding literal. That pair is
+the inset's one owner; a feature stylesheet that reaches for
+`padding: var(--space-4) var(--space-5)` instead is the twelfth section
+about to forget it (#547).
+
 **Not for:** nothing. Every settings and admin section composes a group; the
 flat `app-settings-card` it replaced was deleted in #547.
 

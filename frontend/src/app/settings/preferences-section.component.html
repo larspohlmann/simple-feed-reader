@@ -4,7 +4,7 @@
       <app-language-switcher />
     </app-settings-row>
     @if (language.saveFailed()) {
-      <app-error-banner [message]="'settings.languageSaveFailed' | transloco" />
+      <app-error-banner class="state" [message]="'settings.languageSaveFailed' | transloco" />
     }
 
     <app-settings-row
@@ -21,7 +21,7 @@
       />
     </app-settings-row>
     @if (preferences.saveFailed()) {
-      <app-error-banner [message]="'settings.scrapingSaveFailed' | transloco" />
+      <app-error-banner class="state" [message]="'settings.scrapingSaveFailed' | transloco" />
     }
   </app-settings-group>
 </app-settings-stack>

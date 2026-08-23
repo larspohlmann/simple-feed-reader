@@ -15,6 +15,7 @@
 
     @if (actionError()) {
       <app-error-banner
+        class="state"
         [message]="actionError()!.detail || actionError()!.title"
         [actionLabel]="'admin.dismiss' | transloco"
         (action)="actionError.set(null)"
@@ -22,9 +23,10 @@
     }
 
     @if (loading()) {
-      <app-skeleton [label]="'admin.loadingUsers' | transloco" [rows]="5" />
+      <app-skeleton class="state" [label]="'admin.loadingUsers' | transloco" [rows]="5" />
     } @else if (error()) {
       <app-error-banner
+        class="state"
         [message]="error()!.detail || error()!.title"
         [actionLabel]="'admin.retry' | transloco"
         (action)="load()"

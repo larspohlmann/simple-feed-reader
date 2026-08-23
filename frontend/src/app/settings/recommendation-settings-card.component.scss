@@ -43,7 +43,7 @@ app-settings-group + app-settings-group {
   flex-direction: column;
   gap: var(--space-4);
   margin: var(--space-3) var(--space-4) var(--space-4);
-  padding: var(--space-4) var(--space-5);
+  padding: var(--panel-inset-y) var(--panel-inset-x);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface-0);
@@ -164,7 +164,7 @@ textarea {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-4) var(--space-5);
+  padding: var(--panel-inset-y) var(--panel-inset-x);
 }
 
 .danger-main {
