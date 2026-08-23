@@ -134,7 +134,7 @@ restore again with the same file.
 | `header` | The format version, the export date, the address of the instance the file came from, and the account address the file came from. |
 | `account` | Your language (`locale`), the scrape fallback setting (`scrapeFallbackEnabled`), and all "For you" settings (`recommendationSettings`). |
 | `tag` | Each tag: `name`, `color`, `icon` and `position`. |
-| `feed` | Each feed you subscribe to: `url`, `siteUrl`, `title`, `description`, `faviconUrl` and `sourceFormat`. |
+| `feed` | Each feed you subscribe to: `url`, `siteUrl`, `title`, `description`, `faviconUrl`, `imageUrl` and `sourceFormat`. |
 | `subscription` | Each subscription: `customTitle`, `position`, `markedReadUntil`, `createdAt` (the date the subscription started), and the tags on the subscription with their order. |
 | `entry` | Each article, with the address of the feed it came from: `guid`, `url`, `title`, `author`, `summary`, `contentHtml`, the image (`imageUrl`, `imageWidth`, `imageHeight`), `publishedAt`, `createdAt` (the date this instance first saw the article) and `effectiveDate`. |
 | `entryState` | Each article mark: `isRead`, `isViewed`, `isFavorite`, `isKept`, `readAt` and `viewedAt`. Each mark names its article by feed and by article identifier. |

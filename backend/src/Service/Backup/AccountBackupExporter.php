@@ -239,6 +239,7 @@ final readonly class AccountBackupExporter
             'title' => $feed->getTitle(),
             'description' => $feed->getDescription(),
             'faviconUrl' => $feed->getFaviconUrl(),
+            'imageUrl' => $feed->getImageUrl(),
             'sourceFormat' => $feed->getSourceFormat(),
         ];
     }

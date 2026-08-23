@@ -67,6 +67,7 @@ final class BackupFieldDeclarations
         Feed::class => [
             'url' => 'url', 'siteUrl' => 'siteUrl', 'title' => 'title',
             'description' => 'description', 'faviconUrl' => 'faviconUrl',
+            'imageUrl' => 'imageUrl',
             'sourceFormat' => 'sourceFormat',
         ],
         Subscription::class => [

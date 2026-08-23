@@ -26,8 +26,9 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  *
  * oldest-supported.ndjson omits every additive field added since the format
  * shipped: `showReasons` and `profileText`, both inside the account line's
- * `recommendationSettings`. current.ndjson carries every field the format holds
- * today.
+ * `recommendationSettings`. current.ndjson carries every field the format held when
+ * the corpus was frozen. It is not extended when a field is added — freezing is the
+ * point, and the standing rule below says so.
  *
  * Standing rule: when a PR adds an additive field, it adds NOTHING to this corpus.
  * oldest-supported already lacks the field, and that absence IS the test. A third
