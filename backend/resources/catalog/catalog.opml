@@ -7,6 +7,21 @@
   it opens in any other reader — with three extra attributes on each category
   outline that OPML has no equivalent for: `key` (stable identity across
   imports), `icon` (Material Symbol) and `color`.
+
+  WHAT BELONGS HERE (#559). A feed qualifies if it publishes regularly and has
+  an identifiable editorial voice — an institution, a magazine, or a named
+  author. Where it is hosted is irrelevant: this file already ships plenty of
+  one-person blogs and newsletters, so "it is a personal newsletter" is not a
+  reason to leave something out. #557 used that rule and it was wrong.
+
+  Freshness: the newest entry must be within 90 days, extended to 180 days for
+  a notable named author. Section feeds (one topic of a larger publisher) are
+  too granular for a picker. No URL may appear twice — CatalogDocument rejects
+  the whole document if one does.
+
+  VERIFY BEFORE COMMITTING. Every new URL must pass FeedDiscovery, and
+  `bin/console app:catalog:check-urls` must be clean for the whole file. Do not
+  add a URL on the strength of a search result alone.
 -->
 <opml version="2.0">
   <head>
@@ -186,6 +201,10 @@
                xmlUrl="https://stackoverflow.blog/feed/"
                htmlUrl="https://stackoverflow.blog"
                description="Developer community and industry writing"/>
+      <outline type="rss" text="Stripe Blog"
+               xmlUrl="https://stripe.com/blog/feed.rss"
+               htmlUrl="https://stripe.com/blog"
+               description="Engineering, product and payments writing from Stripe"/>
       <outline type="rss" text="Symfony Blog"
                xmlUrl="https://feeds.feedburner.com/symfony/blog"
                htmlUrl="https://symfony.com"
@@ -300,6 +319,10 @@
                xmlUrl="https://news.mongabay.com/feed/"
                htmlUrl="https://news.mongabay.com"
                description="Conservation and environmental science"/>
+      <outline type="rss" text="The Great Simplification"
+               xmlUrl="https://natehagens.substack.com/feed"
+               htmlUrl="https://natehagens.substack.com"
+               description="Nate Hagens on energy, ecology and the human predicament"/>
       <outline type="rss" text="Utopia.de"
                xmlUrl="https://utopia.de/feed/"
                htmlUrl="https://utopia.de"
@@ -326,6 +349,10 @@
                xmlUrl="https://feeds.bbci.co.uk/news/world/rss.xml"
                htmlUrl="https://www.bbc.com"
                description="World news from the BBC"/>
+      <outline type="rss" text="CBC Top Stories"
+               xmlUrl="https://www.cbc.ca/webfeed/rss/rss-topstories"
+               htmlUrl="https://www.cbc.ca/news"
+               description="Top news from Canada's public broadcaster"/>
       <outline type="rss" text="DW English"
                xmlUrl="https://rss.dw.com/rdf/rss-en-all"
                htmlUrl="https://www.dw.com"
@@ -342,6 +369,10 @@
                xmlUrl="https://www.politico.eu/feed/"
                htmlUrl="https://www.politico.eu"
                description="European politics and policy"/>
+      <outline type="rss" text="Politico Politics"
+               xmlUrl="https://rss.politico.com/politics-news.xml"
+               htmlUrl="https://www.politico.com"
+               description="US politics reporting from Politico"/>
       <outline type="rss" text="The Guardian World"
                xmlUrl="https://www.theguardian.com/world/rss"
                htmlUrl="https://www.theguardian.com"
@@ -364,6 +395,10 @@
                xmlUrl="https://dissentmagazine.org/feed/"
                htmlUrl="https://dissentmagazine.org"
                description="Quarterly of politics and culture from the democratic left"/>
+      <outline type="rss" text="Free Society"
+               xmlUrl="https://peacefulrevolutionary.substack.com/feed"
+               htmlUrl="https://peacefulrevolutionary.substack.com"
+               description="Essays on nonviolence, liberty and social change"/>
       <outline type="rss" text="Freedom News"
                xmlUrl="https://freedomnews.org.uk/feed/"
                htmlUrl="https://freedomnews.org.uk"
@@ -392,6 +427,14 @@
                xmlUrl="https://www.redpepper.org.uk/feed/"
                htmlUrl="https://www.redpepper.org.uk"
                description="British magazine of radical politics, culture and green thinking"/>
+      <outline type="rss" text="Salon"
+               xmlUrl="https://www.salon.com/feed"
+               htmlUrl="https://www.salon.com"
+               description="US progressive news, politics and culture commentary"/>
+      <outline type="rss" text="Slate News &amp; Politics"
+               xmlUrl="https://slate.com/feeds/news-and-politics.rss"
+               htmlUrl="https://slate.com"
+               description="US politics and current affairs commentary from Slate"/>
       <outline type="rss" text="The Anarchist Library"
                xmlUrl="https://theanarchistlibrary.org/feed"
                htmlUrl="https://theanarchistlibrary.org"
@@ -408,6 +451,10 @@
                xmlUrl="https://www.thenation.com/feed/?post_type=article"
                htmlUrl="https://www.thenation.com"
                description="Oldest US progressive weekly"/>
+      <outline type="rss" text="Thinking about…"
+               xmlUrl="https://snyder.substack.com/feed"
+               htmlUrl="https://snyder.substack.com"
+               description="Timothy Snyder on tyranny, history and the defence of democracy"/>
       <outline type="rss" text="Verso Books"
                xmlUrl="https://www.versobooks.com/blogs/news.atom"
                htmlUrl="https://www.versobooks.com/blogs"
@@ -416,6 +463,10 @@
                xmlUrl="https://wagingnonviolence.org/feed/"
                htmlUrl="https://wagingnonviolence.org"
                description="Reporting on social movements worldwide"/>
+      <outline type="rss" text="anarchistnews.org"
+               xmlUrl="https://anarchistnews.org/rss.xml"
+               htmlUrl="https://anarchistnews.org"
+               description="Anarchist news, communiqués and debate"/>
       <outline type="rss" text="openDemocracy"
                xmlUrl="https://www.opendemocracy.net/en/rss/"
                htmlUrl="https://www.opendemocracy.net"
@@ -468,6 +519,40 @@
                xmlUrl="https://www.nngroup.com/feed/rss/"
                htmlUrl="https://www.nngroup.com"
                description="User experience research and guidance"/>
+    </outline>
+    <outline text="Fashion" key="fashion" icon="checkroom" color="#be123c">
+      <outline type="rss" text="Business of Fashion"
+               xmlUrl="https://www.businessoffashion.com/feed/"
+               htmlUrl="https://www.businessoffashion.com"
+               description="The fashion industry as a business: brands, retail and strategy"/>
+      <outline type="rss" text="Dazed"
+               xmlUrl="https://www.dazeddigital.com/rss"
+               htmlUrl="https://www.dazeddigital.com"
+               description="Youth culture, fashion and music from Dazed"/>
+      <outline type="rss" text="Fashionista"
+               xmlUrl="https://fashionista.com/.rss/full/"
+               htmlUrl="https://fashionista.com"
+               description="Fashion news, careers and industry reporting"/>
+      <outline type="rss" text="Good On You"
+               xmlUrl="https://goodonyou.eco/feed/"
+               htmlUrl="https://goodonyou.eco"
+               description="Brand ethics ratings, sustainable and slow fashion"/>
+      <outline type="rss" text="Highsnobiety"
+               xmlUrl="https://www.highsnobiety.com/feed/"
+               htmlUrl="https://www.highsnobiety.com"
+               description="Streetwear, sneakers and contemporary style"/>
+      <outline type="rss" text="Hypebeast"
+               xmlUrl="https://hypebeast.com/feed"
+               htmlUrl="https://hypebeast.com"
+               description="Street fashion, drops, sneakers and design culture"/>
+      <outline type="rss" text="WWD"
+               xmlUrl="https://wwd.com/feed/"
+               htmlUrl="https://wwd.com"
+               description="Women's Wear Daily: the fashion trade record"/>
+      <outline type="rss" text="i-D"
+               xmlUrl="https://i-d.co/feed/"
+               htmlUrl="https://i-d.co"
+               description="Fashion, identity and youth culture"/>
     </outline>
     <outline text="Gaming" key="gaming" icon="sports_esports" color="#a855f7">
       <outline type="rss" text="Aftermath"
@@ -524,6 +609,10 @@
                xmlUrl="https://www.openculture.com/feed"
                htmlUrl="https://www.openculture.com"
                description="Free cultural and educational media"/>
+      <outline type="rss" text="Rushkoff"
+               xmlUrl="https://rushkoff.substack.com/feed"
+               htmlUrl="https://rushkoff.substack.com"
+               description="Douglas Rushkoff on media, technology and human autonomy"/>
       <outline type="rss" text="The Atlantic"
                xmlUrl="https://www.theatlantic.com/feed/all/"
                htmlUrl="https://www.theatlantic.com"
@@ -546,6 +635,14 @@
                description="Curated web miscellany"/>
     </outline>
     <outline text="Psychedelics &amp; Consciousness" key="psychedelics_consciousness" icon="psychology" color="#7e22ce">
+      <outline type="rss" text="Altered States of America"
+               xmlUrl="https://jamiewheal.substack.com/feed"
+               htmlUrl="https://jamiewheal.substack.com"
+               description="Jamie Wheal on peak states, meaning-making and culture design"/>
+      <outline type="rss" text="Being Integrated"
+               xmlUrl="https://beingintegrated.substack.com/feed"
+               htmlUrl="https://beingintegrated.substack.com"
+               description="Integration practice after psychedelic and contemplative experience"/>
       <outline type="rss" text="Burning Shore"
                xmlUrl="https://www.burningshore.com/feed"
                htmlUrl="https://www.burningshore.com"
@@ -554,10 +651,18 @@
                xmlUrl="https://chacruna.net/feed/"
                htmlUrl="https://chacruna.net"
                description="Plant medicines, indigenous reciprocity and psychedelic ethics"/>
+      <outline type="rss" text="Chronicles of Kykeon"
+               xmlUrl="https://kykeon23.substack.com/feed"
+               htmlUrl="https://kykeon23.substack.com"
+               description="Essays on entheogens, myth and the ancient mysteries"/>
       <outline type="rss" text="Ecstatic Integration"
                xmlUrl="https://www.ecstaticintegration.org/feed"
                htmlUrl="https://www.ecstaticintegration.org"
                description="Jules Evans on psychedelic harm, ethics and integration research"/>
+      <outline type="rss" text="Jungian alchemist"
+               xmlUrl="https://jungianalchemist.substack.com/feed"
+               htmlUrl="https://jungianalchemist.substack.com"
+               description="Depth psychology, alchemy and the symbolic imagination"/>
       <outline type="rss" text="Lion's Roar"
                xmlUrl="https://www.lionsroar.com/feed/"
                htmlUrl="https://www.lionsroar.com"
@@ -570,6 +675,18 @@
                xmlUrl="https://maps.org/feed/"
                htmlUrl="https://maps.org"
                description="Multidisciplinary Association for Psychedelic Studies: research news"/>
+      <outline type="rss" text="Michael Pollan"
+               xmlUrl="https://michaelpollan.substack.com/feed"
+               htmlUrl="https://michaelpollan.substack.com"
+               description="The author of How to Change Your Mind on plants, food and consciousness"/>
+      <outline type="rss" text="Modern Psychedelics"
+               xmlUrl="https://joedolce.substack.com/feed"
+               htmlUrl="https://joedolce.substack.com"
+               description="Joe Dolce on psychedelic therapy, policy and practice"/>
+      <outline type="rss" text="Paul Stamets"
+               xmlUrl="https://paulstamets.substack.com/feed"
+               htmlUrl="https://paulstamets.substack.com"
+               description="The mycologist on fungi, mushrooms and mycelial networks"/>
       <outline type="rss" text="Psychedelic Alpha"
                xmlUrl="https://psychedelicalpha.com/feed/"
                htmlUrl="https://psychedelicalpha.com"
@@ -578,14 +695,50 @@
                xmlUrl="https://psychedelicpress.substack.com/feed"
                htmlUrl="https://psychedelicpress.substack.com"
                description="UK publisher on psychedelic history, literature and culture"/>
+      <outline type="rss" text="Psychedelics Design"
+               xmlUrl="https://psychedelicsdesign.substack.com/feed"
+               htmlUrl="https://psychedelicsdesign.substack.com"
+               description="Set, setting and the design of psychedelic spaces and experiences"/>
+      <outline type="rss" text="Rave New World"
+               xmlUrl="https://ravenewworld.substack.com/feed"
+               htmlUrl="https://ravenewworld.substack.com"
+               description="Psychedelic culture, harm reduction and the dance floor"/>
+      <outline type="rss" text="Rick Strassman"
+               xmlUrl="https://rickstrassman.substack.com/feed"
+               htmlUrl="https://rickstrassman.substack.com"
+               description="The DMT researcher on psychedelics, prophecy and religion"/>
+      <outline type="rss" text="Rupert Sheldrake"
+               xmlUrl="https://rupertsheldrake.substack.com/feed"
+               htmlUrl="https://rupertsheldrake.substack.com"
+               description="Morphic resonance, consciousness and the limits of scientific dogma"/>
+      <outline type="rss" text="Sri Ramana Maharshi's Teaching"
+               xmlUrl="https://sriramana.substack.com/feed"
+               htmlUrl="https://sriramana.substack.com"
+               description="Self-enquiry and the teaching of Sri Ramana Maharshi"/>
+      <outline type="rss" text="The Backyard Buddhist"
+               xmlUrl="https://thebackyardbuddhist.substack.com/feed"
+               htmlUrl="https://thebackyardbuddhist.substack.com"
+               description="Everyday Buddhist practice, plainly written"/>
       <outline type="rss" text="The Microdose"
                xmlUrl="https://themicrodose.substack.com/feed"
                htmlUrl="https://themicrodose.substack.com"
                description="Journalism from the UC Berkeley Center for the Science of Psychedelics"/>
+      <outline type="rss" text="The Psychedelic Blog"
+               xmlUrl="https://thepsychedelicblog.substack.com/feed"
+               htmlUrl="https://thepsychedelicblog.substack.com"
+               description="News and commentary on psychedelic research and culture"/>
+      <outline type="rss" text="The Vale"
+               xmlUrl="https://thevale.substack.com/feed"
+               htmlUrl="https://thevale.substack.com"
+               description="Essays on psychedelics, ecology and the sacred"/>
       <outline type="rss" text="Tricycle"
                xmlUrl="https://tricycle.org/feed/"
                htmlUrl="https://tricycle.org"
                description="The Buddhist Review: teachings, interviews and practice"/>
+      <outline type="rss" text="Your Wild and Radiant Mind"
+               xmlUrl="https://sarahkokernot.substack.com/feed"
+               htmlUrl="https://sarahkokernot.substack.com"
+               description="Sarah Kokernot on consciousness, healing and the inner life"/>
     </outline>
     <outline text="Bicycle Culture" key="bicycle_culture" icon="pedal_bike" color="#06b6d4">
       <outline type="rss" text="BicycleDutch"
@@ -622,6 +775,44 @@
                xmlUrl="https://www.smarticular.net/feed/"
                htmlUrl="https://www.smarticular.net"
                description="Selbermachen statt kaufen: Hausmittel, Rezepte und Reparaturen"/>
+    </outline>
+    <outline text="Cooking &amp; Food" key="cooking" icon="restaurant" color="#c2410c">
+      <outline type="rss" text="101 Cookbooks"
+               xmlUrl="https://www.101cookbooks.com/feed"
+               htmlUrl="https://www.101cookbooks.com"
+               description="Heidi Swanson's vegetarian and whole-food recipes"/>
+      <outline type="rss" text="Budget Bytes"
+               xmlUrl="https://www.budgetbytes.com/feed/"
+               htmlUrl="https://www.budgetbytes.com"
+               description="Cheap, tested recipes with cost per serving"/>
+      <outline type="rss" text="David Lebovitz"
+               xmlUrl="https://www.davidlebovitz.com/feed/"
+               htmlUrl="https://www.davidlebovitz.com"
+               description="Baking, Paris and living well from an American pastry chef"/>
+      <outline type="rss" text="Eat this!"
+               xmlUrl="https://www.eat-this.org/feed/"
+               htmlUrl="https://www.eat-this.org"
+               description="Vegane Rezepte und Foodfotografie aus Deutschland"/>
+      <outline type="rss" text="Eater"
+               xmlUrl="https://www.eater.com/rss/index.xml"
+               htmlUrl="https://www.eater.com"
+               description="Restaurants, chefs and the business of eating out"/>
+      <outline type="rss" text="Essen &amp; Trinken"
+               xmlUrl="https://www.essen-und-trinken.de/feed/rss"
+               htmlUrl="https://www.essen-und-trinken.de"
+               description="Rezepte, Kochtechnik, Backen und Getränke"/>
+      <outline type="rss" text="Serious Eats"
+               xmlUrl="https://feeds-api.dotdashmeredith.com/v1/rss/google/ad57d421-0ff5-41e7-a5da-f2167b6d7f7a"
+               htmlUrl="https://www.seriouseats.com"
+               description="Tested recipes and the food science behind them"/>
+      <outline type="rss" text="Vittles"
+               xmlUrl="https://www.vittlesmagazine.com/feed"
+               htmlUrl="https://www.vittlesmagazine.com"
+               description="Food writing, politics and culture from Britain and beyond"/>
+      <outline type="rss" text="smitten kitchen"
+               xmlUrl="https://smittenkitchen.com/feed/"
+               htmlUrl="https://smittenkitchen.com"
+               description="Deb Perelman's home cooking from a tiny New York kitchen"/>
     </outline>
     <outline text="Electronic Music" key="electronic_music" icon="graphic_eq" color="#0e7490">
       <outline type="rss" text="5 Magazine"
@@ -668,6 +859,10 @@
                xmlUrl="https://www.factmag.com/feed/"
                htmlUrl="https://www.factmag.com"
                description="Electronic and experimental music, film series and mixes"/>
+      <outline type="rss" text="Festival101"
+               xmlUrl="https://festival101.co.za/feed/"
+               htmlUrl="https://festival101.co.za"
+               description="South African festival culture and psytrance coverage"/>
       <outline type="rss" text="Groove"
                xmlUrl="https://groove.de/feed/"
                htmlUrl="https://groove.de"
@@ -736,14 +931,54 @@
                xmlUrl="https://feeds.bbci.co.uk/sport/rss.xml"
                htmlUrl="https://www.bbc.com"
                description="Sport news from the BBC"/>
+      <outline type="rss" text="Cyclingnews"
+               xmlUrl="https://www.cyclingnews.com/rss/"
+               htmlUrl="https://www.cyclingnews.com"
+               description="Professional road racing news, results and tech"/>
+      <outline type="rss" text="Defector"
+               xmlUrl="https://defector.com/feed"
+               htmlUrl="https://defector.com"
+               description="Worker-owned sports and culture writing"/>
+      <outline type="rss" text="ESPN"
+               xmlUrl="https://www.espn.com/espn/rss/news"
+               htmlUrl="https://www.espn.com"
+               description="US and international sports headlines"/>
+      <outline type="rss" text="Escape Collective"
+               xmlUrl="https://escapecollective.com/feed/"
+               htmlUrl="https://escapecollective.com"
+               description="Member-owned cycling journalism, racing and gear"/>
       <outline type="rss" text="Guardian Sport"
                xmlUrl="https://www.theguardian.com/uk/sport/rss"
                htmlUrl="https://www.theguardian.com"
                description="Sport news from The Guardian"/>
+      <outline type="rss" text="Runner's World"
+               xmlUrl="https://www.runnersworld.com/rss/all.xml/"
+               htmlUrl="https://www.runnersworld.com"
+               description="Running training, racing, shoes and health"/>
+      <outline type="rss" text="SB Nation"
+               xmlUrl="https://www.sbnation.com/rss/index.xml"
+               htmlUrl="https://www.sbnation.com"
+               description="US team sports news and analysis"/>
       <outline type="rss" text="Sky Sports"
                xmlUrl="https://www.skysports.com/rss/12040"
                htmlUrl="https://www.skysports.com"
                description="Sport news and results"/>
+      <outline type="rss" text="Sportschau"
+               xmlUrl="https://www.sportschau.de/index~rss2.xml"
+               htmlUrl="https://www.sportschau.de"
+               description="Sportnachrichten, Ergebnisse und Live-Ticker der ARD"/>
+      <outline type="rss" text="The Race"
+               xmlUrl="https://www.the-race.com/feed/"
+               htmlUrl="https://www.the-race.com"
+               description="Formula 1 and motorsport reporting and analysis"/>
+      <outline type="rss" text="Velo"
+               xmlUrl="https://velo.outsideonline.com/feed/"
+               htmlUrl="https://velo.outsideonline.com"
+               description="Road, gravel and cyclocross racing coverage"/>
+      <outline type="rss" text="iRunFar"
+               xmlUrl="https://www.irunfar.com/feed"
+               htmlUrl="https://www.irunfar.com"
+               description="Trail and ultramarathon running news and race reports"/>
       <outline type="rss" text="kicker"
                xmlUrl="https://newsfeed.kicker.de/news/aktuell"
                htmlUrl="https://www.kicker.de"
