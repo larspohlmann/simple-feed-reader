@@ -98,20 +98,29 @@
   text-transform: uppercase;
 }
 
-/* A logo beside the text leaves a phone too narrow for either, and the blurb
-   and link cannot share a line at that width. Stack all three. */
+/* Still one row on a phone, with the text in its own column (#572).
+
+   This block used to stack the image above the text, on the reasoning that a
+   logo beside text leaves a phone too narrow for either. That holds for a
+   feed's own image — but only ~8% of feeds publish one, so ~92% render the
+   24px site icon, which sits beside text comfortably at any width. The
+   exception was governing the rule, and it cost the block a whole row in a
+   component whose brief is "two rows, never more".
+
+   Wrapping is the answer instead: `.body` has `min-width: 0` and the global
+   `overflow-wrap: anywhere` to fall back on, so the blurb reflows into the
+   narrower column rather than pushing the image off its line. A wide logo is
+   held to a third of the row so the text keeps a readable measure.
+
+   Floating the image was tried and rejected: it buys width back on long blurbs,
+   but a short one leaves the text stranded against a tall image with a ragged
+   gap beneath it. A column is steadier across the range of real descriptions. */
 @media (width <= bp.$bp-sm) {
   .lead {
-    align-items: flex-start;
-    flex-direction: column;
     gap: var(--space-2);
   }
 
   .logo {
-    max-width: 100%;
-  }
-
-  .body {
-    width: 100%;
+    max-width: 33%;
   }
 }
