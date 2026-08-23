@@ -61,6 +61,7 @@ export class ProxySectionComponent {
   readonly enabled = linkedSignal<boolean>(() => this.svc.state()?.enabled ?? false);
   readonly directFallback = linkedSignal<boolean>(() => this.svc.state()?.directFallback ?? true);
   readonly type = linkedSignal<ProxyType>(() => this.svc.state()?.type ?? 'SOCKS5');
+  readonly remoteDns = linkedSignal<boolean>(() => this.svc.state()?.remoteDns ?? false);
 
   // Typed fields: held as a pending draft in the service until the explicit
   // Save. Each reads the pending edit first and server truth only underneath,
@@ -77,6 +78,9 @@ export class ProxySectionComponent {
   readonly password = signal('');
 
   readonly configured = computed(() => (this.svc.state()?.host ?? '') !== '');
+  /** Only SOCKS5 leaves the client a choice -- an HTTP proxy always resolves
+   *  the name itself, so the switch would describe nothing on that type. */
+  readonly dnsIsChoosable = computed(() => this.type() === 'SOCKS5');
   /** Empty exactly when no password is stored, so it doubles as the "is one on
    *  record?" test the password field's placeholder needs. */
   readonly passwordHint = computed(() => this.svc.state()?.passwordHint ?? '');
@@ -121,6 +125,11 @@ export class ProxySectionComponent {
   onDirectFallback(value: boolean): void {
     this.directFallback.set(value);
     this.svc.saveInstant({ directFallback: value });
+  }
+
+  onRemoteDns(value: boolean): void {
+    this.remoteDns.set(value);
+    this.svc.saveInstant({ remoteDns: value });
   }
 
   onType(event: Event): void {

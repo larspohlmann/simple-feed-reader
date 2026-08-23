@@ -39,16 +39,33 @@
       [title]="'settings.proxy.type' | transloco"
       [description]="'settings.proxy.typeDesc' | transloco"
     >
-      <app-info-tip
-        rowTitleTip
-        [text]="'settings.proxy.info.remoteDns' | transloco"
-        [label]="'settings.proxy.type' | transloco"
-      />
       <select class="type-field" data-testid="proxy-type" (change)="onType($event)">
         @for (option of typeOptions; track option) {
           <option [value]="option" [selected]="type() === option">{{ option }}</option>
         }
       </select>
+    </app-settings-row>
+
+    <app-settings-row
+      [title]="'settings.proxy.remoteDns' | transloco"
+      [description]="
+        dnsIsChoosable()
+          ? ('settings.proxy.remoteDnsDesc' | transloco)
+          : ('settings.proxy.remoteDnsHttpHint' | transloco)
+      "
+    >
+      <app-info-tip
+        rowTitleTip
+        [text]="'settings.proxy.info.remoteDns' | transloco"
+        [label]="'settings.proxy.remoteDns' | transloco"
+      />
+      <app-toggle
+        inputId="proxy-remote-dns-toggle"
+        [label]="'settings.proxy.remoteDns' | transloco"
+        [checked]="remoteDns()"
+        [disabled]="!dnsIsChoosable()"
+        (toggled)="onRemoteDns($event)"
+      />
     </app-settings-row>
 
     <app-settings-row [stackable]="true" [title]="'settings.proxy.host' | transloco">

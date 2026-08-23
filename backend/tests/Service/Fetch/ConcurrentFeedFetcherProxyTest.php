@@ -138,7 +138,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
 
         self::assertNull($outcomes[1]->failure());
         self::assertCount(1, $seenOptions);
-        self::assertSame('socks5h://p:1080', $seenOptions[0]['proxy']);
+        self::assertSame('socks5://p:1080', $seenOptions[0]['proxy']);
         self::assertArrayNotHasKey('resolve', $seenOptions[0]);
     }
 
@@ -162,7 +162,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
 
         self::assertNull($outcomes[1]->failure());
         self::assertCount(2, $seenOptions);
-        self::assertSame('socks5h://p:1080', $seenOptions[0]['proxy']);
+        self::assertSame('socks5://p:1080', $seenOptions[0]['proxy']);
         self::assertArrayNotHasKey('resolve', $seenOptions[0]);
         self::assertArrayNotHasKey('proxy', $seenOptions[1]);
         self::assertArrayHasKey('resolve', $seenOptions[1]);
@@ -186,7 +186,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
 
         self::assertNotNull($outcomes[1]->failure());
         self::assertCount(1, $seenOptions);
-        self::assertSame('socks5h://p:1080', $seenOptions[0]['proxy']);
+        self::assertSame('socks5://p:1080', $seenOptions[0]['proxy']);
     }
 
     /**
@@ -214,7 +214,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
 
         self::assertNotNull($outcomes[1]->failure());
         self::assertCount(1, $seenOptions);
-        self::assertSame('socks5h://p:1080', $seenOptions[0]['proxy']);
+        self::assertSame('socks5://p:1080', $seenOptions[0]['proxy']);
     }
 
     public function testDirectWhenResolverReturnsNull(): void

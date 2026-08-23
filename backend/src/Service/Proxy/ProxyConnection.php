@@ -27,6 +27,7 @@ final readonly class ProxyConnection
         public string $host,
         public int $port,
         public ?string $username,
+        public bool $remoteDns = false,
     ) {
     }
 }

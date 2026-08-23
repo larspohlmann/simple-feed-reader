@@ -35,7 +35,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
             ->getStatusCode();
 
         self::assertCount(1, $calls);
-        self::assertSame('socks5h://p:1080', $calls[0]['proxy'] ?? null);
+        self::assertSame('socks5://p:1080', $calls[0]['proxy'] ?? null);
         self::assertSame(7.0, $calls[0]['timeout'] ?? null);
         self::assertArrayNotHasKey('resolve', $calls[0]);
     }

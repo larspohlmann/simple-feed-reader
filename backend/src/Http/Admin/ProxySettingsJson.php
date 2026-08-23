@@ -20,6 +20,7 @@ final readonly class ProxySettingsJson
      *     host: string,
      *     port: int,
      *     username: string|null,
+     *     remoteDns: bool,
      *     hasPassword: bool,
      *     passwordHint: string,
      * }
@@ -38,6 +39,7 @@ final readonly class ProxySettingsJson
             'host' => $settings->getHost(),
             'port' => $settings->getPort(),
             'username' => $settings->getUsername(),
+            'remoteDns' => $settings->isRemoteDns(),
             'hasPassword' => $settings->hasPassword(),
             'passwordHint' => $settings->getPasswordHint(),
         ];

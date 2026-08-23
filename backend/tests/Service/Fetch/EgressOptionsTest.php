@@ -16,7 +16,7 @@ final class EgressOptionsTest extends TestCase
     {
         $proxy = new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null);
 
-        self::assertSame('socks5h://p:1080', EgressOptions::proxied($proxy)['proxy']);
+        self::assertSame('socks5://p:1080', EgressOptions::proxied($proxy)['proxy']);
     }
 
     /**

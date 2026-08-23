@@ -20,6 +20,7 @@ function state(over: Partial<ProxySettingsState> = {}): ProxySettingsState {
     host: '',
     port: 1080,
     username: null,
+    remoteDns: false,
     hasPassword: false,
     passwordHint: '',
     ...over,
@@ -157,6 +158,34 @@ describe('ProxySectionComponent', () => {
     expect(passwordInput(fixture).placeholder).toBe('••••ab12');
     expect(passwordInput(fixture).value).toBe('');
     expect(passwordInput(fixture).type).toBe('password');
+  });
+
+  const remoteDnsToggle = (fixture: ComponentFixture<ProxySectionComponent>): HTMLInputElement =>
+    fixture.nativeElement.querySelector('#proxy-remote-dns-toggle');
+
+  it('saves the remote-DNS switch instantly, like the other toggles', () => {
+    const fixture = mount(state({ host: 'proxy.example' }));
+
+    remoteDnsToggle(fixture).click();
+    fixture.detectChanges();
+
+    const request = http.expectOne((r) => r.url === ENDPOINT && r.method === 'PUT');
+    expect(request.request.body.remoteDns).toBe(true);
+    request.flush(state({ host: 'proxy.example', remoteDns: true }));
+  });
+
+  // Only SOCKS5 gives the client a choice: an HTTP proxy always resolves the
+  // name itself, so the switch would be a lie on that type.
+  it('disables the remote-DNS switch for an HTTP proxy', () => {
+    const fixture = mount(state({ host: 'proxy.example', type: 'HTTP' }));
+
+    expect(remoteDnsToggle(fixture).disabled).toBe(true);
+  });
+
+  it('enables the remote-DNS switch for a SOCKS5 proxy', () => {
+    const fixture = mount(state({ host: 'proxy.example', type: 'SOCKS5' }));
+
+    expect(remoteDnsToggle(fixture).disabled).toBe(false);
   });
 
   it('keeps a pending typed edit visible when an instant toggle saves', () => {

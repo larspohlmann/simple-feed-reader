@@ -14,6 +14,7 @@ export interface ProxySettingsState {
   readonly host: string;
   readonly port: number;
   readonly username: string | null;
+  readonly remoteDns: boolean;
   readonly hasPassword: boolean;
   readonly passwordHint: string;
 }
@@ -25,14 +26,16 @@ export interface SaveProxySettings {
   readonly host: string;
   readonly port: number;
   readonly username: string | null;
+  readonly remoteDns: boolean;
   /** null keeps the stored secret; a string replaces it. */
   readonly password: string | null;
 }
 
-/** The typed text/number fields behind the explicit Save. The three toggles/selects
- *  — enabled, directFallback, type — save instantly and never enter the draft. */
+/** The typed text/number fields behind the explicit Save. The toggles and the
+ *  select — enabled, directFallback, remoteDns, type — save instantly and never
+ *  enter the draft. */
 export type TypedProxyEdits = Partial<
-  Omit<SaveProxySettings, 'enabled' | 'directFallback' | 'type'>
+  Omit<SaveProxySettings, 'enabled' | 'directFallback' | 'remoteDns' | 'type'>
 >;
 
 export type ProxyProbe =
@@ -116,6 +119,7 @@ export class ProxySettingsService {
       host: state.host,
       port: state.port,
       username: state.username,
+      remoteDns: state.remoteDns,
       password: null,
     };
   }

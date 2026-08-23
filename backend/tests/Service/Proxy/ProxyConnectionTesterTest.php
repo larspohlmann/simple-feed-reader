@@ -42,7 +42,7 @@ final class ProxyConnectionTesterTest extends TestCase
 
         self::assertTrue($result->ok);
         self::assertSame('203.0.113.7', $result->egressIp);
-        self::assertSame('socks5h://user:pw@proxy.example:1080', $seenProxy);
+        self::assertSame('socks5://user:pw@proxy.example:1080', $seenProxy);
     }
 
     public function testReturnsNotConfiguredWhenNoProxyStored(): void

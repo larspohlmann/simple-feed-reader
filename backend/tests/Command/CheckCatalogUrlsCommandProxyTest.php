@@ -58,7 +58,7 @@ final class CheckCatalogUrlsCommandProxyTest extends KernelTestCase
         self::assertSame(0, $tester->getStatusCode());
         self::assertNotEmpty($recordedOptions);
         self::assertArrayHasKey('proxy', $recordedOptions[0]);
-        self::assertSame('socks5h://proxy.example:1080', $recordedOptions[0]['proxy']);
+        self::assertSame('socks5://proxy.example:1080', $recordedOptions[0]['proxy']);
     }
 
     public function testRequestCarriesNoProxyOptionWhenTheResolverReturnsNull(): void

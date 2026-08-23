@@ -31,6 +31,8 @@ final readonly class ProxySettingsRequest
         public int $port = ProxyConnection::DEFAULT_PORT,
         #[Assert\Length(max: 255)]
         public ?string $username = null,
+        #[Assert\Type('bool')]
+        public bool $remoteDns = false,
         #[Assert\Length(max: 512)]
         public ?string $password = null,
     ) {

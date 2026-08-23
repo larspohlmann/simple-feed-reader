@@ -45,6 +45,11 @@ class ProxyServerSettings
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $username = null;
 
+    // Off by default: a proxy that does not resolve host names refuses every
+    // one it is given, and that is the common case (#490).
+    #[ORM\Column(options: ['default' => 0])]
+    private bool $remoteDns = false;
+
     #[ORM\Column(length: 1024)]
     private string $passwordCiphertext = '';
 
@@ -90,6 +95,11 @@ class ProxyServerSettings
         return $this->username;
     }
 
+    public function isRemoteDns(): bool
+    {
+        return $this->remoteDns;
+    }
+
     public function getPasswordHint(): string
     {
         return $this->passwordHint;
@@ -128,5 +138,6 @@ class ProxyServerSettings
         $this->host = $connection->host;
         $this->port = $connection->port;
         $this->username = $connection->username;
+        $this->remoteDns = $connection->remoteDns;
     }
 }

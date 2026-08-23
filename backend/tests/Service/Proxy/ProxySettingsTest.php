@@ -70,6 +70,48 @@ final class ProxySettingsTest extends TestCase
         self::assertNotFalse(json_encode($view));
     }
 
+    /**
+     * The DNS switch decides which SOCKS scheme the fetchers use, so it has to
+     * survive the round trip through the row and reach ProxyConfig (#490).
+     */
+    public function testRemoteDnsRoundTripsThroughTheRowIntoTheProxyConfig(): void
+    {
+        $settings = $this->service($stored);
+
+        $settings->update(new ProxySettingsRequest(
+            enabled: true,
+            directFallback: true,
+            type: 'SOCKS5',
+            host: 'proxy.example',
+            port: 1080,
+            username: null,
+            remoteDns: true,
+            password: 'pw',
+        ));
+
+        self::assertTrue($settings->view()['remoteDns']);
+        self::assertSame('socks5h://proxy.example:1080', $settings->configuredProxy()?->dsn());
+    }
+
+    public function testLocalDnsIsTheDefaultForAFreshInstance(): void
+    {
+        $settings = $this->service($stored);
+
+        self::assertFalse($settings->view()['remoteDns']);
+
+        $settings->update(new ProxySettingsRequest(
+            enabled: true,
+            directFallback: true,
+            type: 'SOCKS5',
+            host: 'proxy.example',
+            port: 1080,
+            username: null,
+            password: 'pw',
+        ));
+
+        self::assertSame('socks5://proxy.example:1080', $settings->configuredProxy()?->dsn());
+    }
+
     public function testBlankPasswordKeepsTheStoredSecret(): void
     {
         $settings = $this->service($stored);

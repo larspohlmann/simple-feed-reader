@@ -102,6 +102,45 @@ final class AdminProxyControllerTest extends ApiTestCase
         self::assertArrayNotHasKey('password', $body);
     }
 
+    /**
+     * The DNS switch is a full-replace field like the rest of the connection,
+     * and the payload has to echo it back or the admin page cannot show it.
+     */
+    public function testRemoteDnsIsPersistedAndEchoedBack(): void
+    {
+        $admin = $this->admin();
+
+        $this->requestWithJsonBody('PUT', $admin, [
+            'enabled' => true,
+            'type' => 'SOCKS5',
+            'host' => 'proxy.example',
+            'port' => 1080,
+            'username' => 'user',
+            'remoteDns' => true,
+            'password' => 'sw0rdfish',
+        ]);
+
+        self::assertResponseIsSuccessful();
+        self::assertTrue($this->payload($this->client)['remoteDns']);
+    }
+
+    public function testRemoteDnsDefaultsToOffWhenTheClientOmitsIt(): void
+    {
+        $admin = $this->admin();
+
+        $this->requestWithJsonBody('PUT', $admin, [
+            'enabled' => true,
+            'type' => 'SOCKS5',
+            'host' => 'proxy.example',
+            'port' => 1080,
+            'username' => 'user',
+            'password' => 'sw0rdfish',
+        ]);
+
+        self::assertResponseIsSuccessful();
+        self::assertFalse($this->payload($this->client)['remoteDns']);
+    }
+
     public function testPuttingWithoutAPasswordKeepsTheStoredSecret(): void
     {
         $admin = $this->admin();

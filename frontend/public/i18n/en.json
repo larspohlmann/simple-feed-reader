@@ -306,6 +306,9 @@
       "directFallbackDesc": "On by default — a proxy failure retries the fetch directly.",
       "type": "Proxy type",
       "typeDesc": "SOCKS5 or HTTP.",
+      "remoteDns": "Resolve DNS at the proxy",
+      "remoteDnsDesc": "Off by default — host names are resolved here, then the address is given to the proxy.",
+      "remoteDnsHttpHint": "An HTTP proxy always resolves host names itself.",
       "host": "Host",
       "port": "Port",
       "username": "Username",
@@ -321,7 +324,7 @@
       "unsaved": "Unsaved changes",
       "info": {
         "directFallback": "On by default. If the proxy fails, retry the fetch directly. Turn this off to keep your real server IP hidden — a proxy failure then fails the fetch instead of revealing your address.",
-        "remoteDns": "SOCKS5 resolves DNS at the proxy, so geo-restricted names resolve from the proxy's location.",
+        "remoteDns": "Off by default. When on, the proxy is given the host name and resolves it, so your DNS resolver never sees which feeds you fetch and geo-restricted names resolve from the proxy’s location. Many SOCKS5 proxies do not resolve names at all — Private Internet Access is one — and answer every name with \"host unreachable\". Leave this off if the connection test fails that way.",
         "piaCredentials": "Private Internet Access needs a separately generated proxy username and password — not your account login."
       }
     }

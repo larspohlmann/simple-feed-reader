@@ -37,6 +37,7 @@ readonly class ProxySettings
      *     host: string,
      *     port: int,
      *     username: string|null,
+     *     remoteDns: bool,
      *     hasPassword: bool,
      *     passwordHint: string,
      * }
@@ -105,6 +106,7 @@ readonly class ProxySettings
             $settings->getUsername(),
             $settings->hasPassword() ? $this->cipher->open($settings->getSealedPassword()) : null,
             $settings->isDirectFallback(),
+            $settings->isRemoteDns(),
         );
     }
 
@@ -117,6 +119,7 @@ readonly class ProxySettings
             $request->host,
             $request->port,
             '' === $request->username ? null : $request->username,
+            $request->remoteDns,
         );
     }
 }
