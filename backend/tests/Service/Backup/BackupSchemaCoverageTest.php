@@ -62,11 +62,23 @@ final class BackupSchemaCoverageTest extends DbTestCase
         . 'the signed-in account, so no line names an owner — an owner read from the file would be '
         . 'one the user chose for themselves.';
 
+    /** The line discriminator, written on every kind and naming no field. */
+    private const array EVERY_LINE = ['kind'];
+
     /**
-     * The header and footer keys, which describe the file rather than any
-     * entity. Nothing declares them, so they are named here instead.
+     * The header and footer describe the file rather than any entity, so no
+     * declaration claims their keys and they are enumerated here instead.
+     *
+     * Kept per kind rather than excused everywhere: the header's own
+     * `createdAt` must not license a `createdAt` appearing on some other line.
      */
-    private const array FILE_SCAFFOLDING = ['kind', 'schemaVersion', 'sourceUrl', 'sourceEmail', 'counts'];
+    private const array FILE_SCAFFOLDING = [
+        BackupSchema::KIND_HEADER => ['schemaVersion', 'createdAt', 'sourceUrl', 'sourceEmail'],
+        BackupSchema::KIND_FOOTER => [
+            'counts', 'counts.tag', 'counts.feed', 'counts.subscription',
+            'counts.entry', 'counts.entryState',
+        ],
+    ];
 
     /**
      * Rows that belong to the instance, not to any one account. A field added
@@ -83,8 +95,11 @@ final class BackupSchemaCoverageTest extends DbTestCase
 
     /**
      * Account-scoped and dropped in full. Declared per entity rather than per
-     * field: see the plan's stated deviation. testAWhollyDroppedEntityExportsNothing()
-     * is what keeps that shorthand honest.
+     * field: see the plan's stated deviation.
+     * testTheExportWritesNoKeyThatNoDeclarationClaims() is what keeps that
+     * shorthand honest — these six have no field-by-field declaration, so the
+     * only way one of them starting to be exported becomes visible is the
+     * insistence that every key on every line is claimed by something.
      */
     private const array ACCOUNT_SCOPED_WHOLLY_DROPPED = [
         AiProviderSettings::class => 'Model endpoints and API keys. A backup is a file the '
@@ -97,7 +112,12 @@ final class BackupSchemaCoverageTest extends DbTestCase
         RecommendationItem::class => 'Per-run picks, tied to a run that is not restored.',
     ];
 
-    /** Doctrine class => [field or association => exported JSON key]. */
+    /**
+     * Doctrine class => [field or association => exported JSON key, or the
+     * list of keys when one field is written as several — an entry reference
+     * is a feed URL and a GUID hash together, and neither half identifies an
+     * entry on its own].
+     */
     private const array BACKED_UP = [
         User::class => [
             'locale' => 'locale',
@@ -150,9 +170,11 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'effectiveDate' => 'effectiveDate',
         ],
         EntryState::class => [
-            // The entry-state line names its entry by feedUrl plus guidHash;
-            // guidHash is the half that picks the entry out of that feed.
-            'entry' => 'guidHash',
+            // Both halves, because both are load-bearing: guidHash picks the
+            // entry out of a feed, feedUrl says which feed. Declaring only one
+            // would leave the other claimed by nothing, and deleting it from
+            // entryStateLine() would still pass.
+            'entry' => ['feedUrl', 'guidHash'],
             'isRead' => 'isRead', 'isFavorite' => 'isFavorite', 'isKept' => 'isKept',
             'readAt' => 'readAt', 'isViewed' => 'isViewed', 'viewedAt' => 'viewedAt',
         ],
@@ -169,9 +191,6 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'approvedAt' => 'An admin\'s decision on this instance, not the reader\'s data.',
             'lastLoginAt' => 'Sign-in telemetry, rewritten by the token issuer on the very next '
                 . 'login. Restoring it would be stale before the user saw it.',
-            'passwordChangedAt' => 'The stamp that binds an issued JWT to a password hash. Its '
-                . 'partner, passwordHash, is in NEVER_BACKED_UP, and a stamp without the hash it '
-                . 'describes would only mis-date a password the restore never touched.',
             'trialEndsAt' => 'The instance\'s terms for this account, granted by the sign-up flow '
                 . 'or by an admin.',
             'maxSubscriptions' => 'A per-account cap an admin grants. Carried in the file, it '
@@ -240,12 +259,22 @@ final class BackupSchemaCoverageTest extends DbTestCase
      * ROLE_ADMIN. Restorable identity links would let a user attach someone
      * else's OAuth identity to their own account, and a restorable email
      * would let them move onto an address they do not control.
+     *
+     * `passwordChangedAt` is here for the same class of reason rather than as
+     * a product choice: it is the token-revocation control itself, and a user
+     * who can write it can undo a revocation.
      */
     private const array NEVER_BACKED_UP = [
         User::class => [
             'roles' => 'Privilege escalation: a hand-edited backup would grant ROLE_ADMIN.',
             'email' => 'Account identity; a restore must never move an account to another address.',
             'passwordHash' => 'Credential material.',
+            'passwordChangedAt' => 'Token revocation. PasswordChangeTokenInvalidator rejects any '
+                . 'JWT whose `iat` is older than this stamp, which is the whole mechanism by '
+                . 'which a password reset kills tokens already in an attacker\'s hands. A '
+                . 'restorable — or nullable — stamp would let the account holder roll it back '
+                . 'from a file they wrote and bring a revoked bearer token back to life, which '
+                . 'is the exact attack the column was added to close.',
         ],
     ];
 
@@ -306,42 +335,57 @@ final class BackupSchemaCoverageTest extends DbTestCase
 
         foreach (self::BACKED_UP as $entityClass => $fields) {
             $kind = self::KIND_OF[$entityClass];
-            foreach ($fields as $field => $exportedKey) {
-                self::assertContains(
-                    $exportedKey,
-                    $keysByKind[$kind] ?? [],
-                    sprintf(
-                        '%s::$%s is declared BACKED_UP as "%s" on the %s line, but the '
-                        . 'exporter never writes that key.',
-                        $entityClass,
-                        $field,
+            foreach ($fields as $field => $declared) {
+                foreach ($this->exportedKeysFor($declared) as $exportedKey) {
+                    self::assertContains(
                         $exportedKey,
-                        $kind,
-                    ),
-                );
+                        $keysByKind[$kind] ?? [],
+                        sprintf(
+                            '%s::$%s is declared BACKED_UP as "%s" on the %s line, but the '
+                            . 'exporter never writes that key.',
+                            $entityClass,
+                            $field,
+                            $exportedKey,
+                            $kind,
+                        ),
+                    );
+                }
             }
         }
     }
 
-    public function testAWhollyDroppedEntityExportsNothing(): void
+    /**
+     * The other direction: nothing reaches the file that this class has not
+     * accounted for.
+     *
+     * This is what keeps ACCOUNT_SCOPED_WHOLLY_DROPPED's per-entity shorthand
+     * honest. Those six entities have no field-by-field declaration, so the
+     * only way to notice one of them starting to be exported is to insist that
+     * every key on every line is claimed by some declaration here.
+     */
+    public function testTheExportWritesNoKeyThatNoDeclarationClaims(): void
     {
-        $undeclaredKeys = $this->undeclaredExportedKeys('dropped@example.com');
+        self::assertSame(
+            [],
+            $this->undeclaredExportedKeysByKind('dropped@example.com'),
+            sprintf(
+                "The exporter writes keys that no declaration in %s claims.\n"
+                . 'If a wholly dropped entity has started reaching the file it is now partly '
+                . 'backed up: move it to BACKED_UP and NOT_BACKED_UP, field by field. '
+                . 'Otherwise declare the new key against the field it comes from.',
+                self::class,
+            ),
+        );
+    }
 
-        foreach (array_keys(self::ACCOUNT_SCOPED_WHOLLY_DROPPED) as $entityClass) {
-            foreach ($this->persistedNames($entityClass) as $name) {
-                self::assertNotContains(
-                    $name,
-                    $undeclaredKeys,
-                    sprintf(
-                        '%s is declared wholly dropped, but "%s" appears in the export. '
-                        . 'It is now partly backed up: move it to BACKED_UP and '
-                        . 'NOT_BACKED_UP, field by field.',
-                        $entityClass,
-                        $name,
-                    ),
-                );
-            }
-        }
+    /**
+     * @param string|list<string> $declared
+     *
+     * @return list<string>
+     */
+    private function exportedKeysFor(string|array $declared): array
+    {
+        return \is_string($declared) ? [$declared] : $declared;
     }
 
     /**
@@ -390,31 +434,40 @@ final class BackupSchemaCoverageTest extends DbTestCase
     }
 
     /**
-     * Keys the export writes that no declaration in this class claims.
+     * Every key the export writes that no declaration in this class claims,
+     * grouped by the kind of line it appeared on. Empty is the passing state.
      *
-     * The wholly-dropped proof subtracts the claimed ones before it looks for
-     * a leak, because field names are shared vocabulary: `createdAt`, `name`
-     * and `position` each belong to something that IS backed up, so their
-     * presence in the file is no evidence that a dropped entity reached it.
-     * What survives the subtraction is exactly the interesting case — a key
-     * appearing in the export that nothing in this class accounts for.
+     * The accounting is per kind, not global. A global one would let any key
+     * excuse itself against a declaration from a different line — `createdAt`
+     * on the header would license a `createdAt` anywhere — and field names are
+     * shared vocabulary across this schema, so a global set collapses to
+     * nothing and the proof stops proving.
      *
-     * @return list<string>
+     * @return array<string, list<string>>
      */
-    private function undeclaredExportedKeys(string $email): array
+    private function undeclaredExportedKeysByKind(string $email): array
     {
-        $exportedKeys = array_merge(...array_values($this->exportedKeysByKind($email)));
+        $undeclared = [];
+        foreach ($this->exportedKeysByKind($email) as $kind => $keys) {
+            $unclaimed = array_values(array_diff($keys, $this->claimedKeysOf($kind)));
+            if ([] !== $unclaimed) {
+                $undeclared[$kind] = $unclaimed;
+            }
+        }
 
-        return array_values(array_diff($exportedKeys, $this->declaredExportKeys()));
+        return $undeclared;
     }
 
-    /** @return list<string> */
-    private function declaredExportKeys(): array
+    /** @return list<string> the keys one kind of line is allowed to carry */
+    private function claimedKeysOf(string $kind): array
     {
-        $keys = self::FILE_SCAFFOLDING;
-        foreach (self::BACKED_UP as $fields) {
-            foreach ($fields as $exportedKey) {
-                $keys[] = $exportedKey;
+        $keys = array_merge(self::EVERY_LINE, self::FILE_SCAFFOLDING[$kind] ?? []);
+        foreach (self::BACKED_UP as $entityClass => $fields) {
+            if (self::KIND_OF[$entityClass] !== $kind) {
+                continue;
+            }
+            foreach ($fields as $declared) {
+                $keys = array_merge($keys, $this->exportedKeysFor($declared));
             }
         }
 
