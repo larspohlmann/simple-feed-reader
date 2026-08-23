@@ -68,11 +68,14 @@ async function openArticle(page: Page) {
   return pane;
 }
 
-/** How full the bar is, as a fraction of the pane's width. */
-async function filledFraction(pane: ReturnType<Page['locator']>): Promise<number> {
+/** How full the phone's rail is, as a fraction of its height. #435 stood the
+ *  cue up on the right edge below the split-pane breakpoint, so below 900px the
+ *  cue fills downward — the horizontal hairline is the wide layout's alone. */
+async function railFilledFraction(pane: ReturnType<Page['locator']>): Promise<number> {
   return pane.evaluate((el) => {
-    const fill = el.querySelector('.progress i')!;
-    return fill.getBoundingClientRect().width / el.getBoundingClientRect().width;
+    const rail = el.querySelector('.progress-rail')!;
+    const fill = rail.querySelector('i')!;
+    return fill.getBoundingClientRect().height / rail.getBoundingClientRect().height;
   });
 }
 
@@ -82,7 +85,7 @@ test.describe('Article reading progress', () => {
   // #238: the shell locks the page and scrolls an inner container, and a phone
   // paints no persistent scrollbar for a nested scroller — so a long article
   // gave the reader no cue at all about its length or their position in it.
-  test('the bar fills as the reader scrolls and is full at the end of the text', async ({
+  test('the rail fills as the reader scrolls and is full at the end of the text', async ({
     page,
   }) => {
     const signedIn = await signInAsAdmin(page);
@@ -91,9 +94,12 @@ test.describe('Article reading progress', () => {
     await page.reload();
     const pane = await openArticle(page);
 
-    const bar = pane.locator('.progress');
-    await expect(bar).toBeVisible();
-    expect(await filledFraction(pane)).toBeLessThan(0.05);
+    const rail = pane.locator('.progress-rail');
+    await expect(rail).toBeVisible();
+    // The two cues swap at the breakpoint rather than coexist (#435). Asserting
+    // the absent one here is what would have caught this spec going stale.
+    await expect(pane.locator('.progress')).toHaveCount(0);
+    expect(await railFilledFraction(pane)).toBeLessThan(0.05);
 
     // The end of the text — NOT the end of the scroller, which carries half a
     // viewport of reading tail past it.
@@ -106,16 +112,18 @@ test.describe('Article reading progress', () => {
 
     // Full at the last line. Measured against `scrollHeight` — the naive
     // formula — the tail would hold this at roughly two thirds.
-    expect(await filledFraction(pane)).toBeGreaterThan(0.98);
+    expect(await railFilledFraction(pane)).toBeGreaterThan(0.98);
   });
 
-  // The tail hangs off the article, not off `.reader`, precisely so the sticky
-  // bar can travel the whole way: a sticky box stops at its containing block's
-  // content box, so tail padding on `.reader` used to strand the bar half a
-  // viewport short and it scrolled out of sight over the tail.
-  test('the bar stays pinned to the bottom edge, including over the reading tail', async ({
-    page,
-  }) => {
+  // The cue has to survive the reading tail, which is half a viewport of blank
+  // space below the last paragraph — exactly where the reader finishes the
+  // article. The hairline this replaced was stranded there by its containing
+  // block (#238); the rail is immune to that one, because its negative margin
+  // leaves it a zero-height margin box that can travel anywhere. What it is not
+  // immune to is losing `position: sticky`: drop that and the rail scrolls away
+  // with the text, which is the whole defect in a different disguise. Verified
+  // by making the rail static — this test then misses the scrollport by 3178px.
+  test('the rail spans the scrollport, including over the reading tail', async ({ page }) => {
     const signedIn = await signInAsAdmin(page);
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, LONG_BODY);
@@ -125,11 +133,18 @@ test.describe('Article reading progress', () => {
     await pane.evaluate((el) => el.scrollTo({ top: el.scrollHeight, behavior: 'instant' }));
     await page.waitForTimeout(300);
 
-    const gapFromBottom = await pane.evaluate((el) => {
-      const bar = el.querySelector('.progress')!.getBoundingClientRect();
-      return el.getBoundingClientRect().bottom - bar.bottom;
+    const gaps = await pane.evaluate((el) => {
+      const rail = el.querySelector('.progress-rail')!.getBoundingClientRect();
+      const scrollport = el.getBoundingClientRect();
+      return {
+        fromTop: rail.top - scrollport.top,
+        fromBottom: scrollport.bottom - rail.bottom,
+        fromRightEdge: scrollport.right - rail.right,
+      };
     });
-    expect(Math.abs(gapFromBottom)).toBeLessThanOrEqual(1);
+    expect(Math.abs(gaps.fromTop)).toBeLessThanOrEqual(1);
+    expect(Math.abs(gaps.fromBottom)).toBeLessThanOrEqual(1);
+    expect(Math.abs(gaps.fromRightEdge)).toBeLessThanOrEqual(1);
   });
 
   test('an article that fits the screen shows no bar', async ({ page }) => {
@@ -139,7 +154,7 @@ test.describe('Article reading progress', () => {
     await page.reload();
     const pane = await openArticle(page);
 
-    await expect(pane.locator('.progress')).toHaveCount(0);
+    await expect(pane.locator('.progress-rail')).toHaveCount(0);
   });
 });
 
@@ -155,6 +170,10 @@ test.describe('Article reading progress on the split layout', () => {
     await stubArticle(page, LONG_BODY);
     await page.reload();
     const pane = await openArticle(page);
+
+    // The wide layout keeps the hairline the split pane was designed for, and
+    // shows no rail — the other half of the swap #435 introduced.
+    await expect(pane.locator('.progress-rail')).toHaveCount(0);
 
     const box = (await pane.locator('.progress').boundingBox())!;
     const paneBox = (await pane.boundingBox())!;

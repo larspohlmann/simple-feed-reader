@@ -1,16 +1,22 @@
 import { APIRequestContext, Page, expect, test } from '@playwright/test';
 
 // The onboarding journey, end to end against the live Docker stack: a brand-new
-// user registers, confirms their address, is approved, signs in, and — with
-// zero subscriptions and a populated catalog — is sent to the picker. From
-// there they either subscribe (and land in a reader carrying their new tags) or
-// skip (and land in the reader with a way back).
+// user registers, clears whichever gates the instance has switched on, signs in,
+// and — with zero subscriptions and a populated catalog — is sent to the picker.
+// From there they either subscribe (and land in a reader carrying their new
+// tags) or skip (and land in the reader with a way back).
 //
 // The flow is real, so it depends on real infrastructure. Every dependency the
 // test cannot conjure — Mailpit to read the confirmation link, the seeded admin
 // to approve the account, a browser that can solve the registration ALTCHA —
 // becomes a clean `test.skip` rather than a flake, matching the convention in
 // reader-smoke.spec.ts: an unavailable precondition is skipped, not failed.
+//
+// Email confirmation and admin approval are runtime instance settings, not
+// deploy constants: CI's fresh database defaults confirmation on, a developer
+// stack may well have both off. Neither is this spec's subject, so it reads the
+// policy's own verdict out of the register response and clears exactly the
+// gates that are actually up.
 
 const MAILPIT_API = process.env.E2E_MAILPIT_API ?? 'http://localhost:8025/api/v1';
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
@@ -55,73 +61,106 @@ async function fetchVerificationUrl(
   return null;
 }
 
-/** Approve the just-verified account through the admin API (the same POST the
- *  admin console drives), so it becomes Active and can sign in. Returns false
- *  when the seeded admin is unavailable, so the caller can skip cleanly. */
-async function approveAccount(request: APIRequestContext, email: string): Promise<boolean> {
+/** What the instance did with a fresh signup. `POST /api/auth/register` returns
+ *  it verbatim, and it is the policy's own answer (RegistrationPolicy), so the
+ *  spec follows the instance instead of assuming a gate is switched on. */
+type SignupStatus = 'pending_verification' | 'pending_approval' | 'active';
+
+/** Whether the account still needs an admin, and whether one was reachable —
+ *  three outcomes, because "nothing to approve" and "no admin to ask" are
+ *  opposite conclusions and a boolean would fold them together. */
+type ApprovalOutcome = 'approved' | 'nothing-to-approve' | 'admin-unavailable';
+
+/** Approve the account through the admin API (the same POST the admin console
+ *  drives), so it becomes Active and can sign in. An account the instance
+ *  already activated is not an error — approval is simply not part of its
+ *  journey. */
+async function approveAccount(request: APIRequestContext, email: string): Promise<ApprovalOutcome> {
   const login = await request.post('/api/auth/login', {
     data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
   });
-  if (!login.ok()) return false;
+  if (!login.ok()) return 'admin-unavailable';
   const token = ((await login.json()) as { token: string }).token;
   const authorization = { Authorization: `Bearer ${token}` };
 
   const list = await request.get('/api/admin/users?status=pending_approval', {
     headers: authorization,
   });
-  if (!list.ok()) return false;
+  if (!list.ok()) return 'admin-unavailable';
   const users = ((await list.json()) as { users: { id: number; email: string }[] }).users;
   const pending = users.find((u) => u.email === email);
-  if (!pending) return false;
+  if (!pending) return 'nothing-to-approve';
 
   const approve = await request.post(`/api/admin/users/${pending.id}/approve`, {
     headers: authorization,
   });
-  return approve.ok();
+  return approve.ok() ? 'approved' : 'admin-unavailable';
 }
 
 /**
- * Register a brand-new user through the real form, confirm their email via the
- * link Mailpit received, have the seeded admin approve the account, then sign
- * in — leaving the page authenticated with zero subscriptions. Skips (rather
- * than fails) the moment a precondition it cannot satisfy is missing.
+ * Register a brand-new user through the real form, clear whichever gates the
+ * instance put in the way — the emailed confirmation link, an admin approval,
+ * or neither — then sign in, leaving the page authenticated with zero
+ * subscriptions. Skips (rather than fails) the moment a precondition it cannot
+ * satisfy is missing.
  */
 async function registerAndVerify(page: Page): Promise<void> {
   const request = page.request;
   const email = `onboarding-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.com`;
-
-  // Mailpit is the only way to read the confirmation link; without it there is
-  // no journey to test.
-  const mailpitUp = await request
-    .get(`${MAILPIT_API}/messages?limit=1`)
-    .then((r) => r.ok())
-    .catch(() => false);
-  test.skip(!mailpitUp, `Mailpit unreachable at ${MAILPIT_API}`);
 
   // --- Register. The submit runs a browser-side ALTCHA proof-of-work, so the
   // confirmation can take a few seconds; wait for the done state, not instantly.
   await page.goto('/register');
   await page.locator('input[type=email]').fill(email);
   await page.locator('input[type=password]').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Create account' }).click();
 
-  const registered = page.getByText(/Check your email/i);
-  const registerError = page.getByRole('alert');
-  await expect(registered.or(registerError)).toBeVisible({ timeout: 20_000 });
+  // Read the policy's verdict off the wire rather than off the page. Which of
+  // the two gates is on is instance state this spec does not own — a developer
+  // stack with confirmation switched off is as valid as CI's fresh database —
+  // and hardcoding "Check your email" made the spec fail on the former for a
+  // reason that has nothing to do with onboarding.
+  const registerResponse = page.waitForResponse(
+    (r) => new URL(r.url()).pathname === '/api/auth/register',
+    { timeout: 30_000 },
+  );
+  await page.getByRole('button', { name: 'Create account' }).click();
+  const response = await registerResponse;
   test.skip(
-    !(await registered.isVisible()),
-    'registration did not complete (ALTCHA or rate limit) — cannot reach onboarding',
+    response.status() === 429,
+    'registration rate limit reached (5 per 15 minutes) — wait out the window',
   );
 
-  // --- Confirm the address via the emailed link.
-  const verifyUrl = await fetchVerificationUrl(request, email);
-  test.skip(!verifyUrl, 'confirmation email never arrived in Mailpit');
-  await page.goto(verifyUrl!);
-  await expect(page.getByText(/Your email is confirmed/i)).toBeVisible({ timeout: 15_000 });
+  const confirmation = page.locator('p.ok');
+  const registerError = page.getByRole('alert');
+  await expect(confirmation.or(registerError)).toBeVisible({ timeout: 20_000 });
+  test.skip(
+    !(await confirmation.isVisible()),
+    'registration did not complete (ALTCHA or validation) — cannot reach onboarding',
+  );
+  const status = ((await response.json()) as { status: SignupStatus }).status;
 
-  // --- Approve, so the account may sign in. Needs the seeded admin.
-  const approved = await approveAccount(request, email);
-  test.skip(!approved, 'seeded admin unavailable to approve the account (run app:e2e:seed-admin)');
+  // --- Confirm the address, when this instance asks for it. Mailpit is the
+  // only way to read the link, so it is a precondition of that branch alone.
+  if (status === 'pending_verification') {
+    const mailpitUp = await request
+      .get(`${MAILPIT_API}/messages?limit=1`)
+      .then((r) => r.ok())
+      .catch(() => false);
+    test.skip(!mailpitUp, `Mailpit unreachable at ${MAILPIT_API}`);
+
+    const verifyUrl = await fetchVerificationUrl(request, email);
+    test.skip(!verifyUrl, 'confirmation email never arrived in Mailpit');
+    await page.goto(verifyUrl!);
+    await expect(page.getByText(/Your email is confirmed/i)).toBeVisible({ timeout: 15_000 });
+  }
+
+  // --- Approve, so the account may sign in. Needs the seeded admin, but only
+  // when the instance actually parked the account for approval.
+  const approval = await approveAccount(request, email);
+  test.skip(
+    approval === 'admin-unavailable',
+    'seeded admin unavailable to approve the account (run app:e2e:seed-admin)',
+  );
 
   // --- Sign in. The reader shell then redirects a zero-subscription user with a
   // populated catalog to the picker.

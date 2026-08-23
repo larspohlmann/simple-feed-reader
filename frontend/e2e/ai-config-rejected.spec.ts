@@ -14,10 +14,10 @@ const SERVER_MESSAGE = 'This value is too long. It should have 512 characters or
  * owns every value it asserts on: nothing is created, nothing seeded is read,
  * and no outbound call reaches a real provider.
  *
- * The list holds one row on purpose. With an empty list the configuration
- * card renders no `.configs` list at all, and "no banner on the list card"
- * would assert against an element that does not exist — a green test proving
- * nothing. One row makes the negative real.
+ * The list holds one row on purpose. With an empty list the group renders no
+ * `.configs` list at all, and "no banner on the list" would assert against an
+ * element that does not exist — a green test proving nothing. One row makes
+ * the negative real.
  *
  * Matched on the pathname, so `/api/me/ai` and `/api/me/ai/configs` do not
  * catch each other.
@@ -83,23 +83,30 @@ test('a rejected configuration keeps the typed values and names the field', asyn
 
   await page.goto('/settings/ai');
 
-  // The add card is collapsed by default; its summary opens it.
-  const addCard = page.locator('app-settings-card').filter({ has: page.locator('.add-config') });
-  await addCard.locator('summary').click();
+  // The stubbed configuration is active and ready, so the provider group folds
+  // to its one-line summary. "Manage" unfolds the configuration list and the
+  // add form beneath it — #547 replaced the cards with grouped disclosures.
+  await page.getByRole('button', { name: 'Manage' }).click();
 
-  await addCard.locator('input[type=url]').fill(ENDPOINT);
-  await addCard.locator('input[type=password]').fill(OVER_LONG_KEY);
-  await addCard.locator('.add-config button').click();
+  // The add form is a collapsed disclosure; its summary opens it.
+  const addForm = page.locator('app-disclosure').filter({ has: page.locator('.add-config') });
+  await addForm.locator('summary').click();
+
+  await addForm.locator('input[type=url]').fill(ENDPOINT);
+  await addForm.locator('input[type=password]').fill(OVER_LONG_KEY);
+  await addForm.locator('.add-config button').click();
 
   // 1. the server's sentence, naming the field — not "Something went wrong".
   // 2. under the add form, not on the configuration list above it.
-  await expect(addCard.locator('app-error-banner')).toHaveText(`API key: ${SERVER_MESSAGE}`);
+  await expect(addForm.locator('app-error-banner')).toHaveText(`API key: ${SERVER_MESSAGE}`);
 
-  const listCard = page.locator('app-settings-card').filter({ has: page.locator('.configs') });
-  await expect(listCard).toHaveCount(1); // else the assertion below proves nothing
-  await expect(listCard.locator('app-error-banner')).toHaveCount(0);
+  // `.conn-list` holds the saved configurations and ends before the add form,
+  // so a banner found inside it is one that leaked onto the list.
+  const list = page.locator('.conn-list');
+  await expect(list.locator('.configs .config-row')).toHaveCount(1); // else the next line proves nothing
+  await expect(list.locator('app-error-banner')).toHaveCount(0);
 
   // 3. the values survive the rejection.
-  await expect(addCard.locator('input[type=url]')).toHaveValue(ENDPOINT);
-  await expect(addCard.locator('input[type=password]')).toHaveValue(OVER_LONG_KEY);
+  await expect(addForm.locator('input[type=url]')).toHaveValue(ENDPOINT);
+  await expect(addForm.locator('input[type=password]')).toHaveValue(OVER_LONG_KEY);
 });
