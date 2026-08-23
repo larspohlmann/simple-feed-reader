@@ -17,7 +17,7 @@ import { SettingsGroupComponent } from '../../../shared/settings/settings-group/
 import { SettingsRowComponent } from '../../../shared/settings/settings-row/settings-row.component';
 import { SettingsSaveBarComponent } from '../../../shared/settings/save-bar/save-bar.component';
 import { ToggleComponent } from '../../../shared/toggle/toggle.component';
-import { ToastService } from '../../../shared/toast/toast.service';
+import { CONFIRMATION_DURATION_MS, ToastService } from '../../../shared/toast/toast.service';
 import { ProxySettingsService, ProxyType, TypedProxyEdits } from './proxy-settings.service';
 
 /** The SOCKS5 well-known port, mirroring the backend's ProxyConnection::DEFAULT_PORT. */
@@ -116,7 +116,10 @@ export class ProxySectionComponent {
     // flag. A rejected save never sets `saved`, so it stays silent.
     effect(() => {
       if (this.svc.saved() && !this.svc.failure()) {
-        this.toast.show({ message: this.i18n.translate('settings.proxy.saved') });
+        this.toast.show({
+          message: this.i18n.translate('settings.proxy.saved'),
+          durationMs: CONFIRMATION_DURATION_MS,
+        });
         this.svc.saved.set(false);
       }
     });

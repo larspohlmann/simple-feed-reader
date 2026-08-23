@@ -11,7 +11,8 @@ interface ToastBase {
   actionLabel?: string;
   action?: () => void;
   /** Omitted takes the 6000ms default. An explicit `null` never auto-dismisses,
-   *  for a surface that must live as long as the work it reports on. */
+   *  for a surface that must live as long as the work it reports on. A bare
+   *  confirmation passes `CONFIRMATION_DURATION_MS` and clears sooner. */
   durationMs?: number | null;
   /** `fixed` holds one box width across successive toasts, so a surface whose
    *  content changes mid-life does not resize under the user. */

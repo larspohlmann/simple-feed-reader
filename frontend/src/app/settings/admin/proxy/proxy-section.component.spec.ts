@@ -4,7 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { API_BASE_URL } from '../../../core/api';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { ToastService } from '../../../shared/toast/toast.service';
+import { CONFIRMATION_DURATION_MS, ToastService } from '../../../shared/toast/toast.service';
 import { ProxySectionComponent } from './proxy-section.component';
 import { ProxySettingsState } from './proxy-settings.service';
 
@@ -93,6 +93,20 @@ describe('ProxySectionComponent', () => {
     expect(put.request.method).toBe('PUT');
     expect(put.request.body.enabled).toBe(true);
     put.flush(state({ host: 'proxy.example.com', enabled: true }));
+  });
+
+  it('confirms a save with a toast that dismisses itself', () => {
+    const fixture = mount(state({ host: 'proxy.example.com', enabled: false }));
+
+    enableToggleInput(fixture).click();
+    fixture.detectChanges();
+    http.expectOne(ENDPOINT).flush(state({ host: 'proxy.example.com', enabled: true }));
+    fixture.detectChanges();
+
+    expect(toastStub.show).toHaveBeenCalledWith({
+      message: 'Proxy settings saved',
+      durationMs: CONFIRMATION_DURATION_MS,
+    });
   });
 
   it('marks the save bar dirty when the host is edited', () => {

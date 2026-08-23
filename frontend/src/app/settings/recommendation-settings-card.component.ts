@@ -23,7 +23,7 @@ import { SettingsGroupComponent } from '../shared/settings/settings-group/settin
 import { SettingsRowComponent } from '../shared/settings/settings-row/settings-row.component';
 import { SettingsSaveBarComponent } from '../shared/settings/save-bar/save-bar.component';
 import { ToggleComponent } from '../shared/toggle/toggle.component';
-import { ToastService } from '../shared/toast/toast.service';
+import { CONFIRMATION_DURATION_MS, ToastService } from '../shared/toast/toast.service';
 import { LanguageService } from '../core/language.service';
 import { formatInteger } from '../reader/format';
 import {
@@ -158,7 +158,10 @@ export class RecommendationSettingsCardComponent {
     // `failure()` guard only hardens that.
     effect(() => {
       if (this.svc.saved() && !this.svc.failure()) {
-        this.toast.show({ message: this.i18n.translate('settings.ai.recommendations.saved') });
+        this.toast.show({
+          message: this.i18n.translate('settings.ai.recommendations.saved'),
+          durationMs: CONFIRMATION_DURATION_MS,
+        });
         this.svc.saved.set(false);
       }
     });
