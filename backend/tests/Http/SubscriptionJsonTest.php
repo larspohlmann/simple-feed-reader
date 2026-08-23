@@ -13,6 +13,58 @@ use PHPUnit\Framework\TestCase;
 
 final class SubscriptionJsonTest extends TestCase
 {
+    private function subscriptionTo(Feed $feed): Subscription
+    {
+        $now = new \DateTimeImmutable('2026-02-03T04:05:06Z');
+
+        return new Subscription(new User('u@example.com', $now), $feed, $now);
+    }
+
+    public function testFlattensAnHtmlDescriptionToPlainText(): void
+    {
+        $feed = new Feed('https://example.com/feed.xml');
+        $feed->setDescription('<p>One</p><p>Two</p>');
+
+        self::assertSame('One Two', SubscriptionJson::one($this->subscriptionTo($feed))['description']);
+    }
+
+    public function testCapsALongDescription(): void
+    {
+        $feed = new Feed('https://example.com/feed.xml');
+        $feed->setDescription(str_repeat('a', 400));
+
+        $description = SubscriptionJson::one($this->subscriptionTo($feed))['description'];
+
+        self::assertIsString($description);
+        self::assertSame(300, mb_strlen($description));
+    }
+
+    public function testAMissingDescriptionStaysNull(): void
+    {
+        $feed = new Feed('https://example.com/feed.xml');
+
+        self::assertNull(SubscriptionJson::one($this->subscriptionTo($feed))['description']);
+    }
+
+    public function testADescriptionOfOnlyMarkupBecomesNull(): void
+    {
+        $feed = new Feed('https://example.com/feed.xml');
+        $feed->setDescription('<p></p>');
+
+        self::assertNull(SubscriptionJson::one($this->subscriptionTo($feed))['description']);
+    }
+
+    public function testSendsTheFeedImage(): void
+    {
+        $feed = new Feed('https://example.com/feed.xml');
+        $feed->setImageUrl('https://example.com/logo.png');
+
+        self::assertSame(
+            'https://example.com/logo.png',
+            SubscriptionJson::one($this->subscriptionTo($feed))['imageUrl'],
+        );
+    }
+
     public function testShapeUsesCustomTitleThenFeedTitleThenUrl(): void
     {
         $now = new \DateTimeImmutable('2026-02-03T04:05:06Z');
