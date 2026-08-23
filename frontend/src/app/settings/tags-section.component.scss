@@ -1,5 +1,17 @@
 @use '../theme/breakpoints' as bp;
 
+// The group's panel is unpadded by design (its rows pad themselves), and this
+// list is a list, not a stack of `app-settings-row`s -- so the inset the card
+// used to supply lives here now. `.list` keeps its own rule below (it needs
+// `display: flex`, not `block`), so it takes the padding there instead of
+// through this shared block.
+.muted,
+app-skeleton,
+app-error-banner {
+  display: block;
+  padding: var(--space-4) var(--space-5);
+}
+
 .muted {
   color: var(--text-muted);
 }
@@ -7,7 +19,7 @@
 .list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: var(--space-4) var(--space-5);
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
