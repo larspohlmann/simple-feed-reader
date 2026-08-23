@@ -1,0 +1,25 @@
+<div class="feed-intro">
+  @if (src(); as url) {
+    <!-- alt is empty on purpose: the feed's name is already the list heading
+         directly above, so naming it again only repeats it to a screen reader. -->
+    <img
+      class="logo"
+      [src]="url"
+      alt=""
+      loading="lazy"
+      decoding="async"
+      referrerpolicy="no-referrer"
+      (error)="broken.set(true)"
+    />
+  }
+  <div class="text">
+    @if (description(); as text) {
+      <p class="description">{{ text }}</p>
+    }
+    @if (siteUrl(); as site) {
+      <a class="homepage" [href]="site" target="_blank" rel="noopener noreferrer">
+        {{ 'reader.feedHomepage' | transloco }} <app-icon name="open_in_new" size="text" />
+      </a>
+    }
+  </div>
+</div>

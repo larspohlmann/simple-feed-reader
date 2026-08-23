@@ -56,6 +56,7 @@ discover panel and the auth card each arrived at 12px independently.
 | `--tap-target` | `44px` | the documented minimum touch target |
 | `--list-bar-h` | `0px` | the entry list's own bar; overwritten on its host once measured |
 | `--bar-gap` | `var(--space-4)` | breathing room between a floating bar and the content under it |
+| `--feed-logo-max-h` | `56px` | the ceiling for a feed's own logo in `<app-feed-intro>`; feed logos range from 88×31 buttons to full-width banners, so the block caps height and lets width follow |
 
 **`--bar-h` is a fallback, not the height.** `ReaderShellComponent` measures the
 real app bar at runtime and writes it to `--app-bar-h`. Every consumer must read

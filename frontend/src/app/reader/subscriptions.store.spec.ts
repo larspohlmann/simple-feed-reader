@@ -18,6 +18,8 @@ const sub = (
   customTitle: null,
   feedUrl: `https://f/${id}`,
   siteUrl: null,
+  description: null,
+  imageUrl: null,
   status: 'active',
   sourceFormat: 'xml',
   createdAt: 'x',

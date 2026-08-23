@@ -152,6 +152,8 @@ describe('TagsSectionComponent', () => {
         customTitle: null,
         feedUrl: 'u',
         siteUrl: null,
+        description: null,
+        imageUrl: null,
         status: 'active',
         sourceFormat: 'xml',
         createdAt: 'x',

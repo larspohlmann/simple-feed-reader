@@ -15,6 +15,8 @@ const sub: SubscriptionDto = {
   customTitle: null,
   feedUrl: 'https://heise.de/rss',
   siteUrl: 'https://heise.de',
+  description: null,
+  imageUrl: null,
   status: 'active',
   sourceFormat: 'xml',
   createdAt: 'x',
