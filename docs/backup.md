@@ -249,14 +249,25 @@ change them.
 
 ## 8. For developers: the format and its guards
 
-Three tests hold this format together. Read them before you change a backed-up
+Four tests hold this format together. Read them before you change a backed-up
 entity.
 
 - `backend/tests/Service/Backup/BackupSchemaCoverageTest.php` reads the ORM
   mapping and demands a decision for each persisted field of each backed-up
   entity. A new column on a backed-up table makes this test red. The test also
   asserts that this page names each dropped entity and each dropped field, so
-  the dropped-field tables above (6.2, 6.3, 7) cannot fall behind the code.
+  the dropped-field tables above (6.2, 6.3, 7) cannot fall behind the code. It
+  also proves that a fully populated account never exports a backed-up field
+  as null, so a field cannot pass this test merely because its test fixture
+  left it empty.
+- `backend/tests/Service/Backup/AccountRestorerTest.php::testEveryBackedUpFieldSurvivesTheRestoreRoundTrip`
+  guards the other direction. `BackupSchemaCoverageTest` proves that the
+  exporter writes each backed-up field. It does not prove that the restore
+  reads that field back. A field can pass the write-direction test and still
+  get lost: the exporter writes it, but no Line DTO reads it back on restore.
+  This test closes that gap. Both tests read the same field list, from
+  `backend/tests/Support/BackupFieldDeclarations.php`. A field added to that
+  list gets both tests for free.
 - `backend/tests/Service/Backup/AccountBackupExporterTest.php` guards what the
   exporter writes.
 - `backend/tests/Service/Backup/GoldenBackupRestoreTest.php` restores two frozen
