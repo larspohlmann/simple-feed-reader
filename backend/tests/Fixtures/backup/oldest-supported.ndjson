@@ -1,0 +1,7 @@
+{"kind":"header","schemaVersion":1,"createdAt":"2026-08-17T11:03:57+00:00","sourceUrl":"https://oldest.example","sourceEmail":"oldest@example.com"}
+{"kind":"account","locale":"de","scrapeFallbackEnabled":true,"recommendationSettings":{"guidancePrompt":"Long reads only.","favoritesCap":40,"keptCap":40,"viewedCap":80,"candidatePoolSize":1000,"lookbackDays":2,"picksLimit":50,"contextWindow":null,"batchCount":null,"debugEnabled":true,"autoGenerateIntervalHours":24}}
+{"kind":"tag","name":"Cartography","color":"#2b6","icon":"map","position":0}
+{"kind":"feed","url":"https://oldest.example/feed.xml","siteUrl":"https://oldest.example","title":"Oldest","description":"A fixture feed.","faviconUrl":null,"sourceFormat":"xml"}
+{"kind":"subscription","feedUrl":"https://oldest.example/feed.xml","customTitle":null,"position":0,"markedReadUntil":null,"createdAt":"2026-08-17T10:00:00+00:00","tags":[{"name":"Cartography","position":0}]}
+{"kind":"entry","feedUrl":"https://oldest.example/feed.xml","guid":"oldest-1","guidHash":"dcc719038e525af36e8dde7b6f6912a2c4b701a790f699b18cb54f421c82367b","url":"https://oldest.example/one?utm_source=rss","title":"One","author":"A","summary":"S","contentHtml":"<p>S</p>","imageUrl":null,"imageWidth":null,"imageHeight":null,"publishedAt":"2026-08-16T09:00:00+00:00","createdAt":"2026-08-17T09:00:00+00:00","effectiveDate":"2026-08-16T09:00:00+00:00"}
+{"kind":"footer","counts":{"tag":1,"feed":1,"subscription":1,"entry":1,"entryState":0}}
