@@ -379,6 +379,41 @@ final class BackupSchemaCoverageTest extends DbTestCase
     }
 
     /**
+     * The reason strings above are for whoever hits a red test. This asserts
+     * the user-facing table cannot silently fall behind them — the coupling is
+     * mechanical, the wording stays hand-written.
+     */
+    public function testEveryDroppedThingAppearsInTheUserFacingDoc(): void
+    {
+        $doc = (string) file_get_contents(__DIR__ . '/../../../../docs/backup.md');
+
+        foreach (array_keys(self::ACCOUNT_SCOPED_WHOLLY_DROPPED) as $entityClass) {
+            $shortName = (new \ReflectionClass($entityClass))->getShortName();
+            self::assertStringContainsString(
+                $shortName,
+                $doc,
+                sprintf('docs/backup.md never mentions %s, which a backup drops.', $shortName),
+            );
+        }
+
+        foreach ([self::NOT_BACKED_UP, self::NEVER_BACKED_UP] as $declarations) {
+            foreach ($declarations as $entityClass => $fields) {
+                foreach (array_keys($fields) as $field) {
+                    self::assertStringContainsString(
+                        '`' . $field . '`',
+                        $doc,
+                        sprintf(
+                            'docs/backup.md has no row for %s::$%s, which a backup drops.',
+                            $entityClass,
+                            $field,
+                        ),
+                    );
+                }
+            }
+        }
+    }
+
+    /**
      * @param string|list<string> $declared
      *
      * @return list<string>
