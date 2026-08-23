@@ -34,6 +34,13 @@
   letter-spacing: -0.01em;
 }
 
+// A labelled title is a click target, so it says so on hover. Everything else
+// about it -- weight, spacing, the adornment slot beside it -- is `.row-title`'s
+// job and is inherited.
+.row-label {
+  cursor: pointer;
+}
+
 .row-desc {
   margin-top: var(--space-0);
   color: var(--text-muted);

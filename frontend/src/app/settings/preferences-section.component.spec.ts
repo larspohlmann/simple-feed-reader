@@ -77,10 +77,16 @@ describe('PreferencesSectionComponent', () => {
     expect(preferences.scrapeFallbackEnabled()).toBe(true);
   });
 
-  // The click-the-label-text-to-toggle affordance is gone with the
-  // `<label class="setting-label">` it depended on: the row's title is now
-  // drawn by `app-settings-row` and is not a control anywhere else in the
-  // system. `app-toggle` still renders a native checkbox with its own label
-  // and `aria-label`, so keyboard and assistive-technology behaviour is
-  // unchanged (see task-6-brief.md, Step 3).
+  it('toggles the control when the visible label text is clicked, not only the switch', () => {
+    const fixture = mount();
+    const el = fixture.nativeElement as HTMLElement;
+    const label = el.querySelector('.row-title label') as HTMLLabelElement;
+    const input = el.querySelector('app-toggle input[type="checkbox"]') as HTMLInputElement;
+
+    expect(label.htmlFor).toBe(input.id);
+    label.click();
+    fixture.detectChanges();
+
+    expect(preferences.scrapeFallbackEnabled()).toBe(true);
+  });
 });

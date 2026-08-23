@@ -22,6 +22,10 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
  * title text inside `.row-title` -- an `<app-info-tip>`, which was its first
  * consumer, or a small badge such as the preferences page's "Experimental"
  * chip. The slot is positional, not typed.
+ *
+ * `labelFor` names the `id` of the row's control and turns the title into a
+ * `<label for>`, so clicking the title (not just the control itself) operates
+ * it -- the larger click target a toggle row should offer.
  */
 @Component({
   selector: 'app-settings-row',
@@ -33,4 +37,10 @@ export class SettingsRowComponent {
   readonly title = input<string>('');
   readonly description = input<string>('');
   readonly stackable = input(false);
+
+  /** The `id` of the control this row labels. When set, the row's title text
+   *  becomes a `<label for>` so clicking it operates the control -- a toggle
+   *  row's title is a click target the same way the switch is. Left unset, the
+   *  title is inert text. */
+  readonly labelFor = input<string>('');
 }

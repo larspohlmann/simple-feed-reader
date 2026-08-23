@@ -824,6 +824,7 @@ stacks.
 | `title` | `string` | `''` |
 | `description` | `string` | `''` — omits the `.row-desc` element when empty |
 | `stackable` | `boolean` | `false` |
+| `labelFor` | `string` | `''` |
 
 ```html
 <app-settings-row
@@ -844,6 +845,11 @@ positional, not typed. The inset hairline divider between rows is
 automatic — `:host(:not(:last-child))` draws it, so the parent group supplies
 only the box. When `stackable`, on a narrow viewport (`bp.$bp-sm`) a select or
 number control fills the row width while a toggle keeps its natural size.
+
+`labelFor` takes the `id` of the control the row holds; the title text then
+renders as a `<label for>`, so clicking it operates the control. A toggle row
+should always set it — the row title is the larger click target, and a switch
+alone is a small one.
 
 ### `<app-settings-save-bar>`
 

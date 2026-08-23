@@ -2,7 +2,11 @@
 <div class="row" [class.stackable]="stackable()">
   <div class="row-main">
     <div class="row-title">
-      {{ title() }}
+      @if (labelFor()) {
+        <label class="row-label" [attr.for]="labelFor()">{{ title() }}</label>
+      } @else {
+        {{ title() }}
+      }
       <ng-content select="[rowTitleTip]" />
     </div>
     @if (description()) {
