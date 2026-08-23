@@ -27,6 +27,7 @@ use App\Entity\WorkerHeartbeat;
 use App\Service\Backup\AccountBackupExporter;
 use App\Service\Backup\BackupSchema;
 use App\Tests\DbTestCase;
+use App\Tests\Support\BackupFieldDeclarations;
 use App\Tests\Support\FullyPopulatedAccount;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -117,68 +118,14 @@ final class BackupSchemaCoverageTest extends DbTestCase
      * list of keys when one field is written as several — an entry reference
      * is a feed URL and a GUID hash together, and neither half identifies an
      * entry on its own].
+     *
+     * Lives in `BackupFieldDeclarations::BACKED_UP` (test/Support), not here,
+     * because `AccountRestorerTest` drives its own round-trip coverage off
+     * the identical list — this class's own write-direction proof would mean
+     * nothing if the read-direction test could silently fall out of step
+     * with it (#556).
      */
-    private const array BACKED_UP = [
-        User::class => [
-            'locale' => 'locale',
-            'recommendationSettings' => 'recommendationSettings',
-        ],
-        Preferences::class => ['scrapeFallbackEnabled' => 'scrapeFallbackEnabled'],
-        RecommendationSettings::class => [
-            'guidancePrompt' => 'recommendationSettings.guidancePrompt',
-            'profileText' => 'recommendationSettings.profileText',
-            'favoritesCap' => 'recommendationSettings.favoritesCap',
-            'keptCap' => 'recommendationSettings.keptCap',
-            'viewedCap' => 'recommendationSettings.viewedCap',
-            'candidatePoolSize' => 'recommendationSettings.candidatePoolSize',
-            'lookbackDays' => 'recommendationSettings.lookbackDays',
-            'picksLimit' => 'recommendationSettings.picksLimit',
-            'contextWindow' => 'recommendationSettings.contextWindow',
-            'batchCount' => 'recommendationSettings.batchCount',
-            'debugEnabled' => 'recommendationSettings.debugEnabled',
-            'autoGenerateIntervalHours' => 'recommendationSettings.autoGenerateIntervalHours',
-            'showReasons' => 'recommendationSettings.showReasons',
-        ],
-        Tag::class => [
-            'name' => 'name', 'color' => 'color', 'icon' => 'icon', 'position' => 'position',
-        ],
-        Feed::class => [
-            'url' => 'url', 'siteUrl' => 'siteUrl', 'title' => 'title',
-            'description' => 'description', 'faviconUrl' => 'faviconUrl',
-            'sourceFormat' => 'sourceFormat',
-        ],
-        Subscription::class => [
-            'feed' => 'feedUrl',
-            'customTitle' => 'customTitle',
-            'position' => 'position',
-            'markedReadUntil' => 'markedReadUntil',
-            'createdAt' => 'createdAt',
-            'subscriptionTags' => 'tags',
-        ],
-        SubscriptionTag::class => [
-            'tag' => 'tags.name',
-            'position' => 'tags.position',
-        ],
-        Entry::class => [
-            'feed' => 'feedUrl',
-            'guid' => 'guid', 'guidHash' => 'guidHash', 'url' => 'url',
-            'title' => 'title', 'author' => 'author', 'summary' => 'summary',
-            'contentHtml' => 'contentHtml',
-            'image.url' => 'imageUrl', 'image.width' => 'imageWidth',
-            'image.height' => 'imageHeight',
-            'publishedAt' => 'publishedAt', 'createdAt' => 'createdAt',
-            'effectiveDate' => 'effectiveDate',
-        ],
-        EntryState::class => [
-            // Both halves, because both are load-bearing: guidHash picks the
-            // entry out of a feed, feedUrl says which feed. Declaring only one
-            // would leave the other claimed by nothing, and deleting it from
-            // entryStateLine() would still pass.
-            'entry' => ['feedUrl', 'guidHash'],
-            'isRead' => 'isRead', 'isFavorite' => 'isFavorite', 'isKept' => 'isKept',
-            'readAt' => 'readAt', 'isViewed' => 'isViewed', 'viewedAt' => 'viewedAt',
-        ],
-    ];
+    private const array BACKED_UP = BackupFieldDeclarations::BACKED_UP;
 
     /** Doctrine class => [field => why a backup leaves it behind]. */
     private const array NOT_BACKED_UP = [
@@ -278,18 +225,13 @@ final class BackupSchemaCoverageTest extends DbTestCase
         ],
     ];
 
-    /** Doctrine class => the `kind` of the line its fields are written on. */
-    private const array KIND_OF = [
-        User::class => BackupSchema::KIND_ACCOUNT,
-        Preferences::class => BackupSchema::KIND_ACCOUNT,
-        RecommendationSettings::class => BackupSchema::KIND_ACCOUNT,
-        Tag::class => BackupSchema::KIND_TAG,
-        Feed::class => BackupSchema::KIND_FEED,
-        Subscription::class => BackupSchema::KIND_SUBSCRIPTION,
-        SubscriptionTag::class => BackupSchema::KIND_SUBSCRIPTION,
-        Entry::class => BackupSchema::KIND_ENTRY,
-        EntryState::class => BackupSchema::KIND_ENTRY_STATE,
-    ];
+    /**
+     * Doctrine class => the `kind` of the line its fields are written on.
+     *
+     * Lives in `BackupFieldDeclarations::KIND_OF` for the same reason
+     * `BACKED_UP` above does.
+     */
+    private const array KIND_OF = BackupFieldDeclarations::KIND_OF;
 
     /**
      * The headings the user-facing tables live under. A dropped thing is

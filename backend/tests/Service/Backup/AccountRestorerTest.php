@@ -7,6 +7,7 @@ namespace App\Tests\Service\Backup;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\Preferences;
 use App\Entity\RecommendationSettings;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
@@ -30,6 +31,8 @@ use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Search\EntryIndexer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\BackupFieldDeclarations;
+use App\Tests\Support\FullyPopulatedAccount;
 use App\Tests\Support\UserFactory;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
@@ -74,6 +77,14 @@ final class AccountRestorerTest extends DbTestCase
         }
 
         return (string) gzencode($ndjson);
+    }
+
+    private function fullyPopulatedAccount(): FullyPopulatedAccount
+    {
+        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
+        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
+
+        return new FullyPopulatedAccount($this->em, $hasher);
     }
 
     private function restorer(): AccountRestorer
@@ -362,6 +373,225 @@ final class AccountRestorerTest extends DbTestCase
         self::assertSame($before, $this->subscriptionShapes($userId));
         self::assertSame($statesBefore, $this->entryStateRows($userId));
         self::assertSame(3, $this->scalarInt('SELECT COUNT(*) FROM entry'));
+    }
+
+    /**
+     * Closes the gap the write-direction guard leaves open: a field declared
+     * `BACKED_UP` and written by the exporter can still be lost if the Line
+     * DTO that reads the file back never claims it. `BackupSchemaCoverageTest`
+     * proves the write half; this proves the read half, off the identical
+     * `BackupFieldDeclarations::BACKED_UP` list, so it grows the moment that
+     * one does rather than needing a matching edit here (#556).
+     *
+     * The account restored onto is a fresh one, not the account that made the
+     * file: `RestoreLoadPass::loadFeed()` leaves a Feed row untouched when one
+     * with the same URL already exists, and the source account's own feed
+     * would be exactly such a row. Comparing against a row this restore
+     * merely referenced, rather than one it wrote from the file's fields,
+     * would let the bug this test exists to catch pass unnoticed.
+     */
+    public function testEveryBackedUpFieldSurvivesTheRestoreRoundTrip(): void
+    {
+        $source = $this->fullyPopulatedAccount()->create('drift-source@example.com');
+        $gzip = $this->backupOf($source);
+        $sourceRows = $this->fixtureRowsOf($source);
+
+        $target = $this->users->create('drift-target@example.com');
+        $targetId = (int) $target->getId();
+        $this->deleteEveryFeed();
+
+        $this->restorer()->restore($this->reloadUser($targetId), $gzip, 'REPLACE');
+        $targetRows = $this->fixtureRowsOf($this->reloadUser($targetId));
+
+        $this->assertFieldsRoundTripped(
+            User::class,
+            $sourceRows['user'],
+            $targetRows['user'],
+            ['recommendationSettings'],
+        );
+        $this->assertFieldsRoundTripped(Preferences::class, $sourceRows['preferences'], $targetRows['preferences']);
+        $this->assertRecommendationSettingsRoundTripped($sourceRows['settings'], $targetRows['settings']);
+        $this->assertFieldsRoundTripped(Tag::class, $sourceRows['tag'], $targetRows['tag']);
+        $this->assertFieldsRoundTripped(Feed::class, $sourceRows['feed'], $targetRows['feed']);
+
+        $this->assertFieldsRoundTripped(
+            Subscription::class,
+            $sourceRows['subscription'],
+            $targetRows['subscription'],
+            ['feed', 'subscriptionTags'],
+        );
+        self::assertSame($sourceRows['feed']->getUrl(), $targetRows['subscription']->getFeed()->getUrl());
+        self::assertSame(
+            $this->tagAssignments($sourceRows['subscription']),
+            $this->tagAssignments($targetRows['subscription']),
+        );
+
+        $this->assertFieldsRoundTripped(
+            SubscriptionTag::class,
+            $sourceRows['subscriptionTag'],
+            $targetRows['subscriptionTag'],
+            ['tag'],
+        );
+        self::assertSame(
+            $sourceRows['subscriptionTag']->getTag()->getName(),
+            $targetRows['subscriptionTag']->getTag()->getName(),
+        );
+
+        $this->assertFieldsRoundTripped(Entry::class, $sourceRows['entry'], $targetRows['entry'], ['feed']);
+        self::assertSame($sourceRows['feed']->getUrl(), $targetRows['entry']->getFeed()->getUrl());
+
+        $this->assertFieldsRoundTripped(
+            EntryState::class,
+            $sourceRows['entryState'],
+            $targetRows['entryState'],
+            ['entry'],
+        );
+        $restoredEntry = $targetRows['entryState']->getEntry();
+        self::assertSame(
+            [$sourceRows['feed']->getUrl(), $sourceRows['entry']->getGuidHash()],
+            [$restoredEntry->getFeed()->getUrl(), $restoredEntry->getGuidHash()],
+        );
+    }
+
+    /**
+     * One of every kind of row `FullyPopulatedAccount` seeds for $user, fetched
+     * fresh so a caller can compare a source account's rows against a restored
+     * account's rows field by field.
+     *
+     * @return array{user: User, preferences: Preferences, settings: RecommendationSettings,
+     *     tag: Tag, feed: Feed, subscription: Subscription, subscriptionTag: SubscriptionTag,
+     *     entry: Entry, entryState: EntryState}
+     */
+    private function fixtureRowsOf(User $user): array
+    {
+        $userId = (int) $user->getId();
+
+        $subscription = $this->em->getRepository(Subscription::class)->findOneBy(['user' => $userId]);
+        self::assertInstanceOf(Subscription::class, $subscription);
+        $subscriptionTags = $subscription->getSubscriptionTags();
+        self::assertCount(1, $subscriptionTags);
+        $subscriptionTag = reset($subscriptionTags);
+        self::assertInstanceOf(SubscriptionTag::class, $subscriptionTag);
+
+        // A ManyToOne association loads lazily: without touching it here, the
+        // caller's later getUrl() call would try to initialize this proxy for
+        // the first time AFTER the source account's own feed row was deleted
+        // to force the target's rows to build fresh from the file — and find
+        // nothing to load. Touching it now, while the row still exists, bakes
+        // the value into the object so it survives that deletion detached.
+        $feed = $subscription->getFeed();
+        $feed->getUrl();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        self::assertInstanceOf(Entry::class, $entry);
+        $entryState = $this->em->getRepository(EntryState::class)->findOneBy(['user' => $userId]);
+        self::assertInstanceOf(EntryState::class, $entryState);
+        $tag = $this->em->getRepository(Tag::class)->findOneBy(['user' => $userId]);
+        self::assertInstanceOf(Tag::class, $tag);
+        $settings = $this->em->getRepository(RecommendationSettings::class)->findOneBy(['user' => $userId]);
+        self::assertInstanceOf(RecommendationSettings::class, $settings);
+
+        return [
+            'user' => $user,
+            'preferences' => $user->getPreferences(),
+            'settings' => $settings,
+            'tag' => $tag,
+            'feed' => $feed,
+            'subscription' => $subscription,
+            'subscriptionTag' => $subscriptionTag,
+            'entry' => $entry,
+            'entryState' => $entryState,
+        ];
+    }
+
+    /**
+     * Every field `BackupFieldDeclarations::BACKED_UP` declares for
+     * $entityClass, minus $handledSeparately, read through the entity's own
+     * getter and compared before vs after the restore.
+     *
+     * Generic on purpose: a newly `BACKED_UP` scalar field needs no new case
+     * here, only a getter — which is exactly what BackupSchemaCoverageTest's
+     * write-only proof could not force (#556). $handledSeparately exists for
+     * the small, fixed set of association fields (`feed`, `subscriptionTags`,
+     * `tag`, `entry`) whose comparison is a relationship, not a getter call —
+     * the caller asserts those itself.
+     *
+     * @param list<string> $handledSeparately
+     */
+    private function assertFieldsRoundTripped(
+        string $entityClass,
+        object $source,
+        object $target,
+        array $handledSeparately = [],
+    ): void {
+        $fields = array_diff(array_keys(BackupFieldDeclarations::BACKED_UP[$entityClass]), $handledSeparately);
+        foreach ($fields as $field) {
+            self::assertEquals(
+                $this->getterValue($source, $field),
+                $this->getterValue($target, $field),
+                sprintf(
+                    '%s::$%s did not survive the export/restore round trip: the exporter '
+                    . 'writes it, but no Line DTO reads it back on restore.',
+                    $entityClass,
+                    $field,
+                ),
+            );
+        }
+    }
+
+    private function assertRecommendationSettingsRoundTripped(
+        RecommendationSettings $source,
+        RecommendationSettings $target,
+    ): void {
+        foreach (array_keys(BackupFieldDeclarations::BACKED_UP[RecommendationSettings::class]) as $field) {
+            self::assertEquals(
+                $source->values()->{$field},
+                $target->values()->{$field},
+                sprintf(
+                    'RecommendationSettings::$%s did not survive the export/restore round trip.',
+                    $field,
+                ),
+            );
+        }
+    }
+
+    /**
+     * Reads a declared field off an entity through its own getter, deriving
+     * the method name from the field's own path so an embedded field such as
+     * `image.url` finds `getImageUrl()` the same way a plain field finds
+     * `getUrl()`. Tried bare first, because a boolean field already named
+     * `isRead` or `isKept` has a getter of that exact name, not `isIsRead()`.
+     */
+    private function getterValue(object $entity, string $field): mixed
+    {
+        $pascal = implode('', array_map(ucfirst(...), explode('.', $field)));
+        foreach ([lcfirst($pascal), 'get' . $pascal, 'is' . $pascal, 'has' . $pascal] as $method) {
+            if (method_exists($entity, $method)) {
+                return $entity->$method();
+            }
+        }
+
+        throw new \LogicException(sprintf(
+            '%s has no getter for backed-up field "%s". Give it one, or add "%s" to the '
+            . 'handledSeparately list in %s and assert it by hand.',
+            $entity::class,
+            $field,
+            $field,
+            self::class,
+        ));
+    }
+
+    /** @return array<string, int> tag name => position on the subscription */
+    private function tagAssignments(Subscription $subscription): array
+    {
+        $assignments = [];
+        foreach ($subscription->getSubscriptionTags() as $subscriptionTag) {
+            self::assertInstanceOf(SubscriptionTag::class, $subscriptionTag);
+            $assignments[$subscriptionTag->getTag()->getName()] = $subscriptionTag->getPosition();
+        }
+        ksort($assignments);
+
+        return $assignments;
     }
 
     public function testRestoreOntoAnEmptyInstanceCreatesFeedsAndEntries(): void
