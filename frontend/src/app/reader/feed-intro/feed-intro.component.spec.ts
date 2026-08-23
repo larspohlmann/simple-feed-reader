@@ -133,11 +133,6 @@ describe('FeedIntroComponent', () => {
     expect(img?.getAttribute('src')).toBe('https://example.com/logo.png');
   });
 
-  it('reports no content when every value is null', () => {
-    render({});
-    expect(fixture.componentInstance.hasContent()).toBe(false);
-  });
-
   it('hides a broken image instead of leaving a broken-image box', () => {
     const host = render({ imageUrl: 'https://example.com/dead.png' });
     host.querySelector('img')?.dispatchEvent(new Event('error'));

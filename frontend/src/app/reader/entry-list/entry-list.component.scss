@@ -447,6 +447,13 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   max-width: var(--magazine-measure);
 }
 
+/* The outlet's own wrapper. Outside the magazine column it is a plain block and
+   costs nothing; inside it, it is what gives whatever was projected the
+   column's measure without the caller having to know there is one. */
+.top-block {
+  display: block;
+}
+
 /* Wraps the (optional) topBlock and the `.empty` message: the header-clearing
    top reservation lives here rather than on `.empty` itself, so a projected
    topBlock sits inside that same reserved space instead of the message text

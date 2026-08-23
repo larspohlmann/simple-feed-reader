@@ -111,7 +111,10 @@ describe('EntryListComponent', () => {
       const rows = el.querySelector('.rows')!;
       expect(rows.querySelector('.top-marker')).not.toBeNull();
       // It scrolls with the rows: it lives inside the scroller, not before it.
-      expect(rows.firstElementChild!.classList).toContain('top-marker');
+      // The projected node sits in the wrapper this component puts around the
+      // outlet, which is what carries the column's sizing to it.
+      expect(rows.firstElementChild!.classList).toContain('top-block');
+      expect(rows.firstElementChild!.firstElementChild!.classList).toContain('top-marker');
     });
 
     it('renders above the magazine rows', () => {
@@ -119,7 +122,8 @@ describe('EntryListComponent', () => {
       const el = mount({ topBlock: tb, layout: 'magazine' }).nativeElement as HTMLElement;
       const rows = el.querySelector('.rows.magazine')!;
       expect(rows.querySelector('.top-marker')).not.toBeNull();
-      expect(rows.firstElementChild!.classList).toContain('top-marker');
+      expect(rows.firstElementChild!.classList).toContain('top-block');
+      expect(rows.firstElementChild!.firstElementChild!.classList).toContain('top-marker');
     });
 
     it('renders above the empty state, so the run button still shows there', () => {

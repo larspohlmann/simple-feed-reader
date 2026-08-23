@@ -302,7 +302,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *  block would be a wide slab sitting on top of the rows.
    *
    *  A feed with no description, image or site URL renders no block at all
-   *  rather than an empty box above the first row. */
+   *  rather than an empty box above the first row. The check belongs here and
+   *  nowhere else: a component cannot decline to be created, so a self-guard
+   *  inside FeedIntroComponent could never suppress the host element's own
+   *  padding. */
   readonly feedIntroSubscription = computed(() => {
     if (this.layout.mode() !== 'magazine') return null;
     const sub = this.selectedSubscription();

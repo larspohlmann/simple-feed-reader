@@ -50,7 +50,12 @@ final class FeedWebsite
 
     private static function usablePublishedLink(string $feedUrl, ?string $publishedLink): ?string
     {
-        if ($publishedLink === null || !self::namesAPublicHost($publishedLink)) {
+        if ($publishedLink === null) {
+            return null;
+        }
+
+        $host = (string) parse_url($publishedLink, \PHP_URL_HOST);
+        if (!self::namesAPublicHost($host) || self::isFeedSubdomain($host)) {
             return null;
         }
 
@@ -59,11 +64,8 @@ final class FeedWebsite
         if (strcasecmp(rtrim($publishedLink, '/'), rtrim($feedUrl, '/')) === 0) {
             return null;
         }
-        if (self::isFeedDocument($publishedLink) || self::isFeedSubdomain($publishedLink)) {
-            return null;
-        }
 
-        return $publishedLink;
+        return self::isFeedDocument($publishedLink) ? null : $publishedLink;
     }
 
     /**
@@ -79,9 +81,8 @@ final class FeedWebsite
         }
 
         $host = (string) parse_url($origin, \PHP_URL_HOST);
-        $labels = explode('.', $host);
-        $stripped = \count($labels) >= 3 && \in_array(strtolower($labels[0]), self::FEED_SUBDOMAINS, true)
-            ? implode('.', \array_slice($labels, 1))
+        $stripped = self::isFeedSubdomain($host)
+            ? implode('.', \array_slice(explode('.', $host), 1))
             : $host;
 
         if (self::isSyndicator($stripped)) {
@@ -96,13 +97,8 @@ final class FeedWebsite
         return \in_array(strtolower($host), self::SYNDICATORS, true);
     }
 
-    private static function namesAPublicHost(string $url): bool
+    private static function namesAPublicHost(string $host): bool
     {
-        $host = parse_url($url, \PHP_URL_HOST);
-        if (!\is_string($host)) {
-            return false;
-        }
-
         $labels = explode('.', $host);
 
         return \count($labels) >= 2 && preg_match(self::PUBLIC_TOP_LEVEL, (string) end($labels)) === 1;
@@ -113,9 +109,9 @@ final class FeedWebsite
         return preg_match(self::FEED_DOCUMENT_PATH, (string) parse_url($url, \PHP_URL_PATH)) === 1;
     }
 
-    private static function isFeedSubdomain(string $url): bool
+    private static function isFeedSubdomain(string $host): bool
     {
-        $labels = explode('.', (string) parse_url($url, \PHP_URL_HOST));
+        $labels = explode('.', $host);
 
         return \count($labels) >= 3 && \in_array(strtolower($labels[0]), self::FEED_SUBDOMAINS, true);
     }

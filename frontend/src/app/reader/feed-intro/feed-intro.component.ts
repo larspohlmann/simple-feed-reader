@@ -48,10 +48,4 @@ export class FeedIntroComponent {
   protected readonly homepageLabel = computed(() =>
     (this.siteUrl() ?? '').replace(/^https?:\/\//i, '').replace(/\/$/, ''),
   );
-
-  /** Whether there is anything at all to show. The caller uses this to leave
-   *  the block out entirely rather than render an empty box above the rows. */
-  readonly hasContent = computed(
-    () => this.description() !== null || this.imageUrl() !== null || this.siteUrl() !== null,
-  );
 }

@@ -15,8 +15,7 @@ final class XmlHelper
 
     /**
      * Trimmed text content of the first matching direct child element that
-     * HAS text, or null when none does. When $namespaceUri is null, any
-     * namespace matches.
+     * HAS text, or null when none does.
      *
      * The first-with-text rule is not fussiness. Matching runs on local name,
      * so an unqualified lookup for 'link' also matches <atom:link/>, and RSS
@@ -27,13 +26,7 @@ final class XmlHelper
      */
     public static function childText(\DOMElement $parent, string $localName, ?string $namespaceUri = null): ?string
     {
-        foreach ($parent->childNodes as $child) {
-            if (!$child instanceof \DOMElement || $child->localName !== $localName) {
-                continue;
-            }
-            if ($namespaceUri !== null && $child->namespaceURI !== $namespaceUri) {
-                continue;
-            }
+        foreach (self::childElements($parent, $localName, $namespaceUri) as $child) {
             $text = trim($child->textContent);
             if ($text !== '') {
                 return $text;
@@ -44,16 +37,33 @@ final class XmlHelper
     }
 
     /**
-     * First matching direct child element, or null when absent. When
-     * $namespaceUri is null, any namespace matches. childText() cannot serve
-     * here: a feed's <image> holds its address in a grandchild <url>, so the
-     * element itself has to be handed back to be descended into.
+     * First matching direct child element, or null when absent. childText()
+     * cannot serve here: a feed's <image> holds its address in a grandchild
+     * <url>, so the element itself has to be handed back to be descended into.
      */
     public static function childElement(
         \DOMElement $parent,
         string $localName,
         ?string $namespaceUri = null,
     ): ?\DOMElement {
+        foreach (self::childElements($parent, $localName, $namespaceUri) as $child) {
+            return $child;
+        }
+
+        return null;
+    }
+
+    /**
+     * Every direct child element with this local name. A null $namespaceUri
+     * matches any namespace — the one place that rule is written down.
+     *
+     * @return iterable<\DOMElement>
+     */
+    private static function childElements(
+        \DOMElement $parent,
+        string $localName,
+        ?string $namespaceUri,
+    ): iterable {
         foreach ($parent->childNodes as $child) {
             if (!$child instanceof \DOMElement || $child->localName !== $localName) {
                 continue;
@@ -62,9 +72,7 @@ final class XmlHelper
                 continue;
             }
 
-            return $child;
+            yield $child;
         }
-
-        return null;
     }
 }

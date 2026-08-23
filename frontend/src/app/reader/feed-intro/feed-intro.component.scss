@@ -1,19 +1,11 @@
 @use '../../theme/breakpoints' as bp;
 
-/* This block sits in the entry list's `topBlock` outlet but is created by the
-   reader shell's template, so Angular stamps it with the SHELL's encapsulation
-   attribute. The list's own `.rows.magazine > *` rule — the one giving every
-   post `width: 100%; max-width: var(--magazine-measure)` — therefore never
-   matches it, and the block rendered 730px wide against 638px posts, and
-   centred, because an undeclared host is `display: inline` and the column's
-   `align-items: center` shrink-wraps it.
-   A cross-component measure needs an owner, not a sibling selector: the measure
-   is a token, and this host claims it for itself. */
+/* An undeclared host is `display: inline`, which ignores the width its wrapper
+   gives it and lets the magazine column's `align-items: center` shrink-wrap and
+   centre the whole block. The measure itself is not this component's business —
+   the entry list wraps its outlet and sizes it. */
 :host {
   display: block;
-  width: 100%;
-  max-width: var(--magazine-measure);
-  margin-inline: auto;
 }
 
 /* Top-aligned, not centred: a wrapped blurb runs several lines and the logo

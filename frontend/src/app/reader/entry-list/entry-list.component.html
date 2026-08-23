@@ -166,7 +166,14 @@
 } @else if (visibleEntryCount() === 0) {
   <div class="empty-wrap" [class.after-banner]="!!error()">
     @if (topBlock(); as block) {
-      <ng-container [ngTemplateOutlet]="block" />
+      <!-- Wrapped in an element this component owns, so the column's own
+           `.rows.magazine > *` sizing reaches it. ng-container renders no node,
+           and the projected component is created by the caller's template, so
+           it carries the caller's encapsulation attribute and that rule can
+           never match it. -->
+      <div class="top-block">
+        <ng-container [ngTemplateOutlet]="block" />
+      </div>
     }
     <p class="empty">
       @if (selection().kind === 'search') {
@@ -193,7 +200,14 @@
     (animationend)="onContentSettled($event)"
   >
     @if (topBlock(); as block) {
-      <ng-container [ngTemplateOutlet]="block" />
+      <!-- Wrapped in an element this component owns, so the column's own
+           `.rows.magazine > *` sizing reaches it. ng-container renders no node,
+           and the projected component is created by the caller's template, so
+           it carries the caller's encapsulation attribute and that rule can
+           never match it. -->
+      <div class="top-block">
+        <ng-container [ngTemplateOutlet]="block" />
+      </div>
     }
     @for (b of blocks(); track blockKey(b)) {
       @if (b.kind === 'run-header') {
@@ -322,7 +336,14 @@
     (animationend)="onContentSettled($event)"
   >
     @if (topBlock(); as block) {
-      <ng-container [ngTemplateOutlet]="block" />
+      <!-- Wrapped in an element this component owns, so the column's own
+           `.rows.magazine > *` sizing reaches it. ng-container renders no node,
+           and the projected component is created by the caller's template, so
+           it carries the caller's encapsulation attribute and that rule can
+           never match it. -->
+      <div class="top-block">
+        <ng-container [ngTemplateOutlet]="block" />
+      </div>
     }
     @for (group of runGroups(); track group.runId) {
       @if (showRunHeader(group)) {

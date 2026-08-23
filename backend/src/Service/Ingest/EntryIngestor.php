@@ -10,6 +10,7 @@ use App\Repository\EntryRepository;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
 use App\Service\Parser\ParsedImage;
+use App\Service\Url\HttpsImageUrl;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Url\UrlNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
@@ -26,6 +27,16 @@ final class EntryIngestor
     private const int AUTHOR_MAX = 255;
     private const int URL_MAX = 2048;
     private const int FEED_TITLE_MAX = 512;
+
+    /**
+     * feed.description is a TEXT column, so nothing but this bounds it. It is
+     * reduced to plain text on every read of the sidebar bootstrap — once per
+     * subscription, for the whole library — so a feed that ships its About
+     * page as a <description> would tax every page load forever. Generous
+     * enough that no real feed notices: the longest in a 111-feed library is
+     * 617 characters.
+     */
+    private const int FEED_DESCRIPTION_MAX = 4000;
 
     public function __construct(
         private readonly EntityManagerInterface $em,
@@ -137,7 +148,7 @@ final class EntryIngestor
             $feed->setSiteUrl(mb_substr($parsed->siteUrl, 0, self::URL_MAX));
         }
         if ($parsed->description !== null) {
-            $feed->setDescription($parsed->description);
+            $feed->setDescription(mb_substr($parsed->description, 0, self::FEED_DESCRIPTION_MAX));
         }
         // Guarded like the fields above: a feed that stops sending its <image>
         // on one fetch must not erase the logo the reader already shows.
@@ -175,29 +186,12 @@ final class EntryIngestor
     }
 
     /**
-     * Rejects a parsed image URL in the two ways it can be unusable rather
-     * than trying to repair it:
-     *
-     * - Scheme: the reader SPA is served over https, so an http:// image is
-     *   mixed-content-blocked and never renders — dead weight, silently. A
-     *   `//host/path` protocol-relative src is unambiguous and upgraded to
-     *   https:// before the check; a `data:` URI or a site-relative path
-     *   (`/img/x.jpg`) has no scheme to upgrade and no base URL is plumbed
-     *   this deep to resolve one against, so it is dropped rather than
-     *   guessed at.
-     * - Length: a URL over URL_MAX is not truncated. Cutting it at exactly
-     *   URL_MAX characters does not shorten a valid URL, it produces a
-     *   different, broken one that will 404 in the reader.
+     * HttpsImageUrl owns the rule; this keeps the ParsedImage-shaped call the
+     * ingest path reads better with.
      */
     private function persistableImageUrl(ParsedImage $image): ?string
     {
-        $url = str_starts_with($image->url, '//') ? 'https:' . $image->url : $image->url;
-
-        if (!str_starts_with($url, 'https://')) {
-            return null;
-        }
-
-        return mb_strlen($url) > self::URL_MAX ? null : $url;
+        return HttpsImageUrl::orNull($image->url);
     }
 
     /**
