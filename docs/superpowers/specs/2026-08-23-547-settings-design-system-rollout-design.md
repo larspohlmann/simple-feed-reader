@@ -93,8 +93,9 @@ selector is not a fix.
 ### 2. `app-settings-group` gains a header actions slot
 
 `app-settings-card` has a `cardActions` slot. `app-settings-group` has none, so
-`tags-section` ("New tag") and `admin-catalog` would lose their header action on
-conversion.
+the three sections that project into it today — `tags-section` ("New tag"),
+`admin-catalog` ("Add category") and `admin-user-detail` (the approve / reject /
+suspend / delete buttons) — would lose their header action on conversion.
 
 Add a named `<ng-content select="[groupActions]">` to `.g-head`, right-aligned
 after the title/caption block.
