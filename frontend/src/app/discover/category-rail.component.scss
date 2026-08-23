@@ -73,16 +73,28 @@ button.active {
   font-weight: 600;
 }
 
+/* Takes the row's spare width AND all of its shrink, so the ellipsis lands
+   here — the same arrangement the sidebar rows use. */
 .name {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* `flex: none` + `nowrap` so the number never breaks (#569). The base
+   `overflow-wrap: anywhere` deliberately lowers min-content width, which let
+   the flex algorithm squeeze this box until "13" wrapped to "1" over "3" on
+   every row whose name was long enough to truncate. `_base.scss` names
+   `white-space: nowrap` as the opt-out for text that must hold one line; this
+   is one of those. */
 .count {
+  flex: none;
   margin-left: auto;
   color: var(--text-muted);
   font-size: var(--fs-sm);
+  white-space: nowrap;
 }
 
 .count.picked {
