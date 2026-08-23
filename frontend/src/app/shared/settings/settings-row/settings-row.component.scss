@@ -62,8 +62,11 @@
   border-top: 1px solid var(--border);
 }
 
-// Narrow viewport: a stackable row wraps, and its select/number control fills
-// the width. A toggle projected into the same slot keeps its natural size.
+// Narrow viewport: a stackable row wraps and gives its control slot the full
+// width. Widening the control inside that slot is the caller's job, not this
+// component's: the control is projected content, so emulated encapsulation
+// stamps it with the caller's scope attribute and a selector written here can
+// never reach it. A toggle keeps its natural size regardless.
 @media (width <= bp.$bp-sm) {
   .row {
     padding: var(--space-4);
@@ -78,11 +81,6 @@
   }
 
   .row.stackable .row-control {
-    width: 100%;
-  }
-
-  .row.stackable .row-control > select,
-  .row.stackable .row-control > input:not([type='checkbox']) {
     width: 100%;
   }
 }

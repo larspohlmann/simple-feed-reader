@@ -44,7 +44,7 @@
         [text]="'settings.proxy.info.remoteDns' | transloco"
         [label]="'settings.proxy.type' | transloco"
       />
-      <select data-testid="proxy-type" (change)="onType($event)">
+      <select class="type-field" data-testid="proxy-type" (change)="onType($event)">
         @for (option of typeOptions; track option) {
           <option [value]="option" [selected]="type() === option">{{ option }}</option>
         }
@@ -52,12 +52,19 @@
     </app-settings-row>
 
     <app-settings-row [stackable]="true" [title]="'settings.proxy.host' | transloco">
-      <input type="text" data-testid="proxy-host" [value]="host()" (input)="onHost($event)" />
+      <input
+        type="text"
+        class="host-field"
+        data-testid="proxy-host"
+        [value]="host()"
+        (input)="onHost($event)"
+      />
     </app-settings-row>
 
     <app-settings-row [stackable]="true" [title]="'settings.proxy.port' | transloco">
       <input
         type="number"
+        class="port-field"
         min="1"
         max="65535"
         data-testid="proxy-port"
@@ -74,6 +81,7 @@
       />
       <input
         type="text"
+        class="credential-field"
         autocomplete="off"
         data-testid="proxy-username"
         [value]="username()"
@@ -84,6 +92,7 @@
     <app-settings-row [stackable]="true" [title]="'settings.proxy.password' | transloco">
       <input
         type="password"
+        class="credential-field"
         autocomplete="off"
         data-testid="proxy-password"
         [placeholder]="passwordHint()"

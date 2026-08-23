@@ -2,6 +2,7 @@
 // Layout glue only. The Grouped chrome (card surface, rows, dividers, save
 // bar) comes from the shared primitives; what stays here is the Test row's
 // button-plus-result layout and the failure/error banner inset.
+@use '../../../theme/breakpoints' as bp;
 
 .test-control {
   display: flex;
@@ -16,4 +17,40 @@
 
 .panel-banner {
   padding: 0 var(--space-5) var(--space-4);
+}
+
+// Field widths. A bare <input> keeps the user agent's default size of about 20
+// characters, and a real proxy hostname is longer than that:
+// `proxy-nl.privateinternetaccess.com` is 34 characters, so the host field
+// showed about half of what the user typed. Each field is sized to the value it
+// holds instead. `ch`, not `rem`: the unit that means "one character wide" is
+// the one that says why the number is what it is.
+// These rules live here and not in `app-settings-row`, which already carries a
+// narrow-viewport rule for the same controls. That rule cannot reach them: the
+// inputs are projected content, so emulated encapsulation stamps them with this
+// component's scope attribute, not the row's, and a `.row-control > input`
+// selector scoped to the row never matches. The row styles its own box; the
+// component that declares a control styles that control.
+.host-field {
+  width: 34ch;
+}
+
+.port-field {
+  width: 10ch;
+}
+
+.credential-field {
+  width: 24ch;
+}
+
+// Narrow viewport: the row stacks, so every field takes the full line rather
+// than sitting at a width the phone cannot spare. The type select is included
+// here for the same reason -- it had no width of its own either.
+@media (width <= bp.$bp-sm) {
+  .host-field,
+  .port-field,
+  .credential-field,
+  .type-field {
+    width: 100%;
+  }
 }
