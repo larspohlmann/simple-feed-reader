@@ -444,10 +444,7 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
 
 .rows.magazine > * {
   width: 100%;
-
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     tuned magazine content measure, not a spacing value. */
-  max-width: 680px;
+  max-width: var(--magazine-measure);
 }
 
 /* Wraps the (optional) topBlock and the `.empty` message: the header-clearing

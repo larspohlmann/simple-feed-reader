@@ -32,6 +32,7 @@ import { ReaderHeaderComponent } from './header/reader-header.component';
 import { headerHiddenAtRest } from './header-scroll';
 import { RefreshService } from './refresh.service';
 import { LayoutService } from './layout.service';
+import { ReadingLayout } from './reading-layout.service';
 import { ManageActions } from './manage/manage-actions.service';
 import { TagsStore } from './tags.store';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
@@ -2049,12 +2050,16 @@ describe('ReaderShellComponent', () => {
     // Boots the shell with one subscription carrying the given intro fields
     // and selects it, so `selectedSubscription()`/`feedIntroSubscription()`
     // see it rather than the empty list `boot()` starts with.
-    function mountWithSubscriptionSelected(overrides: {
-      description: string | null;
-      imageUrl: string | null;
-      siteUrl: string | null;
-    }): HTMLElement {
+    function mountWithSubscriptionSelected(
+      overrides: {
+        description: string | null;
+        imageUrl: string | null;
+        siteUrl: string | null;
+      },
+      layout: ReadingLayout = 'magazine',
+    ): HTMLElement {
       const f = bootWith([{ ...SUBSCRIPTION_FIXTURE, ...overrides }]);
+      f.componentInstance.layout.set(layout);
       const id = String(SUBSCRIPTION_FIXTURE.id);
       qp.next(convertToParamMap({ subscription: id }));
       f.detectChanges();
@@ -2096,6 +2101,22 @@ describe('ReaderShellComponent', () => {
       });
 
       expect(host.querySelector('app-feed-intro')).not.toBeNull();
+    });
+
+    it('shows no feed intro in the list layout', () => {
+      // The block is a member of the magazine column — it takes that column's
+      // measure and left edge. The list layout has no such measure, so the same
+      // block would be a wide slab sitting on top of dense rows.
+      const host = mountWithSubscriptionSelected(
+        {
+          description: 'A feed about things.',
+          imageUrl: 'https://example.com/logo.png',
+          siteUrl: 'https://example.com/',
+        },
+        'list',
+      );
+
+      expect(host.querySelector('app-feed-intro')).toBeNull();
     });
 
     it('shows no feed intro for the aggregated and saved views', () => {

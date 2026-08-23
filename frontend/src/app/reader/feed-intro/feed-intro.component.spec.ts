@@ -13,12 +13,16 @@ describe('FeedIntroComponent', () => {
   });
 
   function render(values: {
+    title?: string;
     description?: string;
     imageUrl?: string;
+    faviconUrl?: string;
     siteUrl?: string;
   }): HTMLElement {
+    fixture.componentRef.setInput('title', values.title ?? null);
     fixture.componentRef.setInput('description', values.description ?? null);
     fixture.componentRef.setInput('imageUrl', values.imageUrl ?? null);
+    fixture.componentRef.setInput('faviconUrl', values.faviconUrl ?? null);
     fixture.componentRef.setInput('siteUrl', values.siteUrl ?? null);
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
@@ -27,6 +31,16 @@ describe('FeedIntroComponent', () => {
   it('renders the description', () => {
     expect(render({ description: 'A feed about things.' }).textContent).toContain(
       'A feed about things.',
+    );
+  });
+
+  it('renders the title above the description', () => {
+    const host = render({ title: 'The Quietus', description: 'Culture countered.' });
+    const title = host.querySelector('.title');
+    expect(title?.textContent?.trim()).toBe('The Quietus');
+    // Order matters: the name heads the block, the blurb explains it.
+    expect(title?.compareDocumentPosition(host.querySelector('.text')!)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
     );
   });
 
@@ -46,6 +60,54 @@ describe('FeedIntroComponent', () => {
     const host = render({ description: 'Only text.' });
     expect(host.querySelector('img')).toBeNull();
     expect(host.querySelector('a')).toBeNull();
+  });
+
+  it('omits the description when it is null', () => {
+    expect(
+      render({ imageUrl: 'https://example.com/logo.png' }).querySelector('.description'),
+    ).toBeNull();
+  });
+
+  it('always draws the labelled divider, even for a feed that says nothing', () => {
+    // It is what separates the block from the first entry; a feed with a logo
+    // and nothing else must still get one.
+    const host = render({ imageUrl: 'https://example.com/logo.png' });
+    expect(host.querySelector('.rule')).not.toBeNull();
+    expect(host.querySelector('.rule__label')?.textContent?.trim()).toBe('Posts');
+  });
+
+  it('keeps the blurb and the homepage link in one flow', () => {
+    // The link trails the last line of a wrapped blurb rather than claiming a
+    // row of its own. A link outside .lead means it has taken one again.
+    const host = render({ description: 'A feed about things.', siteUrl: 'https://example.com/' });
+    expect(host.querySelector('.lead .description')).not.toBeNull();
+    expect(host.querySelector('.lead a.homepage')).not.toBeNull();
+  });
+
+  it('falls back to the favicon when the feed publishes no image of its own', () => {
+    // Through the shared component, not a bare <img>: it owns the backdrop chip
+    // that keeps a dark-ink favicon visible on the dark surface.
+    const host = render({ faviconUrl: 'https://example.com/favicon.ico' });
+    expect(host.querySelector('app-favicon')).not.toBeNull();
+    expect(host.querySelector('img')?.getAttribute('src')).toBe('https://example.com/favicon.ico');
+  });
+
+  it('degrades a dead feed image to the favicon rather than to nothing', () => {
+    const host = render({
+      imageUrl: 'https://example.com/dead.png',
+      faviconUrl: 'https://example.com/favicon.ico',
+    });
+    host.querySelector('img')?.dispatchEvent(new Event('error'));
+    fixture.detectChanges();
+    expect(host.querySelector('app-favicon')).not.toBeNull();
+  });
+
+  it("prefers the feed's own image over the favicon", () => {
+    const img = render({
+      imageUrl: 'https://example.com/logo.png',
+      faviconUrl: 'https://example.com/favicon.ico',
+    }).querySelector('img');
+    expect(img?.getAttribute('src')).toBe('https://example.com/logo.png');
   });
 
   it('reports no content when every value is null', () => {

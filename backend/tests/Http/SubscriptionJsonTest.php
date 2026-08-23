@@ -30,18 +30,18 @@ final class SubscriptionJsonTest extends TestCase
 
     public function testCapsALongDescription(): void
     {
-        // 3-byte-per-character text: a byte-based substr(…, 0, 300) would cut
-        // roughly 100 characters plus a broken trailing byte sequence, not the
-        // 300-character prefix mb_substr produces. That divergence is the
+        // 3-byte-per-character text: a byte-based substr(…, 0, 1000) would cut
+        // roughly 333 characters plus a broken trailing byte sequence, not the
+        // 1000-character prefix mb_substr produces. That divergence is the
         // point — an ASCII fixture cannot tell mb_substr and substr apart.
         $feed = new Feed('https://example.com/feed.xml');
-        $feed->setDescription(str_repeat('あ', 400));
+        $feed->setDescription(str_repeat('あ', 1200));
 
         $description = SubscriptionJson::one($this->subscriptionTo($feed))['description'];
 
         self::assertIsString($description);
-        self::assertSame(300, mb_strlen($description));
-        self::assertSame(str_repeat('あ', 300), $description);
+        self::assertSame(1000, mb_strlen($description));
+        self::assertSame(str_repeat('あ', 1000), $description);
         self::assertTrue(mb_check_encoding($description, 'UTF-8'));
     }
 
@@ -58,6 +58,40 @@ final class SubscriptionJsonTest extends TestCase
         $feed->setDescription('<p></p>');
 
         self::assertNull(SubscriptionJson::one($this->subscriptionTo($feed))['description']);
+    }
+
+    public function testADescriptionOfOnlyPunctuationBecomesNull(): void
+    {
+        $feed = new Feed('https://example.com/feed.xml');
+        // Deutschlandfunk really does describe itself as a lone ">".
+        $feed->setDescription('>');
+
+        self::assertNull(SubscriptionJson::one($this->subscriptionTo($feed))['description']);
+    }
+
+    public function testADescriptionOfOneRealWordSurvives(): void
+    {
+        $feed = new Feed('https://example.com/feed.xml');
+        $feed->setDescription('Nachrichten.');
+
+        self::assertSame('Nachrichten.', SubscriptionJson::one($this->subscriptionTo($feed))['description']);
+    }
+
+    public function testFallsBackToTheFeedsOwnOriginWhenTheFeedPublishesNoLink(): void
+    {
+        // Just under half a real library publishes no channel <link>; without
+        // this the intro block offers those feeds no homepage at all.
+        $feed = new Feed('https://example.com/rss/all.xml');
+
+        self::assertSame('https://example.com', SubscriptionJson::one($this->subscriptionTo($feed))['siteUrl']);
+    }
+
+    public function testPrefersTheLinkTheFeedPublishedOverTheDerivedOrigin(): void
+    {
+        $feed = new Feed('https://feeds.example.com/rss/all.xml');
+        $feed->setSiteUrl('https://www.example.org/');
+
+        self::assertSame('https://www.example.org/', SubscriptionJson::one($this->subscriptionTo($feed))['siteUrl']);
     }
 
     public function testSendsTheFeedImage(): void

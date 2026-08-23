@@ -220,6 +220,28 @@ final class Rss2ParserTest extends TestCase
         );
     }
 
+    public function testPrefersTheRealLinkOverASelfReferencingAtomLink(): void
+    {
+        // Al Jazeera and many other RSS 2.0 feeds open the channel with an
+        // <atom:link rel="self"/>. It shares the local name "link" and carries
+        // no text, and returning on that first match left those feeds with no
+        // site URL at all.
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0"?>
+            <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+                <channel>
+                    <atom:link href="https://example.com/feed.xml" rel="self" type="application/rss+xml"/>
+                    <title>Example</title>
+                    <link>https://example.com</link>
+                    <description>Example feed</description>
+                    <item><title>One</title><link>https://example.com/1</link></item>
+                </channel>
+            </rss>
+            XML;
+
+        self::assertSame('https://example.com', (new Rss2Parser())->parse($this->document($xml))->siteUrl);
+    }
+
     public function testReadsTheChannelImage(): void
     {
         $xml = /** @lang TEXT */ <<<'XML'

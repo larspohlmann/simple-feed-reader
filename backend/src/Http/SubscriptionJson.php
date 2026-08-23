@@ -6,6 +6,7 @@ namespace App\Http;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
+use App\Service\Fetch\UrlResolver;
 use App\Service\Text\PlainText;
 
 final class SubscriptionJson
@@ -15,7 +16,7 @@ final class SubscriptionJson
      * feed that ships a whole About page as its <description> would weigh the
      * whole reader down for a block that shows a few lines.
      */
-    private const int DESCRIPTION_MAX = 300;
+    private const int DESCRIPTION_MAX = 1000;
 
     /**
      * The embedded tag's `position` is this feed's order WITHIN that tag (the
@@ -50,7 +51,7 @@ final class SubscriptionJson
             'title' => $title,
             'customTitle' => $sub->getCustomTitle(),
             'feedUrl' => $feed->getUrl(),
-            'siteUrl' => $feed->getSiteUrl(),
+            'siteUrl' => self::siteUrl($feed),
             'faviconUrl' => $feed->getFaviconUrl(),
             'description' => self::description($feed),
             'imageUrl' => $feed->getImageUrl(),
@@ -67,14 +68,38 @@ final class SubscriptionJson
     }
 
     /**
+     * Where the feed's website is. Just under half the feeds in a real library
+     * publish no <link> at all, which left their intro block with no homepage
+     * to offer, so the feed's own address stands in: a feed lives on the site
+     * it describes, and its origin is that site far more often than not.
+     *
+     * Derived here rather than at ingest on purpose. Feed.siteUrl keeps only
+     * what the feed actually said — the backup carries that column, and a
+     * guess written into it would restore as though the publisher had stated
+     * it.
+     */
+    private static function siteUrl(Feed $feed): ?string
+    {
+        return $feed->getSiteUrl() ?? UrlResolver::origin($feed->getUrl());
+    }
+
+    /**
      * Feed descriptions routinely carry markup. Reducing to plain text at the
      * boundary keeps the SPA out of any sanitiser decision: what it receives
      * is text, and it renders it as text.
+     *
+     * A reduction that leaves no letter and no digit is not a description.
+     * Deutschlandfunk's feed describes itself as a single ">", which reached
+     * the reader as a stray character floating above the headlines. Dropping
+     * it here rather than at ingest also repairs the rows already stored.
      */
     private static function description(Feed $feed): ?string
     {
         $text = PlainText::fromHtmlBlocks($feed->getDescription());
+        if ($text === null || preg_match('/[\p{L}\p{N}]/u', $text) !== 1) {
+            return null;
+        }
 
-        return $text === null ? null : mb_substr($text, 0, self::DESCRIPTION_MAX);
+        return mb_substr($text, 0, self::DESCRIPTION_MAX);
     }
 }

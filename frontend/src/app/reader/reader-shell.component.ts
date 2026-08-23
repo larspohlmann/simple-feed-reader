@@ -293,10 +293,18 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.subs.subscriptions().find((x) => x.id === s.id) ?? null;
   });
 
-  /** The selected feed, but only when it has something to introduce itself
-   *  with. A feed with no description, image or site URL renders no block at
-   *  all rather than an empty box above the first row. */
+  /** The selected feed, but only where the intro block belongs: the magazine
+   *  layout, and only when the feed has something to introduce itself with.
+   *
+   *  Magazine only because the block is a member of that column — it takes the
+   *  column's measure and its left edge, and reads as the card above the cards.
+   *  The list layout is a dense stack with no such measure, where the same
+   *  block would be a wide slab sitting on top of the rows.
+   *
+   *  A feed with no description, image or site URL renders no block at all
+   *  rather than an empty box above the first row. */
   readonly feedIntroSubscription = computed(() => {
+    if (this.layout.mode() !== 'magazine') return null;
     const sub = this.selectedSubscription();
     if (sub === null) return null;
     return sub.description !== null || sub.imageUrl !== null || sub.siteUrl !== null ? sub : null;

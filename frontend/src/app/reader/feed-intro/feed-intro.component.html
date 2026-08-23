@@ -1,5 +1,8 @@
-<div class="feed-intro">
-  @if (src(); as url) {
+<!-- Two rows, never more: everything the feed says about itself on the first,
+     the divider on the second. A feed's own blurb is context, not content — it
+     must not push the first entry off the fold. -->
+<div class="lead">
+  @if (logoUrl(); as url) {
     <!-- alt is empty on purpose: the feed's name is already the list heading
          directly above, so naming it again only repeats it to a screen reader. -->
     <img
@@ -11,15 +14,36 @@
       referrerpolicy="no-referrer"
       (error)="broken.set(true)"
     />
+  } @else if (faviconUrl(); as icon) {
+    <!-- Only 8% of feeds publish an image of their own. The site icon stands in
+         for the rest, through the shared component rather than a bare <img>:
+         it owns --favicon-backdrop, the chip that keeps a dark-ink favicon on a
+         transparent background from vanishing against the dark surface. -->
+    <app-favicon class="icon" [url]="icon" [size]="24" />
   }
-  <div class="text">
-    @if (description(); as text) {
-      <p class="description">{{ text }}</p>
+  <div class="body">
+    @if (title(); as name) {
+      <p class="title">{{ name }}</p>
     }
-    @if (siteUrl(); as site) {
-      <a class="homepage" [href]="site" target="_blank" rel="noopener noreferrer">
-        {{ 'reader.feedHomepage' | transloco }} <app-icon name="open_in_new" size="text" />
-      </a>
-    }
+    <!-- Blurb and link are inline siblings in one flow, so the link trails the
+         last line of a wrapped description instead of claiming a row of its
+         own, and still shows on its own for a feed that carries no blurb. -->
+    <p class="text">
+      @if (description(); as text) {
+        <span class="description">{{ text }}</span>
+      }
+      @if (siteUrl(); as site) {
+        <a class="homepage" [href]="site" target="_blank" rel="noopener noreferrer"
+          >{{ 'reader.feedHomepage' | transloco }} <app-icon name="open_in_new" size="text"
+        /></a>
+      }
+    </p>
   </div>
+</div>
+
+<!-- Always rendered, even for a feed with no blurb and no homepage: it names
+     what follows and ties the block to the list, instead of leaving it floating
+     above the rows. Same label-then-rule shape as the for-you run divider. -->
+<div class="rule" role="separator">
+  <span class="rule__label">{{ 'reader.feedPosts' | transloco }}</span>
 </div>

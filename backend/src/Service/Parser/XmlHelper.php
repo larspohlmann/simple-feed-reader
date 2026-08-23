@@ -14,9 +14,16 @@ final class XmlHelper
     public const string DUBLIN_CORE_NAMESPACE = 'http://purl.org/dc/elements/1.1/';
 
     /**
-     * Trimmed text content of the first matching direct child element, or
-     * null when absent/empty. When $namespaceUri is null, any namespace
-     * matches.
+     * Trimmed text content of the first matching direct child element that
+     * HAS text, or null when none does. When $namespaceUri is null, any
+     * namespace matches.
+     *
+     * The first-with-text rule is not fussiness. Matching runs on local name,
+     * so an unqualified lookup for 'link' also matches <atom:link/>, and RSS
+     * 2.0 feeds routinely open their channel with a self-referencing
+     * <atom:link rel="self"/> before the real <link>. Returning on that first
+     * match left Al Jazeera and every feed shaped like it with no site URL at
+     * all.
      */
     public static function childText(\DOMElement $parent, string $localName, ?string $namespaceUri = null): ?string
     {
@@ -28,8 +35,9 @@ final class XmlHelper
                 continue;
             }
             $text = trim($child->textContent);
-
-            return $text === '' ? null : $text;
+            if ($text !== '') {
+                return $text;
+            }
         }
 
         return null;
