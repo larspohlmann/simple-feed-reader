@@ -19,6 +19,12 @@ use Doctrine\DBAL\Connection;
  * already carries, so it is recomputed here rather than stored. Carrying
  * derived data is how a format grows fields it can never drop (#556).
  *
+ * The two hashes are not inconsistent — they answer different questions.
+ * guid_hash is a reference: entryState lines address their entry by the pair
+ * (feedUrl, guidHash), so the file has to carry the exact value the restore
+ * will look up by. url_hash is referenced by nothing; it is pure storage, so
+ * recomputing it here is free and keeps it from ever going stale.
+ *
  * The column list is spelled out once; values bind positionally per row.
  * Dates are formatted as the naive-UTC wall-clock strings Doctrine's
  * datetime_immutable type stores — every EntryLine date is already UTC
