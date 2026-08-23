@@ -106,8 +106,8 @@ describe('AboutSectionComponent', () => {
     expect(el.querySelector('app-spinner')).not.toBeNull();
   });
 
-  it('renders inside a settings card', async () => {
+  it('renders the section as a settings group', async () => {
     const el = await renderLoaded();
-    expect(el.querySelector('app-settings-card')).not.toBeNull();
+    expect(el.querySelector('app-settings-group')).not.toBeNull();
   });
 });

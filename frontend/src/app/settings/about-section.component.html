@@ -1,35 +1,37 @@
-<app-settings-card [heading]="'settings.about.title' | transloco">
-  @if (loading()) {
-    <div class="loading">
-      <app-spinner />
-      <span>{{ 'settings.loadingVersion' | transloco }}</span>
-    </div>
-  } @else {
-    @for (row of rows(); track row.labelKey) {
-      <div class="row">
-        <span class="label">{{ row.labelKey | transloco }}</span>
-        @if (row.release; as release) {
-          <span class="value">
-            <code>{{ release.version }}</code>
-            <span class="detail">
-              {{ release.commit }}
-              @if (release.builtAt) {
-                · {{ buildDate(release.builtAt) }}
-              }
-            </span>
-          </span>
-        } @else {
-          <span class="value pending">
-            {{
-              (unavailable() ? 'settings.about.unavailable' : 'settings.about.loading') | transloco
-            }}
-          </span>
-        }
+<app-settings-stack>
+  <app-settings-group icon="info" [title]="'settings.about.title' | transloco">
+    @if (loading()) {
+      <div class="loading">
+        <app-spinner />
+        <span>{{ 'settings.loadingVersion' | transloco }}</span>
       </div>
-    }
+    } @else {
+      @for (row of rows(); track row.labelKey) {
+        <app-settings-row [title]="row.labelKey | transloco">
+          @if (row.release; as release) {
+            <span class="value">
+              <code>{{ release.version }}</code>
+              <span class="detail">
+                {{ release.commit }}
+                @if (release.builtAt) {
+                  · {{ buildDate(release.builtAt) }}
+                }
+              </span>
+            </span>
+          } @else {
+            <span class="value pending">
+              {{
+                (unavailable() ? 'settings.about.unavailable' : 'settings.about.loading')
+                  | transloco
+              }}
+            </span>
+          }
+        </app-settings-row>
+      }
 
-    @if (staleBundle()) {
-      <p class="stale">{{ 'settings.about.stale' | transloco }}</p>
+      @if (staleBundle()) {
+        <p class="stale">{{ 'settings.about.stale' | transloco }}</p>
+      }
     }
-  }
-</app-settings-card>
+  </app-settings-group>
+</app-settings-stack>
