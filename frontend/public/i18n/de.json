@@ -680,7 +680,7 @@
       "seconds": "~{{count}} Sek. übrig",
       "minutes": "~{{count}} Min. übrig"
     },
-    "recommendationScore": "Bewertung: {{ score }}"
+    "recommendationScore": "Punkte: {{ score }}"
   },
   "common": {
     "save": "Speichern",
