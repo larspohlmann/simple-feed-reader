@@ -225,9 +225,7 @@ final class EntryIngestor
 
     private function urlHash(?string $url): ?string
     {
-        $normalized = $this->urlNormalizer->normalize($url);
-
-        return $normalized === null ? null : hash('sha256', $normalized);
+        return $this->urlNormalizer->hash($url);
     }
 
     private static function guidHash(string $guid): string
