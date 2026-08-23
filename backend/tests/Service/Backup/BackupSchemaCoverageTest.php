@@ -281,26 +281,74 @@ final class BackupSchemaCoverageTest extends DbTestCase
 
     public function testEveryBackedUpFieldReachesTheExportersOutput(): void
     {
-        $keysByKind = $this->exportedKeysByKind('coverage@example.com');
+        $valuesByKind = $this->exportedValuesByKind('coverage@example.com');
 
         foreach (self::BACKED_UP as $entityClass => $fields) {
             $kind = self::KIND_OF[$entityClass];
             foreach ($fields as $field => $declared) {
                 foreach ($this->exportedKeysFor($declared) as $exportedKey) {
-                    self::assertContains(
+                    $this->assertBackedUpFieldReachedTheExport(
+                        $entityClass,
+                        $field,
                         $exportedKey,
-                        $keysByKind[$kind] ?? [],
-                        sprintf(
-                            '%s::$%s is declared BACKED_UP as "%s" on the %s line, but the '
-                            . 'exporter never writes that key.',
-                            $entityClass,
-                            $field,
-                            $exportedKey,
-                            $kind,
-                        ),
+                        $kind,
+                        $valuesByKind,
                     );
                 }
             }
+        }
+    }
+
+    /**
+     * A key present with a null value would satisfy a bare "was the key
+     * written" check just as well as a real one, so the write-direction proof
+     * has to look at the value, not merely the key — and `FullyPopulatedAccount`
+     * exists precisely so every declared field has a real value to check
+     * against here (#556).
+     *
+     * No field is excused from this today: every `BACKED_UP` field is a
+     * scalar (or a list of them) that `FullyPopulatedAccount` can set to a
+     * real value, so there is currently no case of a field that legitimately
+     * has to stay null. If one is found, name it in a small, explicitly
+     * commented exception here rather than weakening the assertion below for
+     * every field.
+     *
+     * @param array<string, array<string, list<mixed>>> $valuesByKind
+     */
+    private function assertBackedUpFieldReachedTheExport(
+        string $entityClass,
+        string $field,
+        string $exportedKey,
+        string $kind,
+        array $valuesByKind,
+    ): void {
+        self::assertArrayHasKey(
+            $exportedKey,
+            $valuesByKind[$kind] ?? [],
+            sprintf(
+                '%s::$%s is declared BACKED_UP as "%s" on the %s line, but the exporter '
+                . 'never writes that key.',
+                $entityClass,
+                $field,
+                $exportedKey,
+                $kind,
+            ),
+        );
+
+        foreach ($valuesByKind[$kind][$exportedKey] as $value) {
+            self::assertNotNull(
+                $value,
+                sprintf(
+                    '%s::$%s is declared BACKED_UP as "%s" on the %s line, but a fully '
+                    . 'populated account still exports it as null. Populate the field in '
+                    . 'FullyPopulatedAccount — that class exists to make this exact failure '
+                    . 'impossible.',
+                    $entityClass,
+                    $field,
+                    $exportedKey,
+                    $kind,
+                ),
+            );
         }
     }
 
@@ -539,10 +587,43 @@ final class BackupSchemaCoverageTest extends DbTestCase
     }
 
     /**
+     * Seeds one fully populated account and reports, for each kind of line,
+     * every value the exporter writes under each key — the same shape as
+     * {@see exportedKeysByKind()}, but keeping the value rather than only
+     * proving the key was present, because a null value would satisfy the
+     * key-only proof just as well as a real one (#556).
+     *
+     * @return array<string, array<string, list<mixed>>>
+     */
+    private function exportedValuesByKind(string $email): array
+    {
+        $user = $this->fullyPopulatedAccount()->create($email);
+
+        $valuesByKind = [];
+        foreach ($this->exporter()->lines($user, 'https://coverage.example') as $line) {
+            $decoded = json_decode($line, true, flags: \JSON_THROW_ON_ERROR);
+            self::assertIsArray($decoded);
+            /** @var array<string, mixed> $decoded */
+            $kind = $decoded['kind'] ?? '';
+            self::assertIsString($kind);
+            foreach ($this->valuesOfOneLine($decoded) as $key => $values) {
+                $valuesByKind[$kind][$key] = array_merge($valuesByKind[$kind][$key] ?? [], $values);
+            }
+        }
+
+        return $valuesByKind;
+    }
+
+    /**
      * A line's own keys, plus a dotted key for each key of a nested object —
      * `recommendationSettings.profileText`, `tags.position`. One level only:
      * the format nests no deeper, and a flattener that recursed would invent
      * key names the exporter cannot produce.
+     *
+     * Derived from {@see valuesOfOneLine()} rather than walking the line a
+     * second time: the two questions ("which keys" and "which values") share
+     * the exact same traversal, and a key list kept in step by hand would be
+     * exactly the kind of drift this test suite exists to catch elsewhere.
      *
      * @param array<string, mixed> $line
      *
@@ -551,16 +632,38 @@ final class BackupSchemaCoverageTest extends DbTestCase
     private function keysOfOneLine(array $line): array
     {
         $keys = [];
-        foreach ($line as $key => $value) {
-            $keys[] = $key;
-            foreach ($this->nestedObjects($value) as $nested) {
-                foreach (array_keys($nested) as $nestedKey) {
-                    $keys[] = $key . '.' . $nestedKey;
-                }
+        foreach ($this->valuesOfOneLine($line) as $key => $values) {
+            foreach ($values as $ignoredValue) {
+                $keys[] = $key;
             }
         }
 
         return $keys;
+    }
+
+    /**
+     * A line's own values, keyed the same way {@see keysOfOneLine()} names
+     * them — plain keys, and a dotted key per key of a nested object. A key
+     * maps to a list because a nested key repeats once per element: two
+     * subscription tags both contribute a `tags.position` value.
+     *
+     * @param array<string, mixed> $line
+     *
+     * @return array<string, list<mixed>>
+     */
+    private function valuesOfOneLine(array $line): array
+    {
+        $values = [];
+        foreach ($line as $key => $value) {
+            $values[$key][] = $value;
+            foreach ($this->nestedObjects($value) as $nested) {
+                foreach ($nested as $nestedKey => $nestedValue) {
+                    $values[$key . '.' . $nestedKey][] = $nestedValue;
+                }
+            }
+        }
+
+        return $values;
     }
 
     /**
