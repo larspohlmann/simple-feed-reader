@@ -613,7 +613,7 @@ ARIA reimplementation — `<details>` already gives all three for free.
 | Input / output | Type | Default |
 |---|---|---|
 | `label` | `string` | `''` — an already-translated summary line |
-| `appearance` | `'pill' \| 'row' \| 'card-header' \| 'drill-in'` | `'pill'` |
+| `appearance` | `'pill' \| 'row' \| 'drill-in'` | `'pill'` |
 | `startOpen` | `boolean` | `false` — one-way; the caller's state decides the initial open state |
 | `opened` | `output<void>` | — fires when the body is revealed, and only then |
 
@@ -636,8 +636,6 @@ own wrapping class, the same way `recommendation-debug-log.component.scss`'s
 
 `appearance` picks the summary chrome. `pill` (default) is the bordered toggle
 button. `row` is a flat, full-width list row for one disclosure per list item.
-`card-header` is a flat, full-width heading with no horizontal padding, so it
-aligns to a card's content box (see `appearance="drill-in"`).
 `drill-in` (#541) is a full-width Grouped list row: the projected heading/label
 sits on the left, a trailing chevron rotates when the `<details>` opens. It
 reuses the same `startOpen`/`opened`/`label`/`[summary]` API. Use `drill-in`
