@@ -1,9 +1,17 @@
+// Layout glue only. The `.grid` definition list, the `.signout` wrapper and the
+// `.danger-zone` block are gone: those were a card's internal layout, and the
+// row and the second group carry it now.
 .who {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  margin: 0 0 var(--space-4);
+  padding: var(--space-4) var(--space-5);
   min-width: 0;
+
+  // `.who` is not a row, so it draws no divider of its own; without this it
+  // reads as fused to the member-since row that follows, which does draw one
+  // below itself. Matching hairline above and below keeps the rhythm even.
+  border-bottom: 1px solid var(--border);
 }
 
 .who-email {
@@ -14,35 +22,17 @@
   white-space: nowrap;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: var(--space-2) var(--space-4);
-  margin: 0 0 var(--space-3);
-}
-
-dt {
-  color: var(--text-muted);
-}
-
-dd {
-  margin: 0;
+.value {
   color: var(--text-primary);
 }
 
-.signout {
+// A bare action is not a settings row: a row is a label beside a value or a
+// control, and a button carrying its own label has no second half. The panel is
+// unpadded (its rows pad themselves), so the action block supplies the inset.
+.actions {
   display: flex;
-  width: fit-content;
-}
-
-.danger-zone {
-  margin-block-start: var(--space-5);
-  padding-block-start: var(--space-4);
-  border-block-start: 1px solid var(--border);
-}
-
-.danger-zone__note {
-  margin-block-end: var(--space-3);
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
 }
