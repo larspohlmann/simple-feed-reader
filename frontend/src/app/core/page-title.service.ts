@@ -12,6 +12,10 @@ type PageName = { readonly key: string } | { readonly text: string } | null;
 
 const BASE_TITLE = 'simple feed reader';
 
+/** The longest page name a browser tab shows before it truncates it itself.
+ *  Applied here, not by the page: what fits in a tab is a fact about the tab. */
+const NAME_LIMIT = 60;
+
 /** The one writer of `document.title`. Every page states its name here — a page
  *  without one resets to the product name alone — so no title can outlive the
  *  page that set it. */
@@ -44,7 +48,8 @@ export class PageTitleService {
     this.page.set({ key });
   }
 
-  /** Name the page with text it produced itself, already translated. */
+  /** Name the page with text it produced itself, already translated — a
+   *  headline may arrive at full length, the tab cut is taken here. */
   useText(text: string): void {
     this.page.set({ text });
   }
@@ -56,8 +61,14 @@ export class PageTitleService {
 }
 
 function compose(name: string | null): string {
-  if (name === null || name === '' || name === BASE_TITLE) return BASE_TITLE;
-  return `${name} | ${BASE_TITLE}`;
+  const shown = cutToTab(name ?? '');
+  if (shown === '' || shown === BASE_TITLE) return BASE_TITLE;
+  return `${shown} | ${BASE_TITLE}`;
+}
+
+function cutToTab(name: string): string {
+  if (name.length <= NAME_LIMIT) return name;
+  return `${name.slice(0, NAME_LIMIT)}…`;
 }
 
 function sameName(a: PageName, b: PageName): boolean {

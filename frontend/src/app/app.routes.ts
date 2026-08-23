@@ -68,11 +68,11 @@ export const routes: Routes = [
     loadComponent: () => import('./discover/discover.component').then((m) => m.DiscoverComponent),
   },
   {
-    // No title: the reader names the tab after the open article or the selected
-    // list, and keeps doing so across the query-parameter navigations that
-    // switch between them.
+    // The reader names the tab after the open article or the selected list,
+    // and keeps doing so across the query-parameter navigations that switch
+    // between them.
     path: '',
-    data: DYNAMIC_TITLE,
+    title: DYNAMIC_TITLE,
     canActivate: [authGuard],
     loadComponent: () =>
       import('./reader/reader-shell.component').then((m) => m.ReaderShellComponent),

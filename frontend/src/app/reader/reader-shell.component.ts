@@ -399,7 +399,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     // while the reader is on screen.
     effect(() => {
       const entry = this.openEntry();
-      this.pageTitle.useText(entry ? tabTitle(entry.title) : this.title());
+      this.pageTitle.useText(entry ? entry.title : this.title());
     });
 
     // Nothing to read and nothing skipped: send the user to the picker. Purely
@@ -942,14 +942,4 @@ function savedViewMembership(kind: Selection['kind']): 'isFavorite' | 'isKept' |
     default:
       return null;
   }
-}
-
-/** The longest headline a browser tab can show before it truncates it itself. */
-const TAB_TITLE_LIMIT = 60;
-
-/** An article headline, cut to what a browser tab can show. The tab is a label,
- *  not the headline: past this length every title looks the same anyway. */
-function tabTitle(headline: string): string {
-  if (headline.length <= TAB_TITLE_LIMIT) return headline;
-  return `${headline.slice(0, TAB_TITLE_LIMIT)}…`;
 }

@@ -7,7 +7,7 @@ import { AuthService } from '../core/auth.service';
 import { LayoutService } from '../reader/layout.service';
 import { IconComponent } from '../shared/icon/icon.component';
 import { SettingsNavComponent } from './settings-nav.component';
-import { SETTINGS_SECTIONS } from './settings-sections';
+import { SETTINGS_SECTIONS, SettingsSection } from './settings-sections';
 
 /** The frame around every settings section: top bar, the desktop nav rail and
  *  the routed content column. Owns the two pieces of cross-section logic —
@@ -32,7 +32,7 @@ export class SettingsShellComponent implements OnInit {
     { initialValue: this.router.url },
   );
 
-  private readonly section = computed(
+  private readonly section = computed<SettingsSection | null>(
     () => SETTINGS_SECTIONS.find((s) => this.url().startsWith(`/settings/${s.path}`)) ?? null,
   );
 

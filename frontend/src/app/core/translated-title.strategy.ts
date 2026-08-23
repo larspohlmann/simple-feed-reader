@@ -1,12 +1,11 @@
 // src/app/core/translated-title.strategy.ts
 import { Injectable, inject } from '@angular/core';
-import { ActivatedRouteSnapshot, RouterStateSnapshot, TitleStrategy } from '@angular/router';
+import { RouterStateSnapshot, TitleStrategy } from '@angular/router';
 import { PageTitleService } from './page-title.service';
 
-const DYNAMIC_TITLE_KEY = 'dynamicTitle';
-
-/** Route data that hands the title to the routed component. */
-export const DYNAMIC_TITLE = { [DYNAMIC_TITLE_KEY]: true } as const;
+/** The title a route declares when its component names the page itself. Not a
+ *  translation key: it is never shown, it only says who does the naming. */
+export const DYNAMIC_TITLE = 'title.ownedByThePage';
 
 /**
  * Titles every page from its route. A route's `title` is a translation KEY, not
@@ -19,13 +18,14 @@ export class TranslatedTitleStrategy extends TitleStrategy {
   private readonly pageTitle = inject(PageTitleService);
 
   override updateTitle(state: RouterStateSnapshot): void {
+    const key = this.buildTitle(state);
+
     // The reader names itself after the open article or the selected list, and
     // it changes both by query parameter — so every one of those changes comes
-    // through here as a navigation. Resetting would blank the title between the
-    // two writes; the component owns it from first render to last.
-    if (ownsItsTitle(state.root)) return;
+    // through here as a navigation. Writing would blank the title between the
+    // reader's two writes; the component owns it from first render to last.
+    if (key === DYNAMIC_TITLE) return;
 
-    const key = this.buildTitle(state);
     if (key === undefined) {
       this.pageTitle.reset();
       return;
@@ -33,11 +33,4 @@ export class TranslatedTitleStrategy extends TitleStrategy {
 
     this.pageTitle.useKey(key);
   }
-}
-
-function ownsItsTitle(root: ActivatedRouteSnapshot): boolean {
-  for (let route: ActivatedRouteSnapshot | null = root; route !== null; route = route.firstChild) {
-    if (route.data[DYNAMIC_TITLE_KEY] === true) return true;
-  }
-  return false;
 }

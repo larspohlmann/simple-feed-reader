@@ -22,7 +22,7 @@ describe('TranslatedTitleStrategy', () => {
           { path: 'account', title: 'settings.account.title', component: BlankComponent },
           { path: 'tags', title: 'settings.tags.title', component: BlankComponent },
           { path: 'untitled', component: BlankComponent },
-          { path: 'reader', data: DYNAMIC_TITLE, component: BlankComponent },
+          { path: 'reader', title: DYNAMIC_TITLE, component: BlankComponent },
         ]),
         { provide: TitleStrategy, useExisting: TranslatedTitleStrategy },
       ],
@@ -36,13 +36,7 @@ describe('TranslatedTitleStrategy', () => {
     TestBed.tick();
   }
 
-  it('titles a page from the translation key on its route', async () => {
-    await navigate('/account');
-
-    expect(title.getTitle()).toBe('Account | simple feed reader');
-  });
-
-  it('retitles on every navigation, so no page keeps the one before it', async () => {
+  it('titles each page from the translation key on its route, on every navigation', async () => {
     await navigate('/account');
     await navigate('/tags');
 

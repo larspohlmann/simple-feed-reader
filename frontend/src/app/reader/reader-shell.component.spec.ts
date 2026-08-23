@@ -15,7 +15,7 @@ import {
   convertToParamMap,
   provideRouter,
 } from '@angular/router';
-import { By } from '@angular/platform-browser';
+import { By, Title } from '@angular/platform-browser';
 import { BehaviorSubject, Subject, of } from 'rxjs';
 import { WritableSignal, signal } from '@angular/core';
 import { API_BASE_URL } from '../core/api';
@@ -965,6 +965,29 @@ describe('ReaderShellComponent', () => {
     f.detectChanges();
 
     expect(f.componentInstance.title()).toBe('For you');
+  });
+
+  // The reader route declares DYNAMIC_TITLE, which tells the title strategy to
+  // stand back — so if the reader ever stopped naming the tab, nothing else
+  // would, and #549 would be back through the door built for the reader.
+  it('names the browser tab after the list on screen', () => {
+    const f = boot();
+    f.detectChanges();
+
+    expect(TestBed.inject(Title).getTitle()).toBe('All items | simple feed reader');
+  });
+
+  it('names the browser tab after the open article, cut to what a tab shows', () => {
+    const headline = 'A headline far longer than any browser tab has ever been able to show';
+    const f = boot();
+    qp.next(convertToParamMap({ entry: '514' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries/514')
+      .flush({ entry: { ...entry, id: 514, title: headline } });
+    f.detectChanges();
+
+    expect(TestBed.inject(Title).getTitle()).toBe(`${headline.slice(0, 60)}… | simple feed reader`);
   });
 
   // The heading used to hold hardcoded English literals, so a German user saw
