@@ -5,17 +5,21 @@ import { LanguageService } from '../core/language.service';
 import { PreferencesService } from '../core/preferences.service';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { LanguageSwitcherComponent } from '../shared/language-switcher/language-switcher.component';
-import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
+import { SettingsGroupComponent } from '../shared/settings/settings-group/settings-group.component';
+import { SettingsRowComponent } from '../shared/settings/settings-row/settings-row.component';
+import { SettingsStackComponent } from '../shared/settings/stack/settings-stack.component';
 import { ToggleComponent } from '../shared/toggle/toggle.component';
 
 @Component({
   selector: 'app-preferences-section',
   imports: [
+    ErrorBannerComponent,
     LanguageSwitcherComponent,
-    SettingsCardComponent,
+    SettingsGroupComponent,
+    SettingsRowComponent,
+    SettingsStackComponent,
     ToggleComponent,
     TranslocoPipe,
-    ErrorBannerComponent,
   ],
   templateUrl: './preferences-section.component.html',
   styleUrl: './preferences-section.component.scss',
