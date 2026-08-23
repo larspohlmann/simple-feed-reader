@@ -86,7 +86,7 @@
         type="password"
         autocomplete="off"
         data-testid="proxy-password"
-        [placeholder]="hasStoredPassword() ? passwordHint() : ''"
+        [placeholder]="passwordHint()"
         [value]="password()"
         (input)="onPassword($event)"
       />
@@ -109,24 +109,22 @@
         >
           {{ 'settings.proxy.test' | transloco }}
         </app-button>
-        @if (probe(); as probeResult) {
-          @if (probeResult.status === 'ok') {
-            <span class="egress-ip" data-testid="proxy-egress-ip">{{
-              'settings.proxy.testOk' | transloco: { ip: probeResult.egressIp }
-            }}</span>
-          }
+        @let probeResult = probe();
+        @if (probeResult.status === 'ok') {
+          <span class="egress-ip" data-testid="proxy-egress-ip">{{
+            'settings.proxy.testOk' | transloco: { ip: probeResult.egressIp }
+          }}</span>
         }
       </div>
     </app-settings-row>
 
-    @if (probe(); as probeResult) {
-      @if (probeResult.status === 'error') {
-        <div class="panel-banner">
-          <app-error-banner
-            [message]="'settings.proxy.testFailed' | transloco: { reason: probeResult.message }"
-          />
-        </div>
-      }
+    @let probeFailure = probe();
+    @if (probeFailure.status === 'error') {
+      <div class="panel-banner">
+        <app-error-banner
+          [message]="'settings.proxy.testFailed' | transloco: { reason: probeFailure.message }"
+        />
+      </div>
     }
 
     @if (failureMessage(); as message) {

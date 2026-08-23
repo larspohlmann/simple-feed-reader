@@ -6,6 +6,7 @@ import {
   effect,
   inject,
   linkedSignal,
+  signal,
 } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { ButtonComponent } from '../../../shared/button/button.component';
@@ -16,7 +17,10 @@ import { SettingsRowComponent } from '../../../shared/settings/settings-row/sett
 import { SettingsSaveBarComponent } from '../../../shared/settings/save-bar/save-bar.component';
 import { ToggleComponent } from '../../../shared/toggle/toggle.component';
 import { ToastService } from '../../../shared/toast/toast.service';
-import { ProxySettingsService, ProxyType } from './proxy-settings.service';
+import { ProxySettingsService, ProxyType, TypedProxyEdits } from './proxy-settings.service';
+
+/** The SOCKS5 well-known port, mirroring the backend's ProxyConnection::DEFAULT_PORT. */
+const DEFAULT_PORT = 1080;
 
 /**
  * The admin "Proxy" settings section (#490), on the grouped design language
@@ -59,15 +63,22 @@ export class ProxySectionComponent {
   readonly type = linkedSignal<ProxyType>(() => this.svc.state()?.type ?? 'SOCKS5');
 
   // Typed fields: held as a pending draft in the service until the explicit
-  // Save. Each seeds from server truth and recomputes when the state does.
-  readonly host = linkedSignal<string>(() => this.svc.state()?.host ?? '');
-  readonly port = linkedSignal<number>(() => this.svc.state()?.port ?? 1080);
-  readonly username = linkedSignal<string>(() => this.svc.state()?.username ?? '');
+  // Save. Each reads the pending edit first and server truth only underneath,
+  // so an instant save -- which replaces `state` while the draft stands -- can
+  // no longer revert an edit the admin has typed but not yet saved.
+  readonly host = linkedSignal<string>(() => this.pending('host') ?? this.svc.state()?.host ?? '');
+  readonly port = linkedSignal<number>(
+    () => this.pending('port') ?? this.svc.state()?.port ?? DEFAULT_PORT,
+  );
+  readonly username = linkedSignal<string>(
+    () => this.pending('username') ?? this.svc.state()?.username ?? '',
+  );
   /** Never seeded from server truth -- the API never returns the secret. */
-  readonly password = linkedSignal<string>(() => '');
+  readonly password = signal('');
 
   readonly configured = computed(() => (this.svc.state()?.host ?? '') !== '');
-  readonly hasStoredPassword = computed(() => this.svc.state()?.hasPassword ?? false);
+  /** Empty exactly when no password is stored, so it doubles as the "is one on
+   *  record?" test the password field's placeholder needs. */
   readonly passwordHint = computed(() => this.svc.state()?.passwordHint ?? '');
   readonly probe = this.svc.probe;
 
@@ -77,6 +88,17 @@ export class ProxySectionComponent {
   });
 
   readonly typeOptions: readonly ProxyType[] = ['SOCKS5', 'HTTP'];
+
+  /**
+   * The pending value for one typed field, or undefined when the admin has not
+   * edited it. Key presence is the test, not nullishness -- a cleared field is
+   * a real edit and must win over server truth like any other.
+   */
+  private pending<F extends keyof TypedProxyEdits>(field: F): TypedProxyEdits[F] | undefined {
+    const draft = this.svc.draft();
+
+    return field in draft ? draft[field] : undefined;
+  }
 
   constructor() {
     this.svc.load();
@@ -122,7 +144,7 @@ export class ProxySectionComponent {
   onUsername(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     this.username.set(value);
-    this.svc.setTypedField('username', value === '' ? null : value);
+    this.svc.setTypedField('username', value);
   }
 
   /** An empty field means "keep the stored secret", not "clear it" -- the
@@ -137,15 +159,11 @@ export class ProxySectionComponent {
     this.svc.save();
   }
 
-  /** Drops the pending typed edits and reseeds every typed input from the
-   *  last-saved state, so a Reset with no intervening save still visibly
-   *  restores the inputs (a `linkedSignal` only recomputes when `state` does). */
+  /** Dropping the draft is enough for the typed inputs: they read it as their
+   *  source, so clearing it reseeds them from the last-saved state. The
+   *  password is a plain signal with no server source, so it is cleared here. */
   onReset(): void {
     this.svc.discardDraft();
-    const state = this.svc.state();
-    this.host.set(state?.host ?? '');
-    this.port.set(state?.port ?? 1080);
-    this.username.set(state?.username ?? '');
     this.password.set('');
   }
 

@@ -158,4 +158,62 @@ describe('ProxySectionComponent', () => {
     expect(passwordInput(fixture).value).toBe('');
     expect(passwordInput(fixture).type).toBe('password');
   });
+
+  it('keeps a pending typed edit visible when an instant toggle saves', () => {
+    const fixture = mount(state({ host: 'old.example.com' }));
+
+    const host = hostInput(fixture);
+    host.value = 'new.example.com';
+    host.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    // Flip the instant "direct fallback" toggle: it persists from the SAVED
+    // state, so the server echoes back the host the admin has not saved yet.
+    const toggle: HTMLInputElement = fixture.nativeElement.querySelector(
+      '#proxy-direct-fallback-toggle',
+    );
+    toggle.click();
+    fixture.detectChanges();
+    http
+      .expectOne((r) => r.url === ENDPOINT && r.method === 'PUT')
+      .flush(state({ host: 'old.example.com', directFallback: false }));
+    fixture.detectChanges();
+
+    // The typed edit must still be on screen, not silently held in the draft.
+    expect(hostInput(fixture).value).toBe('new.example.com');
+    expect(fixture.componentInstance.svc.dirty()).toBe(true);
+  });
+
+  it('restores the last-saved values on Reset', () => {
+    const fixture = mount(state({ host: 'old.example.com', username: 'sam' }));
+
+    const host = hostInput(fixture);
+    host.value = 'new.example.com';
+    host.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(hostInput(fixture).value).toBe('new.example.com');
+
+    fixture.componentInstance.onReset();
+    fixture.detectChanges();
+
+    expect(hostInput(fixture).value).toBe('old.example.com');
+    expect(fixture.componentInstance.svc.dirty()).toBe(false);
+  });
+
+  it('keeps a cleared username cleared rather than reverting to server truth', () => {
+    const fixture = mount(state({ host: 'old.example.com', username: 'sam' }));
+
+    const username: HTMLInputElement = fixture.nativeElement.querySelector(
+      '[data-testid="proxy-username"]',
+    );
+    username.value = '';
+    username.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    const shown: HTMLInputElement = fixture.nativeElement.querySelector(
+      '[data-testid="proxy-username"]',
+    );
+    expect(shown.value).toBe('');
+    expect(fixture.componentInstance.svc.draft()).toEqual({ username: '' });
+  });
 });
