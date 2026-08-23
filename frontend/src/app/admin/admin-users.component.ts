@@ -11,7 +11,8 @@ import { formatDateOr, trialExpired } from '../reader/format';
 import { ButtonComponent } from '../shared/button/button.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { IconComponent } from '../shared/icon/icon.component';
-import { SettingsCardComponent } from '../shared/settings-card/settings-card.component';
+import { SettingsGroupComponent } from '../shared/settings/settings-group/settings-group.component';
+import { SettingsStackComponent } from '../shared/settings/stack/settings-stack.component';
 import { SkeletonComponent } from '../shared/skeleton/skeleton.component';
 import {
   ConfirmData,
@@ -25,7 +26,8 @@ import { AdminAction, AdminUserDto, AdminUserStatus } from './admin.models';
   imports: [
     ButtonComponent,
     ErrorBannerComponent,
-    SettingsCardComponent,
+    SettingsGroupComponent,
+    SettingsStackComponent,
     SkeletonComponent,
     TranslocoPipe,
     IconComponent,

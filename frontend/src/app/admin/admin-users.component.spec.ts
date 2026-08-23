@@ -270,11 +270,14 @@ describe('AdminUsersComponent', () => {
     ctrl.expectOne('https://api.test/api/admin/users').flush({ users: [] });
   });
 
-  it('renders the list inside a settings card', () => {
+  it('renders the queue as a settings group with its filters in the header', () => {
     const f = mount();
     ctrl.expectOne('https://api.test/api/admin/users').flush({ users: [user(1)] });
     f.detectChanges();
-    expect((f.nativeElement as HTMLElement).querySelector('app-settings-card')).not.toBeNull();
+    const el = f.nativeElement as HTMLElement;
+
+    expect(el.querySelector('app-settings-group')).not.toBeNull();
+    expect(el.querySelector('.g-head .filters')).not.toBeNull();
   });
 
   it('flags a row whose trial has expired', () => {
