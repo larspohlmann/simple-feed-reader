@@ -44,7 +44,15 @@ final readonly class HtmlItemExtractor
             \array_slice($this->firstSuccessfulLayer($doc, $baseUrl), 0, self::MAX_ITEMS),
         );
 
-        return new ParsedFeed($this->feedTitle($doc), $baseUrl, $this->metaDescription($doc), $entries);
+        // No feed image: og:image is the page's picture, not the site's mark,
+        // so guessing with it would put an article photo in the feed header.
+        return new ParsedFeed(
+            $this->feedTitle($doc),
+            $baseUrl,
+            $this->metaDescription($doc),
+            null,
+            $entries,
+        );
     }
 
     private function parse(string $html): HTMLDocument

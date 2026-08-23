@@ -36,6 +36,7 @@ final class Rss2Parser implements FeedFormatParserInterface
             PlainText::from(XmlHelper::childText($channel, 'title')),
             XmlHelper::childText($channel, 'link'),
             XmlHelper::childText($channel, 'description'),
+            FeedImageExtractor::fromRss2Channel($channel),
             $entries,
         );
     }

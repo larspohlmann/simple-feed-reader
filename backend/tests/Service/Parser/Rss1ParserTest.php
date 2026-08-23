@@ -189,4 +189,29 @@ final class Rss1ParserTest extends TestCase
             $feed->entries[1]->title,
         );
     }
+
+    public function testReadsTheImageFromTheRdfRoot(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0"?>
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                     xmlns="http://purl.org/rss/1.0/">
+                <channel rdf:about="https://example.com/">
+                    <title>Example</title>
+                    <link>https://example.com/</link>
+                    <description>Example feed</description>
+                    <image rdf:resource="https://example.com/logo.png"/>
+                </channel>
+                <image rdf:about="https://example.com/logo.png">
+                    <url>https://example.com/logo.png</url>
+                </image>
+                <item rdf:about="https://example.com/1">
+                    <title>One</title>
+                    <link>https://example.com/1</link>
+                </item>
+            </rdf:RDF>
+            XML;
+
+        self::assertSame('https://example.com/logo.png', (new Rss1Parser())->parse($this->document($xml))->imageUrl);
+    }
 }

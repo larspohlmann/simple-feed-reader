@@ -56,12 +56,12 @@ final class EntryIngestorTest extends DbTestCase
         $feed = $this->feed();
         $url = 'https://www.bbc.com/news/articles/ckg4424zd7go';
 
-        $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, [
+        $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, null, [
             $this->parsedEntryAt('https://www.bbc.com/news/articles/ckg4424zd7go#0', $url),
         ]), self::context());
         $this->em->flush();
 
-        $created = $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, [
+        $created = $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, null, [
             $this->parsedEntryAt('https://www.bbc.com/news/articles/ckg4424zd7go#1', $url),
         ]), self::context());
         $this->em->flush();
@@ -74,12 +74,12 @@ final class EntryIngestorTest extends DbTestCase
     {
         $feed = $this->feed();
 
-        $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, [
+        $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, null, [
             $this->parsedEntryAt('guid-a', 'https://www.bbc.com/news/x?at_medium=RSS&at_campaign=rss'),
         ]), self::context());
         $this->em->flush();
 
-        $created = $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, [
+        $created = $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, null, [
             $this->parsedEntryAt('guid-b', 'https://www.bbc.com/news/x?at_medium=email'),
         ]), self::context());
         $this->em->flush();
@@ -100,13 +100,13 @@ final class EntryIngestorTest extends DbTestCase
         $first = 'https://www.bbc.com/news/articles/aaa';
         $second = 'https://www.bbc.com/news/articles/bbb';
 
-        $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, [
+        $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, null, [
             $this->parsedEntryAt('aaa#0', $first),
             $this->parsedEntryAt('bbb#0', $second),
         ]), self::context());
         $this->em->flush();
 
-        $created = $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, [
+        $created = $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, null, [
             $this->parsedEntryAt('aaa#1', $first),
             $this->parsedEntryAt('bbb#1', $second),
         ]), self::context());
@@ -121,7 +121,7 @@ final class EntryIngestorTest extends DbTestCase
         $feed = $this->feed();
         $url = 'https://www.bbc.com/news/articles/abc';
 
-        $created = $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, [
+        $created = $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, null, [
             $this->parsedEntryAt('abc#0', $url),
             $this->parsedEntryAt('abc#1', $url),
         ]), self::context());
@@ -135,7 +135,7 @@ final class EntryIngestorTest extends DbTestCase
     {
         $feed = $this->feed();
 
-        $created = $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, [
+        $created = $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, null, [
             $this->parsedEntryAt('g1', 'https://example.com/story?id=42'),
             $this->parsedEntryAt('g2', 'https://example.com/story?id=43'),
         ]), self::context());
@@ -150,10 +150,10 @@ final class EntryIngestorTest extends DbTestCase
         $feed = $this->feed();
         $item = new ParsedEntry('only-guid', null, 'Title', null, null, '<p>body</p>', null);
 
-        $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, [$item]), self::context());
+        $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, null, [$item]), self::context());
         $this->em->flush();
 
-        $created = $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, [$item]), self::context());
+        $created = $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, null, [$item]), self::context());
         $this->em->flush();
 
         self::assertCount(0, $created);
@@ -226,7 +226,7 @@ final class EntryIngestorTest extends DbTestCase
         $this->em->flush();
 
         $fetchedAt = new \DateTimeImmutable('2026-07-21T12:00:00Z');
-        $parsed = new ParsedFeed(null, null, null, [
+        $parsed = new ParsedFeed(null, null, null, null, [
             $this->parsedEntry('g1', 'One'),
             $this->parsedEntry('g2', 'Two'),
             $this->parsedEntry('g3', 'Three'),
@@ -248,7 +248,7 @@ final class EntryIngestorTest extends DbTestCase
         $this->em->persist($feed);
         $this->em->flush();
 
-        $parsed = new ParsedFeed('Feed Title', 'https://example.com/', 'Desc', [
+        $parsed = new ParsedFeed('Feed Title', 'https://example.com/', 'Desc', null, [
             $this->parsedEntry('g1', 'One'),
             $this->parsedEntry('g2', 'Two'),
             $this->parsedEntry('g1', 'Duplicate of one'),
@@ -274,12 +274,12 @@ final class EntryIngestorTest extends DbTestCase
         $this->em->persist($feed);
         $this->em->flush();
 
-        $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, [
+        $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, null, [
             $this->parsedEntry('g1', 'One'),
         ]), self::context());
         $this->em->flush();
 
-        $created = $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, [
+        $created = $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, null, [
             $this->parsedEntry('g1', 'One again'),
             $this->parsedEntry('g3', 'Three'),
         ]), self::context());
@@ -297,7 +297,7 @@ final class EntryIngestorTest extends DbTestCase
         $this->em->persist($feedB);
         $this->em->flush();
 
-        $parsed = new ParsedFeed(null, null, null, [$this->parsedEntry('shared-guid', 'Shared')]);
+        $parsed = new ParsedFeed(null, null, null, null, [$this->parsedEntry('shared-guid', 'Shared')]);
         self::assertCount(1, $this->ingestor->ingest($feedA, $parsed, self::context()));
         self::assertCount(1, $this->ingestor->ingest($feedB, $parsed, self::context()));
         $this->em->flush();
@@ -312,7 +312,7 @@ final class EntryIngestorTest extends DbTestCase
         $this->em->persist($feed);
         $this->em->flush();
 
-        $parsed = new ParsedFeed(str_repeat('T', 900), null, null, [
+        $parsed = new ParsedFeed(str_repeat('T', 900), null, null, null, [
             new ParsedEntry(
                 guid: 'long',
                 url: 'https://example.com/' . str_repeat('u', 3000),
@@ -339,7 +339,7 @@ final class EntryIngestorTest extends DbTestCase
     public function testPersistsTheFeedSuppliedImage(): void
     {
         $feed = $this->feed();
-        $parsed = new ParsedFeed('T', null, null, [
+        $parsed = new ParsedFeed('T', null, null, null, [
             new ParsedEntry(
                 guid: 'g1',
                 url: 'https://x/1',
@@ -365,7 +365,7 @@ final class EntryIngestorTest extends DbTestCase
     public function testMissingImageLeavesTheColumnsNull(): void
     {
         $feed = $this->feed();
-        $parsed = new ParsedFeed('T', null, null, [
+        $parsed = new ParsedFeed('T', null, null, null, [
             new ParsedEntry('no-image', 'https://x/1', 'One', null, null, '<p>body</p>', null, null),
         ]);
 
@@ -383,7 +383,7 @@ final class EntryIngestorTest extends DbTestCase
     {
         $feed = $this->feed();
         $overlongUrl = 'https://i/' . str_repeat('u', 2048) . '.jpg';
-        $parsed = new ParsedFeed('T', null, null, [
+        $parsed = new ParsedFeed('T', null, null, null, [
             new ParsedEntry(
                 guid: 'overlong-image',
                 url: 'https://x/1',
@@ -409,7 +409,7 @@ final class EntryIngestorTest extends DbTestCase
     public function testProtocolRelativeImageUrlIsUpgradedToHttpsAndKept(): void
     {
         $feed = $this->feed();
-        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, [
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, null, [
             $this->parsedEntryWithImage('protocol-relative', new ParsedImage('//i.example.com/img.jpg', 400, 300)),
         ]), self::context());
         $this->em->flush();
@@ -422,7 +422,7 @@ final class EntryIngestorTest extends DbTestCase
     public function testHttpImageUrlIsDroppedAsMixedContent(): void
     {
         $feed = $this->feed();
-        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, [
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, null, [
             $this->parsedEntryWithImage('http-image', new ParsedImage('http://i.example.com/img.jpg', 400, 300)),
         ]), self::context());
         $this->em->flush();
@@ -435,7 +435,7 @@ final class EntryIngestorTest extends DbTestCase
     public function testDataUriImageIsDropped(): void
     {
         $feed = $this->feed();
-        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, [
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, null, [
             $this->parsedEntryWithImage('data-uri-image', new ParsedImage('data:image/png;base64,AAAA', null, null)),
         ]), self::context());
         $this->em->flush();
@@ -448,7 +448,7 @@ final class EntryIngestorTest extends DbTestCase
     public function testSiteRelativeImageUrlIsDropped(): void
     {
         $feed = $this->feed();
-        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, [
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, null, [
             $this->parsedEntryWithImage('site-relative-image', new ParsedImage('/img/x.jpg', 400, 300)),
         ]), self::context());
         $this->em->flush();
@@ -461,7 +461,7 @@ final class EntryIngestorTest extends DbTestCase
     public function testSummaryFallsBackToContentHtmlWhenFeedSummaryIsNull(): void
     {
         $feed = $this->feed();
-        $parsed = new ParsedFeed('T', null, null, [
+        $parsed = new ParsedFeed('T', null, null, null, [
             new ParsedEntry(
                 guid: 'fallback-summary',
                 url: null,
@@ -484,7 +484,7 @@ final class EntryIngestorTest extends DbTestCase
     public function testJunkContentHtmlYieldsNullSummaryNotTheJunkToken(): void
     {
         $feed = $this->feed();
-        $parsed = new ParsedFeed('T', null, null, [
+        $parsed = new ParsedFeed('T', null, null, null, [
             new ParsedEntry(
                 guid: 'junk-summary',
                 url: null,
@@ -512,7 +512,7 @@ final class EntryIngestorTest extends DbTestCase
         $this->em->persist($feed);
         $this->em->flush();
 
-        $created = $this->ingestor->ingest($feed, new ParsedFeed('New Title', null, null, []), self::context());
+        $created = $this->ingestor->ingest($feed, new ParsedFeed('New Title', null, null, null, []), self::context());
 
         self::assertCount(0, $created);
         self::assertSame('New Title', $feed->getTitle());
@@ -526,7 +526,7 @@ final class EntryIngestorTest extends DbTestCase
         $this->em->persist($feed);
         $this->em->flush();
 
-        $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, []), self::context());
+        $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, null, []), self::context());
 
         self::assertSame('Existing Title', $feed->getTitle());
         self::assertSame('https://existing.example.com/', $feed->getSiteUrl());
@@ -535,7 +535,7 @@ final class EntryIngestorTest extends DbTestCase
     public function testAnArticleTheFeedAlreadyServedKeepsItsPublishedDate(): void
     {
         $feed = $this->feed();
-        $parsed = new ParsedFeed(null, null, null, [
+        $parsed = new ParsedFeed(null, null, null, null, [
             new ParsedEntry(
                 guid: 'old',
                 url: 'https://example.com/old',

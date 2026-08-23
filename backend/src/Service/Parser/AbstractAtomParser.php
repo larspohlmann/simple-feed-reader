@@ -71,6 +71,7 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
             PlainText::from($title),
             $this->alternateLink($root, $ns),
             XmlHelper::childText($root, $this->descriptionElement(), $ns),
+            FeedImageExtractor::fromAtomFeed($root, $ns),
             $entries,
         );
     }

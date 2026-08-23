@@ -36,7 +36,7 @@ final readonly class WordPressJsonParser
             }
         }
 
-        return new ParsedFeed(null, null, null, $entries);
+        return new ParsedFeed(null, null, null, null, $entries);
     }
 
     /** @param array<string, mixed> $post */

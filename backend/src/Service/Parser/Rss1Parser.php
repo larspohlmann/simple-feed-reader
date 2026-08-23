@@ -38,6 +38,7 @@ final class Rss1Parser implements FeedFormatParserInterface
             PlainText::from(XmlHelper::childText($channel, 'title', self::RSS1_NS)),
             XmlHelper::childText($channel, 'link', self::RSS1_NS),
             XmlHelper::childText($channel, 'description', self::RSS1_NS),
+            FeedImageExtractor::fromRss1Document($document, self::RSS1_NS),
             $entries,
         );
     }

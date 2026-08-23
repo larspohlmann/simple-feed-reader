@@ -160,7 +160,7 @@ final class FirstFetchRecorderTest extends DbTestCase
     {
         return new DiscoveredFeed(
             $feed->getUrl(),
-            new ParsedFeed('Discovered', null, null, $entries),
+            new ParsedFeed('Discovered', null, null, null, $entries),
         );
     }
 
@@ -232,5 +232,23 @@ final class FirstFetchRecorderTest extends DbTestCase
             ->getResult();
 
         return array_map(static fn (Entry $entry): string => $entry->getGuid(), $entries);
+    }
+
+    public function testCappingTheEntryListKeepsTheFeedImage(): void
+    {
+        $document = new ParsedFeed(
+            'Example',
+            'https://example.com/',
+            'Example feed',
+            'https://example.com/logo.png',
+            [],
+        );
+
+        $capped = $document->withEntries([]);
+
+        self::assertSame('https://example.com/logo.png', $capped->imageUrl);
+        self::assertSame('Example', $capped->title);
+        self::assertSame('https://example.com/', $capped->siteUrl);
+        self::assertSame('Example feed', $capped->description);
     }
 }

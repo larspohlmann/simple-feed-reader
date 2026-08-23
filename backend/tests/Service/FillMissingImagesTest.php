@@ -50,11 +50,11 @@ final class FillMissingImagesTest extends DbTestCase
     public function testPopulatesAnEntryIngestedWithoutOne(): void
     {
         $feed = $this->feed();
-        $withoutImage = new ParsedFeed('T', null, null, [$this->parsedEntry('g2', null)]);
+        $withoutImage = new ParsedFeed('T', null, null, null, [$this->parsedEntry('g2', null)]);
         $this->ingestor()->ingest($feed, $withoutImage, self::context());
         $this->em->flush();
 
-        $withImage = new ParsedFeed('T', null, null, [
+        $withImage = new ParsedFeed('T', null, null, null, [
             $this->parsedEntry('g2', new ParsedImage('https://i/2.jpg', 700, null)),
         ]);
         $filled = $this->ingestor()->fillMissingImages($feed, $withImage);
@@ -71,12 +71,12 @@ final class FillMissingImagesTest extends DbTestCase
     public function testNeverOverwritesAnExistingImage(): void
     {
         $feed = $this->feed();
-        $this->ingestor()->ingest($feed, new ParsedFeed('T', null, null, [
+        $this->ingestor()->ingest($feed, new ParsedFeed('T', null, null, null, [
             $this->parsedEntry('g3', new ParsedImage('https://i/original.jpg', 900, 600)),
         ]), self::context());
         $this->em->flush();
 
-        $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeed('T', null, null, [
+        $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeed('T', null, null, null, [
             $this->parsedEntry('g3', new ParsedImage('https://i/replacement.jpg', 100, 100)),
         ]));
         $this->em->flush();
@@ -91,7 +91,7 @@ final class FillMissingImagesTest extends DbTestCase
     {
         $feed = $this->feed();
 
-        $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeed('T', null, null, [
+        $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeed('T', null, null, null, [
             $this->parsedEntry('missing', new ParsedImage('https://i/4.jpg', 400, 300)),
         ]));
 
@@ -101,11 +101,11 @@ final class FillMissingImagesTest extends DbTestCase
     public function testSkipsParsedEntriesThatCarryNoImage(): void
     {
         $feed = $this->feed();
-        $g5 = new ParsedFeed('T', null, null, [$this->parsedEntry('g5', null)]);
+        $g5 = new ParsedFeed('T', null, null, null, [$this->parsedEntry('g5', null)]);
         $this->ingestor()->ingest($feed, $g5, self::context());
         $this->em->flush();
 
-        $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeed('T', null, null, [
+        $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeed('T', null, null, null, [
             $this->parsedEntry('g5', null),
         ]));
 
@@ -118,12 +118,12 @@ final class FillMissingImagesTest extends DbTestCase
     public function testAnOverlongReplacementImageUrlIsNotFilledIn(): void
     {
         $feed = $this->feed();
-        $g6 = new ParsedFeed('T', null, null, [$this->parsedEntry('g6', null)]);
+        $g6 = new ParsedFeed('T', null, null, null, [$this->parsedEntry('g6', null)]);
         $this->ingestor()->ingest($feed, $g6, self::context());
         $this->em->flush();
 
         $overlongUrl = 'https://i/' . str_repeat('u', 2048) . '.jpg';
-        $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeed('T', null, null, [
+        $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeed('T', null, null, null, [
             $this->parsedEntry('g6', new ParsedImage($overlongUrl, 100, 100)),
         ]));
 
@@ -136,11 +136,11 @@ final class FillMissingImagesTest extends DbTestCase
     public function testAnHttpReplacementImageUrlIsNotFilledIn(): void
     {
         $feed = $this->feed();
-        $g7 = new ParsedFeed('T', null, null, [$this->parsedEntry('g7', null)]);
+        $g7 = new ParsedFeed('T', null, null, null, [$this->parsedEntry('g7', null)]);
         $this->ingestor()->ingest($feed, $g7, self::context());
         $this->em->flush();
 
-        $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeed('T', null, null, [
+        $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeed('T', null, null, null, [
             $this->parsedEntry('g7', new ParsedImage('http://i/7.jpg', 100, 100)),
         ]));
 

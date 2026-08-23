@@ -219,4 +219,39 @@ final class Rss2ParserTest extends TestCase
             $feed->entries[1]->title,
         );
     }
+
+    public function testReadsTheChannelImage(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0"?>
+            <rss version="2.0">
+                <channel>
+                    <title>Example</title>
+                    <link>https://example.com/</link>
+                    <description>Example feed</description>
+                    <image><url>https://example.com/logo.png</url></image>
+                    <item><title>One</title><link>https://example.com/1</link></item>
+                </channel>
+            </rss>
+            XML;
+
+        self::assertSame('https://example.com/logo.png', (new Rss2Parser())->parse($this->document($xml))->imageUrl);
+    }
+
+    public function testAChannelWithoutAnImageParsesToNull(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0"?>
+            <rss version="2.0">
+                <channel>
+                    <title>Example</title>
+                    <link>https://example.com/</link>
+                    <description>Example feed</description>
+                    <item><title>One</title><link>https://example.com/1</link></item>
+                </channel>
+            </rss>
+            XML;
+
+        self::assertNull((new Rss2Parser())->parse($this->document($xml))->imageUrl);
+    }
 }

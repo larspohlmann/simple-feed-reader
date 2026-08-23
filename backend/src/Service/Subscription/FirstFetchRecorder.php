@@ -109,7 +109,7 @@ final readonly class FirstFetchRecorder
         usort($entries, self::byPublicationDateDescending(...));
         $newest = array_slice($entries, 0, self::FIRST_FETCH_MAX_ENTRIES);
 
-        return new ParsedFeed($document->title, $document->siteUrl, $document->description, $newest);
+        return $document->withEntries($newest);
     }
 
     private static function byPublicationDateDescending(ParsedEntry $left, ParsedEntry $right): int
