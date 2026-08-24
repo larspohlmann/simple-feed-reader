@@ -533,14 +533,37 @@ describe('SidebarComponent', () => {
       expect(f.nativeElement.textContent).not.toContain('Saved searches');
     });
 
-    it('renders a row per saved search with its unread count', () => {
+    it('renders collapsed by default, showing the header with the summed unread count', () => {
       const f = mount({
-        savedSearches: [{ id: 1, term: 'climate', wholeWord: false, position: 0, unreadCount: 3 }],
+        savedSearches: [
+          { id: 1, term: 'climate', wholeWord: false, position: 0, unreadCount: 3 },
+          { id: 2, term: 'space', wholeWord: false, position: 1, unreadCount: 4 },
+        ],
       });
       const text = f.nativeElement.textContent;
       expect(text).toContain('Saved searches');
+      expect(text).not.toContain('climate');
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(0);
+      const head = f.nativeElement.querySelector('.savedsearch-head')!;
+      expect(head.querySelector('.count')?.textContent).toContain('7');
+    });
+
+    it('expands on click, revealing the term rows and hiding the summed count', () => {
+      const f = mount({
+        savedSearches: [
+          { id: 1, term: 'climate', wholeWord: false, position: 0, unreadCount: 3 },
+          { id: 2, term: 'space', wholeWord: false, position: 1, unreadCount: 4 },
+        ],
+      });
+      const head: HTMLButtonElement = f.nativeElement.querySelector('.savedsearch-head');
+      head.click();
+      f.detectChanges();
+
+      const text = f.nativeElement.textContent;
       expect(text).toContain('climate');
-      expect(text).toContain('3');
+      expect(text).toContain('space');
+      expect(head.querySelector('.count')).toBeNull();
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(2);
     });
   });
 });

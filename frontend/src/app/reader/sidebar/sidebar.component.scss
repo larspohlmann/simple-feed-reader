@@ -266,6 +266,42 @@
   margin: var(--space-3) var(--space-2) var(--space-1);
 }
 
+/* The "Saved searches" group header: a toggle-only button built like a `.nav`
+   row (it shares the class), with its own lead-icon slot and a trailing
+   chevron mirroring the tag chevron, but inline in the row rather than a
+   separate `.chevzone` button — there is no adjacent edit/delete menu to
+   share the row with. */
+.savedsearch-head {
+  width: 100%;
+  background: none;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.savedsearch-head .lead {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.savedsearch-head .chev {
+  flex: none;
+  margin-left: auto;
+  display: inline-flex;
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+}
+
+/* Same indent token the tag-feed rows use (`.tag-sub`), so saved-search terms
+   read as nested under their header exactly like feeds under a tag. */
+.savedsearch-item {
+  padding-left: var(--space-6);
+}
+
 .tag {
   display: flex;
   align-items: center;

@@ -96,34 +96,56 @@
   }
 
   @if (savedSearches().length) {
-    <p class="label">{{ 'reader.savedSearches' | transloco }}</p>
-    @for (saved of savedSearches(); track saved.id) {
-      <a
-        class="nav"
-        [class.active]="
-          selection().kind === 'search' &&
-          selection().term === savedSearchTerm(saved.term, saved.wholeWord)
-        "
-        [routerLink]="[]"
-        [queryParams]="savedSearchParams(saved.term, saved.wholeWord)"
-        queryParamsHandling="merge"
+    <div class="savedsearches">
+      <button
+        class="nav grow savedsearch-head"
+        type="button"
+        [class.open]="savedSearchesExpanded()"
+        [attr.aria-expanded]="savedSearchesExpanded()"
+        [attr.aria-label]="'reader.toggleSavedSearches' | transloco"
+        (click)="toggleSavedSearches()"
       >
-        <app-icon name="search" size="sm" />
-        <span class="saved-term">{{ saved.term }}</span>
-        @if (saved.wholeWord) {
-          <span
-            class="whole-word-badge"
-            aria-hidden="true"
-            [attr.title]="'reader.searchWholeWordHint' | transloco"
+        <span class="lead"><app-icon name="bookmark" size="sm" /></span>
+        <span class="savedsearch-title">{{ 'reader.savedSearches' | transloco }}</span>
+        @if (!savedSearchesExpanded() && savedSearchesUnread() > 0) {
+          <span class="count">{{ savedSearchesUnread() }}</span>
+        }
+        <app-icon
+          class="chev"
+          [name]="savedSearchesExpanded() ? 'expand_less' : 'expand_more'"
+          size="sm"
+        />
+      </button>
+      @if (savedSearchesExpanded()) {
+        @for (saved of savedSearches(); track saved.id) {
+          <a
+            class="nav savedsearch-item"
+            [class.active]="
+              selection().kind === 'search' &&
+              selection().term === savedSearchTerm(saved.term, saved.wholeWord)
+            "
+            [routerLink]="[]"
+            [queryParams]="savedSearchParams(saved.term, saved.wholeWord)"
+            queryParamsHandling="merge"
           >
-            {{ 'reader.searchWholeWord' | transloco }}
-          </span>
+            <app-icon name="search" size="sm" />
+            <span class="saved-term">{{ saved.term }}</span>
+            @if (saved.wholeWord) {
+              <span
+                class="whole-word-badge"
+                aria-hidden="true"
+                [attr.title]="'reader.searchWholeWordHint' | transloco"
+              >
+                {{ 'reader.searchWholeWord' | transloco }}
+              </span>
+            }
+            @if (saved.unreadCount > 0) {
+              <span class="count">{{ saved.unreadCount }}</span>
+            }
+          </a>
         }
-        @if (saved.unreadCount > 0) {
-          <span class="count">{{ saved.unreadCount }}</span>
-        }
-      </a>
-    }
+      }
+    </div>
   }
 
   @if (tagTree().length) {

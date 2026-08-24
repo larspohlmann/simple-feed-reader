@@ -585,6 +585,7 @@
     "viewed": "Zuletzt gelesen",
     "forYou": "Für dich",
     "savedSearches": "Gespeicherte Suchen",
+    "toggleSavedSearches": "Gespeicherte Suchen ein-/ausklappen",
     "saveSearch": "Suche speichern",
     "removeSavedSearch": "Gespeicherte Suche entfernen",
     "tagFallback": "Tag",

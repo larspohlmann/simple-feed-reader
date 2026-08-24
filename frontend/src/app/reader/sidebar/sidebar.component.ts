@@ -140,6 +140,19 @@ export class SidebarComponent {
   readonly expanded = signal<Set<number>>(new Set());
   readonly menuFor = signal<string | null>(null);
 
+  /** Whether the "Saved searches" group is expanded. In-memory only, default
+   *  collapsed — mirrors the tags' expand behaviour (state resets on reload). */
+  readonly savedSearchesExpanded = signal(false);
+
+  /** Total unread matches across all saved searches, for the collapsed badge. */
+  readonly savedSearchesUnread = computed(() =>
+    this.savedSearches().reduce((sum, saved) => sum + saved.unreadCount, 0),
+  );
+
+  toggleSavedSearches(): void {
+    this.savedSearchesExpanded.update((open) => !open);
+  }
+
   /** Whole days left in the current trial, or null when the account has no
    *  active trial. Expired trials read as null here — the account is suspended
    *  by then and never reaches this view. */

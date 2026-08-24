@@ -585,6 +585,7 @@
     "viewed": "Recently read",
     "forYou": "For you",
     "savedSearches": "Saved searches",
+    "toggleSavedSearches": "Toggle saved searches",
     "saveSearch": "Save search",
     "removeSavedSearch": "Remove saved search",
     "tagFallback": "Tag",
