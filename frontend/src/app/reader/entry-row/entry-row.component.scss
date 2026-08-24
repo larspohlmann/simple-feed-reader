@@ -65,6 +65,12 @@
   overflow: hidden;
 }
 
+/* In a search result the marked term is the focus; dim the surrounding
+   excerpt a shade so it recedes behind the highlight. */
+:host(.in-search) .snippet {
+  color: var(--text-muted);
+}
+
 /* Tag pills and the action icons share one line, the icons sitting just to the
    right of the pills (not pushed to the row's far edge). `min-width: 0` keeps
    the truncation chain so a long tag name shrinks rather than shoving the icons
