@@ -124,6 +124,7 @@ describe('ReaderShellComponent', () => {
     f.detectChanges(); // ngOnInit + initial effects
     ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+    ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     ctrl
       .expectOne((r) => r.url === 'https://api.test/api/entries')
       .flush({ entries: [{ ...entry, ...entryOverride }], nextCursor: null });
@@ -178,6 +179,7 @@ describe('ReaderShellComponent', () => {
       .expectOne('https://api.test/api/subscriptions')
       .flush({ subscriptions, favoritesCount: 0, keptCount: 0 });
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+    ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     ctrl
       .expectOne((r) => r.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
@@ -785,14 +787,19 @@ describe('ReaderShellComponent', () => {
       const entriesReloads = ctrl.match((r) => r.url === 'https://api.test/api/entries');
       const tagsReloads = ctrl.match((r) => r.url === 'https://api.test/api/tags');
       const subsReloads = ctrl.match((r) => r.url === 'https://api.test/api/subscriptions');
+      const savedSearchesReloads = ctrl.match(
+        (r) => r.url === 'https://api.test/api/saved-searches',
+      );
       expect(entriesReloads.length).toBe(1);
       expect(tagsReloads.length).toBe(1);
       expect(subsReloads.length).toBe(1);
+      expect(savedSearchesReloads.length).toBe(1);
 
       // Drain the reload requests so verify() is clean.
       entriesReloads[0].flush({ entries: [], nextCursor: null });
       tagsReloads[0].flush({ tags: [] });
       subsReloads[0].flush(subsBody);
+      savedSearchesReloads[0].flush({ savedSearches: [] });
       ctrl.verify();
     });
   });
@@ -1875,6 +1882,7 @@ describe('ReaderShellComponent', () => {
           subscriptions: [],
           tags: [],
           entries: [],
+          savedSearches: [],
           favoritesCount: 0,
           keptCount: 0,
           nextCursor: null,
@@ -1918,6 +1926,7 @@ describe('ReaderShellComponent', () => {
           subscriptions: [],
           tags: [],
           entries: [],
+          savedSearches: [],
           favoritesCount: 0,
           keptCount: 0,
           nextCursor: null,
@@ -1944,6 +1953,7 @@ describe('ReaderShellComponent', () => {
           subscriptions: [],
           tags: [],
           entries: [],
+          savedSearches: [],
           favoritesCount: 0,
           keptCount: 0,
           nextCursor: null,

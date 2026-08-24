@@ -71,6 +71,7 @@
       [favoritesCount]="subs.favoritesCount()"
       [keptCount]="subs.keptCount()"
       [viewedCount]="subs.viewedCount()"
+      [savedSearches]="savedSearchesStore.savedSearches()"
       [selection]="selection()"
       [loading]="subs.loading()"
       [searchLoading]="searching()"
@@ -112,6 +113,7 @@
           [headerActions]="forYouActions"
           [leadingActions]="listEditAction"
           [topBlock]="feedIntro"
+          [currentSearchSaved]="!!currentSavedSearch()"
           (loadMore)="entries.loadMore()"
           (markAllRead)="onMarkAllRead()"
           (refresh)="onScopedRefresh()"
@@ -119,6 +121,8 @@
           (keep)="onKeep($event)"
           (read)="onToggleViewed($event)"
           (open)="onOpen($event)"
+          (saveSearch)="onSaveSearch()"
+          (removeSavedSearch)="onRemoveSavedSearch()"
         />
       </section>
       <section class="reader">
@@ -160,6 +164,7 @@
           [headerActions]="forYouActions"
           [leadingActions]="listEditAction"
           [topBlock]="feedIntro"
+          [currentSearchSaved]="!!currentSavedSearch()"
           (scrolled)="onListScrolled($event)"
           (loadMore)="entries.loadMore()"
           (markAllRead)="onMarkAllRead()"
@@ -168,6 +173,8 @@
           (keep)="onKeep($event)"
           (read)="onToggleViewed($event)"
           (open)="onOpen($event)"
+          (saveSearch)="onSaveSearch()"
+          (removeSavedSearch)="onRemoveSavedSearch()"
         />
       </section>
       @if (openEntry()) {

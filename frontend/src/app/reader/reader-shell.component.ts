@@ -24,6 +24,7 @@ import { TagsStore } from './tags.store';
 import { EntriesStore, localStatePatch } from './entries.store';
 import { RefreshService } from './refresh.service';
 import { RecommendationsService } from './recommendations.service';
+import { SavedSearchesStore } from './saved-searches.store';
 import { refreshFailureKey } from './refresh-message';
 import { AiAvailabilityService } from '../core/ai-availability.service';
 import { VersionService } from '../core/version.service';
@@ -32,6 +33,7 @@ import { LayoutService } from './layout.service';
 import {
   RefreshScope,
   Selection,
+  isWholeWordTerm,
   markReadTarget,
   queryFromSelection,
   sameSelection,
@@ -105,6 +107,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly entries = inject(EntriesStore);
   readonly refreshSvc = inject(RefreshService);
   readonly recs = inject(RecommendationsService);
+  readonly savedSearchesStore = inject(SavedSearchesStore);
   readonly ai = inject(AiAvailabilityService);
   private readonly versions = inject(VersionService);
   readonly layout = inject(ReadingLayoutService);
@@ -485,6 +488,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
         if (slice === 0) return; // nothing has reported yet
         if (!this.sweeping() && running) return; // manual refresh: wait for finish
         this.subs.load();
+        this.savedSearchesStore.load();
         // A refresh never touches tags, so reload them once when the run
         // finishes rather than on every onboarding slice (onDone reloaded them;
         // the old slice effect did not reload them at all).
@@ -529,6 +533,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnInit(): void {
     this.subs.load();
+    this.savedSearchesStore.load();
     this.tags.load(); // the sidebar tag tree (order, empty tags) reads TagsStore
     if (!this.auth.user()) this.auth.loadMe().subscribe({ error: () => undefined });
     // Reopening the app resumes a for-you run left in flight by an earlier session.
@@ -816,6 +821,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
               : { subscription: target.id! },
         );
         this.entries.load(queryFromSelection(this.selection()));
+        this.savedSearchesStore.load();
       },
     });
   }
@@ -835,6 +841,35 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       queryParams: { q: term || null, entry: null },
       queryParamsHandling: 'merge',
     });
+  }
+
+  /** The saved search matching the current selection, or null. A search's
+   *  identity is its visible term plus its whole-word flag (both live in
+   *  Selection.term), so both must match. */
+  readonly currentSavedSearch = computed(() => {
+    const s = this.selection();
+    if (s.kind !== 'search') return null;
+    const term = visibleSearchTerm(s.term ?? '');
+    const wholeWord = isWholeWordTerm(s.term ?? '');
+    return (
+      this.savedSearchesStore
+        .savedSearches()
+        .find((saved) => saved.term === term && saved.wholeWord === wholeWord) ?? null
+    );
+  });
+
+  onSaveSearch(): void {
+    const s = this.selection();
+    if (s.kind !== 'search') return;
+    this.savedSearchesStore.createSavedSearch(
+      visibleSearchTerm(s.term ?? ''),
+      isWholeWordTerm(s.term ?? ''),
+    );
+  }
+
+  onRemoveSavedSearch(): void {
+    const saved = this.currentSavedSearch();
+    if (saved) this.savedSearchesStore.removeSavedSearch(saved.id);
   }
 
   /** The global refresh: sweep every due feed. The single reload authority
@@ -928,6 +963,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     ref.closed.subscribe((sub) => {
       if (!sub) return;
       this.subs.load();
+      this.savedSearchesStore.load();
       void this.router.navigate([], {
         relativeTo: this.route,
         queryParams: selectionQueryParams({ subscription: sub.id }),
