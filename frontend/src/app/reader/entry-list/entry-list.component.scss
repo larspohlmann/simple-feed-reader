@@ -62,6 +62,11 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
+
+  /* Only the search title (below) ever grows past one line; every other title
+     stays ellipsised and never needs the row itself to wrap. Harmless for
+     those: the row's main axis never overflows once the h2 shrinks to fit. */
+  flex-wrap: wrap;
 }
 
 /* The tag's glyph, inline before its name — the same glyph and colour the
@@ -124,6 +129,23 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   /* Not animated either, and for the same reason as the bar's padding above:
      the type size drives the line box, which drives the bar's height, which is
      the number the scroller reserves. */
+}
+
+/* The search title alone is allowed to wrap (#581 follow-up): its "Results
+   for" lead plus the quoted term and count run long enough on mobile that
+   ellipsising the term lost information a truncated feed/tag name doesn't
+   carry. Every other title keeps the single-line ellipsis above. */
+.list-header h2.search-title {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+/* Small and muted, so the term and count (the part a reader is scanning for)
+   read as the prominent half of the split title. */
+.results-prefix {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
 }
 
 /* Explains why a whole-word search's result set differs from the same text
@@ -216,6 +238,13 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   padding: 0;
 }
 
+/* The mobile short label beside the icon (Part A, #581 follow-up). Hidden on
+   the desktop button, which keeps its full `.txt`; the mobile media query
+   below swaps the two. */
+.txt-short {
+  display: none;
+}
+
 .refresh:disabled {
   cursor: default;
   color: var(--text-muted);
@@ -298,6 +327,14 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
 
   .toggle a {
     padding: var(--space-1) var(--space-2);
+  }
+
+  /* Mark all read and Refresh trade their full label for a short one — icon +
+     text stay inline, unlike the Unread/All toggle above, which is a filter,
+     not an action, and stays icon-only (#581 follow-up). */
+  .mark-all .txt-short,
+  .refresh .txt-short {
+    display: inline-flex;
   }
 }
 

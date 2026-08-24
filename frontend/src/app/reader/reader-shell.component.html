@@ -97,6 +97,8 @@
           [title]="title()"
           [titleTag]="selectedTag()"
           [titleFaviconUrl]="selectedSubscription()?.faviconUrl ?? null"
+          [searchTitlePrefix]="searchTitlePrefix()"
+          [searchTitleBody]="searchTitleBody()"
           [entries]="entries.entries()"
           [matchedWords]="entries.matchedWords()"
           [loading]="entries.loading()"
@@ -145,6 +147,8 @@
           [title]="title()"
           [titleTag]="selectedTag()"
           [titleFaviconUrl]="selectedSubscription()?.faviconUrl ?? null"
+          [searchTitlePrefix]="searchTitlePrefix()"
+          [searchTitleBody]="searchTitleBody()"
           [entries]="entries.entries()"
           [matchedWords]="entries.matchedWords()"
           [loading]="entries.loading()"
@@ -264,6 +268,7 @@
     >
       <app-icon [name]="currentSavedSearch() ? 'bookmark_remove' : 'bookmark_add'" size="sm" />
       <span class="txt">{{ savedSearchActionLabel() | transloco }}</span>
+      <span class="txt-short">{{ savedSearchActionShortLabel() | transloco }}</span>
     </button>
   }
   @if (selection().kind === 'for-you' && ai.ready()) {

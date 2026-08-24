@@ -326,17 +326,28 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     if (s.kind === 'all') return this.i18n.translate('reader.allItems');
     if (s.kind === 'tag')
       return this.selectedTag()?.name ?? this.i18n.translate('reader.tagFallback');
-    if (s.kind === 'search') return this.searchTitle(s.term ?? '');
+    if (s.kind === 'search') return `${this.searchTitlePrefix()} ${this.searchTitleBody()}`;
     return (
       this.subs.subscriptions().find((x) => x.id === s.id)?.title ??
       this.i18n.translate('reader.feedFallback')
     );
   });
 
-  /** The search heading, which unlike every other title carries a result count
-   *  and therefore its own rules about when that count may be shown. */
-  private searchTitle(rawTerm: string): string {
-    const term = visibleSearchTerm(rawTerm);
+  /** The search title's small, muted lead ("Results for"). Split out from the
+   *  body below so the entry list can render it at a smaller, muted weight
+   *  while the term and count stay prominent (#581 follow-up) — `title()`
+   *  above still concatenates the two into the one string the tab title and
+   *  the heading's accessible name need. */
+  readonly searchTitlePrefix = computed(() => {
+    this.language.lang();
+    return this.i18n.translate('reader.searchResultsPrefix');
+  });
+
+  /** The search heading's body — the quoted term and, unlike every other
+   *  title, a result count with its own rules about when it may be shown. */
+  readonly searchTitleBody = computed(() => {
+    this.language.lang();
+    const term = visibleSearchTerm(this.selection().term ?? '');
     // No count while the search is in flight: EntriesStore.load() clears
     // nextCursor synchronously but deliberately keeps the PREVIOUS list
     // rendered until the response lands (#254) — so for that whole window
@@ -353,7 +364,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     const key = this.hasMore() ? 'reader.searchResultsCountMore' : 'reader.searchResultsCount';
 
     return this.i18n.translate(key, { term, count });
-  }
+  });
 
   private readonly viewedOnOpen = new Set<number>();
 
@@ -880,6 +891,12 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   protected readonly savedSearchActionLabel = computed(() =>
     this.currentSavedSearch() ? 'reader.removeSavedSearch' : 'reader.saveSearch',
+  );
+
+  /** The mobile short label beside the save-search button's icon (#581
+   *  follow-up) — same state, a shorter word for the narrow header. */
+  protected readonly savedSearchActionShortLabel = computed(() =>
+    this.currentSavedSearch() ? 'reader.removeSavedSearchShort' : 'reader.saveSearchShort',
   );
 
   /** Save the search being looked at, or drop it when it is already saved —

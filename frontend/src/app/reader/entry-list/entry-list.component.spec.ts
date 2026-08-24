@@ -259,6 +259,34 @@ describe('EntryListComponent', () => {
     expect(el.querySelectorAll('app-entry-row').length).toBe(2);
   });
 
+  // The search title alone is split into a small muted lead and a prominent
+  // body (#581 follow-up) — the shell assembles both from the same i18n keys
+  // and count logic that used to fold into one `title` string, so this list
+  // only renders the split; every other selection keeps the plain title.
+  describe('the split search title (#581 follow-up)', () => {
+    it('renders the muted prefix and the prominent body for a search selection', () => {
+      const el = mount({
+        selection: { kind: 'search', id: null, unread: false, term: 'punk' },
+        searchTitlePrefix: 'Results for',
+        searchTitleBody: '"punk" — 2',
+      }).nativeElement as HTMLElement;
+
+      const heading = el.querySelector('.list-header h2')!;
+      const prefix = heading.querySelector('.results-prefix');
+      const body = heading.querySelector('.results-body');
+      expect(prefix?.textContent).toBe('Results for');
+      expect(body?.textContent).toBe('"punk" — 2');
+    });
+
+    it('renders the plain title, with no split spans, for a non-search selection', () => {
+      const el = mount().nativeElement as HTMLElement;
+      const heading = el.querySelector('.list-header h2')!;
+      expect(heading.querySelector('.results-prefix')).toBeNull();
+      expect(heading.querySelector('.results-body')).toBeNull();
+      expect(heading.textContent).toContain('All items');
+    });
+  });
+
   // A tag's heading carries the same glyph and colour its sidebar row does, so
   // the list a reader lands in is recognisably the tag they clicked.
   describe('the tag heading', () => {
@@ -632,6 +660,15 @@ describe('EntryListComponent', () => {
   it('hides mark-all-read when not applicable', () => {
     const el = mount({ canMarkAllRead: false }).nativeElement as HTMLElement;
     expect(el.querySelector('.mark-all')).toBeNull();
+  });
+
+  // The mobile short label sits beside the full one at every width — the
+  // media query below picks which shows (#581 follow-up); jsdom renders no
+  // layout, so this only proves the short span is in the DOM at all.
+  it('renders a mobile short-label span beside the full label on mark-all and refresh', () => {
+    const el = mount({ hasMore: false }).nativeElement as HTMLElement;
+    expect(el.querySelector('.mark-all .txt-short')?.textContent).toBe('Mark read');
+    expect(el.querySelector('.refresh .txt-short')?.textContent).toBe('Refresh');
   });
 
   it('emits refresh when the scoped refresh button is clicked', () => {

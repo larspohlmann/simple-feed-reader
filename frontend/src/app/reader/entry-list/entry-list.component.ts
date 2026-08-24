@@ -130,6 +130,14 @@ type ListBlock = MagazineBlock | RunHeaderBlock;
 })
 export class EntryListComponent implements OnDestroy {
   readonly title = input.required<string>();
+  /** The search title's small, muted "Results for" lead and its prominent
+   *  quoted-term-plus-count body (#581 follow-up). Only meaningful for a
+   *  search selection; the shell assembles both from the same i18n keys and
+   *  count logic that `title()` used to fold into one string, so the split
+   *  can never drift from `title()`'s own full text. Empty for every other
+   *  selection, which renders `title()` unsplit instead (see the template). */
+  readonly searchTitlePrefix = input<string>('');
+  readonly searchTitleBody = input<string>('');
   /** The tag the heading names, when the list is scoped to one. It carries the
    *  glyph and the colour the sidebar row already shows, so the same tag reads
    *  the same in both places; null for every other selection. */

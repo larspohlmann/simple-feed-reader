@@ -7,7 +7,7 @@
          the scroller reserves this bar's height, so a taller header moves the
          rows (#419). -->
     <div class="title-row">
-      <h2 #listTitle tabindex="-1">
+      <h2 #listTitle tabindex="-1" [class.search-title]="selection().kind === 'search'">
         @if (titleTag(); as tag) {
           <!-- A named step rather than `text`, so the glyph carries the weight of
                the title beside it instead of trailing it. Stepping down when the
@@ -30,7 +30,16 @@
                same reason: a fixed px would tower over the 13px heading (#411). -->
           <app-icon [name]="icon" [size]="collapsed() ? 'xs' : 'md'" />
         }
-        <span>{{ title() }}</span>
+        @if (selection().kind === 'search') {
+          <!-- Split so the "Results for" lead can sit small and muted while
+               the quoted term and count stay prominent (#581 follow-up). The
+               count logic lives once in the shell, which passes the already-
+               assembled body string down; this list only renders the split. -->
+          <span class="results-prefix">{{ searchTitlePrefix() }}</span>
+          <span class="results-body">{{ searchTitleBody() }}</span>
+        } @else {
+          <span>{{ title() }}</span>
+        }
         @if (showWholeWordBadge()) {
           <!-- Carries the mode into the heading's own accessible name, so a
                screen-reader user hears it whichever way they reached the
@@ -101,6 +110,7 @@
       >
         <app-icon name="done_all" size="sm" />
         <span class="txt">{{ 'reader.markAllRead' | transloco }}</span>
+        <span class="txt-short">{{ 'reader.markAllReadShort' | transloco }}</span>
       </button>
     }
     @if (canRefresh()) {
@@ -115,6 +125,7 @@
       >
         <app-icon name="refresh" size="sm" />
         <span class="txt">{{ 'reader.refresh' | transloco }}</span>
+        <span class="txt-short">{{ 'reader.refresh' | transloco }}</span>
       </button>
     }
     @if (headerActions(); as actions) {

@@ -193,13 +193,26 @@ app-reader-header.hidden {
   font-size: var(--fs-sm);
 }
 
+/* The mobile short label beside the icon (Part A, #581 follow-up). Hidden on
+   the desktop button, which keeps its full `.txt`; the mobile media query
+   below swaps the two. */
+.save-search .txt-short {
+  display: none;
+}
+
 /* Below the small breakpoint the buttons drop their labels and stand on the
    icon alone — the same rule the header's other tools follow, with the
-   aria-label keeping them named. */
+   aria-label keeping them named. The save-search button keeps a short label
+   inline beside its icon instead (#581 follow-up); it is still an action, not
+   the read-only toggle beside it. */
 @media (width <= bp.$bp-sm) {
   .for-you-run .label,
   .save-search .txt {
     display: none;
+  }
+
+  .save-search .txt-short {
+    display: inline-flex;
   }
 }
 

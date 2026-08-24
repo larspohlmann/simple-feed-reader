@@ -1297,6 +1297,8 @@ describe('ReaderShellComponent', () => {
       expect(f.componentInstance.searching()).toBe(true);
 
       expect(f.componentInstance.title()).toBe('Results for "angular"');
+      expect(f.componentInstance.searchTitlePrefix()).toBe('Results for');
+      expect(f.componentInstance.searchTitleBody()).toBe('"angular"');
 
       ctrl
         .expectOne((r) => r.url === 'https://api.test/api/entries/search')
@@ -1314,6 +1316,8 @@ describe('ReaderShellComponent', () => {
     f.detectChanges();
 
     expect(f.componentInstance.title()).toBe('Results for "angular" — 2');
+    expect(f.componentInstance.searchTitlePrefix()).toBe('Results for');
+    expect(f.componentInstance.searchTitleBody()).toBe('"angular" — 2');
   });
 
   it('titles a settled search with zero results as the exact count, not the loading form', () => {
@@ -1327,6 +1331,7 @@ describe('ReaderShellComponent', () => {
 
     expect(f.componentInstance.searching()).toBe(false);
     expect(f.componentInstance.title()).toBe('Results for "angular" — 0');
+    expect(f.componentInstance.searchTitleBody()).toBe('"angular" — 0');
   });
 
   it('titles a search selection with a trailing + when another page exists', () => {
@@ -1339,6 +1344,7 @@ describe('ReaderShellComponent', () => {
     f.detectChanges();
 
     expect(f.componentInstance.title()).toBe('Results for "angular" — 1+');
+    expect(f.componentInstance.searchTitleBody()).toBe('"angular" — 1+');
   });
 
   it('reloads the for-you list when a run completes while it is open', () => {
@@ -2274,6 +2280,22 @@ describe('ReaderShellComponent', () => {
       const f = bootWithSearchSelected([savedClimate], 'climate\u00a0');
 
       expect(f.componentInstance.currentSavedSearch()).toEqual(savedClimate);
+    });
+
+    // The mobile short label sits beside the full one at every width \u2014 the
+    // stylesheet's media query picks which shows (#581 follow-up); jsdom
+    // renders no layout, so this only proves the short span is in the DOM and
+    // flips with the same saved/unsaved state the full label already does.
+    it('renders "Save" as the mobile short label when the search is not yet saved', () => {
+      const f = bootWithSearchSelected([]);
+      const button = (f.nativeElement as HTMLElement).querySelector('.save-search')!;
+      expect(button.querySelector('.txt-short')?.textContent).toBe('Save');
+    });
+
+    it('renders "Remove" as the mobile short label when the search is already saved', () => {
+      const f = bootWithSearchSelected([savedClimate]);
+      const button = (f.nativeElement as HTMLElement).querySelector('.save-search')!;
+      expect(button.querySelector('.txt-short')?.textContent).toBe('Remove');
     });
   });
 });
