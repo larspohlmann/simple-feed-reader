@@ -8,30 +8,11 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Tests\Support\UserFactory;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Tests\Support\ApiTestCase;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class EntrySearchMarkReadTest extends WebTestCase
+final class EntrySearchMarkReadTest extends ApiTestCase
 {
-    private function em(): EntityManagerInterface
-    {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-
-        return $em;
-    }
-
-    private function userFactory(): UserFactory
-    {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        return new UserFactory($this->em(), $hasher);
-    }
-
     /** @return array<string, string> */
     private function authHeader(User $user): array
     {
@@ -80,7 +61,7 @@ final class EntrySearchMarkReadTest extends WebTestCase
     public function testTooShortQueryIsRejected(): void
     {
         $client = self::createClient();
-        $user = $this->userFactory()->create('short-query@example.com');
+        $user = $this->factory()->create('short-query@example.com');
         $headers = $this->authHeader($user);
 
         $client->request(
@@ -90,8 +71,7 @@ final class EntrySearchMarkReadTest extends WebTestCase
             content: json_encode(['q' => 'ab', 'until' => '2100-01-01T00:00:00+00:00'], \JSON_THROW_ON_ERROR),
         );
         self::assertResponseStatusCodeSame(422);
-        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($body);
+        $body = $this->payload($client);
         self::assertSame('validation_error', $body['type']);
     }
 
@@ -103,7 +83,7 @@ final class EntrySearchMarkReadTest extends WebTestCase
         // bounds; a redundant Length constraint on this DTO used to reject
         // it at 101 (#581 off-by-one).
         $client = self::createClient();
-        $user = $this->userFactory()->create('hundred-char-term@example.com');
+        $user = $this->factory()->create('hundred-char-term@example.com');
         $headers = $this->authHeader($user);
 
         $client->request(
@@ -121,7 +101,7 @@ final class EntrySearchMarkReadTest extends WebTestCase
     public function testMarksAllMatchingEntriesRead(): void
     {
         $client = self::createClient();
-        $user = $this->userFactory()->create('search-mark-read@example.com');
+        $user = $this->factory()->create('search-mark-read@example.com');
         $this->seedSubscribedMatchingEntry($user);
         $headers = $this->authHeader($user);
 
@@ -135,8 +115,7 @@ final class EntrySearchMarkReadTest extends WebTestCase
 
         $client->request('GET', '/api/entries/search?q=klima', server: $headers);
         self::assertResponseIsSuccessful();
-        $page = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($page);
+        $page = $this->payload($client);
         self::assertIsArray($page['entries']);
         self::assertCount(1, $page['entries']);
         self::assertIsArray($page['entries'][0]);

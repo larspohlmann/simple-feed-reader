@@ -268,9 +268,16 @@ export function queryFromSelection(s: Selection): EntryQuery {
   }
 }
 
-export function markReadTarget(
-  s: Selection,
-): { scope: MarkReadScope; id?: number; term?: string } | null {
+/** What "Mark all read" applies to for a selection, or null where the action
+ *  does not apply. A discriminated union rather than one bag with optional
+ *  fields: the id and the term never coexist, and a bag would make every
+ *  consumer assert its way back to the case it already switched on. */
+export type MarkReadTarget =
+  | { scope: Extract<MarkReadScope, 'all'> }
+  | { scope: Exclude<MarkReadScope, 'all'>; id: number }
+  | { scope: 'search'; term: string };
+
+export function markReadTarget(s: Selection): MarkReadTarget | null {
   switch (s.kind) {
     case 'all':
       return { scope: 'all' };

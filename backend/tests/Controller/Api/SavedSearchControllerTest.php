@@ -9,30 +9,11 @@ use App\Entity\Feed;
 use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Tests\Support\UserFactory;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Tests\Support\ApiTestCase;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class SavedSearchControllerTest extends WebTestCase
+final class SavedSearchControllerTest extends ApiTestCase
 {
-    private function em(): EntityManagerInterface
-    {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-
-        return $em;
-    }
-
-    private function userFactory(): UserFactory
-    {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        return new UserFactory($this->em(), $hasher);
-    }
-
     /** @return array<string, string> */
     private function authHeaderFor(User $user): array
     {
@@ -55,7 +36,7 @@ final class SavedSearchControllerTest extends WebTestCase
     public function testCreateListWithUnreadCountAndDelete(): void
     {
         $client = self::createClient();
-        $user = $this->userFactory()->create('saver@example.com');
+        $user = $this->factory()->create('saver@example.com');
         $headers = $this->authHeaderFor($user);
 
         // Seed a subscribed feed with one unread matching entry.
@@ -83,8 +64,7 @@ final class SavedSearchControllerTest extends WebTestCase
             content: json_encode(['term' => 'punk', 'wholeWord' => true], \JSON_THROW_ON_ERROR),
         );
         self::assertResponseStatusCodeSame(201);
-        $created = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($created);
+        $created = $this->payload($client);
         self::assertIsArray($created['savedSearch']);
         self::assertSame('punk', $created['savedSearch']['term']);
         self::assertTrue($created['savedSearch']['wholeWord']);
@@ -99,16 +79,14 @@ final class SavedSearchControllerTest extends WebTestCase
             content: json_encode(['term' => 'punk', 'wholeWord' => true], \JSON_THROW_ON_ERROR),
         );
         self::assertResponseStatusCodeSame(200);
-        $again = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($again);
+        $again = $this->payload($client);
         self::assertIsArray($again['savedSearch']);
         self::assertSame($savedId, $again['savedSearch']['id']);
 
         // List carries the live unread-match count (whole-word "punk" matches the one unread entry).
         $client->request('GET', '/api/saved-searches', server: $headers);
         self::assertResponseIsSuccessful();
-        $list = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($list);
+        $list = $this->payload($client);
         self::assertIsArray($list['savedSearches']);
         self::assertCount(1, $list['savedSearches']);
         self::assertIsArray($list['savedSearches'][0]);
@@ -121,8 +99,7 @@ final class SavedSearchControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(204);
 
         $client->request('GET', '/api/saved-searches', server: $headers);
-        $empty = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($empty);
+        $empty = $this->payload($client);
         self::assertIsArray($empty['savedSearches']);
         self::assertCount(0, $empty['savedSearches']);
     }
@@ -130,7 +107,7 @@ final class SavedSearchControllerTest extends WebTestCase
     public function testValidationRejectsShortTerm(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeaderFor($this->userFactory()->create('shorty@example.com'));
+        $headers = $this->authHeaderFor($this->factory()->create('shorty@example.com'));
         $client->request(
             'POST',
             '/api/saved-searches',
@@ -143,8 +120,7 @@ final class SavedSearchControllerTest extends WebTestCase
         // SavedSearchMatchCounter's SearchTerms::fromInput() would apply
         // downstream (property path "q") — that only fires once the entity
         // is already persisted, which a request this short must never reach.
-        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($body);
+        $body = $this->payload($client);
         self::assertIsArray($body['errors']);
         self::assertArrayHasKey('term', $body['errors']);
     }
@@ -152,7 +128,7 @@ final class SavedSearchControllerTest extends WebTestCase
     public function testThreeCharTermIsAcceptedAtTheLowerBound(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeaderFor($this->userFactory()->create('lower-bound@example.com'));
+        $headers = $this->authHeaderFor($this->factory()->create('lower-bound@example.com'));
         $client->request(
             'POST',
             '/api/saved-searches',
@@ -165,7 +141,7 @@ final class SavedSearchControllerTest extends WebTestCase
     public function testHundredCharTermIsAcceptedAndHundredOneIsRejected(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeaderFor($this->userFactory()->create('upper-bound@example.com'));
+        $headers = $this->authHeaderFor($this->factory()->create('upper-bound@example.com'));
 
         $client->request(
             'POST',
@@ -185,8 +161,7 @@ final class SavedSearchControllerTest extends WebTestCase
         // Same reasoning as the short-term case: the rejection must be the
         // DTO's own Length constraint ("term"), not the redundant downstream
         // check in SavedSearchMatchCounter ("q") that only runs after persist.
-        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($body);
+        $body = $this->payload($client);
         self::assertIsArray($body['errors']);
         self::assertArrayHasKey('term', $body['errors']);
     }
@@ -194,7 +169,7 @@ final class SavedSearchControllerTest extends WebTestCase
     public function testWholeWordDefaultsToFalseWhenOmitted(): void
     {
         $client = self::createClient();
-        $headers = $this->authHeaderFor($this->userFactory()->create('default-wholeword@example.com'));
+        $headers = $this->authHeaderFor($this->factory()->create('default-wholeword@example.com'));
 
         $client->request(
             'POST',
@@ -203,8 +178,7 @@ final class SavedSearchControllerTest extends WebTestCase
             content: json_encode(['term' => 'defaulted'], \JSON_THROW_ON_ERROR),
         );
         self::assertResponseStatusCodeSame(201);
-        $created = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($created);
+        $created = $this->payload($client);
         self::assertIsArray($created['savedSearch']);
         self::assertFalse($created['savedSearch']['wholeWord']);
     }
@@ -212,7 +186,7 @@ final class SavedSearchControllerTest extends WebTestCase
     public function testWholeWordAndSubstringCountsAreIndependentAcrossTheList(): void
     {
         $client = self::createClient();
-        $user = $this->userFactory()->create('counts-independent@example.com');
+        $user = $this->factory()->create('counts-independent@example.com');
         $headers = $this->authHeaderFor($user);
 
         $em = $this->em();
@@ -247,8 +221,7 @@ final class SavedSearchControllerTest extends WebTestCase
 
         $client->request('GET', '/api/saved-searches', server: $headers);
         self::assertResponseIsSuccessful();
-        $list = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($list);
+        $list = $this->payload($client);
         self::assertIsArray($list['savedSearches']);
         self::assertCount(2, $list['savedSearches']);
 
@@ -270,12 +243,12 @@ final class SavedSearchControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $em = $this->em();
-        $owner = $this->userFactory()->create('owner3@example.com');
+        $owner = $this->factory()->create('owner3@example.com');
         $saved = new SavedSearch($owner, 'private', false);
         $em->persist($saved);
         $em->flush();
 
-        $headers = $this->authHeaderFor($this->userFactory()->create('intruder3@example.com'));
+        $headers = $this->authHeaderFor($this->factory()->create('intruder3@example.com'));
         $client->request('DELETE', '/api/saved-searches/' . $saved->getId(), server: $headers);
         self::assertResponseStatusCodeSame(404); // not 403 — do not reveal existence
     }

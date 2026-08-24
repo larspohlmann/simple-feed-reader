@@ -96,7 +96,7 @@
   }
 
   @if (savedSearches().length) {
-    <div class="savedsearches">
+    <div>
       <div class="tag savedsearch-head">
         <button
           class="nav grow savedsearch-toggle"
@@ -105,7 +105,7 @@
           (click)="toggleSavedSearches()"
         >
           <span class="lead"><app-icon name="saved_search" size="sm" /></span>
-          <span class="savedsearch-title">{{ 'reader.savedSearches' | transloco }}</span>
+          <span>{{ 'reader.savedSearches' | transloco }}</span>
           @if (savedSearchesUnread() > 0) {
             <span class="count">{{ savedSearchesUnread() }}</span>
           }
@@ -123,15 +123,12 @@
         </button>
       </div>
       @if (savedSearchesExpanded()) {
-        @for (saved of savedSearches(); track saved.id) {
+        @for (saved of savedSearchLinks(); track saved.id) {
           <a
             class="nav savedsearch-item"
-            [class.active]="
-              selection().kind === 'search' &&
-              selection().term === savedSearchTerm(saved.term, saved.wholeWord)
-            "
+            [class.active]="saved.id === activeSavedSearchId()"
             [routerLink]="[]"
-            [queryParams]="savedSearchParams(saved.term, saved.wholeWord)"
+            [queryParams]="saved.params"
             queryParamsHandling="merge"
           >
             <app-icon name="search" size="sm" />

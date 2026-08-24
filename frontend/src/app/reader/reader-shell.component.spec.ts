@@ -25,7 +25,7 @@ import { OnboardingSkip } from '../discover/onboarding-skip';
 import { ReaderShellComponent } from './reader-shell.component';
 import { EntryListComponent } from './entry-list/entry-list.component';
 import { ListScrollMemory } from './list-scroll-memory';
-import { EntryDto } from './models';
+import { EntryDto, SavedSearchDto } from './models';
 import { SubscriptionsStore } from './subscriptions.store';
 import { Selection } from './query';
 import { ReaderHeaderComponent } from './header/reader-header.component';
@@ -2191,6 +2191,72 @@ describe('ReaderShellComponent', () => {
       f.componentInstance.onMarkAllRead();
 
       ctrl.expectNone('https://api.test/api/entries/search/mark-read');
+    });
+  });
+
+  // The Save/Remove control is a shell command rendered through the list's
+  // `headerActions` outlet, so the list emits nothing and the shell owns both
+  // the decision and the button. One toggle, not two one-way actions.
+  describe('saving the current search (#581)', () => {
+    // boot() has already drained the shell's own saved-searches load, so seed
+    // the store directly — what the button reads is the store, not the request.
+    function bootWithSearchSelected(saved: SavedSearchDto[], q = 'climate ') {
+      const f = boot();
+      f.componentInstance.savedSearchesStore.savedSearches.set(saved);
+      qp.next(convertToParamMap({ q }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [], nextCursor: null });
+      f.detectChanges();
+      return f;
+    }
+
+    const savedClimate: SavedSearchDto = {
+      id: 4,
+      term: 'climate',
+      wholeWord: true,
+      position: 0,
+      unreadCount: 2,
+    };
+
+    it('saves the decoded term and whole-word flag, and adopts the response without reloading the list', () => {
+      const f = bootWithSearchSelected([]);
+
+      f.componentInstance.onToggleSavedSearch();
+
+      const req = ctrl.expectOne('https://api.test/api/saved-searches');
+      expect(req.request.method).toBe('POST');
+      // The trailing space is the whole-word signal; it is decoded to the pair
+      // the backend stores, never sent verbatim as the term.
+      expect(req.request.body).toEqual({ term: 'climate', wholeWord: true });
+      req.flush({ savedSearch: savedClimate });
+
+      // The POST already answered with the row and its count — no re-fetch.
+      ctrl.expectNone('https://api.test/api/saved-searches');
+      expect(f.componentInstance.savedSearchesStore.savedSearches()).toEqual([savedClimate]);
+    });
+
+    it('removes the saved search when the current one is already saved, and drops it locally', () => {
+      const f = bootWithSearchSelected([savedClimate]);
+      expect(f.componentInstance.currentSavedSearch()).toEqual(savedClimate);
+
+      f.componentInstance.onToggleSavedSearch();
+
+      const req = ctrl.expectOne('https://api.test/api/saved-searches/4');
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null);
+
+      ctrl.expectNone('https://api.test/api/saved-searches');
+      expect(f.componentInstance.savedSearchesStore.savedSearches()).toEqual([]);
+    });
+
+    it('matches a saved search by its decoded pair, not by the raw term string', () => {
+      // A no-break space is a whole-word signal to the decoder but never equals
+      // a plain trailing space, which is what a string comparison would need.
+      const f = bootWithSearchSelected([savedClimate], 'climate\u00a0');
+
+      expect(f.componentInstance.currentSavedSearch()).toEqual(savedClimate);
     });
   });
 });

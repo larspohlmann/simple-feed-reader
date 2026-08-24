@@ -34,6 +34,7 @@ import {
   RefreshScope,
   Selection,
   isWholeWordTerm,
+  MarkReadTarget,
   markReadTarget,
   queryFromSelection,
   sameSelection,
@@ -43,14 +44,7 @@ import {
 } from './query';
 import { ListScrollReset } from './list-scroll-reset';
 import { entryParam } from './slug';
-import {
-  EntryDto,
-  EntryStatePatch,
-  MarkReadScope,
-  SubscriptionDto,
-  SubscriptionTagDto,
-  TagDto,
-} from './models';
+import { EntryDto, EntryStatePatch, SubscriptionDto, SubscriptionTagDto, TagDto } from './models';
 import { headerHiddenAtRest, nextHeaderHidden } from './header-scroll';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
@@ -809,10 +803,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  private markReadNow(target: { scope: MarkReadScope; id?: number; term?: string }): void {
+  private markReadNow(target: MarkReadTarget): void {
     const until = this.entries.loadedAt() || new Date().toISOString();
     if (target.scope === 'search') {
-      this.api.markSearchRead(target.term ?? '', until).subscribe({
+      this.api.markSearchRead(target.term, until).subscribe({
         next: () => {
           this.entries.load(queryFromSelection(this.selection()));
           this.subs.load();
@@ -821,19 +815,21 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       });
       return;
     }
-    this.api.markRead(target.scope, until, target.id).subscribe({
-      next: () => {
-        this.subs.zeroUnread(
-          target.scope === 'all'
-            ? 'all'
-            : target.scope === 'tag'
-              ? { tag: target.id! }
-              : { subscription: target.id! },
-        );
-        this.entries.load(queryFromSelection(this.selection()));
-        this.savedSearchesStore.load();
-      },
-    });
+    this.api
+      .markRead(target.scope, until, target.scope === 'all' ? undefined : target.id)
+      .subscribe({
+        next: () => {
+          this.subs.zeroUnread(
+            target.scope === 'all'
+              ? 'all'
+              : target.scope === 'tag'
+                ? { tag: target.id }
+                : { subscription: target.id },
+          );
+          this.entries.load(queryFromSelection(this.selection()));
+          this.savedSearchesStore.load();
+        },
+      });
   }
 
   /** A term layers a search over the current list; an empty term drops only the
@@ -853,33 +849,50 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  /** The saved search matching the current selection, or null. A search's
-   *  identity is its visible term plus its whole-word flag (both live in
-   *  Selection.term), so both must match. */
-  readonly currentSavedSearch = computed(() => {
+  /** The current search decoded into the pair a saved search stores: the
+   *  visible term and the whole-word flag. Null outside a search. The one
+   *  place that reads the trailing-space signal off a live selection — every
+   *  comparison downstream is against the decoded pair, never against a
+   *  re-encoded string (#408). */
+  private readonly searchedTermAndMode = computed(() => {
     const s = this.selection();
     if (s.kind !== 'search') return null;
-    const term = visibleSearchTerm(s.term ?? '');
-    const wholeWord = isWholeWordTerm(s.term ?? '');
+    const raw = s.term ?? '';
+
+    return { term: visibleSearchTerm(raw), wholeWord: isWholeWordTerm(raw) };
+  });
+
+  /** The saved search matching the current selection, or null. A search's
+   *  identity is its visible term plus its whole-word flag, so both must match. */
+  readonly currentSavedSearch = computed(() => {
+    const current = this.searchedTermAndMode();
+    if (current === null) return null;
+
     return (
       this.savedSearchesStore
         .savedSearches()
-        .find((saved) => saved.term === term && saved.wholeWord === wholeWord) ?? null
+        .find((saved) => saved.term === current.term && saved.wholeWord === current.wholeWord) ??
+      null
     );
   });
 
-  onSaveSearch(): void {
-    const s = this.selection();
-    if (s.kind !== 'search') return;
-    this.savedSearchesStore.createSavedSearch(
-      visibleSearchTerm(s.term ?? ''),
-      isWholeWordTerm(s.term ?? ''),
-    );
-  }
+  protected readonly savedSearchActionLabel = computed(() =>
+    this.currentSavedSearch() ? 'reader.removeSavedSearch' : 'reader.saveSearch',
+  );
 
-  onRemoveSavedSearch(): void {
+  /** Save the search being looked at, or drop it when it is already saved —
+   *  one command, because the header offers one button whose label and icon
+   *  flip on the same state this reads. */
+  onToggleSavedSearch(): void {
     const saved = this.currentSavedSearch();
-    if (saved) this.savedSearchesStore.removeSavedSearch(saved.id);
+    if (saved) {
+      this.savedSearchesStore.removeSavedSearch(saved.id);
+
+      return;
+    }
+
+    const current = this.searchedTermAndMode();
+    if (current) this.savedSearchesStore.createSavedSearch(current.term, current.wholeWord);
   }
 
   /** The global refresh: sweep every due feed. The single reload authority

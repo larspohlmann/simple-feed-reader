@@ -23,21 +23,44 @@ describe('SavedSearchesStore', () => {
     expect(store.savedSearches().map((s) => s.id)).toEqual([2, 1]);
   });
 
-  it('createSavedSearch() posts then reloads', () => {
+  it('createSavedSearch() adopts the posted row without a reload', () => {
     const createSavedSearch = jest.fn(() => of({ savedSearch: rows[0] }));
     const savedSearches = jest.fn(() => of({ savedSearches: rows }));
     const store = setup({ createSavedSearch, savedSearches });
+
     store.createSavedSearch('rust lang', true);
+
     expect(createSavedSearch).toHaveBeenCalledWith({ term: 'rust lang', wholeWord: true });
-    expect(savedSearches).toHaveBeenCalled();
+    // The POST already answered with the row AND its unread count; reloading
+    // would cost one LIKE scan per saved search to learn nothing new.
+    expect(savedSearches).not.toHaveBeenCalled();
+    expect(store.savedSearches()).toEqual([rows[0]]);
   });
 
-  it('removeSavedSearch() deletes then reloads', () => {
+  it('createSavedSearch() replaces rather than duplicates a term already saved', () => {
+    const createSavedSearch = jest.fn(() => of({ savedSearch: { ...rows[1], unreadCount: 9 } }));
+    const store = setup({ createSavedSearch, savedSearches: () => of({ savedSearches: rows }) });
+    store.load();
+
+    // Saving a saved term is idempotent server-side (200, the existing row).
+    store.createSavedSearch('climate', false);
+
+    expect(store.savedSearches().map((s) => s.id)).toEqual([1, 2]);
+    expect(store.savedSearches()[0].unreadCount).toBe(9);
+  });
+
+  it('removeSavedSearch() drops the row locally without a reload', () => {
     const deleteSavedSearch = jest.fn(() => of(undefined));
-    const savedSearches = jest.fn(() => of({ savedSearches: [] }));
+    const savedSearches = jest.fn(() => of({ savedSearches: rows }));
     const store = setup({ deleteSavedSearch, savedSearches });
+    store.load();
+    savedSearches.mockClear();
+
     store.removeSavedSearch(2);
+
     expect(deleteSavedSearch).toHaveBeenCalledWith(2);
-    expect(savedSearches).toHaveBeenCalled();
+    // Deleting one saved search cannot change another one's count.
+    expect(savedSearches).not.toHaveBeenCalled();
+    expect(store.savedSearches().map((s) => s.id)).toEqual([1]);
   });
 });

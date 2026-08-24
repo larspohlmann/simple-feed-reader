@@ -105,10 +105,7 @@ class EntryListRepository extends ServiceEntityRepository
      */
     public function countUnreadMatchesForUser(EntrySearchQuery $query): int
     {
-        $qb = $this->rowQueryBuilder($query->userId)
-            ->select('COUNT(DISTINCT e.id)');
-        $this->applyTerms($qb, $query->terms);
-        $qb->andWhere(UnreadDql::predicate())->setParameter('readFalse', false, Types::BOOLEAN);
+        $qb = $this->unreadMatchQueryBuilder($query)->select('COUNT(DISTINCT e.id)');
 
         return (int) $qb->getQuery()->getSingleScalarResult();
     }
@@ -123,12 +120,11 @@ class EntryListRepository extends ServiceEntityRepository
      */
     public function unreadMatchingEntryIdsForUser(EntrySearchQuery $query, \DateTimeImmutable $until): array
     {
-        $qb = $this->rowQueryBuilder($query->userId)
+        $qb = $this->unreadMatchQueryBuilder($query)
             ->select('e.id')
-            ->distinct();
-        $this->applyTerms($qb, $query->terms);
-        $qb->andWhere(UnreadDql::predicate())->setParameter('readFalse', false, Types::BOOLEAN);
-        $qb->andWhere('e.effectiveDate <= :until')->setParameter('until', $until);
+            ->distinct()
+            ->andWhere('e.effectiveDate <= :until')
+            ->setParameter('until', $until);
 
         /** @var list<array{id: int}> $rows */
         $rows = $qb->getQuery()->getScalarResult();
@@ -232,6 +228,26 @@ class EntryListRepository extends ServiceEntityRepository
      * subscription, feed, and optional per-entry state. listForUser adds
      * ordering/paging/filters; oneRowForUser adds an id filter.
      */
+    /**
+     * The unread entries a search matches, left for the caller to project.
+     * Deliberately not rowQueryBuilder: both callers reduce to a scalar, and
+     * that builder joins `feed` to select a title and a url nobody reads here
+     * — a wasted join on a predicate that already reads every subscribed entry.
+     * Carries only the subscription gate and the per-user state row the
+     * "unread" predicate needs.
+     */
+    private function unreadMatchQueryBuilder(EntrySearchQuery $query): QueryBuilder
+    {
+        $qb = $this->createQueryBuilder('e')
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
+            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
+            ->setParameter('user', $query->userId);
+
+        $this->applyTerms($qb, $query->terms);
+
+        return $qb->andWhere(UnreadDql::predicate())->setParameter('readFalse', false, Types::BOOLEAN);
+    }
+
     private function rowQueryBuilder(int $userId): QueryBuilder
     {
         return $this->createQueryBuilder('e')

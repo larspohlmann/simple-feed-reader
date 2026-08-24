@@ -11,7 +11,12 @@ use App\Repository\EntryStateRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * The single place an EntryState row comes into existence.
+ * The single place a lazily created EntryState row comes into existence.
+ *
+ * The exceptions are the bulk writers — RestoreEntryLoader and
+ * SearchMarkReadService — which build rows that are read from birth, so the
+ * watermark hazard below cannot apply to them. Any row whose isRead is NOT
+ * decided up front belongs here.
  *
  * Read state is effective, not stored: an entry with no row is read when the
  * subscription's mark-all-read watermark covers it (see

@@ -199,7 +199,12 @@ export interface EntryQuery {
   q?: string;
 }
 
-export type MarkReadScope = 'all' | 'feed' | 'tag' | 'search';
+/** The scopes `POST /api/entries/mark-read` accepts, each identified by an
+ *  optional id. A search is deliberately NOT one of them: it is identified by
+ *  a term, travels its own endpoint, and widening this union would let
+ *  `ReaderApi.markRead('search', …)` type-check against a request the backend
+ *  rejects. `MarkReadTarget` in query.ts is where the two meet. */
+export type MarkReadScope = 'all' | 'feed' | 'tag';
 
 export interface EntryStatePatch {
   isRead?: boolean;

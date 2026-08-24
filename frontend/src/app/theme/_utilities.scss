@@ -46,3 +46,21 @@
   display: block;
   padding: var(--panel-inset-y) var(--panel-inset-x);
 }
+
+/* The "whole words only" marker on a search: the results-header badge carries
+   the full phrase, the sidebar row a compact "W" glyph, and both are the same
+   pill. Two components rendered it, byte for byte, from the same six tokens
+   (#581); a palette or radius change then had to be made twice, and Stylelint
+   cannot see the drift. The glyph is the caller's business, the pill is this
+   class's. Layout that belongs to the surrounding row — the sidebar's
+   `flex: none`, the collapsed header's `display: none` — stays with that
+   component. */
+.whole-word-badge {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--fs-xs, var(--fs-sm));
+  line-height: var(--lh-tight);
+  white-space: nowrap;
+}

@@ -49,21 +49,20 @@ final readonly class SavedSearchController
         #[MapRequestPayload] CreateSavedSearchRequest $request,
     ): JsonResponse {
         $userId = (int) $user->getId();
-        $existing = $this->savedSearches->findOneForUserByTerm($userId, $request->term, $request->wholeWord);
-        if ($existing !== null) {
-            return new JsonResponse(
-                ['savedSearch' => SavedSearchJson::one($existing, $this->counter->countFor($existing, $userId))],
-                Response::HTTP_OK,
-            );
-        }
+        // Saving a term already saved is idempotent, and answers 200 with the
+        // row that was there rather than 201 with a second one.
+        $savedSearch = $this->savedSearches->findOneForUserByTerm($userId, $request->term, $request->wholeWord);
+        $status = $savedSearch === null ? Response::HTTP_CREATED : Response::HTTP_OK;
 
-        $savedSearch = new SavedSearch($user, $request->term, $request->wholeWord);
-        $this->em->persist($savedSearch);
-        $this->em->flush();
+        if ($savedSearch === null) {
+            $savedSearch = new SavedSearch($user, $request->term, $request->wholeWord);
+            $this->em->persist($savedSearch);
+            $this->em->flush();
+        }
 
         return new JsonResponse(
             ['savedSearch' => SavedSearchJson::one($savedSearch, $this->counter->countFor($savedSearch, $userId))],
-            Response::HTTP_CREATED,
+            $status,
         );
     }
 

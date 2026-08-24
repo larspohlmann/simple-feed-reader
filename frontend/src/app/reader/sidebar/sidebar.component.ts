@@ -29,7 +29,7 @@ import { ViewControlsComponent } from '../view-controls/view-controls.component'
 import { SearchFieldComponent } from '../search-field/search-field.component';
 import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
 import { TagNode } from '../subscriptions.store';
-import { Selection, savedSearchParams, savedSearchTerm, selectionQueryParams } from '../query';
+import { Selection, savedSearchParams, selectionQueryParams } from '../query';
 import { SavedSearchDto, SubscriptionDto, TagDto } from '../models';
 import { RefreshService } from '../refresh.service';
 import { RecommendationsService } from '../recommendations.service';
@@ -78,8 +78,6 @@ export class SidebarComponent {
   );
 
   protected readonly selectionQueryParams = selectionQueryParams;
-  protected readonly savedSearchParams = savedSearchParams;
-  protected readonly savedSearchTerm = savedSearchTerm;
 
   readonly tagTree = input.required<TagNode[]>();
   readonly untagged = input.required<SubscriptionDto[]>();
@@ -88,6 +86,13 @@ export class SidebarComponent {
   readonly keptCount = input(0);
   readonly viewedCount = input(0);
   readonly savedSearches = input<SavedSearchDto[]>([]);
+  /** The saved search the list is currently showing, by id, or null. The shell
+   *  decides it: a saved search's identity is its decoded (term, whole-word)
+   *  pair, and having the sidebar re-encode a term to string-compare it
+   *  against the selection made a second, subtly different rule (a trailing
+   *  tab or no-break space reads as whole-word to the decoder but not to a
+   *  string match). An id compares one way only. */
+  readonly activeSavedSearchId = input<number | null>(null);
   readonly selection = input.required<Selection>();
   readonly loading = input(false);
   /** A search request is in flight — distinct from `loading` above, which is
@@ -142,6 +147,19 @@ export class SidebarComponent {
 
   /** Whether the "Saved searches" group is expanded. In-memory only, default
    *  collapsed — mirrors the tags' expand behaviour (state resets on reload). */
+  /** The saved-search rows with their link params resolved once per list
+   *  change. `savedSearchParams` is the one `selectionQueryParams` call site
+   *  that cannot use its identity cache — an unbounded `q` must not be allowed
+   *  to grow it — so calling it from the template would build a fresh object
+   *  per row on every change-detection pass and re-run RouterLink's href for
+   *  each one. */
+  protected readonly savedSearchLinks = computed(() =>
+    this.savedSearches().map((saved) => ({
+      ...saved,
+      params: savedSearchParams(saved.term, saved.wholeWord),
+    })),
+  );
+
   readonly savedSearchesExpanded = signal(false);
 
   /** Total unread matches across all saved searches, for the collapsed badge. */

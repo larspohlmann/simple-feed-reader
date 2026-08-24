@@ -9,9 +9,9 @@ use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
 
 /**
- * The live unread-match count behind each saved search's sidebar badge.
- * Rebuilds the raw query string (a trailing space is the whole-word signal)
- * so the count matches exactly what opening the search would list.
+ * The live unread-match count behind each saved search's sidebar badge. Counts
+ * through the search's own term matching, so the badge tracks exactly what
+ * opening the search would list.
  */
 final readonly class SavedSearchMatchCounter
 {
@@ -36,12 +36,8 @@ final readonly class SavedSearchMatchCounter
 
     public function countFor(SavedSearch $savedSearch, int $userId): int
     {
-        $rawQuery = $savedSearch->isWholeWord()
-            ? $savedSearch->getTerm() . ' '
-            : $savedSearch->getTerm();
+        $terms = SearchTerms::fromTermAndMode($savedSearch->getTerm(), $savedSearch->isWholeWord());
 
-        return $this->entries->countUnreadMatchesForUser(
-            new EntrySearchQuery($userId, SearchTerms::fromInput($rawQuery)),
-        );
+        return $this->entries->countUnreadMatchesForUser(new EntrySearchQuery($userId, $terms));
     }
 }

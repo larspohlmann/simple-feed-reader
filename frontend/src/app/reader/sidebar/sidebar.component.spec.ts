@@ -69,6 +69,7 @@ function mount(
     sheetChoice?: string;
     searchLoading: boolean;
     savedSearches: SavedSearchDto[];
+    activeSavedSearchId: number | null;
   }> = {},
 ) {
   TestBed.configureTestingModule({
@@ -100,6 +101,7 @@ function mount(
   f.componentRef.setInput('searchLoading', over.searchLoading ?? false);
   f.componentRef.setInput('organising', over.organising ?? false);
   f.componentRef.setInput('savedSearches', over.savedSearches ?? []);
+  f.componentRef.setInput('activeSavedSearchId', over.activeSavedSearchId ?? null);
   f.detectChanges();
   return f;
 }
@@ -620,6 +622,55 @@ describe('SidebarComponent', () => {
       expect(badge.textContent?.trim()).toBe('W');
       expect(wholeWordRow.querySelector('.sr-only')?.textContent).toContain('Whole words');
       expect(plainRow.querySelector('.whole-word-badge')).toBeNull();
+    });
+
+    // The active row is decided by id, handed down by the shell. The sidebar
+    // does NOT re-encode a term to string-match it against the selection: that
+    // was a second, subtly different identity rule, and it disagreed with the
+    // shell's whenever the whole-word signal was a tab or a no-break space.
+    it('marks the row the shell names active, and only that one', () => {
+      const f = mount({
+        savedSearches: [
+          { id: 1, term: 'climate', wholeWord: true, position: 0, unreadCount: 0 },
+          { id: 2, term: 'space', wholeWord: false, position: 1, unreadCount: 0 },
+        ],
+        activeSavedSearchId: 1,
+      });
+      f.componentInstance.toggleSavedSearches();
+      f.detectChanges();
+
+      const items = [...f.nativeElement.querySelectorAll('.savedsearch-item')];
+      const active = items.filter((item) => item.classList.contains('active'));
+      expect(active).toHaveLength(1);
+      expect(active[0].textContent).toContain('climate');
+    });
+
+    it('marks no row active when the shell names none', () => {
+      const f = mount({
+        savedSearches: [{ id: 1, term: 'climate', wholeWord: true, position: 0, unreadCount: 0 }],
+      });
+      f.componentInstance.toggleSavedSearches();
+      f.detectChanges();
+
+      expect(f.nativeElement.querySelector('.savedsearch-item.active')).toBeNull();
+    });
+
+    // RouterLink re-resolves an href whenever its queryParams object changes
+    // identity, and savedSearchParams cannot use selectionQueryParams' cache
+    // (an unbounded `q` must not grow it). Resolving the params once per list
+    // change is what keeps a zone-based change-detection pass off that path.
+    it('keeps each row link params object stable across change detection', () => {
+      const f = mount({
+        savedSearches: [{ id: 1, term: 'climate', wholeWord: true, position: 0, unreadCount: 0 }],
+      });
+      f.componentInstance.toggleSavedSearches();
+      f.detectChanges();
+
+      const before = f.componentInstance['savedSearchLinks']()[0].params;
+      f.detectChanges();
+      f.detectChanges();
+
+      expect(f.componentInstance['savedSearchLinks']()[0].params).toBe(before);
     });
   });
 });
