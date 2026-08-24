@@ -34,9 +34,15 @@
           <!-- Split so the "Results for" lead can sit small and muted while
                the quoted term and count stay prominent (#581 follow-up). The
                count logic lives once in the shell, which passes the already-
-               assembled body string down; this list only renders the split. -->
-          <span class="results-prefix">{{ searchTitlePrefix() }}</span>
-          <span class="results-body">{{ searchTitleBody() }}</span>
+               assembled body string down; this list only renders the split.
+               The `{{ ' ' }}` between them is load-bearing, not decoration:
+               Angular drops a purely-whitespace text node between two
+               elements (the same rule the tag glyph's own margin works
+               around above), so without an actual interpolated character
+               here the prefix runs straight into the body's opening quote
+               with no space at all, at every width. -->
+          <span class="results-prefix">{{ searchTitlePrefix() }}</span
+          >{{ ' ' }}<span class="results-body">{{ searchTitleBody() }}</span>
         } @else {
           <span>{{ title() }}</span>
         }

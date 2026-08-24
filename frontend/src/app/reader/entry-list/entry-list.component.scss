@@ -141,11 +141,22 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   white-space: normal;
 }
 
-/* Small and muted, so the term and count (the part a reader is scanning for)
-   read as the prominent half of the split title. */
+/* The prefix and body share one size, a step down from the h2's own
+   `--fs-lg` that every non-search title still renders at — the split reads
+   as one sentence at one scale. The prefix's quiet half comes from its
+   muted COLOR below, not from being smaller than the body beside it. */
 .results-prefix {
   font-size: var(--fs-sm);
   color: var(--text-muted);
+
+  /* The prefix is itself two words ("Results for"); left to wrap freely it
+     breaks between them on mobile before the row is anywhere near full. Only
+     the body (term + count) should wrap, onto its own line below. */
+  white-space: nowrap;
+}
+
+.results-body {
+  font-size: var(--fs-sm);
 }
 
 /* Explains why a whole-word search's result set differs from the same text

@@ -276,6 +276,14 @@ describe('EntryListComponent', () => {
       const body = heading.querySelector('.results-body');
       expect(prefix?.textContent).toBe('Results for');
       expect(body?.textContent).toBe('"punk" — 2');
+
+      // The two spans are adjacent in the template, and Angular drops a
+      // purely-whitespace text node between two elements — so asserting each
+      // span's own text separately (above) cannot catch a missing space
+      // between them. Assert the heading's combined, whitespace-collapsed
+      // text instead: it must read one sentence, not "for" running straight
+      // into the opening quote.
+      expect(heading.textContent?.replace(/\s+/g, ' ')).toContain('Results for "');
     });
 
     it('renders the plain title, with no split spans, for a non-search selection', () => {
