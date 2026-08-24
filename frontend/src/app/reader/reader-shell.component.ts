@@ -64,6 +64,7 @@ import { ProgressHairlineComponent } from '../shared/progress-hairline/progress-
 import { IconComponent } from '../shared/icon/icon.component';
 import { ButtonComponent } from '../shared/button/button.component';
 import { FeedIntroComponent } from './feed-intro/feed-intro.component';
+import { CONFIRMATION_DURATION_MS, ToastService } from '../shared/toast/toast.service';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 @Component({
@@ -88,6 +89,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly dialog = inject(Dialog);
+  private readonly toast = inject(ToastService);
   private readonly actionSheet = inject(ActionSheet);
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);
@@ -882,17 +884,41 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   /** Save the search being looked at, or drop it when it is already saved —
    *  one command, because the header offers one button whose label and icon
-   *  flip on the same state this reads. */
+   *  flip on the same state this reads. Saving toasts a confirmation on the
+   *  real HTTP success; removing is a delete and goes through a confirm
+   *  dialog first (#581). */
   onToggleSavedSearch(): void {
     const saved = this.currentSavedSearch();
     if (saved) {
-      this.savedSearchesStore.removeSavedSearch(saved.id);
+      this.confirmRemoveSavedSearch(saved.id);
 
       return;
     }
 
     const current = this.searchedTermAndMode();
-    if (current) this.savedSearchesStore.createSavedSearch(current.term, current.wholeWord);
+    if (!current) return;
+    this.savedSearchesStore.createSavedSearch(current.term, current.wholeWord, () =>
+      this.toast.show({
+        message: this.i18n.translate('reader.searchSaved'),
+        durationMs: CONFIRMATION_DURATION_MS,
+      }),
+    );
+  }
+
+  private confirmRemoveSavedSearch(id: number): void {
+    const data: ConfirmData = {
+      title: this.i18n.translate('reader.removeSavedSearchConfirm'),
+      message: this.i18n.translate('reader.removeSavedSearchConfirmMessage'),
+      confirmLabel: this.i18n.translate('reader.removeSavedSearch'),
+    };
+    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
+      data,
+      role: 'alertdialog',
+      panelClass: 'app-dialog',
+    });
+    ref.closed.subscribe((confirmed) => {
+      if (confirmed) this.savedSearchesStore.removeSavedSearch(id);
+    });
   }
 
   /** The global refresh: sweep every due feed. The single reload authority

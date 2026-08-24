@@ -37,6 +37,17 @@ describe('SavedSearchesStore', () => {
     expect(store.savedSearches()).toEqual([rows[0]]);
   });
 
+  it('createSavedSearch() calls onSuccess once the row has been adopted', () => {
+    const createSavedSearch = jest.fn(() => of({ savedSearch: rows[0] }));
+    const store = setup({ createSavedSearch });
+    const onSuccess = jest.fn();
+
+    store.createSavedSearch('rust lang', true, onSuccess);
+
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    expect(store.savedSearches()).toEqual([rows[0]]);
+  });
+
   it('createSavedSearch() replaces rather than duplicates a term already saved', () => {
     const createSavedSearch = jest.fn(() => of({ savedSearch: { ...rows[1], unreadCount: 9 } }));
     const store = setup({ createSavedSearch, savedSearches: () => of({ savedSearches: rows }) });

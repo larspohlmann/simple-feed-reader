@@ -38,7 +38,7 @@ import { TagsStore } from './tags.store';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { RecommendationsService } from './recommendations.service';
 import { AiAvailabilityService } from '../core/ai-availability.service';
-import { ToastService } from '../shared/toast/toast.service';
+import { CONFIRMATION_DURATION_MS, ToastService } from '../shared/toast/toast.service';
 
 describe('ReaderShellComponent', () => {
   let screen: {
@@ -2220,8 +2220,9 @@ describe('ReaderShellComponent', () => {
       unreadCount: 2,
     };
 
-    it('saves the decoded term and whole-word flag, and adopts the response without reloading the list', () => {
+    it('saves the decoded term and whole-word flag, adopts the response without reloading the list, and toasts a confirmation', () => {
       const f = bootWithSearchSelected([]);
+      const show = jest.spyOn(TestBed.inject(ToastService), 'show');
 
       f.componentInstance.onToggleSavedSearch();
 
@@ -2235,11 +2236,16 @@ describe('ReaderShellComponent', () => {
       // The POST already answered with the row and its count — no re-fetch.
       ctrl.expectNone('https://api.test/api/saved-searches');
       expect(f.componentInstance.savedSearchesStore.savedSearches()).toEqual([savedClimate]);
+      expect(show).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Search saved', durationMs: CONFIRMATION_DURATION_MS }),
+      );
     });
 
-    it('removes the saved search when the current one is already saved, and drops it locally', () => {
+    it('removes the saved search when the current one is already saved and the removal is confirmed', () => {
       const f = bootWithSearchSelected([savedClimate]);
       expect(f.componentInstance.currentSavedSearch()).toEqual(savedClimate);
+      const ref = { closed: of(true) };
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
       f.componentInstance.onToggleSavedSearch();
 
@@ -2249,6 +2255,17 @@ describe('ReaderShellComponent', () => {
 
       ctrl.expectNone('https://api.test/api/saved-searches');
       expect(f.componentInstance.savedSearchesStore.savedSearches()).toEqual([]);
+    });
+
+    it('does not remove the saved search when the removal is cancelled', () => {
+      const f = bootWithSearchSelected([savedClimate]);
+      const ref = { closed: of(false) };
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
+
+      f.componentInstance.onToggleSavedSearch();
+
+      ctrl.expectNone('https://api.test/api/saved-searches/4');
+      expect(f.componentInstance.savedSearchesStore.savedSearches()).toEqual([savedClimate]);
     });
 
     it('matches a saved search by its decoded pair, not by the raw term string', () => {

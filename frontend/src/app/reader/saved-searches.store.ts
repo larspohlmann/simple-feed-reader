@@ -19,15 +19,19 @@ export class SavedSearchesStore {
     });
   }
 
-  createSavedSearch(term: string, wholeWord: boolean): void {
+  /** `onSuccess` fires once the row has been adopted, so a caller can toast a
+   *  confirmation off the real HTTP success rather than the click (#581). */
+  createSavedSearch(term: string, wholeWord: boolean, onSuccess?: () => void): void {
     this.api.createSavedSearch({ term, wholeWord }).subscribe({
       // Saving a term already saved answers 200 with the existing row, so
       // replace by id rather than prepending a duplicate.
-      next: (r) =>
+      next: (r) => {
         this.savedSearches.update((rows) => [
           r.savedSearch,
           ...rows.filter((row) => row.id !== r.savedSearch.id),
-        ]),
+        ]);
+        onSuccess?.();
+      },
     });
   }
 
