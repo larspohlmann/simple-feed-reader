@@ -259,38 +259,65 @@ describe('EntryListComponent', () => {
     expect(el.querySelectorAll('app-entry-row').length).toBe(2);
   });
 
-  // The search title alone is split into a small muted lead and a prominent
-  // body (#581 follow-up) — the shell assembles both from the same i18n keys
-  // and count logic that used to fold into one `title` string, so this list
-  // only renders the split; every other selection keeps the plain title.
+  // The search title alone is split into a small muted lead, a prominent
+  // quoted term, and a count pill (#581 follow-up, round 2) — the shell
+  // assembles all three from the same i18n keys and count logic that used to
+  // fold into one `title` string, so this list only renders the split; every
+  // other selection keeps the plain title.
   describe('the split search title (#581 follow-up)', () => {
-    it('renders the muted prefix and the prominent body for a search selection', () => {
+    it('renders the muted prefix, the prominent term, and the count pill for a search selection', () => {
       const el = mount({
         selection: { kind: 'search', id: null, unread: false, term: 'punk' },
         searchTitlePrefix: 'Results for',
-        searchTitleBody: '"punk" — 2',
+        searchTitleTerm: '"punk"',
+        searchCountLabel: '2',
       }).nativeElement as HTMLElement;
 
       const heading = el.querySelector('.list-header h2')!;
       const prefix = heading.querySelector('.results-prefix');
-      const body = heading.querySelector('.results-body');
+      const term = heading.querySelector('.results-term');
+      const count = heading.querySelector('.results-count');
       expect(prefix?.textContent).toBe('Results for');
-      expect(body?.textContent).toBe('"punk" — 2');
+      expect(term?.textContent).toBe('"punk"');
+      expect(count?.textContent).toBe('2');
 
-      // The two spans are adjacent in the template, and Angular drops a
-      // purely-whitespace text node between two elements — so asserting each
-      // span's own text separately (above) cannot catch a missing space
-      // between them. Assert the heading's combined, whitespace-collapsed
-      // text instead: it must read one sentence, not "for" running straight
-      // into the opening quote.
+      // The prefix and term spans are adjacent in the template, and Angular
+      // drops a purely-whitespace text node between two elements — so
+      // asserting each span's own text separately (above) cannot catch a
+      // missing space between them. Assert the heading's combined,
+      // whitespace-collapsed text instead: it must read one sentence, not
+      // "for" running straight into the opening quote.
       expect(heading.textContent?.replace(/\s+/g, ' ')).toContain('Results for "');
+    });
+
+    it('renders a trailing + on the count pill when another page is still out there', () => {
+      const el = mount({
+        selection: { kind: 'search', id: null, unread: false, term: 'punk' },
+        searchTitlePrefix: 'Results for',
+        searchTitleTerm: '"punk"',
+        searchCountLabel: '50+',
+      }).nativeElement as HTMLElement;
+
+      expect(el.querySelector('.list-header h2 .results-count')?.textContent).toBe('50+');
+    });
+
+    it('renders no count pill while the search is still loading', () => {
+      const el = mount({
+        selection: { kind: 'search', id: null, unread: false, term: 'punk' },
+        searchTitlePrefix: 'Results for',
+        searchTitleTerm: '"punk"',
+        searchCountLabel: null,
+      }).nativeElement as HTMLElement;
+
+      expect(el.querySelector('.list-header h2 .results-count')).toBeNull();
     });
 
     it('renders the plain title, with no split spans, for a non-search selection', () => {
       const el = mount().nativeElement as HTMLElement;
       const heading = el.querySelector('.list-header h2')!;
       expect(heading.querySelector('.results-prefix')).toBeNull();
-      expect(heading.querySelector('.results-body')).toBeNull();
+      expect(heading.querySelector('.results-term')).toBeNull();
+      expect(heading.querySelector('.results-count')).toBeNull();
       expect(heading.textContent).toContain('All items');
     });
   });

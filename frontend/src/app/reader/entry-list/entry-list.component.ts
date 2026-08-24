@@ -130,14 +130,20 @@ type ListBlock = MagazineBlock | RunHeaderBlock;
 })
 export class EntryListComponent implements OnDestroy {
   readonly title = input.required<string>();
-  /** The search title's small, muted "Results for" lead and its prominent
-   *  quoted-term-plus-count body (#581 follow-up). Only meaningful for a
-   *  search selection; the shell assembles both from the same i18n keys and
-   *  count logic that `title()` used to fold into one string, so the split
-   *  can never drift from `title()`'s own full text. Empty for every other
-   *  selection, which renders `title()` unsplit instead (see the template). */
+  /** The search title's small, muted "Results for" lead, its quoted term, and
+   *  a result-count pill, kept as three separate pieces (#581 follow-up round
+   *  2) so the count can render as a small pill rather than "— {{count}}"
+   *  text. Only meaningful for a search selection; the shell assembles all
+   *  three from the same i18n keys and count logic that `title()` folds into
+   *  one string for the tab/aria name, so the split can never drift from
+   *  `title()`'s own full text. Empty/null for every other selection, which
+   *  renders `title()` unsplit instead (see the template). */
   readonly searchTitlePrefix = input<string>('');
-  readonly searchTitleBody = input<string>('');
+  readonly searchTitleTerm = input<string>('');
+  /** The pill's text (e.g. `"86"` or `"86+"`), or null to render no pill —
+   *  null while the search is still in flight, so the count never flashes a
+   *  stale or false number (see `ReaderShellComponent.searchCountLabel`). */
+  readonly searchCountLabel = input<string | null>(null);
   /** The tag the heading names, when the list is scoped to one. It carries the
    *  glyph and the colour the sidebar row already shows, so the same tag reads
    *  the same in both places; null for every other selection. */

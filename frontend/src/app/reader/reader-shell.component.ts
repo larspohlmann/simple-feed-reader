@@ -366,6 +366,28 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.i18n.translate(key, { term, count });
   });
 
+  /** The quoted term alone (#581 follow-up round 2) — what the entry list
+   *  renders as `.results-term`, now that the count moves into its own pill
+   *  beside it instead of trailing the term as "— {{count}}" text. Reuses
+   *  the same body-only `reader.searchResults` key `searchTitleBody` falls
+   *  back to while loading, since that key IS just the quoted term. */
+  readonly searchTitleTerm = computed(() => {
+    this.language.lang();
+    const term = visibleSearchTerm(this.selection().term ?? '');
+    return this.i18n.translate('reader.searchResults', { term });
+  });
+
+  /** The pill's own text — just the number, with a trailing '+' when another
+   *  page is still out there, or null to render no pill at all. Null covers
+   *  two cases the pill must stay silent for: a search still in flight (see
+   *  `searchTitleBody`'s #254 comment — the same trap, the same guard), and
+   *  a reload that hasn't landed a first count yet. */
+  readonly searchCountLabel = computed<string | null>(() => {
+    if (this.searching()) return null;
+    const count = this.entries.entries().length;
+    return this.hasMore() ? `${count}+` : `${count}`;
+  });
+
   private readonly viewedOnOpen = new Set<number>();
 
   /** Ids of entries removed from the saved view on screen. The entry list

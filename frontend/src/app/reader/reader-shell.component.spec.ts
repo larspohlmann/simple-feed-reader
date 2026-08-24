@@ -1299,6 +1299,11 @@ describe('ReaderShellComponent', () => {
       expect(f.componentInstance.title()).toBe('Results for "angular"');
       expect(f.componentInstance.searchTitlePrefix()).toBe('Results for');
       expect(f.componentInstance.searchTitleBody()).toBe('"angular"');
+      expect(f.componentInstance.searchTitleTerm()).toBe('"angular"');
+      // No pill while in flight — the same trap as the dash-form count above:
+      // a naive read here would show a stale/false count for a term that has
+      // not answered yet.
+      expect(f.componentInstance.searchCountLabel()).toBeNull();
 
       ctrl
         .expectOne((r) => r.url === 'https://api.test/api/entries/search')
@@ -1318,6 +1323,8 @@ describe('ReaderShellComponent', () => {
     expect(f.componentInstance.title()).toBe('Results for "angular" — 2');
     expect(f.componentInstance.searchTitlePrefix()).toBe('Results for');
     expect(f.componentInstance.searchTitleBody()).toBe('"angular" — 2');
+    expect(f.componentInstance.searchTitleTerm()).toBe('"angular"');
+    expect(f.componentInstance.searchCountLabel()).toBe('2');
   });
 
   it('titles a settled search with zero results as the exact count, not the loading form', () => {
@@ -1332,6 +1339,7 @@ describe('ReaderShellComponent', () => {
     expect(f.componentInstance.searching()).toBe(false);
     expect(f.componentInstance.title()).toBe('Results for "angular" — 0');
     expect(f.componentInstance.searchTitleBody()).toBe('"angular" — 0');
+    expect(f.componentInstance.searchCountLabel()).toBe('0');
   });
 
   it('titles a search selection with a trailing + when another page exists', () => {
@@ -1345,6 +1353,7 @@ describe('ReaderShellComponent', () => {
 
     expect(f.componentInstance.title()).toBe('Results for "angular" — 1+');
     expect(f.componentInstance.searchTitleBody()).toBe('"angular" — 1+');
+    expect(f.componentInstance.searchCountLabel()).toBe('1+');
   });
 
   it('reloads the for-you list when a run completes while it is open', () => {

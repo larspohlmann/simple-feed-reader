@@ -141,22 +141,41 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   white-space: normal;
 }
 
-/* The prefix and body share one size, a step down from the h2's own
+/* The prefix and term share one size, a step down from the h2's own
    `--fs-lg` that every non-search title still renders at — the split reads
    as one sentence at one scale. The prefix's quiet half comes from its
-   muted COLOR below, not from being smaller than the body beside it. */
+   muted COLOR below, not from being smaller than the term beside it. */
 .results-prefix {
   font-size: var(--fs-sm);
   color: var(--text-muted);
 
   /* The prefix is itself two words ("Results for"); left to wrap freely it
      breaks between them on mobile before the row is anywhere near full. Only
-     the body (term + count) should wrap, onto its own line below. */
+     the term (and the count pill after it) should wrap, onto its own line
+     below. */
   white-space: nowrap;
 }
 
-.results-body {
+.results-term {
   font-size: var(--fs-sm);
+}
+
+/* The loaded count as its own quiet chip rather than trailing "— {{count}}"
+   text (#581 follow-up round 2) — a border-only pill, the same quiet
+   register as the admin badges elsewhere (`admin-catalog.component.scss`
+   `.badge`), not the filled `--accent-soft` treatment `.whole-word-badge`
+   and the sidebar's update badge use for something the reader can act on.
+   A count is read-only, so it stays the quietest pill in the app. Inline
+   after `.results-term`, so it wraps down with it rather than getting
+   stranded on its own line. */
+.results-count {
+  margin-left: var(--space-1);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 /* Explains why a whole-word search's result set differs from the same text
