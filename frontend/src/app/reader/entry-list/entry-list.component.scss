@@ -262,10 +262,22 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   color: var(--accent);
 }
 
+/* No global `button` reset exists in the app, so without this these two
+   rendered as default browser buttons (grey background, outset border) — the
+   `.save-search` button beside them (reader-shell.component.scss) already
+   carries this same reset; mirrored here rather than shared because that
+   button's node is projected through the shell's own template (#581). */
 .mark-all,
-.refresh,
 .refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   padding: 0;
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: var(--fs-sm);
 }
 
 /* The mobile short label beside the icon (Part A, #581 follow-up). Hidden on
