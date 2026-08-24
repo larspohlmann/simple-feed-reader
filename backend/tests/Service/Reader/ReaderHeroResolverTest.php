@@ -92,6 +92,26 @@ final class ReaderHeroResolverTest extends TestCase
         self::assertSame('https://cdn.test/feed.jpg', $heroes->readerHero?->url);
     }
 
+    public function testTheFeedImageDoesNotBackTheHeroWhenItIsASizeVariantOfTheBodyPhoto(): void
+    {
+        // The deutschlandfunk.de entry 1358618 case (#610): the og:image repeats
+        // the body's lead figure and is suppressed, but the feed's own picture is
+        // the SAME photo at a different size (`-1920x1920` vs the body's
+        // `-1920x1080`). It must not back the hero, or the reader stacks the photo
+        // twice — the whole point of judging the feed picture against the body.
+        $photo = 'https://bilder.deutschlandfunk.de/0f/5a/5c/dd/uuid/ai-toys-100';
+        $entry = $this->entry('<p>Feed body.</p>');
+        $entry->setImage($photo . '-1920x1920.jpg', 1920, 1920);
+        $extractedBody = '<p>Intro.</p><figure><img src="' . $photo . '-1920x1080.jpg" alt=""></figure>';
+
+        $heroes = $this->resolver->resolve(
+            $entry,
+            $this->extracted($extractedBody, $photo . '-1920x1080.jpg'),
+        );
+
+        self::assertNull($heroes->readerHero);
+    }
+
     public function testTheReaderHeroIsJudgedAgainstTheExtractedBodyNotTheFeedBody(): void
     {
         // The feed body repeats the feed picture and the extracted body does not.

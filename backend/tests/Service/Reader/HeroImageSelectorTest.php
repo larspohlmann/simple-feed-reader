@@ -278,6 +278,33 @@ final class HeroImageSelectorTest extends TestCase
         self::assertSame($hero, $this->selectUrl($hero, $body));
     }
 
+    public function testSuppressesHeroWhenTheSizeIsABasenameSuffixOnAStablePhotoName(): void
+    {
+        // The deutschlandfunk.de entry 1358618 case (#610): one photo lives at a
+        // uuid path and each size is a `-WIDTHxHEIGHT` suffix on a basename whose
+        // stable part names the photo — the feed hero is `…/ai-toys-100-1920x1920`
+        // and the body figure `…/ai-toys-100-1920x1080`. An intro paragraph leads
+        // the body, so only the repeat rule can catch it.
+        $photo = 'https://bilder.deutschlandfunk.de/0f/5a/5c/dd/uuid/ai-toys-100';
+        $hero = $photo . '-1920x1920.jpg';
+        $body = '<p>Intro.</p>'
+            . '<figure><img src="' . $photo . '-1920x1080.jpg" alt=""></figure>';
+
+        self::assertNull($this->selectUrl($hero, $body));
+    }
+
+    public function testShowsHeroWhenABasenameSuffixSizeBelongsToADifferentPhoto(): void
+    {
+        // Distinct deutschlandfunk photos have distinct uuid paths and basename
+        // names, so stripping the size suffix must not collapse two pictures into
+        // one identity and hide a genuinely different body image.
+        $hero = 'https://bilder.deutschlandfunk.de/0f/5a/5c/dd/uuid/ai-toys-100-1920x1920.jpg';
+        $bodyImage = 'https://bilder.deutschlandfunk.de/6c/e7/5f/66/uuid2/google-100-1920x1080.jpg';
+        $body = '<p>Intro.</p><figure><img src="' . $bodyImage . '" alt=""></figure>';
+
+        self::assertSame($hero, $this->selectUrl($hero, $body));
+    }
+
     public function testDiscardsANonHttpHero(): void
     {
         // The scheme guard is anchored: a `data:` URL that merely embeds an

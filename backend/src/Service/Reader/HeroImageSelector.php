@@ -127,7 +127,14 @@ final class HeroImageSelector
      *   - the id and slug in the path with the size a whole numeric segment
      *     between them (`/picture/8685793/1200/<slug>.jpeg` vs
      *     `/picture/8685793/14/<slug>.webp`, taz.de entry 1358489) — the numeric
-     *     segment before the file name is dropped, leaving id and slug.
+     *     segment before the file name is dropped, leaving id and slug;
+     *   - the id in the path and the size a `-WIDTHxHEIGHT` suffix on a basename
+     *     whose stable part identifies the photo (`/…/<uuid>/ai-toys-100-1920x1080`
+     *     vs `/…/<uuid>/ai-toys-100-1920x1920`, deutschlandfunk.de entry 1358618)
+     *     — the trailing size token is dropped, leaving the uuid path and the
+     *     basename's stable part. This differs from zeit, where the whole basename
+     *     is a variant crop word: zeit's `__` marks the whole basename for
+     *     removal, so it is handled first and never reaches this narrower rule.
      * Distinct photos keep distinct ids, directories or slugs, so they keep
      * distinct identities. A URL with no path (e.g. `https://cdn.test`) keeps its
      * whole form, so it matches only itself.
@@ -140,8 +147,9 @@ final class HeroImageSelector
         }
 
         $withoutExtension = preg_replace('/\.[a-z0-9]+$/i', '', $path);
-        $withoutSizeVariant = preg_replace('#/[^/]*__\d+x\d+.*$#', '', (string) $withoutExtension);
-        $withoutSizeSegment = preg_replace('#/\d+(?=/[^/]+$)#', '', (string) $withoutSizeVariant);
+        $withoutCropBasename = preg_replace('#/[^/]*__\d+x\d+.*$#', '', (string) $withoutExtension);
+        $withoutSizeSuffix = preg_replace('#[-_]\d+x\d+$#', '', (string) $withoutCropBasename);
+        $withoutSizeSegment = preg_replace('#/\d+(?=/[^/]+$)#', '', (string) $withoutSizeSuffix);
 
         return strtolower((string) $withoutSizeSegment);
     }
