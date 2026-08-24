@@ -29,8 +29,8 @@ import { ViewControlsComponent } from '../view-controls/view-controls.component'
 import { SearchFieldComponent } from '../search-field/search-field.component';
 import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
 import { TagNode } from '../subscriptions.store';
-import { Selection, selectionQueryParams } from '../query';
-import { SubscriptionDto, TagDto } from '../models';
+import { Selection, savedSearchParams, savedSearchTerm, selectionQueryParams } from '../query';
+import { SavedSearchDto, SubscriptionDto, TagDto } from '../models';
 import { RefreshService } from '../refresh.service';
 import { RecommendationsService } from '../recommendations.service';
 import { AuthService } from '../../core/auth.service';
@@ -78,6 +78,8 @@ export class SidebarComponent {
   );
 
   protected readonly selectionQueryParams = selectionQueryParams;
+  protected readonly savedSearchParams = savedSearchParams;
+  protected readonly savedSearchTerm = savedSearchTerm;
 
   readonly tagTree = input.required<TagNode[]>();
   readonly untagged = input.required<SubscriptionDto[]>();
@@ -85,6 +87,7 @@ export class SidebarComponent {
   readonly favoritesCount = input(0);
   readonly keptCount = input(0);
   readonly viewedCount = input(0);
+  readonly savedSearches = input<SavedSearchDto[]>([]);
   readonly selection = input.required<Selection>();
   readonly loading = input(false);
   /** A search request is in flight — distinct from `loading` above, which is

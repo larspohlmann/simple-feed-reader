@@ -12,7 +12,7 @@ import { CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { DropData, SidebarComponent } from './sidebar.component';
 import { TagNode } from '../subscriptions.store';
 import { Selection } from '../query';
-import { SubscriptionDto, TagDto } from '../models';
+import { SavedSearchDto, SubscriptionDto, TagDto } from '../models';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { buildVersion } from '../../../environments/version';
 import { VersionService } from '../../core/version.service';
@@ -68,6 +68,7 @@ function mount(
     organising: boolean;
     sheetChoice?: string;
     searchLoading: boolean;
+    savedSearches: SavedSearchDto[];
   }> = {},
 ) {
   TestBed.configureTestingModule({
@@ -98,6 +99,7 @@ function mount(
   f.componentRef.setInput('loading', false);
   f.componentRef.setInput('searchLoading', over.searchLoading ?? false);
   f.componentRef.setInput('organising', over.organising ?? false);
+  f.componentRef.setInput('savedSearches', over.savedSearches ?? []);
   f.detectChanges();
   return f;
 }
@@ -523,6 +525,23 @@ describe('SidebarComponent', () => {
   it('hides the trial countdown when the trial is already past', () => {
     const f = mount({ user: account(inDays(-1)) });
     expect(f.nativeElement.querySelector('.trial')).toBeNull();
+  });
+
+  describe('saved searches', () => {
+    it('renders no saved-searches section when the list is empty', () => {
+      const f = mount({ savedSearches: [] });
+      expect(f.nativeElement.textContent).not.toContain('Saved searches');
+    });
+
+    it('renders a row per saved search with its unread count', () => {
+      const f = mount({
+        savedSearches: [{ id: 1, term: 'climate', wholeWord: false, position: 0, unreadCount: 3 }],
+      });
+      const text = f.nativeElement.textContent;
+      expect(text).toContain('Saved searches');
+      expect(text).toContain('climate');
+      expect(text).toContain('3');
+    });
   });
 });
 

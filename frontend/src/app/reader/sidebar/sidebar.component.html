@@ -95,6 +95,37 @@
     }
   }
 
+  @if (savedSearches().length) {
+    <p class="label">{{ 'reader.savedSearches' | transloco }}</p>
+    @for (saved of savedSearches(); track saved.id) {
+      <a
+        class="nav"
+        [class.active]="
+          selection().kind === 'search' &&
+          selection().term === savedSearchTerm(saved.term, saved.wholeWord)
+        "
+        [routerLink]="[]"
+        [queryParams]="savedSearchParams(saved.term, saved.wholeWord)"
+        queryParamsHandling="merge"
+      >
+        <app-icon name="search" size="sm" />
+        <span class="saved-term">{{ saved.term }}</span>
+        @if (saved.wholeWord) {
+          <span
+            class="whole-word-badge"
+            aria-hidden="true"
+            [attr.title]="'reader.searchWholeWordHint' | transloco"
+          >
+            {{ 'reader.searchWholeWord' | transloco }}
+          </span>
+        }
+        @if (saved.unreadCount > 0) {
+          <span class="count">{{ saved.unreadCount }}</span>
+        }
+      </a>
+    }
+  }
+
   @if (tagTree().length) {
     <p class="label">{{ 'reader.tags' | transloco }}</p>
     <!-- Each tag contributes two TOP-LEVEL drop lists (never nested): a

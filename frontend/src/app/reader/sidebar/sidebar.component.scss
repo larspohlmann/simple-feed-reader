@@ -248,6 +248,20 @@
   }
 }
 
+.nav .saved-term {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav .whole-word-badge {
+  /* Mirror the results-header badge: a quiet, uppercase micro-label. Reuses
+     the same font-size/opacity the `.label` rule uses. */
+  font-size: var(--fs-sm);
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
 .label {
   font-size: var(--fs-sm);
   text-transform: uppercase;
