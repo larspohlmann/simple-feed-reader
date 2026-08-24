@@ -183,6 +183,16 @@ and re-runs `docker/mysql/init.sql`, after which you migrate again. One
 exception to "plain `down` keeps everything": Mailpit's inbox is in-memory,
 so it starts empty after any `down`.
 
+### Log retention
+
+`dev` and `test` write through Monolog's `rotating_file` handler at `debug`
+level, rotating daily and keeping **3 files** (`config/packages/monolog.yaml`).
+So `backend/var/log/` holds at most three days each of `dev-YYYY-MM-DD.log` and
+`test-YYYY-MM-DD.log`; older days prune on the next rotation. The `php` and
+`worker` containers and a native run share the bind-mounted `backend/`, so they
+append to the same daily file and the same cap covers all three. `prod` is
+unchanged — its handler still keeps 7 daily files (`when@prod`).
+
 ---
 
 ## 5. Step debugging (Xdebug)

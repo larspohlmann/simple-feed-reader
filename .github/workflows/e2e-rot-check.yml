@@ -303,7 +303,9 @@ jobs:
         if: steps.backend.outcome == 'failure'
         run: |
           echo "::group::backend/var/log/dev.log"
-          docker compose exec -T php cat var/log/dev.log || true
+          # The dev handler rotates daily (#596), so the active file is
+          # dev-YYYY-MM-DD.log; cat every retained day.
+          docker compose exec -T php sh -c 'cat var/log/dev-*.log' || true
           echo "::endgroup::"
           docker compose logs --no-color php nginx
 
