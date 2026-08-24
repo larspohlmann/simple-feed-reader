@@ -279,7 +279,13 @@ describe('ReaderApi', () => {
 
     const req = ctrl.expectOne((r) => r.url.endsWith('/api/entries/42/reader'));
     expect(req.request.method).toBe('GET');
-    req.flush({ status: 'failed', url: null, reason: 'no_url' } satisfies ReaderContent);
+    req.flush({
+      status: 'failed',
+      url: null,
+      reason: 'no_url',
+      readerHero: null,
+      originalHero: null,
+    } satisfies ReaderContent);
 
     expect(received?.status).toBe('failed');
   });

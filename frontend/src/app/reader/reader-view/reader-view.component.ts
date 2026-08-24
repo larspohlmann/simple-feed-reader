@@ -24,14 +24,19 @@ import {
   ToTopButtonComponent,
 } from '../../shared/to-top-button/to-top-button.component';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
-import { EntryDto, ReaderArticle, ReaderContent, SubscriptionTagDto } from '../models';
+import {
+  EntryDto,
+  ReaderArticle,
+  ReaderContent,
+  ReaderFailure,
+  SubscriptionTagDto,
+} from '../models';
 import { ReaderContentService } from '../reader-content.service';
 import { ReaderModeService } from '../reader-mode.service';
 import { LanguageService } from '../../core/language.service';
 import { LayoutService } from '../layout.service';
 import { ListScrollMemory } from '../list-scroll-memory';
 import { nextHeaderHidden } from '../header-scroll';
-import { feedHeroImage } from '../feed-hero-image';
 import {
   ARTICLE_FOCUS_CURVE,
   focusOpacityForSpan,
@@ -182,7 +187,9 @@ export class ReaderViewComponent {
   // writes go through the ReaderModeService lifecycle methods below.
   readonly mode = this.readerMode.mode;
   private readonly state = signal<
-    { status: 'idle' | 'loading' } | { status: 'ok'; article: ReaderArticle } | { status: 'failed' }
+    | { status: 'idle' | 'loading' }
+    | { status: 'ok'; article: ReaderArticle }
+    | { status: 'failed'; failure: ReaderFailure | null }
   >({ status: 'idle' });
 
   // Table of contents, built from the rendered article headings. Collapsed by
@@ -229,25 +236,29 @@ export class ReaderViewComponent {
     const s = this.state();
     return s.status === 'ok' ? s.article : null;
   });
-  // A hero image for articles whose extracted body has none (only in reader mode;
-  // the original-content view keeps its own inline images).
-  readonly leadImage = computed(() =>
-    this.mode() === 'reader' ? (this.article()?.leadImage ?? null) : null,
-  );
-
   /** A broken hero URL hides the image rather than leaving a torn placeholder. */
   protected readonly heroError = signal(false);
 
+  /** The payload the heroes come from. Null while loading, and after a
+   *  transport error, where no payload arrived at all. */
+  private readonly heroSource = computed<ReaderContent | null>(() => {
+    const s = this.state();
+    if (s.status === 'ok') return s.article;
+    if (s.status === 'failed') return s.failure;
+    return null;
+  });
+
   /**
-   * The feed's own picture, shown when neither the extractor nor the rendered
-   * body supplies one. It covers the two cases the scraped lead image cannot:
-   * the Original view, and a failed extraction — where the feed's picture is
-   * the only one there is.
+   * The picture that leads the article. The backend resolves one hero per body
+   * it can serve, so switching between the reader and the original view is a
+   * field lookup: no request, and no duplicate-image rule on the client (#592).
    */
-  readonly feedHero = computed(() =>
-    this.leadImage() ? null : feedHeroImage(this.entry(), this.displayHtml()),
-  );
-  readonly visibleFeedHero = computed(() => (this.heroError() ? null : this.feedHero()));
+  readonly hero = computed(() => {
+    if (this.heroError()) return null;
+    const source = this.heroSource();
+    if (source === null) return null;
+    return this.mode() === 'reader' ? source.readerHero : source.originalHero;
+  });
 
   /** Estimated minutes to read the displayed text; null hides the meta chip. */
   readonly readingMinutes = computed(() => estimateReadingMinutes(this.displayHtml()));
@@ -396,12 +407,14 @@ export class ReaderViewComponent {
           this.state.set({ status: 'ok', article: c });
           this.readerMode.enableToggle();
         } else {
-          this.state.set({ status: 'failed' });
+          this.state.set({ status: 'failed', failure: c });
           this.readerMode.setOriginalOnly();
         }
       },
       error: () => {
-        this.state.set({ status: 'failed' });
+        // A timeout or a transport error leaves no payload, so this article
+        // shows the feed's content with no hero.
+        this.state.set({ status: 'failed', failure: null });
         this.readerMode.setOriginalOnly();
       },
     });

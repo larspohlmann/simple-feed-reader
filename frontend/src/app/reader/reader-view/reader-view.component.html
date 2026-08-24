@@ -178,17 +178,16 @@
         @if (failed() && mode() === 'original') {
           <p class="reader-note">{{ 'reader.readerFallback' | transloco }}</p>
         }
-        @if (leadImage(); as img) {
-          <img class="lead-image" [src]="img" alt="" />
-        } @else if (visibleFeedHero(); as hero) {
+        @if (hero(); as image) {
           <!-- Width and height carry the aspect ratio, so the article does not
                jump when a slow hero lands. `height: auto` in the stylesheet
-               keeps the declared size from overriding the fluid layout. -->
+               keeps the declared size from overriding the fluid layout. The
+               backend picked this picture for the body below it (#592). -->
           <img
             class="lead-image"
-            [src]="hero.url"
-            [attr.width]="hero.width"
-            [attr.height]="hero.height"
+            [src]="image.url"
+            [attr.width]="image.width"
+            [attr.height]="image.height"
             (error)="heroError.set(true)"
             alt=""
             loading="lazy"

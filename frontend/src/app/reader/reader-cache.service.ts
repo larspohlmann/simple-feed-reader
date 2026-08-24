@@ -18,11 +18,9 @@ export class ReaderCacheService {
   static readonly MAX_ENTRIES = 100;
   private static readonly DB = 'sfr-reader';
   private static readonly STORE = 'articles';
-  // v3: lazy-loaded images used to be stored with no `src` at all (#467). The
-  // records are otherwise indistinguishable from good ones, and nothing expires
-  // them, so the backend fix only reaches an already-read article if the whole
-  // store is dropped.
-  private static readonly VERSION = 3;
+  // v4: v3 records carry `leadImage` and no resolved heroes (#592), so an
+  // already-read article would come back with no picture at all.
+  private static readonly VERSION = 4;
 
   private db: Promise<IDBDatabase | null> | null = null;
   /** Strictly monotonic clock so puts within the same millisecond keep insertion order. */
