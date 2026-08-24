@@ -62,6 +62,11 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
+
+  /* Only the search title (below) ever grows past one line; every other title
+     stays ellipsised and never needs the row itself to wrap. Harmless for
+     those: the row's main axis never overflows once the h2 shrinks to fit. */
+  flex-wrap: wrap;
 }
 
 /* The tag's glyph, inline before its name — the same glyph and colour the
@@ -124,6 +129,53 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   /* Not animated either, and for the same reason as the bar's padding above:
      the type size drives the line box, which drives the bar's height, which is
      the number the scroller reserves. */
+}
+
+/* The search title alone is allowed to wrap (#581 follow-up): its "Results
+   for" lead plus the quoted term and count run long enough on mobile that
+   ellipsising the term lost information a truncated feed/tag name doesn't
+   carry. Every other title keeps the single-line ellipsis above. */
+.list-header h2.search-title {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+/* The prefix and term share one size, a step down from the h2's own
+   `--fs-lg` that every non-search title still renders at — the split reads
+   as one sentence at one scale. The prefix's quiet half comes from its
+   muted COLOR below, not from being smaller than the term beside it. */
+.results-prefix {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+
+  /* The prefix is itself two words ("Results for"); left to wrap freely it
+     breaks between them on mobile before the row is anywhere near full. Only
+     the term (and the count pill after it) should wrap, onto its own line
+     below. */
+  white-space: nowrap;
+}
+
+.results-term {
+  font-size: var(--fs-sm);
+}
+
+/* The loaded count as its own quiet chip rather than trailing "— {{count}}"
+   text (#581 follow-up round 2) — a border-only pill, the same quiet
+   register as the admin badges elsewhere (`admin-catalog.component.scss`
+   `.badge`), not the filled `--accent-soft` treatment `.whole-word-badge`
+   and the sidebar's update badge use for something the reader can act on.
+   A count is read-only, so it stays the quietest pill in the app. Inline
+   after `.results-term`, so it wraps down with it rather than getting
+   stranded on its own line. */
+.results-count {
+  margin-left: var(--space-1);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 /* Explains why a whole-word search's result set differs from the same text
@@ -210,10 +262,29 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   color: var(--accent);
 }
 
+/* No global `button` reset exists in the app, so without this these two
+   rendered as default browser buttons (grey background, outset border) — the
+   `.save-search` button beside them (reader-shell.component.scss) already
+   carries this same reset; mirrored here rather than shared because that
+   button's node is projected through the shell's own template (#581). */
 .mark-all,
-.refresh,
 .refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   padding: 0;
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: var(--fs-sm);
+}
+
+/* The mobile short label beside the icon (Part A, #581 follow-up). Hidden on
+   the desktop button, which keeps its full `.txt`; the mobile media query
+   below swaps the two. */
+.txt-short {
+  display: none;
 }
 
 .refresh:disabled {
@@ -298,6 +369,14 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
 
   .toggle a {
     padding: var(--space-1) var(--space-2);
+  }
+
+  /* Mark all read and Refresh trade their full label for a short one — icon +
+     text stay inline, unlike the Unread/All toggle above, which is a filter,
+     not an action, and stays icon-only (#581 follow-up). */
+  .mark-all .txt-short,
+  .refresh .txt-short {
+    display: inline-flex;
   }
 }
 

@@ -38,7 +38,7 @@ import { TagsStore } from './tags.store';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { RecommendationsService } from './recommendations.service';
 import { AiAvailabilityService } from '../core/ai-availability.service';
-import { ToastService } from '../shared/toast/toast.service';
+import { CONFIRMATION_DURATION_MS, ToastService } from '../shared/toast/toast.service';
 
 describe('ReaderShellComponent', () => {
   let screen: {
@@ -1297,6 +1297,13 @@ describe('ReaderShellComponent', () => {
       expect(f.componentInstance.searching()).toBe(true);
 
       expect(f.componentInstance.title()).toBe('Results for "angular"');
+      expect(f.componentInstance.searchTitlePrefix()).toBe('Results for');
+      expect(f.componentInstance.searchTitleBody()).toBe('"angular"');
+      expect(f.componentInstance.searchTitleTerm()).toBe('"angular"');
+      // No pill while in flight — the same trap as the dash-form count above:
+      // a naive read here would show a stale/false count for a term that has
+      // not answered yet.
+      expect(f.componentInstance.searchCountLabel()).toBeNull();
 
       ctrl
         .expectOne((r) => r.url === 'https://api.test/api/entries/search')
@@ -1314,6 +1321,10 @@ describe('ReaderShellComponent', () => {
     f.detectChanges();
 
     expect(f.componentInstance.title()).toBe('Results for "angular" — 2');
+    expect(f.componentInstance.searchTitlePrefix()).toBe('Results for');
+    expect(f.componentInstance.searchTitleBody()).toBe('"angular" — 2');
+    expect(f.componentInstance.searchTitleTerm()).toBe('"angular"');
+    expect(f.componentInstance.searchCountLabel()).toBe('2');
   });
 
   it('titles a settled search with zero results as the exact count, not the loading form', () => {
@@ -1327,6 +1338,8 @@ describe('ReaderShellComponent', () => {
 
     expect(f.componentInstance.searching()).toBe(false);
     expect(f.componentInstance.title()).toBe('Results for "angular" — 0');
+    expect(f.componentInstance.searchTitleBody()).toBe('"angular" — 0');
+    expect(f.componentInstance.searchCountLabel()).toBe('0');
   });
 
   it('titles a search selection with a trailing + when another page exists', () => {
@@ -1339,6 +1352,8 @@ describe('ReaderShellComponent', () => {
     f.detectChanges();
 
     expect(f.componentInstance.title()).toBe('Results for "angular" — 1+');
+    expect(f.componentInstance.searchTitleBody()).toBe('"angular" — 1+');
+    expect(f.componentInstance.searchCountLabel()).toBe('1+');
   });
 
   it('reloads the for-you list when a run completes while it is open', () => {
@@ -2220,8 +2235,9 @@ describe('ReaderShellComponent', () => {
       unreadCount: 2,
     };
 
-    it('saves the decoded term and whole-word flag, and adopts the response without reloading the list', () => {
+    it('saves the decoded term and whole-word flag, adopts the response without reloading the list, and toasts a confirmation', () => {
       const f = bootWithSearchSelected([]);
+      const show = jest.spyOn(TestBed.inject(ToastService), 'show');
 
       f.componentInstance.onToggleSavedSearch();
 
@@ -2235,11 +2251,16 @@ describe('ReaderShellComponent', () => {
       // The POST already answered with the row and its count — no re-fetch.
       ctrl.expectNone('https://api.test/api/saved-searches');
       expect(f.componentInstance.savedSearchesStore.savedSearches()).toEqual([savedClimate]);
+      expect(show).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Search saved', durationMs: CONFIRMATION_DURATION_MS }),
+      );
     });
 
-    it('removes the saved search when the current one is already saved, and drops it locally', () => {
+    it('removes the saved search when the current one is already saved and the removal is confirmed', () => {
       const f = bootWithSearchSelected([savedClimate]);
       expect(f.componentInstance.currentSavedSearch()).toEqual(savedClimate);
+      const ref = { closed: of(true) };
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
       f.componentInstance.onToggleSavedSearch();
 
@@ -2251,12 +2272,39 @@ describe('ReaderShellComponent', () => {
       expect(f.componentInstance.savedSearchesStore.savedSearches()).toEqual([]);
     });
 
+    it('does not remove the saved search when the removal is cancelled', () => {
+      const f = bootWithSearchSelected([savedClimate]);
+      const ref = { closed: of(false) };
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
+
+      f.componentInstance.onToggleSavedSearch();
+
+      ctrl.expectNone('https://api.test/api/saved-searches/4');
+      expect(f.componentInstance.savedSearchesStore.savedSearches()).toEqual([savedClimate]);
+    });
+
     it('matches a saved search by its decoded pair, not by the raw term string', () => {
       // A no-break space is a whole-word signal to the decoder but never equals
       // a plain trailing space, which is what a string comparison would need.
       const f = bootWithSearchSelected([savedClimate], 'climate\u00a0');
 
       expect(f.componentInstance.currentSavedSearch()).toEqual(savedClimate);
+    });
+
+    // The mobile short label sits beside the full one at every width \u2014 the
+    // stylesheet's media query picks which shows (#581 follow-up); jsdom
+    // renders no layout, so this only proves the short span is in the DOM and
+    // flips with the same saved/unsaved state the full label already does.
+    it('renders "Save" as the mobile short label when the search is not yet saved', () => {
+      const f = bootWithSearchSelected([]);
+      const button = (f.nativeElement as HTMLElement).querySelector('.save-search')!;
+      expect(button.querySelector('.txt-short')?.textContent).toBe('Save');
+    });
+
+    it('renders "Remove" as the mobile short label when the search is already saved', () => {
+      const f = bootWithSearchSelected([savedClimate]);
+      const button = (f.nativeElement as HTMLElement).querySelector('.save-search')!;
+      expect(button.querySelector('.txt-short')?.textContent).toBe('Remove');
     });
   });
 });

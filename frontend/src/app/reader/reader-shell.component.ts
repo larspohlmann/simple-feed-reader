@@ -64,6 +64,7 @@ import { ProgressHairlineComponent } from '../shared/progress-hairline/progress-
 import { IconComponent } from '../shared/icon/icon.component';
 import { ButtonComponent } from '../shared/button/button.component';
 import { FeedIntroComponent } from './feed-intro/feed-intro.component';
+import { CONFIRMATION_DURATION_MS, ToastService } from '../shared/toast/toast.service';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
 @Component({
@@ -88,6 +89,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly dialog = inject(Dialog);
+  private readonly toast = inject(ToastService);
   private readonly actionSheet = inject(ActionSheet);
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);
@@ -324,17 +326,28 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     if (s.kind === 'all') return this.i18n.translate('reader.allItems');
     if (s.kind === 'tag')
       return this.selectedTag()?.name ?? this.i18n.translate('reader.tagFallback');
-    if (s.kind === 'search') return this.searchTitle(s.term ?? '');
+    if (s.kind === 'search') return `${this.searchTitlePrefix()} ${this.searchTitleBody()}`;
     return (
       this.subs.subscriptions().find((x) => x.id === s.id)?.title ??
       this.i18n.translate('reader.feedFallback')
     );
   });
 
-  /** The search heading, which unlike every other title carries a result count
-   *  and therefore its own rules about when that count may be shown. */
-  private searchTitle(rawTerm: string): string {
-    const term = visibleSearchTerm(rawTerm);
+  /** The search title's small, muted lead ("Results for"). Split out from the
+   *  body below so the entry list can render it at a smaller, muted weight
+   *  while the term and count stay prominent (#581 follow-up) — `title()`
+   *  above still concatenates the two into the one string the tab title and
+   *  the heading's accessible name need. */
+  readonly searchTitlePrefix = computed(() => {
+    this.language.lang();
+    return this.i18n.translate('reader.searchResultsPrefix');
+  });
+
+  /** The search heading's body — the quoted term and, unlike every other
+   *  title, a result count with its own rules about when it may be shown. */
+  readonly searchTitleBody = computed(() => {
+    this.language.lang();
+    const term = visibleSearchTerm(this.selection().term ?? '');
     // No count while the search is in flight: EntriesStore.load() clears
     // nextCursor synchronously but deliberately keeps the PREVIOUS list
     // rendered until the response lands (#254) — so for that whole window
@@ -351,7 +364,29 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     const key = this.hasMore() ? 'reader.searchResultsCountMore' : 'reader.searchResultsCount';
 
     return this.i18n.translate(key, { term, count });
-  }
+  });
+
+  /** The quoted term alone (#581 follow-up round 2) — what the entry list
+   *  renders as `.results-term`, now that the count moves into its own pill
+   *  beside it instead of trailing the term as "— {{count}}" text. Reuses
+   *  the same body-only `reader.searchResults` key `searchTitleBody` falls
+   *  back to while loading, since that key IS just the quoted term. */
+  readonly searchTitleTerm = computed(() => {
+    this.language.lang();
+    const term = visibleSearchTerm(this.selection().term ?? '');
+    return this.i18n.translate('reader.searchResults', { term });
+  });
+
+  /** The pill's own text — just the number, with a trailing '+' when another
+   *  page is still out there, or null to render no pill at all. Null covers
+   *  two cases the pill must stay silent for: a search still in flight (see
+   *  `searchTitleBody`'s #254 comment — the same trap, the same guard), and
+   *  a reload that hasn't landed a first count yet. */
+  readonly searchCountLabel = computed<string | null>(() => {
+    if (this.searching()) return null;
+    const count = this.entries.entries().length;
+    return this.hasMore() ? `${count}+` : `${count}`;
+  });
 
   private readonly viewedOnOpen = new Set<number>();
 
@@ -880,19 +915,49 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     this.currentSavedSearch() ? 'reader.removeSavedSearch' : 'reader.saveSearch',
   );
 
+  /** The mobile short label beside the save-search button's icon (#581
+   *  follow-up) — same state, a shorter word for the narrow header. */
+  protected readonly savedSearchActionShortLabel = computed(() =>
+    this.currentSavedSearch() ? 'reader.removeSavedSearchShort' : 'reader.saveSearchShort',
+  );
+
   /** Save the search being looked at, or drop it when it is already saved —
    *  one command, because the header offers one button whose label and icon
-   *  flip on the same state this reads. */
+   *  flip on the same state this reads. Saving toasts a confirmation on the
+   *  real HTTP success; removing is a delete and goes through a confirm
+   *  dialog first (#581). */
   onToggleSavedSearch(): void {
     const saved = this.currentSavedSearch();
     if (saved) {
-      this.savedSearchesStore.removeSavedSearch(saved.id);
+      this.confirmRemoveSavedSearch(saved.id);
 
       return;
     }
 
     const current = this.searchedTermAndMode();
-    if (current) this.savedSearchesStore.createSavedSearch(current.term, current.wholeWord);
+    if (!current) return;
+    this.savedSearchesStore.createSavedSearch(current.term, current.wholeWord, () =>
+      this.toast.show({
+        message: this.i18n.translate('reader.searchSaved'),
+        durationMs: CONFIRMATION_DURATION_MS,
+      }),
+    );
+  }
+
+  private confirmRemoveSavedSearch(id: number): void {
+    const data: ConfirmData = {
+      title: this.i18n.translate('reader.removeSavedSearchConfirm'),
+      message: this.i18n.translate('reader.removeSavedSearchConfirmMessage'),
+      confirmLabel: this.i18n.translate('reader.removeSavedSearch'),
+    };
+    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
+      data,
+      role: 'alertdialog',
+      panelClass: 'app-dialog',
+    });
+    ref.closed.subscribe((confirmed) => {
+      if (confirmed) this.savedSearchesStore.removeSavedSearch(id);
+    });
   }
 
   /** The global refresh: sweep every due feed. The single reload authority
