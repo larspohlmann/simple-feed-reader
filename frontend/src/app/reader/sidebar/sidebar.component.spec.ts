@@ -557,6 +557,7 @@ describe('SidebarComponent', () => {
       });
       const head: HTMLElement = f.nativeElement.querySelector('.savedsearch-head');
       const toggle: HTMLButtonElement = head.querySelector('.savedsearch-toggle')!;
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
       toggle.click();
       f.detectChanges();
 
@@ -568,6 +569,9 @@ describe('SidebarComponent', () => {
       // Task-12 behaviour.
       expect(head.querySelector('.count')?.textContent).toContain('7');
       expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(2);
+      // Activating the title itself must announce the new state to a screen
+      // reader, not only the trailing chevron button (#581 follow-up).
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
     });
 
     it('also expands on a click of its trailing chevron button', () => {

@@ -98,7 +98,12 @@
   @if (savedSearches().length) {
     <div class="savedsearches">
       <div class="tag savedsearch-head">
-        <button class="nav grow savedsearch-toggle" type="button" (click)="toggleSavedSearches()">
+        <button
+          class="nav grow savedsearch-toggle"
+          type="button"
+          [attr.aria-expanded]="savedSearchesExpanded()"
+          (click)="toggleSavedSearches()"
+        >
           <span class="lead"><app-icon name="saved_search" size="sm" /></span>
           <span class="savedsearch-title">{{ 'reader.savedSearches' | transloco }}</span>
           @if (savedSearchesUnread() > 0) {

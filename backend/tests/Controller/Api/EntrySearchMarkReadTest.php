@@ -95,6 +95,29 @@ final class EntrySearchMarkReadTest extends WebTestCase
         self::assertSame('validation_error', $body['type']);
     }
 
+    public function testHundredCharWholeWordTermIsAccepted(): void
+    {
+        // The whole-word request raw `q` carries a trailing space
+        // (`term . ' '`), so a 100-char term sends 101 raw characters. The
+        // trimmed length SearchTerms::fromInput() enforces stays within
+        // bounds; a redundant Length constraint on this DTO used to reject
+        // it at 101 (#581 off-by-one).
+        $client = self::createClient();
+        $user = $this->userFactory()->create('hundred-char-term@example.com');
+        $headers = $this->authHeader($user);
+
+        $client->request(
+            'POST',
+            '/api/entries/search/mark-read',
+            server: $headers,
+            content: json_encode(
+                ['q' => str_repeat('a', 100) . ' ', 'until' => '2100-01-01T00:00:00+00:00'],
+                \JSON_THROW_ON_ERROR,
+            ),
+        );
+        self::assertResponseStatusCodeSame(204);
+    }
+
     public function testMarksAllMatchingEntriesRead(): void
     {
         $client = self::createClient();

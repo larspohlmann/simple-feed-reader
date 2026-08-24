@@ -10,7 +10,6 @@ final readonly class MarkSearchReadRequest
 {
     public function __construct(
         #[Assert\NotBlank]
-        #[Assert\Length(min: 3, max: 100)]
         public string $q,
         public \DateTimeImmutable $until,
     ) {
