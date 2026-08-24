@@ -221,6 +221,21 @@ final class HeroImageSelectorTest extends TestCase
         self::assertNull($this->selectUrl($hero, $body));
     }
 
+    public function testSuppressesHeroWhenTheSamePhotoUsesADifferentCropNameInTheBody(): void
+    {
+        // The real zeit.de entry 477263 data (#592): the CDN names crops of one
+        // photo with different basename words in the same image-group directory,
+        // so the feed hero is `original__640x360` while the body repeats it as
+        // `wide__660x371`. The directory is the photo's identity; the crop word
+        // is part of the size variant. A byline leads the body, so only the
+        // repeat rule can catch it — it must, or the reader stacks the photo.
+        $hero = 'https://img.zeit.de/news/2026-08/24/koenigsfamilie-image-group/original__640x360';
+        $body = '<div><span>Quelle: dpa</span></div>'
+            . '<figure><img src="https://img.zeit.de/news/2026-08/24/koenigsfamilie-image-group/wide__660x371" alt=""></figure>';
+
+        self::assertNull($this->selectUrl($hero, $body));
+    }
+
     public function testShowsHeroWhenTheBodyPhotoBelongsToADifferentImageGroup(): void
     {
         // Distinct photos live in distinct image-group directories, so a

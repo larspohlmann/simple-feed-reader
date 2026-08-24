@@ -130,10 +130,13 @@ final class HeroImageSelector
      * lowercased. Size variants of one photo collapse to it whichever CDN
      * convention names them — the id in the basename with the size in a query
      * (`/4943510.jpg?width=1200` vs `/4943510.webp?width=960`, mopo.de), or the
-     * id in the directory with the size *as* the basename
-     * (`/…-image-group/wide__1300x731` vs `/…-image-group/wide__660x371`,
-     * zeit.de). A different photo keeps a different path and so a different
-     * identity. A URL with no path (e.g. `https://cdn.test`) keeps its whole
+     * id in the directory with each size a whole basename of the form
+     * `<crop>__WIDTHxHEIGHT`, where the crop word varies between sizes of the
+     * same photo (`/…-image-group/original__640x360` vs
+     * `/…-image-group/wide__660x371`, zeit.de entry 477263). A `__WIDTHxHEIGHT`
+     * basename is therefore dropped whole, leaving the directory as the identity;
+     * distinct photos live in distinct directories and so keep distinct
+     * identities. A URL with no path (e.g. `https://cdn.test`) keeps its whole
      * form, so it matches only itself.
      */
     private function imageIdentity(string $url): string
@@ -144,7 +147,7 @@ final class HeroImageSelector
         }
 
         $withoutExtension = preg_replace('/\.[a-z0-9]+$/i', '', $path);
-        $withoutSizeVariant = preg_replace('/__\d+x\d+.*$/', '', (string) $withoutExtension);
+        $withoutSizeVariant = preg_replace('#/[^/]*__\d+x\d+.*$#', '', (string) $withoutExtension);
 
         return strtolower((string) $withoutSizeVariant);
     }
