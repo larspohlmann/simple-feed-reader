@@ -114,6 +114,29 @@ class EntryListRepository extends ServiceEntityRepository
     }
 
     /**
+     * The ids of every unread entry that matches this search and is no newer
+     * than $until, for the user's subscribed feeds. The set a search-scoped
+     * mark-read must flip; reuses the search's own term matching so it marks
+     * exactly what the search lists.
+     *
+     * @return list<int>
+     */
+    public function unreadMatchingEntryIdsForUser(EntrySearchQuery $query, \DateTimeImmutable $until): array
+    {
+        $qb = $this->rowQueryBuilder($query->userId)
+            ->select('e.id')
+            ->distinct();
+        $this->applyTerms($qb, $query->terms);
+        $qb->andWhere(UnreadDql::predicate())->setParameter('readFalse', false, Types::BOOLEAN);
+        $qb->andWhere('e.effectiveDate <= :until')->setParameter('until', $until);
+
+        /** @var list<array{id: int}> $rows */
+        $rows = $qb->getQuery()->getScalarResult();
+
+        return array_map(static fn (array $row): int => (int) $row['id'], $rows);
+    }
+
+    /**
      * The given entry ids hydrated through the same list-row projection every
      * other list uses — same per-user read state, same subscription join.
      * Ordered exactly like the entry list, never in the id order asked for,
