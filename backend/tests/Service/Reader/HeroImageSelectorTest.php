@@ -229,9 +229,10 @@ final class HeroImageSelectorTest extends TestCase
         // `wide__660x371`. The directory is the photo's identity; the crop word
         // is part of the size variant. A byline leads the body, so only the
         // repeat rule can catch it — it must, or the reader stacks the photo.
-        $hero = 'https://img.zeit.de/news/2026-08/24/koenigsfamilie-image-group/original__640x360';
+        $imageGroup = 'https://img.zeit.de/news/2026-08/24/koenigsfamilie-image-group';
+        $hero = $imageGroup . '/original__640x360';
         $body = '<div><span>Quelle: dpa</span></div>'
-            . '<figure><img src="https://img.zeit.de/news/2026-08/24/koenigsfamilie-image-group/wide__660x371" alt=""></figure>';
+            . '<figure><img src="' . $imageGroup . '/wide__660x371" alt=""></figure>';
 
         self::assertNull($this->selectUrl($hero, $body));
     }

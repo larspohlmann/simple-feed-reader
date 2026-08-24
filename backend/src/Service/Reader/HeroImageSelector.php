@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Html\HtmlDocumentParser;
 use Dom\Element;
-use Dom\HTMLDocument;
 use Dom\Node;
 use Dom\Text;
 
@@ -38,7 +38,9 @@ final class HeroImageSelector
             return null;
         }
 
-        $body = $this->parseBody($bodyHtml);
+        // Blank or unparsable html leaves no body to judge, so the candidate
+        // stands. The parser wraps a bare fragment in <html><body> on its own.
+        $body = HtmlDocumentParser::parseOrNull($bodyHtml)?->body;
         if ($body === null) {
             return $candidate;
         }
@@ -47,20 +49,6 @@ final class HeroImageSelector
         }
 
         return $candidate;
-    }
-
-    /**
-     * The parsed <body>, or null when the html is unparsable. The parser wraps
-     * a bare fragment in <html><body> on its own, so no scaffolding is needed;
-     * an empty or whitespace body parses to an empty <body> and leads the hero.
-     */
-    private function parseBody(string $bodyHtml): ?Element
-    {
-        try {
-            return HTMLDocument::createFromString($bodyHtml, LIBXML_NOERROR)->body;
-        } catch (\Throwable) {
-            return null;
-        }
     }
 
     /** Whether the first rendered node in the body is an image. */

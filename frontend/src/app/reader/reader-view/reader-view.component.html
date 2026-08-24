@@ -188,7 +188,7 @@
             [src]="image.url"
             [attr.width]="image.width"
             [attr.height]="image.height"
-            (error)="heroError.set(true)"
+            (error)="failedHeroUrl.set(image.url)"
             alt=""
             loading="lazy"
             decoding="async"

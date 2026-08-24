@@ -1,5 +1,5 @@
 // src/app/reader/preview-image.ts
-import { EntryDto } from './models';
+import { EntryDto, HeroImageDto } from './models';
 
 /** Parse HTML inertly and return the first absolute https image src, or null.
  *  http/relative/data srcs are rejected: the app is https, so http images are
@@ -35,12 +35,10 @@ export function textSnippet(html: string | null): string {
   return NULL_LEAK.test(text) ? '' : text;
 }
 
-export interface EntryImage {
-  url: string;
-  /** Declared width, or null when the feed did not say. */
-  width: number | null;
-  height: number | null;
-}
+/** Same shape as the API's HeroImageDto — one declaration, so a picture the
+ *  client derives and a picture the backend resolved cannot drift apart.
+ *  Null width/height mean the feed did not say. */
+export type EntryImage = HeroImageDto;
 
 /** The entry's image: the persisted field when present, else an inline <img>.
  *  The fallback exists for rows ingested before the image column landed — a

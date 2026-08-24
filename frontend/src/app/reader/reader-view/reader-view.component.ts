@@ -236,8 +236,11 @@ export class ReaderViewComponent {
     const s = this.state();
     return s.status === 'ok' ? s.article : null;
   });
-  /** A broken hero URL hides the image rather than leaving a torn placeholder. */
-  protected readonly heroError = signal(false);
+  /** The hero URL that failed to load, so a broken picture hides rather than
+   *  leaving a torn placeholder. Keyed by URL, not by component: the reader and
+   *  the original view offer different pictures, and a broken one must not
+   *  suppress the other (the pattern preview-entry-row already uses). */
+  protected readonly failedHeroUrl = signal<string | null>(null);
 
   /** The payload the heroes come from. Null while loading, and after a
    *  transport error, where no payload arrived at all. */
@@ -254,10 +257,10 @@ export class ReaderViewComponent {
    * field lookup: no request, and no duplicate-image rule on the client (#592).
    */
   readonly hero = computed(() => {
-    if (this.heroError()) return null;
     const source = this.heroSource();
     if (source === null) return null;
-    return this.mode() === 'reader' ? source.readerHero : source.originalHero;
+    const image = this.mode() === 'reader' ? source.readerHero : source.originalHero;
+    return image === null || image.url === this.failedHeroUrl() ? null : image;
   });
 
   /** Estimated minutes to read the displayed text; null hides the meta chip. */
@@ -290,7 +293,7 @@ export class ReaderViewComponent {
       // next one headless.
       this.toc.set([]);
       this.tocOpen.set(false);
-      this.heroError.set(false);
+      this.failedHeroUrl.set(null);
       this.showToTop.set(false);
       this.toolbarHidden.set(false);
       this.lastToolbarScrollTop = 0;

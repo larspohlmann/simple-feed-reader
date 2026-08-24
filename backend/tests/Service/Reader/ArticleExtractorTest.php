@@ -99,7 +99,7 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringNotContainsString('data:image', (string) $result->contentHtml);
     }
 
-    public function testEmitsLeadImageWhenBodyHasNoImage(): void
+    public function testExtractsAnOgImageThatSitsOutsideTheBody(): void
     {
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-lead-image.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
@@ -108,8 +108,8 @@ final class ArticleExtractorTest extends TestCase
 
         self::assertTrue($result->ok);
         self::assertStringNotContainsString('<img', (string) $result->contentHtml);
-        // readability finds the og:image even though it is outside the body; the
-        // reader renders it as a hero so the article is not imageless.
+        // readability finds the og:image even though it is outside the body. The
+        // extractor only reports it; ReaderHeroResolver decides whether it leads.
         self::assertSame('https://site.test/hero.jpg', $result->imageCandidate);
     }
 

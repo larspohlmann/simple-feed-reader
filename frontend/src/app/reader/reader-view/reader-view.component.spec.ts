@@ -697,6 +697,28 @@ describe('ReaderViewComponent', () => {
     expect(hero(f)).toBeNull();
   });
 
+  it('keeps the original hero after the reader hero fails to load', () => {
+    loadMock.mockReturnValue(
+      of<ReaderContent>(
+        okContent({
+          readerHero: { url: 'https://img.test/gone.jpg', width: null, height: null },
+          originalHero: { url: 'https://img.test/feed.jpg', width: 800, height: 450 },
+        }),
+      ),
+    );
+    const f = mount(entry());
+    hero(f)!.dispatchEvent(new Event('error'));
+    f.detectChanges();
+    expect(hero(f)).toBeNull();
+
+    // The failure belongs to the one broken URL, not to the article: the
+    // original view offers a different picture and must still show it.
+    TestBed.inject(ReaderModeService).toggle();
+    f.detectChanges();
+
+    expect(hero(f)!.getAttribute('src')).toBe('https://img.test/feed.jpg');
+  });
+
   it('renders no hero when the backend resolved none', () => {
     loadMock.mockReturnValue(of<ReaderContent>(okContent()));
 
