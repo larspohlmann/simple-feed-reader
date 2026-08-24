@@ -249,13 +249,19 @@
 }
 
 .nav .whole-word-badge {
-  /* Mirror the results-header badge: a quiet, uppercase micro-label. Excluded
-     from the generic `.nav > span` rule above (like `.lead`) so it doesn't
-     pick up `flex: 1` and split the row's width with `.saved-term`. */
-  flex: 0 0 auto;
-  font-size: var(--fs-sm);
-  text-transform: uppercase;
-  opacity: 0.65;
+  /* Same pill as the results-header badge (entry-list.component.scss), just
+     carrying the compact "W" glyph instead of the full word — the sidebar row
+     is too narrow for "Whole words". Excluded from the generic `.nav > span`
+     rule above (like `.lead`) so it doesn't pick up `flex: 1` and split the
+     row's width with `.saved-term`. */
+  flex: none;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--fs-xs, var(--fs-sm));
+  line-height: var(--lh-tight);
+  white-space: nowrap;
 }
 
 .label {

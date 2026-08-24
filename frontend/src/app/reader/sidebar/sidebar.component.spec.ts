@@ -594,6 +594,26 @@ describe('SidebarComponent', () => {
       const tagChev: HTMLElement = f.nativeElement.querySelector('.taghead .chevzone');
       expect(savedChev.className).toBe(tagChev.className);
     });
+
+    it('shows a compact "W" pill on a whole-word row and none on a plain row', () => {
+      const f = mount({
+        savedSearches: [
+          { id: 1, term: 'climate', wholeWord: true, position: 0, unreadCount: 0 },
+          { id: 2, term: 'space', wholeWord: false, position: 1, unreadCount: 0 },
+        ],
+      });
+      f.componentInstance.toggleSavedSearches();
+      f.detectChanges();
+
+      const items = [...f.nativeElement.querySelectorAll('.savedsearch-item')];
+      const wholeWordRow = items.find((item) => item.textContent?.includes('climate'))!;
+      const plainRow = items.find((item) => item.textContent?.includes('space'))!;
+
+      const badge = wholeWordRow.querySelector('.whole-word-badge')!;
+      expect(badge.textContent?.trim()).toBe('W');
+      expect(wholeWordRow.querySelector('.sr-only')?.textContent).toContain('Whole words');
+      expect(plainRow.querySelector('.whole-word-badge')).toBeNull();
+    });
   });
 });
 

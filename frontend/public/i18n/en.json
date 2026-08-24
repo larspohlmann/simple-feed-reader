@@ -629,6 +629,7 @@
     "searchClose": "Close search",
     "searchCount": "{{count}} results",
     "searchWholeWord": "Whole words",
+    "searchWholeWordShort": "W",
     "searchWholeWordHint": "A trailing space makes this search match whole words only. Remove it to search for the text anywhere in a word.",
     "loadMore": "Load more",
     "favorite": "Favorite",

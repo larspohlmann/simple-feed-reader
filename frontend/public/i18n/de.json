@@ -629,6 +629,7 @@
     "searchClose": "Suche schließen",
     "searchCount": "{{count}} Ergebnisse",
     "searchWholeWord": "Ganze Wörter",
+    "searchWholeWordShort": "W",
     "searchWholeWordHint": "Ein Leerzeichen am Ende sucht nur nach ganzen Wörtern. Entfernen Sie es, um den Text an beliebiger Stelle in einem Wort zu suchen.",
     "loadMore": "Mehr laden",
     "favorite": "Favorit",
