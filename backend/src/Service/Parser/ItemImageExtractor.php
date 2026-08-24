@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Parser;
 
+use App\Service\Image\DeclaredImage;
+
 /**
  * Finds the best image attached to a feed item. Callers combine the sources in
  * the precedence their format prefers (Media RSS, then a format's enclosure,
@@ -23,7 +25,7 @@ final class ItemImageExtractor
     private const string MEDIA_NS = 'http://search.yahoo.com/mrss/';
 
     /** Media RSS image, searching <media:group> when nothing is attached directly. */
-    public static function fromMedia(\DOMElement $item): ?ParsedImage
+    public static function fromMedia(\DOMElement $item): ?DeclaredImage
     {
         $candidates = self::mediaCandidatesIn($item);
 
@@ -38,7 +40,7 @@ final class ItemImageExtractor
     }
 
     /** RSS 2.0 <enclosure type="image/*" url="…">. */
-    public static function fromRssEnclosure(\DOMElement $item): ?ParsedImage
+    public static function fromRssEnclosure(\DOMElement $item): ?DeclaredImage
     {
         foreach ($item->childNodes as $child) {
             if (!$child instanceof \DOMElement || $child->localName !== 'enclosure') {
@@ -57,7 +59,7 @@ final class ItemImageExtractor
     }
 
     /** Atom <link rel="enclosure" type="image/*" href="…">. */
-    public static function fromAtomEnclosure(\DOMElement $entry, string $ns): ?ParsedImage
+    public static function fromAtomEnclosure(\DOMElement $entry, string $ns): ?DeclaredImage
     {
         foreach ($entry->childNodes as $child) {
             if (
@@ -88,14 +90,14 @@ final class ItemImageExtractor
      * declared candidate wins. The `url` attribute is required, so the standard
      * channel-level <image> (which nests a <url> child) never matches here.
      */
-    public static function fromCustomImageElement(\DOMElement $item): ?ParsedImage
+    public static function fromCustomImageElement(\DOMElement $item): ?DeclaredImage
     {
         return self::widest(self::customImageCandidates($item, 'image_big'))
             ?? self::widest(self::customImageCandidates($item, 'image'));
     }
 
     /** First <img src="…"> in a fragment of HTML. Dimensions are never trusted here. */
-    public static function fromHtml(?string $html): ?ParsedImage
+    public static function fromHtml(?string $html): ?DeclaredImage
     {
         if ($html === null || $html === '') {
             return null;
@@ -105,10 +107,10 @@ final class ItemImageExtractor
         }
         $src = trim(html_entity_decode($matches[2], ENT_QUOTES | ENT_HTML5));
 
-        return $src === '' ? null : new ParsedImage($src);
+        return $src === '' ? null : new DeclaredImage($src);
     }
 
-    /** @return list<ParsedImage> */
+    /** @return list<DeclaredImage> */
     private static function mediaCandidatesIn(\DOMElement $parent): array
     {
         $candidates = [];
@@ -127,7 +129,7 @@ final class ItemImageExtractor
         return $candidates;
     }
 
-    /** @return list<ParsedImage> */
+    /** @return list<DeclaredImage> */
     private static function customImageCandidates(\DOMElement $item, string $localName): array
     {
         $candidates = [];
@@ -151,9 +153,9 @@ final class ItemImageExtractor
             && $node->namespaceURI === self::MEDIA_NS;
     }
 
-    private static function imageFrom(\DOMElement $element, string $url): ParsedImage
+    private static function imageFrom(\DOMElement $element, string $url): DeclaredImage
     {
-        return new ParsedImage(
+        return new DeclaredImage(
             $url,
             self::positiveInt($element->getAttribute('width')),
             self::positiveInt($element->getAttribute('height')),
@@ -167,8 +169,8 @@ final class ItemImageExtractor
         return \is_int($value) && $value > 0 ? $value : null;
     }
 
-    /** @param list<ParsedImage> $candidates */
-    private static function widest(array $candidates): ?ParsedImage
+    /** @param list<DeclaredImage> $candidates */
+    private static function widest(array $candidates): ?DeclaredImage
     {
         $best = null;
         foreach ($candidates as $candidate) {

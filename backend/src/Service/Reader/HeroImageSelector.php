@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Service\Html\HtmlDocumentParser;
+use App\Service\Image\DeclaredImage;
 use Dom\Element;
 use Dom\Node;
 use Dom\Text;
@@ -32,7 +33,7 @@ final class HeroImageSelector
     /** Standard layout whitespace, excluding U+00A0 which is visible text. */
     private const string LAYOUT_WHITESPACE = " \t\n\r\f\v\0";
 
-    public function select(?HeroImage $candidate, string $bodyHtml): ?HeroImage
+    public function select(?DeclaredImage $candidate, string $bodyHtml): ?DeclaredImage
     {
         if ($candidate === null || preg_match('#^https?://#i', $candidate->url) !== 1) {
             return null;

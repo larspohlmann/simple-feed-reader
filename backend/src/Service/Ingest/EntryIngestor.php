@@ -9,7 +9,7 @@ use App\Entity\Feed;
 use App\Repository\EntryRepository;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
-use App\Service\Parser\ParsedImage;
+use App\Service\Image\DeclaredImage;
 use App\Service\Url\HttpsImageUrl;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Url\UrlNormalizer;
@@ -162,12 +162,12 @@ final class EntryIngestor
     /**
      * Sets all three image columns together so a rejected image (null, an
      * unusable scheme, or a URL over the column limit) never leaves a stale
-     * width/height behind. ParsedImage already treats a missing image as a
+     * width/height behind. DeclaredImage already treats a missing image as a
      * first-class case the layout falls back from, so losing the image here
      * is preferable to persisting something guaranteed to render broken
      * forever.
      */
-    private function applyImage(Entry $entry, ?ParsedImage $image): void
+    private function applyImage(Entry $entry, ?DeclaredImage $image): void
     {
         if ($image === null) {
             $entry->setImage(null, null, null);
@@ -186,10 +186,10 @@ final class EntryIngestor
     }
 
     /**
-     * HttpsImageUrl owns the rule; this keeps the ParsedImage-shaped call the
+     * HttpsImageUrl owns the rule; this keeps the DeclaredImage-shaped call the
      * ingest path reads better with.
      */
-    private function persistableImageUrl(ParsedImage $image): ?string
+    private function persistableImageUrl(DeclaredImage $image): ?string
     {
         return HttpsImageUrl::orNull($image->url);
     }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
-use App\Service\Reader\HeroImage;
+use App\Service\Image\DeclaredImage;
 use App\Service\Reader\HeroImageSelector;
 use PHPUnit\Framework\TestCase;
 
@@ -23,7 +23,7 @@ final class HeroImageSelectorTest extends TestCase
      */
     private function selectUrl(?string $candidateUrl, string $bodyHtml): ?string
     {
-        $candidate = $candidateUrl === null ? null : new HeroImage($candidateUrl);
+        $candidate = $candidateUrl === null ? null : new DeclaredImage($candidateUrl);
 
         return $this->selector->select($candidate, $bodyHtml)?->url;
     }
@@ -276,7 +276,7 @@ final class HeroImageSelectorTest extends TestCase
     {
         // The dimensions are the client's aspect-ratio reservation, so the
         // selector must hand back the candidate itself, not a rebuilt copy.
-        $hero = new HeroImage('https://cdn.test/hero.jpg', 800, 450);
+        $hero = new DeclaredImage('https://cdn.test/hero.jpg', 800, 450);
 
         $selected = $this->selector->select($hero, '<p>Just words.</p>');
 

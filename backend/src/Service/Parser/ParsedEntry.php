@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Parser;
 
+use App\Service\Image\DeclaredImage;
+
 final readonly class ParsedEntry
 {
     public function __construct(
@@ -14,7 +16,7 @@ final readonly class ParsedEntry
         public ?string $summary,
         public ?string $contentHtml,
         public ?\DateTimeImmutable $publishedAt,
-        public ?ParsedImage $image = null,
+        public ?DeclaredImage $image = null,
     ) {
     }
 }

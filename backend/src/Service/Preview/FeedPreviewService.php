@@ -14,7 +14,7 @@ use App\Service\Ingest\EntrySnippet;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;
 use App\Service\Parser\ParsedEntry;
-use App\Service\Parser\ParsedImage;
+use App\Service\Image\DeclaredImage;
 use App\Service\Parser\WordPressJsonParser;
 use App\Service\Scraper\HtmlItemExtractor;
 use App\Service\Text\PlainText;
@@ -121,7 +121,7 @@ final readonly class FeedPreviewService
 
     // The SPA is https, so an http/relative/data image is useless in an <img>.
     // Mirrors the reader's firstPreviewImage rule.
-    private function httpsImageUrl(?ParsedImage $image): ?string
+    private function httpsImageUrl(?DeclaredImage $image): ?string
     {
         if ($image === null) {
             return null;

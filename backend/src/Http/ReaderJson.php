@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Service\Reader\ExtractionResult;
-use App\Service\Reader\HeroImage;
+use App\Service\Image\DeclaredImage;
 use App\Service\Reader\ReaderHeroes;
 
 final class ReaderJson
@@ -51,7 +51,7 @@ final class ReaderJson
     }
 
     /** @return array{url: string, width: int|null, height: int|null}|null */
-    private static function hero(?HeroImage $hero): ?array
+    private static function hero(?DeclaredImage $hero): ?array
     {
         return $hero === null
             ? null
