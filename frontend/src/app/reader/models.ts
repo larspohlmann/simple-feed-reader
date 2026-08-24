@@ -8,6 +8,18 @@ export interface TagDto {
   position: number;
 }
 
+export interface SavedSearchDto {
+  id: number;
+  /** The trimmed search term (no trailing whole-word space). */
+  term: string;
+  /** True when the saved search matches whole words only. */
+  wholeWord: boolean;
+  /** Reserved for a future sidebar reorder; unused in v1. */
+  position: number;
+  /** Live count of unread entries matching this search. */
+  unreadCount: number;
+}
+
 /** A tag as embedded on a subscription: same shape as TagDto, but `position` is
  *  THIS feed's order within that tag (the join position), not the tag's own
  *  sidebar order. */

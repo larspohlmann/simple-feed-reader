@@ -22,6 +22,7 @@ import {
   RestoreResult,
   RunHistoryMonthPage,
   RunHistoryOverview,
+  SavedSearchDto,
   SubscribeResult,
   SubscriptionDto,
   SubscriptionsResponse,
@@ -138,6 +139,21 @@ export class ReaderApi {
   /** Persist the order of feeds within one tag. */
   setTagFeedOrder(tagId: number, subscriptionIds: number[]): Observable<void> {
     return this.http.patch<void>(`${this.base}/api/tags/${tagId}/feed-order`, { subscriptionIds });
+  }
+
+  savedSearches(): Observable<{ savedSearches: SavedSearchDto[] }> {
+    return this.http.get<{ savedSearches: SavedSearchDto[] }>(`${this.base}/api/saved-searches`);
+  }
+
+  createSavedSearch(body: {
+    term: string;
+    wholeWord: boolean;
+  }): Observable<{ savedSearch: SavedSearchDto }> {
+    return this.http.post<{ savedSearch: SavedSearchDto }>(`${this.base}/api/saved-searches`, body);
+  }
+
+  deleteSavedSearch(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/api/saved-searches/${id}`);
   }
 
   exportOpml(): Observable<string> {
