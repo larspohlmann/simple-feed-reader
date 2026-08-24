@@ -15,10 +15,10 @@ use fivefilters\Readability\Readability;
 /**
  * Turns an article URL into clean, sanitized, distraction-free HTML:
  * fetch (SSRF-guarded) → page normalization → readability extraction →
- * duplicate-title removal → EntrySanitizer (the same XSS barrier feed HTML
- * crosses). Never throws for an ordinary failure — returns a
- * `failed` ExtractionResult with a machine reason so the endpoint stays 200 and
- * the client can fall back to feed content.
+ * duplicate-title removal → edge-boilerplate trimming → EntrySanitizer (the
+ * same XSS barrier feed HTML crosses). Never throws for an ordinary failure —
+ * returns a `failed` ExtractionResult with a machine reason so the endpoint
+ * stays 200 and the client can fall back to feed content.
  */
 final class ArticleExtractor implements ArticleExtractorInterface
 {
@@ -31,6 +31,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
         private readonly LeadingTitleRemover $titleRemover,
         private readonly EntrySanitizer $sanitizer,
         private readonly LeadImageSelector $leadImageSelector,
+        private readonly EdgeBoilerplateTrimmer $boilerplateTrimmer,
     ) {
     }
 
@@ -55,7 +56,8 @@ final class ArticleExtractor implements ArticleExtractorInterface
         }
 
         $withoutTitle = $this->titleRemover->remove($article->content, [$article->title, $entryTitle]);
-        $clean = $this->sanitizer->sanitize($withoutTitle);
+        $trimmed = $this->boilerplateTrimmer->trim($withoutTitle);
+        $clean = $this->sanitizer->sanitize($trimmed);
         if ($clean === null) {
             return ExtractionResult::failed($url, 'empty');
         }
@@ -94,6 +96,10 @@ final class ArticleExtractor implements ArticleExtractorInterface
         }
 
         $readability = new Readability(new Configuration(
+            // EdgeBoilerplateTrimmer reads class/id fingerprints on this output
+            // (#582); readability strips classes by default, which would make
+            // that signal a permanent no-op.
+            keepClasses: true,
             fixRelativeURLs: true,
             originalURL: $finalUrl,
         ));

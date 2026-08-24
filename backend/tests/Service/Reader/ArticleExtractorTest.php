@@ -10,11 +10,13 @@ use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\ArticleExtractor;
+use App\Service\Reader\EdgeBoilerplateTrimmer;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\LazyImageSources;
 use App\Service\Reader\LeadImageSelector;
 use App\Service\Reader\LeadingTitleRemover;
+use App\Service\Reader\ShareWidgetRemover;
 use App\Service\Sanitize\EntrySanitizer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -50,10 +52,11 @@ final class ArticleExtractorTest extends TestCase
 
         return new ArticleExtractor(
             $fetcher,
-            new FetchedPageNormalizer(new LazyImageSources()),
+            new FetchedPageNormalizer(new LazyImageSources(), new ShareWidgetRemover()),
             new LeadingTitleRemover(),
             new EntrySanitizer(),
             new LeadImageSelector(),
+            new EdgeBoilerplateTrimmer(),
         );
     }
 
@@ -156,10 +159,11 @@ final class ArticleExtractorTest extends TestCase
         );
         $extractor = new ArticleExtractor(
             $fetcher,
-            new FetchedPageNormalizer(new LazyImageSources()),
+            new FetchedPageNormalizer(new LazyImageSources(), new ShareWidgetRemover()),
             new LeadingTitleRemover(),
             new EntrySanitizer(),
             new LeadImageSelector(),
+            new EdgeBoilerplateTrimmer(),
         );
 
         $result = $extractor->extract('http://169.254.169.254/');
@@ -224,5 +228,54 @@ final class ArticleExtractorTest extends TestCase
 
         self::assertTrue($result->ok);
         self::assertStringContainsString('First substantial paragraph', (string) $result->contentHtml);
+    }
+
+    public function testStripsTheShariffBarFromTheExtractedArticle(): void
+    {
+        // #582: the Shariff share bar leads the hanfjournal body ("teilen …
+        // merken"). It must not appear in the extracted, reader-ready HTML,
+        // while the real article text survives.
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/hanfjournal-shariff.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/cannafair');
+
+        self::assertTrue($result->ok);
+        self::assertStringNotContainsString('teilen', (string) $result->contentHtml);
+        self::assertStringNotContainsString('merken', (string) $result->contentHtml);
+        self::assertStringContainsString('Cannafair', (string) $result->contentHtml);
+    }
+
+    public function testTrimsATrailingNewsletterPromptFromTheExtractedArticle(): void
+    {
+        // #582 stage 2: a newsletter prompt at the tail of the article is
+        // removed, while the middle prose is kept. The content root needs at
+        // least 4 top-level blocks — the edge cap is floor(0.25 * blockCount),
+        // and a 3-block root (cap 0) would make the trim a no-op.
+        //
+        // A "related posts" grid is not usable here: readability's own
+        // UNLIKELY_CANDIDATES/NEGATIVE regexes already match "related" and its
+        // own cleanConditionally('div') removes any link-heavy div outright, so
+        // such a fixture would pass without EdgeBoilerplateTrimmer ever running
+        // (verified empirically). "newsletter" matches neither readability
+        // regex and this block carries no links, so only the trimmer's
+        // fingerprint + corroborating-heading-phrase rule removes it.
+        $prose = str_repeat('Ein langer echter Absatz mit Fliesstext. ', 8);
+        $body = '<article><div class="entry-content">'
+            . '<p>' . $prose . '</p><p>' . $prose . '</p><p>' . $prose . '</p>'
+            . '<div class="newsletter"><h3>Jetzt anmelden</h3>'
+            . '<p>Melde dich für unseren Newsletter an, um nichts zu verpassen.</p></div>'
+            . '</div></article>';
+        $html = '<!doctype html><html lang="de"><head><title>T</title></head><body>' . $body . '</body></html>';
+        $extractor = $this->extractor([new MockResponse($html, [
+            'response_headers' => ['content-type' => 'text/html; charset=utf-8'],
+        ])]);
+
+        $result = $extractor->extract('https://site.test/post');
+
+        self::assertTrue($result->ok);
+        self::assertStringNotContainsString('Jetzt anmelden', (string) $result->contentHtml);
+        self::assertStringNotContainsString('unseren Newsletter', (string) $result->contentHtml);
+        self::assertStringContainsString('Fliesstext', (string) $result->contentHtml);
     }
 }
