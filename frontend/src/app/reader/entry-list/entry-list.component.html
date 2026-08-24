@@ -381,6 +381,7 @@
                 [entry]="e"
                 [tags]="tagsFor(e.subscriptionId)"
                 [terms]="searchTerms()"
+                [class.in-search]="isSearch()"
                 [class.open]="openEntryId() === e.id"
                 (favorite)="favorite.emit($event)"
                 (keep)="keep.emit($event)"

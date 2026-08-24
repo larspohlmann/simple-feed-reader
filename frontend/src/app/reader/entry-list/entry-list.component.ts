@@ -263,6 +263,10 @@ export class EntryListComponent implements OnDestroy {
     this.selection().kind === 'search' ? 'list' : this.layout(),
   );
 
+  /** Search rows dim their excerpt a shade — the marked term stays the row's
+   *  focus, and the surrounding prose recedes behind it. */
+  readonly isSearch = computed(() => this.selection().kind === 'search');
+
   private readonly language = inject(LanguageService);
   /** A localised "last refreshed 5 min ago" label for a single-feed selection
    *  or the for-you list, or null when it doesn't apply (neither, or never
