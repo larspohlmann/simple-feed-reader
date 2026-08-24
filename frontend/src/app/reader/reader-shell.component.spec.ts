@@ -640,6 +640,49 @@ describe('ReaderShellComponent', () => {
     ctrl.verify();
   });
 
+  it('does not re-mark the open entry viewed after the user un-ticks it', () => {
+    // The tick must turn off and stay off. The auto-open effect (which marks the
+    // open entry viewed once) must not re-fire when un-ticking flips isViewed
+    // back to false — otherwise it re-marks the entry and the tick never flips.
+    const f = boot();
+    qp.next(convertToParamMap({ entry: '1' }));
+    f.detectChanges();
+    ctrl.expectOne('https://api.test/api/entries/1/state').flush({
+      state: {
+        entryId: 1,
+        isRead: true,
+        isFavorite: false,
+        isKept: false,
+        readAt: 'x',
+        isViewed: true,
+        viewedAt: 'x',
+      },
+    });
+    f.detectChanges();
+
+    f.componentInstance.onToggleViewed(f.componentInstance.openEntry()!);
+    f.detectChanges();
+
+    const patches = ctrl.match((r) => r.url.endsWith('/entries/1/state'));
+    expect(patches.map((p) => p.request.body)).toEqual([{ isViewed: false }]);
+    patches.forEach((p) =>
+      p.flush({
+        state: {
+          entryId: 1,
+          isRead: true,
+          isFavorite: false,
+          isKept: false,
+          readAt: 'x',
+          isViewed: false,
+          viewedAt: null,
+        },
+      }),
+    );
+    f.detectChanges();
+    ctrl.expectNone((r) => r.url.endsWith('/entries/1/state'));
+    ctrl.verify();
+  });
+
   it('marks the entry viewed when the original-article link is followed', () => {
     const f = boot({ isRead: true }); // open fires only the viewed patch…
     qp.next(convertToParamMap({ entry: '1' }));

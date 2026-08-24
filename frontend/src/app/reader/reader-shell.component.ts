@@ -199,6 +199,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     const fetched = this.fetchedEntry();
     return fetched && fetched.id === id ? fetched : null;
   });
+  /** The identity of the open entry, isolated from its flags. The auto-open
+   *  effect keys off this so it fires once per opened entry and never re-runs
+   *  when the entry's own state changes — un-ticking it must not re-mark it. */
+  private readonly openEntryId = computed(() => this.openEntry()?.id ?? null);
   /** Feed tags keyed by subscription id — feeds the tag pills on entries and the
    *  article view without threading tags through each entry DTO. */
   readonly feedTags = computed(() => {
@@ -417,11 +421,13 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     // flag alone; the backend reads it too (ViewedImpliesReadListener) and
     // localStatePatch mirrors that here, so one flag on the wire moves both.
     effect(() => {
-      const e = this.openEntry();
-      if (!e) return;
-      if (e.isViewed || this.viewedOnOpen.has(e.id)) return;
-      this.viewedOnOpen.add(e.id);
-      untracked(() => this.applyOpenedPatch(e, { isViewed: true }));
+      if (this.openEntryId() === null) return;
+      untracked(() => {
+        const e = this.openEntry();
+        if (!e || e.isViewed || this.viewedOnOpen.has(e.id)) return;
+        this.viewedOnOpen.add(e.id);
+        this.applyOpenedPatch(e, { isViewed: true });
+      });
     });
     // Deep link to an entry the current list page doesn't hold: fetch it by id so
     // it still opens. Tracks only entryId; the list copy takes over once loaded.
