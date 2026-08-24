@@ -14,7 +14,7 @@ use App\Service\Reader\EdgeBoilerplateTrimmer;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\LazyImageSources;
-use App\Service\Reader\LeadImageSelector;
+use App\Service\Reader\HeroImageSelector;
 use App\Service\Reader\LeadingTitleRemover;
 use App\Service\Reader\ShareWidgetRemover;
 use App\Service\Sanitize\EntrySanitizer;
@@ -55,7 +55,7 @@ final class ArticleExtractorTest extends TestCase
             new FetchedPageNormalizer(new LazyImageSources(), new ShareWidgetRemover()),
             new LeadingTitleRemover(),
             new EntrySanitizer(),
-            new LeadImageSelector(),
+            new HeroImageSelector(),
             new EdgeBoilerplateTrimmer(),
         );
     }
@@ -162,7 +162,7 @@ final class ArticleExtractorTest extends TestCase
             new FetchedPageNormalizer(new LazyImageSources(), new ShareWidgetRemover()),
             new LeadingTitleRemover(),
             new EntrySanitizer(),
-            new LeadImageSelector(),
+            new HeroImageSelector(),
             new EdgeBoilerplateTrimmer(),
         );
 

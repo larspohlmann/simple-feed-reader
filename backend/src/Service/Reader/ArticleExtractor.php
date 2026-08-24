@@ -30,7 +30,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
         private readonly FetchedPageNormalizer $normalizer,
         private readonly LeadingTitleRemover $titleRemover,
         private readonly EntrySanitizer $sanitizer,
-        private readonly LeadImageSelector $leadImageSelector,
+        private readonly HeroImageSelector $heroImageSelector,
         private readonly EdgeBoilerplateTrimmer $boilerplateTrimmer,
     ) {
     }
@@ -69,7 +69,10 @@ final class ArticleExtractor implements ArticleExtractorInterface
             siteName: $article->siteName,
             contentHtml: $clean,
             excerpt: $article->excerpt,
-            image: $this->leadImageSelector->select($article->image, $clean),
+            image: $this->heroImageSelector->select(
+                $article->image === null ? null : new HeroImage($article->image),
+                $clean,
+            )?->url,
         );
     }
 

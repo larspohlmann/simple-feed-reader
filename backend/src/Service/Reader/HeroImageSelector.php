@@ -10,7 +10,11 @@ use Dom\Node;
 use Dom\Text;
 
 /**
- * Decides whether an article's og:image should lead the reader as a hero.
+ * Decides whether a candidate picture may lead an article as its hero.
+ *
+ * This is the only implementation of the rule (#592). It is applied to more than
+ * one (candidate, body) pair — see ReaderHeroResolver — so it knows nothing
+ * about where either side came from.
  *
  * A hero exists only to give a lead picture to an article whose body does not
  * already open with one. So the hero is suppressed when the extracted body
@@ -23,14 +27,14 @@ use Dom\Text;
  * The candidate is guarded to http(s) so a javascript:/data: URL from the page
  * can never reach the client's <img src>.
  */
-final class LeadImageSelector
+final class HeroImageSelector
 {
     /** Standard layout whitespace, excluding U+00A0 which is visible text. */
     private const string LAYOUT_WHITESPACE = " \t\n\r\f\v\0";
 
-    public function select(?string $candidate, string $bodyHtml): ?string
+    public function select(?HeroImage $candidate, string $bodyHtml): ?HeroImage
     {
-        if ($candidate === null || preg_match('#^https?://#i', $candidate) !== 1) {
+        if ($candidate === null || preg_match('#^https?://#i', $candidate->url) !== 1) {
             return null;
         }
 
@@ -38,7 +42,7 @@ final class LeadImageSelector
         if ($body === null) {
             return $candidate;
         }
-        if ($this->bodyLeadsWithImage($body) || $this->bodyRepeatsImage($body, $candidate)) {
+        if ($this->bodyLeadsWithImage($body) || $this->bodyRepeatsImage($body, $candidate->url)) {
             return null;
         }
 
