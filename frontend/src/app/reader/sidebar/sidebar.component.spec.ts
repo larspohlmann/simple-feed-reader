@@ -548,7 +548,7 @@ describe('SidebarComponent', () => {
       expect(head.querySelector('.count')?.textContent).toContain('7');
     });
 
-    it('expands on click, revealing the term rows and hiding the summed count', () => {
+    it('expands on click, revealing the term rows while keeping the summed count', () => {
       const f = mount({
         savedSearches: [
           { id: 1, term: 'climate', wholeWord: false, position: 0, unreadCount: 3 },
@@ -563,7 +563,10 @@ describe('SidebarComponent', () => {
       const text = f.nativeElement.textContent;
       expect(text).toContain('climate');
       expect(text).toContain('space');
-      expect(head.querySelector('.count')).toBeNull();
+      // The header keeps its summed unread count when expanded, the same way
+      // a tag row keeps its own count — it does not disappear like the old
+      // Task-12 behaviour.
+      expect(head.querySelector('.count')?.textContent).toContain('7');
       expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(2);
     });
 

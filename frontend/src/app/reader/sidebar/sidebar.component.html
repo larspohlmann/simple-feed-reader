@@ -101,7 +101,7 @@
         <button class="nav grow savedsearch-toggle" type="button" (click)="toggleSavedSearches()">
           <span class="lead"><app-icon name="saved_search" size="sm" /></span>
           <span class="savedsearch-title">{{ 'reader.savedSearches' | transloco }}</span>
-          @if (!savedSearchesExpanded() && savedSearchesUnread() > 0) {
+          @if (savedSearchesUnread() > 0) {
             <span class="count">{{ savedSearchesUnread() }}</span>
           }
         </button>
