@@ -265,7 +265,7 @@ final class HeroImageSelectorTest extends TestCase
         $selected = $this->selector->select($hero, '<p>Just words.</p>');
 
         self::assertSame($hero, $selected);
-        self::assertSame(800, $selected?->width);
-        self::assertSame(450, $selected?->height);
+        self::assertSame(800, $selected->width);
+        self::assertSame(450, $selected->height);
     }
 }

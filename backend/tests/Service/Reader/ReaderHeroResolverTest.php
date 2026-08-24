@@ -61,7 +61,7 @@ final class ReaderHeroResolverTest extends TestCase
 
         self::assertSame('https://cdn.test/og.jpg', $heroes->readerHero?->url);
         // readability reports no dimensions for an og:image.
-        self::assertNull($heroes->readerHero?->width);
+        self::assertNull($heroes->readerHero->width);
     }
 
     public function testTheFeedImageBacksTheReaderHeroWhenTheExtractionHasNone(): void
@@ -72,8 +72,8 @@ final class ReaderHeroResolverTest extends TestCase
         $heroes = $this->resolver->resolve($entry, $this->extracted('<p>Extracted body.</p>', null));
 
         self::assertSame('https://cdn.test/feed.jpg', $heroes->readerHero?->url);
-        self::assertSame(800, $heroes->readerHero?->width);
-        self::assertSame(450, $heroes->readerHero?->height);
+        self::assertSame(800, $heroes->readerHero->width);
+        self::assertSame(450, $heroes->readerHero->height);
     }
 
     public function testTheFeedImageBacksTheReaderHeroWhenTheExtractionImageIsSuppressed(): void
@@ -136,8 +136,8 @@ final class ReaderHeroResolverTest extends TestCase
 
         self::assertSame('https://cdn.test/feed.jpg', $heroes->originalHero?->url);
         // Unknown dimensions pass through rather than being guessed.
-        self::assertNull($heroes->originalHero?->width);
-        self::assertNull($heroes->originalHero?->height);
+        self::assertNull($heroes->originalHero->width);
+        self::assertNull($heroes->originalHero->height);
     }
 
     public function testAFailedExtractionStillResolvesTheOriginalHero(): void
