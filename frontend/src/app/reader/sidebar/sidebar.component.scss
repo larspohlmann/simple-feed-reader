@@ -266,34 +266,20 @@
   margin: var(--space-3) var(--space-2) var(--space-1);
 }
 
-/* The "Saved searches" group header: a toggle-only button built like a `.nav`
-   row (it shares the class), with its own lead-icon slot and a trailing
-   chevron mirroring the tag chevron, but inline in the row rather than a
-   separate `.chevzone` button — there is no adjacent edit/delete menu to
-   share the row with. */
-.savedsearch-head {
+/* The "Saved searches" group header mirrors a tag row: `.savedsearch-head`
+   shares `.tag`'s flex-row layout so `.tag .lead` and `.tag .grow` (above)
+   already centre the icon and let the toggle button absorb the row's spare
+   width, and its trailing `.chevzone` is the same button/geometry the tag
+   rows use — no bespoke chevron styling, so the chevron column lines up with
+   the tag chevrons below it. Only the toggle button itself needs a reset: a
+   `<button>` standing in for what is normally a `.nav` anchor. */
+.savedsearch-toggle {
   width: 100%;
   background: none;
   border: none;
   font: inherit;
+  text-align: left;
   cursor: pointer;
-}
-
-.savedsearch-head .lead {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.savedsearch-head .chev {
-  flex: none;
-  margin-left: auto;
-  display: inline-flex;
-  padding: var(--space-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
 }
 
 /* Same indent token the tag-feed rows use (`.tag-sub`), so saved-search terms

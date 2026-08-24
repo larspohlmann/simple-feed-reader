@@ -97,25 +97,26 @@
 
   @if (savedSearches().length) {
     <div class="savedsearches">
-      <button
-        class="nav grow savedsearch-head"
-        type="button"
-        [class.open]="savedSearchesExpanded()"
-        [attr.aria-expanded]="savedSearchesExpanded()"
-        [attr.aria-label]="'reader.toggleSavedSearches' | transloco"
-        (click)="toggleSavedSearches()"
-      >
-        <span class="lead"><app-icon name="bookmark" size="sm" /></span>
-        <span class="savedsearch-title">{{ 'reader.savedSearches' | transloco }}</span>
-        @if (!savedSearchesExpanded() && savedSearchesUnread() > 0) {
-          <span class="count">{{ savedSearchesUnread() }}</span>
-        }
-        <app-icon
-          class="chev"
-          [name]="savedSearchesExpanded() ? 'expand_less' : 'expand_more'"
-          size="sm"
-        />
-      </button>
+      <div class="tag savedsearch-head">
+        <button class="nav grow savedsearch-toggle" type="button" (click)="toggleSavedSearches()">
+          <span class="lead"><app-icon name="saved_search" size="sm" /></span>
+          <span class="savedsearch-title">{{ 'reader.savedSearches' | transloco }}</span>
+          @if (!savedSearchesExpanded() && savedSearchesUnread() > 0) {
+            <span class="count">{{ savedSearchesUnread() }}</span>
+          }
+        </button>
+        <!-- Flush at the right edge, styled exactly like a tag's `.chevzone`, so
+             the chevron column lines up with the tag chevrons below it. -->
+        <button
+          class="chevzone"
+          type="button"
+          [attr.aria-expanded]="savedSearchesExpanded()"
+          [attr.aria-label]="'reader.toggleSavedSearches' | transloco"
+          (click)="toggleSavedSearches()"
+        >
+          <app-icon [name]="savedSearchesExpanded() ? 'expand_less' : 'expand_more'" size="sm" />
+        </button>
+      </div>
       @if (savedSearchesExpanded()) {
         @for (saved of savedSearches(); track saved.id) {
           <a

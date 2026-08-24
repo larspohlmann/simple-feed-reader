@@ -555,8 +555,9 @@ describe('SidebarComponent', () => {
           { id: 2, term: 'space', wholeWord: false, position: 1, unreadCount: 4 },
         ],
       });
-      const head: HTMLButtonElement = f.nativeElement.querySelector('.savedsearch-head');
-      head.click();
+      const head: HTMLElement = f.nativeElement.querySelector('.savedsearch-head');
+      const toggle: HTMLButtonElement = head.querySelector('.savedsearch-toggle')!;
+      toggle.click();
       f.detectChanges();
 
       const text = f.nativeElement.textContent;
@@ -564,6 +565,34 @@ describe('SidebarComponent', () => {
       expect(text).toContain('space');
       expect(head.querySelector('.count')).toBeNull();
       expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(2);
+    });
+
+    it('also expands on a click of its trailing chevron button', () => {
+      const f = mount({
+        savedSearches: [{ id: 1, term: 'climate', wholeWord: false, position: 0, unreadCount: 3 }],
+      });
+      const chevron: HTMLButtonElement = f.nativeElement.querySelector(
+        '.savedsearch-head .chevzone',
+      );
+      chevron.click();
+      f.detectChanges();
+
+      expect(f.nativeElement.textContent).toContain('climate');
+    });
+
+    it('places the chevron in the same right-edge column as a tag chevron', () => {
+      const node: TagNode = {
+        tag: { id: 30, name: 'Tech', color: null, icon: null, position: 0 },
+        subscriptions: [],
+        unreadCount: 0,
+      };
+      const f = mount({
+        tagTree: [node],
+        savedSearches: [{ id: 1, term: 'climate', wholeWord: false, position: 0, unreadCount: 3 }],
+      });
+      const savedChev: HTMLElement = f.nativeElement.querySelector('.savedsearch-head .chevzone');
+      const tagChev: HTMLElement = f.nativeElement.querySelector('.taghead .chevzone');
+      expect(savedChev.className).toBe(tagChev.className);
     });
   });
 });
