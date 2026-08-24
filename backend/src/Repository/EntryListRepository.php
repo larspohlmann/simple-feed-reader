@@ -98,6 +98,22 @@ class EntryListRepository extends ServiceEntityRepository
     }
 
     /**
+     * How many unread entries match this saved search. Reuses searchForUser's
+     * term matching so the badge tracks the LIKE result set, plus the shared
+     * "unread" predicate. Deliberately engine-independent: read state is
+     * per-user and lives only in the database, never in the search index.
+     */
+    public function countUnreadMatchesForUser(EntrySearchQuery $query): int
+    {
+        $qb = $this->rowQueryBuilder($query->userId)
+            ->select('COUNT(DISTINCT e.id)');
+        $this->applyTerms($qb, $query->terms);
+        $qb->andWhere(UnreadDql::predicate())->setParameter('readFalse', false, Types::BOOLEAN);
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
      * The given entry ids hydrated through the same list-row projection every
      * other list uses — same per-user read state, same subscription join.
      * Ordered exactly like the entry list, never in the id order asked for,
