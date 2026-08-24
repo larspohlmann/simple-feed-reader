@@ -178,9 +178,12 @@ export class EntryListComponent implements OnDestroy {
    *  which is the only place that knows what belongs there. */
   readonly topBlock = input<TemplateRef<unknown> | null>(null);
   /** Rendered right-aligned in the list header, after the built-in tools. The
-   *  shell passes a per-selection action here (the For You run/stop button)
-   *  without this generic list knowing what the action is or which selection
-   *  it belongs to — the same outlet arrangement as `topBlock`. */
+   *  shell passes its per-selection actions here — the For You run/stop button,
+   *  the Save/Remove control for a saved search — without this generic list
+   *  knowing what any of them is or which selection it belongs to; the same
+   *  outlet arrangement as `topBlock`. Every such command goes through here:
+   *  a second route would let the two drift, and would teach this list about
+   *  a domain object (#581) it has no other reason to know. */
   readonly headerActions = input<TemplateRef<unknown> | null>(null);
   /** Rendered at the head of the list header's tools, before the built-in
    *  ones. Same arrangement as `headerActions`, at the other end of the row:

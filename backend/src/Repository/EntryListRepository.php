@@ -98,6 +98,41 @@ class EntryListRepository extends ServiceEntityRepository
     }
 
     /**
+     * How many unread entries match this saved search. Reuses searchForUser's
+     * term matching so the badge tracks the LIKE result set, plus the shared
+     * "unread" predicate. Deliberately engine-independent: read state is
+     * per-user and lives only in the database, never in the search index.
+     */
+    public function countUnreadMatchesForUser(EntrySearchQuery $query): int
+    {
+        $qb = $this->unreadMatchQueryBuilder($query)->select('COUNT(DISTINCT e.id)');
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
+     * The ids of every unread entry that matches this search and is no newer
+     * than $until, for the user's subscribed feeds. The set a search-scoped
+     * mark-read must flip; reuses the search's own term matching so it marks
+     * exactly what the search lists.
+     *
+     * @return list<int>
+     */
+    public function unreadMatchingEntryIdsForUser(EntrySearchQuery $query, \DateTimeImmutable $until): array
+    {
+        $qb = $this->unreadMatchQueryBuilder($query)
+            ->select('e.id')
+            ->distinct()
+            ->andWhere('e.effectiveDate <= :until')
+            ->setParameter('until', $until);
+
+        /** @var list<array{id: int}> $rows */
+        $rows = $qb->getQuery()->getScalarResult();
+
+        return array_map(static fn (array $row): int => (int) $row['id'], $rows);
+    }
+
+    /**
      * The given entry ids hydrated through the same list-row projection every
      * other list uses — same per-user read state, same subscription join.
      * Ordered exactly like the entry list, never in the id order asked for,
@@ -193,6 +228,26 @@ class EntryListRepository extends ServiceEntityRepository
      * subscription, feed, and optional per-entry state. listForUser adds
      * ordering/paging/filters; oneRowForUser adds an id filter.
      */
+    /**
+     * The unread entries a search matches, left for the caller to project.
+     * Deliberately not rowQueryBuilder: both callers reduce to a scalar, and
+     * that builder joins `feed` to select a title and a url nobody reads here
+     * — a wasted join on a predicate that already reads every subscribed entry.
+     * Carries only the subscription gate and the per-user state row the
+     * "unread" predicate needs.
+     */
+    private function unreadMatchQueryBuilder(EntrySearchQuery $query): QueryBuilder
+    {
+        $qb = $this->createQueryBuilder('e')
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
+            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
+            ->setParameter('user', $query->userId);
+
+        $this->applyTerms($qb, $query->terms);
+
+        return $qb->andWhere(UnreadDql::predicate())->setParameter('readFalse', false, Types::BOOLEAN);
+    }
+
     private function rowQueryBuilder(int $userId): QueryBuilder
     {
         return $this->createQueryBuilder('e')

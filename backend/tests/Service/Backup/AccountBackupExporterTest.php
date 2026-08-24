@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\RecommendationSettings;
+use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
@@ -60,6 +61,9 @@ final class AccountBackupExporterTest extends DbTestCase
         $tag->setColor('#a1b2c3');
         $tag->setPosition(1);
         $this->em->persist($tag);
+        $savedSearch = new SavedSearch($user, 'climate policy', true);
+        $savedSearch->setPosition(3);
+        $this->em->persist($savedSearch);
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $subscription->setCustomTitle('My One');
         $subscription->setPosition(4);
@@ -85,7 +89,7 @@ final class AccountBackupExporterTest extends DbTestCase
         $lines = $this->decodedLines($user);
 
         self::assertSame(
-            ['header', 'account', 'tag', 'feed', 'subscription', 'entry', 'entryState', 'footer'],
+            ['header', 'account', 'tag', 'savedSearch', 'feed', 'subscription', 'entry', 'entryState', 'footer'],
             array_column($lines, 'kind'),
         );
         self::assertSame(1, $lines[0]['schemaVersion']);
@@ -94,20 +98,24 @@ final class AccountBackupExporterTest extends DbTestCase
         self::assertSame('de', $lines[1]['locale']);
         self::assertSame('Tech', $lines[2]['name']);
         self::assertSame(1, $lines[2]['position']);
-        self::assertSame('https://one.example/feed.xml', $lines[3]['url']);
-        self::assertArrayNotHasKey('etag', $lines[3]);
-        self::assertArrayNotHasKey('status', $lines[3]);
-        self::assertSame('My One', $lines[4]['customTitle']);
-        self::assertSame(4, $lines[4]['position']);
-        self::assertSame([['name' => 'Tech', 'position' => 3]], $lines[4]['tags']);
-        self::assertSame('guid-1', $lines[5]['guid']);
-        self::assertSame(hash('sha256', 'guid-1'), $lines[5]['guidHash']);
-        self::assertSame('<p>body</p>', $lines[5]['contentHtml']);
-        self::assertTrue($lines[6]['isFavorite']);
-        self::assertTrue($lines[6]['isViewed']);
+        self::assertSame('savedSearch', $lines[3]['kind']);
+        self::assertSame('climate policy', $lines[3]['term']);
+        self::assertTrue($lines[3]['wholeWord']);
+        self::assertSame(3, $lines[3]['position']);
+        self::assertSame('https://one.example/feed.xml', $lines[4]['url']);
+        self::assertArrayNotHasKey('etag', $lines[4]);
+        self::assertArrayNotHasKey('status', $lines[4]);
+        self::assertSame('My One', $lines[5]['customTitle']);
+        self::assertSame(4, $lines[5]['position']);
+        self::assertSame([['name' => 'Tech', 'position' => 3]], $lines[5]['tags']);
+        self::assertSame('guid-1', $lines[6]['guid']);
+        self::assertSame(hash('sha256', 'guid-1'), $lines[6]['guidHash']);
+        self::assertSame('<p>body</p>', $lines[6]['contentHtml']);
+        self::assertTrue($lines[7]['isFavorite']);
+        self::assertTrue($lines[7]['isViewed']);
         self::assertSame(
-            ['tag' => 1, 'feed' => 1, 'subscription' => 1, 'entry' => 1, 'entryState' => 1],
-            $lines[7]['counts'],
+            ['tag' => 1, 'savedSearch' => 1, 'feed' => 1, 'subscription' => 1, 'entry' => 1, 'entryState' => 1],
+            $lines[array_key_last($lines)]['counts'],
         );
     }
 

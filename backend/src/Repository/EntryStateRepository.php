@@ -115,6 +115,30 @@ class EntryStateRepository extends ServiceEntityRepository
     }
 
     /**
+     * Which of the given entry ids already have a state row for this user.
+     *
+     * @param list<int> $entryIds
+     *
+     * @return list<int>
+     */
+    public function entryIdsWithStateForUser(int $userId, array $entryIds): array
+    {
+        if ($entryIds === []) {
+            return [];
+        }
+
+        /** @var list<array{entryId: int}> $rows */
+        $rows = $this->createQueryBuilder('es')
+            ->select('IDENTITY(es.entry) AS entryId')
+            ->andWhere('IDENTITY(es.user) = :user')->setParameter('user', $userId)
+            ->andWhere('IDENTITY(es.entry) IN (:ids)')->setParameter('ids', $entryIds)
+            ->getQuery()
+            ->getScalarResult();
+
+        return array_map(static fn (array $row): int => (int) $row['entryId'], $rows);
+    }
+
+    /**
      * Unread entry counts keyed by subscription id, in one query across all the
      * user's subscriptions. Unread = no explicit state and above the watermark,
      * OR an explicit isRead=false row. Subscriptions with zero unread are absent

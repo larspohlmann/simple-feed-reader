@@ -148,7 +148,7 @@ function selectionParam(p: ParamMap, name: SelectionParamName): string | null {
 }
 
 type SelectionParamValue = string | number | null;
-type SelectionParams = Record<SelectionParamName, SelectionParamValue>;
+export type SelectionParams = Record<SelectionParamName, SelectionParamValue>;
 
 /** Results handed out by `selectionQueryParams`, keyed by the argument that
  *  produced them.
@@ -186,6 +186,18 @@ export function selectionQueryParams(set: Partial<SelectionParams>): SelectionPa
   if (set.q == null) selectionParamsCache.set(key, params);
 
   return params;
+}
+
+/** The whole-word trailing space is the search signal (#408 follow-up), so a
+ *  saved whole-word search reconstructs it when it navigates. */
+export function savedSearchTerm(term: string, wholeWord: boolean): string {
+  return wholeWord ? `${term} ` : term;
+}
+
+/** The query params that open a saved search, reusing the existing `q` search
+ *  selection kind. */
+export function savedSearchParams(term: string, wholeWord: boolean): SelectionParams {
+  return selectionQueryParams({ q: savedSearchTerm(term, wholeWord) });
 }
 
 export function selectionFromParams(p: ParamMap): {
@@ -256,7 +268,16 @@ export function queryFromSelection(s: Selection): EntryQuery {
   }
 }
 
-export function markReadTarget(s: Selection): { scope: MarkReadScope; id?: number } | null {
+/** What "Mark all read" applies to for a selection, or null where the action
+ *  does not apply. A discriminated union rather than one bag with optional
+ *  fields: the id and the term never coexist, and a bag would make every
+ *  consumer assert its way back to the case it already switched on. */
+export type MarkReadTarget =
+  | { scope: Extract<MarkReadScope, 'all'> }
+  | { scope: Exclude<MarkReadScope, 'all'>; id: number }
+  | { scope: 'search'; term: string };
+
+export function markReadTarget(s: Selection): MarkReadTarget | null {
   switch (s.kind) {
     case 'all':
       return { scope: 'all' };
@@ -264,6 +285,8 @@ export function markReadTarget(s: Selection): { scope: MarkReadScope; id?: numbe
       return s.id != null ? { scope: 'tag', id: s.id } : null;
     case 'subscription':
       return s.id != null ? { scope: 'feed', id: s.id } : null;
+    case 'search':
+      return s.term ? { scope: 'search', term: s.term } : null;
     default:
       return null;
   }

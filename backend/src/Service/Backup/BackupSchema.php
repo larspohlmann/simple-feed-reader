@@ -15,6 +15,7 @@ final class BackupSchema
     public const string KIND_HEADER = 'header';
     public const string KIND_ACCOUNT = 'account';
     public const string KIND_TAG = 'tag';
+    public const string KIND_SAVED_SEARCH = 'savedSearch';
     public const string KIND_FEED = 'feed';
     public const string KIND_SUBSCRIPTION = 'subscription';
     public const string KIND_ENTRY = 'entry';

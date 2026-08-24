@@ -50,7 +50,22 @@ final readonly class SearchTerms
         // followed by a space while typing, which is not what the user meant.
         $isWholeWord = (bool) preg_match('/' . self::WHITESPACE . '\z/u', $input);
 
-        $trimmed = self::stripSurroundingWhitespace($input);
+        return self::split(self::stripSurroundingWhitespace($input), $isWholeWord);
+    }
+
+    /**
+     * The same terms, for a caller that already holds the mode as its own
+     * field instead of as a trailing space — a saved search stores the two
+     * apart. Without this, such a caller has to append a space to rebuild a
+     * raw query string purely so fromInput can parse the flag back off it.
+     */
+    public static function fromTermAndMode(string $term, bool $isWholeWord): self
+    {
+        return self::split(self::stripSurroundingWhitespace($term), $isWholeWord);
+    }
+
+    private static function split(string $trimmed, bool $isWholeWord): self
+    {
         self::assertLengthIsUsable($trimmed);
 
         /** @var list<string> $terms */

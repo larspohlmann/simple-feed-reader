@@ -12,7 +12,7 @@ import { CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { DropData, SidebarComponent } from './sidebar.component';
 import { TagNode } from '../subscriptions.store';
 import { Selection } from '../query';
-import { SubscriptionDto, TagDto } from '../models';
+import { SavedSearchDto, SubscriptionDto, TagDto } from '../models';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { buildVersion } from '../../../environments/version';
 import { VersionService } from '../../core/version.service';
@@ -68,6 +68,8 @@ function mount(
     organising: boolean;
     sheetChoice?: string;
     searchLoading: boolean;
+    savedSearches: SavedSearchDto[];
+    activeSavedSearchId: number | null;
   }> = {},
 ) {
   TestBed.configureTestingModule({
@@ -98,6 +100,8 @@ function mount(
   f.componentRef.setInput('loading', false);
   f.componentRef.setInput('searchLoading', over.searchLoading ?? false);
   f.componentRef.setInput('organising', over.organising ?? false);
+  f.componentRef.setInput('savedSearches', over.savedSearches ?? []);
+  f.componentRef.setInput('activeSavedSearchId', over.activeSavedSearchId ?? null);
   f.detectChanges();
   return f;
 }
@@ -523,6 +527,151 @@ describe('SidebarComponent', () => {
   it('hides the trial countdown when the trial is already past', () => {
     const f = mount({ user: account(inDays(-1)) });
     expect(f.nativeElement.querySelector('.trial')).toBeNull();
+  });
+
+  describe('saved searches', () => {
+    it('renders no saved-searches section when the list is empty', () => {
+      const f = mount({ savedSearches: [] });
+      expect(f.nativeElement.textContent).not.toContain('Saved searches');
+    });
+
+    it('renders collapsed by default, showing the header with the summed unread count', () => {
+      const f = mount({
+        savedSearches: [
+          { id: 1, term: 'climate', wholeWord: false, position: 0, unreadCount: 3 },
+          { id: 2, term: 'space', wholeWord: false, position: 1, unreadCount: 4 },
+        ],
+      });
+      const text = f.nativeElement.textContent;
+      expect(text).toContain('Saved searches');
+      expect(text).not.toContain('climate');
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(0);
+      const head = f.nativeElement.querySelector('.savedsearch-head')!;
+      expect(head.querySelector('.count')?.textContent).toContain('7');
+    });
+
+    it('expands on click, revealing the term rows while keeping the summed count', () => {
+      const f = mount({
+        savedSearches: [
+          { id: 1, term: 'climate', wholeWord: false, position: 0, unreadCount: 3 },
+          { id: 2, term: 'space', wholeWord: false, position: 1, unreadCount: 4 },
+        ],
+      });
+      const head: HTMLElement = f.nativeElement.querySelector('.savedsearch-head');
+      const toggle: HTMLButtonElement = head.querySelector('.savedsearch-toggle')!;
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      toggle.click();
+      f.detectChanges();
+
+      const text = f.nativeElement.textContent;
+      expect(text).toContain('climate');
+      expect(text).toContain('space');
+      // The header keeps its summed unread count when expanded, the same way
+      // a tag row keeps its own count — it does not disappear like the old
+      // Task-12 behaviour.
+      expect(head.querySelector('.count')?.textContent).toContain('7');
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(2);
+      // Activating the title itself must announce the new state to a screen
+      // reader, not only the trailing chevron button (#581 follow-up).
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('also expands on a click of its trailing chevron button', () => {
+      const f = mount({
+        savedSearches: [{ id: 1, term: 'climate', wholeWord: false, position: 0, unreadCount: 3 }],
+      });
+      const chevron: HTMLButtonElement = f.nativeElement.querySelector(
+        '.savedsearch-head .chevzone',
+      );
+      chevron.click();
+      f.detectChanges();
+
+      expect(f.nativeElement.textContent).toContain('climate');
+    });
+
+    it('places the chevron in the same right-edge column as a tag chevron', () => {
+      const node: TagNode = {
+        tag: { id: 30, name: 'Tech', color: null, icon: null, position: 0 },
+        subscriptions: [],
+        unreadCount: 0,
+      };
+      const f = mount({
+        tagTree: [node],
+        savedSearches: [{ id: 1, term: 'climate', wholeWord: false, position: 0, unreadCount: 3 }],
+      });
+      const savedChev: HTMLElement = f.nativeElement.querySelector('.savedsearch-head .chevzone');
+      const tagChev: HTMLElement = f.nativeElement.querySelector('.taghead .chevzone');
+      expect(savedChev.className).toBe(tagChev.className);
+    });
+
+    it('shows a compact "W" pill on a whole-word row and none on a plain row', () => {
+      const f = mount({
+        savedSearches: [
+          { id: 1, term: 'climate', wholeWord: true, position: 0, unreadCount: 0 },
+          { id: 2, term: 'space', wholeWord: false, position: 1, unreadCount: 0 },
+        ],
+      });
+      f.componentInstance.toggleSavedSearches();
+      f.detectChanges();
+
+      const items = [...f.nativeElement.querySelectorAll('.savedsearch-item')];
+      const wholeWordRow = items.find((item) => item.textContent?.includes('climate'))!;
+      const plainRow = items.find((item) => item.textContent?.includes('space'))!;
+
+      const badge = wholeWordRow.querySelector('.whole-word-badge')!;
+      expect(badge.textContent?.trim()).toBe('W');
+      expect(wholeWordRow.querySelector('.sr-only')?.textContent).toContain('Whole words');
+      expect(plainRow.querySelector('.whole-word-badge')).toBeNull();
+    });
+
+    // The active row is decided by id, handed down by the shell. The sidebar
+    // does NOT re-encode a term to string-match it against the selection: that
+    // was a second, subtly different identity rule, and it disagreed with the
+    // shell's whenever the whole-word signal was a tab or a no-break space.
+    it('marks the row the shell names active, and only that one', () => {
+      const f = mount({
+        savedSearches: [
+          { id: 1, term: 'climate', wholeWord: true, position: 0, unreadCount: 0 },
+          { id: 2, term: 'space', wholeWord: false, position: 1, unreadCount: 0 },
+        ],
+        activeSavedSearchId: 1,
+      });
+      f.componentInstance.toggleSavedSearches();
+      f.detectChanges();
+
+      const items = [...f.nativeElement.querySelectorAll('.savedsearch-item')];
+      const active = items.filter((item) => item.classList.contains('active'));
+      expect(active).toHaveLength(1);
+      expect(active[0].textContent).toContain('climate');
+    });
+
+    it('marks no row active when the shell names none', () => {
+      const f = mount({
+        savedSearches: [{ id: 1, term: 'climate', wholeWord: true, position: 0, unreadCount: 0 }],
+      });
+      f.componentInstance.toggleSavedSearches();
+      f.detectChanges();
+
+      expect(f.nativeElement.querySelector('.savedsearch-item.active')).toBeNull();
+    });
+
+    // RouterLink re-resolves an href whenever its queryParams object changes
+    // identity, and savedSearchParams cannot use selectionQueryParams' cache
+    // (an unbounded `q` must not grow it). Resolving the params once per list
+    // change is what keeps a zone-based change-detection pass off that path.
+    it('keeps each row link params object stable across change detection', () => {
+      const f = mount({
+        savedSearches: [{ id: 1, term: 'climate', wholeWord: true, position: 0, unreadCount: 0 }],
+      });
+      f.componentInstance.toggleSavedSearches();
+      f.detectChanges();
+
+      const before = f.componentInstance['savedSearchLinks']()[0].params;
+      f.detectChanges();
+      f.detectChanges();
+
+      expect(f.componentInstance['savedSearchLinks']()[0].params).toBe(before);
+    });
   });
 });
 

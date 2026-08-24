@@ -9,6 +9,7 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Preferences;
 use App\Entity\RecommendationSettings;
+use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
@@ -64,6 +65,9 @@ final class BackupFieldDeclarations
         Tag::class => [
             'name' => 'name', 'color' => 'color', 'icon' => 'icon', 'position' => 'position',
         ],
+        SavedSearch::class => [
+            'term' => 'term', 'wholeWord' => 'wholeWord', 'position' => 'position',
+        ],
         Feed::class => [
             'url' => 'url', 'siteUrl' => 'siteUrl', 'title' => 'title',
             'description' => 'description', 'faviconUrl' => 'faviconUrl',
@@ -109,6 +113,7 @@ final class BackupFieldDeclarations
         Preferences::class => BackupSchema::KIND_ACCOUNT,
         RecommendationSettings::class => BackupSchema::KIND_ACCOUNT,
         Tag::class => BackupSchema::KIND_TAG,
+        SavedSearch::class => BackupSchema::KIND_SAVED_SEARCH,
         Feed::class => BackupSchema::KIND_FEED,
         Subscription::class => BackupSchema::KIND_SUBSCRIPTION,
         SubscriptionTag::class => BackupSchema::KIND_SUBSCRIPTION,

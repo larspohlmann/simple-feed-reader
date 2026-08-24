@@ -178,6 +178,45 @@ final class BackupReaderTest extends TestCase
         iterator_to_array(new BackupReader()->read($gzip), false);
     }
 
+    /**
+     * A file written before `savedSearch` existed never declares
+     * `counts.savedSearch` at all, and legitimately has zero such lines —
+     * the missing key must default to zero rather than being refused.
+     */
+    public function testAcceptsAFooterMissingTheSavedSearchCountWhenThereAreNoSavedSearchLines(): void
+    {
+        $gzip = self::gzipOf([
+            self::header(),
+            self::account(),
+            ['kind' => 'tag', 'name' => 'Tech', 'color' => null, 'icon' => null, 'position' => 0],
+            self::footer(['tag' => 1]),
+        ]);
+
+        $objects = iterator_to_array(new BackupReader()->read($gzip), false);
+
+        self::assertCount(3, $objects);
+    }
+
+    /**
+     * The missing-key tolerance above must not swallow a genuinely
+     * truncated or miscounted file: a footer that omits `counts.savedSearch`
+     * while the file actually carries a `savedSearch` line is still refused.
+     */
+    public function testRefusesAFooterMissingTheSavedSearchCountWhenSavedSearchLinesArePresent(): void
+    {
+        $gzip = self::gzipOf([
+            self::header(),
+            self::account(),
+            ['kind' => 'savedSearch', 'term' => 'climate', 'wholeWord' => false, 'position' => 0],
+            self::footer(),
+        ]);
+
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessageMatches('/savedSearch/');
+
+        iterator_to_array(new BackupReader()->read($gzip), false);
+    }
+
     public function testRefusesLinesAfterTheFooter(): void
     {
         $gzip = self::gzipOf([

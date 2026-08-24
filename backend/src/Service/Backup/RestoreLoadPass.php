@@ -6,6 +6,7 @@ namespace App\Service\Backup;
 
 use App\Entity\Feed;
 use App\Entity\RecommendationSettings;
+use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
@@ -15,6 +16,7 @@ use App\Service\Backup\Dto\AccountLine;
 use App\Service\Backup\Dto\EntryLine;
 use App\Service\Backup\Dto\EntryStateLine;
 use App\Service\Backup\Dto\FeedLine;
+use App\Service\Backup\Dto\SavedSearchLine;
 use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Dto\TagLine;
 use App\Service\Backup\Exception\BackupLoadFailedException;
@@ -42,8 +44,8 @@ final class RestoreLoadPass
     /** @var array<string, Feed> the subset this restore actually subscribed to */
     private array $subscribedFeedsByUrl = [];
 
-    /** @var array{tags: int, feeds: int, subscriptions: int} */
-    private array $counts = ['tags' => 0, 'feeds' => 0, 'subscriptions' => 0];
+    /** @var array{tags: int, savedSearches: int, feeds: int, subscriptions: int} */
+    private array $counts = ['tags' => 0, 'savedSearches' => 0, 'feeds' => 0, 'subscriptions' => 0];
 
     private bool $entryPhaseStarted = false;
 
@@ -75,6 +77,7 @@ final class RestoreLoadPass
 
         return new RestoreResult(
             tags: $this->counts['tags'],
+            savedSearches: $this->counts['savedSearches'],
             feeds: $this->counts['feeds'],
             subscriptions: $this->counts['subscriptions'],
             entries: $this->entryLoader->entriesCreated(),
@@ -87,6 +90,7 @@ final class RestoreLoadPass
         match (true) {
             $line instanceof AccountLine => $this->loadAccount($line),
             $line instanceof TagLine => $this->loadTag($line),
+            $line instanceof SavedSearchLine => $this->loadSavedSearch($line),
             $line instanceof FeedLine => $this->loadFeed($line),
             $line instanceof SubscriptionLine => $this->loadSubscription($line),
             $line instanceof EntryLine => $this->acceptEntry($line),
@@ -118,6 +122,14 @@ final class RestoreLoadPass
         $this->em->persist($tag);
         $this->tagsByName[$line->name] = $tag;
         ++$this->counts['tags'];
+    }
+
+    private function loadSavedSearch(SavedSearchLine $line): void
+    {
+        $savedSearch = new SavedSearch($this->user, $line->term, $line->wholeWord);
+        $savedSearch->setPosition($line->position);
+        $this->em->persist($savedSearch);
+        ++$this->counts['savedSearches'];
     }
 
     /**

@@ -657,6 +657,13 @@ describe('EntryListComponent', () => {
     }
   });
 
+  it('renders no saved-search button of its own — it is a shell headerActions command', () => {
+    const el = mount({
+      selection: { kind: 'search', id: null, unread: false, term: 'climate' },
+    }).nativeElement as HTMLElement;
+    expect(el.querySelector('button.save-search')).toBeNull();
+  });
+
   // #105: the gesture had no coverage at all, which is how a threshold that
   // needed ~400px of finger travel shipped. Drive the real listeners on the
   // scroller rather than the handler methods — the wiring is half the feature.

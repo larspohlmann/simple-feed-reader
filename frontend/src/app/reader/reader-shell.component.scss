@@ -176,11 +176,29 @@ app-reader-header.hidden {
   gap: var(--space-2);
 }
 
-/* Below the small breakpoint the button drops its label and stands on the icon
-   alone — the same rule the header's other tools follow, with the aria-label
-   keeping it named. */
+/* The header's saved-search slot: save or unsave the search on screen. Styled
+   here rather than in entry-list, like `.for-you-action` above, because both
+   are projected through the list's `headerActions` outlet — the node is created
+   by THIS template and carries this component's encapsulation attribute, so
+   the list's own stylesheet can never match it. Matches `.refresh` beside it. */
+.save-search {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: var(--fs-sm);
+}
+
+/* Below the small breakpoint the buttons drop their labels and stand on the
+   icon alone — the same rule the header's other tools follow, with the
+   aria-label keeping them named. */
 @media (width <= bp.$bp-sm) {
-  .for-you-run .label {
+  .for-you-run .label,
+  .save-search .txt {
     display: none;
   }
 }

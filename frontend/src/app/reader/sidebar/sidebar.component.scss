@@ -206,7 +206,7 @@
   text-decoration: none;
 }
 
-.nav > span:not(.count, .lead) {
+.nav > span:not(.count, .lead, .whole-word-badge) {
   flex: 1;
   min-width: 0;
   white-space: nowrap;
@@ -248,12 +248,43 @@
   }
 }
 
+.nav .whole-word-badge {
+  /* The pill is the global `.whole-word-badge` (theme/_utilities.scss); this
+     row carries the compact "W" glyph instead of the full word because the
+     sidebar is too narrow for "Whole words". Excluded from the generic
+     `.nav > span` rule above (like `.lead`) so it doesn't pick up `flex: 1`
+     and split the row's width with `.saved-term`. */
+  flex: none;
+}
+
 .label {
   font-size: var(--fs-sm);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-muted);
   margin: var(--space-3) var(--space-2) var(--space-1);
+}
+
+/* The "Saved searches" group header mirrors a tag row: `.savedsearch-head`
+   shares `.tag`'s flex-row layout so `.tag .lead` and `.tag .grow` (above)
+   already centre the icon and let the toggle button absorb the row's spare
+   width, and its trailing `.chevzone` is the same button/geometry the tag
+   rows use — no bespoke chevron styling, so the chevron column lines up with
+   the tag chevrons below it. Only the toggle button itself needs a reset: a
+   `<button>` standing in for what is normally a `.nav` anchor. */
+.savedsearch-toggle {
+  width: 100%;
+  background: none;
+  border: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Same indent token the tag-feed rows use (`.tag-sub`), so saved-search terms
+   read as nested under their header exactly like feeds under a tag. */
+.savedsearch-item {
+  padding-left: var(--space-6);
 }
 
 .tag {

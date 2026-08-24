@@ -13,7 +13,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 /**
  * The fixture helpers that were hand-rolled, byte-for-byte, in three separate
  * controller test classes: a `UserFactory` bound to the current kernel's
- * services, the user repository, and a decoded JSON response body.
+ * services, the user repository, the entity manager, and a decoded JSON
+ * response body.
  *
  * Deliberately narrow. How a test authenticates — minting a token straight
  * from the JWT manager, going through `/api/auth/login`, or something else —
@@ -31,6 +32,14 @@ abstract class ApiTestCase extends WebTestCase
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
 
         return new UserFactory($em, $hasher);
+    }
+
+    protected function em(): EntityManagerInterface
+    {
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+
+        return $entityManager;
     }
 
     protected function users(): UserRepository

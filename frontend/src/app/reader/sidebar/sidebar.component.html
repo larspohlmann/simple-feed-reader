@@ -95,6 +95,66 @@
     }
   }
 
+  @if (savedSearches().length) {
+    <div>
+      <div class="tag savedsearch-head">
+        <button
+          class="nav grow savedsearch-toggle"
+          type="button"
+          [attr.aria-expanded]="savedSearchesExpanded()"
+          (click)="toggleSavedSearches()"
+        >
+          <span class="lead"><app-icon name="saved_search" size="sm" /></span>
+          <span>{{ 'reader.savedSearches' | transloco }}</span>
+          @if (savedSearchesUnread() > 0) {
+            <span class="count">{{ savedSearchesUnread() }}</span>
+          }
+        </button>
+        <!-- Flush at the right edge, styled exactly like a tag's `.chevzone`, so
+             the chevron column lines up with the tag chevrons below it. -->
+        <button
+          class="chevzone"
+          type="button"
+          [attr.aria-expanded]="savedSearchesExpanded()"
+          [attr.aria-label]="'reader.toggleSavedSearches' | transloco"
+          (click)="toggleSavedSearches()"
+        >
+          <app-icon [name]="savedSearchesExpanded() ? 'expand_less' : 'expand_more'" size="sm" />
+        </button>
+      </div>
+      @if (savedSearchesExpanded()) {
+        @for (saved of savedSearchLinks(); track saved.id) {
+          <a
+            class="nav savedsearch-item"
+            [class.active]="saved.id === activeSavedSearchId()"
+            [routerLink]="[]"
+            [queryParams]="saved.params"
+            queryParamsHandling="merge"
+          >
+            <app-icon name="search" size="sm" />
+            <span class="saved-term">{{ saved.term }}</span>
+            @if (saved.wholeWord) {
+              <!-- Compact "W" pill for the sidebar's narrow row; the full word
+                   still reaches screen readers via the sr-only span, mirroring
+                   the results-header badge (#408 follow-up). -->
+              <span class="sr-only">{{ 'reader.searchWholeWord' | transloco }}</span>
+              <span
+                class="whole-word-badge"
+                aria-hidden="true"
+                [attr.title]="'reader.searchWholeWordHint' | transloco"
+              >
+                {{ 'reader.searchWholeWordShort' | transloco }}
+              </span>
+            }
+            @if (saved.unreadCount > 0) {
+              <span class="count">{{ saved.unreadCount }}</span>
+            }
+          </a>
+        }
+      }
+    </div>
+  }
+
   @if (tagTree().length) {
     <p class="label">{{ 'reader.tags' | transloco }}</p>
     <!-- Each tag contributes two TOP-LEVEL drop lists (never nested): a

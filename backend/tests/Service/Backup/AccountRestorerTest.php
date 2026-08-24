@@ -9,6 +9,7 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Preferences;
 use App\Entity\RecommendationSettings;
+use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
@@ -152,9 +153,10 @@ final class AccountRestorerTest extends DbTestCase
 
     /**
      * Two feeds, two tags with colours and per-subscription tag positions, two
-     * subscriptions with a custom title and a watermark, three entries with
-     * bodies and images, two entry states, preferences on, a recommendation
-     * settings row and a non-default locale.
+     * saved searches (one whole-word), two subscriptions with a custom title
+     * and a watermark, three entries with bodies and images, two entry
+     * states, preferences on, a recommendation settings row and a
+     * non-default locale.
      */
     private function seedRichAccount(User $user): void
     {
@@ -170,6 +172,11 @@ final class AccountRestorerTest extends DbTestCase
         $news->setColor('#c3b2a1');
         $news->setPosition(2);
         $this->em->persist($news);
+
+        $this->em->persist(new SavedSearch($user, 'climate', false));
+        $whole = new SavedSearch($user, 'rust lang', true);
+        $whole->setPosition(1);
+        $this->em->persist($whole);
 
         $first = new Subscription($user, $one, new \DateTimeImmutable('2026-07-01 08:00:00'));
         $first->setCustomTitle('My One');
@@ -343,6 +350,7 @@ final class AccountRestorerTest extends DbTestCase
         $result = $this->restorer()->restore($this->reloadUser($userId), $gzip, 'REPLACE');
 
         self::assertSame(2, $result->tags);
+        self::assertSame(2, $result->savedSearches);
         // Both feeds and all three entries already exist as shared rows, so a
         // same-instance restore creates neither.
         self::assertSame(0, $result->feeds);
@@ -412,6 +420,7 @@ final class AccountRestorerTest extends DbTestCase
         $this->assertFieldsRoundTripped(Preferences::class, $sourceRows['preferences'], $targetRows['preferences']);
         $this->assertRecommendationSettingsRoundTripped($sourceRows['settings'], $targetRows['settings']);
         $this->assertFieldsRoundTripped(Tag::class, $sourceRows['tag'], $targetRows['tag']);
+        $this->assertFieldsRoundTripped(SavedSearch::class, $sourceRows['savedSearch'], $targetRows['savedSearch']);
         $this->assertFieldsRoundTripped(Feed::class, $sourceRows['feed'], $targetRows['feed']);
 
         $this->assertFieldsRoundTripped(
@@ -459,8 +468,8 @@ final class AccountRestorerTest extends DbTestCase
      * account's rows field by field.
      *
      * @return array{user: User, preferences: Preferences, settings: RecommendationSettings,
-     *     tag: Tag, feed: Feed, subscription: Subscription, subscriptionTag: SubscriptionTag,
-     *     entry: Entry, entryState: EntryState}
+     *     tag: Tag, savedSearch: SavedSearch, feed: Feed, subscription: Subscription,
+     *     subscriptionTag: SubscriptionTag, entry: Entry, entryState: EntryState}
      */
     private function fixtureRowsOf(User $user): array
     {
@@ -488,6 +497,8 @@ final class AccountRestorerTest extends DbTestCase
         self::assertInstanceOf(EntryState::class, $entryState);
         $tag = $this->em->getRepository(Tag::class)->findOneBy(['user' => $userId]);
         self::assertInstanceOf(Tag::class, $tag);
+        $savedSearch = $this->em->getRepository(SavedSearch::class)->findOneBy(['user' => $userId]);
+        self::assertInstanceOf(SavedSearch::class, $savedSearch);
         $settings = $this->em->getRepository(RecommendationSettings::class)->findOneBy(['user' => $userId]);
         self::assertInstanceOf(RecommendationSettings::class, $settings);
 
@@ -496,6 +507,7 @@ final class AccountRestorerTest extends DbTestCase
             'preferences' => $user->getPreferences(),
             'settings' => $settings,
             'tag' => $tag,
+            'savedSearch' => $savedSearch,
             'feed' => $feed,
             'subscription' => $subscription,
             'subscriptionTag' => $subscriptionTag,
@@ -609,6 +621,7 @@ final class AccountRestorerTest extends DbTestCase
         self::assertSame(3, $result->entries);
         self::assertSame(2, $result->subscriptions);
         self::assertSame(2, $result->tags);
+        self::assertSame(2, $result->savedSearches);
         self::assertSame(2, $result->entryStates);
 
         $this->em->clear();
@@ -747,6 +760,7 @@ final class AccountRestorerTest extends DbTestCase
         self::assertSame(0, $second->feeds);
         self::assertSame(0, $second->entries);
         self::assertSame(2, $second->tags);
+        self::assertSame(2, $second->savedSearches);
         self::assertSame(2, $second->subscriptions);
         self::assertSame(2, $second->entryStates);
 

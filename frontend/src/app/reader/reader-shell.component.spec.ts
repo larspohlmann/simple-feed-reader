@@ -25,7 +25,7 @@ import { OnboardingSkip } from '../discover/onboarding-skip';
 import { ReaderShellComponent } from './reader-shell.component';
 import { EntryListComponent } from './entry-list/entry-list.component';
 import { ListScrollMemory } from './list-scroll-memory';
-import { EntryDto } from './models';
+import { EntryDto, SavedSearchDto } from './models';
 import { SubscriptionsStore } from './subscriptions.store';
 import { Selection } from './query';
 import { ReaderHeaderComponent } from './header/reader-header.component';
@@ -124,6 +124,7 @@ describe('ReaderShellComponent', () => {
     f.detectChanges(); // ngOnInit + initial effects
     ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+    ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     ctrl
       .expectOne((r) => r.url === 'https://api.test/api/entries')
       .flush({ entries: [{ ...entry, ...entryOverride }], nextCursor: null });
@@ -178,6 +179,7 @@ describe('ReaderShellComponent', () => {
       .expectOne('https://api.test/api/subscriptions')
       .flush({ subscriptions, favoritesCount: 0, keptCount: 0 });
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+    ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     ctrl
       .expectOne((r) => r.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
@@ -785,14 +787,19 @@ describe('ReaderShellComponent', () => {
       const entriesReloads = ctrl.match((r) => r.url === 'https://api.test/api/entries');
       const tagsReloads = ctrl.match((r) => r.url === 'https://api.test/api/tags');
       const subsReloads = ctrl.match((r) => r.url === 'https://api.test/api/subscriptions');
+      const savedSearchesReloads = ctrl.match(
+        (r) => r.url === 'https://api.test/api/saved-searches',
+      );
       expect(entriesReloads.length).toBe(1);
       expect(tagsReloads.length).toBe(1);
       expect(subsReloads.length).toBe(1);
+      expect(savedSearchesReloads.length).toBe(1);
 
       // Drain the reload requests so verify() is clean.
       entriesReloads[0].flush({ entries: [], nextCursor: null });
       tagsReloads[0].flush({ tags: [] });
       subsReloads[0].flush(subsBody);
+      savedSearchesReloads[0].flush({ savedSearches: [] });
       ctrl.verify();
     });
   });
@@ -1875,6 +1882,7 @@ describe('ReaderShellComponent', () => {
           subscriptions: [],
           tags: [],
           entries: [],
+          savedSearches: [],
           favoritesCount: 0,
           keptCount: 0,
           nextCursor: null,
@@ -1918,6 +1926,7 @@ describe('ReaderShellComponent', () => {
           subscriptions: [],
           tags: [],
           entries: [],
+          savedSearches: [],
           favoritesCount: 0,
           keptCount: 0,
           nextCursor: null,
@@ -1944,6 +1953,7 @@ describe('ReaderShellComponent', () => {
           subscriptions: [],
           tags: [],
           entries: [],
+          savedSearches: [],
           favoritesCount: 0,
           keptCount: 0,
           nextCursor: null,
@@ -2134,6 +2144,119 @@ describe('ReaderShellComponent', () => {
       });
 
       expect(host.querySelector('app-feed-intro')).toBeNull();
+    });
+  });
+
+  describe('mark all read for a search (#581)', () => {
+    // A search selects a `SelectionKind` that markReadTarget() maps to a
+    // 'search' scope, so canMarkAllRead() (and thus the header button) turns
+    // on without any change to the entry-list component.
+    function bootWithSearchSelected() {
+      const f = boot();
+      qp.next(convertToParamMap({ q: 'climate ' }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [], nextCursor: null });
+      f.detectChanges();
+      return f;
+    }
+
+    it('calls the search mark-read endpoint with the term verbatim, then reloads entries, subscriptions and saved searches', () => {
+      const f = bootWithSearchSelected();
+      const ref = { closed: of(true) };
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
+
+      f.componentInstance.onMarkAllRead();
+
+      const req = ctrl.expectOne('https://api.test/api/entries/search/mark-read');
+      expect(req.request.method).toBe('POST');
+      // The trailing space is the whole-word-match signal the backend reads
+      // via SearchTerms::fromInput; it must reach the request body unchanged.
+      expect(req.request.body).toEqual({ q: 'climate ', until: expect.any(String) });
+      req.flush(null);
+
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [], nextCursor: null });
+      ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
+      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+    });
+
+    it('does nothing when the dialog is cancelled', () => {
+      const f = bootWithSearchSelected();
+      const ref = { closed: of(false) };
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
+
+      f.componentInstance.onMarkAllRead();
+
+      ctrl.expectNone('https://api.test/api/entries/search/mark-read');
+    });
+  });
+
+  // The Save/Remove control is a shell command rendered through the list's
+  // `headerActions` outlet, so the list emits nothing and the shell owns both
+  // the decision and the button. One toggle, not two one-way actions.
+  describe('saving the current search (#581)', () => {
+    // boot() has already drained the shell's own saved-searches load, so seed
+    // the store directly — what the button reads is the store, not the request.
+    function bootWithSearchSelected(saved: SavedSearchDto[], q = 'climate ') {
+      const f = boot();
+      f.componentInstance.savedSearchesStore.savedSearches.set(saved);
+      qp.next(convertToParamMap({ q }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [], nextCursor: null });
+      f.detectChanges();
+      return f;
+    }
+
+    const savedClimate: SavedSearchDto = {
+      id: 4,
+      term: 'climate',
+      wholeWord: true,
+      position: 0,
+      unreadCount: 2,
+    };
+
+    it('saves the decoded term and whole-word flag, and adopts the response without reloading the list', () => {
+      const f = bootWithSearchSelected([]);
+
+      f.componentInstance.onToggleSavedSearch();
+
+      const req = ctrl.expectOne('https://api.test/api/saved-searches');
+      expect(req.request.method).toBe('POST');
+      // The trailing space is the whole-word signal; it is decoded to the pair
+      // the backend stores, never sent verbatim as the term.
+      expect(req.request.body).toEqual({ term: 'climate', wholeWord: true });
+      req.flush({ savedSearch: savedClimate });
+
+      // The POST already answered with the row and its count — no re-fetch.
+      ctrl.expectNone('https://api.test/api/saved-searches');
+      expect(f.componentInstance.savedSearchesStore.savedSearches()).toEqual([savedClimate]);
+    });
+
+    it('removes the saved search when the current one is already saved, and drops it locally', () => {
+      const f = bootWithSearchSelected([savedClimate]);
+      expect(f.componentInstance.currentSavedSearch()).toEqual(savedClimate);
+
+      f.componentInstance.onToggleSavedSearch();
+
+      const req = ctrl.expectOne('https://api.test/api/saved-searches/4');
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null);
+
+      ctrl.expectNone('https://api.test/api/saved-searches');
+      expect(f.componentInstance.savedSearchesStore.savedSearches()).toEqual([]);
+    });
+
+    it('matches a saved search by its decoded pair, not by the raw term string', () => {
+      // A no-break space is a whole-word signal to the decoder but never equals
+      // a plain trailing space, which is what a string comparison would need.
+      const f = bootWithSearchSelected([savedClimate], 'climate\u00a0');
+
+      expect(f.componentInstance.currentSavedSearch()).toEqual(savedClimate);
     });
   });
 });

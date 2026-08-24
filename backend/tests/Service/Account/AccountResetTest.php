@@ -12,6 +12,7 @@ use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\RecommendationSettings;
+use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
@@ -52,6 +53,7 @@ final class AccountResetTest extends DbTestCase
         $this->em->persist($feed);
         $tag = new Tag($user, 'Mine');
         $this->em->persist($tag);
+        $this->em->persist(new SavedSearch($user, 'mine', false));
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $subscription->addTag($tag);
         $this->em->persist($subscription);
@@ -109,6 +111,7 @@ final class AccountResetTest extends DbTestCase
         $this->em->clear();
         self::assertSame([], $this->em->getRepository(Subscription::class)->findBy(['user' => $userId]));
         self::assertSame([], $this->em->getRepository(Tag::class)->findBy(['user' => $userId]));
+        self::assertSame([], $this->em->getRepository(SavedSearch::class)->findBy(['user' => $userId]));
         self::assertSame([], $this->em->getRepository(EntryState::class)->findBy(['user' => $userId]));
         self::assertSame([], $this->em->getRepository(RecommendationRun::class)->findBy(['user' => $userId]));
         self::assertSame([], $this->em->getRepository(RecommendationSettings::class)->findBy(['user' => $userId]));
@@ -152,6 +155,7 @@ final class AccountResetTest extends DbTestCase
         $bystanderSubscriptions = $this->em->getRepository(Subscription::class)->findBy(['user' => $bystanderId]);
         self::assertCount(1, $bystanderSubscriptions);
         self::assertCount(1, $this->em->getRepository(Tag::class)->findBy(['user' => $bystanderId]));
+        self::assertCount(1, $this->em->getRepository(SavedSearch::class)->findBy(['user' => $bystanderId]));
         self::assertCount(1, $this->em->getRepository(EntryState::class)->findBy(['user' => $bystanderId]));
         // The one place an over-broad cascade from the victim's wipe would
         // surface: the bystander's own subscription/tag join row.
@@ -184,6 +188,7 @@ final class AccountResetTest extends DbTestCase
         self::assertInstanceOf(User::class, $this->em->find(User::class, $userId));
         self::assertSame([], $this->em->getRepository(Subscription::class)->findBy(['user' => $userId]));
         self::assertSame([], $this->em->getRepository(Tag::class)->findBy(['user' => $userId]));
+        self::assertSame([], $this->em->getRepository(SavedSearch::class)->findBy(['user' => $userId]));
         self::assertSame([], $this->em->getRepository(EntryState::class)->findBy(['user' => $userId]));
         self::assertSame([], $this->em->getRepository(RecommendationRun::class)->findBy(['user' => $userId]));
         self::assertSame([], $this->em->getRepository(RecommendationSettings::class)->findBy(['user' => $userId]));

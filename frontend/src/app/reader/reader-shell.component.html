@@ -71,6 +71,8 @@
       [favoritesCount]="subs.favoritesCount()"
       [keptCount]="subs.keptCount()"
       [viewedCount]="subs.viewedCount()"
+      [savedSearches]="savedSearchesStore.savedSearches()"
+      [activeSavedSearchId]="currentSavedSearch()?.id ?? null"
       [selection]="selection()"
       [loading]="subs.loading()"
       [searchLoading]="searching()"
@@ -109,7 +111,7 @@
           [refreshing]="refreshSvc.running()"
           [lastRefreshed]="listLastRefreshed()"
           [newestRunId]="listNewestRunId()"
-          [headerActions]="forYouActions"
+          [headerActions]="headerActions"
           [leadingActions]="listEditAction"
           [topBlock]="feedIntro"
           (loadMore)="entries.loadMore()"
@@ -157,7 +159,7 @@
           [refreshing]="refreshSvc.running()"
           [lastRefreshed]="listLastRefreshed()"
           [newestRunId]="listNewestRunId()"
-          [headerActions]="forYouActions"
+          [headerActions]="headerActions"
           [leadingActions]="listEditAction"
           [topBlock]="feedIntro"
           (scrolled)="onListScrolled($event)"
@@ -247,7 +249,23 @@
   }
 </ng-template>
 
-<ng-template #forYouActions>
+<ng-template #headerActions>
+  @if (selection().kind === 'search') {
+    <!-- Save/unsave the search being looked at. It lives here, beside the For
+         You control, because both are per-selection commands over a domain
+         object the list itself knows nothing about — the list only owns the
+         slot they render into (#581). -->
+    <button
+      class="save-search"
+      type="button"
+      [attr.aria-label]="savedSearchActionLabel() | transloco"
+      [attr.title]="savedSearchActionLabel() | transloco"
+      (click)="onToggleSavedSearch()"
+    >
+      <app-icon [name]="currentSavedSearch() ? 'bookmark_remove' : 'bookmark_add'" size="sm" />
+      <span class="txt">{{ savedSearchActionLabel() | transloco }}</span>
+    </button>
+  }
   @if (selection().kind === 'for-you' && ai.ready()) {
     <div class="for-you-action">
       @if (recs.running()) {

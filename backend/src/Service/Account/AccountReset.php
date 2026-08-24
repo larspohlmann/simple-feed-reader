@@ -9,6 +9,7 @@ use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\RecommendationSettings;
+use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
@@ -75,6 +76,7 @@ final readonly class AccountReset
         // DB-level ON DELETE CASCADE both join columns declare.
         $this->deleteByUser(Subscription::class, $user);
         $this->deleteByUser(Tag::class, $user);
+        $this->deleteByUser(SavedSearch::class, $user);
     }
 
     /** @param class-string $entityClass */

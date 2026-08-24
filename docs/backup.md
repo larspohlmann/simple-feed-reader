@@ -21,11 +21,12 @@ merge.
 ## 1. What a backup is
 
 A backup is one file. The file holds the reading data of one account: the tags,
-the feeds, the subscriptions, the articles, the read marks and the settings.
+the saved searches, the feeds, the subscriptions, the articles, the read marks
+and the settings.
 
 The file is gzip-compressed NDJSON. Each line is one JSON object. Each object
 has a `kind` field that tells you what the line is: `header`, `account`, `tag`,
-`feed`, `subscription`, `entry`, `entryState` or `footer`.
+`savedSearch`, `feed`, `subscription`, `entry`, `entryState` or `footer`.
 
 A backup holds no database identifiers. A restore makes new identifiers.
 Therefore you can restore a backup into a different account, and into a
@@ -63,8 +64,9 @@ A restore is destructive. The restore does these steps, in this order:
 1. It reads the whole file and counts the lines.
 2. It refuses the file if the file is not a valid backup.
 3. It refuses the file if the file is too large for the account.
-4. It deletes the account's tags, subscriptions, read marks, "For you" runs and
-   "For you" settings, and it sets the scrape fallback preference back to off.
+4. It deletes the account's tags, saved searches, subscriptions, read marks,
+   "For you" runs and "For you" settings, and it sets the scrape fallback
+   preference back to off.
 5. It loads the file into the account.
 
 To start a restore:
@@ -134,6 +136,7 @@ restore again with the same file.
 | `header` | The format version, the export date, the address of the instance the file came from, and the account address the file came from. |
 | `account` | Your language (`locale`), the scrape fallback setting (`scrapeFallbackEnabled`), and all "For you" settings (`recommendationSettings`). |
 | `tag` | Each tag: `name`, `color`, `icon` and `position`. |
+| `savedSearch` | Each saved search: `term`, `wholeWord` and `position`. |
 | `feed` | Each feed you subscribe to: `url`, `siteUrl`, `title`, `description`, `faviconUrl`, `imageUrl` and `sourceFormat`. |
 | `subscription` | Each subscription: `customTitle`, `position`, `markedReadUntil`, `createdAt` (the date the subscription started), and the tags on the subscription with their order. |
 | `entry` | Each article, with the address of the feed it came from: `guid`, `url`, `title`, `author`, `summary`, `contentHtml`, the image (`imageUrl`, `imageWidth`, `imageHeight`), `publishedAt`, `createdAt` (the date this instance first saw the article) and `effectiveDate`. |

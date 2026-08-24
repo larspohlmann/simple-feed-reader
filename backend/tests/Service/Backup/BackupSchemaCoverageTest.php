@@ -18,6 +18,7 @@ use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\RecommendationSettings;
+use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
@@ -76,7 +77,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
     private const array FILE_SCAFFOLDING = [
         BackupSchema::KIND_HEADER => ['schemaVersion', 'createdAt', 'sourceUrl', 'sourceEmail'],
         BackupSchema::KIND_FOOTER => [
-            'counts', 'counts.tag', 'counts.feed', 'counts.subscription',
+            'counts', 'counts.tag', 'counts.savedSearch', 'counts.feed', 'counts.subscription',
             'counts.entry', 'counts.entryState',
         ],
     ];
@@ -155,6 +156,9 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
         ],
         Tag::class => [
+            'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
+        ],
+        SavedSearch::class => [
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
         ],
         Feed::class => [

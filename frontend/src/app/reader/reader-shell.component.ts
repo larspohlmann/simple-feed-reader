@@ -24,6 +24,7 @@ import { TagsStore } from './tags.store';
 import { EntriesStore, localStatePatch } from './entries.store';
 import { RefreshService } from './refresh.service';
 import { RecommendationsService } from './recommendations.service';
+import { SavedSearchesStore } from './saved-searches.store';
 import { refreshFailureKey } from './refresh-message';
 import { AiAvailabilityService } from '../core/ai-availability.service';
 import { VersionService } from '../core/version.service';
@@ -32,6 +33,8 @@ import { LayoutService } from './layout.service';
 import {
   RefreshScope,
   Selection,
+  isWholeWordTerm,
+  MarkReadTarget,
   markReadTarget,
   queryFromSelection,
   sameSelection,
@@ -41,14 +44,7 @@ import {
 } from './query';
 import { ListScrollReset } from './list-scroll-reset';
 import { entryParam } from './slug';
-import {
-  EntryDto,
-  EntryStatePatch,
-  MarkReadScope,
-  SubscriptionDto,
-  SubscriptionTagDto,
-  TagDto,
-} from './models';
+import { EntryDto, EntryStatePatch, SubscriptionDto, SubscriptionTagDto, TagDto } from './models';
 import { headerHiddenAtRest, nextHeaderHidden } from './header-scroll';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
@@ -105,6 +101,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly entries = inject(EntriesStore);
   readonly refreshSvc = inject(RefreshService);
   readonly recs = inject(RecommendationsService);
+  readonly savedSearchesStore = inject(SavedSearchesStore);
   readonly ai = inject(AiAvailabilityService);
   private readonly versions = inject(VersionService);
   readonly layout = inject(ReadingLayoutService);
@@ -485,6 +482,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
         if (slice === 0) return; // nothing has reported yet
         if (!this.sweeping() && running) return; // manual refresh: wait for finish
         this.subs.load();
+        this.savedSearchesStore.load();
         // A refresh never touches tags, so reload them once when the run
         // finishes rather than on every onboarding slice (onDone reloaded them;
         // the old slice effect did not reload them at all).
@@ -529,6 +527,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnInit(): void {
     this.subs.load();
+    this.savedSearchesStore.load();
     this.tags.load(); // the sidebar tag tree (order, empty tags) reads TagsStore
     if (!this.auth.user()) this.auth.loadMe().subscribe({ error: () => undefined });
     // Reopening the app resumes a for-you run left in flight by an earlier session.
@@ -804,20 +803,33 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  private markReadNow(target: { scope: MarkReadScope; id?: number }): void {
+  private markReadNow(target: MarkReadTarget): void {
     const until = this.entries.loadedAt() || new Date().toISOString();
-    this.api.markRead(target.scope, until, target.id).subscribe({
-      next: () => {
-        this.subs.zeroUnread(
-          target.scope === 'all'
-            ? 'all'
-            : target.scope === 'tag'
-              ? { tag: target.id! }
-              : { subscription: target.id! },
-        );
-        this.entries.load(queryFromSelection(this.selection()));
-      },
-    });
+    if (target.scope === 'search') {
+      this.api.markSearchRead(target.term, until).subscribe({
+        next: () => {
+          this.entries.load(queryFromSelection(this.selection()));
+          this.subs.load();
+          this.savedSearchesStore.load();
+        },
+      });
+      return;
+    }
+    this.api
+      .markRead(target.scope, until, target.scope === 'all' ? undefined : target.id)
+      .subscribe({
+        next: () => {
+          this.subs.zeroUnread(
+            target.scope === 'all'
+              ? 'all'
+              : target.scope === 'tag'
+                ? { tag: target.id }
+                : { subscription: target.id },
+          );
+          this.entries.load(queryFromSelection(this.selection()));
+          this.savedSearchesStore.load();
+        },
+      });
   }
 
   /** A term layers a search over the current list; an empty term drops only the
@@ -835,6 +847,52 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       queryParams: { q: term || null, entry: null },
       queryParamsHandling: 'merge',
     });
+  }
+
+  /** The current search decoded into the pair a saved search stores: the
+   *  visible term and the whole-word flag. Null outside a search. The one
+   *  place that reads the trailing-space signal off a live selection — every
+   *  comparison downstream is against the decoded pair, never against a
+   *  re-encoded string (#408). */
+  private readonly searchedTermAndMode = computed(() => {
+    const s = this.selection();
+    if (s.kind !== 'search') return null;
+    const raw = s.term ?? '';
+
+    return { term: visibleSearchTerm(raw), wholeWord: isWholeWordTerm(raw) };
+  });
+
+  /** The saved search matching the current selection, or null. A search's
+   *  identity is its visible term plus its whole-word flag, so both must match. */
+  readonly currentSavedSearch = computed(() => {
+    const current = this.searchedTermAndMode();
+    if (current === null) return null;
+
+    return (
+      this.savedSearchesStore
+        .savedSearches()
+        .find((saved) => saved.term === current.term && saved.wholeWord === current.wholeWord) ??
+      null
+    );
+  });
+
+  protected readonly savedSearchActionLabel = computed(() =>
+    this.currentSavedSearch() ? 'reader.removeSavedSearch' : 'reader.saveSearch',
+  );
+
+  /** Save the search being looked at, or drop it when it is already saved —
+   *  one command, because the header offers one button whose label and icon
+   *  flip on the same state this reads. */
+  onToggleSavedSearch(): void {
+    const saved = this.currentSavedSearch();
+    if (saved) {
+      this.savedSearchesStore.removeSavedSearch(saved.id);
+
+      return;
+    }
+
+    const current = this.searchedTermAndMode();
+    if (current) this.savedSearchesStore.createSavedSearch(current.term, current.wholeWord);
   }
 
   /** The global refresh: sweep every due feed. The single reload authority
@@ -928,6 +986,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     ref.closed.subscribe((sub) => {
       if (!sub) return;
       this.subs.load();
+      this.savedSearchesStore.load();
       void this.router.navigate([], {
         relativeTo: this.route,
         queryParams: selectionQueryParams({ subscription: sub.id }),
