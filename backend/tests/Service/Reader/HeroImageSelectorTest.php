@@ -249,6 +249,35 @@ final class HeroImageSelectorTest extends TestCase
         self::assertSame($hero, $this->selectUrl($hero, $body));
     }
 
+    public function testSuppressesHeroWhenACdnPutsTheSizeInItsOwnPathSegment(): void
+    {
+        // The taz.de entry 1358489 case (#608): one photo is served at two sizes,
+        // where the size/crop is a whole path segment between the photo id and the
+        // file name — the hero is `/picture/8685793/1200/<slug>.jpeg`, the body
+        // figure `/picture/8685793/14/<slug>.webp`. Same photo, so the hero must be
+        // suppressed; an intro paragraph leads the body, so only the repeat rule
+        // can catch it.
+        $photo = 'https://taz.de/picture/8685793';
+        $slug = 'demo-fuer-die-energiewende-april2026-in-hamburg-dpa-georg-wendt';
+        $hero = $photo . '/1200/' . $slug . '.jpeg';
+        $body = '<p>Intro.</p>'
+            . '<figure><img src="' . $photo . '/14/' . $slug . '.webp" alt=""></figure>';
+
+        self::assertNull($this->selectUrl($hero, $body));
+    }
+
+    public function testShowsHeroWhenAPathSegmentSizeBelongsToADifferentPhoto(): void
+    {
+        // Distinct taz photos have distinct ids and slugs, so stripping the size
+        // segment must not collapse two different pictures into one identity and
+        // hide a genuinely different body image.
+        $hero = 'https://taz.de/picture/8685793/1200/energiewende-hamburg.jpeg';
+        $body = '<p>Intro.</p>'
+            . '<figure><img src="https://taz.de/picture/8691154/14/elphi-rauch.webp" alt=""></figure>';
+
+        self::assertSame($hero, $this->selectUrl($hero, $body));
+    }
+
     public function testDiscardsANonHttpHero(): void
     {
         // The scheme guard is anchored: a `data:` URL that merely embeds an

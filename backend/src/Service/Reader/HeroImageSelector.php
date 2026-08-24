@@ -115,18 +115,22 @@ final class HeroImageSelector
 
     /**
      * A CDN-agnostic identity for an image: its full path without the file
-     * extension, the query string, or the trailing size-variant token,
-     * lowercased. Size variants of one photo collapse to it whichever CDN
-     * convention names them — the id in the basename with the size in a query
-     * (`/4943510.jpg?width=1200` vs `/4943510.webp?width=960`, mopo.de), or the
-     * id in the directory with each size a whole basename of the form
-     * `<crop>__WIDTHxHEIGHT`, where the crop word varies between sizes of the
-     * same photo (`/…-image-group/original__640x360` vs
-     * `/…-image-group/wide__660x371`, zeit.de entry 477263). A `__WIDTHxHEIGHT`
-     * basename is therefore dropped whole, leaving the directory as the identity;
-     * distinct photos live in distinct directories and so keep distinct
-     * identities. A URL with no path (e.g. `https://cdn.test`) keeps its whole
-     * form, so it matches only itself.
+     * extension, the query string, or a size-variant token, lowercased. Size
+     * variants of one photo collapse to it whichever CDN convention names them:
+     *   - the id in the basename with the size in a query
+     *     (`/4943510.jpg?width=1200` vs `/4943510.webp?width=960`, mopo.de);
+     *   - the id in the directory with each size a whole basename of the form
+     *     `<crop>__WIDTHxHEIGHT`, where the crop word varies between sizes of the
+     *     same photo (`/…-image-group/original__640x360` vs
+     *     `/…-image-group/wide__660x371`, zeit.de entry 477263) — the
+     *     `__WIDTHxHEIGHT` basename is dropped whole, leaving the directory;
+     *   - the id and slug in the path with the size a whole numeric segment
+     *     between them (`/picture/8685793/1200/<slug>.jpeg` vs
+     *     `/picture/8685793/14/<slug>.webp`, taz.de entry 1358489) — the numeric
+     *     segment before the file name is dropped, leaving id and slug.
+     * Distinct photos keep distinct ids, directories or slugs, so they keep
+     * distinct identities. A URL with no path (e.g. `https://cdn.test`) keeps its
+     * whole form, so it matches only itself.
      */
     private function imageIdentity(string $url): string
     {
@@ -137,7 +141,8 @@ final class HeroImageSelector
 
         $withoutExtension = preg_replace('/\.[a-z0-9]+$/i', '', $path);
         $withoutSizeVariant = preg_replace('#/[^/]*__\d+x\d+.*$#', '', (string) $withoutExtension);
+        $withoutSizeSegment = preg_replace('#/\d+(?=/[^/]+$)#', '', (string) $withoutSizeVariant);
 
-        return strtolower((string) $withoutSizeVariant);
+        return strtolower((string) $withoutSizeSegment);
     }
 }
