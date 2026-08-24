@@ -477,4 +477,15 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
         self::assertStringContainsString('class="related"', $this->trimmer->trim($html));
     }
+
+    public function testReturnsTheOriginalStringByteIdenticalWhenNothingIsRemoved(): void
+    {
+        // A realistic multi-paragraph article with no boilerplate anywhere: no
+        // block is ever removed, so trim() must hand back the exact original
+        // string instead of a DOM-normalised re-serialisation via saveHtml().
+        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+            . '<p>' . self::PROSE . '</p><p>' . self::PROSE . '</p></div>';
+
+        self::assertSame($html, $this->trimmer->trim($html));
+    }
 }

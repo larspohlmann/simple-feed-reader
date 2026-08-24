@@ -49,8 +49,9 @@ final class ShareWidgetRemoverTest extends TestCase
 
     public function testMatchesAWholeClassTokenOnly(): void
     {
-        // "sharing-hint" is not the "sharing" plugin token, and "myshariff" is
-        // not "shariff": a substring must never trigger a removal.
+        // "sharing-hint" is not a whole match for any share-widget token (the
+        // closest is "sd-sharing"), and "myshariff" is not "shariff": a
+        // substring must never trigger a removal.
         $html = '<p class="sharing-hint">Kept one.</p><p class="myshariff">Kept two.</p>';
 
         $result = $this->htmlAfterRemoval($html);

@@ -67,13 +67,26 @@ final readonly class EdgeBoilerplateTrimmer
         }
 
         $blocks = $this->topLevelBlocks($this->contentRoot($document->body));
-        foreach ($this->edgeIndexes($blocks) as $index) {
+        $removedAny = $this->removeBoilerplateBlocks($blocks, $this->edgeIndexes($blocks));
+
+        return $removedAny ? $document->saveHtml() : $bodyHtml;
+    }
+
+    /**
+     * @param list<Element> $blocks
+     * @param list<int> $edgeIndexes
+     */
+    private function removeBoilerplateBlocks(array $blocks, array $edgeIndexes): bool
+    {
+        $removedAny = false;
+        foreach ($edgeIndexes as $index) {
             if ($this->shouldRemove($blocks[$index])) {
                 $blocks[$index]->remove();
+                $removedAny = true;
             }
         }
 
-        return $document->saveHtml();
+        return $removedAny;
     }
 
     /**
