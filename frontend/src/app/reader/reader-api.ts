@@ -82,6 +82,10 @@ export class ReaderApi {
     return this.http.post<void>(`${this.base}/api/entries/mark-read`, body);
   }
 
+  markSearchRead(q: string, until: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/api/entries/search/mark-read`, { q, until });
+  }
+
   readerContent(entryId: number): Observable<ReaderContent> {
     return this.http.get<ReaderContent>(`${this.base}/api/entries/${entryId}/reader`);
   }

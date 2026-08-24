@@ -199,7 +199,7 @@ export interface EntryQuery {
   q?: string;
 }
 
-export type MarkReadScope = 'all' | 'feed' | 'tag';
+export type MarkReadScope = 'all' | 'feed' | 'tag' | 'search';
 
 export interface EntryStatePatch {
   isRead?: boolean;

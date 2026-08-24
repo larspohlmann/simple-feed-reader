@@ -2146,4 +2146,51 @@ describe('ReaderShellComponent', () => {
       expect(host.querySelector('app-feed-intro')).toBeNull();
     });
   });
+
+  describe('mark all read for a search (#581)', () => {
+    // A search selects a `SelectionKind` that markReadTarget() maps to a
+    // 'search' scope, so canMarkAllRead() (and thus the header button) turns
+    // on without any change to the entry-list component.
+    function bootWithSearchSelected() {
+      const f = boot();
+      qp.next(convertToParamMap({ q: 'climate ' }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [], nextCursor: null });
+      f.detectChanges();
+      return f;
+    }
+
+    it('calls the search mark-read endpoint with the term verbatim, then reloads entries, subscriptions and saved searches', () => {
+      const f = bootWithSearchSelected();
+      const ref = { closed: of(true) };
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
+
+      f.componentInstance.onMarkAllRead();
+
+      const req = ctrl.expectOne('https://api.test/api/entries/search/mark-read');
+      expect(req.request.method).toBe('POST');
+      // The trailing space is the whole-word-match signal the backend reads
+      // via SearchTerms::fromInput; it must reach the request body unchanged.
+      expect(req.request.body).toEqual({ q: 'climate ', until: expect.any(String) });
+      req.flush(null);
+
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [], nextCursor: null });
+      ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
+      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+    });
+
+    it('does nothing when the dialog is cancelled', () => {
+      const f = bootWithSearchSelected();
+      const ref = { closed: of(false) };
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
+
+      f.componentInstance.onMarkAllRead();
+
+      ctrl.expectNone('https://api.test/api/entries/search/mark-read');
+    });
+  });
 });

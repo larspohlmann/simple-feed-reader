@@ -268,7 +268,9 @@ export function queryFromSelection(s: Selection): EntryQuery {
   }
 }
 
-export function markReadTarget(s: Selection): { scope: MarkReadScope; id?: number } | null {
+export function markReadTarget(
+  s: Selection,
+): { scope: MarkReadScope; id?: number; term?: string } | null {
   switch (s.kind) {
     case 'all':
       return { scope: 'all' };
@@ -276,6 +278,8 @@ export function markReadTarget(s: Selection): { scope: MarkReadScope; id?: numbe
       return s.id != null ? { scope: 'tag', id: s.id } : null;
     case 'subscription':
       return s.id != null ? { scope: 'feed', id: s.id } : null;
+    case 'search':
+      return s.term ? { scope: 'search', term: s.term } : null;
     default:
       return null;
   }

@@ -136,6 +136,14 @@ describe('ReaderApi', () => {
     req.flush(null);
   });
 
+  it('POSTs search mark-read with q/until', () => {
+    api.markSearchRead('climate ', '2026-01-01T00:00:00Z').subscribe();
+    const req = ctrl.expectOne('https://api.test/api/entries/search/mark-read');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ q: 'climate ', until: '2026-01-01T00:00:00Z' });
+    req.flush(null);
+  });
+
   it('POSTs refresh', () => {
     api.refresh().subscribe();
     const req = ctrl.expectOne('https://api.test/api/refresh');

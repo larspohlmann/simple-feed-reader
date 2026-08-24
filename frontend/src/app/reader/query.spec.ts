@@ -280,6 +280,19 @@ describe('markReadTarget', () => {
     expect(markReadTarget({ kind: 'favorites', id: null, unread: false })).toBeNull();
     expect(markReadTarget({ kind: 'for-you', id: null, unread: false })).toBeNull();
   });
+
+  it('maps a search selection to a search scope, term verbatim', () => {
+    expect(markReadTarget({ kind: 'search', id: null, unread: false, term: 'climate' })).toEqual({
+      scope: 'search',
+      term: 'climate',
+    });
+    // The trailing space is the whole-word-match signal and must reach the backend.
+    expect(markReadTarget({ kind: 'search', id: null, unread: false, term: 'climate ' })).toEqual({
+      scope: 'search',
+      term: 'climate ',
+    });
+    expect(markReadTarget({ kind: 'search', id: null, unread: false, term: '' })).toBeNull();
+  });
 });
 
 describe('canScopedRefresh', () => {

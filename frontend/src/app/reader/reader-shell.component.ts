@@ -809,8 +809,18 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  private markReadNow(target: { scope: MarkReadScope; id?: number }): void {
+  private markReadNow(target: { scope: MarkReadScope; id?: number; term?: string }): void {
     const until = this.entries.loadedAt() || new Date().toISOString();
+    if (target.scope === 'search') {
+      this.api.markSearchRead(target.term ?? '', until).subscribe({
+        next: () => {
+          this.entries.load(queryFromSelection(this.selection()));
+          this.subs.load();
+          this.savedSearchesStore.load();
+        },
+      });
+      return;
+    }
     this.api.markRead(target.scope, until, target.id).subscribe({
       next: () => {
         this.subs.zeroUnread(
