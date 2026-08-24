@@ -148,7 +148,7 @@ function selectionParam(p: ParamMap, name: SelectionParamName): string | null {
 }
 
 type SelectionParamValue = string | number | null;
-type SelectionParams = Record<SelectionParamName, SelectionParamValue>;
+export type SelectionParams = Record<SelectionParamName, SelectionParamValue>;
 
 /** Results handed out by `selectionQueryParams`, keyed by the argument that
  *  produced them.
@@ -186,6 +186,18 @@ export function selectionQueryParams(set: Partial<SelectionParams>): SelectionPa
   if (set.q == null) selectionParamsCache.set(key, params);
 
   return params;
+}
+
+/** The whole-word trailing space is the search signal (#408 follow-up), so a
+ *  saved whole-word search reconstructs it when it navigates. */
+export function savedSearchTerm(term: string, wholeWord: boolean): string {
+  return wholeWord ? `${term} ` : term;
+}
+
+/** The query params that open a saved search, reusing the existing `q` search
+ *  selection kind. */
+export function savedSearchParams(term: string, wholeWord: boolean): SelectionParams {
+  return selectionQueryParams({ q: savedSearchTerm(term, wholeWord) });
 }
 
 export function selectionFromParams(p: ParamMap): {
