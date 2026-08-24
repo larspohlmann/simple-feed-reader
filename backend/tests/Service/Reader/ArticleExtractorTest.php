@@ -14,7 +14,6 @@ use App\Service\Reader\EdgeBoilerplateTrimmer;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\LazyImageSources;
-use App\Service\Reader\LeadImageSelector;
 use App\Service\Reader\LeadingTitleRemover;
 use App\Service\Reader\ShareWidgetRemover;
 use App\Service\Sanitize\EntrySanitizer;
@@ -55,7 +54,6 @@ final class ArticleExtractorTest extends TestCase
             new FetchedPageNormalizer(new LazyImageSources(), new ShareWidgetRemover()),
             new LeadingTitleRemover(),
             new EntrySanitizer(),
-            new LeadImageSelector(),
             new EdgeBoilerplateTrimmer(),
         );
     }
@@ -81,7 +79,7 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringContainsString('https://site.test/img/photo.jpg', (string) $result->contentHtml);
         self::assertStringNotContainsString('About', (string) $result->contentHtml);
         // This page declares no og:image, so there is no hero to lead with.
-        self::assertNull($result->image);
+        self::assertNull($result->imageCandidate);
     }
 
     public function testRestoresLazyLoadedImagesInsteadOfLeavingEmptyFrames(): void
@@ -101,7 +99,7 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringNotContainsString('data:image', (string) $result->contentHtml);
     }
 
-    public function testEmitsLeadImageWhenBodyHasNoImage(): void
+    public function testExtractsAnOgImageThatSitsOutsideTheBody(): void
     {
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-lead-image.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
@@ -110,16 +108,17 @@ final class ArticleExtractorTest extends TestCase
 
         self::assertTrue($result->ok);
         self::assertStringNotContainsString('<img', (string) $result->contentHtml);
-        // readability finds the og:image even though it is outside the body; the
-        // reader renders it as a hero so the article is not imageless.
-        self::assertSame('https://site.test/hero.jpg', $result->image);
+        // readability finds the og:image even though it is outside the body. The
+        // extractor only reports it; ReaderHeroResolver decides whether it leads.
+        self::assertSame('https://site.test/hero.jpg', $result->imageCandidate);
     }
 
-    public function testEmitsLeadImageWhenTheBodyShowsADifferentPicture(): void
+    public function testCarriesTheOgImageThroughAsACandidate(): void
     {
         // #505: the og:image hero sits in the page header (a different CDN image
-        // id than the body photo). The reader used to drop it because the body
-        // held *some* image; it must now show the hero because it is not that one.
+        // id than the body photo). The #505 suppression assertion now lives in
+        // ReaderHeroResolverTest; this only proves the candidate survives
+        // extraction unchanged, whatever the body shows.
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-distinct-hero.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
@@ -128,7 +127,7 @@ final class ArticleExtractorTest extends TestCase
         self::assertTrue($result->ok);
         self::assertStringContainsString('4943526', (string) $result->contentHtml);
         self::assertStringNotContainsString('4943510', (string) $result->contentHtml);
-        self::assertSame('https://site.test/4943510.jpg?imageId=4943510', $result->image);
+        self::assertSame('https://site.test/4943510.jpg?imageId=4943510', $result->imageCandidate);
     }
 
     public function testStripsDangerousMarkup(): void
@@ -162,7 +161,6 @@ final class ArticleExtractorTest extends TestCase
             new FetchedPageNormalizer(new LazyImageSources(), new ShareWidgetRemover()),
             new LeadingTitleRemover(),
             new EntrySanitizer(),
-            new LeadImageSelector(),
             new EdgeBoilerplateTrimmer(),
         );
 

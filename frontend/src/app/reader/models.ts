@@ -233,6 +233,14 @@ export interface SubscriptionUpdate {
   tagIds: number[];
 }
 
+/** A picture the backend chose to lead the article, with the dimensions its
+ *  source declared. Null width/height mean unknown, so no space is reserved. */
+export interface HeroImageDto {
+  url: string;
+  width: number | null;
+  height: number | null;
+}
+
 /** A successfully extracted reader-mode article (GET /api/entries/{id}/reader). */
 export interface ReaderArticle {
   status: 'ok';
@@ -242,8 +250,12 @@ export interface ReaderArticle {
   siteName: string | null;
   contentHtml: string;
   excerpt: string | null;
-  /** Lead image to show as a hero when the body has none of its own; else null. */
-  leadImage: string | null;
+  /** The picture to lead the reader view; null when the extracted body has its
+   *  own leading image, or repeats it. Resolved server-side (#592). */
+  readerHero: HeroImageDto | null;
+  /** The picture to lead the original-feed view, resolved against the feed's
+   *  own body by the same server-side rule. */
+  originalHero: HeroImageDto | null;
   extractedAt: string;
 }
 
@@ -252,6 +264,9 @@ export interface ReaderFailure {
   status: 'failed';
   url: string | null;
   reason: 'no_url' | 'fetch' | 'unextractable' | 'empty';
+  /** Always null: a failed extraction has no body to lead. */
+  readerHero: null;
+  originalHero: HeroImageDto | null;
 }
 
 export type ReaderContent = ReaderArticle | ReaderFailure;

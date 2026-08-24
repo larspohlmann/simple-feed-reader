@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Html\HtmlDocumentParser;
 use Dom\Element;
-use Dom\HTMLDocument;
 use Dom\Node;
 use Dom\Text;
 
 /**
- * Decides whether an article's og:image should lead the reader as a hero.
+ * Decides whether a candidate picture may lead an article as its hero.
+ *
+ * This is the only implementation of the rule (#592). It is applied to more than
+ * one (candidate, body) pair — see ReaderHeroResolver — so it knows nothing
+ * about where either side came from.
  *
  * A hero exists only to give a lead picture to an article whose body does not
  * already open with one. So the hero is suppressed when the extracted body
@@ -23,40 +27,28 @@ use Dom\Text;
  * The candidate is guarded to http(s) so a javascript:/data: URL from the page
  * can never reach the client's <img src>.
  */
-final class LeadImageSelector
+final class HeroImageSelector
 {
     /** Standard layout whitespace, excluding U+00A0 which is visible text. */
     private const string LAYOUT_WHITESPACE = " \t\n\r\f\v\0";
 
-    public function select(?string $candidate, string $bodyHtml): ?string
+    public function select(?HeroImage $candidate, string $bodyHtml): ?HeroImage
     {
-        if ($candidate === null || preg_match('#^https?://#i', $candidate) !== 1) {
+        if ($candidate === null || preg_match('#^https?://#i', $candidate->url) !== 1) {
             return null;
         }
 
-        $body = $this->parseBody($bodyHtml);
+        // Blank or unparsable html leaves no body to judge, so the candidate
+        // stands. The parser wraps a bare fragment in <html><body> on its own.
+        $body = HtmlDocumentParser::parseOrNull($bodyHtml)?->body;
         if ($body === null) {
             return $candidate;
         }
-        if ($this->bodyLeadsWithImage($body) || $this->bodyRepeatsImage($body, $candidate)) {
+        if ($this->bodyLeadsWithImage($body) || $this->bodyRepeatsImage($body, $candidate->url)) {
             return null;
         }
 
         return $candidate;
-    }
-
-    /**
-     * The parsed <body>, or null when the html is unparsable. The parser wraps
-     * a bare fragment in <html><body> on its own, so no scaffolding is needed;
-     * an empty or whitespace body parses to an empty <body> and leads the hero.
-     */
-    private function parseBody(string $bodyHtml): ?Element
-    {
-        try {
-            return HTMLDocument::createFromString($bodyHtml, LIBXML_NOERROR)->body;
-        } catch (\Throwable) {
-            return null;
-        }
     }
 
     /** Whether the first rendered node in the body is an image. */
@@ -126,10 +118,13 @@ final class LeadImageSelector
      * lowercased. Size variants of one photo collapse to it whichever CDN
      * convention names them — the id in the basename with the size in a query
      * (`/4943510.jpg?width=1200` vs `/4943510.webp?width=960`, mopo.de), or the
-     * id in the directory with the size *as* the basename
-     * (`/…-image-group/wide__1300x731` vs `/…-image-group/wide__660x371`,
-     * zeit.de). A different photo keeps a different path and so a different
-     * identity. A URL with no path (e.g. `https://cdn.test`) keeps its whole
+     * id in the directory with each size a whole basename of the form
+     * `<crop>__WIDTHxHEIGHT`, where the crop word varies between sizes of the
+     * same photo (`/…-image-group/original__640x360` vs
+     * `/…-image-group/wide__660x371`, zeit.de entry 477263). A `__WIDTHxHEIGHT`
+     * basename is therefore dropped whole, leaving the directory as the identity;
+     * distinct photos live in distinct directories and so keep distinct
+     * identities. A URL with no path (e.g. `https://cdn.test`) keeps its whole
      * form, so it matches only itself.
      */
     private function imageIdentity(string $url): string
@@ -140,7 +135,7 @@ final class LeadImageSelector
         }
 
         $withoutExtension = preg_replace('/\.[a-z0-9]+$/i', '', $path);
-        $withoutSizeVariant = preg_replace('/__\d+x\d+.*$/', '', (string) $withoutExtension);
+        $withoutSizeVariant = preg_replace('#/[^/]*__\d+x\d+.*$#', '', (string) $withoutExtension);
 
         return strtolower((string) $withoutSizeVariant);
     }

@@ -6,7 +6,8 @@ import { of, Subject } from 'rxjs';
 import { ReaderViewComponent } from './reader-view.component';
 import { ReaderContentService } from '../reader-content.service';
 import { entryScrollKey } from '../list-scroll-memory';
-import { EntryDto, ReaderArticle, ReaderContent } from '../models';
+import { EntryDto, ReaderArticle, ReaderContent, ReaderFailure } from '../models';
+import { ReaderModeService } from '../reader-mode.service';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
@@ -48,8 +49,18 @@ const okContent = (over: Partial<ReaderArticle> = {}): ReaderArticle => ({
   byline: null,
   siteName: null,
   excerpt: null,
-  leadImage: null,
+  readerHero: null,
+  originalHero: null,
   extractedAt: '',
+  ...over,
+});
+
+const failedContent = (over: Partial<ReaderFailure> = {}): ReaderFailure => ({
+  status: 'failed',
+  reason: 'fetch',
+  url: null,
+  readerHero: null,
+  originalHero: null,
   ...over,
 });
 
@@ -57,7 +68,7 @@ describe('ReaderViewComponent', () => {
   beforeEach(() => {
     // Default: extraction fails so the existing presentational tests keep
     // asserting against the feed's own content. Reader-specific tests override.
-    loadMock = jest.fn(() => of<ReaderContent>({ status: 'failed', reason: 'fetch', url: null }));
+    loadMock = jest.fn(() => of<ReaderContent>(failedContent()));
     reloadMock = jest.fn(() => of<ReaderContent>(okContent()));
     TestBed.configureTestingModule({
       imports: [ReaderViewComponent, provideTranslocoTesting()],
@@ -235,7 +246,7 @@ describe('ReaderViewComponent', () => {
 
     it('restores the remembered offset when extraction fails', async () => {
       const { f, scroll, load } = mountRemembering(900);
-      load.next({ status: 'failed', reason: 'fetch', url: null });
+      load.next(failedContent());
       await settle(f);
       expect(scroll.top).toBe(900);
       f.destroy();
@@ -251,7 +262,7 @@ describe('ReaderViewComponent', () => {
 
     it('leaves an article with no remembered offset at the top', async () => {
       const { f, scroll, load } = mountRemembering(0);
-      load.next({ status: 'failed', reason: 'fetch', url: null });
+      load.next(failedContent());
       await settle(f);
       expect(scroll.top).toBe(0);
       f.destroy();
@@ -564,7 +575,7 @@ describe('ReaderViewComponent', () => {
   });
 
   it('falls back to feed content and shows a note when extraction fails', () => {
-    loadMock.mockReturnValue(of<ReaderContent>({ status: 'failed', reason: 'fetch', url: null }));
+    loadMock.mockReturnValue(of<ReaderContent>(failedContent()));
     const el = mount(entry()).nativeElement as HTMLElement;
     expect(el.querySelector('.content')!.innerHTML).toContain('Body');
     expect(el.querySelector('.reader-note')).not.toBeNull();
@@ -623,19 +634,99 @@ describe('ReaderViewComponent', () => {
     expect(loadMock).toHaveBeenLastCalledWith(2);
   });
 
-  it('renders the lead image as a hero when the extracted body has none', () => {
+  const hero = (f: { nativeElement: unknown }) =>
+    (f.nativeElement as HTMLElement).querySelector('.lead-image') as HTMLImageElement | null;
+
+  it('renders the reader hero the backend resolved for the extracted body', () => {
     loadMock.mockReturnValue(
-      of<ReaderContent>(okContent({ leadImage: 'https://img.test/hero.jpg' })),
+      of<ReaderContent>(
+        okContent({ readerHero: { url: 'https://img.test/hero.jpg', width: 800, height: 450 } }),
+      ),
     );
-    const img = (mount(entry()).nativeElement as HTMLElement).querySelector(
-      '.lead-image',
-    ) as HTMLImageElement | null;
+
+    const img = hero(mount(entry()));
+
     expect(img).not.toBeNull();
     expect(img!.getAttribute('src')).toBe('https://img.test/hero.jpg');
+    expect(img!.getAttribute('width')).toBe('800');
+    expect(img!.getAttribute('height')).toBe('450');
+  });
+
+  it('swaps to the original hero on toggle without asking the server again', () => {
+    loadMock.mockReturnValue(
+      of<ReaderContent>(
+        okContent({
+          readerHero: { url: 'https://img.test/reader.jpg', width: null, height: null },
+          originalHero: { url: 'https://img.test/feed.jpg', width: 800, height: 450 },
+        }),
+      ),
+    );
+    const f = mount(entry());
+    expect(hero(f)!.getAttribute('src')).toBe('https://img.test/reader.jpg');
+
+    TestBed.inject(ReaderModeService).toggle();
+    f.detectChanges();
+
+    expect(hero(f)!.getAttribute('src')).toBe('https://img.test/feed.jpg');
+    expect(loadMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the original hero when extraction failed', () => {
+    loadMock.mockReturnValue(
+      of<ReaderContent>(
+        failedContent({
+          originalHero: { url: 'https://img.test/feed.jpg', width: 800, height: 450 },
+        }),
+      ),
+    );
+
+    expect(hero(mount(entry()))!.getAttribute('src')).toBe('https://img.test/feed.jpg');
+  });
+
+  it('hides a hero whose image fails to load', () => {
+    loadMock.mockReturnValue(
+      of<ReaderContent>(
+        okContent({ readerHero: { url: 'https://img.test/gone.jpg', width: null, height: null } }),
+      ),
+    );
+    const f = mount(entry());
+
+    hero(f)!.dispatchEvent(new Event('error'));
+    f.detectChanges();
+
+    expect(hero(f)).toBeNull();
+  });
+
+  it('keeps the original hero after the reader hero fails to load', () => {
+    loadMock.mockReturnValue(
+      of<ReaderContent>(
+        okContent({
+          readerHero: { url: 'https://img.test/gone.jpg', width: null, height: null },
+          originalHero: { url: 'https://img.test/feed.jpg', width: 800, height: 450 },
+        }),
+      ),
+    );
+    const f = mount(entry());
+    hero(f)!.dispatchEvent(new Event('error'));
+    f.detectChanges();
+    expect(hero(f)).toBeNull();
+
+    // The failure belongs to the one broken URL, not to the article: the
+    // original view offers a different picture and must still show it.
+    TestBed.inject(ReaderModeService).toggle();
+    f.detectChanges();
+
+    expect(hero(f)!.getAttribute('src')).toBe('https://img.test/feed.jpg');
+  });
+
+  it('renders no hero when the backend resolved none', () => {
+    loadMock.mockReturnValue(of<ReaderContent>(okContent()));
+
+    expect(hero(mount(entry()))).toBeNull();
   });
 
   it('falls back to the feed summary when contentHtml is null on failure', () => {
-    loadMock.mockReturnValue(of<ReaderContent>({ status: 'failed', reason: 'fetch', url: null }));
+    loadMock.mockReturnValue(of<ReaderContent>(failedContent()));
     const el = mount(entry({ contentHtml: null, summary: 'Just a summary' }))
       .nativeElement as HTMLElement;
     expect(el.querySelector('.content')!.innerHTML).toContain('Just a summary');

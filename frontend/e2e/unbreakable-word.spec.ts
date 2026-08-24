@@ -116,7 +116,8 @@ async function stubEntries(page: Page): Promise<void> {
           siteName: 'Fixture source',
           contentHtml: CONTENT_HTML,
           excerpt: null,
-          leadImage: null,
+          readerHero: null,
+          originalHero: null,
           extractedAt: '2026-08-01T12:50:34+00:00',
         },
       });

@@ -13,7 +13,8 @@ const ARTICLE: ReaderArticle = {
   siteName: null,
   contentHtml: '<p>b</p>',
   excerpt: null,
-  leadImage: null,
+  readerHero: null,
+  originalHero: null,
   extractedAt: '2026-07-23T00:00:00Z',
 };
 
@@ -59,7 +60,13 @@ describe('ReaderContentService', () => {
 
   it('does not cache a failure', async () => {
     cacheGet.mockResolvedValue(null);
-    const failure: ReaderContent = { status: 'failed', url: null, reason: 'fetch' };
+    const failure: ReaderContent = {
+      status: 'failed',
+      url: null,
+      reason: 'fetch',
+      readerHero: null,
+      originalHero: null,
+    };
     apiGet.mockReturnValue(of(failure));
     const svc = TestBed.inject(ReaderContentService);
     await firstValueFrom(svc.load(1));
@@ -77,7 +84,13 @@ describe('ReaderContentService', () => {
   });
 
   it('reload does not cache a failed refetch', async () => {
-    const failure: ReaderContent = { status: 'failed', url: null, reason: 'fetch' };
+    const failure: ReaderContent = {
+      status: 'failed',
+      url: null,
+      reason: 'fetch',
+      readerHero: null,
+      originalHero: null,
+    };
     apiGet.mockReturnValue(of(failure));
     const svc = TestBed.inject(ReaderContentService);
     await firstValueFrom(svc.reload(1));

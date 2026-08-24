@@ -64,6 +64,8 @@ final class EntryReaderControllerTest extends WebTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
+        $entry->setContentHtml('<p>The feed body.</p>');
+        $entry->setImage('https://example.com/feed.jpg', 800, 450);
         $em->persist($entry);
         $em->flush();
 
@@ -90,7 +92,7 @@ final class EntryReaderControllerTest extends WebTestCase
             siteName: 'Example',
             contentHtml: '<p>Body</p>',
             excerpt: 'An excerpt.',
-            image: 'https://example.com/lead.jpg',
+            imageCandidate: 'https://example.com/lead.jpg',
         ));
         $entry = $this->seedEntry($user, 'https://example.com/article');
 
@@ -105,7 +107,17 @@ final class EntryReaderControllerTest extends WebTestCase
         self::assertSame('A. Writer', $body['byline']);
         self::assertSame('Example', $body['siteName']);
         self::assertSame('An excerpt.', $body['excerpt']);
-        self::assertSame('https://example.com/lead.jpg', $body['leadImage']);
+        self::assertSame(
+            ['url' => 'https://example.com/lead.jpg', 'width' => null, 'height' => null],
+            $body['readerHero'],
+        );
+        // The feed body carries no picture of its own, so the feed's own image
+        // leads the original view.
+        self::assertSame(
+            ['url' => 'https://example.com/feed.jpg', 'width' => 800, 'height' => 450],
+            $body['originalHero'],
+        );
+        self::assertArrayNotHasKey('leadImage', $body);
         self::assertSame('https://example.com/article', $body['url']);
         self::assertArrayHasKey('extractedAt', $body);
         self::assertSame(['https://example.com/article'], $fake->calls);
@@ -127,6 +139,13 @@ final class EntryReaderControllerTest extends WebTestCase
         self::assertSame('failed', $body['status']);
         self::assertSame('fetch', $body['reason']);
         self::assertSame(['https://example.com/article'], $fake->calls);
+        // A failed extraction is exactly when the feed's own picture is the only
+        // one there is, so the original hero must still be resolved.
+        self::assertNull($body['readerHero']);
+        self::assertSame(
+            ['url' => 'https://example.com/feed.jpg', 'width' => 800, 'height' => 450],
+            $body['originalHero'],
+        );
     }
 
     public function testEntryWithoutUrlShortCircuitsWithoutCallingExtractor(): void
