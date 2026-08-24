@@ -170,6 +170,32 @@ final class LeadImageSelectorTest extends TestCase
         self::assertSame($hero, $this->selector->select($hero, $body));
     }
 
+    public function testSuppressesHeroWhenACdnPutsThePhotoIdentityInThePathAndTheSizeInTheBasename(): void
+    {
+        // The zeit.de entry 477263 case: one photo lives in an image-group
+        // directory and each size is a differently named basename, so the hero
+        // and the body figure are the same picture under `wide__1300x731` and
+        // `wide__660x371`. A byline leads the body, so only the repeat rule can
+        // catch it; it must, or the reader stacks the photo twice.
+        $hero = 'https://img.zeit.de/koenigsfamilie-image-group/wide__1300x731';
+        $body = '<div><span>Quelle: dpa</span></div>'
+            . '<figure><img src="https://img.zeit.de/koenigsfamilie-image-group/wide__660x371" alt=""></figure>';
+
+        self::assertNull($this->selector->select($hero, $body));
+    }
+
+    public function testShowsHeroWhenTheBodyPhotoBelongsToADifferentImageGroup(): void
+    {
+        // Distinct photos live in distinct image-group directories, so a
+        // size-variant basename shared between them must not collapse the two
+        // into one identity and hide a genuinely different body image.
+        $hero = 'https://img.zeit.de/koenigsfamilie-image-group/wide__1300x731';
+        $body = '<p>Intro.</p>'
+            . '<figure><img src="https://img.zeit.de/koenigslinde-image-group/wide__660x371" alt=""></figure>';
+
+        self::assertSame($hero, $this->selector->select($hero, $body));
+    }
+
     public function testDiscardsANonHttpHero(): void
     {
         // The scheme guard is anchored: a `data:` URL that merely embeds an
