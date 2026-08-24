@@ -76,6 +76,27 @@ describe('EntryRowComponent', () => {
     expect(el.querySelector('img.thumb')).toBeNull();
   });
 
+  it('shows the persisted imageUrl when the body has no inline image', () => {
+    const el = mount(
+      entry({
+        contentHtml: '<p>no image</p>',
+        summary: '<p>x</p>',
+        imageUrl: 'https://cdn.test/hero.jpg',
+      }),
+    ).nativeElement as HTMLElement;
+    expect(el.querySelector('img.thumb')!.getAttribute('src')).toBe('https://cdn.test/hero.jpg');
+  });
+
+  it('prefers the persisted imageUrl over a differing inline image', () => {
+    const el = mount(
+      entry({
+        contentHtml: '<img src="https://cdn.test/inline.jpg"><p>Body</p>',
+        imageUrl: 'https://cdn.test/hero.jpg',
+      }),
+    ).nativeElement as HTMLElement;
+    expect(el.querySelector('img.thumb')!.getAttribute('src')).toBe('https://cdn.test/hero.jpg');
+  });
+
   it('moves the thumbnail to the left when imageSide is left', () => {
     const f = mount(entry());
     f.componentRef.setInput('imageSide', 'left');

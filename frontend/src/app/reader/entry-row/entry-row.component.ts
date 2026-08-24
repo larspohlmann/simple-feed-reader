@@ -6,7 +6,7 @@ import { SourceTagsComponent } from '../source-tags/source-tags.component';
 import { EntryActionsComponent } from '../entry-actions/entry-actions.component';
 import { LanguageService } from '../../core/language.service';
 import { EntryDto, SubscriptionTagDto } from '../models';
-import { firstPreviewImage, textSnippet } from '../preview-image';
+import { entryImage, textSnippet } from '../preview-image';
 import { relativeTime } from '../format';
 
 @Component({
@@ -33,9 +33,10 @@ export class EntryRowComponent {
   readonly open = output<EntryDto>();
 
   readonly imgError = signal(false);
-  readonly image = computed(() =>
-    firstPreviewImage(this.entry().contentHtml, this.entry().summary),
-  );
+  // The entry's image, from the same shared helper the magazine uses: the
+  // persisted hero when present, else an inline <img>. One source of truth, so
+  // a picture never shows in one view and hides in another.
+  readonly image = computed(() => entryImage(this.entry())?.url ?? null);
   readonly snippet = computed(() =>
     this.entry().summary
       ? textSnippet(this.entry().summary)
