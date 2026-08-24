@@ -23,8 +23,8 @@ use Dom\HTMLDocument;
  * into the picture the image belongs to.
  *
  * An image with no usable candidate is removed: an <img> the client cannot load
- * is a broken frame, and leaving it also fools ArticleExtractor::leadImage()
- * into suppressing the hero.
+ * is a broken frame, and leaving it also fools HeroImageSelector into thinking
+ * the body already shows a picture, suppressing the hero.
  */
 final readonly class LazyImageSources
 {

@@ -52,7 +52,7 @@ final readonly class ReaderHeroResolver
     /** Readability reports no dimensions for the og:image it finds. */
     private function extractedPicture(ExtractionResult $result): ?HeroImage
     {
-        return $result->image === null ? null : new HeroImage($result->image);
+        return $result->imageCandidate === null ? null : new HeroImage($result->imageCandidate);
     }
 
     private function feedPicture(Entry $entry): ?HeroImage

@@ -45,7 +45,7 @@ final class ReaderHeroResolverTest extends TestCase
             siteName: null,
             contentHtml: $contentHtml,
             excerpt: null,
-            image: $imageCandidate,
+            imageCandidate: $imageCandidate,
         );
     }
 

@@ -19,6 +19,10 @@ use fivefilters\Readability\Readability;
  * same XSS barrier feed HTML crosses). Never throws for an ordinary failure —
  * returns a `failed` ExtractionResult with a machine reason so the endpoint
  * stays 200 and the client can fall back to feed content.
+ *
+ * The lead picture is carried through undecided: whether it may lead the
+ * article depends on the body the client shows, which is ReaderHeroResolver's
+ * concern (#592).
  */
 final class ArticleExtractor implements ArticleExtractorInterface
 {
@@ -30,7 +34,6 @@ final class ArticleExtractor implements ArticleExtractorInterface
         private readonly FetchedPageNormalizer $normalizer,
         private readonly LeadingTitleRemover $titleRemover,
         private readonly EntrySanitizer $sanitizer,
-        private readonly HeroImageSelector $heroImageSelector,
         private readonly EdgeBoilerplateTrimmer $boilerplateTrimmer,
     ) {
     }
@@ -69,10 +72,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
             siteName: $article->siteName,
             contentHtml: $clean,
             excerpt: $article->excerpt,
-            image: $this->heroImageSelector->select(
-                $article->image === null ? null : new HeroImage($article->image),
-                $clean,
-            )?->url,
+            imageCandidate: $article->image,
         );
     }
 
