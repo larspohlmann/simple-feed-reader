@@ -191,10 +191,15 @@ export class EntryListComponent implements OnDestroy {
    *  whenever the database LIKE fallback answered instead of the engine —
    *  that is the normal, permanent state on any install with no engine. */
   readonly matchedWords = input<string[]>([]);
+  /** True when the current search term is already saved; flips the header
+   *  action between Save and Remove. Meaningful only for a search selection. */
+  readonly currentSearchSaved = input<boolean>(false);
 
   readonly loadMore = output<void>();
   readonly markAllRead = output<void>();
   readonly refresh = output<void>();
+  readonly saveSearch = output<void>();
+  readonly removeSavedSearch = output<void>();
   readonly favorite = output<EntryDto>();
   readonly keep = output<EntryDto>();
   readonly read = output<EntryDto>();

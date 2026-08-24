@@ -214,7 +214,9 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   color: var(--accent);
 }
 
-.mark-all {
+.mark-all,
+.refresh,
+.save-search {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
@@ -225,16 +227,9 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   font-size: var(--fs-sm);
 }
 
-.refresh {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  background: none;
-  border: none;
+.refresh,
+.save-search {
   padding: 0;
-  color: var(--accent);
-  cursor: pointer;
-  font-size: var(--fs-sm);
 }
 
 .refresh:disabled {
@@ -309,7 +304,8 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
 @media (width <= bp.$bp-sm) {
   .toggle .txt,
   .mark-all .txt,
-  .refresh .txt {
+  .refresh .txt,
+  .save-search .txt {
     display: none;
   }
 

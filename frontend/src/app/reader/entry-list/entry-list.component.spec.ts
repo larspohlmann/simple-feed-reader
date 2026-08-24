@@ -657,6 +657,37 @@ describe('EntryListComponent', () => {
     }
   });
 
+  describe('saved-search action', () => {
+    it('emits saveSearch when the current search is not saved', () => {
+      const f = mount({
+        selection: { kind: 'search', id: null, unread: false, term: 'climate' },
+        currentSearchSaved: false,
+      });
+      let hits = 0;
+      f.componentInstance.saveSearch.subscribe(() => hits++);
+      (f.nativeElement.querySelector('button.save-search') as HTMLButtonElement).click();
+      expect(hits).toBe(1);
+    });
+
+    it('emits removeSavedSearch when the current search is saved', () => {
+      const f = mount({
+        selection: { kind: 'search', id: null, unread: false, term: 'climate' },
+        currentSearchSaved: true,
+      });
+      let hits = 0;
+      f.componentInstance.removeSavedSearch.subscribe(() => hits++);
+      (f.nativeElement.querySelector('button.save-search') as HTMLButtonElement).click();
+      expect(hits).toBe(1);
+    });
+
+    it('shows no save/remove button off a search selection', () => {
+      const el = mount({
+        selection: { kind: 'all', id: null, unread: true },
+      }).nativeElement as HTMLElement;
+      expect(el.querySelector('button.save-search')).toBeNull();
+    });
+  });
+
   // #105: the gesture had no coverage at all, which is how a threshold that
   // needed ~400px of finger travel shipped. Drive the real listeners on the
   // scroller rather than the handler methods — the wiring is half the feature.

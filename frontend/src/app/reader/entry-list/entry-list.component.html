@@ -117,6 +117,31 @@
         <span class="txt">{{ 'reader.refresh' | transloco }}</span>
       </button>
     }
+    @if (selection().kind === 'search') {
+      @if (currentSearchSaved()) {
+        <button
+          class="save-search"
+          type="button"
+          (click)="removeSavedSearch.emit()"
+          [attr.aria-label]="'reader.removeSavedSearch' | transloco"
+          [attr.title]="'reader.removeSavedSearch' | transloco"
+        >
+          <app-icon name="bookmark_remove" size="sm" />
+          <span class="txt">{{ 'reader.removeSavedSearch' | transloco }}</span>
+        </button>
+      } @else {
+        <button
+          class="save-search"
+          type="button"
+          (click)="saveSearch.emit()"
+          [attr.aria-label]="'reader.saveSearch' | transloco"
+          [attr.title]="'reader.saveSearch' | transloco"
+        >
+          <app-icon name="bookmark_add" size="sm" />
+          <span class="txt">{{ 'reader.saveSearch' | transloco }}</span>
+        </button>
+      }
+    }
     @if (headerActions(); as actions) {
       <ng-container [ngTemplateOutlet]="actions" />
     }
