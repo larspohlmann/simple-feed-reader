@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\LazyImageSources;
+use App\Service\Reader\ShareWidgetRemover;
 use PHPUnit\Framework\TestCase;
 
 final class FetchedPageNormalizerTest extends TestCase
@@ -14,7 +15,10 @@ final class FetchedPageNormalizerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->normalizer = new FetchedPageNormalizer(new LazyImageSources());
+        $this->normalizer = new FetchedPageNormalizer(
+            new LazyImageSources(),
+            new ShareWidgetRemover(),
+        );
     }
 
     public function testCollapsesSingleChildDivChains(): void
@@ -101,6 +105,21 @@ final class FetchedPageNormalizerTest extends TestCase
         self::assertStringNotContainsString('Image caption,', $normalized);
         self::assertStringNotContainsString('skip', $normalized);
         self::assertStringContainsString('Body', $normalized);
+    }
+
+    public function testStripsAShareWidgetBeforeReadabilitySeesIt(): void
+    {
+        // A Shariff bar in the raw page is gone after normalize(), so its
+        // "teilen" labels never reach readability or lead the article (#582).
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body><article><div class="shariff">'
+            . '<ul class="shariff-buttons"><li>Facebook teilen</li></ul></div>'
+            . '<p>Body text long enough to be real content.</p></article></body></html>';
+
+        $normalized = $this->normalizer->normalize($html)?->saveHtml() ?? '';
+
+        self::assertStringNotContainsString('teilen', $normalized);
+        self::assertStringContainsString('Body text', $normalized);
     }
 
     public function testEmptyInputYieldsNull(): void

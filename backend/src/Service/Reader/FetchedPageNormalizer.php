@@ -35,6 +35,11 @@ use Dom\XPath;
  *    browser paints a tofu box (taz's pull-quote mark is the case, U+E80F).
  *    The dead code points are removed here, along with the now-empty element
  *    that held them.
+ *  - Social share-button widgets (Shariff, Sharedaddy, AddToAny, ShareThis)
+ *    sit inside the article container as a plain list of links, so readability
+ *    keeps them and their "teilen"/"share" labels lead the extracted text.
+ *    ShareWidgetRemover strips them here, by class fingerprint, before scoring
+ *    (#582).
  *  - <script> and <style> blocks are stripped from the raw source, bounded by
  *    the real close tag. This keeps their text out of the extraction — the
  *    same content readability's own script removal drops — and does it before
@@ -69,8 +74,10 @@ final readonly class FetchedPageNormalizer
         'img', 'picture', 'source', 'svg', 'video', 'audio', 'iframe', 'br', 'hr', 'input',
     ];
 
-    public function __construct(private LazyImageSources $lazyImages)
-    {
+    public function __construct(
+        private LazyImageSources $lazyImages,
+        private ShareWidgetRemover $shareWidgets,
+    ) {
     }
 
     /**
@@ -113,6 +120,7 @@ final readonly class FetchedPageNormalizer
         }
 
         $this->lazyImages->resolveIn($document);
+        $this->shareWidgets->removeFrom($document);
         $this->removeScreenReaderOnlyElements($document);
         $this->removeOrphanIconGlyphs($document);
 
