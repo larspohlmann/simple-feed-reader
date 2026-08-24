@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Html\ClassTokenMatcher;
 use App\Service\Html\HtmlDocumentParser;
 use Dom\Element;
 
@@ -218,13 +219,7 @@ final readonly class EdgeBoilerplateTrimmer
 
     private function hasFingerprint(Element $block): bool
     {
-        /** @var list<string> $tokens */
-        $tokens = preg_split('/\s+/', trim($block->getAttribute('class') ?? '')) ?: [];
-
-        return array_any(
-            $tokens,
-            static fn (string $token): bool => in_array($token, self::BOILERPLATE_CLASS_TOKENS, true),
-        );
+        return ClassTokenMatcher::hasAnyToken($block, self::BOILERPLATE_CLASS_TOKENS);
     }
 
     private function isLinkList(Element $block): bool

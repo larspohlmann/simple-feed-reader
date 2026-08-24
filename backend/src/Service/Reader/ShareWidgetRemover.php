@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Html\ClassTokenMatcher;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\XPath;
@@ -47,12 +48,7 @@ final readonly class ShareWidgetRemover
 
     private function isShareWidget(Element $element): bool
     {
-        $tokens = preg_split('/\s+/', trim($element->getAttribute('class') ?? '')) ?: [];
-
-        return array_any(
-            $tokens,
-            static fn (string $token): bool => in_array($token, self::SHARE_WIDGET_CLASS_TOKENS, true),
-        );
+        return ClassTokenMatcher::hasAnyToken($element, self::SHARE_WIDGET_CLASS_TOKENS);
     }
 
     /**
