@@ -135,10 +135,35 @@ final class LeadImageSelectorTest extends TestCase
 
     public function testMatchesTheImageIdentityRegardlessOfCase(): void
     {
+        // The body leads with text, so only the repeat rule can suppress the
+        // hero here: the two URLs match on identity alone, which they do only
+        // because the identity is lower-cased on both sides.
         $hero = 'https://cdn.test/Photo.JPG';
-        $body = '<IMG SRC="https://cdn.test/photo.jpg" ALT="">';
+        $body = '<p>Intro.</p><IMG SRC="https://cdn.test/photo.jpg" ALT="">';
 
         self::assertNull($this->selector->select($hero, $body));
+    }
+
+    public function testMatchesAPathlessImageIdentityRegardlessOfCase(): void
+    {
+        // A pathless URL is its own identity, and that fallback is lower-cased
+        // too, so a host that differs only in case is still the same picture.
+        // The body leads with text, so only the repeat rule can fire.
+        $hero = 'https://CDN.test';
+        $body = '<p>Intro.</p><img src="https://cdn.test" alt="">';
+
+        self::assertNull($this->selector->select($hero, $body));
+    }
+
+    public function testShowsHeroWhenTwoPathlessUrlsDifferOnlyInTheirHost(): void
+    {
+        // A lone slash names no photo, so trimming it makes each URL its own
+        // identity and two different hosts stay distinct — the hero still
+        // leads. Without the trim both paths collapse to "/" and wrongly match.
+        $hero = 'https://a.test/';
+        $body = '<p>Intro.</p><img src="https://b.test/" alt="">';
+
+        self::assertSame($hero, $this->selector->select($hero, $body));
     }
 
     public function testMatchesASingleQuotedBodyImage(): void
