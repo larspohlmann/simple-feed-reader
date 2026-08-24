@@ -8,8 +8,11 @@ import { ListScrollMemory } from './list-scroll-memory';
 import { ListScrollReset, ReaderPlace, forgetsPosition } from './list-scroll-reset';
 import { Selection } from './query';
 
-const ALL: Selection = { kind: 'all', id: null, unread: true };
-const TAG: Selection = { kind: 'tag', id: 5, unread: true };
+// A bare list URL (`/`, `/?tag=5`) parses to unread:false now that "all" is the
+// default filter, so the constants the router-driven cases key the memory with
+// must match that.
+const ALL: Selection = { kind: 'all', id: null, unread: false };
+const TAG: Selection = { kind: 'tag', id: 5, unread: false };
 const SEARCH: Selection = { kind: 'search', id: null, unread: false, term: 'angular' };
 
 /** A plain list: what is shown is the list itself. */
@@ -33,7 +36,7 @@ describe('forgetsPosition', () => {
   });
 
   it('forgets the position when a click only changes the unread filter', () => {
-    expect(forgetsPosition(at(TAG), at({ ...TAG, unread: false }), 'imperative')).toBe(true);
+    expect(forgetsPosition(at(TAG), at({ ...TAG, unread: true }), 'imperative')).toBe(true);
   });
 
   it('keeps the position when a click names the list already open', () => {

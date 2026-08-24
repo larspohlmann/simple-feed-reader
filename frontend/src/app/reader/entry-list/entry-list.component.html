@@ -1,7 +1,12 @@
 <!-- Floats over the scroller's reserved top padding rather than sitting above
      it in the flow, so collapsing the bar never resizes the scroller and the
      rows stay put under the finger (#87). -->
-<header class="list-header" #listHdr [class.collapsed]="collapsed()">
+<header
+  class="list-header"
+  #listHdr
+  [class.collapsed]="collapsed()"
+  [class.is-search]="selection().kind === 'search'"
+>
   <div class="heading">
     <!-- Title and badge share one row so the badge never adds a second one:
          the scroller reserves this bar's height, so a taller header moves the
@@ -86,30 +91,39 @@
       selection().kind === 'tag' ||
       selection().kind === 'subscription'
     ) {
-      <div class="toggle" role="group" [attr.aria-label]="'reader.filter' | transloco">
-        <a
-          [class.on]="selection().unread"
-          [routerLink]="[]"
-          [queryParams]="{ unread: null }"
-          queryParamsHandling="merge"
-          [attr.aria-label]="'reader.unread' | transloco"
-          [attr.title]="'reader.unread' | transloco"
-        >
-          <app-icon class="ico" name="circle" size="sm" />
-          <span class="txt">{{ 'reader.unread' | transloco }}</span>
-        </a>
-        <a
-          [class.on]="!selection().unread"
-          [routerLink]="[]"
-          [queryParams]="{ unread: '0' }"
-          queryParamsHandling="merge"
-          [attr.aria-label]="'reader.all' | transloco"
-          [attr.title]="'reader.all' | transloco"
-        >
-          <app-icon class="ico" name="list" size="sm" />
-          <span class="txt">{{ 'reader.all' | transloco }}</span>
-        </a>
-      </div>
+      <!-- One switch, not a two-option toggle. It reads as an "Unread" switch:
+           on narrows the list to unread, off shows everything. A filled circle
+           marks the on/unread position, a hollow one the off/all position — the
+           same "filled means unread" convention the rows carry (#602) — so fill,
+           accent and aria-checked all agree. Its accessible name and tooltip
+           stay the constant "Unread" (the switch role carries the on/off state
+           itself); the visible legend below flips Unread/All for sighted users.
+           Turning it on sets `unread=1`; turning it off drops the param, which
+           the reader now reads as the default "all". The keydown.space handler
+           gives the switch the Space-to-toggle a native anchor lacks. -->
+      <a
+        #unreadSwitch
+        class="unread-switch"
+        role="switch"
+        [class.on]="selection().unread"
+        [attr.aria-checked]="selection().unread"
+        [routerLink]="[]"
+        [queryParams]="{ unread: selection().unread ? null : '1' }"
+        queryParamsHandling="merge"
+        [attr.aria-label]="'reader.unread' | transloco"
+        [attr.title]="'reader.unread' | transloco"
+        (keydown.space)="$event.preventDefault(); unreadSwitch.click()"
+      >
+        <app-icon [name]="selection().unread ? 'circle' : 'radio_button_unchecked'" size="sm" />
+        <!-- A legend on the wide header only (the narrow header drops it and
+             lets the circle carry the state, the same trade the action buttons
+             beside it make). It names the current view — "Unread" while filtered
+             to unread, "All" while showing everything — and is aria-hidden so it
+             never fights the switch's own constant name and on/off state. -->
+        <span class="txt" aria-hidden="true">{{
+          (selection().unread ? 'reader.unread' : 'reader.all') | transloco
+        }}</span>
+      </a>
     }
     @if (canMarkAllRead()) {
       <button

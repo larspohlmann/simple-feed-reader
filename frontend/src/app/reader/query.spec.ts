@@ -18,24 +18,25 @@ import {
 const pm = (o: Record<string, string>) => convertToParamMap(o);
 
 describe('selectionFromParams', () => {
-  it('defaults to all-items, unread-only', () => {
+  it('defaults to all-items, showing everything', () => {
     const { selection, entryId } = selectionFromParams(pm({}));
-    expect(selection).toEqual({ kind: 'all', id: null, unread: true });
+    expect(selection).toEqual({ kind: 'all', id: null, unread: false });
     expect(entryId).toBeNull();
   });
-  it('reads unread=0 as show-all', () => {
+  it('reads unread=1 as unread-only, and anything else as show-all', () => {
+    expect(selectionFromParams(pm({ unread: '1' })).selection.unread).toBe(true);
     expect(selectionFromParams(pm({ unread: '0' })).selection.unread).toBe(false);
   });
   it('reads a subscription selection and open entry', () => {
     const { selection, entryId } = selectionFromParams(pm({ subscription: '7', entry: '42' }));
-    expect(selection).toEqual({ kind: 'subscription', id: 7, unread: true });
+    expect(selection).toEqual({ kind: 'subscription', id: 7, unread: false });
     expect(entryId).toBe(42);
   });
   it('reads a tag selection', () => {
     expect(selectionFromParams(pm({ tag: '3' })).selection).toEqual({
       kind: 'tag',
       id: 3,
-      unread: true,
+      unread: false,
     });
   });
   it('reads favorites/kept and ignores the unread toggle there', () => {
@@ -110,15 +111,15 @@ describe('listSelectionFrom (#579)', () => {
     expect(listSelectionFrom({ tag: '5', q: 'angular' })).toEqual({
       kind: 'tag',
       id: 5,
-      unread: true,
+      unread: false,
     });
   });
 
   it('keeps the unread refinement the search hid', () => {
-    expect(listSelectionFrom({ tag: '5', unread: '0', q: 'angular' })).toEqual({
+    expect(listSelectionFrom({ tag: '5', unread: '1', q: 'angular' })).toEqual({
       kind: 'tag',
       id: 5,
-      unread: false,
+      unread: true,
     });
   });
 

@@ -697,6 +697,56 @@ describe('EntryListComponent', () => {
     expect(el.querySelector('.mark-all')).toBeNull();
   });
 
+  describe('unread filter switch', () => {
+    it('fills the circle and marks the switch on while filtered to unread', () => {
+      const el = mount({ selection: { kind: 'all', id: null, unread: true } })
+        .nativeElement as HTMLElement;
+      const sw = el.querySelector('.unread-switch')!;
+      expect(sw.classList.contains('on')).toBe(true);
+      expect(sw.getAttribute('aria-checked')).toBe('true');
+      expect(sw.querySelector('app-icon')?.textContent?.trim()).toBe('circle');
+      expect(sw.querySelector('.txt')?.textContent?.trim()).toBe('Unread');
+    });
+
+    it('empties the circle and marks the switch off while showing all', () => {
+      const el = mount({ selection: { kind: 'all', id: null, unread: false } })
+        .nativeElement as HTMLElement;
+      const sw = el.querySelector('.unread-switch')!;
+      expect(sw.classList.contains('on')).toBe(false);
+      expect(sw.getAttribute('aria-checked')).toBe('false');
+      expect(sw.querySelector('app-icon')?.textContent?.trim()).toBe('radio_button_unchecked');
+      expect(sw.querySelector('.txt')?.textContent?.trim()).toBe('All');
+    });
+
+    it('shows the switch only for the browsable lists, not search or saved views', () => {
+      for (const kind of ['all', 'tag', 'subscription'] as const) {
+        const el = mount({ selection: { kind, id: null, unread: true } })
+          .nativeElement as HTMLElement;
+        expect(el.querySelector('.unread-switch')).not.toBeNull();
+      }
+      for (const kind of ['search', 'favorites', 'kept', 'for-you'] as const) {
+        const el = mount({
+          selection: { kind, id: null, unread: false, term: 'x' },
+          canMarkAllRead: false,
+        }).nativeElement as HTMLElement;
+        expect(el.querySelector('.unread-switch')).toBeNull();
+      }
+    });
+
+    // The href is where the queryParams ternary shows up. Filtered to unread,
+    // the switch turns the filter OFF — it drops the param (default all), so no
+    // unread=1. Showing all, it turns the filter ON with an explicit unread=1.
+    it('drops the param to reach all when on, and sets unread=1 to reach unread when off', () => {
+      const on = mount({ selection: { kind: 'all', id: null, unread: true } })
+        .nativeElement as HTMLElement;
+      expect(on.querySelector('.unread-switch')!.getAttribute('href')).not.toContain('unread=1');
+
+      const off = mount({ selection: { kind: 'all', id: null, unread: false } })
+        .nativeElement as HTMLElement;
+      expect(off.querySelector('.unread-switch')!.getAttribute('href')).toContain('unread=1');
+    });
+  });
+
   // The mobile short label sits beside the full one at every width — the
   // media query below picks which shows (#581 follow-up); jsdom renders no
   // layout, so this only proves the short span is in the DOM at all.
