@@ -1,5 +1,5 @@
 // src/app/reader/query.ts
-import { ParamMap } from '@angular/router';
+import { ParamMap, Params, convertToParamMap } from '@angular/router';
 import { EntryQuery, MarkReadScope } from './models';
 import { entryIdFromParam } from './slug';
 
@@ -223,6 +223,16 @@ export function selectionFromParams(p: ParamMap): {
     selection = { kind: 'all', id: null, unread };
   }
   return { selection, entryId };
+}
+
+/** The list a URL names with any search set aside: the list a search is layered
+ *  over, and the one that clearing the search returns to. `selectionFromParams`
+ *  gives a searchable `q` priority over `view`/`tag`/`subscription`, so the
+ *  covered list is invisible in the resulting selection even though the URL
+ *  still carries it (#542). Reading it takes knowing that `q` alone makes a
+ *  search, which is this file's knowledge rather than a caller's. */
+export function listSelectionFrom(params: Params): Selection {
+  return selectionFromParams(convertToParamMap({ ...params, q: null })).selection;
 }
 
 export function queryFromSelection(s: Selection): EntryQuery {

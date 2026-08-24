@@ -16,6 +16,21 @@ const TAG = { id: 7001, name: 'Scroll fixture', color: null, icon: null, positio
 const ALL_LIST = { link: 'All items', rowPrefix: 'All fixture entry' };
 const TAG_LIST = { link: TAG.name, rowPrefix: 'Tag fixture entry' };
 
+/** The results a search shows, named apart from both lists for the same reason:
+ *  only their own rows prove the search — and not the list under it — is up. */
+const SEARCH_RESULTS = { rowPrefix: 'Search fixture entry' };
+
+/** A term long enough for the field to search on (MIN_SEARCH_LENGTH). */
+const SEARCH_TERM = 'fixture';
+
+/** The phone the header's own search bar is built for. */
+const PHONE = { width: 375, height: 667 };
+
+/** Where the list rests when the search is opened. The header retracts on the
+ *  way down and comes back on the way up, so the search button is only in reach
+ *  after a scroll back — which is how a thumb reaches it too. */
+const RESTS_AT = SCROLLED_TO - 200;
+
 function entry(id: number, title: string) {
   return {
     id,
@@ -93,6 +108,10 @@ async function stubReaderData(page: Page): Promise<void> {
       await route.fulfill({ status: 200, json: { entries: entriesFor(list), nextCursor: null } });
     },
   );
+  await stubGet(page, '/api/entries/search', {
+    entries: entriesFor(SEARCH_RESULTS),
+    nextCursor: null,
+  });
   await stubGet(page, '/api/subscriptions', SUBSCRIPTIONS);
   await stubGet(page, '/api/tags', { tags: [TAG] });
 }
@@ -136,6 +155,12 @@ async function openList(page: Page, list: { link: string; rowPrefix: string }): 
     .getByRole('link', { name: list.link })
     .click();
   await showsRowsOf(page, list);
+}
+
+/** On a phone the sidebar is a drawer, so a list is opened through it. */
+async function openTagListFromDrawer(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Toggle sidebar' }).click();
+  await openList(page, TAG_LIST);
 }
 
 async function scrollListTo(page: Page, top: number): Promise<void> {
@@ -218,5 +243,42 @@ test.describe('list scroll position on a list switch', () => {
 
     await showsRowsOf(page, ALL_LIST);
     await expect.poll(() => scrollTop(page)).toBe(SCROLLED_TO);
+  });
+});
+
+/**
+ * A search is a list the user asks for by typing, and closing it is a return to
+ * the list it was started from — not a click on a new one (#579). On a phone the
+ * search bar covers the header, so this is where the loss was seen.
+ */
+test.describe('list scroll position around a search', () => {
+  test.use({ viewport: PHONE, isMobile: true, hasTouch: true });
+
+  test('closing the search lands back where the list was left', async ({ page }) => {
+    const signedIn = await signInAsAdmin(page);
+    test.skip(
+      !signedIn,
+      'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
+    );
+
+    await showsRowsOf(page, ALL_LIST);
+    await openTagListFromDrawer(page);
+    await scrollListTo(page, SCROLLED_TO);
+    await scrollListTo(page, RESTS_AT);
+
+    await page.getByRole('button', { name: 'Search' }).click();
+    await page.getByPlaceholder('Search articles').fill(SEARCH_TERM);
+    await showsRowsOf(page, SEARCH_RESULTS);
+    // The results are their own list: they start at the top, and scrolling them
+    // must not be mistaken for scrolling the list underneath.
+    await expect.poll(() => scrollTop(page)).toBe(0);
+
+    // The bar's ✕ is a two-step contract on a phone: the first tap empties the
+    // box, the second ends the search and closes the bar.
+    await page.getByRole('button', { name: 'Clear search' }).click();
+    await page.getByRole('button', { name: 'Close search' }).click();
+
+    await showsRowsOf(page, TAG_LIST);
+    await expect.poll(() => scrollTop(page)).toBe(RESTS_AT);
   });
 });
