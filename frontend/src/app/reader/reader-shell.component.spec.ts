@@ -1894,16 +1894,17 @@ describe('ReaderShellComponent', () => {
     // shell starts it, which is the one thing that file cannot show: without the
     // constructor call nothing listens and the offset survives the click (#286).
     it('drops the offset of a list the user clicks', () => {
-      const allUnread: Selection = { kind: 'all', id: null, unread: true };
+      // A bare `/` parses to the all-items list with the default (all) filter.
+      const allItems: Selection = { kind: 'all', id: null, unread: false };
       bootWith([SUBSCRIPTION_FIXTURE]);
       const memory = TestBed.inject(ListScrollMemory);
       const events = TestBed.inject(Router).events as Subject<RouterEvent>;
 
       events.next(new NavigationStart(1, '/?tag=5', 'imperative'));
-      memory.save(allUnread, 300);
+      memory.save(allItems, 300);
       events.next(new NavigationStart(2, '/', 'imperative'));
 
-      expect(memory.read(allUnread)).toBe(0);
+      expect(memory.read(allItems)).toBe(0);
     });
   });
 

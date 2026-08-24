@@ -234,31 +234,23 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   flex: none;
 }
 
-.toggle {
-  display: inline-flex;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-
-.toggle a {
+/* Read/unread filter, a single switch (#602 follow-up): a filled circle when
+   the list is filtered to unread, a hollow one when it shows everything. The
+   circle alone carries the state — a filled dot means unread on the rows too,
+   so the same glyph reads the same way here. Muted while off, accent while on,
+   like the action buttons beside it. */
+.unread-switch {
   display: inline-flex;
   align-items: center;
-  padding: var(--space-1) var(--space-3);
-  font-size: var(--fs-sm);
+  gap: var(--space-1);
+  padding: var(--space-1);
   color: var(--text-secondary);
   text-decoration: none;
   cursor: pointer;
+  font-size: var(--fs-sm);
 }
 
-/* The toggle icons only stand in for the labels in the compact (narrow)
-         layout below; the wide header keeps the Unread/All text. */
-.toggle .ico {
-  display: none;
-}
-
-.toggle a.on {
-  background: var(--surface-0);
+.unread-switch.on {
   color: var(--accent);
 }
 
@@ -357,25 +349,17 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
          tag title (worse with German strings) stays readable. The icons, backed
          by aria-label/title tooltips, carry the meaning on one row. */
 @media (width <= bp.$bp-sm) {
-  .toggle .txt,
+  .unread-switch .txt,
   .mark-all .txt,
   .refresh .txt {
     display: none;
   }
 
-  .toggle .ico {
-    display: inline-flex;
-  }
-
-  .toggle a {
-    padding: var(--space-1) var(--space-2);
-  }
-
-  /* Mark all read and Refresh trade their full label for a short one — icon +
-     text stay inline, unlike the Unread/All toggle above, which is a filter,
-     not an action, and stays icon-only (#581 follow-up). */
-  .mark-all .txt-short,
-  .refresh .txt-short {
+  /* Only the search result list keeps a label on mobile — there is no room for
+     one in the other lists' headers, so their Mark all read and Refresh stand
+     on the icon alone, named by their aria-label/title. Refresh never appears
+     in a search list, so it is always icon-only here. */
+  .list-header.is-search .mark-all .txt-short {
     display: inline-flex;
   }
 }

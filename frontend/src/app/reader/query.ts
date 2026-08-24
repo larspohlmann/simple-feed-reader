@@ -208,8 +208,10 @@ export function selectionFromParams(p: ParamMap): {
   const tag = posInt(selectionParam(p, 'tag'));
   const subscription = posInt(selectionParam(p, 'subscription'));
   // unread refines the current list rather than choosing it, so it is not
-  // part of the selection vocabulary above and is read directly.
-  const unread = p.get('unread') !== '0';
+  // part of the selection vocabulary above and is read directly. The default
+  // is "all": only an explicit `unread=1` narrows the list, so a bare URL —
+  // every sidebar link, and the first load — shows everything.
+  const unread = p.get('unread') === '1';
   // The entry param is an id or an id-prefixed slug ("514-some-title").
   const entryId = entryIdFromParam(selectionParam(p, 'entry'));
 
