@@ -15,6 +15,7 @@ use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\LazyImageSources;
 use App\Service\Reader\LeadImageSelector;
 use App\Service\Reader\LeadingTitleRemover;
+use App\Service\Reader\ShareWidgetRemover;
 use App\Service\Sanitize\EntrySanitizer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -50,7 +51,7 @@ final class ArticleExtractorTest extends TestCase
 
         return new ArticleExtractor(
             $fetcher,
-            new FetchedPageNormalizer(new LazyImageSources()),
+            new FetchedPageNormalizer(new LazyImageSources(), new ShareWidgetRemover()),
             new LeadingTitleRemover(),
             new EntrySanitizer(),
             new LeadImageSelector(),
@@ -156,7 +157,7 @@ final class ArticleExtractorTest extends TestCase
         );
         $extractor = new ArticleExtractor(
             $fetcher,
-            new FetchedPageNormalizer(new LazyImageSources()),
+            new FetchedPageNormalizer(new LazyImageSources(), new ShareWidgetRemover()),
             new LeadingTitleRemover(),
             new EntrySanitizer(),
             new LeadImageSelector(),
@@ -224,5 +225,21 @@ final class ArticleExtractorTest extends TestCase
 
         self::assertTrue($result->ok);
         self::assertStringContainsString('First substantial paragraph', (string) $result->contentHtml);
+    }
+
+    public function testStripsTheShariffBarFromTheExtractedArticle(): void
+    {
+        // #582: the Shariff share bar leads the hanfjournal body ("teilen …
+        // merken"). It must not appear in the extracted, reader-ready HTML,
+        // while the real article text survives.
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/hanfjournal-shariff.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/cannafair');
+
+        self::assertTrue($result->ok);
+        self::assertStringNotContainsString('teilen', (string) $result->contentHtml);
+        self::assertStringNotContainsString('merken', (string) $result->contentHtml);
+        self::assertStringContainsString('Cannafair', (string) $result->contentHtml);
     }
 }
