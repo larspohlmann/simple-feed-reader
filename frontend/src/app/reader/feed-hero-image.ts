@@ -13,21 +13,29 @@ export interface FeedHeroImage {
 const LAYOUT_WHITESPACE = /^[ \t\n\r\f\v\0]*$/;
 
 /**
- * A CDN-agnostic identity for an image: the path basename without its extension
- * or query string, lowercased. Size-variant URLs of one photo (`/hero.jpg` vs
- * `/hero.webp?width=960`) share it; a different photo does not. Mirrors the
- * backend's `LeadImageSelector` so both ends make the same duplicate call.
+ * A CDN-agnostic identity for an image: its full path without the file
+ * extension, the query string, or the trailing size-variant token, lowercased.
+ * Size variants of one photo collapse to it whichever CDN convention names them
+ * — the id in the basename with the size in a query (`/hero.jpg` vs
+ * `/hero.webp?width=960`), or the id in the directory with the size *as* the
+ * basename (`/…-image-group/wide__1300x731` vs `/…-image-group/wide__660x371`,
+ * zeit.de). A different photo keeps a different path. A URL whose path names no
+ * photo keeps its whole form, so it matches only itself. Mirrors the backend's
+ * `LeadImageSelector` so both ends make the same duplicate call.
  */
 function imageIdentity(url: string): string {
-  let path = url;
+  let path: string | null = null;
   try {
     path = new URL(url, 'https://feed-hero.invalid').pathname;
   } catch {
     // A malformed URL keeps its raw form; it only ever matches itself.
   }
-  const basename = path.split('/').pop() ?? '';
-  const stem = basename.replace(/\.[^.]+$/, '');
-  return (stem !== '' ? stem : url).toLowerCase();
+  if (path === null || path.replace(/^\/+|\/+$/g, '') === '') {
+    return url.toLowerCase();
+  }
+  const withoutExtension = path.replace(/\.[a-z0-9]+$/i, '');
+  const withoutSizeVariant = withoutExtension.replace(/__\d+x\d+.*$/, '');
+  return withoutSizeVariant.toLowerCase();
 }
 
 /** The parsed body, or null when the html cannot be parsed. */
