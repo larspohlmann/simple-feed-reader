@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Parser;
 
+use App\Service\Image\DeclaredImage;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Text\PlainText;
 
@@ -107,11 +108,11 @@ final readonly class WordPressJsonParser
      *
      * @param array<string, mixed> $post
      */
-    private function image(array $post): ?ParsedImage
+    private function image(array $post): ?DeclaredImage
     {
         $url = $this->stringOrNull($post['jetpack_featured_media_url'] ?? null);
 
-        return null === $url ? null : new ParsedImage($url);
+        return null === $url ? null : new DeclaredImage($url);
     }
 
     private function stringOrNull(mixed $value): ?string

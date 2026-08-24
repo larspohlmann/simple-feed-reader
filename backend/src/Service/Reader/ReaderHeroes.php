@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Image\DeclaredImage;
+
 /**
  * The two pictures a reader response offers: one for each body the client can
  * put on screen. Serving both lets the Reader/Original toggle switch without a
@@ -12,8 +14,8 @@ namespace App\Service\Reader;
 final readonly class ReaderHeroes
 {
     public function __construct(
-        public ?HeroImage $readerHero,
-        public ?HeroImage $originalHero,
+        public ?DeclaredImage $readerHero,
+        public ?DeclaredImage $originalHero,
     ) {
     }
 }

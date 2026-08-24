@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Entity\Entry;
+use App\Service\Image\DeclaredImage;
 
 /**
  * Picks the hero for each body the reader can show.
@@ -37,7 +38,7 @@ final readonly class ReaderHeroResolver
      * feed's picture is offered against that same body rather than leaving the
      * article imageless.
      */
-    private function readerHero(ExtractionResult $result, ?HeroImage $feedPicture): ?HeroImage
+    private function readerHero(ExtractionResult $result, ?DeclaredImage $feedPicture): ?DeclaredImage
     {
         if (!$result->ok) {
             return null;
@@ -50,16 +51,16 @@ final readonly class ReaderHeroResolver
     }
 
     /** Readability reports no dimensions for the og:image it finds. */
-    private function extractedPicture(ExtractionResult $result): ?HeroImage
+    private function extractedPicture(ExtractionResult $result): ?DeclaredImage
     {
-        return $result->imageCandidate === null ? null : new HeroImage($result->imageCandidate);
+        return $result->imageCandidate === null ? null : new DeclaredImage($result->imageCandidate);
     }
 
-    private function feedPicture(Entry $entry): ?HeroImage
+    private function feedPicture(Entry $entry): ?DeclaredImage
     {
         $url = $entry->getImageUrl();
 
-        return $url === null ? null : new HeroImage($url, $entry->getImageWidth(), $entry->getImageHeight());
+        return $url === null ? null : new DeclaredImage($url, $entry->getImageWidth(), $entry->getImageHeight());
     }
 
     /**

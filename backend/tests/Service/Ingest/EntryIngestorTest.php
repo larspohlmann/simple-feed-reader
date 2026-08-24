@@ -11,7 +11,7 @@ use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\FeedIngestContext;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
-use App\Service\Parser\ParsedImage;
+use App\Service\Image\DeclaredImage;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
@@ -192,7 +192,7 @@ final class EntryIngestorTest extends DbTestCase
         return $entry->getEffectiveDate()->format('Y-m-d H:i:s');
     }
 
-    private function parsedEntryWithImage(string $guid, ?ParsedImage $image): ParsedEntry
+    private function parsedEntryWithImage(string $guid, ?DeclaredImage $image): ParsedEntry
     {
         return new ParsedEntry(
             guid: $guid,
@@ -348,7 +348,7 @@ final class EntryIngestorTest extends DbTestCase
                 summary: null,
                 contentHtml: '<p>body</p>',
                 publishedAt: null,
-                image: new ParsedImage('https://i/1.jpg', 948, 474),
+                image: new DeclaredImage('https://i/1.jpg', 948, 474),
             ),
         ]);
 
@@ -392,7 +392,7 @@ final class EntryIngestorTest extends DbTestCase
                 summary: null,
                 contentHtml: '<p>body</p>',
                 publishedAt: null,
-                image: new ParsedImage($overlongUrl, 100, 100),
+                image: new DeclaredImage($overlongUrl, 100, 100),
             ),
         ]);
 
@@ -410,7 +410,7 @@ final class EntryIngestorTest extends DbTestCase
     {
         $feed = $this->feed();
         $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, null, [
-            $this->parsedEntryWithImage('protocol-relative', new ParsedImage('//i.example.com/img.jpg', 400, 300)),
+            $this->parsedEntryWithImage('protocol-relative', new DeclaredImage('//i.example.com/img.jpg', 400, 300)),
         ]), self::context());
         $this->em->flush();
 
@@ -423,7 +423,7 @@ final class EntryIngestorTest extends DbTestCase
     {
         $feed = $this->feed();
         $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, null, [
-            $this->parsedEntryWithImage('http-image', new ParsedImage('http://i.example.com/img.jpg', 400, 300)),
+            $this->parsedEntryWithImage('http-image', new DeclaredImage('http://i.example.com/img.jpg', 400, 300)),
         ]), self::context());
         $this->em->flush();
 
@@ -436,7 +436,7 @@ final class EntryIngestorTest extends DbTestCase
     {
         $feed = $this->feed();
         $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, null, [
-            $this->parsedEntryWithImage('data-uri-image', new ParsedImage('data:image/png;base64,AAAA', null, null)),
+            $this->parsedEntryWithImage('data-uri-image', new DeclaredImage('data:image/png;base64,AAAA', null, null)),
         ]), self::context());
         $this->em->flush();
 
@@ -449,7 +449,7 @@ final class EntryIngestorTest extends DbTestCase
     {
         $feed = $this->feed();
         $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, null, [
-            $this->parsedEntryWithImage('site-relative-image', new ParsedImage('/img/x.jpg', 400, 300)),
+            $this->parsedEntryWithImage('site-relative-image', new DeclaredImage('/img/x.jpg', 400, 300)),
         ]), self::context());
         $this->em->flush();
 
