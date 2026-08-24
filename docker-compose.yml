@@ -36,6 +36,11 @@ services:
       target: dev
     volumes:
       - ./backend:/app
+      # BackupSchemaCoverageTest reads docs/backup.md through a path that escapes
+      # the backend mount and resolves to /docs (see #593). Without this the
+      # container run reports a spurious red and aborts every in-container
+      # Infection run. Read-only: the container never writes the doc.
+      - ./docs:/docs:ro
     environment:
       # Real env vars beat .env/.env.test file values (Symfony precedence), so
       # committed files stay untouched and the native SQLite workflow is
