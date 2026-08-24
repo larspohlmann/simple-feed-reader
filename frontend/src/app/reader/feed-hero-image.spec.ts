@@ -42,6 +42,25 @@ describe('feedHeroImage', () => {
     expect(feedHeroImage(entry(), '<img src="https://cdn.test/hero.webp?width=960">')).toBeNull();
   });
 
+  it('stands down when a CDN keys the photo by directory and the size by basename (the #590 case)', () => {
+    // zeit.de: one photo in an image-group directory, each size a differently
+    // named basename. Hero and body figure are the same picture.
+    const hero = entry({
+      imageUrl: 'https://img.zeit.de/koenigsfamilie-image-group/wide__1300x731',
+    });
+    const body =
+      '<p>Quelle: dpa</p><img src="https://img.zeit.de/koenigsfamilie-image-group/wide__660x371">';
+    expect(feedHeroImage(hero, body)).toBeNull();
+  });
+
+  it('still leads when the body photo belongs to a different image group (the #590 guard)', () => {
+    const hero = entry({
+      imageUrl: 'https://img.zeit.de/koenigsfamilie-image-group/wide__1300x731',
+    });
+    const body = '<p>a</p><img src="https://img.zeit.de/koenigslinde-image-group/wide__660x371">';
+    expect(feedHeroImage(hero, body)).not.toBeNull();
+  });
+
   it('still leads when the body picture is a different one (the #505 case)', () => {
     expect(feedHeroImage(entry(), '<p>a</p><img src="https://cdn.test/inline.jpg">')).toEqual({
       url: 'https://cdn.test/hero.jpg',
