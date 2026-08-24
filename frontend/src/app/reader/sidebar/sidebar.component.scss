@@ -206,7 +206,7 @@
   text-decoration: none;
 }
 
-.nav > span:not(.count, .lead) {
+.nav > span:not(.count, .lead, .whole-word-badge) {
   flex: 1;
   min-width: 0;
   white-space: nowrap;
@@ -248,15 +248,11 @@
   }
 }
 
-.nav .saved-term {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .nav .whole-word-badge {
-  /* Mirror the results-header badge: a quiet, uppercase micro-label. Reuses
-     the same font-size/opacity the `.label` rule uses. */
+  /* Mirror the results-header badge: a quiet, uppercase micro-label. Excluded
+     from the generic `.nav > span` rule above (like `.lead`) so it doesn't
+     pick up `flex: 1` and split the row's width with `.saved-term`. */
+  flex: 0 0 auto;
   font-size: var(--fs-sm);
   text-transform: uppercase;
   opacity: 0.65;
