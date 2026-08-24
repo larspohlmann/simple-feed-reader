@@ -147,7 +147,9 @@ No schema change, so no migration.
   ```
 
   The heroes must survive a failed extraction, so the component state has to keep
-  the failure payload instead of collapsing it to `{status:'failed'}`.
+  the failure payload instead of collapsing it to `{status:'failed'}`. The
+  transport-error branch of `runLoad()` has no payload to keep, which is the
+  accepted regression below.
 - `reader-view.component.html`: the `@if (leadImage())` / `@else if
   (visibleFeedHero())` pair becomes one `@if (hero(); as image)` block. The
   extraction hero therefore gains the `width`, `height`, `loading`, `decoding`,
@@ -164,7 +166,14 @@ Two, both intended:
 2. `heroError` now hides a broken extraction hero as well. Today only the feed
    hero has an error handler.
 
-Nothing else changes. Case B is preserved exactly.
+One accepted regression:
+
+3. When the reader request itself fails at transport level — a timeout, a 5xx,
+   or an offline client — `runLoad()` gets no payload, so there is no hero. The
+   article still renders from the feed's own content. Today the client computes
+   a hero from the entry it already holds. Every alternative either keeps the
+   duplicated rule in TypeScript or puts an HTML parse on every list row, so
+   losing the picture on a failed request is the cheaper cost.
 
 ## Edge cases
 
@@ -176,6 +185,7 @@ Nothing else changes. Case B is preserved exactly.
 | Extraction failed, or `no_url` | `readerHero` null, `originalHero` resolved | no effect |
 | Hero URL fails to load | `heroError` hides it, client-side | now covers both heroes |
 | Stale cached article | `VERSION` bump evicts it | new |
+| Reader request times out or 5xxs | Feed content renders with no hero | yes, see below |
 
 Cost: one extra parse of the feed body per reader request, and one more parse of
 the extracted body when case B runs. The endpoint already fetches a remote page
