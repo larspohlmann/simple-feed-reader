@@ -166,8 +166,12 @@ Enforced mechanically by `composer check` and `composer md`:
 - **Run e2e through `composer e2e`, not raw phpunit.** Homebrew PHP ignores the
   macOS keychain, so the script builds a CA bundle containing the mkcert root;
   bare phpunit fails TLS verification against `https://localhost:8443`.
-- **Scan `backend/var/log/dev.log`** after backend work — deprecations and
-  swallowed errors surface there.
+- **Scan the dev log** after backend work — deprecations and swallowed errors
+  surface there. The `dev` and `test` handlers rotate daily and keep 3 files
+  (`monolog.yaml`, #596), so the active file is
+  `backend/var/log/dev-YYYY-MM-DD.log`, not `dev.log`. Scan today's file, e.g.
+  `ls -t backend/var/log/dev-*.log | head -1`. `dev.log` reaches back 3 days;
+  the level stays `debug`.
 - Symfony's `SendmailTransport` hardcodes `-bs`; a sendmail DSN needs an explicit
   `?command=` or mail fails silently after a `202`.
 

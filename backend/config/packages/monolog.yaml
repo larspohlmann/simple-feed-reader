@@ -5,9 +5,15 @@ monolog:
 when@dev:
     monolog:
         handlers:
+            # rotating_file, not stream: a plain stream grew dev.log without a
+            # bound (1.4 GiB, #596). Daily rotation with a 3-file cap keeps three
+            # days and prunes the rest. The level stays debug on purpose — the
+            # dev.log scan rule needs the full output; only the *retention* is
+            # bounded here. The active file is dev-YYYY-MM-DD.log, not dev.log.
             main:
-                type: stream
+                type: rotating_file
                 path: "%kernel.logs_dir%/%kernel.environment%.log"
+                max_files: 3
                 level: debug
                 channels: ["!event"]
             console:
@@ -24,9 +30,13 @@ when@test:
                 handler: nested
                 excluded_http_codes: [404, 405]
                 channels: ["!event"]
+            # rotating_file for the same reason as dev: a red suite flushes its
+            # whole debug buffer through fingers_crossed, and a plain stream let
+            # test.log reach 397 MiB (#596). Daily rotation prunes old days.
             nested:
-                type: stream
+                type: rotating_file
                 path: "%kernel.logs_dir%/%kernel.environment%.log"
+                max_files: 3
                 level: debug
 
 when@prod:
