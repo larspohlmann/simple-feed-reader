@@ -11,6 +11,7 @@ use App\Service\Backup\Dto\EntryStateLine;
 use App\Service\Backup\Dto\FeedLine;
 use App\Service\Backup\Dto\FooterLine;
 use App\Service\Backup\Dto\LineField;
+use App\Service\Backup\Dto\SavedSearchLine;
 use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Dto\TagLine;
 use App\Service\Backup\Exception\InvalidBackupException;
@@ -29,11 +30,12 @@ final readonly class BackupReader
         BackupSchema::KIND_HEADER => 0,
         BackupSchema::KIND_ACCOUNT => 1,
         BackupSchema::KIND_TAG => 2,
-        BackupSchema::KIND_FEED => 3,
-        BackupSchema::KIND_SUBSCRIPTION => 4,
-        BackupSchema::KIND_ENTRY => 5,
-        BackupSchema::KIND_ENTRY_STATE => 6,
-        BackupSchema::KIND_FOOTER => 7,
+        BackupSchema::KIND_SAVED_SEARCH => 3,
+        BackupSchema::KIND_FEED => 4,
+        BackupSchema::KIND_SUBSCRIPTION => 5,
+        BackupSchema::KIND_ENTRY => 6,
+        BackupSchema::KIND_ENTRY_STATE => 7,
+        BackupSchema::KIND_FOOTER => 8,
     ];
 
     /**
@@ -48,6 +50,7 @@ final readonly class BackupReader
 
     private const array COUNTED_KINDS = [
         BackupSchema::KIND_TAG,
+        BackupSchema::KIND_SAVED_SEARCH,
         BackupSchema::KIND_FEED,
         BackupSchema::KIND_SUBSCRIPTION,
         BackupSchema::KIND_ENTRY,
@@ -177,6 +180,7 @@ final readonly class BackupReader
             BackupSchema::KIND_HEADER => $this->assertKnownSchemaVersion(BackupHeader::fromLine($decoded)),
             BackupSchema::KIND_ACCOUNT => AccountLine::fromLine($decoded),
             BackupSchema::KIND_TAG => TagLine::fromLine($decoded),
+            BackupSchema::KIND_SAVED_SEARCH => SavedSearchLine::fromLine($decoded),
             BackupSchema::KIND_FEED => FeedLine::fromLine($decoded),
             BackupSchema::KIND_SUBSCRIPTION => SubscriptionLine::fromLine($decoded),
             BackupSchema::KIND_ENTRY => EntryLine::fromLine($decoded),
@@ -202,17 +206,24 @@ final readonly class BackupReader
     }
 
     /**
+     * A count key missing from the footer defaults to zero rather than
+     * failing outright: a file written before its kind existed (savedSearch
+     * joined after tag, feed, subscription, entry and entryState, still
+     * under the same schema version) never declares it, and genuinely has
+     * zero such lines. A missing key paired with a nonzero actual count is
+     * still refused — that combination cannot happen from age alone.
+     *
      * @param array<string, int> $actualCounts
      */
     private function verifyFooter(FooterLine $footer, array $actualCounts): void
     {
         foreach (self::COUNTED_KINDS as $kind) {
-            $expected = $footer->counts[$kind] ?? null;
+            $expected = $footer->counts[$kind] ?? 0;
             if ($expected !== $actualCounts[$kind]) {
                 throw new InvalidBackupException(sprintf(
                     'Footer count for "%s" is %s but %d lines were read.',
                     $kind,
-                    null === $expected ? 'missing' : (string) $expected,
+                    \array_key_exists($kind, $footer->counts) ? (string) $expected : 'missing',
                     $actualCounts[$kind],
                 ));
             }

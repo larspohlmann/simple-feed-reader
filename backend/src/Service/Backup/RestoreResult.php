@@ -15,6 +15,7 @@ final readonly class RestoreResult
 {
     public function __construct(
         public int $tags,
+        public int $savedSearches,
         public int $feeds,
         public int $subscriptions,
         public int $entries,

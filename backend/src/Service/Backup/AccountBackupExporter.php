@@ -7,6 +7,7 @@ namespace App\Service\Backup;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
@@ -14,6 +15,7 @@ use App\Entity\User;
 use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\RecommendationSettingsRepository;
+use App\Repository\SavedSearchRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -38,6 +40,7 @@ final readonly class AccountBackupExporter
     public function __construct(
         private EntityManagerInterface $em,
         private TagRepository $tags,
+        private SavedSearchRepository $savedSearches,
         private SubscriptionRepository $subscriptions,
         private EntryRepository $entries,
         private EntryStateRepository $entryStates,
@@ -52,7 +55,7 @@ final readonly class AccountBackupExporter
     public function lines(User $user, ?string $sourceUrl): \Generator
     {
         $userId = $user->getId() ?? throw new \LogicException('Cannot export an unsaved account.');
-        $counts = ['tag' => 0, 'feed' => 0, 'subscription' => 0, 'entry' => 0, 'entryState' => 0];
+        $counts = ['tag' => 0, 'savedSearch' => 0, 'feed' => 0, 'subscription' => 0, 'entry' => 0, 'entryState' => 0];
 
         yield $this->encode($this->headerLine($user, $sourceUrl));
         yield $this->encode($this->accountLine($user));
@@ -60,6 +63,11 @@ final readonly class AccountBackupExporter
         foreach ($this->tags->findForUser($userId) as $tag) {
             yield $this->encode($this->tagLine($tag));
             ++$counts['tag'];
+        }
+
+        foreach ($this->savedSearches->findForUser($userId) as $savedSearch) {
+            yield $this->encode($this->savedSearchLine($savedSearch));
+            ++$counts['savedSearch'];
         }
 
         $subscriptions = $this->subscriptions->findForUserWithTags($userId);
@@ -224,6 +232,19 @@ final readonly class AccountBackupExporter
             'color' => $tag->getColor(),
             'icon' => $tag->getIcon(),
             'position' => $tag->getPosition(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function savedSearchLine(SavedSearch $savedSearch): array
+    {
+        return [
+            'kind' => BackupSchema::KIND_SAVED_SEARCH,
+            'term' => $savedSearch->getTerm(),
+            'wholeWord' => $savedSearch->isWholeWord(),
+            'position' => $savedSearch->getPosition(),
         ];
     }
 

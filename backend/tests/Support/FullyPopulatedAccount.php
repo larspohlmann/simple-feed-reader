@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\RecommendationSettings;
+use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
@@ -45,6 +46,8 @@ final readonly class FullyPopulatedAccount
 
         $tag = $this->tagFor($user);
         $this->em->persist($tag);
+
+        $this->em->persist($this->savedSearchFor($user));
 
         $feed = $this->feedFor($email);
         $this->em->persist($feed);
@@ -84,6 +87,14 @@ final readonly class FullyPopulatedAccount
             profileText: 'Reads infrastructure essays and typography criticism.',
             showReasons: true,
         );
+    }
+
+    private function savedSearchFor(User $user): SavedSearch
+    {
+        $savedSearch = new SavedSearch($user, 'climate policy', true);
+        $savedSearch->setPosition(3);
+
+        return $savedSearch;
     }
 
     private function tagFor(User $user): Tag
