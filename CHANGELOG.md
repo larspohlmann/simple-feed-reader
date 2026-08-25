@@ -10,6 +10,26 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+### Highlights
+
+**Saved searches.** Name a search and keep it as a saved view in the sidebar,
+next to your tags and feeds. Each one carries a live count that climbs as fresh
+articles match it, so you can tell at a glance when new content is waiting.
+
+**Smarter For You recommendations.** Ranking is now a two-step pass: your
+reading history is distilled once into a durable taste profile, then each run
+scores unread entries against that profile in a single consolidation pass. The
+provider prompt cache is warmed with one batch before the concurrent fan-out,
+which cuts both latency and cost on every run.
+
+**WordPress REST API support.** When a site exposes the WordPress REST API,
+discovery now offers it as a feed source, so you get full articles and images
+from WordPress publishers instead of the site's bare RSS feed.
+
+**Optional egress proxy.** Route all outbound fetches through a SOCKS5 or HTTP
+proxy, behind a single master switch, with a direct-connection fallback when the
+proxy is off.
+
 ## [v0.6.1] - 2026-08-20
 
 ## What's Changed

@@ -37,9 +37,38 @@ if grep -qF "## [${version}]" "${changelog}"; then
 fi
 
 section=$(mktemp)
-trap 'rm -f "${section}"' EXIT
+highlights=$(mktemp)
+body=$(mktemp)
+trap 'rm -f "${section}" "${highlights}" "${body}"' EXIT
+
+# Lift a "### Highlights" block out of the Unreleased section into its own file,
+# and write the changelog without it to ${body}. The block runs from its heading
+# up to the next heading of level 2 or 3. A changelog with no such block leaves
+# ${highlights} empty and ${body} byte-identical to the input.
+awk -v anchor="${anchor}" -v highlights="${highlights}" '
+  BEGIN { in_unreleased = 0; in_highlights = 0 }
+  {
+    if ($0 == anchor) { print; in_unreleased = 1; next }
+    if (in_unreleased && in_highlights) {
+      if ($0 ~ /^##+ /) { in_highlights = 0 }
+      else { print > highlights; next }
+    }
+    if (in_unreleased && !in_highlights) {
+      if ($0 ~ /^### Highlights[ \t]*$/) { in_highlights = 1; print > highlights; next }
+      if ($0 ~ /^## /) { in_unreleased = 0 }
+    }
+    print
+  }
+' "${changelog}" > "${body}"
+
+# The version section: the heading, then the promoted highlights (trailing blank
+# lines trimmed, one blank line added back), then the generated notes on stdin.
 {
   printf '\n## [%s] - %s\n\n' "${version}" "${date}"
+  if [ -s "${highlights}" ]; then
+    awk 'NF { last = NR } { line[NR] = $0 } END { for (i = 1; i <= last; i++) print line[i] }' "${highlights}"
+    printf '\n'
+  fi
   cat
 } > "${section}"
 
@@ -51,5 +80,5 @@ awk -v anchor="${anchor}" -v section="${section}" '
     close(section)
     spliced = 1
   }
-' "${changelog}" > "${changelog}.tmp"
+' "${body}" > "${changelog}.tmp"
 mv "${changelog}.tmp" "${changelog}"
