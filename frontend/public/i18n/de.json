@@ -740,6 +740,10 @@
     "swatch": "Farbe {{colour}}",
     "custom": "Eigene Farbe"
   },
+  "passwordInput": {
+    "show": "Passwort anzeigen",
+    "hide": "Passwort verbergen"
+  },
   "setup": {
     "title": "Diese Instanz einrichten",
     "subtitle": "Erstellen Sie das erste Administratorkonto.",

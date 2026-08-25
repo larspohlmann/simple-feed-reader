@@ -262,12 +262,14 @@
             [hint]="'settings.ai.apiKeyHint' | transloco"
             [info]="'settings.ai.info.apiKey' | transloco"
           >
-            <input
-              type="password"
-              autocomplete="off"
-              [value]="newApiKey()"
-              (input)="newApiKey.set(value($event))"
-            />
+            <app-password-input>
+              <input
+                type="password"
+                autocomplete="off"
+                [value]="newApiKey()"
+                (input)="newApiKey.set(value($event))"
+              />
+            </app-password-input>
           </app-field>
 
           <app-button

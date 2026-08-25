@@ -740,6 +740,10 @@
     "swatch": "Colour {{colour}}",
     "custom": "Custom colour"
   },
+  "passwordInput": {
+    "show": "Show password",
+    "hide": "Hide password"
+  },
   "setup": {
     "title": "Set up this instance",
     "subtitle": "Create the first administrator account.",
