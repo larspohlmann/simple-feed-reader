@@ -42,10 +42,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      # The changelog helper's output is auto-committed to main below, so verify
-      # it before trusting it -- at the tagged commit's version of the script.
-      - name: Verify the changelog helper
-        run: scripts/test/changelog-insert-release.test.sh
+      # The changelog helpers' output is auto-committed to main and published as
+      # the Release body below, so verify them before trusting them -- at the
+      # tagged commit's version of the scripts.
+      - name: Verify the changelog helpers
+        run: |
+          scripts/test/changelog-insert-release.test.sh
+          scripts/test/changelog-highlights.test.sh
 
       # GUARD 1 of 2: the tagged commit must be on main.
       - name: Check the tagged commit is on main
@@ -124,14 +127,27 @@ jobs:
               --jq .body > "${RUNNER_TEMP}/notes.md"
           fi
 
+      # Lead the Release body with the same "### Highlights" block that
+      # changelog-insert-release.sh promotes into CHANGELOG.md, so the Release
+      # page and the changelog agree. The changelog step below keeps using the
+      # plain notes, so the highlights are not duplicated there (#634).
       - name: Publish the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          body="${RUNNER_TEMP}/release-body.md"
+          scripts/changelog-highlights.sh > "${RUNNER_TEMP}/highlights.md"
+          if [ -s "${RUNNER_TEMP}/highlights.md" ]; then
+            cat "${RUNNER_TEMP}/highlights.md" > "${body}"
+            printf '\n' >> "${body}"
+            cat "${RUNNER_TEMP}/notes.md" >> "${body}"
+          else
+            cp "${RUNNER_TEMP}/notes.md" "${body}"
+          fi
           gh release create "${GITHUB_REF_NAME}" \
             --title "${GITHUB_REF_NAME}" \
-            --notes-file "${RUNNER_TEMP}/notes.md" \
+            --notes-file "${body}" \
             --latest \
             --verify-tag
 
