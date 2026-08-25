@@ -32,12 +32,17 @@ export const ICON_SIZE_TOKEN: Record<IconSize, string> = {
   selector: 'app-icon',
   templateUrl: './icon.component.html',
   styleUrl: './icon.component.scss',
-  host: { '[style.font-size]': 'fontSize()' },
+  host: { '[style.font-size]': 'fontSize()', '[class.filled]': 'fill()' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class IconComponent {
   readonly name = input.required<string>();
   readonly size = input<IconSize>('md');
+
+  /* Drives the Material Symbols FILL axis. The outlined font ships FILL 0, so a
+     symbol with a hollow and a solid form -- `circle`, `star`, `favorite` --
+     draws hollow by default; `fill` toggles it solid without swapping the name. */
+  readonly fill = input(false);
 
   protected fontSize(): string {
     return ICON_SIZE_TOKEN[this.size()];

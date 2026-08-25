@@ -62,6 +62,7 @@ import { CatalogStore } from '../discover/catalog.store';
 import { OnboardingSkip } from '../discover/onboarding-skip';
 import { ProgressHairlineComponent } from '../shared/progress-hairline/progress-hairline.component';
 import { IconComponent } from '../shared/icon/icon.component';
+import { ListActionDirective } from '../shared/list-action/list-action.directive';
 import { ButtonComponent } from '../shared/button/button.component';
 import { FeedIntroComponent } from './feed-intro/feed-intro.component';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../shared/toast/toast.service';
@@ -77,6 +78,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
     DrawerSwipeDirective,
     ProgressHairlineComponent,
     IconComponent,
+    ListActionDirective,
     ButtonComponent,
     FeedIntroComponent,
     RouterLink,

@@ -91,21 +91,23 @@
       selection().kind === 'tag' ||
       selection().kind === 'subscription'
     ) {
-      <!-- One switch, not a two-option toggle. It reads as an "Unread" switch:
+      <!-- One switch, not a two-option toggle. It reads as an "unread" switch:
            on narrows the list to unread, off shows everything. A filled circle
            marks the on/unread position, a hollow one the off/all position — the
-           same "filled means unread" convention the rows carry (#602) — so fill,
-           accent and aria-checked all agree. Its accessible name and tooltip
-           stay the constant "Unread" (the switch role carries the on/off state
-           itself); the visible legend below flips Unread/All for sighted users.
-           Turning it on sets `unread=1`; turning it off drops the param, which
-           the reader now reads as the default "all". The keydown.space handler
-           gives the switch the Space-to-toggle a native anchor lacks. -->
+           same "filled means unread" convention the rows carry (#602) — so the
+           fill and aria-checked agree. The switch stays accent (green) in both
+           positions; the fill, not the colour, marks on from off. Its accessible
+           name and tooltip stay the constant "only unread" (the switch role
+           carries the on/off state itself); the visible legend below flips
+           "only unread"/"All posts" for sighted users. Turning it on sets
+           `unread=1`; turning it off drops the param, which the reader now reads
+           as the default "all". The keydown.space handler gives the switch the
+           Space-to-toggle a native anchor lacks. -->
       <a
         #unreadSwitch
+        appListAction
         class="unread-switch"
         role="switch"
-        [class.on]="selection().unread"
         [attr.aria-checked]="selection().unread"
         [routerLink]="[]"
         [queryParams]="{ unread: selection().unread ? null : '1' }"
@@ -114,12 +116,19 @@
         [attr.title]="'reader.unread' | transloco"
         (keydown.space)="$event.preventDefault(); unreadSwitch.click()"
       >
-        <app-icon [name]="selection().unread ? 'circle' : 'radio_button_unchecked'" size="sm" />
+        <!-- One `circle` glyph for both positions, its FILL axis carrying the
+             state (#602's "filled means unread"): a solid disc while filtered to
+             unread, a hollow ring while showing all. The outlined font is FILL 0
+             by default, which is why the ring needs no second glyph and the disc
+             needs `fill`. Keeping one name keeps the diameter identical across
+             the toggle. -->
+        <app-icon name="circle" size="sm" [fill]="selection().unread" />
         <!-- A legend on the wide header only (the narrow header drops it and
              lets the circle carry the state, the same trade the action buttons
-             beside it make). It names the current view — "Unread" while filtered
-             to unread, "All" while showing everything — and is aria-hidden so it
-             never fights the switch's own constant name and on/off state. -->
+             beside it make). It names the current view — "only unread" while
+             filtered to unread, "All posts" while showing everything — and is
+             aria-hidden so it never fights the switch's own constant name and
+             on/off state. -->
         <span class="txt" aria-hidden="true">{{
           (selection().unread ? 'reader.unread' : 'reader.all') | transloco
         }}</span>
@@ -127,6 +136,7 @@
     }
     @if (canMarkAllRead()) {
       <button
+        appListAction
         class="mark-all"
         type="button"
         (click)="markAllRead.emit()"
@@ -140,6 +150,7 @@
     }
     @if (canRefresh()) {
       <button
+        appListAction
         class="refresh"
         type="button"
         [class.spinning]="refreshing()"

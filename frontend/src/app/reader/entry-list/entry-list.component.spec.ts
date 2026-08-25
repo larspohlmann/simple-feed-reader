@@ -702,20 +702,22 @@ describe('EntryListComponent', () => {
       const el = mount({ selection: { kind: 'all', id: null, unread: true } })
         .nativeElement as HTMLElement;
       const sw = el.querySelector('.unread-switch')!;
-      expect(sw.classList.contains('on')).toBe(true);
       expect(sw.getAttribute('aria-checked')).toBe('true');
-      expect(sw.querySelector('app-icon')?.textContent?.trim()).toBe('circle');
-      expect(sw.querySelector('.txt')?.textContent?.trim()).toBe('Unread');
+      const icon = sw.querySelector('app-icon')!;
+      expect(icon.textContent?.trim()).toBe('circle');
+      expect(icon.classList.contains('filled')).toBe(true);
+      expect(sw.querySelector('.txt')?.textContent?.trim()).toBe('only unread');
     });
 
     it('empties the circle and marks the switch off while showing all', () => {
       const el = mount({ selection: { kind: 'all', id: null, unread: false } })
         .nativeElement as HTMLElement;
       const sw = el.querySelector('.unread-switch')!;
-      expect(sw.classList.contains('on')).toBe(false);
       expect(sw.getAttribute('aria-checked')).toBe('false');
-      expect(sw.querySelector('app-icon')?.textContent?.trim()).toBe('radio_button_unchecked');
-      expect(sw.querySelector('.txt')?.textContent?.trim()).toBe('All');
+      const icon = sw.querySelector('app-icon')!;
+      expect(icon.textContent?.trim()).toBe('circle');
+      expect(icon.classList.contains('filled')).toBe(false);
+      expect(sw.querySelector('.txt')?.textContent?.trim()).toBe('All posts');
     });
 
     it('shows the switch only for the browsable lists, not search or saved views', () => {
