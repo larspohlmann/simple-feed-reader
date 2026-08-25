@@ -305,6 +305,34 @@ final class HeroImageSelectorTest extends TestCase
         self::assertSame($hero, $this->selectUrl($hero, $body));
     }
 
+    public function testSuppressesHeroWhenTheSizeIsATildeSeparatedBasenameSuffix(): void
+    {
+        // The zdfheute.de entry 478680 case (#619): one photo lives at a stable
+        // asset name and each size is a `~WIDTHxHEIGHT` suffix on it — the
+        // extracted og:image hero is `…-tn-clean-100~1280x720` while the body
+        // repeats it as `…-tn-clean-100~384x216`. A "Jetzt live" paragraph leads
+        // the body, so only the repeat rule can catch it.
+        $photo = 'https://www.zdfheute.de/assets/merz-statement-kabinettsklausur-tn-clean-100';
+        $hero = $photo . '~1280x720?cb=1787640565468';
+        $body = '<p>Jetzt live</p>'
+            . '<figure><img src="' . $photo . '~384x216?cb=1787640565468" alt=""></figure>';
+
+        self::assertNull($this->selectUrl($hero, $body));
+    }
+
+    public function testShowsHeroWhenATildeSeparatedSizeBelongsToADifferentPhoto(): void
+    {
+        // Distinct zdfheute photos have distinct asset names, so stripping the
+        // tilde size suffix must not collapse two pictures into one identity and
+        // hide a genuinely different body image.
+        $assets = 'https://www.zdfheute.de/assets';
+        $hero = $assets . '/merz-statement-kabinettsklausur-tn-clean-100~1280x720?cb=1';
+        $body = '<p>Intro.</p>'
+            . '<figure><img src="' . $assets . '/andere-story-tn-clean-100~384x216?cb=2" alt=""></figure>';
+
+        self::assertSame($hero, $this->selectUrl($hero, $body));
+    }
+
     public function testDiscardsANonHttpHero(): void
     {
         // The scheme guard is anchored: a `data:` URL that merely embeds an
