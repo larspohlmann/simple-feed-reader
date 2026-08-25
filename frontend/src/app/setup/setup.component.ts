@@ -12,6 +12,7 @@ import { AuthShellComponent } from '../auth/auth-shell/auth-shell.component';
 import { ButtonComponent } from '../shared/button/button.component';
 import { FormErrorComponent } from '../shared/form-error/form-error.component';
 import { FieldComponent } from '../shared/field/field.component';
+import { PasswordInputComponent } from '../shared/password-input/password-input.component';
 import { SetupApi } from './setup-api';
 import { SetupService } from './setup.service';
 
@@ -24,6 +25,7 @@ import { SetupService } from './setup.service';
     ButtonComponent,
     FormErrorComponent,
     FieldComponent,
+    PasswordInputComponent,
   ],
   templateUrl: './setup.component.html',
   styleUrl: './setup.component.scss',

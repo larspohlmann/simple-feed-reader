@@ -38,6 +38,16 @@ app-field textarea {
   width: 100%;
 }
 
+// A password input wrapped in <app-password-input> keeps a reveal button inside
+// its right edge. The input is projected, so — like everything else in this
+// file — its chrome cannot come from the component's own styles: it must fill
+// the wrapper and reserve a control-height gap on the end so the secret never
+// runs under the button.
+app-password-input input {
+  width: 100%;
+  padding-inline-end: var(--control-h);
+}
+
 // Only the controls that actually carry a border may trade the focus outline
 // for an accent border. Applying `outline: none` to every input outranks the
 // :focus-visible rule in _base.scss (0,1,1 beats 0,1,0) and would leave

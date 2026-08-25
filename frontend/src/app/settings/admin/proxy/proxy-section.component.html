@@ -111,15 +111,16 @@
       </app-settings-row>
 
       <app-settings-row [stackable]="true" [title]="'settings.proxy.password' | transloco">
-        <input
-          type="password"
-          class="credential-field"
-          autocomplete="off"
-          data-testid="proxy-password"
-          [placeholder]="passwordHint()"
-          [value]="password()"
-          (input)="onPassword($event)"
-        />
+        <app-password-input class="credential-field">
+          <input
+            type="password"
+            autocomplete="off"
+            data-testid="proxy-password"
+            [placeholder]="passwordHint()"
+            [value]="password()"
+            (input)="onPassword($event)"
+          />
+        </app-password-input>
       </app-settings-row>
 
       @let probeResult = probe();

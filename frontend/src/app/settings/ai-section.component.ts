@@ -18,6 +18,7 @@ import {
 import { DisclosureComponent } from '../shared/disclosure/disclosure.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../shared/field/field.component';
+import { PasswordInputComponent } from '../shared/password-input/password-input.component';
 import { IconComponent } from '../shared/icon/icon.component';
 import { InfoTipComponent } from '../shared/info-tip/info-tip.component';
 import {
@@ -50,6 +51,7 @@ import { RecommendationSettingsCardComponent } from './recommendation-settings-c
     DisclosureComponent,
     ErrorBannerComponent,
     FieldComponent,
+    PasswordInputComponent,
     IconComponent,
     InfoTipComponent,
     RecommendationDebugLogComponent,

@@ -13,6 +13,7 @@ import { ButtonComponent } from '../../../shared/button/button.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { InfoTipComponent } from '../../../shared/info-tip/info-tip.component';
+import { PasswordInputComponent } from '../../../shared/password-input/password-input.component';
 import { SettingsGroupComponent } from '../../../shared/settings/settings-group/settings-group.component';
 import { SettingsRowComponent } from '../../../shared/settings/settings-row/settings-row.component';
 import { SettingsSaveBarComponent } from '../../../shared/settings/save-bar/save-bar.component';
@@ -44,6 +45,7 @@ const DEFAULT_PORT = 1080;
     ErrorBannerComponent,
     IconComponent,
     InfoTipComponent,
+    PasswordInputComponent,
     SettingsGroupComponent,
     SettingsRowComponent,
     SettingsSaveBarComponent,

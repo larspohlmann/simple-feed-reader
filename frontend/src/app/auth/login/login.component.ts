@@ -13,6 +13,7 @@ import { AuthShellComponent } from '../auth-shell/auth-shell.component';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { FormErrorComponent } from '../../shared/form-error/form-error.component';
 import { FieldComponent } from '../../shared/field/field.component';
+import { PasswordInputComponent } from '../../shared/password-input/password-input.component';
 
 @Component({
   selector: 'app-login',
@@ -24,6 +25,7 @@ import { FieldComponent } from '../../shared/field/field.component';
     ButtonComponent,
     FormErrorComponent,
     FieldComponent,
+    PasswordInputComponent,
   ],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',

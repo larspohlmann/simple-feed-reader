@@ -289,6 +289,34 @@ control is styled globally by `styles/_controls.scss`, because
 label would triple the row height — see `admin-catalog` in
 [§6](#6-deliberate-exceptions).
 
+### `<app-password-input>`
+
+Wraps a password control and adds a button that reveals the secret while the
+user types. Takes no inputs — wrap the existing `<input type="password">`.
+
+```html
+<app-field [label]="'auth.password' | transloco">
+  <app-password-input>
+    <input type="password" formControlName="password" autocomplete="current-password" />
+  </app-password-input>
+</app-field>
+```
+
+**Projects the control, like `<app-field>` — never owns it.** The input keeps
+its own `formControlName` or `[value]` binding, its `autocomplete`, `name` and
+`data-testid`; the component reaches the projected input once and only ever
+flips its `type`. That is deliberate: the auth forms recover browser autofill by
+reading `input[formControlName]` straight from the DOM (`auth/autofill.ts`), so
+the `formControlName` must stay on the real `<input>`. The projected input's
+right padding (room for the button) and width live in `styles/_controls.scss`
+for the same reason `<app-field>`'s do. Works uniformly for the reactive-form
+fields and the signal-driven settings secrets (AI key, proxy password); the
+proxy field carries its width class on the wrapper so the inner input can fill
+it.
+
+**Not for:** a field with no secret to hide — a plain `<input>` in `<app-field>`
+needs no reveal button.
+
 ### `<app-color-field>`
 
 Colour chooser: a row of presets, a native picker for anything else, and an

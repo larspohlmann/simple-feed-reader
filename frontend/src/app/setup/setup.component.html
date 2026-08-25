@@ -4,15 +4,19 @@
       <input type="email" formControlName="email" name="email" autocomplete="email" />
     </app-field>
     <app-field [label]="'auth.password' | transloco">
-      <input
-        type="password"
-        formControlName="password"
-        name="password"
-        autocomplete="new-password"
-      />
+      <app-password-input>
+        <input
+          type="password"
+          formControlName="password"
+          name="password"
+          autocomplete="new-password"
+        />
+      </app-password-input>
     </app-field>
     <app-field [label]="'setup.secret' | transloco">
-      <input type="password" formControlName="secret" name="secret" autocomplete="off" />
+      <app-password-input>
+        <input type="password" formControlName="secret" name="secret" autocomplete="off" />
+      </app-password-input>
     </app-field>
     <p class="hint">{{ 'setup.secretHint' | transloco }}</p>
     <app-form-error [message]="error()" />

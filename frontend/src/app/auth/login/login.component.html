@@ -7,12 +7,14 @@
       <input type="email" formControlName="email" name="email" autocomplete="email" />
     </app-field>
     <app-field [label]="'auth.password' | transloco">
-      <input
-        type="password"
-        formControlName="password"
-        name="password"
-        autocomplete="current-password"
-      />
+      <app-password-input>
+        <input
+          type="password"
+          formControlName="password"
+          name="password"
+          autocomplete="current-password"
+        />
+      </app-password-input>
     </app-field>
     <app-form-error [message]="error()" />
     <app-button block variant="primary" [loading]="loading()" (click)="submit()">{{
