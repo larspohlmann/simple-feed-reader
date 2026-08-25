@@ -23,15 +23,3 @@ export function nextHeaderHidden(
   if (delta < -HEADER_SCROLL_DELTA) return false;
   return prevHidden;
 }
-
-/**
- * The resting hidden-state for a given offset, independent of scroll direction.
- * Used when the mobile drawer closes: the header is force-shown while the drawer
- * is open, so on close it must return to what the scroll position implies rather
- * than stay expanded over scrolled-down content — an expanded bar there overlays
- * the list without being its scroller, so a swipe starting on it scrolls nothing.
- */
-export function headerHiddenAtRest(top: number, isWide: boolean): boolean {
-  if (isWide) return false;
-  return top > HEADER_NEAR_TOP;
-}

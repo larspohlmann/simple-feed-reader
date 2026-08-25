@@ -1,4 +1,4 @@
-import { HEADER_NEAR_TOP, headerHiddenAtRest, nextHeaderHidden } from './header-scroll';
+import { HEADER_NEAR_TOP, nextHeaderHidden } from './header-scroll';
 
 describe('nextHeaderHidden', () => {
   it('never hides on a wide (desktop) layout', () => {
@@ -20,19 +20,5 @@ describe('nextHeaderHidden', () => {
   it('keeps the current state on a tiny scroll jitter', () => {
     expect(nextHeaderHidden(true, 300, 302, false)).toBe(true);
     expect(nextHeaderHidden(false, 300, 298, false)).toBe(false);
-  });
-});
-
-describe('headerHiddenAtRest', () => {
-  it('never hides on a wide (desktop) layout', () => {
-    expect(headerHiddenAtRest(500, true)).toBe(false);
-  });
-
-  it('is shown at rest near the top', () => {
-    expect(headerHiddenAtRest(HEADER_NEAR_TOP, false)).toBe(false);
-  });
-
-  it('is hidden at rest when scrolled past the threshold', () => {
-    expect(headerHiddenAtRest(HEADER_NEAR_TOP + 1, false)).toBe(true);
   });
 });

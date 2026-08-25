@@ -218,11 +218,6 @@ export class EntryListComponent implements OnDestroy {
   readonly keep = output<EntryDto>();
   readonly read = output<EntryDto>();
   readonly open = output<EntryDto>();
-  /** The list scroller's offset, on every scroll. The shell's hide-on-scroll
-   *  app bar listens to THIS and nothing else — a typed output instead of a
-   *  capture-phase listener that heard every scroller under the shell and had
-   *  to guess which mattered (#128). */
-  readonly scrolled = output<number>();
 
   /** The refresh button + pull gesture are hidden in the cross-feed saved views. */
   readonly canRefresh = computed(() => canScopedRefresh(this.selection()));
@@ -384,8 +379,11 @@ export class EntryListComponent implements OnDestroy {
     });
   }
   // On a narrow layout the list header collapses to a slim tag-name-only bar as
-  // you scroll down the list, expanding again on scroll up (same direction logic
-  // as the app header's hide-on-scroll). Always expanded on wide screens.
+  // you scroll down the list, expanding again on scroll up. Always expanded on
+  // wide screens. The shell's app bar mirrors this signal for its own
+  // hide-on-scroll — it is the same state, so it is kept once, here, and reset
+  // with the list on every selection change (see `_resetCollapse`), which is why
+  // switching lists returns the app bar to the top of the new list (#630).
   readonly collapsed = signal(false);
   private lastScrollTop = 0;
   private focusRaf = 0;
@@ -498,7 +496,6 @@ export class EntryListComponent implements OnDestroy {
     );
     this.lastScrollTop = top;
     this.showToTop.set(top > BACK_TO_TOP_AFTER_PX);
-    this.scrolled.emit(top);
     this.pulseFocus();
     // Remember where the user is so a browser resume-reload (iOS/Brave discard the
     // tab and reload it) can drop them back here rather than at the top.
@@ -597,13 +594,6 @@ export class EntryListComponent implements OnDestroy {
     // scroll, so it's a floor for the reduced-motion/interrupted cases, not a
     // guarantee that 0 is what actually gets remembered.
     this.scroll.save(this.selection(), 0);
-  }
-
-  /** The list scroller's current offset. The shell derives the drawer-close
-   *  header state from the list itself rather than from whichever scroller
-   *  under it happened to fire last (#128). */
-  currentScrollTop(): number {
-    return this.rows()?.nativeElement.scrollTop ?? 0;
   }
 
   tagsFor(subscriptionId: number): SubscriptionTagDto[] {
