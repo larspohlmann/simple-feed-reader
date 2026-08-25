@@ -333,6 +333,54 @@ final class HeroImageSelectorTest extends TestCase
         self::assertSame($hero, $this->selectUrl($hero, $body));
     }
 
+    public function testSuppressesHeroWhenTheSamePhotoSitsBehindDifferentCdnFetchTransforms(): void
+    {
+        // The natehagens.substack.com entry 1359963 case (#625): Substack serves
+        // images through a Cloudinary-style fetch proxy that carries the real
+        // photo — an encoded origin URL — as the last path segment, behind a
+        // transform segment that differs per size. The extracted og:image hero and
+        // the body figure are the same S3 object (`844466a9-…`) under the
+        // transforms `w_1200,h_675,c_fill,…` and `w_1456,c_limit,…`. An intro
+        // paragraph leads the body, so only the repeat rule can catch it.
+        $fetch = 'https://substackcdn.com/image/fetch/';
+        $photo = 'https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F'
+            . '844466a9-363d-4dc7-a45d-d800181f1e83_1672x941.png';
+        $hero = $fetch . '$s_!qvPe!,w_1200,h_675,c_fill,f_jpg,q_auto:good,fl_progressive:steep,g_auto/' . $photo;
+        $bodyImage = $fetch . '$s_!qvPe!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/' . $photo;
+        $body = '<p>Intro.</p><figure><img src="' . $bodyImage . '" alt=""></figure>';
+
+        self::assertNull($this->selectUrl($hero, $body));
+    }
+
+    public function testShowsHeroWhenAFetchProxyOriginBelongsToADifferentPhoto(): void
+    {
+        // Distinct Substack photos have distinct encoded origin URLs, so unwrapping
+        // the fetch proxy must not collapse two pictures into one identity and hide
+        // a genuinely different body image.
+        $fetch = 'https://substackcdn.com/image/fetch/';
+        $s3 = 'https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F';
+        $hero = $fetch . '$s_!qvPe!,w_1200,c_limit,f_jpg/' . $s3 . '844466a9-363d-4dc7-a45d-d800181f1e83_1672x941.png';
+        $bodyImage = $fetch . '$s_!AbCd!,w_1456,c_limit,f_auto/' . $s3
+            . '7022837b-698b-427d-9e90-61fe86f143f1_800x600.png';
+        $body = '<p>Intro.</p><figure><img src="' . $bodyImage . '" alt=""></figure>';
+
+        self::assertSame($hero, $this->selectUrl($hero, $body));
+    }
+
+    public function testDoesNotUnwrapAFileNameThatMerelyContainsAnEncodedUrl(): void
+    {
+        // The proxy unwrap only triggers when the last path segment *is* an
+        // encoded origin — i.e. it begins with the scheme. Two distinct photos
+        // whose file names merely embed a URL-like substring further along keep
+        // their own path identities and must not be collapsed into one, so the
+        // hero stays. The body leads with text, so only the repeat rule can fire.
+        $hero = 'https://cdn.test/thumb/a-https%3A%2F%2Forigin.test%2Fp.jpg';
+        $body = '<p>Intro.</p>'
+            . '<figure><img src="https://cdn.test/thumb/b-https%3A%2F%2Forigin.test%2Fp.jpg" alt=""></figure>';
+
+        self::assertSame($hero, $this->selectUrl($hero, $body));
+    }
+
     public function testDiscardsANonHttpHero(): void
     {
         // The scheme guard is anchored: a `data:` URL that merely embeds an

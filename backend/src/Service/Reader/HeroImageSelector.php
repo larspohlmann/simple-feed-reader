@@ -143,6 +143,8 @@ final class HeroImageSelector
      */
     private function imageIdentity(string $url): string
     {
+        $url = $this->originBehindFetchProxy($url);
+
         $path = parse_url($url, PHP_URL_PATH);
         if (!is_string($path) || trim($path, '/') === '') {
             return strtolower($url);
@@ -154,5 +156,33 @@ final class HeroImageSelector
         $withoutSizeSegment = preg_replace('#/\d+(?=/[^/]+$)#', '', (string) $withoutSizeSuffix);
 
         return strtolower((string) $withoutSizeSegment);
+    }
+
+    /**
+     * The real photo URL behind a Cloudinary-style *fetch* proxy, or the URL
+     * unchanged when it is not one.
+     *
+     * A fetch proxy serves a foreign image by carrying its origin URL, encoded,
+     * as the last path segment behind a transform segment that differs per size:
+     * `substackcdn.com/image/fetch/$s_!qvPe!,w_1200,…/https%3A%2F%2F…%2F<id>.png`
+     * (natehagens.substack.com entry 1359963, #625). Comparing the proxy path
+     * would read the transform (`w_1200,c_fill,…` vs `w_1456,c_limit,…`) as the
+     * photo and see two size variants of one picture as different images. The
+     * origin is the photo's identity, so the rest of the rule runs against it.
+     *
+     * A plain image URL has no encoded http(s) tail, so it is returned as is.
+     */
+    private function originBehindFetchProxy(string $url): string
+    {
+        $path = parse_url($url, PHP_URL_PATH);
+        if (!is_string($path)) {
+            return $url;
+        }
+
+        $origin = rawurldecode(basename($path));
+
+        // Only a segment that *is* an encoded origin (begins with the scheme) is
+        // unwrapped; a file name that merely contains a URL-like substring is not.
+        return preg_match('#^https?://#', $origin) === 1 ? $origin : $url;
     }
 }
