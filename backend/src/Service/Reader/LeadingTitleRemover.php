@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
-use App\Service\Html\HtmlDocumentParser;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -19,31 +18,24 @@ use Dom\HTMLDocument;
  * page <title> can be an SEO variant of the headline, while the feed entry's
  * title usually matches it verbatim.
  *
- * Never throws: content this step cannot process is returned unchanged.
+ * Mutates the shared document in place (ReaderBodyCleaner parses and serialises
+ * once around it). A document with no matching leading heading is left as is.
  */
 final readonly class LeadingTitleRemover
 {
     /** @param list<string|null> $titleCandidates */
-    public function remove(string $contentHtml, array $titleCandidates): string
+    public function removeFrom(HTMLDocument $document, array $titleCandidates): void
     {
-        $normalizedTitles = $this->normalizeCandidates($titleCandidates);
-        if ($normalizedTitles === []) {
-            return $contentHtml;
-        }
-
-        $document = HtmlDocumentParser::parseOrNull($contentHtml);
-        if ($document === null) {
-            return $contentHtml;
-        }
-
         $firstHeading = $this->findFirstHeading($document);
-        if ($firstHeading === null || !$this->repeatsTitle($firstHeading, $normalizedTitles)) {
-            return $contentHtml;
+        if ($firstHeading === null) {
+            return;
+        }
+
+        if (!$this->repeatsTitle($firstHeading, $this->normalizeCandidates($titleCandidates))) {
+            return;
         }
 
         $firstHeading->remove();
-
-        return $document->saveHtml();
     }
 
     /**

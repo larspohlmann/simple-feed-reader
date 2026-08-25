@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
+use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\EdgeBoilerplateTrimmer;
 use PHPUnit\Framework\TestCase;
 
@@ -21,11 +22,6 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $this->trimmer = new EdgeBoilerplateTrimmer();
     }
 
-    public function testReturnsUnparsableInputUnchanged(): void
-    {
-        self::assertSame('', $this->trimmer->trim(''));
-    }
-
     public function testKeepsEverythingWhenThereIsNoSubstantialParagraph(): void
     {
         // No block clears the prose threshold, so the edge is undefined and the
@@ -33,7 +29,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div><ul class="related"><li><a href="/a">A</a></li>'
             . '<li><a href="/b">B</a></li><li><a href="/c">C</a></li></ul></div>';
 
-        self::assertStringContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringContainsString('class="related"', $this->trimmed($html));
     }
 
     public function testKeepsABoilerplateBlockThatSitsInTheArticleMiddle(): void
@@ -44,7 +40,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
             . '<a href="/a">A</a><a href="/b">B</a><a href="/c">C</a></div>';
         $html = '<div><p>' . self::PROSE . '</p>' . $middle . '<p>' . self::PROSE . '</p></div>';
 
-        self::assertStringContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringContainsString('class="related"', $this->trimmed($html));
     }
 
     public function testRemovesATrailingRelatedGridWithFingerprintAndLinkShape(): void
@@ -58,7 +54,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $grid . '</div>';
 
-        $result = $this->trimmer->trim($html);
+        $result = $this->trimmed($html);
 
         self::assertStringNotContainsString('jp-relatedposts', $result);
         self::assertStringContainsString(self::PROSE, $result);
@@ -73,7 +69,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $form . '</div>';
 
-        self::assertStringNotContainsString('newsletter', $this->trimmer->trim($html));
+        self::assertStringNotContainsString('newsletter', $this->trimmed($html));
     }
 
     public function testRemovesALeadingCommentPromptWithFingerprintAndPhrase(): void
@@ -86,7 +82,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div>' . $prompt . '<p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>'
             . self::PROSE . '</p></div>';
 
-        self::assertStringNotContainsString('comment-respond', $this->trimmer->trim($html));
+        self::assertStringNotContainsString('comment-respond', $this->trimmed($html));
     }
 
     public function testKeepsABlockWithOnlyOneStructuralSignal(): void
@@ -99,7 +95,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $block . '</div>';
 
-        self::assertStringContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringContainsString('class="related"', $this->trimmed($html));
     }
 
     public function testKeepsABlockWithOnlyAPhraseAndNoStructuralSignal(): void
@@ -112,7 +108,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $note . '</div>';
 
-        self::assertStringContainsString('Read more', $this->trimmer->trim($html));
+        self::assertStringContainsString('Read more', $this->trimmed($html));
     }
 
     public function testKeepsABlockWithACorroboratingHeadingButNoStructuralSignal(): void
@@ -126,7 +122,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $block . '</div>';
 
-        self::assertStringContainsString('Related posts', $this->trimmer->trim($html));
+        self::assertStringContainsString('Related posts', $this->trimmed($html));
     }
 
     public function testDescendsThroughAWrapperFollowedByOnlyWhitespaceText(): void
@@ -140,7 +136,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $grid . '</div>' . "   \n  ";
 
-        self::assertStringNotContainsString('jp-relatedposts', $this->trimmer->trim($html));
+        self::assertStringNotContainsString('jp-relatedposts', $this->trimmed($html));
     }
 
     public function testDoesNotDescendIntoANonContainerSoleWrapper(): void
@@ -156,7 +152,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<span><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $grid . '</span>';
 
-        self::assertStringContainsString('jp-relatedposts', $this->trimmer->trim($html));
+        self::assertStringContainsString('jp-relatedposts', $this->trimmed($html));
     }
 
     public function testNeverExtendsTheLeadingEdgeBeyondItsComputedBound(): void
@@ -172,7 +168,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
             . '<a href="/c">' . self::PROSE . '</a></div>';
         $html = '<div><p>Short lead.</p>' . $comboAnchor . '<p>Filler.</p><p>' . self::PROSE . '</p></div>';
 
-        self::assertStringContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringContainsString('class="related"', $this->trimmed($html));
     }
 
     public function testNeverShrinksTheTrailingEdgeBelowItsComputedBound(): void
@@ -188,7 +184,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
             . '<p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . '<p>Filler.</p>' . $boilerplate . '</div>';
 
-        self::assertStringNotContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringNotContainsString('class="related"', $this->trimmed($html));
     }
 
     public function testCapUsesFloorNotCeilOrRound(): void
@@ -202,7 +198,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . '<p>Filler.</p>' . $boilerplate . '<p>Tail.</p></div>';
 
-        self::assertStringContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringContainsString('class="related"', $this->trimmed($html));
     }
 
     public function testLeadingBoundUsesTheFirstSubstantialIndexNotTheSecond(): void
@@ -221,7 +217,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div><p>Filler.</p>' . $comboAnchor . '<p>Filler.</p><p>' . self::PROSE . '</p>'
             . '<p>Filler.</p><p>Filler.</p><p>Filler.</p><p>Filler.</p></div>';
 
-        self::assertStringContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringContainsString('class="related"', $this->trimmed($html));
     }
 
     public function testTrailingBoundExcludesTheLastSubstantialIndexItself(): void
@@ -240,7 +236,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
             . '<p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $comboAnchor . '<p>Filler.</p></div>';
 
-        self::assertStringContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringContainsString('class="related"', $this->trimmed($html));
     }
 
     public function testTrailingBoundStaysAtSubstantialIndexPlusOneNotMinusOne(): void
@@ -257,7 +253,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
             . '<p>F.</p><p>F.</p><p>F.</p><p>F.</p><p>F.</p><p>F.</p><p>F.</p><p>F.</p>'
             . $boilerplate . '<p>' . self::PROSE . '</p></div>';
 
-        self::assertStringContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringContainsString('class="related"', $this->trimmed($html));
     }
 
     public function testSubstantialityIgnoresPaddingWhitespaceAroundTheText(): void
@@ -272,7 +268,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $padded . '</div>';
 
-        self::assertStringNotContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringNotContainsString('class="related"', $this->trimmed($html));
     }
 
     public function testSubstantialityCountsCharactersNotBytes(): void
@@ -288,7 +284,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $target . '</div>';
 
-        self::assertStringNotContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringNotContainsString('class="related"', $this->trimmed($html));
     }
 
     public function testSubstantialityThresholdIsInclusiveAtExactly200Characters(): void
@@ -302,7 +298,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $target = '<div class="related">' . str_repeat('x', 200) . '<input type="email"></div>';
         $html = '<div>' . $target . '<p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>Filler.</p></div>';
 
-        self::assertStringContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringContainsString('class="related"', $this->trimmed($html));
     }
 
     public function testSubstantialIndexesAreNotCollapsedToJustTheFirst(): void
@@ -320,7 +316,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p><p>Filler.</p><p>Filler.</p><p>Filler.</p>'
             . '<p>Filler.</p><p>Filler.</p>' . $comboAnchor . '<p>Filler.</p></div>';
 
-        self::assertStringContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringContainsString('class="related"', $this->trimmed($html));
     }
 
     public function testLinkListRequiresAtLeastThreeLinksNotJustOverTwo(): void
@@ -332,7 +328,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $grid . '</div>';
 
-        self::assertStringNotContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringNotContainsString('class="related"', $this->trimmed($html));
     }
 
     public function testFewerThanThreeLinksIsNeverALinkListRegardlessOfRatio(): void
@@ -345,7 +341,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $pair . '</div>';
 
-        self::assertStringContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringContainsString('class="related"', $this->trimmed($html));
     }
 
     public function testLinkListRatioIgnoresPaddingWhitespaceInTheDenominator(): void
@@ -361,7 +357,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $grid . '</div>';
 
-        self::assertStringNotContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringNotContainsString('class="related"', $this->trimmed($html));
     }
 
     public function testLinkListRatioBoundaryOfExactlyPointSixCountsAsAList(): void
@@ -375,7 +371,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $grid . '</div>';
 
-        self::assertStringNotContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringNotContainsString('class="related"', $this->trimmed($html));
     }
 
     public function testLinkTextLengthCountsCharactersNotBytes(): void
@@ -390,7 +386,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $block . '</div>';
 
-        self::assertStringContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringContainsString('class="related"', $this->trimmed($html));
     }
 
     public function testLinkTextLengthTrimsEachLinksOwnPadding(): void
@@ -405,7 +401,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $block . '</div>';
 
-        self::assertStringContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringContainsString('class="related"', $this->trimmed($html));
     }
 
     public function testLinkListRatioIsAQuotientNotAProduct(): void
@@ -421,7 +417,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $block . '</div>';
 
-        self::assertStringContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringContainsString('class="related"', $this->trimmed($html));
     }
 
     public function testFormPresenceAloneCountsAsAStructuralSignalEvenWithoutEmail(): void
@@ -434,7 +430,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $block . '</div>';
 
-        self::assertStringNotContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringNotContainsString('class="related"', $this->trimmed($html));
     }
 
     public function testFormOrEmailChecksTheInputTypeIsActuallyEmail(): void
@@ -446,7 +442,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $block . '</div>';
 
-        self::assertStringContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringContainsString('class="related"', $this->trimmed($html));
     }
 
     public function testCorroboratingPhraseMatchIsCaseInsensitiveAcrossUmlauts(): void
@@ -462,7 +458,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div>' . $prompt . '<p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>'
             . self::PROSE . '</p></div>';
 
-        self::assertStringNotContainsString('comment-respond', $this->trimmer->trim($html));
+        self::assertStringNotContainsString('comment-respond', $this->trimmed($html));
     }
 
     public function testCorroboratingPhraseRequiresAnActualMatchNotAnyHeading(): void
@@ -475,17 +471,32 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $block . '</div>';
 
-        self::assertStringContainsString('class="related"', $this->trimmer->trim($html));
+        self::assertStringContainsString('class="related"', $this->trimmed($html));
     }
 
-    public function testReturnsTheOriginalStringByteIdenticalWhenNothingIsRemoved(): void
+    public function testKeepsEveryParagraphWhenNothingIsBoilerplate(): void
     {
         // A realistic multi-paragraph article with no boilerplate anywhere: no
-        // block is ever removed, so trim() must hand back the exact original
-        // string instead of a DOM-normalised re-serialisation via saveHtml().
+        // block is ever removed, so every paragraph of real prose survives the
+        // trim untouched.
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . '<p>' . self::PROSE . '</p><p>' . self::PROSE . '</p></div>';
 
-        self::assertSame($html, $this->trimmer->trim($html));
+        self::assertSame(4, substr_count($this->trimmed($html), self::PROSE));
+    }
+
+    /**
+     * Parses the fragment, runs the in-place trim, and serialises the shared
+     * document — mirroring the parse-once/serialise-once window ReaderBodyCleaner
+     * owns in the pipeline.
+     */
+    private function trimmed(string $bodyHtml): string
+    {
+        $document = HtmlDocumentParser::parseOrNull($bodyHtml);
+        self::assertNotNull($document);
+
+        $this->trimmer->trimIn($document);
+
+        return $document->saveHtml();
     }
 }

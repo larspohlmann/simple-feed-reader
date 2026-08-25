@@ -32,9 +32,8 @@ final class ArticleExtractor implements ArticleExtractorInterface
     public function __construct(
         private readonly HtmlPageFetcher $fetcher,
         private readonly FetchedPageNormalizer $normalizer,
-        private readonly LeadingTitleRemover $titleRemover,
+        private readonly ReaderBodyCleaner $bodyCleaner,
         private readonly EntrySanitizer $sanitizer,
-        private readonly EdgeBoilerplateTrimmer $boilerplateTrimmer,
     ) {
     }
 
@@ -58,9 +57,8 @@ final class ArticleExtractor implements ArticleExtractorInterface
             return ExtractionResult::failed($url, 'empty');
         }
 
-        $withoutTitle = $this->titleRemover->remove($article->content, [$article->title, $entryTitle]);
-        $trimmed = $this->boilerplateTrimmer->trim($withoutTitle);
-        $clean = $this->sanitizer->sanitize($trimmed);
+        $body = $this->bodyCleaner->clean($article->content, [$article->title, $entryTitle]);
+        $clean = $this->sanitizer->sanitize($body);
         if ($clean === null) {
             return ExtractionResult::failed($url, 'empty');
         }
