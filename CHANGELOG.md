@@ -10,6 +10,8 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v0.7.0] - 2026-08-25
+
 ### Highlights
 
 **Saved searches.** Name a search and keep it as a saved view in the sidebar,
@@ -29,6 +31,74 @@ from WordPress publishers instead of the site's bare RSS feed.
 **Optional egress proxy.** Route all outbound fetches through a SOCKS5 or HTTP
 proxy, behind a single master switch, with a direct-connection fallback when the
 proxy is off.
+
+## What's Changed
+* Group top-level Service classes into cohesive subdirectories by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/512
+* refactor(reader): migrate normalization to \Dom\HTMLDocument, drop the round-trip by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/521
+* refactor(recommendation): split dedup and finalize out of RecommendationRunAdvancer (#338) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/522
+* fix(reader): one reload authority for a refresh (#502) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/523
+* fix(#520): suppress hero when the body leads with an image by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/524
+* feat(parser): find card images in Atom summary and custom <image> elements (#513) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/525
+* feat(#515): one-line dek in the magazine compact block by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/526
+* fix(#516): route image-less entries with a summary to a dek-showing block by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/527
+* fix(#488): fold entry-row actions onto shared app-entry-actions by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/529
+* feat(#516): collapse summary-less entries out of the kicker block by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/528
+* fix(#484): dedupe ingest on stable URL to defeat volatile GUIDs by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/530
+* feat(#493): two-step recommendations — distill history into a profile, consolidate in one pass by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/531
+* fix(#493): source the connection batch-cap default from the backend by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/532
+* fix(#497): document-wide no-referrer policy for body images by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/533
+* feat(#495): warm the provider prompt cache with one batch before the concurrent fan-out by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/534
+* feat(#518): offer the WordPress REST API as a richer feed alternative during discovery by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/535
+* test(#536): skip body-limit agreement check where docker/ isn't mounted by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/537
+* fix(#411): translate the reader list heading and add per-view icons by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/538
+* feat(#539): show update-available badge in the sidebar version display by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/540
+* fix(#542): restore the previous view when a search is closed by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/544
+* fix(#543): fall back to Atom <id> for the entry URL by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/545
+* AI settings redesign: grouped design system + reason/debug decouple (#541) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/546
+* feat(#519): render the add-feed preview like the reader by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/548
+* fix(#549): title every page from its route by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/551
+* fix(#550): let the search field's own ✕ close the mobile bar by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/552
+* feat(#490): optional SOCKS5/HTTP egress proxy by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/553
+* fix(#554): clear a settings-saved toast after three seconds by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/555
+* feat: expand the onboarding catalog to 226 feeds by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/558
+* feat: correct the catalog admission rule, add 54 feeds and two categories by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/560
+* Roll the settings design system across settings + admin (#547, #454) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/563
+* fix: make every category reachable in the picker, on both layouts by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/564
+* Guard the backup format against silent schema drift by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/565
+* feat: add Mixmag to the Electronic Music catalog by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/567
+* Show a feed's image, description and website at the top of its entry list by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/570
+* fix(#489): clear the e2e rot in both suites by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/571
+* fix(#574): let the mobile search ✕ empty the box before it leaves by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/575
+* fix(#576): let one switch carry the whole explanation by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/577
+* fix(#576): shorten the German score label to "Punkte" by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/578
+* fix(#579): let a closed search return to the list it covered by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/580
+* feat(#581): saved searches by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/583
+* Strip share-widget bars and edge boilerplate from reader articles by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/585
+* Saved searches follow-ups: save toast, remove confirm, mobile header polish by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/587
+* fix(#588): mute the excerpt colour in search-result rows by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/589
+* fix(#590): match a photo's identity by path, not just basename by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/591
+* fix(#594): read tick does not flip on an open entry by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/595
+* refactor(#592): consolidate the hero duplicate-image rule into the backend by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/597
+* fix(#593): mount docs read-only into the php container by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/599
+* feat(#596): rotate dev and test logs daily, keep 3 files by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/600
+* refactor(#598): one DeclaredImage value object, not ParsedImage + HeroImage by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/601
+* fix(#602): fill the unread dot, empty it once read by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/603
+* fix(#602): unread dot fill + read filter as a single switch, default all by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/604
+* fix(#605): show the persisted image in list and search rows by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/606
+* fix(#608, #610): collapse CDN size-variant image identities (taz path segment, deutschlandfunk basename suffix) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/609
+* feat(#613): add --help to the operator scripts by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/614
+* feat(#612): make the sidebar Tags and Feeds sections collapsible by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/616
+* fix(#617): unify the list-header action controls by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/618
+* fix(#619): dedupe zdfheute tilde-separated image size variants by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/620
+* refactor(#586): share one Dom document across reader title-removal and trim by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/621
+* feat(#622): reveal toggle for password fields by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/623
+* fix(#625): dedupe Substack hero by the origin behind the CDN fetch proxy by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/626
+* fix(#628): fall back to the content lead image for wp-json feeds by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/629
+* fix(#630): app bar stays hidden after switching lists from the drawer by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/631
+* feat(#632): promote the Unreleased Highlights block into the tagged version section by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/633
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v0.6.1...v0.7.0
 
 ## [v0.6.1] - 2026-08-20
 
