@@ -44,6 +44,11 @@ import { trialDaysRemaining } from '../format';
 /** What a sidebar drop target represents: a tag to add, or the untagged bucket. */
 export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
 
+/** localStorage keys holding whether each sidebar section is collapsed.
+ *  Namespaced under `sfr.*` like the other persisted UI preferences. */
+const TAGS_COLLAPSED_KEY = 'sfr.tags.collapsed';
+const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
+
 @Component({
   selector: 'app-sidebar',
   imports: [
@@ -169,6 +174,26 @@ export class SidebarComponent {
 
   toggleSavedSearches(): void {
     this.savedSearchesExpanded.update((open) => !open);
+  }
+
+  /** Whether the "Tags" section is expanded. Unlike the in-memory Saved-searches
+   *  and per-tag toggles, this one persists across reloads (localStorage). It
+   *  defaults to expanded, so an untouched sidebar looks exactly as before. */
+  readonly tagsExpanded = signal(localStorage.getItem(TAGS_COLLAPSED_KEY) !== 'true');
+
+  toggleTags(): void {
+    this.tagsExpanded.update((open) => !open);
+    localStorage.setItem(TAGS_COLLAPSED_KEY, String(!this.tagsExpanded()));
+  }
+
+  /** Whether the "Feeds" (untagged) section is expanded. Persisted like the
+   *  Tags section; default expanded. The drop list it heads stays mounted while
+   *  collapsed (see the template), so a feed drag out of a tag still lands. */
+  readonly feedsExpanded = signal(localStorage.getItem(FEEDS_COLLAPSED_KEY) !== 'true');
+
+  toggleFeeds(): void {
+    this.feedsExpanded.update((open) => !open);
+    localStorage.setItem(FEEDS_COLLAPSED_KEY, String(!this.feedsExpanded()));
   }
 
   /** Whole days left in the current trial, or null when the account has no

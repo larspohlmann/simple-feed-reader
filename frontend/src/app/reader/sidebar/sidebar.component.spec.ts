@@ -673,6 +673,132 @@ describe('SidebarComponent', () => {
       expect(f.componentInstance['savedSearchLinks']()[0].params).toBe(before);
     });
   });
+
+  describe('collapsible tag list', () => {
+    const tagNode: TagNode = {
+      tag: { id: 40, name: 'Tech', color: null, icon: null, position: 0 },
+      subscriptions: [sub(1, 3)],
+      unreadCount: 3,
+    };
+
+    // The collapsed state persists in localStorage, so each test starts and
+    // ends from a clean slate to keep the default-expanded assumption honest.
+    beforeEach(() => localStorage.clear());
+    afterEach(() => localStorage.clear());
+
+    // The borderless header chevron is its own `.section-chevron`, never the
+    // bordered `.chevzone` box the tag rows carry.
+    const headChevronIcon = (el: HTMLElement) =>
+      el.querySelector('.tags-head .section-chevron .material-symbols-outlined')!.textContent;
+
+    it('shows the tags expanded by default, with a downward chevron on the header', () => {
+      const el = mount({ tagTree: [tagNode] }).nativeElement as HTMLElement;
+      const head = el.querySelector('.tags-head')!;
+      expect(head.textContent).toContain('Tags');
+      expect(head.querySelector('.section-toggle')!.getAttribute('aria-expanded')).toBe('true');
+      expect(headChevronIcon(el)).toBe('expand_more');
+      expect(head.querySelector('.chevzone')).toBeNull();
+      expect(el.querySelector('.tags .taghead')).not.toBeNull();
+    });
+
+    it('collapses the list and points the chevron right when the title is clicked', () => {
+      const f = mount({ tagTree: [tagNode] });
+      const el = f.nativeElement as HTMLElement;
+      (el.querySelector('.tags-head .section-toggle') as HTMLButtonElement).click();
+      f.detectChanges();
+
+      expect(el.querySelector('.tags-head .section-toggle')!.getAttribute('aria-expanded')).toBe(
+        'false',
+      );
+      expect(headChevronIcon(el)).toBe('chevron_right');
+      expect(el.querySelector('.tags .taghead')).toBeNull();
+      // The header itself stays put so the section can be reopened.
+      expect(el.querySelector('.tags-head')).not.toBeNull();
+    });
+
+    it('also collapses via the trailing chevron button', () => {
+      const f = mount({ tagTree: [tagNode] });
+      const el = f.nativeElement as HTMLElement;
+      (el.querySelector('.tags-head .section-chevron') as HTMLButtonElement).click();
+      f.detectChanges();
+
+      expect(el.querySelector('.tags .taghead')).toBeNull();
+    });
+
+    it('restores the collapsed state on a fresh mount (persisted)', () => {
+      const first = mount({ tagTree: [tagNode] });
+      first.componentInstance.toggleTags();
+
+      TestBed.resetTestingModule();
+      const el = mount({ tagTree: [tagNode] }).nativeElement as HTMLElement;
+      expect(el.querySelector('.tags-head .section-toggle')!.getAttribute('aria-expanded')).toBe(
+        'false',
+      );
+      expect(el.querySelector('.tags .taghead')).toBeNull();
+    });
+  });
+
+  describe('collapsible feed list', () => {
+    beforeEach(() => localStorage.clear());
+    afterEach(() => localStorage.clear());
+
+    const headChevronIcon = (el: HTMLElement) =>
+      el.querySelector('.feeds-head .section-chevron .material-symbols-outlined')!.textContent;
+
+    it('shows the feeds expanded by default, with a downward chevron on the header', () => {
+      const el = mount({ untagged: [sub(1, 2)] }).nativeElement as HTMLElement;
+      const head = el.querySelector('.feeds-head')!;
+      expect(head.textContent).toContain('Feeds');
+      expect(head.querySelector('.section-toggle')!.getAttribute('aria-expanded')).toBe('true');
+      expect(headChevronIcon(el)).toBe('expand_more');
+      expect(el.querySelector('.feedlist .feedrow')).not.toBeNull();
+    });
+
+    it('collapses the untagged feeds and points the chevron right when clicked', () => {
+      const f = mount({ untagged: [sub(1, 2)] });
+      const el = f.nativeElement as HTMLElement;
+      (el.querySelector('.feeds-head .section-toggle') as HTMLButtonElement).click();
+      f.detectChanges();
+
+      expect(headChevronIcon(el)).toBe('chevron_right');
+      expect(el.querySelector('.feedlist .feedrow')).toBeNull();
+      // The drop list itself stays mounted so an untag drag still has a target.
+      expect(el.querySelector('.feedlist')).not.toBeNull();
+    });
+
+    it('also collapses via the trailing chevron button', () => {
+      const f = mount({ untagged: [sub(1, 2)] });
+      const el = f.nativeElement as HTMLElement;
+      (el.querySelector('.feeds-head .section-chevron') as HTMLButtonElement).click();
+      f.detectChanges();
+
+      expect(el.querySelector('.feedlist .feedrow')).toBeNull();
+    });
+
+    it('reveals the feeds while a drag is in progress, even when collapsed', () => {
+      const f = mount({ untagged: [sub(1, 2)] });
+      const el = f.nativeElement as HTMLElement;
+      f.componentInstance.toggleFeeds();
+      f.detectChanges();
+      expect(el.querySelector('.feedlist .feedrow')).toBeNull();
+
+      f.componentInstance.dragging.set(true);
+      f.detectChanges();
+      expect(el.querySelector('.feedlist .feedrow')).not.toBeNull();
+    });
+
+    it('restores the collapsed state on a fresh mount (persisted)', () => {
+      const first = mount({ untagged: [sub(1, 2)] });
+      first.componentInstance.toggleFeeds();
+
+      TestBed.resetTestingModule();
+      const el = mount({ untagged: [sub(1, 2)] }).nativeElement as HTMLElement;
+      expect(el.querySelector('.feeds-head .section-toggle')!.getAttribute('aria-expanded')).toBe(
+        'false',
+      );
+      expect(el.querySelector('.feedlist .feedrow')).toBeNull();
+    });
+  });
 });
 
 describe('for-you row', () => {
@@ -814,7 +940,7 @@ describe('organise mode', () => {
 
   it('coarse navigation shows the trailing chevron and no inline menu', () => {
     const el = mount({ coarse: true, tagTree: tree }).nativeElement as HTMLElement;
-    const zone = el.querySelector('.chevzone')!;
+    const zone = el.querySelector('.tag .chevzone')!;
     expect(zone).not.toBeNull();
     expect(zone.getAttribute('aria-expanded')).toBe('false');
     expect(el.querySelector('.tag .nav.grow')).not.toBeNull();
@@ -824,10 +950,10 @@ describe('organise mode', () => {
   it('the chevron zone expands the tag without navigating', () => {
     const f = mount({ coarse: true, tagTree: tree });
     const el = f.nativeElement as HTMLElement;
-    el.querySelector<HTMLElement>('.chevzone')!.click();
+    el.querySelector<HTMLElement>('.tag .chevzone')!.click();
     f.detectChanges();
     expect(el.querySelector('.tagfeeds')).not.toBeNull();
-    expect(el.querySelector('.chevzone')!.getAttribute('aria-expanded')).toBe('true');
+    expect(el.querySelector('.tag .chevzone')!.getAttribute('aria-expanded')).toBe('true');
     expect(TestBed.inject(Router).url).toBe('/'); // expand must not select the tag
   });
 
@@ -836,7 +962,7 @@ describe('organise mode', () => {
     const el = f.nativeElement as HTMLElement;
     expect(el.querySelector('.tag .handle')).not.toBeNull();
     expect(el.querySelector('.tag .nav.grow')).toBeNull();
-    expect(el.querySelector('.chevzone')).toBeNull();
+    expect(el.querySelector('.tag .chevzone')).toBeNull();
     expect(el.querySelector('.tag .rowbody')!.getAttribute('aria-expanded')).toBe('false');
     el.querySelector<HTMLElement>('.tag .rowbody')!.click();
     f.detectChanges();
@@ -963,7 +1089,7 @@ describe('organise mode', () => {
     // leave the organise DOM with no way out — the component resets instead.
     expect(f.componentInstance.organising()).toBe(false);
     expect((f.nativeElement as HTMLElement).querySelector('.tag .handle')).toBeNull();
-    expect((f.nativeElement as HTMLElement).querySelector('.chevzone')).not.toBeNull();
+    expect((f.nativeElement as HTMLElement).querySelector('.tag .chevzone')).not.toBeNull();
   });
 
   it('locks dragging in coarse navigation mode and frees it while organising', () => {
@@ -1011,7 +1137,7 @@ describe('organise mode', () => {
 
   it('desktop shows the trailing chevron, inline menu and popover', () => {
     const el = mount({ tagTree: tree }).nativeElement as HTMLElement;
-    expect(el.querySelector('.chevzone')).not.toBeNull();
+    expect(el.querySelector('.tag .chevzone')).not.toBeNull();
     expect(el.querySelector('.handle')).toBeNull();
     expect(el.querySelector('.rowmenu .dots')).not.toBeNull();
   });
