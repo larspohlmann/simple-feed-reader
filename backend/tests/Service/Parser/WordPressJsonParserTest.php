@@ -78,6 +78,59 @@ final class WordPressJsonParserTest extends TestCase
         self::assertNull($this->parse($body)->entries[0]->image);
     }
 
+    public function testFallsBackToTheContentLeadImageWhenNoJetpackImage(): void
+    {
+        // A Jetpack-less site (e.g. correctiv) carries its picture inline in the
+        // body; without this fallback entry.imageUrl stays null and the magazine
+        // distrusts the client-derived inline image.
+        $body = '[{"id":9,"link":"https://x.example/9","title":{"rendered":"T"},'
+            . '"content":{"rendered":"<p>Intro.</p>'
+            . '<figure><img src=\"https://x.example/lead.jpg\" alt=\"\"></figure>"}}]';
+
+        $image = $this->parse($body)->entries[0]->image;
+
+        self::assertNotNull($image);
+        self::assertSame('https://x.example/lead.jpg', $image->url);
+    }
+
+    public function testFallsBackToTheExcerptImageWhenContentHasNone(): void
+    {
+        $body = '[{"id":10,"link":"https://x.example/10","title":{"rendered":"T"},'
+            . '"content":{"rendered":"<p>No picture here.</p>"},'
+            . '"excerpt":{"rendered":"<img src=\"https://x.example/teaser.jpg\" alt=\"\">"}}]';
+
+        $image = $this->parse($body)->entries[0]->image;
+
+        self::assertNotNull($image);
+        self::assertSame('https://x.example/teaser.jpg', $image->url);
+    }
+
+    public function testTheContentImageWinsOverTheExcerptImage(): void
+    {
+        // Content is the fuller body, so its lead image ranks above the
+        // excerpt's — the same content-before-summary order the RSS parsers use.
+        $body = '[{"id":12,"link":"https://x.example/12","title":{"rendered":"T"},'
+            . '"content":{"rendered":"<img src=\"https://x.example/from-content.jpg\" alt=\"\">"},'
+            . '"excerpt":{"rendered":"<img src=\"https://x.example/from-excerpt.jpg\" alt=\"\">"}}]';
+
+        self::assertSame(
+            'https://x.example/from-content.jpg',
+            $this->parse($body)->entries[0]->image?->url,
+        );
+    }
+
+    public function testJetpackImageWinsOverTheContentLeadImage(): void
+    {
+        $body = '[{"id":11,"link":"https://x.example/11","title":{"rendered":"T"},'
+            . '"content":{"rendered":"<img src=\"https://x.example/inline.jpg\" alt=\"\">"},'
+            . '"jetpack_featured_media_url":"https://x.example/featured.jpg"}]';
+
+        self::assertSame(
+            'https://x.example/featured.jpg',
+            $this->parse($body)->entries[0]->image?->url,
+        );
+    }
+
     public function testEmptyArrayIsAZeroEntryFeed(): void
     {
         self::assertSame([], $this->parse('[]')->entries);
