@@ -422,4 +422,77 @@ test.describe('Hide-on-scroll header on a phone', () => {
     expect(second.y).toBeCloseTo(first.y, 0);
     expect(second.x).toBeCloseTo(first.x, 0);
   });
+
+  // #630: pick a list from the drawer while the current list is scrolled down.
+  // The outgoing list stays rendered at its offset until the new page lands
+  // (#254); the app bar used to resolve its state from that stale offset when
+  // the drawer auto-closed and stay retracted over the new list, which opens at
+  // the top — leaving an empty band where the bar belongs. In magazine layout
+  // (the default) no incidental scroll event re-showed it. The bar now mirrors
+  // the list's own collapse state, which resets to the top on the new list.
+  test('the app bar returns for a list chosen from the drawer while scrolled down', async ({
+    page,
+  }) => {
+    // Magazine layout on purpose (no list pin). A unique feed per entry keeps
+    // magazine from collapsing the run into one group, so the list scrolls.
+    await page.goto('/login');
+    await page.locator('input[type=email]').fill(ADMIN_EMAIL);
+    await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
+    await page.getByRole('button', { name: 'Sign in' }).click();
+    const sidebar = page.getByRole('navigation', { name: 'Feeds' });
+    const loginError = page.getByRole('alert');
+    await expect(sidebar.or(loginError)).toBeVisible();
+    test.skip(!(await sidebar.isVisible()), 'seeded admin login unavailable');
+
+    const perFeed = ENTRIES.map((e, i) => ({ ...e, subscriptionId: i + 1 }));
+    await page.route('**/api/entries*', async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      await route.fulfill({ status: 200, json: { entries: perFeed, nextCursor: null } });
+    });
+    await page.route('**/api/saved-searches', async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      await route.fulfill({
+        status: 200,
+        json: {
+          savedSearches: [{ id: 1, term: 'number', wholeWord: false, position: 0, unreadCount: 5 }],
+        },
+      });
+    });
+    await page.reload();
+
+    const rows = page.locator(ROWS);
+    await expect(rows).toBeVisible();
+    await settle(page);
+
+    // Scroll down: the bar retracts.
+    await rows.evaluate((el) => el.scrollBy(0, 400));
+    await waitForHeaderTransitionEnd(page);
+    const header = page.locator('app-reader-header');
+    await expect(header).toHaveClass(/hidden/);
+
+    // Open the drawer with an edge-swipe (the bar's menu button is off-screen
+    // while retracted, exactly as the user finds it), then pick the saved search.
+    await rows.evaluate((el) => {
+      const touch = (x: number) => [
+        new Touch({ identifier: 1, target: el, clientX: x, clientY: 300 }),
+      ];
+      el.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, touches: touch(6) }));
+      el.dispatchEvent(new TouchEvent('touchmove', { bubbles: true, touches: touch(220) }));
+      el.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [] }));
+    });
+    await expect(header).not.toHaveClass(/hidden/); // force-shown while the drawer is open
+    const savedItem = page.locator('.savedsearch-item').first();
+    if (!(await savedItem.isVisible())) {
+      await page.locator('.savedsearch-toggle').first().click(); // expand the section
+    }
+    await savedItem.click();
+
+    // The new list is at the top, so the bar must show — not inherit the old
+    // scroll. A retracted bar slides off the top (translateY -100%); a shown one
+    // rests at the top of the viewport, so its box must be on screen.
+    await waitForHeaderTransitionEnd(page);
+    await expect(header).not.toHaveClass(/hidden/);
+    const headerBox = (await header.boundingBox())!;
+    expect(headerBox.y).toBeGreaterThanOrEqual(-1);
+  });
 });

@@ -45,7 +45,6 @@ import {
 import { ListScrollReset } from './list-scroll-reset';
 import { entryParam } from './slug';
 import { EntryDto, EntryStatePatch, SubscriptionDto, SubscriptionTagDto, TagDto } from './models';
-import { headerHiddenAtRest, nextHeaderHidden } from './header-scroll';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { EntryListComponent } from './entry-list/entry-list.component';
@@ -250,11 +249,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   });
   readonly allItemsActive = computed(() => this.selection().kind === 'all');
 
-  // Mobile hide-on-scroll app bar — the LIST's chrome, driven exclusively by
-  // the entry list's typed `scrolled` output. A full-screen article is a layer
-  // above this bar with its own toolbar, so opening or closing one never
-  // touches it (#128).
-  readonly headerHidden = signal(false);
   readonly headerHeight = signal(0);
   private readonly hdr = viewChild('hdr', { read: ElementRef });
   /** Only one of the two template branches renders a list at a time. */
@@ -272,7 +266,19 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly headerOverlayOpen = computed(
     () => this.sidebarOpen() || this.headerSearchOpen(),
   );
-  private lastListScrollTop = 0;
+  // Mobile hide-on-scroll app bar — the LIST's chrome. It is not a separate
+  // hide-on-scroll state: the list already keeps one (`collapsed`, same scroll
+  // logic, reset on every selection change), so the bar simply mirrors it. An
+  // open overlay (the drawer or the search bar) force-shows the bar, because the
+  // drawer hangs below it and the search bar holds the live term. Reading the
+  // list's own `collapsed` is what keeps the bar reacting to the list scroller
+  // alone — never an article's or the tag row's (#128) — and what lets it follow
+  // a view switch to the top of the new list without a stale-offset recompute
+  // (#630). A full-screen article is a layer above the bar with its own toolbar,
+  // so opening or closing one never touches it (#128).
+  readonly headerHidden = computed(() =>
+    this.headerOverlayOpen() ? false : (this.list()?.collapsed() ?? false),
+  );
   private resizeObs?: ResizeObserver;
   /** Mobile drawer state; the sidebar is a fixed overlay below 720px. */
   readonly sidebarOpen = signal(false);
@@ -543,29 +549,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
         if (this.selection().kind === 'for-you') this.entries.load({ view: 'for-you' });
       });
     });
-
-    // The wide layout never hides the bar. Crossing the breakpoint with a
-    // retracted one (a phone rotation) must not leave it stuck off-screen:
-    // only list scrolls bring it back, and the wide layouts scroll other panes.
-    effect(() => {
-      if (this.screen.isWide()) untracked(() => this.headerHidden.set(false));
-    });
-
-    // Force-show the header while either overlay that hangs off it — the
-    // mobile drawer or the search bar — is open, and resolve back to the
-    // scroll-implied resting state once BOTH are closed. One effect reacting
-    // to the single derived `headerOverlayOpen`, rather than one effect per
-    // overlay: two independent writers each resolving to their own "resting
-    // state" on close is exactly what let the drawer and the search bar
-    // fight over the header (one closing would retract it out from under the
-    // other, still open). setSidebarOpen() only ever toggles `sidebarOpen`
-    // now — it does not write `headerHidden` itself — so this is the one
-    // place that turns "an overlay opened or closed" into a header-visibility
-    // decision, for both overlays alike.
-    effect(() => {
-      const open = this.headerOverlayOpen();
-      untracked(() => this.headerHidden.set(open ? false : this.restingHeaderHidden()));
-    });
   }
 
   ngOnInit(): void {
@@ -649,40 +632,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     this.sidebarOpen.set(open);
   }
 
-  /** The bar state the list's own scroll offset implies, asked of the list
-   *  itself: the last scroller to fire may have been an article's, whose offset
-   *  says nothing about the list (#128). */
-  private restingHeaderHidden(): boolean {
-    return headerHiddenAtRest(this.list()?.currentScrollTop() ?? 0, this.screen.isWide());
-  }
-
   /** The top bar's empty middle was tapped: send the list back to the top. */
   onScrollListTop(): void {
     this.list()?.scrollToTop();
-  }
-
-  /**
-   * The entry list scrolled. This typed output is the bar's ONE scroll source:
-   * the shell used to capture-listen for scroll events across everything
-   * beneath it and guess which scroller mattered — the article overlay's (its
-   * own coordinate space, so deltas across the two were nonsense) and the tag
-   * row's (horizontal, so its snap events read as scrollTop 0, springing the
-   * retracted bar back via the near-top rule) both fed it (#128).
-   */
-  onListScrolled(top: number): void {
-    const previous = this.lastListScrollTop;
-    this.lastListScrollTop = top;
-    // While either overlay — the drawer or the search bar — is open the header
-    // must stay shown (the drawer hangs below it; the search bar holds the
-    // live term and the phone's keyboard). Inertial scrolling keeps firing
-    // scroll events after the open-swipe's touchend, so the gesture handler
-    // cannot be trusted as the last word — guard here. The offset still
-    // advances above, so the next real scroll sees no phantom jump once
-    // both overlays are closed.
-    if (this.headerOverlayOpen()) return;
-    this.headerHidden.set(
-      nextHeaderHidden(this.headerHidden(), previous, top, this.screen.isWide()),
-    );
   }
 
   // Toggle favourite/kept and keep the sidebar badge in sync optimistically,

@@ -139,9 +139,9 @@
       </section>
     } @else {
       <!-- The list stays mounted; a full-screen article overlays it, so swiping
-           the article away reveals the list (and its scroll) underneath. Only
-           this list drives the bar's hide-on-scroll — its scrolled output is
-           the bar's one and only scroll source (#128). -->
+           the article away reveals the list (and its scroll) underneath. The app
+           bar mirrors this list's own `collapsed` hide-on-scroll state, so the
+           list scroller is the bar's one and only scroll source (#128). -->
       <section class="list">
         <app-entry-list
           [layout]="layout.mode()"
@@ -168,7 +168,6 @@
           [headerActions]="headerActions"
           [leadingActions]="listEditAction"
           [topBlock]="feedIntro"
-          (scrolled)="onListScrolled($event)"
           (loadMore)="entries.loadMore()"
           (markAllRead)="onMarkAllRead()"
           (refresh)="onScopedRefresh()"

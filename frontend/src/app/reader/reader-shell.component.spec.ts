@@ -29,7 +29,6 @@ import { EntryDto, SavedSearchDto } from './models';
 import { SubscriptionsStore } from './subscriptions.store';
 import { Selection } from './query';
 import { ReaderHeaderComponent } from './header/reader-header.component';
-import { headerHiddenAtRest } from './header-scroll';
 import { RefreshService } from './refresh.service';
 import { LayoutService } from './layout.service';
 import { ReadingLayout } from './reading-layout.service';
@@ -257,7 +256,11 @@ describe('ReaderShellComponent', () => {
       expect(el.style.getPropertyValue('--app-bar-h')).toBe('90px');
       expect(el.style.getPropertyValue('--app-bar-shift')).toBe('0px');
 
-      f.componentInstance.headerHidden.set(true);
+      // Retract the bar the only way there is now: scroll the list down on the
+      // narrow layout, which collapses the list and the app bar mirrors it.
+      const rows = listScroller(f);
+      rows.scrollTo(100);
+      rows.scrollTo(500);
       f.detectChanges();
       // The reservation is unchanged — only the shift moves. That is the fix:
       // the panes' geometry cannot depend on whether the bar is showing.
@@ -272,7 +275,12 @@ describe('ReaderShellComponent', () => {
       // The drawer hangs below the bar, so opening it under a retracted header
       // would leave a strip of backdrop where the bar belongs.
       const f = boot();
-      f.componentInstance.headerHidden.set(true);
+      const rows = listScroller(f);
+      rows.scrollTo(100);
+      rows.scrollTo(500);
+      f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(true);
+
       f.componentInstance.setSidebarOpen(true);
       f.detectChanges();
       expect(f.componentInstance.headerHidden()).toBe(false);
@@ -292,8 +300,8 @@ describe('ReaderShellComponent', () => {
       f.detectChanges();
       expect(f.componentInstance.headerHidden()).toBe(false);
 
-      // A residual downward scroll (100 → 500) delivered to the shell's
-      // capture-phase scroll listener while the drawer is open.
+      // A residual downward scroll (100 → 500) on the list while the drawer is
+      // open. It collapses the list, but the open overlay force-shows the bar.
       const rows = listScroller(f);
       rows.scrollTo(100);
       rows.scrollTo(500);
@@ -430,22 +438,37 @@ describe('ReaderShellComponent', () => {
       expect(f.componentInstance.headerHidden()).toBe(false);
     });
 
-    it('matches headerHiddenAtRest for the offset once both overlays are closed', () => {
+    it('shows the bar again when a new list is chosen while scrolled down (#630)', () => {
+      // Regression: picking a selection from the drawer auto-closes it while the
+      // OUTGOING list is still rendered and still scrolled down (#254). The bar
+      // used to resolve its state from that stale offset and stay retracted over
+      // the new list, which opens at the top. It must follow the new list.
       const f = boot();
-      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
-
       const rows = listScroller(f);
       rows.scrollTo(100);
       rows.scrollTo(500);
       f.detectChanges();
+      expect(f.componentInstance.headerHidden()).toBe(true);
 
-      expect(f.componentInstance.headerHidden()).toBe(headerHiddenAtRest(500, false));
+      // Open the drawer (bar shows), then pick a saved search from it. The
+      // selection change auto-closes the drawer; the outgoing list is still at
+      // 500 at that instant.
+      f.componentInstance.setSidebarOpen(true);
+      f.detectChanges();
+      qp.next(convertToParamMap({ q: 'news' }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [entry], nextCursor: null });
+      f.detectChanges();
+
+      expect(f.componentInstance.headerHidden()).toBe(false);
     });
   });
 
   /** Drive the entry list's real scroll container: assign an offset and fire the
-   *  scroll event the shell's capture-phase listener hears. The drawer-close
-   *  restore reads this element's offset back, so tests must scroll the element
+   *  scroll event `onRowsScroll` handles. That updates the list's `collapsed`
+   *  signal, which the shell's app bar mirrors, so tests must scroll the element
    *  the component actually consults, not a stand-in. */
   function listScroller(f: ReturnType<typeof boot>) {
     const el = (f.nativeElement as HTMLElement).querySelector<HTMLElement>('.rows')!;
