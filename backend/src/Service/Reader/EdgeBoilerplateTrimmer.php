@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Service\Html\ClassTokenMatcher;
-use App\Service\Html\HtmlDocumentParser;
 use Dom\Element;
+use Dom\HTMLDocument;
 
 /**
  * Removes boilerplate blocks that survive readability at the head or tail of an
@@ -17,10 +17,12 @@ use Dom\Element;
  *
  * Runs on the readability output BEFORE EntrySanitizer, because the sanitizer
  * strips the class attributes and <form> elements this step reads as signals.
+ * Mutates the shared document in place (ReaderBodyCleaner parses and serialises
+ * once around it).
  *
  * Conservative: a block is removed only when two or more independent objective
- * signals agree (see shouldRemove); an ambiguous block, an undefined edge or an
- * unparsable body all leave the input unchanged.
+ * signals agree (see shouldRemove); an ambiguous block or an undefined edge
+ * leaves the document unchanged.
  */
 final readonly class EdgeBoilerplateTrimmer
 {
@@ -60,34 +62,27 @@ final readonly class EdgeBoilerplateTrimmer
         'more from', 'sign up', 'subscribe', 'leave a comment', 'comments',
     ];
 
-    public function trim(string $bodyHtml): string
+    public function trimIn(HTMLDocument $document): void
     {
-        $document = HtmlDocumentParser::parseOrNull($bodyHtml);
-        if ($document === null || $document->body === null) {
-            return $bodyHtml;
+        if ($document->body === null) {
+            return;
         }
 
         $blocks = $this->topLevelBlocks($this->contentRoot($document->body));
-        $removedAny = $this->removeBoilerplateBlocks($blocks, $this->edgeIndexes($blocks));
-
-        return $removedAny ? $document->saveHtml() : $bodyHtml;
+        $this->removeBoilerplateBlocks($blocks, $this->edgeIndexes($blocks));
     }
 
     /**
      * @param list<Element> $blocks
      * @param list<int> $edgeIndexes
      */
-    private function removeBoilerplateBlocks(array $blocks, array $edgeIndexes): bool
+    private function removeBoilerplateBlocks(array $blocks, array $edgeIndexes): void
     {
-        $removedAny = false;
         foreach ($edgeIndexes as $index) {
             if ($this->shouldRemove($blocks[$index])) {
                 $blocks[$index]->remove();
-                $removedAny = true;
             }
         }
-
-        return $removedAny;
     }
 
     /**

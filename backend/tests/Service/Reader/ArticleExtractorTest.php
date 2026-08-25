@@ -15,6 +15,7 @@ use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\LazyImageSources;
 use App\Service\Reader\LeadingTitleRemover;
+use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\ShareWidgetRemover;
 use App\Service\Sanitize\EntrySanitizer;
 use PHPUnit\Framework\TestCase;
@@ -52,9 +53,8 @@ final class ArticleExtractorTest extends TestCase
         return new ArticleExtractor(
             $fetcher,
             new FetchedPageNormalizer(new LazyImageSources(), new ShareWidgetRemover()),
-            new LeadingTitleRemover(),
+            new ReaderBodyCleaner(new LeadingTitleRemover(), new EdgeBoilerplateTrimmer()),
             new EntrySanitizer(),
-            new EdgeBoilerplateTrimmer(),
         );
     }
 
@@ -159,9 +159,8 @@ final class ArticleExtractorTest extends TestCase
         $extractor = new ArticleExtractor(
             $fetcher,
             new FetchedPageNormalizer(new LazyImageSources(), new ShareWidgetRemover()),
-            new LeadingTitleRemover(),
+            new ReaderBodyCleaner(new LeadingTitleRemover(), new EdgeBoilerplateTrimmer()),
             new EntrySanitizer(),
-            new EdgeBoilerplateTrimmer(),
         );
 
         $result = $extractor->extract('http://169.254.169.254/');
