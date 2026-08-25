@@ -11,6 +11,14 @@ class Host {}
 })
 class SizedHost {}
 
+@Component({
+  imports: [IconComponent],
+  template: `<app-icon name="circle" [fill]="filled" />`,
+})
+class FillHost {
+  filled = false;
+}
+
 describe('IconComponent', () => {
   it('renders the ligature name inside a material-symbols span', async () => {
     await TestBed.configureTestingModule({ imports: [Host] }).compileComponents();
@@ -42,5 +50,21 @@ describe('IconComponent', () => {
 
     const span: HTMLElement = fixture.nativeElement.querySelector('span.material-symbols-outlined');
     expect(span.style.fontSize).toBe('inherit');
+  });
+
+  /* The `fill` input drives the FILL axis through a host class, so the SCSS can
+     select it (`:host(.filled)`) without piercing encapsulation. Like the size,
+     the axis itself is verified in the browser; this pins the class toggle. */
+  it('toggles the `filled` host class from the fill input', async () => {
+    await TestBed.configureTestingModule({ imports: [FillHost] }).compileComponents();
+    const fixture = TestBed.createComponent(FillHost);
+    fixture.detectChanges();
+
+    const host: HTMLElement = fixture.nativeElement.querySelector('app-icon');
+    expect(host.classList.contains('filled')).toBe(false);
+
+    fixture.componentInstance.filled = true;
+    fixture.detectChanges();
+    expect(host.classList.contains('filled')).toBe(true);
   });
 });

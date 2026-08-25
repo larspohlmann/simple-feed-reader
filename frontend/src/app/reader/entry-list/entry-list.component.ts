@@ -18,6 +18,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { ListActionDirective } from '../../shared/list-action/list-action.directive';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { LoadingOverlayComponent } from '../../shared/loading-overlay/loading-overlay.component';
@@ -108,6 +109,7 @@ type ListBlock = MagazineBlock | RunHeaderBlock;
     RouterLink,
     TranslocoPipe,
     IconComponent,
+    ListActionDirective,
     SpinnerComponent,
     LoadingOverlayComponent,
     TagGlyphComponent,

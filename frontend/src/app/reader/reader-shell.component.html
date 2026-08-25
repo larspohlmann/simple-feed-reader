@@ -219,6 +219,7 @@
 <ng-template #listEditAction>
   @if (selectedSubscription(); as sub) {
     <button
+      appListAction
       class="list-edit"
       type="button"
       [attr.aria-label]="'reader.editFeed' | transloco"
@@ -226,9 +227,13 @@
       (click)="manage.editSubscription(sub)"
     >
       <app-icon name="edit" size="sm" />
+      <!-- The label the sibling actions (Mark all read, Refresh) carry, dropped
+           on narrow the same way they are so a long feed title keeps the row. -->
+      <span class="txt">{{ 'reader.editFeed' | transloco }}</span>
     </button>
   } @else if (selectedTag(); as tag) {
     <button
+      appListAction
       class="list-edit"
       type="button"
       [attr.aria-label]="'reader.editTag' | transloco"
@@ -236,6 +241,7 @@
       (click)="manage.editTag(tag)"
     >
       <app-icon name="edit" size="sm" />
+      <span class="txt">{{ 'reader.editTag' | transloco }}</span>
     </button>
   }
 </ng-template>
@@ -262,6 +268,7 @@
          object the list itself knows nothing about — the list only owns the
          slot they render into (#581). -->
     <button
+      appListAction
       class="save-search"
       type="button"
       [attr.aria-label]="savedSearchActionLabel() | transloco"

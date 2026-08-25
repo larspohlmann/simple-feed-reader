@@ -29,3 +29,12 @@ span {
   user-select: none;
   font-variation-settings: 'opsz' 20;
 }
+
+/* The FILL axis, opt-in via the `fill` input. Repeats `opsz` because
+   `font-variation-settings` is one declaration, not a set of independent
+   properties: naming only FILL here would drop the opsz above. */
+:host(.filled) span {
+  font-variation-settings:
+    'opsz' 20,
+    'FILL' 1;
+}

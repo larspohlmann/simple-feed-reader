@@ -11,6 +11,7 @@
 @use './styles/reset';
 @use './styles/base';
 @use './styles/controls';
+@use './styles/list-action';
 
 // Every dialog.open() passes `panelClass: 'app-dialog'`, which lands on the
 // CDK's .cdk-overlay-pane. The frame itself is app-overlay-panel's -- the pane

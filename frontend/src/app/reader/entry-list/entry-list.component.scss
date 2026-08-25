@@ -234,54 +234,19 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   flex: none;
 }
 
-/* Read/unread filter, a single switch (#602 follow-up): a filled circle when
-   the list is filtered to unread, a hollow one when it shows everything. The
-   circle alone carries the state — a filled dot means unread on the rows too,
-   so the same glyph reads the same way here. Muted while off, accent while on,
-   like the action buttons beside it. */
-.unread-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1);
-  color: var(--text-secondary);
-  text-decoration: none;
-  cursor: pointer;
-  font-size: var(--fs-sm);
-}
-
-.unread-switch.on {
-  color: var(--accent);
-}
-
-/* No global `button` reset exists in the app, so without this these two
-   rendered as default browser buttons (grey background, outset border) — the
-   `.save-search` button beside them (reader-shell.component.scss) already
-   carries this same reset; mirrored here rather than shared because that
-   button's node is projected through the shell's own template (#581). */
-.mark-all,
-.refresh {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: 0;
-  background: none;
-  border: none;
-  color: var(--accent);
-  cursor: pointer;
-  font-size: var(--fs-sm);
-}
+/* The read/unread switch, Mark all read and Refresh share their look with the
+   shell's Edit and Save-search through the `app-list-action` component (#617);
+   only what is specific to each control stays here. The switch (#602 follow-up)
+   is a filled circle when filtered to unread, a hollow one when showing all: one
+   `circle` glyph whose FILL axis carries the state through app-icon's `fill`
+   input (the outlined font is FILL 0 by default, which draws it hollow), so the
+   fill — never the colour, which stays accent both ways — marks on from off. */
 
 /* The mobile short label beside the icon (Part A, #581 follow-up). Hidden on
    the desktop button, which keeps its full `.txt`; the mobile media query
    below swaps the two. */
 .txt-short {
   display: none;
-}
-
-.refresh:disabled {
-  cursor: default;
-  color: var(--text-muted);
 }
 
 /* Spin the icon while a run is in flight (the button is also disabled). */

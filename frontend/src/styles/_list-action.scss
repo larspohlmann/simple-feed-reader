@@ -1,0 +1,31 @@
+// src/styles/_list-action.scss
+// The shared look of a list-header action (the `appListAction` directive, #617):
+// Edit, the unread switch, Mark all read, Refresh, Save search. Global rather
+// than component-scoped because several of these are projected through the list
+// header's action outlets, and ViewEncapsulation does not style projected
+// content — the same reason _controls.scss is global.
+// `padding: 0`, `background`/`border: none` and `font: inherit` double as the
+// button reset the app has no global one for: a <button> here would otherwise
+// render as a grey user-agent button in a user-agent font, out of step with the
+// <a> beside it. Icon size and the label-visibility breakpoints stay with each
+// consumer — they are per-control, not shared.
+.list-action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-decoration: none;
+}
+
+// Buttons only — an anchor never matches :disabled. Refresh wears this while a
+// run is in flight.
+.list-action:disabled {
+  cursor: default;
+  color: var(--text-muted);
+}
