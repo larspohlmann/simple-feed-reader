@@ -23,6 +23,15 @@ if CHANGELOG_FILE="${work}" "${script}" v1.0.0 2026-01-02 < "${fixtures}/notes.m
   fail 'a duplicate version insert should exit non-zero'
 fi
 
+# Case 4: a "### Highlights" block under Unreleased moves into the new version
+# section, above the generated notes, and leaves Unreleased with no highlights.
+hl=$(mktemp)
+cp "${fixtures}/changelog-highlights-before.md" "${hl}"
+CHANGELOG_FILE="${hl}" "${script}" v1.0.0 2026-01-02 < "${fixtures}/notes.md"
+diff -u "${fixtures}/changelog-highlights-expected.md" "${hl}" \
+  || { rm -f "${hl}"; fail 'highlights block was not promoted into the version section'; }
+rm -f "${hl}"
+
 # Case 3: a changelog with no Unreleased anchor is refused.
 no_anchor=$(mktemp)
 printf '# Changelog\n\nNothing here.\n' > "${no_anchor}"

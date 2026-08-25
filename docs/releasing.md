@@ -77,6 +77,31 @@ the changelog section back to `main`. Within a minute the one-line installer
 also resolves to the new tag, and every existing install moves to it with
 `./scripts/update.sh`.
 
+## Highlights
+
+The generated release notes are a flat "What's Changed" list of merged pull
+requests. To lead a version's changelog section with a short, hand-written
+summary of the headline features — as v0.6.0 does — write a `### Highlights`
+block under `## [Unreleased]` in [CHANGELOG.md](../CHANGELOG.md) before you tag,
+and merge it to `develop` like any other change:
+
+```markdown
+## [Unreleased]
+
+### Highlights
+
+**Saved searches.** Name a search and keep it as a saved view in the sidebar…
+
+**WordPress REST API support.** When a site exposes the WordPress REST API…
+```
+
+At tag time `scripts/changelog-insert-release.sh` lifts that block out of
+`[Unreleased]` and places it at the top of the new version section, above the
+generated notes. No block means the section is just the generated notes, exactly
+as before. This is why v0.6.0's highlights needed a separate manual docs PR
+([#491](https://github.com/larspohlmann/simple-feed-reader/pull/491)) and later
+releases do not ([#632](https://github.com/larspohlmann/simple-feed-reader/issues/632)).
+
 ## Choosing the version number
 
 The deploy tags so far are `v0.5.0-dev.N`, so the natural first public release is
