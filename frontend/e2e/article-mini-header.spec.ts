@@ -1,5 +1,6 @@
 // e2e/article-mini-header.spec.ts
 import { test, expect, Page } from '@playwright/test';
+import { readerFailedJson } from './support/reader';
 
 // Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
@@ -52,7 +53,7 @@ async function signInAsAdmin(page: Page): Promise<boolean> {
 /** One article, extraction failing so the stubbed body is what renders. */
 async function stubArticle(page: Page, title: string): Promise<void> {
   await page.route('**/api/entries/*/reader', async (route) =>
-    route.fulfill({ status: 200, json: { status: 'failed', reason: 'fetch', url: null } }),
+    route.fulfill({ status: 200, json: readerFailedJson() }),
   );
   // Echo the patch back, the way the API does: the store takes the response as
   // the new truth, so a stub with fixed flags would swallow every toggle.

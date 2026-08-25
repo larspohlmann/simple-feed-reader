@@ -1,5 +1,6 @@
 // e2e/article-tail-space.spec.ts
 import { test, expect, Page } from '@playwright/test';
+import { readerFailedJson } from './support/reader';
 
 // Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
@@ -45,7 +46,7 @@ async function signInAsAdmin(page: Page): Promise<boolean> {
 /** Serve one article, extraction failing so the stubbed body is what renders. */
 async function stubArticle(page: Page, body: string): Promise<void> {
   await page.route('**/api/entries/*/reader', async (route) =>
-    route.fulfill({ status: 200, json: { status: 'failed', reason: 'fetch', url: null } }),
+    route.fulfill({ status: 200, json: readerFailedJson() }),
   );
   await page.route('**/api/entries*', async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();

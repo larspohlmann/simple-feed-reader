@@ -1,5 +1,6 @@
 // e2e/header-scroll-mobile.spec.ts
 import { test, expect, Page } from '@playwright/test';
+import { readerFailedJson } from './support/reader';
 
 // Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
@@ -345,10 +346,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
     // renders, and the test fails for a reason that has nothing to do with the
     // back-to-top button — plus every run would make a real outbound HTTP call.
     await page.route('**/api/entries/*/reader', async (route) => {
-      await route.fulfill({
-        status: 200,
-        json: { status: 'failed', url: null, reason: 'unextractable' },
-      });
+      await route.fulfill({ status: 200, json: readerFailedJson('unextractable') });
     });
     // A stub with real height drives the article's own scroller past the
     // back-to-top threshold. Overriding after stubEntries() means this route

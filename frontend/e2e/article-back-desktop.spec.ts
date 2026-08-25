@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { readerFailedJson } from './support/reader';
 
 // Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
@@ -56,10 +57,7 @@ async function stubEntries(page: Page): Promise<void> {
   // own contentHtml) instead of depending on a real outbound fetch of the
   // stubbed URL — the same reason header-scroll-mobile.spec.ts stubs it.
   await page.route('**/api/entries/*/reader', async (route) => {
-    await route.fulfill({
-      status: 200,
-      json: { status: 'failed', url: null, reason: 'unextractable' },
-    });
+    await route.fulfill({ status: 200, json: readerFailedJson('unextractable') });
   });
   await page.route('**/api/entries/*/state', async (route) => {
     await route.fulfill({
