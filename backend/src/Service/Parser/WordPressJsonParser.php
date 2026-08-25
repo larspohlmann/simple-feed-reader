@@ -57,6 +57,27 @@ final readonly class WordPressJsonParser
         );
     }
 
+    /**
+     * The featured image. Jetpack's top-level convenience field is preferred so
+     * no `_embed` is needed; a Jetpack-less site carries its picture inline in
+     * the body instead, so the content lead image is the fallback — the same
+     * precedence FeedParser applies to RSS/Atom items via ItemImageExtractor.
+     * Absent on both → null (the reader still extracts a hero on open).
+     * Dimensions are unknown from either source.
+     *
+     * @param array<string, mixed> $post
+     */
+    private function image(array $post): ?DeclaredImage
+    {
+        $jetpackUrl = $this->stringOrNull($post['jetpack_featured_media_url'] ?? null);
+        if ($jetpackUrl !== null) {
+            return new DeclaredImage($jetpackUrl);
+        }
+
+        return ItemImageExtractor::fromHtml($this->rendered($post, 'content'))
+            ?? ItemImageExtractor::fromHtml($this->rendered($post, 'excerpt'));
+    }
+
     /** @param array<string, mixed> $post */
     private function guid(array $post): string
     {
@@ -98,21 +119,6 @@ final readonly class WordPressJsonParser
         } catch (\Exception) {
             return null;
         }
-    }
-
-    /**
-     * The featured image, taken from Jetpack's top-level convenience field so no
-     * `_embed` is needed. Absent on non-Jetpack sites → null (the reader then
-     * extracts the lead image from content.rendered). Dimensions are unknown
-     * from this field.
-     *
-     * @param array<string, mixed> $post
-     */
-    private function image(array $post): ?DeclaredImage
-    {
-        $url = $this->stringOrNull($post['jetpack_featured_media_url'] ?? null);
-
-        return null === $url ? null : new DeclaredImage($url);
     }
 
     private function stringOrNull(mixed $value): ?string
