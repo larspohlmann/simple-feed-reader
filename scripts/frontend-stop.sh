@@ -8,6 +8,19 @@ _dir=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 # shellcheck source=scripts/lib.sh
 source "${_dir}/lib.sh"
 
+usage() {
+  cat <<'EOF'
+Usage: frontend-stop.sh
+
+Stop the development frontend. The rest of the stack and your data keep running.
+Runs from any directory.
+
+Options:
+  -h, --help              Show this help and exit.
+EOF
+}
+handle_help_request "$@"
+
 ensure_docker
 
 say 'Stopping the development frontend ...'

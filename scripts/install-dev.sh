@@ -30,6 +30,35 @@ fi
 say() { printf '%s\n' "${_b_blue}==>${_b_reset} $*"; }
 die() { printf '%s\n' "${_b_red}error:${_b_reset} $*" >&2; exit 1; }
 
+# Self-contained, like say() and die() above: lib.sh (and its handle_help_request)
+# only exists after the clone these arguments decide, so --help is answered here.
+usage() {
+  cat <<'EOF'
+Usage: install-dev.sh [--ref <branch-or-tag>] [target-directory]
+       curl -fsSL <url> | bash -s -- [--ref <branch-or-tag>] [target-directory]
+
+Install the full DEVELOPMENT stack: MySQL, the PHP API with xdebug, nginx with
+a locally trusted certificate, Mailpit, and the Angular dev server with live
+reload. It clones the repository, checks out the latest release, and brings the
+stack up. Nothing here deletes data.
+
+Arguments:
+  target-directory        Where to clone. Default: ./simple-feed-reader.
+
+Options:
+  --ref <branch-or-tag>   Install this ref instead of the latest release.
+  -h, --help              Show this help and exit.
+
+Environment:
+  SFR_REF                 Same as --ref.
+  SFR_REPO_URL            Clone from somewhere else (a local path is how a change
+                          to this script is tried before it is pushed).
+  NO_COLOR                Disable coloured output.
+
+For the PRODUCTION stack (real mail transport, no dev tooling) use install.sh.
+EOF
+}
+
 # --- arguments --------------------------------------------------------------
 # lib.sh holds the canonical parser (parse_ref_args), but it lives inside the
 # clone these very arguments decide, so the loop is repeated here -- the same
@@ -38,6 +67,7 @@ REF="${SFR_REF:-}"
 TARGET_DIR=''
 while [ "$#" -gt 0 ]; do
   case "$1" in
+    -h | --help) usage ; exit 0 ;;
     --ref)
       [ "$#" -ge 2 ] || die 'Option --ref needs a branch or a tag name.'
       REF=$2

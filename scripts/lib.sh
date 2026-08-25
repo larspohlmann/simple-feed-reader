@@ -30,6 +30,22 @@ ok()   { printf '%s\n' "${_c_green}OK${_c_reset}  $*"; }
 warn() { printf '%s\n' "${_c_yellow}warning:${_c_reset} $*" >&2; record_note "$*"; }
 die()  { printf '%s\n' "${_c_red}error:${_c_reset} $*" >&2; exit 1; }
 
+# --- --help -----------------------------------------------------------------
+# Print the calling script's usage and exit when the arguments ask for help.
+# Every operator script that sources lib.sh defines its own usage() -- the help
+# text is per script -- and calls this straight after the source, before
+# ensure_docker and any question. So `--help` works with no daemon running and
+# no .env.prod filled in. The two bootstrap installers cannot use this (lib.sh
+# lives inside the clone their arguments decide), so they carry their own copy;
+# keep the three in step.
+handle_help_request() {
+  for argument in "$@"; do
+    case "${argument}" in
+      -h | --help) usage; exit 0 ;;
+    esac
+  done
+}
+
 # --- notes for the closing block --------------------------------------------
 # Every warning is also recorded, so the block printed at the very end can
 # repeat it. Minutes of container output separate a warning from the end of an

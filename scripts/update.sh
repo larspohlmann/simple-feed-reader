@@ -16,6 +16,27 @@ _dir=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 # shellcheck source=scripts/lib.sh
 source "${_dir}/lib.sh"
 
+usage() {
+  cat <<'EOF'
+Usage: update.sh [--ref <branch-or-tag>]
+
+Update an existing simple-feed-reader install and its stacks. It checks out the
+newest release tag (or the ref given with --ref), then updates whichever stack
+is installed -- production, development, or both. It never deletes data and
+stops if the working tree has uncommitted changes.
+
+Options:
+  --ref <branch-or-tag>   Check out this ref instead of the newest release tag.
+                          A pre-release tag (for example v0.6.2-dev.23) is not a
+                          release tag, so pass it here to update to it.
+  -h, --help              Show this help and exit.
+
+Environment:
+  SFR_REF                 Same as --ref.
+EOF
+}
+handle_help_request "$@"
+
 notes_start
 parse_ref_args "$@"
 
