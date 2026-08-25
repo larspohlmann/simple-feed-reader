@@ -25,6 +25,22 @@ _dir=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 # shellcheck source=scripts/lib.sh
 source "${_dir}/lib.sh"
 
+usage() {
+  cat <<'EOF'
+Usage: prod-configure.sh
+
+Reconfigure an existing production install: re-ask how users reach the instance,
+whether to run the search engine, and how mail is sent -- each defaulting to the
+current .env.prod value -- then apply by re-running prod-start.sh. Interactive:
+it needs a terminal. Secrets, passwords, and the database engine are never
+changed.
+
+Options:
+  -h, --help              Show this help and exit.
+EOF
+}
+handle_help_request "$@"
+
 notes_start
 
 ensure_docker

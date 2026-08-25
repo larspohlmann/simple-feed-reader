@@ -8,6 +8,8 @@ set -euo pipefail
 #     the published container port and the port in every account-mail link;
 #   - --ref parsing, on entry points that normally run through `curl | bash`,
 #     where a silent argument break is invisible until an install goes wrong;
+#   - --help, which every operator script prints and exits 0 for, before it
+#     touches docker or the network;
 #   - the warnings collected during a run and repeated in the closing block,
 #     which is the whole reason the block is printed last.
 
@@ -112,7 +114,21 @@ for installer in install.sh install-dev.sh; do
   assert_contains 'Unknown option' "${output}" "${installer} rejects an unknown option"
   output=$(bash "${_dir}/../${installer}" --ref 2>&1) && fail "${installer} accepted --ref without a value"
   assert_contains 'needs a branch or a tag name' "${output}" "${installer} rejects a valueless --ref"
+  # --help exits 0 and prints the usage, before any prerequisite check or clone,
+  # so it needs neither docker nor a network. Its own copy of the help flag,
+  # because lib.sh's handle_help_request is not on disk until the clone.
+  output=$(bash "${_dir}/../${installer}" --help 2>&1) || fail "${installer} --help must exit 0"
+  assert_contains 'Usage:' "${output}" "${installer} --help prints the usage"
 done
+
+# --- --help on the lib.sh scripts -------------------------------------------
+# The scripts that source lib.sh answer --help through handle_help_request,
+# before ensure_docker, so it works with no daemon running. update.sh is the
+# representative: it also runs through the shared parser, and --help must win
+# over it (parse_ref_args would otherwise reject the flag as unknown).
+output=$(bash "${_dir}/../update.sh" --help 2>&1) || fail 'update.sh --help must exit 0'
+assert_contains 'Usage: update.sh' "${output}" 'update.sh --help prints the usage'
+assert_contains '--ref' "${output}" 'update.sh --help lists its option'
 
 # --- warnings are collected for the closing block ---------------------------
 notes_start

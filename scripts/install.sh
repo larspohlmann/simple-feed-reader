@@ -55,6 +55,35 @@ fi
 say() { printf '%s\n' "${_b_blue}==>${_b_reset} $*"; }
 die() { printf '%s\n' "${_b_red}error:${_b_reset} $*" >&2; exit 1; }
 
+# Self-contained, like say() and die() above: lib.sh (and its handle_help_request)
+# only exists after the clone these arguments decide, so --help is answered here.
+usage() {
+  cat <<'EOF'
+Usage: install.sh [--ref <branch-or-tag>] [target-directory]
+       curl -fsSL <url> | bash -s -- [--ref <branch-or-tag>] [target-directory]
+
+Install the PRODUCTION stack: clone the repository, check out the latest
+release, write .env.prod with fresh secrets, ask the few values only you know
+(package, public origin, mail), and start the stack.
+
+Arguments:
+  target-directory        Where to clone. Default: ./simple-feed-reader.
+
+Options:
+  --ref <branch-or-tag>   Install this ref instead of the latest release --
+                          how a production install is tried before it is
+                          released.
+  -h, --help              Show this help and exit.
+
+Environment:
+  SFR_REF                 Same as --ref.
+  SFR_REPO_URL            Clone from somewhere else (for example a local path).
+  NO_COLOR                Disable coloured output.
+
+For the DEVELOPMENT stack (live reload, xdebug, Mailpit) use install-dev.sh.
+EOF
+}
+
 # --- arguments --------------------------------------------------------------
 # lib.sh holds the canonical parser (parse_ref_args), but it lives inside the
 # clone these very arguments decide, so the loop is repeated here -- the same
@@ -63,6 +92,7 @@ REF="${SFR_REF:-}"
 TARGET_DIR=''
 while [ "$#" -gt 0 ]; do
   case "$1" in
+    -h | --help) usage ; exit 0 ;;
     --ref)
       [ "$#" -ge 2 ] || die 'Option --ref needs a branch or a tag name.'
       REF=$2

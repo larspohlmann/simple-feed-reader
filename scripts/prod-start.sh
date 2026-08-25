@@ -15,6 +15,23 @@ _dir=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 # shellcheck source=scripts/lib.sh
 source "${_dir}/lib.sh"
 
+usage() {
+  cat <<'EOF'
+Usage: prod-start.sh
+
+Build and start the PRODUCTION stack (docker-compose.prod.yml): MySQL, the
+production PHP image, and nginx serving the built app. Reads configuration from
+.env.prod. Idempotent and safe to re-run: it rebuilds what changed, re-applies
+migrations, and never deletes data. Re-running it is the update step after a new
+release, and the way to switch to TLS after dropping certificates into
+docker/certs-prod/.
+
+Options:
+  -h, --help              Show this help and exit.
+EOF
+}
+handle_help_request "$@"
+
 # Collect warnings for the closing block. A no-op when a caller (the installer,
 # prod-configure.sh) already opened the collection -- the file is inherited.
 notes_start

@@ -8,6 +8,19 @@ _dir=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 # shellcheck source=scripts/lib.sh
 source "${_dir}/lib.sh"
 
+usage() {
+  cat <<'EOF'
+Usage: prod-stop.sh
+
+Stop the production stack. Containers are removed; the data volumes (MySQL, logs
+and cache pools, JWT keys) are kept. Start again with prod-start.sh.
+
+Options:
+  -h, --help              Show this help and exit.
+EOF
+}
+handle_help_request "$@"
+
 ensure_docker
 
 if [ ! -f "${ENV_PROD_FILE}" ]; then

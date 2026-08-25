@@ -147,6 +147,8 @@ installs something other than the latest release — how a change is tried on a
 test instance before it ships:
 `… | bash -s -- --ref feature/430-installer-output my-folder`.
 
+Every script in the table below, and both installers, print `--help`.
+
 Once the stack is running, create the first administrator account — see
 [docs/first-run-setup.md](docs/first-run-setup.md).
 
