@@ -1,6 +1,7 @@
 .idea/
 .DS_Store
 .claude/
+.codex/
 .superpowers/
 .playwright-mcp/
 .phptramp.cache/
