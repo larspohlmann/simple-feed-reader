@@ -92,7 +92,7 @@ final class AccountBackupExporterTest extends DbTestCase
             ['header', 'account', 'tag', 'savedSearch', 'feed', 'subscription', 'entry', 'entryState', 'footer'],
             array_column($lines, 'kind'),
         );
-        self::assertSame(1, $lines[0]['schemaVersion']);
+        self::assertSame(2, $lines[0]['schemaVersion']);
         self::assertSame('export-order@example.com', $lines[0]['sourceEmail']);
         self::assertSame('https://source.example', $lines[0]['sourceUrl']);
         self::assertSame('de', $lines[1]['locale']);

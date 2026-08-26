@@ -8,7 +8,7 @@ use App\Entity\Entry;
 
 /**
  * One row of the entry list: the shared Entry plus the caller-specific view of
- * it. `isRead` already has the subscription watermark folded in, so the client
+ * it. `isHidden` already has the subscription watermark folded in, so the client
  * never re-derives it. `subscriptionId`/`subscriptionTitle` identify the source
  * for a cross-feed listing.
  */
@@ -18,7 +18,7 @@ final readonly class EntryListRow
         public Entry $entry,
         public int $subscriptionId,
         public string $subscriptionTitle,
-        public bool $isRead,
+        public bool $isHidden,
         public bool $isFavorite,
         public bool $isKept,
         public bool $isViewed,
@@ -32,9 +32,9 @@ final readonly class EntryListRow
         public ?\DateTimeImmutable $viewedAt,
         /**
          * The subscription's mark-all-read watermark, already selected by the
-         * row projection. `isRead` above has it folded in; it is carried
+         * row projection. `isHidden` above has it folded in; it is carried
          * separately only so a row materialised from this projection can record
-         * *when* the sweep made the entry read.
+         * *when* the sweep hid the entry.
          */
         public ?\DateTimeImmutable $markedReadUntil,
     ) {

@@ -140,7 +140,7 @@ restore again with the same file.
 | `feed` | Each feed you subscribe to: `url`, `siteUrl`, `title`, `description`, `faviconUrl`, `imageUrl` and `sourceFormat`. |
 | `subscription` | Each subscription: `customTitle`, `position`, `markedReadUntil`, `createdAt` (the date the subscription started), and the tags on the subscription with their order. |
 | `entry` | Each article, with the address of the feed it came from: `guid`, `url`, `title`, `author`, `summary`, `contentHtml`, the image (`imageUrl`, `imageWidth`, `imageHeight`), `publishedAt`, `createdAt` (the date this instance first saw the article) and `effectiveDate`. |
-| `entryState` | Each article mark: `isRead`, `isViewed`, `isFavorite`, `isKept`, `readAt` and `viewedAt`. Each mark names its article by feed and by article identifier. |
+| `entryState` | Each article mark: `isHidden`, `isViewed`, `isFavorite`, `isKept`, `hiddenAt` and `viewedAt`. Each mark names its article by feed and by article identifier. |
 | `footer` | The number of lines of each kind. The restore uses these numbers to show you what the file holds. |
 
 The "For you" settings in the `account` line are complete: the guidance prompt,

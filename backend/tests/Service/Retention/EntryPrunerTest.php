@@ -287,7 +287,7 @@ final class EntryPrunerTest extends DbTestCase
         $keptState = new EntryState($user, $kept);
         $keptState->setIsKept(true);
         $readState = new EntryState($user, $oldButRead);
-        $readState->setIsRead(true);
+        $readState->setIsHidden(true);
         $this->em->persist($favoriteState);
         $this->em->persist($keptState);
         $this->em->persist($readState);
@@ -320,7 +320,7 @@ final class EntryPrunerTest extends DbTestCase
         $this->em->flush();
 
         $aliceRead = new EntryState($alice, $shared);
-        $aliceRead->setIsRead(true);
+        $aliceRead->setIsHidden(true);
         $bobKept = new EntryState($bob, $shared);
         $bobKept->setIsKept(true);
         $this->em->persist($aliceRead);
@@ -341,7 +341,7 @@ final class EntryPrunerTest extends DbTestCase
         $feed = $this->feedWithEntries(20, $this->daysAgo(5));
         $doomed = $this->seedEntry($feed, 'doomed', $this->daysAgo(200));
         $state = new EntryState($user, $doomed);
-        $state->setIsRead(true);
+        $state->setIsHidden(true);
         $this->em->persist($state);
         $this->em->flush();
 
@@ -426,7 +426,7 @@ final class EntryPrunerTest extends DbTestCase
         $oldest = $this->seedEntry($feed, 'oldest', $this->daysAgo(2));
 
         $readState = new EntryState($user, $oldest);
-        $readState->setIsRead(true);
+        $readState->setIsHidden(true);
         $this->em->persist($readState);
         $this->em->flush();
 

@@ -53,7 +53,7 @@ final class MarkReadServiceTest extends DbTestCase
         [$user, $sub, $old] = $this->seed();
         // A pre-existing explicit "unread" below the mark point.
         $state = new EntryState($user, $old);
-        $state->setIsRead(false);
+        $state->setIsHidden(false);
         $this->em->persist($state);
         $this->em->flush();
 
@@ -70,8 +70,8 @@ final class MarkReadServiceTest extends DbTestCase
         $flipped = $this->em->getRepository(EntryState::class)
             ->findOneForUserEntry((int) $user->getId(), (int) $old->getId());
         self::assertNotNull($flipped);
-        self::assertTrue($flipped->isRead());
-        self::assertNotNull($flipped->getReadAt());
+        self::assertTrue($flipped->isHidden());
+        self::assertNotNull($flipped->getHiddenAt());
     }
 
     public function testWatermarkOnlyAdvances(): void
@@ -119,11 +119,11 @@ final class MarkReadServiceTest extends DbTestCase
 
     public function testFlippingAFavoritedRowKeepsItFavoriteAndKept(): void
     {
-        // Requirement: mark-read flips isRead on an existing row but must never
+        // Requirement: mark-read flips isHidden on an existing row but must never
         // disturb the favorite/kept flags that protect an entry from pruning.
         [$user, , $old] = $this->seed();
         $state = new EntryState($user, $old);
-        $state->setIsRead(false);
+        $state->setIsHidden(false);
         $state->setIsFavorite(true);
         $state->setIsKept(true);
         $this->em->persist($state);
@@ -135,9 +135,32 @@ final class MarkReadServiceTest extends DbTestCase
         $reloaded = $this->em->getRepository(EntryState::class)
             ->findOneForUserEntry((int) $user->getId(), (int) $old->getId());
         self::assertNotNull($reloaded);
-        self::assertTrue($reloaded->isRead());
+        self::assertTrue($reloaded->isHidden());
         self::assertTrue($reloaded->isFavorite(), 'favorite must survive mark-read');
         self::assertTrue($reloaded->isKept(), 'kept must survive mark-read');
+    }
+
+    public function testMarkAllReadDoesNotChangeViewed(): void
+    {
+        [$user, , $old] = $this->seed();
+        $viewedAt = new \DateTimeImmutable('2026-07-05T12:00:00Z');
+        $state = new EntryState($user, $old);
+        $state->markViewed($viewedAt);
+        $this->em->persist($state);
+        $this->em->flush();
+
+        $this->service()->mark($user, 'all', null, new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+        $this->em->clear();
+
+        $reloaded = $this->em->getRepository(EntryState::class)
+            ->findOneForUserEntry((int) $user->getId(), (int) $old->getId());
+        self::assertNotNull($reloaded);
+        self::assertTrue($reloaded->isHidden());
+        self::assertTrue($reloaded->isViewed());
+        self::assertSame(
+            $viewedAt->format(\DateTimeInterface::ATOM),
+            $reloaded->getViewedAt()?->format(\DateTimeInterface::ATOM),
+        );
     }
 
     public function testTagScopeRejectsAnotherUsersTag(): void

@@ -15,8 +15,8 @@ final class UnreadDql
 {
     public static function predicate(): string
     {
-        return 'es.isRead = :readFalse '
-            . 'OR (es.isRead IS NULL AND (s.markedReadUntil IS NULL '
+        return 'es.isHidden = :readFalse '
+            . 'OR (es.isHidden IS NULL AND (s.markedReadUntil IS NULL '
             . 'OR e.effectiveDate > s.markedReadUntil))';
     }
 }

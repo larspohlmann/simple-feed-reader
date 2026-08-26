@@ -57,7 +57,7 @@ final class EntryUnreadMatchIdsTest extends DbTestCase
         $this->em->persist($entry);
         if ($read) {
             $state = new EntryState($this->user, $entry);
-            $state->setIsRead(true);
+            $state->setIsHidden(true);
             $this->em->persist($state);
         }
         $this->em->flush();

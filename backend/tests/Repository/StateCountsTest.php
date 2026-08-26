@@ -61,7 +61,7 @@ final class StateCountsTest extends DbTestCase
         // Read-only state (a mark-all-read sweep, never opened) contributes to
         // no count — least of all "viewed".
         $read = new EntryState($user, $this->entry($feed, 'read'));
-        $read->markRead($when);
+        $read->hide($when);
         $this->em->persist($read);
 
         $this->em->flush();

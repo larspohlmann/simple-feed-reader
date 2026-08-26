@@ -15,13 +15,13 @@ use Doctrine\ORM\EntityManagerInterface;
  *
  * The exceptions are the bulk writers — RestoreEntryLoader and
  * SearchMarkReadService — which build rows that are read from birth, so the
- * watermark hazard below cannot apply to them. Any row whose isRead is NOT
+ * watermark hazard below cannot apply to them. Any row whose isHidden is NOT
  * decided up front belongs here.
  *
  * Read state is effective, not stored: an entry with no row is read when the
  * subscription's mark-all-read watermark covers it (see
  * EntryRepository::rowIsRead() and EntryStateRepository::unreadCountsForUser()).
- * Materialising such a row with the field default isRead=false would therefore
+ * Materialising such a row with the field default isHidden=false would therefore
  * flip a read entry back to unread and raise the unread badge. Every lazily
  * created row is seeded from the watermark here so that no caller — favorite,
  * keep or viewed — can reintroduce that hazard.
@@ -58,15 +58,15 @@ final readonly class EntryStateResolver
 
     private function seedReadState(EntryState $state, EntryListRow $row): void
     {
-        if (!$row->isRead) {
+        if (!$row->isHidden) {
             return;
         }
 
-        $state->setIsRead(true);
+        $state->setIsHidden(true);
         // The watermark, not the current time: the entry became read when the
         // sweep ran, and the clock would claim a read that never happened at
         // this instant. It is also the same value the sweep itself compared
         // against, so the row now states exactly what the watermark implied.
-        $state->setReadAt($row->markedReadUntil);
+        $state->setHiddenAt($row->markedReadUntil);
     }
 }

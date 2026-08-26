@@ -27,7 +27,7 @@ class EntryState
     private Entry $entry;
 
     #[ORM\Column]
-    private bool $isRead = false;
+    private bool $isHidden = false;
 
     #[ORM\Column]
     private bool $isFavorite = false;
@@ -36,7 +36,7 @@ class EntryState
     private bool $isKept = false;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
-    private ?\DateTimeImmutable $readAt = null;
+    private ?\DateTimeImmutable $hiddenAt = null;
 
     #[ORM\Column]
     private bool $isViewed = false;
@@ -60,14 +60,14 @@ class EntryState
         return $this->entry;
     }
 
-    public function isRead(): bool
+    public function isHidden(): bool
     {
-        return $this->isRead;
+        return $this->isHidden;
     }
 
-    public function setIsRead(bool $isRead): void
+    public function setIsHidden(bool $isHidden): void
     {
-        $this->isRead = $isRead;
+        $this->isHidden = $isHidden;
     }
 
     public function isFavorite(): bool
@@ -90,14 +90,14 @@ class EntryState
         $this->isKept = $isKept;
     }
 
-    public function getReadAt(): ?\DateTimeImmutable
+    public function getHiddenAt(): ?\DateTimeImmutable
     {
-        return $this->readAt;
+        return $this->hiddenAt;
     }
 
-    public function setReadAt(?\DateTimeImmutable $readAt): void
+    public function setHiddenAt(?\DateTimeImmutable $hiddenAt): void
     {
-        $this->readAt = $readAt;
+        $this->hiddenAt = $hiddenAt;
     }
 
     public function isViewed(): bool
@@ -114,8 +114,8 @@ class EntryState
      * "viewed" records that the user actively opened and read the entry (#307),
      * so a repeat open keeps the first open's timestamp. Only opening or the tick
      * sets it — never a mark-all-read sweep. It sets the viewed flag alone; the
-     * subset invariant (viewed ⇒ read) is enforced centrally on flush by
-     * ViewedImpliesReadListener (#482), so no caller has to remember the coupling.
+     * subset invariant (viewed ⇒ hidden) is enforced centrally on flush by
+     * ViewedImpliesHiddenListener (#482), so no caller has to remember the coupling.
      */
     public function markViewed(\DateTimeImmutable $when): void
     {
@@ -138,10 +138,10 @@ class EntryState
         $this->viewedAt = null;
     }
 
-    public function markRead(\DateTimeImmutable $when): void
+    public function hide(\DateTimeImmutable $when): void
     {
-        $this->isRead = true;
-        $this->readAt = $when;
+        $this->isHidden = true;
+        $this->hiddenAt = $when;
     }
 
     /**
@@ -153,8 +153,8 @@ class EntryState
      */
     public function markUnread(): void
     {
-        $this->isRead = false;
-        $this->readAt = null;
+        $this->isHidden = false;
+        $this->hiddenAt = null;
         $this->isViewed = false;
         $this->viewedAt = null;
     }

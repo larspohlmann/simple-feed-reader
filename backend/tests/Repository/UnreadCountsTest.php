@@ -40,7 +40,7 @@ final class UnreadCountsTest extends DbTestCase
             $this->em->persist($e);
             if ($g === 'c') {
                 $st = new EntryState($user, $e);
-                $st->setIsRead(true);
+                $st->setIsHidden(true);
                 $this->em->persist($st);
             }
         }

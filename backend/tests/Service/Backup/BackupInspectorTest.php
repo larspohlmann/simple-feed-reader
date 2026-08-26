@@ -26,7 +26,7 @@ final class BackupInspectorTest extends TestCase
     }
 
     /** @return array<string, mixed> */
-    private static function header(int $schemaVersion = 1): array
+    private static function header(int $schemaVersion = 2): array
     {
         return [
             'kind' => 'header',
@@ -86,8 +86,8 @@ final class BackupInspectorTest extends TestCase
     /** @return array<string, mixed> */
     private static function entryState(string $feedUrl): array
     {
-        return ['kind' => 'entryState', 'feedUrl' => $feedUrl, 'guidHash' => 'h', 'isRead' => true,
-            'isFavorite' => false, 'isKept' => false, 'readAt' => null, 'isViewed' => false,
+        return ['kind' => 'entryState', 'feedUrl' => $feedUrl, 'guidHash' => 'h', 'isHidden' => true,
+            'isFavorite' => false, 'isKept' => false, 'hiddenAt' => null, 'isViewed' => false,
             'viewedAt' => null];
     }
 

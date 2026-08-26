@@ -229,7 +229,7 @@ final class EntryPageTest extends TestCase
             entry: $entry,
             subscriptionId: 1,
             subscriptionTitle: 'Example',
-            isRead: false,
+            isHidden: false,
             isFavorite: false,
             isKept: false,
             isViewed: $viewedAt !== null,

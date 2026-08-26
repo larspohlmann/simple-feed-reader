@@ -69,7 +69,7 @@ final class EntryStateRepositoryTest extends DbTestCase
         $withoutState = $this->entry('without-state');
 
         $state = new EntryState($this->user, $withState);
-        $state->setIsRead(true);
+        $state->setIsHidden(true);
         $this->em->persist($state);
         $this->em->flush();
 

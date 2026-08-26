@@ -258,7 +258,7 @@ final class ReaderJourneyE2eTest extends E2eTestCase
             $first = $entries[0];
             self::assertIsArray($first);
             self::assertArrayHasKey('id', $first);
-            self::assertArrayHasKey('isRead', $first);
+            self::assertArrayHasKey('isHidden', $first);
             self::assertArrayHasKey('source', $first);
 
             $entryId = $first['id'];
@@ -270,11 +270,11 @@ final class ReaderJourneyE2eTest extends E2eTestCase
             // the flag explicitly (rather than assuming a fresh ingest starts
             // unread) keeps this robust to re-runs: EntryState rows outlive the
             // subscription, so a prior run may have left this entry read.
-            $unreadResp = $this->patchState($token, $entryId, ['isRead' => false]);
+            $unreadResp = $this->patchState($token, $entryId, ['isHidden' => false]);
             self::assertSame(200, $unreadResp->getStatusCode());
             $unreadState = $unreadResp->toArray()['state'] ?? null;
             self::assertIsArray($unreadState);
-            self::assertFalse($unreadState['isRead'] ?? null, 'PATCH isRead=false clears the read flag');
+            self::assertFalse($unreadState['isHidden'] ?? null, 'PATCH isHidden=false clears the read flag');
             self::assertContains(
                 $entryId,
                 $this->entryIds($token, $unreadPath),
@@ -282,11 +282,11 @@ final class ReaderJourneyE2eTest extends E2eTestCase
             );
 
             // (b) Mark it READ → it drops out of the unread view.
-            $readResp = $this->patchState($token, $entryId, ['isRead' => true]);
+            $readResp = $this->patchState($token, $entryId, ['isHidden' => true]);
             self::assertSame(200, $readResp->getStatusCode());
             $readState = $readResp->toArray()['state'] ?? null;
             self::assertIsArray($readState);
-            self::assertTrue($readState['isRead'] ?? null, 'PATCH isRead=true sets the read flag');
+            self::assertTrue($readState['isHidden'] ?? null, 'PATCH isHidden=true sets the read flag');
             self::assertNotContains(
                 $entryId,
                 $this->entryIds($token, $unreadPath),

@@ -42,7 +42,7 @@ class EntryListRepository extends ServiceEntityRepository
      * effectiveDate for every view but "viewed", which is a reading history and
      * orders by EntryState.viewedAt instead (see EntryListSort). LEFT JOINs the
      * caller's EntryState and folds Subscription.markedReadUntil into an
-     * effective isRead. `view` narrows to unread/favorites/kept/viewed.
+     * effective isHidden. `view` narrows to unread/favorites/kept/viewed.
      *
      * @return list<EntryListRow>
      */
@@ -268,7 +268,7 @@ class EntryListRepository extends ServiceEntityRepository
             ->addSelect('s.customTitle AS customTitle')
             ->addSelect('f.title AS feedTitle')
             ->addSelect('f.url AS feedUrl')
-            ->addSelect('es.isRead AS esRead')
+            ->addSelect('es.isHidden AS esHidden')
             ->addSelect('es.isFavorite AS esFavorite')
             ->addSelect('es.isKept AS esKept')
             ->addSelect('es.isViewed AS esViewed')
@@ -419,7 +419,7 @@ class EntryListRepository extends ServiceEntityRepository
             entry: $entry,
             subscriptionId: self::toInt($row['subscriptionId']),
             subscriptionTitle: $this->rowTitle($row),
-            isRead: $this->rowIsRead($row, $entry),
+            isHidden: $this->rowIsHidden($row, $entry),
             isFavorite: (bool) ($row['esFavorite'] ?? false),
             isKept: (bool) ($row['esKept'] ?? false),
             isViewed: (bool) ($row['esViewed'] ?? false),
@@ -440,13 +440,13 @@ class EntryListRepository extends ServiceEntityRepository
     /**
      * @param array<array-key, mixed> $row
      */
-    private function rowIsRead(array $row, Entry $entry): bool
+    private function rowIsHidden(array $row, Entry $entry): bool
     {
-        $esRead = $row['esRead'];
+        $esHidden = $row['esHidden'];
         $markedReadUntil = $row['markedReadUntil'];
 
-        return EffectiveReadState::isRead(
-            $esRead === null ? null : (bool) $esRead,
+        return EffectiveReadState::isHidden(
+            $esHidden === null ? null : (bool) $esHidden,
             $markedReadUntil instanceof \DateTimeInterface ? $markedReadUntil : null,
             $entry->getEffectiveDate(),
         );

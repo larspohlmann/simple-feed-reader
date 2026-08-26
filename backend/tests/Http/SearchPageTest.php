@@ -114,7 +114,7 @@ final class SearchPageTest extends TestCase
             entry: $entry,
             subscriptionId: 1,
             subscriptionTitle: 'Example',
-            isRead: false,
+            isHidden: false,
             isFavorite: false,
             isKept: false,
             isViewed: false,

@@ -107,7 +107,7 @@ final class RecommendationFeedJsonTest extends TestCase
             entry: $entry,
             subscriptionId: 1,
             subscriptionTitle: 'Seeded',
-            isRead: false,
+            isHidden: false,
             isFavorite: false,
             isKept: false,
             isViewed: false,

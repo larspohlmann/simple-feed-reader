@@ -19,7 +19,7 @@ use Psr\Clock\ClockInterface;
  * Marks read every unread entry matching a search term for one user. A search
  * spans every feed and is a content filter, so — unlike feed/tag mark-read —
  * there is no watermark to bump: each matching entry needs an EntryState row
- * with isRead=true (created when absent, flipped when an explicit unread row
+ * with isHidden=true (created when absent, flipped when an explicit unread row
  * exists). Batched to bound memory on broad terms.
  */
 final readonly class SearchMarkReadService
@@ -59,8 +59,8 @@ final readonly class SearchMarkReadService
     {
         $this->em->createQuery(
             'UPDATE ' . EntryState::class . ' es
-             SET es.isRead = :true, es.readAt = :now
-             WHERE es.user = :user AND es.isRead = :false AND IDENTITY(es.entry) IN (:ids)',
+             SET es.isHidden = :true, es.hiddenAt = :now
+             WHERE es.user = :user AND es.isHidden = :false AND IDENTITY(es.entry) IN (:ids)',
         )
             ->setParameter('true', true, Types::BOOLEAN)
             ->setParameter('false', false, Types::BOOLEAN)
@@ -84,7 +84,7 @@ final readonly class SearchMarkReadService
             $entryRef = $this->em->getReference(Entry::class, $entryId)
                 ?? throw new \LogicException('An entry this search just matched has no reference.');
             $state = new EntryState($userRef, $entryRef);
-            $state->markRead($now);
+            $state->hide($now);
             $this->em->persist($state);
         }
     }

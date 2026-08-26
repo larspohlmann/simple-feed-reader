@@ -29,7 +29,7 @@ final class BackupReaderTest extends TestCase
     }
 
     /** @return array<string, mixed> */
-    private static function header(int $schemaVersion = 1): array
+    private static function header(int $schemaVersion = 2): array
     {
         return [
             'kind' => 'header',
@@ -71,7 +71,7 @@ final class BackupReaderTest extends TestCase
 
         self::assertCount(2, $objects);
         self::assertInstanceOf(BackupHeader::class, $objects[0]);
-        self::assertSame(1, $objects[0]->schemaVersion);
+        self::assertSame(2, $objects[0]->schemaVersion);
         self::assertSame('source@example.com', $objects[0]->sourceEmail);
         self::assertInstanceOf(AccountLine::class, $objects[1]);
         self::assertSame('de', $objects[1]->locale);
@@ -96,8 +96,8 @@ final class BackupReaderTest extends TestCase
                 'imageHeight' => null, 'publishedAt' => null, 'createdAt' => '2026-08-01T00:00:00+00:00',
                 'effectiveDate' => '2026-08-01T00:00:00+00:00'],
             ['kind' => 'entryState', 'feedUrl' => 'https://f.example/feed.xml',
-                'guidHash' => hash('sha256', 'g1'), 'isRead' => true, 'isFavorite' => false,
-                'isKept' => false, 'readAt' => '2026-08-02T00:00:00+00:00', 'isViewed' => false,
+                'guidHash' => hash('sha256', 'g1'), 'isHidden' => true, 'isFavorite' => false,
+                'isKept' => false, 'hiddenAt' => '2026-08-02T00:00:00+00:00', 'isViewed' => false,
                 'viewedAt' => null],
             self::footer(['tag' => 1, 'feed' => 1, 'subscription' => 1, 'entry' => 1, 'entryState' => 1]),
         ]);
@@ -118,7 +118,7 @@ final class BackupReaderTest extends TestCase
 
     public function testRefusesANewerSchemaVersion(): void
     {
-        $gzip = self::gzipOf([self::header(schemaVersion: 2), self::account(), self::footer()]);
+        $gzip = self::gzipOf([self::header(schemaVersion: 3), self::account(), self::footer()]);
 
         $this->expectException(InvalidBackupException::class);
         $this->expectExceptionMessageMatches('/schema version/i');

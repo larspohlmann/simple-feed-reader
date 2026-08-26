@@ -97,8 +97,8 @@ final class SubscriptionTest extends DbTestCase
         $this->em->flush();
 
         $state = new EntryState($user, $entry);
-        $state->setIsRead(true);
-        $state->setReadAt(new \DateTimeImmutable());
+        $state->setIsHidden(true);
+        $state->setHiddenAt(new \DateTimeImmutable());
         $this->em->persist($state);
         $this->em->flush();
         $this->em->clear();
@@ -106,7 +106,7 @@ final class SubscriptionTest extends DbTestCase
         $reloaded = $this->em->find(EntryState::class, ['user' => $user->getId(), 'entry' => $entry->getId()]);
 
         self::assertNotNull($reloaded);
-        self::assertTrue($reloaded->isRead());
+        self::assertTrue($reloaded->isHidden());
         self::assertFalse($reloaded->isFavorite());
         self::assertFalse($reloaded->isKept());
     }
@@ -155,6 +155,6 @@ final class SubscriptionTest extends DbTestCase
         self::assertNotNull($reloaded);
         self::assertTrue($reloaded->isFavorite());
         self::assertTrue($reloaded->isKept());
-        self::assertFalse($reloaded->isRead());
+        self::assertFalse($reloaded->isHidden());
     }
 }

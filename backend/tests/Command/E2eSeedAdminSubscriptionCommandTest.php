@@ -245,7 +245,7 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
 
         $entry = $this->fixtureEntry($this->fixtureFeed());
         $state = new EntryState($admin, $entry);
-        $state->setIsRead(true);
+        $state->setIsHidden(true);
         $this->em->persist($state);
         $this->em->flush();
 
@@ -256,7 +256,7 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
         $entryStates = self::getContainer()->get(EntryStateRepository::class);
         $reloaded = $entryStates->findOneForUserEntry((int) $admin->getId(), (int) $entry->getId());
         self::assertInstanceOf(EntryState::class, $reloaded);
-        self::assertFalse($reloaded->isRead());
+        self::assertFalse($reloaded->isHidden());
     }
 
     public function testFailsWhenTheAdminDoesNotExistYet(): void

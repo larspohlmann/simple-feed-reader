@@ -119,6 +119,6 @@ final class EntrySearchMarkReadTest extends ApiTestCase
         self::assertIsArray($page['entries']);
         self::assertCount(1, $page['entries']);
         self::assertIsArray($page['entries'][0]);
-        self::assertTrue($page['entries'][0]['isRead']);
+        self::assertTrue($page['entries'][0]['isHidden']);
     }
 }
