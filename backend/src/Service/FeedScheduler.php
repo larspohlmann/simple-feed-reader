@@ -16,7 +16,7 @@ use Symfony\Component\Clock\ClockInterface;
 final class FeedScheduler
 {
     private const int FLOOR_MINUTES = 5;
-    private const int CEILING_MINUTES = 360;       // 6 h
+    private const int CEILING_MINUTES = 120;       // 2 h
     private const int FAILURE_CAP_MINUTES = 10080; // 7 days
     private const int FAILURES_UNTIL_GONE = 30;
     private const int MAX_BACKOFF_EXPONENT = 9;
@@ -36,11 +36,18 @@ final class FeedScheduler
      */
     public function recordSuccess(Feed $feed, int $newEntryCount): void
     {
-        // The floor applies to both branches: without it a stored interval of
-        // <= 0 (corruption, manual edit) would survive the *1.5 growth and set
-        // nextFetchAt <= now, refetching the feed on every single run.
+        // A source that just delivered is polled at the floor at once, not
+        // eased down by halving: after a quiet spell the interval has grown
+        // toward the ceiling, and a slow walk back lets a burst arrive in
+        // chunks that block the top of All items (#643). Resetting on the first
+        // sign of life picks the rest of the burst up in small increments that
+        // interleave with the other feeds.
+        //
+        // The grow branch keeps the floor guard: without it a stored interval
+        // of <= 0 (corruption, manual edit) would survive the *1.5 growth and
+        // set nextFetchAt <= now, refetching the feed on every single run.
         $interval = $newEntryCount > 0
-            ? max(self::FLOOR_MINUTES, intdiv($feed->getFetchIntervalMinutes(), 2))
+            ? self::FLOOR_MINUTES
             : max(
                 self::FLOOR_MINUTES,
                 min(self::CEILING_MINUTES, (int) round($feed->getFetchIntervalMinutes() * 1.5)),

@@ -22,19 +22,21 @@ final class FeedSchedulerTest extends TestCase
         $this->scheduler = new FeedScheduler($this->clock);
     }
 
-    public function testSuccessWithNewEntriesHalvesIntervalDownToFloor(): void
+    public function testSuccessWithNewEntriesResetsIntervalToFloor(): void
     {
         $feed = new Feed('https://example.com/feed');
         $feed->setFetchIntervalMinutes(120);
 
         $this->scheduler->recordSuccess($feed, 3);
 
-        self::assertSame(60, $feed->getFetchIntervalMinutes());
+        // A source that shows life is polled at the floor at once, so the rest
+        // of a burst interleaves instead of blocking the top of All items (#643).
+        self::assertSame(5, $feed->getFetchIntervalMinutes());
         self::assertSame(0, $feed->getConsecutiveFailures());
         self::assertSame(FeedStatus::Active, $feed->getStatus());
         self::assertSame('2026-07-21 12:00:00', $feed->getLastFetchedAt()?->format('Y-m-d H:i:s'));
         self::assertSame('2026-07-21 12:00:00', $feed->getLastSuccessfulFetchAt()?->format('Y-m-d H:i:s'));
-        self::assertSame('2026-07-21 13:00:00', $feed->getNextFetchAt()?->format('Y-m-d H:i:s'));
+        self::assertSame('2026-07-21 12:05:00', $feed->getNextFetchAt()?->format('Y-m-d H:i:s'));
 
         $feed->setFetchIntervalMinutes(8);
         $this->scheduler->recordSuccess($feed, 1);
@@ -99,9 +101,11 @@ final class FeedSchedulerTest extends TestCase
         $this->scheduler->recordSuccess($feed, 0);
         self::assertSame(90, $feed->getFetchIntervalMinutes());
 
+        // The grow-on-empty branch is capped at 2 h, so the first fetch after a
+        // quiet spell cannot accumulate more than that (#643).
         $feed->setFetchIntervalMinutes(300);
         $this->scheduler->recordSuccess($feed, 0);
-        self::assertSame(360, $feed->getFetchIntervalMinutes());
+        self::assertSame(120, $feed->getFetchIntervalMinutes());
     }
 
     public function testCorruptedIntervalCannotScheduleInThePast(): void
