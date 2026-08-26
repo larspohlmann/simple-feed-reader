@@ -118,10 +118,10 @@ describe('ReaderApi', () => {
     req.flush({
       state: {
         entryId: 3,
-        isRead: false,
+        isHidden: false,
         isFavorite: true,
         isKept: false,
-        readAt: null,
+        hiddenAt: null,
         isViewed: false,
         viewedAt: null,
       },

@@ -21,7 +21,7 @@ const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   subscriptionId: 1,
   source: 's',
   faviconUrl: null,
-  isRead: false,
+  isHidden: false,
   isFavorite: false,
   isKept: false,
   isViewed: false,
@@ -202,16 +202,16 @@ describe('EntriesStore', () => {
     store.load({ view: 'viewed' });
     ctrl
       .expectOne((r) => r.url === 'https://api.test/api/entries')
-      .flush({ entries: [{ ...entry(1), isRead: true, isViewed: true }], nextCursor: null });
+      .flush({ entries: [{ ...entry(1), isHidden: true, isViewed: true }], nextCursor: null });
 
-    store.setState(1, { isRead: false });
+    store.setState(1, { isHidden: false });
 
     // Local: marking unread also clears "opened", so the row leaves the view.
-    expect(store.entries()[0].isRead).toBe(false);
+    expect(store.entries()[0].isHidden).toBe(false);
     expect(store.entries()[0].isViewed).toBe(false);
-    // On the wire: only isRead — the API rejects isViewed=false (it is one-way in).
+    // On the wire: only isHidden — the API rejects isViewed=false (it is one-way in).
     const req = ctrl.expectOne('https://api.test/api/entries/1/state');
-    expect(req.request.body).toEqual({ isRead: false });
+    expect(req.request.body).toEqual({ isHidden: false });
     req.flush({ state: {} });
   });
 
@@ -378,7 +378,7 @@ describe('EntriesStore', () => {
       .flush({ entries: [entry(1)], nextCursor: null });
 
     let called = 0;
-    store.setState(1, { isRead: true }, () => called++);
+    store.setState(1, { isHidden: true }, () => called++);
     expect(called).toBe(0);
     ctrl
       .expectOne('https://api.test/api/entries/1/state')

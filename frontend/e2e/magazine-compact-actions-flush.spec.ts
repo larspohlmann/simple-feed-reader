@@ -27,7 +27,7 @@ function entry(id: number, source: string, subscriptionId: number) {
     subscriptionId,
     source,
     faviconUrl: null,
-    isRead: false,
+    isHidden: false,
     isFavorite: false,
     isKept: false,
   };
@@ -172,7 +172,7 @@ function splitEntry(id: number) {
     subscriptionId: 100 + id,
     source: `Split source ${id}`,
     faviconUrl: null,
-    isRead: false,
+    isHidden: false,
     isFavorite: false,
     isKept: false,
   };

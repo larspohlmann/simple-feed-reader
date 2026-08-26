@@ -72,7 +72,7 @@ function entry(id: number, withImage: boolean) {
     subscriptionId: (id % 3) + 1,
     source: 'Fixture source',
     faviconUrl: null,
-    isRead: false,
+    isHidden: false,
     isFavorite: false,
     isKept: false,
   };

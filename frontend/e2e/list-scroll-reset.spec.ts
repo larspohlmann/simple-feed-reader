@@ -47,7 +47,7 @@ function entry(id: number, title: string) {
     subscriptionId: 7002,
     source: 'Scroll fixture feed',
     faviconUrl: null,
-    isRead: false,
+    isHidden: false,
     isFavorite: false,
     isKept: false,
   };

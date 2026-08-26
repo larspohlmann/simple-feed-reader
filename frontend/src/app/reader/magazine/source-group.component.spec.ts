@@ -27,7 +27,7 @@ const e = (id: number): EntryDto => ({
   subscriptionId: 7,
   source: 'heise',
   faviconUrl: null,
-  isRead: false,
+  isHidden: false,
   isFavorite: false,
   isKept: false,
   isViewed: false,

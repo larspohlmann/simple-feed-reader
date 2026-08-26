@@ -2,7 +2,7 @@
   class="kicker-card"
   role="button"
   tabindex="0"
-  [class.read]="entry().isRead"
+  [class.read]="entry().isHidden"
   (click)="open.emit(entry())"
   (keydown.enter)="open.emit(entry())"
   (keydown.space)="$event.preventDefault(); open.emit(entry())"

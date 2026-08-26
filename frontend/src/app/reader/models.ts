@@ -103,7 +103,7 @@ export interface EntryDto {
   source: string;
   /** Absolute https favicon URL for the entry's feed, or null if unresolved. */
   faviconUrl: string | null;
-  isRead: boolean;
+  isHidden: boolean;
   isFavorite: boolean;
   isKept: boolean;
   /** One-way: the user actively opened this entry at least once (#307). */
@@ -137,10 +137,10 @@ export interface EntriesPage {
 
 export interface EntryStateDto {
   entryId: number;
-  isRead: boolean;
+  isHidden: boolean;
   isFavorite: boolean;
   isKept: boolean;
-  readAt: string | null;
+  hiddenAt: string | null;
   isViewed: boolean;
   viewedAt: string | null;
 }
@@ -222,7 +222,7 @@ export interface EntryQuery {
 export type MarkReadScope = 'all' | 'feed' | 'tag';
 
 export interface EntryStatePatch {
-  isRead?: boolean;
+  isHidden?: boolean;
   isFavorite?: boolean;
   isKept?: boolean;
   isViewed?: boolean;

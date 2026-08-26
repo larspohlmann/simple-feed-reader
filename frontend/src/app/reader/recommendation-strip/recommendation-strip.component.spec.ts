@@ -19,7 +19,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   subscriptionId: 5,
   source: 'heise',
   faviconUrl: null,
-  isRead: false,
+  isHidden: false,
   isFavorite: false,
   isKept: false,
   isViewed: false,

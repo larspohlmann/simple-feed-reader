@@ -33,7 +33,7 @@ const entry = (contentHtml: string) => ({
   createdAt: '2026-07-25T10:00:00Z',
   subscriptionId: 5,
   source: 'stub',
-  isRead: false,
+  isHidden: false,
   isFavorite: false,
   isKept: false,
 });

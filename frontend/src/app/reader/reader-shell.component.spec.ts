@@ -87,7 +87,7 @@ describe('ReaderShellComponent', () => {
     subscriptionId: 5,
     source: 'heise',
     faviconUrl: null,
-    isRead: false,
+    isHidden: false,
     isFavorite: false,
     isKept: false,
     isViewed: false,
@@ -515,10 +515,10 @@ describe('ReaderShellComponent', () => {
       ctrl.expectOne('https://api.test/api/entries/1/state').flush({
         state: {
           entryId: 1,
-          isRead: true,
+          isHidden: true,
           isFavorite: false,
           isKept: false,
-          readAt: 'x',
+          hiddenAt: 'x',
           isViewed: true,
           viewedAt: 'x',
         },
@@ -611,10 +611,10 @@ describe('ReaderShellComponent', () => {
     req.flush({
       state: {
         entryId: 1,
-        isRead: true,
+        isHidden: true,
         isFavorite: false,
         isKept: false,
-        readAt: 'x',
+        hiddenAt: 'x',
         isViewed: true,
         viewedAt: 'x',
       },
@@ -642,10 +642,10 @@ describe('ReaderShellComponent', () => {
     ctrl.expectOne('https://api.test/api/entries/1/state').flush({
       state: {
         entryId: 1,
-        isRead: true,
+        isHidden: true,
         isFavorite: false,
         isKept: false,
-        readAt: 'x',
+        hiddenAt: 'x',
         isViewed: true,
         viewedAt: 'x',
       },
@@ -691,7 +691,7 @@ describe('ReaderShellComponent', () => {
   });
 
   it('marks an already-read entry viewed on open', () => {
-    const f = boot({ isRead: true });
+    const f = boot({ isHidden: true });
     qp.next(convertToParamMap({ entry: '1' }));
     f.detectChanges();
     const req = ctrl.expectOne('https://api.test/api/entries/1/state');
@@ -699,10 +699,10 @@ describe('ReaderShellComponent', () => {
     req.flush({
       state: {
         entryId: 1,
-        isRead: true,
+        isHidden: true,
         isFavorite: false,
         isKept: false,
-        readAt: 'x',
+        hiddenAt: 'x',
         isViewed: true,
         viewedAt: 'x',
       },
@@ -710,7 +710,7 @@ describe('ReaderShellComponent', () => {
   });
 
   it('does not re-mark an already-viewed entry on open', () => {
-    const f = boot({ isRead: true, isViewed: true });
+    const f = boot({ isHidden: true, isViewed: true });
     qp.next(convertToParamMap({ entry: '1' }));
     f.detectChanges();
     ctrl.expectNone((r) => r.url.endsWith('/entries/1/state'));
@@ -727,10 +727,10 @@ describe('ReaderShellComponent', () => {
     ctrl.expectOne('https://api.test/api/entries/1/state').flush({
       state: {
         entryId: 1,
-        isRead: true,
+        isHidden: true,
         isFavorite: false,
         isKept: false,
-        readAt: 'x',
+        hiddenAt: 'x',
         isViewed: true,
         viewedAt: 'x',
       },
@@ -746,10 +746,10 @@ describe('ReaderShellComponent', () => {
       p.flush({
         state: {
           entryId: 1,
-          isRead: true,
+          isHidden: true,
           isFavorite: false,
           isKept: false,
-          readAt: 'x',
+          hiddenAt: 'x',
           isViewed: false,
           viewedAt: null,
         },
@@ -761,7 +761,7 @@ describe('ReaderShellComponent', () => {
   });
 
   it('marks the entry viewed when the original-article link is followed', () => {
-    const f = boot({ isRead: true }); // open fires only the viewed patch…
+    const f = boot({ isHidden: true }); // open fires only the viewed patch…
     qp.next(convertToParamMap({ entry: '1' }));
     f.detectChanges();
     ctrl
@@ -769,7 +769,7 @@ describe('ReaderShellComponent', () => {
       .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' }); // …which fails and rolls back, so the link click is the real retry path.
     f.detectChanges();
 
-    f.componentInstance.onOpenOriginal({ ...entry, isRead: true, isViewed: false });
+    f.componentInstance.onOpenOriginal({ ...entry, isHidden: true, isViewed: false });
     const req = ctrl.expectOne('https://api.test/api/entries/1/state');
     expect(req.request.body).toEqual({ isViewed: true });
   });
@@ -792,7 +792,7 @@ describe('ReaderShellComponent', () => {
     it('marks viewed via the narrow full-screen overlay reader-view', () => {
       // Default test layout is narrow (isWide() is false), so the shell renders
       // the @else branch's overlay <app-reader-view> (reader-shell.component.html:157).
-      const f = boot({ isRead: true, url: 'https://example.com/story' });
+      const f = boot({ isHidden: true, url: 'https://example.com/story' });
       qp.next(convertToParamMap({ entry: '1' }));
       f.detectChanges();
       // The on-open effect's own PATCH fails and rolls isViewed back to false,
@@ -811,7 +811,7 @@ describe('ReaderShellComponent', () => {
     it('marks viewed via the wide split-pane reader-view', () => {
       // Force the wide split-pane layout so the shell renders the @if branch's
       // <app-reader-view> (reader-shell.component.html:112) instead of the overlay.
-      const f = boot({ isRead: true, url: 'https://example.com/story' });
+      const f = boot({ isHidden: true, url: 'https://example.com/story' });
       (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => true;
       f.componentInstance.layout.set('pane');
       qp.next(convertToParamMap({ entry: '1' }));
@@ -839,7 +839,7 @@ describe('ReaderShellComponent', () => {
       f.detectChanges();
       ctrl
         .expectOne((r) => r.url === 'https://api.test/api/entries/search')
-        .flush({ entries: [{ ...entry, isRead: true, isViewed: true }], nextCursor: null });
+        .flush({ entries: [{ ...entry, isHidden: true, isViewed: true }], nextCursor: null });
       f.detectChanges();
 
       expect(f.componentInstance.paneMode()).toBe(false);
@@ -879,9 +879,9 @@ describe('ReaderShellComponent', () => {
     // Not in the list → the shell fetches it by the id parsed from the slug.
     const req = ctrl.expectOne('https://api.test/api/entries/514');
     expect(req.request.method).toBe('GET');
-    // isRead:true, isViewed:true so the on-open effect fires no state PATCH.
+    // isHidden:true, isViewed:true so the on-open effect fires no state PATCH.
     req.flush({
-      entry: { ...entry, id: 514, title: 'Deep linked story', isRead: true, isViewed: true },
+      entry: { ...entry, id: 514, title: 'Deep linked story', isHidden: true, isViewed: true },
     });
     f.detectChanges();
 
@@ -900,9 +900,9 @@ describe('ReaderShellComponent', () => {
     const reqB = ctrl.expectOne('https://api.test/api/entries/600');
 
     // B resolves first (now open), then A resolves LATE — A must not clobber B.
-    reqB.flush({ entry: { ...entry, id: 600, title: 'Entry B', isRead: true } });
+    reqB.flush({ entry: { ...entry, id: 600, title: 'Entry B', isHidden: true } });
     f.detectChanges();
-    reqA.flush({ entry: { ...entry, id: 514, title: 'Entry A', isRead: true } });
+    reqA.flush({ entry: { ...entry, id: 514, title: 'Entry A', isHidden: true } });
     f.detectChanges();
 
     // The list stays mounted beneath the article overlay, so scope to the reader.
@@ -2194,7 +2194,7 @@ describe('ReaderShellComponent', () => {
     });
 
     it('collapses a Recently-read row on un-tick and drops the viewed badge', () => {
-      const f = bootInto('viewed', { isRead: true, isViewed: true });
+      const f = bootInto('viewed', { isHidden: true, isViewed: true });
       const subs = TestBed.inject(SubscriptionsStore);
       expect(subs.viewedCount()).toBe(3);
 
@@ -2206,7 +2206,7 @@ describe('ReaderShellComponent', () => {
     });
 
     it('un-collapses the row and restores the badge when the PATCH fails', () => {
-      const f = bootInto('viewed', { isRead: true, isViewed: true });
+      const f = bootInto('viewed', { isHidden: true, isViewed: true });
       const subs = TestBed.inject(SubscriptionsStore);
 
       f.componentInstance.onToggleViewed(f.componentInstance.entries.entries()[0]);
