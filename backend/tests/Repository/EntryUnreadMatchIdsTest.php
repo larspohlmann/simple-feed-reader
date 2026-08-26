@@ -14,7 +14,7 @@ use App\Repository\EntrySearchQuery;
 use App\Service\Search\SearchTerms;
 use App\Tests\DbTestCase;
 
-final class EntryUnreadMatchCountTest extends DbTestCase
+final class EntryUnreadMatchIdsTest extends DbTestCase
 {
     private User $user;
     private Feed $feed;
@@ -65,30 +65,37 @@ final class EntryUnreadMatchCountTest extends DbTestCase
         return $entry;
     }
 
-    private function countMatches(string $input): int
+    /** @return list<int> */
+    private function matchIds(string $input): array
     {
-        return $this->repo()->countUnreadMatchesForUser(new EntrySearchQuery(
+        return $this->repo()->unreadMatchIdsForUser(new EntrySearchQuery(
             userId: (int) $this->user->getId(),
             terms: SearchTerms::fromInput($input),
         ));
     }
 
-    public function testCountsOnlyUnreadMatches(): void
+    public function testReturnsOnlyUnreadMatchingIds(): void
     {
-        $this->entry('a', 'Climate policy update', false); // unread match
-        $this->entry('b', 'Climate summit recap', false);  // unread match
-        $this->entry('c', 'Climate deal signed', true);     // read match -> excluded
-        $this->entry('d', 'Unrelated cooking post', false); // no match
+        $policy = $this->entry('a', 'Climate policy update', false); // unread match
+        $recap = $this->entry('b', 'Climate summit recap', false);   // unread match
+        $this->entry('c', 'Climate deal signed', true);              // read match -> excluded
+        $this->entry('d', 'Unrelated cooking post', false);          // no match
 
-        self::assertSame(2, $this->countMatches('climate'));
+        $ids = $this->matchIds('climate');
+
+        sort($ids);
+        $expected = [(int) $policy->getId(), (int) $recap->getId()];
+        sort($expected);
+        self::assertSame($expected, $ids);
     }
 
-    public function testWholeWordCountIsStricterThanSubstring(): void
+    public function testWholeWordMatchIsStricterThanSubstring(): void
     {
-        $this->entry('e', 'A punk revival', false);  // whole word "punk"
-        $this->entry('f', 'Steampunk gadgets', false); // substring only
+        $revival = $this->entry('e', 'A punk revival', false); // whole word "punk"
+        $this->entry('f', 'Steampunk gadgets', false);         // substring only
 
-        self::assertSame(2, $this->countMatches('punk'));   // substring: both
-        self::assertSame(1, $this->countMatches('punk '));  // trailing space = whole word: only "A punk revival"
+        self::assertCount(2, $this->matchIds('punk'));   // substring: both
+        // trailing space = whole word: only "A punk revival"
+        self::assertSame([(int) $revival->getId()], $this->matchIds('punk '));
     }
 }

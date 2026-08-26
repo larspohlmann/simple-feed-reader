@@ -9,7 +9,7 @@ use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Http\SavedSearchJson;
 use App\Repository\SavedSearchRepository;
-use App\Service\Search\SavedSearchMatchCounter;
+use App\Service\Search\SavedSearchMatchIds;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,7 +23,7 @@ final readonly class SavedSearchController
 {
     public function __construct(
         private SavedSearchRepository $savedSearches,
-        private SavedSearchMatchCounter $counter,
+        private SavedSearchMatchIds $matches,
         private EntityManagerInterface $em,
     ) {
     }
@@ -33,11 +33,11 @@ final readonly class SavedSearchController
     {
         $userId = (int) $user->getId();
         $rows = $this->savedSearches->findForUser($userId);
-        $counts = $this->counter->countsFor($rows, $userId);
+        $idsBySearch = $this->matches->forAll($rows, $userId);
 
         return new JsonResponse([
             'savedSearches' => array_map(
-                static fn (SavedSearch $s) => SavedSearchJson::one($s, $counts[(int) $s->getId()] ?? 0),
+                static fn (SavedSearch $s) => SavedSearchJson::one($s, $idsBySearch[(int) $s->getId()] ?? []),
                 $rows,
             ),
         ]);
@@ -61,7 +61,7 @@ final readonly class SavedSearchController
         }
 
         return new JsonResponse(
-            ['savedSearch' => SavedSearchJson::one($savedSearch, $this->counter->countFor($savedSearch, $userId))],
+            ['savedSearch' => SavedSearchJson::one($savedSearch, $this->matches->forOne($savedSearch, $userId))],
             $status,
         );
     }

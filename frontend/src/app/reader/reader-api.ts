@@ -22,7 +22,7 @@ import {
   RestoreResult,
   RunHistoryMonthPage,
   RunHistoryOverview,
-  SavedSearchDto,
+  SavedSearchWire,
   SubscribeResult,
   SubscriptionDto,
   SubscriptionsResponse,
@@ -145,15 +145,18 @@ export class ReaderApi {
     return this.http.patch<void>(`${this.base}/api/tags/${tagId}/feed-order`, { subscriptionIds });
   }
 
-  savedSearches(): Observable<{ savedSearches: SavedSearchDto[] }> {
-    return this.http.get<{ savedSearches: SavedSearchDto[] }>(`${this.base}/api/saved-searches`);
+  savedSearches(): Observable<{ savedSearches: SavedSearchWire[] }> {
+    return this.http.get<{ savedSearches: SavedSearchWire[] }>(`${this.base}/api/saved-searches`);
   }
 
   createSavedSearch(body: {
     term: string;
     wholeWord: boolean;
-  }): Observable<{ savedSearch: SavedSearchDto }> {
-    return this.http.post<{ savedSearch: SavedSearchDto }>(`${this.base}/api/saved-searches`, body);
+  }): Observable<{ savedSearch: SavedSearchWire }> {
+    return this.http.post<{ savedSearch: SavedSearchWire }>(
+      `${this.base}/api/saved-searches`,
+      body,
+    );
   }
 
   deleteSavedSearch(id: number): Observable<void> {

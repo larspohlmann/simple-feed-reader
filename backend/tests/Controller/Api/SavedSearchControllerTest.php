@@ -33,7 +33,7 @@ final class SavedSearchControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(401);
     }
 
-    public function testCreateListWithUnreadCountAndDelete(): void
+    public function testCreateListWithUnreadMatchIdsAndDelete(): void
     {
         $client = self::createClient();
         $user = $this->factory()->create('saver@example.com');
@@ -83,7 +83,7 @@ final class SavedSearchControllerTest extends ApiTestCase
         self::assertIsArray($again['savedSearch']);
         self::assertSame($savedId, $again['savedSearch']['id']);
 
-        // List carries the live unread-match count (whole-word "punk" matches the one unread entry).
+        // List carries the ids of the unread matches (whole-word "punk" matches the one unread entry).
         $client->request('GET', '/api/saved-searches', server: $headers);
         self::assertResponseIsSuccessful();
         $list = $this->payload($client);
@@ -91,7 +91,7 @@ final class SavedSearchControllerTest extends ApiTestCase
         self::assertCount(1, $list['savedSearches']);
         self::assertIsArray($list['savedSearches'][0]);
         self::assertSame('punk', $list['savedSearches'][0]['term']);
-        self::assertSame(1, $list['savedSearches'][0]['unreadCount']);
+        self::assertSame([$entry->getId()], $list['savedSearches'][0]['unreadEntryIds']);
         self::assertSame(0, $list['savedSearches'][0]['position']);
 
         // Delete.
@@ -117,7 +117,7 @@ final class SavedSearchControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(422);
         // The violation must come from the DTO's own Length constraint
         // (property path "term"), not from the redundant length check
-        // SavedSearchMatchCounter's SearchTerms::fromInput() would apply
+        // SavedSearchMatchIds's SearchTerms::fromInput() would apply
         // downstream (property path "q") — that only fires once the entity
         // is already persisted, which a request this short must never reach.
         $body = $this->payload($client);
@@ -160,7 +160,7 @@ final class SavedSearchControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(422);
         // Same reasoning as the short-term case: the rejection must be the
         // DTO's own Length constraint ("term"), not the redundant downstream
-        // check in SavedSearchMatchCounter ("q") that only runs after persist.
+        // check in SavedSearchMatchIds ("q") that only runs after persist.
         $body = $this->payload($client);
         self::assertIsArray($body['errors']);
         self::assertArrayHasKey('term', $body['errors']);
@@ -183,7 +183,7 @@ final class SavedSearchControllerTest extends ApiTestCase
         self::assertFalse($created['savedSearch']['wholeWord']);
     }
 
-    public function testWholeWordAndSubstringCountsAreIndependentAcrossTheList(): void
+    public function testWholeWordAndSubstringMatchIdsAreIndependentAcrossTheList(): void
     {
         $client = self::createClient();
         $user = $this->factory()->create('counts-independent@example.com');
@@ -229,10 +229,11 @@ final class SavedSearchControllerTest extends ApiTestCase
         $substringCount = null;
         foreach ($list['savedSearches'] as $savedSearch) {
             self::assertIsArray($savedSearch);
+            self::assertIsArray($savedSearch['unreadEntryIds']);
             if ($savedSearch['wholeWord']) {
-                $wholeWordCount = $savedSearch['unreadCount'];
+                $wholeWordCount = count($savedSearch['unreadEntryIds']);
             } else {
-                $substringCount = $savedSearch['unreadCount'];
+                $substringCount = count($savedSearch['unreadEntryIds']);
             }
         }
         self::assertSame(1, $wholeWordCount);

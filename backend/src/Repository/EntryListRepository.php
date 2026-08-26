@@ -98,16 +98,24 @@ class EntryListRepository extends ServiceEntityRepository
     }
 
     /**
-     * How many unread entries match this saved search. Reuses searchForUser's
-     * term matching so the badge tracks the LIKE result set, plus the shared
-     * "unread" predicate. Deliberately engine-independent: read state is
-     * per-user and lives only in the database, never in the search index.
+     * The ids of every unread entry that matches this saved search, across all
+     * the user's subscribed feeds. Reuses searchForUser's term matching so the
+     * badge tracks the LIKE result set, plus the shared "unread" predicate.
+     * Returns the ids rather than a bare count so the client can drop one the
+     * moment the user reads it, without a fresh scan. Deliberately
+     * engine-independent: read state is per-user and lives only in the
+     * database, never in the search index.
+     *
+     * @return list<int>
      */
-    public function countUnreadMatchesForUser(EntrySearchQuery $query): int
+    public function unreadMatchIdsForUser(EntrySearchQuery $query): array
     {
-        $qb = $this->unreadMatchQueryBuilder($query)->select('COUNT(DISTINCT e.id)');
+        $qb = $this->unreadMatchQueryBuilder($query)->select('e.id')->distinct();
 
-        return (int) $qb->getQuery()->getSingleScalarResult();
+        /** @var list<array{id: int}> $rows */
+        $rows = $qb->getQuery()->getScalarResult();
+
+        return array_map(static fn (array $row): int => (int) $row['id'], $rows);
     }
 
     /**

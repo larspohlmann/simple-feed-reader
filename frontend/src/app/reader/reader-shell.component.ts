@@ -666,12 +666,18 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private setViewed(e: EntryDto, viewed: boolean): void {
     const alsoReads = viewed && !e.isRead;
     this.subs.bumpViewed(viewed ? 1 : -1);
-    if (alsoReads) this.subs.decrementUnread(e.subscriptionId);
+    if (alsoReads) {
+      this.subs.decrementUnread(e.subscriptionId);
+      this.savedSearchesStore.markEntryRead(e.id);
+    }
     // Let a later reopen re-mark a now-un-ticked entry.
     if (!viewed) this.viewedOnOpen.delete(e.id);
     this.patchInList(e, { isViewed: viewed }, () => {
       this.subs.bumpViewed(viewed ? -1 : 1);
-      if (alsoReads) this.subs.incrementUnread(e.subscriptionId);
+      if (alsoReads) {
+        this.subs.incrementUnread(e.subscriptionId);
+        this.savedSearchesStore.markEntryUnread(e.id);
+      }
     });
   }
 
@@ -727,10 +733,16 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *  flag, and the unread count down when opening also reads a still-unread entry. */
   private applyOpenedPatch(e: EntryDto, patch: EntryStatePatch): void {
     const alsoReads = patch.isViewed === true && !e.isRead;
-    if (alsoReads) this.subs.decrementUnread(e.subscriptionId);
+    if (alsoReads) {
+      this.subs.decrementUnread(e.subscriptionId);
+      this.savedSearchesStore.markEntryRead(e.id);
+    }
     if (patch.isViewed) this.subs.bumpViewed(1);
     this.patchOpen(e, patch, () => {
-      if (alsoReads) this.subs.incrementUnread(e.subscriptionId);
+      if (alsoReads) {
+        this.subs.incrementUnread(e.subscriptionId);
+        this.savedSearchesStore.markEntryUnread(e.id);
+      }
       if (patch.isViewed) this.subs.bumpViewed(-1);
     });
   }
