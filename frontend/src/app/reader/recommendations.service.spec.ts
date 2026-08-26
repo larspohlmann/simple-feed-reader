@@ -809,7 +809,7 @@ describe('RecommendationsService', () => {
     jest.useRealTimers();
   }));
 
-  it('computes an ETA of average x remaining, and hides it before batch 1', fakeAsync(() => {
+  it('shows the server ETA and ticks it down between polls', fakeAsync(() => {
     jest.useFakeTimers();
     nowMs = 0;
     svc.start();
@@ -817,20 +817,45 @@ describe('RecommendationsService', () => {
       .expectOne('https://api.test/api/recommendations/runs')
       .flush(report({ status: 'pending' }));
 
-    // Before any completion: no average -> starting, no creep.
+    // Before the server sends an estimate: a blank, not a guess.
     expect(svc.etaSeconds()).toBeNull();
     expect(svc.etaState()).toBe('starting');
-    nowMs = 12345;
-    jest.advanceTimersByTime(200);
-    expect(svc.progress()).toBe(0);
 
     nowMs = 20000;
     ctrl
       .expectOne('https://api.test/api/recommendations/runs/tick')
-      .flush(report({ status: 'running', batchesTotal: 4, batchesDone: 1, elapsedSeconds: 20 }));
-    // avg 20s, 3 batches remain (2,3,dedup). At the boundary, into-current = 0.
+      .flush(report({ status: 'running', batchesTotal: 4, batchesDone: 1, etaSeconds: 60 }));
     expect(svc.etaSeconds()).toBe(60);
     expect(svc.etaState()).toBe('eta');
+
+    // Ten seconds pass with no new poll: the client counts the estimate down
+    // from the value the server last sent.
+    nowMs = 30000;
+    jest.advanceTimersByTime(200);
+    expect(svc.etaSeconds()).toBe(50);
+
+    drainTrailingTick();
+    discardPeriodicTasks();
+    jest.useRealTimers();
+  }));
+
+  it('keeps the starting label until the server sends an ETA', fakeAsync(() => {
+    jest.useFakeTimers();
+    nowMs = 0;
+    svc.start();
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs')
+      .flush(report({ status: 'pending' }));
+
+    nowMs = 20000;
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'running', batchesTotal: 4, batchesDone: 1, etaSeconds: null }));
+
+    // A run with no history behind it: the server sends no estimate, so the
+    // label stays "starting" rather than showing a fabricated number.
+    expect(svc.etaSeconds()).toBeNull();
+    expect(svc.etaState()).toBe('starting');
 
     drainTrailingTick();
     discardPeriodicTasks();

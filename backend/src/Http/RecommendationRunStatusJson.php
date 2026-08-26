@@ -10,9 +10,10 @@ use Symfony\Component\Clock\ClockInterface;
 
 /**
  * The wire shape every /api/recommendations/runs* action returns: the run
- * report, the run's live `elapsedSeconds` (computed here so it stays on the
- * server's own clock — the client never subtracts timestamps across machines),
- * and the for-you summary.
+ * report, the run's live `elapsedSeconds` (computed on the server's own clock —
+ * the client never subtracts timestamps across machines), the phase-weighted
+ * `etaSeconds` (null when there is no estimate yet, #638), and the for-you
+ * summary.
  */
 final class RecommendationRunStatusJson
 {
@@ -21,24 +22,17 @@ final class RecommendationRunStatusJson
         RecommendationRunReport $report,
         RecommendationForYouSummary $summary,
         ClockInterface $clock,
+        ?int $etaSeconds,
     ): array {
         return $report->toArray() + [
-            'elapsedSeconds' => self::elapsedSeconds($report, $clock),
+            'elapsedSeconds' => $report->elapsedSecondsAt($clock->now()),
+            'etaSeconds' => $etaSeconds,
             'forYou' => [
                 'itemCount' => $summary->itemCount,
                 'generatedAt' => $summary->generatedAt?->format(\DateTimeInterface::ATOM),
                 'newestRunId' => $summary->newestRunId,
             ],
         ];
-    }
-
-    private static function elapsedSeconds(RecommendationRunReport $report, ClockInterface $clock): ?int
-    {
-        if (null === $report->startedAt) {
-            return null;
-        }
-
-        return max(0, $clock->now()->getTimestamp() - $report->startedAt->getTimestamp());
     }
 
     private function __construct()

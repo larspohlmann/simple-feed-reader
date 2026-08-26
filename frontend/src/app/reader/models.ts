@@ -292,6 +292,14 @@ export interface RecommendationRunReport {
    *  null when there is no run. The client keeps it live between polls with a
    *  local monotonic delta rather than re-subtracting server time. */
   elapsedSeconds: number | null;
+  /** Whole seconds the run is still expected to need, weighted by phase from
+   *  the account's own history and computed on the server (#638). Null when
+   *  there is no run in flight or no completed run to learn from yet; the
+   *  client shows a blank then, never a guessed number. Optional so a response
+   *  cached from an older backend does not break the type — an absent value
+   *  reads the same as null. The client ticks it down between polls with a
+   *  local monotonic delta, the same way it keeps `elapsedSeconds` live. */
+  readonly etaSeconds?: number | null;
   /** The surviving for-you list's own summary: how many entries it holds, when
    *  it was last generated, and the id of the run that generated it. Describes
    *  the *list*, not this run — a failed latest run still carries the previous

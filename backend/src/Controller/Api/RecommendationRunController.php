@@ -11,7 +11,6 @@ use App\Exception\AiProviderApiException;
 use App\Exception\NoActiveRecommendationRunApiException;
 use App\Exception\NoResumableRecommendationRunApiException;
 use App\Exception\RecommendationRunActiveApiException;
-use App\Http\RecommendationRunStatusJson;
 use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
@@ -21,13 +20,12 @@ use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Recommendation\Exception\NoActiveRecommendationRunException;
 use App\Service\Recommendation\Exception\NoResumableRecommendationRunException;
 use App\Service\Recommendation\Exception\RecommendationRunActiveException;
-use App\Service\Recommendation\RecommendationForYouSummaryProvider;
 use App\Service\Recommendation\RecommendationPollDriver;
 use App\Service\Recommendation\RecommendationRunCanceller;
 use App\Service\Recommendation\RecommendationRunPurger;
 use App\Service\Recommendation\RecommendationRunReport;
 use App\Service\Recommendation\RecommendationRunStarter;
-use Symfony\Component\Clock\ClockInterface;
+use App\Service\Recommendation\RecommendationRunStatusPayload;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -50,11 +48,10 @@ final readonly class RecommendationRunController
         private RecommendationPollDriver $pollDriver,
         private RecommendationRunPurger $purger,
         private RecommendationRunCanceller $canceller,
-        private RecommendationForYouSummaryProvider $forYouSummaries,
+        private RecommendationRunStatusPayload $statusPayload,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $aiRecommendationsLimiter,
         private RateLimiterFactoryInterface $aiRecommendationStartsLimiter,
-        private ClockInterface $clock,
     ) {
     }
 
@@ -69,9 +66,7 @@ final readonly class RecommendationRunController
             throw new AiNotConfiguredApiException($e);
         }
 
-        return new JsonResponse(
-            RecommendationRunStatusJson::report($report, $this->forYouSummaries->forUser($user), $this->clock),
-        );
+        return new JsonResponse($this->statusPayload->forReport($report, $user));
     }
 
     /**
@@ -93,9 +88,7 @@ final readonly class RecommendationRunController
             throw new NoResumableRecommendationRunApiException($e);
         }
 
-        return new JsonResponse(
-            RecommendationRunStatusJson::report($report, $this->forYouSummaries->forUser($user), $this->clock),
-        );
+        return new JsonResponse($this->statusPayload->forReport($report, $user));
     }
 
     #[Route('/tick', name: 'api_recommendations_tick', methods: ['POST'])]
@@ -113,19 +106,13 @@ final readonly class RecommendationRunController
             throw new AiProviderApiException($e->getMessage(), $e);
         }
 
-        return new JsonResponse(
-            RecommendationRunStatusJson::report($report, $this->forYouSummaries->forUser($user), $this->clock),
-        );
+        return new JsonResponse($this->statusPayload->forReport($report, $user));
     }
 
     #[Route('/current', name: 'api_recommendations_current', methods: ['GET'])]
     public function current(#[CurrentUser] User $user): JsonResponse
     {
-        $report = $this->pollDriver->current($user);
-
-        return new JsonResponse(
-            RecommendationRunStatusJson::report($report, $this->forYouSummaries->forUser($user), $this->clock),
-        );
+        return new JsonResponse($this->statusPayload->forReport($this->pollDriver->current($user), $user));
     }
 
     /**
@@ -142,11 +129,7 @@ final readonly class RecommendationRunController
             throw new NoActiveRecommendationRunApiException($e);
         }
 
-        return new JsonResponse(RecommendationRunStatusJson::report(
-            $this->pollDriver->current($user),
-            $this->forYouSummaries->forUser($user),
-            $this->clock,
-        ));
+        return new JsonResponse($this->statusPayload->forReport($this->pollDriver->current($user), $user));
     }
 
     #[Route('', name: 'api_recommendations_purge', methods: ['DELETE'])]
@@ -158,12 +141,6 @@ final readonly class RecommendationRunController
             throw new RecommendationRunActiveApiException($e);
         }
 
-        return new JsonResponse(
-            RecommendationRunStatusJson::report(
-                RecommendationRunReport::none(),
-                $this->forYouSummaries->forUser($user),
-                $this->clock,
-            ),
-        );
+        return new JsonResponse($this->statusPayload->forReport(RecommendationRunReport::none(), $user));
     }
 }

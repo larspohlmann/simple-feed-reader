@@ -9,12 +9,14 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * One provider-call attempt of a recommendation run, recorded for the debug
- * view (#309): the request body the moment it was sent, the response text as
- * it streams in (checkpointed every ~2 s by RecordedCall via direct DBAL
- * updates), and the parser's verdict once the call ended. Rows exist only
- * while the debug switch is on and only for the latest run — the next run
- * start wipes them.
+ * One provider-call attempt of a recommendation run (#309): the request body
+ * the moment it was sent, the response text as it streams in (checkpointed
+ * every ~2 s by RecordedCall via direct DBAL updates), and the parser's
+ * verdict once the call ended. Rows are written for every run and kept for the
+ * newest {@see RunLogRetention::RUNS} — the debug view reads them, and since
+ * #638 the phase timestamps here are the history the ETA averages, so the
+ * debug switch governs only whether the panel shows the rows, not whether
+ * they exist.
  *
  * LONGTEXT length: a #308 batch request over a large context window is
  * hundreds of KB, past MySQL TEXT's 64 KB.

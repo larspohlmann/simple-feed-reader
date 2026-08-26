@@ -111,8 +111,17 @@ export class RecommendationsService {
   private readonly currentBatchStart = signal<number | null>(null);
 
   /** Blended seconds-per-completed-batch (`elapsedSeconds / batchesDone`);
-   *  null until batch 1 completes, which is the honest-blank window. */
+   *  null until batch 1 completes, which is the honest-blank window. Drives the
+   *  progress bar's between-poll creep only — the ETA number is the server's. */
   private readonly avgCompletedSeconds = signal<number | null>(null);
+
+  /** The seconds-remaining the server last sent (#638), and the monotonic ms
+   *  when it landed. The ETA is phase-weighted on the server; the client only
+   *  counts it down from the freshest value between polls. Both null when no
+   *  estimate stands: before the first report of a run, or when the server has
+   *  no history to weight one. */
+  private readonly serverEtaSeconds = signal<number | null>(null);
+  private readonly serverEtaAt = signal<number | null>(null);
 
   /** True while the poll loop is waiting out the 429 limiter. The ticker is
    *  paused for the duration (see `backOffWhileRateLimited`), so the bar holds
@@ -147,21 +156,18 @@ export class RecommendationsService {
     return clamp01(base + fractionIntoBatch * (next - base) * CREEP_CAP);
   });
 
-  /** Ceil seconds remaining, or `null` when there is no run, no total, the run
-   *  is not actively progressing, or no average yet exists (before batch 1). */
+  /** Ceil seconds remaining, or `null` when the server sent no estimate — no
+   *  run in flight, or no history to weight one (#638). The number itself is
+   *  the server's, phase-weighted; here it is only counted down from the value
+   *  the last report carried, so it keeps falling smoothly between polls. */
   readonly etaSeconds = computed<number | null>(() => {
     this.frame();
-    const current = this.report();
-    if (!current || !current.batchesTotal) return null;
-    if (current.status !== 'running' && current.status !== 'pending') return null;
+    const base = this.serverEtaSeconds();
+    const anchoredAt = this.serverEtaAt();
+    if (base === null || anchoredAt === null) return null;
 
-    const average = this.avgCompletedSeconds();
-    const batchStart = this.currentBatchStart();
-    if (average === null || batchStart === null) return null;
-
-    const batchesRemaining = current.batchesTotal - current.batchesDone; // includes the in-flight one
-    const secondsIntoBatch = (this.now() - batchStart) / 1000;
-    return Math.max(0, Math.ceil(average * batchesRemaining - secondsIntoBatch));
+    const secondsSincePoll = (this.now() - anchoredAt) / 1000;
+    return Math.max(0, Math.ceil(base - secondsSincePoll));
   });
 
   /** Drives the Task 6 label: hidden outside a run, starting before the first
@@ -264,6 +270,10 @@ export class RecommendationsService {
     // the report to decide whether the bar may move, and the previous run's
     // last report is no evidence about this one.
     this.report.set(null);
+    // The previous run's ETA is no evidence about this one either; blank it
+    // until this run's first report carries a fresh estimate.
+    this.serverEtaSeconds.set(null);
+    this.serverEtaAt.set(null);
     this.stopping.set(false);
     this.markRunning();
     source.subscribe({
@@ -393,8 +403,9 @@ export class RecommendationsService {
   }
 
   /** The single place a fresh report lands: it re-blends the average and
-   *  re-anchors the current batch whenever `batchesDone` moves, clears the
-   *  rate-limited flag on any live report, then stores the report. */
+   *  re-anchors the current batch whenever `batchesDone` moves, re-anchors the
+   *  server ETA on every report, clears the rate-limited flag on any live
+   *  report, then stores the report. */
   private applyReport(next: RecommendationRunReport): void {
     const previousDone = this.report()?.batchesDone ?? -1;
     if (next.batchesDone !== previousDone) {
@@ -405,6 +416,11 @@ export class RecommendationsService {
       );
       this.currentBatchStart.set(this.now());
     }
+    // Re-anchored every report, not only on a completion: the server's ETA
+    // keeps falling as a phase runs, so each report carries a fresher number to
+    // count down from than the last did.
+    this.serverEtaSeconds.set(next.etaSeconds ?? null);
+    this.serverEtaAt.set(this.now());
     // Stored before the bar is synced, because the sync reads the report.
     this.report.set(next);
     if (next.status === 'running' || next.status === 'pending') {

@@ -12,12 +12,11 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * Opens the debug record for one provider call (#309): decides — per call,
- * so a mid-run settings flip takes effect on the next call — whether the
- * debug switch is on, persists the request body the moment it is sent, and
- * hands back the RecordedCall the advancer threads through the chat client
- * as its stream observer. With debug off the RecordedCall still exists,
- * because the liveness counter it maintains is not debug data.
+ * Opens the run-log record for one provider call (#309, #638): persists the
+ * request body the moment it is sent and hands back the RecordedCall the
+ * advancer threads through the chat client as its stream observer. Recorded
+ * for every run — the run log is the phase-timing history the ETA reads
+ * (#638), and the debug switch now only governs whether the panel shows it.
  */
 final readonly class RecommendationCallRecorder
 {
@@ -25,7 +24,6 @@ final readonly class RecommendationCallRecorder
         private EntityManagerInterface $entityManager,
         private RecommendationRunLogRepository $logs,
         private Connection $connection,
-        private RecommendationSettingsResolver $settingsResolver,
         private ClockInterface $clock,
     ) {
     }
@@ -38,15 +36,13 @@ final readonly class RecommendationCallRecorder
         array $messages,
         string $model,
     ): RecordedCall {
-        $log = $this->settingsResolver->forUser($run->getUser())->debugEnabled
-            ? $this->persistedLog($run, $phase, $batchNumber, $messages, $model)
-            : null;
+        $log = $this->persistedLog($run, $phase, $batchNumber, $messages, $model);
 
         return new RecordedCall(
             $this->connection,
             $this->clock,
             $run->getId() ?? throw new \LogicException('Cannot record a call for an unsaved run.'),
-            $log?->getId(),
+            $log->getId(),
         );
     }
 

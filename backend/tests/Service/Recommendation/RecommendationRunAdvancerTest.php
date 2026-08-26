@@ -2459,11 +2459,10 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ));
     }
 
-    public function testDistillBatchAndConsolidateCallsAreLoggedWithVerdictsWhenDebugIsOn(): void
+    public function testDistillBatchAndConsolidateCallsAreLoggedWithVerdicts(): void
     {
         $this->seedMultiBatchFixture();
-        $this->enableDebug();
-        $run = $this->startSnapshotAndDistill(); // debug already on: the distill call logs too
+        $run = $this->startSnapshotAndDistill(); // the distill call logs like every phase (#638)
         $firstBatch = $run->getCandidateBatches()[0];
         $secondBatch = $run->getCandidateBatches()[1];
 
@@ -2505,7 +2504,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testACorrectiveRetryGetsItsOwnLogRowWithTheUnusableVerdict(): void
     {
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistillWithDebugOffUntilNow();
+        $run = $this->startSnapshotAndDistill();
 
         // In-tick retry (#344): the unusable reply and its corrective retry are
         // one tick, so both queued replies are consumed by a single advance and
@@ -2517,7 +2516,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
 
-        $rows = $this->logRowsOfLatestRun();
+        // The distill call every run spends first (#493) logs its own row now
+        // (#638); this scenario is about the batch calls, so read only those.
+        $rows = $this->batchLogRowsOfLatestRun();
         self::assertSame([1, 2], array_column($rows, 'attempt'));
         self::assertSame(['unusable', 'usable'], array_column($rows, 'verdict'));
         self::assertSame('not json', $this->freshRunLog($rows[0]['id'])->getResponseText());
@@ -2530,7 +2531,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testATransportFailureStampsItsLogRow(): void
     {
         $this->seedMultiBatchFixture();
-        $this->startSnapshotAndDistillWithDebugOffUntilNow();
+        $this->startSnapshotAndDistill();
 
         $this->stubChatClient()->queueFailure(new ProviderUnreachableException('gone'));
         try {
@@ -2539,25 +2540,11 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         } catch (ProviderUnreachableException) {
         }
 
-        $rows = $this->logRowsOfLatestRun();
+        $rows = $this->batchLogRowsOfLatestRun();
         self::assertSame(['transport-failed'], array_column($rows, 'verdict'));
         $log = $this->freshRunLog($rows[0]['id']);
         self::assertSame('gone', $log->getErrorDetail());
         self::assertNotNull($log->getFinishedAt());
-    }
-
-    public function testNoLogRowsAreWrittenWithDebugOff(): void
-    {
-        $this->seedMultiBatchFixture();
-        $this->startSnapshotAndDistill();
-
-        $firstEntryId = $this->activeRun()->getCandidateBatches()[0][0];
-        $this->stubChatClient()->queueContent(json_encode([
-            'recommendations' => [['id' => $firstEntryId, 'score' => 50, 'reason' => 'r']],
-        ], \JSON_THROW_ON_ERROR));
-        $this->advancer()->advance($this->user);
-
-        self::assertSame([], $this->logRowsOfLatestRun());
     }
 
     /**
@@ -2570,7 +2557,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testApiKeyUnreadableSettlesTheLogRowInsteadOfLeavingItStreamingForever(): void
     {
         $this->seedMultiBatchFixture();
-        $this->startSnapshotAndDistillWithDebugOffUntilNow();
+        $this->startSnapshotAndDistill();
 
         $keyDonor = (new UserFactory($this->em, $this->passwordHasher()))->create('key-donor@example.test');
         $this->fixtures->seedReadyAiSettings($keyDonor);
@@ -2593,7 +2580,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         } catch (ApiKeyUnreadableException) {
         }
 
-        $rows = $this->logRowsOfLatestRun();
+        $rows = $this->batchLogRowsOfLatestRun();
         self::assertSame(['transport-failed'], array_column($rows, 'verdict'));
         $log = $this->freshRunLog($rows[0]['id']);
         self::assertNotNull($log->getErrorDetail());
@@ -2782,24 +2769,6 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The same snapshot-then-distill sequence as {@see startSnapshotAndDistill()},
-     * with debug enabled only once both ticks are already spent -- for a test
-     * whose log-row assertions want to isolate exactly the calls its own
-     * scenario makes, not the distill call every run now spends first (#493).
-     */
-    private function startSnapshotAndDistillWithDebugOffUntilNow(): RecommendationRun
-    {
-        $this->starter()->start($this->user);
-        $this->advancer()->advance($this->user);
-        $this->queueDistillReply();
-        $this->advancer()->advance($this->user);
-
-        $this->enableDebug();
-
-        return $this->activeRun();
-    }
-
-    /**
      * The canned distill reply most tests neither read nor care about the
      * content of -- only that the distillation phase spends exactly one
      * provider call before the batches begin.
@@ -2845,35 +2814,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * Re-updates the RecommendationSettings row seedMultiBatchFixture already
-     * persisted, flipping only debugEnabled -- no boolean flag parameter on
-     * the fixture helpers themselves.
-     */
-    private function enableDebug(): void
-    {
-        /** @var RecommendationSettings $settings */
-        $settings = $this->em->getRepository(RecommendationSettings::class)->findOneBy(['user' => $this->user]);
-        $current = $settings->values();
-        $settings->update(new RecommendationSettingsValues(
-            guidancePrompt: $current->guidancePrompt,
-            favoritesCap: $current->favoritesCap,
-            keptCap: $current->keptCap,
-            viewedCap: $current->viewedCap,
-            candidatePoolSize: $current->candidatePoolSize,
-            lookbackDays: $current->lookbackDays,
-            picksLimit: $current->picksLimit,
-            contextWindow: $current->contextWindow,
-            batchCount: $current->batchCount,
-            debugEnabled: true,
-        ));
-        $this->em->flush();
-    }
-
-    /**
-     * The debug rows of the account's newest run. The log keeps ten runs
+     * The log rows of the account's newest run. The log keeps ten runs
      * (#401), so a read has to name one; every test here drives a single run.
      *
-    /**
      * @return list<array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
      *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
      *     createdAt: string, finishedAt: ?string, errorDetail: ?string, finishReason: ?string}>
@@ -2884,6 +2827,23 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertNotNull($run);
 
         return $this->runLogs()->listForRun($this->user, $run->getId() ?? 0);
+    }
+
+    /**
+     * The batch-phase rows of the newest run only. Every run spends a distill
+     * call first (#493), and it logs like every phase (#638); a test that
+     * asserts on the batch calls its own scenario makes reads past that row.
+     *
+     * @return list<array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
+     *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
+     *     createdAt: string, finishedAt: ?string, errorDetail: ?string, finishReason: ?string}>
+     */
+    private function batchLogRowsOfLatestRun(): array
+    {
+        return array_values(array_filter(
+            $this->logRowsOfLatestRun(),
+            static fn (array $row): bool => RecommendationRunLog::PHASE_BATCH === $row['phase'],
+        ));
     }
 
     private function runLogs(): RecommendationRunLogRepository

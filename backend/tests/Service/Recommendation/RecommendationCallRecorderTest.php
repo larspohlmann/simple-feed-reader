@@ -8,12 +8,9 @@ use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\CompletionStreamProgress;
 use App\Service\Recommendation\RecommendationCallRecorder;
-use App\Service\Recommendation\RecommendationSettingsResolver;
 use App\Tests\DbTestCase;
-use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -25,7 +22,6 @@ final class RecommendationCallRecorderTest extends DbTestCase
     private MockClock $clock;
     private RecommendationCallRecorder $recorder;
     private RecommendationRunLogRepository $logs;
-    private RecommendationRunFixtures $fixtures;
 
     protected function setUp(): void
     {
@@ -35,10 +31,6 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         $factory = new UserFactory($this->em, $hasher);
         $this->user = $factory->create('recorder-owner@example.test');
-
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
 
         $this->run = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-08T09:00:00Z'));
         $this->em->persist($this->run);
@@ -50,22 +42,21 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $logs = self::getContainer()->get(RecommendationRunLogRepository::class);
         $this->logs = $logs;
 
-        /** @var RecommendationSettingsResolver $settingsResolver */
-        $settingsResolver = self::getContainer()->get(RecommendationSettingsResolver::class);
-
         $this->recorder = new RecommendationCallRecorder(
             $this->em,
             $this->logs,
             $this->em->getConnection(),
-            $settingsResolver,
             $this->clock,
         );
     }
 
-    public function testBeginWithDebugOnPersistsTheRequestBodyImmediately(): void
+    /**
+     * The row is written for every run, not only a debugged one (#638): the
+     * debug switch is off here, yet the request body lands the moment the
+     * call goes out, because the ETA reads this log as its timing history.
+     */
+    public function testBeginPersistsTheRequestBodyImmediatelyRegardlessOfTheDebugSwitch(): void
     {
-        $this->fixtures->debugEnabledSettings($this->user);
-
         $this->recorder->begin(
             $this->run,
             RecommendationRunLog::PHASE_BATCH,
@@ -86,18 +77,8 @@ final class RecommendationCallRecorderTest extends DbTestCase
         self::assertEquals($this->clock->now(), $log->getCreatedAt());
     }
 
-    public function testBeginWithDebugOffWritesNoRow(): void
-    {
-        $this->fixtures->debugDisabledSettings($this->user);
-
-        $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
-
-        self::assertSame([], $this->logRows());
-    }
-
     public function testCheckpointsAreThrottledToTheInterval(): void
     {
-        $this->fixtures->debugEnabledSettings($this->user);
         $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
         $logId = $this->logRows()[0]['id'];
 
@@ -114,9 +95,8 @@ final class RecommendationCallRecorderTest extends DbTestCase
         self::assertSame('Hello', $this->freshLog($logId)->getResponseText());
     }
 
-    public function testCheckpointUpdatesTheLivenessCounterEvenWithDebugOff(): void
+    public function testCheckpointUpdatesTheLivenessCounter(): void
     {
-        $this->fixtures->debugDisabledSettings($this->user);
         $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
 
         $this->clock->modify('+3 seconds');
@@ -131,7 +111,6 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
     public function testFinishUsableStoresTextVerdictAndResetsLiveness(): void
     {
-        $this->fixtures->debugEnabledSettings($this->user);
         $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
         $logId = $this->logRows()[0]['id'];
         $this->clock->modify('+3 seconds');
@@ -149,7 +128,6 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
     public function testAbortKeepsThePartialTextWithTransportVerdictAndTheTransportMessage(): void
     {
-        $this->fixtures->debugEnabledSettings($this->user);
         $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
         $logId = $this->logRows()[0]['id'];
         $this->clock->modify('+3 seconds');
@@ -173,7 +151,6 @@ final class RecommendationCallRecorderTest extends DbTestCase
      */
     public function testAnAbortRecordsTheBytesEvenWhenNothingWasAnswered(): void
     {
-        $this->fixtures->debugEnabledSettings($this->user);
         $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
         $logId = $this->logRows()[0]['id'];
 
@@ -199,8 +176,6 @@ final class RecommendationCallRecorderTest extends DbTestCase
      */
     public function testUpdatesStayScopedToTheOwningRunAndLog(): void
     {
-        $this->fixtures->debugEnabledSettings($this->user);
-
         [$otherRunId, $otherLogId] = $this->seedOtherUsersRunAndLog();
 
         $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
@@ -218,7 +193,6 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
     public function testASecondBeginForTheSamePhaseCountsTheAttempt(): void
     {
-        $this->fixtures->debugEnabledSettings($this->user);
         $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm')->finishUnusable('bad');
         $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
 
