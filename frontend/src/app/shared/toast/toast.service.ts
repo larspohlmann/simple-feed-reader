@@ -30,6 +30,15 @@ export class ToastService {
   private ref: DialogRef<void, ToastComponent> | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private cachedBottomOffset: string | null = null;
+  private paneObserver: ResizeObserver | null = null;
+
+  /** The custom property carrying the live toast's height, published on the
+   *  document root while a toast is on screen and removed when none is. A
+   *  bottom-anchored floating control (a to-top button) reads it to sit clear
+   *  of the toast instead of being buried under it -- on a narrow layout the
+   *  run pill spans nearly the full width and, as an overlay, paints over the
+   *  corner the button lives in (#641). */
+  private static readonly HEIGHT_PROPERTY = '--app-toast-height';
 
   private readonly _visible = signal(false);
   /** Whether a toast is on screen. Read by a feature that offers to raise its
@@ -61,6 +70,7 @@ export class ToastService {
     });
     this.ref = ref;
     this._visible.set(true);
+    this.publishHeight(ref);
 
     // Every close lands here -- the ✕, `dismiss()`, Escape -- so the flag has
     // one owner rather than three. The identity guard is what makes that safe:
@@ -71,6 +81,7 @@ export class ToastService {
       if (this.ref !== ref) return;
       this.ref = null;
       this._visible.set(false);
+      this.clearHeight();
     });
 
     const durationMs = this.durationOf(toast);
@@ -87,6 +98,31 @@ export class ToastService {
     if (this.timer === null) return;
     clearTimeout(this.timer);
     this.timer = null;
+  }
+
+  /** Mirrors the toast's rendered height onto the document root, and keeps it
+   *  current: a content toast (the run pill) grows a line as the run reports a
+   *  phase or an ETA, so a single measurement would leave a stale offset. The
+   *  observer supersedes any prior toast's, and a browser without
+   *  `ResizeObserver` still gets the first measurement. */
+  private publishHeight(ref: DialogRef<void, ToastComponent>): void {
+    this.clearHeight();
+    const pane = ref.overlayRef.overlayElement;
+    const write = (): void =>
+      document.documentElement.style.setProperty(
+        ToastService.HEIGHT_PROPERTY,
+        `${Math.ceil(pane.getBoundingClientRect().height)}px`,
+      );
+    write();
+    if (typeof ResizeObserver === 'undefined') return;
+    this.paneObserver = new ResizeObserver(write);
+    this.paneObserver.observe(pane);
+  }
+
+  private clearHeight(): void {
+    this.paneObserver?.disconnect();
+    this.paneObserver = null;
+    document.documentElement.style.removeProperty(ToastService.HEIGHT_PROPERTY);
   }
 
   /** Stylelint bans ad-hoc `px` outside `theme/`, but cannot see this file:
