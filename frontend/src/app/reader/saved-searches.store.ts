@@ -1,21 +1,68 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, Signal, computed, inject, signal } from '@angular/core';
 import { ReaderApi } from './reader-api';
-import { SavedSearchDto } from './models';
+import { SavedSearchDto, SavedSearchWire } from './models';
 
 /** The user's saved searches, newest first, each with a live unread-match
- *  count. load() re-syncs the whole set and is the hook the reader shell calls
- *  after every refresh slice; the mutations patch the list from what the API
- *  already answered, because a full reload costs one LIKE scan per saved
- *  search and neither mutation can change a count this store does not have. */
+ *  count. load() re-syncs the whole set — the hook the reader shell calls after
+ *  every refresh slice — and is the only place a count is learned, because it
+ *  costs one LIKE scan per saved search.
+ *
+ *  A single read used to leave every badge stale until the next such reload
+ *  (#581, self-heals on the next tick). Now the API answers each search with
+ *  the ids of its unread matches, so markEntryRead() can drop one the moment
+ *  the user reads it — no round-trip. The dropped ids are tracked separately
+ *  and cleared on the next load(), which is when the real set is re-learned
+ *  (#645). The mutations patch the list from what the API already answered,
+ *  because neither can change a set this store does not hold. */
 @Injectable({ providedIn: 'root' })
 export class SavedSearchesStore {
   private readonly api = inject(ReaderApi);
 
-  readonly savedSearches = signal<SavedSearchDto[]>([]);
+  private readonly loaded = signal<SavedSearchWire[]>([]);
+  /** Entry ids read since the last load(), subtracted from every search's set
+   *  so a badge falls the instant a matching entry is read. Cleared on load(),
+   *  when the backend re-counts from scratch. */
+  private readonly readSinceLoad = signal<ReadonlySet<number>>(new Set());
+
+  /** The sidebar view: each search with its unread count, the matches read
+   *  since the last load already subtracted. */
+  readonly savedSearches: Signal<SavedSearchDto[]> = computed(() => {
+    const read = this.readSinceLoad();
+    return this.loaded().map((wire) => ({
+      id: wire.id,
+      term: wire.term,
+      wholeWord: wire.wholeWord,
+      position: wire.position,
+      unreadCount: wire.unreadEntryIds.reduce((count, id) => count + (read.has(id) ? 0 : 1), 0),
+    }));
+  });
 
   load(): void {
     this.api.savedSearches().subscribe({
-      next: (r) => this.savedSearches.set(r.savedSearches),
+      next: (r) => {
+        this.loaded.set(r.savedSearches);
+        this.readSinceLoad.set(new Set());
+      },
+    });
+  }
+
+  /** Drop an entry from every saved-search unread tally, the moment it is read.
+   *  A no-op unless the entry actually matches a saved search, so the tracking
+   *  set stays small and unrelated reads never churn the sidebar. One-way, to
+   *  match read-stickiness; the real set is re-learned on the next load(). */
+  markEntryRead(entryId: number): void {
+    if (!this.loaded().some((wire) => wire.unreadEntryIds.includes(entryId))) return;
+    this.readSinceLoad.update((read) => new Set(read).add(entryId));
+  }
+
+  /** Undo a markEntryRead(): the read PATCH failed, so the entry is unread
+   *  again and belongs back in the tallies. */
+  markEntryUnread(entryId: number): void {
+    this.readSinceLoad.update((read) => {
+      if (!read.has(entryId)) return read;
+      const next = new Set(read);
+      next.delete(entryId);
+      return next;
     });
   }
 
@@ -26,7 +73,7 @@ export class SavedSearchesStore {
       // Saving a term already saved answers 200 with the existing row, so
       // replace by id rather than prepending a duplicate.
       next: (r) => {
-        this.savedSearches.update((rows) => [
+        this.loaded.update((rows) => [
           r.savedSearch,
           ...rows.filter((row) => row.id !== r.savedSearch.id),
         ]);
@@ -37,7 +84,7 @@ export class SavedSearchesStore {
 
   removeSavedSearch(id: number): void {
     this.api.deleteSavedSearch(id).subscribe({
-      next: () => this.savedSearches.update((rows) => rows.filter((row) => row.id !== id)),
+      next: () => this.loaded.update((rows) => rows.filter((row) => row.id !== id)),
     });
   }
 }

@@ -8,6 +8,9 @@ export interface TagDto {
   position: number;
 }
 
+/** The sidebar's view of a saved search: the badge reads `unreadCount`. The
+ *  store derives it from the wire's id set, dropping an entry the moment it is
+ *  read, so the count falls without another round-trip (#645). */
 export interface SavedSearchDto {
   id: number;
   /** The trimmed search term (no trailing whole-word space). */
@@ -18,6 +21,18 @@ export interface SavedSearchDto {
   position: number;
   /** Live count of unread entries matching this search. */
   unreadCount: number;
+}
+
+/** The API shape of a saved search. It carries the ids of the unread matches
+ *  rather than a bare count, so the store can drop one locally on read and
+ *  reconcile the whole set on the next load() (#645). */
+export interface SavedSearchWire {
+  id: number;
+  term: string;
+  wholeWord: boolean;
+  position: number;
+  /** The ids of every unread entry that matches this search. */
+  unreadEntryIds: number[];
 }
 
 /** A tag as embedded on a subscription: same shape as TagDto, but `position` is

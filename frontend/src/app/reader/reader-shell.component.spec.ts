@@ -25,7 +25,7 @@ import { OnboardingSkip } from '../discover/onboarding-skip';
 import { ReaderShellComponent } from './reader-shell.component';
 import { EntryListComponent } from './entry-list/entry-list.component';
 import { ListScrollMemory } from './list-scroll-memory';
-import { EntryDto, SavedSearchDto } from './models';
+import { EntryDto, SavedSearchDto, SavedSearchWire } from './models';
 import { SubscriptionsStore } from './subscriptions.store';
 import { Selection } from './query';
 import { ReaderHeaderComponent } from './header/reader-header.component';
@@ -620,6 +620,56 @@ describe('ReaderShellComponent', () => {
       },
     });
     expect(f.nativeElement.querySelector('app-reader-view')).not.toBeNull();
+  });
+
+  it('drops the saved-search unread count when an unread matching entry is opened (#645)', () => {
+    const f = boot();
+    const store = f.componentInstance.savedSearchesStore;
+    store.load();
+    ctrl.expectOne('https://api.test/api/saved-searches').flush({
+      savedSearches: [{ id: 7, term: 'news', wholeWord: false, position: 0, unreadEntryIds: [1, 2] }],
+    });
+    expect(store.savedSearches()[0].unreadCount).toBe(2);
+
+    qp.next(convertToParamMap({ entry: '1' }));
+    f.detectChanges();
+
+    // Opening reads entry 1 optimistically, so the badge drops at once — before
+    // the state PATCH even resolves, no reload of the saved searches.
+    expect(store.savedSearches()[0].unreadCount).toBe(1);
+    ctrl.expectOne('https://api.test/api/entries/1/state').flush({
+      state: {
+        entryId: 1,
+        isRead: true,
+        isFavorite: false,
+        isKept: false,
+        readAt: 'x',
+        isViewed: true,
+        viewedAt: 'x',
+      },
+    });
+    ctrl.expectNone('https://api.test/api/saved-searches');
+  });
+
+  it('restores the saved-search unread count when the open PATCH fails (#645)', () => {
+    const f = boot();
+    const store = f.componentInstance.savedSearchesStore;
+    store.load();
+    ctrl.expectOne('https://api.test/api/saved-searches').flush({
+      savedSearches: [{ id: 7, term: 'news', wholeWord: false, position: 0, unreadEntryIds: [1, 2] }],
+    });
+
+    qp.next(convertToParamMap({ entry: '1' }));
+    f.detectChanges();
+    expect(store.savedSearches()[0].unreadCount).toBe(1);
+
+    ctrl
+      .expectOne('https://api.test/api/entries/1/state')
+      .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+    f.detectChanges();
+
+    // The read rolled back, so the entry is unread again and the badge returns.
+    expect(store.savedSearches()[0].unreadCount).toBe(2);
   });
 
   it('marks the opened entry read and viewed only once even when the PATCH fails', () => {
@@ -2280,11 +2330,13 @@ describe('ReaderShellComponent', () => {
   // `headerActions` outlet, so the list emits nothing and the shell owns both
   // the decision and the button. One toggle, not two one-way actions.
   describe('saving the current search (#581)', () => {
-    // boot() has already drained the shell's own saved-searches load, so seed
-    // the store directly — what the button reads is the store, not the request.
-    function bootWithSearchSelected(saved: SavedSearchDto[], q = 'climate ') {
+    // boot() drained the shell's own initial saved-searches load with an empty
+    // set, so seed through a second real load() — the store maps the wire (ids)
+    // to the view the button reads, exactly as production does.
+    function bootWithSearchSelected(saved: SavedSearchWire[], q = 'climate ') {
       const f = boot();
-      f.componentInstance.savedSearchesStore.savedSearches.set(saved);
+      f.componentInstance.savedSearchesStore.load();
+      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: saved });
       qp.next(convertToParamMap({ q }));
       f.detectChanges();
       ctrl
@@ -2294,7 +2346,15 @@ describe('ReaderShellComponent', () => {
       return f;
     }
 
-    const savedClimate: SavedSearchDto = {
+    const savedClimate: SavedSearchWire = {
+      id: 4,
+      term: 'climate',
+      wholeWord: true,
+      position: 0,
+      unreadEntryIds: [100, 101],
+    };
+    // The sidebar view the store derives from that wire row.
+    const savedClimateView: SavedSearchDto = {
       id: 4,
       term: 'climate',
       wholeWord: true,
@@ -2315,9 +2375,9 @@ describe('ReaderShellComponent', () => {
       expect(req.request.body).toEqual({ term: 'climate', wholeWord: true });
       req.flush({ savedSearch: savedClimate });
 
-      // The POST already answered with the row and its count — no re-fetch.
+      // The POST already answered with the row and its matches — no re-fetch.
       ctrl.expectNone('https://api.test/api/saved-searches');
-      expect(f.componentInstance.savedSearchesStore.savedSearches()).toEqual([savedClimate]);
+      expect(f.componentInstance.savedSearchesStore.savedSearches()).toEqual([savedClimateView]);
       expect(show).toHaveBeenCalledWith(
         expect.objectContaining({ message: 'Search saved', durationMs: CONFIRMATION_DURATION_MS }),
       );
@@ -2325,7 +2385,7 @@ describe('ReaderShellComponent', () => {
 
     it('removes the saved search when the current one is already saved and the removal is confirmed', () => {
       const f = bootWithSearchSelected([savedClimate]);
-      expect(f.componentInstance.currentSavedSearch()).toEqual(savedClimate);
+      expect(f.componentInstance.currentSavedSearch()).toEqual(savedClimateView);
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
@@ -2347,7 +2407,7 @@ describe('ReaderShellComponent', () => {
       f.componentInstance.onToggleSavedSearch();
 
       ctrl.expectNone('https://api.test/api/saved-searches/4');
-      expect(f.componentInstance.savedSearchesStore.savedSearches()).toEqual([savedClimate]);
+      expect(f.componentInstance.savedSearchesStore.savedSearches()).toEqual([savedClimateView]);
     });
 
     it('matches a saved search by its decoded pair, not by the raw term string', () => {
@@ -2355,7 +2415,7 @@ describe('ReaderShellComponent', () => {
       // a plain trailing space, which is what a string comparison would need.
       const f = bootWithSearchSelected([savedClimate], 'climate\u00a0');
 
-      expect(f.componentInstance.currentSavedSearch()).toEqual(savedClimate);
+      expect(f.componentInstance.currentSavedSearch()).toEqual(savedClimateView);
     });
 
     // The mobile short label sits beside the full one at every width \u2014 the
