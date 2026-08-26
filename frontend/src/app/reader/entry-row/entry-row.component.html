@@ -2,7 +2,7 @@
   class="row"
   role="button"
   tabindex="0"
-  [class.read]="entry().isRead"
+  [class.read]="entry().isHidden"
   [class.img-left]="imageSide() === 'left'"
   (click)="open.emit(entry())"
   (keydown.enter)="open.emit(entry())"
@@ -18,7 +18,7 @@
     </h3>
     <p class="meta">
       <app-favicon [url]="entry().faviconUrl" [size]="14" />{{ entry().source }} · {{ when() }}
-      <span class="dot" [class.on]="!entry().isRead" aria-hidden="true"></span>
+      <span class="dot" [class.on]="!entry().isHidden" aria-hidden="true"></span>
     </p>
     <p class="snippet">
       @if (marking()) {

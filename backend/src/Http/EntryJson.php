@@ -15,7 +15,7 @@ final class EntryJson
      *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null,
      *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
-     *   isRead: bool, isFavorite: bool, isKept: bool, isViewed: bool
+     *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool
      * }
      */
     public static function one(EntryListRow $row): array
@@ -38,7 +38,7 @@ final class EntryJson
             'source' => $row->subscriptionTitle,
             // The feed is fetch-joined in the row query, so this adds no N+1.
             'faviconUrl' => $e->getFeed()->getFaviconUrl(),
-            'isRead' => $row->isRead,
+            'isHidden' => $row->isHidden,
             'isFavorite' => $row->isFavorite,
             'isKept' => $row->isKept,
             'isViewed' => $row->isViewed,

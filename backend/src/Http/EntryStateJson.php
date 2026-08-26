@@ -10,18 +10,18 @@ final class EntryStateJson
 {
     /**
      * @return array{
-     *   entryId: int, isRead: bool, isFavorite: bool, isKept: bool,
-     *   readAt: string|null, isViewed: bool, viewedAt: string|null
+     *   entryId: int, isHidden: bool, isFavorite: bool, isKept: bool,
+     *   hiddenAt: string|null, isViewed: bool, viewedAt: string|null
      * }
      */
     public static function one(EntryState $state, int $entryId): array
     {
         return [
             'entryId' => $entryId,
-            'isRead' => $state->isRead(),
+            'isHidden' => $state->isHidden(),
             'isFavorite' => $state->isFavorite(),
             'isKept' => $state->isKept(),
-            'readAt' => $state->getReadAt()?->format(\DateTimeInterface::ATOM),
+            'hiddenAt' => $state->getHiddenAt()?->format(\DateTimeInterface::ATOM),
             'isViewed' => $state->isViewed(),
             'viewedAt' => $state->getViewedAt()?->format(\DateTimeInterface::ATOM),
         ];

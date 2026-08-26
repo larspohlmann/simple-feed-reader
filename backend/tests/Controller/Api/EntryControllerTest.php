@@ -108,7 +108,7 @@ final class EntryControllerTest extends WebTestCase
         $first = $body['entries'][0];
         self::assertIsArray($first);
         self::assertSame('Post 3', $first['title']);
-        self::assertFalse($first['isRead']);
+        self::assertFalse($first['isHidden']);
         self::assertFalse($first['isViewed']);
         self::assertSame('Seeded', $first['source']);
         self::assertSame('https://icon.example.com/f.png', $first['faviconUrl']);
@@ -275,7 +275,7 @@ final class EntryControllerTest extends WebTestCase
             'PATCH',
             "/api/entries/$id/state",
             server: $headers + ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode(['isRead' => true, 'isViewed' => true], \JSON_THROW_ON_ERROR),
+            content: json_encode(['isHidden' => true, 'isViewed' => true], \JSON_THROW_ON_ERROR),
         );
         self::assertResponseIsSuccessful();
         $client->request('GET', '/api/entries?view=viewed', server: $headers);
@@ -289,7 +289,7 @@ final class EntryControllerTest extends WebTestCase
             'PATCH',
             "/api/entries/$id/state",
             server: $headers + ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode(['isRead' => false], \JSON_THROW_ON_ERROR),
+            content: json_encode(['isHidden' => false], \JSON_THROW_ON_ERROR),
         );
         self::assertResponseIsSuccessful();
         $client->request('GET', '/api/entries?view=viewed', server: $headers);
@@ -494,16 +494,16 @@ final class EntryControllerTest extends WebTestCase
             'PATCH',
             "/api/entries/$entryId/state",
             server: $headers + ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode(['isRead' => true, 'isFavorite' => true], \JSON_THROW_ON_ERROR),
+            content: json_encode(['isHidden' => true, 'isFavorite' => true], \JSON_THROW_ON_ERROR),
         );
         self::assertResponseIsSuccessful();
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
         self::assertIsArray($body['state']);
-        self::assertTrue($body['state']['isRead']);
+        self::assertTrue($body['state']['isHidden']);
         self::assertTrue($body['state']['isFavorite']);
         self::assertFalse($body['state']['isKept']);
-        self::assertNotNull($body['state']['readAt']);
+        self::assertNotNull($body['state']['hiddenAt']);
     }
 
     public function testPatchStateUnreadClearsReadAt(): void
@@ -520,19 +520,19 @@ final class EntryControllerTest extends WebTestCase
             'PATCH',
             "/api/entries/$entryId/state",
             server: $headers + ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode(['isRead' => true], \JSON_THROW_ON_ERROR),
+            content: json_encode(['isHidden' => true], \JSON_THROW_ON_ERROR),
         );
         $client->request(
             'PATCH',
             "/api/entries/$entryId/state",
             server: $headers + ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode(['isRead' => false], \JSON_THROW_ON_ERROR),
+            content: json_encode(['isHidden' => false], \JSON_THROW_ON_ERROR),
         );
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
         self::assertIsArray($body['state']);
-        self::assertFalse($body['state']['isRead']);
-        self::assertNull($body['state']['readAt']);
+        self::assertFalse($body['state']['isHidden']);
+        self::assertNull($body['state']['hiddenAt']);
     }
 
     public function testPatchStateMarksViewed(): void
@@ -559,7 +559,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertTrue($body['state']['isViewed']);
         self::assertNotNull($body['state']['viewedAt']);
         // Viewing reads the entry (#482 subset invariant, enforced on flush).
-        self::assertTrue($body['state']['isRead']);
+        self::assertTrue($body['state']['isHidden']);
     }
 
     public function testPatchStateUnviewingKeepsTheEntryRead(): void
@@ -575,7 +575,7 @@ final class EntryControllerTest extends WebTestCase
         // Viewing reads the entry (the subset invariant).
         $viewed = $this->markViewed($client, $headers, (int) $entryId);
         self::assertTrue($viewed['isViewed']);
-        self::assertTrue($viewed['isRead']);
+        self::assertTrue($viewed['isHidden']);
 
         // Un-ticking (#482) clears viewed but leaves the entry read — hiding from
         // the unread list is sticky.
@@ -590,7 +590,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertIsArray($body);
         self::assertIsArray($body['state']);
         self::assertFalse($body['state']['isViewed']);
-        self::assertTrue($body['state']['isRead']);
+        self::assertTrue($body['state']['isHidden']);
     }
 
     public function testMarkingViewedKeepsAWatermarkReadEntryRead(): void
@@ -625,8 +625,8 @@ final class EntryControllerTest extends WebTestCase
         self::assertIsArray($body);
         self::assertIsArray($body['state']);
         self::assertTrue($body['state']['isViewed']);
-        self::assertTrue($body['state']['isRead']);
-        self::assertSame('2026-08-01T00:00:00+00:00', $body['state']['readAt']);
+        self::assertTrue($body['state']['isHidden']);
+        self::assertSame('2026-08-01T00:00:00+00:00', $body['state']['hiddenAt']);
 
         $client->request('GET', '/api/entries', server: $headers);
         $list = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
@@ -634,7 +634,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertIsArray($list['entries']);
         foreach ($list['entries'] as $entry) {
             self::assertIsArray($entry);
-            self::assertTrue($entry['isRead'], 'Every swept entry must stay read.');
+            self::assertTrue($entry['isHidden'], 'Every swept entry must stay read.');
         }
 
         self::assertSame(0, $this->unreadCountOf($client, $headers, (int) $sub->getId()));
@@ -659,13 +659,13 @@ final class EntryControllerTest extends WebTestCase
         $onTheWatermark = $this->entryIdOf($sub, 'g2');
         $aboveTheWatermark = $this->entryIdOf($sub, 'g3');
 
-        self::assertTrue($this->markViewed($client, $headers, $onTheWatermark)['isRead']);
+        self::assertTrue($this->markViewed($client, $headers, $onTheWatermark)['isHidden']);
 
         // Above the watermark the sweep left it unread, but viewing reads it now
         // (#482 subset invariant): viewed can never be true while read is false.
         $above = $this->markViewed($client, $headers, $aboveTheWatermark);
-        self::assertTrue($above['isRead']);
-        self::assertNotNull($above['readAt']);
+        self::assertTrue($above['isHidden']);
+        self::assertNotNull($above['hiddenAt']);
     }
 
     private function entryIdOf(Subscription $subscription, string $guid): int
@@ -749,7 +749,7 @@ final class EntryControllerTest extends WebTestCase
             'PATCH',
             "/api/entries/$entryId/state",
             server: $headers + ['CONTENT_TYPE' => 'application/json'],
-            content: '{"isRead":true,"isFavorite":true}',
+            content: '{"isHidden":true,"isFavorite":true}',
         );
 
         self::assertResponseIsSuccessful();
@@ -775,7 +775,7 @@ final class EntryControllerTest extends WebTestCase
             'PATCH',
             "/api/entries/$entryId/state",
             server: $headers + ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode(['isRead' => true], \JSON_THROW_ON_ERROR),
+            content: json_encode(['isHidden' => true], \JSON_THROW_ON_ERROR),
         );
         self::assertResponseStatusCodeSame(404);
     }
@@ -799,7 +799,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertSame($entryId, $body['entry']['id']);
         self::assertSame('Post 1', $body['entry']['title']);
         self::assertSame('Seeded', $body['entry']['source']);
-        self::assertFalse($body['entry']['isRead']);
+        self::assertFalse($body['entry']['isHidden']);
     }
 
     public function testGetUnsubscribedEntryIs404(): void

@@ -45,7 +45,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     {
         $readByFlag = $this->entry('read-by-flag', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $readByFlag);
-        $state->setIsRead(true);
+        $state->setIsHidden(true);
         $this->em->persist($state);
 
         $this->entry('read-by-watermark', '2026-07-11T00:00:00Z');

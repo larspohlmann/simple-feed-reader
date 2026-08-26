@@ -22,7 +22,7 @@ function entry(id: number, title: string) {
     subscriptionId: 607,
     source: 'Desktop search fixture',
     faviconUrl: null,
-    isRead: true,
+    isHidden: true,
     isFavorite: false,
     isKept: false,
     isViewed: true,

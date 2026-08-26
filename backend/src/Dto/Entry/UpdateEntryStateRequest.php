@@ -11,12 +11,12 @@ namespace App\Dto\Entry;
 final readonly class UpdateEntryStateRequest
 {
     public function __construct(
-        public ?bool $isRead = null,
+        public ?bool $isHidden = null,
         public ?bool $isFavorite = null,
         public ?bool $isKept = null,
         // Both directions (#482): true opens/reads the entry, false un-ticks it.
-        // Setting viewed also reads (ViewedImpliesReadListener); un-ticking
-        // leaves the entry read.
+        // Setting viewed also hides (ViewedImpliesHiddenListener); un-ticking
+        // leaves the entry hidden.
         public ?bool $isViewed = null,
     ) {
     }

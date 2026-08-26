@@ -14,10 +14,10 @@ final readonly class EntryStateLine
     public function __construct(
         public string $feedUrl,
         public string $guidHash,
-        public bool $isRead,
+        public bool $isHidden,
         public bool $isFavorite,
         public bool $isKept,
-        public ?\DateTimeImmutable $readAt,
+        public ?\DateTimeImmutable $hiddenAt,
         public bool $isViewed,
         public ?\DateTimeImmutable $viewedAt,
     ) {
@@ -31,10 +31,10 @@ final readonly class EntryStateLine
         return new self(
             feedUrl: LineField::string($line, 'feedUrl'),
             guidHash: LineField::string($line, 'guidHash'),
-            isRead: LineField::bool($line, 'isRead'),
+            isHidden: LineField::bool($line, 'isHidden'),
             isFavorite: LineField::bool($line, 'isFavorite'),
             isKept: LineField::bool($line, 'isKept'),
-            readAt: LineField::dateOrNull($line, 'readAt'),
+            hiddenAt: LineField::dateOrNull($line, 'hiddenAt'),
             isViewed: LineField::bool($line, 'isViewed'),
             viewedAt: LineField::dateOrNull($line, 'viewedAt'),
         );

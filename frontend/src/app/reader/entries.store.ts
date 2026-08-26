@@ -131,14 +131,14 @@ export class EntriesStore {
 }
 
 /** The local view of a state patch, which can differ from what is sent to the
- *  server. The backend couples the two flags (#482): viewing an entry also reads
- *  it (ViewedImpliesReadListener), and un-hiding clears "viewed" too
+ *  server. The backend couples the two flags (#482): viewing an entry also hides
+ *  it (ViewedImpliesHiddenListener), and un-hiding clears "viewed" too
  *  (EntryState::markUnread). The wire only ever carries the flag the user
  *  toggled, so the coupled flag is mirrored here — once, in the one place that
  *  also decides list membership after a patch. Un-ticking (isViewed=false)
- *  leaves the read flag: hiding from the unread list is sticky. */
+ *  leaves the hidden flag: hiding from the unread list is sticky. */
 export function localStatePatch(patch: EntryStatePatch): EntryStatePatch {
-  if (patch.isViewed === true) return { ...patch, isRead: true };
-  if (patch.isRead === false) return { ...patch, isViewed: false };
+  if (patch.isViewed === true) return { ...patch, isHidden: true };
+  if (patch.isHidden === false) return { ...patch, isViewed: false };
   return patch;
 }

@@ -96,7 +96,7 @@ final class EntryListTest extends DbTestCase
         self::assertSame('Title b', $rows[0]->entry->getTitle());
         self::assertSame($this->sub->getId(), $rows[0]->subscriptionId);
         self::assertSame('Example', $rows[0]->subscriptionTitle);
-        self::assertFalse($rows[0]->isRead);
+        self::assertFalse($rows[0]->isHidden);
     }
 
     public function testSortsByEffectiveDateNotByFetchInstant(): void
@@ -169,8 +169,8 @@ final class EntryListTest extends DbTestCase
         foreach ($all as $r) {
             $byGuid[$r->entry->getGuid()] = $r;
         }
-        self::assertTrue($byGuid['old']->isRead);   // under the watermark
-        self::assertFalse($byGuid['new']->isRead);  // above it
+        self::assertTrue($byGuid['old']->isHidden);   // under the watermark
+        self::assertFalse($byGuid['new']->isHidden);  // above it
 
         $unread = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0, view: 'unread'));
         self::assertCount(1, $unread);
@@ -183,13 +183,13 @@ final class EntryListTest extends DbTestCase
         $this->sub->setMarkedReadUntil(new \DateTimeImmutable('2026-07-10T00:00:00Z'));
         // Explicitly unread despite being under the watermark.
         $state = new EntryState($this->user, $e);
-        $state->setIsRead(false);
+        $state->setIsHidden(false);
         $this->em->persist($state);
         $this->em->flush();
 
         $unread = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0, view: 'unread'));
         self::assertCount(1, $unread);
-        self::assertFalse($unread[0]->isRead);
+        self::assertFalse($unread[0]->isHidden);
     }
 
     public function testFavoritesAndKeptViews(): void
@@ -372,7 +372,7 @@ final class EntryListTest extends DbTestCase
         $this->em->persist($stranger);
         $this->em->persist(new Subscription($stranger, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $strangerState = new EntryState($stranger, $entry);
-        $strangerState->setIsRead(true);
+        $strangerState->setIsHidden(true);
         $strangerState->setIsFavorite(true);
         $this->em->persist($strangerState);
         $this->em->flush();
@@ -380,7 +380,7 @@ final class EntryListTest extends DbTestCase
         $rows = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0));
         self::assertCount(1, $rows);
         self::assertSame('shared', $rows[0]->entry->getGuid());
-        self::assertFalse($rows[0]->isRead, 'must not inherit the stranger\'s read flag');
+        self::assertFalse($rows[0]->isHidden, 'must not inherit the stranger\'s read flag');
         self::assertFalse($rows[0]->isFavorite, 'must not inherit the stranger\'s favorite flag');
     }
 }

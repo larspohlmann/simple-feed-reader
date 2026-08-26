@@ -60,7 +60,7 @@ final class AccountBackupControllerTest extends WebTestCase
         );
         $em->persist($entry);
         $state = new EntryState($user, $entry);
-        $state->setIsRead(true);
+        $state->setIsHidden(true);
         $em->persist($state);
         $em->flush();
 

@@ -195,7 +195,7 @@ final class RecommendationFeedTest extends DbTestCase
 
         // The entry's effectiveDate (2026-07-01) falls under the watermark
         // (2026-08-07), so with no explicit EntryState it reads as read.
-        self::assertTrue($byGuid['old']->row->isRead);
+        self::assertTrue($byGuid['old']->row->isHidden);
         self::assertSame(
             $watermark->getTimestamp(),
             $byGuid['old']->row->markedReadUntil?->getTimestamp(),

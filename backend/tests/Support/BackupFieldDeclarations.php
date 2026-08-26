@@ -102,8 +102,8 @@ final class BackupFieldDeclarations
             // would leave the other claimed by nothing, and deleting it from
             // entryStateLine() would still pass.
             'entry' => ['feedUrl', 'guidHash'],
-            'isRead' => 'isRead', 'isFavorite' => 'isFavorite', 'isKept' => 'isKept',
-            'readAt' => 'readAt', 'isViewed' => 'isViewed', 'viewedAt' => 'viewedAt',
+            'isHidden' => 'isHidden', 'isFavorite' => 'isFavorite', 'isKept' => 'isKept',
+            'hiddenAt' => 'hiddenAt', 'isViewed' => 'isViewed', 'viewedAt' => 'viewedAt',
         ],
     ];
 

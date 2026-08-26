@@ -124,10 +124,10 @@ final class RestoreEntryLoader
         $entry = $this->em->getReference(Entry::class, $entryId)
             ?? throw new \LogicException('An entry this restore just wrote has no reference.');
         $state = new EntryState($this->userReference(), $entry);
-        $state->setIsRead($line->isRead);
+        $state->setIsHidden($line->isHidden);
         $state->setIsFavorite($line->isFavorite);
         $state->setIsKept($line->isKept);
-        $state->setReadAt($line->readAt);
+        $state->setHiddenAt($line->hiddenAt);
         if ($line->isViewed) {
             // markViewed() is the only way in (#307, one-way by design) and it
             // needs an instant. A file that says "viewed" without a timestamp

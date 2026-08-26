@@ -63,7 +63,7 @@ final class RecommendationItemRepository extends ServiceEntityRepository
             ->addSelect('s.customTitle AS customTitle')
             ->addSelect('f.title AS feedTitle')
             ->addSelect('f.url AS feedUrl')
-            ->addSelect('es.isRead AS esRead')
+            ->addSelect('es.isHidden AS esHidden')
             ->addSelect('es.isFavorite AS esFavorite')
             ->addSelect('es.isKept AS esKept')
             ->addSelect('es.isViewed AS esViewed')
@@ -162,7 +162,7 @@ final class RecommendationItemRepository extends ServiceEntityRepository
         /** @var RecommendationItem $item */
         $item = $row[0];
         $entry = $item->getEntry();
-        $esRead = $row['esRead'];
+        $esHidden = $row['esHidden'];
         $markedReadUntil = $row['markedReadUntil'];
         $runCompletedAt = $row['runCompletedAt'];
 
@@ -170,8 +170,8 @@ final class RecommendationItemRepository extends ServiceEntityRepository
             entry: $entry,
             subscriptionId: self::toInt($row['subscriptionId']),
             subscriptionTitle: $this->rowTitle($row),
-            isRead: EffectiveReadState::isRead(
-                $esRead === null ? null : (bool) $esRead,
+            isHidden: EffectiveReadState::isHidden(
+                $esHidden === null ? null : (bool) $esHidden,
                 $markedReadUntil instanceof \DateTimeInterface ? $markedReadUntil : null,
                 $entry->getEffectiveDate(),
             ),

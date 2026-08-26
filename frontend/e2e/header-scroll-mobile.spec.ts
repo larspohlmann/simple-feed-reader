@@ -24,7 +24,7 @@ const ENTRIES = Array.from({ length: 30 }, (_, i) => ({
   createdAt: '2026-07-25T10:00:00Z',
   subscriptionId: 5,
   source: 'stub',
-  isRead: false,
+  isHidden: false,
   isFavorite: false,
   isKept: false,
 }));
@@ -48,7 +48,9 @@ async function stubEntries(page: Page): Promise<void> {
   await page.route('**/api/entries/*/state', async (route) => {
     await route.fulfill({
       status: 200,
-      json: { state: { entryId: 1, isRead: true, isFavorite: false, isKept: false, readAt: 'x' } },
+      json: {
+        state: { entryId: 1, isHidden: true, isFavorite: false, isKept: false, hiddenAt: 'x' },
+      },
     });
   });
   await page.route('**/api/entries*', async (route) => {

@@ -50,7 +50,7 @@ final class RestorePreviewerTest extends DbTestCase
     {
         return [
             'kind' => 'header',
-            'schemaVersion' => 1,
+            'schemaVersion' => 2,
             'createdAt' => '2026-08-17T09:00:00+00:00',
             'sourceUrl' => 'https://source.example',
             'sourceEmail' => 'source@example.com',
@@ -89,7 +89,7 @@ final class RestorePreviewerTest extends DbTestCase
     private static function entryState(string $feedUrl, string $guidHash): array
     {
         return ['kind' => 'entryState', 'feedUrl' => $feedUrl, 'guidHash' => $guidHash,
-            'isRead' => true, 'isFavorite' => false, 'isKept' => false, 'readAt' => null,
+            'isHidden' => true, 'isFavorite' => false, 'isKept' => false, 'hiddenAt' => null,
             'isViewed' => false, 'viewedAt' => null];
     }
 
@@ -116,7 +116,7 @@ final class RestorePreviewerTest extends DbTestCase
     private static function someHeader(): BackupHeader
     {
         return new BackupHeader(
-            schemaVersion: 1,
+            schemaVersion: 2,
             createdAt: new \DateTimeImmutable('2026-08-17T09:00:00+00:00'),
             sourceUrl: null,
             sourceEmail: null,

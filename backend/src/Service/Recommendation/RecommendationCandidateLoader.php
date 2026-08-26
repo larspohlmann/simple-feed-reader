@@ -75,7 +75,7 @@ final readonly class RecommendationCandidateLoader
             ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($request->poolSize)
             ->setParameter('since', $request->since)
-            ->setParameter('readFalse', false, Types::BOOLEAN)
+            ->setParameter('notHidden', false, Types::BOOLEAN)
             ->setParameter('notInteracted', false, Types::BOOLEAN);
 
         $lines = $this->linesFor($qb);

@@ -21,7 +21,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   subscriptionId: 7,
   source: 'Src',
   faviconUrl: null,
-  isRead: false,
+  isHidden: false,
   isFavorite: false,
   isKept: false,
   isViewed: false,
@@ -122,7 +122,7 @@ describe('EntryActionsComponent', () => {
   });
 
   it('leaves an inactive toggle unmarked', () => {
-    const f = mount(entry({ isFavorite: false, isKept: false, isRead: false }));
+    const f = mount(entry({ isFavorite: false, isKept: false, isHidden: false }));
     const on = buttons(f).map((b) => b.classList.contains('on'));
     expect(on).toEqual([false, false, false]);
   });
@@ -130,8 +130,8 @@ describe('EntryActionsComponent', () => {
   it('keeps one glyph per toggle, so only the colour moves', () => {
     // The read button swapped to an envelope once read; the state is carried by
     // the accent now, exactly as favorite and keep carry theirs (#435).
-    for (const isRead of [false, true]) {
-      const text = mount(entry({ isRead })).nativeElement.textContent;
+    for (const isHidden of [false, true]) {
+      const text = mount(entry({ isHidden })).nativeElement.textContent;
       expect(text).toContain('check');
       expect(text).not.toContain('mark_email_unread');
     }

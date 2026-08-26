@@ -2,7 +2,7 @@
   class="split"
   role="button"
   tabindex="0"
-  [class.read]="entry().isRead"
+  [class.read]="entry().isHidden"
   [class.img-left]="imageSide() === 'left'"
   (click)="open.emit(entry())"
   (keydown.enter)="open.emit(entry())"

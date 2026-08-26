@@ -141,7 +141,7 @@ class EntryStateRepository extends ServiceEntityRepository
     /**
      * Unread entry counts keyed by subscription id, in one query across all the
      * user's subscriptions. Unread = no explicit state and above the watermark,
-     * OR an explicit isRead=false row. Subscriptions with zero unread are absent
+     * OR an explicit isHidden=false row. Subscriptions with zero unread are absent
      * from the map (the caller defaults them to 0).
      *
      * Lives here rather than on SubscriptionRepository because its subject is
@@ -168,7 +168,7 @@ class EntryStateRepository extends ServiceEntityRepository
             UnreadDql::predicate(),
         ))
             ->setParameter('user', $userId)
-            ->setParameter('readFalse', false, Types::BOOLEAN)
+            ->setParameter('notHidden', false, Types::BOOLEAN)
             ->getResult();
 
         $map = [];

@@ -61,10 +61,10 @@ final class SearchMarkReadServiceTest extends DbTestCase
         return $entry;
     }
 
-    private function stateFor(Entry $entry, bool $isRead): EntryState
+    private function stateFor(Entry $entry, bool $isHidden): EntryState
     {
         $state = new EntryState($this->user, $entry);
-        $state->setIsRead($isRead);
+        $state->setIsHidden($isHidden);
         $this->em->persist($state);
         $this->em->flush();
 
@@ -90,7 +90,7 @@ final class SearchMarkReadServiceTest extends DbTestCase
 
         $state = $this->stateOf($entry);
         self::assertNotNull($state);
-        self::assertTrue($state->isRead());
+        self::assertTrue($state->isHidden());
     }
 
     public function testFlipsAnExplicitlyUnreadMatch(): void
@@ -102,21 +102,21 @@ final class SearchMarkReadServiceTest extends DbTestCase
 
         $state = $this->stateOf($entry);
         self::assertNotNull($state);
-        self::assertTrue($state->isRead());
+        self::assertTrue($state->isHidden());
     }
 
     public function testLeavesAnAlreadyReadMatchUnchanged(): void
     {
         $entry = $this->entry('c', 'Klima old');
         $existing = $this->stateFor($entry, true);
-        $readAt = $existing->getReadAt();
+        $hiddenAt = $existing->getHiddenAt();
 
         $this->service()->mark($this->user, 'klima', new \DateTimeImmutable('2100-01-01'));
 
         $state = $this->stateOf($entry);
         self::assertNotNull($state);
-        self::assertTrue($state->isRead());
-        self::assertEquals($readAt, $state->getReadAt());
+        self::assertTrue($state->isHidden());
+        self::assertEquals($hiddenAt, $state->getHiddenAt());
     }
 
     public function testLeavesANonMatchUnread(): void
@@ -137,7 +137,7 @@ final class SearchMarkReadServiceTest extends DbTestCase
 
         $wholeState = $this->stateOf($whole);
         self::assertNotNull($wholeState);
-        self::assertTrue($wholeState->isRead());
+        self::assertTrue($wholeState->isHidden());
         self::assertNull($this->stateOf($substring));
     }
 

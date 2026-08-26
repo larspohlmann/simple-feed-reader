@@ -48,13 +48,13 @@ final class EntryStateTest extends TestCase
     {
         $state = $this->makeState();
         $when = new \DateTimeImmutable('2026-08-07T10:00:00Z');
-        $state->markRead($when);
+        $state->hide($when);
         $state->markViewed($when);
 
         $state->markUnread();
 
-        self::assertFalse($state->isRead());
-        self::assertNull($state->getReadAt());
+        self::assertFalse($state->isHidden());
+        self::assertNull($state->getHiddenAt());
         self::assertFalse($state->isViewed());
         self::assertNull($state->getViewedAt());
     }
@@ -64,10 +64,10 @@ final class EntryStateTest extends TestCase
         $state = $this->makeState();
         $when = new \DateTimeImmutable('2026-08-07T10:00:00Z');
 
-        $state->markRead($when);
+        $state->hide($when);
 
-        self::assertTrue($state->isRead());
-        self::assertSame($when, $state->getReadAt());
+        self::assertTrue($state->isHidden());
+        self::assertSame($when, $state->getHiddenAt());
         // A bare read (a mark-all-read sweep) never counts as "opened".
         self::assertFalse($state->isViewed());
     }
@@ -76,7 +76,7 @@ final class EntryStateTest extends TestCase
     {
         $state = $this->makeState();
         $when = new \DateTimeImmutable('2026-08-07T10:00:00Z');
-        $state->markRead($when);
+        $state->hide($when);
         $state->markViewed($when);
 
         $state->clearViewed();
@@ -84,8 +84,8 @@ final class EntryStateTest extends TestCase
         // Un-ticking (#482) drops "Recently read" but keeps the entry read.
         self::assertFalse($state->isViewed());
         self::assertNull($state->getViewedAt());
-        self::assertTrue($state->isRead());
-        self::assertSame($when, $state->getReadAt());
+        self::assertTrue($state->isHidden());
+        self::assertSame($when, $state->getHiddenAt());
     }
 
     private function makeState(): EntryState

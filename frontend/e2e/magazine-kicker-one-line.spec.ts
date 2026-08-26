@@ -32,7 +32,7 @@ function entry(id: number, source: string) {
     subscriptionId: 1,
     source,
     faviconUrl: null,
-    isRead: false,
+    isHidden: false,
     isFavorite: false,
     isKept: false,
   };

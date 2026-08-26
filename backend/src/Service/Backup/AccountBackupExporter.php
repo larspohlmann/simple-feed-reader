@@ -330,10 +330,10 @@ final readonly class AccountBackupExporter
             'kind' => BackupSchema::KIND_ENTRY_STATE,
             'feedUrl' => $entry->getFeed()->getUrl(),
             'guidHash' => $entry->getGuidHash(),
-            'isRead' => $state->isRead(),
+            'isHidden' => $state->isHidden(),
             'isFavorite' => $state->isFavorite(),
             'isKept' => $state->isKept(),
-            'readAt' => $this->formatDateOrNull($state->getReadAt()),
+            'hiddenAt' => $this->formatDateOrNull($state->getHiddenAt()),
             'isViewed' => $state->isViewed(),
             'viewedAt' => $this->formatDateOrNull($state->getViewedAt()),
         ];

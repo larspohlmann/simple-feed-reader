@@ -21,7 +21,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * "Mark all read until T" for a scope. Advances each affected subscription's
  * watermark to max(current, T) and — so entries a user had explicitly marked
  * unread also become read — flips the caller's existing EntryState rows in the
- * affected feeds whose effectiveDate <= T to isRead=true. Sparse (no-row)
+ * affected feeds whose effectiveDate <= T to isHidden=true. Sparse (no-row)
  * entries are covered by the watermark alone.
  */
 final readonly class MarkReadService
@@ -58,8 +58,8 @@ final readonly class MarkReadService
         // committing.
         $this->em->wrapInTransaction(function () use ($user, $feedIds, $until): void {
             $this->em->createQuery(sprintf(
-                'UPDATE %s es SET es.isRead = :true, es.readAt = :now
-                 WHERE es.user = :user AND es.isRead = :false
+                'UPDATE %s es SET es.isHidden = :true, es.hiddenAt = :now
+                 WHERE es.user = :user AND es.isHidden = :false
                  AND es.entry IN (
                      SELECT e.id FROM %s e
                      WHERE e.feed IN (:feeds) AND e.effectiveDate <= :until

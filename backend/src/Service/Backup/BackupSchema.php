@@ -10,7 +10,7 @@ namespace App\Service\Backup;
  */
 final class BackupSchema
 {
-    public const int VERSION = 1;
+    public const int VERSION = 2;
 
     public const string KIND_HEADER = 'header';
     public const string KIND_ACCOUNT = 'account';

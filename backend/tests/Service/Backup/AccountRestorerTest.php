@@ -194,9 +194,9 @@ final class AccountRestorerTest extends DbTestCase
         $entryC = $this->makeEntry($two, 'guid-c', 'Article C', '2026-08-04');
 
         $read = new EntryState($user, $entryA);
-        $read->setIsRead(true);
+        $read->setIsHidden(true);
         $read->setIsFavorite(true);
-        $read->setReadAt(new \DateTimeImmutable('2026-08-05 10:00:00'));
+        $read->setHiddenAt(new \DateTimeImmutable('2026-08-05 10:00:00'));
         $this->em->persist($read);
         $viewed = new EntryState($user, $entryC);
         $viewed->setIsKept(true);
@@ -300,7 +300,7 @@ final class AccountRestorerTest extends DbTestCase
     {
         /** @var list<array<string, mixed>> $rows */
         $rows = $this->em->getConnection()->fetchAllAssociative(
-            'SELECT e.guid, s.is_read, s.is_favorite, s.is_kept, s.read_at, s.is_viewed, s.viewed_at'
+            'SELECT e.guid, s.is_hidden, s.is_favorite, s.is_kept, s.hidden_at, s.is_viewed, s.viewed_at'
             . ' FROM entry_state s JOIN entry e ON e.id = s.entry_id WHERE s.user_id = ? ORDER BY e.guid',
             [$userId],
         );
@@ -572,7 +572,7 @@ final class AccountRestorerTest extends DbTestCase
      * the method name from the field's own path so an embedded field such as
      * `image.url` finds `getImageUrl()` the same way a plain field finds
      * `getUrl()`. Tried bare first, because a boolean field already named
-     * `isRead` or `isKept` has a getter of that exact name, not `isIsRead()`.
+     * `isHidden` or `isKept` has a getter of that exact name, not `isIsRead()`.
      */
     private function getterValue(object $entity, string $field): mixed
     {

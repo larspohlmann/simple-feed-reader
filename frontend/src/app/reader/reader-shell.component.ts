@@ -428,7 +428,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     });
     // Mark the opened entry viewed exactly once per session — even if the PATCH
     // fails and the flag rolls back, we never re-fire. Opening sends the viewed
-    // flag alone; the backend reads it too (ViewedImpliesReadListener) and
+    // flag alone; the backend reads it too (ViewedImpliesHiddenListener) and
     // localStatePatch mirrors that here, so one flag on the wire moves both.
     effect(() => {
       if (this.openEntryId() === null) return;
@@ -666,7 +666,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *  badge is unchanged. The Recently-read badge follows the viewed flag both
    *  ways, and the row leaves that view through patchInList. */
   private setViewed(e: EntryDto, viewed: boolean): void {
-    const alsoReads = viewed && !e.isRead;
+    const alsoReads = viewed && !e.isHidden;
     this.subs.bumpViewed(viewed ? 1 : -1);
     if (alsoReads) {
       this.subs.decrementUnread(e.subscriptionId);
@@ -734,7 +734,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *  together if the PATCH fails — the Recently-read count up for the viewed
    *  flag, and the unread count down when opening also reads a still-unread entry. */
   private applyOpenedPatch(e: EntryDto, patch: EntryStatePatch): void {
-    const alsoReads = patch.isViewed === true && !e.isRead;
+    const alsoReads = patch.isViewed === true && !e.isHidden;
     if (alsoReads) {
       this.subs.decrementUnread(e.subscriptionId);
       this.savedSearchesStore.markEntryRead(e.id);
