@@ -604,6 +604,25 @@ describe('SidebarComponent', () => {
       expect(savedChev.className).toBe(tagChev.className);
     });
 
+    // The header chevron follows the same convention as the Tags and Feeds
+    // section chevrons: it points down (`expand_more`) when the list is open
+    // and right (`chevron_right`) when it is collapsed — never up.
+    it('points the header chevron down when expanded and right when collapsed', () => {
+      const f = mount({
+        savedSearches: [{ id: 1, term: 'climate', wholeWord: false, position: 0, unreadCount: 3 }],
+      });
+      const chevronIcon = (): string | null =>
+        f.nativeElement.querySelector('.savedsearch-head .chevzone .material-symbols-outlined')
+          ?.textContent ?? null;
+
+      expect(chevronIcon()).toBe('chevron_right');
+
+      f.componentInstance.toggleSavedSearches();
+      f.detectChanges();
+
+      expect(chevronIcon()).toBe('expand_more');
+    });
+
     it('shows a compact "W" pill on a whole-word row and none on a plain row', () => {
       const f = mount({
         savedSearches: [

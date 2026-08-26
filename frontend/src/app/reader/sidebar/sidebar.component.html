@@ -119,7 +119,7 @@
           [attr.aria-label]="'reader.toggleSavedSearches' | transloco"
           (click)="toggleSavedSearches()"
         >
-          <app-icon [name]="savedSearchesExpanded() ? 'expand_less' : 'expand_more'" size="sm" />
+          <app-icon [name]="savedSearchesExpanded() ? 'expand_more' : 'chevron_right'" size="sm" />
         </button>
       </div>
       @if (savedSearchesExpanded()) {
