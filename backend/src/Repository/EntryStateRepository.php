@@ -168,7 +168,7 @@ class EntryStateRepository extends ServiceEntityRepository
             UnreadDql::predicate(),
         ))
             ->setParameter('user', $userId)
-            ->setParameter('readFalse', false, Types::BOOLEAN)
+            ->setParameter('notHidden', false, Types::BOOLEAN)
             ->getResult();
 
         $map = [];

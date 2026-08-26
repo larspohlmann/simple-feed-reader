@@ -253,7 +253,7 @@ class EntryListRepository extends ServiceEntityRepository
 
         $this->applyTerms($qb, $query->terms);
 
-        return $qb->andWhere(UnreadDql::predicate())->setParameter('readFalse', false, Types::BOOLEAN);
+        return $qb->andWhere(UnreadDql::predicate())->setParameter('notHidden', false, Types::BOOLEAN);
     }
 
     private function rowQueryBuilder(int $userId): QueryBuilder
@@ -281,7 +281,7 @@ class EntryListRepository extends ServiceEntityRepository
     {
         switch ($view) {
             case 'unread':
-                $qb->andWhere(UnreadDql::predicate())->setParameter('readFalse', false, Types::BOOLEAN);
+                $qb->andWhere(UnreadDql::predicate())->setParameter('notHidden', false, Types::BOOLEAN);
                 break;
             case 'favorites':
                 $qb->andWhere('es.isFavorite = :flag')->setParameter('flag', true, Types::BOOLEAN);
