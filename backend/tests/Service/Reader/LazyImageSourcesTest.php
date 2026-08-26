@@ -134,6 +134,37 @@ final class LazyImageSourcesTest extends TestCase
         self::assertStringNotContainsString('<img', $html);
     }
 
+    public function testDropsThePictureSourcesWhenTheImageCarriesItsOwnSource(): void
+    {
+        // NDR wraps each photo in a <picture> whose <source srcset> lists a 20w
+        // placeholder first and sets sizes="1px"; its own script rewrites the
+        // size after layout. The reader strips that script, so a surviving
+        // <source> makes the browser pick the placeholder over the real <img>.
+        $html = $this->resolvedHtml(
+            '<picture>'
+            . '<source type="image/webp" srcset="/assets/placeholder.png 20w,'
+            . ' https://images.example.com/photo.webp?width=256 256w" sizes="1px">'
+            . '<img src="https://images.example.com/photo.webp?width=576" alt="A">'
+            . '</picture>'
+        );
+
+        self::assertStringNotContainsString('<source', $html);
+        self::assertStringContainsString('https://images.example.com/photo.webp?width=576', $html);
+    }
+
+    public function testDropsThePictureSourcesAfterPromotingABareImage(): void
+    {
+        // The promoted src is authoritative, so the sibling <source> that fed it
+        // must not remain to override the selection the reader just made.
+        $html = $this->resolvedHtml(
+            '<picture><source srcset="https://images.example.com/small.jpg 384w">'
+            . '<img alt="A"></picture>'
+        );
+
+        self::assertStringNotContainsString('<source', $html);
+        self::assertStringContainsString('src="https://images.example.com/small.jpg"', $html);
+    }
+
     public function testRemovesAnImageWithNoUsableCandidate(): void
     {
         $html = $this->resolvedHtml(

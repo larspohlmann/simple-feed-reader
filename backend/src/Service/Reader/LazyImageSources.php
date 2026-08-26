@@ -25,6 +25,12 @@ use Dom\HTMLDocument;
  * An image with no usable candidate is removed: an <img> the client cannot load
  * is a broken frame, and leaving it also fools HeroImageSelector into thinking
  * the body already shows a picture, suppressing the hero.
+ *
+ * Once an image inside a <picture> owns a usable src, the picture is flattened
+ * to that image so the sibling <source> set cannot override the choice. NDR
+ * lists a 20w placeholder first and sets `sizes="1px"`; its own script rewrites
+ * the size after layout, but the reader strips the script, so a surviving
+ * <source> would leave the browser on the placeholder (entry 480204).
  */
 final readonly class LazyImageSources
 {
@@ -46,18 +52,52 @@ final readonly class LazyImageSources
 
     private function resolveImage(Element $image): void
     {
-        if ($this->isUsable($image->getAttribute('src'))) {
-            return;
-        }
-
-        $candidate = $this->candidateFor($image);
-        if ($candidate === null) {
+        if (!$this->ensureUsableSource($image)) {
             $image->remove();
 
             return;
         }
 
+        $this->flattenEnclosingPicture($image);
+    }
+
+    /**
+     * Guarantees the image carries a usable src, promoting a lazy candidate when
+     * its own src is a placeholder. False when no candidate exists at all.
+     */
+    private function ensureUsableSource(Element $image): bool
+    {
+        if ($this->isUsable($image->getAttribute('src'))) {
+            return true;
+        }
+
+        $candidate = $this->candidateFor($image);
+        if ($candidate === null) {
+            return false;
+        }
+
         $image->setAttribute('src', $candidate);
+
+        return true;
+    }
+
+    /**
+     * Replaces the enclosing <picture> with the image, dropping the sibling
+     * <source> elements. The image now carries an authoritative src, and a
+     * surviving <source> would override it: NDR lists a 20w placeholder first and
+     * sets `sizes="1px"`, so once its own resize script is stripped the browser
+     * picks the placeholder over the real photo (entry 480204). The reader shows
+     * one picture at a single column width, so the responsive candidates that the
+     * <source> set carried have no use here.
+     */
+    private function flattenEnclosingPicture(Element $image): void
+    {
+        $picture = $this->enclosingPicture($image);
+        if ($picture === null || $picture->parentNode === null) {
+            return;
+        }
+
+        $picture->parentNode->replaceChild($image, $picture);
     }
 
     private function candidateFor(Element $image): ?string
