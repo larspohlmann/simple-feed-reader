@@ -9,6 +9,7 @@ use App\Http\ReaderJson;
 use App\Repository\EntryListRepository;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Reader\ArticleExtractorInterface;
+use App\Service\Reader\ExtractionCoverageGate;
 use App\Service\Reader\ExtractionResult;
 use App\Service\Reader\ReaderHeroResolver;
 use Psr\Clock\ClockInterface;
@@ -31,6 +32,7 @@ final readonly class EntryReaderController
         private EntryListRepository $entryList,
         private ClockInterface $clock,
         private ArticleExtractorInterface $extractor,
+        private ExtractionCoverageGate $coverageGate,
         private ReaderHeroResolver $readerHeroes,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $readerLimiter,
@@ -53,6 +55,10 @@ final readonly class EntryReaderController
         $result = $url === null || $url === ''
             ? ExtractionResult::failed(null, 'no_url')
             : $this->extractor->extract($url, $entry->getTitle());
+
+        // A confident-but-wrong extraction (page furniture instead of the article)
+        // is failed here so the client falls back to the feed body (#654).
+        $result = $this->coverageGate->verify($result, $entry->getContentHtml());
 
         $heroes = $this->readerHeroes->resolve($entry, $result);
 
