@@ -63,6 +63,12 @@ async function openFeed(page: Page, overrides: Record<string, unknown>): Promise
   await page.route('**/api/me**', json({ id: 1, email: '', roles: [], preferences: {} }));
   await page.route('**/api/version**', json({ version: 'dev' }));
   await page.route('**/api/recommendations/**', json({ run: null }));
+  // The reader shell loads saved searches on boot (#581). Left unstubbed it
+  // reaches the real backend, 401s on the stub token, and the interceptor
+  // clears the session and redirects to /login mid-test — app-feed-intro
+  // vanishes and the measurement reads null. Fast machines beat the round trip;
+  // CI loses it.
+  await page.route('**/api/saved-searches**', json({ savedSearches: [] }));
 
   await page.goto('/?subscription=1');
   await page.locator('app-feed-intro').waitFor();
