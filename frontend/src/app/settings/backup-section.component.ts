@@ -2,7 +2,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { Problem, REQUEST_TOO_LARGE, parseProblem } from '../core/problem';
+import { Problem, REQUEST_TOO_LARGE, parseProblem, parseProblemAsync } from '../core/problem';
 import { filenameFromContentDisposition, saveAs } from '../core/save-as';
 import { downloadOpmlExport } from '../core/opml-export';
 import { LanguageService } from '../core/language.service';
@@ -115,9 +115,10 @@ export class BackupSectionComponent {
         );
         saveAs(response.body, filename);
       },
-      error: (e: HttpErrorResponse) => {
+      error: async (e: HttpErrorResponse) => {
+        const problem = await parseProblemAsync(e);
         this.exporting.set(false);
-        this.exportError.set(parseProblem(e));
+        this.exportError.set(problem);
       },
     });
   }
