@@ -829,6 +829,48 @@ describe('ReaderShellComponent', () => {
     });
   });
 
+  describe('wide desktop searches (#607)', () => {
+    it('uses the split reader and restores the selected magazine layout when search clears', () => {
+      const f = boot();
+      screen.isWide.set(true);
+      f.componentInstance.layout.set('magazine');
+
+      qp.next(convertToParamMap({ q: 'angular' }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [{ ...entry, isRead: true, isViewed: true }], nextCursor: null });
+      f.detectChanges();
+
+      expect(f.componentInstance.paneMode()).toBe(false);
+      expect(f.componentInstance.splitView()).toBe(true);
+      expect(f.componentInstance.layout.mode()).toBe('magazine');
+      expect(f.nativeElement.querySelector('.main.split .reader .placeholder')).not.toBeNull();
+
+      qp.next(convertToParamMap({ q: 'angular', entry: '1' }));
+      f.detectChanges();
+
+      expect(f.componentInstance.articleFullscreen()).toBe(false);
+      expect(f.nativeElement.querySelector('.main.split .reader h1.title')?.textContent).toContain(
+        'e1',
+      );
+      expect(f.nativeElement.querySelector('.article-overlay')).toBeNull();
+
+      qp.next(convertToParamMap({}));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({ entries: [entry], nextCursor: null });
+      f.detectChanges();
+
+      expect(f.componentInstance.splitView()).toBe(f.componentInstance.paneMode());
+      expect(f.componentInstance.splitView()).toBe(false);
+      expect(f.componentInstance.layout.mode()).toBe('magazine');
+      expect(f.nativeElement.querySelector('.main.split')).toBeNull();
+      expect(f.nativeElement.querySelector('.rows.magazine')).not.toBeNull();
+    });
+  });
+
   it('fetches a deep-linked entry that is not in the loaded list', () => {
     const f = boot(); // initial list holds only entry id 1
     qp.next(convertToParamMap({ entry: '514-deep-linked-story' }));
