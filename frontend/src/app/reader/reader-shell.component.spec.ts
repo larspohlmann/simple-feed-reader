@@ -627,7 +627,9 @@ describe('ReaderShellComponent', () => {
     const store = f.componentInstance.savedSearchesStore;
     store.load();
     ctrl.expectOne('https://api.test/api/saved-searches').flush({
-      savedSearches: [{ id: 7, term: 'news', wholeWord: false, position: 0, unreadEntryIds: [1, 2] }],
+      savedSearches: [
+        { id: 7, term: 'news', wholeWord: false, position: 0, unreadEntryIds: [1, 2] },
+      ],
     });
     expect(store.savedSearches()[0].unreadCount).toBe(2);
 
@@ -656,7 +658,9 @@ describe('ReaderShellComponent', () => {
     const store = f.componentInstance.savedSearchesStore;
     store.load();
     ctrl.expectOne('https://api.test/api/saved-searches').flush({
-      savedSearches: [{ id: 7, term: 'news', wholeWord: false, position: 0, unreadEntryIds: [1, 2] }],
+      savedSearches: [
+        { id: 7, term: 'news', wholeWord: false, position: 0, unreadEntryIds: [1, 2] },
+      ],
     });
 
     qp.next(convertToParamMap({ entry: '1' }));
