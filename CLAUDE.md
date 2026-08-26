@@ -226,8 +226,9 @@ control, not ceremony — do not "simplify" it away, and do not delete
   inflates the score rather than breaking the build (it read 97% instead of 74%).
   Prove isolation with `infection --noop`: noop mutants leave the code unchanged,
   so **every** one of them must survive. Any reported kill is a false one.
-- Frontend unit: `npm test` (Jest, jsdom). Playwright smokes need Docker and are
-  deliberately outside the CI gate.
+- Frontend unit: `docker compose exec -T frontend npm test` (Jest, jsdom). Always
+  run frontend tests inside the Docker frontend container. Playwright smokes need
+  Docker and are deliberately outside the CI gate.
 - Both e2e suites run weekly in CI
   (`.github/workflows/e2e-rot-check.yml`) and open an `e2e-rot` issue when they
   break. Never give that workflow a `pull_request` trigger — the cost was

@@ -336,18 +336,28 @@ describe('BackupSectionComponent', () => {
     appendSpy.mockRestore();
   });
 
-  it('shows an error rather than failing silently when the backup download fails', () => {
+  it('shows the server detail when the backup download returns problem+json as a Blob', async () => {
     const f = mount();
 
     const c = f.componentInstance;
     c.downloadBackup();
+    const body = new Blob([], { type: 'application/problem+json' });
+    body.text = jest.fn().mockResolvedValue(
+      JSON.stringify({
+        type: 'backup_export_failed',
+        title: 'The backup could not be created',
+        status: 500,
+        detail: 'The server could not read one account record.',
+      }),
+    );
     ctrl
       .expectOne('https://api.test/api/account/backup')
-      .flush(new Blob(['server error']), { status: 500, statusText: 'Server Error' });
+      .flush(body, { status: 500, statusText: 'Server Error' });
+    await f.whenStable();
     f.detectChanges();
 
     expect(c.exporting()).toBe(false);
-    expect(c.exportError()).not.toBeNull();
+    expect(c.exportError()?.detail).toBe('The server could not read one account record.');
   });
 
   it('downloads the safety-net OPML export through the shared saveAs helper', () => {
