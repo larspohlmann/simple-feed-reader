@@ -89,8 +89,8 @@
       (search)="onSearch($event)"
     />
   </aside>
-  <main class="main" [class.split]="paneMode()">
-    @if (paneMode()) {
+  <main class="main" [class.split]="splitView()">
+    @if (splitView()) {
       <section class="list">
         <app-entry-list
           [layout]="layout.mode()"

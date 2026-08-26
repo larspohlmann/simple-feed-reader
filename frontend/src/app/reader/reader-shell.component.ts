@@ -237,9 +237,11 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     this.selection().kind === 'for-you' ? this.recs.newestRunId() : null,
   );
   readonly paneMode = computed(() => this.layout.mode() === 'pane' && this.screen.isWide());
+  readonly searchPane = computed(() => this.screen.isWide() && this.selection().kind === 'search');
+  readonly splitView = computed(() => this.paneMode() || this.searchPane());
   /** An article filling the whole main area (not the split pane) — the top bar
    *  takes over its back button, reader switch and prev/next. */
-  readonly articleFullscreen = computed(() => this.openEntry() !== null && !this.paneMode());
+  readonly articleFullscreen = computed(() => this.openEntry() !== null && !this.splitView());
 
   /** The user's tags for the mobile swipe row (the sidebar covers wider screens). */
   readonly headerTags = computed<TagDto[]>(() => this.subs.tagTree().map((n) => n.tag));
