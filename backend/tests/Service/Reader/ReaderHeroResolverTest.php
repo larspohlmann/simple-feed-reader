@@ -20,14 +20,31 @@ final class ReaderHeroResolverTest extends TestCase
         $this->resolver = new ReaderHeroResolver(new HeroImageSelector());
     }
 
-    public function testTheArticleImageLeadsWhenTheExtractedBodyHasALaterImage(): void
+    public function testTheArticleImageDoesNotLeadWhenTheExtractedBodyHasAnyImage(): void
     {
+        // #657: the extracted body already carries a picture, so neither the
+        // article og:image nor the feed image leads it — even though the body
+        // image (body.jpg) is a different file from the og:image.
         $entry = $this->entry('<p>Feed body.</p>');
         $entry->setImage('https://cdn.test/feed.jpg', 800, 450);
 
         $heroes = $this->resolver->resolve(
             $entry,
             $this->extracted('<p>Intro.</p><img src="https://cdn.test/body.jpg" alt="">', 'https://cdn.test/og.jpg'),
+        );
+
+        self::assertNull($heroes->readerHero);
+    }
+
+    public function testTheArticleImageLeadsWhenTheExtractedBodyHasNoImage(): void
+    {
+        // The article's own og:image leads a text-only extracted body.
+        $entry = $this->entry('<p>Feed body.</p>');
+        $entry->setImage('https://cdn.test/feed.jpg', 800, 450);
+
+        $heroes = $this->resolver->resolve(
+            $entry,
+            $this->extracted('<p>Just words.</p>', 'https://cdn.test/og.jpg'),
         );
 
         self::assertSame('https://cdn.test/og.jpg', $heroes->readerHero?->url);

@@ -20,10 +20,16 @@ final readonly class ReaderHeroResolver
 
         return new ReaderHeroes(
             readerHero: $this->readerHero($result, $feedPicture),
-            originalHero: $this->selector->selectFeedHero($feedPicture, $this->feedBody($entry)),
+            originalHero: $this->selector->select($feedPicture, $this->feedBody($entry)),
         );
     }
 
+    /**
+     * The extraction's own picture leads when it survives the rule. When it does
+     * not — the page offered none, or the extracted body already shows an image —
+     * the feed's picture is offered against that same body rather than leaving
+     * the article imageless.
+     */
     private function readerHero(ExtractionResult $result, ?DeclaredImage $feedPicture): ?DeclaredImage
     {
         if (!$result->ok) {
@@ -32,8 +38,8 @@ final readonly class ReaderHeroResolver
 
         $extractedBody = (string) $result->contentHtml;
 
-        return $this->selector->selectArticleHero($this->extractedPicture($result), $extractedBody)
-            ?? $this->selector->selectFeedHero($feedPicture, $extractedBody);
+        return $this->selector->select($this->extractedPicture($result), $extractedBody)
+            ?? $this->selector->select($feedPicture, $extractedBody);
     }
 
     /** Readability reports no dimensions for the og:image it finds. */
