@@ -41,7 +41,7 @@ final readonly class RecommendationDebugLogView
      */
     public function forUser(User $user, int $requestedRunId): array
     {
-        $runs = $this->runs->findNewestForUser($user, DebugLogRetention::RUNS);
+        $runs = $this->runs->findNewestForUser($user, RunLogRetention::RUNS);
         $selected = self::select($runs, $requestedRunId);
 
         if (null === $selected) {

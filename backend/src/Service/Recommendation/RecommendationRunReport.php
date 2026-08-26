@@ -35,6 +35,21 @@ final readonly class RecommendationRunReport
     ) {
     }
 
+    /**
+     * Seconds since the run started, on the caller's clock. Null before the
+     * run has a start instant (the `none`/`busy` reports). Computed here so
+     * both the status payload's `elapsedSeconds` and the ETA estimate read the
+     * one definition rather than each subtracting timestamps its own way.
+     */
+    public function elapsedSecondsAt(\DateTimeImmutable $now): ?int
+    {
+        if (null === $this->startedAt) {
+            return null;
+        }
+
+        return max(0, $now->getTimestamp() - $this->startedAt->getTimestamp());
+    }
+
     public static function none(): self
     {
         return new self(self::STATUS_NONE, null, 0, null);

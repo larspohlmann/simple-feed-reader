@@ -20,9 +20,23 @@ final class RecommendationRunStatusJsonTest extends TestCase
         $report = RecommendationRunReport::fromRun(new RecommendationRun($this->user(), $startedAt));
         $clock = new MockClock($startedAt->modify('+90 seconds'));
 
-        $json = RecommendationRunStatusJson::report($report, $this->emptySummary(), $clock);
+        $json = RecommendationRunStatusJson::report($report, $this->emptySummary(), $clock, null);
 
         self::assertSame(90, $json['elapsedSeconds']);
+    }
+
+    public function testEtaSecondsEchoesTheEstimatePassedIn(): void
+    {
+        $report = RecommendationRunReport::none();
+
+        $json = RecommendationRunStatusJson::report(
+            $report,
+            $this->emptySummary(),
+            new MockClock('2026-08-09T10:00:00'),
+            42,
+        );
+
+        self::assertSame(42, $json['etaSeconds']);
     }
 
     public function testElapsedSecondsClampsToZeroWhenTheClockIsBehindStartedAt(): void
@@ -31,7 +45,7 @@ final class RecommendationRunStatusJsonTest extends TestCase
         $report = RecommendationRunReport::fromRun(new RecommendationRun($this->user(), $startedAt));
         $clock = new MockClock($startedAt->modify('-5 seconds'));
 
-        $json = RecommendationRunStatusJson::report($report, $this->emptySummary(), $clock);
+        $json = RecommendationRunStatusJson::report($report, $this->emptySummary(), $clock, null);
 
         self::assertSame(0, $json['elapsedSeconds']);
     }
@@ -42,6 +56,7 @@ final class RecommendationRunStatusJsonTest extends TestCase
             RecommendationRunReport::none(),
             $this->emptySummary(),
             new MockClock('2026-08-09T10:00:00'),
+            null,
         );
 
         self::assertNull($json['elapsedSeconds']);
@@ -55,6 +70,7 @@ final class RecommendationRunStatusJsonTest extends TestCase
             RecommendationRunReport::none(),
             $summary,
             new MockClock('2026-08-09T10:00:00'),
+            null,
         );
 
         $forYou = $json['forYou'];

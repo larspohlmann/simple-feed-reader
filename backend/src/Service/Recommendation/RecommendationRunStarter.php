@@ -59,24 +59,24 @@ final readonly class RecommendationRunStarter
         $this->entityManager->persist($run);
         $this->entityManager->flush();
 
-        $this->trimDebugLog($user);
+        $this->trimRunLog($user);
 
         return RecommendationRunReport::fromRun($run);
     }
 
     /**
-     * Trims the account's debug log to the retention window. It runs after the
+     * Trims the account's run log to the retention window. It runs after the
      * new run is flushed, so the new run is inside the window it is counted
      * against and the number of runs holding a log is exactly the constant --
      * trimming first would keep the window's worth of old runs plus this one.
      * resume() never comes here: a resumed run appends to the log it already
      * has (#309).
      */
-    private function trimDebugLog(User $user): void
+    private function trimRunLog(User $user): void
     {
         $this->logs->deleteForUserOutsideRuns(
             $user,
-            $this->runs->findNewestIdsForUser($user, DebugLogRetention::RUNS),
+            $this->runs->findNewestIdsForUser($user, RunLogRetention::RUNS),
         );
     }
 
