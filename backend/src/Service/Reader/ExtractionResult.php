@@ -11,6 +11,7 @@ namespace App\Service\Reader;
  *   fetch         — the page could not be retrieved (network / SSRF-blocked / oversized)
  *   unextractable — readability could not find an article
  *   empty         — extraction produced nothing after sanitization
+ *   mismatch      — the extraction did not reflect the article the feed carries (#654)
  */
 final readonly class ExtractionResult
 {

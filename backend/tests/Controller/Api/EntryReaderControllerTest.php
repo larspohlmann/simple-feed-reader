@@ -148,6 +148,87 @@ final class EntryReaderControllerTest extends WebTestCase
         );
     }
 
+    public function testOffTopicExtractionOfAFullFeedArticleFallsBackToTheFeed(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('reader-mismatch@example.com');
+        $fake = $this->installFake();
+        // Readability grabbed page furniture, not the story (#654).
+        $fake->willReturn(ExtractionResult::ok(
+            url: 'https://example.com/article',
+            title: 'The Title',
+            byline: null,
+            siteName: null,
+            contentHtml: '<p>+++ dein shop gegen meerweh +++ neu im shop eingetroffen +++</p>',
+            excerpt: null,
+            imageCandidate: null,
+        ));
+        $entry = $this->seedEntry($user, 'https://example.com/article');
+        $this->setFeedBody($entry, '<div>' . $this->fullFeedArticle() . '</div>');
+
+        $client->request('GET', '/api/entries/' . $entry->getId() . '/reader', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('failed', $body['status']);
+        self::assertSame('mismatch', $body['reason']);
+        self::assertNull($body['readerHero']);
+    }
+
+    public function testExtractionThatReflectsTheFullFeedArticleStaysOk(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('reader-reflects@example.com');
+        $fake = $this->installFake();
+        $fake->willReturn(ExtractionResult::ok(
+            url: 'https://example.com/article',
+            title: 'The Title',
+            byline: null,
+            siteName: null,
+            // A clean extraction of the same page shares the feed's wording.
+            contentHtml: '<article>' . $this->fullFeedArticle() . '</article>',
+            excerpt: null,
+            imageCandidate: null,
+        ));
+        $entry = $this->seedEntry($user, 'https://example.com/article');
+        $this->setFeedBody($entry, '<div>' . $this->fullFeedArticle() . '</div>');
+
+        $client->request('GET', '/api/entries/' . $entry->getId() . '/reader', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('ok', $body['status']);
+    }
+
+    private function setFeedBody(Entry $entry, string $html): void
+    {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entry->setContentHtml($html);
+        $em->flush();
+    }
+
+    /** A distinct-worded feed body past the gate's substantial-feed bar. */
+    private function fullFeedArticle(): string
+    {
+        return '<p>Gegen zwanzig Uhr fünfzig empfing die Rettungsleitstelle einen kaum '
+            . 'verständlichen Notruf von einer polnischen Segelyacht nördlich von Sassnitz. '
+            . 'Sechs Menschen, darunter drei Kinder, standen bereits bis zu den Schienbeinen '
+            . 'im Wasser der Ostsee, während viel Seewasser in das zwölf Meter lange Boot '
+            . 'eindrang und es langsam zu sinken drohte. Der Seenotrettungskreuzer erreichte '
+            . 'den Havaristen nach wenigen Minuten, brachte eine leistungsstarke Lenzpumpe an '
+            . 'Bord und stabilisierte die Lage. Anschließend nahm das Tochterboot die Yacht in '
+            . 'Schlepp und brachte sie sicher in den Stadthafen von Sassnitz, wo die Feuerwehren '
+            . 'die weiteren Sicherungsarbeiten übernahmen. Alle sechs Menschen an Bord blieben '
+            . 'unverletzt, die Ursache des Wassereinbruchs blieb zunächst ungeklärt. Die '
+            . 'Steilküste des Nationalparks Jasmund erschwerte die Verständigung über Seefunk '
+            . 'erheblich, sodass die Besatzung ihre genaue Position erst nach mehreren Versuchen '
+            . 'durchgeben konnte. Zum Zeitpunkt des Seenotfalls herrschten schwache Winde aus '
+            . 'südwestlicher Richtung und eine vergleichsweise ruhige See.</p>';
+    }
+
     public function testEntryWithoutUrlShortCircuitsWithoutCallingExtractor(): void
     {
         $client = self::createClient();
