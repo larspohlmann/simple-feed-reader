@@ -23,7 +23,18 @@ describe('ToastService', () => {
   })
   class HostedContentComponent {}
 
-  afterEach(() => jest.useRealTimers());
+  const root = document.documentElement;
+  const toastHeight = () => root.style.getPropertyValue('--app-toast-height');
+  const stubToastHeight = (height: number) =>
+    jest
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue({ height } as DOMRect);
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+    root.style.removeProperty('--app-toast-height');
+  });
 
   it('renders the message into the document', () => {
     toast.show({ message: 'Refresh finished' });
@@ -187,6 +198,32 @@ describe('ToastService', () => {
     toast.dismiss();
     tick();
     expect(toast.visible()).toBe(false);
+  });
+
+  it('publishes the live toast height as --app-toast-height while it is on screen', () => {
+    stubToastHeight(118);
+    expect(toastHeight()).toBe('');
+
+    toast.show({ message: 'Ranking your feeds', durationMs: null });
+    tick();
+    expect(toastHeight()).toBe('118px');
+
+    toast.dismiss();
+    tick();
+    expect(toastHeight()).toBe('');
+  });
+
+  it('keeps the height published across a replacement, so the offset never strands', () => {
+    stubToastHeight(90);
+    toast.show({ message: 'First' });
+    tick();
+    expect(toastHeight()).toBe('90px');
+
+    // The replacement opens before the outgoing ref reports itself closed; its
+    // closed handler must not clear the property out from under the new toast.
+    toast.show({ message: 'Second' });
+    tick();
+    expect(toastHeight()).toBe('90px');
   });
 
   it('marks the pane fixed-width only when the toast asks for it', () => {

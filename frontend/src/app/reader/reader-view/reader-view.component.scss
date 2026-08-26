@@ -155,6 +155,15 @@ app-to-top-button {
   z-index: 20;
 }
 
+/* On a narrow layout an active run's pill is a bottom-centred toast that, as an
+   overlay above the article, would bury this button (#641). Lift it clear:
+   `--app-toast-height` is the live toast's measured height, published while one
+   is visible; its fallback cancels the gap so the term is zero and the button
+   keeps its base offset when no toast is up. */
+:host-context(.is-narrow) app-to-top-button {
+  bottom: calc(24px + var(--space-3) + var(--app-toast-height, calc(-1 * var(--space-3))));
+}
+
 /* The full-screen article's standing nameplate. The headline and the meta line
    scroll away with the body, and the toolbar retracts on top of that, so a
    scrolled-down article used to carry nothing at all that named it (#270).

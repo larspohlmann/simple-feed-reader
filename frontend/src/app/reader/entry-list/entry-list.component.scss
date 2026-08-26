@@ -554,3 +554,15 @@ app-to-top-button {
   bottom: var(--space-5);
   z-index: 4;
 }
+
+/* On a narrow layout the run pill is a bottom-centred toast that spans nearly
+   the full width and, as an overlay above everything, buries this corner
+   (#641). Lift the button clear of whatever toast is up: `--app-toast-height`
+   is the live toast's measured height, published by ToastService while one is
+   visible; its fallback cancels the gap so the whole added term is zero and the
+   button keeps its base offset when no toast is on screen. */
+:host-context(.is-narrow) app-to-top-button {
+  bottom: calc(
+    var(--space-5) + var(--space-3) + var(--app-toast-height, calc(-1 * var(--space-3)))
+  );
+}
