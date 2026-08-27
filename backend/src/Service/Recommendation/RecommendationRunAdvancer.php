@@ -347,6 +347,7 @@ final class RecommendationRunAdvancer
         AiProviderSettings $settings,
         TickDriver $driver,
     ): RecommendationRunReport {
+        $this->markFirstBatchBeforeCallingProvider($run);
         $userId = $this->requireUserId($user);
         $effectiveSettings = $this->settingsResolver->forUser($user);
         $waveSize = $this->waveSize($run, $settings, $driver);
@@ -354,6 +355,18 @@ final class RecommendationRunAdvancer
         $winnersPerBatch = $this->resolveWave($run, $settings, $effectiveSettings, $userId, $waveSize);
 
         return $this->pickEndingAfterWave($run, $winnersPerBatch);
+    }
+
+    /** Commit the start signal before the blocking provider request. A status
+     * poll during that request must see that the ETA can now count down. */
+    private function markFirstBatchBeforeCallingProvider(RecommendationRun $run): void
+    {
+        if ($run->hasFirstBatchStarted()) {
+            return;
+        }
+
+        $run->markFirstBatchStarted();
+        $this->entityManager->flush();
     }
 
     /**

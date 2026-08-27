@@ -39,6 +39,38 @@ final class RecommendationRunStatusJsonTest extends TestCase
         self::assertSame(42, $json['etaSeconds']);
     }
 
+    public function testReportsWhetherTheFirstBatchHasStarted(): void
+    {
+        $run = new RecommendationRun($this->user(), new \DateTimeImmutable('2026-08-09T10:00:00'));
+        $run->snapshot([[1]]);
+        $run->markFirstBatchStarted();
+
+        $json = RecommendationRunStatusJson::report(
+            RecommendationRunReport::fromRun($run),
+            $this->emptySummary(),
+            new MockClock('2026-08-09T10:00:00'),
+            42,
+        );
+
+        self::assertTrue($json['firstBatchStarted']);
+    }
+
+    public function testTreatsCompletedBatchesAsAStartedFirstBatchForExistingRuns(): void
+    {
+        $run = new RecommendationRun($this->user(), new \DateTimeImmutable('2026-08-09T10:00:00'));
+        $run->snapshot([[1]]);
+        $run->recordBatchWinners([]);
+
+        $json = RecommendationRunStatusJson::report(
+            RecommendationRunReport::fromRun($run),
+            $this->emptySummary(),
+            new MockClock('2026-08-09T10:00:00'),
+            42,
+        );
+
+        self::assertTrue($json['firstBatchStarted']);
+    }
+
     public function testElapsedSecondsClampsToZeroWhenTheClockIsBehindStartedAt(): void
     {
         $startedAt = new \DateTimeImmutable('2026-08-09T10:00:00');
