@@ -14,7 +14,7 @@ const BASE = 'https://api.test';
 const ENDPOINT = `${BASE}/api/me/ai/recommendations`;
 
 function state(over: Partial<RecommendationSettingsState> = {}): RecommendationSettingsState {
-  const { expertDefaults, ...otherOverrides } = over;
+  const { expertBounds, expertDefaults, ...otherOverrides } = over;
 
   return {
     guidancePrompt: null,
@@ -45,6 +45,15 @@ function state(over: Partial<RecommendationSettingsState> = {}): RecommendationS
       picksLimit: 50,
       batchCount: null,
       contextWindow: null,
+    },
+    expertBounds: expertBounds ?? {
+      favoritesCap: { min: 0, max: 500 },
+      keptCap: { min: 0, max: 500 },
+      viewedCap: { min: 0, max: 500 },
+      candidatePoolSize: { min: 10, max: 5000 },
+      picksLimit: { min: 1, max: 500 },
+      batchCount: { min: 1, max: 100 },
+      contextWindow: { min: 4096, max: 2097152 },
     },
   };
 }

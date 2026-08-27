@@ -60,6 +60,20 @@ app-field {
   width: 100%;
 }
 
+.numeric-range {
+  margin: 0 0 var(--space-1);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+input[aria-invalid='true']:focus {
+  border-color: var(--danger);
+}
+
 textarea {
   min-height: 6em;
   resize: vertical;

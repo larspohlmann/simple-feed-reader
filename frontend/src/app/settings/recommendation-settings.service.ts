@@ -20,6 +20,20 @@ export interface RecommendationExpertDefaults {
   readonly contextWindow: number | null;
 }
 
+export interface RecommendationSettingBounds {
+  readonly min: number;
+  readonly max: number;
+}
+
+export type RecommendationExpertField =
+  | 'favoritesCap'
+  | 'keptCap'
+  | 'viewedCap'
+  | 'candidatePoolSize'
+  | 'picksLimit'
+  | 'batchCount'
+  | 'contextWindow';
+
 /** Mirrors the GET payload 1:1 — see Task 14's `RecommendationSettingsJson`. */
 export interface RecommendationSettingsState {
   readonly guidancePrompt: string | null;
@@ -29,6 +43,7 @@ export interface RecommendationSettingsState {
     readonly outputContract: string;
   };
   readonly expertDefaults: RecommendationExpertDefaults;
+  readonly expertBounds: Readonly<Record<RecommendationExpertField, RecommendationSettingBounds>>;
   readonly favoritesCap: number;
   readonly keptCap: number;
   readonly viewedCap: number;
