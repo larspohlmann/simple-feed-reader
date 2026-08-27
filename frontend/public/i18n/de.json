@@ -219,6 +219,7 @@
         "lookback7": "Letzte 7 Tage",
         "guidance": "Leitprompt",
         "guidanceReset": "Prompt auf Standard zurücksetzen",
+        "factoryDefaultsReset": "Auf Werkseinstellungen zurücksetzen",
         "fixedShow": "Festen Prompt anzeigen",
         "expertTitle": "Experteneinstellungen",
         "expertDesc": "Prompt, Obergrenzen, Kontextfenster und Debug.",

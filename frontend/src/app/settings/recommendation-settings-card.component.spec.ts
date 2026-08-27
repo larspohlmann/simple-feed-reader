@@ -22,6 +22,16 @@ describe('RecommendationSettingsCardComponent', () => {
       role: 'You are the recommendation engine for a feed reader.',
       outputContract: 'Return at most 20 picks as a JSON array of entry ids.',
     },
+    expertDefaults: {
+      guidancePrompt: null,
+      favoritesCap: 40,
+      keptCap: 40,
+      viewedCap: 80,
+      candidatePoolSize: 500,
+      picksLimit: 50,
+      batchCount: null,
+      contextWindow: null,
+    },
     favoritesCap: 50,
     keptCap: 50,
     viewedCap: 200,
@@ -99,6 +109,11 @@ describe('RecommendationSettingsCardComponent', () => {
     fixture: ComponentFixture<RecommendationSettingsCardComponent>,
   ): HTMLButtonElement =>
     fixture.nativeElement.querySelector('app-settings-save-bar app-button[variant="ghost"] button');
+
+  const factoryDefaultsButton = (
+    fixture: ComponentFixture<RecommendationSettingsCardComponent>,
+  ): HTMLButtonElement =>
+    fixture.nativeElement.querySelector('[data-testid="factory-defaults-reset"] button');
 
   beforeEach(() => {
     dialogStub.open.mockReset();
@@ -290,6 +305,49 @@ describe('RecommendationSettingsCardComponent', () => {
       const request = http.expectOne('/api/me/ai/recommendations');
       expect(request.request.body).toEqual(expect.objectContaining({ guidancePrompt: null }));
       request.flush({ ...STATE, guidancePrompt: null });
+    });
+
+    it('reseeds every expert field as a pending factory-default draft', () => {
+      const fixture = mount({ ...STATE, guidancePrompt: 'Focus on space exploration.' });
+
+      factoryDefaultsButton(fixture).click();
+
+      expect(fixture.componentInstance.guidance()).toBe('');
+      expect(fixture.componentInstance.favoritesCap()).toBe(40);
+      expect(fixture.componentInstance.keptCap()).toBe(40);
+      expect(fixture.componentInstance.viewedCap()).toBe(80);
+      expect(fixture.componentInstance.candidatePoolSize()).toBe(500);
+      expect(fixture.componentInstance.picksLimit()).toBe(50);
+      expect(fixture.componentInstance.batchCount()).toBeNull();
+      expect(fixture.componentInstance.contextWindow()).toBeNull();
+      expect(fixture.componentInstance.svc.draft()).toEqual(STATE.expertDefaults);
+      http.expectNone('/api/me/ai/recommendations');
+    });
+
+    it('saves every factory default after the user resets the expert draft', () => {
+      const fixture = mount({ ...STATE, guidancePrompt: 'Focus on space exploration.' });
+
+      factoryDefaultsButton(fixture).click();
+      fixture.detectChanges();
+      saveButton(fixture).click();
+
+      const request = http.expectOne('/api/me/ai/recommendations');
+      expect(request.request.body).toEqual(expect.objectContaining(STATE.expertDefaults));
+      request.flush({ ...STATE, ...STATE.expertDefaults });
+    });
+
+    it('lets the save bar discard a factory-default draft before a save', () => {
+      const fixture = mount({ ...STATE, guidancePrompt: 'Focus on space exploration.' });
+
+      factoryDefaultsButton(fixture).click();
+      fixture.detectChanges();
+      resetButton(fixture).click();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.guidance()).toBe('Focus on space exploration.');
+      expect(fixture.componentInstance.favoritesCap()).toBe(50);
+      expect(fixture.componentInstance.svc.dirty()).toBe(false);
+      http.expectNone('/api/me/ai/recommendations');
     });
 
     it('Reset discards the pending typed edit and reseeds the input', () => {

@@ -179,6 +179,17 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
             />
           </app-field>
 
+          <div class="factory-reset">
+            <app-button
+              data-testid="factory-defaults-reset"
+              variant="accent-outline"
+              size="sm"
+              (click)="resetToFactoryDefaults()"
+            >
+              {{ 'settings.ai.recommendations.factoryDefaultsReset' | transloco }}
+            </app-button>
+          </div>
+
           <div class="reference-refs">
             <div class="group">
               <app-field [label]="'settings.ai.recommendations.guidance' | transloco">

@@ -14,6 +14,8 @@ const BASE = 'https://api.test';
 const ENDPOINT = `${BASE}/api/me/ai/recommendations`;
 
 function state(over: Partial<RecommendationSettingsState> = {}): RecommendationSettingsState {
+  const { expertDefaults, ...otherOverrides } = over;
+
   return {
     guidancePrompt: null,
     defaultGuidancePrompt: 'Prefer long-form articles.',
@@ -33,7 +35,17 @@ function state(over: Partial<RecommendationSettingsState> = {}): RecommendationS
     workerAlive: true,
     profileText: null,
     showReasons: false,
-    ...over,
+    ...otherOverrides,
+    expertDefaults: expertDefaults ?? {
+      guidancePrompt: null,
+      favoritesCap: 40,
+      keptCap: 40,
+      viewedCap: 80,
+      candidatePoolSize: 500,
+      picksLimit: 50,
+      batchCount: null,
+      contextWindow: null,
+    },
   };
 }
 

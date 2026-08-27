@@ -75,6 +75,22 @@ final class RecommendationSettingsJsonTest extends TestCase
         self::assertFalse($state['showReasons']);
     }
 
+    public function testStateEmitsFactoryDefaultsForTheExpertDraft(): void
+    {
+        $state = RecommendationSettingsJson::state($this->effectiveSettings(), workerAlive: true);
+
+        self::assertSame([
+            'guidancePrompt' => null,
+            'favoritesCap' => 40,
+            'keptCap' => 40,
+            'viewedCap' => 80,
+            'candidatePoolSize' => 500,
+            'picksLimit' => 50,
+            'batchCount' => null,
+            'contextWindow' => null,
+        ], $state['expertDefaults']);
+    }
+
     private function effectiveSettings(
         ?string $profileText = null,
         bool $showReasons = false,

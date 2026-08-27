@@ -71,6 +71,15 @@ textarea {
   gap: var(--space-3) var(--space-4);
 }
 
+// This action resets the whole expert draft. It sits in its own ruled section
+// so it does not read as the guidance field's smaller, local reset action.
+.factory-reset {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
 @media (width <= bp.$bp-sm) {
   .expert-grid {
     grid-template-columns: 1fr;

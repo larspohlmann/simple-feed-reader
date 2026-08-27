@@ -9,6 +9,17 @@ import { RecommendationsService } from '../reader/recommendations.service';
 
 export type ContextWindowSource = 'user' | 'provider' | 'fallback';
 
+export interface RecommendationExpertDefaults {
+  readonly guidancePrompt: string | null;
+  readonly favoritesCap: number;
+  readonly keptCap: number;
+  readonly viewedCap: number;
+  readonly candidatePoolSize: number;
+  readonly picksLimit: number;
+  readonly batchCount: number | null;
+  readonly contextWindow: number | null;
+}
+
 /** Mirrors the GET payload 1:1 — see Task 14's `RecommendationSettingsJson`. */
 export interface RecommendationSettingsState {
   readonly guidancePrompt: string | null;
@@ -17,6 +28,7 @@ export interface RecommendationSettingsState {
     readonly role: string;
     readonly outputContract: string;
   };
+  readonly expertDefaults: RecommendationExpertDefaults;
   readonly favoritesCap: number;
   readonly keptCap: number;
   readonly viewedCap: number;
@@ -139,6 +151,12 @@ export class RecommendationSettingsService {
     value: TypedRecommendationEdits[Field],
   ): void {
     this.draft.update((draft) => ({ ...draft, [field]: value }));
+  }
+
+  /** Replaces the entire expert draft with the factory values from the API.
+   *  This stays local until the card's explicit Save writes it. */
+  resetExpertDraft(defaults: RecommendationExpertDefaults): void {
+    this.draft.set(defaults);
   }
 
   /** Drops every pending typed edit and restores the clean baseline, without a

@@ -219,6 +219,7 @@
         "lookback7": "Last 7 days",
         "guidance": "Guidance prompt",
         "guidanceReset": "Reset the prompt to default",
+        "factoryDefaultsReset": "Reset to factory defaults",
         "fixedShow": "Show the fixed prompt",
         "expertTitle": "Expert settings",
         "expertDesc": "Prompt, caps, context window and debug.",
