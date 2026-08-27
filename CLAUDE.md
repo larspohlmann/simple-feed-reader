@@ -166,6 +166,10 @@ Enforced mechanically by `composer check` and `composer md`:
 - **Run e2e through `composer e2e`, not raw phpunit.** Homebrew PHP ignores the
   macOS keychain, so the script builds a CA bundle containing the mkcert root;
   bare phpunit fails TLS verification against `https://localhost:8443`.
+- **e2e is black-box against the single shared Docker stack.** Run it only from
+  the checkout that ran `docker compose up`; a run from another checkout (a
+  worktree) tests the wrong code. Both suites preflight-guard against this and
+  fail fast naming the owning path (#615, `backend/bin/e2e-preflight.sh`).
 - **Scan the dev log** after backend work — deprecations and swallowed errors
   surface there. The `dev` and `test` handlers rotate daily and keep 3 files
   (`monolog.yaml`, #596), so the active file is
