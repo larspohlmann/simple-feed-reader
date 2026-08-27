@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dto\Recommendation;
 
 use App\Service\Recommendation\RecommendationSettingsValues;
+use App\Service\Recommendation\RecommendationSettingsBounds;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -22,21 +23,42 @@ final readonly class SaveRecommendationSettingsRequest
     public function __construct(
         #[Assert\Length(max: 4000)]
         public ?string $guidancePrompt,
-        #[Assert\Range(min: 0, max: 500)]
+        #[Assert\Range(
+            min: RecommendationSettingsBounds::FAVORITES_CAP_MINIMUM,
+            max: RecommendationSettingsBounds::FAVORITES_CAP_MAXIMUM,
+        )]
         public int $favoritesCap,
-        #[Assert\Range(min: 0, max: 500)]
+        #[Assert\Range(
+            min: RecommendationSettingsBounds::KEPT_CAP_MINIMUM,
+            max: RecommendationSettingsBounds::KEPT_CAP_MAXIMUM,
+        )]
         public int $keptCap,
-        #[Assert\Range(min: 0, max: 500)]
+        #[Assert\Range(
+            min: RecommendationSettingsBounds::VIEWED_CAP_MINIMUM,
+            max: RecommendationSettingsBounds::VIEWED_CAP_MAXIMUM,
+        )]
         public int $viewedCap,
-        #[Assert\Range(min: 10, max: 5000)]
+        #[Assert\Range(
+            min: RecommendationSettingsBounds::CANDIDATE_POOL_SIZE_MINIMUM,
+            max: RecommendationSettingsBounds::CANDIDATE_POOL_SIZE_MAXIMUM,
+        )]
         public int $candidatePoolSize,
         #[Assert\Range(min: 1, max: 7)]
         public int $lookbackDays,
-        #[Assert\Range(min: 1, max: 500)]
+        #[Assert\Range(
+            min: RecommendationSettingsBounds::PICKS_LIMIT_MINIMUM,
+            max: RecommendationSettingsBounds::PICKS_LIMIT_MAXIMUM,
+        )]
         public int $picksLimit,
-        #[Assert\Range(min: 4096, max: 2097152)]
+        #[Assert\Range(
+            min: RecommendationSettingsBounds::CONTEXT_WINDOW_MINIMUM,
+            max: RecommendationSettingsBounds::CONTEXT_WINDOW_MAXIMUM,
+        )]
         public ?int $contextWindow,
-        #[Assert\Range(min: 1, max: 100)]
+        #[Assert\Range(
+            min: RecommendationSettingsBounds::BATCH_COUNT_MINIMUM,
+            max: RecommendationSettingsBounds::BATCH_COUNT_MAXIMUM,
+        )]
         public ?int $batchCount,
         public bool $debugEnabled,
         #[Assert\Choice(choices: [null, 1, 3, 6, 12, 24])]

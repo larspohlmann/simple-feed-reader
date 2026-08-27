@@ -6,6 +6,7 @@ namespace App\Http;
 
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationPromptText;
+use App\Service\Recommendation\RecommendationSettingsBounds;
 
 /**
  * The client's view of a user's recommendation settings: the effective
@@ -43,6 +44,7 @@ final class RecommendationSettingsJson
                 'batchCount' => null,
                 'contextWindow' => null,
             ],
+            'expertBounds' => RecommendationSettingsBounds::EXPERT_FIELDS,
             'favoritesCap' => $effective->favoritesCap,
             'keptCap' => $effective->keptCap,
             'viewedCap' => $effective->viewedCap,

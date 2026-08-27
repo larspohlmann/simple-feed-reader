@@ -7,6 +7,7 @@ import {
   effect,
   inject,
   linkedSignal,
+  signal,
 } from '@angular/core';
 import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -29,6 +30,8 @@ import { LanguageService } from '../core/language.service';
 import { formatInteger } from '../reader/format';
 import {
   RecommendationSettingsService,
+  RecommendationExpertField,
+  RecommendationSettingBounds,
   TypedRecommendationEdits,
 } from './recommendation-settings.service';
 
@@ -92,6 +95,12 @@ export class RecommendationSettingsCardComponent {
   readonly contextWindow = linkedSignal<number | null>(
     () => this.svc.state()?.contextWindowOverride ?? null,
   );
+  private readonly clientValidationErrors = signal<
+    Partial<Record<RecommendationExpertField, string>>
+  >({});
+  private readonly dismissedServerErrors = signal<Partial<Record<RecommendationExpertField, true>>>(
+    {},
+  );
 
   // Instant fields: persisted the moment they change, never held in the draft.
   readonly showReasons = linkedSignal<boolean>(() => this.svc.state()?.showReasons ?? false);
@@ -138,11 +147,23 @@ export class RecommendationSettingsCardComponent {
     return 'settings.ai.recommendations.contextWindowFallback';
   });
 
+  readonly contextWindowHint = computed(
+    () =>
+      `${this.i18n.translate(this.contextWindowSourceKey(), {
+        value: this.reportedContextWindow(),
+      })} · ${this.rangeLabel('contextWindow')}`,
+  );
+
   /** Falls back to the problem's title so a failure with no `detail` (a
    *  network error, a gateway response) still shows something. */
   readonly failureMessage = computed(() => {
     const failure = this.svc.failure();
-    return failure ? (failure.detail ?? failure.title) : null;
+    if (!failure) return null;
+
+    const messages = Object.entries(failure.errors ?? {})
+      .filter(([field]) => !this.dismissedServerErrors()[field as RecommendationExpertField])
+      .flatMap(([, errors]) => errors);
+    return messages.length > 0 ? messages.join(' ') : (failure.detail ?? failure.title);
   });
 
   /** Same fallback as `failureMessage`; the 409 while a run is active
@@ -173,12 +194,14 @@ export class RecommendationSettingsCardComponent {
    *  field to a value below every cap's minimum and ship a raw 422 on save.
    *  Leaving the signal untouched keeps its last valid value instead. */
   onCapInput(
-    field: keyof TypedRecommendationEdits,
+    field: Extract<RecommendationExpertField, keyof TypedRecommendationEdits>,
     target: WritableSignal<number>,
     event: Event,
   ): void {
     const raw = (event.target as HTMLInputElement).value;
     if (raw === '') return;
+
+    this.clearFieldError(field);
     const value = +raw;
     target.set(value);
     this.svc.setTypedField(field, value);
@@ -192,12 +215,14 @@ export class RecommendationSettingsCardComponent {
   }
 
   onBatchCountInput(event: Event): void {
+    this.clearFieldError('batchCount');
     const value = this.nullableNumberValue(event);
     this.batchCount.set(value);
     this.svc.setTypedField('batchCount', value);
   }
 
   onContextWindowInput(event: Event): void {
+    this.clearFieldError('contextWindow');
     const value = this.nullableNumberValue(event);
     this.contextWindow.set(value);
     this.svc.setTypedField('contextWindow', value);
@@ -253,12 +278,37 @@ export class RecommendationSettingsCardComponent {
     this.picksLimit.set(defaults.picksLimit);
     this.batchCount.set(defaults.batchCount);
     this.contextWindow.set(defaults.contextWindow);
+    this.clientValidationErrors.set({});
+    this.dismissedServerErrors.set({});
   }
 
   /** The explicit Save flushes the accumulated typed draft over the last-saved
    *  baseline; the service builds the body. */
   onSave(): void {
+    if (this.validateExpertFields()) return;
+
+    this.dismissedServerErrors.set({});
     this.svc.save();
+  }
+
+  range(field: RecommendationExpertField): RecommendationSettingBounds {
+    return this.svc.state()!.expertBounds[field];
+  }
+
+  rangeLabel(field: RecommendationExpertField): string {
+    const bounds = this.range(field);
+    return `${formatInteger(bounds.min, this.language.lang())}–${formatInteger(bounds.max, this.language.lang())}`;
+  }
+
+  fieldError(field: RecommendationExpertField): string | null {
+    const clientError = this.clientValidationErrors()[field];
+    if (clientError) return clientError;
+    if (this.dismissedServerErrors()[field]) return null;
+    return this.svc.failure()?.errors?.[field]?.join(' ') ?? null;
+  }
+
+  isFieldInvalid(field: RecommendationExpertField): boolean {
+    return this.fieldError(field) !== null;
   }
 
   /** Drops the pending typed edits and reseeds every typed input from the last
@@ -275,6 +325,45 @@ export class RecommendationSettingsCardComponent {
     this.picksLimit.set(state?.picksLimit ?? 0);
     this.batchCount.set(state?.batchCount ?? null);
     this.contextWindow.set(state?.contextWindowOverride ?? null);
+    this.clientValidationErrors.set({});
+    this.dismissedServerErrors.set({});
+  }
+
+  private validateExpertFields(): boolean {
+    const errors = (
+      Object.entries(this.expertFieldValues()) as [RecommendationExpertField, number | null][]
+    ).reduce<Partial<Record<RecommendationExpertField, string>>>(
+      (validationErrors, [field, value]) => {
+        if (value === null || this.isInRange(field, value)) return validationErrors;
+
+        return { ...validationErrors, [field]: this.rangeLabel(field) };
+      },
+      {},
+    );
+    this.clientValidationErrors.set(errors);
+    return Object.keys(errors).length > 0;
+  }
+
+  private expertFieldValues(): Record<RecommendationExpertField, number | null> {
+    return {
+      favoritesCap: this.favoritesCap(),
+      keptCap: this.keptCap(),
+      viewedCap: this.viewedCap(),
+      candidatePoolSize: this.candidatePoolSize(),
+      picksLimit: this.picksLimit(),
+      batchCount: this.batchCount(),
+      contextWindow: this.contextWindow(),
+    };
+  }
+
+  private isInRange(field: RecommendationExpertField, value: number): boolean {
+    const bounds = this.range(field);
+    return Number.isInteger(value) && value >= bounds.min && value <= bounds.max;
+  }
+
+  private clearFieldError(field: RecommendationExpertField): void {
+    this.clientValidationErrors.update((errors) => ({ ...errors, [field]: undefined }));
+    this.dismissedServerErrors.update((errors) => ({ ...errors, [field]: true }));
   }
 
   /** Same confirm-then-act shape as `AccountSectionComponent.confirmThenDelete()`:

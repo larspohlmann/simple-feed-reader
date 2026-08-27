@@ -32,6 +32,15 @@ describe('RecommendationSettingsCardComponent', () => {
       batchCount: null,
       contextWindow: null,
     },
+    expertBounds: {
+      favoritesCap: { min: 0, max: 500 },
+      keptCap: { min: 0, max: 500 },
+      viewedCap: { min: 0, max: 500 },
+      candidatePoolSize: { min: 10, max: 5000 },
+      picksLimit: { min: 1, max: 500 },
+      batchCount: { min: 1, max: 100 },
+      contextWindow: { min: 4096, max: 2097152 },
+    },
     favoritesCap: 50,
     keptCap: 50,
     viewedCap: 200,
@@ -157,6 +166,19 @@ describe('RecommendationSettingsCardComponent', () => {
         expect.stringContaining('Batches (empty = automatic)'),
       ]),
     );
+  });
+
+  it("shows each expert numeric field's allowed range", () => {
+    const fixture = mount();
+    const rangeElements = fixture.nativeElement.querySelectorAll(
+      '.numeric-range',
+    ) as NodeListOf<HTMLElement>;
+    const ranges = Array.from(rangeElements).map((range) => range.textContent?.trim());
+
+    expect(ranges).toEqual(
+      expect.arrayContaining(['0–500', '10–5,000', '1–500', '1–100', '4,096–2,097,152']),
+    );
+    expect(ranges.filter((range) => range === '0–500')).toHaveLength(3);
   });
 
   describe('the show-reasons switch (instant)', () => {
@@ -368,11 +390,11 @@ describe('RecommendationSettingsCardComponent', () => {
       http.expectNone('/api/me/ai/recommendations');
     });
 
-    it('shows the error banner when the save is rejected as invalid', () => {
+    it('shows the backend field error and marks its input invalid when the save is rejected', () => {
       const fixture = mount();
 
       const input = picksInput(fixture);
-      input.value = '9999';
+      input.value = '500';
       input.dispatchEvent(new Event('input'));
       fixture.detectChanges();
       saveButton(fixture).click();
@@ -389,7 +411,90 @@ describe('RecommendationSettingsCardComponent', () => {
       );
       fixture.detectChanges();
 
-      expect(banner(fixture)?.textContent).toContain('One or more fields are invalid.');
+      expect(banner(fixture)?.textContent).toContain('This value should be between 1 and 500.');
+      expect(picksInput(fixture).getAttribute('aria-invalid')).toBe('true');
+      expect(fixture.nativeElement.textContent).toContain(
+        'This value should be between 1 and 500.',
+      );
+    });
+
+    it('rejects an out-of-range value in the browser without sending it', () => {
+      const fixture = mount();
+
+      const input = picksInput(fixture);
+      input.value = '9999';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      saveButton(fixture).click();
+      fixture.detectChanges();
+
+      expect(http.match('/api/me/ai/recommendations')).toHaveLength(0);
+      expect(input.getAttribute('aria-invalid')).toBe('true');
+      expect(fixture.nativeElement.textContent).toContain('1–500');
+    });
+
+    it('keeps an invalid cap error when the user clears the field without correcting it', () => {
+      const fixture = mount();
+
+      const input = picksInput(fixture);
+      input.value = '9999';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      saveButton(fixture).click();
+      fixture.detectChanges();
+
+      input.value = '';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+
+      expect(picksInput(fixture).getAttribute('aria-invalid')).toBe('true');
+    });
+
+    it('clears a backend field error when the user corrects that field', () => {
+      const fixture = mount();
+
+      const input = picksInput(fixture);
+      input.value = '500';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      saveButton(fixture).click();
+      http.expectOne('/api/me/ai/recommendations').flush(
+        {
+          type: 'validation_error',
+          title: 'Validation failed',
+          status: 422,
+          errors: { picksLimit: ['This value should be between 1 and 500.'] },
+        },
+        { status: 422, statusText: 'Unprocessable Content' },
+      );
+      fixture.detectChanges();
+
+      const correctedInput = picksInput(fixture);
+      correctedInput.value = '50';
+      correctedInput.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+
+      expect(picksInput(fixture).getAttribute('aria-invalid')).toBe('false');
+      expect(fixture.nativeElement.textContent).not.toContain(
+        'This value should be between 1 and 500.',
+      );
+    });
+
+    it('clears an invalid state when factory defaults replace an invalid draft', () => {
+      const fixture = mount();
+
+      const input = picksInput(fixture);
+      input.value = '9999';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      saveButton(fixture).click();
+      fixture.detectChanges();
+
+      factoryDefaultsButton(fixture).click();
+      fixture.detectChanges();
+
+      expect(picksInput(fixture).value).toBe('50');
+      expect(picksInput(fixture).getAttribute('aria-invalid')).toBe('false');
     });
   });
 
@@ -415,7 +520,7 @@ describe('RecommendationSettingsCardComponent', () => {
       const fixture = mount();
 
       const input = picksInput(fixture);
-      input.value = '9999';
+      input.value = '50';
       input.dispatchEvent(new Event('input'));
       fixture.detectChanges();
       saveButton(fixture).click();

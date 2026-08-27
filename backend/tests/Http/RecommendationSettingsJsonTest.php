@@ -91,6 +91,21 @@ final class RecommendationSettingsJsonTest extends TestCase
         ], $state['expertDefaults']);
     }
 
+    public function testStateEmitsTheExpertFieldBounds(): void
+    {
+        $state = RecommendationSettingsJson::state($this->effectiveSettings(), workerAlive: true);
+
+        self::assertSame([
+            'favoritesCap' => ['min' => 0, 'max' => 500],
+            'keptCap' => ['min' => 0, 'max' => 500],
+            'viewedCap' => ['min' => 0, 'max' => 500],
+            'candidatePoolSize' => ['min' => 10, 'max' => 5000],
+            'picksLimit' => ['min' => 1, 'max' => 500],
+            'batchCount' => ['min' => 1, 'max' => 100],
+            'contextWindow' => ['min' => 4096, 'max' => 2097152],
+        ], $state['expertBounds']);
+    }
+
     private function effectiveSettings(
         ?string $profileText = null,
         bool $showReasons = false,

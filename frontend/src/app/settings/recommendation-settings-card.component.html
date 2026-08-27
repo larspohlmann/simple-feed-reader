@@ -89,11 +89,14 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
             <app-field
               [label]="'settings.ai.recommendations.favoritesCap' | transloco"
               [info]="'settings.ai.info.favoritesCap' | transloco"
+              [error]="fieldError('favoritesCap')"
             >
+              <p class="numeric-range">{{ rangeLabel('favoritesCap') }}</p>
               <input
                 type="number"
-                min="0"
-                max="500"
+                [min]="range('favoritesCap').min"
+                [max]="range('favoritesCap').max"
+                [attr.aria-invalid]="isFieldInvalid('favoritesCap')"
                 [value]="favoritesCap()"
                 (input)="onCapInput('favoritesCap', favoritesCap, $event)"
               />
@@ -102,11 +105,14 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
             <app-field
               [label]="'settings.ai.recommendations.keptCap' | transloco"
               [info]="'settings.ai.info.keptCap' | transloco"
+              [error]="fieldError('keptCap')"
             >
+              <p class="numeric-range">{{ rangeLabel('keptCap') }}</p>
               <input
                 type="number"
-                min="0"
-                max="500"
+                [min]="range('keptCap').min"
+                [max]="range('keptCap').max"
+                [attr.aria-invalid]="isFieldInvalid('keptCap')"
                 [value]="keptCap()"
                 (input)="onCapInput('keptCap', keptCap, $event)"
               />
@@ -115,11 +121,14 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
             <app-field
               [label]="'settings.ai.recommendations.viewedCap' | transloco"
               [info]="'settings.ai.info.viewedCap' | transloco"
+              [error]="fieldError('viewedCap')"
             >
+              <p class="numeric-range">{{ rangeLabel('viewedCap') }}</p>
               <input
                 type="number"
-                min="0"
-                max="500"
+                [min]="range('viewedCap').min"
+                [max]="range('viewedCap').max"
+                [attr.aria-invalid]="isFieldInvalid('viewedCap')"
                 [value]="viewedCap()"
                 (input)="onCapInput('viewedCap', viewedCap, $event)"
               />
@@ -128,11 +137,14 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
             <app-field
               [label]="'settings.ai.recommendations.candidatePool' | transloco"
               [info]="'settings.ai.info.candidatePool' | transloco"
+              [error]="fieldError('candidatePoolSize')"
             >
+              <p class="numeric-range">{{ rangeLabel('candidatePoolSize') }}</p>
               <input
                 type="number"
-                min="10"
-                max="5000"
+                [min]="range('candidatePoolSize').min"
+                [max]="range('candidatePoolSize').max"
+                [attr.aria-invalid]="isFieldInvalid('candidatePoolSize')"
                 [value]="candidatePoolSize()"
                 (input)="onCapInput('candidatePoolSize', candidatePoolSize, $event)"
               />
@@ -141,11 +153,14 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
             <app-field
               [label]="'settings.ai.recommendations.picksLimit' | transloco"
               [info]="'settings.ai.info.picksLimit' | transloco"
+              [error]="fieldError('picksLimit')"
             >
+              <p class="numeric-range">{{ rangeLabel('picksLimit') }}</p>
               <input
                 type="number"
-                min="1"
-                max="500"
+                [min]="range('picksLimit').min"
+                [max]="range('picksLimit').max"
+                [attr.aria-invalid]="isFieldInvalid('picksLimit')"
                 [value]="picksLimit()"
                 (input)="onCapInput('picksLimit', picksLimit, $event)"
               />
@@ -154,11 +169,14 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
             <app-field
               [label]="'settings.ai.recommendations.batchCount' | transloco"
               [info]="'settings.ai.info.batchCount' | transloco"
+              [error]="fieldError('batchCount')"
             >
+              <p class="numeric-range">{{ rangeLabel('batchCount') }}</p>
               <input
                 type="number"
-                min="1"
-                max="100"
+                [min]="range('batchCount').min"
+                [max]="range('batchCount').max"
+                [attr.aria-invalid]="isFieldInvalid('batchCount')"
                 [value]="batchCount() ?? ''"
                 (input)="onBatchCountInput($event)"
               />
@@ -167,13 +185,16 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
 
           <app-field
             [label]="'settings.ai.recommendations.contextWindow' | transloco"
-            [hint]="contextWindowSourceKey() | transloco: { value: reportedContextWindow() }"
+            [hint]="contextWindowHint()"
             [info]="'settings.ai.info.contextWindow' | transloco"
+            [error]="fieldError('contextWindow')"
           >
+            <p class="numeric-range">{{ rangeLabel('contextWindow') }}</p>
             <input
               type="number"
-              min="4096"
-              max="2097152"
+              [min]="range('contextWindow').min"
+              [max]="range('contextWindow').max"
+              [attr.aria-invalid]="isFieldInvalid('contextWindow')"
               [value]="contextWindow() ?? ''"
               (input)="onContextWindowInput($event)"
             />
