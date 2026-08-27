@@ -411,14 +411,16 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly leavingIds = signal<ReadonlySet<number>>(new Set());
 
   constructor() {
-    // Reload the list whenever the selection (not the open entry) changes. A new
-    // list has no removed rows, so clear the collapsed set with it — otherwise a
-    // recycled id would render an incoming row already collapsed.
+    // Reload the list and sidebar counts whenever the selection (not the open
+    // entry) changes. A new list has no removed rows, so clear the collapsed set
+    // with it — otherwise a recycled id would render an incoming row already
+    // collapsed.
     effect(() => {
       const q = queryFromSelection(this.selection());
       untracked(() => {
         this.leavingIds.set(new Set());
         this.entries.load(q);
+        this.subs.loadIfStale();
       });
     });
     // Dismiss the mobile drawer once a new selection is chosen from it.
@@ -554,7 +556,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.subs.load();
     this.savedSearchesStore.load();
     this.tags.load(); // the sidebar tag tree (order, empty tags) reads TagsStore
     if (!this.auth.user()) this.auth.loadMe().subscribe({ error: () => undefined });

@@ -121,7 +121,9 @@ describe('ReaderShellComponent', () => {
   function boot(entryOverride: Partial<typeof entry> = {}) {
     const f = TestBed.createComponent(ReaderShellComponent);
     f.detectChanges(); // ngOnInit + initial effects
-    ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
+    const subscriptions = ctrl.match('https://api.test/api/subscriptions');
+    expect(subscriptions.length).toBeLessThanOrEqual(1);
+    subscriptions.forEach((request) => request.flush(subsBody));
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
     ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     ctrl
@@ -1114,15 +1116,24 @@ describe('ReaderShellComponent', () => {
     ctrl.expectNone((r) => r.url === 'https://api.test/api/refresh');
   });
 
-  it('reloads entries when the selection changes', () => {
+  it('reloads entries and sidebar counts when the selection changes (#664)', () => {
+    jest.useFakeTimers({ now: new Date('2026-08-27T16:00:00Z') });
     const f = boot();
+    jest.advanceTimersByTime(10_000);
     qp.next(convertToParamMap({ subscription: '5' }));
     f.detectChanges();
     ctrl
       .expectOne((r) => r.params.get('subscription') === '5')
       .flush({ entries: [], nextCursor: null });
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      ...subsBody,
+      subscriptions: [{ ...subsBody.subscriptions[0], unreadCount: 3 }],
+    });
     f.detectChanges();
+
+    expect(TestBed.inject(SubscriptionsStore).totalUnread()).toBe(3);
     expect(f.nativeElement.querySelector('.empty')).not.toBeNull();
+    jest.useRealTimers();
   });
 
   it('loads the for-you view and titles the list for it', () => {
