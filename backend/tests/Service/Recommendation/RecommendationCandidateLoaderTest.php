@@ -57,28 +57,23 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         self::assertSame([$readByFlag->getId()], array_map(static fn ($l) => $l->entryId, $lines));
     }
 
-    public function testEntriesAtOrBeforeTheMarkedReadWatermarkAreExcluded(): void
+    public function testEntriesAtOrBeforeTheMarkedReadWatermarkStayCandidates(): void
     {
-        // "Mark all read up to here" is an explicit dismissal, so it still
-        // removes entries at or before the watermark — even a read (hidden)
-        // entry newer than the watermark stays a candidate.
+        // "Mark all read up to here" is a bulk convenience, not a per-entry
+        // judgement, so it no longer removes entries from the pool. It was the
+        // watermark — set to now by "mark all read" — that covered every
+        // in-window entry and emptied the pool on Strato.
         $this->subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-07-12T00:00:00Z'));
 
-        $this->entry('before-watermark', '2026-07-11T00:00:00Z');
-
-        $readButAfter = $this->entry('read-but-after-watermark', '2026-07-13T00:00:00Z');
-        $state = new EntryState($this->user, $readButAfter);
-        $state->setIsHidden(true);
-        $this->em->persist($state);
-
-        $unread = $this->entry('unread', '2026-07-14T00:00:00Z');
+        $beforeWatermark = $this->entry('before-watermark', '2026-07-11T00:00:00Z');
+        $afterWatermark = $this->entry('after-watermark', '2026-07-13T00:00:00Z');
 
         $this->em->flush();
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
         self::assertEqualsCanonicalizing(
-            [$readButAfter->getId(), $unread->getId()],
+            [$beforeWatermark->getId(), $afterWatermark->getId()],
             array_map(static fn ($l) => $l->entryId, $lines),
         );
     }

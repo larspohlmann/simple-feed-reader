@@ -51,14 +51,13 @@ final readonly class RecommendationCandidateLoader
     {
         $qb = $this->candidateQueryBuilder($userId)
             ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
-            // The candidate pool deliberately does NOT apply the per-entry
-            // isHidden (read) flag: a reader who has read an entry may still
-            // want it recommended, and excluding read entries emptied the pool
-            // as soon as the reader caught up, which finished the run with zero
-            // picks. The subscription's markedReadUntil watermark is still
-            // honoured — "mark all read up to here" is an explicit dismissal,
-            // not incidental reading — so entries at or before it stay out.
-            ->andWhere('s.markedReadUntil IS NULL OR e.effectiveDate > s.markedReadUntil')
+            // The candidate pool deliberately applies NO read/unread filter:
+            // neither the per-entry isHidden flag nor the subscription's
+            // markedReadUntil watermark. A reader who has read (or bulk
+            // "marked all read") a feed may still want its entries
+            // recommended, and excluding them emptied the pool the moment the
+            // reader caught up — which finished the run with zero picks. Only
+            // the reader's explicit per-entry history is excluded below.
             // This is the negation of what RecommendationHistoryLoader's
             // FAVORITES/KEPT/VIEWED sections contain -- a future change to
             // what counts as reader history there must update both.
