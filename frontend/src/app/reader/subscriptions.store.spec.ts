@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../core/api';
+import { TokenStore } from '../core/token.store';
 import { SubscriptionsStore, buildTagTree, sumUnread, untaggedSubs } from './subscriptions.store';
 import { SubscriptionDto } from './models';
 
@@ -78,7 +79,9 @@ describe('buildTagTree with an explicit tag order', () => {
 describe('SubscriptionsStore', () => {
   let store: SubscriptionsStore;
   let ctrl: HttpTestingController;
+  let tokens: TokenStore;
   beforeEach(() => {
+    localStorage.clear();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -86,9 +89,13 @@ describe('SubscriptionsStore', () => {
         { provide: API_BASE_URL, useValue: 'https://api.test' },
       ],
     });
+    tokens = TestBed.inject(TokenStore);
+    tokens.set('user-a.jwt');
     store = TestBed.inject(SubscriptionsStore);
     ctrl = TestBed.inject(HttpTestingController);
   });
+
+  afterEach(() => ctrl.verify());
 
   it('loads and exposes derived signals', () => {
     store.load();
@@ -104,15 +111,108 @@ describe('SubscriptionsStore', () => {
     expect(store.loading()).toBe(false);
   });
 
-  it('keeps the newest subscription response when an older request lands late', () => {
+  it('cancels an older subscription request when a newer load starts', () => {
+    store.load();
+    const olderRequest = ctrl.expectOne('https://api.test/api/subscriptions');
+    store.load();
+    const newerRequest = ctrl.expectOne('https://api.test/api/subscriptions');
+
+    newerRequest.flush({ subscriptions: [sub(1, 5)], favoritesCount: 0, keptCount: 0 });
+
+    expect(olderRequest.cancelled).toBe(true);
+    expect(store.totalUnread()).toBe(5);
+  });
+
+  it('cancels every older request before an identity change can expose it', () => {
     store.load();
     store.load();
     const [olderRequest, newerRequest] = ctrl.match('https://api.test/api/subscriptions');
 
     newerRequest.flush({ subscriptions: [sub(1, 5)], favoritesCount: 0, keptCount: 0 });
-    olderRequest.flush({ subscriptions: [sub(1, 2)], favoritesCount: 0, keptCount: 0 });
+    tokens.clear();
+    TestBed.tick();
 
-    expect(store.totalUnread()).toBe(5);
+    expect(olderRequest.cancelled).toBe(true);
+  });
+
+  it('makes a previous empty result unresolved while the current account reloads', () => {
+    store.load();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      subscriptions: [],
+      favoritesCount: 0,
+      keptCount: 0,
+      viewedCount: 0,
+    });
+    expect(store.resolved()).toBe(true);
+
+    store.load();
+
+    expect(store.resolved()).toBe(false);
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      subscriptions: [sub(1, 3)],
+      favoritesCount: 0,
+      keptCount: 0,
+      viewedCount: 0,
+    });
+    expect(store.resolved()).toBe(true);
+  });
+
+  describe('when the signed-in identity changes', () => {
+    it('drops the completed subscription state from the previous user', () => {
+      store.load();
+      ctrl.expectOne('https://api.test/api/subscriptions').flush({
+        subscriptions: [sub(1, 3)],
+        favoritesCount: 2,
+        keptCount: 1,
+        viewedCount: 4,
+      });
+
+      tokens.clear();
+      TestBed.tick();
+
+      expect(store.subscriptions()).toEqual([]);
+      expect(store.favoritesCount()).toBe(0);
+      expect(store.keptCount()).toBe(0);
+      expect(store.viewedCount()).toBe(0);
+      expect(store.resolved()).toBe(false);
+    });
+
+    it('abandons a subscription request from the previous user', () => {
+      store.load();
+      const stale = ctrl.expectOne('https://api.test/api/subscriptions');
+
+      tokens.clear();
+      TestBed.tick();
+
+      expect(stale.cancelled).toBe(true);
+      expect(store.loading()).toBe(false);
+      expect(store.resolved()).toBe(false);
+    });
+
+    it('loads the next user even when the previous result is still fresh', () => {
+      jest.useFakeTimers({ now: new Date('2026-08-27T16:00:00Z') });
+      store.loadIfStale();
+      ctrl.expectOne('https://api.test/api/subscriptions').flush({
+        subscriptions: [],
+        favoritesCount: 0,
+        keptCount: 0,
+        viewedCount: 0,
+      });
+
+      tokens.clear();
+      tokens.set('user-b.jwt');
+      TestBed.tick();
+      store.loadIfStale();
+
+      ctrl.expectOne('https://api.test/api/subscriptions').flush({
+        subscriptions: [sub(2, 1)],
+        favoritesCount: 0,
+        keptCount: 0,
+        viewedCount: 0,
+      });
+      expect(store.subscriptions().map((subscription) => subscription.id)).toEqual([2]);
+      jest.useRealTimers();
+    });
   });
 
   it('loads sidebar counts at most once every ten seconds', () => {

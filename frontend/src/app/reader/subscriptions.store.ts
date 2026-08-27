@@ -1,7 +1,9 @@
 // src/app/reader/subscriptions.store.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, WritableSignal, computed, inject, signal } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { Problem, parseProblem } from '../core/problem';
+import { onIdentityChange } from '../core/session-identity';
 import { ReaderApi } from './reader-api';
 import { TagsStore } from './tags.store';
 import { SubscriptionDto, TagDto } from './models';
@@ -98,15 +100,24 @@ export class SubscriptionsStore {
 
   private latestLoad = 0;
   private lastLoadedAt = 0;
+  private inFlight: Subscription | null = null;
+
+  constructor() {
+    onIdentityChange(() => this.invalidate());
+  }
 
   load(): void {
+    this.inFlight?.unsubscribe();
+    this.inFlight = null;
     const load = ++this.latestLoad;
     this.lastLoadedAt = Date.now();
     this.loading.set(true);
     this.error.set(null);
-    this.api.subscriptions().subscribe({
+    this.resolved.set(false);
+    this.inFlight = this.api.subscriptions().subscribe({
       next: (r) => {
         if (load !== this.latestLoad) return;
+        this.inFlight = null;
         this.subscriptions.set(r.subscriptions);
         this.favoritesCount.set(r.favoritesCount);
         this.keptCount.set(r.keptCount);
@@ -116,11 +127,26 @@ export class SubscriptionsStore {
       },
       error: (e: HttpErrorResponse) => {
         if (load !== this.latestLoad) return;
+        this.inFlight = null;
         this.error.set(parseProblem(e));
         this.loading.set(false);
         this.resolved.set(true);
       },
     });
+  }
+
+  private invalidate(): void {
+    ++this.latestLoad;
+    this.inFlight?.unsubscribe();
+    this.inFlight = null;
+    this.lastLoadedAt = 0;
+    this.subscriptions.set([]);
+    this.favoritesCount.set(0);
+    this.keptCount.set(0);
+    this.viewedCount.set(0);
+    this.loading.set(false);
+    this.error.set(null);
+    this.resolved.set(false);
   }
 
   /** Reload sidebar counts only after their freshness window has elapsed. */
