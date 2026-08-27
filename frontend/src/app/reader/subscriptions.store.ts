@@ -73,6 +73,8 @@ export function sumUnread(subs: SubscriptionDto[]): number {
 
 type ZeroTarget = 'all' | { tag: number } | { subscription: number };
 
+const SIDEBAR_RELOAD_INTERVAL_MS = 10_000;
+
 @Injectable({ providedIn: 'root' })
 export class SubscriptionsStore {
   private readonly api = inject(ReaderApi);
@@ -94,11 +96,17 @@ export class SubscriptionsStore {
   readonly untagged = computed(() => untaggedSubs(this.subscriptions()));
   readonly totalUnread = computed(() => sumUnread(this.subscriptions()));
 
+  private latestLoad = 0;
+  private lastLoadedAt = 0;
+
   load(): void {
+    const load = ++this.latestLoad;
+    this.lastLoadedAt = Date.now();
     this.loading.set(true);
     this.error.set(null);
     this.api.subscriptions().subscribe({
       next: (r) => {
+        if (load !== this.latestLoad) return;
         this.subscriptions.set(r.subscriptions);
         this.favoritesCount.set(r.favoritesCount);
         this.keptCount.set(r.keptCount);
@@ -107,11 +115,18 @@ export class SubscriptionsStore {
         this.resolved.set(true);
       },
       error: (e: HttpErrorResponse) => {
+        if (load !== this.latestLoad) return;
         this.error.set(parseProblem(e));
         this.loading.set(false);
         this.resolved.set(true);
       },
     });
+  }
+
+  /** Reload sidebar counts only after their freshness window has elapsed. */
+  loadIfStale(): void {
+    if (Date.now() - this.lastLoadedAt < SIDEBAR_RELOAD_INTERVAL_MS) return;
+    this.load();
   }
 
   /** Keep the sidebar favourite/kept badges live after a toggle without a reload;

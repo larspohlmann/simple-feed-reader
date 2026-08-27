@@ -104,6 +104,40 @@ describe('SubscriptionsStore', () => {
     expect(store.loading()).toBe(false);
   });
 
+  it('keeps the newest subscription response when an older request lands late', () => {
+    store.load();
+    store.load();
+    const [olderRequest, newerRequest] = ctrl.match('https://api.test/api/subscriptions');
+
+    newerRequest.flush({ subscriptions: [sub(1, 5)], favoritesCount: 0, keptCount: 0 });
+    olderRequest.flush({ subscriptions: [sub(1, 2)], favoritesCount: 0, keptCount: 0 });
+
+    expect(store.totalUnread()).toBe(5);
+  });
+
+  it('loads sidebar counts at most once every ten seconds', () => {
+    jest.useFakeTimers({ now: new Date('2026-08-27T16:00:00Z') });
+
+    store.loadIfStale();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      subscriptions: [sub(1, 2)],
+      favoritesCount: 0,
+      keptCount: 0,
+    });
+    store.loadIfStale();
+    ctrl.expectNone('https://api.test/api/subscriptions');
+
+    jest.advanceTimersByTime(10_000);
+    store.loadIfStale();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      subscriptions: [sub(1, 3)],
+      favoritesCount: 0,
+      keptCount: 0,
+    });
+
+    jest.useRealTimers();
+  });
+
   it('optimistically bumps favourite/kept totals, clamped at zero', () => {
     store.load();
     ctrl
