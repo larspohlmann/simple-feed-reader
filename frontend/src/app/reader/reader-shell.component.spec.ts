@@ -21,6 +21,7 @@ import { WritableSignal, signal } from '@angular/core';
 import { API_BASE_URL } from '../core/api';
 import { AuthService } from '../core/auth.service';
 import { LanguageService } from '../core/language.service';
+import { TokenStore } from '../core/token.store';
 import { OnboardingSkip } from '../discover/onboarding-skip';
 import { ReaderShellComponent } from './reader-shell.component';
 import { EntryListComponent } from './entry-list/entry-list.component';
@@ -1805,6 +1806,65 @@ describe('ReaderShellComponent', () => {
   });
 
   describe('onboarding redirect and first sweep', () => {
+    it('waits for the current user subscriptions before offering the catalog', async () => {
+      const tokens = TestBed.inject(TokenStore);
+      tokens.set('user-a.jwt');
+      const subscriptions = TestBed.inject(SubscriptionsStore);
+      subscriptions.load();
+      ctrl.expectOne('https://api.test/api/subscriptions').flush({
+        subscriptions: [],
+        favoritesCount: 0,
+        keptCount: 0,
+        viewedCount: 0,
+      });
+
+      tokens.set('user-b.jwt');
+      TestBed.tick();
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const f = TestBed.createComponent(ReaderShellComponent);
+      f.detectChanges();
+
+      const currentSubscriptions = ctrl.expectOne('https://api.test/api/subscriptions');
+      ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [], nextCursor: null });
+      ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
+        status: 'none',
+        batchesTotal: null,
+        batchesDone: 0,
+        error: null,
+        background: false,
+        streamedChars: 0,
+        forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+      });
+      ctrl.expectOne('https://api.test/api/version').flush({
+        version: 'dev',
+        commit: 'local',
+        builtAt: '',
+        latest: null,
+        updateAvailable: false,
+      });
+      await f.whenStable();
+      f.detectChanges();
+
+      expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
+      ctrl.expectNone('https://api.test/api/catalog');
+
+      currentSubscriptions.flush({
+        subscriptions: [SUBSCRIPTION_FIXTURE],
+        favoritesCount: 0,
+        keptCount: 0,
+        viewedCount: 0,
+      });
+      await f.whenStable();
+      f.detectChanges();
+
+      expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
+      ctrl.expectNone('https://api.test/api/catalog');
+    });
+
     it('redirects a user with no subscriptions to the picker, replacing the URL', async () => {
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
       const f = bootWith([]);
