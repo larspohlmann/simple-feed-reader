@@ -160,7 +160,17 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   font-size: var(--fs-sm);
 }
 
-/* The loaded count as its own quiet chip rather than trailing "— {{count}}"
+.mobile-search-title-break {
+  display: none;
+}
+
+@media (width <= bp.$bp-sm) {
+  .mobile-search-title-break {
+    display: block;
+  }
+}
+
+/* The loaded count as its own quiet chip rather than trailing “— {{count}}”
    text (#581 follow-up round 2) — a border-only pill, the same quiet
    register as the admin badges elsewhere (`admin-catalog.component.scss`
    `.badge`), not the filled `--accent-soft` treatment `.whole-word-badge`

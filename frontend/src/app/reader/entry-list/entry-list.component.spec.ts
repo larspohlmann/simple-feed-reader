@@ -290,6 +290,18 @@ describe('EntryListComponent', () => {
       expect(heading.textContent?.replace(/\s+/g, ' ')).toContain('Results for "');
     });
 
+    it('places a mobile-only line break after the search title prefix', () => {
+      const el = mount({
+        selection: { kind: 'search', id: null, unread: false, term: 'punk' },
+        searchTitlePrefix: 'Results for',
+        searchTitleTerm: '"punk"',
+        searchCountLabel: '2',
+      }).nativeElement as HTMLElement;
+
+      const heading = el.querySelector('.list-header h2')!;
+      expect(heading.querySelector('.results-prefix + .mobile-search-title-break')).not.toBeNull();
+    });
+
     it('renders a trailing + on the count pill when another page is still out there', () => {
       const el = mount({
         selection: { kind: 'search', id: null, unread: false, term: 'punk' },
