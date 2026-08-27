@@ -240,6 +240,12 @@ jobs:
       - name: ShellCheck
         run: shellcheck scripts/*.sh scripts/test/*.sh docker/php/entrypoint-prod.sh docker/web/10-select-mode.sh
 
+      # The Strato deploy probes a public route with an invalid bearer token to
+      # prove Apache forwards Authorization. The status diagnosis controls
+      # whether a healthy release is accepted, retried, or reported as broken.
+      - name: check-authorization-header
+        run: scripts/test/check-authorization-header.test.sh
+
       # The installer's three public-origin questions decide PUBLIC_URL, and
       # PUBLIC_URL is the OAuth redirect base and the link base in account
       # mail. A wrong answer there is only visible after an install, so the
