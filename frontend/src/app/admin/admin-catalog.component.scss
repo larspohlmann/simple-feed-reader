@@ -50,6 +50,7 @@
 
 .warm {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
 }
@@ -57,6 +58,23 @@
 .progress {
   color: var(--text-muted);
   font-size: var(--fs-sm);
+}
+
+.progress-panel {
+  display: flex;
+  flex: 1 1 14rem;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-left: var(--space-1) solid var(--accent);
+  background: var(--accent-soft);
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+}
+
+.progress-panel progress {
+  width: 5rem;
+  accent-color: var(--accent);
 }
 
 .counts {

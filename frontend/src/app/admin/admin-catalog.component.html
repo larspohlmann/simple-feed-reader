@@ -9,6 +9,132 @@
       />
     }
 
+    @if (!loading() && !error() && !hasFeeds()) {
+      <p class="notice">{{ 'admin.catalogEmpty' | transloco }}</p>
+    }
+
+    <section class="import">
+      @if (bundled()?.available) {
+        <app-button
+          variant="primary"
+          data-testid="import-bundled"
+          [loading]="importing()"
+          [disabled]="importBusy()"
+          (click)="importBundled()"
+        >
+          {{
+            'admin.importBundled'
+              | transloco: { categories: bundled()!.categories, feeds: bundled()!.feeds }
+          }}
+        </app-button>
+      }
+
+      <div class="upload">
+        <app-field [label]="'admin.importUpload' | transloco">
+          <input
+            #fileInput
+            type="file"
+            accept=".opml,.xml"
+            data-testid="import-file"
+            [disabled]="importBusy()"
+            (change)="onFileSelected($event)"
+          />
+        </app-field>
+        <app-field [label]="'admin.importMode' | transloco">
+          <select data-testid="import-mode" [disabled]="importBusy()" (change)="setMode($event)">
+            <option value="merge" [selected]="importMode() === 'merge'">
+              {{ 'admin.importModeMerge' | transloco }}
+            </option>
+            <option value="replace" [selected]="importMode() === 'replace'">
+              {{ 'admin.importModeReplace' | transloco }}
+            </option>
+          </select>
+        </app-field>
+        <app-button
+          variant="primary"
+          data-testid="import-run"
+          [loading]="importing()"
+          [disabled]="pendingDocument() === null || importBusy()"
+          (click)="importUpload()"
+        >
+          {{ 'admin.importUpload' | transloco }}
+        </app-button>
+      </div>
+
+      @if (importError()) {
+        <app-error-banner [message]="importError()!.detail || importError()!.title" />
+      }
+
+      @if (importCounts(); as counts) {
+        <p class="counts">
+          {{
+            'admin.importDone'
+              | transloco
+                : {
+                    categoriesCreated: counts.categoriesCreated,
+                    categoriesUpdated: counts.categoriesUpdated,
+                    categoriesRemoved: counts.categoriesRemoved,
+                    feedsCreated: counts.feedsCreated,
+                    feedsUpdated: counts.feedsUpdated,
+                    feedsRemoved: counts.feedsRemoved,
+                  }
+          }}
+          @if (counts.lockedSkipped > 0) {
+            — {{ 'admin.importLockedSkipped' | transloco: { count: counts.lockedSkipped } }}
+          }
+        </p>
+      }
+
+      @if (importing()) {
+        <div class="progress-panel" data-testid="import-progress" role="status" aria-live="polite">
+          <app-icon name="upload" size="sm" />
+          <span>{{ 'admin.importingCatalog' | transloco }}</span>
+        </div>
+      } @else if (refreshingCatalog()) {
+        <div class="progress-panel" data-testid="import-progress" role="status" aria-live="polite">
+          <app-icon name="refresh" size="sm" />
+          <span>{{ 'admin.refreshingCatalog' | transloco }}</span>
+        </div>
+      }
+
+      <div class="warm">
+        <app-button [disabled]="importBusy()" (click)="warm()">
+          {{ 'admin.warmIcons' | transloco }}
+        </app-button>
+        @if (warming()) {
+          <div
+            class="progress-panel"
+            role="progressbar"
+            aria-live="polite"
+            [attr.aria-label]="'admin.warmingIconsLabel' | transloco"
+            [attr.aria-valuetext]="
+              warmRemaining() === null
+                ? ('admin.warmingIconsStarting' | transloco)
+                : ('admin.warmingIcons' | transloco: { remaining: warmRemaining() })
+            "
+          >
+            <progress aria-hidden="true"></progress>
+            @if (warmRemaining() === null) {
+              <span>{{ 'admin.warmingIconsStarting' | transloco }}</span>
+            } @else {
+              <span>{{ 'admin.warmingIcons' | transloco: { remaining: warmRemaining() } }}</span>
+            }
+          </div>
+        } @else if (warmReport(); as report) {
+          <span class="progress">
+            {{ 'admin.warmDone' | transloco: { warmed: report.warmed, failed: report.failed } }}
+          </span>
+        }
+      </div>
+      @if (warmError()) {
+        <app-error-banner [message]="warmError()!.detail || warmError()!.title" />
+      }
+    </section>
+
+    <p class="hint">{{ 'admin.lockedHint' | transloco }}</p>
+  </app-settings-group>
+
+  <app-settings-group icon="category" [title]="'admin.catalog' | transloco">
     @if (loading()) {
       <app-skeleton class="state" [label]="'admin.loadingCatalog' | transloco" [rows]="5" />
     } @else if (error()) {
@@ -19,96 +145,6 @@
         (action)="load()"
       />
     } @else {
-      @if (!hasFeeds()) {
-        <p class="notice">{{ 'admin.catalogEmpty' | transloco }}</p>
-      }
-
-      <section class="import">
-        @if (bundled()?.available) {
-          <app-button variant="primary" data-testid="import-bundled" (click)="importBundled()">
-            {{
-              'admin.importBundled'
-                | transloco: { categories: bundled()!.categories, feeds: bundled()!.feeds }
-            }}
-          </app-button>
-        }
-
-        <div class="upload">
-          <app-field [label]="'admin.importUpload' | transloco">
-            <input
-              #fileInput
-              type="file"
-              accept=".opml,.xml"
-              data-testid="import-file"
-              (change)="onFileSelected($event)"
-            />
-          </app-field>
-          <app-field [label]="'admin.importMode' | transloco">
-            <select data-testid="import-mode" (change)="setMode($event)">
-              <option value="merge" [selected]="importMode() === 'merge'">
-                {{ 'admin.importModeMerge' | transloco }}
-              </option>
-              <option value="replace" [selected]="importMode() === 'replace'">
-                {{ 'admin.importModeReplace' | transloco }}
-              </option>
-            </select>
-          </app-field>
-          <app-button
-            variant="primary"
-            data-testid="import-run"
-            [disabled]="pendingDocument() === null"
-            (click)="importUpload()"
-          >
-            {{ 'admin.importUpload' | transloco }}
-          </app-button>
-        </div>
-
-        @if (importError()) {
-          <app-error-banner [message]="importError()!.detail || importError()!.title" />
-        }
-
-        @if (importCounts(); as counts) {
-          <p class="counts">
-            {{
-              'admin.importDone'
-                | transloco
-                  : {
-                      categoriesCreated: counts.categoriesCreated,
-                      categoriesUpdated: counts.categoriesUpdated,
-                      categoriesRemoved: counts.categoriesRemoved,
-                      feedsCreated: counts.feedsCreated,
-                      feedsUpdated: counts.feedsUpdated,
-                      feedsRemoved: counts.feedsRemoved,
-                    }
-            }}
-            @if (counts.lockedSkipped > 0) {
-              — {{ 'admin.importLockedSkipped' | transloco: { count: counts.lockedSkipped } }}
-            }
-          </p>
-        }
-
-        <div class="warm">
-          <app-button [disabled]="warming()" (click)="warm()">
-            {{ 'admin.warmIcons' | transloco }}
-          </app-button>
-          @if (warming()) {
-            <span class="progress">
-              {{ 'admin.warmingIcons' | transloco: { remaining: warmRemaining() } }}
-            </span>
-          } @else if (warmReport(); as report) {
-            <span class="progress">
-              {{ 'admin.warmDone' | transloco: { warmed: report.warmed, failed: report.failed } }}
-            </span>
-          }
-        </div>
-      </section>
-
-      <p class="hint">{{ 'admin.lockedHint' | transloco }}</p>
-    }
-  </app-settings-group>
-
-  <app-settings-group icon="category" [title]="'admin.catalog' | transloco">
-    @if (!loading() && !error()) {
       <app-button
         groupActions
         size="sm"

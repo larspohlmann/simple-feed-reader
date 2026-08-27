@@ -59,12 +59,18 @@ export class AdminCatalogComponent implements OnInit {
   readonly pendingDocument = signal<string | null>(null);
   readonly importCounts = signal<CatalogImportCounts | null>(null);
   readonly importError = signal<Problem | null>(null);
+  readonly importing = signal(false);
+  readonly refreshingCatalog = signal(false);
 
   readonly warming = signal(false);
-  readonly warmRemaining = signal(0);
+  readonly warmRemaining = signal<number | null>(null);
   readonly warmReport = signal<CatalogWarmReport | null>(null);
+  readonly warmError = signal<Problem | null>(null);
 
   readonly hasFeeds = computed(() => this.feeds().length > 0);
+  readonly importBusy = computed(
+    () => this.importing() || this.refreshingCatalog() || this.warming(),
+  );
 
   private readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
 
@@ -77,7 +83,7 @@ export class AdminCatalogComponent implements OnInit {
     this.fetchCatalog();
   }
 
-  private fetchCatalog(afterLoad?: () => void): void {
+  private fetchCatalog(afterLoad?: () => void, afterError?: () => void): void {
     this.loading.set(true);
     this.error.set(null);
     this.api.catalog().subscribe({
@@ -90,6 +96,7 @@ export class AdminCatalogComponent implements OnInit {
       error: (failure: HttpErrorResponse) => {
         this.error.set(parseProblem(failure));
         this.loading.set(false);
+        afterError?.();
       },
     });
   }
@@ -246,9 +253,13 @@ export class AdminCatalogComponent implements OnInit {
   private beginImport(request: ReturnType<AdminApi['importCatalog']>): void {
     this.importError.set(null);
     this.importCounts.set(null);
+    this.importing.set(true);
     request.subscribe({
       next: (counts) => this.handleImportSuccess(counts),
-      error: (failure: HttpErrorResponse) => this.importError.set(parseProblem(failure)),
+      error: (failure: HttpErrorResponse) => {
+        this.importError.set(parseProblem(failure));
+        this.importing.set(false);
+      },
     });
   }
 
@@ -259,9 +270,15 @@ export class AdminCatalogComponent implements OnInit {
     this.importCounts.set(counts);
     this.clearPendingDocument();
     const broughtNewFeeds = counts.feedsCreated + counts.feedsUpdated > 0;
-    this.fetchCatalog(() => {
-      if (broughtNewFeeds) this.warm();
-    });
+    this.importing.set(false);
+    this.refreshingCatalog.set(true);
+    this.fetchCatalog(
+      () => {
+        this.refreshingCatalog.set(false);
+        if (broughtNewFeeds) this.warm();
+      },
+      () => this.refreshingCatalog.set(false),
+    );
   }
 
   // Drop the consumed document so a second click cannot resend a stale upload,
@@ -277,7 +294,8 @@ export class AdminCatalogComponent implements OnInit {
   warm(): void {
     this.warming.set(true);
     this.warmReport.set(null);
-    this.warmRemaining.set(0);
+    this.warmError.set(null);
+    this.warmRemaining.set(null);
     this.warmNextSlice();
   }
 
@@ -293,7 +311,10 @@ export class AdminCatalogComponent implements OnInit {
         }
         this.warmNextSlice();
       },
-      error: () => this.warming.set(false),
+      error: (failure: HttpErrorResponse) => {
+        this.warmError.set(parseProblem(failure));
+        this.warming.set(false);
+      },
     });
   }
 

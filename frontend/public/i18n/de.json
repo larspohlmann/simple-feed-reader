@@ -459,7 +459,11 @@
     "lockedHint": "Gesperrte Einträge überstehen einen Import unverändert — sie werden weder überschrieben noch gelöscht.",
     "importLockedSkipped": "{{count}} gesperrte Einträge unverändert gelassen",
     "importDone": "Kategorien +{{categoriesCreated}} ~{{categoriesUpdated}} −{{categoriesRemoved}}, Feeds +{{feedsCreated}} ~{{feedsUpdated}} −{{feedsRemoved}}",
+    "importingCatalog": "Katalog wird importiert",
+    "refreshingCatalog": "Katalog wird aktualisiert",
     "warmIcons": "Fehlende Icons abrufen",
+    "warmingIconsLabel": "Fortschritt beim Abruf der Favicons",
+    "warmingIconsStarting": "Icons werden abgerufen",
     "warmingIcons": "Icons werden abgerufen — noch {{remaining}}",
     "warmDone": "Icons: {{warmed}} abgerufen, {{failed}} nicht verfügbar",
     "status": {

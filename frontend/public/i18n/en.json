@@ -459,7 +459,11 @@
     "lockedHint": "Locked entries survive an import untouched — neither overwritten nor deleted.",
     "importLockedSkipped": "{{count}} locked entries left untouched",
     "importDone": "Categories +{{categoriesCreated}} ~{{categoriesUpdated}} −{{categoriesRemoved}}, feeds +{{feedsCreated}} ~{{feedsUpdated}} −{{feedsRemoved}}",
+    "importingCatalog": "Importing catalog",
+    "refreshingCatalog": "Refreshing catalog",
     "warmIcons": "Fetch missing icons",
+    "warmingIconsLabel": "Favicon warming progress",
+    "warmingIconsStarting": "Fetching icons",
     "warmingIcons": "Fetching icons — {{remaining}} left",
     "warmDone": "Icons: {{warmed}} fetched, {{failed}} unavailable",
     "status": {
