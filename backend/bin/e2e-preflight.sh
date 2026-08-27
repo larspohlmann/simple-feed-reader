@@ -20,8 +20,6 @@
 #   0  this checkout owns the running stack, OR no stack is running
 #   1  a stack is running but mounts a different checkout (message names it)
 #   2  docker is not usable (binary missing or daemon unreachable)
-set -euo pipefail
-
 # Resolve a path to its canonical form without realpath(1), which is absent on
 # stock macOS. `cd … && pwd -P` follows symlinks and normalises, and works on
 # bash 3.2. A missing directory prints nothing and returns non-zero.
@@ -105,5 +103,6 @@ assert_stack_owns_checkout() {
 
 # Run only when executed directly, not when sourced (bash 3.2 safe).
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+  set -euo pipefail
   assert_stack_owns_checkout "${1:?usage: e2e-preflight.sh <repo-root>}"
 fi
