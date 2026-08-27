@@ -11,6 +11,7 @@ import { ConfirmData } from '../shared/confirm-dialog/confirm-dialog.component';
 import { AiFailure, ScopedAiFailure } from './ai-failure';
 import { AiSectionComponent } from './ai-section.component';
 import { AiConfig, AiSettingsService } from './ai-settings.service';
+import { RecommendationSettingsState } from './recommendation-settings.service';
 
 interface AiSettingsStub {
   configs: WritableSignal<readonly AiConfig[]>;
@@ -50,20 +51,35 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   ...over,
 });
 
-const RECOMMENDATIONS = {
+const RECOMMENDATIONS: RecommendationSettingsState = {
   guidancePrompt: null,
   defaultGuidancePrompt: 'Prefer long-form articles.',
   fixedPrompt: { role: 'role', outputContract: 'contract' },
+  expertDefaults: {
+    guidancePrompt: null,
+    favoritesCap: 40,
+    keptCap: 40,
+    viewedCap: 80,
+    candidatePoolSize: 500,
+    picksLimit: 50,
+    batchCount: null,
+    contextWindow: null,
+  },
   favoritesCap: 50,
   keptCap: 50,
   viewedCap: 200,
   candidatePoolSize: 400,
   lookbackDays: 2,
   picksLimit: 20,
+  batchCount: null,
   contextWindow: 128000,
   contextWindowOverride: null,
   contextWindowSource: 'provider',
   debugEnabled: false,
+  autoGenerateIntervalHours: null,
+  workerAlive: true,
+  profileText: null,
+  showReasons: false,
 };
 
 function createStub(): AiSettingsStub {

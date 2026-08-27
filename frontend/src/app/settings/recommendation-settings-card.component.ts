@@ -238,6 +238,23 @@ export class RecommendationSettingsCardComponent {
     this.svc.setTypedField('guidancePrompt', null);
   }
 
+  /** Seeds every expert input from the factory values the API supplied, without
+   *  writing them until the explicit Save. */
+  resetToFactoryDefaults(): void {
+    const defaults = this.svc.state()?.expertDefaults;
+    if (!defaults) return;
+
+    this.svc.resetExpertDraft(defaults);
+    this.guidance.set(defaults.guidancePrompt ?? '');
+    this.favoritesCap.set(defaults.favoritesCap);
+    this.keptCap.set(defaults.keptCap);
+    this.viewedCap.set(defaults.viewedCap);
+    this.candidatePoolSize.set(defaults.candidatePoolSize);
+    this.picksLimit.set(defaults.picksLimit);
+    this.batchCount.set(defaults.batchCount);
+    this.contextWindow.set(defaults.contextWindow);
+  }
+
   /** The explicit Save flushes the accumulated typed draft over the last-saved
    *  baseline; the service builds the body. */
   onSave(): void {
