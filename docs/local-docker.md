@@ -250,6 +250,17 @@ work in one browser and silently fail in another, which is exactly the kind of
   container's live index instead. If you ever need a test that genuinely
   exercises the engine, use `composer e2e` (against the real running stack),
   not `vendor/bin/phpunit`.
+- **Run e2e from the checkout that owns the stack.** Both e2e suites are
+  black-box tests against the single shared Docker stack, whose project name is
+  pinned to `simple-feed-reader`. The code under test comes from the `./backend`
+  and `./frontend` bind mounts, which resolve against whatever directory last
+  ran `docker compose up`. So from a second checkout (a git worktree), `composer
+  e2e` and `npm run e2e` reach the same `:8443` and the same `docker compose
+  exec` and silently test the *other* checkout's code. Edit-and-e2e must happen
+  in the checkout that ran `docker compose up`. A preflight guard
+  (`backend/bin/e2e-preflight.sh`, wired into both suites) now fails fast and
+  names the owning path when the running stack mounts a different checkout, so
+  this is a loud error rather than a silent wrong result (#615).
 - **Root-owned `vendor/` on Linux hosts.** `docker compose exec php composer
   install` runs as root inside the container; on Linux the bind mount exposes
   that ownership on the host. Either run composer natively or use

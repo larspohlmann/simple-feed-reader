@@ -26,7 +26,11 @@ const FIXTURE_COMMANDS: readonly string[][] = [
 ];
 
 export default function globalSetup(): void {
-  const composeFile = resolve(__dirname, '..', '..', 'docker-compose.yml');
+  const repoRoot = resolve(__dirname, '..', '..');
+  const composeFile = resolve(repoRoot, 'docker-compose.yml');
+  const preflightScript = resolve(repoRoot, 'backend', 'bin', 'e2e-preflight.sh');
+
+  assertStackOwnsCheckout(preflightScript, repoRoot);
 
   for (const consoleArgs of FIXTURE_COMMANDS) {
     try {
@@ -41,5 +45,24 @@ export default function globalSetup(): void {
         `[global-setup] Skipping e2e fixture step "${consoleArgs.join(' ')}": ${reason}`,
       );
     }
+  }
+}
+
+// #615: the Docker project name is pinned, so a stack started from another
+// checkout answers the same `docker compose exec`. The shared bash guard exits
+// 1 when the running stack mounts a DIFFERENT checkout (hard failure), 2 when
+// docker is unusable, and 0 when this checkout owns the stack or none runs.
+// Only exit 1 aborts the run; everything else stays best-effort like the
+// fixture steps, so a host without Docker still runs the specs.
+function assertStackOwnsCheckout(preflightScript: string, repoRoot: string): void {
+  try {
+    execFileSync('bash', [preflightScript, repoRoot], { stdio: 'inherit' });
+  } catch (error) {
+    const status = (error as { status?: number }).status;
+    if (status === 1) {
+      throw error;
+    }
+    const reason = error instanceof Error ? error.message : String(error);
+    console.warn(`[global-setup] Stack-ownership check skipped: ${reason}`);
   }
 }
