@@ -41,23 +41,46 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $this->em->flush();
     }
 
-    public function testOnlyUnreadEntriesAreReturned(): void
+    public function testAReadHiddenEntryStaysACandidate(): void
     {
+        // Read via the per-entry isHidden flag: no longer removed from the
+        // pool. Excluding read entries emptied the pool the moment the reader
+        // caught up, finishing the run with zero picks.
         $readByFlag = $this->entry('read-by-flag', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $readByFlag);
         $state->setIsHidden(true);
         $this->em->persist($state);
+        $this->em->flush();
 
-        $this->entry('read-by-watermark', '2026-07-11T00:00:00Z');
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest());
+
+        self::assertSame([$readByFlag->getId()], array_map(static fn ($l) => $l->entryId, $lines));
+    }
+
+    public function testEntriesAtOrBeforeTheMarkedReadWatermarkAreExcluded(): void
+    {
+        // "Mark all read up to here" is an explicit dismissal, so it still
+        // removes entries at or before the watermark — even a read (hidden)
+        // entry newer than the watermark stays a candidate.
         $this->subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-07-12T00:00:00Z'));
 
-        $unread = $this->entry('unread', '2026-07-13T00:00:00Z');
+        $this->entry('before-watermark', '2026-07-11T00:00:00Z');
+
+        $readButAfter = $this->entry('read-but-after-watermark', '2026-07-13T00:00:00Z');
+        $state = new EntryState($this->user, $readButAfter);
+        $state->setIsHidden(true);
+        $this->em->persist($state);
+
+        $unread = $this->entry('unread', '2026-07-14T00:00:00Z');
 
         $this->em->flush();
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
-        self::assertSame([$unread->getId()], array_map(static fn ($l) => $l->entryId, $lines));
+        self::assertEqualsCanonicalizing(
+            [$readButAfter->getId(), $unread->getId()],
+            array_map(static fn ($l) => $l->entryId, $lines),
+        );
     }
 
     public function testAnUnreadFavoritedEntryIsExcluded(): void

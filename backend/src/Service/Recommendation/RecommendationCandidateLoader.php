@@ -8,7 +8,6 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
 use App\Repository\SubscriptionDisplayTitle;
-use App\Repository\UnreadDql;
 use App\Service\Text\PlainText;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
@@ -38,9 +37,10 @@ final readonly class RecommendationCandidateLoader
     }
 
     /**
-     * Unread candidates, excluding anything the reader has already favorited,
+     * Candidates, excluding anything the reader has already favorited,
      * kept, or viewed, in feeds the reader subscribes to, and no older than
-     * the request's window (#386). The newest $request->poolSize of those are
+     * the request's window (#386). Read (hidden) entries stay eligible.
+     * The newest $request->poolSize of those are
      * selected, then returned in a randomized order seeded by
      * $request->orderSeed, so batches sample the pool rather than cluster by
      * recency (#344). The same seed always produces the same order.
@@ -51,7 +51,14 @@ final readonly class RecommendationCandidateLoader
     {
         $qb = $this->candidateQueryBuilder($userId)
             ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
-            ->andWhere(UnreadDql::predicate())
+            // The candidate pool deliberately does NOT apply the per-entry
+            // isHidden (read) flag: a reader who has read an entry may still
+            // want it recommended, and excluding read entries emptied the pool
+            // as soon as the reader caught up, which finished the run with zero
+            // picks. The subscription's markedReadUntil watermark is still
+            // honoured — "mark all read up to here" is an explicit dismissal,
+            // not incidental reading — so entries at or before it stay out.
+            ->andWhere('s.markedReadUntil IS NULL OR e.effectiveDate > s.markedReadUntil')
             // This is the negation of what RecommendationHistoryLoader's
             // FAVORITES/KEPT/VIEWED sections contain -- a future change to
             // what counts as reader history there must update both.
@@ -75,7 +82,6 @@ final readonly class RecommendationCandidateLoader
             ->addOrderBy('e.id', 'DESC')
             ->setMaxResults($request->poolSize)
             ->setParameter('since', $request->since)
-            ->setParameter('notHidden', false, Types::BOOLEAN)
             ->setParameter('notInteracted', false, Types::BOOLEAN);
 
         $lines = $this->linesFor($qb);
