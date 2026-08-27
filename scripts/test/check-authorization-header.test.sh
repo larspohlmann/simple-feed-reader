@@ -20,6 +20,8 @@ cat > "${fake_bin}/curl" <<'FAKE_CURL'
 #!/usr/bin/env bash
 set -euo pipefail
 
+printf '%s\n' "$@" >> "${FAKE_CURL_ARGUMENTS}"
+
 output_file=''
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -68,6 +70,7 @@ run_probe() {
   local responses=$1
   printf '%s\n' "${responses}" > "${FAKE_CURL_RESPONSES}"
   rm -f "${FAKE_CURL_ATTEMPTS}" "${FAKE_SLEEP_CALLS}"
+  rm -f "${FAKE_CURL_ARGUMENTS}"
   probe_status=0
   probe_output=$(PATH="${fake_bin}:${PATH}" "${probe}" 'https://reader.example/api/health' 2>&1) \
     || probe_status=$?
@@ -75,12 +78,19 @@ run_probe() {
 
 export FAKE_CURL_RESPONSES="${work}/responses"
 export FAKE_CURL_ATTEMPTS="${work}/attempts"
+export FAKE_CURL_ARGUMENTS="${work}/curl-arguments"
 export FAKE_SLEEP_CALLS="${work}/sleep-calls"
 
 run_probe '401|invalid token|0'
 assert_equals 0 "${probe_status}" '401 must pass'
 assert_equals 1 "$(cat "${FAKE_CURL_ATTEMPTS}")" '401 must need one request'
 assert_contains 'Authorization header reaches PHP' "${probe_output}" '401 must report success'
+assert_contains 'Authorization: Bearer deliberately-invalid' "$(cat "${FAKE_CURL_ARGUMENTS}")" \
+  'the probe must send the invalid bearer token'
+assert_contains 'https://reader.example/api/health' "$(cat "${FAKE_CURL_ARGUMENTS}")" \
+  'the probe must request the supplied health URL'
+assert_contains '--max-time' "$(cat "${FAKE_CURL_ARGUMENTS}")" \
+  'the probe must set a request timeout'
 
 run_probe $'500|warming one|0\n500|warming two|0\n401|invalid token|0'
 assert_equals 0 "${probe_status}" 'a 401 after transient 500 responses must pass'
@@ -109,7 +119,14 @@ run_probe '000|connection timed out|28'
 assert_contains 'curl failed with exit code 28' "${probe_output}" 'a transport error must keep its exit code'
 assert_contains 'connection timed out' "${probe_output}" 'a transport error must print the response body'
 
-grep -qF 'scripts/check-authorization-header.sh' "${deploy_workflow}" \
+run_probe $'500||0\n500||0\n500||0'
+[ "${probe_status}" -ne 0 ] || fail 'a persistent 500 with no body must fail'
+assert_contains '<empty>' "${probe_output}" 'an empty response body must be identified'
+
+smoke_step=$(sed -n \
+  '/- name: Smoke-test the live release/,/- name: Prune old releases/p' \
+  "${deploy_workflow}")
+printf '%s\n' "${smoke_step}" | grep -qE '^[[:space:]]+scripts/check-authorization-header\.sh \\$' \
   || fail 'the deploy workflow must use the tested authorization probe'
 
 printf 'ok: check-authorization-header\n'
