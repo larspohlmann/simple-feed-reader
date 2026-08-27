@@ -28,6 +28,15 @@ if ! curl -fsS -o /dev/null "$BASE_URL/api/health"; then
   exit 1
 fi
 
+# #615: the stack is up, but is it OUR stack? The project name is pinned, so a
+# stack started from another checkout (a worktree) answers the same :8443 and
+# the same `docker compose exec`. Fail fast rather than silently seed and test
+# the other checkout's database.
+# shellcheck source=e2e-preflight.sh
+source "$BACKEND_DIR/bin/e2e-preflight.sh"
+echo "==> Verifying this checkout owns the running stack ..."
+assert_stack_owns_checkout "$REPO_ROOT"
+
 echo "==> Purging leftover e2e fixture accounts ..."
 docker compose -f "$REPO_ROOT/docker-compose.yml" exec -T php bin/console app:e2e:purge-users
 
