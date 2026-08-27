@@ -32,6 +32,7 @@ final readonly class RecommendationRunReport
         public bool $waitingForLock = false,
         public int $streamedChars = 0,
         public ?\DateTimeImmutable $startedAt = null,
+        public bool $firstBatchStarted = false,
     ) {
     }
 
@@ -71,6 +72,7 @@ final readonly class RecommendationRunReport
             $run->getError(),
             streamedChars: $run->getStreamedChars(),
             startedAt: $run->getCreatedAt(),
+            firstBatchStarted: $run->hasFirstBatchStarted(),
         );
     }
 
@@ -89,6 +91,7 @@ final readonly class RecommendationRunReport
             waitingForLock: $this->waitingForLock,
             streamedChars: $this->streamedChars,
             startedAt: $this->startedAt,
+            firstBatchStarted: $this->firstBatchStarted,
         );
     }
 
@@ -112,12 +115,13 @@ final readonly class RecommendationRunReport
             waitingForLock: true,
             streamedChars: $this->streamedChars,
             startedAt: $this->startedAt,
+            firstBatchStarted: $this->firstBatchStarted,
         );
     }
 
     /**
      * @return array{status: string, batchesTotal: ?int, batchesDone: int, error: ?string, background: bool,
-     *     waitingForLock: bool, streamedChars: int}
+     *     waitingForLock: bool, streamedChars: int, firstBatchStarted: bool}
      */
     public function toArray(): array
     {
@@ -129,6 +133,7 @@ final readonly class RecommendationRunReport
             'background' => $this->background,
             'waitingForLock' => $this->waitingForLock,
             'streamedChars' => $this->streamedChars,
+            'firstBatchStarted' => $this->firstBatchStarted,
         ];
     }
 }

@@ -67,6 +67,20 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
         self::assertNull($this->estimatorAt('+20 seconds')->estimateSeconds($report, $this->user));
     }
 
+    public function testReturnsNullBeforeTheFirstBatchStarts(): void
+    {
+        $this->seedHistoricalRun(distill: 10, batchWall: 40, batches: 4, consolidate: 30);
+        $run = new RecommendationRun($this->user, new \DateTimeImmutable(self::RUN_START));
+        $run->snapshot([[1], [2], [3]]);
+
+        $eta = $this->estimatorAt('+20 seconds')->estimateSeconds(
+            RecommendationRunReport::fromRun($run),
+            $this->user,
+        );
+
+        self::assertNull($eta);
+    }
+
     public function testReturnsNullWhenNoRunIsInFlight(): void
     {
         $this->seedHistoricalRun(distill: 10, batchWall: 40, batches: 4, consolidate: 30);
@@ -91,6 +105,7 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
     {
         $run = new RecommendationRun($this->user, new \DateTimeImmutable(self::RUN_START));
         $run->snapshot(array_map(static fn (int $i): array => [$i], range(1, $batches)));
+        $run->markFirstBatchStarted();
 
         return RecommendationRunReport::fromRun($run);
     }

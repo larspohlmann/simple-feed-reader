@@ -40,7 +40,11 @@ final readonly class RecommendationEtaEstimator
 
     public function estimateSeconds(RecommendationRunReport $report, User $user): ?int
     {
-        if (null === $report->batchesTotal || !$this->isInFlight($report)) {
+        if (
+            null === $report->batchesTotal
+            || !$report->firstBatchStarted
+            || !$this->isInFlight($report)
+        ) {
             return null;
         }
 

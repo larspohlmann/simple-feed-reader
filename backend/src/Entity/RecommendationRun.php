@@ -106,8 +106,10 @@ class RecommendationRun
     #[ORM\Column(type: Types::JSON)]
     private array $batchWinners = [];
 
-    #[ORM\Column(options: ['default' => 0])]
-    private int $batchesDone = 0;
+    /** The mutable checkpoints specific to the batch phase. Keeping them
+     * together separates batch state from the run's lifecycle state. */
+    #[ORM\Embedded(class: RunBatchProgress::class, columnPrefix: false)]
+    private RunBatchProgress $batchProgress;
 
     #[ORM\Column(options: ['default' => 0])]
     private int $attempts = 0;
@@ -142,6 +144,7 @@ class RecommendationRun
         $this->createdAt = $createdAt;
         $this->providerUsage = new ProviderUsage();
         $this->runProfile = new RunProfile();
+        $this->batchProgress = new RunBatchProgress();
     }
 
     public function getId(): ?int
@@ -197,7 +200,7 @@ class RecommendationRun
     {
         return RecommendationRunProgress::forBatchPlan(
             $this->candidateBatches,
-            $this->batchesDone,
+            $this->batchProgress->batchesDone(),
             $this->attempts,
             $this->isDistilled(),
         );
@@ -211,10 +214,24 @@ class RecommendationRun
         $this->guardStatus(self::STATUS_RUNNING, 'recordBatchWinners');
 
         $this->batchWinners[] = $picks;
-        $this->batchesDone++;
+        $this->batchProgress->recordCompletedBatch();
         $this->attempts = 0;
         $this->transportFailures = 0;
         $this->lastInvalidReply = null;
+    }
+
+    /** Mark this run once its first scored batch starts, before the provider
+     * call begins so a concurrent status poll cannot start the ETA early. */
+    public function markFirstBatchStarted(): void
+    {
+        $this->guardStatus(self::STATUS_RUNNING, 'mark the first batch as started');
+        $this->batchProgress->markFirstBatchStarted();
+    }
+
+    public function hasFirstBatchStarted(): bool
+    {
+        return $this->batchProgress->hasFirstBatchStarted()
+            || $this->batchProgress->batchesDone() > 0;
     }
 
     /**
@@ -360,7 +377,9 @@ class RecommendationRun
         $this->guardStatus(self::STATUS_RUNNING, 'complete');
 
         $this->terminate(self::STATUS_COMPLETED, $when);
-        $this->batchesDone = $this->progress()->batchesTotal ?? $this->batchesDone;
+        $this->batchProgress->completeAllBatches(
+            $this->progress()->batchesTotal ?? $this->batchProgress->batchesDone(),
+        );
         $this->transportFailures = 0;
     }
 

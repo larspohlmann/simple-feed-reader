@@ -303,6 +303,10 @@ export interface RecommendationRunReport {
   /** Bytes of the in-flight provider answer received so far this call; 0
    *  between calls, since the server resets the counter when a call ends. */
   streamedChars: number;
+  /** True once the first scored batch request has started. The ETA and its
+   * time-based bar stay in their honest-start state until this signal arrives
+   * from the server (#668). */
+  firstBatchStarted?: boolean;
   /** Whole seconds the run has been going, computed on the server's clock;
    *  null when there is no run. The client keeps it live between polls with a
    *  local monotonic delta rather than re-subtracting server time. */
