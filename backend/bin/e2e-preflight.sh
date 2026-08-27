@@ -49,21 +49,33 @@ running_stack_backend_mount() {
     # No running php container: not an ownership problem. Empty stdout, ok.
     return 0
   fi
-  docker inspect "$container" \
-    --format '{{range .Mounts}}{{if eq .Destination "/app"}}{{.Source}}{{end}}{{end}}'
+  local mounted_path
+  if ! mounted_path="$(docker inspect "$container" \
+    --format '{{range .Mounts}}{{if eq .Destination "/app"}}{{.Source}}{{end}}{{end}}')"; then
+    return 2
+  fi
+  printf '%s\n' "$mounted_path"
 }
 
 # Fail fast if the running stack is owned by a different checkout than $1.
 assert_stack_owns_checkout() {
   local repo_root="$1"
-  local expected_backend mounted_backend rc
+  local expected_backend mounted_backend rc errexit_was_set=0
+
+  case $- in
+    *e*) errexit_was_set=1 ;;
+  esac
 
   expected_backend="$(canonical_path "$repo_root/backend" || true)"
 
   set +e
   mounted_backend="$(running_stack_backend_mount)"
   rc=$?
-  set -e
+  if [ "$errexit_was_set" -eq 1 ]; then
+    set -e
+  else
+    set +e
+  fi
 
   if [ "$rc" -eq 2 ]; then
     echo "==> Preflight: docker not usable; skipping the stack-ownership check." >&2
