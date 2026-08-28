@@ -33,6 +33,22 @@
   color: var(--text-muted);
 }
 
+// Refresh spins its icon while a run is in flight (the button is also disabled).
+// The spin turns the glyph itself, NOT the `app-icon` box: on a phone that box
+// wears the `mobile-icon-only` border below, and rotating the box would spin the
+// border square with it (#698). Reaching the glyph needs this global sheet — the
+// border lives here too, and the button's own encapsulated styles cannot cross
+// into app-icon's projected span.
+.list-action.spinning app-icon .material-symbols-outlined {
+  animation: list-action-spin 0.9s linear infinite;
+}
+
+@keyframes list-action-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 // On a phone, the list header's Edit, unread switch, Mark all read and Refresh
 // controls lose their text so the title still fits. Give the now-icon-only
 // controls the sidebar chevron treatment: a full tap target around a smaller
@@ -50,5 +66,11 @@
     padding: var(--space-2);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .list-action.spinning app-icon .material-symbols-outlined {
+    animation: none;
   }
 }
