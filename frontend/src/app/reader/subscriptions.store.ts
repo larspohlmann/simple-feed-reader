@@ -193,6 +193,15 @@ export class SubscriptionsStore {
     );
   }
 
+  /** Optimistically apply an exclusion-flag toggle (All items / For you) so the
+   *  UI reflects it immediately; the caller reconciles with the server. */
+  patchLocal(
+    id: number,
+    flags: Partial<Pick<SubscriptionDto, 'includeInAllItems' | 'includeInForYou'>>,
+  ): void {
+    this.subscriptions.update((subs) => subs.map((s) => (s.id === id ? { ...s, ...flags } : s)));
+  }
+
   zeroUnread(target: ZeroTarget): void {
     this.subscriptions.update((subs) =>
       subs.map((s) => {

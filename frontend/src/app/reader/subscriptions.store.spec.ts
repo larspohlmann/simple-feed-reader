@@ -279,6 +279,21 @@ describe('SubscriptionsStore', () => {
     expect(store.subscriptions().find((s) => s.id === 2)!.unreadCount).toBe(0);
   });
 
+  it('optimistically patches the exclusion flags in place', () => {
+    store.load();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      subscriptions: [sub(1, 3), sub(2, 6)],
+      favoritesCount: 0,
+      keptCount: 0,
+    });
+    store.patchLocal(1, { includeInAllItems: false });
+    expect(store.subscriptions().find((s) => s.id === 1)!.includeInAllItems).toBe(false);
+    expect(store.subscriptions().find((s) => s.id === 1)!.includeInForYou).toBe(true);
+    expect(store.subscriptions().find((s) => s.id === 2)!.includeInAllItems).toBe(true);
+    store.patchLocal(1, { includeInForYou: false });
+    expect(store.subscriptions().find((s) => s.id === 1)!.includeInForYou).toBe(false);
+  });
+
   it('captures a problem on error', () => {
     store.load();
     ctrl

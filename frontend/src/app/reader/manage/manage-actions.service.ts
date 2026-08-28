@@ -73,6 +73,36 @@ export class ManageActions {
     );
   }
 
+  /** Flip whether this feed contributes to the "All items" list. Optimistic:
+   *  update the sidebar immediately, reconcile with the server. */
+  setIncludeInAllItems(sub: SubscriptionDto, value: boolean): void {
+    this.patchFlags(sub, { includeInAllItems: value, includeInForYou: sub.includeInForYou });
+  }
+
+  /** Flip whether this feed contributes to "For you". Optimistic: update the
+   *  sidebar immediately, reconcile with the server. */
+  setIncludeInForYou(sub: SubscriptionDto, value: boolean): void {
+    this.patchFlags(sub, { includeInAllItems: sub.includeInAllItems, includeInForYou: value });
+  }
+
+  /** The backend PATCH clears customTitle/tagIds when they are omitted, so
+   *  every flag toggle sends the full mutable body — not just the flag that
+   *  changed — mirroring retag(). */
+  private patchFlags(
+    sub: SubscriptionDto,
+    flags: { includeInAllItems: boolean; includeInForYou: boolean },
+  ): void {
+    this.subs.patchLocal(sub.id, flags);
+    this.reloadAfter(
+      this.api.updateSubscription(sub.id, {
+        customTitle: sub.customTitle,
+        tagIds: sub.tags.map((t) => t.id),
+        ...flags,
+      }),
+      () => this.subs.load(),
+    );
+  }
+
   /** Persist a new sidebar tag order (drag-and-drop); tag order lives in
    *  TagsStore. Optimistic: reorder immediately, reconcile on response. */
   reorderTags(tagIds: number[]): void {
