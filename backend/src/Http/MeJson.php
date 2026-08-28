@@ -16,9 +16,10 @@ final class MeJson
     /**
      * @return array<string, mixed>
      */
-    public static function profile(User $user): array
+    public static function profile(User $user, bool $mailEnabled): array
     {
         $aiSettings = $user->getActiveAiProviderSettings();
+        $preferences = $user->getPreferences();
 
         return [
             'id' => $user->getId(),
@@ -28,8 +29,16 @@ final class MeJson
             'createdAt' => $user->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'locale' => $user->getLocale(),
             'trialEndsAt' => $user->getTrialEndsAt()?->format(\DateTimeInterface::ATOM),
+            'mail' => ['enabled' => $mailEnabled],
+            'emailVerified' => $user->isEmailVerified(),
             'preferences' => [
-                'scrapeFallbackEnabled' => $user->getPreferences()->isScrapeFallbackEnabled(),
+                'scrapeFallbackEnabled' => $preferences->isScrapeFallbackEnabled(),
+                'digest' => [
+                    'enabled' => $preferences->isDigestEnabled(),
+                    'cadence' => $preferences->getDigestCadence()->value,
+                    'sendHour' => $preferences->getDigestSendHour(),
+                    'weekday' => $preferences->getDigestWeekday(),
+                ],
             ],
             'ai' => [
                 'ready' => AiSettingsJson::isReady($aiSettings),

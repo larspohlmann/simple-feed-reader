@@ -9,6 +9,7 @@ use App\Dto\Me\UpdatePreferencesRequest;
 use App\Entity\User;
 use App\Http\MeJson;
 use App\Service\Account\AccountDeleter;
+use App\Service\Mail\MailCapability;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -25,13 +26,14 @@ final readonly class MeController
     public function __construct(
         private EntityManagerInterface $entityManager,
         private AccountDeleter $accountDeleter,
+        private MailCapability $mail,
     ) {
     }
 
     #[Route('/api/me', name: 'api_me', methods: ['GET'])]
     public function show(#[CurrentUser] User $user): JsonResponse
     {
-        return new JsonResponse(MeJson::profile($user));
+        return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled()));
     }
 
     /**
@@ -48,7 +50,7 @@ final readonly class MeController
         $user->setLocale($request->locale);
         $this->entityManager->flush();
 
-        return new JsonResponse(MeJson::profile($user));
+        return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled()));
     }
 
     /**
@@ -65,7 +67,7 @@ final readonly class MeController
         $user->getPreferences()->setScrapeFallbackEnabled($request->scrapeFallbackEnabled);
         $this->entityManager->flush();
 
-        return new JsonResponse(MeJson::profile($user));
+        return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled()));
     }
 
     /**
