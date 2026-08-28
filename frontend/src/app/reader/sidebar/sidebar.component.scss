@@ -346,15 +346,16 @@
    read as nested under their header exactly like feeds under a tag. */
 .savedsearch-item {
   padding-left: var(--space-6);
+}
 
-  /* The trailing controls (count + mail button) carry their own margin, exactly
-     like the header's chevron, so dropping the row's right text-padding lets the
-     mail button's column line up with the "Saved searches" chevron above. */
+/* The mail button is the row's trailing control, and the row's metrics bend to
+   it: dropping the right text-padding lets the button's column line up with the
+   "Saved searches" chevron above, and dropping the block padding lets the
+   button's own box (not row-pad-y on top of it) drive the height so these rows
+   match the tag rows below. Without the button (mail off, or the account digest
+   off) none of that applies, so the row keeps the plain `.nav` padding (#636). */
+.savedsearch-item.with-digest {
   padding-right: 0;
-
-  /* The mail button's own box drives the row height; the extra row-pad-y would
-     stack on top of it and make these rows taller than the tag rows below (which
-     have none). Drop it so both sit at the same compact height. */
   padding-block: 0;
 }
 
@@ -391,12 +392,15 @@
 .savedsearch-item .count {
   flex: none;
   margin-left: 0;
-
-  /* Nudge the count off the mail button so its right edge lands in the same
-     column as the "Saved searches" header count. */
-  margin-right: var(--space-1);
   min-width: 2ch;
   text-align: right;
+}
+
+/* With the mail button present, nudge the count off it so its right edge lands
+   in the same column as the "Saved searches" header count. Without the button
+   the row's own right padding already sets that column, so no nudge. */
+.savedsearch-item.with-digest .count {
+  margin-right: var(--space-1);
 }
 
 /* The per-search mail button is the row's trailing control, styled to the exact

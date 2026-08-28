@@ -107,6 +107,12 @@ export class SidebarComponent {
    *  digest off, per-search inclusion has no digest to appear in, so the
    *  envelope button would control nothing (#636). */
   readonly digestEnabled = input<boolean>(false);
+
+  /** The trailing envelope button shows only when mail can send AND the account
+   *  digest is on. The saved-search row also styles itself around whether this
+   *  button is present — it is the row's trailing control, so its absence
+   *  restores the plain nav-row height and right padding (#636). */
+  protected readonly showDigestToggles = computed(() => this.mailEnabled() && this.digestEnabled());
   readonly selection = input.required<Selection>();
   readonly loading = input(false);
   /** A search request is in flight — distinct from `loading` above, which is

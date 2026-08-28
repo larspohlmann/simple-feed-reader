@@ -127,6 +127,7 @@
           <a
             class="nav savedsearch-item"
             [class.active]="saved.id === activeSavedSearchId()"
+            [class.with-digest]="showDigestToggles()"
             [routerLink]="[]"
             [queryParams]="saved.params"
             queryParamsHandling="merge"
@@ -154,7 +155,7 @@
             @if (saved.unreadCount > 0) {
               <span class="count">{{ saved.unreadCount }}</span>
             }
-            @if (mailEnabled() && digestEnabled()) {
+            @if (showDigestToggles()) {
               <button
                 class="digest-toggle"
                 type="button"
