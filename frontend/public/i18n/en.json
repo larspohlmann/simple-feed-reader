@@ -628,6 +628,15 @@
     "searchSaved": "Search saved",
     "removeSavedSearchConfirm": "Remove saved search?",
     "removeSavedSearchConfirmMessage": "This removes it from your saved searches.",
+    "digest": {
+      "toggleAria": "Include \"{{term}}\" in the email digest",
+      "enableConfirm": "Include this search in the digest?",
+      "enableConfirmMessage": "New matches for \"{{term}}\" will appear in your next email digest.",
+      "enableConfirmAction": "Include",
+      "disableConfirm": "Remove this search from the digest?",
+      "disableConfirmMessage": "\"{{term}}\" will no longer appear in your email digest.",
+      "disableConfirmAction": "Remove"
+    },
     "tagFallback": "Tag",
     "feedFallback": "Feed",
     "forYouGeneratedAt": "Generated {{ago}}",

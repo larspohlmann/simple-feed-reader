@@ -73,6 +73,7 @@
       [viewedCount]="subs.viewedCount()"
       [savedSearches]="savedSearchesStore.savedSearches()"
       [activeSavedSearchId]="currentSavedSearch()?.id ?? null"
+      [mailEnabled]="auth.user()?.mail?.enabled ?? false"
       [selection]="selection()"
       [loading]="subs.loading()"
       [searchLoading]="searching()"
@@ -87,6 +88,7 @@
       (refresh)="onRefresh()"
       (addFeed)="onAddFeed()"
       (search)="onSearch($event)"
+      (toggleDigest)="confirmToggleDigest($event)"
     />
   </aside>
   <main class="main" [class.split]="splitView()">

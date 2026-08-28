@@ -149,6 +149,19 @@
             @if (saved.unreadCount > 0) {
               <span class="count">{{ saved.unreadCount }}</span>
             }
+            @if (mailEnabled()) {
+              <button
+                class="dots digest-toggle"
+                type="button"
+                [attr.aria-pressed]="saved.includeInDigest"
+                [attr.aria-label]="'reader.digest.toggleAria' | transloco: { term: saved.term }"
+                (click)="
+                  toggleDigest.emit(saved); $event.stopPropagation(); $event.preventDefault()
+                "
+              >
+                <app-icon name="mail" size="sm" [class.muted]="!saved.includeInDigest" />
+              </button>
+            }
           </a>
         }
       }

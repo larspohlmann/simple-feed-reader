@@ -608,6 +608,13 @@
   opacity: 1;
 }
 
+/* The per-search digest mail icon stays outlined in both states; only its
+   opacity marks whether the search is included, so a glance across the list
+   reads which searches feed the digest without a filled/outlined swap. */
+.digest-toggle .muted {
+  opacity: 0.35;
+}
+
 .pop {
   position: absolute;
   right: 0;

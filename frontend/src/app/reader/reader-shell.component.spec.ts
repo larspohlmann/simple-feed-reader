@@ -2529,6 +2529,45 @@ describe('ReaderShellComponent', () => {
       expect(f.componentInstance.savedSearchesStore.savedSearches()).toEqual([savedClimateView]);
     });
 
+    it('enables the digest for a row when confirmed, keyed by the row id and its flipped flag', () => {
+      const f = bootWithSearchSelected([savedClimate]);
+      const ref = { closed: of(true) };
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
+      const setIncludeInDigest = jest
+        .spyOn(f.componentInstance.savedSearchesStore, 'setIncludeInDigest')
+        .mockImplementation(() => undefined);
+
+      f.componentInstance.confirmToggleDigest(savedClimateView);
+
+      expect(setIncludeInDigest).toHaveBeenCalledWith(4, true);
+    });
+
+    it('disables the digest for a row already included, when confirmed', () => {
+      const f = bootWithSearchSelected([savedClimate]);
+      const ref = { closed: of(true) };
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
+      const setIncludeInDigest = jest
+        .spyOn(f.componentInstance.savedSearchesStore, 'setIncludeInDigest')
+        .mockImplementation(() => undefined);
+
+      f.componentInstance.confirmToggleDigest({ ...savedClimateView, includeInDigest: true });
+
+      expect(setIncludeInDigest).toHaveBeenCalledWith(4, false);
+    });
+
+    it('does nothing when the digest toggle confirmation is cancelled', () => {
+      const f = bootWithSearchSelected([savedClimate]);
+      const ref = { closed: of(false) };
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
+      const setIncludeInDigest = jest
+        .spyOn(f.componentInstance.savedSearchesStore, 'setIncludeInDigest')
+        .mockImplementation(() => undefined);
+
+      f.componentInstance.confirmToggleDigest(savedClimateView);
+
+      expect(setIncludeInDigest).not.toHaveBeenCalled();
+    });
+
     it('matches a saved search by its decoded pair, not by the raw term string', () => {
       // A no-break space is a whole-word signal to the decoder but never equals
       // a plain trailing space, which is what a string comparison would need.

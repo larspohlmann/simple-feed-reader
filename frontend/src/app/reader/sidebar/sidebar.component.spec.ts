@@ -75,6 +75,7 @@ function mount(
     searchLoading: boolean;
     savedSearches: SavedSearchDto[];
     activeSavedSearchId: number | null;
+    mailEnabled: boolean;
   }> = {},
 ) {
   TestBed.configureTestingModule({
@@ -107,6 +108,7 @@ function mount(
   f.componentRef.setInput('organising', over.organising ?? false);
   f.componentRef.setInput('savedSearches', over.savedSearches ?? []);
   f.componentRef.setInput('activeSavedSearchId', over.activeSavedSearchId ?? null);
+  f.componentRef.setInput('mailEnabled', over.mailEnabled ?? false);
   f.detectChanges();
   return f;
 }
@@ -796,6 +798,75 @@ describe('SidebarComponent', () => {
       f.detectChanges();
 
       expect(f.componentInstance['savedSearchLinks']()[0].params).toBe(before);
+    });
+  });
+
+  describe('per-search digest toggle', () => {
+    const climate: SavedSearchDto = {
+      id: 1,
+      term: 'climate',
+      wholeWord: false,
+      position: 0,
+      unreadCount: 3,
+      includeInDigest: false,
+    };
+    const space: SavedSearchDto = {
+      id: 2,
+      term: 'space',
+      wholeWord: false,
+      position: 1,
+      unreadCount: 4,
+      includeInDigest: true,
+    };
+
+    it('renders no mail icon on saved-search rows when mail is disabled', () => {
+      const f = mount({ savedSearches: [climate], mailEnabled: false });
+      f.componentInstance.toggleSavedSearches();
+      f.detectChanges();
+
+      expect(f.nativeElement.querySelector('.digest-toggle')).toBeNull();
+    });
+
+    it('renders a mail icon button per row when mail is enabled, muted only when not included', () => {
+      const f = mount({ savedSearches: [climate, space], mailEnabled: true });
+      f.componentInstance.toggleSavedSearches();
+      f.detectChanges();
+
+      const buttons: HTMLButtonElement[] = [...f.nativeElement.querySelectorAll('.digest-toggle')];
+      expect(buttons).toHaveLength(2);
+
+      const climateRow = buttons.find((b) => b.getAttribute('aria-label')?.includes('climate'))!;
+      const spaceRow = buttons.find((b) => b.getAttribute('aria-label')?.includes('space'))!;
+
+      expect(climateRow.getAttribute('aria-pressed')).toBe('false');
+      expect(climateRow.querySelector('app-icon')?.classList.contains('muted')).toBe(true);
+
+      expect(spaceRow.getAttribute('aria-pressed')).toBe('true');
+      expect(spaceRow.querySelector('app-icon')?.classList.contains('muted')).toBe(false);
+    });
+
+    it('emits toggleDigest with the row on click, without navigating the row link', () => {
+      const f = mount({ savedSearches: [climate], mailEnabled: true });
+      f.componentInstance.toggleSavedSearches();
+      f.detectChanges();
+
+      const emitted: SavedSearchDto[] = [];
+      f.componentInstance.toggleDigest.subscribe((row) => emitted.push(row));
+
+      const button: HTMLButtonElement = f.nativeElement.querySelector('.digest-toggle');
+      const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+      const stopSpy = jest.spyOn(clickEvent, 'stopPropagation');
+      const preventSpy = jest.spyOn(clickEvent, 'preventDefault');
+      button.dispatchEvent(clickEvent);
+      f.detectChanges();
+
+      // The row comes off `savedSearchLinks()`, which spreads in a resolved
+      // `params` object alongside the DTO fields — assert on identity of the
+      // underlying search, not a strict shape match against the raw input.
+      expect(emitted).toHaveLength(1);
+      expect(emitted[0]).toMatchObject(climate);
+      expect(stopSpy).toHaveBeenCalled();
+      expect(preventSpy).toHaveBeenCalled();
     });
   });
 

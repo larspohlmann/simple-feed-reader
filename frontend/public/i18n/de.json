@@ -628,6 +628,15 @@
     "searchSaved": "Suche gespeichert",
     "removeSavedSearchConfirm": "Gespeicherte Suche entfernen?",
     "removeSavedSearchConfirmMessage": "Sie wird aus Ihren gespeicherten Suchen entfernt.",
+    "digest": {
+      "toggleAria": "\"{{term}}\" in den E-Mail-Digest aufnehmen",
+      "enableConfirm": "Diese Suche in den Digest aufnehmen?",
+      "enableConfirmMessage": "Neue Treffer für \"{{term}}\" erscheinen in Ihrem nächsten E-Mail-Digest.",
+      "enableConfirmAction": "Aufnehmen",
+      "disableConfirm": "Diese Suche aus dem Digest entfernen?",
+      "disableConfirmMessage": "\"{{term}}\" erscheint nicht mehr in Ihrem E-Mail-Digest.",
+      "disableConfirmAction": "Entfernen"
+    },
     "tagFallback": "Tag",
     "feedFallback": "Feed",
     "forYouGeneratedAt": "Erstellt {{ago}}",

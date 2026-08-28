@@ -98,6 +98,10 @@ export class SidebarComponent {
    *  tab or no-break space reads as whole-word to the decoder but not to a
    *  string match). An id compares one way only. */
   readonly activeSavedSearchId = input<number | null>(null);
+  /** Whether the account has mail sending enabled. The per-search digest
+   *  toggle only renders when this is true — with mail off there is nowhere
+   *  for the flag to send to. */
+  readonly mailEnabled = input<boolean>(false);
   readonly selection = input.required<Selection>();
   readonly loading = input(false);
   /** A search request is in flight — distinct from `loading` above, which is
@@ -123,6 +127,9 @@ export class SidebarComponent {
   readonly reorderUntagged = output<number[]>();
   /** Feeds within one tag were reordered. */
   readonly reorderTagFeeds = output<{ tagId: number; subscriptionIds: number[] }>();
+  /** The mail icon on a saved-search row was clicked; the shell confirms and
+   *  flips `includeInDigest`. */
+  readonly toggleDigest = output<SavedSearchDto>();
 
   /** True when the drag is a feed row (its data is a SubscriptionDto). */
   private isFeedData(data: unknown): data is SubscriptionDto {
