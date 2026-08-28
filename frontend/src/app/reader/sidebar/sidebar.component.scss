@@ -105,6 +105,14 @@
   animation: for-you-pulse 1.4s ease-in-out infinite;
 }
 
+// A feed excluded from All items or For You (#688): a muted glyph that sits
+// immediately left of the unread count without displacing it — both render
+// together when a feed is both excluded and unread.
+.feed-exclusion-marker {
+  color: var(--text-muted);
+  margin-right: var(--space-1);
+}
+
 @keyframes for-you-pulse {
   0%,
   100% {

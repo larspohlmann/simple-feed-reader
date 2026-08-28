@@ -82,6 +82,8 @@
       (deleteTag)="manage.deleteTag($event)"
       (editFeed)="manage.editSubscription($event)"
       (unsubscribe)="manage.unsubscribe($event)"
+      (toggleAllItems)="manage.setIncludeInAllItems($event, !$event.includeInAllItems)"
+      (toggleForYou)="manage.setIncludeInForYou($event, !$event.includeInForYou)"
       (retag)="manage.retag($event.sub, $event.tagIds)"
       (reorderTags)="manage.reorderTags($event)"
       (reorderUntagged)="manage.reorderUntagged($event)"

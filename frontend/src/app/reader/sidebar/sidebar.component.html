@@ -357,6 +357,14 @@
                       queryParamsHandling="merge"
                     >
                       <app-favicon [url]="s.faviconUrl" /><span>{{ s.title }}</span>
+                      @if (!s.includeInAllItems || !s.includeInForYou) {
+                        <app-icon
+                          class="feed-exclusion-marker"
+                          name="visibility_off"
+                          size="xs"
+                          [title]="exclusionTitle(s)"
+                        />
+                      }
                       @if (s.unreadCount > 0) {
                         <span class="count">{{ s.unreadCount }}</span>
                       }
@@ -380,6 +388,22 @@
                           <div class="pop" role="menu">
                             <button role="menuitem" (click)="editFeed.emit(s); closeMenu()">
                               {{ 'reader.editFeed' | transloco }}
+                            </button>
+                            <button role="menuitem" (click)="toggleAllItems.emit(s); closeMenu()">
+                              {{
+                                (s.includeInAllItems
+                                  ? 'reader.excludeFromAllItems'
+                                  : 'reader.includeInAllItems'
+                                ) | transloco
+                              }}
+                            </button>
+                            <button role="menuitem" (click)="toggleForYou.emit(s); closeMenu()">
+                              {{
+                                (s.includeInForYou
+                                  ? 'reader.excludeFromForYou'
+                                  : 'reader.includeInForYou'
+                                ) | transloco
+                              }}
                             </button>
                             <button role="menuitem" (click)="unsubscribe.emit(s); closeMenu()">
                               {{ 'reader.unsubscribe' | transloco }}
@@ -465,6 +489,14 @@
               queryParamsHandling="merge"
             >
               <app-favicon [url]="s.faviconUrl" /><span>{{ s.title }}</span>
+              @if (!s.includeInAllItems || !s.includeInForYou) {
+                <app-icon
+                  class="feed-exclusion-marker"
+                  name="visibility_off"
+                  size="xs"
+                  [title]="exclusionTitle(s)"
+                />
+              }
               @if (s.unreadCount > 0) {
                 <span class="count">{{ s.unreadCount }}</span>
               }
@@ -488,6 +520,20 @@
                   <div class="pop" role="menu">
                     <button role="menuitem" (click)="editFeed.emit(s); closeMenu()">
                       {{ 'reader.editFeed' | transloco }}
+                    </button>
+                    <button role="menuitem" (click)="toggleAllItems.emit(s); closeMenu()">
+                      {{
+                        (s.includeInAllItems
+                          ? 'reader.excludeFromAllItems'
+                          : 'reader.includeInAllItems'
+                        ) | transloco
+                      }}
+                    </button>
+                    <button role="menuitem" (click)="toggleForYou.emit(s); closeMenu()">
+                      {{
+                        (s.includeInForYou ? 'reader.excludeFromForYou' : 'reader.includeInForYou')
+                          | transloco
+                      }}
                     </button>
                     <button role="menuitem" (click)="unsubscribe.emit(s); closeMenu()">
                       {{ 'reader.unsubscribe' | transloco }}
