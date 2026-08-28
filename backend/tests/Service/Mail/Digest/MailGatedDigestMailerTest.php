@@ -10,6 +10,7 @@ use App\Service\Mail\Digest\DigestModel;
 use App\Service\Mail\Digest\MailGatedDigestMailer;
 use App\Service\Mail\MailCapability;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 final class MailGatedDigestMailerTest extends TestCase
@@ -31,7 +32,13 @@ final class MailGatedDigestMailerTest extends TestCase
         $inner = $this->createMock(DigestMailerInterface::class);
         $inner->expects(self::never())->method('send');
 
-        $gated = new MailGatedDigestMailer($inner, new MailCapability('1'), new NullLogger());
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('info')->with(
+            'Mail disabled (MAIL_DISABLED); skipped digest mail to {email}.',
+            ['email' => 'a@b.test'],
+        );
+
+        $gated = new MailGatedDigestMailer($inner, new MailCapability('1'), $logger);
         $gated->send(new User('a@b.test', new \DateTimeImmutable()), new DigestModel([], 0));
     }
 }
