@@ -95,6 +95,25 @@
       "deleteNote": "Das Löschen deines Kontos entfernt deine Abonnements, Tags und Lesezustände dauerhaft. Exportiere deine Feeds vorher, wenn du sie behalten möchtest.",
       "deleteMessage": "Dies löscht dein Konto dauerhaft, mit allen Abonnements, Tags und Lesezuständen. Das kann nicht rückgängig gemacht werden."
     },
+    "email": {
+      "title": "E-Mail",
+      "mailDisabled": "Diese Instanz kann keine E-Mails versenden, daher ist die E-Mail-Zusammenfassung nicht verfügbar.",
+      "unverified": "Bestätige deine E-Mail-Adresse, um die Zusammenfassung zu aktivieren.",
+      "resend": "Bestätigungs-E-Mail erneut senden",
+      "enable": "Zusammenfassung per E-Mail senden",
+      "cadence": "Häufigkeit",
+      "daily": "Täglich",
+      "weekly": "Wöchentlich",
+      "sendHour": "Senden um",
+      "weekday": "Senden am",
+      "weekdayMonday": "Montag",
+      "weekdayTuesday": "Dienstag",
+      "weekdayWednesday": "Mittwoch",
+      "weekdayThursday": "Donnerstag",
+      "weekdayFriday": "Freitag",
+      "weekdaySaturday": "Samstag",
+      "weekdaySunday": "Sonntag"
+    },
     "ai": {
       "title": "KI",
       "lead": "Verbinde einen OpenAI-kompatiblen Endpunkt. Der Schlüssel wird verschlüsselt gespeichert und nie wieder angezeigt.",

@@ -92,4 +92,11 @@ export class AuthService {
   deleteAccount(): Observable<void> {
     return this.http.delete<void>(`${this.base}/api/me`);
   }
+
+  /** Re-sends the account's verification email. The email section is the only
+   *  caller today (its `unverified` state), so the request lives here rather
+   *  than in a dedicated service. */
+  resendVerification(): Observable<void> {
+    return this.http.post<void>(`${this.base}/api/me/resend-verification`, {});
+  }
 }

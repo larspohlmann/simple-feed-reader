@@ -95,6 +95,25 @@
       "deleteNote": "Deleting your account removes your subscriptions, tags and read state permanently. Export your feeds first if you want to keep them.",
       "deleteMessage": "This permanently deletes your account with all subscriptions, tags and read state. This cannot be undone."
     },
+    "email": {
+      "title": "Email",
+      "mailDisabled": "This instance cannot send mail, so the email digest is unavailable.",
+      "unverified": "Verify your email address to enable the digest.",
+      "resend": "Resend verification email",
+      "enable": "Send a digest email",
+      "cadence": "Frequency",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "sendHour": "Send at",
+      "weekday": "Send on",
+      "weekdayMonday": "Monday",
+      "weekdayTuesday": "Tuesday",
+      "weekdayWednesday": "Wednesday",
+      "weekdayThursday": "Thursday",
+      "weekdayFriday": "Friday",
+      "weekdaySaturday": "Saturday",
+      "weekdaySunday": "Sunday"
+    },
     "ai": {
       "title": "AI",
       "lead": "Connect an OpenAI-compatible endpoint. The key is stored encrypted and is never shown again.",

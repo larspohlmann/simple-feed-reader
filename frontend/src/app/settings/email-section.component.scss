@@ -1,0 +1,23 @@
+// The callout is the one piece of chrome the settings primitives do not own:
+// an informational block sitting directly in the panel, above the rows, for a
+// state the section's own controls cannot fix (no mail transport on this
+// instance, an unverified address). It reads the panel's own inset tokens
+// rather than a padding literal -- see "app-settings-group" in
+// docs/design-language.md on why a non-row panel child owns its inset that way.
+.callout {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+  background: var(--accent-soft);
+  color: var(--text-primary);
+}
+
+.callout span {
+  flex: 1;
+}
+
+.callout app-icon {
+  flex: none;
+  color: var(--accent);
+}
