@@ -14,8 +14,6 @@ import { TagNode } from '../subscriptions.store';
 import { Selection } from '../query';
 import { SavedSearchDto, SubscriptionDto, TagDto } from '../models';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
-import { buildVersion } from '../../../environments/version';
-import { VersionService } from '../../core/version.service';
 import { LayoutService } from '../layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { of } from 'rxjs';
@@ -29,8 +27,13 @@ const account = (trialEndsAt: string | null): CurrentUser => ({
   createdAt: '2026-01-01T00:00:00Z',
   locale: 'en',
   trialEndsAt,
-  preferences: { scrapeFallbackEnabled: false },
+  preferences: {
+    scrapeFallbackEnabled: false,
+    digest: { enabled: false, cadence: 'daily', sendHour: 8, weekday: 1, timezone: 'UTC' },
+  },
   ai: { ready: false, model: null },
+  mail: { enabled: true },
+  emailVerified: true,
 });
 
 const inDays = (days: number): string => new Date(Date.now() + days * 86_400_000).toISOString();
@@ -70,6 +73,8 @@ function mount(
     searchLoading: boolean;
     savedSearches: SavedSearchDto[];
     activeSavedSearchId: number | null;
+    mailEnabled: boolean;
+    digestEnabled: boolean;
   }> = {},
 ) {
   TestBed.configureTestingModule({
@@ -102,6 +107,8 @@ function mount(
   f.componentRef.setInput('organising', over.organising ?? false);
   f.componentRef.setInput('savedSearches', over.savedSearches ?? []);
   f.componentRef.setInput('activeSavedSearchId', over.activeSavedSearchId ?? null);
+  f.componentRef.setInput('mailEnabled', over.mailEnabled ?? false);
+  f.componentRef.setInput('digestEnabled', over.digestEnabled ?? true);
   f.detectChanges();
   return f;
 }
@@ -481,53 +488,8 @@ describe('SidebarComponent', () => {
     });
   });
 
-  it('shows the running build as a link into settings', () => {
-    const version = (mount().nativeElement as HTMLElement).querySelector('.version');
-
-    expect(version?.textContent?.trim()).toBe(buildVersion.version);
-    expect(version?.getAttribute('href')).toBe('/settings');
-  });
-
-  it('shows an update badge linking to the release notes when an update is available', () => {
-    const f = mount();
-    const versions = TestBed.inject(VersionService);
-    versions.latest.set({ version: 'v9.9.9', notesUrl: 'https://github.test/releases/tag/v9.9.9' });
-    versions.updateAvailable.set(true);
-    f.detectChanges();
-
-    const badge = (f.nativeElement as HTMLElement).querySelector('.update-badge');
-    expect(badge).not.toBeNull();
-    expect(badge?.textContent).toContain('v9.9.9');
-    expect(badge?.getAttribute('href')).toBe('https://github.test/releases/tag/v9.9.9');
-    expect(badge?.getAttribute('target')).toBe('_blank');
-    expect(badge?.getAttribute('rel')).toBe('noopener noreferrer');
-  });
-
-  it('shows no update badge when the running build is current', () => {
-    const f = mount();
-    const versions = TestBed.inject(VersionService);
-    versions.updateAvailable.set(false);
-    versions.latest.set(null);
-    f.detectChanges();
-
-    expect((f.nativeElement as HTMLElement).querySelector('.update-badge')).toBeNull();
-  });
-
-  it('shows the trial countdown when a trial is active', () => {
-    const f = mount({ user: account(inDays(5)) });
-    const el = f.nativeElement.querySelector('.trial');
-    expect(el?.textContent).toContain('5');
-  });
-
-  it('hides the trial countdown when there is no trial', () => {
-    const f = mount({ user: account(null) });
-    expect(f.nativeElement.querySelector('.trial')).toBeNull();
-  });
-
-  it('hides the trial countdown when the trial is already past', () => {
-    const f = mount({ user: account(inDays(-1)) });
-    expect(f.nativeElement.querySelector('.trial')).toBeNull();
-  });
+  // The build/version link, the update badge and the trial countdown moved to
+  // SidebarFootComponent; they are covered by sidebar-foot.component.spec.ts.
 
   describe('saved searches', () => {
     it('renders no saved-searches section when the list is empty', () => {
@@ -538,8 +500,22 @@ describe('SidebarComponent', () => {
     it('renders collapsed by default, showing the header with the summed unread count', () => {
       const f = mount({
         savedSearches: [
-          { id: 1, term: 'climate', wholeWord: false, position: 0, unreadCount: 3 },
-          { id: 2, term: 'space', wholeWord: false, position: 1, unreadCount: 4 },
+          {
+            id: 1,
+            term: 'climate',
+            wholeWord: false,
+            position: 0,
+            unreadCount: 3,
+            includeInDigest: false,
+          },
+          {
+            id: 2,
+            term: 'space',
+            wholeWord: false,
+            position: 1,
+            unreadCount: 4,
+            includeInDigest: false,
+          },
         ],
       });
       const text = f.nativeElement.textContent;
@@ -553,8 +529,22 @@ describe('SidebarComponent', () => {
     it('expands on click, revealing the term rows while keeping the summed count', () => {
       const f = mount({
         savedSearches: [
-          { id: 1, term: 'climate', wholeWord: false, position: 0, unreadCount: 3 },
-          { id: 2, term: 'space', wholeWord: false, position: 1, unreadCount: 4 },
+          {
+            id: 1,
+            term: 'climate',
+            wholeWord: false,
+            position: 0,
+            unreadCount: 3,
+            includeInDigest: false,
+          },
+          {
+            id: 2,
+            term: 'space',
+            wholeWord: false,
+            position: 1,
+            unreadCount: 4,
+            includeInDigest: false,
+          },
         ],
       });
       const head: HTMLElement = f.nativeElement.querySelector('.savedsearch-head');
@@ -578,7 +568,16 @@ describe('SidebarComponent', () => {
 
     it('also expands on a click of its trailing chevron button', () => {
       const f = mount({
-        savedSearches: [{ id: 1, term: 'climate', wholeWord: false, position: 0, unreadCount: 3 }],
+        savedSearches: [
+          {
+            id: 1,
+            term: 'climate',
+            wholeWord: false,
+            position: 0,
+            unreadCount: 3,
+            includeInDigest: false,
+          },
+        ],
       });
       const chevron: HTMLButtonElement = f.nativeElement.querySelector(
         '.savedsearch-head .chevzone',
@@ -597,7 +596,16 @@ describe('SidebarComponent', () => {
       };
       const f = mount({
         tagTree: [node],
-        savedSearches: [{ id: 1, term: 'climate', wholeWord: false, position: 0, unreadCount: 3 }],
+        savedSearches: [
+          {
+            id: 1,
+            term: 'climate',
+            wholeWord: false,
+            position: 0,
+            unreadCount: 3,
+            includeInDigest: false,
+          },
+        ],
       });
       const savedChev: HTMLElement = f.nativeElement.querySelector('.savedsearch-head .chevzone');
       const tagChev: HTMLElement = f.nativeElement.querySelector('.taghead .chevzone');
@@ -609,7 +617,16 @@ describe('SidebarComponent', () => {
     // and right (`chevron_right`) when it is collapsed — never up.
     it('points the header chevron down when expanded and right when collapsed', () => {
       const f = mount({
-        savedSearches: [{ id: 1, term: 'climate', wholeWord: false, position: 0, unreadCount: 3 }],
+        savedSearches: [
+          {
+            id: 1,
+            term: 'climate',
+            wholeWord: false,
+            position: 0,
+            unreadCount: 3,
+            includeInDigest: false,
+          },
+        ],
       });
       const chevronIcon = (): string | null =>
         f.nativeElement.querySelector('.savedsearch-head .chevzone .material-symbols-outlined')
@@ -626,8 +643,22 @@ describe('SidebarComponent', () => {
     it('shows a compact "W" pill on a whole-word row and none on a plain row', () => {
       const f = mount({
         savedSearches: [
-          { id: 1, term: 'climate', wholeWord: true, position: 0, unreadCount: 0 },
-          { id: 2, term: 'space', wholeWord: false, position: 1, unreadCount: 0 },
+          {
+            id: 1,
+            term: 'climate',
+            wholeWord: true,
+            position: 0,
+            unreadCount: 0,
+            includeInDigest: false,
+          },
+          {
+            id: 2,
+            term: 'space',
+            wholeWord: false,
+            position: 1,
+            unreadCount: 0,
+            includeInDigest: false,
+          },
         ],
       });
       f.componentInstance.toggleSavedSearches();
@@ -650,8 +681,22 @@ describe('SidebarComponent', () => {
     it('marks the row the shell names active, and only that one', () => {
       const f = mount({
         savedSearches: [
-          { id: 1, term: 'climate', wholeWord: true, position: 0, unreadCount: 0 },
-          { id: 2, term: 'space', wholeWord: false, position: 1, unreadCount: 0 },
+          {
+            id: 1,
+            term: 'climate',
+            wholeWord: true,
+            position: 0,
+            unreadCount: 0,
+            includeInDigest: false,
+          },
+          {
+            id: 2,
+            term: 'space',
+            wholeWord: false,
+            position: 1,
+            unreadCount: 0,
+            includeInDigest: false,
+          },
         ],
         activeSavedSearchId: 1,
       });
@@ -666,7 +711,16 @@ describe('SidebarComponent', () => {
 
     it('marks no row active when the shell names none', () => {
       const f = mount({
-        savedSearches: [{ id: 1, term: 'climate', wholeWord: true, position: 0, unreadCount: 0 }],
+        savedSearches: [
+          {
+            id: 1,
+            term: 'climate',
+            wholeWord: true,
+            position: 0,
+            unreadCount: 0,
+            includeInDigest: false,
+          },
+        ],
       });
       f.componentInstance.toggleSavedSearches();
       f.detectChanges();
@@ -680,7 +734,16 @@ describe('SidebarComponent', () => {
     // change is what keeps a zone-based change-detection pass off that path.
     it('keeps each row link params object stable across change detection', () => {
       const f = mount({
-        savedSearches: [{ id: 1, term: 'climate', wholeWord: true, position: 0, unreadCount: 0 }],
+        savedSearches: [
+          {
+            id: 1,
+            term: 'climate',
+            wholeWord: true,
+            position: 0,
+            unreadCount: 0,
+            includeInDigest: false,
+          },
+        ],
       });
       f.componentInstance.toggleSavedSearches();
       f.detectChanges();
@@ -690,6 +753,83 @@ describe('SidebarComponent', () => {
       f.detectChanges();
 
       expect(f.componentInstance['savedSearchLinks']()[0].params).toBe(before);
+    });
+  });
+
+  describe('per-search digest toggle', () => {
+    const climate: SavedSearchDto = {
+      id: 1,
+      term: 'climate',
+      wholeWord: false,
+      position: 0,
+      unreadCount: 3,
+      includeInDigest: false,
+    };
+    const space: SavedSearchDto = {
+      id: 2,
+      term: 'space',
+      wholeWord: false,
+      position: 1,
+      unreadCount: 4,
+      includeInDigest: true,
+    };
+
+    it('renders no mail icon on saved-search rows when mail is disabled', () => {
+      const f = mount({ savedSearches: [climate], mailEnabled: false });
+      f.componentInstance.toggleSavedSearches();
+      f.detectChanges();
+
+      expect(f.nativeElement.querySelector('.digest-toggle')).toBeNull();
+    });
+
+    it('renders no mail icon when mail is on but the account digest is off', () => {
+      const f = mount({ savedSearches: [climate], mailEnabled: true, digestEnabled: false });
+      f.componentInstance.toggleSavedSearches();
+      f.detectChanges();
+
+      expect(f.nativeElement.querySelector('.digest-toggle')).toBeNull();
+    });
+
+    it('renders a mail icon button per row when mail is enabled, muted only when not included', () => {
+      const f = mount({ savedSearches: [climate, space], mailEnabled: true });
+      f.componentInstance.toggleSavedSearches();
+      f.detectChanges();
+
+      const buttons: HTMLButtonElement[] = [...f.nativeElement.querySelectorAll('.digest-toggle')];
+      expect(buttons).toHaveLength(2);
+
+      const climateRow = buttons.find((b) => b.getAttribute('aria-label')?.includes('climate'))!;
+      const spaceRow = buttons.find((b) => b.getAttribute('aria-label')?.includes('space'))!;
+
+      expect(climateRow.getAttribute('aria-pressed')).toBe('false');
+      expect(climateRow.querySelector('app-icon')?.classList.contains('muted')).toBe(true);
+
+      expect(spaceRow.getAttribute('aria-pressed')).toBe('true');
+      expect(spaceRow.querySelector('app-icon')?.classList.contains('muted')).toBe(false);
+    });
+
+    it('emits toggleDigest with the row on click, without navigating the row link', () => {
+      const f = mount({ savedSearches: [climate], mailEnabled: true });
+      f.componentInstance.toggleSavedSearches();
+      f.detectChanges();
+
+      const emitted: SavedSearchDto[] = [];
+      f.componentInstance.toggleDigest.subscribe((row) => emitted.push(row));
+
+      const button: HTMLButtonElement = f.nativeElement.querySelector('.digest-toggle');
+      const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+      const stopSpy = jest.spyOn(clickEvent, 'stopPropagation');
+      const preventSpy = jest.spyOn(clickEvent, 'preventDefault');
+      button.dispatchEvent(clickEvent);
+      f.detectChanges();
+
+      // The row comes off `savedSearchLinks()`, which spreads in a resolved
+      // `params` object alongside the DTO fields — assert on identity of the
+      // underlying search, not a strict shape match against the raw input.
+      expect(emitted).toHaveLength(1);
+      expect(emitted[0]).toMatchObject(climate);
+      expect(stopSpy).toHaveBeenCalled();
+      expect(preventSpy).toHaveBeenCalled();
     });
   });
 
@@ -1057,25 +1197,6 @@ describe('organise mode', () => {
     f.nativeElement.querySelector('.tag .dots').click();
     expect(TestBed.inject(ActionSheet).open).toHaveBeenCalled();
     expect(emitted).not.toHaveBeenCalled();
-  });
-
-  it('keeps the foot order: organise, view controls, trial, meta', () => {
-    const el = mount({ coarse: true, user: account(inDays(5)) }).nativeElement as HTMLElement;
-    const order = Array.from(el.querySelector('.foot')!.children).map(
-      (child) => child.classList[0],
-    );
-    expect(order).toEqual(['organise', 'controls', 'trial', 'meta']);
-  });
-
-  it('links Feedback to the public issue tracker in a new tab', () => {
-    const feedback = (mount().nativeElement as HTMLElement).querySelector('.feedback');
-
-    expect(feedback?.textContent?.trim()).toBe('Feedback');
-    expect(feedback?.getAttribute('href')).toBe(
-      'https://github.com/larspohlmann/simple-feed-reader/issues',
-    );
-    expect(feedback?.getAttribute('target')).toBe('_blank');
-    expect(feedback?.getAttribute('rel')).toBe('noopener noreferrer');
   });
 
   it('resets organising when the pointer stops being coarse', () => {

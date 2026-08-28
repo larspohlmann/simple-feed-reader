@@ -33,6 +33,9 @@ export class AdminSettingsComponent implements OnInit {
 
   readonly requireEmailConfirmation = signal(false);
   readonly requireApproval = signal(false);
+  // The external base URL for links in outgoing email; null falls back to the
+  // APP_FRONTEND_URL deploy env (#636).
+  readonly publicBaseUrl = signal<string | null>(null);
   // mailEnabled reflects the deploy-time MAIL_DISABLED flag (#230), not a
   // toggle the admin can flip — it only explains why the email-confirmation
   // switch is disabled.
@@ -60,16 +63,29 @@ export class AdminSettingsComponent implements OnInit {
   }
 
   toggleEmailConfirmation(): void {
-    this.save(!this.requireEmailConfirmation(), this.requireApproval());
+    this.save(!this.requireEmailConfirmation(), this.requireApproval(), this.publicBaseUrl());
   }
 
   toggleApproval(): void {
-    this.save(this.requireEmailConfirmation(), !this.requireApproval());
+    this.save(this.requireEmailConfirmation(), !this.requireApproval(), this.publicBaseUrl());
   }
 
-  private save(requireEmailConfirmation: boolean, requireApproval: boolean): void {
+  savePublicBaseUrl(value: string): void {
+    const trimmed = value.trim();
+    this.save(
+      this.requireEmailConfirmation(),
+      this.requireApproval(),
+      trimmed === '' ? null : trimmed,
+    );
+  }
+
+  private save(
+    requireEmailConfirmation: boolean,
+    requireApproval: boolean,
+    publicBaseUrl: string | null,
+  ): void {
     this.error.set(null);
-    this.api.update(requireEmailConfirmation, requireApproval).subscribe({
+    this.api.update(requireEmailConfirmation, requireApproval, publicBaseUrl).subscribe({
       next: (settings) => this.applySettings(settings),
       error: (failure: HttpErrorResponse) => this.error.set(parseProblem(failure)),
     });
@@ -79,5 +95,6 @@ export class AdminSettingsComponent implements OnInit {
     this.requireEmailConfirmation.set(settings.requireEmailConfirmation);
     this.requireApproval.set(settings.requireApproval);
     this.mailEnabled.set(settings.mailEnabled);
+    this.publicBaseUrl.set(settings.publicBaseUrl);
   }
 }

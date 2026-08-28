@@ -163,6 +163,16 @@ export class ReaderApi {
     return this.http.delete<void>(`${this.base}/api/saved-searches/${id}`);
   }
 
+  updateSavedSearch(
+    id: number,
+    body: { includeInDigest: boolean },
+  ): Observable<{ savedSearch: SavedSearchWire }> {
+    return this.http.patch<{ savedSearch: SavedSearchWire }>(
+      `${this.base}/api/saved-searches/${id}`,
+      body,
+    );
+  }
+
   exportOpml(): Observable<string> {
     return this.http.get(`${this.base}/api/opml/export`, { responseType: 'text' });
   }

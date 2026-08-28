@@ -24,14 +24,14 @@ final readonly class AdminSettingsController
     #[Route('', name: 'api_admin_settings_get', methods: ['GET'])]
     public function get(): JsonResponse
     {
-        return new JsonResponse(InstanceSettingsJson::from($this->policy));
+        return new JsonResponse(InstanceSettingsJson::from($this->policy, $this->settings->getPublicBaseUrl()));
     }
 
     #[Route('', name: 'api_admin_settings_update', methods: ['PUT'])]
     public function update(#[MapRequestPayload] InstanceSettingsRequest $request): JsonResponse
     {
-        $this->settings->update($request->requireEmailConfirmation, $request->requireApproval);
+        $this->settings->update($request->requireEmailConfirmation, $request->requireApproval, $request->publicBaseUrl);
 
-        return new JsonResponse(InstanceSettingsJson::from($this->policy));
+        return new JsonResponse(InstanceSettingsJson::from($this->policy, $this->settings->getPublicBaseUrl()));
     }
 }

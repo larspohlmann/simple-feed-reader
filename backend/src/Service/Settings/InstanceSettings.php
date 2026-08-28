@@ -31,7 +31,12 @@ final readonly class InstanceSettings
         return $this->repository->findSingleton()?->requireApproval() ?? true;
     }
 
-    public function update(bool $requireEmailConfirmation, bool $requireApproval): void
+    public function getPublicBaseUrl(): ?string
+    {
+        return $this->repository->findSingleton()?->getPublicBaseUrl();
+    }
+
+    public function update(bool $requireEmailConfirmation, bool $requireApproval, ?string $publicBaseUrl): void
     {
         $setting = $this->repository->findSingleton();
 
@@ -40,7 +45,7 @@ final readonly class InstanceSettings
             $this->em->persist($setting);
         }
 
-        $setting->apply($requireEmailConfirmation, $requireApproval);
+        $setting->apply($requireEmailConfirmation, $requireApproval, $publicBaseUrl);
         $this->em->flush();
     }
 }

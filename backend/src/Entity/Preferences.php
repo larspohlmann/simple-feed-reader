@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Repository\PreferencesRepository;
+use App\Service\Mail\Digest\DigestCadence;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -34,6 +36,24 @@ class Preferences
     #[ORM\Column(options: ['default' => false])]
     private bool $scrapeFallbackEnabled = false;
 
+    #[ORM\Column(name: 'digest_enabled', options: ['default' => false])]
+    private bool $digestEnabled = false;
+
+    #[ORM\Column(name: 'digest_cadence', length: 10, enumType: DigestCadence::class, options: ['default' => 'daily'])]
+    private DigestCadence $digestCadence = DigestCadence::Daily;
+
+    /** The local hour (0–23) the digest is sent, interpreted in the instance timezone. */
+    #[ORM\Column(name: 'digest_send_hour', type: Types::SMALLINT, options: ['default' => 8])]
+    private int $digestSendHour = 8;
+
+    /** ISO-8601 weekday (1=Mon … 7=Sun); only meaningful for the weekly cadence. */
+    #[ORM\Column(name: 'digest_weekday', type: Types::SMALLINT, options: ['default' => 1])]
+    private int $digestWeekday = 1;
+
+    /** Naive UTC. Null until the digest is first enabled; the "since" marker. */
+    #[ORM\Column(name: 'digest_last_sent_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $digestLastSentAt = null;
+
     public function __construct(User $user)
     {
         $this->user = $user;
@@ -57,5 +77,55 @@ class Preferences
     public function setScrapeFallbackEnabled(bool $scrapeFallbackEnabled): void
     {
         $this->scrapeFallbackEnabled = $scrapeFallbackEnabled;
+    }
+
+    public function isDigestEnabled(): bool
+    {
+        return $this->digestEnabled;
+    }
+
+    public function setDigestEnabled(bool $digestEnabled): void
+    {
+        $this->digestEnabled = $digestEnabled;
+    }
+
+    public function getDigestCadence(): DigestCadence
+    {
+        return $this->digestCadence;
+    }
+
+    public function setDigestCadence(DigestCadence $digestCadence): void
+    {
+        $this->digestCadence = $digestCadence;
+    }
+
+    public function getDigestSendHour(): int
+    {
+        return $this->digestSendHour;
+    }
+
+    public function setDigestSendHour(int $digestSendHour): void
+    {
+        $this->digestSendHour = $digestSendHour;
+    }
+
+    public function getDigestWeekday(): int
+    {
+        return $this->digestWeekday;
+    }
+
+    public function setDigestWeekday(int $digestWeekday): void
+    {
+        $this->digestWeekday = $digestWeekday;
+    }
+
+    public function getDigestLastSentAt(): ?\DateTimeImmutable
+    {
+        return $this->digestLastSentAt;
+    }
+
+    public function setDigestLastSentAt(?\DateTimeImmutable $digestLastSentAt): void
+    {
+        $this->digestLastSentAt = $digestLastSentAt;
     }
 }

@@ -32,6 +32,10 @@ class SavedSearch
     #[ORM\Column(options: ['default' => 0])]
     private int $position = 0;
 
+    /** Whether new matches feed this user's email digest (#636). */
+    #[ORM\Column(name: 'include_in_digest', options: ['default' => false])]
+    private bool $includeInDigest = false;
+
     public function __construct(User $user, string $term, bool $wholeWord)
     {
         $this->user = $user;
@@ -67,5 +71,15 @@ class SavedSearch
     public function setPosition(int $position): void
     {
         $this->position = $position;
+    }
+
+    public function isIncludeInDigest(): bool
+    {
+        return $this->includeInDigest;
+    }
+
+    public function setIncludeInDigest(bool $includeInDigest): void
+    {
+        $this->includeInDigest = $includeInDigest;
     }
 }

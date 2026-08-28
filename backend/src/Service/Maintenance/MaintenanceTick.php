@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Maintenance;
 
+use App\Service\Mail\Digest\DigestSweepReport;
+use App\Service\Mail\Digest\SendDueDigests;
 use App\Service\Recommendation\ForYouSweep;
 use App\Service\Refresh\RefreshRequest;
 use App\Service\Refresh\RefreshRunner;
@@ -28,14 +30,21 @@ use App\Service\Refresh\RefreshRunner;
  * on-demand drainer alive for whatever the sweep leaves active is
  * RecommendationDrainOnTerminateListener's job now (#393), off this class's
  * own termination rather than threaded through here.
+ *
+ * The due-digests sweep (#636) runs last, after refresh and recommendations,
+ * and shares their guard: it also flushes through the same default
+ * EntityManager, so it is skipped on the same aborted-refresh tick.
  */
 final readonly class MaintenanceTick
 {
     public const int REFRESH_BUDGET_SECONDS = 20;
 
+    private const string ABORTED_REASON = 'refresh aborted: the shared EntityManager is unusable this tick';
+
     public function __construct(
         private RefreshRunner $refreshRunner,
         private ForYouSweep $forYouSweep,
+        private SendDueDigests $sendDueDigests,
     ) {
     }
 
@@ -43,12 +52,17 @@ final readonly class MaintenanceTick
     {
         $refresh = $this->refreshRunner->run(RefreshRequest::allDue(self::REFRESH_BUDGET_SECONDS));
         if ($refresh->isAborted()) {
-            return new MaintenanceTickReport($refresh->toArray(), $this->skippedRecommendations());
+            return new MaintenanceTickReport(
+                $refresh->toArray(),
+                $this->skippedRecommendations(),
+                $this->skippedDigests(),
+            );
         }
 
         $recommendations = $this->forYouSweep->sweepOnce();
+        $digests = $this->sendDueDigests->run()->toArray();
 
-        return new MaintenanceTickReport($refresh->toArray(), $recommendations->toArray());
+        return new MaintenanceTickReport($refresh->toArray(), $recommendations->toArray(), $digests);
     }
 
     /**
@@ -60,7 +74,15 @@ final readonly class MaintenanceTick
             'startedRuns' => 0,
             'advancedRuns' => 0,
             'activeRuns' => 0,
-            'skipped' => 'refresh aborted: the shared EntityManager is unusable this tick',
+            'skipped' => self::ABORTED_REASON,
         ];
+    }
+
+    /**
+     * @return array{considered: int, sent: int, skippedEmpty: int, skipped: string}
+     */
+    private function skippedDigests(): array
+    {
+        return (new DigestSweepReport(0, 0, 0))->toArray() + ['skipped' => self::ABORTED_REASON];
     }
 }

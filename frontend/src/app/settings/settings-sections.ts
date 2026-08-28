@@ -18,6 +18,7 @@ export const SETTINGS_SECTIONS = [
   { path: 'tags', icon: 'sell', labelKey: 'settings.tags.title', group: 'general' },
   { path: 'import', icon: 'import_export', labelKey: 'settings.opml.title', group: 'general' },
   { path: 'preferences', icon: 'tune', labelKey: 'settings.preferences', group: 'general' },
+  { path: 'email', icon: 'mail', labelKey: 'settings.email.title', group: 'general' },
   { path: 'account', icon: 'person', labelKey: 'settings.account.title', group: 'general' },
   { path: 'ai', icon: 'smart_toy', labelKey: 'settings.ai.title', group: 'general' },
   { path: 'about', icon: 'info', labelKey: 'settings.about.title', group: 'general' },

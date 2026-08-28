@@ -14,8 +14,13 @@ const admin: CurrentUser = {
   createdAt: 'x',
   locale: 'en',
   trialEndsAt: null,
-  preferences: { scrapeFallbackEnabled: false },
+  preferences: {
+    scrapeFallbackEnabled: false,
+    digest: { enabled: false, cadence: 'daily', sendHour: 8, weekday: 1, timezone: 'UTC' },
+  },
   ai: { ready: false, model: null },
+  mail: { enabled: true },
+  emailVerified: true,
 };
 const plain: CurrentUser = { ...admin, roles: ['ROLE_USER'] };
 

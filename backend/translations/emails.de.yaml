@@ -13,3 +13,9 @@ admin_pending_approval:
     subject: 'Ein neuer Nutzer wartet auf Freischaltung'
     body: "Ein neuer Nutzer hat sich registriert und benötigt deine Freischaltung.\n\nE-Mail: %applicant_email%\nRegistriert über: %method%\nNutzer, die auf Freischaltung warten: %pending_count%\n\nHier prüfen und freischalten:\n\n%review_url%"
     method_email_password: 'E-Mail und Passwort'
+digest:
+    subject: 'Neu in deinen Feeds: %count% Einträge'
+    intro: "Das sind neue Einträge, die zu deinen gespeicherten Suchen passen, nach Suche gruppiert."
+    group_heading: '%term% (%count%)'
+    more: '+ mehr → %url%'
+    footer: 'Verwalte deinen Digest unter Einstellungen → E-Mail.'

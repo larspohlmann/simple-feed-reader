@@ -25,21 +25,17 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
-import { ViewControlsComponent } from '../view-controls/view-controls.component';
 import { SearchFieldComponent } from '../search-field/search-field.component';
+import { SidebarFootComponent } from './sidebar-foot.component';
 import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
 import { TagNode } from '../subscriptions.store';
 import { Selection, savedSearchParams, selectionQueryParams } from '../query';
 import { SavedSearchDto, SubscriptionDto, TagDto } from '../models';
 import { RefreshService } from '../refresh.service';
 import { RecommendationsService } from '../recommendations.service';
-import { AuthService } from '../../core/auth.service';
 import { AiAvailabilityService } from '../../core/ai-availability.service';
-import { VersionService } from '../../core/version.service';
 import { LayoutService } from '../layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
-import { buildVersion } from '../../../environments/version';
-import { trialDaysRemaining } from '../format';
 
 /** What a sidebar drop target represents: a tag to add, or the untagged bucket. */
 export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
@@ -56,8 +52,8 @@ const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
     IconComponent,
     TagGlyphComponent,
     FaviconComponent,
-    ViewControlsComponent,
     SearchFieldComponent,
+    SidebarFootComponent,
     TranslocoPipe,
     CdkDropListGroup,
     CdkDropList,
@@ -69,19 +65,6 @@ const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
   styleUrl: './sidebar.component.scss',
 })
 export class SidebarComponent {
-  /** Baked in at build time, so it names the bundle actually running. */
-  readonly version = buildVersion.version;
-
-  private readonly versions = inject(VersionService);
-
-  /** The release to update to, or null when the running build is current. The
-   *  update badge renders only when this is set. The shell triggers the check
-   *  on app load; the sidebar only reads its result — the same way it reads the
-   *  refresh, AI and recommendation services. */
-  readonly availableUpdate = computed(() =>
-    this.versions.updateAvailable() ? this.versions.latest() : null,
-  );
-
   protected readonly selectionQueryParams = selectionQueryParams;
 
   readonly tagTree = input.required<TagNode[]>();
@@ -98,6 +81,21 @@ export class SidebarComponent {
    *  tab or no-break space reads as whole-word to the decoder but not to a
    *  string match). An id compares one way only. */
   readonly activeSavedSearchId = input<number | null>(null);
+  /** Whether the account has mail sending enabled. The per-search digest
+   *  toggle only renders when this is true — with mail off there is nowhere
+   *  for the flag to send to. */
+  readonly mailEnabled = input<boolean>(false);
+  /** Whether the account's own digest is switched on ("Send a digest email").
+   *  The per-search toggle renders only when this is true as well: with the
+   *  digest off, per-search inclusion has no digest to appear in, so the
+   *  envelope button would control nothing (#636). */
+  readonly digestEnabled = input<boolean>(false);
+
+  /** The trailing envelope button shows only when mail can send AND the account
+   *  digest is on. The saved-search row also styles itself around whether this
+   *  button is present — it is the row's trailing control, so its absence
+   *  restores the plain nav-row height and right padding (#636). */
+  protected readonly showDigestToggles = computed(() => this.mailEnabled() && this.digestEnabled());
   readonly selection = input.required<Selection>();
   readonly loading = input(false);
   /** A search request is in flight — distinct from `loading` above, which is
@@ -123,6 +121,9 @@ export class SidebarComponent {
   readonly reorderUntagged = output<number[]>();
   /** Feeds within one tag were reordered. */
   readonly reorderTagFeeds = output<{ tagId: number; subscriptionIds: number[] }>();
+  /** The mail icon on a saved-search row was clicked; the shell confirms and
+   *  flips `includeInDigest`. */
+  readonly toggleDigest = output<SavedSearchDto>();
 
   /** True when the drag is a feed row (its data is a SubscriptionDto). */
   private isFeedData(data: unknown): data is SubscriptionDto {
@@ -136,7 +137,6 @@ export class SidebarComponent {
   readonly refreshSvc = inject(RefreshService);
   readonly ai = inject(AiAvailabilityService);
   readonly recs = inject(RecommendationsService);
-  private readonly auth = inject(AuthService);
   readonly screen = inject(LayoutService);
   readonly organising = model(false);
 
@@ -195,19 +195,6 @@ export class SidebarComponent {
     this.feedsExpanded.update((open) => !open);
     localStorage.setItem(FEEDS_COLLAPSED_KEY, String(!this.feedsExpanded()));
   }
-
-  /** Whole days left in the current trial, or null when the account has no
-   *  active trial. Expired trials read as null here — the account is suspended
-   *  by then and never reaches this view. */
-  readonly trialDaysLeft = computed<number | null>(() =>
-    trialDaysRemaining(this.auth.user()?.trialEndsAt ?? null),
-  );
-
-  /** The last stretch of a trial is emphasised. */
-  readonly trialEndingSoon = computed(() => {
-    const daysLeft = this.trialDaysLeft();
-    return daysLeft !== null && daysLeft <= 3;
-  });
 
   /** True while a feed row is being dragged (reveals the empty Feeds drop zone). */
   readonly dragging = signal(false);

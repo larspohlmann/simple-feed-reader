@@ -13,142 +13,10 @@
   margin-bottom: var(--space-1);
 }
 
-/* Meta controls grouped at the drawer's foot: Organise, then layout/theme,
-   then trial and version. The wrapper takes the old margin-top: auto. */
-.foot {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-}
-
-.controls {
-  padding-top: var(--space-3);
-}
-
-.organise {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-2);
-  color: var(--text-primary);
-  font-size: var(--fs-sm);
-  cursor: pointer;
-}
-
-.organise .track {
-  position: relative;
-  display: inline-block;
-
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     tuned switch-track measure, not a spacing value. */
-  width: 32px;
-  height: var(--space-4);
-  border-radius: var(--radius-pill);
-  background: var(--border-strong);
-  transition: background 0.15s;
-}
-
-.organise .knob {
-  position: absolute;
-  top: var(--space-0);
-  left: var(--space-0);
-  width: var(--space-3);
-  height: var(--space-3);
-  border-radius: var(--radius-pill);
-  background: var(--surface-2);
-  transition: transform 0.15s;
-}
-
-.organise[aria-checked='true'] {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.organise[aria-checked='true'] .track {
-  background: var(--accent);
-}
-
-.organise[aria-checked='true'] .knob {
-  /* Travel = track (32px) minus knob (12px) minus both 2px insets = 16px.
-     `100%` would move the knob only its own 12px width and park it 4px short
-     of the right edge, reading as a half-on switch. */
-  transform: translateX(var(--space-4));
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .organise .track,
-  .organise .knob {
-    transition: none;
-  }
-
   .nav app-icon.pulse {
     animation: none;
   }
-}
-
-/* Rides along under the controls, which already carry the margin-top: auto. */
-.trial {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-2) 0;
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-}
-
-.trial.soon {
-  color: var(--danger);
-}
-
-/* Version and Feedback share the foot's final row. */
-.meta {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.version,
-.feedback {
-  padding: var(--space-1) var(--space-2) 0;
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-  text-decoration: none;
-}
-
-.version:hover,
-.feedback:hover {
-  color: var(--text-secondary);
-}
-
-/* The version link and, when one exists, the update badge sit together at the
-   left of the meta row; Feedback stays at the right. */
-.version-group {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.update-badge {
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-pill);
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.update-badge:hover {
-  background: var(--accent);
-  color: var(--on-accent);
 }
 
 .act {
@@ -346,6 +214,85 @@
    read as nested under their header exactly like feeds under a tag. */
 .savedsearch-item {
   padding-left: var(--space-6);
+}
+
+/* The mail button is the row's trailing control, and the row's metrics bend to
+   it: dropping the right text-padding lets the button's column line up with the
+   "Saved searches" chevron above, and dropping the block padding lets the
+   button's own box (not row-pad-y on top of it) drive the height so these rows
+   match the tag rows below. Without the button (mail off, or the account digest
+   off) none of that applies, so the row keeps the plain `.nav` padding (#636). */
+.savedsearch-item.with-digest {
+  padding-right: 0;
+  padding-block: 0;
+}
+
+/* Term + "W" pill as one left group. It takes the row's flexible width, so its
+   trailing slack pushes the unread count and the mail button to a consistent
+   right edge while the pill stays glued to the word (#636). */
+.savedsearch-item .saved-term-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+}
+
+.savedsearch-item .saved-term {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Smaller than the global pill: the sidebar row is narrower than the results
+   header, so the marker takes the sub-chrome --fs-2xs step and a hair of
+   padding here. */
+.savedsearch-item .whole-word-badge {
+  padding: 0 var(--space-1);
+  font-size: var(--fs-2xs);
+}
+
+/* The unread count sits in its own right-aligned column, left of the mail
+   button, so it lines up with the "Saved searches" header count above rather
+   than drifting with the term width. The term group's flex:1 packs it (and the
+   button) to the right, so it must not also claim the auto margin. */
+.savedsearch-item .count {
+  flex: none;
+  margin-left: 0;
+  min-width: 2ch;
+  text-align: right;
+}
+
+/* With the mail button present, nudge the count off it so its right edge lands
+   in the same column as the "Saved searches" header count. Without the button
+   the row's own right padding already sets that column, so no nudge. */
+.savedsearch-item.with-digest .count {
+  margin-right: var(--space-1);
+}
+
+/* The per-search mail button is the row's trailing control, styled to the exact
+   box metrics of the tag/saved-search `.chevzone` chevron -- same margin, and a
+   bordered glyph box on the inner icon -- so it reads as a button and its column
+   lines up with the chevron above it (#636). */
+.savedsearch-item .digest-toggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  margin: var(--space-1);
+}
+
+.savedsearch-item .digest-toggle app-icon {
+  display: inline-flex;
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
 }
 
 .tag {
@@ -606,6 +553,13 @@
 .dots:hover,
 .dots:focus-visible {
   opacity: 1;
+}
+
+/* The per-search digest mail icon stays outlined in both states; only its
+   opacity marks whether the search is included, so a glance across the list
+   reads which searches feed the digest without a filled/outlined swap. */
+.digest-toggle .muted {
+  opacity: 0.35;
 }
 
 .pop {

@@ -21,6 +21,8 @@ export interface SavedSearchDto {
   position: number;
   /** Live count of unread entries matching this search. */
   unreadCount: number;
+  /** True when this saved search's matches are included in the email digest. */
+  includeInDigest: boolean;
 }
 
 /** The API shape of a saved search. It carries the ids of the unread matches
@@ -33,6 +35,8 @@ export interface SavedSearchWire {
   position: number;
   /** The ids of every unread entry that matches this search. */
   unreadEntryIds: number[];
+  /** True when this saved search's matches are included in the email digest. */
+  includeInDigest: boolean;
 }
 
 /** A tag as embedded on a subscription: same shape as TagDto, but `position` is

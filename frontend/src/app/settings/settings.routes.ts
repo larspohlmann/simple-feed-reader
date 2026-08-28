@@ -32,6 +32,12 @@ export const SETTINGS_ROUTES: Routes = [
           import('./preferences-section.component').then((m) => m.PreferencesSectionComponent),
       },
       {
+        path: 'email',
+        title: sectionLabelKey('email'),
+        loadComponent: () =>
+          import('./email-section.component').then((m) => m.EmailSectionComponent),
+      },
+      {
         path: 'account',
         title: sectionLabelKey('account'),
         loadComponent: () =>

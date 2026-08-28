@@ -5,12 +5,24 @@ import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 import { AiAvailabilityService } from './ai-availability.service';
 import { API_BASE_URL } from './api';
+import { DigestService } from './digest.service';
 import { LanguageService } from './language.service';
 import { PreferencesService } from './preferences.service';
 import { TokenStore } from './token.store';
 
+export interface UserDigestPreferences {
+  enabled: boolean;
+  cadence: 'daily' | 'weekly';
+  sendHour: number;
+  weekday: number;
+  /** The instance's configured timezone (`APP_TIMEZONE`), read-only: the send
+   *  hour is interpreted in this zone. Never sent back in a digest PATCH. */
+  timezone: string;
+}
+
 export interface UserPreferences {
   scrapeFallbackEnabled: boolean;
+  digest: UserDigestPreferences;
 }
 
 export interface CurrentUser {
@@ -23,6 +35,8 @@ export interface CurrentUser {
   trialEndsAt: string | null;
   preferences: UserPreferences;
   ai: { ready: boolean; model: string | null };
+  mail: { enabled: boolean };
+  emailVerified: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -33,6 +47,7 @@ export class AuthService {
   private readonly router = inject(Router);
   private readonly language = inject(LanguageService);
   private readonly preferences = inject(PreferencesService);
+  private readonly digest = inject(DigestService);
   private readonly ai = inject(AiAvailabilityService);
 
   readonly user = signal<CurrentUser | null>(null);
@@ -53,6 +68,7 @@ export class AuthService {
         this.user.set(u);
         this.language.adopt(u.locale);
         this.preferences.adopt(u);
+        this.digest.adopt(u);
         this.ai.adopt(u);
       }),
     );
@@ -65,6 +81,7 @@ export class AuthService {
     // account see the previous one's toggle state until (or unless) its own
     // loadMe() resolves.
     this.preferences.reset();
+    this.digest.reset();
     this.ai.reset();
     void this.router.navigate(['/login']);
   }
@@ -77,5 +94,12 @@ export class AuthService {
    *  do with a failure (e.g. show it inline), and `logout()` navigates. */
   deleteAccount(): Observable<void> {
     return this.http.delete<void>(`${this.base}/api/me`);
+  }
+
+  /** Re-sends the account's verification email. The email section is the only
+   *  caller today (its `unverified` state), so the request lives here rather
+   *  than in a dedicated service. */
+  resendVerification(): Observable<void> {
+    return this.http.post<void>(`${this.base}/api/me/resend-verification`, {});
   }
 }

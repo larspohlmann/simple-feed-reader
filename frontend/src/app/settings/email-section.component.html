@@ -1,0 +1,153 @@
+<app-settings-stack>
+  <app-settings-group icon="mail" [title]="'settings.email.title' | transloco">
+    @if (state() === 'mailDisabled') {
+      <div class="callout">
+        <app-icon name="info" size="sm" />
+        <span>{{ 'settings.email.mailDisabled' | transloco }}</span>
+      </div>
+    } @else {
+      @if (state() === 'unverified') {
+        <div class="callout">
+          <app-icon name="info" size="sm" />
+          <span>{{ 'settings.email.unverified' | transloco }}</span>
+          <app-button size="sm" [loading]="resending()" (click)="resend()">
+            {{ 'settings.email.resend' | transloco }}
+          </app-button>
+        </div>
+      }
+
+      <app-settings-row
+        [title]="'settings.email.enable' | transloco"
+        labelFor="digest-enable-toggle"
+      >
+        <app-toggle
+          inputId="digest-enable-toggle"
+          [checked]="digest.enabled()"
+          [disabled]="controlsDisabled()"
+          [label]="'settings.email.enable' | transloco"
+          (toggled)="digest.setEnabled($event)"
+        />
+      </app-settings-row>
+
+      <app-settings-row [stackable]="true" [title]="'settings.email.cadence' | transloco">
+        <select
+          data-testid="digest-cadence"
+          [disabled]="controlsDisabled()"
+          (change)="onCadence($event)"
+        >
+          <option value="daily" [selected]="digest.cadence() === 'daily'">
+            {{ 'settings.email.daily' | transloco }}
+          </option>
+          <option value="weekly" [selected]="digest.cadence() === 'weekly'">
+            {{ 'settings.email.weekly' | transloco }}
+          </option>
+        </select>
+      </app-settings-row>
+
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.email.sendHour' | transloco"
+        [description]="'settings.email.sendHourZone' | transloco: { timezone: digest.timezone() }"
+      >
+        <select
+          data-testid="digest-send-hour"
+          [disabled]="controlsDisabled()"
+          (change)="onSendHour($event)"
+        >
+          @for (hour of hours; track hour.value) {
+            <option [value]="hour.value" [selected]="digest.sendHour() === hour.value">
+              {{ hour.label }}
+            </option>
+          }
+        </select>
+      </app-settings-row>
+
+      @if (digest.cadence() === 'weekly') {
+        <app-settings-row [stackable]="true" [title]="'settings.email.weekday' | transloco">
+          <select
+            data-testid="digest-weekday"
+            [disabled]="controlsDisabled()"
+            (change)="onWeekday($event)"
+          >
+            @for (day of weekdays; track day.value) {
+              <option [value]="day.value" [selected]="digest.weekday() === day.value">
+                {{ day.labelKey | transloco }}
+              </option>
+            }
+          </select>
+        </app-settings-row>
+      }
+    }
+  </app-settings-group>
+
+  @if (state() === 'ready') {
+    <app-settings-group icon="search" [title]="'settings.email.includedSearches' | transloco">
+      @if (savedSearches().length === 0) {
+        <div class="callout">
+          <app-icon name="info" size="sm" />
+          <span>{{ 'settings.email.includedSearchesEmpty' | transloco }}</span>
+        </div>
+      } @else {
+        @for (search of savedSearches(); track search.id) {
+          <app-settings-row [title]="search.term" [labelFor]="'digest-search-' + search.id">
+            <app-toggle
+              [inputId]="'digest-search-' + search.id"
+              [checked]="search.includeInDigest"
+              [label]="search.term"
+              (toggled)="onIncludeInDigest(search.id, $event)"
+            />
+          </app-settings-row>
+        }
+      }
+    </app-settings-group>
+
+    <app-settings-group icon="mail" [title]="'settings.email.testMail' | transloco">
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.email.testMailDays' | transloco"
+        [description]="
+          (testMailDaysInvalid()
+            ? 'settings.email.testMailDaysRangeError'
+            : 'settings.email.testMailDaysRange'
+          ) | transloco: { min: minTestMailDays, max: maxTestMailDays }
+        "
+        labelFor="test-mail-days"
+      >
+        <input
+          id="test-mail-days"
+          type="number"
+          data-testid="test-mail-days"
+          class="test-mail-days"
+          [min]="minTestMailDays"
+          [max]="maxTestMailDays"
+          [attr.aria-invalid]="testMailDaysInvalid()"
+          [value]="testMailDays()"
+          (change)="onTestMailDays($event)"
+        />
+      </app-settings-row>
+
+      <app-settings-row>
+        <app-button
+          data-testid="test-mail-send"
+          [loading]="sendingTestMail()"
+          [disabled]="noSearchesIncluded() || testMailDaysInvalid()"
+          (click)="sendTestMail()"
+        >
+          {{ 'settings.email.testMailSend' | transloco }}
+        </app-button>
+      </app-settings-row>
+
+      @if (testMailFeedback(); as feedback) {
+        <div
+          class="callout"
+          [class.callout--success]="feedback.severity === 'success'"
+          [class.callout--error]="feedback.severity === 'error'"
+          data-testid="test-mail-result"
+        >
+          <app-icon [name]="feedback.icon" size="sm" />
+          <span>{{ feedback.key | transloco }}</span>
+        </div>
+      }
+    </app-settings-group>
+  }
+</app-settings-stack>

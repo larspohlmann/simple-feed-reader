@@ -45,6 +45,24 @@ class SavedSearchRepository extends ServiceEntityRepository
         return $row;
     }
 
+    /**
+     * The user's saved searches flagged for the email digest, in list order.
+     *
+     * @return list<SavedSearch>
+     */
+    public function findIncludedInDigestForUser(int $userId): array
+    {
+        /** @var list<SavedSearch> $rows */
+        $rows = $this->createQueryBuilder('savedSearch')
+            ->andWhere('savedSearch.user = :userId')->setParameter('userId', $userId)
+            ->andWhere('savedSearch.includeInDigest = true')
+            ->orderBy('savedSearch.position', 'ASC')->addOrderBy('savedSearch.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $rows;
+    }
+
     public function findOneForUserByTerm(int $userId, string $term, bool $wholeWord): ?SavedSearch
     {
         /** @var SavedSearch|null $row */

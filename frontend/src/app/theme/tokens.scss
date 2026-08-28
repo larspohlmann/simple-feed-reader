@@ -115,6 +115,10 @@
      headings size in `em` against it, so changing this one value rescales the
      whole article. */
   --font-sans: system-ui, -apple-system, 'Segoe UI', roboto, sans-serif;
+
+  /* --fs-2xs is below the UI chrome scale: for compact glyph badges (the
+     sidebar's "W" whole-word pill), not body or control text. */
+  --fs-2xs: 10px;
   --fs-xs: 11px;
   --fs-sm: 13px;
   --fs-base: 15px;

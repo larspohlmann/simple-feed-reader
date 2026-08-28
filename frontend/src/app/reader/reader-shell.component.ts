@@ -27,6 +27,7 @@ import { RecommendationsService } from './recommendations.service';
 import { SavedSearchesStore } from './saved-searches.store';
 import { refreshFailureKey } from './refresh-message';
 import { AiAvailabilityService } from '../core/ai-availability.service';
+import { DigestService } from '../core/digest.service';
 import { VersionService } from '../core/version.service';
 import { ReadingLayoutService } from './reading-layout.service';
 import { LayoutService } from './layout.service';
@@ -44,7 +45,14 @@ import {
 } from './query';
 import { ListScrollReset } from './list-scroll-reset';
 import { entryParam } from './slug';
-import { EntryDto, EntryStatePatch, SubscriptionDto, SubscriptionTagDto, TagDto } from './models';
+import {
+  EntryDto,
+  EntryStatePatch,
+  SavedSearchDto,
+  SubscriptionDto,
+  SubscriptionTagDto,
+  TagDto,
+} from './models';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { EntryListComponent } from './entry-list/entry-list.component';
@@ -95,7 +103,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);
   private readonly api = inject(ReaderApi);
-  private readonly auth = inject(AuthService);
+  protected readonly auth = inject(AuthService);
   private readonly hostRef = inject(ElementRef<HTMLElement>);
 
   readonly manage = inject(ManageActions);
@@ -106,6 +114,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly recs = inject(RecommendationsService);
   readonly savedSearchesStore = inject(SavedSearchesStore);
   readonly ai = inject(AiAvailabilityService);
+  readonly digest = inject(DigestService);
   private readonly versions = inject(VersionService);
   readonly layout = inject(ReadingLayoutService);
   readonly screen = inject(LayoutService);
@@ -932,6 +941,35 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     });
     ref.closed.subscribe((confirmed) => {
       if (confirmed) this.savedSearchesStore.removeSavedSearch(id);
+    });
+  }
+
+  /** The sidebar's per-search mail icon: confirm before flipping
+   *  `includeInDigest`, with different copy for turning it on versus off. */
+  confirmToggleDigest(row: SavedSearchDto): void {
+    const enabling = !row.includeInDigest;
+    const data: ConfirmData = enabling
+      ? {
+          title: this.i18n.translate('reader.digest.enableConfirm'),
+          message: this.i18n.translate('reader.digest.enableConfirmMessage', {
+            term: row.term,
+          }),
+          confirmLabel: this.i18n.translate('reader.digest.enableConfirmAction'),
+        }
+      : {
+          title: this.i18n.translate('reader.digest.disableConfirm'),
+          message: this.i18n.translate('reader.digest.disableConfirmMessage', {
+            term: row.term,
+          }),
+          confirmLabel: this.i18n.translate('reader.digest.disableConfirmAction'),
+        };
+    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
+      data,
+      role: 'alertdialog',
+      panelClass: 'app-dialog',
+    });
+    ref.closed.subscribe((confirmed) => {
+      if (confirmed) this.savedSearchesStore.setIncludeInDigest(row.id, enabling);
     });
   }
 

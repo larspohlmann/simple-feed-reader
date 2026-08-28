@@ -7,6 +7,7 @@ namespace App\Tests\Service\Worker;
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
 use App\Service\Worker\Message\PurgeFailedMessages;
 use App\Service\Worker\Message\RefreshDueFeeds;
+use App\Service\Worker\Message\SendDueDigests;
 use App\Service\Worker\Message\StartDueRecommendationRuns;
 use App\Service\Worker\WorkerSchedule;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -36,7 +37,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
 
         $recurringMessages = $provider->getSchedule()->getRecurringMessages();
 
-        self::assertCount(4, $recurringMessages);
+        self::assertCount(5, $recurringMessages);
         $classes = array_map(
             static fn ($recurring) => self::firstMessageClass($recurring),
             $recurringMessages,
@@ -47,6 +48,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
                 StartDueRecommendationRuns::class,
                 RefreshDueFeeds::class,
                 PurgeFailedMessages::class,
+                SendDueDigests::class,
             ],
             $classes,
         );
@@ -62,7 +64,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
             $recurringMessages,
         );
         self::assertSame(
-            ['every 10 seconds', 'every 5 minutes', 'every 5 minutes', 'every 1 day'],
+            ['every 10 seconds', 'every 5 minutes', 'every 5 minutes', 'every 1 day', 'every 1 hour'],
             $frequencies,
         );
     }

@@ -10,10 +10,16 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryRepository;
 use App\Repository\FeedRepository;
+use App\Repository\PreferencesRepository;
 use App\Service\FeedScheduler;
 use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\FetchResponse;
 use App\Service\Ingest\EntryIngestor;
+use App\Service\Mail\Digest\DigestComposer;
+use App\Service\Mail\Digest\DigestMailerInterface;
+use App\Service\Mail\Digest\DigestSchedule;
+use App\Service\Mail\Digest\SendDueDigests;
+use App\Service\Mail\MailCapability;
 use App\Service\Maintenance\MaintenanceTick;
 use App\Service\OrphanedFeedReclaimer;
 use App\Service\Recommendation\ForYouSweep;
@@ -44,14 +50,19 @@ final class MaintenanceTickTest extends DbTestCase
         $report = $tick->run()->toArray();
 
         // The refresh half always carries a status; the recommendations half
-        // always carries the three sweep counts. Exact values are not asserted:
-        // the shared test database may hold rows from other classes, so this
-        // proves the shape, not a fixed count.
+        // always carries the three sweep counts; the digests half always
+        // carries the three sweep counts too (#636). Exact values are not
+        // asserted: the shared test database may hold rows from other
+        // classes, so this proves the shape, not a fixed count.
         self::assertArrayHasKey('status', $report['refresh']);
         self::assertIsInt($report['recommendations']['startedRuns']);
         self::assertIsInt($report['recommendations']['advancedRuns']);
         self::assertIsInt($report['recommendations']['activeRuns']);
         self::assertArrayNotHasKey('skipped', $report['recommendations']);
+        self::assertIsInt($report['digests']['considered']);
+        self::assertIsInt($report['digests']['sent']);
+        self::assertIsInt($report['digests']['skippedEmpty']);
+        self::assertArrayNotHasKey('skipped', $report['digests']);
     }
 
     /**
@@ -70,7 +81,12 @@ final class MaintenanceTickTest extends DbTestCase
      * fetcher and a few other collaborators are made public for tests) — so
      * the proof here is behavioural: the recommendations half comes back
      * `skipped` rather than run, which is only possible if the sweep was never
-     * called.
+     * called. The digest sweep (#636) is proven the same way, but harder: it
+     * is also `final readonly`, so it is built by hand around a
+     * `PreferencesRepository` stub whose `findWithDigestEnabled()` throws --
+     * if `MaintenanceTick` ever called `SendDueDigests::run()` on the aborted
+     * path, that throw would surface as a test failure instead of the fixed
+     * skipped marker.
      */
     public function testSkipsTheRecommendationSweepWhenRefreshAborts(): void
     {
@@ -133,7 +149,32 @@ final class MaintenanceTickTest extends DbTestCase
         $forYouSweep = self::getContainer()->get(ForYouSweep::class);
         self::assertInstanceOf(ForYouSweep::class, $forYouSweep);
 
-        $tick = new MaintenanceTick($refreshRunner, $forYouSweep);
+        $throwingPreferences = $this->createStub(PreferencesRepository::class);
+        $throwingPreferences->method('findWithDigestEnabled')->willThrowException(
+            new \LogicException('SendDueDigests::run() must not be called when refresh aborted'),
+        );
+
+        $digestSchedule = self::getContainer()->get(DigestSchedule::class);
+        self::assertInstanceOf(DigestSchedule::class, $digestSchedule);
+        $digestComposer = self::getContainer()->get(DigestComposer::class);
+        self::assertInstanceOf(DigestComposer::class, $digestComposer);
+        $digestMailer = self::getContainer()->get(DigestMailerInterface::class);
+        self::assertInstanceOf(DigestMailerInterface::class, $digestMailer);
+        $mailCapability = self::getContainer()->get(MailCapability::class);
+        self::assertInstanceOf(MailCapability::class, $mailCapability);
+
+        $sendDueDigests = new SendDueDigests(
+            $throwingPreferences,
+            $digestSchedule,
+            $digestComposer,
+            $digestMailer,
+            $mailCapability,
+            $clock,
+            $this->em,
+            new NullLogger(),
+        );
+
+        $tick = new MaintenanceTick($refreshRunner, $forYouSweep, $sendDueDigests);
 
         $report = $tick->run()->toArray();
 
@@ -146,6 +187,15 @@ final class MaintenanceTickTest extends DbTestCase
                 'skipped' => 'refresh aborted: the shared EntityManager is unusable this tick',
             ],
             $report['recommendations'],
+        );
+        self::assertSame(
+            [
+                'considered' => 0,
+                'sent' => 0,
+                'skippedEmpty' => 0,
+                'skipped' => 'refresh aborted: the shared EntityManager is unusable this tick',
+            ],
+            $report['digests'],
         );
     }
 }

@@ -2469,6 +2469,7 @@ describe('ReaderShellComponent', () => {
       wholeWord: true,
       position: 0,
       unreadEntryIds: [100, 101],
+      includeInDigest: false,
     };
     // The sidebar view the store derives from that wire row.
     const savedClimateView: SavedSearchDto = {
@@ -2477,6 +2478,7 @@ describe('ReaderShellComponent', () => {
       wholeWord: true,
       position: 0,
       unreadCount: 2,
+      includeInDigest: false,
     };
 
     it('saves the decoded term and whole-word flag, adopts the response without reloading the list, and toasts a confirmation', () => {
@@ -2525,6 +2527,45 @@ describe('ReaderShellComponent', () => {
 
       ctrl.expectNone('https://api.test/api/saved-searches/4');
       expect(f.componentInstance.savedSearchesStore.savedSearches()).toEqual([savedClimateView]);
+    });
+
+    it('enables the digest for a row when confirmed, keyed by the row id and its flipped flag', () => {
+      const f = bootWithSearchSelected([savedClimate]);
+      const ref = { closed: of(true) };
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
+      const setIncludeInDigest = jest
+        .spyOn(f.componentInstance.savedSearchesStore, 'setIncludeInDigest')
+        .mockImplementation(() => undefined);
+
+      f.componentInstance.confirmToggleDigest(savedClimateView);
+
+      expect(setIncludeInDigest).toHaveBeenCalledWith(4, true);
+    });
+
+    it('disables the digest for a row already included, when confirmed', () => {
+      const f = bootWithSearchSelected([savedClimate]);
+      const ref = { closed: of(true) };
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
+      const setIncludeInDigest = jest
+        .spyOn(f.componentInstance.savedSearchesStore, 'setIncludeInDigest')
+        .mockImplementation(() => undefined);
+
+      f.componentInstance.confirmToggleDigest({ ...savedClimateView, includeInDigest: true });
+
+      expect(setIncludeInDigest).toHaveBeenCalledWith(4, false);
+    });
+
+    it('does nothing when the digest toggle confirmation is cancelled', () => {
+      const f = bootWithSearchSelected([savedClimate]);
+      const ref = { closed: of(false) };
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
+      const setIncludeInDigest = jest
+        .spyOn(f.componentInstance.savedSearchesStore, 'setIncludeInDigest')
+        .mockImplementation(() => undefined);
+
+      f.componentInstance.confirmToggleDigest(savedClimateView);
+
+      expect(setIncludeInDigest).not.toHaveBeenCalled();
     });
 
     it('matches a saved search by its decoded pair, not by the raw term string', () => {

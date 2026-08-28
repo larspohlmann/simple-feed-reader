@@ -127,27 +127,46 @@
           <a
             class="nav savedsearch-item"
             [class.active]="saved.id === activeSavedSearchId()"
+            [class.with-digest]="showDigestToggles()"
             [routerLink]="[]"
             [queryParams]="saved.params"
             queryParamsHandling="merge"
           >
             <app-icon name="search" size="sm" />
-            <span class="saved-term">{{ saved.term }}</span>
-            @if (saved.wholeWord) {
-              <!-- Compact "W" pill for the sidebar's narrow row; the full word
-                   still reaches screen readers via the sr-only span, mirroring
-                   the results-header badge (#408 follow-up). -->
-              <span class="sr-only">{{ 'reader.searchWholeWord' | transloco }}</span>
-              <span
-                class="whole-word-badge"
-                aria-hidden="true"
-                [attr.title]="'reader.searchWholeWordHint' | transloco"
-              >
-                {{ 'reader.searchWholeWordShort' | transloco }}
-              </span>
-            }
+            <!-- Term + "W" pill travel together as one left group so the pill
+                 sits directly after the word; the count and mail button anchor
+                 to the right edge past this group's trailing slack (#636). -->
+            <span class="saved-term-group">
+              <span class="saved-term">{{ saved.term }}</span>
+              @if (saved.wholeWord) {
+                <!-- Compact "W" pill for the sidebar's narrow row; the full word
+                     still reaches screen readers via the sr-only span, mirroring
+                     the results-header badge (#408 follow-up). -->
+                <span class="sr-only">{{ 'reader.searchWholeWord' | transloco }}</span>
+                <span
+                  class="whole-word-badge"
+                  aria-hidden="true"
+                  [attr.title]="'reader.searchWholeWordHint' | transloco"
+                >
+                  {{ 'reader.searchWholeWordShort' | transloco }}
+                </span>
+              }
+            </span>
             @if (saved.unreadCount > 0) {
               <span class="count">{{ saved.unreadCount }}</span>
+            }
+            @if (showDigestToggles()) {
+              <button
+                class="digest-toggle"
+                type="button"
+                [attr.aria-pressed]="saved.includeInDigest"
+                [attr.aria-label]="'reader.digest.toggleAria' | transloco: { term: saved.term }"
+                (click)="
+                  toggleDigest.emit(saved); $event.stopPropagation(); $event.preventDefault()
+                "
+              >
+                <app-icon name="mail" size="sm" [class.muted]="!saved.includeInDigest" />
+              </button>
             }
           </a>
         }
@@ -486,58 +505,5 @@
     }
   </div>
 
-  <div class="foot">
-    @if (screen.isCoarse()) {
-      <button
-        class="organise"
-        type="button"
-        role="switch"
-        [attr.aria-checked]="organising()"
-        (click)="organising.set(!organising())"
-      >
-        <span>{{ 'reader.organise' | transloco }}</span>
-        <span class="track" aria-hidden="true"><span class="knob"></span></span>
-      </button>
-    }
-    @if (!organising()) {
-      <app-view-controls class="controls" />
-      @if (trialDaysLeft(); as days) {
-        <p class="trial" [class.soon]="trialEndingSoon()">
-          <app-icon name="schedule" size="sm" />
-          <span>{{
-            (days === 1 ? 'reader.trialDayLeft' : 'reader.trialDaysLeft') | transloco: { days }
-          }}</span>
-        </p>
-      }
-    }
-    <div class="meta">
-      <span class="version-group">
-        <a
-          class="version"
-          routerLink="/settings"
-          [attr.aria-label]="'reader.versionLabel' | transloco: { version }"
-          >{{ version }}</a
-        >
-        @if (availableUpdate(); as update) {
-          <a
-            class="update-badge"
-            [href]="update.notesUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            [attr.aria-label]="
-              'reader.updateAvailableLabel' | transloco: { version: update.version }
-            "
-            >{{ 'reader.updateAvailable' | transloco: { version: update.version } }}</a
-          >
-        }
-      </span>
-      <a
-        class="feedback"
-        href="https://github.com/larspohlmann/simple-feed-reader/issues"
-        target="_blank"
-        rel="noopener noreferrer"
-        >Feedback</a
-      >
-    </div>
-  </div>
+  <app-sidebar-foot [(organising)]="organising" />
 </nav>

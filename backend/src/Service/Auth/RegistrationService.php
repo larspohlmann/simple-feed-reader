@@ -127,6 +127,11 @@ final readonly class RegistrationService
         // Re-verifying an already-approved account must not demote it back to
         // the admin queue.
         if (UserStatus::PendingVerification === $user->getStatus()) {
+            $now = $this->clock->now();
+            // The token was just consumed, which proves the address regardless
+            // of which status the account lands in next.
+            $user->markEmailVerified($now);
+
             if ($this->policy->approvalRequired()) {
                 $user->setStatus(UserStatus::PendingApproval);
                 $this->em->flush();
@@ -137,7 +142,7 @@ final readonly class RegistrationService
                 $this->events->dispatch(new UserAwaitingApproval($user, RegistrationMethod::EmailPassword));
             } else {
                 $user->setStatus(UserStatus::Active);
-                $user->setApprovedAt($this->clock->now());
+                $user->setApprovedAt($now);
                 $this->em->flush();
             }
         }
@@ -181,6 +186,23 @@ final readonly class RegistrationService
             $user,
             $this->tokens->issue($user, TokenPurpose::ResetPassword),
         );
+    }
+
+    /**
+     * Re-sends the address-verification mail for an account that has not yet
+     * proved its address (#636). A no-op once verified, so the endpoint is safe
+     * to call idempotently. Mail is skipped by the gated mailer when disabled.
+     *
+     * @throws TransportExceptionInterface
+     * @throws RandomException
+     */
+    public function resendVerification(User $user): void
+    {
+        if ($user->isEmailVerified()) {
+            return;
+        }
+
+        $this->mailer->sendVerification($user, $this->tokens->issue($user, TokenPurpose::VerifyEmail));
     }
 
     public function resetPassword(string $plainToken, string $plainPassword): bool

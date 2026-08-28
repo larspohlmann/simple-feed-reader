@@ -123,6 +123,16 @@ services:
     App\Service\Process\ShellCommandRunnerInterface: '@App\Service\Process\ExecShellCommandRunner'
     App\Service\Process\DetachedProcessLauncherInterface: '@App\Service\Process\DetachedProcessLauncher'
 
+    # MeController's own outbound-mail rate limiters (#636), grouped so the
+    # controller takes one collaborator instead of one parameter per limiter.
+    # Wired against the underlying `limiter.<name>` service ids directly,
+    # bypassing the `$<name>Limiter`-named autowiring alias this class does
+    # not use.
+    App\Service\RateLimit\MeRateLimiters:
+        arguments:
+            $digestTest: '@limiter.digest_test'
+            $resendVerification: '@limiter.resend_verification'
+
     # Two classes implement AccountMailerInterface (AccountMailer and its
     # #[AsDecorator] MailGatedAccountMailer below), so the container will not
     # auto-create an interface alias for it — ambiguous. This alias resolves the
@@ -131,6 +141,12 @@ services:
     # Every consumer that typehints the interface therefore gets the mail gate
     # for free. MailGatedAccountMailerWiringTest pins this.
     App\Service\Mail\AccountMailerInterface: '@App\Service\Mail\AccountMailer'
+
+    # Same ambiguity, same fix, for the digest mailer (#636): DigestMailer and
+    # its #[AsDecorator] MailGatedDigestMailer both implement
+    # DigestMailerInterface, so this alias resolves to the DigestMailer service
+    # id, which decoration then swaps for the decorator.
+    App\Service\Mail\Digest\DigestMailerInterface: '@App\Service\Mail\Digest\DigestMailer'
 
     # The sweep's in-flight cap. Wired on this one service rather than as a
     # `bind` in _defaults: a binding matches by parameter NAME, so a global

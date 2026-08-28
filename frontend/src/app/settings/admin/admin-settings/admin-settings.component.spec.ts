@@ -34,7 +34,12 @@ describe('AdminSettingsComponent', () => {
 
   it('loads the settings on init and renders both toggles', () => {
     const f = mount();
-    flushInitial(f, { requireEmailConfirmation: false, requireApproval: false, mailEnabled: true });
+    flushInitial(f, {
+      requireEmailConfirmation: false,
+      requireApproval: false,
+      mailEnabled: true,
+      publicBaseUrl: null,
+    });
 
     const el = f.nativeElement as HTMLElement;
     const checkboxes = el.querySelectorAll('input[type="checkbox"]');
@@ -43,7 +48,12 @@ describe('AdminSettingsComponent', () => {
 
   it('disables the email-confirmation control and shows an explanation when mail is off', () => {
     const f = mount();
-    flushInitial(f, { requireEmailConfirmation: true, requireApproval: true, mailEnabled: false });
+    flushInitial(f, {
+      requireEmailConfirmation: true,
+      requireApproval: true,
+      mailEnabled: false,
+      publicBaseUrl: null,
+    });
 
     const el = f.nativeElement as HTMLElement;
     const checkboxes = el.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
@@ -58,7 +68,12 @@ describe('AdminSettingsComponent', () => {
 
   it('leaves the email-confirmation control enabled and shows no mailless explanation when mail is on', () => {
     const f = mount();
-    flushInitial(f, { requireEmailConfirmation: true, requireApproval: true, mailEnabled: true });
+    flushInitial(f, {
+      requireEmailConfirmation: true,
+      requireApproval: true,
+      mailEnabled: true,
+      publicBaseUrl: null,
+    });
 
     const el = f.nativeElement as HTMLElement;
     const emailConfirmation = el.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
@@ -68,7 +83,12 @@ describe('AdminSettingsComponent', () => {
 
   it('toggling approval calls update and applies the response', () => {
     const f = mount();
-    flushInitial(f, { requireEmailConfirmation: true, requireApproval: true, mailEnabled: false });
+    flushInitial(f, {
+      requireEmailConfirmation: true,
+      requireApproval: true,
+      mailEnabled: false,
+      publicBaseUrl: null,
+    });
 
     const el = f.nativeElement as HTMLElement;
     const approval = el.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')[1];
@@ -77,8 +97,17 @@ describe('AdminSettingsComponent', () => {
 
     const req = ctrl.expectOne('https://api.test/api/admin/settings');
     expect(req.request.method).toBe('PUT');
-    expect(req.request.body).toEqual({ requireEmailConfirmation: true, requireApproval: false });
-    req.flush({ requireEmailConfirmation: true, requireApproval: false, mailEnabled: false });
+    expect(req.request.body).toEqual({
+      requireEmailConfirmation: true,
+      requireApproval: false,
+      publicBaseUrl: null,
+    });
+    req.flush({
+      requireEmailConfirmation: true,
+      requireApproval: false,
+      mailEnabled: false,
+      publicBaseUrl: null,
+    });
 
     f.detectChanges();
     expect(f.componentInstance.requireApproval()).toBe(false);
@@ -99,14 +128,22 @@ describe('AdminSettingsComponent', () => {
 
     const retry = el.querySelector('[role="alert"] button') as HTMLButtonElement;
     retry.click();
-    ctrl
-      .expectOne('https://api.test/api/admin/settings')
-      .flush({ requireEmailConfirmation: false, requireApproval: false, mailEnabled: true });
+    ctrl.expectOne('https://api.test/api/admin/settings').flush({
+      requireEmailConfirmation: false,
+      requireApproval: false,
+      mailEnabled: true,
+      publicBaseUrl: null,
+    });
   });
 
   it('renders both switches as settings rows in one group', () => {
     const f = mount();
-    flushInitial(f, { requireEmailConfirmation: false, requireApproval: false, mailEnabled: true });
+    flushInitial(f, {
+      requireEmailConfirmation: false,
+      requireApproval: false,
+      mailEnabled: true,
+      publicBaseUrl: null,
+    });
     const el = f.nativeElement as HTMLElement;
 
     expect(el.querySelectorAll('app-settings-group').length).toBe(1);
@@ -115,12 +152,18 @@ describe('AdminSettingsComponent', () => {
 
   it('toggles the control when the visible label text is clicked, not only the switch', () => {
     const f = mount();
-    flushInitial(f, { requireEmailConfirmation: false, requireApproval: false, mailEnabled: true });
+    flushInitial(f, {
+      requireEmailConfirmation: false,
+      requireApproval: false,
+      mailEnabled: true,
+      publicBaseUrl: null,
+    });
     const el = f.nativeElement as HTMLElement;
 
     const labels = el.querySelectorAll<HTMLLabelElement>('.row-title label');
     const checkboxes = el.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
-    expect(labels.length).toBe(2);
+    // Two toggle rows plus the public-base-URL text row.
+    expect(labels.length).toBe(3);
     expect(labels[0].htmlFor).toBe(checkboxes[0].id);
     expect(labels[1].htmlFor).toBe(checkboxes[1].id);
 
@@ -128,7 +171,77 @@ describe('AdminSettingsComponent', () => {
     f.detectChanges();
 
     const req = ctrl.expectOne('https://api.test/api/admin/settings');
-    expect(req.request.body).toEqual({ requireEmailConfirmation: false, requireApproval: true });
-    req.flush({ requireEmailConfirmation: false, requireApproval: true, mailEnabled: true });
+    expect(req.request.body).toEqual({
+      requireEmailConfirmation: false,
+      requireApproval: true,
+      publicBaseUrl: null,
+    });
+    req.flush({
+      requireEmailConfirmation: false,
+      requireApproval: true,
+      mailEnabled: true,
+      publicBaseUrl: null,
+    });
+  });
+
+  it('saving the public base URL sends it in the update and applies the response', () => {
+    const f = mount();
+    flushInitial(f, {
+      requireEmailConfirmation: true,
+      requireApproval: true,
+      mailEnabled: true,
+      publicBaseUrl: null,
+    });
+
+    const input = (f.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      '#public-base-url-input',
+    )!;
+    input.value = 'https://reader.example.ts.net/reader';
+    input.dispatchEvent(new Event('change'));
+
+    const req = ctrl.expectOne('https://api.test/api/admin/settings');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({
+      requireEmailConfirmation: true,
+      requireApproval: true,
+      publicBaseUrl: 'https://reader.example.ts.net/reader',
+    });
+    req.flush({
+      requireEmailConfirmation: true,
+      requireApproval: true,
+      mailEnabled: true,
+      publicBaseUrl: 'https://reader.example.ts.net/reader',
+    });
+    f.detectChanges();
+    expect(f.componentInstance.publicBaseUrl()).toBe('https://reader.example.ts.net/reader');
+  });
+
+  it('clearing the public base URL sends null', () => {
+    const f = mount();
+    flushInitial(f, {
+      requireEmailConfirmation: true,
+      requireApproval: true,
+      mailEnabled: true,
+      publicBaseUrl: 'https://old.example/',
+    });
+
+    const input = (f.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      '#public-base-url-input',
+    )!;
+    input.value = '   ';
+    input.dispatchEvent(new Event('change'));
+
+    const req = ctrl.expectOne('https://api.test/api/admin/settings');
+    expect(req.request.body).toEqual({
+      requireEmailConfirmation: true,
+      requireApproval: true,
+      publicBaseUrl: null,
+    });
+    req.flush({
+      requireEmailConfirmation: true,
+      requireApproval: true,
+      mailEnabled: true,
+      publicBaseUrl: null,
+    });
   });
 });

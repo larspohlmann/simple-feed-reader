@@ -18,8 +18,13 @@ const user: CurrentUser = {
   createdAt: '2026-01-01T00:00:00Z',
   locale: 'en',
   trialEndsAt: null,
-  preferences: { scrapeFallbackEnabled: false },
+  preferences: {
+    scrapeFallbackEnabled: false,
+    digest: { enabled: false, cadence: 'daily', sendHour: 8, weekday: 1, timezone: 'UTC' },
+  },
   ai: { ready: false, model: null },
+  mail: { enabled: true },
+  emailVerified: true,
 };
 
 const base = 'https://api.test';

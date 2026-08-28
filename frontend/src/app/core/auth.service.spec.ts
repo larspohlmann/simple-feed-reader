@@ -11,6 +11,7 @@ import { LanguageService } from './language.service';
 import { LOCALE_WRITER } from './locale-writer';
 import { HttpLocaleWriter } from './http-locale-writer';
 import { PreferencesService } from './preferences.service';
+import { DigestService } from './digest.service';
 import { AiAvailabilityService } from './ai-availability.service';
 import { CatalogStore } from '../discover/catalog.store';
 
@@ -58,8 +59,19 @@ describe('AuthService', () => {
       status: 'active',
       createdAt: '2026-07-01T00:00:00+00:00',
       locale: 'de',
-      preferences: { scrapeFallbackEnabled: false },
+      preferences: {
+        scrapeFallbackEnabled: false,
+        digest: {
+          enabled: true,
+          cadence: 'weekly',
+          sendHour: 20,
+          weekday: 5,
+          timezone: 'Europe/Berlin',
+        },
+      },
       ai: { ready: true, model: 'gpt-4o' },
+      mail: { enabled: true },
+      emailVerified: true,
     });
 
     expect(svc.user()?.email).toBe('a@b.c');
@@ -67,6 +79,12 @@ describe('AuthService', () => {
     expect(TestBed.inject(AiAvailabilityService).model()).toBe('gpt-4o');
     // The one place the account's locale is adopted into the UI.
     expect(TestBed.inject(LanguageService).lang()).toBe('de');
+    const digest = TestBed.inject(DigestService);
+    expect(digest.enabled()).toBe(true);
+    expect(digest.cadence()).toBe('weekly');
+    expect(digest.sendHour()).toBe(20);
+    expect(digest.weekday()).toBe(5);
+    expect(digest.timezone()).toBe('Europe/Berlin');
     // A value that just arrived from the server must never be PATCHed
     // straight back to it.
     ctrl.expectNone({ method: 'PATCH', url: 'https://api.test/api/me' });
@@ -88,6 +106,16 @@ describe('AuthService', () => {
     svc.logout();
 
     expect(preferences.scrapeFallbackEnabled()).toBe(false);
+  });
+
+  it('logout resets the cached digest settings, so the next account never sees a stale one', () => {
+    const digest = TestBed.inject(DigestService);
+    digest.setEnabled(true);
+    expect(digest.enabled()).toBe(true);
+
+    svc.logout();
+
+    expect(digest.enabled()).toBe(false);
   });
 
   it('logout drops AI availability, so the next account never inherits it', () => {

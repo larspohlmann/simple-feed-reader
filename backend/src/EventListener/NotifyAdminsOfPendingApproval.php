@@ -9,8 +9,8 @@ use App\Enum\UserStatus;
 use App\Event\UserAwaitingApproval;
 use App\Repository\UserRepository;
 use App\Service\Mail\AccountMailerInterface;
+use App\Service\Settings\PublicBaseUrl;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
@@ -26,8 +26,7 @@ final readonly class NotifyAdminsOfPendingApproval
         private UserRepository $users,
         private AccountMailerInterface $mailer,
         private LoggerInterface $logger,
-        #[Autowire('%env(APP_FRONTEND_URL)%')]
-        private string $frontendUrl,
+        private PublicBaseUrl $publicBaseUrl,
     ) {
     }
 
@@ -50,7 +49,7 @@ final readonly class NotifyAdminsOfPendingApproval
             $event->user->getEmail(),
             $event->method,
             $event->oauthProvider,
-            rtrim($this->frontendUrl, '/') . '/admin/users',
+            $this->publicBaseUrl->get() . '/admin/users',
             $this->users->countByStatus(UserStatus::PendingApproval),
         );
 

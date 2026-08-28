@@ -1,0 +1,44 @@
+// The callout is the one piece of chrome the settings primitives do not own:
+// an informational block sitting directly in the panel, above the rows, for a
+// state the section's own controls cannot fix (no mail transport on this
+// instance, an unverified address). It reads the panel's own inset tokens
+// rather than a padding literal -- see "app-settings-group" in
+// docs/design-language.md on why a non-row panel child owns its inset that way.
+.callout {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+  background: var(--accent-soft);
+  color: var(--text-primary);
+}
+
+.callout span {
+  flex: 1;
+}
+
+.callout app-icon {
+  flex: none;
+  color: var(--accent);
+}
+
+// A test-mail result is feedback, not always neutral: a failed or rate-limited
+// send must not read as the same green "info" a mail-off notice does (#636).
+.callout--success app-icon {
+  color: var(--accent);
+}
+
+.callout--error {
+  background: var(--bg-danger);
+  color: var(--danger);
+}
+
+.callout--error app-icon {
+  color: var(--danger);
+}
+
+// A two-digit day count never needs the full row width the other stackable
+// controls take -- same reasoning as ai-section's `.batch-cap-input`.
+.test-mail-days {
+  width: calc(4ch + 2 * var(--space-3));
+}

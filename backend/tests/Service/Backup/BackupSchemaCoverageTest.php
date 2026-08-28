@@ -64,6 +64,15 @@ final class BackupSchemaCoverageTest extends DbTestCase
         . 'the signed-in account, so no line names an owner — an owner read from the file would be '
         . 'one the user chose for themselves.';
 
+    /**
+     * The email digest (#636) lands its data model in this task before the
+     * backup format is extended for it. Genuine account configuration, so it
+     * belongs in BACKED_UP eventually — a later task of the same plan wires
+     * the exporter and the restorer for it.
+     */
+    private const string DIGEST_BACKUP_NOT_YET_WIRED = 'Email digest configuration, added ahead of '
+        . 'the backup format\'s support for it. A later task of the digest plan (#636) carries it.';
+
     /** The line discriminator, written on every kind and naming no field. */
     private const array EVERY_LINE = ['kind'];
 
@@ -139,10 +148,14 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'approvedAt' => 'An admin\'s decision on this instance, not the reader\'s data.',
             'lastLoginAt' => 'Sign-in telemetry, rewritten by the token issuer on the very next '
                 . 'login. Restoring it would be stale before the user saw it.',
-            'trialEndsAt' => 'The instance\'s terms for this account, granted by the sign-up flow '
-                . 'or by an admin.',
-            'maxSubscriptions' => 'A per-account cap an admin grants. Carried in the file, it '
-                . 'would be a quota the account holder writes for themselves.',
+            'emailVerifiedAt' => 'Server-derived verification state (#636), like lastLoginAt: '
+                . 'stamped by the verify-email and OIDC flows, never by the account holder. A '
+                . 'restore runs against an account whose address this instance already verified '
+                . 'or did not.',
+            'accountLimits.trialEndsAt' => 'The instance\'s terms for this account, granted by the '
+                . 'sign-up flow or by an admin.',
+            'accountLimits.maxSubscriptions' => 'A per-account cap an admin grants. Carried in the '
+                . 'file, it would be a quota the account holder writes for themselves.',
             'preferences' => 'Not a carried value: the pointer to the account\'s preferences row. '
                 . 'The account line inlines that row\'s field instead of nesting it, so the '
                 . 'pointer itself becomes no key.',
@@ -151,6 +164,12 @@ final class BackupSchemaCoverageTest extends DbTestCase
         ],
         Preferences::class => [
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
+            'digestEnabled' => self::DIGEST_BACKUP_NOT_YET_WIRED,
+            'digestCadence' => self::DIGEST_BACKUP_NOT_YET_WIRED,
+            'digestSendHour' => self::DIGEST_BACKUP_NOT_YET_WIRED,
+            'digestWeekday' => self::DIGEST_BACKUP_NOT_YET_WIRED,
+            'digestLastSentAt' => 'System-written, like lastLoginAt: the next send overwrites it, '
+                . 'and a restored value would only delay that send by a stale watermark.',
         ],
         RecommendationSettings::class => [
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
@@ -160,6 +179,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
         ],
         SavedSearch::class => [
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
+            'includeInDigest' => self::DIGEST_BACKUP_NOT_YET_WIRED,
         ],
         Feed::class => [
             'status' => 'Live fetch state, not the user\'s data. A restored feed starts clean.',

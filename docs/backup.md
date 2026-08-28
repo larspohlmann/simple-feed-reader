@@ -188,10 +188,13 @@ Your "For you" **settings** are carried. Only the **results** are dropped.
 | `createdAt` | The date this instance opened the account. A restore fills an account that already exists. It does not make one. Therefore the age of the account is not the file's to set. |
 | `approvedAt` | The date an administrator approved the account on this instance. It is a decision of the instance, not your reading data. |
 | `lastLoginAt` | The date of your last sign-in. The next sign-in writes it again, so a restored value is old before you see it. |
-| `trialEndsAt` | The end of the trial period this instance gave the account. The instance decides its own terms. |
-| `maxSubscriptions` | The subscription limit an administrator gave the account. If the file carried it, you could write your own limit. |
+| `emailVerifiedAt` | The date this instance proved you control your address (#636). Written by the verify-email and sign-in-with-provider flows, never by you. A restore runs against an account this instance already verified or did not. |
+| `accountLimits.trialEndsAt` | The end of the trial period this instance gave the account. The instance decides its own terms. |
+| `accountLimits.maxSubscriptions` | The subscription limit an administrator gave the account. If the file carried it, you could write your own limit. |
 | `preferences` | Not a value, but the pointer from the account to its preferences row. The `account` line writes the preference itself, so the pointer becomes no key in the file. |
 | `activeAiProviderSettings` | The pointer to the AI connection in use. It points at data that section 6.2 drops in full. |
+| `digestEnabled`, `digestCadence`, `digestSendHour`, `digestWeekday` | The email digest settings (#636). Added ahead of the backup format's support for them; a later task carries them. |
+| `digestLastSentAt` | The date the digest last sent. The next send writes it again, so a restored value would only delay that send. |
 
 **On each row you own.** The preferences, the "For you" settings, each tag, each
 subscription and each article mark all hold one pointer to their owner.
@@ -199,6 +202,7 @@ subscription and each article mark all hold one pointer to their owner.
 | Field | Why the file leaves it out |
 |---|---|
 | `user` | The pointer to the account that owns the row. A restore writes into the account you are signed in to, so no line names an owner. It could not: an owner read from the file would be an owner you chose for yourself. |
+| `includeInDigest` | Whether a saved search feeds the email digest (#636). Added ahead of the backup format's support for it; a later task carries it. |
 
 **On a feed.**
 

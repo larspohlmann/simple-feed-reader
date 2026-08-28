@@ -110,12 +110,7 @@ class EntryListRepository extends ServiceEntityRepository
      */
     public function unreadMatchIdsForUser(EntrySearchQuery $query): array
     {
-        $qb = $this->unreadMatchQueryBuilder($query)->select('e.id')->distinct();
-
-        /** @var list<array{id: int}> $rows */
-        $rows = $qb->getQuery()->getScalarResult();
-
-        return array_map(static fn (array $row): int => (int) $row['id'], $rows);
+        return $this->scalarIds($this->unreadMatchQueryBuilder($query)->select('e.id')->distinct());
     }
 
     /**
@@ -128,14 +123,51 @@ class EntryListRepository extends ServiceEntityRepository
      */
     public function unreadMatchingEntryIdsForUser(EntrySearchQuery $query, \DateTimeImmutable $until): array
     {
-        $qb = $this->unreadMatchQueryBuilder($query)
-            ->select('e.id')
-            ->distinct()
-            ->andWhere('e.effectiveDate <= :until')
-            ->setParameter('until', $until);
+        return $this->scalarIds(
+            $this->unreadMatchQueryBuilder($query)
+                ->select('e.id')
+                ->distinct()
+                ->andWhere('e.effectiveDate <= :until')
+                ->setParameter('until', $until),
+        );
+    }
 
+    /**
+     * The ids of every unread entry that matches this search and is NEWER than
+     * $since, for the user's subscribed feeds — the digest's "new since the last
+     * send" window (#636). The mirror of unreadMatchingEntryIdsForUser's `<=`.
+     *
+     * Ordered newest-first so a caller that only wants the most recent handful
+     * (the digest caps each section) can slice the head without hydrating the
+     * whole set. `effectiveDate` rides in the SELECT because DISTINCT forbids
+     * ordering by a column it does not project.
+     *
+     * @return list<int>
+     */
+    public function unreadMatchIdsSince(EntrySearchQuery $query, \DateTimeImmutable $since): array
+    {
+        return $this->scalarIds(
+            $this->unreadMatchQueryBuilder($query)
+                ->select('e.id', 'e.effectiveDate')
+                ->distinct()
+                ->andWhere('e.effectiveDate > :since')
+                ->setParameter('since', $since)
+                ->orderBy('e.effectiveDate', 'DESC')
+                ->addOrderBy('e.id', 'DESC'),
+        );
+    }
+
+    /**
+     * The distinct entry ids a match query selects, as a plain int list. The
+     * shared tail of the unreadMatch* readers: they differ only in their filter
+     * and ordering, never in reducing `e.id` rows to ints.
+     *
+     * @return list<int>
+     */
+    private function scalarIds(QueryBuilder $queryBuilder): array
+    {
         /** @var list<array{id: int}> $rows */
-        $rows = $qb->getQuery()->getScalarResult();
+        $rows = $queryBuilder->getQuery()->getScalarResult();
 
         return array_map(static fn (array $row): int => (int) $row['id'], $rows);
     }

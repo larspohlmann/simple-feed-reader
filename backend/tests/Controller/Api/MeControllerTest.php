@@ -139,6 +139,20 @@ final class MeControllerTest extends ApiTestCase
         self::assertNull($this->payload($client)['trialEndsAt']);
     }
 
+    public function testTheProfileCarriesMailCapabilityAndVerificationState(): void
+    {
+        $client = static::createClient();
+        $this->factory()->create('mail-flags@example.test');
+        $this->authenticate($client, 'mail-flags@example.test');
+
+        $client->request('GET', '/api/me');
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client);
+        self::assertSame(['enabled' => true], $payload['mail']);
+        self::assertFalse($payload['emailVerified']);
+    }
+
     public function testScrapeFallbackCanBeEnabled(): void
     {
         $client = static::createClient();
@@ -153,7 +167,19 @@ final class MeControllerTest extends ApiTestCase
         );
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['scrapeFallbackEnabled' => true], $this->payload($client)['preferences']);
+        self::assertSame(
+            [
+                'scrapeFallbackEnabled' => true,
+                'digest' => [
+                    'enabled' => false,
+                    'cadence' => 'daily',
+                    'sendHour' => 8,
+                    'weekday' => 1,
+                    'timezone' => 'UTC',
+                ],
+            ],
+            $this->payload($client)['preferences'],
+        );
 
         $this->entityManager()->clear();
         $reloaded = $this->users()->find($user->getId());
@@ -216,7 +242,19 @@ final class MeControllerTest extends ApiTestCase
         $client->request('GET', '/api/me');
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['scrapeFallbackEnabled' => false], $this->payload($client)['preferences']);
+        self::assertSame(
+            [
+                'scrapeFallbackEnabled' => false,
+                'digest' => [
+                    'enabled' => false,
+                    'cadence' => 'daily',
+                    'sendHour' => 8,
+                    'weekday' => 1,
+                    'timezone' => 'UTC',
+                ],
+            ],
+            $this->payload($client)['preferences'],
+        );
     }
 
     public function testAUserDeletesTheirOwnAccount(): void

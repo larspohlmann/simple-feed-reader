@@ -124,4 +124,20 @@ final class UserTest extends DbTestCase
         $user->setMaxSubscriptions(null);
         self::assertNull($user->getMaxSubscriptions());
     }
+
+    public function testEmailVerifiedAtStartsNullAndIsStampedOnce(): void
+    {
+        $user = new User('a@b.example', new \DateTimeImmutable());
+        self::assertNull($user->getEmailVerifiedAt());
+        self::assertFalse($user->isEmailVerified());
+
+        $first = new \DateTimeImmutable('2026-08-28 10:00:00');
+        $user->markEmailVerified($first);
+        self::assertSame($first, $user->getEmailVerifiedAt());
+        self::assertTrue($user->isEmailVerified());
+
+        // Idempotent: a later verification does not move the original instant.
+        $user->markEmailVerified(new \DateTimeImmutable('2026-09-01 10:00:00'));
+        self::assertSame($first, $user->getEmailVerifiedAt());
+    }
 }

@@ -14,9 +14,14 @@ use App\Service\Auth\RegistrationPolicy;
 final readonly class InstanceSettingsJson
 {
     /**
-     * @return array{requireEmailConfirmation: bool, requireApproval: bool, mailEnabled: bool}
+     * @return array{
+     *     requireEmailConfirmation: bool,
+     *     requireApproval: bool,
+     *     mailEnabled: bool,
+     *     publicBaseUrl: string|null,
+     * }
      */
-    public static function from(RegistrationPolicy $policy): array
+    public static function from(RegistrationPolicy $policy, ?string $publicBaseUrl): array
     {
         return [
             // The stored toggle, not the effective value: the admin sees what
@@ -24,6 +29,7 @@ final readonly class InstanceSettingsJson
             'requireEmailConfirmation' => $policy->storedEmailConfirmationRequired(),
             'requireApproval' => $policy->approvalRequired(),
             'mailEnabled' => $policy->mailEnabled(),
+            'publicBaseUrl' => $publicBaseUrl,
         ];
     }
 }

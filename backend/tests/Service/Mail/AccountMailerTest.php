@@ -8,6 +8,7 @@ use App\Dto\Mail\PendingApprovalNotice;
 use App\Entity\User;
 use App\Enum\RegistrationMethod;
 use App\Service\Mail\AccountMailer;
+use App\Service\Settings\PublicBaseUrl;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Mailer\MailerInterface;
@@ -43,12 +44,19 @@ final class AccountMailerTest extends TestCase
         $translator->addResource('yaml', "{$dir}/emails.en.yaml", 'en', 'emails');
         $translator->addResource('yaml', "{$dir}/emails.de.yaml", 'de', 'emails');
 
+        $publicBaseUrl = new class implements PublicBaseUrl {
+            public function get(): string
+            {
+                return 'https://feeds.example.com';
+            }
+        };
+
         $this->mailer = new AccountMailer(
             $transport,
             $translator,
             'noreply@feeds.example.com',
             'Simple Feed Reader',
-            'https://feeds.example.com',
+            $publicBaseUrl,
         );
     }
 
