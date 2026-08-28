@@ -14,16 +14,19 @@ use fivefilters\Readability\Readability;
 
 /**
  * Turns an article URL into clean, sanitized, distraction-free HTML:
- * fetch (SSRF-guarded) → page normalization → readability extraction →
- * duplicate-title removal → edge-boilerplate trimming → lead-image restore →
- * EntrySanitizer (the same XSS barrier feed HTML crosses). Never throws for an
- * ordinary failure — returns a `failed` ExtractionResult with a machine reason
- * so the endpoint stays 200 and the client can fall back to feed content.
+ * fetch (SSRF-guarded) → page normalization → readability extraction → body
+ * cleaning (duplicate-title removal, edge-boilerplate trimming, lead-image
+ * restore) → EntrySanitizer (the same XSS barrier feed HTML crosses). Never
+ * throws for an ordinary failure — returns a `failed` ExtractionResult with a
+ * machine reason so the endpoint stays 200 and the client can fall back to feed
+ * content.
  *
  * Readability strips a page-header image as chrome and reports it apart as the
- * og:image. ReaderLeadImage puts that picture back at the top of the extracted
- * body when the page draws it and the body does not already show it (#681), so
- * the reader body carries its own lead rather than a separate hero.
+ * og:image. ReaderBodyCleaner restores that picture into the extracted body via
+ * ReaderLeadImage, when the page draws it and the body does not already show it
+ * (#681). The "does the page draw it?" answer is a PageImageInventory this class
+ * builds once from the normalised page document, before readability consumes it
+ * (#684).
  */
 final class ArticleExtractor implements ArticleExtractorInterface
 {
@@ -34,7 +37,6 @@ final class ArticleExtractor implements ArticleExtractorInterface
         private readonly HtmlPageFetcher $fetcher,
         private readonly FetchedPageNormalizer $normalizer,
         private readonly ReaderBodyCleaner $bodyCleaner,
-        private readonly ReaderLeadImage $leadImage,
         private readonly EntrySanitizer $sanitizer,
     ) {
     }
@@ -47,7 +49,10 @@ final class ArticleExtractor implements ArticleExtractorInterface
             return ExtractionResult::failed($url, 'fetch');
         }
 
-        $article = $this->richestArticle($page);
+        $normalized = $this->normalizer->normalize($page->html);
+        $pageImages = PageImageInventory::fromDocument($normalized);
+
+        $article = $this->richestArticle($normalized, $page);
         if ($article === null) {
             return ExtractionResult::failed($url, 'unextractable');
         }
@@ -59,8 +64,8 @@ final class ArticleExtractor implements ArticleExtractorInterface
             return ExtractionResult::failed($url, 'empty');
         }
 
-        $body = $this->bodyCleaner->clean($article->content, [$article->title, $entryTitle]);
-        $body = $this->leadImage->restore($body, $page->html, $article->image);
+        $leadImage = new LeadImageCandidate($article->image, $pageImages);
+        $body = $this->bodyCleaner->clean($article->content, [$article->title, $entryTitle], $leadImage);
         $clean = $this->sanitizer->sanitize($body);
         if ($clean === null) {
             return ExtractionResult::failed($url, 'empty');
@@ -77,16 +82,20 @@ final class ArticleExtractor implements ArticleExtractorInterface
     }
 
     /**
-     * Extract the page twice — with the score-neutral repairs only, and with the
-     * wrapper-chain collapse (#235) as well — and keep the richer result. The
+     * Keep the richer of two extractions of the page: the passed score-neutral
+     * document (repairs only) and the wrapper-chain-collapsed variant (#235). The
      * collapse rescues block-component pages (#235) and breaks some
      * well-structured ones (#476); the longer body is the better one in both
      * directions. collapseWrapperChains() returns null when there is no chain to
      * collapse, so the second extraction is skipped.
+     *
+     * The conservative document is passed in already normalised because the
+     * caller reads its image inventory before readability consumes (mutates) it
+     * (#684).
      */
-    private function richestArticle(PageResponse $page): ?Article
+    private function richestArticle(?HTMLDocument $normalized, PageResponse $page): ?Article
     {
-        $conservative = $this->parse($this->normalizer->normalize($page->html), $page->finalUrl);
+        $conservative = $this->parse($normalized, $page->finalUrl);
         $collapsed = $this->parse($this->normalizer->collapseWrapperChains($page->html), $page->finalUrl);
 
         return $this->richer($conservative, $collapsed);
