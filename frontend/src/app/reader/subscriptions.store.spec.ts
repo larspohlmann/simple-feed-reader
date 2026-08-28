@@ -28,6 +28,8 @@ const sub = (
   position: 0,
   tags,
   unreadCount: unread,
+  includeInAllItems: true,
+  includeInForYou: true,
 });
 
 describe('subscription derivations', () => {
@@ -52,6 +54,17 @@ describe('subscription derivations', () => {
   it('orders untagged feeds by their position', () => {
     const at = (id: number, position: number): SubscriptionDto => ({ ...sub(id, 0), position });
     expect(untaggedSubs([at(1, 2), at(2, 0), at(3, 1)]).map((s) => s.id)).toEqual([2, 3, 1]);
+  });
+
+  it('excludes includeInAllItems=false feeds from the All items badge', () => {
+    const excludedSubs = [sub(1, 5), { ...sub(2, 8), includeInAllItems: false }];
+    expect(sumUnread(excludedSubs)).toBe(5);
+  });
+
+  it('still counts an excluded feed under its tag', () => {
+    const excluded = { ...sub(2, 8, [tag(3, 'Tech')]), includeInAllItems: false };
+    const tree = buildTagTree([excluded]);
+    expect(tree[0].unreadCount).toBe(8);
   });
 });
 

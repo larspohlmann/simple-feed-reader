@@ -161,6 +161,8 @@ describe('TagsSectionComponent', () => {
         position: 0,
         tags: [tag(1, 'Tech')],
         unreadCount: 0,
+        includeInAllItems: true,
+        includeInForYou: true,
       },
     ];
     const { el } = await render([tag(1, 'Tech'), tag(2, 'News')], subs);

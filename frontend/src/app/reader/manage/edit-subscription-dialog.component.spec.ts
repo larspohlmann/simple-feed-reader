@@ -24,6 +24,8 @@ const sub: SubscriptionDto = {
   position: 0,
   tags: [{ id: 1, name: 'Tech', color: null, icon: null, position: 0 }],
   unreadCount: 3,
+  includeInAllItems: true,
+  includeInForYou: true,
 };
 
 describe('EditSubscriptionDialogComponent', () => {

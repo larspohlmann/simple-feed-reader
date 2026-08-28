@@ -55,6 +55,8 @@ const sub = (id: number, unread = 0): SubscriptionDto => ({
   position: 0,
   tags: [],
   unreadCount: unread,
+  includeInAllItems: true,
+  includeInForYou: true,
 });
 
 function mount(

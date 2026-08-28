@@ -27,6 +27,8 @@ const sub: SubscriptionDto = {
   position: 0,
   tags: [],
   unreadCount: 0,
+  includeInAllItems: true,
+  includeInForYou: true,
 };
 const tag: TagDto = { id: 3, name: 'Tech', color: null, icon: null, position: 0 };
 
