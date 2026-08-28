@@ -9,6 +9,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { FieldComponent } from '../../shared/field/field.component';
 import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.component';
+import { ToggleComponent } from '../../shared/toggle/toggle.component';
 import { parseProblem } from '../../core/problem';
 import { ReaderApi } from '../reader-api';
 import { TagsStore } from '../tags.store';
@@ -25,6 +26,7 @@ import { ButtonComponent } from '../../shared/button/button.component';
     FieldComponent,
     ButtonComponent,
     OverlayPanelComponent,
+    ToggleComponent,
     TranslocoPipe,
   ],
   templateUrl: './edit-subscription-dialog.component.html',
@@ -44,6 +46,8 @@ export class EditSubscriptionDialogComponent implements OnInit {
     customTitle: [this.data.title, [Validators.maxLength(512)]],
   });
   readonly checked = signal<Set<number>>(new Set(this.data.tags.map((t) => t.id)));
+  readonly includeInAllItems = signal<boolean>(this.data.includeInAllItems);
+  readonly includeInForYou = signal<boolean>(this.data.includeInForYou);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
@@ -74,6 +78,8 @@ export class EditSubscriptionDialogComponent implements OnInit {
     const body = {
       customTitle: this.form.getRawValue().customTitle.trim() || null,
       tagIds: [...this.checked()],
+      includeInAllItems: this.includeInAllItems(),
+      includeInForYou: this.includeInForYou(),
     };
     this.loading.set(true);
     this.error.set(null);

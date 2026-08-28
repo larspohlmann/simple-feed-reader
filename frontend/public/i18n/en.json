@@ -416,6 +416,8 @@
       "siteUrl": "Website",
       "tags": "Tags",
       "noTags": "No tags yet — create one from Settings › Tags.",
+      "showInAllItems": "Show in All items",
+      "showInForYou": "Show in For You",
       "saving": "Saving…",
       "save": "Save"
     }

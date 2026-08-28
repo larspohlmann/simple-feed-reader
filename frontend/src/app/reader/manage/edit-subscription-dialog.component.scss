@@ -113,6 +113,25 @@ form {
   color: var(--on-accent);
 }
 
+// The two exclusion switches, laid out label-left/control-right like the rest
+// of the app's toggle rows (see settings' digest toggle), but without
+// settings-row's own panel-inset padding: this dialog already carries that
+// padding on `.body` (overlay-panel), so re-adding it here would indent the
+// switches past the tag pills and the URL fields above them.
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+}
+
+.switch-label {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
 .error {
   color: var(--danger);
   font-size: var(--fs-sm);

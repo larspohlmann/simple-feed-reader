@@ -416,6 +416,8 @@
       "siteUrl": "Website",
       "tags": "Tags",
       "noTags": "Noch keine Tags – erstelle einen unter Einstellungen › Tags.",
+      "showInAllItems": "In Alle Einträge anzeigen",
+      "showInForYou": "In Für dich anzeigen",
       "saving": "Wird gespeichert…",
       "save": "Speichern"
     }
