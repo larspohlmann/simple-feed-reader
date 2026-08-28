@@ -42,6 +42,18 @@ final class PageImageInventoryTest extends TestCase
         self::assertFalse($inventory->draws(ImageIdentity::fromUrl('https://cdn.test/hero-photo.jpg')));
     }
 
+    public function testDrawsAPhotoThatIsNotTheFirstImageOnThePage(): void
+    {
+        // The lead can be any image the page draws, not only the first — a
+        // decorative logo commonly precedes the article photo.
+        $inventory = $this->inventoryOf(
+            '<body><img src="https://cdn.test/site-logo.png">'
+            . '<img src="https://cdn.test/hero-photo.jpg"></body>',
+        );
+
+        self::assertTrue($inventory->draws(ImageIdentity::fromUrl('https://cdn.test/hero-photo.jpg')));
+    }
+
     public function testDrawsTheFirstSrcsetCandidateOfASource(): void
     {
         $html = '<body><picture><source srcset="https://cdn.test/hero-photo.jpg 1x, https://cdn.test/hero-2x.jpg 2x">'
