@@ -321,4 +321,40 @@ final class RecommendationFeedTest extends DbTestCase
         $rows = $this->repo()->listForYou((int) $this->user->getId(), null, 50);
         self::assertCount(0, $rows);
     }
+
+    public function testFeedExcludedFromForYouDropsFromListAndCount(): void
+    {
+        $entryA = $this->entry('a');
+
+        $excludedFeed = new Feed('https://excluded.example.com/feed.xml');
+        $this->em->persist($excludedFeed);
+        $excludedSub = new Subscription(
+            $this->user,
+            $excludedFeed,
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+        );
+        $excludedSub->setIncludeInForYou(false);
+        $this->em->persist($excludedSub);
+        $excludedCreatedAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
+        $entryB = new Entry(
+            $excludedFeed,
+            'b',
+            'https://excluded.example.com/b',
+            'Title b',
+            $excludedCreatedAt,
+            $excludedCreatedAt,
+        );
+        $this->em->persist($entryB);
+        $this->em->flush();
+
+        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $this->item($run, $entryA, 1, 'reason a');
+        $this->item($run, $entryB, 2, 'reason b');
+
+        $rows = $this->repo()->listForYou((int) $this->user->getId(), null, 50);
+        self::assertCount(1, $rows);
+        self::assertSame('a', $rows[0]->row->entry->getGuid());
+
+        self::assertSame(1, $this->repo()->countForYou((int) $this->user->getId()));
+    }
 }
