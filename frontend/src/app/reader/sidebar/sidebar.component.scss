@@ -351,6 +351,11 @@
      like the header's chevron, so dropping the row's right text-padding lets the
      mail button's column line up with the "Saved searches" chevron above. */
   padding-right: 0;
+
+  /* The mail button's own box drives the row height; the extra row-pad-y would
+     stack on top of it and make these rows taller than the tag rows below (which
+     have none). Drop it so both sit at the same compact height. */
+  padding-block: 0;
 }
 
 /* Term + "W" pill as one left group. It takes the row's flexible width, so its
