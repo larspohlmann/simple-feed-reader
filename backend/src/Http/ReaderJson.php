@@ -6,33 +6,30 @@ namespace App\Http;
 
 use App\Service\Reader\ExtractionResult;
 use App\Service\Image\DeclaredImage;
-use App\Service\Reader\ReaderHeroes;
 
 final class ReaderJson
 {
     /**
-     * Both heroes ride on both branches. A failed extraction has no extracted
-     * body to lead, so its reader hero is always null — but the field is there,
-     * so any client reads the same two fields whatever the status (#592).
+     * The reader body carries its own lead picture (#681), so the only hero the
+     * response still declares is the original view's — the feed image, shown when
+     * the feed body has none. The field rides on both branches: a failed
+     * extraction has no reader body, but the original view still has its hero.
      *
      * @return array{status: 'ok', url: string, title: string, byline: string|null,
      *   siteName: string|null, contentHtml: string, excerpt: string|null,
-     *   readerHero: array{url: string, width: int|null, height: int|null}|null,
      *   originalHero: array{url: string, width: int|null, height: int|null}|null,
      *   extractedAt: string}
      *  |array{status: 'failed', url: string|null, reason: string,
-     *   readerHero: null,
      *   originalHero: array{url: string, width: int|null, height: int|null}|null}
      */
-    public static function one(ExtractionResult $r, ReaderHeroes $heroes, \DateTimeImmutable $now): array
+    public static function one(ExtractionResult $r, ?DeclaredImage $originalHero, \DateTimeImmutable $now): array
     {
         if (!$r->ok) {
             return [
                 'status' => 'failed',
                 'url' => $r->url,
                 'reason' => (string) $r->reason,
-                'readerHero' => null,
-                'originalHero' => self::hero($heroes->originalHero),
+                'originalHero' => self::hero($originalHero),
             ];
         }
 
@@ -44,8 +41,7 @@ final class ReaderJson
             'siteName' => $r->siteName,
             'contentHtml' => (string) $r->contentHtml,
             'excerpt' => $r->excerpt,
-            'readerHero' => self::hero($heroes->readerHero),
-            'originalHero' => self::hero($heroes->originalHero),
+            'originalHero' => self::hero($originalHero),
             'extractedAt' => $now->format(\DateTimeInterface::ATOM),
         ];
     }

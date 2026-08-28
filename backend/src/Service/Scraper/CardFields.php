@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Scraper;
 
 use App\Service\Fetch\PageUrls;
+use App\Service\Html\Srcset;
 use App\Service\Parser\DateParser;
 use Dom\Element;
 
@@ -132,7 +133,7 @@ final readonly class CardFields
         }
         $candidate = self::nonEmpty($img->getAttribute('src'))
             ?? self::nonEmpty($img->getAttribute('data-src'))
-            ?? self::srcsetFirst($img->getAttribute('srcset'));
+            ?? Srcset::firstUrl($img->getAttribute('srcset'));
 
         return $this->pageUrls->httpUrl($candidate);
     }
@@ -142,16 +143,6 @@ final readonly class CardFields
         $value = trim($value ?? '');
 
         return $value === '' ? null : $value;
-    }
-
-    private static function srcsetFirst(?string $srcset): ?string
-    {
-        if ($srcset === null) {
-            return null;
-        }
-        preg_match('/\S+/', explode(',', $srcset)[0], $matches);
-
-        return self::nonEmpty($matches[0] ?? null);
     }
 
     private static function publishedAt(Element $container): ?\DateTimeImmutable

@@ -49,7 +49,6 @@ const okContent = (over: Partial<ReaderArticle> = {}): ReaderArticle => ({
   byline: null,
   siteName: null,
   excerpt: null,
-  readerHero: null,
   originalHero: null,
   extractedAt: '',
   ...over,
@@ -59,7 +58,6 @@ const failedContent = (over: Partial<ReaderFailure> = {}): ReaderFailure => ({
   status: 'failed',
   reason: 'fetch',
   url: null,
-  readerHero: null,
   originalHero: null,
   ...over,
 });
@@ -637,37 +635,38 @@ describe('ReaderViewComponent', () => {
   const hero = (f: { nativeElement: unknown }) =>
     (f.nativeElement as HTMLElement).querySelector('.lead-image') as HTMLImageElement | null;
 
-  it('renders the reader hero the backend resolved for the extracted body', () => {
-    loadMock.mockReturnValue(
-      of<ReaderContent>(
-        okContent({ readerHero: { url: 'https://img.test/hero.jpg', width: 800, height: 450 } }),
-      ),
-    );
-
-    const img = hero(mount(entry()));
-
-    expect(img).not.toBeNull();
-    expect(img!.getAttribute('src')).toBe('https://img.test/hero.jpg');
-    expect(img!.getAttribute('width')).toBe('800');
-    expect(img!.getAttribute('height')).toBe('450');
-  });
-
-  it('swaps to the original hero on toggle without asking the server again', () => {
+  it('renders no separate hero in reader mode; the lead rides in contentHtml', () => {
+    // The backend now restores the lead picture into the extracted body itself
+    // (#681), so reader mode shows it as part of the article, not a hero element.
     loadMock.mockReturnValue(
       of<ReaderContent>(
         okContent({
-          readerHero: { url: 'https://img.test/reader.jpg', width: null, height: null },
-          originalHero: { url: 'https://img.test/feed.jpg', width: 800, height: 450 },
+          contentHtml: '<figure><img src="https://img.test/hero.jpg"></figure><p>Body</p>',
         }),
       ),
     );
     const f = mount(entry());
-    expect(hero(f)!.getAttribute('src')).toBe('https://img.test/reader.jpg');
+
+    expect(hero(f)).toBeNull();
+    const content = (f.nativeElement as HTMLElement).querySelector('.content');
+    expect(content!.innerHTML).toContain('https://img.test/hero.jpg');
+  });
+
+  it('shows the original hero only after toggling to the original view', () => {
+    loadMock.mockReturnValue(
+      of<ReaderContent>(
+        okContent({ originalHero: { url: 'https://img.test/feed.jpg', width: 800, height: 450 } }),
+      ),
+    );
+    const f = mount(entry());
+    expect(hero(f)).toBeNull();
 
     TestBed.inject(ReaderModeService).toggle();
     f.detectChanges();
 
     expect(hero(f)!.getAttribute('src')).toBe('https://img.test/feed.jpg');
+    expect(hero(f)!.getAttribute('width')).toBe('800');
+    expect(hero(f)!.getAttribute('height')).toBe('450');
     expect(loadMock).toHaveBeenCalledTimes(1);
   });
 
@@ -683,43 +682,23 @@ describe('ReaderViewComponent', () => {
     expect(hero(mount(entry()))!.getAttribute('src')).toBe('https://img.test/feed.jpg');
   });
 
-  it('hides a hero whose image fails to load', () => {
+  it('hides the original hero whose image fails to load', () => {
     loadMock.mockReturnValue(
       of<ReaderContent>(
-        okContent({ readerHero: { url: 'https://img.test/gone.jpg', width: null, height: null } }),
-      ),
-    );
-    const f = mount(entry());
-
-    hero(f)!.dispatchEvent(new Event('error'));
-    f.detectChanges();
-
-    expect(hero(f)).toBeNull();
-  });
-
-  it('keeps the original hero after the reader hero fails to load', () => {
-    loadMock.mockReturnValue(
-      of<ReaderContent>(
-        okContent({
-          readerHero: { url: 'https://img.test/gone.jpg', width: null, height: null },
-          originalHero: { url: 'https://img.test/feed.jpg', width: 800, height: 450 },
+        failedContent({
+          originalHero: { url: 'https://img.test/gone.jpg', width: null, height: null },
         }),
       ),
     );
     const f = mount(entry());
+
     hero(f)!.dispatchEvent(new Event('error'));
     f.detectChanges();
+
     expect(hero(f)).toBeNull();
-
-    // The failure belongs to the one broken URL, not to the article: the
-    // original view offers a different picture and must still show it.
-    TestBed.inject(ReaderModeService).toggle();
-    f.detectChanges();
-
-    expect(hero(f)!.getAttribute('src')).toBe('https://img.test/feed.jpg');
   });
 
-  it('renders no hero when the backend resolved none', () => {
+  it('renders no hero in reader mode when the backend resolved none', () => {
     loadMock.mockReturnValue(of<ReaderContent>(okContent()));
 
     expect(hero(mount(entry()))).toBeNull();
