@@ -175,6 +175,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
         ],
         SavedSearch::class => [
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
+            'includeInDigest' => self::DIGEST_BACKUP_NOT_YET_WIRED,
         ],
         Feed::class => [
             'status' => 'Live fetch state, not the user\'s data. A restored feed starts clean.',

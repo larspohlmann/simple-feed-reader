@@ -201,6 +201,7 @@ subscription and each article mark all hold one pointer to their owner.
 | Field | Why the file leaves it out |
 |---|---|
 | `user` | The pointer to the account that owns the row. A restore writes into the account you are signed in to, so no line names an owner. It could not: an owner read from the file would be an owner you chose for yourself. |
+| `includeInDigest` | Whether a saved search feeds the email digest (#636). Added ahead of the backup format's support for it; a later task carries it. |
 
 **On a feed.**
 
