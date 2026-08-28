@@ -1897,6 +1897,45 @@ describe('ReaderShellComponent', () => {
       expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
     });
 
+    it('does not redirect when the subscriptions request fails (#691)', async () => {
+      // A 500 leaves the store resolved with an empty list and an error set. That
+      // must not read as "this user has zero subscriptions": no catalog fetch, no
+      // redirect to the picker — the user stays on the reader with the error.
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+      const f = TestBed.createComponent(ReaderShellComponent);
+      f.detectChanges();
+      ctrl
+        .expectOne('https://api.test/api/subscriptions')
+        .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+      ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({ entries: [], nextCursor: null });
+      ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
+        status: 'none',
+        batchesTotal: null,
+        batchesDone: 0,
+        error: null,
+        background: false,
+        streamedChars: 0,
+        forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+      });
+      ctrl.expectOne('https://api.test/api/version').flush({
+        version: 'dev',
+        commit: 'local',
+        builtAt: '',
+        latest: null,
+        updateAvailable: false,
+      });
+      f.detectChanges();
+      await f.whenStable();
+      f.detectChanges();
+
+      ctrl.expectNone('https://api.test/api/catalog');
+      expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
+    });
+
     it('does not even ask for the catalog when a non-admin user has subscriptions', () => {
       // Non-admin (the default mock): a populated reader has no reason to touch
       // the catalog. Admins DO fetch it unconditionally — covered separately below.
