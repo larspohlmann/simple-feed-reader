@@ -92,17 +92,13 @@ final readonly class ImageIdentity
      */
     private static function unwrapProxy(string $url): string
     {
-        foreach (['url', 'u', 'image', 'src'] as $key) {
-            $embedded = self::queryParameter($url, $key);
-            if ($embedded !== null && self::isHttpUrl($embedded)) {
-                return $embedded;
-            }
-        }
-
-        return self::decodedPathSource($url) ?? $url;
+        return self::sourceFromQuery($url)
+            ?? self::sourceFromPath($url)
+            ?? $url;
     }
 
-    private static function queryParameter(string $url, string $key): ?string
+    /** A `?url=` proxy (Politico's dims4, NPR's brightspot) carries the source verbatim. */
+    private static function sourceFromQuery(string $url): ?string
     {
         $query = (string) (parse_url($url, PHP_URL_QUERY) ?? '');
         if ($query === '') {
@@ -110,34 +106,23 @@ final readonly class ImageIdentity
         }
 
         parse_str($query, $parameters);
-        $value = $parameters[$key] ?? null;
+        $embedded = $parameters['url'] ?? null;
 
-        return is_string($value) ? $value : null;
+        return is_string($embedded) && self::isHttpUrl($embedded) ? $embedded : null;
     }
 
-    /** imgproxy carries the source as a base64 path segment; find and decode it. */
-    private static function decodedPathSource(string $url): ?string
+    /**
+     * imgproxy carries the source as the final path segment, url-safe base64.
+     * Strict decoding rejects a real filename on its own (it is not a base64 http
+     * URL) and tolerates the unpadded spelling once `-_` map back to `+/`.
+     */
+    private static function sourceFromPath(string $url): ?string
     {
-        $path = (string) (parse_url($url, PHP_URL_PATH) ?? '');
-        foreach (array_reverse(explode('/', $path)) as $segment) {
-            $decoded = self::decodeHttpUrl($segment);
-            if ($decoded !== null) {
-                return $decoded;
-            }
-        }
-
-        return null;
-    }
-
-    private static function decodeHttpUrl(string $segment): ?string
-    {
-        // Strict decoding rejects a non-base64 segment on its own, and tolerates
-        // imgproxy's url-safe, unpadded spelling once `-_` map back to `+/`. Only a
-        // decode that yields an http(s) URL is a source; a real filename does not.
+        $segment = basename((string) (parse_url($url, PHP_URL_PATH) ?? ''));
         $candidate = (string) preg_replace('/\.[a-z0-9]{2,5}$/i', '', $segment);
         $decoded = base64_decode(strtr($candidate, '-_', '+/'), true);
 
-        return ($decoded !== false && self::isHttpUrl($decoded)) ? $decoded : null;
+        return $decoded !== false && self::isHttpUrl($decoded) ? $decoded : null;
     }
 
     private static function isHttpUrl(string $value): bool

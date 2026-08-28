@@ -146,6 +146,16 @@ final class ImageIdentityTest extends TestCase
         ));
     }
 
+    public function testPrefersTheQueryParamSourceOverAPathSegment(): void
+    {
+        // A URL can carry both spellings; the explicit `?url=` source is
+        // authoritative and the base64 path segment is not consulted.
+        $both = $this->imgproxy('https://cdn.test/path-loser.jpg')
+            . '?url=' . rawurlencode('https://cdn.test/query-winner.jpg');
+        self::assertTrue($this->sameImage('https://cdn.test/query-winner.jpg', $both));
+        self::assertFalse($this->sameImage('https://cdn.test/path-loser.jpg', $both));
+    }
+
     public function testMatchesThroughAJetpackPhotonHost(): void
     {
         self::assertTrue($this->sameImage(
