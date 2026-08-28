@@ -29,8 +29,13 @@ const account = (trialEndsAt: string | null): CurrentUser => ({
   createdAt: '2026-01-01T00:00:00Z',
   locale: 'en',
   trialEndsAt,
-  preferences: { scrapeFallbackEnabled: false },
+  preferences: {
+    scrapeFallbackEnabled: false,
+    digest: { enabled: false, cadence: 'daily', sendHour: 8, weekday: 1 },
+  },
   ai: { ready: false, model: null },
+  mail: { enabled: true },
+  emailVerified: true,
 });
 
 const inDays = (days: number): string => new Date(Date.now() + days * 86_400_000).toISOString();

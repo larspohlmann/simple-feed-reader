@@ -60,8 +60,13 @@ describe('PreferencesService', () => {
       createdAt: '2026-08-02T10:00:00+00:00',
       locale: 'en',
       trialEndsAt: null,
-      preferences: { scrapeFallbackEnabled: true },
+      preferences: {
+        scrapeFallbackEnabled: true,
+        digest: { enabled: false, cadence: 'daily', sendHour: 8, weekday: 1 },
+      },
       ai: { ready: false, model: null },
+      mail: { enabled: true },
+      emailVerified: true,
     });
 
     expect(s.scrapeFallbackEnabled()).toBe(true);

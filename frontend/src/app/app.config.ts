@@ -16,6 +16,8 @@ import { authInterceptor } from './core/auth.interceptor';
 import { preloadInitialLanguage } from './core/boot-language';
 import { NavigationFailureReporter } from './core/navigation-failure';
 import { startNavigationWatchdog } from './core/navigation-watchdog';
+import { DIGEST_WRITER } from './core/digest-writer';
+import { HttpDigestWriter } from './core/http-digest-writer';
 import { HttpLocaleWriter } from './core/http-locale-writer';
 import { HttpPreferencesWriter } from './core/http-preferences-writer';
 import { HttpTranslocoLoader } from './core/transloco-loader';
@@ -53,6 +55,9 @@ export const appConfig: ApplicationConfig = {
     // PREFERENCES_WRITER defaults to a no-op (see preferences-writer.ts) for the
     // same reason LOCALE_WRITER does; the running app overrides it here too.
     { provide: PREFERENCES_WRITER, useExisting: HttpPreferencesWriter },
+    // DIGEST_WRITER defaults to a no-op (see digest-writer.ts) for the same
+    // reason LOCALE_WRITER does; the running app overrides it here too.
+    { provide: DIGEST_WRITER, useExisting: HttpDigestWriter },
     provideTransloco({
       config: {
         availableLangs: [...LANGS],
