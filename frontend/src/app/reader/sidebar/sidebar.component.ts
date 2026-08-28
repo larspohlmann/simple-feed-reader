@@ -102,6 +102,11 @@ export class SidebarComponent {
    *  toggle only renders when this is true — with mail off there is nowhere
    *  for the flag to send to. */
   readonly mailEnabled = input<boolean>(false);
+  /** Whether the account's own digest is switched on ("Send a digest email").
+   *  The per-search toggle renders only when this is true as well: with the
+   *  digest off, per-search inclusion has no digest to appear in, so the
+   *  envelope button would control nothing (#636). */
+  readonly digestEnabled = input<boolean>(false);
   readonly selection = input.required<Selection>();
   readonly loading = input(false);
   /** A search request is in flight — distinct from `loading` above, which is

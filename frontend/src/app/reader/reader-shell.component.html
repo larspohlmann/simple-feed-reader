@@ -74,6 +74,7 @@
       [savedSearches]="savedSearchesStore.savedSearches()"
       [activeSavedSearchId]="currentSavedSearch()?.id ?? null"
       [mailEnabled]="auth.user()?.mail?.enabled ?? false"
+      [digestEnabled]="digest.enabled()"
       [selection]="selection()"
       [loading]="subs.loading()"
       [searchLoading]="searching()"

@@ -76,6 +76,7 @@ function mount(
     savedSearches: SavedSearchDto[];
     activeSavedSearchId: number | null;
     mailEnabled: boolean;
+    digestEnabled: boolean;
   }> = {},
 ) {
   TestBed.configureTestingModule({
@@ -109,6 +110,7 @@ function mount(
   f.componentRef.setInput('savedSearches', over.savedSearches ?? []);
   f.componentRef.setInput('activeSavedSearchId', over.activeSavedSearchId ?? null);
   f.componentRef.setInput('mailEnabled', over.mailEnabled ?? false);
+  f.componentRef.setInput('digestEnabled', over.digestEnabled ?? true);
   f.detectChanges();
   return f;
 }
@@ -821,6 +823,14 @@ describe('SidebarComponent', () => {
 
     it('renders no mail icon on saved-search rows when mail is disabled', () => {
       const f = mount({ savedSearches: [climate], mailEnabled: false });
+      f.componentInstance.toggleSavedSearches();
+      f.detectChanges();
+
+      expect(f.nativeElement.querySelector('.digest-toggle')).toBeNull();
+    });
+
+    it('renders no mail icon when mail is on but the account digest is off', () => {
+      const f = mount({ savedSearches: [climate], mailEnabled: true, digestEnabled: false });
       f.componentInstance.toggleSavedSearches();
       f.detectChanges();
 

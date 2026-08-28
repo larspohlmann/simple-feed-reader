@@ -27,6 +27,7 @@ import { RecommendationsService } from './recommendations.service';
 import { SavedSearchesStore } from './saved-searches.store';
 import { refreshFailureKey } from './refresh-message';
 import { AiAvailabilityService } from '../core/ai-availability.service';
+import { DigestService } from '../core/digest.service';
 import { VersionService } from '../core/version.service';
 import { ReadingLayoutService } from './reading-layout.service';
 import { LayoutService } from './layout.service';
@@ -113,6 +114,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly recs = inject(RecommendationsService);
   readonly savedSearchesStore = inject(SavedSearchesStore);
   readonly ai = inject(AiAvailabilityService);
+  readonly digest = inject(DigestService);
   private readonly versions = inject(VersionService);
   readonly layout = inject(ReadingLayoutService);
   readonly screen = inject(LayoutService);

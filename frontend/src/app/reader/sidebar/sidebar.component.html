@@ -154,7 +154,7 @@
             @if (saved.unreadCount > 0) {
               <span class="count">{{ saved.unreadCount }}</span>
             }
-            @if (mailEnabled()) {
+            @if (mailEnabled() && digestEnabled()) {
               <button
                 class="digest-toggle"
                 type="button"
