@@ -59,7 +59,12 @@ final class DigestComposerTest extends TestCase
         $this->entries->method('unreadMatchIdsSince')->willReturnCallback(
             fn (EntrySearchQuery $query): array => $query->terms->terms === ['rust'] ? $ids : [],
         );
-        $this->entries->method('rowsByIdsForUser')->willReturn($rows);
+        // Hydration returns one row per id it is asked for (the rows are already
+        // in id order), so the finder's cap to the newest PER_SEARCH is visible
+        // here rather than hidden behind a stub that returns the whole set.
+        $this->entries->method('rowsByIdsForUser')->willReturnCallback(
+            static fn (array $entryIds): array => \array_slice($rows, 0, \count($entryIds)),
+        );
 
         $model = $this->composer()->compose($this->user, $this->since);
 

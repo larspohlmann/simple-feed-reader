@@ -145,17 +145,24 @@ class EntryListRepository extends ServiceEntityRepository
      * $since, for the user's subscribed feeds — the digest's "new since the last
      * send" window (#636). The mirror of unreadMatchingEntryIdsForUser's `<=`.
      *
+     * Ordered newest-first so a caller that only wants the most recent handful
+     * (the digest caps each section) can slice the head without hydrating the
+     * whole set. `effectiveDate` rides in the SELECT because DISTINCT forbids
+     * ordering by a column it does not project.
+     *
      * @return list<int>
      */
     public function unreadMatchIdsSince(EntrySearchQuery $query, \DateTimeImmutable $since): array
     {
         $qb = $this->unreadMatchQueryBuilder($query)
-            ->select('e.id')
+            ->select('e.id', 'e.effectiveDate')
             ->distinct()
             ->andWhere('e.effectiveDate > :since')
-            ->setParameter('since', $since);
+            ->setParameter('since', $since)
+            ->orderBy('e.effectiveDate', 'DESC')
+            ->addOrderBy('e.id', 'DESC');
 
-        /** @var list<array{id: int}> $rows */
+        /** @var list<array{id: int, effectiveDate: mixed}> $rows */
         $rows = $qb->getQuery()->getScalarResult();
 
         return array_map(static fn (array $row): int => (int) $row['id'], $rows);

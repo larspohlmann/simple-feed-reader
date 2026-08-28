@@ -49,30 +49,28 @@ final class DigestEntryFinderTest extends TestCase
         return new EntryListRow($entry, 1, 'Example', false, false, false, false, null, null);
     }
 
-    public function testCapsTheHydratedRowsAtPerSearchButKeepsTheFullTotal(): void
+    public function testHydratesOnlyThePerSearchNewestButKeepsTheFullTotal(): void
     {
         $ids = range(1, 12);
-        $rows = array_map($this->row(...), $ids);
+        $newestIds = array_slice($ids, 0, DigestEntryFinder::PER_SEARCH);
+        $rows = array_map($this->row(...), $newestIds);
         $since = new \DateTimeImmutable('2026-07-15T00:00:00Z');
 
         $this->entries->expects(self::once())
             ->method('unreadMatchIdsSince')
             ->with(self::isInstanceOf(EntrySearchQuery::class), $since)
             ->willReturn($ids);
+        // Only the newest PER_SEARCH ids are hydrated — never the whole match set.
         $this->entries->expects(self::once())
             ->method('rowsByIdsForUser')
-            ->with($ids, $this->userId)
+            ->with($newestIds, $this->userId)
             ->willReturn($rows);
 
         $matches = (new DigestEntryFinder($this->entries))->matchesSince($this->search, $this->userId, $since);
 
         self::assertSame(12, $matches->totalCount);
         self::assertCount(DigestEntryFinder::PER_SEARCH, $matches->entries);
-        self::assertSame(
-            array_slice($rows, 0, DigestEntryFinder::PER_SEARCH),
-            $matches->entries,
-            'The cap must keep the newest-first order rowsByIdsForUser already returns.',
-        );
+        self::assertSame($rows, $matches->entries);
     }
 
     public function testNoMatchesReturnsEmptyWithoutHydrating(): void

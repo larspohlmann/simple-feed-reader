@@ -33,11 +33,13 @@ final readonly class DigestEntryFinder
             return new DigestSearchMatches([], 0);
         }
 
-        // rowsByIdsForUser orders newest-first, so slicing to PER_SEARCH keeps
-        // the newest entries; totalCount stays the pre-cap, post-gate count for
-        // the "+N more" line and the subject total.
-        $rows = $this->entries->rowsByIdsForUser($ids, $userId);
+        // Hydrate only the newest PER_SEARCH rows, not the whole match set: a
+        // wide window (a test digest can look back weeks) matches hundreds, and
+        // building every heavy list row to show ten would dominate the cost and
+        // time the request out (#636). The ids arrive newest-first, so the head
+        // is the newest; totalCount stays the full pre-cap count for "+N more".
+        $newestIds = \array_slice($ids, 0, self::PER_SEARCH);
 
-        return new DigestSearchMatches(\array_slice($rows, 0, self::PER_SEARCH), \count($rows));
+        return new DigestSearchMatches($this->entries->rowsByIdsForUser($newestIds, $userId), \count($ids));
     }
 }
