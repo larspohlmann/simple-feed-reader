@@ -361,6 +361,50 @@ final class EntryListTest extends DbTestCase
         self::assertFalse($byGuid['untouched']);
     }
 
+    public function testExcludedFeedHiddenFromAllAndUnreadButVisibleInExplicitScopes(): void
+    {
+        $entryA = $this->entry('a', '2026-07-10T00:00:00Z');
+
+        $excludedFeed = new Feed('https://excluded.example.com/feed.xml');
+        $this->em->persist($excludedFeed);
+        $excludedSub = new Subscription($this->user, $excludedFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $excludedSub->setIncludeInAllItems(false);
+        $tag = new Tag($this->user, 'news');
+        $this->em->persist($tag);
+        $excludedSub->addTag($tag);
+        $this->em->persist($excludedSub);
+        $entryB = new Entry(
+            $excludedFeed,
+            'b',
+            'https://excluded.example.com/b',
+            'Title b',
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            new \DateTimeImmutable('2026-07-11T00:00:00Z'),
+        );
+        $this->em->persist($entryB);
+        $favoriteState = new EntryState($this->user, $entryB);
+        $favoriteState->setIsFavorite(true);
+        $this->em->persist($favoriteState);
+        $this->em->flush();
+
+        $all = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0));
+        self::assertSame([$entryA->getId()], array_map(static fn ($row) => $row->entry->getId(), $all));
+
+        $unread = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0, view: 'unread'));
+        self::assertSame([$entryA->getId()], array_map(static fn ($row) => $row->entry->getId(), $unread));
+
+        $own = $this->repo()->listForUser(
+            new EntryQuery($this->user->getId() ?? 0, subscriptionId: $excludedSub->getId()),
+        );
+        self::assertContains($entryB->getId(), array_map(static fn ($row) => $row->entry->getId(), $own));
+
+        $tagged = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0, tagId: $tag->getId()));
+        self::assertContains($entryB->getId(), array_map(static fn ($row) => $row->entry->getId(), $tagged));
+
+        $favorites = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0, view: 'favorites'));
+        self::assertContains($entryB->getId(), array_map(static fn ($row) => $row->entry->getId(), $favorites));
+    }
+
     public function testStateIsScopedToTheCaller(): void
     {
         // A second subscriber to the SAME feed/entry. Their read + favorite
