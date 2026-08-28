@@ -112,6 +112,10 @@ final class BackupReaderTest extends TestCase
         // +02:00 wall clock normalised to naive-UTC storage time.
         self::assertSame('2026-07-01 00:00:00', $subscription->createdAt->format('Y-m-d H:i:s'));
         self::assertSame('Tech', $subscription->tags[0]->name);
+        // The fixture line above carries no includeInAllItems/includeInForYou key,
+        // so both must default to true (an older backup predates #688).
+        self::assertTrue($subscription->includeInAllItems);
+        self::assertTrue($subscription->includeInForYou);
         self::assertInstanceOf(EntryLine::class, $objects[5]);
         self::assertInstanceOf(EntryStateLine::class, $objects[6]);
     }

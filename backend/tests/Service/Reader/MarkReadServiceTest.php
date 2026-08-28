@@ -13,6 +13,7 @@ use App\Entity\User;
 use App\Exception\ValidationException;
 use App\Service\Reader\MarkReadService;
 use App\Tests\DbTestCase;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class MarkReadServiceTest extends DbTestCase
@@ -186,6 +187,13 @@ final class MarkReadServiceTest extends DbTestCase
         [$user] = $this->seed();
         $this->expectException(ValidationException::class);
         $this->service()->mark($user, 'feed', null, new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+    }
+
+    public function testUnknownScopeIsRejected(): void
+    {
+        [$user] = $this->seed();
+        $this->expectException(BadRequestHttpException::class);
+        $this->service()->mark($user, 'bogus', null, new \DateTimeImmutable('2026-07-10T00:00:00Z'));
     }
 
     /**
