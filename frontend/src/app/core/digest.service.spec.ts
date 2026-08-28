@@ -97,6 +97,22 @@ describe('DigestService', () => {
     expect(writer.written).toEqual([]);
   });
 
+  it('adopts defaults without throwing when preferences.digest is missing', () => {
+    const s = service();
+    const malformedUser = {
+      ...user({ enabled: true, cadence: 'weekly', sendHour: 20, weekday: 5 }),
+      preferences: { scrapeFallbackEnabled: false } as unknown as CurrentUser['preferences'],
+    };
+
+    expect(() => s.adopt(malformedUser)).not.toThrow();
+
+    expect(s.enabled()).toBe(false);
+    expect(s.cadence()).toBe('daily');
+    expect(s.sendHour()).toBe(8);
+    expect(s.weekday()).toBe(1);
+    expect(writer.written).toEqual([]);
+  });
+
   it('resets to defaults', () => {
     const s = service();
     s.adopt(user({ enabled: true, cadence: 'weekly', sendHour: 20, weekday: 5 }));

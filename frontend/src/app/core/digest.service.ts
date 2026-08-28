@@ -51,13 +51,17 @@ export class DigestService {
   /**
    * Take the account's values, typically right after `AuthService.loadMe()`.
    * Caches only — a value that just arrived from the server is never PATCHed
-   * straight back to it.
+   * straight back to it. Reads through optional chaining rather than trusting
+   * `CurrentUser`'s type: this runs inside `loadMe()`'s shared `tap()`, so a
+   * missing or partial `digest` on a malformed or older payload must fall
+   * back per-field instead of throwing and aborting the adopters after it.
    */
   adopt(user: CurrentUser): void {
-    this.enabled.set(user.preferences.digest.enabled);
-    this.cadence.set(user.preferences.digest.cadence);
-    this.sendHour.set(user.preferences.digest.sendHour);
-    this.weekday.set(user.preferences.digest.weekday);
+    const digest = user.preferences?.digest;
+    this.enabled.set(digest?.enabled ?? DEFAULT_ENABLED);
+    this.cadence.set(digest?.cadence ?? DEFAULT_CADENCE);
+    this.sendHour.set(digest?.sendHour ?? DEFAULT_SEND_HOUR);
+    this.weekday.set(digest?.weekday ?? DEFAULT_WEEKDAY);
   }
 
   /**
