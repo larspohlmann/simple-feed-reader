@@ -73,4 +73,58 @@
       }
     }
   </app-settings-group>
+
+  @if (state() === 'ready') {
+    <app-settings-group icon="search" [title]="'settings.email.includedSearches' | transloco">
+      @if (savedSearches().length === 0) {
+        <div class="callout">
+          <app-icon name="info" size="sm" />
+          <span>{{ 'settings.email.includedSearchesEmpty' | transloco }}</span>
+        </div>
+      } @else {
+        @for (search of savedSearches(); track search.id) {
+          <app-settings-row [title]="search.term" [labelFor]="'digest-search-' + search.id">
+            <app-toggle
+              [inputId]="'digest-search-' + search.id"
+              [checked]="search.includeInDigest"
+              [label]="search.term"
+              (toggled)="onIncludeInDigest(search.id, $event)"
+            />
+          </app-settings-row>
+        }
+      }
+    </app-settings-group>
+
+    <app-settings-group icon="mail" [title]="'settings.email.testMail' | transloco">
+      <app-settings-row [stackable]="true" [title]="'settings.email.testMailDays' | transloco">
+        <input
+          type="number"
+          data-testid="test-mail-days"
+          class="test-mail-days"
+          min="1"
+          max="30"
+          [value]="testMailDays()"
+          (change)="onTestMailDays($event)"
+        />
+      </app-settings-row>
+
+      <app-settings-row>
+        <app-button
+          data-testid="test-mail-send"
+          [loading]="sendingTestMail()"
+          [disabled]="noSearchesIncluded()"
+          (click)="sendTestMail()"
+        >
+          {{ 'settings.email.testMailSend' | transloco }}
+        </app-button>
+      </app-settings-row>
+
+      @if (testMailMessageKey(); as messageKey) {
+        <div class="callout" data-testid="test-mail-result">
+          <app-icon name="info" size="sm" />
+          <span>{{ messageKey | transloco }}</span>
+        </div>
+      }
+    </app-settings-group>
+  }
 </app-settings-stack>

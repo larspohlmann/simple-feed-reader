@@ -112,7 +112,16 @@
       "weekdayThursday": "Thursday",
       "weekdayFriday": "Friday",
       "weekdaySaturday": "Saturday",
-      "weekdaySunday": "Sunday"
+      "weekdaySunday": "Sunday",
+      "includedSearches": "Included saved searches",
+      "includedSearchesEmpty": "You have no saved searches yet. Save a search to include its matches in the digest.",
+      "testMail": "Send a test email",
+      "testMailDays": "Days to include",
+      "testMailSend": "Send test",
+      "testMailSent": "Test email sent.",
+      "testMailEmpty": "Nothing to send — no matches in that period.",
+      "testMailRateLimited": "Too many requests. Try again later.",
+      "testMailFailed": "The test email could not be sent."
     },
     "ai": {
       "title": "AI",

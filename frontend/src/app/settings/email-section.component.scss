@@ -21,3 +21,9 @@
   flex: none;
   color: var(--accent);
 }
+
+// A two-digit day count never needs the full row width the other stackable
+// controls take -- same reasoning as ai-section's `.batch-cap-input`.
+.test-mail-days {
+  width: calc(4ch + 2 * var(--space-3));
+}

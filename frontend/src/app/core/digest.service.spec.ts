@@ -1,16 +1,23 @@
 import { TestBed } from '@angular/core/testing';
 import { Observable, of } from 'rxjs';
 import { CurrentUser } from './auth.service';
-import { DIGEST_WRITER, DigestConfig, DigestWriter } from './digest-writer';
+import { DIGEST_WRITER, DigestConfig, DigestTestMailResult, DigestWriter } from './digest-writer';
 import { DigestService } from './digest.service';
 
 class FakeWriter implements DigestWriter {
   written: DigestConfig[] = [];
   result = true;
+  testMailDaysRequested: number[] = [];
+  testMailResult: DigestTestMailResult = 'sent';
 
   write(config: DigestConfig): Observable<boolean> {
     this.written.push(config);
     return of(this.result);
+  }
+
+  sendTest(days: number): Observable<DigestTestMailResult> {
+    this.testMailDaysRequested.push(days);
+    return of(this.testMailResult);
   }
 }
 
@@ -124,5 +131,16 @@ describe('DigestService', () => {
     expect(s.sendHour()).toBe(8);
     expect(s.weekday()).toBe(1);
     expect(s.saveFailed()).toBe(false);
+  });
+
+  it('forwards sendTest to the writer with the requested days', () => {
+    writer.testMailResult = 'empty';
+    const s = service();
+
+    let result: DigestTestMailResult | undefined;
+    s.sendTest(14).subscribe((r) => (result = r));
+
+    expect(writer.testMailDaysRequested).toEqual([14]);
+    expect(result).toBe('empty');
   });
 });

@@ -1,7 +1,8 @@
 // src/app/core/digest.service.ts
 import { Injectable, inject, signal } from '@angular/core';
+import { Observable } from 'rxjs';
 import { CurrentUser } from './auth.service';
-import { DIGEST_WRITER, DigestConfig } from './digest-writer';
+import { DIGEST_WRITER, DigestConfig, DigestTestMailResult } from './digest-writer';
 
 const DEFAULT_ENABLED = false;
 const DEFAULT_CADENCE = 'daily';
@@ -46,6 +47,12 @@ export class DigestService {
   setWeekday(weekday: number): void {
     this.weekday.set(weekday);
     this.writeAll();
+  }
+
+  /** Sends a one-off test digest; the caller (the email section) owns the
+   *  in-flight and result state, the same split as `AuthService.resendVerification()`. */
+  sendTest(days: number): Observable<DigestTestMailResult> {
+    return this.writer.sendTest(days);
   }
 
   /**

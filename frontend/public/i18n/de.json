@@ -112,7 +112,16 @@
       "weekdayThursday": "Donnerstag",
       "weekdayFriday": "Freitag",
       "weekdaySaturday": "Samstag",
-      "weekdaySunday": "Sonntag"
+      "weekdaySunday": "Sonntag",
+      "includedSearches": "Einbezogene gespeicherte Suchen",
+      "includedSearchesEmpty": "Du hast noch keine gespeicherten Suchen. Speichere eine Suche, um ihre Treffer in die Zusammenfassung aufzunehmen.",
+      "testMail": "Test-E-Mail senden",
+      "testMailDays": "Einbezogene Tage",
+      "testMailSend": "Test senden",
+      "testMailSent": "Test-E-Mail gesendet.",
+      "testMailEmpty": "Nichts zu senden – keine Treffer in diesem Zeitraum.",
+      "testMailRateLimited": "Zu viele Anfragen. Versuche es später erneut.",
+      "testMailFailed": "Die Test-E-Mail konnte nicht gesendet werden."
     },
     "ai": {
       "title": "KI",

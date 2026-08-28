@@ -1,9 +1,9 @@
 // src/app/core/http-digest-writer.ts
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, of } from 'rxjs';
 import { API_BASE_URL } from './api';
-import { DigestConfig, DigestWriter } from './digest-writer';
+import { DigestConfig, DigestTestMailResult, DigestWriter } from './digest-writer';
 
 /**
  * The real `DigestWriter`. Goes straight at `HttpClient`/`API_BASE_URL` rather
@@ -19,6 +19,15 @@ export class HttpDigestWriter implements DigestWriter {
     return this.http.patch(`${this.base}/api/me/digest`, config).pipe(
       map(() => true),
       catchError(() => of(false)),
+    );
+  }
+
+  sendTest(days: number): Observable<DigestTestMailResult> {
+    return this.http.post<{ sent: boolean }>(`${this.base}/api/me/digest/test`, { days }).pipe(
+      map((response): DigestTestMailResult => (response.sent ? 'sent' : 'empty')),
+      catchError((error: HttpErrorResponse) =>
+        of<DigestTestMailResult>(error.status === 429 ? 'rateLimited' : 'failed'),
+      ),
     );
   }
 }
