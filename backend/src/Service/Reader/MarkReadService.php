@@ -85,11 +85,26 @@ final readonly class MarkReadService
         $userId = (int) $user->getId();
 
         return match ($scope) {
-            'all' => $this->subscriptions->findForUserWithTags($userId),
+            'all' => $this->includedInAllItems($this->subscriptions->findForUserWithTags($userId)),
             'feed' => [$this->requireSubscription($id, $userId)],
             'tag' => $this->subscriptions->findForUserByTagId($userId, $this->requireTag($id, $userId)),
             default => throw new BadRequestHttpException(sprintf('Unknown scope "%s".', $scope)),
         };
+    }
+
+    /**
+     * Scope "all" mirrors what the All-items list shows, so a feed hidden from
+     * it must not have its watermark advanced or its entries flipped read.
+     *
+     * @param  list<Subscription> $subscriptions
+     * @return list<Subscription>
+     */
+    private function includedInAllItems(array $subscriptions): array
+    {
+        return array_values(array_filter(
+            $subscriptions,
+            static fn (Subscription $subscription): bool => $subscription->isIncludeInAllItems(),
+        ));
     }
 
     private function requireSubscription(?int $id, int $userId): Subscription
