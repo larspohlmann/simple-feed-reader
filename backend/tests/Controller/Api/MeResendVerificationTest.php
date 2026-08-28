@@ -7,6 +7,7 @@ namespace App\Tests\Controller\Api;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 /**
@@ -24,6 +25,18 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
  */
 final class MeResendVerificationTest extends ApiTestCase
 {
+    protected function setUp(): void
+    {
+        // Same reasoning as MeDigestTestControllerTest: the resend_verification
+        // limiter counts in a FILESYSTEM pool that outlives the run, so a prior
+        // case's spend must not bleed into this one and trip a spurious 429.
+        self::bootKernel();
+        $rateLimiterCache = self::getContainer()->get('test.cache.rate_limiter');
+        self::assertInstanceOf(CacheItemPoolInterface::class, $rateLimiterCache);
+        $rateLimiterCache->clear();
+        self::ensureKernelShutdown();
+    }
+
     /** Attaches a bearer token to every subsequent request this client makes. */
     private function authenticate(KernelBrowser $client, User $user): void
     {
@@ -71,5 +84,28 @@ final class MeResendVerificationTest extends ApiTestCase
         $this->resendVerification($client);
 
         self::assertResponseStatusCodeSame(401);
+    }
+
+    /**
+     * An unverified account can spam only up to the resend_verification budget
+     * before being refused, so it cannot turn its own inbox (and the relay)
+     * into an unlimited mail sink.
+     */
+    public function testTheSixthCallInTheWindowIsThrottled(): void
+    {
+        $client = static::createClient();
+        $user = $this->factory()->create('resend-throttled@example.test');
+        $this->authenticate($client, $user);
+
+        for ($attempt = 1; $attempt <= 5; ++$attempt) {
+            $this->resendVerification($client);
+            self::assertResponseStatusCodeSame(204, \sprintf('attempt %d should still be accepted', $attempt));
+        }
+
+        $this->resendVerification($client);
+
+        self::assertResponseStatusCodeSame(429);
+        self::assertResponseHeaderSame('content-type', 'application/problem+json');
+        self::assertSame('rate_limited', $this->payload($client)['type']);
     }
 }

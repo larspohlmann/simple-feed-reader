@@ -163,3 +163,14 @@ framework:
             limit: 5
             interval: '15 minutes'
             cache_pool: cache.rate_limiter
+
+        # Per-user cap on re-sending the address-verification mail (#636). The
+        # endpoint is authenticated but the address is not yet proved, so an
+        # unverified account could otherwise spam its own inbox on every call.
+        # Keyed on the user id; sliding window, same pool, same shape as
+        # digest_test above.
+        resend_verification:
+            policy: 'sliding_window'
+            limit: 5
+            interval: '15 minutes'
+            cache_pool: cache.rate_limiter

@@ -15,6 +15,7 @@ use App\Service\Auth\RegistrationService;
 use App\Service\Mail\Digest\DigestEnablement;
 use App\Service\Mail\Digest\SendTestDigest;
 use App\Service\Mail\MailCapability;
+use App\Service\RateLimit\MeRateLimiters;
 use App\Service\RateLimit\RateLimitGuard;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -22,7 +23,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
-use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -40,7 +40,7 @@ final readonly class MeController
         private RegistrationService $registration,
         private SendTestDigest $sendTestDigest,
         private RateLimitGuard $rateLimitGuard,
-        private RateLimiterFactoryInterface $digestTestLimiter,
+        private MeRateLimiters $rateLimiters,
         #[Autowire('%env(string:APP_TIMEZONE)%')]
         private string $instanceTimezone,
     ) {
@@ -120,7 +120,7 @@ final readonly class MeController
             throw new AccessDeniedHttpException('Mail is unavailable for this account.');
         }
 
-        $this->rateLimitGuard->enforceForUser($this->digestTestLimiter, $user);
+        $this->rateLimitGuard->enforceForUser($this->rateLimiters->digestTest, $user);
         $sent = $this->sendTestDigest->send($user, $request->days);
 
         return new JsonResponse(['sent' => $sent]);
@@ -134,6 +134,7 @@ final readonly class MeController
     #[Route('/api/me/resend-verification', name: 'api_me_resend_verification', methods: ['POST'])]
     public function resendVerification(#[CurrentUser] User $user): JsonResponse
     {
+        $this->rateLimitGuard->enforceForUser($this->rateLimiters->resendVerification, $user);
         $this->registration->resendVerification($user);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);

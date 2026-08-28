@@ -171,6 +171,7 @@ final class MaintenanceTickTest extends DbTestCase
             $mailCapability,
             $clock,
             $this->em,
+            new NullLogger(),
         );
 
         $tick = new MaintenanceTick($refreshRunner, $forYouSweep, $sendDueDigests);

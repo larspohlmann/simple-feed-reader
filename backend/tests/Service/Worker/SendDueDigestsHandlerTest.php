@@ -27,6 +27,7 @@ use App\Service\Worker\Message\SendDueDigests;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 
 /**
@@ -92,9 +93,10 @@ final class SendDueDigestsHandlerTest extends TestCase
             new MailCapability(''),
             new MockClock(self::NOW),
             $this->createStub(EntityManagerInterface::class),
+            new NullLogger(),
         );
 
-        return new SendDueDigestsHandler($service);
+        return new SendDueDigestsHandler($service, new NullLogger());
     }
 
     private function user(): User

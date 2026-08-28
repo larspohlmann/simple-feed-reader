@@ -6,6 +6,7 @@ namespace App\Service\Mail\Digest;
 
 use App\Entity\User;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
@@ -27,6 +28,9 @@ final readonly class DigestMailer implements DigestMailerInterface
     ) {
     }
 
+    /**
+     * @throws TransportExceptionInterface
+     */
     public function send(User $user, DigestModel $model): void
     {
         $mail = $this->renderer->render($model, $user->getLocale());

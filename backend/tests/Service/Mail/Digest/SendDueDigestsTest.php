@@ -26,7 +26,9 @@ use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\Mailer\Exception\TransportException;
 
 /**
  * The sweep is the actual security boundary for the digest (#636): the
@@ -167,6 +169,33 @@ final class SendDueDigestsTest extends TestCase
         self::assertEquals(new \DateTimeImmutable(self::OCCURRENCE), $notDuePrefs->getDigestLastSentAt());
     }
 
+    public function testAFailingSendForOneUserDoesNotStarveTheRestOfTheSweep(): void
+    {
+        $failingUser = $this->user();
+        $failingPrefs = $this->duePreferences($failingUser, lastSentAt: null);
+
+        $healthyUser = $this->user();
+        $healthyPrefs = $this->duePreferences($healthyUser, lastSentAt: null);
+
+        $this->givenOneMatch();
+        $this->preferencesRepository->method('findWithDigestEnabled')
+            ->willReturn([$failingPrefs, $healthyPrefs]);
+
+        $this->mailer->expects(self::exactly(2))->method('send')
+            ->willReturnCallback(static function (User $user) use ($failingUser): void {
+                if ($user === $failingUser) {
+                    throw new TransportException('relay rejected the recipient');
+                }
+            });
+
+        $report = $this->sweep()->run();
+
+        self::assertSame(2, $report->considered);
+        self::assertSame(1, $report->sent);
+        self::assertNull($failingPrefs->getDigestLastSentAt());
+        self::assertEquals(new \DateTimeImmutable(self::OCCURRENCE), $healthyPrefs->getDigestLastSentAt());
+    }
+
     private function sweep(
         bool $mailEnabled = true,
         ?EntityManagerInterface $em = null,
@@ -184,6 +213,7 @@ final class SendDueDigestsTest extends TestCase
             new MailCapability($mailEnabled ? '' : '1'),
             new MockClock(self::NOW),
             $em ?? $this->em,
+            new NullLogger(),
         );
     }
 

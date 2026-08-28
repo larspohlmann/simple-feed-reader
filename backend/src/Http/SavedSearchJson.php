@@ -11,7 +11,14 @@ final class SavedSearchJson
     /**
      * @param list<int> $unreadEntryIds
      *
-     * @return array{id: int|null, term: string, wholeWord: bool, position: int, unreadEntryIds: list<int>, includeInDigest: bool}
+     * @return array{
+     *     id: int|null,
+     *     term: string,
+     *     wholeWord: bool,
+     *     position: int,
+     *     unreadEntryIds: list<int>,
+     *     includeInDigest: bool,
+     * }
      */
     public static function one(SavedSearch $savedSearch, array $unreadEntryIds): array
     {

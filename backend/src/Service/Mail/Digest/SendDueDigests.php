@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Service\Mail\Digest;
 
 use App\Entity\Preferences;
+use App\Entity\User;
 use App\Repository\PreferencesRepository;
 use App\Service\Mail\MailCapability;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 /**
  * The sweep both the worker (a Docker tick loop) and the maintenance command
@@ -30,6 +33,7 @@ final readonly class SendDueDigests
         private MailCapability $mail,
         private ClockInterface $clock,
         private EntityManagerInterface $em,
+        private LoggerInterface $logger,
     ) {
     }
 
@@ -59,7 +63,9 @@ final readonly class SendDueDigests
     }
 
     /**
-     * Null: not due, or due but not eligible to receive mail right now.
+     * Null: not due; due but not eligible to receive mail right now; or the
+     * send to this recipient failed and was isolated so it does not stop the
+     * sweep (retried next tick, since the watermark was left untouched).
      * True: composed something and sent it.
      * False: due and eligible, but there was nothing to report.
      */
@@ -81,7 +87,33 @@ final readonly class SendDueDigests
             return false;
         }
 
-        $this->mailer->send($user, $model);
+        return $this->sendAndAdvance($user, $model, $prefs, $occurrence);
+    }
+
+    /**
+     * A recipient's mail transport can reject or fail independently of every
+     * other recipient (relay error, rejected mailbox). One bad address must
+     * not starve the rest of the sweep, so the send is isolated here: on
+     * failure the watermark is left untouched, and the occurrence is retried
+     * on the next tick (#636).
+     */
+    private function sendAndAdvance(
+        User $user,
+        DigestModel $model,
+        Preferences $prefs,
+        \DateTimeImmutable $occurrence,
+    ): ?bool {
+        try {
+            $this->mailer->send($user, $model);
+        } catch (TransportExceptionInterface $e) {
+            $this->logger->error(
+                'Digest send failed: {userId} <{email}>',
+                ['userId' => $user->getId(), 'email' => $user->getEmail(), 'exception' => $e],
+            );
+
+            return null;
+        }
+
         $prefs->setDigestLastSentAt($occurrence);
         $this->em->flush();
 

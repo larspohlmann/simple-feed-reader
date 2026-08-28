@@ -44,7 +44,10 @@ final class DigestTextRendererTest extends TestCase
         self::assertStringContainsString('rust (5)', $rendered->body);
         self::assertStringContainsString('golang (2)', $rendered->body);
 
-        self::assertStringContainsString("Rust 1.80 released — Rust Blog\n  A short summary.\n  https://example.com/1", $rendered->body);
+        self::assertStringContainsString(
+            "Rust 1.80 released — Rust Blog\n  A short summary.\n  https://example.com/1",
+            $rendered->body,
+        );
         self::assertStringContainsString("Second post — Rust Blog\n  https://example.com/2", $rendered->body);
 
         self::assertStringContainsString('+ more', $rendered->body);
