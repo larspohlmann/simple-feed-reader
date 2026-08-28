@@ -13,3 +13,8 @@ admin_pending_approval:
     subject: 'A new user is awaiting approval'
     body: "A new user has registered and needs your approval.\n\nEmail: %applicant_email%\nSigned up via: %method%\nUsers awaiting approval: %pending_count%\n\nReview and approve them here:\n\n%review_url%"
     method_email_password: 'email and password'
+digest:
+    subject: 'New in your feeds: %count% entries'
+    group_heading: '%term% (%count%)'
+    more: '+ more → %url%'
+    footer: 'Manage your digest in Settings → Email.'
