@@ -192,6 +192,8 @@ Your "For you" **settings** are carried. Only the **results** are dropped.
 | `maxSubscriptions` | The subscription limit an administrator gave the account. If the file carried it, you could write your own limit. |
 | `preferences` | Not a value, but the pointer from the account to its preferences row. The `account` line writes the preference itself, so the pointer becomes no key in the file. |
 | `activeAiProviderSettings` | The pointer to the AI connection in use. It points at data that section 6.2 drops in full. |
+| `digestEnabled`, `digestCadence`, `digestSendHour`, `digestWeekday` | The email digest settings (#636). Added ahead of the backup format's support for them; a later task carries them. |
+| `digestLastSentAt` | The date the digest last sent. The next send writes it again, so a restored value would only delay that send. |
 
 **On each row you own.** The preferences, the "For you" settings, each tag, each
 subscription and each article mark all hold one pointer to their owner.
