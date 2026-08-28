@@ -12,9 +12,4 @@ final readonly class DigestModel
         public int $totalCount,
     ) {
     }
-
-    public function isEmpty(): bool
-    {
-        return $this->groups === [];
-    }
 }

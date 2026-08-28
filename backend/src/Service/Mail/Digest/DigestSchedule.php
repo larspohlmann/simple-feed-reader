@@ -52,15 +52,12 @@ final readonly class DigestSchedule
     {
         $candidate = $localNow->setTime($hour, 0, 0);
 
-        // Walk back at most 7 days to the most recent matching weekday-at-hour.
-        for ($back = 0; $back < 7; ++$back) {
-            $day = $candidate->modify(\sprintf('-%d days', $back));
-            if ((int) $day->format('N') === $weekday && $day <= $localNow) {
-                return $day;
-            }
-        }
+        // Step back to the most recent matching weekday: (today - target) mod 7.
+        $daysBack = ((int) $candidate->format('N') - $weekday + 7) % 7;
+        $occurrence = $candidate->modify(\sprintf('-%d days', $daysBack));
 
-        return $candidate->modify('-7 days');
+        // A same-weekday occurrence whose hour has not passed belongs to last week.
+        return $occurrence <= $localNow ? $occurrence : $occurrence->modify('-7 days');
     }
 
     /** The same instant expressed as naive UTC, for comparison against digestLastSentAt. */

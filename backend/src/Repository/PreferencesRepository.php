@@ -29,6 +29,10 @@ class PreferencesRepository extends ServiceEntityRepository
     {
         /** @var list<Preferences> $rows */
         $rows = $this->createQueryBuilder('p')
+            // Fetch-join the user the sweep reads for every due row, so dueness
+            // and eligibility do not each fire a lazy-load SELECT per account.
+            ->addSelect('u')
+            ->join('p.user', 'u')
             ->andWhere('p.digestEnabled = true')
             ->getQuery()->getResult();
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Maintenance;
 
+use App\Service\Mail\Digest\DigestSweepReport;
 use App\Service\Mail\Digest\SendDueDigests;
 use App\Service\Recommendation\ForYouSweep;
 use App\Service\Refresh\RefreshRequest;
@@ -38,6 +39,8 @@ final readonly class MaintenanceTick
 {
     public const int REFRESH_BUDGET_SECONDS = 20;
 
+    private const string ABORTED_REASON = 'refresh aborted: the shared EntityManager is unusable this tick';
+
     public function __construct(
         private RefreshRunner $refreshRunner,
         private ForYouSweep $forYouSweep,
@@ -71,7 +74,7 @@ final readonly class MaintenanceTick
             'startedRuns' => 0,
             'advancedRuns' => 0,
             'activeRuns' => 0,
-            'skipped' => 'refresh aborted: the shared EntityManager is unusable this tick',
+            'skipped' => self::ABORTED_REASON,
         ];
     }
 
@@ -80,11 +83,6 @@ final readonly class MaintenanceTick
      */
     private function skippedDigests(): array
     {
-        return [
-            'considered' => 0,
-            'sent' => 0,
-            'skippedEmpty' => 0,
-            'skipped' => 'refresh aborted: the shared EntityManager is unusable this tick',
-        ];
+        return (new DigestSweepReport(0, 0, 0))->toArray() + ['skipped' => self::ABORTED_REASON];
     }
 }

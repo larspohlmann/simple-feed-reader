@@ -8,6 +8,7 @@ use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Repository\EntryListRow;
 use App\Repository\SavedSearchRepository;
+use App\Service\Text\PlainText;
 
 /**
  * Builds one user's digest content: a group per `includeInDigest` saved search
@@ -71,7 +72,10 @@ final readonly class DigestComposer
 
     private function shortDescription(EntryListRow $row): string
     {
-        $text = trim(preg_replace('/\s+/', ' ', strip_tags($row->entry->getSummary() ?? '')) ?? '');
+        // PlainText strips markup AND decodes the entity-escaped HTML feed
+        // summaries routinely carry ("&amp;#8220;"), which a bare strip_tags
+        // would leak into the mail; then cap for one email line.
+        $text = PlainText::from($row->entry->getSummary()) ?? '';
 
         return mb_strlen($text) > self::SUMMARY_MAX
             ? rtrim(mb_substr($text, 0, self::SUMMARY_MAX)) . '…'
