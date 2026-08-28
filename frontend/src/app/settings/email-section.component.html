@@ -102,13 +102,25 @@
     </app-settings-group>
 
     <app-settings-group icon="mail" [title]="'settings.email.testMail' | transloco">
-      <app-settings-row [stackable]="true" [title]="'settings.email.testMailDays' | transloco">
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.email.testMailDays' | transloco"
+        [description]="
+          (testMailDaysInvalid()
+            ? 'settings.email.testMailDaysRangeError'
+            : 'settings.email.testMailDaysRange'
+          ) | transloco: { min: minTestMailDays, max: maxTestMailDays }
+        "
+        labelFor="test-mail-days"
+      >
         <input
+          id="test-mail-days"
           type="number"
           data-testid="test-mail-days"
           class="test-mail-days"
-          min="1"
-          max="30"
+          [min]="minTestMailDays"
+          [max]="maxTestMailDays"
+          [attr.aria-invalid]="testMailDaysInvalid()"
           [value]="testMailDays()"
           (change)="onTestMailDays($event)"
         />
@@ -118,17 +130,22 @@
         <app-button
           data-testid="test-mail-send"
           [loading]="sendingTestMail()"
-          [disabled]="noSearchesIncluded()"
+          [disabled]="noSearchesIncluded() || testMailDaysInvalid()"
           (click)="sendTestMail()"
         >
           {{ 'settings.email.testMailSend' | transloco }}
         </app-button>
       </app-settings-row>
 
-      @if (testMailMessageKey(); as messageKey) {
-        <div class="callout" data-testid="test-mail-result">
-          <app-icon name="info" size="sm" />
-          <span>{{ messageKey | transloco }}</span>
+      @if (testMailFeedback(); as feedback) {
+        <div
+          class="callout"
+          [class.callout--success]="feedback.severity === 'success'"
+          [class.callout--error]="feedback.severity === 'error'"
+          data-testid="test-mail-result"
+        >
+          <app-icon [name]="feedback.icon" size="sm" />
+          <span>{{ feedback.key | transloco }}</span>
         </div>
       }
     </app-settings-group>

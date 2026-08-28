@@ -119,10 +119,12 @@
       "testMail": "Test-E-Mail senden",
       "testMailDays": "Einbezogene Tage",
       "testMailSend": "Test senden",
-      "testMailSent": "Test-E-Mail gesendet.",
-      "testMailEmpty": "Nichts zu senden – keine Treffer in diesem Zeitraum.",
-      "testMailRateLimited": "Zu viele Anfragen. Versuche es später erneut.",
-      "testMailFailed": "Die Test-E-Mail konnte nicht gesendet werden."
+      "testMailDaysRange": "Zwischen {{min}} und {{max}} Tagen.",
+      "testMailDaysRangeError": "Wähle zwischen {{min}} und {{max}} Tagen.",
+      "testMailSent": "Test-E-Mail gesendet – sieh in deinem Postfach nach.",
+      "testMailEmpty": "Keine Einträge passten in diesem Zeitraum zu deinen einbezogenen Suchen, daher gab es nichts zu senden.",
+      "testMailRateLimited": "Zu viele Test-E-Mails in kurzer Zeit. Warte ein paar Minuten und versuche es erneut.",
+      "testMailFailed": "Die Test-E-Mail konnte nicht gesendet werden. Der Mailserver ist möglicherweise falsch konfiguriert oder nicht erreichbar – prüfe das Server-Log."
     },
     "ai": {
       "title": "KI",

@@ -119,10 +119,12 @@
       "testMail": "Send a test email",
       "testMailDays": "Days to include",
       "testMailSend": "Send test",
-      "testMailSent": "Test email sent.",
-      "testMailEmpty": "Nothing to send — no matches in that period.",
-      "testMailRateLimited": "Too many requests. Try again later.",
-      "testMailFailed": "The test email could not be sent."
+      "testMailDaysRange": "Between {{min}} and {{max}} days.",
+      "testMailDaysRangeError": "Choose between {{min}} and {{max}} days.",
+      "testMailSent": "Test email sent — check your inbox.",
+      "testMailEmpty": "No entries matched your included searches in that period, so there was nothing to send.",
+      "testMailRateLimited": "Too many test emails in a short time. Wait a few minutes, then try again.",
+      "testMailFailed": "The test email could not be sent. The mail server may be misconfigured or unreachable — check the server log."
     },
     "ai": {
       "title": "AI",

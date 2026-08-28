@@ -313,6 +313,36 @@ describe('EmailSectionComponent', () => {
       expect(sendTest).toHaveBeenCalledWith(14);
     });
 
+    it('flags an out-of-range day count and blocks the send', () => {
+      const f = mount(user(), [search({ includeInDigest: true })]);
+      const el = f.nativeElement as HTMLElement;
+
+      const input = daysInput(el);
+      input.value = '60';
+      input.dispatchEvent(new Event('change'));
+      f.detectChanges();
+
+      expect(input.getAttribute('aria-invalid')).toBe('true');
+      expect(sendButton(el).disabled).toBe(true);
+      expect(el.textContent).toContain('Choose between');
+    });
+
+    it('clears the error and re-enables the send once the day count is back in range', () => {
+      const f = mount(user(), [search({ includeInDigest: true })]);
+      const el = f.nativeElement as HTMLElement;
+      const input = daysInput(el);
+
+      input.value = '60';
+      input.dispatchEvent(new Event('change'));
+      f.detectChanges();
+      input.value = '20';
+      input.dispatchEvent(new Event('change'));
+      f.detectChanges();
+
+      expect(input.getAttribute('aria-invalid')).toBe('false');
+      expect(sendButton(el).disabled).toBe(false);
+    });
+
     it('shows a confirmation on a successful send', () => {
       const f = mount(user(), [search({ includeInDigest: true })]);
       jest.spyOn(digest, 'sendTest').mockReturnValue(of('sent' as DigestTestMailResult));
@@ -355,6 +385,32 @@ describe('EmailSectionComponent', () => {
         sendButton(el).click();
         f.detectChanges();
       }).not.toThrow();
+    });
+
+    it('styles a failed send as an error, not the neutral info callout', () => {
+      const f = mount(user(), [search({ includeInDigest: true })]);
+      jest.spyOn(digest, 'sendTest').mockReturnValue(of('failed' as DigestTestMailResult));
+      const el = f.nativeElement as HTMLElement;
+
+      sendButton(el).click();
+      f.detectChanges();
+
+      const result = el.querySelector('[data-testid="test-mail-result"]') as HTMLElement;
+      expect(result.classList).toContain('callout--error');
+      expect(result.classList).not.toContain('callout--success');
+    });
+
+    it('styles a successful send as success', () => {
+      const f = mount(user(), [search({ includeInDigest: true })]);
+      jest.spyOn(digest, 'sendTest').mockReturnValue(of('sent' as DigestTestMailResult));
+      const el = f.nativeElement as HTMLElement;
+
+      sendButton(el).click();
+      f.detectChanges();
+
+      const result = el.querySelector('[data-testid="test-mail-result"]') as HTMLElement;
+      expect(result.classList).toContain('callout--success');
+      expect(result.classList).not.toContain('callout--error');
     });
   });
 });

@@ -13,13 +13,29 @@ import { SettingsStackComponent } from '../shared/settings/stack/settings-stack.
 import { ToggleComponent } from '../shared/toggle/toggle.component';
 
 const DEFAULT_TEST_MAIL_DAYS = 7;
+/** The look-back window the backend accepts, mirroring `SendTestDigestRequest`'s
+ *  `Assert\Range` (#636). The form shows this range and blocks a send outside it,
+ *  so the server's 422 is never the way the user learns the limit. */
+const MIN_TEST_MAIL_DAYS = 1;
+const MAX_TEST_MAIL_DAYS = 30;
 
-/** Maps a test-mail result to the i18n key that reports it inline. */
-const TEST_MAIL_RESULT_KEYS: Record<DigestTestMailResult, string> = {
-  sent: 'settings.email.testMailSent',
-  empty: 'settings.email.testMailEmpty',
-  rateLimited: 'settings.email.testMailRateLimited',
-  failed: 'settings.email.testMailFailed',
+/** How an inline feedback line reads: neutral info, a positive confirmation, or
+ *  an error. Drives both the colour and the icon so a failure never shows in the
+ *  neutral/positive styling (#636). */
+type FeedbackSeverity = 'info' | 'success' | 'error';
+
+interface TestMailFeedback {
+  readonly key: string;
+  readonly severity: FeedbackSeverity;
+  readonly icon: string;
+}
+
+/** Maps a test-mail result to the message, severity and icon that report it. */
+const TEST_MAIL_FEEDBACK: Record<DigestTestMailResult, TestMailFeedback> = {
+  sent: { key: 'settings.email.testMailSent', severity: 'success', icon: 'check_circle' },
+  empty: { key: 'settings.email.testMailEmpty', severity: 'info', icon: 'info' },
+  rateLimited: { key: 'settings.email.testMailRateLimited', severity: 'error', icon: 'error' },
+  failed: { key: 'settings.email.testMailFailed', severity: 'error', icon: 'error' },
 };
 
 type EmailSectionState = 'mailDisabled' | 'unverified' | 'ready';
@@ -74,6 +90,8 @@ export class EmailSectionComponent {
 
   readonly hours = SEND_HOURS;
   readonly weekdays = WEEKDAYS;
+  readonly minTestMailDays = MIN_TEST_MAIL_DAYS;
+  readonly maxTestMailDays = MAX_TEST_MAIL_DAYS;
   readonly savedSearches = this.searches.savedSearches;
 
   /** True while a resend request is in flight, so the button can show its
@@ -101,9 +119,16 @@ export class EmailSectionComponent {
     this.savedSearches().every((search) => !search.includeInDigest),
   );
 
-  readonly testMailMessageKey = computed<string | null>(() => {
+  /** True when the day count is outside the accepted range, so the form can show
+   *  the reason and block the send before it reaches the backend's 422. */
+  readonly testMailDaysInvalid = computed(() => {
+    const days = this.testMailDays();
+    return !Number.isInteger(days) || days < MIN_TEST_MAIL_DAYS || days > MAX_TEST_MAIL_DAYS;
+  });
+
+  readonly testMailFeedback = computed<TestMailFeedback | null>(() => {
     const result = this.testMailResult();
-    return result === null ? null : TEST_MAIL_RESULT_KEYS[result];
+    return result === null ? null : TEST_MAIL_FEEDBACK[result];
   });
 
   constructor() {
@@ -115,7 +140,7 @@ export class EmailSectionComponent {
   }
 
   onTestMailDays(event: Event): void {
-    this.testMailDays.set(+(event.target as HTMLInputElement).value);
+    this.testMailDays.set(Math.round(+(event.target as HTMLInputElement).value));
   }
 
   /** `DigestWriter.sendTest()` never errors, but a stubbed caller in a test

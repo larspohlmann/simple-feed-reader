@@ -22,6 +22,21 @@
   color: var(--accent);
 }
 
+// A test-mail result is feedback, not always neutral: a failed or rate-limited
+// send must not read as the same green "info" a mail-off notice does (#636).
+.callout--success app-icon {
+  color: var(--accent);
+}
+
+.callout--error {
+  background: var(--bg-danger);
+  color: var(--danger);
+}
+
+.callout--error app-icon {
+  color: var(--danger);
+}
+
 // A two-digit day count never needs the full row width the other stackable
 // controls take -- same reasoning as ai-section's `.batch-cap-input`.
 .test-mail-days {
