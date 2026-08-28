@@ -7,6 +7,7 @@ import { ListScrollMemory } from '../list-scroll-memory';
 import { CatalogStore } from '../../discover/catalog.store';
 import { prefetchMargin } from '../paging';
 import { EntryDto } from '../models';
+import { ReadingFocusService } from '../../core/reading-focus.service';
 
 const memory = { save: jest.fn(), read: jest.fn().mockReturnValue(0) };
 // A stub for the two signals `catalogEmpty` reads — keeps the real CatalogStore
@@ -101,6 +102,8 @@ function rowOpacities(f: ComponentFixture<EntryListComponent>): string[] {
 }
 
 describe('EntryListComponent', () => {
+  beforeEach(() => localStorage.clear());
+
   // #321: the for-you block is now projected into the top of whichever
   // content branch is live, so it scrolls away with the list instead of
   // sitting in a permanently reserved bar above it.
@@ -1367,6 +1370,32 @@ describe('EntryListComponent', () => {
   // covered the gap (#462).
   describe('reading focus', () => {
     const loaded = [entry(1), entry(2), entry(3)];
+
+    it('clears dimming from the open list when disabled', async () => {
+      const f = mount({ entries: loaded });
+      await frames();
+      expect(rowOpacities(f)).not.toContain('');
+
+      TestBed.inject(ReadingFocusService).setEnabled(false);
+      f.detectChanges();
+
+      expect(rowOpacities(f)).toEqual(['', '', '']);
+    });
+
+    it('restores dimming in the open list when enabled again', async () => {
+      const f = mount({ entries: loaded });
+      await frames();
+      const readingFocus = TestBed.inject(ReadingFocusService);
+      readingFocus.setEnabled(false);
+      f.detectChanges();
+      expect(rowOpacities(f)).toEqual(['', '', '']);
+
+      readingFocus.setEnabled(true);
+      f.detectChanges();
+      await frames();
+
+      expect(rowOpacities(f)).not.toContain('');
+    });
 
     it('fades the rows that arrive after the load finishes', async () => {
       const f = mount({ loading: true, entries: [] });

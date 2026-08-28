@@ -10,6 +10,8 @@ describe('PreferencesSectionComponent', () => {
   let saveFailed: ReturnType<typeof signal<boolean>>;
   let preferences: PreferencesService;
 
+  beforeEach(() => localStorage.clear());
+
   function mount() {
     TestBed.resetTestingModule();
     saveFailed = signal(false);
@@ -63,6 +65,25 @@ describe('PreferencesSectionComponent', () => {
 
     expect(text).toContain('Experimental');
     expect(fixture.nativeElement.querySelector('app-toggle')).not.toBeNull();
+  });
+
+  it('offers reading focus enabled by default', () => {
+    const fixture = mount();
+    const toggle = fixture.nativeElement.querySelector('#reading-focus-toggle') as HTMLInputElement;
+
+    expect(fixture.nativeElement.textContent).toContain('Reading focus');
+    expect(toggle.checked).toBe(true);
+  });
+
+  it('stores the reading focus setting when toggled', () => {
+    const fixture = mount();
+    const toggle = fixture.nativeElement.querySelector('#reading-focus-toggle') as HTMLInputElement;
+
+    toggle.click();
+    fixture.detectChanges();
+
+    expect(toggle.checked).toBe(false);
+    expect(localStorage.getItem('sfr.readingFocus')).toBe('false');
   });
 
   it('writes the preference when toggled', () => {

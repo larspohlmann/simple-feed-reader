@@ -8,6 +8,7 @@ import { ReaderContentService } from '../reader-content.service';
 import { entryScrollKey } from '../list-scroll-memory';
 import { EntryDto, ReaderArticle, ReaderContent, ReaderFailure } from '../models';
 import { ReaderModeService } from '../reader-mode.service';
+import { ReadingFocusService } from '../../core/reading-focus.service';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
@@ -66,6 +67,7 @@ const failedContent = (over: Partial<ReaderFailure> = {}): ReaderFailure => ({
 
 describe('ReaderViewComponent', () => {
   beforeEach(() => {
+    localStorage.clear();
     // Default: extraction fails so the existing presentational tests keep
     // asserting against the feed's own content. Reader-specific tests override.
     loadMock = jest.fn(() => of<ReaderContent>(failedContent()));
@@ -76,6 +78,41 @@ describe('ReaderViewComponent', () => {
         provideRouter([]),
         { provide: ReaderContentService, useValue: { load: loadMock, reload: reloadMock } },
       ],
+    });
+  });
+
+  describe('reading focus setting', () => {
+    it('clears dimming from the open article when disabled', async () => {
+      const f = mount(entry({ contentHtml: '<p>First</p><p>Second</p>' }));
+      await Promise.resolve();
+      f.detectChanges();
+      const blocks = Array.from(
+        (f.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.content > *'),
+      );
+      for (const block of blocks) block.style.opacity = '0.28';
+
+      TestBed.inject(ReadingFocusService).setEnabled(false);
+      f.detectChanges();
+
+      expect(blocks.map((block) => block.style.opacity)).toEqual(['', '']);
+    });
+
+    it('restores dimming in the open article when enabled again', async () => {
+      const readingFocus = TestBed.inject(ReadingFocusService);
+      readingFocus.setEnabled(false);
+      const f = mount(entry({ contentHtml: '<p>First</p><p>Second</p>' }));
+      await Promise.resolve();
+      f.detectChanges();
+      const blocks = Array.from(
+        (f.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.content > *'),
+      );
+      expect(blocks.map((block) => block.style.opacity)).toEqual(['', '']);
+
+      readingFocus.setEnabled(true);
+      f.detectChanges();
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+      expect(blocks.map((block) => block.style.opacity)).not.toContain('');
     });
   });
 

@@ -16,6 +16,8 @@
     "scraping": "Webseiten ohne Feed auslesen",
     "scrapingHint": "Wenn eine Seite keinen Feed anbietet, die Seite selbst als Quelle anbieten. Die Qualität hängt von der Seite ab, und die Funktion kann jederzeit ohne Vorwarnung ausfallen.",
     "scrapingSaveFailed": "Die Einstellung wurde auf diesem Gerät geändert, konnte aber nicht in deinem Konto gespeichert werden.",
+    "readingFocus": "Lesefokus",
+    "readingFocusHint": "Inhalte außerhalb der Lesemitte abdunkeln.",
     "loadingVersion": "Versionsinformationen werden geladen",
     "feeds": {
       "title": "Feeds",

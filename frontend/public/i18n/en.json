@@ -16,6 +16,8 @@
     "scraping": "Scrape websites without a feed",
     "scrapingHint": "When a page offers no feed, offer the page itself as a source. Quality depends on the site and can break without notice.",
     "scrapingSaveFailed": "The setting changed on this device, but could not be saved to your account.",
+    "readingFocus": "Reading focus",
+    "readingFocusHint": "Dim content away from the reading centre.",
     "loadingVersion": "Loading version information",
     "feeds": {
       "title": "Feeds",
