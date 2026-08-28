@@ -165,6 +165,83 @@ final class LazyImageSourcesTest extends TestCase
         self::assertStringContainsString('src="https://images.example.com/small.jpg"', $html);
     }
 
+    public function testAdoptsAWiderPictureSourceWhenTheImageSrcIsAPlaceholder(): void
+    {
+        // taz wraps each photo in a <picture> whose <source>s carry the real
+        // renditions and whose <img> fallback src is a 14px LQIP placeholder
+        // (entry 486683). The placeholder is a valid https URL, so it survives
+        // the usable-source check; the wider <source> has to win regardless.
+        $html = $this->resolvedHtml(
+            '<picture>'
+            . '<source srcset="https://cdn.example.com/picture/8227075/1020/x.webp">'
+            . '<source srcset="https://cdn.example.com/picture/8227075/665/x.webp">'
+            . '<source srcset="https://cdn.example.com/picture/8227075/310/x.webp">'
+            . '<img src="https://cdn.example.com/picture/8227075/14/x.webp" height="206">'
+            . '</picture>'
+        );
+
+        self::assertStringContainsString('src="https://cdn.example.com/picture/8227075/1020/x.webp"', $html);
+        self::assertStringNotContainsString('/14/', $html);
+        self::assertStringNotContainsString('<source', $html);
+    }
+
+    public function testAdoptsAPictureSourceThatOutmeasuresTheImageSrc(): void
+    {
+        // Both the <img> and the <source> declare a width, so the wider of the
+        // two wins even though the <img> already carries a usable src.
+        $source = $this->resolvedSource(
+            '<picture>'
+            . '<source srcset="https://images.example.com/photo.jpg?width=800 800w">'
+            . '<img src="https://images.example.com/photo.jpg?width=200" alt="A">'
+            . '</picture>'
+        );
+
+        self::assertSame('https://images.example.com/photo.jpg?width=800', $source);
+    }
+
+    public function testKeepsTheImageWhenItsWidthEqualsTheWidestSource(): void
+    {
+        // Equal widths leave the <img> in place: the source is no improvement.
+        $source = $this->resolvedSource(
+            '<picture>'
+            . '<source srcset="https://images.example.com/from-source.jpg?width=400 400w">'
+            . '<img src="https://images.example.com/from-image.jpg?width=400" alt="A">'
+            . '</picture>'
+        );
+
+        self::assertSame('https://images.example.com/from-image.jpg?width=400', $source);
+    }
+
+    public function testMeasuresAPictureSourceByItsDescriptorNotItsUrlQuery(): void
+    {
+        // The <source> descriptor says 300w though its URL query says 999. The
+        // descriptor is authoritative, so the 500-wide <img> stays (500 >= 300).
+        $source = $this->resolvedSource(
+            '<picture>'
+            . '<source srcset="https://images.example.com/from-source.jpg?width=999 300w">'
+            . '<img src="https://images.example.com/from-image.jpg?width=500" alt="A">'
+            . '</picture>'
+        );
+
+        self::assertSame('https://images.example.com/from-image.jpg?width=500', $source);
+    }
+
+    public function testSkipsUnusableSourcesWhenChoosingTheWidest(): void
+    {
+        // The first <source> carries no srcset and the second an unsafe scheme;
+        // only the third is loadable and must beat the placeholder <img>.
+        $source = $this->resolvedSource(
+            '<picture>'
+            . '<source>'
+            . '<source srcset="javascript:alert(1)">'
+            . '<source srcset="https://cdn.example.com/picture/1/1000/x.webp">'
+            . '<img src="https://cdn.example.com/picture/1/14/x.webp">'
+            . '</picture>'
+        );
+
+        self::assertSame('https://cdn.example.com/picture/1/1000/x.webp', $source);
+    }
+
     public function testRemovesAnImageWithNoUsableCandidate(): void
     {
         $html = $this->resolvedHtml(
