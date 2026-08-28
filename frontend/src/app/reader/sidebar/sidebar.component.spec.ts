@@ -14,8 +14,6 @@ import { TagNode } from '../subscriptions.store';
 import { Selection } from '../query';
 import { SavedSearchDto, SubscriptionDto, TagDto } from '../models';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
-import { buildVersion } from '../../../environments/version';
-import { VersionService } from '../../core/version.service';
 import { LayoutService } from '../layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { of } from 'rxjs';
@@ -490,53 +488,8 @@ describe('SidebarComponent', () => {
     });
   });
 
-  it('shows the running build as a link into settings', () => {
-    const version = (mount().nativeElement as HTMLElement).querySelector('.version');
-
-    expect(version?.textContent?.trim()).toBe(buildVersion.version);
-    expect(version?.getAttribute('href')).toBe('/settings');
-  });
-
-  it('shows an update badge linking to the release notes when an update is available', () => {
-    const f = mount();
-    const versions = TestBed.inject(VersionService);
-    versions.latest.set({ version: 'v9.9.9', notesUrl: 'https://github.test/releases/tag/v9.9.9' });
-    versions.updateAvailable.set(true);
-    f.detectChanges();
-
-    const badge = (f.nativeElement as HTMLElement).querySelector('.update-badge');
-    expect(badge).not.toBeNull();
-    expect(badge?.textContent).toContain('v9.9.9');
-    expect(badge?.getAttribute('href')).toBe('https://github.test/releases/tag/v9.9.9');
-    expect(badge?.getAttribute('target')).toBe('_blank');
-    expect(badge?.getAttribute('rel')).toBe('noopener noreferrer');
-  });
-
-  it('shows no update badge when the running build is current', () => {
-    const f = mount();
-    const versions = TestBed.inject(VersionService);
-    versions.updateAvailable.set(false);
-    versions.latest.set(null);
-    f.detectChanges();
-
-    expect((f.nativeElement as HTMLElement).querySelector('.update-badge')).toBeNull();
-  });
-
-  it('shows the trial countdown when a trial is active', () => {
-    const f = mount({ user: account(inDays(5)) });
-    const el = f.nativeElement.querySelector('.trial');
-    expect(el?.textContent).toContain('5');
-  });
-
-  it('hides the trial countdown when there is no trial', () => {
-    const f = mount({ user: account(null) });
-    expect(f.nativeElement.querySelector('.trial')).toBeNull();
-  });
-
-  it('hides the trial countdown when the trial is already past', () => {
-    const f = mount({ user: account(inDays(-1)) });
-    expect(f.nativeElement.querySelector('.trial')).toBeNull();
-  });
+  // The build/version link, the update badge and the trial countdown moved to
+  // SidebarFootComponent; they are covered by sidebar-foot.component.spec.ts.
 
   describe('saved searches', () => {
     it('renders no saved-searches section when the list is empty', () => {
@@ -1244,25 +1197,6 @@ describe('organise mode', () => {
     f.nativeElement.querySelector('.tag .dots').click();
     expect(TestBed.inject(ActionSheet).open).toHaveBeenCalled();
     expect(emitted).not.toHaveBeenCalled();
-  });
-
-  it('keeps the foot order: organise, view controls, trial, meta', () => {
-    const el = mount({ coarse: true, user: account(inDays(5)) }).nativeElement as HTMLElement;
-    const order = Array.from(el.querySelector('.foot')!.children).map(
-      (child) => child.classList[0],
-    );
-    expect(order).toEqual(['organise', 'controls', 'trial', 'meta']);
-  });
-
-  it('links Feedback to the public issue tracker in a new tab', () => {
-    const feedback = (mount().nativeElement as HTMLElement).querySelector('.feedback');
-
-    expect(feedback?.textContent?.trim()).toBe('Feedback');
-    expect(feedback?.getAttribute('href')).toBe(
-      'https://github.com/larspohlmann/simple-feed-reader/issues',
-    );
-    expect(feedback?.getAttribute('target')).toBe('_blank');
-    expect(feedback?.getAttribute('rel')).toBe('noopener noreferrer');
   });
 
   it('resets organising when the pointer stops being coarse', () => {
