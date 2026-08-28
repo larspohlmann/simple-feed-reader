@@ -259,16 +259,9 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   display: none;
 }
 
-/* Spin the icon while a run is in flight (the button is also disabled). */
-.refresh.spinning app-icon {
-  animation: refresh-spin 0.9s linear infinite;
-}
-
-@keyframes refresh-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
+/* The Refresh button's in-flight spin lives in the global `_list-action.scss`:
+   it must turn the glyph, not the `app-icon` box that wears the mobile border,
+   and only a global rule reaches the projected glyph (#698). */
 
 /* Pull-to-refresh / refresh reveal tray. A full-width row centring a pill
    (spinner + "Refreshing…" label). Parked one --refresh-reveal above the bars and
@@ -538,10 +531,6 @@ app-loading-overlay {
   }
 
   .skeleton {
-    animation: none;
-  }
-
-  .refresh.spinning app-icon {
     animation: none;
   }
 
