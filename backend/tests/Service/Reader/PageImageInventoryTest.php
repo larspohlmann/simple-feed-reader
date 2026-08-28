@@ -59,6 +59,15 @@ final class PageImageInventoryTest extends TestCase
         self::assertTrue($inventory->draws(ImageIdentity::fromUrl('https://cdn.test/hero-photo.jpg')));
     }
 
+    public function testTrimsSurroundingWhitespaceFromASource(): void
+    {
+        // The src attribute keeps its surrounding spaces; without trimming them
+        // the URL fingerprints differently and would not match the same photo.
+        $inventory = $this->inventoryOf('<body><img src="  https://cdn.test/hero-photo.jpg  "></body>');
+
+        self::assertTrue($inventory->draws(ImageIdentity::fromUrl('https://cdn.test/hero-photo.jpg')));
+    }
+
     public function testANullDocumentDrawsNothing(): void
     {
         $inventory = PageImageInventory::fromDocument(null);
