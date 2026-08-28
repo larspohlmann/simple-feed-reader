@@ -188,6 +188,23 @@ final readonly class RegistrationService
         );
     }
 
+    /**
+     * Re-sends the address-verification mail for an account that has not yet
+     * proved its address (#636). A no-op once verified, so the endpoint is safe
+     * to call idempotently. Mail is skipped by the gated mailer when disabled.
+     *
+     * @throws TransportExceptionInterface
+     * @throws RandomException
+     */
+    public function resendVerification(User $user): void
+    {
+        if ($user->isEmailVerified()) {
+            return;
+        }
+
+        $this->mailer->sendVerification($user, $this->tokens->issue($user, TokenPurpose::VerifyEmail));
+    }
+
     public function resetPassword(string $plainToken, string $plainPassword): bool
     {
         $user = $this->tokens->consume($plainToken, TokenPurpose::ResetPassword);

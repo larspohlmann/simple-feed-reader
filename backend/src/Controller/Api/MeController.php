@@ -10,6 +10,7 @@ use App\Dto\Me\UpdatePreferencesRequest;
 use App\Entity\User;
 use App\Http\MeJson;
 use App\Service\Account\AccountDeleter;
+use App\Service\Auth\RegistrationService;
 use App\Service\Mail\Digest\DigestEnablement;
 use App\Service\Mail\MailCapability;
 use Doctrine\ORM\EntityManagerInterface;
@@ -30,6 +31,7 @@ final readonly class MeController
         private AccountDeleter $accountDeleter,
         private MailCapability $mail,
         private DigestEnablement $digestEnablement,
+        private RegistrationService $registration,
     ) {
     }
 
@@ -88,6 +90,19 @@ final readonly class MeController
         $this->entityManager->flush();
 
         return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled()));
+    }
+
+    /**
+     * Reissues the address-verification mail for an account that has not yet
+     * proved its address (#636). Idempotent: RegistrationService::resendVerification()
+     * is a no-op once the address is verified.
+     */
+    #[Route('/api/me/resend-verification', name: 'api_me_resend_verification', methods: ['POST'])]
+    public function resendVerification(#[CurrentUser] User $user): JsonResponse
+    {
+        $this->registration->resendVerification($user);
+
+        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
     /**
