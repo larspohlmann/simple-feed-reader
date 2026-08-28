@@ -24,6 +24,25 @@ final class ImageIdentityTest extends TestCase
         ));
     }
 
+    public function testMatchesOnTheImageIdWhenTheFilenamesDiffer(): void
+    {
+        // The id ties two renders whose filenames share nothing else.
+        self::assertTrue($this->sameImage(
+            'https://cdn.test/a.jpg?imageId=zx9k2',
+            'https://cdn.test/b.webp?imageId=zx9k2',
+        ));
+    }
+
+    public function testMatchesOnAFiveCharacterToken(): void
+    {
+        // Five characters is the shortest token that carries identity; a shared
+        // `polar` must tie the two crops even when nothing else does.
+        self::assertTrue($this->sameImage(
+            'https://cdn.test/x/polar-1.jpg',
+            'https://cdn.test/y/polar-2.jpg',
+        ));
+    }
+
     public function testMatchesOnTheFilenameStemAlone(): void
     {
         self::assertTrue($this->sameImage(
@@ -84,6 +103,93 @@ final class ImageIdentityTest extends TestCase
         self::assertFalse($this->sameImage(
             'https://image.mopo.de/4958348.jpg?imageId=4958348',
             'https://image.mopo.de/4958605.jpg?imageId=4958605',
+        ));
+    }
+
+    /** imgproxy's spelling: the source URL, url-safe base64, as the last path segment. */
+    private function imgproxy(string $source): string
+    {
+        $blob = rtrim(strtr(base64_encode($source), '+/', '-_'), '=');
+
+        return "https://imgproxy.gridwork.co/sig/w:900/h:599/q:82/{$blob}.jpg";
+    }
+
+    public function testMatchesThroughAnImgproxyBase64Wrapper(): void
+    {
+        // inthesetimes (#686): the og:image is the direct S3 file; the body serves
+        // the same photo through imgproxy, which base64-encodes the source URL in
+        // the path. Without unwrapping, the fingerprint reads the opaque blob.
+        $direct = 'https://s3.us-east-1.amazonaws.com/in-these-times/GettyImages-2272241474_1.jpg';
+        self::assertTrue($this->sameImage(
+            $direct . '?mtime=1787252863',
+            $this->imgproxy($direct),
+        ));
+    }
+
+    public function testMatchesThroughAUrlQueryParamProxy(): void
+    {
+        // politico (#686): both the lead and the body image are the same static
+        // file, wrapped by the dims4 proxy at different sizes, source in `?url=`.
+        $source = 'https://static.politico.com/b4/a9/4e9bfb8144bca5e8/election-2-26-michigan-9499.jpg';
+        $proxy = static fn (int $width, string $format): string =>
+            "https://www.politico.com/dims4/default/resize/{$width}/format/{$format}?url=" . rawurlencode($source);
+        self::assertTrue($this->sameImage($proxy(1200, 'jpg'), $proxy(630, 'webp')));
+    }
+
+    public function testUnwrapsAProxyWhoseEmbeddedSchemeIsUppercase(): void
+    {
+        // URL schemes are case-insensitive; a proxy may embed HTTPS in upper case.
+        $source = 'https://cdn.test/harbor-lighthouse.jpg';
+        self::assertTrue($this->sameImage(
+            $source,
+            'https://proxy.test/x?url=' . rawurlencode('HTTPS://cdn.test/harbor-lighthouse.jpg'),
+        ));
+    }
+
+    public function testMatchesThroughAJetpackPhotonHost(): void
+    {
+        self::assertTrue($this->sameImage(
+            'https://i0.wp.com/example.org/wp-content/uploads/2026/08/harbor-sunrise.jpg?resize=1200%2C800',
+            'https://example.org/wp-content/uploads/2026/08/harbor-sunrise.jpg',
+        ));
+    }
+
+    public function testDoesNotMatchDifferentPhotosWrappedByTheSameProxy(): void
+    {
+        // Two distinct photos behind imgproxy must still read as different: unwrap
+        // recovers precision, it never collapses unrelated sources into one.
+        self::assertFalse($this->sameImage(
+            $this->imgproxy('https://cdn.test/a/red-balloon.jpg'),
+            $this->imgproxy('https://cdn.test/b/blue-whale.jpg'),
+        ));
+    }
+
+    public function testDoesNotMatchTwoDifferentGettyPhotosOnTheLibraryName(): void
+    {
+        // inthesetimes (#686): two unrelated photos are both `GettyImages-<id>`.
+        // The only identity is the numeric id; the word `gettyimages` is noise and
+        // must not, on its own, tie the lead to a different in-body picture.
+        self::assertFalse($this->sameImage(
+            'https://s3.us-east-1.amazonaws.com/in-these-times/GettyImages-2272241474_1.jpg',
+            'https://s3.us-east-2.amazonaws.com/itt-images/GettyImages-2251914887.jpeg',
+        ));
+    }
+
+    public function testStillMatchesTheSameGettyPhotoThroughAProxy(): void
+    {
+        // …while the same Getty photo, direct and imgproxy-wrapped, still matches
+        // on its numeric id.
+        $direct = 'https://s3.us-east-1.amazonaws.com/in-these-times/GettyImages-2272241474_1.jpg';
+        self::assertTrue($this->sameImage($direct, $this->imgproxy($direct)));
+    }
+
+    public function testLeavesANonDecodableSegmentAlone(): void
+    {
+        // A long path segment that is not base64-of-an-http-url is not a proxy
+        // wrapper; it must fall back to today's behaviour, not a spurious match.
+        self::assertFalse($this->sameImage(
+            'https://cdn.test/aGVsbG8gd29ybGQ.jpg',
+            'https://s3.amazonaws.com/bucket/real-photograph-name.jpg',
         ));
     }
 }

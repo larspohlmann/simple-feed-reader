@@ -18,12 +18,33 @@ namespace App\Service\Reader;
  * directory (zeit) — are reported as different. That miss is safe by design: the
  * one caller (ReaderLeadImage) only ever skips restoring a picture on a miss, so
  * the cost is today's behaviour, never a duplicated photo.
+ *
+ * One transform runs before the fingerprint: a proxying image CDN is unwrapped to
+ * the source URL it carries (#686), so the direct og:image and its proxied copy
+ * on the page read as the same photo. A host-only proxy (Jetpack Photon,
+ * Cloudinary fetch) already keeps the filename, so only the spellings that hide
+ * it need this: imgproxy's base64-in-the-path and a `?url=` query parameter.
  */
 final readonly class ImageIdentity
 {
     /**
+     * Filename words that name a photo library or a boilerplate role, not the
+     * photo. Two unrelated Getty pictures share `gettyimages`, two unrelated
+     * crops share `image`; matching on those fabricates identity. They are
+     * dropped so a token match rests on something photo-specific (a numeric id,
+     * a slug). Over-listing only ever costs a match, which is safe here.
+     */
+    private const array GENERIC_TOKENS = [
+        'image', 'images', 'photo', 'photos', 'picture', 'pictures', 'photograph',
+        'thumbnail', 'thumb', 'default', 'featured', 'header', 'hero', 'cover',
+        'banner', 'screenshot', 'original', 'final', 'output', 'upload', 'uploads',
+        'getty', 'gettyimages', 'istock', 'istockphoto', 'shutterstock',
+        'unsplash', 'pexels', 'adobestock',
+    ];
+
+    /**
      * @param list<string> $ids    every `imageId=` token, lower-cased
-     * @param list<string> $tokens the filename stem's distinct words (>= 5 chars)
+     * @param list<string> $tokens the filename stem's distinct, photo-specific words
      */
     private function __construct(
         private string $stem,
@@ -34,18 +55,24 @@ final readonly class ImageIdentity
 
     public static function fromUrl(string $url): self
     {
-        $path = (string) (parse_url($url, PHP_URL_PATH) ?? '');
+        $source = self::unwrapProxy($url);
+        $path = (string) (parse_url($source, PHP_URL_PATH) ?? '');
         $stem = strtolower((string) preg_replace('/\.[a-z0-9]{2,5}$/i', '', basename($path)));
 
         $ids = [];
-        if (preg_match_all('/imageid=(\w+)/i', $url, $matches)) {
+        if (preg_match_all('/imageid=(\w+)/i', $source, $matches)) {
             $ids = array_map(strtolower(...), $matches[1]);
         }
 
         $words = preg_split('/[^a-z0-9]+/', $stem, -1, \PREG_SPLIT_NO_EMPTY) ?: [];
-        $tokens = array_values(array_filter($words, static fn (string $w): bool => strlen($w) >= 5));
+        $tokens = array_values(array_filter($words, self::isPhotoSpecificToken(...)));
 
         return new self($stem, $ids, $tokens);
+    }
+
+    private static function isPhotoSpecificToken(string $word): bool
+    {
+        return strlen($word) >= 5 && !in_array($word, self::GENERIC_TOKENS, true);
     }
 
     public function matches(self $other): bool
@@ -56,5 +83,65 @@ final readonly class ImageIdentity
 
         return array_intersect($this->ids, $other->ids) !== []
             || array_intersect($this->tokens, $other->tokens) !== [];
+    }
+
+    /**
+     * The real source URL a proxying CDN embeds, or the URL unchanged when it is
+     * not a wrapper. Only an http(s) result is trusted; anything else is not a
+     * proxy and the original stands, so a miss keeps the fingerprint as it was.
+     */
+    private static function unwrapProxy(string $url): string
+    {
+        foreach (['url', 'u', 'image', 'src'] as $key) {
+            $embedded = self::queryParameter($url, $key);
+            if ($embedded !== null && self::isHttpUrl($embedded)) {
+                return $embedded;
+            }
+        }
+
+        return self::decodedPathSource($url) ?? $url;
+    }
+
+    private static function queryParameter(string $url, string $key): ?string
+    {
+        $query = (string) (parse_url($url, PHP_URL_QUERY) ?? '');
+        if ($query === '') {
+            return null;
+        }
+
+        parse_str($query, $parameters);
+        $value = $parameters[$key] ?? null;
+
+        return is_string($value) ? $value : null;
+    }
+
+    /** imgproxy carries the source as a base64 path segment; find and decode it. */
+    private static function decodedPathSource(string $url): ?string
+    {
+        $path = (string) (parse_url($url, PHP_URL_PATH) ?? '');
+        foreach (array_reverse(explode('/', $path)) as $segment) {
+            $decoded = self::decodeHttpUrl($segment);
+            if ($decoded !== null) {
+                return $decoded;
+            }
+        }
+
+        return null;
+    }
+
+    private static function decodeHttpUrl(string $segment): ?string
+    {
+        // Strict decoding rejects a non-base64 segment on its own, and tolerates
+        // imgproxy's url-safe, unpadded spelling once `-_` map back to `+/`. Only a
+        // decode that yields an http(s) URL is a source; a real filename does not.
+        $candidate = (string) preg_replace('/\.[a-z0-9]{2,5}$/i', '', $segment);
+        $decoded = base64_decode(strtr($candidate, '-_', '+/'), true);
+
+        return ($decoded !== false && self::isHttpUrl($decoded)) ? $decoded : null;
+    }
+
+    private static function isHttpUrl(string $value): bool
+    {
+        return preg_match('#^https?://#i', $value) === 1;
     }
 }
