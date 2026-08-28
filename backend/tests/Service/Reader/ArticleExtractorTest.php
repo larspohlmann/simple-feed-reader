@@ -54,8 +54,7 @@ final class ArticleExtractorTest extends TestCase
         return new ArticleExtractor(
             $fetcher,
             new FetchedPageNormalizer(new LazyImageSources(), new ShareWidgetRemover()),
-            new ReaderBodyCleaner(new LeadingTitleRemover(), new EdgeBoilerplateTrimmer()),
-            new ReaderLeadImage(),
+            new ReaderBodyCleaner(new LeadingTitleRemover(), new EdgeBoilerplateTrimmer(), new ReaderLeadImage()),
             new EntrySanitizer(),
         );
     }
@@ -163,8 +162,7 @@ final class ArticleExtractorTest extends TestCase
         $extractor = new ArticleExtractor(
             $fetcher,
             new FetchedPageNormalizer(new LazyImageSources(), new ShareWidgetRemover()),
-            new ReaderBodyCleaner(new LeadingTitleRemover(), new EdgeBoilerplateTrimmer()),
-            new ReaderLeadImage(),
+            new ReaderBodyCleaner(new LeadingTitleRemover(), new EdgeBoilerplateTrimmer(), new ReaderLeadImage()),
             new EntrySanitizer(),
         );
 

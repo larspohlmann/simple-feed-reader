@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
-use App\Service\Html\HtmlDocumentParser;
-use App\Service\Html\Srcset;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -19,6 +17,10 @@ use Dom\HTMLDocument;
  * image (#657) — which lost the lead on every article that also carries a second
  * picture. This restores the lead into the body itself instead.
  *
+ * It mutates the shared \Dom\HTMLDocument in place, like LeadingTitleRemover and
+ * EdgeBoilerplateTrimmer, so ReaderBodyCleaner parses and serialises once around
+ * it — the lead restore never re-parses the body or the page (#684).
+ *
  * The lead is left out only to avoid stacking a picture the body already shows.
  * So it is added whenever the body has no image at all, and otherwise only when:
  *
@@ -28,6 +30,10 @@ use Dom\HTMLDocument;
  *     share-render (beat.de's opengraph file lives in the <meta> alone), which
  *     against a body that has its own image would only duplicate it.
  *
+ * "Drawn on the page" is answered by the PageImageInventory the caller built once
+ * from the normalised page document, where LazyImageSources has already resolved
+ * every lazy source — so this class no longer digs `data-*` attributes itself.
+ *
  * Same-photo identity is the light ImageIdentity fingerprint, not the per-CDN
  * URL normalisation #657 deleted: a missed match simply skips the restore, so
  * the worst case is today's behaviour and never a duplicated photo. Measured
@@ -36,52 +42,31 @@ use Dom\HTMLDocument;
  */
 final readonly class ReaderLeadImage
 {
-    /** Attributes a lazy-loaded <img> may carry its real URL in, plus `src`. */
-    private const array URL_ATTRIBUTES = ['src', 'data-src', 'data-lazy-src', 'data-original'];
-
-    public function restore(string $bodyHtml, string $pageHtml, ?string $leadUrl): string
+    public function restore(HTMLDocument $document, LeadImageCandidate $lead): void
     {
+        $leadUrl = $lead->url;
         if ($leadUrl === null || preg_match('#^https?://#i', $leadUrl) !== 1) {
-            return $bodyHtml;
+            return;
         }
 
-        $document = HtmlDocumentParser::parseOrNull($bodyHtml);
-        $body = $document?->body;
+        $body = $document->body;
         if ($body === null) {
-            return $bodyHtml;
+            return;
         }
 
-        $lead = ImageIdentity::fromUrl($leadUrl);
-        if ($this->opensWithImage($body) || $this->bodyShowsLead($lead, $body)) {
-            return $bodyHtml;
+        $leadIdentity = ImageIdentity::fromUrl($leadUrl);
+        if ($this->opensWithImage($body) || $this->bodyShowsLead($leadIdentity, $body)) {
+            return;
         }
 
         // A body that already carries some picture only takes the lead when the
         // page truly draws it; otherwise a meta-only share-render would double up.
         // A body with no picture has nothing to duplicate, so the lead goes in.
-        if ($this->bodyHasImage($body) && !$this->drawnOnPage($lead, $pageHtml)) {
-            return $bodyHtml;
+        if ($this->bodyHasImage($body) && !$lead->pageImages->draws($leadIdentity)) {
+            return;
         }
 
         $body->insertBefore($this->figure($document, $leadUrl), $body->firstChild);
-
-        return $body->innerHTML;
-    }
-
-    private function drawnOnPage(ImageIdentity $lead, string $pageHtml): bool
-    {
-        $document = HtmlDocumentParser::parseOrNull($pageHtml);
-        if ($document === null) {
-            return false;
-        }
-
-        foreach ($this->renderedUrls($document) as $url) {
-            if ($lead->matches(ImageIdentity::fromUrl($url))) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private function bodyHasImage(Element $body): bool
@@ -119,36 +104,6 @@ final readonly class ReaderLeadImage
         }
 
         return false;
-    }
-
-    /**
-     * Every image URL the page draws, across lazy-load and <picture> spellings.
-     *
-     * @return \Generator<string>
-     */
-    private function renderedUrls(HTMLDocument $document): \Generator
-    {
-        foreach ($document->getElementsByTagName('img') as $image) {
-            foreach (self::URL_ATTRIBUTES as $attribute) {
-                $url = trim($image->getAttribute($attribute) ?? '');
-                if ($url !== '') {
-                    yield $url;
-                }
-            }
-            yield from $this->srcsetUrl($image);
-        }
-        foreach ($document->getElementsByTagName('source') as $source) {
-            yield from $this->srcsetUrl($source);
-        }
-    }
-
-    /** @return \Generator<string> the first srcset candidate of an element, if any */
-    private function srcsetUrl(Element $element): \Generator
-    {
-        $first = Srcset::firstUrl($element->getAttribute('srcset'));
-        if ($first !== null) {
-            yield $first;
-        }
     }
 
     private function figure(HTMLDocument $document, string $leadUrl): Element

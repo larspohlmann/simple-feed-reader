@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\EdgeBoilerplateTrimmer;
+use App\Service\Reader\LeadImageCandidate;
 use App\Service\Reader\LeadingTitleRemover;
+use App\Service\Reader\PageImageInventory;
 use App\Service\Reader\ReaderBodyCleaner;
+use App\Service\Reader\ReaderLeadImage;
 use PHPUnit\Framework\TestCase;
 
 final class ReaderBodyCleanerTest extends TestCase
@@ -20,14 +23,23 @@ final class ReaderBodyCleanerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->cleaner = new ReaderBodyCleaner(new LeadingTitleRemover(), new EdgeBoilerplateTrimmer());
+        $this->cleaner = new ReaderBodyCleaner(
+            new LeadingTitleRemover(),
+            new EdgeBoilerplateTrimmer(),
+            new ReaderLeadImage(),
+        );
+    }
+
+    private function noLead(): LeadImageCandidate
+    {
+        return new LeadImageCandidate(null, PageImageInventory::fromDocument(null));
     }
 
     public function testDropsTheLeadingDuplicateHeadingInOnePass(): void
     {
         $content = '<div><h2>My Article</h2><p>' . self::PROSE . '</p></div>';
 
-        $result = $this->cleaner->clean($content, ['My Article']);
+        $result = $this->cleaner->clean($content, ['My Article'], $this->noLead());
 
         self::assertStringNotContainsString('<h2>', $result);
         self::assertStringContainsString('Fliesstext', $result);
@@ -40,7 +52,7 @@ final class ReaderBodyCleanerTest extends TestCase
         $content = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $grid . '</div>';
 
-        $result = $this->cleaner->clean($content, [null]);
+        $result = $this->cleaner->clean($content, [null], $this->noLead());
 
         self::assertStringNotContainsString('jp-relatedposts', $result);
         self::assertStringContainsString('Fliesstext', $result);
@@ -53,7 +65,7 @@ final class ReaderBodyCleanerTest extends TestCase
         $content = '<div><h2>My Article</h2><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . '<p>' . self::PROSE . '</p>' . $grid . '</div>';
 
-        $result = $this->cleaner->clean($content, ['My Article']);
+        $result = $this->cleaner->clean($content, ['My Article'], $this->noLead());
 
         self::assertStringNotContainsString('<h2>', $result);
         self::assertStringNotContainsString('jp-relatedposts', $result);
@@ -64,6 +76,20 @@ final class ReaderBodyCleanerTest extends TestCase
     {
         // Readability output is always non-empty in the pipeline, but a body that
         // cannot be parsed must fall through untouched rather than crash the pass.
-        self::assertSame('   ', $this->cleaner->clean('   ', ['My Article']));
+        self::assertSame('   ', $this->cleaner->clean('   ', ['My Article'], $this->noLead()));
+    }
+
+    public function testRestoresTheLeadIntoATextOnlyBodyInTheSharedWindow(): void
+    {
+        $content = '<div><p>' . self::PROSE . '</p></div>';
+        $candidate = new LeadImageCandidate(
+            'https://cdn.test/hero.jpg',
+            PageImageInventory::fromDocument(null),
+        );
+
+        $result = $this->cleaner->clean($content, [null], $candidate);
+
+        self::assertStringContainsString('<img src="https://cdn.test/hero.jpg"', $result);
+        self::assertStringContainsString('Fliesstext', $result);
     }
 }
