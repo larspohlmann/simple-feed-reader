@@ -30,9 +30,19 @@ final readonly class ImageIdentity
     /**
      * Filename words that name a photo library or a boilerplate role, not the
      * photo. Two unrelated Getty pictures share `gettyimages`, two unrelated
-     * crops share `image`; matching on those fabricates identity. They are
-     * dropped so a token match rests on something photo-specific (a numeric id,
-     * a slug). Over-listing only ever costs a match, which is safe here.
+     * crops share `image`; matching on those fabricates identity, and a false
+     * match is the one direction that can duplicate a picture — so the list
+     * leans complete, and over-listing only ever costs a match, which is safe.
+     *
+     * A structural rule was tried instead of a list — a token counts only if it
+     * carries a digit, so numeric ids and hashes qualify but generic words do
+     * not — and measured over the whole feed corpus (#686): it dropped ~40 real
+     * matches, below even the pre-#686 recall. What it discarded is the ordinary
+     * WordPress size variant: `vegane-burrata-002.jpg` beside
+     * `vegane-burrata-002-1280x854.jpg`, `BruceSpringsteen-1.jpg` beside
+     * `brucespringsteen-1.jpg` — whose only tie is a descriptive, all-letters
+     * filename. A generic word and a distinctive one are both plain text; only a
+     * word list tells them apart, so the list stays.
      */
     private const array GENERIC_TOKENS = [
         'image', 'images', 'photo', 'photos', 'picture', 'pictures', 'photograph',
