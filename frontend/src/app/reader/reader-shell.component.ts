@@ -490,6 +490,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     // button.
     effect(() => {
       if (!this.subs.resolved()) return;
+      // A failed load resolves with an empty list; that is not "zero
+      // subscriptions" but "we could not read them", so it must not send the
+      // user to the picker over what a retry may fill (#691).
+      if (this.subs.error()) return;
       if (this.subs.subscriptions().length > 0) return;
       if (this.skip.wasSkipped()) return;
 
