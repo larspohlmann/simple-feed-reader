@@ -67,6 +67,10 @@
   cursor: pointer;
 }
 
-.more:hover {
-  background: var(--surface-0);
+/* Pointer-only hover: a touch tap fires :hover, so guard it or a drag-scroll
+   darkens the toggle (#704). */
+@media (hover: hover) {
+  .more:hover {
+    background: var(--surface-0);
+  }
 }
