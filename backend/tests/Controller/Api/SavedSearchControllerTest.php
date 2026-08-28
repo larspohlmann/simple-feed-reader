@@ -240,6 +240,67 @@ final class SavedSearchControllerTest extends ApiTestCase
         self::assertSame(2, $substringCount);
     }
 
+    public function testUpdateSetsIncludeInDigestForTheOwner(): void
+    {
+        $client = self::createClient();
+        $em = $this->em();
+        $owner = $this->factory()->create('digest-owner@example.com');
+        $saved = new SavedSearch($owner, 'digest-term', false);
+        $em->persist($saved);
+        $em->flush();
+        $savedId = $saved->getId();
+        self::assertIsInt($savedId);
+
+        $headers = $this->authHeaderFor($owner);
+        $client->request(
+            'PATCH',
+            '/api/saved-searches/' . $savedId,
+            server: $headers,
+            content: json_encode(['includeInDigest' => true], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseIsSuccessful();
+        $updated = $this->payload($client);
+        self::assertIsArray($updated['savedSearch']);
+        self::assertTrue($updated['savedSearch']['includeInDigest']);
+
+        $em->clear();
+        $persisted = $em->find(SavedSearch::class, $savedId);
+        self::assertInstanceOf(SavedSearch::class, $persisted);
+        self::assertTrue($persisted->isIncludeInDigest());
+    }
+
+    public function testUpdateAnotherUsersSavedSearchIs404(): void
+    {
+        $client = self::createClient();
+        $em = $this->em();
+        $owner = $this->factory()->create('digest-owner2@example.com');
+        $saved = new SavedSearch($owner, 'private-digest', false);
+        $em->persist($saved);
+        $em->flush();
+
+        $headers = $this->authHeaderFor($this->factory()->create('digest-intruder@example.com'));
+        $client->request(
+            'PATCH',
+            '/api/saved-searches/' . $saved->getId(),
+            server: $headers,
+            content: json_encode(['includeInDigest' => true], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(404); // not 403 — do not reveal existence
+    }
+
+    public function testUpdateUnknownSavedSearchIs404(): void
+    {
+        $client = self::createClient();
+        $headers = $this->authHeaderFor($this->factory()->create('digest-unknown@example.com'));
+        $client->request(
+            'PATCH',
+            '/api/saved-searches/999999',
+            server: $headers,
+            content: json_encode(['includeInDigest' => true], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(404);
+    }
+
     public function testDeleteAnotherUsersSavedSearchIs404(): void
     {
         $client = self::createClient();

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Dto\SavedSearch\CreateSavedSearchRequest;
+use App\Dto\SavedSearch\UpdateSavedSearchRequest;
 use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Http\SavedSearchJson;
@@ -63,6 +64,24 @@ final readonly class SavedSearchController
         return new JsonResponse(
             ['savedSearch' => SavedSearchJson::one($savedSearch, $this->matches->forOne($savedSearch, $userId))],
             $status,
+        );
+    }
+
+    #[Route('/{id}', name: 'api_saved_searches_update', methods: ['PATCH'], requirements: ['id' => '\d+'])]
+    public function update(
+        int $id,
+        #[CurrentUser] User $user,
+        #[MapRequestPayload] UpdateSavedSearchRequest $request,
+    ): JsonResponse {
+        $userId = (int) $user->getId();
+        $savedSearch = $this->savedSearches->findOneOwnedBy($id, $userId)
+            ?? throw new NotFoundHttpException('No such saved search.');
+
+        $savedSearch->setIncludeInDigest($request->includeInDigest);
+        $this->em->flush();
+
+        return new JsonResponse(
+            ['savedSearch' => SavedSearchJson::one($savedSearch, $this->matches->forOne($savedSearch, $userId))],
         );
     }
 
