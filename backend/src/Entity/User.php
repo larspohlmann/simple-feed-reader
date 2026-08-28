@@ -41,6 +41,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?\DateTimeImmutable $approvedAt = null;
 
     /**
+     * When this account proved it can read mail at its address: a verify-email
+     * token was consumed, or an OIDC provider vouched for a real address (#636).
+     * Null means unverified — the digest will not mail an unverified address.
+     */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $emailVerifiedAt = null;
+
+    /**
      * When this account last had a token issued to it. Null means "never
      * signed in", which the admin list renders as such and the dormancy rule
      * treats as an account that was created and then abandoned.
@@ -79,24 +87,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 5, options: ['default' => 'en'])]
     private string $locale = 'en';
 
-    /**
-     * When this account's trial period ends. Null means the account has no
-     * trial and no expiry — the state of every account created before this
-     * column. App\Security\TrialExpiryGuard blocks the account (and flips its
-     * status to Suspended on the next request) once this is in the past; the
-     * date is retained after expiry so the admin can see the suspension came
-     * from the trial rather than from a manual action.
-     */
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
-    private ?\DateTimeImmutable $trialEndsAt = null;
-
-    /**
-     * A per-user override of the global subscription cap. Null means "fall back
-     * to SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER" — resolved in exactly
-     * one place, App\Service\Subscription\SubscriptionLimitResolver.
-     */
-    #[ORM\Column(nullable: true)]
-    private ?int $maxSubscriptions = null;
+    /** @see AccountLimits */
+    #[ORM\Embedded(class: AccountLimits::class, columnPrefix: false)]
+    private AccountLimits $accountLimits;
 
     /**
      * Per-account settings. The constructor creates the row, so every creation
@@ -139,6 +132,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->email = $email;
         $this->createdAt = $createdAt;
         $this->preferences = new Preferences($this);
+        $this->accountLimits = new AccountLimits();
     }
 
     /**
@@ -241,6 +235,22 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->approvedAt = $approvedAt;
     }
 
+    public function getEmailVerifiedAt(): ?\DateTimeImmutable
+    {
+        return $this->emailVerifiedAt;
+    }
+
+    public function isEmailVerified(): bool
+    {
+        return null !== $this->emailVerifiedAt;
+    }
+
+    /** Stamps the first verification only; re-verifying never moves the instant. */
+    public function markEmailVerified(\DateTimeImmutable $verifiedAt): void
+    {
+        $this->emailVerifiedAt ??= $verifiedAt;
+    }
+
     public function getLastLoginAt(): ?\DateTimeImmutable
     {
         return $this->lastLoginAt;
@@ -263,22 +273,22 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function getTrialEndsAt(): ?\DateTimeImmutable
     {
-        return $this->trialEndsAt;
+        return $this->accountLimits->getTrialEndsAt();
     }
 
     public function setTrialEndsAt(?\DateTimeImmutable $trialEndsAt): void
     {
-        $this->trialEndsAt = $trialEndsAt;
+        $this->accountLimits->setTrialEndsAt($trialEndsAt);
     }
 
     public function getMaxSubscriptions(): ?int
     {
-        return $this->maxSubscriptions;
+        return $this->accountLimits->getMaxSubscriptions();
     }
 
     public function setMaxSubscriptions(?int $maxSubscriptions): void
     {
-        $this->maxSubscriptions = $maxSubscriptions;
+        $this->accountLimits->setMaxSubscriptions($maxSubscriptions);
     }
 
     /**

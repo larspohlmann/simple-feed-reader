@@ -195,6 +195,7 @@ final readonly class OAuthAccountLinker
             $user->setStatus(UserStatus::Active);
             $user->setApprovedAt($now);
         }
+        $user->markEmailVerified($now);
         $user->setPasswordHash(null, $now);
 
         return $this->policy->approvalRequired();
@@ -218,6 +219,9 @@ final readonly class OAuthAccountLinker
     {
         $now = $this->clock->now();
         $user = new User($this->loginIdentifierFor($identity), $now);
+        if ($identity->isLinkableByEmail()) {
+            $user->markEmailVerified($now);
+        }
 
         if ($this->policy->approvalRequired()) {
             $user->setStatus(UserStatus::PendingApproval);

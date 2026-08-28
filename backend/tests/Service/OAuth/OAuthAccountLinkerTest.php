@@ -76,6 +76,9 @@ final class OAuthAccountLinkerTest extends DbTestCase
         // The claim is not thrown away, it is just filed where it cannot be
         // mistaken for something we verified.
         self::assertSame('admin@company.example', $this->onlyIdentity()->getEmail());
+        // Unlinkable means unproven: nothing here earns the verification stamp
+        // (#636).
+        self::assertFalse($resolved->isEmailVerified());
     }
 
     public function testAPrivateRelayAddressNeverLinks(): void
@@ -87,6 +90,9 @@ final class OAuthAccountLinkerTest extends DbTestCase
         );
 
         self::assertNotSame($existing->getId(), $resolved->getId());
+        // A private relay address is real and provider-verified, but it names
+        // an (app, user) pair, not the person — never treated as proven (#636).
+        self::assertFalse($resolved->isEmailVerified());
     }
 
     public function testLinkingToAnUnverifiedAccountPromotesItAndWipesThePlantedPassword(): void
@@ -106,6 +112,9 @@ final class OAuthAccountLinkerTest extends DbTestCase
         // is still holding: PasswordChangeTokenInvalidator rejects tokens
         // issued before this instant.
         self::assertEquals($this->now(), $resolved->getPasswordChangedAt());
+        // The provider proved this address, which is exactly what claimed the
+        // row away from the planted, unverified registration (#636).
+        self::assertTrue($resolved->isEmailVerified());
     }
 
     public function testLinkingDoesNotReviveARejectedAccount(): void
@@ -153,6 +162,8 @@ final class OAuthAccountLinkerTest extends DbTestCase
         self::assertSame(UserStatus::PendingApproval, $resolved->getStatus());
         self::assertNull($resolved->getPasswordHash());
         self::assertSame(1, $this->countIdentities());
+        // A linkable, provider-verified address proves the account (#636).
+        self::assertTrue($resolved->isEmailVerified());
     }
 
     /**

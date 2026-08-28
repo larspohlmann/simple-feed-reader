@@ -245,6 +245,7 @@ final class RegistrationServiceTest extends DbTestCase
         self::assertInstanceOf(User::class, $user);
         self::assertSame(UserStatus::PendingApproval, $user->getStatus());
         self::assertNull($user->getApprovedAt());
+        self::assertTrue($user->isEmailVerified());
 
         self::assertCount(1, $captured);
         self::assertSame($user, $captured[0]->user);
@@ -278,6 +279,7 @@ final class RegistrationServiceTest extends DbTestCase
         self::assertInstanceOf(User::class, $user);
         self::assertSame(UserStatus::Active, $user->getStatus());
         self::assertNotNull($user->getApprovedAt());
+        self::assertTrue($user->isEmailVerified());
 
         self::assertSame([], $captured);
     }

@@ -148,10 +148,14 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'approvedAt' => 'An admin\'s decision on this instance, not the reader\'s data.',
             'lastLoginAt' => 'Sign-in telemetry, rewritten by the token issuer on the very next '
                 . 'login. Restoring it would be stale before the user saw it.',
-            'trialEndsAt' => 'The instance\'s terms for this account, granted by the sign-up flow '
-                . 'or by an admin.',
-            'maxSubscriptions' => 'A per-account cap an admin grants. Carried in the file, it '
-                . 'would be a quota the account holder writes for themselves.',
+            'emailVerifiedAt' => 'Server-derived verification state (#636), like lastLoginAt: '
+                . 'stamped by the verify-email and OIDC flows, never by the account holder. A '
+                . 'restore runs against an account whose address this instance already verified '
+                . 'or did not.',
+            'accountLimits.trialEndsAt' => 'The instance\'s terms for this account, granted by the '
+                . 'sign-up flow or by an admin.',
+            'accountLimits.maxSubscriptions' => 'A per-account cap an admin grants. Carried in the '
+                . 'file, it would be a quota the account holder writes for themselves.',
             'preferences' => 'Not a carried value: the pointer to the account\'s preferences row. '
                 . 'The account line inlines that row\'s field instead of nesting it, so the '
                 . 'pointer itself becomes no key.',

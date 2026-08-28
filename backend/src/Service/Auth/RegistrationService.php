@@ -127,6 +127,11 @@ final readonly class RegistrationService
         // Re-verifying an already-approved account must not demote it back to
         // the admin queue.
         if (UserStatus::PendingVerification === $user->getStatus()) {
+            $now = $this->clock->now();
+            // The token was just consumed, which proves the address regardless
+            // of which status the account lands in next.
+            $user->markEmailVerified($now);
+
             if ($this->policy->approvalRequired()) {
                 $user->setStatus(UserStatus::PendingApproval);
                 $this->em->flush();
@@ -137,7 +142,7 @@ final readonly class RegistrationService
                 $this->events->dispatch(new UserAwaitingApproval($user, RegistrationMethod::EmailPassword));
             } else {
                 $user->setStatus(UserStatus::Active);
-                $user->setApprovedAt($this->clock->now());
+                $user->setApprovedAt($now);
                 $this->em->flush();
             }
         }
