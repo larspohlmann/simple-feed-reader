@@ -126,6 +126,8 @@ final readonly class FullyPopulatedAccount
         $subscription->setCustomTitle('My populated feed');
         $subscription->setPosition(3);
         $subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-07-15T10:00:00Z'));
+        $subscription->setIncludeInAllItems(false);
+        $subscription->setIncludeInForYou(false);
         $subscription->addTag($tag, 5);
 
         return $subscription;

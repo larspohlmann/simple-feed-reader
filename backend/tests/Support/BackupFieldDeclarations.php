@@ -81,6 +81,8 @@ final class BackupFieldDeclarations
             'markedReadUntil' => 'markedReadUntil',
             'createdAt' => 'createdAt',
             'subscriptionTags' => 'tags',
+            'includeInAllItems' => 'includeInAllItems',
+            'includeInForYou' => 'includeInForYou',
         ],
         SubscriptionTag::class => [
             'tag' => 'tags.name',
