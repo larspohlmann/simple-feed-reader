@@ -14,6 +14,8 @@ final readonly class UpdateSubscriptionRequest
         public ?string $customTitle = null,
         #[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]
         public array $tagIds = [],
+        public ?bool $includeInAllItems = null,
+        public ?bool $includeInForYou = null,
     ) {
     }
 }

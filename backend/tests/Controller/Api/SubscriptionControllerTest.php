@@ -539,6 +539,114 @@ final class SubscriptionControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(404); // not 403 — do not reveal existence
     }
 
+    public function testPatchSetsIncludeInAllItemsFalse(): void
+    {
+        $client = self::createClient();
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+
+        $user = $this->userFactory()->create('flagsetter@example.com');
+        $feed = new Feed('https://flags.example.com/rss');
+        $em->persist($feed);
+        $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
+        $em->persist($sub);
+        $em->flush();
+
+        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
+        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
+        $headers = ['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)];
+
+        $client->request(
+            'PATCH',
+            '/api/subscriptions/' . $sub->getId(),
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(
+                ['customTitle' => null, 'tagIds' => [], 'includeInAllItems' => false],
+                \JSON_THROW_ON_ERROR,
+            ),
+        );
+        self::assertResponseStatusCodeSame(200);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['subscription']);
+        self::assertFalse($body['subscription']['includeInAllItems']);
+        // The flag not sent in this request must survive untouched.
+        self::assertTrue($body['subscription']['includeInForYou']);
+    }
+
+    public function testOmittingAFlagLeavesItUnchanged(): void
+    {
+        $client = self::createClient();
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+
+        $user = $this->userFactory()->create('flagkeeper@example.com');
+        $feed = new Feed('https://flagkeeper.example.com/rss');
+        $em->persist($feed);
+        $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
+        $sub->setIncludeInForYou(false);
+        $em->persist($sub);
+        $em->flush();
+
+        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
+        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
+        $headers = ['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)];
+
+        $client->request(
+            'PATCH',
+            '/api/subscriptions/' . $sub->getId(),
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['customTitle' => 'Kept Title', 'tagIds' => []], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(200);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['subscription']);
+        // Omitted flag: null leaves the pre-existing false value alone.
+        self::assertFalse($body['subscription']['includeInForYou']);
+        // customTitle keeps its existing (unrelated) clear-on-omission-free
+        // apply-what-was-sent behaviour.
+        self::assertSame('Kept Title', $body['subscription']['customTitle']);
+    }
+
+    /**
+     * Regression guard: customTitle/tagIds must keep their existing
+     * clear-on-omission semantics — a PATCH body without tagIds still wipes
+     * the feed's tags, exactly as before the two flags were added.
+     */
+    public function testTagClearOnOmissionStillHolds(): void
+    {
+        $client = self::createClient();
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+
+        $user = $this->userFactory()->create('tagclearer@example.com');
+        $tag = new Tag($user, 'Keepsake');
+        $em->persist($tag);
+        $feed = new Feed('https://tagclearer.example.com/rss');
+        $em->persist($feed);
+        $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
+        $sub->addTag($tag);
+        $em->persist($sub);
+        $em->flush();
+
+        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
+        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
+        $headers = ['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)];
+
+        $client->request(
+            'PATCH',
+            '/api/subscriptions/' . $sub->getId(),
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['customTitle' => null], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(200);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['subscription']);
+        self::assertSame([], $body['subscription']['tags']);
+    }
+
     public function testUnsubscribingAsTheOnlySubscriberDeletesTheFeed(): void
     {
         $client = self::createClient();

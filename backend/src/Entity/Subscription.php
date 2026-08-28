@@ -139,6 +139,21 @@ class Subscription
     }
 
     /**
+     * Applies the two exclusion flags from a PATCH request, where `null` means
+     * "leave the stored value unchanged" — kept as one entity operation so the
+     * controller stays a single delegated call rather than two inline guards.
+     */
+    public function updateInclusionFlags(?bool $includeInAllItems, ?bool $includeInForYou): void
+    {
+        if ($includeInAllItems !== null) {
+            $this->includeInAllItems = $includeInAllItems;
+        }
+        if ($includeInForYou !== null) {
+            $this->includeInForYou = $includeInForYou;
+        }
+    }
+
+    /**
      * The tags on this subscription, ordered by their per-tag position. Kept as
      * the public read shape so callers that only need tags are unaffected by the
      * join being an entity now.

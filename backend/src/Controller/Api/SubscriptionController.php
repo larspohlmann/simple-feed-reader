@@ -133,6 +133,8 @@ final readonly class SubscriptionController
             $sub->setPosition($this->subscriptionRepo->nextPositionForUser((int) $user->getId()));
         }
 
+        $sub->updateInclusionFlags($request->includeInAllItems, $request->includeInForYou);
+
         $this->em->flush();
 
         return new JsonResponse(['subscription' => SubscriptionJson::one($sub)]);
