@@ -10,8 +10,12 @@
   cursor: pointer;
 }
 
-.wide:hover {
-  border-color: var(--border-strong);
+/* Pointer-only: a touch tap fires :hover, which must not highlight a card
+   during a drag-scroll (#704). */
+@media (hover: hover) {
+  .wide:hover {
+    border-color: var(--border-strong);
+  }
 }
 
 .img {

@@ -13,8 +13,12 @@
   cursor: pointer;
 }
 
-.split:hover {
-  border-color: var(--border-strong);
+/* Pointer-only: a touch tap fires :hover, which must not highlight a card
+   during a drag-scroll (#704). */
+@media (hover: hover) {
+  .split:hover {
+    border-color: var(--border-strong);
+  }
 }
 
 /* Image beside text. The meta row is a sibling below, so its actions align to

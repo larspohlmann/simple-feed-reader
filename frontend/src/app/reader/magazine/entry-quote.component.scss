@@ -14,8 +14,12 @@
   cursor: pointer;
 }
 
-.quote:hover {
-  border-color: var(--border-strong);
+/* Pointer-only: a touch tap fires :hover, which must not highlight a card
+   during a drag-scroll (#704). */
+@media (hover: hover) {
+  .quote:hover {
+    border-color: var(--border-strong);
+  }
 }
 
 .pull {

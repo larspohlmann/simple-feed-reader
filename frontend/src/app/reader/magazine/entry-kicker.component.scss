@@ -14,8 +14,12 @@
   cursor: pointer;
 }
 
-.kicker-card:hover {
-  border-color: var(--border-strong);
+/* Pointer-only: a touch tap fires :hover, which must not highlight a card
+   during a drag-scroll (#704). */
+@media (hover: hover) {
+  .kicker-card:hover {
+    border-color: var(--border-strong);
+  }
 }
 
 .title {
