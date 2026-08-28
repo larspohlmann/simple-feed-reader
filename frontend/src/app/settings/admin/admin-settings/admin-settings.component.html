@@ -41,6 +41,24 @@
           (toggled)="toggleApproval()"
         />
       </app-settings-row>
+
+      <app-settings-row
+        [title]="'settings.instance.publicBaseUrl' | transloco"
+        [description]="'settings.instance.publicBaseUrlHint' | transloco"
+        labelFor="public-base-url-input"
+        [stackable]="true"
+      >
+        <input
+          id="public-base-url-input"
+          type="url"
+          inputmode="url"
+          autocomplete="off"
+          [value]="publicBaseUrl() ?? ''"
+          [attr.aria-label]="'settings.instance.publicBaseUrl' | transloco"
+          [placeholder]="'settings.instance.publicBaseUrlPlaceholder' | transloco"
+          (change)="savePublicBaseUrl($any($event.target).value)"
+        />
+      </app-settings-row>
     }
   </app-settings-group>
 </app-settings-stack>

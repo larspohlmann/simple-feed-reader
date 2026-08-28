@@ -8,6 +8,9 @@ export interface InstanceSettings {
   requireEmailConfirmation: boolean;
   requireApproval: boolean;
   mailEnabled: boolean;
+  /** The external base URL used to build links in outgoing email, or null to
+   *  fall back to the APP_FRONTEND_URL deploy env (#636). */
+  publicBaseUrl: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -22,10 +25,12 @@ export class AdminSettingsApi {
   update(
     requireEmailConfirmation: boolean,
     requireApproval: boolean,
+    publicBaseUrl: string | null,
   ): Observable<InstanceSettings> {
     return this.http.put<InstanceSettings>(`${this.base}/api/admin/settings`, {
       requireEmailConfirmation,
       requireApproval,
+      publicBaseUrl,
     });
   }
 }

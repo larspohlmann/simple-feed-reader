@@ -328,7 +328,10 @@
       "requireEmailConfirmationHint": "New accounts must confirm their email address before they can sign in.",
       "requireApproval": "Require admin approval",
       "requireApprovalHint": "New accounts stay pending until an admin approves them.",
-      "mailDisabledHint": "This instance sends no mail, so email confirmation cannot run — approve accounts by hand instead."
+      "mailDisabledHint": "This instance sends no mail, so email confirmation cannot run — approve accounts by hand instead.",
+      "publicBaseUrl": "Public base URL",
+      "publicBaseUrlHint": "The address used to build links in outgoing email. Set this to the URL that works from outside — a phone off the network, another machine — not the local serving address. Leave empty to use the deploy default.",
+      "publicBaseUrlPlaceholder": "https://reader.example.com/"
     },
     "proxy": {
       "title": "Egress proxy",

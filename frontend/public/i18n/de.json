@@ -328,7 +328,10 @@
       "requireEmailConfirmationHint": "Neue Konten müssen ihre E-Mail-Adresse bestätigen, bevor sie sich anmelden können.",
       "requireApproval": "Admin-Freigabe erforderlich",
       "requireApprovalHint": "Neue Konten bleiben ausstehend, bis ein Admin sie freigibt.",
-      "mailDisabledHint": "Diese Instanz versendet keine E-Mails, daher kann die E-Mail-Bestätigung nicht laufen — gib Konten stattdessen manuell frei."
+      "mailDisabledHint": "Diese Instanz versendet keine E-Mails, daher kann die E-Mail-Bestätigung nicht laufen — gib Konten stattdessen manuell frei.",
+      "publicBaseUrl": "Öffentliche Basis-URL",
+      "publicBaseUrlHint": "Die Adresse, aus der Links in ausgehenden E-Mails gebaut werden. Trage die URL ein, die von außen funktioniert — ein Handy außerhalb des Netzwerks, ein anderer Rechner — nicht die lokale Adresse. Leer lassen, um den Standard aus dem Deployment zu verwenden.",
+      "publicBaseUrlPlaceholder": "https://reader.example.com/"
     },
     "proxy": {
       "title": "Ausgehender Proxy",
