@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Html\ImageRendition;
 use App\Service\Html\Srcset;
 use Dom\Element;
 use Dom\HTMLDocument;
@@ -69,6 +70,8 @@ final readonly class LazyImageSources
     private function ensureUsableSource(Element $image): bool
     {
         if ($this->isUsable($image->getAttribute('src'))) {
+            $this->preferWiderPictureSource($image);
+
             return true;
         }
 
@@ -80,6 +83,87 @@ final readonly class LazyImageSources
         $image->setAttribute('src', $candidate);
 
         return true;
+    }
+
+    /**
+     * A <picture>'s <source> set carries the real renditions; its <img> is only
+     * the fallback for a client without <picture> support, and publishers
+     * routinely make that fallback a tiny LQIP placeholder (taz ships a 14px
+     * webp, entry 486683). So adopt the widest <source> — unless the <img>'s own
+     * src is already at least as wide, the mirror case where the placeholder
+     * hides in a <source> and the real photo is the <img> (NDR, entry 480204).
+     */
+    private function preferWiderPictureSource(Element $image): void
+    {
+        $picture = $this->enclosingPicture($image);
+        if ($picture === null) {
+            return;
+        }
+
+        $widest = $this->widestPictureSource($picture);
+        if ($widest === null) {
+            return;
+        }
+
+        $imageWidth = $this->declaredWidth($image->getAttribute('src'));
+        if ($imageWidth !== null && ($widest->width === null || $imageWidth >= $widest->width)) {
+            return;
+        }
+
+        $image->setAttribute('src', $widest->url);
+    }
+
+    /**
+     * The widest usable rendition the picture's <source> set offers. When no
+     * source declares a width the first usable one stands in, so a src-less
+     * picture still resolves to a real image.
+     */
+    private function widestPictureSource(Element $picture): ?ImageRendition
+    {
+        $widest = null;
+        foreach ($picture->getElementsByTagName('source') as $source) {
+            $rendition = $this->renditionOf($source);
+            if ($rendition === null) {
+                continue;
+            }
+            if ($widest === null || $this->outmeasures($rendition, $widest)) {
+                $widest = $rendition;
+            }
+        }
+
+        return $widest;
+    }
+
+    /** A source's widest usable candidate, its width filled from the URL when the
+     *  srcset omits a descriptor. Null when the source carries nothing loadable. */
+    private function renditionOf(Element $source): ?ImageRendition
+    {
+        $candidate = Srcset::widest($source->getAttribute('srcset'));
+        if ($candidate === null || !$this->isUsable($candidate->url)) {
+            return null;
+        }
+
+        return new ImageRendition($candidate->url, $candidate->width ?? $this->declaredWidth($candidate->url));
+    }
+
+    /** True when a rendition outsizes the incumbent; an unmeasured one never does. */
+    private function outmeasures(ImageRendition $candidate, ImageRendition $incumbent): bool
+    {
+        if ($candidate->width === null) {
+            return false;
+        }
+
+        return $incumbent->width === null || $candidate->width > $incumbent->width;
+    }
+
+    /** The pixel width a URL states in a `width=` or `w=` query, or null. */
+    private function declaredWidth(?string $url): ?int
+    {
+        if ($url === null || preg_match('/[?&](?:width|w)=(\d+)/', $url, $matches) !== 1) {
+            return null;
+        }
+
+        return (int) $matches[1];
     }
 
     /**
