@@ -76,7 +76,7 @@ final class RegistrationServiceTest extends DbTestCase
     {
         /** @var InstanceSettings $settings */
         $settings = self::getContainer()->get(InstanceSettings::class);
-        $settings->update($confirm, $approve);
+        $settings->update($confirm, $approve, null);
 
         return new RegistrationPolicy(new MailCapability(''), $settings);
     }

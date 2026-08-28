@@ -29,17 +29,27 @@ final class InstanceSettingsTest extends KernelTestCase
 
     public function testUpdatePersistsAndIsReadBack(): void
     {
-        $this->settings->update(requireEmailConfirmation: false, requireApproval: true);
+        $this->settings->update(requireEmailConfirmation: false, requireApproval: true, publicBaseUrl: null);
         $this->em->clear();
 
         self::assertFalse($this->settings->requireEmailConfirmation());
         self::assertTrue($this->settings->requireApproval());
     }
 
+    public function testPublicBaseUrlDefaultsToNullAndRoundTrips(): void
+    {
+        self::assertNull($this->settings->getPublicBaseUrl());
+
+        $this->settings->update(true, true, 'https://reader.example.ts.net/reader');
+        $this->em->clear();
+
+        self::assertSame('https://reader.example.ts.net/reader', $this->settings->getPublicBaseUrl());
+    }
+
     public function testUpdateReusesTheSingleRowRatherThanInsertingASecond(): void
     {
-        $this->settings->update(false, false);
-        $this->settings->update(true, false);
+        $this->settings->update(false, false, null);
+        $this->settings->update(true, false, null);
         $this->em->clear();
 
         $count = (int) $this->em

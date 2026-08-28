@@ -28,7 +28,7 @@ final class RegistrationPolicyTest extends KernelTestCase
 
     private function policy(bool $mailOn, bool $confirm, bool $approve): RegistrationPolicy
     {
-        $this->settings->update($confirm, $approve);
+        $this->settings->update($confirm, $approve, null);
 
         return new RegistrationPolicy(
             new MailCapability($mailOn ? '' : '1'),

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Digest;
 
+use App\Tests\Support\FixedPublicBaseUrl;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\SavedSearch;
@@ -53,7 +54,7 @@ final class SendTestDigestTest extends TestCase
             new DigestComposer(
                 $this->savedSearches,
                 new DigestEntryFinder($this->entries),
-                new DigestLinkBuilder('https://reader.example'),
+                new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example')),
             ),
             $mailer ?? $this->mailer,
             $clock,

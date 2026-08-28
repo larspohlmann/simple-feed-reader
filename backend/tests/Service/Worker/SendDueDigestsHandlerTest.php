@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Worker;
 
+use App\Tests\Support\FixedPublicBaseUrl;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Preferences;
@@ -87,7 +88,7 @@ final class SendDueDigestsHandlerTest extends TestCase
             new DigestComposer(
                 $savedSearches ?? $this->createStub(SavedSearchRepository::class),
                 new DigestEntryFinder($entries ?? $this->createStub(EntryListRepository::class)),
-                new DigestLinkBuilder('https://reader.example'),
+                new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example')),
             ),
             $mailer,
             new MailCapability(''),

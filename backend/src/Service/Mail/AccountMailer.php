@@ -7,6 +7,7 @@ namespace App\Service\Mail;
 use App\Dto\Mail\PendingApprovalNotice;
 use App\Entity\User;
 use App\Enum\RegistrationMethod;
+use App\Service\Settings\PublicBaseUrl;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
@@ -28,8 +29,7 @@ final readonly class AccountMailer implements AccountMailerInterface
         private string $fromAddress,
         #[Autowire('%env(MAIL_FROM_NAME)%')]
         private string $fromName,
-        #[Autowire('%env(APP_FRONTEND_URL)%')]
-        private string $frontendUrl,
+        private PublicBaseUrl $publicBaseUrl,
     ) {
     }
 
@@ -46,7 +46,7 @@ final readonly class AccountMailer implements AccountMailerInterface
      */
     public function sendApproved(User $user): void
     {
-        $this->send($user, 'approved', ['%url%' => rtrim($this->frontendUrl, '/')]);
+        $this->send($user, 'approved', ['%url%' => $this->publicBaseUrl->get()]);
     }
 
     /**
@@ -72,7 +72,7 @@ final readonly class AccountMailer implements AccountMailerInterface
 
     private function link(string $path, string $plainToken): string
     {
-        return rtrim($this->frontendUrl, '/') . $path . '?token=' . rawurlencode($plainToken);
+        return $this->publicBaseUrl->get() . $path . '?token=' . rawurlencode($plainToken);
     }
 
     private function methodLabel(PendingApprovalNotice $notice, string $locale): string

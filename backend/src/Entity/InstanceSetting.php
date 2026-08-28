@@ -31,6 +31,14 @@ class InstanceSetting
     #[ORM\Column]
     private bool $requireApproval = true;
 
+    /**
+     * The externally reachable base URL used to build links in outgoing email
+     * (#636). Null means "no override" — email links fall back to the
+     * APP_FRONTEND_URL deploy env. See {@see \App\Service\Settings\PublicBaseUrl}.
+     */
+    #[ORM\Column(name: 'public_base_url', length: 255, nullable: true)]
+    private ?string $publicBaseUrl = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -46,9 +54,15 @@ class InstanceSetting
         return $this->requireApproval;
     }
 
-    public function apply(bool $requireEmailConfirmation, bool $requireApproval): void
+    public function getPublicBaseUrl(): ?string
+    {
+        return $this->publicBaseUrl;
+    }
+
+    public function apply(bool $requireEmailConfirmation, bool $requireApproval, ?string $publicBaseUrl): void
     {
         $this->requireEmailConfirmation = $requireEmailConfirmation;
         $this->requireApproval = $requireApproval;
+        $this->publicBaseUrl = $publicBaseUrl;
     }
 }

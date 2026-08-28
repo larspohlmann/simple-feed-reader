@@ -262,7 +262,7 @@ final class RegistrationTest extends ApiTestCase
     {
         $this->assertRegisterIsByteIdenticalForFreshAndDuplicateAddress('policy-default@example.com');
 
-        $this->instanceSettings()->update(requireEmailConfirmation: false, requireApproval: false);
+        $this->instanceSettings()->update(requireEmailConfirmation: false, requireApproval: false, publicBaseUrl: null);
         $this->assertRegisterIsByteIdenticalForFreshAndDuplicateAddress('policy-open@example.com');
     }
 

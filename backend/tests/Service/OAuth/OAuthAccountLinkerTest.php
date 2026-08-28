@@ -395,7 +395,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
     {
         /** @var InstanceSettings $settings */
         $settings = self::getContainer()->get(InstanceSettings::class);
-        $settings->update(true, $approve);
+        $settings->update(true, $approve, null);
 
         return new RegistrationPolicy(new MailCapability(''), $settings);
     }

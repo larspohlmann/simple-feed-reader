@@ -90,7 +90,12 @@ final class AdminSettingsControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(
-            ['requireEmailConfirmation' => true, 'requireApproval' => true, 'mailEnabled' => true],
+            [
+                'requireEmailConfirmation' => true,
+                'requireApproval' => true,
+                'mailEnabled' => true,
+                'publicBaseUrl' => null,
+            ],
             $this->payload(),
         );
     }
@@ -102,12 +107,17 @@ final class AdminSettingsControllerTest extends WebTestCase
         $this->requestWithJsonBody(
             'PUT',
             $admin,
-            ['requireEmailConfirmation' => false, 'requireApproval' => true],
+            ['requireEmailConfirmation' => false, 'requireApproval' => true, 'publicBaseUrl' => null],
         );
 
         self::assertResponseIsSuccessful();
         self::assertSame(
-            ['requireEmailConfirmation' => false, 'requireApproval' => true, 'mailEnabled' => true],
+            [
+                'requireEmailConfirmation' => false,
+                'requireApproval' => true,
+                'mailEnabled' => true,
+                'publicBaseUrl' => null,
+            ],
             $this->payload(),
         );
 
@@ -119,9 +129,42 @@ final class AdminSettingsControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(
-            ['requireEmailConfirmation' => false, 'requireApproval' => true, 'mailEnabled' => true],
+            [
+                'requireEmailConfirmation' => false,
+                'requireApproval' => true,
+                'mailEnabled' => true,
+                'publicBaseUrl' => null,
+            ],
             $this->payload(),
         );
+    }
+
+    public function testPutPersistsThePublicBaseUrl(): void
+    {
+        $admin = $this->admin();
+
+        $this->requestWithJsonBody('PUT', $admin, [
+            'requireEmailConfirmation' => true,
+            'requireApproval' => true,
+            'publicBaseUrl' => 'https://reader.example.ts.net/reader',
+        ]);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('https://reader.example.ts.net/reader', $this->payload()['publicBaseUrl']);
+    }
+
+    public function testPutRejectsAMalformedPublicBaseUrl(): void
+    {
+        $admin = $this->admin();
+
+        $this->requestWithJsonBody('PUT', $admin, [
+            'requireEmailConfirmation' => true,
+            'requireApproval' => true,
+            'publicBaseUrl' => 'not a url',
+        ]);
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertResponseHeaderSame('content-type', 'application/problem+json');
     }
 
     public function testPutRejectsANonBooleanPayload(): void
