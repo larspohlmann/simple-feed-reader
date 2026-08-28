@@ -21,4 +21,13 @@ final class SavedSearchJsonTest extends TestCase
         self::assertTrue($json['includeInDigest']);
         self::assertSame([7, 8], $json['unreadEntryIds']);
     }
+
+    public function testOneEmitsThePhraseFlag(): void
+    {
+        $substring = new SavedSearch(new User('a@b.example', new \DateTimeImmutable()), 'climate change', false, false);
+        $phrase = new SavedSearch(new User('a@b.example', new \DateTimeImmutable()), 'climate change', false, true);
+
+        self::assertFalse(SavedSearchJson::one($substring, [])['phrase']);
+        self::assertTrue(SavedSearchJson::one($phrase, [])['phrase']);
+    }
 }

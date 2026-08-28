@@ -632,6 +632,34 @@ describe('EntryListComponent', () => {
     });
   });
 
+  describe('phrase search badge (#702)', () => {
+    it('renders the phrase badge for a quoted search selection', () => {
+      const el = mount({
+        selection: { kind: 'search', id: null, unread: false, term: '"climate change"' },
+      }).nativeElement as HTMLElement;
+      const badge = el.querySelector('.phrase-badge');
+      expect(badge).not.toBeNull();
+      expect(badge!.textContent).toContain('Phrase');
+      expect(badge!.getAttribute('aria-hidden')).toBe('true');
+      expect(el.querySelector('.list-header h2 .sr-only')!.textContent).toContain('Phrase');
+    });
+
+    it('renders no phrase badge for an unquoted search', () => {
+      const el = mount({
+        selection: { kind: 'search', id: null, unread: false, term: 'climate change' },
+      }).nativeElement as HTMLElement;
+      expect(el.querySelector('.phrase-badge')).toBeNull();
+    });
+
+    it('shows only the phrase badge when a phrase also carries a trailing space', () => {
+      const el = mount({
+        selection: { kind: 'search', id: null, unread: false, term: '"climate change" ' },
+      }).nativeElement as HTMLElement;
+      expect(el.querySelector('.phrase-badge')).not.toBeNull();
+      expect(el.querySelector('.whole-word-badge')).toBeNull();
+    });
+  });
+
   it('hides the whole-word-mode trailing space from the empty-state message (#408 follow-up)', () => {
     const el = mount({
       loading: false,

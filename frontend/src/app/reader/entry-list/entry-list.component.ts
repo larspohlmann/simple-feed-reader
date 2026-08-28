@@ -49,6 +49,7 @@ import {
   canScopedRefresh,
   isSingleStreamView,
   isWholeWordTerm,
+  isPhraseTerm,
   sameSelection,
   searchWords,
   visibleSearchTerm,
@@ -248,7 +249,19 @@ export class EntryListComponent implements OnDestroy {
    *  why (#408 follow-up). */
   readonly showWholeWordBadge = computed(() => {
     const s = this.selection();
-    return s.kind === 'search' && isWholeWordTerm(s.term ?? '');
+    const term = s.term ?? '';
+    // A phrase overrides whole-word when both signals are present (#702), so a
+    // phrase query shows only the phrase pill, never both.
+    return s.kind === 'search' && isWholeWordTerm(term) && !isPhraseTerm(term);
+  });
+
+  /** Whether the current selection is a phrase search (a query wrapped in
+   *  double quotes). The pill that surfaces it is the only sign the words were
+   *  matched as one exact run rather than each anywhere — mirroring the
+   *  whole-word badge (#702). */
+  readonly showPhraseBadge = computed(() => {
+    const s = this.selection();
+    return s.kind === 'search' && isPhraseTerm(s.term ?? '');
   });
 
   /** The heading's leading icon for a fixed view, or null for a tag or a

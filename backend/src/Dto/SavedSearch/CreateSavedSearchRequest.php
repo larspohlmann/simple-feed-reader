@@ -13,6 +13,7 @@ final readonly class CreateSavedSearchRequest
         #[Assert\Length(min: 3, max: 100)]
         public string $term = '',
         public bool $wholeWord = false,
+        public bool $phrase = false,
     ) {
     }
 }

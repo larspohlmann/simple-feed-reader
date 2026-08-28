@@ -40,7 +40,8 @@ final readonly class SavedSearchMatchIds
      */
     public function forOne(SavedSearch $savedSearch, int $userId): array
     {
-        $terms = SearchTerms::fromTermAndMode($savedSearch->getTerm(), $savedSearch->isWholeWord());
+        $mode = SearchMode::fromFlags($savedSearch->isWholeWord(), $savedSearch->isPhrase());
+        $terms = SearchTerms::fromTermAndMode($savedSearch->getTerm(), $mode);
 
         return $this->entries->unreadMatchIdsForUser(new EntrySearchQuery($userId, $terms));
     }

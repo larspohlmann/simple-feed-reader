@@ -211,7 +211,7 @@ final class BackupReaderTest extends TestCase
         $gzip = self::gzipOf([
             self::header(),
             self::account(),
-            ['kind' => 'savedSearch', 'term' => 'climate', 'wholeWord' => false, 'position' => 0],
+            ['kind' => 'savedSearch', 'term' => 'climate', 'wholeWord' => false, 'phrase' => false, 'position' => 0],
             self::footer(),
         ]);
 

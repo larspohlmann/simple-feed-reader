@@ -167,7 +167,7 @@ export class SidebarComponent {
   protected readonly savedSearchLinks = computed(() =>
     this.savedSearches().map((saved) => ({
       ...saved,
-      params: savedSearchParams(saved.term, saved.wholeWord),
+      params: savedSearchParams(saved.term, saved.wholeWord, saved.phrase),
     })),
   );
 

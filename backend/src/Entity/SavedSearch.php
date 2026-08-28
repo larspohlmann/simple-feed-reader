@@ -9,7 +9,10 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: SavedSearchRepository::class)]
 #[ORM\Table(name: 'saved_search')]
-#[ORM\UniqueConstraint(name: 'uniq_saved_search_user_term_word', columns: ['user_id', 'term', 'whole_word'])]
+#[ORM\UniqueConstraint(
+    name: 'uniq_saved_search_user_term_mode',
+    columns: ['user_id', 'term', 'whole_word', 'phrase'],
+)]
 class SavedSearch
 {
     #[ORM\Id]
@@ -28,6 +31,10 @@ class SavedSearch
     #[ORM\Column(name: 'whole_word', options: ['default' => false])]
     private bool $wholeWord;
 
+    /** True when the search matches one exact phrase (the raw query wrapped in double quotes). */
+    #[ORM\Column(name: 'phrase', options: ['default' => false])]
+    private bool $phrase;
+
     /** Reserved for a future sidebar reorder; unused for ordering in v1. */
     #[ORM\Column(options: ['default' => 0])]
     private int $position = 0;
@@ -36,11 +43,12 @@ class SavedSearch
     #[ORM\Column(name: 'include_in_digest', options: ['default' => false])]
     private bool $includeInDigest = false;
 
-    public function __construct(User $user, string $term, bool $wholeWord)
+    public function __construct(User $user, string $term, bool $wholeWord, bool $phrase = false)
     {
         $this->user = $user;
         $this->term = $term;
         $this->wholeWord = $wholeWord;
+        $this->phrase = $phrase;
     }
 
     public function getId(): ?int
@@ -61,6 +69,11 @@ class SavedSearch
     public function isWholeWord(): bool
     {
         return $this->wholeWord;
+    }
+
+    public function isPhrase(): bool
+    {
+        return $this->phrase;
     }
 
     public function getPosition(): int

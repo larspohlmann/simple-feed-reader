@@ -324,4 +324,30 @@ final class EntrySearchTest extends DbTestCase
 
         self::assertSame(['literal'], $this->search('100% '));
     }
+
+    public function testAQuotedPhraseMatchesOnlyTheWordsTogetherInOrder(): void
+    {
+        $this->entry('together', 'The climate change report is out');
+        $this->entry('apart', 'A change in the climate of the debate');
+
+        self::assertSame(['together'], $this->search('"climate change"'));
+    }
+
+    public function testTheSameWordsUnquotedMatchThemApart(): void
+    {
+        // The contrast to the phrase search above: without the quotes the two
+        // words match wherever each appears, so the entry that carries them
+        // apart qualifies too.
+        $this->entry('together', 'The climate change report is out');
+        $this->entry('apart', 'A change in the climate of the debate');
+
+        self::assertSame(['apart', 'together'], $this->search('climate change'));
+    }
+
+    public function testAQuotedPhraseStillMatchesAcrossASingleSpace(): void
+    {
+        $this->entry('hit', 'Untitled', 'a deep dive into machine learning today');
+
+        self::assertSame(['hit'], $this->search('"machine learning"'));
+    }
 }

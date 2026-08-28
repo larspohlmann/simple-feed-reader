@@ -173,7 +173,9 @@ final class AccountRestorerTest extends DbTestCase
         $news->setPosition(2);
         $this->em->persist($news);
 
-        $this->em->persist(new SavedSearch($user, 'climate', false));
+        // A phrase saved search (quoted query) — its `phrase` flag must survive
+        // the round trip, which `assertFieldsRoundTripped` checks below (#702).
+        $this->em->persist(new SavedSearch($user, 'climate change', false, true));
         $whole = new SavedSearch($user, 'rust lang', true);
         $whole->setPosition(1);
         $this->em->persist($whole);

@@ -126,6 +126,19 @@ final class MeilisearchIndexTest extends TestCase
         self::assertSame('wid gets', $this->capturedJsonObject()['q']);
     }
 
+    public function testAPhraseSearchSendsTheWholeQueryAsOneQuotedPhrase(): void
+    {
+        $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));
+        // Wrapping the query in double quotes is the phrase signal
+        // (SearchTerms::fromInput); Meilisearch's own phrase syntax then asks
+        // for those words in order and adjacent (#702).
+        $this->index($client)->find(
+            new IndexSearch(SearchTerms::fromInput('"widgets gizmos"'), [1, 2], null, 20),
+        );
+
+        self::assertSame('"widgets gizmos"', $this->capturedJsonObject()['q']);
+    }
+
     public function testFindSendsTheFeedIdFilter(): void
     {
         $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));

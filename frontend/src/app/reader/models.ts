@@ -13,10 +13,12 @@ export interface TagDto {
  *  read, so the count falls without another round-trip (#645). */
 export interface SavedSearchDto {
   id: number;
-  /** The trimmed search term (no trailing whole-word space). */
+  /** The bare search term — no trailing whole-word space, no wrapping phrase quotes. */
   term: string;
   /** True when the saved search matches whole words only. */
   wholeWord: boolean;
+  /** True when the saved search matches one exact phrase (a quoted query). */
+  phrase: boolean;
   /** Reserved for a future sidebar reorder; unused in v1. */
   position: number;
   /** Live count of unread entries matching this search. */
@@ -32,6 +34,7 @@ export interface SavedSearchWire {
   id: number;
   term: string;
   wholeWord: boolean;
+  phrase: boolean;
   position: number;
   /** The ids of every unread entry that matches this search. */
   unreadEntryIds: number[];

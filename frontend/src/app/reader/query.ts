@@ -39,6 +39,33 @@ export function isWholeWordTerm(term: string): boolean {
   return /[\s\p{Z}]$/u.test(term);
 }
 
+/** Whether a search term is wrapped in double quotes, which the backend
+ *  (`SearchTerms::fromInput`) reads as "match this exact phrase" — the words in
+ *  order and adjacent — rather than each word anywhere. A phrase overrides
+ *  whole-word mode when a query carries both signals, exactly as the server
+ *  decides it, so every consumer that asks "is this whole-word?" for a display
+ *  or an identity check must set a phrase aside first. */
+export function isPhraseTerm(term: string): boolean {
+  return phraseWithin(term) !== null;
+}
+
+/** The exact phrase inside a quoted query, or null when the query is not a
+ *  phrase. Mirrors the server's `SearchTerms::phraseWithin`: the trimmed input
+ *  opens and closes with a double quote, inner quotes become boundaries (a
+ *  stray one would reopen a phrase) and inner whitespace collapses to single
+ *  spaces, so the phrase that is marked and the phrase that is matched are one
+ *  string. Null when the wrapping quotes hold nothing but whitespace. */
+function phraseWithin(term: string): string | null {
+  const trimmed = term.trim();
+  if (trimmed.length < 2 || !trimmed.startsWith('"') || !trimmed.endsWith('"')) return null;
+  const inner = trimmed
+    .slice(1, -1)
+    .replace(/"/g, ' ')
+    .replace(/[\s\p{Z}]+/gu, ' ')
+    .trim();
+  return inner.length > 0 ? inner : null;
+}
+
 /** Strips leading whitespace and collapses inner runs to a single space, but
  *  — unlike `String.trim()` — keeps exactly one trailing space when the raw
  *  input ended in whitespace. The server reads a trailing space as "match
@@ -82,6 +109,11 @@ export function isTooShortToSearch(term: string): boolean {
  *  `normalizeSearchInput`, `visibleSearchTerm` and `isWholeWordTerm` so that
  *  every answer to "what is a term made of" has one home. */
 export function searchWords(term: string): string[] {
+  // A phrase is marked as one contiguous run, not word by word — the same
+  // string the server matched — so a quoted `"climate change"` highlights only
+  // where the two words sit together, never each on its own.
+  const phrase = phraseWithin(term);
+  if (phrase !== null) return [phrase];
   return term.split(/[\s\p{Z}]+/u).filter((word) => word.length > 0);
 }
 
@@ -104,7 +136,10 @@ export function sameSelection(a: Selection, b: Selection): boolean {
  *  identity, see `sameSelection`); this is only for the strings a human
  *  reads, e.g. the list title and the empty-state message. */
 export function visibleSearchTerm(term: string): string {
-  return term.trimEnd();
+  // A phrase shows as its bare inner text — the wrapping quotes are the mode
+  // signal, surfaced by the "Phrase" pill instead, exactly as the trailing
+  // whole-word space is dropped here and shown as its own pill (#702).
+  return phraseWithin(term) ?? term.trimEnd();
 }
 
 /** Whether the current selection supports a scoped refresh — the cross-feed
@@ -188,16 +223,23 @@ export function selectionQueryParams(set: Partial<SelectionParams>): SelectionPa
   return params;
 }
 
-/** The whole-word trailing space is the search signal (#408 follow-up), so a
- *  saved whole-word search reconstructs it when it navigates. */
-export function savedSearchTerm(term: string, wholeWord: boolean): string {
+/** The raw `q` a saved search navigates to. A saved search stores the bare
+ *  term with its mode apart, so the signal the mode rode in on is rebuilt
+ *  here: wrapping quotes for a phrase (#702), a trailing space for whole-word
+ *  (#408 follow-up). The modes are mutually exclusive, phrase first. */
+export function savedSearchTerm(term: string, wholeWord: boolean, phrase: boolean): string {
+  if (phrase) return `"${term}"`;
   return wholeWord ? `${term} ` : term;
 }
 
 /** The query params that open a saved search, reusing the existing `q` search
  *  selection kind. */
-export function savedSearchParams(term: string, wholeWord: boolean): SelectionParams {
-  return selectionQueryParams({ q: savedSearchTerm(term, wholeWord) });
+export function savedSearchParams(
+  term: string,
+  wholeWord: boolean,
+  phrase: boolean,
+): SelectionParams {
+  return selectionQueryParams({ q: savedSearchTerm(term, wholeWord, phrase) });
 }
 
 export function selectionFromParams(p: ParamMap): {

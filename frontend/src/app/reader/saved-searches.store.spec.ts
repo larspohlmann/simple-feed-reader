@@ -10,6 +10,7 @@ describe('SavedSearchesStore', () => {
       id: 2,
       term: 'rust lang',
       wholeWord: true,
+      phrase: false,
       position: 0,
       unreadEntryIds: [10, 11, 12, 13],
       includeInDigest: false,
@@ -18,6 +19,7 @@ describe('SavedSearchesStore', () => {
       id: 1,
       term: 'climate',
       wholeWord: false,
+      phrase: false,
       position: 0,
       unreadEntryIds: [],
       includeInDigest: false,
@@ -26,8 +28,8 @@ describe('SavedSearchesStore', () => {
 
   /** The sidebar view the store derives from a wire row. */
   function view(wire: SavedSearchWire, unreadCount = wire.unreadEntryIds.length): SavedSearchDto {
-    const { id, term, wholeWord, position, includeInDigest } = wire;
-    return { id, term, wholeWord, position, unreadCount, includeInDigest };
+    const { id, term, wholeWord, phrase, position, includeInDigest } = wire;
+    return { id, term, wholeWord, phrase, position, unreadCount, includeInDigest };
   }
 
   function setup(api: Partial<ReaderApi>): SavedSearchesStore {
@@ -49,9 +51,13 @@ describe('SavedSearchesStore', () => {
     const savedSearches = jest.fn(() => of({ savedSearches: rows }));
     const store = setup({ createSavedSearch, savedSearches });
 
-    store.createSavedSearch('rust lang', true);
+    store.createSavedSearch('rust lang', true, false);
 
-    expect(createSavedSearch).toHaveBeenCalledWith({ term: 'rust lang', wholeWord: true });
+    expect(createSavedSearch).toHaveBeenCalledWith({
+      term: 'rust lang',
+      wholeWord: true,
+      phrase: false,
+    });
     // The POST already answered with the row AND its matches; reloading would
     // cost one LIKE scan per saved search to learn nothing new.
     expect(savedSearches).not.toHaveBeenCalled();
@@ -63,7 +69,7 @@ describe('SavedSearchesStore', () => {
     const store = setup({ createSavedSearch });
     const onSuccess = jest.fn();
 
-    store.createSavedSearch('rust lang', true, onSuccess);
+    store.createSavedSearch('rust lang', true, false, onSuccess);
 
     expect(onSuccess).toHaveBeenCalledTimes(1);
     expect(store.savedSearches()).toEqual([view(rows[0])]);
@@ -76,7 +82,7 @@ describe('SavedSearchesStore', () => {
     store.load();
 
     // Saving a saved term is idempotent server-side (200, the existing row).
-    store.createSavedSearch('climate', false);
+    store.createSavedSearch('climate', false, false);
 
     expect(store.savedSearches().map((s) => s.id)).toEqual([1, 2]);
     expect(store.savedSearches()[0].unreadCount).toBe(9);

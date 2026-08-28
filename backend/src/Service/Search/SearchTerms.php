@@ -36,13 +36,31 @@ final readonly class SearchTerms
      */
     private const string WHITESPACE = '[\s\p{Z}]';
 
+    private const string DOUBLE_QUOTE = '"';
+
     /** @param list<string> $terms */
-    private function __construct(public array $terms, public bool $isWholeWord)
-    {
+    private function __construct(
+        public array $terms,
+        public bool $isWholeWord,
+        public bool $isPhrase,
+    ) {
     }
 
     public static function fromInput(string $input): self
     {
+        $trimmed = self::stripSurroundingWhitespace($input);
+        self::assertLengthIsUsable($trimmed);
+
+        // A query wrapped in double quotes is one exact phrase — the strongest
+        // signal, so it is read before the trailing-space check and wins when
+        // both are present. An empty phrase (nothing but quotes and whitespace
+        // inside the wrapping pair) is no phrase at all and falls through to
+        // ordinary parsing rather than becoming a search for nothing.
+        $phrase = self::phraseWithin($trimmed);
+        if ($phrase !== null) {
+            return new self([$phrase], isWholeWord: false, isPhrase: true);
+        }
+
         // The mode is a property of the raw input, decided before trimming:
         // a trailing space is the signal, and trimming would erase it. It is
         // one flag for the whole query, not a per-term one — a per-term rule
@@ -50,28 +68,58 @@ final readonly class SearchTerms
         // followed by a space while typing, which is not what the user meant.
         $isWholeWord = (bool) preg_match('/' . self::WHITESPACE . '\z/u', $input);
 
-        return self::split(self::stripSurroundingWhitespace($input), $isWholeWord);
+        return self::split($trimmed, $isWholeWord);
     }
 
     /**
      * The same terms, for a caller that already holds the mode as its own
-     * field instead of as a trailing space — a saved search stores the two
-     * apart. Without this, such a caller has to append a space to rebuild a
-     * raw query string purely so fromInput can parse the flag back off it.
+     * field instead of as a trailing space or wrapping quotes — a saved search
+     * stores the mode apart from the bare term. Without this, such a caller
+     * has to re-encode a raw query string purely so fromInput can parse the
+     * mode back off it.
      */
-    public static function fromTermAndMode(string $term, bool $isWholeWord): self
+    public static function fromTermAndMode(string $term, SearchMode $mode): self
     {
-        return self::split(self::stripSurroundingWhitespace($term), $isWholeWord);
+        $trimmed = self::stripSurroundingWhitespace($term);
+        self::assertLengthIsUsable($trimmed);
+
+        if ($mode->isPhrase()) {
+            return new self([self::collapseWhitespace($trimmed)], isWholeWord: false, isPhrase: true);
+        }
+
+        return self::split($trimmed, $mode->isWholeWord());
     }
 
     private static function split(string $trimmed, bool $isWholeWord): self
     {
-        self::assertLengthIsUsable($trimmed);
-
         /** @var list<string> $terms */
         $terms = preg_split('/' . self::WHITESPACE . '+/u', $trimmed) ?: [];
 
-        return new self(\array_slice($terms, 0, self::MAX_TERMS), $isWholeWord);
+        return new self(\array_slice($terms, 0, self::MAX_TERMS), $isWholeWord, isPhrase: false);
+    }
+
+    /**
+     * The phrase inside a query wrapped in double quotes, or null when the
+     * query is not wrapped or wraps nothing usable. Inner quotes become
+     * boundaries (a stray one would otherwise reopen a phrase) and inner
+     * whitespace collapses to single spaces, so the phrase lines up with the
+     * single spaces of real article text.
+     */
+    private static function phraseWithin(string $trimmed): ?string
+    {
+        if (!str_starts_with($trimmed, self::DOUBLE_QUOTE) || !str_ends_with($trimmed, self::DOUBLE_QUOTE)) {
+            return null;
+        }
+
+        $inner = mb_substr($trimmed, 1, mb_strlen($trimmed) - 2);
+        $phrase = self::collapseWhitespace(str_replace(self::DOUBLE_QUOTE, ' ', $inner));
+
+        return $phrase === '' ? null : $phrase;
+    }
+
+    private static function collapseWhitespace(string $value): string
+    {
+        return trim((string) preg_replace('/' . self::WHITESPACE . '+/u', ' ', $value));
     }
 
     private static function stripSurroundingWhitespace(string $input): string

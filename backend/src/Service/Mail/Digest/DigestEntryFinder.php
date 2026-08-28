@@ -7,6 +7,7 @@ namespace App\Service\Mail\Digest;
 use App\Entity\SavedSearch;
 use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
+use App\Service\Search\SearchMode;
 use App\Service\Search\SearchTerms;
 
 /**
@@ -26,7 +27,8 @@ final readonly class DigestEntryFinder
 
     public function matchesSince(SavedSearch $search, int $userId, \DateTimeImmutable $since): DigestSearchMatches
     {
-        $terms = SearchTerms::fromTermAndMode($search->getTerm(), $search->isWholeWord());
+        $mode = SearchMode::fromFlags($search->isWholeWord(), $search->isPhrase());
+        $terms = SearchTerms::fromTermAndMode($search->getTerm(), $mode);
         $ids = $this->entries->unreadMatchIdsSince(new EntrySearchQuery($userId, $terms), $since);
 
         if ($ids === []) {

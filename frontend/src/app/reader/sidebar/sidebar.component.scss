@@ -74,7 +74,7 @@
   text-decoration: none;
 }
 
-.nav > span:not(.count, .lead, .whole-word-badge) {
+.nav > span:not(.count, .lead, .whole-word-badge, .phrase-badge) {
   flex: 1;
   min-width: 0;
   white-space: nowrap;
@@ -124,12 +124,13 @@
   }
 }
 
-.nav .whole-word-badge {
-  /* The pill is the global `.whole-word-badge` (theme/_utilities.scss); this
-     row carries the compact "W" glyph instead of the full word because the
-     sidebar is too narrow for "Whole words". Excluded from the generic
-     `.nav > span` rule above (like `.lead`) so it doesn't pick up `flex: 1`
-     and split the row's width with `.saved-term`. */
+.nav .whole-word-badge,
+.nav .phrase-badge {
+  /* The pill is the global `.whole-word-badge`/`.phrase-badge`
+     (theme/_utilities.scss); this row carries the compact "W"/"P" glyph
+     instead of the full word because the sidebar is too narrow for the label.
+     Excluded from the generic `.nav > span` rule above (like `.lead`) so it
+     doesn't pick up `flex: 1` and split the row's width with `.saved-term`. */
   flex: none;
 }
 
@@ -256,7 +257,8 @@
 /* Smaller than the global pill: the sidebar row is narrower than the results
    header, so the marker takes the sub-chrome --fs-2xs step and a hair of
    padding here. */
-.savedsearch-item .whole-word-badge {
+.savedsearch-item .whole-word-badge,
+.savedsearch-item .phrase-badge {
   padding: 0 var(--space-1);
   font-size: var(--fs-2xs);
 }

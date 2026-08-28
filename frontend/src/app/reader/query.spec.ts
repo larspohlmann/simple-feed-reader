@@ -4,6 +4,7 @@ import {
   isSearchableTerm,
   isTooShortToSearch,
   isWholeWordTerm,
+  isPhraseTerm,
   listSelectionFrom,
   markReadTarget,
   normalizeSearchInput,
@@ -356,6 +357,28 @@ describe('visibleSearchTerm', () => {
   it('leaves inner spacing between terms untouched', () => {
     expect(visibleSearchTerm('daft punk ')).toBe('daft punk');
   });
+  it('strips the wrapping quotes of a phrase, showing the bare inner text', () => {
+    expect(visibleSearchTerm('"climate change"')).toBe('climate change');
+  });
+});
+
+describe('isPhraseTerm (#702)', () => {
+  it('is true for a query wrapped in double quotes', () => {
+    expect(isPhraseTerm('"climate change"')).toBe(true);
+  });
+  it('is false for an unquoted query', () => {
+    expect(isPhraseTerm('climate change')).toBe(false);
+  });
+  it('is false when the quotes wrap nothing usable', () => {
+    expect(isPhraseTerm('""')).toBe(false);
+    expect(isPhraseTerm('"   "')).toBe(false);
+  });
+  it('a phrase overrides the whole-word trailing space when both are present', () => {
+    // The consumer decides precedence, but the two predicates must both fire so
+    // it can: phrase wins, so a query carrying both signals reads as a phrase.
+    expect(isPhraseTerm('"climate change" ')).toBe(true);
+    expect(isWholeWordTerm('"climate change" ')).toBe(true);
+  });
 });
 
 // These pin the two predicates at their edges rather than through a call site.
@@ -402,6 +425,10 @@ describe('searchWords (#408 cleanup)', () => {
 
   it('drops the empty piece a trailing space would leave', () => {
     expect(searchWords('punk ')).toEqual(['punk']);
+  });
+
+  it('returns a phrase as one contiguous run, not word by word (#702)', () => {
+    expect(searchWords('"climate change"')).toEqual(['climate change']);
   });
 
   // Written as an escape, not the literal character: a no-break space is
