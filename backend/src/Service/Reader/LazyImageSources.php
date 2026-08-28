@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Html\Srcset;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -167,10 +168,8 @@ final readonly class LazyImageSources
     /** The first candidate of a srcset list, or null when it yields nothing usable. */
     private function usableSrcsetHead(string $srcset): ?string
     {
-        if (preg_match('/\S+/', explode(',', $srcset)[0], $matches) !== 1) {
-            return null;
-        }
+        $candidate = Srcset::firstUrl($srcset);
 
-        return $this->isUsable($matches[0]) ? $matches[0] : null;
+        return $candidate !== null && $this->isUsable($candidate) ? $candidate : null;
     }
 }

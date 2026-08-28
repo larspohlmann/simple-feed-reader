@@ -265,11 +265,9 @@ export interface ReaderArticle {
   siteName: string | null;
   contentHtml: string;
   excerpt: string | null;
-  /** The picture to lead the reader view; null when the extracted body has its
-   *  own leading image, or repeats it. Resolved server-side (#592). */
-  readerHero: HeroImageDto | null;
-  /** The picture to lead the original-feed view, resolved against the feed's
-   *  own body by the same server-side rule. */
+  /** The picture to lead the original-feed view, resolved against the feed's own
+   *  body server-side. The reader view needs no field of its own: its lead
+   *  picture is restored into contentHtml during extraction (#681). */
   originalHero: HeroImageDto | null;
   extractedAt: string;
 }
@@ -279,8 +277,6 @@ export interface ReaderFailure {
   status: 'failed';
   url: string | null;
   reason: 'no_url' | 'fetch' | 'unextractable' | 'empty';
-  /** Always null: a failed extraction has no body to lead. */
-  readerHero: null;
   originalHero: HeroImageDto | null;
 }
 

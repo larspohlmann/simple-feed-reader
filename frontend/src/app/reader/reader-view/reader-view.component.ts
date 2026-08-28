@@ -238,11 +238,9 @@ export class ReaderViewComponent {
     const s = this.state();
     return s.status === 'ok' ? s.article : null;
   });
-  /** The hero URL that failed to load, so a broken picture hides rather than
-   *  leaving a torn placeholder. Keyed by URL, not by component: the reader and
-   *  the original view offer different pictures, and a broken one must not
-   *  suppress the other (the pattern preview-entry-row already uses). */
-  protected readonly failedHeroUrl = signal<string | null>(null);
+  /** Set when the original view's hero image fails to load, so a broken picture
+   *  hides rather than leaving a torn placeholder. Reset on every entry change. */
+  protected readonly heroFailed = signal(false);
 
   /** The payload the heroes come from. Null while loading, and after a
    *  transport error, where no payload arrived at all. */
@@ -254,15 +252,15 @@ export class ReaderViewComponent {
   });
 
   /**
-   * The picture that leads the article. The backend resolves one hero per body
-   * it can serve, so switching between the reader and the original view is a
-   * field lookup: no request, and no duplicate-image rule on the client (#592).
+   * The picture that leads the ORIGINAL view. The reader view carries its own
+   * lead inside contentHtml now (#681), so it needs no hero element here; only
+   * the original view, which renders the raw feed body, still gets one.
    */
   readonly hero = computed(() => {
     const source = this.heroSource();
-    if (source === null) return null;
-    const image = this.mode() === 'reader' ? source.readerHero : source.originalHero;
-    return image === null || image.url === this.failedHeroUrl() ? null : image;
+    if (source === null || this.mode() === 'reader') return null;
+    const image = source.originalHero;
+    return image === null || this.heroFailed() ? null : image;
   });
 
   /** Estimated minutes to read the displayed text; null hides the meta chip. */
@@ -295,7 +293,7 @@ export class ReaderViewComponent {
       // next one headless.
       this.toc.set([]);
       this.tocOpen.set(false);
-      this.failedHeroUrl.set(null);
+      this.heroFailed.set(false);
       this.showToTop.set(false);
       this.toolbarHidden.set(false);
       this.lastToolbarScrollTop = 0;

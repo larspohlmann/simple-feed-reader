@@ -11,7 +11,7 @@ use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Reader\ArticleExtractorInterface;
 use App\Service\Reader\ExtractionCoverageGate;
 use App\Service\Reader\ExtractionResult;
-use App\Service\Reader\ReaderHeroResolver;
+use App\Service\Reader\OriginalHeroResolver;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -33,7 +33,7 @@ final readonly class EntryReaderController
         private ClockInterface $clock,
         private ArticleExtractorInterface $extractor,
         private ExtractionCoverageGate $coverageGate,
-        private ReaderHeroResolver $readerHeroes,
+        private OriginalHeroResolver $originalHero,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $readerLimiter,
     ) {
@@ -60,8 +60,8 @@ final readonly class EntryReaderController
         // is failed here so the client falls back to the feed body (#654).
         $result = $this->coverageGate->verify($result, $entry->getContentHtml());
 
-        $heroes = $this->readerHeroes->resolve($entry, $result);
+        $originalHero = $this->originalHero->resolve($entry);
 
-        return new JsonResponse(ReaderJson::one($result, $heroes, $this->clock->now()));
+        return new JsonResponse(ReaderJson::one($result, $originalHero, $this->clock->now()));
     }
 }

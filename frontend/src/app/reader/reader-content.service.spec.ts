@@ -13,7 +13,6 @@ const ARTICLE: ReaderArticle = {
   siteName: null,
   contentHtml: '<p>b</p>',
   excerpt: null,
-  readerHero: null,
   originalHero: null,
   extractedAt: '2026-07-23T00:00:00Z',
 };
@@ -64,7 +63,6 @@ describe('ReaderContentService', () => {
       status: 'failed',
       url: null,
       reason: 'fetch',
-      readerHero: null,
       originalHero: null,
     };
     apiGet.mockReturnValue(of(failure));
@@ -88,7 +86,6 @@ describe('ReaderContentService', () => {
       status: 'failed',
       url: null,
       reason: 'fetch',
-      readerHero: null,
       originalHero: null,
     };
     apiGet.mockReturnValue(of(failure));

@@ -16,6 +16,7 @@ use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\LazyImageSources;
 use App\Service\Reader\LeadingTitleRemover;
 use App\Service\Reader\ReaderBodyCleaner;
+use App\Service\Reader\ReaderLeadImage;
 use App\Service\Reader\ShareWidgetRemover;
 use App\Service\Sanitize\EntrySanitizer;
 use PHPUnit\Framework\TestCase;
@@ -54,6 +55,7 @@ final class ArticleExtractorTest extends TestCase
             $fetcher,
             new FetchedPageNormalizer(new LazyImageSources(), new ShareWidgetRemover()),
             new ReaderBodyCleaner(new LeadingTitleRemover(), new EdgeBoilerplateTrimmer()),
+            new ReaderLeadImage(),
             new EntrySanitizer(),
         );
     }
@@ -78,8 +80,6 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringContainsString('substantial paragraph', (string) $result->contentHtml);
         self::assertStringContainsString('https://site.test/img/photo.jpg', (string) $result->contentHtml);
         self::assertStringNotContainsString('About', (string) $result->contentHtml);
-        // This page declares no og:image, so there is no hero to lead with.
-        self::assertNull($result->imageCandidate);
     }
 
     public function testRestoresLazyLoadedImagesInsteadOfLeavingEmptyFrames(): void
@@ -99,26 +99,26 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringNotContainsString('data:image', (string) $result->contentHtml);
     }
 
-    public function testExtractsAnOgImageThatSitsOutsideTheBody(): void
+    public function testRestoresTheLeadIntoATextOnlyBody(): void
     {
+        // readability drops the og:image (it sits outside the scored body) and the
+        // body carries no picture of its own. With nothing to duplicate, the lead
+        // is restored at the top so the story is not left imageless (#681).
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-lead-image.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $result = $extractor->extract('https://site.test/post');
 
         self::assertTrue($result->ok);
-        self::assertStringNotContainsString('<img', (string) $result->contentHtml);
-        // readability finds the og:image even though it is outside the body. The
-        // extractor only reports it; ReaderHeroResolver decides whether it leads.
-        self::assertSame('https://site.test/hero.jpg', $result->imageCandidate);
+        self::assertStringContainsString('<img src="https://site.test/hero.jpg"', (string) $result->contentHtml);
     }
 
-    public function testCarriesTheOgImageThroughAsACandidate(): void
+    public function testRestoresADistinctPageHeroAboveTheBodyPhoto(): void
     {
-        // #505: the og:image hero sits in the page header (a different CDN image
-        // id than the body photo). The #505 suppression assertion now lives in
-        // ReaderHeroResolverTest; this only proves the candidate survives
-        // extraction unchanged, whatever the body shows.
+        // #681: the og:image hero sits in the page header (a different CDN image id
+        // than the body photo). readability drops it as chrome; because the page
+        // draws it and the body's own photo is a different picture, the lead is
+        // restored at the top — the mopo pattern that used to lose the first image.
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-distinct-hero.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
@@ -126,8 +126,12 @@ final class ArticleExtractorTest extends TestCase
 
         self::assertTrue($result->ok);
         self::assertStringContainsString('4943526', (string) $result->contentHtml);
-        self::assertStringNotContainsString('4943510', (string) $result->contentHtml);
-        self::assertSame('https://site.test/4943510.jpg?imageId=4943510', $result->imageCandidate);
+        self::assertStringContainsString('4943510', (string) $result->contentHtml);
+        self::assertLessThan(
+            strpos((string) $result->contentHtml, '4943526'),
+            strpos((string) $result->contentHtml, '4943510'),
+            'the restored hero must lead the body photo',
+        );
     }
 
     public function testStripsDangerousMarkup(): void
@@ -160,6 +164,7 @@ final class ArticleExtractorTest extends TestCase
             $fetcher,
             new FetchedPageNormalizer(new LazyImageSources(), new ShareWidgetRemover()),
             new ReaderBodyCleaner(new LeadingTitleRemover(), new EdgeBoilerplateTrimmer()),
+            new ReaderLeadImage(),
             new EntrySanitizer(),
         );
 
