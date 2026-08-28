@@ -62,6 +62,7 @@ import { CatalogStore } from '../../discover/catalog.store';
 import { ListScrollMemory } from '../list-scroll-memory';
 import { nextHeaderHidden } from '../header-scroll';
 import { prefetchMargin } from '../paging';
+import { ReadingFocusService } from '../../core/reading-focus.service';
 
 // Scroll-restore settle window: re-assert the target for at most this many frames,
 // stopping early once the content height has held steady for this many in a row.
@@ -353,6 +354,7 @@ export class EntryListComponent implements OnDestroy {
   });
 
   private readonly screen = inject(LayoutService);
+  private readonly readingFocus = inject(ReadingFocusService);
   private readonly scroll = inject(ListScrollMemory);
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly catalog = inject(CatalogStore);
@@ -470,6 +472,7 @@ export class EntryListComponent implements OnDestroy {
    *
    * The sources, gathered here rather than wired up piecemeal so a new one is a
    * single line and never a place to forget (each miss was its own bug):
+   *  - `readingFocus.enabled()` — the local setting that starts or clears the pass.
    *  - `screen.isWide()` — the breakpoint the fade is gated on.
    *  - `entries()` — a finished load or a load-more append.
    *  - `rows()` — the scroller element itself being replaced (skeleton -> list,
@@ -479,6 +482,12 @@ export class EntryListComponent implements OnDestroy {
    *  - `focusPulse()` — the imperative events: scroll, resize, row collapse.
    */
   private readonly _readingFocus = effect(() => {
+    if (!this.readingFocus.enabled()) {
+      if (this.focusRaf) cancelAnimationFrame(this.focusRaf);
+      this.focusRaf = 0;
+      this.clearFocus();
+      return;
+    }
     this.screen.isWide();
     this.entries();
     this.rows();
@@ -516,7 +525,7 @@ export class EntryListComponent implements OnDestroy {
    *  Called only by the `_readingFocus` subscriber — every source funnels
    *  through that effect, so this stays the single place the work happens. */
   private scheduleFocus(): void {
-    if (this.reduceMotion || this.focusRaf) return;
+    if (this.reduceMotion || !this.readingFocus.enabled() || this.focusRaf) return;
     this.focusRaf = requestAnimationFrame(() => {
       this.focusRaf = 0;
       this.applyFocus();
@@ -539,10 +548,8 @@ export class EntryListComponent implements OnDestroy {
   private applyFocus(): void {
     const rows = this.rows()?.nativeElement;
     if (!rows) return;
-    if (this.screen.isWide()) {
-      for (const child of Array.from(rows.children) as HTMLElement[]) {
-        child.style.opacity = '';
-      }
+    if (!this.readingFocus.enabled() || this.screen.isWide()) {
+      this.clearFocus();
       return;
     }
     const viewport = rows.clientHeight;
@@ -556,6 +563,12 @@ export class EntryListComponent implements OnDestroy {
       // minimum because its off-screen centre is a viewport away (#213).
       child.style.opacity = String(focusOpacityForSpan(top, top + rect.height, viewport));
     }
+  }
+
+  private clearFocus(): void {
+    const rows = this.rows()?.nativeElement;
+    if (!rows) return;
+    for (const child of Array.from(rows.children) as HTMLElement[]) child.style.opacity = '';
   }
 
   /**
