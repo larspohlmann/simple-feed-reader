@@ -141,6 +141,27 @@ class EntryListRepository extends ServiceEntityRepository
     }
 
     /**
+     * The ids of every unread entry that matches this search and is NEWER than
+     * $since, for the user's subscribed feeds — the digest's "new since the last
+     * send" window (#636). The mirror of unreadMatchingEntryIdsForUser's `<=`.
+     *
+     * @return list<int>
+     */
+    public function unreadMatchIdsSince(EntrySearchQuery $query, \DateTimeImmutable $since): array
+    {
+        $qb = $this->unreadMatchQueryBuilder($query)
+            ->select('e.id')
+            ->distinct()
+            ->andWhere('e.effectiveDate > :since')
+            ->setParameter('since', $since);
+
+        /** @var list<array{id: int}> $rows */
+        $rows = $qb->getQuery()->getScalarResult();
+
+        return array_map(static fn (array $row): int => (int) $row['id'], $rows);
+    }
+
+    /**
      * The given entry ids hydrated through the same list-row projection every
      * other list uses — same per-user read state, same subscription join.
      * Ordered exactly like the entry list, never in the id order asked for,
