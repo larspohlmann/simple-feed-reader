@@ -1,6 +1,7 @@
 import { ApplicationRef, ChangeDetectionStrategy, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { OverlayContainer } from '@angular/cdk/overlay';
+import { NoopScrollStrategy, OverlayContainer } from '@angular/cdk/overlay';
+import { Dialog } from '@angular/cdk/dialog';
 import { CONFIRMATION_DURATION_MS, ToastService } from './toast.service';
 
 describe('ToastService', () => {
@@ -224,6 +225,16 @@ describe('ToastService', () => {
     toast.show({ message: 'Second' });
     tick();
     expect(toastHeight()).toBe('90px');
+  });
+
+  it('opens with a non-blocking scroll strategy, so the page still scrolls under the toast', () => {
+    // The CDK Dialog defaults to a block strategy that locks page scroll for the
+    // toast's whole life (#700); the toast must opt out of it.
+    const open = jest.spyOn(TestBed.inject(Dialog), 'open');
+    toast.show({ message: 'Saved.' });
+    tick();
+
+    expect(open.mock.calls[0][1]!.scrollStrategy).toBeInstanceOf(NoopScrollStrategy);
   });
 
   it('marks the pane fixed-width only when the toast asks for it', () => {
