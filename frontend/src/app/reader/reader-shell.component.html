@@ -219,7 +219,7 @@
   @if (selectedSubscription(); as sub) {
     <button
       appListAction
-      class="list-edit"
+      class="list-edit mobile-icon-only"
       type="button"
       [attr.aria-label]="'reader.editFeed' | transloco"
       [attr.title]="'reader.editFeed' | transloco"
@@ -233,7 +233,7 @@
   } @else if (selectedTag(); as tag) {
     <button
       appListAction
-      class="list-edit"
+      class="list-edit mobile-icon-only"
       type="button"
       [attr.aria-label]="'reader.editTag' | transloco"
       [attr.title]="'reader.editTag' | transloco"

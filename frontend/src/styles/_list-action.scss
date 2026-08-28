@@ -7,8 +7,11 @@
 // `padding: 0`, `background`/`border: none` and `font: inherit` double as the
 // button reset the app has no global one for: a <button> here would otherwise
 // render as a grey user-agent button in a user-agent font, out of step with the
-// <a> beside it. Icon size and the label-visibility breakpoints stay with each
-// consumer — they are per-control, not shared.
+// <a> beside it. Icon size and label visibility stay with each consumer. The
+// shared `mobile-icon-only` modifier below owns the target and border only after
+// that consumer has hidden its label.
+@use '../app/theme/breakpoints' as bp;
+
 .list-action {
   display: inline-flex;
   align-items: center;
@@ -28,4 +31,24 @@
 .list-action:disabled {
   cursor: default;
   color: var(--text-muted);
+}
+
+// On a phone, the list header's Edit, unread switch, Mark all read and Refresh
+// controls lose their text so the title still fits. Give the now-icon-only
+// controls the sidebar chevron treatment: a full tap target around a smaller
+// bordered glyph box. The modifier is explicit because some phone actions keep
+// a short label and must stay as links without this chrome (#679).
+@media (width <= bp.$bp-sm) {
+  .list-action.mobile-icon-only {
+    justify-content: center;
+    width: var(--tap-target);
+    height: var(--tap-target);
+  }
+
+  .list-action.mobile-icon-only app-icon {
+    display: inline-flex;
+    padding: var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+  }
 }
