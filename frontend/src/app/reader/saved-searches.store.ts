@@ -34,6 +34,7 @@ export class SavedSearchesStore {
       wholeWord: wire.wholeWord,
       position: wire.position,
       unreadCount: wire.unreadEntryIds.reduce((count, id) => count + (read.has(id) ? 0 : 1), 0),
+      includeInDigest: wire.includeInDigest,
     }));
   });
 
@@ -85,6 +86,20 @@ export class SavedSearchesStore {
   removeSavedSearch(id: number): void {
     this.api.deleteSavedSearch(id).subscribe({
       next: () => this.loaded.update((rows) => rows.filter((row) => row.id !== id)),
+    });
+  }
+
+  /** Optimistic patch of one saved search's digest flag; reverts on a failed PATCH. */
+  setIncludeInDigest(id: number, value: boolean): void {
+    const before = this.loaded().find((row) => row.id === id);
+    if (!before) return;
+    this.loaded.update((rows) =>
+      rows.map((row) => (row.id === id ? { ...row, includeInDigest: value } : row)),
+    );
+    this.api.updateSavedSearch(id, { includeInDigest: value }).subscribe({
+      error: () => {
+        this.loaded.update((rows) => rows.map((row) => (row.id === id ? before : row)));
+      },
     });
   }
 }

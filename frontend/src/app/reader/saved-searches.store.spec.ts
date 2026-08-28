@@ -1,19 +1,33 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { ReaderApi } from './reader-api';
 import { SavedSearchDto, SavedSearchWire } from './models';
 import { SavedSearchesStore } from './saved-searches.store';
 
 describe('SavedSearchesStore', () => {
   const rows: SavedSearchWire[] = [
-    { id: 2, term: 'rust lang', wholeWord: true, position: 0, unreadEntryIds: [10, 11, 12, 13] },
-    { id: 1, term: 'climate', wholeWord: false, position: 0, unreadEntryIds: [] },
+    {
+      id: 2,
+      term: 'rust lang',
+      wholeWord: true,
+      position: 0,
+      unreadEntryIds: [10, 11, 12, 13],
+      includeInDigest: false,
+    },
+    {
+      id: 1,
+      term: 'climate',
+      wholeWord: false,
+      position: 0,
+      unreadEntryIds: [],
+      includeInDigest: false,
+    },
   ];
 
   /** The sidebar view the store derives from a wire row. */
   function view(wire: SavedSearchWire, unreadCount = wire.unreadEntryIds.length): SavedSearchDto {
-    const { id, term, wholeWord, position } = wire;
-    return { id, term, wholeWord, position, unreadCount };
+    const { id, term, wholeWord, position, includeInDigest } = wire;
+    return { id, term, wholeWord, position, unreadCount, includeInDigest };
   }
 
   function setup(api: Partial<ReaderApi>): SavedSearchesStore {
@@ -124,5 +138,28 @@ describe('SavedSearchesStore', () => {
     store.load(); // the backend already reflects the read; the local drop must reset
 
     expect(store.savedSearches()[0].unreadCount).toBe(4);
+  });
+
+  it('setIncludeInDigest() patches the flag immediately and calls the API', () => {
+    const updateSavedSearch = jest.fn(() =>
+      of({ savedSearch: { ...rows[1], includeInDigest: true } }),
+    );
+    const store = setup({ savedSearches: () => of({ savedSearches: rows }), updateSavedSearch });
+    store.load();
+
+    store.setIncludeInDigest(1, true);
+
+    expect(store.savedSearches().find((s) => s.id === 1)?.includeInDigest).toBe(true);
+    expect(updateSavedSearch).toHaveBeenCalledWith(1, { includeInDigest: true });
+  });
+
+  it('setIncludeInDigest() reverts the flag when the PATCH fails', () => {
+    const updateSavedSearch = jest.fn(() => throwError(() => new Error('boom')));
+    const store = setup({ savedSearches: () => of({ savedSearches: rows }), updateSavedSearch });
+    store.load();
+
+    store.setIncludeInDigest(1, true);
+
+    expect(store.savedSearches().find((s) => s.id === 1)?.includeInDigest).toBe(false);
   });
 });

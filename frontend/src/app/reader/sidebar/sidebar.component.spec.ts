@@ -543,8 +543,22 @@ describe('SidebarComponent', () => {
     it('renders collapsed by default, showing the header with the summed unread count', () => {
       const f = mount({
         savedSearches: [
-          { id: 1, term: 'climate', wholeWord: false, position: 0, unreadCount: 3 },
-          { id: 2, term: 'space', wholeWord: false, position: 1, unreadCount: 4 },
+          {
+            id: 1,
+            term: 'climate',
+            wholeWord: false,
+            position: 0,
+            unreadCount: 3,
+            includeInDigest: false,
+          },
+          {
+            id: 2,
+            term: 'space',
+            wholeWord: false,
+            position: 1,
+            unreadCount: 4,
+            includeInDigest: false,
+          },
         ],
       });
       const text = f.nativeElement.textContent;
@@ -558,8 +572,22 @@ describe('SidebarComponent', () => {
     it('expands on click, revealing the term rows while keeping the summed count', () => {
       const f = mount({
         savedSearches: [
-          { id: 1, term: 'climate', wholeWord: false, position: 0, unreadCount: 3 },
-          { id: 2, term: 'space', wholeWord: false, position: 1, unreadCount: 4 },
+          {
+            id: 1,
+            term: 'climate',
+            wholeWord: false,
+            position: 0,
+            unreadCount: 3,
+            includeInDigest: false,
+          },
+          {
+            id: 2,
+            term: 'space',
+            wholeWord: false,
+            position: 1,
+            unreadCount: 4,
+            includeInDigest: false,
+          },
         ],
       });
       const head: HTMLElement = f.nativeElement.querySelector('.savedsearch-head');
@@ -583,7 +611,16 @@ describe('SidebarComponent', () => {
 
     it('also expands on a click of its trailing chevron button', () => {
       const f = mount({
-        savedSearches: [{ id: 1, term: 'climate', wholeWord: false, position: 0, unreadCount: 3 }],
+        savedSearches: [
+          {
+            id: 1,
+            term: 'climate',
+            wholeWord: false,
+            position: 0,
+            unreadCount: 3,
+            includeInDigest: false,
+          },
+        ],
       });
       const chevron: HTMLButtonElement = f.nativeElement.querySelector(
         '.savedsearch-head .chevzone',
@@ -602,7 +639,16 @@ describe('SidebarComponent', () => {
       };
       const f = mount({
         tagTree: [node],
-        savedSearches: [{ id: 1, term: 'climate', wholeWord: false, position: 0, unreadCount: 3 }],
+        savedSearches: [
+          {
+            id: 1,
+            term: 'climate',
+            wholeWord: false,
+            position: 0,
+            unreadCount: 3,
+            includeInDigest: false,
+          },
+        ],
       });
       const savedChev: HTMLElement = f.nativeElement.querySelector('.savedsearch-head .chevzone');
       const tagChev: HTMLElement = f.nativeElement.querySelector('.taghead .chevzone');
@@ -614,7 +660,16 @@ describe('SidebarComponent', () => {
     // and right (`chevron_right`) when it is collapsed — never up.
     it('points the header chevron down when expanded and right when collapsed', () => {
       const f = mount({
-        savedSearches: [{ id: 1, term: 'climate', wholeWord: false, position: 0, unreadCount: 3 }],
+        savedSearches: [
+          {
+            id: 1,
+            term: 'climate',
+            wholeWord: false,
+            position: 0,
+            unreadCount: 3,
+            includeInDigest: false,
+          },
+        ],
       });
       const chevronIcon = (): string | null =>
         f.nativeElement.querySelector('.savedsearch-head .chevzone .material-symbols-outlined')
@@ -631,8 +686,22 @@ describe('SidebarComponent', () => {
     it('shows a compact "W" pill on a whole-word row and none on a plain row', () => {
       const f = mount({
         savedSearches: [
-          { id: 1, term: 'climate', wholeWord: true, position: 0, unreadCount: 0 },
-          { id: 2, term: 'space', wholeWord: false, position: 1, unreadCount: 0 },
+          {
+            id: 1,
+            term: 'climate',
+            wholeWord: true,
+            position: 0,
+            unreadCount: 0,
+            includeInDigest: false,
+          },
+          {
+            id: 2,
+            term: 'space',
+            wholeWord: false,
+            position: 1,
+            unreadCount: 0,
+            includeInDigest: false,
+          },
         ],
       });
       f.componentInstance.toggleSavedSearches();
@@ -655,8 +724,22 @@ describe('SidebarComponent', () => {
     it('marks the row the shell names active, and only that one', () => {
       const f = mount({
         savedSearches: [
-          { id: 1, term: 'climate', wholeWord: true, position: 0, unreadCount: 0 },
-          { id: 2, term: 'space', wholeWord: false, position: 1, unreadCount: 0 },
+          {
+            id: 1,
+            term: 'climate',
+            wholeWord: true,
+            position: 0,
+            unreadCount: 0,
+            includeInDigest: false,
+          },
+          {
+            id: 2,
+            term: 'space',
+            wholeWord: false,
+            position: 1,
+            unreadCount: 0,
+            includeInDigest: false,
+          },
         ],
         activeSavedSearchId: 1,
       });
@@ -671,7 +754,16 @@ describe('SidebarComponent', () => {
 
     it('marks no row active when the shell names none', () => {
       const f = mount({
-        savedSearches: [{ id: 1, term: 'climate', wholeWord: true, position: 0, unreadCount: 0 }],
+        savedSearches: [
+          {
+            id: 1,
+            term: 'climate',
+            wholeWord: true,
+            position: 0,
+            unreadCount: 0,
+            includeInDigest: false,
+          },
+        ],
       });
       f.componentInstance.toggleSavedSearches();
       f.detectChanges();
@@ -685,7 +777,16 @@ describe('SidebarComponent', () => {
     // change is what keeps a zone-based change-detection pass off that path.
     it('keeps each row link params object stable across change detection', () => {
       const f = mount({
-        savedSearches: [{ id: 1, term: 'climate', wholeWord: true, position: 0, unreadCount: 0 }],
+        savedSearches: [
+          {
+            id: 1,
+            term: 'climate',
+            wholeWord: true,
+            position: 0,
+            unreadCount: 0,
+            includeInDigest: false,
+          },
+        ],
       });
       f.componentInstance.toggleSavedSearches();
       f.detectChanges();

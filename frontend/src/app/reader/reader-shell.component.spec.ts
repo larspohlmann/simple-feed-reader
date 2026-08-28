@@ -2469,6 +2469,7 @@ describe('ReaderShellComponent', () => {
       wholeWord: true,
       position: 0,
       unreadEntryIds: [100, 101],
+      includeInDigest: false,
     };
     // The sidebar view the store derives from that wire row.
     const savedClimateView: SavedSearchDto = {
@@ -2477,6 +2478,7 @@ describe('ReaderShellComponent', () => {
       wholeWord: true,
       position: 0,
       unreadCount: 2,
+      includeInDigest: false,
     };
 
     it('saves the decoded term and whole-word flag, adopts the response without reloading the list, and toasts a confirmation', () => {
