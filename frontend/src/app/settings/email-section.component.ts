@@ -24,7 +24,13 @@ const TEST_MAIL_RESULT_KEYS: Record<DigestTestMailResult, string> = {
 
 type EmailSectionState = 'mailDisabled' | 'unverified' | 'ready';
 
-const SEND_HOURS = Array.from({ length: 24 }, (_unused, hour) => hour);
+/** The 24 send-hour choices, each labelled as a zero-padded 24-hour clock time
+ *  (e.g. "08:00") so the option reads unambiguously as a time of day rather than
+ *  a bare number (#636). The value stays the plain hour the backend expects. */
+const SEND_HOURS: readonly { value: number; label: string }[] = Array.from(
+  { length: 24 },
+  (_unused, hour) => ({ value: hour, label: `${String(hour).padStart(2, '0')}:00` }),
+);
 
 /** ISO-8601 weekday numbering (1=Mon … 7=Sun), matching `Preferences::getDigestWeekday()`
  *  on the backend -- see `backend/src/Entity/Preferences.php`. */

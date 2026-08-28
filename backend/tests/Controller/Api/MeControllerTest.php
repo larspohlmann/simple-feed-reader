@@ -170,7 +170,13 @@ final class MeControllerTest extends ApiTestCase
         self::assertSame(
             [
                 'scrapeFallbackEnabled' => true,
-                'digest' => ['enabled' => false, 'cadence' => 'daily', 'sendHour' => 8, 'weekday' => 1],
+                'digest' => [
+                    'enabled' => false,
+                    'cadence' => 'daily',
+                    'sendHour' => 8,
+                    'weekday' => 1,
+                    'timezone' => 'UTC',
+                ],
             ],
             $this->payload($client)['preferences'],
         );
@@ -239,7 +245,13 @@ final class MeControllerTest extends ApiTestCase
         self::assertSame(
             [
                 'scrapeFallbackEnabled' => false,
-                'digest' => ['enabled' => false, 'cadence' => 'daily', 'sendHour' => 8, 'weekday' => 1],
+                'digest' => [
+                    'enabled' => false,
+                    'cadence' => 'daily',
+                    'sendHour' => 8,
+                    'weekday' => 1,
+                    'timezone' => 'UTC',
+                ],
             ],
             $this->payload($client)['preferences'],
         );

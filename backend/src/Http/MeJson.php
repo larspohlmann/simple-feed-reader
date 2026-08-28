@@ -16,7 +16,7 @@ final class MeJson
     /**
      * @return array<string, mixed>
      */
-    public static function profile(User $user, bool $mailEnabled): array
+    public static function profile(User $user, bool $mailEnabled, string $instanceTimezone): array
     {
         $aiSettings = $user->getActiveAiProviderSettings();
         $preferences = $user->getPreferences();
@@ -38,6 +38,7 @@ final class MeJson
                     'cadence' => $preferences->getDigestCadence()->value,
                     'sendHour' => $preferences->getDigestSendHour(),
                     'weekday' => $preferences->getDigestWeekday(),
+                    'timezone' => $instanceTimezone,
                 ],
             ],
             'ai' => [

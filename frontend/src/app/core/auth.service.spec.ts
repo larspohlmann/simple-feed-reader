@@ -61,7 +61,13 @@ describe('AuthService', () => {
       locale: 'de',
       preferences: {
         scrapeFallbackEnabled: false,
-        digest: { enabled: true, cadence: 'weekly', sendHour: 20, weekday: 5 },
+        digest: {
+          enabled: true,
+          cadence: 'weekly',
+          sendHour: 20,
+          weekday: 5,
+          timezone: 'Europe/Berlin',
+        },
       },
       ai: { ready: true, model: 'gpt-4o' },
       mail: { enabled: true },
@@ -78,6 +84,7 @@ describe('AuthService', () => {
     expect(digest.cadence()).toBe('weekly');
     expect(digest.sendHour()).toBe(20);
     expect(digest.weekday()).toBe(5);
+    expect(digest.timezone()).toBe('Europe/Berlin');
     // A value that just arrived from the server must never be PATCHed
     // straight back to it.
     ctrl.expectNone({ method: 'PATCH', url: 'https://api.test/api/me' });

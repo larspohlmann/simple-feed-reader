@@ -58,7 +58,13 @@ final class MeDigestControllerTest extends ApiTestCase
         $preferences = $this->payload($client)['preferences'];
         self::assertIsArray($preferences);
         self::assertSame(
-            ['enabled' => true, 'cadence' => 'weekly', 'sendHour' => 9, 'weekday' => 3],
+            [
+                'enabled' => true,
+                'cadence' => 'weekly',
+                'sendHour' => 9,
+                'weekday' => 3,
+                'timezone' => 'UTC',
+            ],
             $preferences['digest'],
         );
 

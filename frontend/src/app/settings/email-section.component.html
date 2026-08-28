@@ -44,14 +44,20 @@
         </select>
       </app-settings-row>
 
-      <app-settings-row [stackable]="true" [title]="'settings.email.sendHour' | transloco">
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.email.sendHour' | transloco"
+        [description]="'settings.email.sendHourZone' | transloco: { timezone: digest.timezone() }"
+      >
         <select
           data-testid="digest-send-hour"
           [disabled]="controlsDisabled()"
           (change)="onSendHour($event)"
         >
-          @for (hour of hours; track hour) {
-            <option [value]="hour" [selected]="digest.sendHour() === hour">{{ hour }}</option>
+          @for (hour of hours; track hour.value) {
+            <option [value]="hour.value" [selected]="digest.sendHour() === hour.value">
+              {{ hour.label }}
+            </option>
           }
         </select>
       </app-settings-row>

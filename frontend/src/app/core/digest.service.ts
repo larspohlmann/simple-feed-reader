@@ -8,6 +8,7 @@ const DEFAULT_ENABLED = false;
 const DEFAULT_CADENCE = 'daily';
 const DEFAULT_SEND_HOUR = 8;
 const DEFAULT_WEEKDAY = 1;
+const DEFAULT_TIMEZONE = 'UTC';
 
 /**
  * Per-account digest settings, mirroring `PreferencesService`: the account is
@@ -25,6 +26,9 @@ export class DigestService {
   readonly cadence = signal<'daily' | 'weekly'>(DEFAULT_CADENCE);
   readonly sendHour = signal(DEFAULT_SEND_HOUR);
   readonly weekday = signal(DEFAULT_WEEKDAY);
+  /** The instance's configured timezone, read-only instance config adopted
+   *  from the account -- never written back through `writeAll()`. */
+  readonly timezone = signal(DEFAULT_TIMEZONE);
 
   /** True when the value applied locally but the account write failed. */
   readonly saveFailed = signal(false);
@@ -69,6 +73,7 @@ export class DigestService {
     this.cadence.set(digest?.cadence ?? DEFAULT_CADENCE);
     this.sendHour.set(digest?.sendHour ?? DEFAULT_SEND_HOUR);
     this.weekday.set(digest?.weekday ?? DEFAULT_WEEKDAY);
+    this.timezone.set(digest?.timezone ?? DEFAULT_TIMEZONE);
   }
 
   /**
@@ -82,6 +87,7 @@ export class DigestService {
     this.cadence.set(DEFAULT_CADENCE);
     this.sendHour.set(DEFAULT_SEND_HOUR);
     this.weekday.set(DEFAULT_WEEKDAY);
+    this.timezone.set(DEFAULT_TIMEZONE);
     this.saveFailed.set(false);
   }
 

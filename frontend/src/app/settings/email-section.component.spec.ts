@@ -40,7 +40,13 @@ function user(overrides: Partial<CurrentUser> = {}): CurrentUser {
     trialEndsAt: null,
     preferences: {
       scrapeFallbackEnabled: false,
-      digest: { enabled: false, cadence: 'daily', sendHour: 8, weekday: 1 },
+      digest: {
+        enabled: false,
+        cadence: 'daily',
+        sendHour: 8,
+        weekday: 1,
+        timezone: 'Europe/Berlin',
+      },
     },
     ai: { ready: false, model: null },
     mail: { enabled: true },
@@ -70,6 +76,7 @@ describe('EmailSectionComponent', () => {
       ],
     });
     digest = TestBed.inject(DigestService);
+    digest.adopt(u);
     const f = TestBed.createComponent(EmailSectionComponent);
     f.detectChanges();
     return f;
@@ -127,6 +134,23 @@ describe('EmailSectionComponent', () => {
       const sendHour = el.querySelector('[data-testid="digest-send-hour"]') as HTMLSelectElement;
       expect(cadence.disabled).toBe(false);
       expect(sendHour.disabled).toBe(false);
+    });
+
+    it('renders each send-hour option as a zero-padded clock time', () => {
+      const f = mount(user());
+      const el = f.nativeElement as HTMLElement;
+
+      const sendHour = el.querySelector('[data-testid="digest-send-hour"]') as HTMLSelectElement;
+      const eightAm = Array.from(sendHour.options).find((option) => option.value === '8');
+
+      expect(eightAm?.textContent?.trim()).toBe('08:00');
+    });
+
+    it('shows the instance timezone adopted from the account next to the send hour', () => {
+      const f = mount(user());
+      const el = f.nativeElement as HTMLElement;
+
+      expect(el.textContent).toContain('Europe/Berlin');
     });
 
     it('shows no weekday selector while cadence is daily', () => {

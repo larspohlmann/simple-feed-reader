@@ -21,7 +21,7 @@ class FakeWriter implements DigestWriter {
   }
 }
 
-const user = (digest: DigestConfig): CurrentUser => ({
+const user = (digest: DigestConfig, timezone = 'UTC'): CurrentUser => ({
   id: 1,
   email: 'a@example.com',
   roles: [],
@@ -29,7 +29,7 @@ const user = (digest: DigestConfig): CurrentUser => ({
   createdAt: '2026-08-02T10:00:00+00:00',
   locale: 'en',
   trialEndsAt: null,
-  preferences: { scrapeFallbackEnabled: false, digest },
+  preferences: { scrapeFallbackEnabled: false, digest: { ...digest, timezone } },
   ai: { ready: false, model: null },
   mail: { enabled: true },
   emailVerified: true,
@@ -47,13 +47,14 @@ describe('DigestService', () => {
     });
   });
 
-  it('defaults to disabled, daily, 8am, Monday', () => {
+  it('defaults to disabled, daily, 8am, Monday, UTC', () => {
     const s = service();
 
     expect(s.enabled()).toBe(false);
     expect(s.cadence()).toBe('daily');
     expect(s.sendHour()).toBe(8);
     expect(s.weekday()).toBe(1);
+    expect(s.timezone()).toBe('UTC');
   });
 
   it('applies a changed field locally and writes the full config through', () => {
@@ -95,19 +96,20 @@ describe('DigestService', () => {
   it('adopts the account values without writing them back', () => {
     const s = service();
 
-    s.adopt(user({ enabled: true, cadence: 'weekly', sendHour: 20, weekday: 5 }));
+    s.adopt(user({ enabled: true, cadence: 'weekly', sendHour: 20, weekday: 5 }, 'Europe/Berlin'));
 
     expect(s.enabled()).toBe(true);
     expect(s.cadence()).toBe('weekly');
     expect(s.sendHour()).toBe(20);
     expect(s.weekday()).toBe(5);
+    expect(s.timezone()).toBe('Europe/Berlin');
     expect(writer.written).toEqual([]);
   });
 
   it('adopts defaults without throwing when preferences.digest is missing', () => {
     const s = service();
     const malformedUser = {
-      ...user({ enabled: true, cadence: 'weekly', sendHour: 20, weekday: 5 }),
+      ...user({ enabled: true, cadence: 'weekly', sendHour: 20, weekday: 5 }, 'Europe/Berlin'),
       preferences: { scrapeFallbackEnabled: false } as unknown as CurrentUser['preferences'],
     };
 
@@ -117,12 +119,13 @@ describe('DigestService', () => {
     expect(s.cadence()).toBe('daily');
     expect(s.sendHour()).toBe(8);
     expect(s.weekday()).toBe(1);
+    expect(s.timezone()).toBe('UTC');
     expect(writer.written).toEqual([]);
   });
 
   it('resets to defaults', () => {
     const s = service();
-    s.adopt(user({ enabled: true, cadence: 'weekly', sendHour: 20, weekday: 5 }));
+    s.adopt(user({ enabled: true, cadence: 'weekly', sendHour: 20, weekday: 5 }, 'Europe/Berlin'));
 
     s.reset();
 
@@ -130,6 +133,7 @@ describe('DigestService', () => {
     expect(s.cadence()).toBe('daily');
     expect(s.sendHour()).toBe(8);
     expect(s.weekday()).toBe(1);
+    expect(s.timezone()).toBe('UTC');
     expect(s.saveFailed()).toBe(false);
   });
 

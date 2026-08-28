@@ -20,7 +20,7 @@ const user: CurrentUser = {
   trialEndsAt: null,
   preferences: {
     scrapeFallbackEnabled: false,
-    digest: { enabled: false, cadence: 'daily', sendHour: 8, weekday: 1 },
+    digest: { enabled: false, cadence: 'daily', sendHour: 8, weekday: 1, timezone: 'UTC' },
   },
   ai: { ready: false, model: null },
   mail: { enabled: true },

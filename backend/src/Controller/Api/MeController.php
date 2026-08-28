@@ -17,6 +17,7 @@ use App\Service\Mail\Digest\SendTestDigest;
 use App\Service\Mail\MailCapability;
 use App\Service\RateLimit\RateLimitGuard;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -40,13 +41,15 @@ final readonly class MeController
         private SendTestDigest $sendTestDigest,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $digestTestLimiter,
+        #[Autowire('%env(string:APP_TIMEZONE)%')]
+        private string $instanceTimezone,
     ) {
     }
 
     #[Route('/api/me', name: 'api_me', methods: ['GET'])]
     public function show(#[CurrentUser] User $user): JsonResponse
     {
-        return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled()));
+        return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled(), $this->instanceTimezone));
     }
 
     /**
@@ -63,7 +66,7 @@ final readonly class MeController
         $user->setLocale($request->locale);
         $this->entityManager->flush();
 
-        return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled()));
+        return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled(), $this->instanceTimezone));
     }
 
     /**
@@ -80,7 +83,7 @@ final readonly class MeController
         $user->getPreferences()->setScrapeFallbackEnabled($request->scrapeFallbackEnabled);
         $this->entityManager->flush();
 
-        return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled()));
+        return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled(), $this->instanceTimezone));
     }
 
     /**
@@ -97,7 +100,7 @@ final readonly class MeController
         $this->digestEnablement->applyTo($user->getPreferences(), $request);
         $this->entityManager->flush();
 
-        return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled()));
+        return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled(), $this->instanceTimezone));
     }
 
     /**

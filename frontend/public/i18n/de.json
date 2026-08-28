@@ -105,6 +105,7 @@
       "daily": "Täglich",
       "weekly": "Wöchentlich",
       "sendHour": "Senden um",
+      "sendHourZone": "Zeiten werden in {{timezone}} angezeigt.",
       "weekday": "Senden am",
       "weekdayMonday": "Montag",
       "weekdayTuesday": "Dienstag",

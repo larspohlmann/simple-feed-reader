@@ -15,6 +15,9 @@ export interface UserDigestPreferences {
   cadence: 'daily' | 'weekly';
   sendHour: number;
   weekday: number;
+  /** The instance's configured timezone (`APP_TIMEZONE`), read-only: the send
+   *  hour is interpreted in this zone. Never sent back in a digest PATCH. */
+  timezone: string;
 }
 
 export interface UserPreferences {

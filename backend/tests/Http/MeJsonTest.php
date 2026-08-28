@@ -32,7 +32,7 @@ final class MeJsonTest extends TestCase
 
     public function testAnAccountWithNoActiveConfigurationIsNotReady(): void
     {
-        $profile = MeJson::profile($this->user(), true);
+        $profile = MeJson::profile($this->user(), true, 'UTC');
 
         self::assertIsArray($profile['ai']);
         self::assertFalse($profile['ai']['ready']);
@@ -46,7 +46,7 @@ final class MeJsonTest extends TestCase
         $active->chooseModel('gpt-4o-mini', new \DateTimeImmutable('2026-08-09T09:05:00Z'), null);
         $user->setActiveAiProviderSettings($active);
 
-        $profile = MeJson::profile($user, true);
+        $profile = MeJson::profile($user, true, 'UTC');
 
         self::assertIsArray($profile['ai']);
         self::assertTrue($profile['ai']['ready']);
@@ -69,7 +69,7 @@ final class MeJsonTest extends TestCase
         $other = $this->configuration($user, 'Personal OpenRouter');
         $other->chooseModel('claude-3-haiku', new \DateTimeImmutable('2026-08-09T09:06:00Z'), null);
 
-        $profile = MeJson::profile($user, true);
+        $profile = MeJson::profile($user, true, 'UTC');
 
         self::assertIsArray($profile['ai']);
         self::assertTrue($profile['ai']['ready']);
@@ -86,13 +86,19 @@ final class MeJsonTest extends TestCase
         $preferences->setDigestSendHour(9);
         $preferences->setDigestWeekday(3);
 
-        $profile = MeJson::profile($user, true);
+        $profile = MeJson::profile($user, true, 'Europe/Berlin');
 
         self::assertSame(['enabled' => true], $profile['mail']);
         self::assertTrue($profile['emailVerified']);
         self::assertIsArray($profile['preferences']);
         self::assertSame(
-            ['enabled' => true, 'cadence' => 'weekly', 'sendHour' => 9, 'weekday' => 3],
+            [
+                'enabled' => true,
+                'cadence' => 'weekly',
+                'sendHour' => 9,
+                'weekday' => 3,
+                'timezone' => 'Europe/Berlin',
+            ],
             $profile['preferences']['digest'],
         );
     }
