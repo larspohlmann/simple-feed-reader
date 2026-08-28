@@ -8,16 +8,15 @@ use App\Dto\Subscription\ReorderSubscriptionsRequest;
 use App\Dto\Subscription\SubscribeRequest;
 use App\Dto\Subscription\UpdateSubscriptionRequest;
 use App\Entity\Subscription;
-use App\Entity\Tag;
 use App\Entity\User;
 use App\Exception\ScrapingDisabledApiException;
 use App\Http\SubscriptionJson;
 use App\Repository\EntryStateRepository;
 use App\Repository\SubscriptionRepository;
-use App\Repository\SubscriptionTagRepository;
 use App\Repository\TagRepository;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
 use App\Service\Subscription\SubscriptionService;
+use App\Service\Subscription\SubscriptionTagSync;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -33,7 +32,7 @@ final readonly class SubscriptionController
     public function __construct(
         private SubscriptionService $subscriptions,
         private SubscriptionRepository $subscriptionRepo,
-        private SubscriptionTagRepository $subscriptionTags,
+        private SubscriptionTagSync $tagSync,
         private TagRepository $tags,
         private EntryStateRepository $entryStates,
         private EntityManagerInterface $em,
@@ -107,33 +106,16 @@ final readonly class SubscriptionController
 
         $sub->setCustomTitle('' === (string) $request->customTitle ? null : $request->customTitle);
 
-        $wasTagged = !$sub->getTags()->isEmpty();
+        $this->tagSync->sync($sub, $request->tagIds, (int) $user->getId());
 
-        // Sync the tag set to the requested (user-owned) tags by DIFF, not
-        // clear-and-re-add: a tag the feed keeps must retain its per-tag
-        // position, and a newly added tag appends to the end of that tag's list.
-        $resolved = $this->tags->findAllByIdsForUser($request->tagIds, (int) $user->getId());
-        $resolvedIds = array_map(static fn (Tag $t): int => (int) $t->getId(), $resolved);
-
-        foreach ($sub->getTags() as $existing) {
-            if (!\in_array((int) $existing->getId(), $resolvedIds, true)) {
-                $sub->removeTag($existing);
-            }
+        // null on either flag means "leave the stored value unchanged", matching
+        // EntryController::updateState()'s nullable-PATCH convention (#695).
+        if (null !== $request->includeInAllItems) {
+            $sub->setIncludeInAllItems($request->includeInAllItems);
         }
-        $currentIds = array_map(static fn (Tag $t): int => (int) $t->getId(), $sub->getTags()->toArray());
-        foreach ($resolved as $tag) {
-            if (!\in_array((int) $tag->getId(), $currentIds, true)) {
-                $sub->addTag($tag, $this->subscriptionTags->nextPositionForTag($tag));
-            }
+        if (null !== $request->includeInForYou) {
+            $sub->setIncludeInForYou($request->includeInForYou);
         }
-
-        // A feed that just lost its last tag joins the untagged "Feeds" list;
-        // append it so its stale position doesn't float it to the top.
-        if ($wasTagged && $sub->getTags()->isEmpty()) {
-            $sub->setPosition($this->subscriptionRepo->nextPositionForUser((int) $user->getId()));
-        }
-
-        $sub->updateInclusionFlags($request->includeInAllItems, $request->includeInForYou);
 
         $this->em->flush();
 
