@@ -19,8 +19,11 @@ export const CONFIRMATION_DURATION_MS = 3000;
  * through the CDK overlay -- never `position: fixed` -- because a transformed
  * ancestor (the open drawer, a dialog) would re-anchor a fixed child to the
  * wrong containing block (#85, #100). `hasBackdrop: false`, `autoFocus: false`,
- * `restoreFocus: false`: a toast must never steal focus from whatever the user
- * is doing.
+ * `restoreFocus: false` and a `noop` scroll strategy: a toast must never steal
+ * focus -- nor freeze the page -- from whatever the user is doing. The CDK
+ * `Dialog` defaults its scroll strategy to `block`, which would lock scrolling
+ * for the toast's whole life; a "Saved." over a long settings page then reads
+ * as a page that will not move (#700).
  */
 @Injectable({ providedIn: 'root' })
 export class ToastService {
@@ -57,6 +60,7 @@ export class ToastService {
         .global()
         .centerHorizontally()
         .bottom(this.bottomOffset()),
+      scrollStrategy: this.overlay.scrollStrategies.noop(),
       hasBackdrop: false,
       autoFocus: false,
       restoreFocus: false,
