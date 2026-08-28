@@ -18,9 +18,10 @@ export class ReaderCacheService {
   static readonly MAX_ENTRIES = 100;
   private static readonly DB = 'sfr-reader';
   private static readonly STORE = 'articles';
-  // v4: v3 records carry `leadImage` and no resolved heroes (#592), so an
-  // already-read article would come back with no picture at all.
-  private static readonly VERSION = 4;
+  // v5: v4 records carry a `readerHero` field and a contentHtml with no lead
+  // picture in it (#681); an already-read article would come back missing its
+  // lead until refetched.
+  private static readonly VERSION = 5;
 
   private db: Promise<IDBDatabase | null> | null = null;
   /** Strictly monotonic clock so puts within the same millisecond keep insertion order. */

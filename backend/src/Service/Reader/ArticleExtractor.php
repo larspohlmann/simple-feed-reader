@@ -15,14 +15,15 @@ use fivefilters\Readability\Readability;
 /**
  * Turns an article URL into clean, sanitized, distraction-free HTML:
  * fetch (SSRF-guarded) → page normalization → readability extraction →
- * duplicate-title removal → edge-boilerplate trimming → EntrySanitizer (the
- * same XSS barrier feed HTML crosses). Never throws for an ordinary failure —
- * returns a `failed` ExtractionResult with a machine reason so the endpoint
- * stays 200 and the client can fall back to feed content.
+ * duplicate-title removal → edge-boilerplate trimming → lead-image restore →
+ * EntrySanitizer (the same XSS barrier feed HTML crosses). Never throws for an
+ * ordinary failure — returns a `failed` ExtractionResult with a machine reason
+ * so the endpoint stays 200 and the client can fall back to feed content.
  *
- * The lead picture is carried through undecided: whether it may lead the
- * article depends on the body the client shows, which is ReaderHeroResolver's
- * concern (#592).
+ * Readability strips a page-header image as chrome and reports it apart as the
+ * og:image. ReaderLeadImage puts that picture back at the top of the extracted
+ * body when the page draws it and the body does not already show it (#681), so
+ * the reader body carries its own lead rather than a separate hero.
  */
 final class ArticleExtractor implements ArticleExtractorInterface
 {
@@ -33,6 +34,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
         private readonly HtmlPageFetcher $fetcher,
         private readonly FetchedPageNormalizer $normalizer,
         private readonly ReaderBodyCleaner $bodyCleaner,
+        private readonly ReaderLeadImage $leadImage,
         private readonly EntrySanitizer $sanitizer,
     ) {
     }
@@ -58,6 +60,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
         }
 
         $body = $this->bodyCleaner->clean($article->content, [$article->title, $entryTitle]);
+        $body = $this->leadImage->restore($body, $page->html, $article->image);
         $clean = $this->sanitizer->sanitize($body);
         if ($clean === null) {
             return ExtractionResult::failed($url, 'empty');
@@ -70,7 +73,6 @@ final class ArticleExtractor implements ArticleExtractorInterface
             siteName: $article->siteName,
             contentHtml: $clean,
             excerpt: $article->excerpt,
-            imageCandidate: $article->image,
         );
     }
 

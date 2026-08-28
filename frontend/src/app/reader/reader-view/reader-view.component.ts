@@ -56,6 +56,7 @@ import { markLeadParagraph } from '../lead-paragraph';
 import { markInsetCards } from '../reader-cards';
 import { estimateReadingMinutes } from '../reading-time';
 import { selectionQueryParams } from '../query';
+import { ReadingFocusService } from '../../core/reading-focus.service';
 
 /** Give up on a hung extraction and fall back to feed content (backend caps a
  *  fetch at ~20s; this is the client-side backstop for a stalled connection). */
@@ -135,6 +136,7 @@ export class ReaderViewComponent {
   private readonly language = inject(LanguageService);
   private readonly scroll = inject(ListScrollMemory);
   protected readonly screen = inject(LayoutService);
+  private readonly readingFocus = inject(ReadingFocusService);
   private readonly destroyRef = inject(DestroyRef);
 
   // Article scroll restore: a browser resume-reload reopens the entry from the URL
@@ -146,7 +148,7 @@ export class ReaderViewComponent {
 
   // Reading-focus effect: the paragraph nearest the reading centre stays fully
   // opaque while the rest dims, refreshed on scroll. Skipped entirely when the
-  // reader prefers reduced motion.
+  // setting is off or the reader prefers reduced motion.
   private readonly reduceMotion =
     typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   private focusRaf = 0;
@@ -236,11 +238,9 @@ export class ReaderViewComponent {
     const s = this.state();
     return s.status === 'ok' ? s.article : null;
   });
-  /** The hero URL that failed to load, so a broken picture hides rather than
-   *  leaving a torn placeholder. Keyed by URL, not by component: the reader and
-   *  the original view offer different pictures, and a broken one must not
-   *  suppress the other (the pattern preview-entry-row already uses). */
-  protected readonly failedHeroUrl = signal<string | null>(null);
+  /** Set when the original view's hero image fails to load, so a broken picture
+   *  hides rather than leaving a torn placeholder. Reset on every entry change. */
+  protected readonly heroFailed = signal(false);
 
   /** The payload the heroes come from. Null while loading, and after a
    *  transport error, where no payload arrived at all. */
@@ -252,15 +252,15 @@ export class ReaderViewComponent {
   });
 
   /**
-   * The picture that leads the article. The backend resolves one hero per body
-   * it can serve, so switching between the reader and the original view is a
-   * field lookup: no request, and no duplicate-image rule on the client (#592).
+   * The picture that leads the ORIGINAL view. The reader view carries its own
+   * lead inside contentHtml now (#681), so it needs no hero element here; only
+   * the original view, which renders the raw feed body, still gets one.
    */
   readonly hero = computed(() => {
     const source = this.heroSource();
-    if (source === null) return null;
-    const image = this.mode() === 'reader' ? source.readerHero : source.originalHero;
-    return image === null || image.url === this.failedHeroUrl() ? null : image;
+    if (source === null || this.mode() === 'reader') return null;
+    const image = source.originalHero;
+    return image === null || this.heroFailed() ? null : image;
   });
 
   /** Estimated minutes to read the displayed text; null hides the meta chip. */
@@ -293,7 +293,7 @@ export class ReaderViewComponent {
       // next one headless.
       this.toc.set([]);
       this.tocOpen.set(false);
-      this.failedHeroUrl.set(null);
+      this.heroFailed.set(false);
       this.showToTop.set(false);
       this.toolbarHidden.set(false);
       this.lastToolbarScrollTop = 0;
@@ -310,6 +310,16 @@ export class ReaderViewComponent {
       this.runLoad(this.reader.load(e.id));
     });
     this.destroyRef.onDestroy(() => this.loadSub?.unsubscribe());
+
+    effect(() => {
+      if (this.readingFocus.enabled()) {
+        this.scheduleFocus();
+        return;
+      }
+      if (this.focusRaf) cancelAnimationFrame(this.focusRaf);
+      this.focusRaf = 0;
+      this.clearFocus();
+    });
 
     // Re-decorate external links and re-seat the reading focus whenever the
     // rendered HTML changes (new article, or Reader/Original toggle).
@@ -596,7 +606,7 @@ export class ReaderViewComponent {
 
   /** Coalesce focus recomputes to one per animation frame. */
   private scheduleFocus(): void {
-    if (this.reduceMotion || this.focusRaf) return;
+    if (this.reduceMotion || !this.readingFocus.enabled() || this.focusRaf) return;
     this.focusRaf = requestAnimationFrame(() => {
       this.focusRaf = 0;
       this.applyFocus();
@@ -611,10 +621,8 @@ export class ReaderViewComponent {
   private applyFocus(): void {
     const content = this.content()?.nativeElement;
     if (!content) return;
-    if (this.screen.isWide()) {
-      for (const block of readingBlocks(content)) {
-        block.style.opacity = '';
-      }
+    if (!this.readingFocus.enabled() || this.screen.isWide()) {
+      this.clearFocus();
       return;
     }
     const scroller = this.host.nativeElement;
@@ -630,6 +638,12 @@ export class ReaderViewComponent {
         focusOpacityForSpan(top, top + rect.height, viewport, ARTICLE_FOCUS_CURVE),
       );
     }
+  }
+
+  private clearFocus(): void {
+    const content = this.content()?.nativeElement;
+    if (!content) return;
+    for (const block of readingBlocks(content)) block.style.opacity = '';
   }
 
   /** Extract the article's headings into a contents list, giving each a unique

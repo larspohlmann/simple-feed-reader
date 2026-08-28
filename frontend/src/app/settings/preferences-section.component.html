@@ -23,5 +23,18 @@
     @if (preferences.saveFailed()) {
       <app-error-banner class="state" [message]="'settings.scrapingSaveFailed' | transloco" />
     }
+
+    <app-settings-row
+      [title]="'settings.readingFocus' | transloco"
+      [description]="'settings.readingFocusHint' | transloco"
+      labelFor="reading-focus-toggle"
+    >
+      <app-toggle
+        inputId="reading-focus-toggle"
+        [checked]="readingFocus.enabled()"
+        [label]="'settings.readingFocus' | transloco"
+        (toggled)="readingFocus.setEnabled($event)"
+      />
+    </app-settings-row>
   </app-settings-group>
 </app-settings-stack>

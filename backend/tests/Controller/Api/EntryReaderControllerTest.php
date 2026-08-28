@@ -92,7 +92,6 @@ final class EntryReaderControllerTest extends WebTestCase
             siteName: 'Example',
             contentHtml: '<p>Body</p>',
             excerpt: 'An excerpt.',
-            imageCandidate: 'https://example.com/lead.jpg',
         ));
         $entry = $this->seedEntry($user, 'https://example.com/article');
 
@@ -107,17 +106,15 @@ final class EntryReaderControllerTest extends WebTestCase
         self::assertSame('A. Writer', $body['byline']);
         self::assertSame('Example', $body['siteName']);
         self::assertSame('An excerpt.', $body['excerpt']);
-        self::assertSame(
-            ['url' => 'https://example.com/lead.jpg', 'width' => null, 'height' => null],
-            $body['readerHero'],
-        );
+        // The reader body now carries its own lead picture inside contentHtml, so
+        // the response declares no separate reader hero (#681).
+        self::assertArrayNotHasKey('readerHero', $body);
         // The feed body carries no picture of its own, so the feed's own image
         // leads the original view.
         self::assertSame(
             ['url' => 'https://example.com/feed.jpg', 'width' => 800, 'height' => 450],
             $body['originalHero'],
         );
-        self::assertArrayNotHasKey('leadImage', $body);
         self::assertSame('https://example.com/article', $body['url']);
         self::assertArrayHasKey('extractedAt', $body);
         self::assertSame(['https://example.com/article'], $fake->calls);
@@ -141,7 +138,7 @@ final class EntryReaderControllerTest extends WebTestCase
         self::assertSame(['https://example.com/article'], $fake->calls);
         // A failed extraction is exactly when the feed's own picture is the only
         // one there is, so the original hero must still be resolved.
-        self::assertNull($body['readerHero']);
+        self::assertArrayNotHasKey('readerHero', $body);
         self::assertSame(
             ['url' => 'https://example.com/feed.jpg', 'width' => 800, 'height' => 450],
             $body['originalHero'],
@@ -161,7 +158,6 @@ final class EntryReaderControllerTest extends WebTestCase
             siteName: null,
             contentHtml: '<p>+++ dein shop gegen meerweh +++ neu im shop eingetroffen +++</p>',
             excerpt: null,
-            imageCandidate: null,
         ));
         $entry = $this->seedEntry($user, 'https://example.com/article');
         $this->setFeedBody($entry, '<div>' . $this->fullFeedArticle() . '</div>');
@@ -173,7 +169,7 @@ final class EntryReaderControllerTest extends WebTestCase
         self::assertIsArray($body);
         self::assertSame('failed', $body['status']);
         self::assertSame('mismatch', $body['reason']);
-        self::assertNull($body['readerHero']);
+        self::assertArrayNotHasKey('readerHero', $body);
     }
 
     public function testExtractionThatReflectsTheFullFeedArticleStaysOk(): void
@@ -189,7 +185,6 @@ final class EntryReaderControllerTest extends WebTestCase
             // A clean extraction of the same page shares the feed's wording.
             contentHtml: '<article>' . $this->fullFeedArticle() . '</article>',
             excerpt: null,
-            imageCandidate: null,
         ));
         $entry = $this->seedEntry($user, 'https://example.com/article');
         $this->setFeedBody($entry, '<div>' . $this->fullFeedArticle() . '</div>');

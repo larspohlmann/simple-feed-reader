@@ -128,7 +128,6 @@ final class ExtractionCoverageGateTest extends TestCase
             siteName: null,
             contentHtml: $contentHtml,
             excerpt: null,
-            imageCandidate: null,
         );
     }
 

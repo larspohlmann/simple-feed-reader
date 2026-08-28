@@ -107,7 +107,7 @@
       <a
         #unreadSwitch
         appListAction
-        class="unread-switch"
+        class="unread-switch mobile-icon-only"
         role="switch"
         [attr.aria-checked]="selection().unread"
         [routerLink]="[]"
@@ -139,6 +139,7 @@
       <button
         appListAction
         class="mark-all"
+        [class.mobile-icon-only]="selection().kind !== 'search'"
         type="button"
         (click)="markAllRead.emit()"
         [attr.aria-label]="'reader.markAllRead' | transloco"
@@ -152,7 +153,7 @@
     @if (canRefresh()) {
       <button
         appListAction
-        class="refresh"
+        class="refresh mobile-icon-only"
         type="button"
         [class.spinning]="refreshing()"
         [disabled]="refreshing()"
