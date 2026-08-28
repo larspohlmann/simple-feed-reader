@@ -174,6 +174,7 @@ final readonly class RecommendationCandidateLoader
             ->from(Entry::class, 'e')
             ->join('e.feed', 'f')
             ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
+            ->andWhere('s.includeInForYou = true')
             ->setParameter('user', $userId);
     }
 

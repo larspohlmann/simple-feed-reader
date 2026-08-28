@@ -24,6 +24,8 @@ const sub: SubscriptionDto = {
   position: 0,
   tags: [{ id: 1, name: 'Tech', color: null, icon: null, position: 0 }],
   unreadCount: 3,
+  includeInAllItems: true,
+  includeInForYou: true,
 };
 
 describe('EditSubscriptionDialogComponent', () => {
@@ -136,7 +138,12 @@ describe('EditSubscriptionDialogComponent', () => {
     c.submit();
     const req = ctrl.expectOne('https://api.test/api/subscriptions/5');
     expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({ customTitle: 'My Heise', tagIds: [2] });
+    expect(req.request.body).toEqual({
+      customTitle: 'My Heise',
+      tagIds: [2],
+      includeInAllItems: true,
+      includeInForYou: true,
+    });
     req.flush({ subscription: { ...sub, customTitle: 'My Heise' } });
     expect(close).toHaveBeenCalled();
   });
@@ -146,7 +153,50 @@ describe('EditSubscriptionDialogComponent', () => {
     c.form.controls.customTitle.setValue('');
     c.submit();
     const req = ctrl.expectOne('https://api.test/api/subscriptions/5');
-    expect(req.request.body).toEqual({ customTitle: null, tagIds: [1] });
+    expect(req.request.body).toEqual({
+      customTitle: null,
+      tagIds: [1],
+      includeInAllItems: true,
+      includeInForYou: true,
+    });
     req.flush({ subscription: sub });
+  });
+
+  it('reflects stored exclusion state and sends the toggled values', () => {
+    const excludedFromAllItems: SubscriptionDto = { ...sub, includeInAllItems: false };
+    TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'https://api.test' },
+        { provide: DialogRef, useValue: { close } },
+        { provide: DIALOG_DATA, useValue: excludedFromAllItems },
+      ],
+    });
+    const f = TestBed.createComponent(EditSubscriptionDialogComponent);
+    f.detectChanges();
+    ctrl = TestBed.inject(HttpTestingController);
+    ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+    f.detectChanges();
+
+    const el = f.nativeElement as HTMLElement;
+    const allItemsSwitch = el.querySelector<HTMLInputElement>('#edit-feed-all-items');
+    const forYouSwitch = el.querySelector<HTMLInputElement>('#edit-feed-for-you');
+    expect(allItemsSwitch!.checked).toBe(false);
+    expect(forYouSwitch!.checked).toBe(true);
+
+    forYouSwitch!.click();
+    f.detectChanges();
+    f.componentInstance.submit();
+
+    const req = ctrl.expectOne('https://api.test/api/subscriptions/5');
+    expect(req.request.body).toEqual({
+      customTitle: 'Heise',
+      tagIds: [1],
+      includeInAllItems: false,
+      includeInForYou: false,
+    });
+    req.flush({ subscription: excludedFromAllItems });
   });
 });

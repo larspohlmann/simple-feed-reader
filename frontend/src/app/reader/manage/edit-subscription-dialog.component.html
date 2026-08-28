@@ -50,6 +50,29 @@
         }
       </div>
 
+      <div class="switch-row">
+        <label class="switch-label" for="edit-feed-all-items">
+          {{ 'dialog.editFeed.showInAllItems' | transloco }}
+        </label>
+        <app-toggle
+          inputId="edit-feed-all-items"
+          [checked]="includeInAllItems()"
+          [label]="'dialog.editFeed.showInAllItems' | transloco"
+          (toggled)="includeInAllItems.set($event)"
+        />
+      </div>
+      <div class="switch-row">
+        <label class="switch-label" for="edit-feed-for-you">
+          {{ 'dialog.editFeed.showInForYou' | transloco }}
+        </label>
+        <app-toggle
+          inputId="edit-feed-for-you"
+          [checked]="includeInForYou()"
+          [label]="'dialog.editFeed.showInForYou' | transloco"
+          (toggled)="includeInForYou.set($event)"
+        />
+      </div>
+
       @if (error()) {
         <p class="error" role="alert">{{ error() }}</p>
       }

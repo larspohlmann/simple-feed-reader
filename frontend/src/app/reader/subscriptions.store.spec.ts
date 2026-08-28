@@ -28,6 +28,8 @@ const sub = (
   position: 0,
   tags,
   unreadCount: unread,
+  includeInAllItems: true,
+  includeInForYou: true,
 });
 
 describe('subscription derivations', () => {
@@ -52,6 +54,17 @@ describe('subscription derivations', () => {
   it('orders untagged feeds by their position', () => {
     const at = (id: number, position: number): SubscriptionDto => ({ ...sub(id, 0), position });
     expect(untaggedSubs([at(1, 2), at(2, 0), at(3, 1)]).map((s) => s.id)).toEqual([2, 3, 1]);
+  });
+
+  it('excludes includeInAllItems=false feeds from the All items badge', () => {
+    const excludedSubs = [sub(1, 5), { ...sub(2, 8), includeInAllItems: false }];
+    expect(sumUnread(excludedSubs)).toBe(5);
+  });
+
+  it('still counts an excluded feed under its tag', () => {
+    const excluded = { ...sub(2, 8, [tag(3, 'Tech')]), includeInAllItems: false };
+    const tree = buildTagTree([excluded]);
+    expect(tree[0].unreadCount).toBe(8);
   });
 });
 
@@ -264,6 +277,21 @@ describe('SubscriptionsStore', () => {
     expect(store.subscriptions().find((s) => s.id === 1)!.unreadCount).toBe(0);
     store.zeroUnread({ subscription: 2 });
     expect(store.subscriptions().find((s) => s.id === 2)!.unreadCount).toBe(0);
+  });
+
+  it('optimistically patches the exclusion flags in place', () => {
+    store.load();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush({
+      subscriptions: [sub(1, 3), sub(2, 6)],
+      favoritesCount: 0,
+      keptCount: 0,
+    });
+    store.patchLocal(1, { includeInAllItems: false });
+    expect(store.subscriptions().find((s) => s.id === 1)!.includeInAllItems).toBe(false);
+    expect(store.subscriptions().find((s) => s.id === 1)!.includeInForYou).toBe(true);
+    expect(store.subscriptions().find((s) => s.id === 2)!.includeInAllItems).toBe(true);
+    store.patchLocal(1, { includeInForYou: false });
+    expect(store.subscriptions().find((s) => s.id === 1)!.includeInForYou).toBe(false);
   });
 
   it('captures a problem on error', () => {

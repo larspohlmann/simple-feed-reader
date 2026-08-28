@@ -1141,6 +1141,44 @@ admin catalog, which stay compact. A new touch surface repeats the pattern
 locally: key on `pointer: coarse` (capability), never on viewport width
 (presentation), and size hit areas with `--tap-target`.
 
+### Sidebar row markers
+
+A single-line sidebar row (a feed under a tag, or in the untagged bucket) can
+carry a small status marker ahead of its trailing unread count, without
+growing the row or pushing the count around. The feed-exclusion marker (#688)
+is the first of these and sets the pattern:
+
+```html
+@if (!s.includeInAllItems || !s.includeInForYou) {
+  <app-icon class="feed-exclusion-marker" name="visibility_off" size="xs" [title]="exclusionTitle(s)" />
+}
+```
+
+```scss
+.feed-exclusion-marker {
+  color: var(--text-muted);
+  margin-right: var(--space-1);
+}
+```
+
+`visibility_off` is a Material Symbol, rendered through `<app-icon>` like every
+other glyph in this app — not a Tabler icon. The rules a future marker should
+reuse:
+
+- **`size="xs"`, `color: var(--text-muted)`.** A row marker reports state; it
+  must not compete with the row's own content or the accent colour reserved
+  for the active row.
+- **`margin-right: var(--space-1)` on the marker, not spacing on the count.**
+  The gap belongs to the element that is conditionally there, so the count's
+  position stays stable whether or not the marker renders.
+- **It sits immediately left of the unread count and never displaces it.**
+  Both render together when a row is both marked and unread — the marker does
+  not hide or move the count, and the count does not push the marker off.
+- **A `title` names the exact condition**, not a generic label — the
+  exclusion marker's tooltip (`exclusionTitle()`) says which surface(s) the
+  feed is hidden from, so a reader never has to guess what an icon-only glyph
+  means.
+
 ### Sticky and scroll
 
 **Stickiness lives on the flex-child host, never on an inner wrapper.** A sticky

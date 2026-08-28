@@ -52,4 +52,13 @@ final readonly class EntryQuery
     ) {
         $this->limit = self::clampLimit($limit);
     }
+
+    public function hidesExcludedFeeds(): bool
+    {
+        if ($this->subscriptionId !== null || $this->tagId !== null) {
+            return false;
+        }
+
+        return $this->view === 'all' || $this->view === 'unread';
+    }
 }

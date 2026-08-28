@@ -64,6 +64,10 @@ class EntryListRepository extends ServiceEntityRepository
                 ->setParameter('tagId', $query->tagId);
         }
 
+        if ($query->hidesExcludedFeeds()) {
+            $qb->andWhere('s.includeInAllItems = true');
+        }
+
         $this->applyView($qb, $query->view);
         $this->applyCursor($qb, $query->cursor, $sort);
 

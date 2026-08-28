@@ -416,6 +416,8 @@
       "siteUrl": "Website",
       "tags": "Tags",
       "noTags": "No tags yet — create one from Settings › Tags.",
+      "showInAllItems": "Show in All items",
+      "showInForYou": "Show in For You",
       "saving": "Saving…",
       "save": "Save"
     }
@@ -666,6 +668,13 @@
     "deleteTag": "Delete tag",
     "editFeed": "Edit feed",
     "unsubscribe": "Unsubscribe",
+    "excludeFromAllItems": "Exclude from All items",
+    "includeInAllItems": "Show in All items",
+    "excludeFromForYou": "Exclude from For You",
+    "includeInForYou": "Show in For You",
+    "excludedFromAllItems": "Hidden from All items",
+    "excludedFromForYou": "Hidden from For You",
+    "excludedFromBoth": "Hidden from All items and For You",
     "dropToRemoveTags": "Drop here to remove tags",
     "unread": "only unread",
     "all": "All posts",

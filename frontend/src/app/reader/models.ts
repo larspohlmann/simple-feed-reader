@@ -77,6 +77,10 @@ export interface SubscriptionDto {
   position: number;
   tags: SubscriptionTagDto[];
   unreadCount: number;
+  /** False excludes this feed's unread from the All-items badge and list. */
+  includeInAllItems: boolean;
+  /** False excludes this feed's entries from For-you recommendations. */
+  includeInForYou: boolean;
 }
 
 /** The sidebar bootstrap payload: the feed list plus the user-wide favourite,
@@ -246,10 +250,13 @@ export interface TagInput {
   icon: string | null;
 }
 
-/** Body for PATCH /api/subscriptions/{id}. Replaces the whole tag set. */
+/** Body for PATCH /api/subscriptions/{id}. Replaces the whole tag set. Omitted
+ *  flags leave the server's current value unchanged. */
 export interface SubscriptionUpdate {
   customTitle: string | null;
   tagIds: number[];
+  includeInAllItems?: boolean;
+  includeInForYou?: boolean;
 }
 
 /** A picture the backend chose to lead the article, with the dimensions its

@@ -52,6 +52,14 @@ class Subscription
     #[ORM\Column(options: ['default' => 0])]
     private int $position = 0;
 
+    /** Whether this feed appears in "All items" and its unread badge (#688). */
+    #[ORM\Column(name: 'include_in_all_items', options: ['default' => true])]
+    private bool $includeInAllItems = true;
+
+    /** Whether this feed feeds the "For You" recommendation pool (#688). */
+    #[ORM\Column(name: 'include_in_for_you', options: ['default' => true])]
+    private bool $includeInForYou = true;
+
     public function __construct(User $user, Feed $feed, \DateTimeImmutable $createdAt)
     {
         $this->user = $user;
@@ -108,6 +116,41 @@ class Subscription
     public function setPosition(int $position): void
     {
         $this->position = $position;
+    }
+
+    public function isIncludeInAllItems(): bool
+    {
+        return $this->includeInAllItems;
+    }
+
+    public function setIncludeInAllItems(bool $includeInAllItems): void
+    {
+        $this->includeInAllItems = $includeInAllItems;
+    }
+
+    public function isIncludeInForYou(): bool
+    {
+        return $this->includeInForYou;
+    }
+
+    public function setIncludeInForYou(bool $includeInForYou): void
+    {
+        $this->includeInForYou = $includeInForYou;
+    }
+
+    /**
+     * Applies the two exclusion flags from a PATCH request, where `null` means
+     * "leave the stored value unchanged" — kept as one entity operation so the
+     * controller stays a single delegated call rather than two inline guards.
+     */
+    public function updateInclusionFlags(?bool $includeInAllItems, ?bool $includeInForYou): void
+    {
+        if ($includeInAllItems !== null) {
+            $this->includeInAllItems = $includeInAllItems;
+        }
+        if ($includeInForYou !== null) {
+            $this->includeInForYou = $includeInForYou;
+        }
     }
 
     /**

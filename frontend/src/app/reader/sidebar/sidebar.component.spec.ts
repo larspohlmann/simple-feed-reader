@@ -55,6 +55,8 @@ const sub = (id: number, unread = 0): SubscriptionDto => ({
   position: 0,
   tags: [],
   unreadCount: unread,
+  includeInAllItems: true,
+  includeInForYou: true,
 });
 
 function mount(
@@ -449,8 +451,110 @@ describe('SidebarComponent', () => {
     (el.querySelector('.feedrow .dots') as HTMLButtonElement).click();
     f.detectChanges();
     const buttons2 = el.querySelectorAll('.feedrow .pop [role="menuitem"]');
-    (buttons2[1] as HTMLButtonElement).click();
+    (buttons2[buttons2.length - 1] as HTMLButtonElement).click();
     expect(unsub).toHaveBeenCalledWith(s);
+  });
+
+  it('shows both exclusion toggles in the untagged feed row menu and emits', () => {
+    const s = sub(1, 0);
+    const f = mount({ untagged: [s] });
+    const el = f.nativeElement as HTMLElement;
+    const toggleAllItems = jest.fn();
+    const toggleForYou = jest.fn();
+    f.componentInstance.toggleAllItems.subscribe(toggleAllItems);
+    f.componentInstance.toggleForYou.subscribe(toggleForYou);
+
+    (el.querySelector('.feedrow .dots') as HTMLButtonElement).click();
+    f.detectChanges();
+    const labels = [...el.querySelectorAll('.feedrow .pop [role="menuitem"]')].map((b) =>
+      b.textContent?.trim(),
+    );
+    expect(labels).toEqual([
+      'Edit feed',
+      'Exclude from All items',
+      'Exclude from For You',
+      'Unsubscribe',
+    ]);
+
+    (el.querySelector('.feedrow .pop [role="menuitem"]:nth-child(2)') as HTMLButtonElement).click();
+    f.detectChanges();
+    expect(toggleAllItems).toHaveBeenCalledWith(s);
+    expect(el.querySelector('.feedrow .pop')).toBeNull();
+
+    (el.querySelector('.feedrow .dots') as HTMLButtonElement).click();
+    f.detectChanges();
+    (el.querySelector('.feedrow .pop [role="menuitem"]:nth-child(3)') as HTMLButtonElement).click();
+    expect(toggleForYou).toHaveBeenCalledWith(s);
+  });
+
+  it('shows both exclusion toggles in the tagged feed row menu', () => {
+    const s = sub(1, 0);
+    const node: TagNode = {
+      tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
+      subscriptions: [s],
+      unreadCount: 0,
+    };
+    const f = mount({ tagTree: [node] });
+    const el = f.nativeElement as HTMLElement;
+    (el.querySelector('.tag .chevzone') as HTMLButtonElement).click();
+    f.detectChanges();
+
+    const toggleAllItems = jest.fn();
+    const toggleForYou = jest.fn();
+    f.componentInstance.toggleAllItems.subscribe(toggleAllItems);
+    f.componentInstance.toggleForYou.subscribe(toggleForYou);
+
+    (el.querySelector('.tag-sub + .rowmenu .dots') as HTMLButtonElement).click();
+    f.detectChanges();
+    const labels = [...el.querySelectorAll('.tag-sub + .rowmenu .pop [role="menuitem"]')].map((b) =>
+      b.textContent?.trim(),
+    );
+    expect(labels).toEqual([
+      'Edit feed',
+      'Exclude from All items',
+      'Exclude from For You',
+      'Unsubscribe',
+    ]);
+
+    (
+      el.querySelector(
+        '.tag-sub + .rowmenu .pop [role="menuitem"]:nth-child(2)',
+      ) as HTMLButtonElement
+    ).click();
+    expect(toggleAllItems).toHaveBeenCalledWith(s);
+
+    (el.querySelector('.tag-sub + .rowmenu .dots') as HTMLButtonElement).click();
+    f.detectChanges();
+    (
+      el.querySelector(
+        '.tag-sub + .rowmenu .pop [role="menuitem"]:nth-child(3)',
+      ) as HTMLButtonElement
+    ).click();
+    expect(toggleForYou).toHaveBeenCalledWith(s);
+  });
+
+  it('renders the exclusion marker without displacing the unread count', () => {
+    const excludedForYou = { ...sub(2, 4), includeInForYou: false };
+    const f = mount({ untagged: [excludedForYou] });
+    const el = f.nativeElement as HTMLElement;
+    const row = el.querySelector('.feedrow')!;
+    expect(row.querySelector('.feed-exclusion-marker')).not.toBeNull();
+    expect(row.querySelector('.count')?.textContent).toContain('4');
+  });
+
+  it('renders the exclusion marker when only includeInAllItems is false', () => {
+    const excludedAllItems = { ...sub(2, 4), includeInAllItems: false };
+    const f = mount({ untagged: [excludedAllItems] });
+    const el = f.nativeElement as HTMLElement;
+    const row = el.querySelector('.feedrow')!;
+    expect(row.querySelector('.feed-exclusion-marker')).not.toBeNull();
+    expect(row.querySelector('.count')?.textContent).toContain('4');
+  });
+
+  it('renders no exclusion marker when both flags are true', () => {
+    const f = mount({ untagged: [sub(2, 4)] });
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('.feedrow .feed-exclusion-marker')).toBeNull();
   });
 
   describe('search field', () => {
@@ -1146,7 +1250,7 @@ describe('organise mode', () => {
     expect(deleted).toHaveBeenCalledWith(tag);
   });
 
-  it('the feed dots offer edit and unsubscribe', () => {
+  it('the feed dots offer edit, the two exclusion toggles, and unsubscribe', () => {
     const f = mount({ coarse: true, organising: true, untagged: [sub(9)], sheetChoice: 'edit' });
     const edited = jest.fn();
     f.componentInstance.editFeed.subscribe(edited);
@@ -1156,10 +1260,31 @@ describe('organise mode', () => {
       title: 's9',
       actions: [
         { id: 'edit', label: 'Edit feed' },
+        { id: 'toggleAllItems', label: 'Exclude from All items' },
+        { id: 'toggleForYou', label: 'Exclude from For You' },
         { id: 'unsubscribe', label: 'Unsubscribe', danger: true },
       ],
     });
     expect(edited).toHaveBeenCalledWith(expect.objectContaining({ id: 9 }));
+  });
+
+  it('routes the feed sheet toggle choices to toggleAllItems / toggleForYou and only those', () => {
+    const f = mount({
+      coarse: true,
+      organising: true,
+      untagged: [sub(9)],
+      sheetChoice: 'toggleAllItems',
+    });
+    const toggleAllItems = jest.fn();
+    const toggleForYou = jest.fn();
+    const unsubscribed = jest.fn();
+    f.componentInstance.toggleAllItems.subscribe(toggleAllItems);
+    f.componentInstance.toggleForYou.subscribe(toggleForYou);
+    f.componentInstance.unsubscribe.subscribe(unsubscribed);
+    f.nativeElement.querySelector('.feedrow .dots').click();
+    expect(toggleAllItems).toHaveBeenCalledWith(expect.objectContaining({ id: 9 }));
+    expect(toggleForYou).not.toHaveBeenCalled();
+    expect(unsubscribed).not.toHaveBeenCalled();
   });
 
   it('routes the tag edit choice to editTag and only that', () => {

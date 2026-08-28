@@ -69,8 +69,11 @@ export function untaggedSubs(subs: SubscriptionDto[]): SubscriptionDto[] {
   return subs.filter((s) => s.tags.length === 0).sort((a, b) => a.position - b.position);
 }
 
+/** All-items badge total: a feed excluded from All items (`includeInAllItems:
+ *  false`) contributes nothing here, though it still counts under its own
+ *  per-feed row and any tag it carries (see `buildTagTree`). */
 export function sumUnread(subs: SubscriptionDto[]): number {
-  return subs.reduce((n, s) => n + s.unreadCount, 0);
+  return subs.reduce((n, s) => (s.includeInAllItems ? n + s.unreadCount : n), 0);
 }
 
 type ZeroTarget = 'all' | { tag: number } | { subscription: number };
@@ -188,6 +191,15 @@ export class SubscriptionsStore {
     this.subscriptions.update((subs) =>
       subs.map((s) => (s.id === subscriptionId ? { ...s, unreadCount: s.unreadCount + by } : s)),
     );
+  }
+
+  /** Optimistically apply an exclusion-flag toggle (All items / For you) so the
+   *  UI reflects it immediately; the caller reconciles with the server. */
+  patchLocal(
+    id: number,
+    flags: Partial<Pick<SubscriptionDto, 'includeInAllItems' | 'includeInForYou'>>,
+  ): void {
+    this.subscriptions.update((subs) => subs.map((s) => (s.id === id ? { ...s, ...flags } : s)));
   }
 
   zeroUnread(target: ZeroTarget): void {

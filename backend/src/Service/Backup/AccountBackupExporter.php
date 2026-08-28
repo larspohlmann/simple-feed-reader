@@ -278,6 +278,8 @@ final readonly class AccountBackupExporter
             'markedReadUntil' => $this->formatDateOrNull($subscription->getMarkedReadUntil()),
             'createdAt' => $this->formatDate($subscription->getCreatedAt()),
             'tags' => $this->subscriptionTagRefs($subscription),
+            'includeInAllItems' => $subscription->isIncludeInAllItems(),
+            'includeInForYou' => $subscription->isIncludeInForYou(),
         ];
     }
 

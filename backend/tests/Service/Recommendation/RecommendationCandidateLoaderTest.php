@@ -425,6 +425,44 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         self::assertSame([], $recorder->queries());
     }
 
+    public function testAFeedExcludedFromForYouContributesNoCandidates(): void
+    {
+        $excludedFeed = new Feed('https://example.com/excluded-feed.xml');
+        $excludedFeed->setTitle('Excluded');
+        $this->em->persist($excludedFeed);
+
+        $excludedSubscription = new Subscription(
+            $this->user,
+            $excludedFeed,
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+        );
+        $excludedSubscription->setIncludeInForYou(false);
+        $this->em->persist($excludedSubscription);
+        $this->em->flush();
+
+        $included = $this->entry('included', '2026-07-10T00:00:00Z');
+        $excludedEntry = $this->entryIn($excludedFeed, 'excluded', '2026-07-10T00:00:00Z');
+
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest());
+
+        self::assertSame([$included->getId()], array_map(static fn ($l) => $l->entryId, $lines));
+
+        $linesById = $this->loader()->linesForIds(
+            $this->userId(),
+            [$included->getId() ?? 0, $excludedEntry->getId() ?? 0],
+        );
+
+        self::assertSame([$included->getId()], array_keys($linesById));
+
+        $summary = $this->loader()->summarize(
+            $this->userId(),
+            [$included->getId() ?? 0, $excludedEntry->getId() ?? 0],
+        );
+
+        self::assertNotNull($summary);
+        self::assertSame(1, $summary->total);
+    }
+
     public function testAnEntryOlderThanTheWindowIsExcluded(): void
     {
         $this->entry('too-old', '2026-07-09T23:59:59Z');
@@ -480,9 +518,14 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
     private function entry(string $guid, string $published): Entry
     {
+        return $this->entryIn($this->feed, $guid, $published);
+    }
+
+    private function entryIn(Feed $feed, string $guid, string $published): Entry
+    {
         $publishedAt = new \DateTimeImmutable($published);
         $entry = new Entry(
-            $this->feed,
+            $feed,
             $guid,
             'https://example.com/' . $guid,
             $guid,

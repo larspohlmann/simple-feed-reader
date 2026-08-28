@@ -13,6 +13,7 @@ use App\Entity\User;
 use App\Exception\ValidationException;
 use App\Service\Reader\MarkReadService;
 use App\Tests\DbTestCase;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class MarkReadServiceTest extends DbTestCase
@@ -186,5 +187,133 @@ final class MarkReadServiceTest extends DbTestCase
         [$user] = $this->seed();
         $this->expectException(ValidationException::class);
         $this->service()->mark($user, 'feed', null, new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+    }
+
+    public function testUnknownScopeIsRejected(): void
+    {
+        [$user] = $this->seed();
+        $this->expectException(BadRequestHttpException::class);
+        $this->service()->mark($user, 'bogus', null, new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+    }
+
+    /**
+     * @return array{Subscription, Entry}
+     */
+    private function seedExcludedFeedSubscription(User $user): array
+    {
+        $feed = new Feed('https://example.com/excluded.xml');
+        $this->em->persist($feed);
+        $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $sub->setIncludeInAllItems(false);
+        $this->em->persist($sub);
+
+        $publishedAt = new \DateTimeImmutable('2026-07-05T00:00:00Z');
+        $entry = new Entry(
+            $feed,
+            'excluded',
+            null,
+            'Excluded',
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            $publishedAt,
+        );
+        $entry->setPublishedAt($publishedAt);
+        $this->em->persist($entry);
+
+        $state = new EntryState($user, $entry);
+        $state->setIsHidden(false);
+        $this->em->persist($state);
+        $this->em->flush();
+
+        return [$sub, $entry];
+    }
+
+    public function testAllScopeSkipsFeedExcludedFromAllItems(): void
+    {
+        [$user, $sub, $old] = $this->seed();
+        // A pre-existing explicit "unread" on the included feed, below the mark point.
+        $includedState = new EntryState($user, $old);
+        $includedState->setIsHidden(false);
+        $this->em->persist($includedState);
+        $this->em->flush();
+
+        [$excludedSub, $excludedEntry] = $this->seedExcludedFeedSubscription($user);
+
+        $this->service()->mark($user, 'all', null, new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+        $this->em->clear();
+
+        $reloadedIncludedSub = $this->em->getRepository(Subscription::class)->find($sub->getId());
+        self::assertNotNull($reloadedIncludedSub);
+        self::assertSame(
+            '2026-07-10T00:00:00+00:00',
+            $reloadedIncludedSub->getMarkedReadUntil()?->format(\DateTimeInterface::ATOM),
+        );
+
+        $reloadedExcludedSub = $this->em->getRepository(Subscription::class)->find($excludedSub->getId());
+        self::assertNotNull($reloadedExcludedSub);
+        self::assertNull(
+            $reloadedExcludedSub->getMarkedReadUntil(),
+            'excluded feed must not have its watermark advanced by scope "all"',
+        );
+
+        $flippedIncluded = $this->em->getRepository(EntryState::class)
+            ->findOneForUserEntry((int) $user->getId(), (int) $old->getId());
+        self::assertNotNull($flippedIncluded);
+        self::assertTrue($flippedIncluded->isHidden(), 'included feed entry must be marked read');
+
+        $untouchedExcluded = $this->em->getRepository(EntryState::class)
+            ->findOneForUserEntry((int) $user->getId(), (int) $excludedEntry->getId());
+        self::assertNotNull($untouchedExcluded);
+        self::assertFalse($untouchedExcluded->isHidden(), 'excluded feed entry must stay unread');
+    }
+
+    public function testFeedScopeStillMarksAFeedExcludedFromAllItems(): void
+    {
+        [$user] = $this->seed();
+        [$excludedSub, $excludedEntry] = $this->seedExcludedFeedSubscription($user);
+
+        $this->service()->mark(
+            $user,
+            'feed',
+            (int) $excludedSub->getId(),
+            new \DateTimeImmutable('2026-07-10T00:00:00Z'),
+        );
+        $this->em->clear();
+
+        $reloadedSub = $this->em->getRepository(Subscription::class)->find($excludedSub->getId());
+        self::assertNotNull($reloadedSub);
+        self::assertSame(
+            '2026-07-10T00:00:00+00:00',
+            $reloadedSub->getMarkedReadUntil()?->format(\DateTimeInterface::ATOM),
+        );
+
+        $flipped = $this->em->getRepository(EntryState::class)
+            ->findOneForUserEntry((int) $user->getId(), (int) $excludedEntry->getId());
+        self::assertNotNull($flipped);
+        self::assertTrue($flipped->isHidden(), 'scope "feed" must still mark an excluded feed');
+    }
+
+    public function testTagScopeStillMarksAFeedExcludedFromAllItems(): void
+    {
+        [$user] = $this->seed();
+        [$excludedSub, $excludedEntry] = $this->seedExcludedFeedSubscription($user);
+        $tag = new Tag($user, 'excluded-tag');
+        $this->em->persist($tag);
+        $excludedSub->addTag($tag);
+        $this->em->flush();
+
+        $this->service()->mark($user, 'tag', (int) $tag->getId(), new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+        $this->em->clear();
+
+        $reloadedSub = $this->em->getRepository(Subscription::class)->find($excludedSub->getId());
+        self::assertNotNull($reloadedSub);
+        self::assertSame(
+            '2026-07-10T00:00:00+00:00',
+            $reloadedSub->getMarkedReadUntil()?->format(\DateTimeInterface::ATOM),
+        );
+
+        $flipped = $this->em->getRepository(EntryState::class)
+            ->findOneForUserEntry((int) $user->getId(), (int) $excludedEntry->getId());
+        self::assertNotNull($flipped);
+        self::assertTrue($flipped->isHidden(), 'scope "tag" must still mark an excluded feed');
     }
 }

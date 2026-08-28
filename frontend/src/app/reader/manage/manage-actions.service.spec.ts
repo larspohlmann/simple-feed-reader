@@ -27,6 +27,8 @@ const sub: SubscriptionDto = {
   position: 0,
   tags: [],
   unreadCount: 0,
+  includeInAllItems: true,
+  includeInForYou: true,
 };
 const tag: TagDto = { id: 3, name: 'Tech', color: null, icon: null, position: 0 };
 
@@ -101,6 +103,44 @@ describe('ManageActions', () => {
     expect(req.request.method).toBe('PATCH');
     expect(req.request.body).toEqual({ customTitle: 'My feed', tagIds: [3, 7] });
     req.flush({ subscription: { ...named, tags: [tag] } });
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('setIncludeInAllItems: PATCHes the full body with the flag flipped and optimistically updates the store', () => {
+    const s: SubscriptionDto = { ...sub, tags: [tag] };
+    const store = TestBed.inject(SubscriptionsStore);
+    store.subscriptions.set([s]);
+    const spy = jest.spyOn(store, 'load').mockImplementation(() => undefined);
+    svc.setIncludeInAllItems(s, false);
+    expect(store.subscriptions().find((x) => x.id === 5)!.includeInAllItems).toBe(false);
+    const req = ctrl.expectOne('https://api.test/api/subscriptions/5');
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({
+      customTitle: s.customTitle,
+      tagIds: [3],
+      includeInAllItems: false,
+      includeInForYou: true,
+    });
+    req.flush({ subscription: { ...s, includeInAllItems: false } });
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('setIncludeInForYou: PATCHes the full body with the flag flipped and optimistically updates the store', () => {
+    const s: SubscriptionDto = { ...sub, tags: [tag] };
+    const store = TestBed.inject(SubscriptionsStore);
+    store.subscriptions.set([s]);
+    const spy = jest.spyOn(store, 'load').mockImplementation(() => undefined);
+    svc.setIncludeInForYou(s, false);
+    expect(store.subscriptions().find((x) => x.id === 5)!.includeInForYou).toBe(false);
+    const req = ctrl.expectOne('https://api.test/api/subscriptions/5');
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({
+      customTitle: s.customTitle,
+      tagIds: [3],
+      includeInAllItems: true,
+      includeInForYou: false,
+    });
+    req.flush({ subscription: { ...s, includeInForYou: false } });
     expect(spy).toHaveBeenCalled();
   });
 

@@ -157,4 +157,22 @@ final class SubscriptionTest extends DbTestCase
         self::assertTrue($reloaded->isKept());
         self::assertFalse($reloaded->isHidden());
     }
+
+    public function testANewSubscriptionIsIncludedEverywhereByDefault(): void
+    {
+        $subscription = new Subscription($this->makeUser(), $this->makeFeed(), new \DateTimeImmutable());
+
+        self::assertTrue($subscription->isIncludeInAllItems());
+        self::assertTrue($subscription->isIncludeInForYou());
+    }
+
+    public function testExclusionFlagsCanBeToggled(): void
+    {
+        $subscription = new Subscription($this->makeUser(), $this->makeFeed(), new \DateTimeImmutable());
+        $subscription->setIncludeInAllItems(false);
+        $subscription->setIncludeInForYou(false);
+
+        self::assertFalse($subscription->isIncludeInAllItems());
+        self::assertFalse($subscription->isIncludeInForYou());
+    }
 }

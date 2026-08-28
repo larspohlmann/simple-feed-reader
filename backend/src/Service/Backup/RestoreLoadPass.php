@@ -171,6 +171,8 @@ final class RestoreLoadPass
         $subscription->setCustomTitle($line->customTitle);
         $subscription->setPosition($line->position);
         $subscription->setMarkedReadUntil($line->markedReadUntil);
+        $subscription->setIncludeInAllItems($line->includeInAllItems);
+        $subscription->setIncludeInForYou($line->includeInForYou);
         foreach ($line->tags as $ref) {
             $subscription->addTag($this->tagNamed($ref->name), $ref->position);
         }

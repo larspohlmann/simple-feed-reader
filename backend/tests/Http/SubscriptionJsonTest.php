@@ -192,6 +192,21 @@ final class SubscriptionJsonTest extends TestCase
         );
     }
 
+    public function testSerialisesTheExclusionFlags(): void
+    {
+        $now = new \DateTimeImmutable('2026-02-03T04:05:06Z');
+        $user = new User('u@example.com', $now);
+        $feed = new Feed('https://example.com/feed.xml');
+        $sub = new Subscription($user, $feed, $now);
+        $sub->setIncludeInAllItems(false);
+        $sub->setIncludeInForYou(true);
+
+        $shape = SubscriptionJson::one($sub);
+
+        self::assertFalse($shape['includeInAllItems']);
+        self::assertTrue($shape['includeInForYou']);
+    }
+
     public function testCustomTitleWinsAndFallsBackToUrl(): void
     {
         $now = new \DateTimeImmutable('2026-02-03T04:05:06Z');

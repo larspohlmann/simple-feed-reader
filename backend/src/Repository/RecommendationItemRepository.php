@@ -109,8 +109,9 @@ final class RecommendationItemRepository extends ServiceEntityRepository
     }
 
     /** The for-you feed's row set: completed runs of this user, entries still
-     *  subscribed, deduped to their newest run. Shared by the pager and the
-     *  count so the sidebar number can never disagree with the list. */
+     *  subscribed to a feed with for-you recommendations enabled, deduped to
+     *  their newest run. Shared by the pager and the count so the sidebar
+     *  number can never disagree with the list. */
     private function applyForYouCriteria(QueryBuilder $qb, int $userId): QueryBuilder
     {
         return $qb
@@ -119,6 +120,7 @@ final class RecommendationItemRepository extends ServiceEntityRepository
             ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
             ->andWhere('r.user = :user')
             ->andWhere('r.status = :completed')
+            ->andWhere('s.includeInForYou = true')
             ->andWhere($this->notDedupedByNewerRunDql())
             ->setParameter('user', $userId)
             ->setParameter('completed', RecommendationRun::STATUS_COMPLETED);

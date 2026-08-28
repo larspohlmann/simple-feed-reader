@@ -70,6 +70,8 @@ describe('ReaderShellComponent', () => {
         createdAt: 'x',
         tags: [],
         unreadCount: 2,
+        includeInAllItems: true,
+        includeInForYou: true,
       },
     ],
   };

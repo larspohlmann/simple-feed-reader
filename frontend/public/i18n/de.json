@@ -416,6 +416,8 @@
       "siteUrl": "Website",
       "tags": "Tags",
       "noTags": "Noch keine Tags – erstelle einen unter Einstellungen › Tags.",
+      "showInAllItems": "In Alle Einträge anzeigen",
+      "showInForYou": "In Für dich anzeigen",
       "saving": "Wird gespeichert…",
       "save": "Speichern"
     }
@@ -666,6 +668,13 @@
     "deleteTag": "Tag löschen",
     "editFeed": "Feed bearbeiten",
     "unsubscribe": "Abbestellen",
+    "excludeFromAllItems": "Aus Alle Einträge ausschließen",
+    "includeInAllItems": "In Alle Einträge anzeigen",
+    "excludeFromForYou": "Aus Für dich ausschließen",
+    "includeInForYou": "In Für dich anzeigen",
+    "excludedFromAllItems": "Ausgeblendet aus Alle Einträge",
+    "excludedFromForYou": "Ausgeblendet aus Für dich",
+    "excludedFromBoth": "Ausgeblendet aus Alle Einträge und Für dich",
     "dropToRemoveTags": "Hier ablegen, um Tags zu entfernen",
     "unread": "nur ungelesene",
     "all": "Alle Beiträge",

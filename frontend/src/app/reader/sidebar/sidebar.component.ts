@@ -107,6 +107,12 @@ export class SidebarComponent {
   readonly deleteTag = output<TagDto>();
   readonly editFeed = output<SubscriptionDto>();
   readonly unsubscribe = output<SubscriptionDto>();
+  /** The "Exclude/Show in All items" menu action was chosen; the shell flips
+   *  `includeInAllItems` via `ManageActions`. */
+  readonly toggleAllItems = output<SubscriptionDto>();
+  /** The "Exclude/Show in For You" menu action was chosen; the shell flips
+   *  `includeInForYou` via `ManageActions`. */
+  readonly toggleForYou = output<SubscriptionDto>();
   readonly refresh = output<void>();
   readonly addFeed = output<void>();
   /** The settled search term from the field, or '' when it is cleared. */
@@ -242,6 +248,22 @@ export class SidebarComponent {
         actions: [
           { id: 'edit', label: this.transloco.translate('reader.editFeed') },
           {
+            id: 'toggleAllItems',
+            label: this.toggleLabel(
+              subscription.includeInAllItems,
+              'reader.excludeFromAllItems',
+              'reader.includeInAllItems',
+            ),
+          },
+          {
+            id: 'toggleForYou',
+            label: this.toggleLabel(
+              subscription.includeInForYou,
+              'reader.excludeFromForYou',
+              'reader.includeInForYou',
+            ),
+          },
+          {
             id: 'unsubscribe',
             label: this.transloco.translate('reader.unsubscribe'),
             danger: true,
@@ -251,8 +273,28 @@ export class SidebarComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
         if (choice === 'edit') this.editFeed.emit(subscription);
+        if (choice === 'toggleAllItems') this.toggleAllItems.emit(subscription);
+        if (choice === 'toggleForYou') this.toggleForYou.emit(subscription);
         if (choice === 'unsubscribe') this.unsubscribe.emit(subscription);
       });
+  }
+
+  /** Label for a feed exclusion toggle, state-dependent: when the feed is
+   *  currently included it offers to exclude, and vice versa. */
+  protected toggleLabel(included: boolean, excludeKey: string, includeKey: string): string {
+    return this.transloco.translate(included ? excludeKey : includeKey);
+  }
+
+  /** Tooltip for the row's exclusion marker: names exactly which surface(s)
+   *  the feed is hidden from. */
+  exclusionTitle(subscription: SubscriptionDto): string {
+    if (!subscription.includeInAllItems && !subscription.includeInForYou) {
+      return this.transloco.translate('reader.excludedFromBoth');
+    }
+    if (!subscription.includeInAllItems) {
+      return this.transloco.translate('reader.excludedFromAllItems');
+    }
+    return this.transloco.translate('reader.excludedFromForYou');
   }
   /** Stable drop-target for the untagged bucket. */
   readonly untaggedDrop: DropData = { kind: 'untagged' };
