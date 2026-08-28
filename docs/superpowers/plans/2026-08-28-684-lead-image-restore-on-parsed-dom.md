@@ -83,10 +83,14 @@ final class PageImageInventoryTest extends TestCase
 
     public function testDrawsASizeVariantOfTheSamePhoto(): void
     {
-        // ImageIdentity matches renditions of one photo by filename stem.
-        $inventory = $this->inventoryOf('<body><img src="https://cdn.test/hero-photo-1280x720.jpg"></body>');
+        // ImageIdentity matches renditions of one photo by their distinctive
+        // filename words (the WordPress size-variant case in its docblock). The
+        // example must carry photo-specific tokens (len >= 5, non-generic): a
+        // pair distinguished only by the size suffix does NOT match, and must
+        // not, since ImageIdentity is untouched here (spec non-goal).
+        $inventory = $this->inventoryOf('<body><img src="https://cdn.test/mountain-vista-scene-1280x720.jpg"></body>');
 
-        self::assertTrue($inventory->draws(ImageIdentity::fromUrl('https://cdn.test/hero-photo.jpg')));
+        self::assertTrue($inventory->draws(ImageIdentity::fromUrl('https://cdn.test/mountain-vista-scene.jpg')));
     }
 
     public function testDoesNotDrawAnUnrelatedPhoto(): void
