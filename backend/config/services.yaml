@@ -132,6 +132,12 @@ services:
     # for free. MailGatedAccountMailerWiringTest pins this.
     App\Service\Mail\AccountMailerInterface: '@App\Service\Mail\AccountMailer'
 
+    # Same ambiguity, same fix, for the digest mailer (#636): DigestMailer and
+    # its #[AsDecorator] MailGatedDigestMailer both implement
+    # DigestMailerInterface, so this alias resolves to the DigestMailer service
+    # id, which decoration then swaps for the decorator.
+    App\Service\Mail\Digest\DigestMailerInterface: '@App\Service\Mail\Digest\DigestMailer'
+
     # The sweep's in-flight cap. Wired on this one service rather than as a
     # `bind` in _defaults: a binding matches by parameter NAME, so a global
     # `int $concurrency` would also feed any unrelated service that ever names a

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Dto\Me\SendTestDigestRequest;
 use App\Dto\Me\UpdateDigestRequest;
 use App\Dto\Me\UpdateLocaleRequest;
 use App\Dto\Me\UpdatePreferencesRequest;
@@ -12,11 +13,15 @@ use App\Http\MeJson;
 use App\Service\Account\AccountDeleter;
 use App\Service\Auth\RegistrationService;
 use App\Service\Mail\Digest\DigestEnablement;
+use App\Service\Mail\Digest\SendTestDigest;
 use App\Service\Mail\MailCapability;
+use App\Service\RateLimit\RateLimitGuard;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -32,6 +37,9 @@ final readonly class MeController
         private MailCapability $mail,
         private DigestEnablement $digestEnablement,
         private RegistrationService $registration,
+        private SendTestDigest $sendTestDigest,
+        private RateLimitGuard $rateLimitGuard,
+        private RateLimiterFactoryInterface $digestTestLimiter,
     ) {
     }
 
@@ -90,6 +98,29 @@ final readonly class MeController
         $this->entityManager->flush();
 
         return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled()));
+    }
+
+    /**
+     * Sends a one-off preview digest over the last `days` days, without moving
+     * digestLastSentAt (#636) — SendTestDigest composes and sends but never
+     * touches the schedule watermark, so this button can be pressed any number
+     * of times without disturbing the real digest cadence. Gated the same way
+     * as the real send: mail must be on for this instance and the address must
+     * be verified, or there is nowhere trustworthy to send the preview to.
+     */
+    #[Route('/api/me/digest/test', name: 'api_me_digest_test', methods: ['POST'])]
+    public function sendTestDigest(
+        #[CurrentUser] User $user,
+        #[MapRequestPayload] SendTestDigestRequest $request,
+    ): JsonResponse {
+        if (!$this->mail->isEnabled() || !$user->isEmailVerified()) {
+            throw new AccessDeniedHttpException('Mail is unavailable for this account.');
+        }
+
+        $this->rateLimitGuard->enforceForUser($this->digestTestLimiter, $user);
+        $sent = $this->sendTestDigest->send($user, $request->days);
+
+        return new JsonResponse(['sent' => $sent]);
     }
 
     /**
