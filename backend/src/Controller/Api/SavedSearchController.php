@@ -52,11 +52,16 @@ final readonly class SavedSearchController
         $userId = (int) $user->getId();
         // Saving a term already saved is idempotent, and answers 200 with the
         // row that was there rather than 201 with a second one.
-        $savedSearch = $this->savedSearches->findOneForUserByTerm($userId, $request->term, $request->wholeWord);
+        $savedSearch = $this->savedSearches->findOneForUserByTerm(
+            $userId,
+            $request->term,
+            $request->wholeWord,
+            $request->phrase,
+        );
         $status = $savedSearch === null ? Response::HTTP_CREATED : Response::HTTP_OK;
 
         if ($savedSearch === null) {
-            $savedSearch = new SavedSearch($user, $request->term, $request->wholeWord);
+            $savedSearch = new SavedSearch($user, $request->term, $request->wholeWord, $request->phrase);
             $this->em->persist($savedSearch);
             $this->em->flush();
         }

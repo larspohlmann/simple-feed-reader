@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Search;
 
 use App\Exception\ValidationException;
+use App\Service\Search\SearchMode;
 use App\Service\Search\SearchTerms;
 use PHPUnit\Framework\TestCase;
 
@@ -154,5 +155,115 @@ final class SearchTermsTest extends TestCase
 
         self::assertSame(['daft', 'punk'], $terms->terms);
         self::assertFalse($terms->isWholeWord);
+    }
+
+    public function testAQueryWrappedInDoubleQuotesIsOnePhrasePhrase(): void
+    {
+        $terms = SearchTerms::fromInput('"climate change"');
+
+        self::assertTrue($terms->isPhrase);
+        self::assertFalse($terms->isWholeWord);
+        self::assertSame(['climate change'], $terms->terms);
+    }
+
+    public function testAPhrasePhraseCollapsesItsInnerWhitespace(): void
+    {
+        $terms = SearchTerms::fromInput("\"climate   change\"");
+
+        self::assertTrue($terms->isPhrase);
+        self::assertSame(['climate change'], $terms->terms);
+    }
+
+    public function testAnUnquotedQueryIsNotAPhrase(): void
+    {
+        $terms = SearchTerms::fromInput('climate change');
+
+        self::assertFalse($terms->isPhrase);
+        self::assertSame(['climate', 'change'], $terms->terms);
+    }
+
+    public function testAPhraseWinsOverATrailingSpace(): void
+    {
+        // A wrapped query with a trailing space carries both signals; the exact
+        // phrase is the stronger intent, so whole-word mode yields to it.
+        $terms = SearchTerms::fromInput('"climate change" ');
+
+        self::assertTrue($terms->isPhrase);
+        self::assertFalse($terms->isWholeWord);
+        self::assertSame(['climate change'], $terms->terms);
+    }
+
+    public function testInnerDoubleQuotesInAPhraseAreDroppedAsBoundaries(): void
+    {
+        // A stray quote inside the phrase would reopen a phrase; it becomes a
+        // boundary and the words on either side stay in the one phrase.
+        $terms = SearchTerms::fromInput('"a "b" c"');
+
+        self::assertTrue($terms->isPhrase);
+        self::assertSame(['a b c'], $terms->terms);
+    }
+
+    public function testAWrappedButEmptyPhraseFallsBackToNormalParsing(): void
+    {
+        // Nothing but quotes and whitespace between the wrapping quotes: there
+        // is no phrase to match, so the input parses as ordinary quote text
+        // rather than becoming an empty phrase search.
+        $terms = SearchTerms::fromInput('" "" "');
+
+        self::assertFalse($terms->isPhrase);
+    }
+
+    public function testASingleWordCanBeAPhrase(): void
+    {
+        $terms = SearchTerms::fromInput('"punk"');
+
+        self::assertTrue($terms->isPhrase);
+        self::assertSame(['punk'], $terms->terms);
+    }
+
+    public function testAnOpeningQuoteWithoutAClosingOneIsNotAPhrase(): void
+    {
+        // Only a query that BOTH opens and closes with a quote is a phrase; a
+        // dangling opening quote reads as ordinary text, quote and all.
+        $terms = SearchTerms::fromInput('"climate');
+
+        self::assertFalse($terms->isPhrase);
+        self::assertSame(['"climate'], $terms->terms);
+    }
+
+    public function testAClosingQuoteWithoutAnOpeningOneIsNotAPhrase(): void
+    {
+        $terms = SearchTerms::fromInput('climate"');
+
+        self::assertFalse($terms->isPhrase);
+        self::assertSame(['climate"'], $terms->terms);
+    }
+
+    public function testAMultibytePhraseKeepsEveryCharacter(): void
+    {
+        // The wrapping quotes are stripped by character position, not byte
+        // position: a multibyte phrase must come back whole, not truncated.
+        $terms = SearchTerms::fromInput('"café crème"');
+
+        self::assertTrue($terms->isPhrase);
+        self::assertSame(['café crème'], $terms->terms);
+    }
+
+    public function testFromTermAndModeRebuildsAPhrasePhrase(): void
+    {
+        $terms = SearchTerms::fromTermAndMode('climate change', SearchMode::Phrase);
+
+        self::assertTrue($terms->isPhrase);
+        self::assertFalse($terms->isWholeWord);
+        self::assertSame(['climate change'], $terms->terms);
+    }
+
+    public function testFromTermAndModeRebuildsAWholeWordSearch(): void
+    {
+        $terms = SearchTerms::fromTermAndMode('climate change', SearchMode::WholeWord);
+
+        self::assertTrue($terms->isWholeWord);
+        self::assertFalse($terms->isPhrase);
+        self::assertSame(['climate', 'change'], $terms->terms);
     }
 }

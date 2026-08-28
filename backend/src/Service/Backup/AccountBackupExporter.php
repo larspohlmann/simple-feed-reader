@@ -244,6 +244,7 @@ final readonly class AccountBackupExporter
             'kind' => BackupSchema::KIND_SAVED_SEARCH,
             'term' => $savedSearch->getTerm(),
             'wholeWord' => $savedSearch->isWholeWord(),
+            'phrase' => $savedSearch->isPhrase(),
             'position' => $savedSearch->getPosition(),
         ];
     }

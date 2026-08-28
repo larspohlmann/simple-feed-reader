@@ -126,7 +126,7 @@ final class RestoreLoadPass
 
     private function loadSavedSearch(SavedSearchLine $line): void
     {
-        $savedSearch = new SavedSearch($this->user, $line->term, $line->wholeWord);
+        $savedSearch = new SavedSearch($this->user, $line->term, $line->wholeWord, $line->phrase);
         $savedSearch->setPosition($line->position);
         $this->em->persist($savedSearch);
         ++$this->counts['savedSearches'];

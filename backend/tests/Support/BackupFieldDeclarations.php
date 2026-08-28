@@ -66,7 +66,7 @@ final class BackupFieldDeclarations
             'name' => 'name', 'color' => 'color', 'icon' => 'icon', 'position' => 'position',
         ],
         SavedSearch::class => [
-            'term' => 'term', 'wholeWord' => 'wholeWord', 'position' => 'position',
+            'term' => 'term', 'wholeWord' => 'wholeWord', 'phrase' => 'phrase', 'position' => 'position',
         ],
         Feed::class => [
             'url' => 'url', 'siteUrl' => 'siteUrl', 'title' => 'title',

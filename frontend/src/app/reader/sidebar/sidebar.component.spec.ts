@@ -608,6 +608,7 @@ describe('SidebarComponent', () => {
             id: 1,
             term: 'climate',
             wholeWord: false,
+            phrase: false,
             position: 0,
             unreadCount: 3,
             includeInDigest: false,
@@ -616,6 +617,7 @@ describe('SidebarComponent', () => {
             id: 2,
             term: 'space',
             wholeWord: false,
+            phrase: false,
             position: 1,
             unreadCount: 4,
             includeInDigest: false,
@@ -637,6 +639,7 @@ describe('SidebarComponent', () => {
             id: 1,
             term: 'climate',
             wholeWord: false,
+            phrase: false,
             position: 0,
             unreadCount: 3,
             includeInDigest: false,
@@ -645,6 +648,7 @@ describe('SidebarComponent', () => {
             id: 2,
             term: 'space',
             wholeWord: false,
+            phrase: false,
             position: 1,
             unreadCount: 4,
             includeInDigest: false,
@@ -677,6 +681,7 @@ describe('SidebarComponent', () => {
             id: 1,
             term: 'climate',
             wholeWord: false,
+            phrase: false,
             position: 0,
             unreadCount: 3,
             includeInDigest: false,
@@ -705,6 +710,7 @@ describe('SidebarComponent', () => {
             id: 1,
             term: 'climate',
             wholeWord: false,
+            phrase: false,
             position: 0,
             unreadCount: 3,
             includeInDigest: false,
@@ -726,6 +732,7 @@ describe('SidebarComponent', () => {
             id: 1,
             term: 'climate',
             wholeWord: false,
+            phrase: false,
             position: 0,
             unreadCount: 3,
             includeInDigest: false,
@@ -751,6 +758,7 @@ describe('SidebarComponent', () => {
             id: 1,
             term: 'climate',
             wholeWord: true,
+            phrase: false,
             position: 0,
             unreadCount: 0,
             includeInDigest: false,
@@ -759,6 +767,7 @@ describe('SidebarComponent', () => {
             id: 2,
             term: 'space',
             wholeWord: false,
+            phrase: false,
             position: 1,
             unreadCount: 0,
             includeInDigest: false,
@@ -778,6 +787,31 @@ describe('SidebarComponent', () => {
       expect(plainRow.querySelector('.whole-word-badge')).toBeNull();
     });
 
+    it('shows a compact "P" pill on a phrase row, with no quotes on the term', () => {
+      const f = mount({
+        savedSearches: [
+          {
+            id: 1,
+            term: 'climate change',
+            wholeWord: false,
+            phrase: true,
+            position: 0,
+            unreadCount: 0,
+            includeInDigest: false,
+          },
+        ],
+      });
+      f.componentInstance.toggleSavedSearches();
+      f.detectChanges();
+
+      const row = f.nativeElement.querySelector('.savedsearch-item')!;
+      expect(row.querySelector('.phrase-badge')?.textContent?.trim()).toBe('P');
+      expect(row.querySelector('.sr-only')?.textContent).toContain('Phrase');
+      // The mode rides in the pill, so the stored bare term shows without quotes.
+      expect(row.querySelector('.saved-term')?.textContent?.trim()).toBe('climate change');
+      expect(row.querySelector('.whole-word-badge')).toBeNull();
+    });
+
     // The active row is decided by id, handed down by the shell. The sidebar
     // does NOT re-encode a term to string-match it against the selection: that
     // was a second, subtly different identity rule, and it disagreed with the
@@ -789,6 +823,7 @@ describe('SidebarComponent', () => {
             id: 1,
             term: 'climate',
             wholeWord: true,
+            phrase: false,
             position: 0,
             unreadCount: 0,
             includeInDigest: false,
@@ -797,6 +832,7 @@ describe('SidebarComponent', () => {
             id: 2,
             term: 'space',
             wholeWord: false,
+            phrase: false,
             position: 1,
             unreadCount: 0,
             includeInDigest: false,
@@ -820,6 +856,7 @@ describe('SidebarComponent', () => {
             id: 1,
             term: 'climate',
             wholeWord: true,
+            phrase: false,
             position: 0,
             unreadCount: 0,
             includeInDigest: false,
@@ -843,6 +880,7 @@ describe('SidebarComponent', () => {
             id: 1,
             term: 'climate',
             wholeWord: true,
+            phrase: false,
             position: 0,
             unreadCount: 0,
             includeInDigest: false,
@@ -865,6 +903,7 @@ describe('SidebarComponent', () => {
       id: 1,
       term: 'climate',
       wholeWord: false,
+      phrase: false,
       position: 0,
       unreadCount: 3,
       includeInDigest: false,
@@ -873,6 +912,7 @@ describe('SidebarComponent', () => {
       id: 2,
       term: 'space',
       wholeWord: false,
+      phrase: false,
       position: 1,
       unreadCount: 4,
       includeInDigest: true,

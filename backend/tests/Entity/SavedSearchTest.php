@@ -19,4 +19,12 @@ final class SavedSearchTest extends TestCase
         $search->setIncludeInDigest(true);
         self::assertTrue($search->isIncludeInDigest());
     }
+
+    public function testPhraseDefaultsFalseAndIsCarried(): void
+    {
+        $user = new User('a@b.example', new \DateTimeImmutable());
+
+        self::assertFalse((new SavedSearch($user, 'rust', false))->isPhrase());
+        self::assertTrue((new SavedSearch($user, 'climate change', false, true))->isPhrase());
+    }
 }

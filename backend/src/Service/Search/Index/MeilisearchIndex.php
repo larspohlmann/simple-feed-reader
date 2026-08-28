@@ -185,10 +185,19 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
      * That is why a whole-word search for "punk" was answering with
      * "Pünktlichkeit" until #450; probed against v1.13, which narrowed that
      * same search from 82 hits to 16.
+     *
+     * A phrase search — the wrapping quotes the user typed, carried here as
+     * SearchTerms::$isPhrase — becomes one quoted phrase over the whole term,
+     * which is Meilisearch's own way of asking for those words in order and
+     * adjacent (#702).
      */
     private function queryStringFor(SearchTerms $terms): string
     {
         $words = array_map(self::withoutPhraseDelimiters(...), $terms->terms);
+
+        if ($terms->isPhrase) {
+            return '"' . implode(' ', $words) . '"';
+        }
 
         if (!$terms->isWholeWord) {
             return implode(' ', $words);

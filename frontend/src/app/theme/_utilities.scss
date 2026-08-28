@@ -55,7 +55,8 @@
    class's. Layout that belongs to the surrounding row — the sidebar's
    `flex: none`, the collapsed header's `display: none` — stays with that
    component. */
-.whole-word-badge {
+.whole-word-badge,
+.phrase-badge {
   padding: 0 var(--space-2);
   border-radius: var(--radius-pill);
   background: var(--accent-soft);

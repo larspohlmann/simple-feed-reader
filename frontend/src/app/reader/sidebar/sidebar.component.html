@@ -151,6 +151,19 @@
                   {{ 'reader.searchWholeWordShort' | transloco }}
                 </span>
               }
+              @if (saved.phrase) {
+                <!-- Compact "P" pill, the phrase-mode analog of the "W" pill
+                     above; the term itself is stored bare, so no quotes show in
+                     the sidebar (#702). -->
+                <span class="sr-only">{{ 'reader.searchPhrase' | transloco }}</span>
+                <span
+                  class="phrase-badge"
+                  aria-hidden="true"
+                  [attr.title]="'reader.searchPhraseHint' | transloco"
+                >
+                  {{ 'reader.searchPhraseShort' | transloco }}
+                </span>
+              }
             </span>
             @if (saved.unreadCount > 0) {
               <span class="count">{{ saved.unreadCount }}</span>

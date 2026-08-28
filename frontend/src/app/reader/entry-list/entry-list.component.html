@@ -66,6 +66,12 @@
                aria-hidden so the two don't announce it twice. -->
           <span class="sr-only">{{ 'reader.searchWholeWord' | transloco }}</span>
         }
+        @if (showPhraseBadge()) {
+          <!-- The phrase mode's accessible name, mirroring the whole-word one
+               above: heard on heading navigation, with the visible pill beside
+               it aria-hidden so it announces once (#702). -->
+          <span class="sr-only">{{ 'reader.searchPhrase' | transloco }}</span>
+        }
       </h2>
       @if (showWholeWordBadge()) {
         <span
@@ -74,6 +80,15 @@
           [attr.title]="'reader.searchWholeWordHint' | transloco"
         >
           {{ 'reader.searchWholeWord' | transloco }}
+        </span>
+      }
+      @if (showPhraseBadge()) {
+        <span
+          class="phrase-badge"
+          aria-hidden="true"
+          [attr.title]="'reader.searchPhraseHint' | transloco"
+        >
+          {{ 'reader.searchPhrase' | transloco }}
         </span>
       }
     </div>

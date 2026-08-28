@@ -63,13 +63,14 @@ class SavedSearchRepository extends ServiceEntityRepository
         return $rows;
     }
 
-    public function findOneForUserByTerm(int $userId, string $term, bool $wholeWord): ?SavedSearch
+    public function findOneForUserByTerm(int $userId, string $term, bool $wholeWord, bool $phrase): ?SavedSearch
     {
         /** @var SavedSearch|null $row */
         $row = $this->createQueryBuilder('savedSearch')
             ->andWhere('savedSearch.user = :userId')->setParameter('userId', $userId)
             ->andWhere('savedSearch.term = :term')->setParameter('term', $term)
             ->andWhere('savedSearch.wholeWord = :wholeWord')->setParameter('wholeWord', $wholeWord)
+            ->andWhere('savedSearch.phrase = :phrase')->setParameter('phrase', $phrase)
             ->getQuery()
             ->getOneOrNullResult();
 

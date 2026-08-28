@@ -101,6 +101,7 @@ final class AccountBackupExporterTest extends DbTestCase
         self::assertSame('savedSearch', $lines[3]['kind']);
         self::assertSame('climate policy', $lines[3]['term']);
         self::assertTrue($lines[3]['wholeWord']);
+        self::assertFalse($lines[3]['phrase']);
         self::assertSame(3, $lines[3]['position']);
         self::assertSame('https://one.example/feed.xml', $lines[4]['url']);
         self::assertArrayNotHasKey('etag', $lines[4]);

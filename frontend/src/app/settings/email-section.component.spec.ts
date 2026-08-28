@@ -22,6 +22,7 @@ function search(overrides: Partial<SavedSearchDto> = {}): SavedSearchDto {
     id: 1,
     term: 'kubernetes',
     wholeWord: false,
+    phrase: false,
     position: 0,
     unreadCount: 0,
     includeInDigest: false,

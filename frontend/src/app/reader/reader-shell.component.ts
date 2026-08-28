@@ -35,6 +35,7 @@ import {
   RefreshScope,
   Selection,
   isWholeWordTerm,
+  isPhraseTerm,
   MarkReadTarget,
   markReadTarget,
   queryFromSelection,
@@ -882,11 +883,17 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     if (s.kind !== 'search') return null;
     const raw = s.term ?? '';
 
-    return { term: visibleSearchTerm(raw), wholeWord: isWholeWordTerm(raw) };
+    // A phrase (wrapping quotes) overrides whole-word (a trailing space) when a
+    // query carries both, exactly as the server decides it (#702), so the
+    // whole-word flag is read only when the query is not a phrase.
+    const phrase = isPhraseTerm(raw);
+
+    return { term: visibleSearchTerm(raw), wholeWord: !phrase && isWholeWordTerm(raw), phrase };
   });
 
   /** The saved search matching the current selection, or null. A search's
-   *  identity is its visible term plus its whole-word flag, so both must match. */
+   *  identity is its visible term plus its mode — the whole-word and phrase
+   *  flags — so all three must match. */
   readonly currentSavedSearch = computed(() => {
     const current = this.searchedTermAndMode();
     if (current === null) return null;
@@ -894,8 +901,12 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     return (
       this.savedSearchesStore
         .savedSearches()
-        .find((saved) => saved.term === current.term && saved.wholeWord === current.wholeWord) ??
-      null
+        .find(
+          (saved) =>
+            saved.term === current.term &&
+            saved.wholeWord === current.wholeWord &&
+            saved.phrase === current.phrase,
+        ) ?? null
     );
   });
 
@@ -924,7 +935,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const current = this.searchedTermAndMode();
     if (!current) return;
-    this.savedSearchesStore.createSavedSearch(current.term, current.wholeWord, () =>
+    this.savedSearchesStore.createSavedSearch(current.term, current.wholeWord, current.phrase, () =>
       this.toast.show({
         message: this.i18n.translate('reader.searchSaved'),
         durationMs: CONFIRMATION_DURATION_MS,

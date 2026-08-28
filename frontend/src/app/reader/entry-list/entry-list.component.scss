@@ -196,9 +196,11 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
    the rows would move (#419). `flex: none` keeps the pill at its text width
    while the title takes the truncation. */
 
-/* The pill itself is the global `.whole-word-badge` in theme/_utilities.scss;
-   only its behaviour inside this header row belongs here. */
-.whole-word-badge {
+/* The pill itself is the global `.whole-word-badge`/`.phrase-badge` in
+   theme/_utilities.scss; only its behaviour inside this header row belongs
+   here. Both mode pills sit beside the title the same way. */
+.whole-word-badge,
+.phrase-badge {
   flex: none;
 }
 
@@ -232,7 +234,8 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   }
 
   .list-header.collapsed .last-refreshed,
-  .list-header.collapsed .whole-word-badge {
+  .list-header.collapsed .whole-word-badge,
+  .list-header.collapsed .phrase-badge {
     display: none;
   }
 }

@@ -152,6 +152,7 @@ export class ReaderApi {
   createSavedSearch(body: {
     term: string;
     wholeWord: boolean;
+    phrase: boolean;
   }): Observable<{ savedSearch: SavedSearchWire }> {
     return this.http.post<{ savedSearch: SavedSearchWire }>(
       `${this.base}/api/saved-searches`,

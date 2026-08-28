@@ -633,7 +633,14 @@ describe('ReaderShellComponent', () => {
     store.load();
     ctrl.expectOne('https://api.test/api/saved-searches').flush({
       savedSearches: [
-        { id: 7, term: 'news', wholeWord: false, position: 0, unreadEntryIds: [1, 2] },
+        {
+          id: 7,
+          term: 'news',
+          wholeWord: false,
+          phrase: false,
+          position: 0,
+          unreadEntryIds: [1, 2],
+        },
       ],
     });
     expect(store.savedSearches()[0].unreadCount).toBe(2);
@@ -664,7 +671,14 @@ describe('ReaderShellComponent', () => {
     store.load();
     ctrl.expectOne('https://api.test/api/saved-searches').flush({
       savedSearches: [
-        { id: 7, term: 'news', wholeWord: false, position: 0, unreadEntryIds: [1, 2] },
+        {
+          id: 7,
+          term: 'news',
+          wholeWord: false,
+          phrase: false,
+          position: 0,
+          unreadEntryIds: [1, 2],
+        },
       ],
     });
 
@@ -2508,6 +2522,7 @@ describe('ReaderShellComponent', () => {
       id: 4,
       term: 'climate',
       wholeWord: true,
+      phrase: false,
       position: 0,
       unreadEntryIds: [100, 101],
       includeInDigest: false,
@@ -2517,6 +2532,7 @@ describe('ReaderShellComponent', () => {
       id: 4,
       term: 'climate',
       wholeWord: true,
+      phrase: false,
       position: 0,
       unreadCount: 2,
       includeInDigest: false,
@@ -2530,9 +2546,9 @@ describe('ReaderShellComponent', () => {
 
       const req = ctrl.expectOne('https://api.test/api/saved-searches');
       expect(req.request.method).toBe('POST');
-      // The trailing space is the whole-word signal; it is decoded to the pair
+      // The trailing space is the whole-word signal; it is decoded to the mode
       // the backend stores, never sent verbatim as the term.
-      expect(req.request.body).toEqual({ term: 'climate', wholeWord: true });
+      expect(req.request.body).toEqual({ term: 'climate', wholeWord: true, phrase: false });
       req.flush({ savedSearch: savedClimate });
 
       // The POST already answered with the row and its matches — no re-fetch.
@@ -2541,6 +2557,22 @@ describe('ReaderShellComponent', () => {
       expect(show).toHaveBeenCalledWith(
         expect.objectContaining({ message: 'Search saved', durationMs: CONFIRMATION_DURATION_MS }),
       );
+    });
+
+    it('saves a quoted query as a phrase, with the bare term and the phrase flag', () => {
+      const f = bootWithSearchSelected([], '"climate change"');
+
+      f.componentInstance.onToggleSavedSearch();
+
+      const req = ctrl.expectOne('https://api.test/api/saved-searches');
+      expect(req.request.method).toBe('POST');
+      // The wrapping quotes are the phrase signal; decoded to the mode the
+      // backend stores, the term is saved bare and phrase is true.
+      expect(req.request.body).toEqual({
+        term: 'climate change',
+        wholeWord: false,
+        phrase: true,
+      });
     });
 
     it('removes the saved search when the current one is already saved and the removal is confirmed', () => {

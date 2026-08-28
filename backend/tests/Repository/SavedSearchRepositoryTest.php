@@ -50,10 +50,30 @@ final class SavedSearchRepositoryTest extends DbTestCase
         $this->em->flush();
 
         $userId = (int) $user->getId();
-        self::assertNotNull($this->repo()->findOneForUserByTerm($userId, 'punk', false));
-        self::assertNotNull($this->repo()->findOneForUserByTerm($userId, 'punk', true));
-        self::assertSame(true, $this->repo()->findOneForUserByTerm($userId, 'punk', true)->isWholeWord());
-        self::assertNull($this->repo()->findOneForUserByTerm($userId, 'missing', false));
+        self::assertNotNull($this->repo()->findOneForUserByTerm($userId, 'punk', false, false));
+        self::assertNotNull($this->repo()->findOneForUserByTerm($userId, 'punk', true, false));
+        self::assertSame(true, $this->repo()->findOneForUserByTerm($userId, 'punk', true, false)->isWholeWord());
+        self::assertNull($this->repo()->findOneForUserByTerm($userId, 'missing', false, false));
+    }
+
+    public function testFindOneForUserByTermDistinguishesPhrase(): void
+    {
+        // A phrase search and a plain substring search share a term but are two
+        // distinct saved searches — the mode is part of a saved search's
+        // identity, so the lookup must not confuse one for the other.
+        $user = new User('phrase@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->em->persist($user);
+        $this->em->persist(new SavedSearch($user, 'climate change', false, false));
+        $this->em->persist(new SavedSearch($user, 'climate change', false, true));
+        $this->em->flush();
+
+        $userId = (int) $user->getId();
+        $substring = $this->repo()->findOneForUserByTerm($userId, 'climate change', false, false);
+        $phrase = $this->repo()->findOneForUserByTerm($userId, 'climate change', false, true);
+        self::assertNotNull($substring);
+        self::assertNotNull($phrase);
+        self::assertFalse($substring->isPhrase());
+        self::assertTrue($phrase->isPhrase());
     }
 
     public function testFindOneOwnedByRejectsAnotherUser(): void
