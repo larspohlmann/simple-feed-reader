@@ -21,10 +21,13 @@ final readonly class DigestTextRenderer
     {
         $subject = $this->translator->trans('digest.subject', ['%count%' => $model->totalCount], 'emails', $locale);
 
+        $intro = $this->translator->trans('digest.intro', [], 'emails', $locale);
         $blocks = array_map(fn (DigestGroup $group): string => $this->group($group, $locale), $model->groups);
         $footer = $this->translator->trans('digest.footer', [], 'emails', $locale);
 
-        return new DigestRenderedMail($subject, implode("\n\n", $blocks) . "\n\n" . $footer);
+        $body = $intro . "\n\n" . implode("\n\n", $blocks) . "\n\n" . $footer;
+
+        return new DigestRenderedMail($subject, $body);
     }
 
     private function group(DigestGroup $group, string $locale): string

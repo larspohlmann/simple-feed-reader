@@ -41,6 +41,9 @@ final class DigestTextRendererTest extends TestCase
 
         self::assertStringContainsString('7', $rendered->subject);
 
+        // A short introductory line opens the body, before any results.
+        self::assertStringStartsWith('These are new entries matching your saved searches', $rendered->body);
+
         self::assertStringContainsString('rust (5)', $rendered->body);
         self::assertStringContainsString('golang (2)', $rendered->body);
 
@@ -62,6 +65,7 @@ final class DigestTextRendererTest extends TestCase
 
         $rendered = $this->renderer->render($model, 'de');
 
+        self::assertStringStartsWith('Das sind neue Einträge', $rendered->body);
         self::assertStringContainsString('Einstellungen', $rendered->body);
     }
 

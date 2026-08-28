@@ -15,6 +15,7 @@ admin_pending_approval:
     method_email_password: 'E-Mail und Passwort'
 digest:
     subject: 'Neu in deinen Feeds: %count% Einträge'
+    intro: "Das sind neue Einträge, die zu deinen gespeicherten Suchen passen, nach Suche gruppiert."
     group_heading: '%term% (%count%)'
     more: '+ mehr → %url%'
     footer: 'Verwalte deinen Digest unter Einstellungen → E-Mail.'
