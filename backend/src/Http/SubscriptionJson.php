@@ -30,7 +30,7 @@ final class SubscriptionJson
      *   status: string, sourceFormat: string,
      *   createdAt: string, lastFetchedAt: string|null, position: int,
      *   tags: list<array{id: int|null, name: string, color: string|null, icon: string|null, position: int}>,
-     *   unreadCount: int
+     *   unreadCount: int, includeInAllItems: bool, includeInForYou: bool
      * }
      */
     public static function one(Subscription $sub, int $unreadCount = 0): array
@@ -64,6 +64,8 @@ final class SubscriptionJson
             'position' => $sub->getPosition(),
             'tags' => $tags,
             'unreadCount' => $unreadCount,
+            'includeInAllItems' => $sub->isIncludeInAllItems(),
+            'includeInForYou' => $sub->isIncludeInForYou(),
         ];
     }
 
