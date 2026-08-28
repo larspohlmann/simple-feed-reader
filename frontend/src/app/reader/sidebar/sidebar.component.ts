@@ -247,8 +247,22 @@ export class SidebarComponent {
         title: subscription.title,
         actions: [
           { id: 'edit', label: this.transloco.translate('reader.editFeed') },
-          { id: 'toggleAllItems', label: this.allItemsToggleLabel(subscription) },
-          { id: 'toggleForYou', label: this.forYouToggleLabel(subscription) },
+          {
+            id: 'toggleAllItems',
+            label: this.toggleLabel(
+              subscription.includeInAllItems,
+              'reader.excludeFromAllItems',
+              'reader.includeInAllItems',
+            ),
+          },
+          {
+            id: 'toggleForYou',
+            label: this.toggleLabel(
+              subscription.includeInForYou,
+              'reader.excludeFromForYou',
+              'reader.includeInForYou',
+            ),
+          },
           {
             id: 'unsubscribe',
             label: this.transloco.translate('reader.unsubscribe'),
@@ -265,21 +279,10 @@ export class SidebarComponent {
       });
   }
 
-  /** Label for the "All items" toggle, state-dependent: offers the opposite
-   *  of the feed's current membership. */
-  protected allItemsToggleLabel(subscription: SubscriptionDto): string {
-    const key = subscription.includeInAllItems
-      ? 'reader.excludeFromAllItems'
-      : 'reader.includeInAllItems';
-    return this.transloco.translate(key);
-  }
-
-  /** Label for the "For You" toggle, state-dependent like the one above. */
-  protected forYouToggleLabel(subscription: SubscriptionDto): string {
-    const key = subscription.includeInForYou
-      ? 'reader.excludeFromForYou'
-      : 'reader.includeInForYou';
-    return this.transloco.translate(key);
+  /** Label for a feed exclusion toggle, state-dependent: when the feed is
+   *  currently included it offers to exclude, and vice versa. */
+  protected toggleLabel(included: boolean, excludeKey: string, includeKey: string): string {
+    return this.transloco.translate(included ? excludeKey : includeKey);
   }
 
   /** Tooltip for the row's exclusion marker: names exactly which surface(s)

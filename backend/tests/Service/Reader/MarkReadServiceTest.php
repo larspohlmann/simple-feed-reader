@@ -197,7 +197,7 @@ final class MarkReadServiceTest extends DbTestCase
     }
 
     /**
-     * @return array{User, Subscription, Entry}
+     * @return array{Subscription, Entry}
      */
     private function seedExcludedFeedSubscription(User $user): array
     {
@@ -224,7 +224,7 @@ final class MarkReadServiceTest extends DbTestCase
         $this->em->persist($state);
         $this->em->flush();
 
-        return [$user, $sub, $entry];
+        return [$sub, $entry];
     }
 
     public function testAllScopeSkipsFeedExcludedFromAllItems(): void
@@ -236,7 +236,7 @@ final class MarkReadServiceTest extends DbTestCase
         $this->em->persist($includedState);
         $this->em->flush();
 
-        [, $excludedSub, $excludedEntry] = $this->seedExcludedFeedSubscription($user);
+        [$excludedSub, $excludedEntry] = $this->seedExcludedFeedSubscription($user);
 
         $this->service()->mark($user, 'all', null, new \DateTimeImmutable('2026-07-10T00:00:00Z'));
         $this->em->clear();
@@ -269,7 +269,7 @@ final class MarkReadServiceTest extends DbTestCase
     public function testFeedScopeStillMarksAFeedExcludedFromAllItems(): void
     {
         [$user] = $this->seed();
-        [, $excludedSub, $excludedEntry] = $this->seedExcludedFeedSubscription($user);
+        [$excludedSub, $excludedEntry] = $this->seedExcludedFeedSubscription($user);
 
         $this->service()->mark(
             $user,
@@ -295,7 +295,7 @@ final class MarkReadServiceTest extends DbTestCase
     public function testTagScopeStillMarksAFeedExcludedFromAllItems(): void
     {
         [$user] = $this->seed();
-        [, $excludedSub, $excludedEntry] = $this->seedExcludedFeedSubscription($user);
+        [$excludedSub, $excludedEntry] = $this->seedExcludedFeedSubscription($user);
         $tag = new Tag($user, 'excluded-tag');
         $this->em->persist($tag);
         $excludedSub->addTag($tag);
