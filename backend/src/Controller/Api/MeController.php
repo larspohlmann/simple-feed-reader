@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Dto\Me\UpdateDigestRequest;
 use App\Dto\Me\UpdateLocaleRequest;
 use App\Dto\Me\UpdatePreferencesRequest;
 use App\Entity\User;
 use App\Http\MeJson;
 use App\Service\Account\AccountDeleter;
+use App\Service\Mail\Digest\DigestEnablement;
 use App\Service\Mail\MailCapability;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -27,6 +29,7 @@ final readonly class MeController
         private EntityManagerInterface $entityManager,
         private AccountDeleter $accountDeleter,
         private MailCapability $mail,
+        private DigestEnablement $digestEnablement,
     ) {
     }
 
@@ -65,6 +68,23 @@ final readonly class MeController
         #[MapRequestPayload] UpdatePreferencesRequest $request,
     ): JsonResponse {
         $user->getPreferences()->setScrapeFallbackEnabled($request->scrapeFallbackEnabled);
+        $this->entityManager->flush();
+
+        return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled()));
+    }
+
+    /**
+     * The email-digest configuration (#636). Its own PATCH, not folded into
+     * preferences: see updatePreferences() for why each settings write stays
+     * independent. First-enable seeding of digestLastSentAt lives in
+     * DigestEnablement, not here, to keep this action a plain read-delegate-return.
+     */
+    #[Route('/api/me/digest', name: 'api_me_update_digest', methods: ['PATCH'])]
+    public function updateDigest(
+        #[CurrentUser] User $user,
+        #[MapRequestPayload] UpdateDigestRequest $request,
+    ): JsonResponse {
+        $this->digestEnablement->applyTo($user->getPreferences(), $request);
         $this->entityManager->flush();
 
         return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled()));
