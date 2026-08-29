@@ -61,9 +61,10 @@ framework:
             # store sets an explicit ten-minute expiry on every entry it writes;
             # this lifetime is only a backstop for an entry whose expiry was
             # somehow lost, the same relationship oauth.login_code.cache has to
-            # its store. Losing an entry costs one jump of the progress bar, which
-            # is why two integers with a two-minute life get a cache pool rather
-            # than a table and a sweeper.
+            # its store. A run itself lasts a couple of minutes and its record is
+            # worthless once it ends — losing one costs a single jump of the
+            # progress bar. That is why two integers get a cache pool rather than
+            # a table, a migration and a sweeper for abandoned runs.
             refresh.run.cache:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 900

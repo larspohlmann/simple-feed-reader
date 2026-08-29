@@ -120,4 +120,25 @@ final class RefreshRunStoreTest extends TestCase
 
         $this->store->open(RefreshRequest::allDue(self::BUDGET));
     }
+
+    /**
+     * A string entry degrades to null on `['done']` and so never reaches the
+     * `is_array` guard — only the `is_int` ones. An object throws instead, which
+     * is what makes this the case that guard exists for.
+     */
+    public function testAnEntryOfTheWrongTypeEntirelyOpensAFreshRun(): void
+    {
+        $cache = new ArrayAdapter();
+        $store = new RefreshRunStore($cache);
+        $request = RefreshRequest::forUser(1, self::BUDGET);
+        $store->save($request, RefreshRunProgress::start()->advancedBy(20, 180));
+
+        foreach (array_keys($cache->getValues()) as $key) {
+            $item = $cache->getItem($key);
+            $item->set(new \stdClass());
+            $cache->save($item);
+        }
+
+        self::assertSame(0, $store->open($request)->done);
+    }
 }
