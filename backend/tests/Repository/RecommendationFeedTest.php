@@ -12,6 +12,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Http\RecommendationCursor;
+use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationItemRepository;
 use App\Tests\DbTestCase;
 
@@ -128,7 +129,7 @@ final class RecommendationFeedTest extends DbTestCase
         $strangerRun = $this->seedRun($stranger, RecommendationRun::STATUS_COMPLETED);
         $this->item($strangerRun, $strangerEntry, 1, 'stranger reason');
 
-        $rows = $this->repo()->listForYou((int) $this->user->getId(), null, 50);
+        $rows = $this->repo()->listForYou(new ForYouFeedQuery($this->user, null, 50), null);
 
         self::assertCount(3, $rows);
         self::assertSame('b', $rows[0]->row->entry->getGuid());
@@ -151,7 +152,7 @@ final class RecommendationFeedTest extends DbTestCase
         $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
         $this->item($run, $entryA, 1, 'reason a');
 
-        $rows = $this->repo()->listForYou((int) $this->user->getId(), null, 20);
+        $rows = $this->repo()->listForYou(new ForYouFeedQuery($this->user, null, 20), null);
 
         self::assertCount(1, $rows);
         self::assertEquals(
@@ -187,7 +188,7 @@ final class RecommendationFeedTest extends DbTestCase
         $this->item($run, $entryKept, 3, 'reason kept');
         $this->item($run, $entryViewed, 4, 'reason viewed');
 
-        $rows = $this->repo()->listForYou((int) $this->user->getId(), null, 50);
+        $rows = $this->repo()->listForYou(new ForYouFeedQuery($this->user, null, 50), null);
         $byGuid = [];
         foreach ($rows as $row) {
             $byGuid[$row->row->entry->getGuid()] = $row;
@@ -218,6 +219,98 @@ final class RecommendationFeedTest extends DbTestCase
         self::assertSame('Example', $byGuid['old']->row->subscriptionTitle);
     }
 
+    public function testUnreadOnlyDropsEveryPickTheReaderHasAlreadyRead(): void
+    {
+        $unread = $this->entry('unread');
+        $hidden = $this->entry('hidden');
+        $unreadAgain = $this->entry('explicitly-unread');
+
+        $hiddenState = new EntryState($this->user, $hidden);
+        $hiddenState->hide(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
+        $this->em->persist($hiddenState);
+        // An explicit unread row beats the watermark below, exactly as it does
+        // in the main list — that is what UnreadDql's first clause is for.
+        $unreadState = new EntryState($this->user, $unreadAgain);
+        $unreadState->markUnread();
+        $this->em->persist($unreadState);
+        $this->sub->setMarkedReadUntil(new \DateTimeImmutable('2026-08-07T00:00:00Z'));
+        $this->em->flush();
+
+        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $this->item($run, $unread, 1, 'reason unread');
+        $this->item($run, $hidden, 2, 'reason hidden');
+        $this->item($run, $unreadAgain, 3, 'reason explicitly unread');
+
+        $rows = $this->repo()->listForYou(
+            new ForYouFeedQuery($this->user, null, 50, unreadOnly: true),
+            null,
+        );
+
+        // 'unread' has no state row and an effectiveDate under the watermark,
+        // so the watermark reads it as read and it drops out with 'hidden'.
+        self::assertSame(
+            ['explicitly-unread'],
+            array_map(static fn ($row) => $row->row->entry->getGuid(), $rows),
+        );
+    }
+
+    public function testWithoutTheUnreadFilterEveryPickStays(): void
+    {
+        $unread = $this->entry('unread');
+        $hidden = $this->entry('hidden');
+        $hiddenState = new EntryState($this->user, $hidden);
+        $hiddenState->hide(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
+        $this->em->persist($hiddenState);
+        $this->em->flush();
+
+        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $this->item($run, $unread, 1, 'reason unread');
+        $this->item($run, $hidden, 2, 'reason hidden');
+
+        $rows = $this->repo()->listForYou(new ForYouFeedQuery($this->user, null, 50), null);
+
+        self::assertCount(2, $rows);
+    }
+
+    public function testUnreadEntryIdsForYouSkipsReadPicksAndRunsThatFinishedTooLate(): void
+    {
+        $unread = $this->entry('unread');
+        $read = $this->entry('read');
+        $tooLate = $this->entry('too-late');
+
+        $readState = new EntryState($this->user, $read);
+        $readState->hide(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
+        $this->em->persist($readState);
+        $this->em->flush();
+
+        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $this->item($run, $unread, 1, 'reason unread');
+        $this->item($run, $read, 2, 'reason read');
+
+        $laterRun = $this->completedRunAt('2026-08-07T11:00:00Z');
+        $this->item($laterRun, $tooLate, 1, 'reason too late');
+
+        $ids = $this->repo()->unreadEntryIdsForYou(
+            (int) $this->user->getId(),
+            new \DateTimeImmutable('2026-08-07T10:30:00Z'),
+        );
+
+        self::assertSame([(int) $unread->getId()], $ids);
+    }
+
+    /** A completed run stamped at a time this test chooses — `seedRun` fixes
+     *  one, and the mark-read cut-off is a question about that stamp. */
+    private function completedRunAt(string $completedAt): RecommendationRun
+    {
+        $run = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
+        $run->snapshot([[1]]);
+        $run->complete(new \DateTimeImmutable($completedAt));
+        $this->em->persist($run);
+        $this->em->flush();
+
+        return $run;
+    }
+
     public function testSubscriptionTitleFallsBackToCustomTitleThenFeedTitle(): void
     {
         $customFeed = new Feed('https://custom.example.com/feed.xml');
@@ -241,7 +334,7 @@ final class RecommendationFeedTest extends DbTestCase
         $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
         $this->item($run, $customEntry, 1, 'reason custom');
 
-        $rows = $this->repo()->listForYou((int) $this->user->getId(), null, 50);
+        $rows = $this->repo()->listForYou(new ForYouFeedQuery($this->user, null, 50), null);
         self::assertCount(1, $rows);
         self::assertSame('My Custom Title', $rows[0]->row->subscriptionTitle);
     }
@@ -267,7 +360,7 @@ final class RecommendationFeedTest extends DbTestCase
         $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
         $this->item($run, $untitledEntry, 1, 'reason untitled');
 
-        $rows = $this->repo()->listForYou((int) $this->user->getId(), null, 50);
+        $rows = $this->repo()->listForYou(new ForYouFeedQuery($this->user, null, 50), null);
         self::assertCount(1, $rows);
         self::assertSame('https://untitled.example.com/feed.xml', $rows[0]->row->subscriptionTitle);
     }
@@ -281,7 +374,7 @@ final class RecommendationFeedTest extends DbTestCase
         $this->item($run, $entryA, 1, 'reason a');
         $this->item($run, $entryB, 2, 'reason b');
 
-        $rows = $this->repo()->listForYou((int) $this->user->getId(), null, 0);
+        $rows = $this->repo()->listForYou(new ForYouFeedQuery($this->user, null, 0), null);
         self::assertCount(1, $rows);
     }
 
@@ -298,13 +391,13 @@ final class RecommendationFeedTest extends DbTestCase
         $this->item($run2, $entryB, 1, 'reason b');
         $this->item($run2, $entryC, 2, 'reason c');
 
-        $page1 = $this->repo()->listForYou((int) $this->user->getId(), null, 2);
+        $page1 = $this->repo()->listForYou(new ForYouFeedQuery($this->user, null, 2), null);
         self::assertCount(2, $page1);
         self::assertSame('b', $page1[0]->row->entry->getGuid());
         self::assertSame('c', $page1[1]->row->entry->getGuid());
 
         $cursor = new RecommendationCursor($page1[1]->runId, $page1[1]->position);
-        $page2 = $this->repo()->listForYou((int) $this->user->getId(), $cursor, 2);
+        $page2 = $this->repo()->listForYou(new ForYouFeedQuery($this->user, null, 2), $cursor);
         self::assertCount(1, $page2);
         self::assertSame('a', $page2[0]->row->entry->getGuid());
     }
@@ -318,7 +411,7 @@ final class RecommendationFeedTest extends DbTestCase
         $this->em->remove($this->sub);
         $this->em->flush();
 
-        $rows = $this->repo()->listForYou((int) $this->user->getId(), null, 50);
+        $rows = $this->repo()->listForYou(new ForYouFeedQuery($this->user, null, 50), null);
         self::assertCount(0, $rows);
     }
 
@@ -351,7 +444,7 @@ final class RecommendationFeedTest extends DbTestCase
         $this->item($run, $entryA, 1, 'reason a');
         $this->item($run, $entryB, 2, 'reason b');
 
-        $rows = $this->repo()->listForYou((int) $this->user->getId(), null, 50);
+        $rows = $this->repo()->listForYou(new ForYouFeedQuery($this->user, null, 50), null);
         self::assertCount(1, $rows);
         self::assertSame('a', $rows[0]->row->entry->getGuid());
 

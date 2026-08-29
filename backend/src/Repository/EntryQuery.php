@@ -23,8 +23,9 @@ final readonly class EntryQuery
      *
      * `EntryQuery` applies it at construction, so `$query->limit` is ALREADY
      * the effective size and readers pass it straight on. This stays public
-     * for the two callers that page without an `EntryQuery`
-     * (`RecommendationItemRepository`, `RecommendationFeedPager`).
+     * for `ForYouFeedQuery`, which is the same idea for the ranked feed and
+     * clamps the same way at ITS construction — so the for-you pager and
+     * repository no longer clamp anything themselves either.
      */
     public static function clampLimit(int $limit): int
     {

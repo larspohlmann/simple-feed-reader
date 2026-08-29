@@ -337,6 +337,95 @@ final class EntryControllerTest extends WebTestCase
         self::assertNull($body['nextCursor']);
     }
 
+    public function testForYouViewNarrowsToUnreadPicksWhenAsked(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-foryou-unread@example.com');
+        $sub = $this->seedFeedWithEntries($user, 2);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entries = $em->getRepository(Entry::class)->findBy(['feed' => $sub->getFeed()], ['guid' => 'ASC']);
+
+        $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
+        $run->snapshot([[1]]);
+        $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+        $em->persist($run);
+        foreach ($entries as $position => $entry) {
+            $em->persist(new RecommendationItem($run, $entry, $position + 1, 'reason', 50));
+        }
+        $em->flush();
+
+        $client->request(
+            'PATCH',
+            '/api/entries/' . $entries[0]->getId() . '/state',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['isHidden' => true], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseIsSuccessful();
+
+        $client->request('GET', '/api/entries?view=for-you', server: $headers);
+        self::assertCount(2, $this->entriesOf($client), 'The unfiltered feed keeps a read pick.');
+
+        $client->request('GET', '/api/entries?view=for-you&unread=1', server: $headers);
+        $unread = $this->entriesOf($client);
+        self::assertCount(1, $unread);
+        $first = $unread[0];
+        self::assertIsArray($first);
+        self::assertSame($entries[1]->getId(), $first['id']);
+    }
+
+    public function testMarkForYouReadClearsThePicksWithoutMovingTheWatermark(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-foryou-mark@example.com');
+        $sub = $this->seedFeedWithEntries($user, 2);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entries = $em->getRepository(Entry::class)->findBy(['feed' => $sub->getFeed()], ['guid' => 'ASC']);
+
+        // Only the first entry is recommended: the second proves the action
+        // stays inside the for-you list instead of clearing the whole feed.
+        $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
+        $run->snapshot([[1]]);
+        $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+        $em->persist($run);
+        $em->persist(new RecommendationItem($run, $entries[0], 1, 'reason', 50));
+        $em->flush();
+
+        $client->request(
+            'POST',
+            '/api/entries/for-you/mark-read',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['until' => '2026-08-07T12:00:00+00:00'], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(204);
+
+        $client->request('GET', '/api/entries?view=for-you&unread=1', server: $headers);
+        self::assertCount(0, $this->entriesOf($client), 'Every pick is read now.');
+
+        $client->request('GET', '/api/entries?view=unread', server: $headers);
+        $stillUnread = $this->entriesOf($client);
+        self::assertCount(1, $stillUnread, 'The entry that was never recommended stays unread.');
+
+        // The watermark is what emptied the candidate pool in #665; a for-you
+        // mark-read must never touch it.
+        $em->clear();
+        $reloaded = $em->getRepository(Subscription::class)->find($sub->getId());
+        self::assertInstanceOf(Subscription::class, $reloaded);
+        self::assertNull($reloaded->getMarkedReadUntil());
+    }
+
+    /** @return list<mixed> */
+    private function entriesOf(KernelBrowser $client): array
+    {
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entries']);
+
+        return array_values($body['entries']);
+    }
+
     public function testForYouViewWithholdsBothAnnotationsFromDebugAlone(): void
     {
         $client = self::createClient();

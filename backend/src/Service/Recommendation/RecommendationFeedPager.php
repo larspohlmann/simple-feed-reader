@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 use App\Http\RecommendationCursor;
-use App\Repository\EntryQuery;
+use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationFeedRow;
 use App\Repository\RecommendationItemRepository;
 
@@ -21,14 +21,14 @@ final readonly class RecommendationFeedPager
      * than an error — the same leniency EntryCursor deliberately does NOT
      * have, because here a stale/garbled cursor should never break the feed.
      */
-    public function page(int $userId, ?string $cursor, int $limit): RecommendationFeedPage
+    public function page(ForYouFeedQuery $query): RecommendationFeedPage
     {
-        $limit = EntryQuery::clampLimit($limit);
+        $cursor = $query->cursor;
         $decodedCursor = $cursor === null || $cursor === '' ? null : RecommendationCursor::decode($cursor);
 
-        $rows = $this->items->listForYou($userId, $decodedCursor, $limit);
+        $rows = $this->items->listForYou($query, $decodedCursor);
 
-        return new RecommendationFeedPage($rows, $this->nextCursorFor($rows, $limit));
+        return new RecommendationFeedPage($rows, $this->nextCursorFor($rows, $query->limit));
     }
 
     /**

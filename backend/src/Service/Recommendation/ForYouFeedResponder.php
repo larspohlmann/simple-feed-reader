@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation;
 
-use App\Entity\User;
 use App\Http\FeedAnnotationVisibility;
 use App\Http\RecommendationFeedJson;
+use App\Repository\ForYouFeedQuery;
 
 /**
  * What JSON the for-you feed page returns for a user — paginates their
@@ -25,12 +25,12 @@ final readonly class ForYouFeedResponder
     }
 
     /** @return array<string, mixed> */
-    public function page(User $user, ?string $cursor, int $limit): array
+    public function page(ForYouFeedQuery $query): array
     {
-        $page = $this->pager->page((int) $user->getId(), $cursor, $limit);
+        $page = $this->pager->page($query);
 
         $visibility = new FeedAnnotationVisibility(
-            showExplanation: $this->settings->forUser($user)->showReasons,
+            showExplanation: $this->settings->forUser($query->user)->showReasons,
         );
 
         return RecommendationFeedJson::page($page->rows, $page->nextCursor, $visibility);

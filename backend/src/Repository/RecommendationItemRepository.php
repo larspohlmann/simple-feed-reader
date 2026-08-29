@@ -11,6 +11,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Http\RecommendationCursor;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -30,16 +31,21 @@ final class RecommendationItemRepository extends ServiceEntityRepository
      * recommended in several runs shows only in its newest occurrence.
      * Unsubscribed feeds drop out, exactly like the main entry list.
      *
+     * The cursor arrives decoded, from the pager that owns the rule for a
+     * malformed one; everything else the page was asked for is on the query.
+     *
      * @return list<RecommendationFeedRow>
      */
-    public function listForYou(int $userId, ?RecommendationCursor $cursor, int $limit): array
+    public function listForYou(ForYouFeedQuery $query, ?RecommendationCursor $cursor): array
     {
-        $limit = EntryQuery::clampLimit($limit);
-
-        $qb = $this->rowQueryBuilder($userId)
+        $qb = $this->rowQueryBuilder($query->userId())
             ->orderBy('r.id', 'DESC')
             ->addOrderBy('i.position', 'ASC')
-            ->setMaxResults($limit);
+            ->setMaxResults($query->limit);
+
+        if ($query->unreadOnly) {
+            $this->applyUnread($qb);
+        }
 
         $this->applyCursor($qb, $cursor);
 
@@ -69,6 +75,33 @@ final class RecommendationItemRepository extends ServiceEntityRepository
             ->addSelect('es.isViewed AS esViewed')
             ->addSelect('s.markedReadUntil AS markedReadUntil')
             ->addSelect('r.completedAt AS runCompletedAt');
+    }
+
+    /**
+     * The unread picks in this user's for-you feed, from runs that had already
+     * finished at `$until`.
+     *
+     * The cut-off is the RUN's completion time, not the entry's date: the feed
+     * is ranked, not dated, so a run finishing while the reader looks at the
+     * list can add an old entry at the top. Bounding by entry date would mark
+     * that new pick read; bounding by the run leaves it, which is what the
+     * reader means by "mark all read" — everything I could see.
+     *
+     * @return list<int>
+     */
+    public function unreadEntryIdsForYou(int $userId, \DateTimeImmutable $until): array
+    {
+        $qb = $this->applyForYouCriteria($this->createQueryBuilder('i')->select('e.id AS id'), $userId)
+            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
+            ->andWhere('r.completedAt <= :until')
+            ->setParameter('until', $until);
+
+        $this->applyUnread($qb);
+
+        /** @var list<array{id: int}> $rows */
+        $rows = $qb->getQuery()->getScalarResult();
+
+        return array_map(static fn (array $row): int => (int) $row['id'], $rows);
     }
 
     public function countForYou(int $userId): int
@@ -143,6 +176,17 @@ final class RecommendationItemRepository extends ServiceEntityRepository
             )',
             RecommendationItem::class,
         );
+    }
+
+    /**
+     * "Unread" means here exactly what it means in the main list — the shared
+     * `UnreadDql` predicate, which folds the subscription's read watermark in
+     * with the entry's own state. Needs the `es`, `s` and `e` aliases the row
+     * projection already joins.
+     */
+    private function applyUnread(QueryBuilder $qb): void
+    {
+        $qb->andWhere(UnreadDql::predicate())->setParameter('notHidden', false, Types::BOOLEAN);
     }
 
     private function applyCursor(QueryBuilder $qb, ?RecommendationCursor $cursor): void
