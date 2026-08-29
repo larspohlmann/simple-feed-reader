@@ -9,6 +9,7 @@ import { ManageActions } from './manage-actions.service';
 import { SubscriptionsStore } from '../subscriptions.store';
 import { TagsStore } from '../tags.store';
 import { SubscriptionDto, TagDto } from '../models';
+import { ToastService } from '../../shared/toast/toast.service';
 
 const BASE = 'https://api.test';
 
@@ -199,6 +200,15 @@ describe('ManageActions', () => {
         title: `Feed ${index + 1}`,
       }));
 
+    // setup() gives each test its own TestBed (see below), so the outer
+    // suite's `afterEach(() => ctrl.verify())` verifies the wrong, detached
+    // controller for every test in this block. This local `http` plus
+    // afterEach verifies the controller setup() actually injected, so an
+    // unexpected extra request (e.g. a cold Observable subscribed twice)
+    // still fails the test, not just a wrong URL or count.
+    let http: HttpTestingController;
+    afterEach(() => http.verify());
+
     // Own TestBed per call: the dialog mock here must return a replayable
     // `closed` (so a test can resolve it before the code under test
     // subscribes), which the outer suite's `of(closed)` cannot do.
@@ -216,10 +226,18 @@ describe('ManageActions', () => {
           provideHttpClientTesting(),
           { provide: API_BASE_URL, useValue: BASE },
           { provide: Dialog, useValue: { open: dialogOpen } },
+          // ManageActions and ToastService share the `Dialog` token, and the
+          // stub above answers every caller with the same bare { closed }
+          // object -- enough for ManageActions' own dialogs, but missing the
+          // `overlayRef` ToastService.show() reads. A real ToastService.show()
+          // call inside bulkPatch()/bulkUnsubscribe() would throw against that
+          // stub, so it gets its own stub here rather than exercising the CDK
+          // overlay machinery this suite does not set up.
+          { provide: ToastService, useValue: { show: jest.fn() } },
         ],
       });
       const actions = TestBed.inject(ManageActions);
-      const http = TestBed.inject(HttpTestingController);
+      http = TestBed.inject(HttpTestingController);
       const subLoad = jest
         .spyOn(TestBed.inject(SubscriptionsStore), 'load')
         .mockImplementation(() => undefined);
@@ -231,34 +249,48 @@ describe('ManageActions', () => {
 
     it('posts one bulk patch when a tag is added to several feeds', () => {
       const { actions, http } = setup();
+      let emitted = false;
 
-      actions.bulkAddTag([1, 2, 3], TAG).subscribe();
+      actions.bulkAddTag([1, 2, 3], TAG).subscribe(() => (emitted = true));
 
       const req = http.expectOne(`${BASE}/api/subscriptions/bulk`);
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toEqual({ subscriptionIds: [1, 2, 3], addTagIds: [TAG.id] });
+      req.flush({ subscriptions: [] });
+
+      expect(emitted).toBe(true);
     });
 
     it('posts removeTagIds when a tag is removed', () => {
       const { actions, http } = setup();
+      let emitted = false;
 
-      actions.bulkRemoveTag([4], TAG).subscribe();
+      actions.bulkRemoveTag([4], TAG).subscribe(() => (emitted = true));
 
-      expect(http.expectOne(`${BASE}/api/subscriptions/bulk`).request.body).toEqual({
+      const req = http.expectOne(`${BASE}/api/subscriptions/bulk`);
+      expect(req.request.body).toEqual({
         subscriptionIds: [4],
         removeTagIds: [TAG.id],
       });
+      req.flush({ subscriptions: [] });
+
+      expect(emitted).toBe(true);
     });
 
     it('sends only the flag that was named', () => {
       const { actions, http } = setup();
+      let emitted = false;
 
-      actions.bulkSetFlags([7], { includeInAllItems: false }).subscribe();
+      actions.bulkSetFlags([7], { includeInAllItems: false }).subscribe(() => (emitted = true));
 
-      expect(http.expectOne(`${BASE}/api/subscriptions/bulk`).request.body).toEqual({
+      const req = http.expectOne(`${BASE}/api/subscriptions/bulk`);
+      expect(req.request.body).toEqual({
         subscriptionIds: [7],
         includeInAllItems: false,
       });
+      req.flush({ subscriptions: [] });
+
+      expect(emitted).toBe(true);
     });
 
     it('opens the add-feed dialog and reloads on a successful subscribe', () => {
