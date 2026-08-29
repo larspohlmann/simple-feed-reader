@@ -66,6 +66,13 @@ security:
 
     access_control:
         - { path: ^/api/health$, roles: PUBLIC_ACCESS }
+        # Both sit under ^/api/auth/, which the next rule makes public, and the
+        # first match wins — so without these two the enrolment endpoints are
+        # open to anyone. The first also covers /register/options; the second
+        # also covers /passkeys/{id}. Neither matches /passkey/login, which is
+        # public on purpose (the flow is discoverable-credential only).
+        - { path: ^/api/auth/passkey/register, roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api/auth/passkeys, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/api/auth/, roles: PUBLIC_ACCESS }
         - { path: ^/api/setup/, roles: PUBLIC_ACCESS }
         # Catalog favicons are public image bytes (cached icon or a monogram
