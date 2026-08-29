@@ -1831,10 +1831,16 @@ grep -rn "fetchProgress" frontend/src
 grep -rn "\.prog\b" frontend/src/app/reader/sidebar
 grep -rn "refreshSvc.report()\|refresh.report()" frontend/src
 grep -rn "progress-hairline" frontend/src/app/reader/reader-shell.component.ts frontend/src/app/reader/reader-shell.component.html
-# Any remaining fixture still describing the old wire shape — Step 2 should have
-# left none. Each hit is a spec flushing a RefreshReport; check it by eye.
-grep -rn "total:" frontend/src --include=*.spec.ts | grep -i "refresh"
+# Every RefreshReport fixture in the frontend specs, precisely: `skippedForBudget`
+# appears in that shape and nowhere else in the codebase. Each hit must carry a
+# nested `progress` and a `throttled`, and must NOT carry a top-level `total`.
+# Two known stragglers live in reader-shell.component.spec.ts's aborted-status
+# flushes; there may be others.
+grep -rn "skippedForBudget" frontend/src --include=*.spec.ts
 ```
+
+A fixture that describes a wire shape the server no longer sends is stale whether or
+not any assertion reads it — it is the next reader's map of the contract.
 
 Then decide the one real question — whether `RefreshReport::$total` still has a reader:
 
