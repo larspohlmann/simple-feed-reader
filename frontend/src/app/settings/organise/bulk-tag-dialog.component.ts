@@ -1,0 +1,83 @@
+// src/app/settings/organise/bulk-tag-dialog.component.ts
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.component';
+import { ButtonComponent } from '../../shared/button/button.component';
+import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
+import { SubscriptionDto, TagDto } from '../../reader/models';
+
+export interface BulkTagDialogData {
+  readonly mode: 'add' | 'remove';
+  readonly subscriptions: SubscriptionDto[];
+  readonly tags: TagDto[];
+}
+
+/**
+ * Choose one tag to add to, or remove from, the current selection.
+ *
+ * Nothing is written here: the dialog closes with the chosen tag and the caller
+ * performs the bulk write through ManageActions. That keeps the one-write-path
+ * rule intact and makes a wrong click free — until Apply, the user has changed
+ * nothing.
+ */
+@Component({
+  selector: 'app-bulk-tag-dialog',
+  imports: [TranslocoPipe, OverlayPanelComponent, ButtonComponent, TagGlyphComponent],
+  templateUrl: './bulk-tag-dialog.component.html',
+  styleUrl: './bulk-tag-dialog.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class BulkTagDialogComponent {
+  readonly ref = inject<DialogRef<TagDto | undefined>>(DialogRef);
+  readonly data = inject<BulkTagDialogData>(DIALOG_DATA);
+
+  readonly chosen = signal<TagDto | null>(null);
+
+  readonly total = this.data.subscriptions.length;
+
+  /** Add mode offers every tag; remove mode offers only what the selection
+   *  actually carries — a tag nobody has is not a tag anybody can lose. */
+  readonly offered = computed<TagDto[]>(() => {
+    if (this.data.mode === 'add') return this.data.tags;
+
+    return this.data.tags.filter((tag) => this.carriedBy(tag) > 0);
+  });
+
+  /** How many of the selected feeds already carry this tag. */
+  carriedBy(tag: TagDto): number {
+    return this.data.subscriptions.filter((s) => s.tags.some((t) => t.id === tag.id)).length;
+  }
+
+  /** In remove mode, how many feeds would be left with no tag at all. */
+  readonly losingLastTag = computed<number>(() => {
+    const tag = this.chosen();
+    if (tag === null || this.data.mode !== 'remove') return 0;
+
+    return this.data.subscriptions.filter((s) => s.tags.length === 1 && s.tags[0].id === tag.id)
+      .length;
+  });
+
+  /** How many feeds the Apply button will actually change. */
+  readonly affected = computed<number>(() => {
+    const tag = this.chosen();
+    if (tag === null) return 0;
+    const carried = this.carriedBy(tag);
+
+    return this.data.mode === 'add' ? this.total - carried : carried;
+  });
+
+  choose(tag: TagDto): void {
+    this.chosen.set(tag);
+  }
+
+  apply(): void {
+    const tag = this.chosen();
+    if (tag === null) return;
+    this.ref.close(tag);
+  }
+
+  cancel(): void {
+    this.ref.close(undefined);
+  }
+}

@@ -1,0 +1,46 @@
+// src/app/settings/organise/bulk-tag-dialog.component.scss
+.hint,
+.effect {
+  margin: 0 0 var(--space-3);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.pill.chosen {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.pill .n {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-xs);
+  opacity: 0.75;
+}
+
+@media (hover: hover) {
+  .pill:hover {
+    border-color: var(--accent);
+  }
+}

@@ -1,0 +1,57 @@
+<app-overlay-panel
+  [heading]="
+    (data.mode === 'add' ? 'settings.organise.addTagTitle' : 'settings.organise.removeTagTitle')
+      | transloco: { count: total }
+  "
+>
+  <p class="hint">{{ 'settings.organise.tagCountHint' | transloco }}</p>
+
+  @if (offered().length === 0) {
+    <p class="hint">{{ 'settings.organise.noTagsToRemove' | transloco }}</p>
+  } @else {
+    <div class="pills">
+      @for (tag of offered(); track tag.id) {
+        <button
+          type="button"
+          class="pill"
+          data-test="tag-pill"
+          [class.chosen]="chosen()?.id === tag.id"
+          [attr.aria-pressed]="chosen()?.id === tag.id"
+          (click)="choose(tag)"
+        >
+          <app-tag-glyph [name]="tag.icon" [color]="tag.color" size="sm" />
+          <span>{{ tag.name }}</span>
+          <span class="n">{{ carriedBy(tag) }}/{{ total }}</span>
+        </button>
+      }
+    </div>
+  }
+
+  @if (chosen(); as tag) {
+    <p class="effect">
+      {{
+        (data.mode === 'add' ? 'settings.organise.addEffect' : 'settings.organise.removeEffect')
+          | transloco: { name: tag.name, count: affected() }
+      }}
+      @if (losingLastTag() > 0) {
+        {{ 'settings.organise.losingLastTag' | transloco: { count: losingLastTag() } }}
+      }
+    </p>
+  }
+
+  <app-button footer data-test="cancel" (click)="cancel()">
+    {{ 'settings.tags.cancel' | transloco }}
+  </app-button>
+  <app-button
+    footer
+    data-test="apply"
+    variant="primary"
+    [disabled]="chosen() === null"
+    (click)="apply()"
+  >
+    {{
+      (data.mode === 'add' ? 'settings.organise.addTagApply' : 'settings.organise.removeTagApply')
+        | transloco
+    }}
+  </app-button>
+</app-overlay-panel>
