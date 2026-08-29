@@ -409,10 +409,14 @@
       "caption": "Melde dich ohne Passwort an, mit dem Fingerabdruck, Gesicht oder der Bildschirmsperre deines Geräts.",
       "add": "Passkey hinzufügen",
       "empty": "Noch keine Passkeys.",
-      "defaultLabel": "Passkey",
       "meta": "Hinzugefügt {{created}} · Zuletzt verwendet: {{lastUsed}}",
       "never": "Nie",
-      "removeAria": "Passkey „{{label}}“ entfernen"
+      "removeAria": "Passkey „{{label}}“ entfernen",
+      "nameDialog": {
+        "title": "Passkey benennen",
+        "label": "Name",
+        "confirm": "Hinzufügen"
+      }
     }
   },
   "dialog": {

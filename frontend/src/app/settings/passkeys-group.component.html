@@ -6,7 +6,7 @@
     [caption]="'settings.passkeys.caption' | transloco"
   >
     <div groupActions>
-      <app-button size="sm" [loading]="adding()" (click)="add()">
+      <app-button size="sm" [loading]="adding()" (click)="openAddDialog()">
         <app-icon name="add" size="sm" /> {{ 'settings.passkeys.add' | transloco }}
       </app-button>
     </div>

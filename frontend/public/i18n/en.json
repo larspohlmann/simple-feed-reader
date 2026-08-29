@@ -409,10 +409,14 @@
       "caption": "Sign in without a password, using your device's fingerprint, face or screen lock.",
       "add": "Add a passkey",
       "empty": "No passkeys yet.",
-      "defaultLabel": "Passkey",
       "meta": "Added {{created}} · Last used: {{lastUsed}}",
       "never": "Never",
-      "removeAria": "Remove the passkey \"{{label}}\""
+      "removeAria": "Remove the passkey \"{{label}}\"",
+      "nameDialog": {
+        "title": "Name this passkey",
+        "label": "Name",
+        "confirm": "Add"
+      }
     }
   },
   "dialog": {

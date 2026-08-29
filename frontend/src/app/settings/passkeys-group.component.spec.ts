@@ -1,10 +1,12 @@
 // src/app/settings/passkeys-group.component.spec.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
+import { Dialog } from '@angular/cdk/dialog';
 import { of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { PasskeyService, PasskeySummary } from '../core/passkey.service';
 import { Problem } from '../core/problem';
+import { PasskeyNameDialogComponent } from './passkey-name-dialog.component';
 import { PasskeysGroupComponent } from './passkeys-group.component';
 
 const TOUCH_ID: PasskeySummary = {
@@ -37,16 +39,34 @@ function passkeyServiceStub(passkeys: PasskeySummary[] = []): PasskeyServiceStub
 
 describe('PasskeysGroupComponent', () => {
   let passkeyService: PasskeyServiceStub;
+  // Enrolling now goes through the naming dialog (fix round 1, #624): "Add a
+  // passkey" opens it and only calls `enrol()` once the dialog closes with a
+  // name. Stubbed the same way `AccountSectionComponent`'s own dialog spec
+  // stubs `Dialog`, rather than rendering the real CDK overlay here -- that
+  // dialog has its own spec.
+  const dialogStub = { open: jest.fn() };
 
   function mount() {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
-      providers: [{ provide: PasskeyService, useValue: passkeyService }],
+      providers: [
+        { provide: PasskeyService, useValue: passkeyService },
+        { provide: Dialog, useValue: dialogStub },
+      ],
     });
     const f = TestBed.createComponent(PasskeysGroupComponent);
     f.detectChanges();
     return f;
   }
+
+  function clickAdd(f: ReturnType<typeof mount>): void {
+    const addButton = Array.from(f.nativeElement.querySelectorAll('button')).find((button) =>
+      (button as HTMLButtonElement).textContent?.includes('Add a passkey'),
+    ) as HTMLButtonElement;
+    addButton.click();
+  }
+
+  beforeEach(() => dialogStub.open.mockReset());
 
   afterEach(() => {
     // jsdom carries neither: leaving a stub behind would leak "supported"
@@ -84,6 +104,20 @@ describe('PasskeysGroupComponent', () => {
       expect(rows[1].textContent).toContain('August 10, 2026');
     });
 
+    it('renders two credentials with different labels as two distinguishable rows', () => {
+      // The regression this proves fixed: before rename-on-create, every
+      // enrolment sent the same fixed default label, so two credentials
+      // rendered as two rows with IDENTICAL titles -- telling them apart
+      // required reading near-identical creation timestamps.
+      passkeyService = passkeyServiceStub([TOUCH_ID, NEVER_USED]);
+      const f = mount();
+
+      const titles = Array.from(f.nativeElement.querySelectorAll('.row-title')).map((title) =>
+        (title as HTMLElement).textContent?.trim(),
+      );
+      expect(titles).toEqual(['MacBook Touch ID', 'YubiKey 5C']);
+    });
+
     it('shows the never-used copy for a credential with no lastUsedAt, not a blank', () => {
       passkeyService = passkeyServiceStub([NEVER_USED]);
       const f = mount();
@@ -104,16 +138,28 @@ describe('PasskeysGroupComponent', () => {
       expect(row.textContent).not.toContain('Never');
     });
 
-    it('calls enrol when "Add a passkey" is clicked', () => {
+    it('opens the naming dialog and enrols with the name it returns', () => {
       passkeyService = passkeyServiceStub([]);
+      dialogStub.open.mockReturnValue({ closed: of('MacBook Touch ID') });
       const f = mount();
 
-      const addButton = Array.from(f.nativeElement.querySelectorAll('button')).find((button) =>
-        (button as HTMLButtonElement).textContent?.includes('Add a passkey'),
-      ) as HTMLButtonElement;
-      addButton.click();
+      clickAdd(f);
 
-      expect(passkeyService.enrol).toHaveBeenCalledTimes(1);
+      expect(dialogStub.open).toHaveBeenCalledWith(
+        PasskeyNameDialogComponent,
+        expect.objectContaining({ panelClass: 'app-dialog' }),
+      );
+      expect(passkeyService.enrol).toHaveBeenCalledWith('MacBook Touch ID');
+    });
+
+    it('does not enrol when the naming dialog is dismissed with no name', () => {
+      passkeyService = passkeyServiceStub([]);
+      dialogStub.open.mockReturnValue({ closed: of(undefined) });
+      const f = mount();
+
+      clickAdd(f);
+
+      expect(passkeyService.enrol).not.toHaveBeenCalled();
     });
 
     it('calls remove for the clicked row and refreshes the list', () => {
@@ -169,6 +215,7 @@ describe('PasskeysGroupComponent', () => {
 
     it('does not render an error when the ceremony is cancelled', async () => {
       passkeyService = passkeyServiceStub([]);
+      dialogStub.open.mockReturnValue({ closed: of('MacBook Touch ID') });
       const cancelled: Problem = {
         type: 'NotAllowedError',
         title: 'The operation either timed out or was not allowed.',
@@ -177,10 +224,7 @@ describe('PasskeysGroupComponent', () => {
       passkeyService.enrol.mockRejectedValue(cancelled);
       const f = mount();
 
-      const addButton = Array.from(f.nativeElement.querySelectorAll('button')).find((button) =>
-        (button as HTMLButtonElement).textContent?.includes('Add a passkey'),
-      ) as HTMLButtonElement;
-      addButton.click();
+      clickAdd(f);
       await Promise.resolve();
       await Promise.resolve();
       f.detectChanges();

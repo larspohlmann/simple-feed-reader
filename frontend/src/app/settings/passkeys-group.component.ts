@@ -1,6 +1,7 @@
 // src/app/settings/passkeys-group.component.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { LanguageService } from '../core/language.service';
 import { PasskeyService, PasskeySummary } from '../core/passkey.service';
@@ -13,6 +14,7 @@ import { IconButtonDirective } from '../shared/icon-button/icon-button.directive
 import { IconComponent } from '../shared/icon/icon.component';
 import { SettingsGroupComponent } from '../shared/settings/settings-group/settings-group.component';
 import { SettingsRowComponent } from '../shared/settings/settings-row/settings-row.component';
+import { PasskeyNameDialogComponent } from './passkey-name-dialog.component';
 
 /**
  * The Settings -> Account passkeys group (#624): the credentials enrolled on
@@ -43,6 +45,7 @@ export class PasskeysGroupComponent {
   private readonly passkeyService = inject(PasskeyService);
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);
+  private readonly dialog = inject(Dialog);
 
   /** Read once: a browser does not gain or lose WebAuthn support mid-session,
    *  so there is nothing to react to by making this a signal. */
@@ -74,17 +77,16 @@ export class PasskeysGroupComponent {
     });
   }
 
-  async add(): Promise<void> {
-    this.addError.set(null);
-    this.adding.set(true);
-    try {
-      await this.passkeyService.enrol(this.i18n.translate('settings.passkeys.defaultLabel'));
-      this.refresh();
-    } catch (error) {
-      this.handleEnrolFailure(error as Problem);
-    } finally {
-      this.adding.set(false);
-    }
+  /** Opens the naming dialog, then enrols with whatever name the user
+   *  confirmed. Naming and enrolling are split across two methods because
+   *  they run on two different lifecycles: the dialog closes as soon as a
+   *  name is chosen, well before the ceremony -- and its own success or
+   *  failure -- resolves. */
+  openAddDialog(): void {
+    const ref = this.dialog.open<string>(PasskeyNameDialogComponent, { panelClass: 'app-dialog' });
+    ref.closed.subscribe((name) => {
+      if (name) this.enrolWith(name);
+    });
   }
 
   remove(passkey: PasskeySummary): void {
@@ -93,6 +95,19 @@ export class PasskeysGroupComponent {
       next: () => this.refresh(),
       error: (failure: HttpErrorResponse) => this.removeError.set(parseProblem(failure)),
     });
+  }
+
+  private async enrolWith(label: string): Promise<void> {
+    this.addError.set(null);
+    this.adding.set(true);
+    try {
+      await this.passkeyService.enrol(label);
+      this.refresh();
+    } catch (error) {
+      this.handleEnrolFailure(error as Problem);
+    } finally {
+      this.adding.set(false);
+    }
   }
 
   private refresh(): void {
