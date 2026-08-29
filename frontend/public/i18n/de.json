@@ -738,6 +738,16 @@
       "disableConfirmMessage": "\"{{term}}\" erscheint nicht mehr in Ihrem E-Mail-Digest.",
       "disableConfirmAction": "Entfernen"
     },
+    "passkeyOffer": {
+      "title": "Passkey einrichten?",
+      "message": "Melde dich beim nächsten Mal schneller an — mit dem Fingerabdruck, Gesicht oder der Bildschirmsperre deines Geräts. Kein Passwort nötig.",
+      "setUp": "Passkey einrichten",
+      "notNow": "Nicht jetzt",
+      "success": "Passkey hinzugefügt.",
+      "declinedTitle": "Kein Problem",
+      "declinedMessage": "Du kannst jederzeit über Einstellungen → Konto → Passkeys einen Passkey hinzufügen.",
+      "ok": "OK"
+    },
     "tagFallback": "Tag",
     "feedFallback": "Feed",
     "forYouGeneratedAt": "Erstellt {{ago}}",

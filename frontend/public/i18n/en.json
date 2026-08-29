@@ -738,6 +738,16 @@
       "disableConfirmMessage": "\"{{term}}\" will no longer appear in your email digest.",
       "disableConfirmAction": "Remove"
     },
+    "passkeyOffer": {
+      "title": "Set up a passkey?",
+      "message": "Sign in faster next time — with your device's fingerprint, face, or screen lock. No password to remember.",
+      "setUp": "Set up a passkey",
+      "notNow": "Not now",
+      "success": "Passkey added.",
+      "declinedTitle": "No problem",
+      "declinedMessage": "You can add a passkey any time from Settings → Account → Passkeys.",
+      "ok": "OK"
+    },
     "tagFallback": "Tag",
     "feedFallback": "Feed",
     "forYouGeneratedAt": "Generated {{ago}}",

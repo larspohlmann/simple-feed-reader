@@ -42,6 +42,29 @@ describe('AuthService', () => {
   });
   afterEach(() => ctrl.verify());
 
+  // A minimal /api/me body for the two tests below, which care only about
+  // the passkey-offer flag, not the rest of the account shape loadMe() above
+  // already exercises in full.
+  function meFixture(preferences: { passkeyOfferAnswered: boolean }) {
+    return {
+      id: 1,
+      email: 'a@b.c',
+      roles: ['ROLE_USER'],
+      status: 'active',
+      createdAt: '2026-07-01T00:00:00+00:00',
+      locale: 'en',
+      trialEndsAt: null,
+      preferences: {
+        scrapeFallbackEnabled: false,
+        digest: { enabled: false, cadence: 'daily', sendHour: 8, weekday: 1, timezone: 'UTC' },
+        ...preferences,
+      },
+      ai: { ready: false, model: null },
+      mail: { enabled: true },
+      emailVerified: true,
+    };
+  }
+
   it('login stores the returned JWT', () => {
     svc.login('a@b.c', 'password12345').subscribe();
     const req = ctrl.expectOne('https://api.test/api/auth/login');
@@ -68,6 +91,7 @@ describe('AuthService', () => {
           weekday: 5,
           timezone: 'Europe/Berlin',
         },
+        passkeyOfferAnswered: true,
       },
       ai: { ready: true, model: 'gpt-4o' },
       mail: { enabled: true },
@@ -127,6 +151,28 @@ describe('AuthService', () => {
 
     expect(ai.ready()).toBe(false);
     expect(ai.model()).toBeNull();
+  });
+
+  it('answerPasskeyOffer posts the answer and marks the local user answered on success', () => {
+    svc.loadMe().subscribe();
+    ctrl.expectOne('https://api.test/api/me').flush(meFixture({ passkeyOfferAnswered: false }));
+
+    svc.answerPasskeyOffer().subscribe();
+    const req = ctrl.expectOne('https://api.test/api/me/passkey-offer/answer');
+    expect(req.request.method).toBe('POST');
+    req.flush(null);
+
+    expect(svc.user()?.preferences.passkeyOfferAnswered).toBe(true);
+  });
+
+  it('markPasskeyOfferAnswered flips the local flag without any request', () => {
+    svc.loadMe().subscribe();
+    ctrl.expectOne('https://api.test/api/me').flush(meFixture({ passkeyOfferAnswered: false }));
+
+    svc.markPasskeyOfferAnswered();
+
+    expect(svc.user()?.preferences.passkeyOfferAnswered).toBe(true);
+    ctrl.expectNone('https://api.test/api/me/passkey-offer/answer');
   });
 
   // Driven through the real logout() rather than through TokenStore, because

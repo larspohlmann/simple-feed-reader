@@ -30,6 +30,7 @@ const account = (trialEndsAt: string | null): CurrentUser => ({
   preferences: {
     scrapeFallbackEnabled: false,
     digest: { enabled: false, cadence: 'daily', sendHour: 8, weekday: 1, timezone: 'UTC' },
+    passkeyOfferAnswered: true,
   },
   ai: { ready: false, model: null },
   mail: { enabled: true },

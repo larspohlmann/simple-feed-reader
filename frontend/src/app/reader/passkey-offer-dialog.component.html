@@ -1,0 +1,39 @@
+<!-- src/app/reader/passkey-offer-dialog.component.html -->
+@if (stage() === 'offer') {
+  <app-overlay-panel [heading]="'reader.passkeyOffer.title' | transloco" cdkTrapFocus>
+    <p class="msg">{{ 'reader.passkeyOffer.message' | transloco }}</p>
+
+    @if (error(); as problem) {
+      <div class="notice">
+        <app-error-banner [message]="problem.detail || problem.title" />
+      </div>
+    }
+
+    <app-button footer (click)="declineForNow()">
+      {{ 'reader.passkeyOffer.notNow' | transloco }}
+    </app-button>
+    <app-button
+      footer
+      variant="primary"
+      focusInitial
+      [loading]="enrolling()"
+      (click)="setUpPasskey()"
+    >
+      {{ 'reader.passkeyOffer.setUp' | transloco }}
+    </app-button>
+  </app-overlay-panel>
+} @else {
+  <app-overlay-panel [heading]="'reader.passkeyOffer.declinedTitle' | transloco" cdkTrapFocus>
+    <p class="msg">{{ 'reader.passkeyOffer.declinedMessage' | transloco }}</p>
+
+    <app-button
+      footer
+      variant="primary"
+      focusInitial
+      data-test="passkey-offer-ok"
+      (click)="ref.close()"
+    >
+      {{ 'reader.passkeyOffer.ok' | transloco }}
+    </app-button>
+  </app-overlay-panel>
+}
