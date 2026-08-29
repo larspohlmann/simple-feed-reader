@@ -56,3 +56,14 @@ framework:
             github.release.cache:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 21600
+
+            # One refresh run's progress between two of its slices (#721). The
+            # store sets an explicit ten-minute expiry on every entry it writes;
+            # this lifetime is only a backstop for an entry whose expiry was
+            # somehow lost, the same relationship oauth.login_code.cache has to
+            # its store. Losing an entry costs one jump of the progress bar, which
+            # is why two integers with a two-minute life get a cache pool rather
+            # than a table and a sweeper.
+            refresh.run.cache:
+                adapter: cache.adapter.filesystem
+                default_lifetime: 900
