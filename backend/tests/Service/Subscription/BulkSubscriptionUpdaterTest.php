@@ -179,6 +179,42 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         self::assertFalse($subscription->isIncludeInForYou(), 'A null flag must not be written.');
     }
 
+    /**
+     * A symmetric fixture — both flags starting and ending at the same
+     * boolean — cannot tell applyFlags() apart from a copy-paste bug that
+     * writes one request field into the other setter: whichever setter
+     * fires, the field lands on the value both branches agree on. Sending
+     * both flags in ONE request, each flipping its OWN field to a DIFFERENT
+     * target value, means a swapped setter or a swapped source field shows up
+     * as the wrong boolean on the wrong flag.
+     */
+    public function testEachFlagIsWrittenToItsOwnField(): void
+    {
+        $user = $this->user('bulk-flags-own-field@example.com');
+        $subscription = $this->subscription($user, 'https://flags-own-field.example/feed.xml');
+        $subscription->setIncludeInAllItems(false);
+        $subscription->setIncludeInForYou(true);
+        $this->em->flush();
+
+        $this->updater->apply(
+            new BulkUpdateSubscriptionsRequest(
+                subscriptionIds: [(int) $subscription->getId()],
+                includeInAllItems: true,
+                includeInForYou: false,
+            ),
+            (int) $user->getId(),
+        );
+
+        self::assertTrue(
+            $subscription->isIncludeInAllItems(),
+            'includeInAllItems must take the includeInAllItems value.',
+        );
+        self::assertFalse(
+            $subscription->isIncludeInForYou(),
+            'includeInForYou must take the includeInForYou value, not includeInAllItems.',
+        );
+    }
+
     public function testRejectsATagNamedInBothAddAndRemove(): void
     {
         $user = $this->user('bulk-contradiction@example.com');
