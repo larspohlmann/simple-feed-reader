@@ -175,6 +175,23 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         );
     }
 
+    public function testRejectsADuplicateTagIdInAddTagIds(): void
+    {
+        $user = $this->user('bulk-duplicate-tag@example.com');
+        $tech = $this->tag($user, 'Tech', 0);
+        $subscription = $this->subscription($user, 'https://f.example/feed.xml');
+        $this->em->flush();
+
+        $this->expectException(UnprocessableEntityHttpException::class);
+        $this->updater->apply(
+            new BulkUpdateSubscriptionsRequest(
+                subscriptionIds: [(int) $subscription->getId()],
+                addTagIds: [(int) $tech->getId(), (int) $tech->getId()],
+            ),
+            (int) $user->getId(),
+        );
+    }
+
     public function testRejectsATagThatBelongsToAnotherUser(): void
     {
         $mine = $this->user('bulk-mine@example.com');
