@@ -165,6 +165,48 @@ describe('OrganiseTagGroupComponent', () => {
     expect(manage.reorderUntagged).toHaveBeenCalledWith([SUB_B.id, SUB_A.id]);
   });
 
+  it('disables the feed arrows and drag under an active filter, and writes nothing', async () => {
+    const { store, manage, component } = await render(GROUP);
+    store.titleFilter.set('heise');
+    fixture.detectChanges();
+
+    const row = fixture.debugElement.queryAll(By.css('app-organise-feed-row'))[0];
+    expect(row.componentInstance.reorderable()).toBe(false);
+    expect(component.dragDisabled()).toBe(true);
+
+    component.moveFeed(SUB_A, 1);
+
+    expect(manage.reorderTagFeeds).not.toHaveBeenCalled();
+  });
+
+  it('disables the untagged arrows under an active filter, and writes nothing', async () => {
+    const { store, manage, component } = await render(UNTAGGED_GROUP);
+    store.titleFilter.set('heise');
+    fixture.detectChanges();
+
+    const row = fixture.debugElement.queryAll(By.css('app-organise-feed-row'))[0];
+    expect(row.componentInstance.reorderable()).toBe(false);
+
+    component.moveFeed(SUB_A, 1);
+
+    expect(manage.reorderUntagged).not.toHaveBeenCalled();
+  });
+
+  it('ignores a same-group drop reorder under an active filter', async () => {
+    const { store, manage, component } = await render(GROUP);
+    store.titleFilter.set('heise');
+
+    component.onFeedDropped({
+      previousContainer: { data: GROUP },
+      container: { data: GROUP },
+      item: { data: SUB_A },
+      previousIndex: 0,
+      currentIndex: 1,
+    } as never);
+
+    expect(manage.reorderTagFeeds).not.toHaveBeenCalled();
+  });
+
   it('moves a feed carrying two tags to a third tag that is neither of them', async () => {
     const { manage, component } = await render(THIRD_GROUP);
 
@@ -183,7 +225,7 @@ describe('OrganiseTagGroupComponent', () => {
     expect(manage.retag).toHaveBeenCalledWith(SUB_WITH_TWO_TAGS, [OTHER_TAG.id, THIRD_TAG.id]);
   });
 
-  it('clears every tag when a feed is dropped on the untagged group', async () => {
+  it('removes a single-tag feed entirely when dropped on the untagged group', async () => {
     const { manage, component } = await render(UNTAGGED_GROUP);
 
     component.onFeedDropped({
@@ -195,6 +237,23 @@ describe('OrganiseTagGroupComponent', () => {
     } as never);
 
     expect(manage.retag).toHaveBeenCalledWith(SUB_A, []);
+  });
+
+  it('removes only the source tag when a two-tag feed is dropped on the untagged group', async () => {
+    const { manage, component } = await render(UNTAGGED_GROUP);
+
+    // SUB_WITH_TWO_TAGS carries TECH (2) and OTHER_TAG (4) and is dragged out
+    // of the TECH group. Dropping on "Untagged" is single-tag removal, not a
+    // clear: OTHER_TAG must survive.
+    component.onFeedDropped({
+      previousContainer: { data: GROUP },
+      container: { data: UNTAGGED_GROUP },
+      item: { data: SUB_WITH_TWO_TAGS },
+      previousIndex: 0,
+      currentIndex: 0,
+    } as never);
+
+    expect(manage.retag).toHaveBeenCalledWith(SUB_WITH_TWO_TAGS, [OTHER_TAG.id]);
   });
 
   it('ignores a dropped tag header instead of mistaking it for a feed', async () => {

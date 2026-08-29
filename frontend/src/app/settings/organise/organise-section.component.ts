@@ -139,6 +139,11 @@ export class OrganiseSectionComponent implements OnInit {
   }
 
   protected moveTag(group: OrganiseGroup, offset: number): void {
+    // The template also disables the tag arrows under a filter, but
+    // `store.groups()` — what canMoveTagUp/Down index — is the filtered
+    // list while this swaps within the full, unfiltered tags() list; under
+    // a filter that mismatch can silently swap with an invisible tag.
+    if (this.store.filterActive()) return;
     const ids = this.tags.tags().map((t) => t.id);
     const from = ids.indexOf(group.tag?.id ?? -1);
     const to = from + offset;

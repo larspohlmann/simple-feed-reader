@@ -99,7 +99,7 @@
           <app-organise-feed-row
             [subscription]="s"
             [sortable]="!dragDisabled()"
-            [reorderable]="true"
+            [reorderable]="!store.filterActive()"
             [attr.data-test]="dragDisabled() ? 'arrows-only' : null"
             [selected]="store.selectedIds().has(s.id)"
             [canMoveUp]="i > 0"

@@ -51,8 +51,16 @@ export class OrganiseTagGroupComponent {
 
   /** Drag is pointer-only. On a phone a drag inside a scrolling page fights the
    *  scroll — the sidebar needed a long-press guard and a whole Organise mode
-   *  to make it work. The arrows do the same job with none of that. */
-  protected readonly dragDisabled = computed(() => this.screen.isCoarse());
+   *  to make it work. The arrows do the same job with none of that.
+   *
+   *  Also off under an active filter: `group().subscriptions` is the
+   *  FILTERED list, so both a same-group reorder and a cross-group move
+   *  would index or resolve against a subset of the real order — the drop
+   *  would either corrupt the untagged list's positions (no permutation
+   *  check on that endpoint) or 422 silently on a tag's feed order. */
+  protected readonly dragDisabled = computed(
+    () => this.screen.isCoarse() || this.store.filterActive(),
+  );
 
   protected readonly expanded = computed(() => this.store.isExpanded(this.group().key));
   protected readonly state = computed(() => this.store.groupState(this.group()));
@@ -70,6 +78,10 @@ export class OrganiseTagGroupComponent {
   }
 
   protected moveFeed(subscription: SubscriptionDto, offset: number): void {
+    // Defense in depth: the template also disables the arrows under a
+    // filter, but `group().subscriptions` is the filtered list either way —
+    // reordering against it is meaningless, not merely hidden.
+    if (this.store.filterActive()) return;
     const ids = this.group().subscriptions.map((s) => s.id);
     const from = ids.indexOf(subscription.id);
     const to = from + offset;
@@ -109,6 +121,9 @@ export class OrganiseTagGroupComponent {
 
   private reorderTo(subscription: SubscriptionDto, from: number, to: number): void {
     if (from === to) return;
+    // Same reasoning as moveFeed(): the drag handle is already disabled
+    // under a filter, but a same-list drop is guarded here too.
+    if (this.store.filterActive()) return;
     const ids = this.group().subscriptions.map((s) => s.id);
     ids.splice(to, 0, ...ids.splice(from, 1));
 
@@ -125,15 +140,16 @@ export class OrganiseTagGroupComponent {
   }
 
   /** The feed's tags after a move into this group: the source tag goes, this
-   *  group's tag arrives. A drop on the untagged group clears every tag. */
+   *  group's tag arrives. A drop on the untagged group removes only the
+   *  SOURCE tag, keeping every other tag the feed carries — the single-tag
+   *  removal this page has that the sidebar has never had (see the design
+   *  spec's "Dropping on 'Untagged' removes the tag it came from"). */
   private tagIdsAfterMove(subscription: SubscriptionDto, source: OrganiseGroup): number[] {
     const target = this.group().tag;
-    if (target === null) return [];
-
     const kept = subscription.tags
       .map((t) => t.id)
-      .filter((id) => id !== source.tag?.id && id !== target.id);
+      .filter((id) => id !== source.tag?.id && id !== target?.id);
 
-    return [...kept, target.id];
+    return target === null ? kept : [...kept, target.id];
   }
 }

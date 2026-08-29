@@ -296,4 +296,57 @@ describe('OrganiseSectionComponent', () => {
 
     expect(manage.reorderTags).toHaveBeenCalledWith([3, 2]);
   });
+
+  // canMoveTagUp/Down index store.groups() — the FILTERED list — while
+  // moveTag() swaps within the full, unfiltered tags() list. Under a filter
+  // that mismatch can silently swap a tag's position with one the user
+  // cannot even see, so both the arrow and moveTag() itself must refuse
+  // while a filter is active, even when two tag groups stay adjacent.
+  it('disables tag reordering under an active filter, and writes nothing', async () => {
+    const NEWS: TagDto = { id: 3, name: 'News', color: null, icon: null, position: 1 };
+    const subsWithNews = [...SUBS.slice(0, 1), feed(11, 'heise', [NEWS.id]), SUBS[2]];
+    localStorage.clear();
+    for (const spy of Object.values(manage)) spy.mockReset();
+    manage.addFeed.mockReturnValue(of(undefined));
+
+    await TestBed.resetTestingModule()
+      .configureTestingModule({
+        imports: [OrganiseSectionComponent, provideTranslocoTesting()],
+        providers: [
+          { provide: ManageActions, useValue: manage },
+          { provide: Dialog, useValue: { open: jest.fn(() => ({ closed: of(undefined) })) } },
+          { provide: LayoutService, useValue: { isCoarse: signal(false) } },
+          { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
+          {
+            provide: SubscriptionsStore,
+            useValue: {
+              subscriptions: signal(subsWithNews),
+              loading: signal(false),
+              load: jest.fn(),
+            },
+          },
+          { provide: TagsStore, useValue: { tags: signal([TECH, NEWS]), load: jest.fn() } },
+        ],
+      })
+      .compileComponents();
+
+    fixture = TestBed.createComponent(OrganiseSectionComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+
+    // Both TECH and NEWS stay visible and adjacent under this filter, so
+    // canMoveTagDown would be true on TECH if the filter guard were missing.
+    component.store.tagFilter.set(new Set([TECH.id, NEWS.id]));
+    fixture.detectChanges();
+
+    const groups = fixture.debugElement.queryAll(By.directive(OrganiseTagGroupComponent));
+    expect(groups.length).toBe(2);
+    expect(
+      (groups[0].componentInstance as OrganiseTagGroupComponent).canMoveTagDown(),
+    ).toBe(false);
+
+    (groups[0].componentInstance as OrganiseTagGroupComponent).moveTagDown.emit();
+
+    expect(manage.reorderTags).not.toHaveBeenCalled();
+  });
 });

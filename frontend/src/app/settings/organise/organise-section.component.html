@@ -221,8 +221,13 @@
         @for (group of store.groups(); track group.key; let i = $index, last = $last) {
           <app-organise-tag-group
             [group]="group"
-            [canMoveTagUp]="group.tag !== null && i > 0"
-            [canMoveTagDown]="group.tag !== null && !last && store.groups()[i + 1].tag !== null"
+            [canMoveTagUp]="group.tag !== null && i > 0 && !store.filterActive()"
+            [canMoveTagDown]="
+              group.tag !== null &&
+              !last &&
+              store.groups()[i + 1].tag !== null &&
+              !store.filterActive()
+            "
             (moveTagUp)="moveTag(group, -1)"
             (moveTagDown)="moveTag(group, 1)"
           />
