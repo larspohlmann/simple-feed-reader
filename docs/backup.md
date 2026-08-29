@@ -175,6 +175,7 @@ These rows belong to your account. A backup drops each of them completely.
 | `RecommendationRun` | The history of your "For you" runs. Run the engine again to get new results. The history is large, and it points at articles the restore has replaced. |
 | `RecommendationRunLog` | The diagnostic log of one run. It has no meaning without the run, and the run is not restored. |
 | `RecommendationItem` | The picks of one run. They have no meaning without the run, and the run is not restored. |
+| `UserPasskey` | Your passkeys. A passkey is tied to one device and to this instance's identity. A credential restored onto another account, or onto another device, could never sign you in. Carrying credential ids and keys in the file would only make a stolen backup more dangerous. |
 
 Your "For you" **settings** are carried. Only the **results** are dropped.
 

@@ -24,6 +24,7 @@ use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Entity\UserIdentity;
+use App\Entity\UserPasskey;
 use App\Entity\WorkerHeartbeat;
 use App\Service\Backup\AccountBackupExporter;
 use App\Service\Backup\BackupSchema;
@@ -121,6 +122,10 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'meaningless once its entries are gone.',
         RecommendationRunLog::class => 'Per-run diagnostics, tied to a run that is not restored.',
         RecommendationItem::class => 'Per-run picks, tied to a run that is not restored.',
+        UserPasskey::class => 'Passkeys are bound to a device and to a relying-party id, so a '
+            . 'credential restored into another account or onto another device could never '
+            . 'authenticate. Exporting credential ids and public keys would widen the blast '
+            . 'radius of a leaked backup file for no gain.',
     ];
 
     /**
