@@ -142,6 +142,15 @@ export function visibleSearchTerm(term: string): string {
   return phraseWithin(term) ?? term.trimEnd();
 }
 
+/** Whether the list offers the "All posts / only unread" switch. The saved
+ *  views are already a filter on state, and a search is a filter on content, so
+ *  narrowing them by read state would be a second, conflicting answer to what
+ *  the list is for. For you is not: it is a ranked view of the same posts every
+ *  other browsable list shows (#710). */
+export function hasUnreadFilter(s: Selection): boolean {
+  return canScopedRefresh(s) || s.kind === 'for-you';
+}
+
 /** Whether the current selection supports a scoped refresh — the cross-feed
  *  saved views (favorites/kept) don't map to any feed scope, so they can't. */
 export function canScopedRefresh(s: Selection): boolean {
@@ -269,8 +278,14 @@ export function selectionFromParams(p: ParamMap): {
   }
 
   let selection: Selection;
-  if (view === 'favorites' || view === 'kept' || view === 'viewed' || view === 'for-you') {
+  if (view === 'favorites' || view === 'kept' || view === 'viewed') {
+    // Each of these IS a filter on entry state, so a second one would be a
+    // contradiction: "kept, but only unread" is not a list this reader offers.
     selection = { kind: view, id: null, unread: false };
+  } else if (view === 'for-you') {
+    // For you is not a state filter — it is a ranking of the same posts — so it
+    // takes the refinement like any browsable list (#710).
+    selection = { kind: 'for-you', id: null, unread };
   } else if (subscription != null) {
     selection = { kind: 'subscription', id: subscription, unread };
   } else if (tag != null) {
@@ -300,7 +315,9 @@ export function queryFromSelection(s: Selection): EntryQuery {
     case 'viewed':
       return { view: 'viewed' };
     case 'for-you':
-      return { view: 'for-you' };
+      // The one list whose unread filter is not a view of its own: the ranked
+      // feed IS the view, so the filter travels beside it (#710).
+      return s.unread ? { view: 'for-you', unread: true } : { view: 'for-you' };
     case 'tag':
       return { view: s.unread ? 'unread' : 'all', tag: s.id ?? undefined };
     case 'subscription':
@@ -319,7 +336,8 @@ export function queryFromSelection(s: Selection): EntryQuery {
 export type MarkReadTarget =
   | { scope: Extract<MarkReadScope, 'all'> }
   | { scope: Exclude<MarkReadScope, 'all'>; id: number }
-  | { scope: 'search'; term: string };
+  | { scope: 'search'; term: string }
+  | { scope: 'for-you' };
 
 export function markReadTarget(s: Selection): MarkReadTarget | null {
   switch (s.kind) {
@@ -331,6 +349,10 @@ export function markReadTarget(s: Selection): MarkReadTarget | null {
       return s.id != null ? { scope: 'feed', id: s.id } : null;
     case 'search':
       return s.term ? { scope: 'search', term: s.term } : null;
+    case 'for-you':
+      // No id and no term: the list is the reader's own ranked feed, so the
+      // endpoint needs nothing beyond who is asking (#710).
+      return { scope: 'for-you' };
     default:
       return null;
   }

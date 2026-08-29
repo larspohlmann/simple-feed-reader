@@ -10,6 +10,7 @@ use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationItemRepository;
 use App\Service\Recommendation\RecommendationFeedPager;
 use App\Tests\DbTestCase;
@@ -45,7 +46,7 @@ final class RecommendationFeedPagerTest extends DbTestCase
 
     public function testAMalformedCursorYieldsTheFirstPageInsteadOfAnError(): void
     {
-        $page = $this->pager()->page((int) $this->user->getId(), 'not-a-cursor', 50);
+        $page = $this->pager()->page(new ForYouFeedQuery($this->user, 'not-a-cursor', 50));
 
         self::assertCount(2, $page->rows);
         self::assertSame('a', $page->rows[0]->row->entry->getGuid());
@@ -53,7 +54,7 @@ final class RecommendationFeedPagerTest extends DbTestCase
 
     public function testTheLimitIsClampedToAtLeastOne(): void
     {
-        $page = $this->pager()->page((int) $this->user->getId(), null, 0);
+        $page = $this->pager()->page(new ForYouFeedQuery($this->user, null, 0));
 
         self::assertCount(1, $page->rows);
     }

@@ -10,6 +10,7 @@ use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationItemRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\ForYouFeedResponder;
@@ -99,7 +100,7 @@ final class ForYouFeedResponderTest extends DbTestCase
      */
     private function firstEntry(): array
     {
-        $page = $this->responder()->page($this->user, null, 50);
+        $page = $this->responder()->page(new ForYouFeedQuery($this->user, null, 50));
         self::assertIsArray($page['entries']);
         $first = $page['entries'][0];
         self::assertIsArray($first);

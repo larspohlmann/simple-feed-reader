@@ -6,6 +6,7 @@ import {
   isWholeWordTerm,
   isPhraseTerm,
   listSelectionFrom,
+  hasUnreadFilter,
   markReadTarget,
   normalizeSearchInput,
   queryFromSelection,
@@ -48,12 +49,23 @@ describe('selectionFromParams', () => {
     });
     expect(selectionFromParams(pm({ view: 'kept' })).selection.kind).toBe('kept');
   });
-  it('reads for-you and ignores the unread toggle there', () => {
+  it('reads for-you, and keeps its unread refinement (#710)', () => {
     expect(selectionFromParams(pm({ view: 'for-you', unread: '0' })).selection).toEqual({
       kind: 'for-you',
       id: null,
       unread: false,
     });
+    expect(selectionFromParams(pm({ view: 'for-you', unread: '1' })).selection).toEqual({
+      kind: 'for-you',
+      id: null,
+      unread: true,
+    });
+  });
+
+  it('still ignores the unread toggle on the saved views, which already filter by state', () => {
+    for (const view of ['favorites', 'kept', 'viewed'] as const) {
+      expect(selectionFromParams(pm({ view, unread: '1' })).selection.unread).toBe(false);
+    }
   });
   it('rejects non-positive/garbage ids', () => {
     expect(selectionFromParams(pm({ subscription: '0' })).selection.kind).toBe('all');
@@ -258,6 +270,14 @@ describe('queryFromSelection', () => {
       view: 'for-you',
     });
   });
+  // For you is the one list whose unread filter cannot be a view: the ranked
+  // feed IS the view, so the filter rides beside it (#710).
+  it('asks the ranked feed for unread picks with a flag, not a view', () => {
+    expect(queryFromSelection({ kind: 'for-you', id: null, unread: true })).toEqual({
+      view: 'for-you',
+      unread: true,
+    });
+  });
   it('maps a search selection to view=all with q', () => {
     expect(
       queryFromSelection({ kind: 'search', id: null, unread: false, term: 'angular' }),
@@ -280,7 +300,14 @@ describe('markReadTarget', () => {
       id: 7,
     });
     expect(markReadTarget({ kind: 'favorites', id: null, unread: false })).toBeNull();
-    expect(markReadTarget({ kind: 'for-you', id: null, unread: false })).toBeNull();
+  });
+
+  // For you marks its picks read through its own endpoint — no scope, no id:
+  // the list is the reader's own ranked feed (#710).
+  it('maps the for-you selection to its own scope', () => {
+    expect(markReadTarget({ kind: 'for-you', id: null, unread: false })).toEqual({
+      scope: 'for-you',
+    });
   });
 
   it('maps a search selection to a search scope, term verbatim', () => {
@@ -294,6 +321,21 @@ describe('markReadTarget', () => {
       term: 'climate ',
     });
     expect(markReadTarget({ kind: 'search', id: null, unread: false, term: '' })).toBeNull();
+  });
+});
+
+describe('hasUnreadFilter', () => {
+  it('covers the browsable lists and the ranked feed', () => {
+    expect(hasUnreadFilter({ kind: 'all', id: null, unread: true })).toBe(true);
+    expect(hasUnreadFilter({ kind: 'tag', id: 3, unread: true })).toBe(true);
+    expect(hasUnreadFilter({ kind: 'subscription', id: 7, unread: true })).toBe(true);
+    expect(hasUnreadFilter({ kind: 'for-you', id: null, unread: true })).toBe(true);
+  });
+  it('leaves the saved views and a search alone — each is already a filter', () => {
+    expect(hasUnreadFilter({ kind: 'favorites', id: null, unread: false })).toBe(false);
+    expect(hasUnreadFilter({ kind: 'kept', id: null, unread: false })).toBe(false);
+    expect(hasUnreadFilter({ kind: 'viewed', id: null, unread: false })).toBe(false);
+    expect(hasUnreadFilter({ kind: 'search', id: null, unread: false, term: 'x' })).toBe(false);
   });
 });
 

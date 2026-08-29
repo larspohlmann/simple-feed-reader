@@ -826,12 +826,14 @@ describe('EntryListComponent', () => {
     });
 
     it('shows the switch only for the browsable lists, not search or saved views', () => {
-      for (const kind of ['all', 'tag', 'subscription'] as const) {
+      // For you joins the three (#710): its unread filter is a flag on the
+      // ranked view rather than a view of its own, but the switch is the same.
+      for (const kind of ['all', 'tag', 'subscription', 'for-you'] as const) {
         const el = mount({ selection: { kind, id: null, unread: true } })
           .nativeElement as HTMLElement;
         expect(el.querySelector('.unread-switch')).not.toBeNull();
       }
-      for (const kind of ['search', 'favorites', 'kept', 'for-you'] as const) {
+      for (const kind of ['search', 'favorites', 'kept'] as const) {
         const el = mount({
           selection: { kind, id: null, unread: false, term: 'x' },
           canMarkAllRead: false,
