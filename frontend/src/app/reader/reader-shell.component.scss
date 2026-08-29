@@ -221,6 +221,20 @@ app-reader-header.hidden {
   left: 0;
   right: 0;
   z-index: 4;
+
+  /* Travels with the app bar, exactly as `.list-header` does and for the same
+     reason: it hangs directly beneath the bar, so staying put while the bar
+     retracted would leave it floating over a strip of nothing. A banner is an
+     alert and is correct to stay visible at the top — unlike the refresh
+     hairline, which is chrome and now retracts with the bar itself (#721). */
+  transform: translateY(var(--app-bar-shift, 0));
+  transition: transform 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .under-header {
+    transition: none;
+  }
 }
 
 /* The post-onboarding fetch banner: an in-flow strip inside `.under-header`. */
