@@ -1,6 +1,6 @@
 // e2e/header-scroll-mobile.spec.ts
 import { test, expect, Page } from '@playwright/test';
-import { readerFailedJson } from './support/reader';
+import { readerFailedJson, savedSearchWire, savedSearchesJson } from './support/reader';
 
 // Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
@@ -451,12 +451,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
     });
     await page.route('**/api/saved-searches', async (route) => {
       if (route.request().method() !== 'GET') return route.fallback();
-      await route.fulfill({
-        status: 200,
-        json: {
-          savedSearches: [{ id: 1, term: 'number', wholeWord: false, position: 0, unreadCount: 5 }],
-        },
-      });
+      await route.fulfill({ status: 200, json: savedSearchesJson(savedSearchWire()) });
     });
     await page.reload();
 
