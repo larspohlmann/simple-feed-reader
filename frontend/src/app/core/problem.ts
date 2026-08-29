@@ -8,6 +8,10 @@ export interface Problem {
   detail?: string;
   errors?: Record<string, string[]>;
   accountStatus?: string;
+  /** Set only on the 409 a passkey relying-party id change raises while
+   *  credentials still exist -- the count the confirmation prompt quotes
+   *  (RelyingPartyChangeRequiresConfirmationException, #624). */
+  invalidatedPasskeyCount?: number;
 }
 
 /** An oversized request body, refused by the web server before the app ran.
@@ -45,6 +49,10 @@ function parseProblemBody(body: unknown, status: number): Problem {
       errors: (b['errors'] as Record<string, string[]> | undefined) ?? undefined,
       accountStatus:
         typeof b['accountStatus'] === 'string' ? (b['accountStatus'] as string) : undefined,
+      invalidatedPasskeyCount:
+        typeof b['invalidatedPasskeyCount'] === 'number'
+          ? (b['invalidatedPasskeyCount'] as number)
+          : undefined,
     };
   }
   return fallbackProblem(status);

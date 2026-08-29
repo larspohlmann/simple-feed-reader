@@ -59,6 +59,86 @@
           (change)="savePublicBaseUrl($any($event.target).value)"
         />
       </app-settings-row>
+
+      <app-settings-row
+        [title]="'settings.instance.passkeyRpId' | transloco"
+        [description]="
+          'settings.instance.passkeyRpIdHint' | transloco: { host: passkeyRpIdEffective() }
+        "
+        labelFor="passkey-rp-id-input"
+        [stackable]="true"
+      >
+        <input
+          id="passkey-rp-id-input"
+          type="text"
+          inputmode="url"
+          autocomplete="off"
+          [value]="passkeyRpId() ?? ''"
+          [attr.aria-label]="'settings.instance.passkeyRpId' | transloco"
+          [placeholder]="passkeyRpIdEffective()"
+          (change)="savePasskeyRpId($any($event.target).value)"
+        />
+      </app-settings-row>
+
+      <app-settings-row
+        [title]="'settings.instance.passkeyRpName' | transloco"
+        [description]="'settings.instance.passkeyRpNameHint' | transloco"
+        labelFor="passkey-rp-name-input"
+        [stackable]="true"
+      >
+        <input
+          id="passkey-rp-name-input"
+          type="text"
+          autocomplete="off"
+          [value]="passkeyRpName() ?? ''"
+          [attr.aria-label]="'settings.instance.passkeyRpName' | transloco"
+          (change)="savePasskeyRpName($any($event.target).value)"
+        />
+      </app-settings-row>
+
+      <app-disclosure [label]="'settings.instance.passkeyHelp.label' | transloco" appearance="row">
+        <div class="passkey-help">
+          <h4>{{ 'settings.instance.passkeyHelp.idTitle' | transloco }}</h4>
+          <p>{{ 'settings.instance.passkeyHelp.idIntro' | transloco }}</p>
+
+          <div class="example-scroll">
+            <table class="examples">
+              <thead>
+                <tr>
+                  <th>{{ 'settings.instance.passkeyHelp.tableServing' | transloco }}</th>
+                  <th>{{ 'settings.instance.passkeyHelp.tableUse' | transloco }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>https://lars-pohlmann.de/reader</td>
+                  <td>lars-pohlmann.de</td>
+                </tr>
+                <tr>
+                  <td>https://reader.example.com</td>
+                  <td>reader.example.com — or example.com</td>
+                </tr>
+                <tr>
+                  <td>http://localhost:4200</td>
+                  <td>localhost</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <ul>
+            <li>{{ 'settings.instance.passkeyHelp.rule1' | transloco }}</li>
+            <li>{{ 'settings.instance.passkeyHelp.rule2' | transloco }}</li>
+            <li>{{ 'settings.instance.passkeyHelp.rule3' | transloco }}</li>
+            <li>{{ 'settings.instance.passkeyHelp.rule4' | transloco }}</li>
+          </ul>
+
+          <p class="warning">{{ 'settings.instance.passkeyHelp.idWarning' | transloco }}</p>
+
+          <h4>{{ 'settings.instance.passkeyHelp.nameTitle' | transloco }}</h4>
+          <p>{{ 'settings.instance.passkeyHelp.nameBody' | transloco }}</p>
+        </div>
+      </app-disclosure>
     }
   </app-settings-group>
 </app-settings-stack>

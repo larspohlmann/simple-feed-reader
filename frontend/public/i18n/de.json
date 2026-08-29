@@ -322,7 +322,28 @@
       "mailDisabledHint": "Diese Instanz versendet keine E-Mails, daher kann die E-Mail-Bestätigung nicht laufen — gib Konten stattdessen manuell frei.",
       "publicBaseUrl": "Öffentliche Basis-URL",
       "publicBaseUrlHint": "Die Adresse, aus der Links in ausgehenden E-Mails gebaut werden. Trage die URL ein, die von außen funktioniert — ein Handy außerhalb des Netzwerks, ein anderer Rechner — nicht die lokale Adresse. Leer lassen, um den Standard aus dem Deployment zu verwenden.",
-      "publicBaseUrlPlaceholder": "https://reader.example.com/"
+      "publicBaseUrlPlaceholder": "https://reader.example.com/",
+      "passkeyRpId": "Passkey-Domain",
+      "passkeyRpIdHint": "Die Domain, zu der Ihre Passkeys gehören. Leer lassen, um {{host}} zu verwenden.",
+      "passkeyRpName": "Passkey-Anzeigename",
+      "passkeyRpNameHint": "Der Name, den ein Gerät bei der Passkey-Abfrage zeigt. Leer lassen für Simple Feed Reader.",
+      "passkeyInvalidateTitle": "Passkey-Domain ändern?",
+      "passkeyInvalidateMessage": "Eine Änderung der Domain meldet {{count}} registrierte Passkey(s) dauerhaft ab. Sie lassen sich nicht reparieren. Bestätige, um die Domain zu ändern und sie zu löschen.",
+      "passkeyInvalidateConfirm": "Domain ändern und Passkeys löschen",
+      "passkeyHelp": {
+        "label": "Wie finde ich diese Werte?",
+        "idTitle": "Passkey-Domain",
+        "idIntro": "Ein Browser verwendet einen Passkey nur auf der Domain, für die er erstellt wurde. Tragen Sie nur die Domain ein: kein https://, kein Port, kein Pfad.",
+        "tableServing": "Sie betreiben den Reader unter",
+        "tableUse": "Eintragen",
+        "rule1": "Es muss der Host sein, unter dem Sie den Reader betreiben, oder eine übergeordnete Domain. example.com funktioniert für reader.example.com. Für other.com funktioniert es nicht.",
+        "rule2": "Eine öffentliche Endung wird abgelehnt. com oder co.uk können Sie nicht besitzen.",
+        "rule3": "Eine IP-Adresse wird abgelehnt. Verwenden Sie einen Domainnamen. localhost ist die einzige Ausnahme.",
+        "rule4": "Passkeys brauchen eine sichere Seite. Verwenden Sie HTTPS oder localhost.",
+        "idWarning": "Eine Änderung der Domain meldet jeden Passkey dauerhaft ab. Die Domain wird bei der Erstellung in jeden Passkey geschrieben. Ein vorhandener Passkey passt dann nicht mehr und lässt sich nicht reparieren. Der Reader lehnt die Änderung ab, bis Sie sie bestätigen, und löscht danach die unbrauchbar gewordenen Passkeys.",
+        "nameTitle": "Passkey-Anzeigename",
+        "nameBody": "Das ist der Name, den Nutzer sehen, wenn ihr Gerät nach einem Passkey fragt, und die Bezeichnung, die ihr Passwortmanager speichert. Halten Sie ihn kurz. Eine Änderung ist unbedenklich, alle Passkeys funktionieren weiter. Ein Gerät, das bereits einen gespeichert hat, zeigt weiterhin den alten Namen."
+      }
     },
     "proxy": {
       "title": "Ausgehender Proxy",

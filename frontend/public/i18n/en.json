@@ -322,7 +322,28 @@
       "mailDisabledHint": "This instance sends no mail, so email confirmation cannot run — approve accounts by hand instead.",
       "publicBaseUrl": "Public base URL",
       "publicBaseUrlHint": "The address used to build links in outgoing email. Set this to the URL that works from outside — a phone off the network, another machine — not the local serving address. Leave empty to use the deploy default.",
-      "publicBaseUrlPlaceholder": "https://reader.example.com/"
+      "publicBaseUrlPlaceholder": "https://reader.example.com/",
+      "passkeyRpId": "Passkey domain",
+      "passkeyRpIdHint": "The domain your passkeys belong to. Leave empty to use {{host}}.",
+      "passkeyRpName": "Passkey display name",
+      "passkeyRpNameHint": "The name a device shows when it asks for a passkey. Leave empty to use Simple Feed Reader.",
+      "passkeyInvalidateTitle": "Change the passkey domain?",
+      "passkeyInvalidateMessage": "Changing the domain signs out {{count}} enrolled passkey(s), permanently. They cannot be repaired. Confirm to change the domain and delete them.",
+      "passkeyInvalidateConfirm": "Change domain and delete passkeys",
+      "passkeyHelp": {
+        "label": "How do I find these values?",
+        "idTitle": "Passkey domain",
+        "idIntro": "A browser uses a passkey only on the domain it was made for. Write the domain on its own: no https://, no port, no path.",
+        "tableServing": "You serve the reader at",
+        "tableUse": "Use",
+        "rule1": "It must be the host you serve from, or a parent of it. example.com works for reader.example.com. It does not work for other.com.",
+        "rule2": "A public suffix is refused. You cannot own com or co.uk.",
+        "rule3": "An IP address is refused. Use a domain name. localhost is the one exception.",
+        "rule4": "Passkeys need a secure page. Use HTTPS, or localhost.",
+        "idWarning": "Changing the domain signs out every passkey, permanently. The domain is written into each passkey when it is made, so an existing one stops matching and cannot be repaired. The reader refuses the change until you confirm it, then deletes the passkeys it made unusable.",
+        "nameTitle": "Passkey display name",
+        "nameBody": "This is the name people see when their device asks for a passkey, and the label their password manager saves. Keep it short. Changing it is safe and every passkey keeps working. A device that already saved one keeps showing the old name."
+      }
     },
     "proxy": {
       "title": "Egress proxy",
