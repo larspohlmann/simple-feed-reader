@@ -5,8 +5,9 @@ import { Subscription } from 'rxjs';
 import { Problem, parseProblem } from '../core/problem';
 import { onIdentityChange } from '../core/session-identity';
 import { ReaderApi } from './reader-api';
+import { countsAreStale } from './sidebar-freshness';
 import { TagsStore } from './tags.store';
-import { SubscriptionDto, TagDto } from './models';
+import { SubscriptionDto, SubscriptionsResponse, TagDto } from './models';
 
 export interface TagNode {
   tag: TagDto;
@@ -78,8 +79,6 @@ export function sumUnread(subs: SubscriptionDto[]): number {
 
 type ZeroTarget = 'all' | { tag: number } | { subscription: number };
 
-const SIDEBAR_RELOAD_INTERVAL_MS = 10_000;
-
 @Injectable({ providedIn: 'root' })
 export class SubscriptionsStore {
   private readonly api = inject(ReaderApi);
@@ -105,37 +104,61 @@ export class SubscriptionsStore {
   private lastLoadedAt = 0;
   private inFlight: Subscription | null = null;
 
+  /** Counts the optimistic patches this store has applied on its own — a read,
+   *  a favourite, an emptied feed. A quiet reload compares it across its own
+   *  round trip to know whether the user has overtaken the server's answer. */
+  private localEdits = 0;
+
   constructor() {
     onIdentityChange(() => this.invalidate());
   }
 
   load(): void {
-    this.inFlight?.unsubscribe();
-    this.inFlight = null;
-    const load = ++this.latestLoad;
-    this.lastLoadedAt = Date.now();
+    const request = this.beginRequest();
     this.loading.set(true);
     this.error.set(null);
     this.resolved.set(false);
-    this.inFlight = this.api.subscriptions().subscribe({
-      next: (r) => {
-        if (load !== this.latestLoad) return;
-        this.inFlight = null;
-        this.subscriptions.set(r.subscriptions);
-        this.favoritesCount.set(r.favoritesCount);
-        this.keptCount.set(r.keptCount);
-        this.viewedCount.set(r.viewedCount);
-        this.loading.set(false);
-        this.resolved.set(true);
-      },
-      error: (e: HttpErrorResponse) => {
-        if (load !== this.latestLoad) return;
-        this.inFlight = null;
-        this.error.set(parseProblem(e));
-        this.loading.set(false);
-        this.resolved.set(true);
-      },
-    });
+    this.inFlight = this.trackWhileOpen(
+      this.api.subscriptions().subscribe({
+        next: (r) => {
+          if (!this.settle(request)) return;
+          this.applyCounts(r);
+          this.loading.set(false);
+          this.resolved.set(true);
+        },
+        error: (e: HttpErrorResponse) => {
+          if (!this.settle(request)) return;
+          this.error.set(parseProblem(e));
+          this.loading.set(false);
+          this.resolved.set(true);
+        },
+      }),
+    );
+  }
+
+  /** Claim the store for a new request: abandon whatever it supersedes, stamp
+   *  the freshness clock, and take the epoch that tells a late response it has
+   *  been overtaken. */
+  private beginRequest(): number {
+    this.inFlight?.unsubscribe();
+    this.inFlight = null;
+    this.lastLoadedAt = Date.now();
+    return ++this.latestLoad;
+  }
+
+  /** True while `request` is still the store's current one — false once a newer
+   *  load, or a logout, has taken it over. */
+  private settle(request: number): boolean {
+    if (request !== this.latestLoad) return false;
+    this.inFlight = null;
+    return true;
+  }
+
+  /** Park a request in the in-flight slot only while it is still out. A
+   *  response that came back synchronously has already left, and holding its
+   *  closed subscription would jam the poll's in-flight guard for good. */
+  private trackWhileOpen(request: Subscription): Subscription | null {
+    return request.closed ? null : request;
   }
 
   private invalidate(): void {
@@ -154,8 +177,51 @@ export class SubscriptionsStore {
 
   /** Reload sidebar counts only after their freshness window has elapsed. */
   loadIfStale(): void {
-    if (Date.now() - this.lastLoadedAt < SIDEBAR_RELOAD_INTERVAL_MS) return;
+    if (!countsAreStale(this.lastLoadedAt)) return;
     this.load();
+  }
+
+  /** The counts poll's reload (#708): the same request as `load()`, with none
+   *  of its UI. `loading` stays down — it swaps the whole organise tree for a
+   *  skeleton — and `resolved` is never taken back, because it gates the
+   *  onboarding redirect. So a tick can never spin, flicker or move the user.
+   *  A failure is dropped without a word; the next tick tries again. */
+  reloadQuietlyIfStale(): void {
+    // A tick refreshes counts; it never bootstraps them. Fetching before the
+    // first real load would stamp the freshness clock, silence that load for a
+    // whole window, and leave `resolved` false — so the onboarding redirect
+    // would never get to decide anything.
+    if (!this.resolved()) return;
+    // A request already on the wire is about to answer this tick's question. It
+    // is also the one request a tick may NOT cancel: `load()` has taken
+    // `resolved` down and only its own response puts it back.
+    if (this.inFlight) return;
+    if (!countsAreStale(this.lastLoadedAt)) return;
+
+    const request = this.beginRequest();
+    const editsWhenSent = this.localEdits;
+    this.inFlight = this.trackWhileOpen(
+      this.api.subscriptions().subscribe({
+        next: (r) => {
+          if (!this.settle(request)) return;
+          // The user changed a count while this was on the wire — marked an
+          // entry read, favourited one, emptied a feed. The server counted
+          // before that, so adopting the response now would put the badge back
+          // up. Drop it; the next tick reconciles against a server that has
+          // seen the change.
+          if (this.localEdits !== editsWhenSent) return;
+          this.applyCounts(r);
+        },
+        error: () => void this.settle(request),
+      }),
+    );
+  }
+
+  private applyCounts(response: SubscriptionsResponse): void {
+    this.subscriptions.set(response.subscriptions);
+    this.favoritesCount.set(response.favoritesCount);
+    this.keptCount.set(response.keptCount);
+    this.viewedCount.set(response.viewedCount);
   }
 
   /** Keep the sidebar favourite/kept badges live after a toggle without a reload;
@@ -176,20 +242,19 @@ export class SubscriptionsStore {
   }
 
   private bumpCount(count: WritableSignal<number>, by: number): void {
+    ++this.localEdits;
     count.update((n) => Math.max(0, n + by));
   }
 
   decrementUnread(subscriptionId: number, by = 1): void {
-    this.subscriptions.update((subs) =>
-      subs.map((s) =>
-        s.id === subscriptionId ? { ...s, unreadCount: Math.max(0, s.unreadCount - by) } : s,
-      ),
+    this.patchSubscriptions((s) =>
+      s.id === subscriptionId ? { ...s, unreadCount: Math.max(0, s.unreadCount - by) } : s,
     );
   }
 
   incrementUnread(subscriptionId: number, by = 1): void {
-    this.subscriptions.update((subs) =>
-      subs.map((s) => (s.id === subscriptionId ? { ...s, unreadCount: s.unreadCount + by } : s)),
+    this.patchSubscriptions((s) =>
+      s.id === subscriptionId ? { ...s, unreadCount: s.unreadCount + by } : s,
     );
   }
 
@@ -199,17 +264,22 @@ export class SubscriptionsStore {
     id: number,
     flags: Partial<Pick<SubscriptionDto, 'includeInAllItems' | 'includeInForYou'>>,
   ): void {
-    this.subscriptions.update((subs) => subs.map((s) => (s.id === id ? { ...s, ...flags } : s)));
+    this.patchSubscriptions((s) => (s.id === id ? { ...s, ...flags } : s));
   }
 
   zeroUnread(target: ZeroTarget): void {
-    this.subscriptions.update((subs) =>
-      subs.map((s) => {
-        if (target === 'all') return { ...s, unreadCount: 0 };
-        if ('tag' in target)
-          return s.tags.some((t) => t.id === target.tag) ? { ...s, unreadCount: 0 } : s;
-        return s.id === target.subscription ? { ...s, unreadCount: 0 } : s;
-      }),
-    );
+    this.patchSubscriptions((s) => {
+      if (target === 'all') return { ...s, unreadCount: 0 };
+      if ('tag' in target)
+        return s.tags.some((t) => t.id === target.tag) ? { ...s, unreadCount: 0 } : s;
+      return s.id === target.subscription ? { ...s, unreadCount: 0 } : s;
+    });
+  }
+
+  /** THE way this store edits its own rows. Every optimistic patch goes through
+   *  here so none can forget to register itself against an in-flight reload. */
+  private patchSubscriptions(patch: (sub: SubscriptionDto) => SubscriptionDto): void {
+    ++this.localEdits;
+    this.subscriptions.update((subs) => subs.map(patch));
   }
 }

@@ -1,8 +1,12 @@
+import { effect } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { of } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
 import { TokenStore } from '../core/token.store';
+import { ReaderApi } from './reader-api';
+import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
 import { SubscriptionsStore, buildTagTree, sumUnread, untaggedSubs } from './subscriptions.store';
 import { SubscriptionDto } from './models';
 
@@ -228,7 +232,7 @@ describe('SubscriptionsStore', () => {
     });
   });
 
-  it('loads sidebar counts at most once every ten seconds', () => {
+  it('loads sidebar counts at most once per freshness window', () => {
     jest.useFakeTimers({ now: new Date('2026-08-27T16:00:00Z') });
 
     store.loadIfStale();
@@ -240,7 +244,11 @@ describe('SubscriptionsStore', () => {
     store.loadIfStale();
     ctrl.expectNone('https://api.test/api/subscriptions');
 
-    jest.advanceTimersByTime(10_000);
+    jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS - 1);
+    store.loadIfStale();
+    ctrl.expectNone('https://api.test/api/subscriptions');
+
+    jest.advanceTimersByTime(1);
     store.loadIfStale();
     ctrl.expectOne('https://api.test/api/subscriptions').flush({
       subscriptions: [sub(1, 3)],
@@ -301,5 +309,202 @@ describe('SubscriptionsStore', () => {
       .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
     expect(store.error()?.status).toBe(500);
     expect(store.loading()).toBe(false);
+  });
+});
+
+describe('SubscriptionsStore quiet reload', () => {
+  let store: SubscriptionsStore;
+  let ctrl: HttpTestingController;
+
+  const counts = (subscriptions: SubscriptionDto[], favorites = 0, kept = 0, viewed = 0) => ({
+    subscriptions,
+    favoritesCount: favorites,
+    keptCount: kept,
+    viewedCount: viewed,
+  });
+
+  /** A settled store, one poll interval old, so a quiet reload may fire. */
+  const settleAndAge = (subscriptions: SubscriptionDto[]) => {
+    store.load();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush(counts(subscriptions, 1, 2, 3));
+    jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+  };
+
+  beforeEach(() => {
+    localStorage.clear();
+    jest.useFakeTimers({ now: new Date('2026-08-29T16:00:00Z') });
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'https://api.test' },
+      ],
+    });
+    TestBed.inject(TokenStore).set('user-a.jwt');
+    store = TestBed.inject(SubscriptionsStore);
+    ctrl = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    ctrl.verify();
+    jest.useRealTimers();
+  });
+
+  it('refreshes every count without ever raising the loading flag', () => {
+    settleAndAge([sub(1, 2)]);
+
+    store.reloadQuietlyIfStale();
+    expect(store.loading()).toBe(false);
+
+    ctrl.expectOne('https://api.test/api/subscriptions').flush(counts([sub(1, 7)], 4, 5, 6));
+    expect(store.totalUnread()).toBe(7);
+    expect(store.favoritesCount()).toBe(4);
+    expect(store.keptCount()).toBe(5);
+    expect(store.viewedCount()).toBe(6);
+    expect(store.loading()).toBe(false);
+  });
+
+  it('stands aside until a real load has resolved the store', () => {
+    // Boot order: the shell injects the poll before its own first load runs. A
+    // tick that fetched here would stamp the freshness clock, silence that
+    // load for a whole window, and leave `resolved` false — so the onboarding
+    // redirect would never get to decide anything.
+    store.reloadQuietlyIfStale();
+    ctrl.expectNone('https://api.test/api/subscriptions');
+    expect(store.resolved()).toBe(false);
+
+    store.loadIfStale();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush(counts([sub(1, 2)]));
+    expect(store.resolved()).toBe(true);
+  });
+
+  it('waits out a tick already on the wire instead of stacking on it', () => {
+    settleAndAge([sub(1, 1)]);
+    store.reloadQuietlyIfStale();
+    const slowTick = ctrl.expectOne('https://api.test/api/subscriptions');
+    jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+
+    store.reloadQuietlyIfStale();
+
+    ctrl.expectNone('https://api.test/api/subscriptions');
+    expect(slowTick.cancelled).toBe(false);
+    slowTick.flush(counts([sub(1, 4)]));
+    expect(store.totalUnread()).toBe(4);
+  });
+
+  it('leaves a load in flight alone, so its resolved state still lands', () => {
+    settleAndAge([sub(1, 1)]);
+    store.load();
+    const pendingLoad = ctrl.expectOne('https://api.test/api/subscriptions');
+    jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+
+    store.reloadQuietlyIfStale();
+    ctrl.expectNone('https://api.test/api/subscriptions');
+    expect(pendingLoad.cancelled).toBe(false);
+
+    pendingLoad.flush(counts([sub(1, 4)]));
+    expect(store.totalUnread()).toBe(4);
+    expect(store.resolved()).toBe(true);
+  });
+
+  it('drops a response the user has overtaken by reading an entry', () => {
+    settleAndAge([sub(1, 5)]);
+    store.reloadQuietlyIfStale();
+    const tick = ctrl.expectOne('https://api.test/api/subscriptions');
+
+    // The user reads one entry while the tick is on the wire. The response was
+    // counted before that, so adopting it would put the badge back up to 5.
+    store.decrementUnread(1);
+    tick.flush(counts([sub(1, 5)], 9, 9, 9));
+
+    expect(store.subscriptions()[0].unreadCount).toBe(4);
+    expect(store.favoritesCount()).toBe(1);
+  });
+
+  it('adopts the server counts again on the tick after a local change', () => {
+    settleAndAge([sub(1, 5)]);
+    store.reloadQuietlyIfStale();
+    const overtaken = ctrl.expectOne('https://api.test/api/subscriptions');
+    store.decrementUnread(1);
+    overtaken.flush(counts([sub(1, 5)]));
+
+    jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+    store.reloadQuietlyIfStale();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush(counts([sub(1, 2)], 7, 8, 9));
+
+    expect(store.subscriptions()[0].unreadCount).toBe(2);
+    expect(store.favoritesCount()).toBe(7);
+  });
+
+  it('never takes resolved back, so a tick cannot re-fire the onboarding redirect', () => {
+    settleAndAge([]);
+    const resolvedSeen: boolean[] = [];
+    TestBed.runInInjectionContext(() => effect(() => resolvedSeen.push(store.resolved())));
+    TestBed.tick();
+
+    store.reloadQuietlyIfStale();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush(counts([]));
+    TestBed.tick();
+
+    expect(resolvedSeen).toEqual([true]);
+  });
+
+  it('swallows a failed tick instead of raising the error banner', () => {
+    settleAndAge([sub(1, 5)]);
+
+    store.reloadQuietlyIfStale();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+
+    expect(store.error()).toBeNull();
+    expect(store.totalUnread()).toBe(5);
+  });
+
+  it('abandons a tick from the previous user on logout', () => {
+    settleAndAge([sub(1, 5)]);
+    store.reloadQuietlyIfStale();
+    const tick = ctrl.expectOne('https://api.test/api/subscriptions');
+
+    TestBed.inject(TokenStore).clear();
+    TestBed.tick();
+
+    // Cancelled outright, so the previous user's counts can never land in the
+    // next user's sidebar — the response is off the wire, not merely ignored.
+    expect(tick.cancelled).toBe(true);
+    expect(store.subscriptions()).toEqual([]);
+    expect(store.favoritesCount()).toBe(0);
+  });
+});
+
+describe('SubscriptionsStore against an API that answers synchronously', () => {
+  // An interceptor or a cache can answer without ever leaving the process. The
+  // subscription is then already closed by the time it reaches the in-flight
+  // slot, and parking it there would stop the poll for the rest of the session.
+  const respond = (unread: number) => ({
+    subscriptions: [sub(1, unread)],
+    favoritesCount: 0,
+    keptCount: 0,
+    viewedCount: 0,
+  });
+
+  it('keeps ticking after a response that never left the process', () => {
+    jest.useFakeTimers({ now: new Date('2026-08-29T16:00:00Z') });
+    let unread = 1;
+    const subscriptions = jest.fn(() => of(respond(++unread)));
+    TestBed.configureTestingModule({
+      providers: [SubscriptionsStore, { provide: ReaderApi, useValue: { subscriptions } }],
+    });
+    const store = TestBed.inject(SubscriptionsStore);
+
+    store.load();
+    jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+    store.reloadQuietlyIfStale();
+    jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+    store.reloadQuietlyIfStale();
+
+    expect(subscriptions).toHaveBeenCalledTimes(3);
+    expect(store.totalUnread()).toBe(4);
+    jest.useRealTimers();
   });
 });

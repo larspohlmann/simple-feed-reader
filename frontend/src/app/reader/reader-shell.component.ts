@@ -66,6 +66,7 @@ import {
 import { ActionSheet } from '../shared/action-sheet/action-sheet.service';
 import { ManageActions } from './manage/manage-actions.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
+import { SidebarCountsPoll } from './sidebar-counts-poll.service';
 import { CatalogStore } from '../discover/catalog.store';
 import { OnboardingSkip } from '../discover/onboarding-skip';
 import { ProgressHairlineComponent } from '../shared/progress-hairline/progress-hairline.component';
@@ -94,6 +95,9 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
   ],
   templateUrl: './reader-shell.component.html',
   styleUrl: './reader-shell.component.scss',
+  // Provided here, not in the root injector, so the poll cannot outlive the
+  // reader that it keeps up to date (#708).
+  providers: [SidebarCountsPoll],
 })
 export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
@@ -127,6 +131,11 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *  reader is the only place that imports it, which is what keeps it out of
    *  the initial bundle. */
   private readonly listScrollReset = inject(ListScrollReset);
+  /** Injected for its timer: it keeps every count on screen — the sidebar
+   *  badges, the list heading and the tab title, which all read the same two
+   *  stores (#709) — moving on its own while the reader is open (#708).
+   *  Holding it is what starts it, and dropping it is what stops it. */
+  private readonly countsPoll = inject(SidebarCountsPoll);
 
   /** Is the picker worth showing at all? Nothing seeds the catalog — it arrives
    *  by admin import — so a deployment without one must not redirect anybody

@@ -1,8 +1,9 @@
 import { TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { ReaderApi } from './reader-api';
 import { SavedSearchDto, SavedSearchWire } from './models';
 import { SavedSearchesStore } from './saved-searches.store';
+import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
 
 describe('SavedSearchesStore', () => {
   const rows: SavedSearchWire[] = [
@@ -167,5 +168,54 @@ describe('SavedSearchesStore', () => {
     store.setIncludeInDigest(1, true);
 
     expect(store.savedSearches().find((s) => s.id === 1)?.includeInDigest).toBe(false);
+  });
+
+  describe('the counts poll (#708)', () => {
+    beforeEach(() => jest.useFakeTimers({ now: new Date('2026-08-29T16:00:00Z') }));
+    afterEach(() => jest.useRealTimers());
+
+    it('reloads the badges only once the freshness window has elapsed', () => {
+      const savedSearches = jest.fn(() => of({ savedSearches: rows }));
+      const store = setup({ savedSearches });
+      store.load();
+      expect(savedSearches).toHaveBeenCalledTimes(1);
+
+      store.reloadIfStale();
+      jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS - 1);
+      store.reloadIfStale();
+      expect(savedSearches).toHaveBeenCalledTimes(1);
+
+      jest.advanceTimersByTime(1);
+      store.reloadIfStale();
+      expect(savedSearches).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps a badge that fell while the reload was on the wire', () => {
+      const responses = new Subject<{ savedSearches: SavedSearchWire[] }>();
+      const store = setup({ savedSearches: () => responses });
+      store.load();
+      responses.next({ savedSearches: rows });
+      jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+
+      store.reloadIfStale();
+      // The user reads a matching entry while the reload is on the wire. The
+      // server counted before that, so its four would put the badge back up.
+      store.markEntryRead(10);
+      responses.next({ savedSearches: rows });
+
+      expect(store.savedSearches()[0].unreadCount).toBe(3);
+    });
+
+    it('does not stack a second request on a reload already in flight', () => {
+      const responses = new Subject<{ savedSearches: SavedSearchWire[] }>();
+      const savedSearches = jest.fn(() => responses);
+      const store = setup({ savedSearches });
+      store.load();
+      jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+
+      store.reloadIfStale();
+
+      expect(savedSearches).toHaveBeenCalledTimes(1);
+    });
   });
 });
