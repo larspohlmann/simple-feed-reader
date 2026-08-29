@@ -25,17 +25,22 @@ use Webauthn\PublicKeyCredentialUserEntity;
  * one would only make the browser's enrolment prompt collect data nobody
  * reads.
  *
- * `PublicKeyCredentialRpEntity` is built with an empty name deliberately.
- * `web-auth/webauthn-lib` 5.3 deprecated passing a non-empty `$name` to
- * `PublicKeyCredentialEntity`'s constructor (removed in 6.0), and
- * `PublicKeyCredentialRpEntity` forwards its constructor argument to that
- * parent unshielded — unlike `PublicKeyCredentialUserEntity`, which always
- * passes `''` up and sets its own `$name` property directly afterwards. This
- * project's PHPUnit configuration turns that deprecation into a test failure
- * (`failOnDeprecation`), so `PasskeyRelyingParty::name()` is intentionally
- * not threaded through here; the normalizer already drops an empty `rp.name`
- * from the wire payload rather than emitting an empty string, so nothing is
- * lost on the wire either.
+ * `PublicKeyCredentialRpEntity` is built with an empty name, and `rp.name` is
+ * then set on the serialised array afterwards, from `PasskeyRelyingParty::
+ * name()` — NOT by threading the configured name through the entity's own
+ * constructor. Do not "clean this up" back to an empty name: `rp.name` is
+ * still a REQUIRED member of the WebAuthn IDL, and an empty one degrades the
+ * browser's and the password manager's enrolment prompt to showing the bare
+ * domain instead of the admin-configured name (#624, Task 3). The two-step
+ * shape exists only because `web-auth/webauthn-lib` 5.3 deprecated passing a
+ * non-empty `$name` to `PublicKeyCredentialEntity`'s constructor (removed in
+ * 6.0) — `PublicKeyCredentialRpEntity` forwards its constructor argument to
+ * that parent unshielded, unlike `PublicKeyCredentialUserEntity`, which
+ * always passes `''` up and sets its own `$name` property directly
+ * afterwards — and this project's PHPUnit configuration turns that
+ * deprecation into a test failure (`failOnDeprecation`). The library
+ * deprecated its own carrier for this field; the wire contract we hand the
+ * browser is ours to fill in regardless.
  */
 final readonly class RegistrationOptionsFactory
 {
@@ -75,7 +80,7 @@ final readonly class RegistrationOptionsFactory
         );
 
         return [
-            'options' => $this->serialize($options),
+            'options' => $this->serializeWithRelyingPartyName($options),
             'handle' => $this->challengeStore->issue($challenge, $user->getId()),
         ];
     }
@@ -85,6 +90,24 @@ final readonly class RegistrationOptionsFactory
         $handle = Base64UrlSafe::decodeNoPadding($this->credentials->userHandleFor($user));
 
         return PublicKeyCredentialUserEntity::create($user->getEmail(), $handle, $user->getEmail());
+    }
+
+    /**
+     * The class docblock explains why `rp.name` is stitched in here rather
+     * than passed to `PublicKeyCredentialRpEntity`.
+     *
+     * @return array<string, mixed>
+     */
+    private function serializeWithRelyingPartyName(PublicKeyCredentialCreationOptions $options): array
+    {
+        $decoded = $this->serialize($options);
+
+        /** @var array<string, mixed> $relyingParty */
+        $relyingParty = \is_array($decoded['rp'] ?? null) ? $decoded['rp'] : [];
+        $relyingParty['name'] = $this->relyingParty->name();
+        $decoded['rp'] = $relyingParty;
+
+        return $decoded;
     }
 
     /**

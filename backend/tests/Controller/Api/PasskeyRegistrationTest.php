@@ -29,7 +29,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
     public function testTheOptionsCarryTheRelyingPartyAndRequireUserVerification(): void
     {
         $client = static::createClient();
-        $this->pinRelyingPartyId('example.test');
+        $this->pinRelyingParty('example.test', 'Example Reader');
         $this->factory()->create('enroller@example.test');
         $this->authenticate($client, 'enroller@example.test');
 
@@ -44,6 +44,27 @@ final class PasskeyRegistrationTest extends ApiTestCase
         self::assertSame('required', $authenticatorSelection['userVerification']);
         self::assertSame('required', $authenticatorSelection['residentKey']);
         self::assertNotEmpty($body['handle']);
+    }
+
+    /**
+     * `rp.name` is a required WebAuthn IDL member, not decoration: the
+     * browser's and the password manager's enrolment prompt show it. Fix
+     * round 1 (#624) found `RegistrationOptionsFactory` had silently emptied
+     * it to dodge a library deprecation — this is the regression test for
+     * that. Pinned separately from `rp.id` above so this test cannot pass by
+     * accident if only one of the two ever gets threaded through.
+     */
+    public function testTheOptionsCarryTheConfiguredRelyingPartyName(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty('example.test', 'Example Reader');
+        $this->factory()->create('name-checker@example.test');
+        $this->authenticate($client, 'name-checker@example.test');
+
+        $client->request('POST', '/api/auth/passkey/register/options');
+
+        $relyingParty = $this->arrayValue($this->options($this->payload($client)), 'rp');
+        self::assertSame('Example Reader', $relyingParty['name']);
     }
 
     /**
@@ -141,7 +162,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->em()->flush();
     }
 
-    private function pinRelyingPartyId(string $relyingPartyId): void
+    private function pinRelyingParty(string $relyingPartyId, string $relyingPartyName): void
     {
         /** @var InstanceSettings $settings */
         $settings = self::getContainer()->get(InstanceSettings::class);
@@ -150,7 +171,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
             requireApproval: true,
             publicBaseUrl: null,
             passkeyRpId: $relyingPartyId,
-            passkeyRpName: null,
+            passkeyRpName: $relyingPartyName,
         ));
     }
 }
