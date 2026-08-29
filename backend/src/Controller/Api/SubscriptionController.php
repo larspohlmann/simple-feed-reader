@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Dto\Subscription\BulkUnsubscribeRequest;
+use App\Dto\Subscription\BulkUpdateSubscriptionsRequest;
 use App\Dto\Subscription\ReorderSubscriptionsRequest;
 use App\Dto\Subscription\SubscribeRequest;
 use App\Dto\Subscription\UpdateSubscriptionRequest;
+use App\Entity\Subscription;
 use App\Entity\User;
 use App\Exception\ScrapingDisabledApiException;
 use App\Http\SubscriptionJson;
@@ -14,6 +17,7 @@ use App\Repository\EntryStateRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
+use App\Service\Subscription\BulkSubscriptionUpdater;
 use App\Service\Subscription\OwnedSubscriptions;
 use App\Service\Subscription\SubscriptionService;
 use App\Service\Subscription\SubscriptionTagSync;
@@ -36,6 +40,7 @@ final readonly class SubscriptionController
         private EntryStateRepository $entryStates,
         private EntityManagerInterface $em,
         private OwnedSubscriptions $ownedSubscriptions,
+        private BulkSubscriptionUpdater $bulkUpdater,
     ) {
     }
 
@@ -140,6 +145,39 @@ final readonly class SubscriptionController
         $this->em->flush();
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+    }
+
+    /**
+     * Change tags and inclusion flags across many feeds in one request. Every
+     * id must be the caller's; one that is not answers 422 and writes nothing.
+     */
+    #[Route('/bulk', name: 'api_subscriptions_bulk_update', methods: ['PATCH'])]
+    public function bulkUpdate(
+        #[CurrentUser] User $user,
+        #[MapRequestPayload] BulkUpdateSubscriptionsRequest $request,
+    ): JsonResponse {
+        $changed = $this->bulkUpdater->apply($request, (int) $user->getId());
+
+        return new JsonResponse([
+            'subscriptions' => array_map(
+                static fn (Subscription $subscription): array => SubscriptionJson::one($subscription),
+                $changed,
+            ),
+        ]);
+    }
+
+    /**
+     * Unsubscribe from many feeds in one request. No undo: the entries go with
+     * the subscription, so the client's confirmation is the only guard.
+     */
+    #[Route('/bulk-unsubscribe', name: 'api_subscriptions_bulk_unsubscribe', methods: ['POST'])]
+    public function bulkUnsubscribe(
+        #[CurrentUser] User $user,
+        #[MapRequestPayload] BulkUnsubscribeRequest $request,
+    ): JsonResponse {
+        $byId = $this->ownedSubscriptions->resolve($request->subscriptionIds, (int) $user->getId());
+
+        return new JsonResponse(['removed' => $this->subscriptions->unsubscribeAll(array_values($byId))]);
     }
 
     #[Route('/{id}', name: 'api_subscriptions_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]

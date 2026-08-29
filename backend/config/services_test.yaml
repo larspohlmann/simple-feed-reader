@@ -540,15 +540,4 @@ services:
         autowire: true
         public: true
 
-    # BulkSubscriptionUpdaterTest drives apply() directly against the real
-    # OwnedSubscriptions/TagRepository/SubscriptionTagSync graph to prove the
-    # tag-set union/diff and the flag writes. #659's bulk-update endpoint is a
-    # later task in the same plan, so this service has no production caller
-    # yet: with nothing referencing it, RemoveUnusedDefinitionsPass would drop
-    # the definition outright, not merely leave it private — `public: true`
-    # here is what keeps it in the compiled container until that controller
-    # action wires it in.
-    App\Service\Subscription\BulkSubscriptionUpdater:
-        autowire: true
-        public: true
 
