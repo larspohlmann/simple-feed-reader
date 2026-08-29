@@ -175,6 +175,9 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'digestWeekday' => self::DIGEST_BACKUP_NOT_YET_WIRED,
             'digestLastSentAt' => 'System-written, like lastLoginAt: the next send overwrites it, '
                 . 'and a restored value would only delay that send by a stale watermark.',
+            'passkeyOfferAnsweredAt' => 'Interface state, not account configuration: it records that the '
+                . 'one-time enrolment offer was shown and answered. A restore into a fresh account should '
+                . 'let that account see the offer.',
         ],
         RecommendationSettings::class => [
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,

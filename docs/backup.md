@@ -196,6 +196,7 @@ Your "For you" **settings** are carried. Only the **results** are dropped.
 | `activeAiProviderSettings` | The pointer to the AI connection in use. It points at data that section 6.2 drops in full. |
 | `digestEnabled`, `digestCadence`, `digestSendHour`, `digestWeekday` | The email digest settings (#636). Added ahead of the backup format's support for them; a later task carries them. |
 | `digestLastSentAt` | The date the digest last sent. The next send writes it again, so a restored value would only delay that send. |
+| `passkeyOfferAnsweredAt` | Whether you have already been offered a passkey (#624). This is the state of the app on this device, not a setting of your account. A restore into a fresh account should let that account see the offer. |
 
 **On each row you own.** The preferences, the "For you" settings, each tag, each
 subscription and each article mark all hold one pointer to their owner.

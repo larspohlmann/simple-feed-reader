@@ -170,6 +170,7 @@ final class MeControllerTest extends ApiTestCase
         self::assertSame(
             [
                 'scrapeFallbackEnabled' => true,
+                'passkeyOfferAnswered' => false,
                 'digest' => [
                     'enabled' => false,
                     'cadence' => 'daily',
@@ -245,6 +246,7 @@ final class MeControllerTest extends ApiTestCase
         self::assertSame(
             [
                 'scrapeFallbackEnabled' => false,
+                'passkeyOfferAnswered' => false,
                 'digest' => [
                     'enabled' => false,
                     'cadence' => 'daily',

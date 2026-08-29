@@ -54,6 +54,13 @@ class Preferences
     #[ORM\Column(name: 'digest_last_sent_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $digestLastSentAt = null;
 
+    /**
+     * Naive UTC. Null until the account answers the one-time passkey
+     * enrolment offer (#624); once set, the offer must never show again.
+     */
+    #[ORM\Column(name: 'passkey_offer_answered_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $passkeyOfferAnsweredAt = null;
+
     public function __construct(User $user)
     {
         $this->user = $user;
@@ -127,5 +134,20 @@ class Preferences
     public function setDigestLastSentAt(?\DateTimeImmutable $digestLastSentAt): void
     {
         $this->digestLastSentAt = $digestLastSentAt;
+    }
+
+    public function getPasskeyOfferAnsweredAt(): ?\DateTimeImmutable
+    {
+        return $this->passkeyOfferAnsweredAt;
+    }
+
+    /**
+     * Idempotent by the caller's contract (see PasskeyOffer::markAnswered),
+     * not here: Preferences holds state, it does not decide whether a write
+     * is allowed to happen.
+     */
+    public function markPasskeyOfferAnswered(\DateTimeImmutable $at): void
+    {
+        $this->passkeyOfferAnsweredAt = $at;
     }
 }
