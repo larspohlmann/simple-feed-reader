@@ -24,16 +24,19 @@
   gap: var(--space-3);
 }
 
+// A stacked flex column left both pills at their own shrink-to-fit width --
+// "New tag" narrower than "Add feed" -- which read as two mismatched lengths
+// rather than one block (#659 round 4). `<app-settings-group>`'s `.g-actions`
+// wraps to content width itself (view-encapsulated, so it cannot be widened
+// from here), so stretching `.header-actions` to "100%" had nothing wider to
+// stretch against. Grid's default `justify-items: stretch` sizes the column
+// to the widest item's own content and stretches every item to match it --
+// no dependency on an ancestor's width, and both buttons end up the same
+// width as "Add feed", the longer of the two.
 @media (width <= bp.$bp-sm) {
   .header-actions {
-    flex-direction: column;
-    align-items: stretch;
-
-    // `.g-actions`'s own `margin-left: auto` only has room to act while this
-    // wrapper is narrower than the row it sits in; claiming the full width
-    // here is what turns the two same-height pills into an even, stacked
-    // pair instead of a right-aligned cluster.
-    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
   }
 }
 
@@ -214,7 +217,17 @@
 // above) so a tag card's edge lines up with "Select all" / the filter input
 // above it, not with the (now nonexistent) panel border a plain edge-to-edge
 // card would otherwise align to.
+
+// This region sits OUTSIDE `<app-settings-stack>` now, not as its second
+// child (#659 round 4): the stack's `--space-7` gap is the rhythm between
+// distinct settings groups on a page, and the toolbar-plus-tree here is one
+// section, not two -- using the between-groups gap on top of `.tree`'s own
+// `margin-top` produced a 60px dead gap on a phone (measured: 48px stack gap
+// + 12px `.tree` margin, with `.tree-region`'s own top padding at 0). One
+// `margin-top` here, matching `.tree`'s inter-card `gap` below, is the
+// single deliberate value instead.
 .tree-region {
+  margin-top: var(--space-4);
   padding: 0 var(--panel-inset-x) var(--panel-inset-y);
 }
 
@@ -267,18 +280,19 @@
   color: var(--text-muted);
 }
 
+// `margin-top` lives on `.tree-region` itself now (above), not here: it
+// applies once, whichever view is showing, instead of being duplicated on
+// both `.tree` and `.list`.
 .tree {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  margin-top: var(--space-3);
 }
 
 // The list has no per-row card the way a tag panel does, so the list itself
 // is the page's one box for that view -- the same card treatment a tag panel
 // gives itself below, not the group panel this page no longer wraps it in.
 .list {
-  margin-top: var(--space-3);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface-1);

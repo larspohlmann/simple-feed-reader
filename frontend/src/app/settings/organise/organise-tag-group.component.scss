@@ -66,7 +66,19 @@
 // item's default `min-width: auto` otherwise floors it at that width, and
 // with no `white-space: nowrap` the browser wraps a long German compound
 // (e.g. "Wissenschaft") mid-word to make room instead of truncating it.
+
+// `flex: 1 1 auto` claims any leftover room in the row (#659 round 4): with
+// the old `flex: 0 1 auto` default, the name never grew, so a short tag's
+// row (e.g. "Tech") left its slack sitting unused between `.count` and
+// `.acts` -- `.acts`'s own `margin-left: auto` (below) claimed it instead,
+// which visibly right-aligned the icons on short rows while a long name a
+// few rows down had nothing left to shrink into and truncated early even
+// though the card was evidently wide enough. Now the name is first in line
+// for whatever room a row actually has; `.acts` no longer needs its own
+// auto margin to reach the row's right edge, because a growing name already
+// fills the row up to it.
 .name {
+  flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   font-size: var(--fs-sm);
@@ -86,7 +98,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-0);
-  margin-left: auto;
 }
 
 // Indented past the head row's own left inset so a feed visibly nests under

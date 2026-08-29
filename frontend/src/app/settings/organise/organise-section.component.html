@@ -148,116 +148,116 @@
       </div>
     </div>
   </app-settings-group>
+</app-settings-stack>
 
-  <!-- The tree/list is a plain region, not a second `<app-settings-group>` panel:
+<!-- The tree/list is a plain region, not a second `<app-settings-group>` panel:
        wrapping it in a group nested this page's own tag cards inside the
        group's own card, reading as "boxes inside a box" (#659). The repeated
        unit here -- a tag card, a plain feed row -- is the only box; this
        region itself carries no border, background or shadow of its own. -->
-  <div class="tree-region">
-    <!-- Zero-height sticky dock (docs/design-language.md #3 "Sticky and scroll"):
-         the dock itself never reserves flow height, so the bar toggling on and
-         off never shifts the toolbar above it. The tree/list below reserves its
-         own top space (`.has-bulk-bar`) so the floating bar never covers the
-         first row. -->
-    <div class="bulk-dock">
-      @if (store.selectedCount() > 0) {
-        <div class="bulk" data-test="bulk-bar">
-          <span class="count" data-test="bulk-count">{{
-            'settings.organise.selectedCount' | transloco: { count: store.selectedCount() }
+<div class="tree-region">
+  <!-- Zero-height sticky dock (docs/design-language.md #3 "Sticky and scroll"):
+       the dock itself never reserves flow height, so the bar toggling on and
+       off never shifts the toolbar above it. The tree/list below reserves its
+       own top space (`.has-bulk-bar`) so the floating bar never covers the
+       first row. -->
+  <div class="bulk-dock">
+    @if (store.selectedCount() > 0) {
+      <div class="bulk" data-test="bulk-bar">
+        <span class="count" data-test="bulk-count">{{
+          'settings.organise.selectedCount' | transloco: { count: store.selectedCount() }
+        }}</span>
+        @if (store.hiddenSelectedCount() > 0) {
+          <span class="hidden" data-test="bulk-hidden">{{
+            'settings.organise.hiddenCount' | transloco: { count: store.hiddenSelectedCount() }
           }}</span>
-          @if (store.hiddenSelectedCount() > 0) {
-            <span class="hidden" data-test="bulk-hidden">{{
-              'settings.organise.hiddenCount' | transloco: { count: store.hiddenSelectedCount() }
-            }}</span>
-          }
-          <span class="spacer"></span>
-          <app-button size="sm" [disabled]="store.busy()" (click)="openTagDialog('add')">
-            {{ 'settings.organise.addTag' | transloco }}
-          </app-button>
-          <app-button size="sm" [disabled]="store.busy()" (click)="openTagDialog('remove')">
-            {{ 'settings.organise.removeTag' | transloco }}
-          </app-button>
-          <!-- Four commands, not two toggles: a toggle over a mixed selection has no
-             correct starting position. They sit behind one menu so the bar stays
-             narrow enough to hold every action on one line. -->
-          <div
-            class="menu"
-            [appDismissOnOutside]="visibilityOpen()"
-            (dismiss)="visibilityOpen.set(false)"
-          >
-            <app-button
-              size="sm"
-              data-test="visibility"
-              [disabled]="store.busy()"
-              (click)="visibilityOpen.set(!visibilityOpen())"
-            >
-              {{ 'settings.organise.visibility' | transloco }}
-              <app-icon name="expand_more" size="sm" />
-            </app-button>
-            @if (visibilityOpen()) {
-              <div class="pop" role="menu">
-                @for (item of visibilityMenuItems; track item.labelKey) {
-                  <button role="menuitem" (click)="chooseVisibility(item)">
-                    {{ item.labelKey | transloco }}
-                  </button>
-                }
-              </div>
-            }
-          </div>
+        }
+        <span class="spacer"></span>
+        <app-button size="sm" [disabled]="store.busy()" (click)="openTagDialog('add')">
+          {{ 'settings.organise.addTag' | transloco }}
+        </app-button>
+        <app-button size="sm" [disabled]="store.busy()" (click)="openTagDialog('remove')">
+          {{ 'settings.organise.removeTag' | transloco }}
+        </app-button>
+        <!-- Four commands, not two toggles: a toggle over a mixed selection has no
+           correct starting position. They sit behind one menu so the bar stays
+           narrow enough to hold every action on one line. -->
+        <div
+          class="menu"
+          [appDismissOnOutside]="visibilityOpen()"
+          (dismiss)="visibilityOpen.set(false)"
+        >
           <app-button
             size="sm"
-            variant="danger-outline"
-            data-test="bulk-unsubscribe"
+            data-test="visibility"
             [disabled]="store.busy()"
-            (click)="unsubscribeSelected()"
+            (click)="visibilityOpen.set(!visibilityOpen())"
           >
-            {{ 'reader.unsubscribe' | transloco }}
+            {{ 'settings.organise.visibility' | transloco }}
+            <app-icon name="expand_more" size="sm" />
           </app-button>
-          <app-button size="sm" [disabled]="store.busy()" (click)="store.clearSelection()">
-            {{ 'settings.organise.clear' | transloco }}
-          </app-button>
+          @if (visibilityOpen()) {
+            <div class="pop" role="menu">
+              @for (item of visibilityMenuItems; track item.labelKey) {
+                <button role="menuitem" (click)="chooseVisibility(item)">
+                  {{ item.labelKey | transloco }}
+                </button>
+              }
+            </div>
+          }
         </div>
-      }
-    </div>
-
-    @if (error(); as problem) {
-      <app-error-banner class="state" [message]="problem.detail || problem.title" />
-    }
-
-    @if (subs.loading()) {
-      <app-skeleton class="state" [label]="'settings.organise.loading' | transloco" [rows]="6" />
-    } @else if (store.view() === 'tree') {
-      <div class="tree" [class.has-bulk-bar]="store.selectedCount() > 0" cdkDropListGroup>
-        @for (group of store.groups(); track group.key; let i = $index, last = $last) {
-          <app-organise-tag-group
-            [group]="group"
-            [canMoveTagUp]="group.tag !== null && i > 0 && !store.filterActive()"
-            [canMoveTagDown]="
-              group.tag !== null &&
-              !last &&
-              store.groups()[i + 1].tag !== null &&
-              !store.filterActive()
-            "
-            (moveTagUp)="moveTag(group, -1)"
-            (moveTagDown)="moveTag(group, 1)"
-          />
-        }
-      </div>
-    } @else {
-      <div class="list" [class.has-bulk-bar]="store.selectedCount() > 0">
-        @for (s of store.listRows(); track s.id) {
-          <app-organise-feed-row
-            [subscription]="s"
-            [selected]="store.selectedIds().has(s.id)"
-            (selectedChange)="store.toggleFeed(s.id)"
-            (edit)="manage.editSubscription(s)"
-            (toggleAllItems)="manage.setIncludeInAllItems(s, !s.includeInAllItems)"
-            (toggleForYou)="manage.setIncludeInForYou(s, !s.includeInForYou)"
-            (unsubscribe)="manage.unsubscribe(s)"
-          />
-        }
+        <app-button
+          size="sm"
+          variant="danger-outline"
+          data-test="bulk-unsubscribe"
+          [disabled]="store.busy()"
+          (click)="unsubscribeSelected()"
+        >
+          {{ 'reader.unsubscribe' | transloco }}
+        </app-button>
+        <app-button size="sm" [disabled]="store.busy()" (click)="store.clearSelection()">
+          {{ 'settings.organise.clear' | transloco }}
+        </app-button>
       </div>
     }
   </div>
-</app-settings-stack>
+
+  @if (error(); as problem) {
+    <app-error-banner class="state" [message]="problem.detail || problem.title" />
+  }
+
+  @if (subs.loading()) {
+    <app-skeleton class="state" [label]="'settings.organise.loading' | transloco" [rows]="6" />
+  } @else if (store.view() === 'tree') {
+    <div class="tree" [class.has-bulk-bar]="store.selectedCount() > 0" cdkDropListGroup>
+      @for (group of store.groups(); track group.key; let i = $index, last = $last) {
+        <app-organise-tag-group
+          [group]="group"
+          [canMoveTagUp]="group.tag !== null && i > 0 && !store.filterActive()"
+          [canMoveTagDown]="
+            group.tag !== null &&
+            !last &&
+            store.groups()[i + 1].tag !== null &&
+            !store.filterActive()
+          "
+          (moveTagUp)="moveTag(group, -1)"
+          (moveTagDown)="moveTag(group, 1)"
+        />
+      }
+    </div>
+  } @else {
+    <div class="list" [class.has-bulk-bar]="store.selectedCount() > 0">
+      @for (s of store.listRows(); track s.id) {
+        <app-organise-feed-row
+          [subscription]="s"
+          [selected]="store.selectedIds().has(s.id)"
+          (selectedChange)="store.toggleFeed(s.id)"
+          (edit)="manage.editSubscription(s)"
+          (toggleAllItems)="manage.setIncludeInAllItems(s, !s.includeInAllItems)"
+          (toggleForYou)="manage.setIncludeInForYou(s, !s.includeInForYou)"
+          (unsubscribe)="manage.unsubscribe(s)"
+        />
+      }
+    </div>
+  }
+</div>
