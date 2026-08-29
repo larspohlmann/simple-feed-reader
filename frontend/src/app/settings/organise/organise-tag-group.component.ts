@@ -9,7 +9,8 @@ import { OrganiseGroup, OrganiseStore } from './organise.store';
 import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
 import { ManageActions } from '../../reader/manage/manage-actions.service';
 import { LayoutService } from '../../reader/layout.service';
-import { SubscriptionDto, isSubscriptionDrag } from '../../reader/models';
+import { LanguageService } from '../../core/language.service';
+import { SubscriptionDto, TagDto, isSubscriptionDrag, isTagDrag } from '../../reader/models';
 
 /**
  * One tag panel: a header row, and — when open — its feeds.
@@ -50,6 +51,7 @@ export class OrganiseTagGroupComponent {
   protected readonly manage = inject(ManageActions);
   protected readonly screen = inject(LayoutService);
   private readonly i18n = inject(TranslocoService);
+  private readonly language = inject(LanguageService);
 
   /** Drag is pointer-only. On a phone a drag inside a scrolling page fights the
    *  scroll — the sidebar needed a long-press guard and a whole Organise mode
@@ -64,12 +66,26 @@ export class OrganiseTagGroupComponent {
     () => this.screen.isCoarse() || this.store.filterActive(),
   );
 
+  /** The header's own drag source is additionally off for the untagged
+   *  group: it is not a tag, has no position among tags.reorderTags(), and
+   *  always sits last (see GroupKey's comment) — dragging it to "reorder"
+   *  would have nothing to write. */
+  protected readonly headerDragDisabled = computed(
+    () => this.dragDisabled() || this.group().tag === null,
+  );
+
   protected readonly expanded = computed(() => this.store.isExpanded(this.group().key));
   protected readonly state = computed(() => this.store.groupState(this.group()));
 
-  protected readonly label = computed(
-    () => this.group().tag?.name ?? this.i18n.translate('settings.organise.untagged'),
-  );
+  protected readonly label = computed(() => {
+    // Read as a dependency, not used directly: TranslocoService.translate() is
+    // one-shot, so the untagged group's name would keep the language it was
+    // first computed in unless a language signal pulls this computed through
+    // a re-evaluation on a switch (the same trap as reader-shell.component.ts's
+    // `title`, #411 / #659).
+    this.language.lang();
+    return this.group().tag?.name ?? this.i18n.translate('settings.organise.untagged');
+  });
 
   protected toggle(): void {
     this.store.toggleGroup(this.group().key);
@@ -89,12 +105,11 @@ export class OrganiseTagGroupComponent {
     this.persistOrder(ids);
   }
 
-  /** A drop inside this group reorders it; a drop from another group moves the
-   *  feed between tags. The head row is itself a `cdkDrag` (so its drop list
-   *  can highlight while a feed hovers it, matching the sidebar), which means
-   *  a dropped item can also be the tag header itself — this component has no
-   *  cross-group view to reorder tags by drag (that is the arrows' job), so a
-   *  non-feed drop is ignored rather than treated as a subscription. */
+  /** A drop inside this group's feed list reorders it; a drop from another
+   *  group's feed list moves the feed between tags. This list only ever
+   *  carries feeds, so a non-feed drop (a dragged tag header, which the
+   *  cross-group `cdkDropListGroup` also lets reach here) is ignored rather
+   *  than treated as a subscription. */
   onFeedDropped(event: CdkDragDrop<OrganiseGroup>): void {
     if (!isSubscriptionDrag(event.item.data)) return;
     const subscription = event.item.data;
@@ -108,6 +123,39 @@ export class OrganiseTagGroupComponent {
       subscription,
       this.tagIdsAfterMove(subscription, event.previousContainer.data),
     );
+  }
+
+  /** A drop on this group's HEADER: a dragged feed still adds this tag (same
+   *  write as dropping it in the body — delegated to onFeedDropped so that
+   *  rule exists once), and a dragged tag header reorders the tags
+   *  themselves. The header is the only list a tag header can sensibly be
+   *  dropped on: a tag has no body list of its own to sort into. */
+  onHeaderDropped(event: CdkDragDrop<OrganiseGroup>): void {
+    if (isSubscriptionDrag(event.item.data)) {
+      this.onFeedDropped(event);
+      return;
+    }
+    if (isTagDrag(event.item.data)) {
+      this.reorderDroppedTag(event.item.data);
+    }
+  }
+
+  /** Persists a tag reorder from a header-to-header drag. The order comes
+   *  from `store.tags()` — the full, unfiltered tag list — never
+   *  `group().subscriptions`/`group()`'s own filtered view: the same reason
+   *  persistOrder() below reads the unfiltered list for feeds. Mirrors
+   *  OrganiseSectionComponent.moveTag(), the arrows' own equivalent. */
+  private reorderDroppedTag(draggedTag: TagDto): void {
+    if (this.store.filterActive()) return;
+    const targetTag = this.group().tag;
+    if (targetTag === null || draggedTag.id === targetTag.id) return;
+
+    const ids = this.store.tags().map((t) => t.id);
+    const from = ids.indexOf(draggedTag.id);
+    const to = ids.indexOf(targetTag.id);
+    if (from < 0 || to < 0) return;
+    moveItemInArray(ids, from, to);
+    this.manage.reorderTags(ids);
   }
 
   private reorderTo(subscription: SubscriptionDto, from: number, to: number): void {

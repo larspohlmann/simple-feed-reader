@@ -6,9 +6,9 @@
     cdkDropList
     [cdkDropListData]="group()"
     [cdkDropListSortingDisabled]="true"
-    (cdkDropListDropped)="onFeedDropped($event)"
+    (cdkDropListDropped)="onHeaderDropped($event)"
   >
-    <div class="head" cdkDrag [cdkDragData]="group()" [cdkDragDisabled]="dragDisabled()">
+    <div class="head" cdkDrag [cdkDragData]="group().tag" [cdkDragDisabled]="headerDragDisabled()">
       <button
         type="button"
         class="chev"

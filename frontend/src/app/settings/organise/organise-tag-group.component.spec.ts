@@ -10,6 +10,7 @@ import { TagsStore } from '../../reader/tags.store';
 import { ManageActions } from '../../reader/manage/manage-actions.service';
 import { LayoutService } from '../../reader/layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
+import { LanguageService } from '../../core/language.service';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 
 const TECH: TagDto = { id: 2, name: 'Tech', color: null, icon: null, position: 0 };
@@ -73,6 +74,7 @@ describe('OrganiseTagGroupComponent', () => {
   const manage = {
     reorderTagFeeds: jest.fn(),
     reorderUntagged: jest.fn(),
+    reorderTags: jest.fn(),
     retag: jest.fn(),
     editTag: jest.fn(),
     deleteTag: jest.fn(),
@@ -101,7 +103,7 @@ describe('OrganiseTagGroupComponent', () => {
             provide: SubscriptionsStore,
             useValue: { subscriptions: signal([SUB_A, SUB_B, SUB_WITH_TWO_TAGS]) },
           },
-          { provide: TagsStore, useValue: { tags: signal([TECH, OTHER_TAG]) } },
+          { provide: TagsStore, useValue: { tags: signal([TECH, OTHER_TAG, THIRD_TAG]) } },
         ],
       })
       .compileComponents();
@@ -121,6 +123,26 @@ describe('OrganiseTagGroupComponent', () => {
     await render({ ...GROUP, subscriptions: [SUB_A], totalCount: 12 });
 
     expect(fixture.nativeElement.textContent).toContain('12');
+  });
+
+  /**
+   * The `label` computed used to call TranslocoService.translate() directly
+   * without reading a language signal — a one-shot read that never
+   * re-evaluates on a switch (the same #411 trap reader-shell.component.ts
+   * documents at line 340). The untagged group's name would then keep
+   * reading "Untagged" in German while every transloco-pipe label in the
+   * same header (e.g. the feed count) switched, visibly mixing languages
+   * (#659 review).
+   */
+  it('translates the untagged group name on a language switch', async () => {
+    await render(UNTAGGED_GROUP);
+
+    expect(fixture.debugElement.query(By.css('.name')).nativeElement.textContent).toBe('Untagged');
+
+    TestBed.inject(LanguageService).set('de');
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('.name')).nativeElement.textContent).toBe('Ohne Tag');
   });
 
   it('renders no feed rows while the group is collapsed', async () => {
@@ -259,13 +281,10 @@ describe('OrganiseTagGroupComponent', () => {
   it('ignores a dropped tag header instead of mistaking it for a feed', async () => {
     const { manage, component } = await render(THIRD_GROUP);
 
-    // The head row is itself a cdkDrag carrying the GROUP as its payload
-    // (see the template). Once the page wires a cdkDropListGroup around
-    // several tag groups (Task 11), a tag header becomes a droppable item on
-    // any group's drop lists — including this one. Without the isFeedDrag
-    // guard, `event.item.data` would be treated as a SubscriptionDto and
-    // `subscription.tags.map(...)` would throw, since an OrganiseGroup has
-    // no `tags` field.
+    // The feed list's own drop handler must never treat a non-feed payload
+    // as a SubscriptionDto — `subscription.tags.map(...)` would throw, since
+    // neither an OrganiseGroup nor a TagDto has a `tags` field. Tag-header
+    // drags are handled by onHeaderDropped instead (see the tests below).
     component.onFeedDropped({
       previousContainer: { data: GROUP },
       container: { data: THIRD_GROUP },
@@ -277,6 +296,73 @@ describe('OrganiseTagGroupComponent', () => {
     expect(manage.retag).not.toHaveBeenCalled();
     expect(manage.reorderTagFeeds).not.toHaveBeenCalled();
     expect(manage.reorderUntagged).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The tag header is a `cdkDrag` and its own `cdkDropList` accepts drops, but
+   * nothing used to act on a dropped TAG — only a dropped feed. The design
+   * spec calls for tag reordering by drag, same as feeds; ManageActions.
+   * reorderTags(tagIds) is the write, and the order comes from the full,
+   * unfiltered tags list (store.tags()), not the filtered group() (#659
+   * review).
+   */
+  it('reorders tags when a tag header is dropped on another tag header', async () => {
+    const { manage, component } = await render(THIRD_GROUP);
+
+    // store.tags() = [TECH(2), OTHER_TAG(4), THIRD_TAG(6)]. Dragging TECH and
+    // dropping it on THIRD_GROUP's header (6) moves it after THIRD_TAG.
+    component.onHeaderDropped({
+      previousContainer: { data: GROUP },
+      container: { data: THIRD_GROUP },
+      item: { data: TECH },
+      previousIndex: 0,
+      currentIndex: 0,
+    } as never);
+
+    expect(manage.reorderTags).toHaveBeenCalledWith([OTHER_TAG.id, THIRD_TAG.id, TECH.id]);
+  });
+
+  it('does nothing when a tag is dropped on its own header', async () => {
+    const { manage, component } = await render(THIRD_GROUP);
+
+    component.onHeaderDropped({
+      previousContainer: { data: THIRD_GROUP },
+      container: { data: THIRD_GROUP },
+      item: { data: THIRD_TAG },
+      previousIndex: 0,
+      currentIndex: 0,
+    } as never);
+
+    expect(manage.reorderTags).not.toHaveBeenCalled();
+  });
+
+  it('ignores a tag-header reorder drop under an active filter, and writes nothing', async () => {
+    const { store, manage, component } = await render(THIRD_GROUP);
+    store.titleFilter.set('heise');
+
+    component.onHeaderDropped({
+      previousContainer: { data: GROUP },
+      container: { data: THIRD_GROUP },
+      item: { data: TECH },
+      previousIndex: 0,
+      currentIndex: 0,
+    } as never);
+
+    expect(manage.reorderTags).not.toHaveBeenCalled();
+  });
+
+  it('still adds the tag when a feed is dropped on the header (delegates to the feed drop)', async () => {
+    const { manage, component } = await render(THIRD_GROUP);
+
+    component.onHeaderDropped({
+      previousContainer: { data: GROUP },
+      container: { data: THIRD_GROUP },
+      item: { data: SUB_WITH_TWO_TAGS },
+      previousIndex: 0,
+      currentIndex: 0,
+    } as never);
+
+    expect(manage.retag).toHaveBeenCalledWith(SUB_WITH_TWO_TAGS, [OTHER_TAG.id, THIRD_TAG.id]);
   });
 
   it('turns drag off on a coarse pointer, keeping the arrows', async () => {
