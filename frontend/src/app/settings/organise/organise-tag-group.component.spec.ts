@@ -377,43 +377,41 @@ describe('OrganiseTagGroupComponent', () => {
    * headerDragDisabled() has its own three off-switches (coarse pointer,
    * active filter, untagged group) plus the all-clear case — none of them
    * previously had a test of their own, only the write-guards inside
-   * reorderDroppedTag() (#659 review). The DOM assertion, not just the
-   * computed's return value, is what would catch the template's
-   * `[cdkDragDisabled]="headerDragDisabled()"` binding coming decoupled from
-   * the computed: CdkDrag reflects its `disabled` input as the
+   * reorderDroppedTag() (#659 review). These assert on the DOM rather than on
+   * headerDragDisabled()'s return value -- partly because the computed is
+   * protected, but mostly because the DOM check is the stronger of the two: it
+   * is what catches the template's `[cdkDragDisabled]="headerDragDisabled()"`
+   * binding coming decoupled from the computed, which a check of the computed
+   * alone sails straight past. CdkDrag reflects its `disabled` input as the
    * `cdk-drag-disabled` host class.
    */
   describe('headerDragDisabled', () => {
     it('disables the header drag on a coarse pointer', async () => {
-      const { component } = await render(GROUP, { coarse: true });
+      await render(GROUP, { coarse: true });
 
-      expect(component.headerDragDisabled()).toBe(true);
       const head = fixture.debugElement.query(By.css('.head')).nativeElement;
       expect(head.classList.contains('cdk-drag-disabled')).toBe(true);
     });
 
     it('disables the header drag under an active filter', async () => {
-      const { store, component } = await render(GROUP);
+      const { store } = await render(GROUP);
       store.titleFilter.set('heise');
       fixture.detectChanges();
 
-      expect(component.headerDragDisabled()).toBe(true);
       const head = fixture.debugElement.query(By.css('.head')).nativeElement;
       expect(head.classList.contains('cdk-drag-disabled')).toBe(true);
     });
 
     it('disables the header drag for the untagged group, which has no tag to reorder', async () => {
-      const { component } = await render(UNTAGGED_GROUP);
+      await render(UNTAGGED_GROUP);
 
-      expect(component.headerDragDisabled()).toBe(true);
       const head = fixture.debugElement.query(By.css('.head')).nativeElement;
       expect(head.classList.contains('cdk-drag-disabled')).toBe(true);
     });
 
     it('leaves the header drag enabled with a fine pointer, no filter, and a real tag', async () => {
-      const { component } = await render(GROUP);
+      await render(GROUP);
 
-      expect(component.headerDragDisabled()).toBe(false);
       const head = fixture.debugElement.query(By.css('.head')).nativeElement;
       expect(head.classList.contains('cdk-drag-disabled')).toBe(false);
     });
