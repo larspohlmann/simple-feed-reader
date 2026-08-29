@@ -1,5 +1,7 @@
 import { Injectable, Signal, computed, inject, signal } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { ReaderApi } from './reader-api';
+import { countsAreStale } from './sidebar-freshness';
 import { SavedSearchDto, SavedSearchWire } from './models';
 
 /** The user's saved searches, newest first, each with a live unread-match
@@ -24,6 +26,11 @@ export class SavedSearchesStore {
    *  when the backend re-counts from scratch. */
   private readonly readSinceLoad = signal<ReadonlySet<number>>(new Set());
 
+  /** When the badges were last asked for, and the request still out for them —
+   *  the two things the counts poll needs to know before it spends a tick. */
+  private lastLoadedAt = 0;
+  private inFlight: Subscription | null = null;
+
   /** The sidebar view: each search with its unread count, the matches read
    *  since the last load already subtracted. */
   readonly savedSearches: Signal<SavedSearchDto[]> = computed(() => {
@@ -40,12 +47,38 @@ export class SavedSearchesStore {
   });
 
   load(): void {
-    this.api.savedSearches().subscribe({
+    this.lastLoadedAt = Date.now();
+    this.inFlight?.unsubscribe();
+    const readsWhenSent = this.readSinceLoad();
+    const request = this.api.savedSearches().subscribe({
       next: (r) => {
+        this.inFlight = null;
         this.loaded.set(r.savedSearches);
-        this.readSinceLoad.set(new Set());
+        // The server re-counted, so the reads it has already seen are spent.
+        // The ones that arrived while this request was on the wire are NOT in
+        // its tally, and dropping them would put a badge the user just knocked
+        // down straight back up (#708).
+        this.readSinceLoad.update(
+          (read) => new Set([...read].filter((id) => !readsWhenSent.has(id))),
+        );
       },
     });
+    // A response that came back synchronously has already left; parking its
+    // closed subscription here would jam the in-flight guard for good.
+    this.inFlight = request.closed ? null : request;
+  }
+
+  /** The counts poll's reload (#708). `load()` is already silent — this store
+   *  has no loading flag and no banner — so the poll needs no separate quiet
+   *  path, only the two rules that keep a tick from doing harm: never refetch
+   *  inside the freshness window, and never stack on a request already out.
+   *
+   *  The badges the user has already knocked down are the third rule, and it
+   *  lives in `load()`'s response below. */
+  reloadIfStale(): void {
+    if (this.inFlight) return;
+    if (!countsAreStale(this.lastLoadedAt)) return;
+    this.load();
   }
 
   /** Drop an entry from every saved-search unread tally, the moment it is read.

@@ -27,6 +27,7 @@ import { ReaderShellComponent } from './reader-shell.component';
 import { EntryListComponent } from './entry-list/entry-list.component';
 import { ListScrollMemory } from './list-scroll-memory';
 import { EntryDto, SavedSearchDto, SavedSearchWire } from './models';
+import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
 import { SubscriptionsStore } from './subscriptions.store';
 import { Selection } from './query';
 import { ReaderHeaderComponent } from './header/reader-header.component';
@@ -1031,16 +1032,20 @@ describe('ReaderShellComponent', () => {
       expect(finishReloads.some((req) => req.request.url.endsWith('/api/entries'))).toBe(true);
       // Tags reload exactly once, here at the finish — never on the partial slice above.
       expect(finishReloads.filter((req) => req.request.url.endsWith('/api/tags')).length).toBe(1);
-      finishReloads.forEach((req) =>
-        req.flush({
-          entries: [],
-          nextCursor: null,
-          subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: '2026-08-21T00:00:00Z' }],
-          favoritesCount: 0,
-          keptCount: 0,
-          tags: [],
-        }),
-      );
+      // Skip the cancelled ones: each store abandons a request the next slice's
+      // reload supersedes, so the queue holds some that can no longer answer.
+      finishReloads
+        .filter((req) => !req.cancelled)
+        .forEach((req) =>
+          req.flush({
+            entries: [],
+            nextCursor: null,
+            subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: '2026-08-21T00:00:00Z' }],
+            favoritesCount: 0,
+            keptCount: 0,
+            tags: [],
+          }),
+        );
       ctrl.verify();
     });
   });
@@ -1136,7 +1141,7 @@ describe('ReaderShellComponent', () => {
   it('reloads entries and sidebar counts when the selection changes (#664)', () => {
     jest.useFakeTimers({ now: new Date('2026-08-27T16:00:00Z') });
     const f = boot();
-    jest.advanceTimersByTime(10_000);
+    jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
     qp.next(convertToParamMap({ subscription: '5' }));
     f.detectChanges();
     ctrl
@@ -2769,6 +2774,71 @@ describe('ReaderShellComponent', () => {
       const f = bootWithSearchSelected([savedClimate]);
       const button = (f.nativeElement as HTMLElement).querySelector('.save-search')!;
       expect(button.querySelector('.txt-short')?.textContent).toBe('Remove');
+    });
+  });
+
+  describe('the counts poll (#708)', () => {
+    afterEach(() => jest.useRealTimers());
+
+    // The poll's interval is created while the reader is built, so the fake
+    // clock has to be in place before that — installed afterwards, it would
+    // never own the timer it is supposed to drive.
+    beforeEach(() => jest.useFakeTimers());
+
+    it('refreshes the sidebar counts on its own while the reader is open', () => {
+      const f = boot();
+
+      jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+
+      // Both count endpoints, with no user action of any kind in between.
+      ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
+      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+      f.detectChanges();
+    });
+
+    // The property that matters across #708 and #709: there is ONE number per
+    // surface, held in the stores, and the sidebar badge, the list heading and
+    // the tab title all read it. A tick moves the store, so it moves all three
+    // at once — none of them can be refreshed and leave another behind.
+    it('moves the sidebar badge, the list heading and the tab title on one tick', () => {
+      const f = boot();
+      expect(TestBed.inject(Title).getTitle()).toBe('All items (2) | simple feed reader');
+
+      jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+      ctrl.expectOne('https://api.test/api/subscriptions').flush({
+        ...subsBody,
+        subscriptions: [{ ...subsBody.subscriptions[0], unreadCount: 9 }],
+      });
+      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+      f.detectChanges();
+
+      expect(TestBed.inject(SubscriptionsStore).totalUnread()).toBe(9);
+      const list = f.debugElement.query(By.directive(EntryListComponent));
+      expect(list.componentInstance.titleCount()).toEqual({ value: 9, counts: 'unread' });
+      expect(TestBed.inject(Title).getTitle()).toBe('All items (9) | simple feed reader');
+    });
+
+    it('ends with the reader, so a closed reader polls nothing', () => {
+      const f = boot();
+
+      f.destroy();
+      jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS * 5);
+
+      ctrl.expectNone('https://api.test/api/subscriptions');
+      ctrl.expectNone('https://api.test/api/saved-searches');
+    });
+  });
+
+  // Its own describe: this one needs the real clock, because a fake one hides
+  // exactly the defect it is here to catch.
+  describe('the counts poll and Angular zone stability (#708)', () => {
+    it('leaves the zone stable, so anything awaiting the app still resolves', async () => {
+      const f = boot();
+
+      // A repeating timer scheduled INSIDE the Angular zone is a macrotask that
+      // never finishes, so the zone never settles and every `whenStable()` in
+      // the app hangs until it times out. The poll schedules outside the zone.
+      await expect(f.whenStable()).resolves.toBeDefined();
     });
   });
 });
