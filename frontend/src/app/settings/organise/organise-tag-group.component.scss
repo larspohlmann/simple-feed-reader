@@ -1,0 +1,96 @@
+// src/app/settings/organise/organise-tag-group.component.scss
+:host {
+  display: block;
+}
+
+.panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+  box-shadow: var(--panel-shadow);
+  overflow: hidden;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--row-pad-y) var(--row-pad-x);
+  min-height: var(--tap-target);
+}
+
+.head-drop.cdk-drop-list-dragging,
+.head-drop:has(.cdk-drag-preview) {
+  background: var(--accent-soft);
+}
+
+.chev,
+.ib {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.ib:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.ib.danger {
+  color: var(--danger);
+}
+
+/* Guarded by (hover: hover): on a touch device the tap that presses this
+   button also fires :hover, and with no separate release event the hover
+   style sticks until something else is tapped (#704). */
+@media (hover: hover) {
+  .chev:hover,
+  .ib:hover:not(:disabled) {
+    background: var(--surface-0);
+    color: var(--text-primary);
+  }
+
+  .ib.danger:hover:not(:disabled) {
+    color: var(--danger);
+  }
+}
+
+.name {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.count {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.acts {
+  display: flex;
+  align-items: center;
+  gap: var(--space-0);
+  margin-left: auto;
+}
+
+.feeds {
+  border-top: 1px solid var(--border);
+}
+
+.feeds > div + div {
+  border-top: 1px solid var(--border);
+}
+
+.empty {
+  margin: 0;
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
