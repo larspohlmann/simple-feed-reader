@@ -24,6 +24,15 @@ final class RefreshControllerTest extends WebTestCase
         /** @var CacheItemPoolInterface $rateLimiterCache */
         $rateLimiterCache = self::getContainer()->get('test.cache.rate_limiter');
         $rateLimiterCache->clear();
+        // refresh.run.cache is a filesystem pool with a ten-minute TTL and
+        // reused auto-increment ids, so a run left behind by an earlier test
+        // process could be resumed by a same-id user here and corrupt the
+        // `progress` assertions with no cause visible in this file. Not
+        // reachable today — every test in this class ends `completed` and
+        // TrackedRefreshRunner forgets a completed run — but cheap insurance.
+        /** @var CacheItemPoolInterface $refreshRunCache */
+        $refreshRunCache = self::getContainer()->get('test.cache.refresh_run');
+        $refreshRunCache->clear();
         self::ensureKernelShutdown();
     }
 
