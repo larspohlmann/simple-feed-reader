@@ -193,7 +193,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->authenticate($client, 'enroller@example.test');
         $fixture = $this->buildFixture('example.test', 'https://example.test');
 
-        $handle = $this->issueExpiredChallenge($fixture->challenge, $user->getId());
+        $handle = $this->issueExpiredChallenge($fixture->challenge, $user->getId(), $this->randomUserHandle());
         $this->registerPasskey($client, $handle, $fixture->credential, 'My phone');
 
         $this->assertRejected($client, 400);
@@ -242,7 +242,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $user = $this->factory()->create('enroller@example.test');
         $this->authenticate($client, 'enroller@example.test');
         $fixture = $this->buildFixture('example.test', 'https://example.test');
-        $handle = $this->issueChallenge($fixture->challenge, $user->getId());
+        $handle = $this->issueChallenge($fixture->challenge, $user->getId(), $this->randomUserHandle());
 
         $this->registerPasskey($client, $handle, $fixture->credential, 'My phone');
 
@@ -258,7 +258,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $user = $this->factory()->create('enroller@example.test');
         $this->authenticate($client, 'enroller@example.test');
         $fixture = $this->buildFixture('example.test', 'https://example.test');
-        $handle = $this->issueChallenge($fixture->challenge, $user->getId());
+        $handle = $this->issueChallenge($fixture->challenge, $user->getId(), $this->randomUserHandle());
 
         $this->registerPasskey($client, $handle, $fixture->credential, 'My phone');
 
@@ -276,6 +276,124 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->registerPasskey($client, $handle, $fixture->credential, '');
 
         $this->assertRejected($client, 422);
+    }
+
+    // -- Fix round 1 (#624): the user handle must survive two requests -----
+
+    /**
+     * THE regression test for fix round 1. PasskeyCredentials::userHandleFor()
+     * mints a fresh random value for an account's FIRST credential on every
+     * call. Before this fix, RegistrationOptionsFactory::create() (at options
+     * time) and AttestationVerifier (at verification time, a SEPARATE HTTP
+     * request) each called it independently and got two different values, so
+     * the row persisted here would never match the handle a real
+     * authenticator remembers from the options response — breaking
+     * discoverable login for every account's very first passkey. This test
+     * cannot use seedRegistrationChallenge()'s shortcut: the bug lives
+     * exactly on the boundary between the two requests, so it drives both
+     * for real, through the actual options endpoint.
+     */
+    public function testTheStoredUserHandleMatchesTheOneAdvertisedAtOptionsTime(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
+        $user = $this->factory()->create('enroller@example.test');
+        $this->authenticate($client, 'enroller@example.test');
+
+        $client->request('POST', '/api/auth/passkey/register/options');
+        self::assertResponseIsSuccessful();
+        [$handle, $advertisedUserHandle, $challenge] = $this->handleUserHandleAndChallengeFromOptions($client);
+
+        $fixture = PasskeyFixtures::attestation(
+            'example.test',
+            'https://example.test',
+            $challenge,
+            random_bytes(16),
+            random_bytes(32),
+        );
+        $this->registerPasskey($client, $handle, $fixture->credential, 'My phone');
+
+        self::assertResponseStatusCodeSame(201);
+        $stored = $this->onlyStoredPasskeyFor($user);
+        self::assertSame($advertisedUserHandle, $stored->getUserHandle());
+    }
+
+    /**
+     * The mirror case: PasskeyCredentials::userHandleFor() is deterministic
+     * once an account has a credential, so a second enrolment must reuse
+     * that same handle rather than the options endpoint minting a new one.
+     */
+    public function testASecondPasskeyReusesTheAccountsExistingUserHandle(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
+        $user = $this->factory()->create('enroller@example.test');
+        $this->givenAPasskeyFor($user, credentialId: 'ZXhpc3RpbmctY3JlZA', userHandle: 'ZXhpc3RpbmctaGFuZGxl');
+        $this->authenticate($client, 'enroller@example.test');
+
+        $client->request('POST', '/api/auth/passkey/register/options');
+        self::assertResponseIsSuccessful();
+        [$handle, $advertisedUserHandle, $challenge] = $this->handleUserHandleAndChallengeFromOptions($client);
+        self::assertSame('ZXhpc3RpbmctaGFuZGxl', $advertisedUserHandle);
+
+        $fixture = PasskeyFixtures::attestation(
+            'example.test',
+            'https://example.test',
+            $challenge,
+            random_bytes(16),
+            random_bytes(32),
+        );
+        $this->registerPasskey($client, $handle, $fixture->credential, 'My second phone');
+
+        self::assertResponseStatusCodeSame(201);
+        /** @var UserPasskeyRepository $repository */
+        $repository = self::getContainer()->get(UserPasskeyRepository::class);
+        $stored = $repository->findForUser($user);
+        self::assertCount(2, $stored);
+        foreach ($stored as $passkey) {
+            self::assertSame('ZXhpc3RpbmctaGFuZGxl', $passkey->getUserHandle());
+        }
+    }
+
+    /**
+     * The exclude list stops an honest client from re-submitting a
+     * credential it already offered, but nothing stops a replayed or forged
+     * request from reaching the database's own unique constraint on
+     * `credential_id` — that must come back as a clean 409, never a 500.
+     */
+    public function testADuplicateCredentialIdIsRejected(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
+        $user = $this->factory()->create('enroller@example.test');
+        $this->authenticate($client, 'enroller@example.test');
+        $credentialId = random_bytes(16);
+
+        $fixtureOne = PasskeyFixtures::attestation(
+            'example.test',
+            'https://example.test',
+            random_bytes(32),
+            $credentialId,
+            random_bytes(32),
+        );
+        $handleOne = $this->issueChallenge($fixtureOne->challenge, $user->getId(), $this->randomUserHandle());
+        $this->registerPasskey($client, $handleOne, $fixtureOne->credential, 'My phone');
+        self::assertResponseStatusCodeSame(201);
+
+        // A fresh challenge and handle, but the SAME credential id — as if a
+        // captured attestation were replayed onto a second ceremony.
+        $fixtureTwo = PasskeyFixtures::attestation(
+            'example.test',
+            'https://example.test',
+            random_bytes(32),
+            $credentialId,
+            random_bytes(32),
+        );
+        $handleTwo = $this->issueChallenge($fixtureTwo->challenge, $user->getId(), $this->randomUserHandle());
+
+        $this->registerPasskey($client, $handleTwo, $fixtureTwo->credential, 'My other phone');
+
+        $this->assertRejected($client, 409);
     }
 
     /**
@@ -319,14 +437,15 @@ final class PasskeyRegistrationTest extends ApiTestCase
      * Stores $credentialId verbatim, matching UserPasskeyTest's own
      * convention: it is treated as the value PasskeyCredentials::excludeListFor
      * decodes as base64url text, so a readable fixture like 'Y3JlZC1hYmM'
-     * round-trips back out through the WebAuthn serializer unchanged.
+     * round-trips back out through the WebAuthn serializer unchanged. Same
+     * for $userHandle, whose default keeps every existing caller unchanged.
      */
-    private function givenAPasskeyFor(User $user, string $credentialId): void
+    private function givenAPasskeyFor(User $user, string $credentialId, string $userHandle = 'aGFuZGxl'): void
     {
         $this->em()->persist(new UserPasskey(
             $user,
             $credentialId,
-            'aGFuZGxl',
+            $userHandle,
             'cHVibGljLWtleQ',
             0,
             null,
@@ -373,9 +492,13 @@ final class PasskeyRegistrationTest extends ApiTestCase
 
     /**
      * Builds a fixture and seeds PasskeyChallengeStore with the exact
-     * challenge it was signed against, the way RegistrationOptionsFactory
-     * would have — so a test can go straight to posting the completed
+     * challenge (and a made-up but valid user handle) it was signed against,
+     * the way RegistrationOptionsFactory would have — so a test that does not
+     * care about the handle itself can go straight to posting the completed
      * ceremony without a second round trip through the options endpoint.
+     * testTheStoredUserHandleMatchesTheOneAdvertisedAtOptionsTime and its
+     * mirror case below do NOT use this shortcut, because the fix-round-1 bug
+     * they prove lives exactly on the boundary this shortcut skips.
      *
      * @return array{0: PasskeyAttestationFixture, 1: string}
      */
@@ -383,27 +506,73 @@ final class PasskeyRegistrationTest extends ApiTestCase
     {
         $fixture = $this->buildFixture($relyingPartyId, $origin);
 
-        return [$fixture, $this->issueChallenge($fixture->challenge, $userId)];
+        return [$fixture, $this->issueChallenge($fixture->challenge, $userId, $this->randomUserHandle())];
     }
 
-    private function issueChallenge(string $challenge, ?int $userId): string
+    private function issueChallenge(string $challenge, ?int $userId, ?string $userHandle): string
     {
         /** @var PasskeyChallengeStore $store */
         $store = self::getContainer()->get(PasskeyChallengeStore::class);
 
-        return $store->issue($challenge, $userId);
+        return $store->issue($challenge, $userId, $userHandle);
     }
 
     /**
      * Shares the container's own cache pool but not its clock — see
      * testAnExpiredHandleIsRejected for why that matters.
      */
-    private function issueExpiredChallenge(string $challenge, ?int $userId): string
+    private function issueExpiredChallenge(string $challenge, ?int $userId, ?string $userHandle): string
     {
         /** @var CacheItemPoolInterface $pool */
         $pool = self::getContainer()->get('test.cache.passkey_challenge');
 
-        return (new PasskeyChallengeStore($pool, new MockClock('2020-01-01 00:00:00')))->issue($challenge, $userId);
+        return (new PasskeyChallengeStore($pool, new MockClock('2020-01-01 00:00:00')))
+            ->issue($challenge, $userId, $userHandle);
+    }
+
+    /**
+     * A syntactically valid but otherwise meaningless user handle, for tests
+     * that must seed one to reach AttestationVerifier at all but do not
+     * assert on its value.
+     */
+    private function randomUserHandle(): string
+    {
+        return Base64UrlSafe::encodeUnpadded(random_bytes(32));
+    }
+
+    /**
+     * Reads the three values a completed registration ceremony needs out of
+     * a `/register/options` response: the challenge-store handle, the user
+     * handle the browser was shown (still base64url, as stored), and the
+     * raw challenge bytes a fixture's clientDataJSON must be signed against.
+     *
+     * @return array{0: string, 1: string, 2: string}
+     */
+    private function handleUserHandleAndChallengeFromOptions(KernelBrowser $client): array
+    {
+        $body = $this->payload($client);
+        $handle = $body['handle'];
+        self::assertIsString($handle);
+
+        $options = $this->options($body);
+        $userOption = $this->arrayValue($options, 'user');
+        $userHandle = $userOption['id'];
+        self::assertIsString($userHandle);
+
+        $challengeOption = $options['challenge'];
+        self::assertIsString($challengeOption);
+
+        return [$handle, $userHandle, Base64UrlSafe::decodeNoPadding($challengeOption)];
+    }
+
+    private function onlyStoredPasskeyFor(User $user): UserPasskey
+    {
+        /** @var UserPasskeyRepository $repository */
+        $repository = self::getContainer()->get(UserPasskeyRepository::class);
+        $stored = $repository->findForUser($user);
+        self::assertCount(1, $stored);
+
+        return $stored[0];
     }
 
     /**

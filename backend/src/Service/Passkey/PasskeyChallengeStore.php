@@ -25,6 +25,16 @@ use Random\RandomException;
  * - consume() deletes the entry before validating it, so a handle that fails
  *   the expiry check is burned rather than left available to retry.
  *
+ * $userHandle (#624, fix round 1) rides along with the challenge for a
+ * registration ceremony because PasskeyCredentials::userHandleFor() mints a
+ * fresh random value for an account's first credential on every call: a
+ * second, independent call at verification time would return DIFFERENT
+ * bytes than the ones already shown to the browser at options time, and
+ * those are the bytes a real authenticator remembers and later returns at
+ * login. Storing the minted value here, once, is what lets the verifier
+ * reuse it instead of asking PasskeyCredentials a second time. It is null
+ * for a login ceremony's challenge, same as $userId.
+ *
  * SINGLE USE IS BEST-EFFORT UNDER CONCURRENCY. PSR-6 has no compare-and-swap,
  * and deleteItem() reports success whether or not the key existed, so it
  * cannot be pressed into service as one either. Two simultaneous redemptions
@@ -53,7 +63,7 @@ final readonly class PasskeyChallengeStore
      * @throws InvalidArgumentException
      * @throws RandomException
      */
-    public function issue(string $challenge, ?int $userId): string
+    public function issue(string $challenge, ?int $userId, ?string $userHandle = null): string
     {
         $handle = self::randomHandle();
 
@@ -64,6 +74,7 @@ final readonly class PasskeyChallengeStore
         $item->set([
             'challenge' => $challenge,
             'user_id' => $userId,
+            'user_handle' => $userHandle,
             'expires_at' => $this->clock->now()->getTimestamp() + self::LIFETIME_SECONDS,
         ]);
         $item->expiresAfter(self::LIFETIME_SECONDS);
@@ -102,7 +113,7 @@ final readonly class PasskeyChallengeStore
             throw new UnknownChallengeException();
         }
 
-        return new PasskeyChallenge($stored['challenge'], $stored['user_id']);
+        return new PasskeyChallenge($stored['challenge'], $stored['user_id'], $stored['user_handle']);
     }
 
     /**
@@ -110,25 +121,44 @@ final readonly class PasskeyChallengeStore
      * typed or null if anything is missing or of the wrong type. A corrupt or
      * tampered entry is thereby treated exactly like an unknown handle.
      *
-     * @return array{challenge: string, user_id: ?int, expires_at: int}|null
+     * @return array{challenge: string, user_id: ?int, user_handle: ?string, expires_at: int}|null
      */
     private static function decodeStored(mixed $stored): ?array
     {
-        if (
-            !\is_array($stored)
-            || !\is_string($stored['challenge'] ?? null)
-            || !\array_key_exists('user_id', $stored)
-            || !(null === $stored['user_id'] || \is_int($stored['user_id']))
-            || !\is_int($stored['expires_at'] ?? null)
-        ) {
+        if (!self::isWellFormed($stored)) {
             return null;
         }
 
         return [
             'challenge' => $stored['challenge'],
             'user_id' => $stored['user_id'],
+            'user_handle' => $stored['user_handle'],
             'expires_at' => $stored['expires_at'],
         ];
+    }
+
+    /**
+     * @phpstan-assert-if-true array{challenge: string, user_id: ?int, user_handle: ?string, expires_at: int} $stored
+     */
+    private static function isWellFormed(mixed $stored): bool
+    {
+        return \is_array($stored)
+            && \is_string($stored['challenge'] ?? null)
+            && \array_key_exists('user_id', $stored)
+            && self::isNullableInt($stored['user_id'])
+            && \array_key_exists('user_handle', $stored)
+            && self::isNullableString($stored['user_handle'])
+            && \is_int($stored['expires_at'] ?? null);
+    }
+
+    private static function isNullableInt(mixed $value): bool
+    {
+        return null === $value || \is_int($value);
+    }
+
+    private static function isNullableString(mixed $value): bool
+    {
+        return null === $value || \is_string($value);
     }
 
     /**

@@ -41,6 +41,18 @@ use Webauthn\PublicKeyCredentialUserEntity;
  * deprecation into a test failure (`failOnDeprecation`). The library
  * deprecated its own carrier for this field; the wire contract we hand the
  * browser is ours to fill in regardless.
+ *
+ * `create()` mints the user handle EXACTLY ONCE via PasskeyCredentials::
+ * userHandleFor() and threads that one value through both the options shown
+ * to the browser and PasskeyChallengeStore::issue(). It must never be minted
+ * a second time for the same ceremony: userHandleFor() returns a fresh
+ * random value on every call for an account with no credential yet, so a
+ * second mint at verification time — in a separate HTTP request — would
+ * return different bytes than the ones already shown to the browser (#624,
+ * fix round 1). optionsFor() therefore takes the handle as a parameter
+ * rather than deriving it itself, so AttestationVerifier can pass in the
+ * value it read back off the consumed PasskeyChallenge instead of minting
+ * its own.
  */
 final readonly class RegistrationOptionsFactory
 {
@@ -62,29 +74,30 @@ final readonly class RegistrationOptionsFactory
     public function create(User $user): array
     {
         $challenge = random_bytes(self::CHALLENGE_LENGTH_BYTES);
-        $options = $this->optionsFor($user, $challenge);
+        $userHandle = $this->credentials->userHandleFor($user);
+        $options = $this->optionsFor($user, $challenge, $userHandle);
 
         return [
             'options' => $this->serializeWithRelyingPartyName($options),
-            'handle' => $this->challengeStore->issue($challenge, $user->getId()),
+            'handle' => $this->challengeStore->issue($challenge, $user->getId(), $userHandle),
         ];
     }
 
     /**
      * Rebuilds the exact same options a creation ceremony was started with,
-     * given the same user and the challenge PasskeyChallengeStore handed
-     * back on consume(). Pulled out of create() so AttestationVerifier can
-     * share it: the resident-key and user-verification requirements below
-     * are security-relevant, and a second, independently written copy of
-     * this construction could silently drift from the one the browser was
+     * given the same user, challenge and user handle PasskeyChallengeStore
+     * handed back on consume(). Pulled out of create() so AttestationVerifier
+     * can share it: the resident-key and user-verification requirements
+     * below are security-relevant, and a second, independently written copy
+     * of this construction could silently drift from the one the browser was
      * actually shown — for instance stop enforcing user verification —
      * without either call site's own tests noticing.
      */
-    public function optionsFor(User $user, string $challenge): PublicKeyCredentialCreationOptions
+    public function optionsFor(User $user, string $challenge, string $userHandle): PublicKeyCredentialCreationOptions
     {
         return PublicKeyCredentialCreationOptions::create(
             rp: PublicKeyCredentialRpEntity::create('', $this->relyingParty->id()),
-            user: $this->userEntityFor($user),
+            user: self::userEntityFor($user, $userHandle),
             challenge: $challenge,
             pubKeyCredParams: [
                 PublicKeyCredentialParameters::createPk(ES256::ID),
@@ -99,11 +112,13 @@ final readonly class RegistrationOptionsFactory
         );
     }
 
-    private function userEntityFor(User $user): PublicKeyCredentialUserEntity
+    private static function userEntityFor(User $user, string $userHandle): PublicKeyCredentialUserEntity
     {
-        $handle = Base64UrlSafe::decodeNoPadding($this->credentials->userHandleFor($user));
-
-        return PublicKeyCredentialUserEntity::create($user->getEmail(), $handle, $user->getEmail());
+        return PublicKeyCredentialUserEntity::create(
+            $user->getEmail(),
+            Base64UrlSafe::decodeNoPadding($userHandle),
+            $user->getEmail(),
+        );
     }
 
     /**

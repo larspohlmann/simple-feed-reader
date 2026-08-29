@@ -8,7 +8,9 @@ use App\Dto\Passkey\RegisterPasskeyRequest;
 use App\Entity\User;
 use App\Entity\UserPasskey;
 use App\Service\Passkey\Exception\AttestationRejectedException;
+use App\Service\Passkey\Exception\DuplicatePasskeyException;
 use App\Service\Passkey\Exception\PasskeyChallengeOwnershipException;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use Psr\Cache\InvalidArgumentException;
@@ -27,10 +29,17 @@ use Webauthn\PublicKeyCredential;
  * trusts that a row in `user_passkey` really was produced by a ceremony an
  * authenticator completed.
  *
- * The five steps below are deliberately in this order: the challenge is
- * consumed and its ownership checked BEFORE the credential bytes are even
- * looked at, so a caller who does not own the challenge never learns whether
- * their forged credential would otherwise have parsed.
+ * The steps below are deliberately in this order: the challenge is consumed
+ * and its ownership checked BEFORE the credential bytes are even looked at,
+ * so a caller who does not own the challenge never learns whether their
+ * forged credential would otherwise have parsed.
+ *
+ * This class never calls PasskeyCredentials::userHandleFor() — it reads the
+ * user handle straight off the consumed PasskeyChallenge instead. See that
+ * class's docblock (#624, fix round 1) for why re-minting one here would be
+ * a real bug: userHandleFor() returns a fresh random value on every call for
+ * an account's first credential, and options and verification are two
+ * separate HTTP requests.
  */
 final readonly class AttestationVerifier
 {
@@ -52,18 +61,10 @@ final readonly class AttestationVerifier
         $challenge = $this->challengeStore->consume($request->handle);
         $this->guardOwnership($user, $challenge);
 
-        $credentialRecord = $this->check($user, $challenge->challenge, $request->credential);
-
+        $credentialRecord = $this->check($user, $challenge, $request->credential);
         $passkey = $this->passkeyFrom($user, $credentialRecord, $request->label);
-        $this->em->persist($passkey);
 
-        // Marked before the flush below, not after: markAnswered() only
-        // mutates the already-managed Preferences entity, so one flush
-        // covers both this and the new UserPasskey row. Two flushes would
-        // risk leaving the offer stamped on a request whose credential
-        // insert then failed.
-        $this->offer->markAnswered($user);
-        $this->em->flush();
+        $this->persist($user, $passkey);
 
         return $passkey;
     }
@@ -89,11 +90,14 @@ final readonly class AttestationVerifier
      *
      * @param array<string, mixed> $credential
      */
-    private function check(User $user, string $challenge, array $credential): CredentialRecord
+    private function check(User $user, PasskeyChallenge $challenge, array $credential): CredentialRecord
     {
         try {
             $response = $this->deserialize($credential);
-            $options = $this->optionsFactory->optionsFor($user, $challenge);
+            $userHandle = $challenge->userHandle ?? throw new \UnexpectedValueException(
+                'A registration challenge must always carry a user handle.',
+            );
+            $options = $this->optionsFactory->optionsFor($user, $challenge->challenge, $userHandle);
 
             return AuthenticatorAttestationResponseValidator::create($this->ceremony->creation())
                 ->check($response, $options, $this->ceremony->host());
@@ -116,6 +120,31 @@ final readonly class AttestationVerifier
             || throw new \UnexpectedValueException('Expected an attestation response, got an assertion response.');
 
         return $publicKeyCredential->response;
+    }
+
+    /**
+     * The credential id is unique across every account, and
+     * PasskeyCredentials::excludeListFor() already tells an honest
+     * authenticator about every credential this account holds — so reaching
+     * the database's own constraint here means a replayed or forged
+     * registration, not a bug, and it must not reach the client as a 500.
+     */
+    private function persist(User $user, UserPasskey $passkey): void
+    {
+        $this->em->persist($passkey);
+
+        // Marked before the flush below, not after: markAnswered() only
+        // mutates the already-managed Preferences entity, so one flush
+        // covers both this and the new UserPasskey row. Two flushes would
+        // risk leaving the offer stamped on a request whose credential
+        // insert then failed.
+        $this->offer->markAnswered($user);
+
+        try {
+            $this->em->flush();
+        } catch (UniqueConstraintViolationException) {
+            throw new DuplicatePasskeyException();
+        }
     }
 
     private function passkeyFrom(User $user, CredentialRecord $record, string $label): UserPasskey
