@@ -10,6 +10,7 @@ use App\Entity\User;
 use App\Repository\FeedRepository;
 use App\Repository\SubscriptionRepository;
 use App\Service\Subscription\SubscriptionService;
+use App\Tests\Support\QueryRecorder;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -109,6 +110,17 @@ final class UnsubscribeAllTest extends KernelTestCase
         self::assertNotNull($feeds->find($sharedId));
     }
 
+    /**
+     * reclaim() is idempotent — a second call against an already-deleted feed
+     * id returns false and issues its DELETE anyway, changing nothing. So
+     * "the feed is gone" holds whether unsubscribeAll() reclaims the shared
+     * feed once (per distinct id, as intended) or twice (once per removed
+     * subscription); an outcome-only assertion cannot tell those apart.
+     * Counting the DELETE statements reclaim() issues is the only way to pin
+     * the de-duplication itself, not just its externally visible result —
+     * same reasoning as RecommendationCandidateLoaderTest's empty-id-list
+     * guard.
+     */
     public function testTwoSubscriptionsToOneFeedReclaimItOnce(): void
     {
         $mine = $this->user('unsub-two-mine@example.com');
@@ -119,9 +131,18 @@ final class UnsubscribeAllTest extends KernelTestCase
         $this->em->flush();
         $sharedId = (int) $shared->getId();
 
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        $recorder->reset();
+
         $removed = $this->subscriptions->unsubscribeAll([$ours, $alsoOurs]);
 
         self::assertSame(2, $removed);
+        self::assertCount(
+            1,
+            $recorder->queriesMatching('delete from feed'),
+            'unsubscribeAll() must reclaim a feed shared by two removed subscriptions exactly once.',
+        );
         // Same identity-map staleness as testReclaimsAFeedNobodySubscribesToAnyMore.
         $this->em->clear();
         $feeds = self::getContainer()->get(FeedRepository::class);
