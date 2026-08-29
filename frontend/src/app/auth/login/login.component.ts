@@ -1,12 +1,14 @@
 // src/app/auth/login/login.component.ts
-import { Component, ElementRef, OnInit, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { API_BASE_URL } from '../../core/api';
 import { AuthService } from '../../core/auth.service';
-import { parseProblem } from '../../core/problem';
+import { PasskeyService } from '../../core/passkey.service';
+import { Problem, parseProblem } from '../../core/problem';
+import { isConditionalMediationSupported, isPasskeySupported } from '../../core/webauthn';
 import { adoptAutofilledValues } from '../autofill';
 import { SetupService } from '../../setup/setup.service';
 import { AuthShellComponent } from '../auth-shell/auth-shell.component';
@@ -30,7 +32,7 @@ import { PasswordInputComponent } from '../../shared/password-input/password-inp
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
-export class LoginComponent implements OnInit {
+export class LoginComponent implements OnInit, OnDestroy {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly auth = inject(AuthService);
   private readonly http = inject(HttpClient);
@@ -39,6 +41,7 @@ export class LoginComponent implements OnInit {
   private readonly i18n = inject(TranslocoService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly setup = inject(SetupService);
+  private readonly passkeyService = inject(PasskeyService);
 
   readonly form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -49,15 +52,36 @@ export class LoginComponent implements OnInit {
   readonly providers = signal<string[]>([]);
   readonly mailEnabled = this.setup.mailEnabled;
 
+  /** Read once: a browser does not gain or lose WebAuthn support mid-session,
+   *  the same reasoning `PasskeysGroupComponent.isSupported` documents. */
+  protected readonly passkeySupported = isPasskeySupported();
+
+  /** Held so the conditional ceremony started in `ngOnInit` can be cancelled
+   *  from `submit()` and `ngOnDestroy()` -- two live `navigator.credentials`
+   *  calls compete and the browser rejects one (#624 task 15, trap 2). */
+  private conditionalAbort: AbortController | null = null;
+
   ngOnInit(): void {
     this.http.get<{ providers: string[] }>(`${this.base}/api/auth/oauth/providers`).subscribe({
       next: (r) => this.providers.set(r.providers ?? []),
       error: () => this.providers.set([]),
     });
+
+    if (this.passkeySupported) {
+      void this.offerConditionalPasskey();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.abortConditionalPasskey();
   }
 
   submit(): void {
     if (this.loading()) return;
+    // A conditional passkey ceremony may still be pending on the e-mail
+    // field's autofill; a password submit means the visitor chose the other
+    // path, and the browser will not run both at once.
+    this.abortConditionalPasskey();
     // This form already carried a hand-rolled version of this, keyed on the
     // `name` attribute and querying the whole document. It is now the shared
     // helper: scoped to this component, and keyed on formControlName, which is
@@ -74,16 +98,29 @@ export class LoginComponent implements OnInit {
     this.error.set(null);
     const { email, password } = this.form.getRawValue();
     this.auth.login(email, password).subscribe({
-      next: () =>
-        this.auth.loadMe().subscribe({
-          next: () => void this.router.navigate(['/']),
-          error: () => void this.router.navigate(['/']),
-        }),
+      next: () => this.afterSignIn(),
       error: (e: HttpErrorResponse) => {
         this.error.set(parseProblem(e).detail ?? this.i18n.translate('auth.login.failed'));
         this.loading.set(false);
       },
     });
+  }
+
+  /** The explicit "Sign in with a passkey" button. Distinct from the
+   *  conditional ceremony `ngOnInit` starts: this one is user-initiated, so
+   *  a cancelled sheet (`NotAllowedError`) still has to clear `loading`. */
+  signInWithPasskey(): void {
+    if (this.loading()) return;
+    this.abortConditionalPasskey();
+    this.loading.set(true);
+    this.error.set(null);
+    this.passkeyService.signIn().then(
+      () => this.afterSignIn(),
+      (problem: Problem) => {
+        this.loading.set(false);
+        this.showPasskeyFailure(problem);
+      },
+    );
   }
 
   oauthUrl(provider: string): string {
@@ -96,5 +133,50 @@ export class LoginComponent implements OnInit {
 
   label(provider: string): string {
     return provider.charAt(0).toUpperCase() + provider.slice(1);
+  }
+
+  /** Offers the passkey through the e-mail field's autofill the moment the
+   *  browser can (`mediation: 'conditional'`); a no-op wherever it can't,
+   *  per `isConditionalMediationSupported()`'s own contract. Runs for the
+   *  page's whole lifetime, so `submit()` and `ngOnDestroy()` both have to be
+   *  able to cut it short. */
+  private async offerConditionalPasskey(): Promise<void> {
+    if (!(await isConditionalMediationSupported())) return;
+
+    this.conditionalAbort = new AbortController();
+    try {
+      await this.passkeyService.signInConditionally(this.conditionalAbort.signal);
+      this.afterSignIn();
+    } catch (error) {
+      this.showPasskeyFailure(error as Problem);
+    }
+  }
+
+  private abortConditionalPasskey(): void {
+    this.conditionalAbort?.abort();
+    this.conditionalAbort = null;
+  }
+
+  /** Shared by password, explicit-passkey and conditional-passkey sign-in --
+   *  wherever the credential came from, the app lands the visitor in exactly
+   *  the same place. `TokenStore` is already populated by this point:
+   *  `AuthService.login()` and `PasskeyService`'s ceremonies both set it
+   *  themselves before resolving. */
+  private afterSignIn(): void {
+    this.auth.loadMe().subscribe({
+      next: () => void this.router.navigate(['/']),
+      error: () => void this.router.navigate(['/']),
+    });
+  }
+
+  /** A cancelled or self-aborted ceremony is not a failure to report:
+   *  `NotAllowedError` is the user dismissing the platform sheet (or it
+   *  timing out), `AbortError` is this component's own `abortConditionalPasskey()`
+   *  firing under a live request -- see `PasskeyService`'s docblock. Anything
+   *  else renders through the same `app-form-error` a failed password sign-in
+   *  does. */
+  private showPasskeyFailure(problem: Problem): void {
+    if (problem.type === 'NotAllowedError' || problem.type === 'AbortError') return;
+    this.error.set(problem.detail ?? this.i18n.translate('auth.login.passkeyFailed'));
   }
 }

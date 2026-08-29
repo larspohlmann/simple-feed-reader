@@ -632,10 +632,12 @@
       "submit": "Sign in",
       "or": "or",
       "continueWith": "Continue with {{provider}}",
+      "passkey": "Sign in with a passkey",
       "createAccount": "Create account",
       "forgotPassword": "Forgot password?",
       "invalidInput": "Please enter a valid email and password.",
-      "failed": "Sign in failed."
+      "failed": "Sign in failed.",
+      "passkeyFailed": "Passkey sign-in failed."
     },
     "register": {
       "title": "Create account",

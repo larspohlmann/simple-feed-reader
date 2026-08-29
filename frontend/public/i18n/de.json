@@ -632,10 +632,12 @@
       "submit": "Anmelden",
       "or": "oder",
       "continueWith": "Weiter mit {{provider}}",
+      "passkey": "Mit einem Passkey anmelden",
       "createAccount": "Konto erstellen",
       "forgotPassword": "Passwort vergessen?",
       "invalidInput": "Bitte gib eine gültige E-Mail-Adresse und ein Passwort ein.",
-      "failed": "Anmeldung fehlgeschlagen."
+      "failed": "Anmeldung fehlgeschlagen.",
+      "passkeyFailed": "Passkey-Anmeldung fehlgeschlagen."
     },
     "register": {
       "title": "Konto erstellen",
