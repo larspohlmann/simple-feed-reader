@@ -191,6 +191,15 @@ final class SubscriptionBulkTest extends WebTestCase
         self::assertCount(0, $reloaded->getTags(), 'A rejected bulk request must write nothing.');
     }
 
+    /**
+     * Sends a flag alongside the foreign tag and re-reads the subscription
+     * afterwards (clearing the entity manager first, same staleness reason as
+     * testRejectsAForeignSubscriptionAndWritesNothing). apply() must reject
+     * the tag ownership BEFORE it resolves subscriptions or writes flags —
+     * reordering assertOwnedTagIds() after resolve()/applyFlags() still
+     * returns this same 422, but leaves the flag written, and only a test
+     * that re-reads the row can tell those two apart.
+     */
     public function testRejectsAForeignTag(): void
     {
         $client = self::createClient();
@@ -199,13 +208,20 @@ final class SubscriptionBulkTest extends WebTestCase
         $foreignTag = $this->makeTag($theirs, 'Theirs');
         $ours = $this->makeSub($mine, 'https://ours2.example/feed.xml');
         $this->em()->flush();
+        $ourId = (int) $ours->getId();
 
         $this->send($client, $mine, 'PATCH', '/api/subscriptions/bulk', [
-            'subscriptionIds' => [(int) $ours->getId()],
+            'subscriptionIds' => [$ourId],
             'addTagIds' => [(int) $foreignTag->getId()],
+            'includeInAllItems' => false,
         ]);
 
         self::assertResponseStatusCodeSame(422);
+        $this->em()->clear();
+        $reloaded = $this->em()->getRepository(Subscription::class)->find($ourId);
+        self::assertInstanceOf(Subscription::class, $reloaded);
+        self::assertCount(0, $reloaded->getTags(), 'A rejected bulk request must write no tag.');
+        self::assertTrue($reloaded->isIncludeInAllItems(), 'A rejected bulk request must write no flag.');
     }
 
     public function testRejectsMoreIdsThanTheCap(): void
@@ -239,6 +255,14 @@ final class SubscriptionBulkTest extends WebTestCase
         self::assertSame(['removed' => 2], $this->json($client));
         $this->em()->clear();
         self::assertNotNull($this->em()->getRepository(Subscription::class)->find($keptId));
+        self::assertNull(
+            $this->em()->getRepository(Subscription::class)->find((int) $goingOne->getId()),
+            'unsubscribeAll() must actually remove the listed subscription, not just report the count.',
+        );
+        self::assertNull(
+            $this->em()->getRepository(Subscription::class)->find((int) $goingTwo->getId()),
+            'unsubscribeAll() must actually remove the listed subscription, not just report the count.',
+        );
     }
 
     public function testUnsubscribeRejectsAForeignIdAndRemovesNothing(): void
