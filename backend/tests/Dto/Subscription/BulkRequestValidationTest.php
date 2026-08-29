@@ -36,18 +36,34 @@ final class BulkRequestValidationTest extends KernelTestCase
         self::assertGreaterThan(0, \count($this->validator->validate($request)));
     }
 
-    public function testMoreIdsThanAnAccountCanOwnAreRejected(): void
+    /**
+     * The cap is a hard technical ceiling on one request's payload, not "every
+     * feed the caller could own" (#659 review): an admin can raise a single
+     * account's subscription limit above MAX_SUBSCRIPTIONS_PER_USER via
+     * SubscriptionLimitResolver, so a request naming more ids than the global
+     * default must still validate as long as it stays under the technical
+     * ceiling.
+     */
+    public function testMoreIdsThanTheDefaultAccountCapAreAccepted(): void
     {
-        $tooMany = range(1, SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER + 1);
+        $moreThanTheDefaultCap = range(1, SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER + 1);
+        $request = new BulkUpdateSubscriptionsRequest(subscriptionIds: $moreThanTheDefaultCap);
+
+        self::assertCount(0, $this->validator->validate($request));
+    }
+
+    public function testMoreIdsThanTheHardCeilingAreRejected(): void
+    {
+        $tooMany = range(1, SubscriptionService::MAX_BULK_REQUEST_IDS + 1);
         $request = new BulkUpdateSubscriptionsRequest(subscriptionIds: $tooMany);
 
         self::assertGreaterThan(0, \count($this->validator->validate($request)));
     }
 
-    public function testExactlyTheCapIsAccepted(): void
+    public function testExactlyTheHardCeilingIsAccepted(): void
     {
-        $atCap = range(1, SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER);
-        $request = new BulkUpdateSubscriptionsRequest(subscriptionIds: $atCap);
+        $atCeiling = range(1, SubscriptionService::MAX_BULK_REQUEST_IDS);
+        $request = new BulkUpdateSubscriptionsRequest(subscriptionIds: $atCeiling);
 
         self::assertCount(0, $this->validator->validate($request));
     }
@@ -61,7 +77,7 @@ final class BulkRequestValidationTest extends KernelTestCase
 
     public function testUnsubscribeRequestSharesTheSameCap(): void
     {
-        $tooMany = range(1, SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER + 1);
+        $tooMany = range(1, SubscriptionService::MAX_BULK_REQUEST_IDS + 1);
 
         self::assertCount(0, $this->validator->validate(new BulkUnsubscribeRequest([1])));
         self::assertGreaterThan(0, \count($this->validator->validate(new BulkUnsubscribeRequest($tooMany))));

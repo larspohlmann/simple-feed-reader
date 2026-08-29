@@ -8,6 +8,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Service\Subscription\SubscriptionService;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -225,17 +226,47 @@ final class SubscriptionBulkTest extends WebTestCase
         self::assertTrue($reloaded->isIncludeInAllItems(), 'A rejected bulk request must write no flag.');
     }
 
-    public function testRejectsMoreIdsThanTheCap(): void
+    public function testRejectsMoreIdsThanTheHardCeiling(): void
     {
         $client = self::createClient();
         $user = $this->user('bulk-endpoint-cap@example.com');
         $this->em()->flush();
 
         $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
-            'subscriptionIds' => range(1, 501),
+            'subscriptionIds' => range(1, SubscriptionService::MAX_BULK_REQUEST_IDS + 1),
         ]);
 
         self::assertResponseStatusCodeSame(422);
+    }
+
+    /**
+     * An admin-raised per-account limit (SubscriptionLimitResolver) can exceed
+     * SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER. A bulk request naming
+     * more than the global default, but real, owned subscriptions must not be
+     * rejected by a cap that used to equal that default (#659 review).
+     */
+    public function testAnAccountRaisedAboveTheDefaultCapCanBulkActOnAllItsFeeds(): void
+    {
+        $client = self::createClient();
+        $user = $this->user('bulk-endpoint-raised-cap@example.com');
+        $user->setMaxSubscriptions(SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER + 50);
+        $count = SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER + 10;
+        $subscriptions = [];
+        for ($i = 0; $i < $count; ++$i) {
+            $subscriptions[] = $this->makeSub($user, "https://raised-cap-$i.example/feed.xml");
+        }
+        $this->em()->flush();
+        $ids = array_map(static fn (Subscription $s): int => (int) $s->getId(), $subscriptions);
+
+        $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
+            'subscriptionIds' => $ids,
+            'includeInAllItems' => false,
+        ]);
+
+        self::assertResponseIsSuccessful();
+        $body = $this->json($client);
+        self::assertIsArray($body['subscriptions']);
+        self::assertCount($count, $body['subscriptions']);
     }
 
     /**
@@ -326,6 +357,99 @@ final class SubscriptionBulkTest extends WebTestCase
             "adding one tag across 5 subscriptions must not query the tag table once per "
                 . "subscription, got:\n" . implode("\n", $tagReads),
         );
+    }
+
+    /**
+     * SubscriptionTagSync::sync() picks a new tag's join position with
+     * SubscriptionTagRepository::nextPositionForTag(), a MAX(position) query.
+     * BulkSubscriptionUpdater::apply() calls sync() once per subscription and
+     * flushes only once after the loop, so that query cannot see the rows the
+     * earlier iterations just added — every feed reads the same stale MAX and
+     * gets the same position. Three untagged feeds tagged in one bulk request
+     * must land at distinct ascending positions [0, 1, 2], not all at 0.
+     */
+    public function testBulkAddTagGivesEachFeedADistinctAscendingTagPosition(): void
+    {
+        $client = self::createClient();
+        $user = $this->user('bulk-add-tag-positions@example.com');
+        $tech = $this->makeTag($user, 'Tech');
+        $first = $this->makeSub($user, 'https://pos-a.example/feed.xml');
+        $second = $this->makeSub($user, 'https://pos-b.example/feed.xml');
+        $third = $this->makeSub($user, 'https://pos-c.example/feed.xml');
+        $this->em()->flush();
+
+        $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
+            'subscriptionIds' => [(int) $first->getId(), (int) $second->getId(), (int) $third->getId()],
+            'addTagIds' => [(int) $tech->getId()],
+        ]);
+
+        self::assertResponseIsSuccessful();
+        $this->em()->clear();
+        self::assertSame(
+            [0, 1, 2],
+            [
+                $this->joinPosition($first->getId(), $tech->getId()),
+                $this->joinPosition($second->getId(), $tech->getId()),
+                $this->joinPosition($third->getId(), $tech->getId()),
+            ],
+        );
+    }
+
+    /**
+     * The mirror defect on the untagged side: SubscriptionTagSync::sync()
+     * appends a feed that just lost its last tag with
+     * SubscriptionRepository::nextPositionForUser(), also a MAX() query before
+     * the same single flush. Three feeds stripped of their only tag in one
+     * bulk request must land at distinct untagged positions, not all at the
+     * same stale MAX.
+     */
+    public function testBulkRemoveLastTagGivesEachFeedADistinctUntaggedPosition(): void
+    {
+        $client = self::createClient();
+        $user = $this->user('bulk-remove-tag-positions@example.com');
+        $tech = $this->makeTag($user, 'Tech');
+        $first = $this->makeSub($user, 'https://untag-a.example/feed.xml', $tech);
+        $second = $this->makeSub($user, 'https://untag-b.example/feed.xml', $tech);
+        $third = $this->makeSub($user, 'https://untag-c.example/feed.xml', $tech);
+        $this->em()->flush();
+
+        $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
+            'subscriptionIds' => [(int) $first->getId(), (int) $second->getId(), (int) $third->getId()],
+            'removeTagIds' => [(int) $tech->getId()],
+        ]);
+
+        self::assertResponseIsSuccessful();
+        $this->em()->clear();
+        $positions = [
+            $this->subscriptionPosition($first->getId()),
+            $this->subscriptionPosition($second->getId()),
+            $this->subscriptionPosition($third->getId()),
+        ];
+        self::assertSame(
+            \count($positions),
+            \count(array_unique($positions)),
+            'positions must be distinct: ' . implode(',', $positions),
+        );
+    }
+
+    private function joinPosition(?int $subscriptionId, ?int $tagId): int
+    {
+        $subscription = $this->em()->getRepository(Subscription::class)->find((int) $subscriptionId);
+        self::assertInstanceOf(Subscription::class, $subscription);
+        foreach ($subscription->getSubscriptionTags() as $join) {
+            if ((int) $join->getTag()->getId() === (int) $tagId) {
+                return $join->getPosition();
+            }
+        }
+        self::fail('Subscription is not tagged with tag ' . $tagId);
+    }
+
+    private function subscriptionPosition(?int $subscriptionId): int
+    {
+        $subscription = $this->em()->getRepository(Subscription::class)->find((int) $subscriptionId);
+        self::assertInstanceOf(Subscription::class, $subscription);
+
+        return $subscription->getPosition();
     }
 
     public function testUnsubscribesEveryListedFeedAndKeepsTheRest(): void

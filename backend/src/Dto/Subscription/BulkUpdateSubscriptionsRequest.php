@@ -15,9 +15,11 @@ use Symfony\Component\Validator\Constraints as Assert;
  * unchanged" — the same convention UpdateSubscriptionRequest and
  * EntryController::updateState use (#695).
  *
- * The id cap is the per-account subscription limit: a bulk request may name at
- * most every feed the caller could possibly own. Reading the constant rather
- * than repeating 500 keeps the two from drifting.
+ * The id cap is a hard technical ceiling on one request's payload size, NOT
+ * the per-account subscription limit — an admin can raise a single account's
+ * real cap above the global default (SubscriptionLimitResolver), and this
+ * attribute cannot read the current user to match it. See
+ * SubscriptionService::MAX_BULK_REQUEST_IDS for why it is generous instead.
  */
 final readonly class BulkUpdateSubscriptionsRequest
 {
@@ -27,7 +29,7 @@ final readonly class BulkUpdateSubscriptionsRequest
      * @param list<int> $removeTagIds    tags to remove from every listed feed
      */
     public function __construct(
-        #[Assert\Count(min: 1, max: SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER)]
+        #[Assert\Count(min: 1, max: SubscriptionService::MAX_BULK_REQUEST_IDS)]
         #[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]
         public array $subscriptionIds = [],
         #[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]

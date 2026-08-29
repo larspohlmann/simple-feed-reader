@@ -17,6 +17,17 @@ final readonly class SubscriptionService
 {
     public const int MAX_SUBSCRIPTIONS_PER_USER = 500;
 
+    /**
+     * A hard technical ceiling on how many ids ONE bulk request may name — it
+     * bounds payload/array size, nothing else. It is deliberately NOT tied to
+     * MAX_SUBSCRIPTIONS_PER_USER: SubscriptionLimitResolver lets an admin raise
+     * a single account's real cap above the global default, and a validation
+     * attribute cannot read the current user to match it exactly. Every id in
+     * the request is still checked for ownership downstream (OwnedSubscriptions),
+     * so this ceiling only needs to be generous, not exact.
+     */
+    public const int MAX_BULK_REQUEST_IDS = 5000;
+
     public function __construct(
         private FeedDiscoveryInterface $discovery,
         private SubscriptionCreator $creator,
