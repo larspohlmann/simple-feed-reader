@@ -143,7 +143,7 @@ test('adds a tag to two selected feeds in one request', async ({ page }) => {
   // dialog's backdrop for the rest of the action's timeout.
   const dialog = page.getByRole('dialog', { name: 'Add a tag to 2 feeds' });
   await dialog.getByRole('button', { name: 'Tech', exact: false }).click();
-  await dialog.getByRole('button', { name: 'Add tag', exact: true }).click();
+  await dialog.locator('[data-test="apply"]').click();
 
   await expect.poll(() => body).toEqual({ subscriptionIds: [11, 12], addTagIds: [2] });
 });
