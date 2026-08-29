@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Passkey;
 
 use App\Entity\User;
-use Symfony\Component\Clock\ClockInterface;
+use Psr\Clock\ClockInterface;
 
 /**
  * Records that the one-time passkey enrolment offer (#624) has been shown to
