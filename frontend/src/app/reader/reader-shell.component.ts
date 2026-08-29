@@ -874,6 +874,20 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       });
       return;
     }
+    // The ranked feed has no scope to name and no watermark to move: the
+    // backend marks its picks by their own entry state (#710, and #665 for why
+    // a watermark here would be wrong). Its picks belong to feeds and can match
+    // a saved search, so both counts beside the list are reloaded.
+    if (target.scope === 'for-you') {
+      this.api.markForYouRead(until).subscribe({
+        next: () => {
+          this.entries.load(queryFromSelection(this.selection()));
+          this.subs.load();
+          this.savedSearchesStore.load();
+        },
+      });
+      return;
+    }
     this.api
       .markRead(target.scope, until, target.scope === 'all' ? undefined : target.id)
       .subscribe({

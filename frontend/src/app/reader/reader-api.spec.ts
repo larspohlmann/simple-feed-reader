@@ -144,6 +144,29 @@ describe('ReaderApi', () => {
     req.flush(null);
   });
 
+  it('POSTs for-you mark-read with until alone', () => {
+    api.markForYouRead('2026-01-01T00:00:00Z').subscribe();
+    const req = ctrl.expectOne('https://api.test/api/entries/for-you/mark-read');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ until: '2026-01-01T00:00:00Z' });
+    req.flush(null);
+  });
+
+  it('asks the ranked feed for unread picks with a query flag', () => {
+    api.entries({ view: 'for-you', unread: true }).subscribe();
+    const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
+    expect(req.request.params.get('view')).toBe('for-you');
+    expect(req.request.params.get('unread')).toBe('1');
+    req.flush({ entries: [], nextCursor: null });
+  });
+
+  it('sends no unread flag for a feed that shows everything', () => {
+    api.entries({ view: 'all' }).subscribe();
+    const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
+    expect(req.request.params.has('unread')).toBe(false);
+    req.flush({ entries: [], nextCursor: null });
+  });
+
   it('POSTs refresh', () => {
     api.refresh().subscribe();
     const req = ctrl.expectOne('https://api.test/api/refresh');

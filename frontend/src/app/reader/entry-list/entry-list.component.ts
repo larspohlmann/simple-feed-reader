@@ -47,6 +47,7 @@ import { EntryDto, SubscriptionTagDto, TagDto } from '../models';
 import {
   Selection,
   canScopedRefresh,
+  hasUnreadFilter,
   isSingleStreamView,
   isWholeWordTerm,
   isPhraseTerm,
@@ -239,6 +240,11 @@ export class EntryListComponent implements OnDestroy {
 
   /** The refresh button + pull gesture are hidden in the cross-feed saved views. */
   readonly canRefresh = computed(() => canScopedRefresh(this.selection()));
+
+  /** Whether this list offers the All posts / only unread switch. The rule is
+   *  the selection vocabulary's, not this header's — the shell asks the same
+   *  question when it builds the list query. */
+  readonly hasUnreadFilter = computed(() => hasUnreadFilter(this.selection()));
 
   /** The number the heading shows, or 0 for the two cases that show none: a
    *  list with nothing in it, and a search — whose heading already carries its

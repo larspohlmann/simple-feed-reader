@@ -320,11 +320,17 @@
           }}</span>
         </app-button>
       } @else {
+        <!-- Outlined, not solid: it is one action among the three this header
+             carries, and the loudest weight belonged to it only while it was
+             the only one (#710). It reads "Refresh" like the feed refresh it
+             sits beside — the sparkle glyph is what tells the two apart at a
+             glance, and the accessible name spells it out for a reader who
+             hears the button rather than sees it. -->
         <app-button
-          variant="primary"
+          variant="accent-outline"
           size="sm"
           class="for-you-run"
-          [ariaLabel]="'reader.forYouRun' | transloco"
+          [ariaLabel]="'reader.forYouRunLabel' | transloco"
           (click)="startRecommendations()"
         >
           <app-icon name="auto_awesome" size="sm" />

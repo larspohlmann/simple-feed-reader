@@ -123,11 +123,7 @@
     @if (leadingActions(); as actions) {
       <ng-container [ngTemplateOutlet]="actions" />
     }
-    @if (
-      selection().kind === 'all' ||
-      selection().kind === 'tag' ||
-      selection().kind === 'subscription'
-    ) {
+    @if (hasUnreadFilter()) {
       <!-- One switch, not a two-option toggle. It reads as an "unread" switch:
            on narrows the list to unread, off shows everything. A filled circle
            marks the on/unread position, a hollow one the off/all position — the

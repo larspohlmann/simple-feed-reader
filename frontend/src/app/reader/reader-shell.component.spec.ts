@@ -1672,7 +1672,18 @@ describe('ReaderShellComponent', () => {
       '.list-header .for-you-run button',
     ) as HTMLButtonElement;
     expect(button).not.toBeNull();
-    expect(button.textContent).toContain('Get recommendations');
+    // "Refresh", not "Get recommendations" (#710): the action is named after
+    // what it produces, like every other header action beside it. The sparkle
+    // glyph is what keeps it apart from the ordinary feed refresh, and the
+    // accessible name says which refresh this is.
+    expect(button.textContent).toContain('Refresh');
+    expect(button.textContent).not.toContain('Get recommendations');
+    expect(button.getAttribute('aria-label')).toBe('Refresh recommendations');
+    expect(button.querySelector('app-icon')?.textContent?.trim()).toBe('auto_awesome');
+    // Outlined, not the solid primary it used to be: it is one quiet header
+    // action among three, not the loudest thing in the bar.
+    expect(button.classList.contains('accent-outline')).toBe(true);
+    expect(button.classList.contains('primary')).toBe(false);
     // The header never carries the progress caption: it is the pill's, on
     // every route, running or not (#398).
     expect(f.nativeElement.querySelector('.for-you-progress')).toBeNull();
@@ -2532,6 +2543,63 @@ describe('ReaderShellComponent', () => {
       f.componentInstance.onMarkAllRead();
 
       ctrl.expectNone('https://api.test/api/entries/search/mark-read');
+    });
+  });
+
+  describe('mark all read for the ranked feed (#710)', () => {
+    function bootWithForYouSelected() {
+      const f = boot();
+      qp.next(convertToParamMap({ view: 'for-you' }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({ entries: [], nextCursor: null });
+      f.detectChanges();
+      return f;
+    }
+
+    it('offers the action on the ranked feed at all', () => {
+      const f = bootWithForYouSelected();
+
+      expect(f.componentInstance.canMarkAllRead()).toBe(true);
+    });
+
+    it('calls the for-you endpoint, then reloads the list and the counts beside it', () => {
+      const f = bootWithForYouSelected();
+      const ref = { closed: of(true) };
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
+
+      f.componentInstance.onMarkAllRead();
+
+      const req = ctrl.expectOne('https://api.test/api/entries/for-you/mark-read');
+      expect(req.request.method).toBe('POST');
+      // No scope and no id: the ranked feed identifies itself.
+      expect(req.request.body).toEqual({ until: expect.any(String) });
+      req.flush(null);
+
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({ entries: [], nextCursor: null });
+      ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
+      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+    });
+
+    // A watermark is what the feed and tag scopes move; this list must never
+    // reach that endpoint (#665, and the reason the backend split them).
+    it('never falls back to the watermark endpoint', () => {
+      const f = bootWithForYouSelected();
+      const ref = { closed: of(true) };
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
+
+      f.componentInstance.onMarkAllRead();
+
+      ctrl.expectNone('https://api.test/api/entries/mark-read');
+      ctrl.expectOne('https://api.test/api/entries/for-you/mark-read').flush(null);
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({ entries: [], nextCursor: null });
+      ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
+      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     });
   });
 

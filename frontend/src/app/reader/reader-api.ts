@@ -60,6 +60,7 @@ export class ReaderApi {
     let params = new HttpParams().set('view', query.view).set('limit', PAGE_SIZE);
     if (query.subscription != null) params = params.set('subscription', query.subscription);
     if (query.tag != null) params = params.set('tag', query.tag);
+    if (query.unread) params = params.set('unread', '1');
     if (cursor) params = params.set('cursor', cursor);
     return this.http.get<EntriesPage>(`${this.base}/api/entries`, { params });
   }
@@ -84,6 +85,12 @@ export class ReaderApi {
 
   markSearchRead(q: string, until: string): Observable<void> {
     return this.http.post<void>(`${this.base}/api/entries/search/mark-read`, { q, until });
+  }
+
+  /** For you names no scope: the list is the caller's own ranked feed, and the
+   *  backend marks the picks by entry state rather than by watermark (#710). */
+  markForYouRead(until: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/api/entries/for-you/mark-read`, { until });
   }
 
   readerContent(entryId: number): Observable<ReaderContent> {
