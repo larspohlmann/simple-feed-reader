@@ -1803,7 +1803,10 @@ describe('ReaderShellComponent', () => {
     expect(el.querySelectorAll('app-progress-hairline').length).toBe(1);
     // Inside the bar, so it travels with the bar. Parked in the strip below it,
     // the bar retracted on scroll and left a 2px band over the content.
-    expect(el.querySelector('app-reader-header app-progress-hairline')).not.toBeNull();
+    // The hairline's own template gates the `.bar` on `active()`, so reaching
+    // for the rendered bar (not just the host element, which is always in the
+    // DOM) is what actually exercises the `[active]="refreshSvc.running()"` binding.
+    expect(el.querySelector('app-reader-header app-progress-hairline .bar')).not.toBeNull();
     expect(el.querySelector('.under-header app-progress-hairline')).toBeNull();
   });
 
@@ -2162,7 +2165,12 @@ describe('ReaderShellComponent', () => {
 
     it('marks the failure as an alert, not a status update', () => {
       const { banner } = refreshAnsweredWith((request) =>
-        request.flush({ ...refreshDone, status: 'aborted', remaining: 4 }),
+        request.flush({
+          ...refreshDone,
+          status: 'aborted',
+          progress: { done: 0, total: 4 },
+          remaining: 4,
+        }),
       );
 
       expect(banner()?.getAttribute('role')).toBe('alert');
