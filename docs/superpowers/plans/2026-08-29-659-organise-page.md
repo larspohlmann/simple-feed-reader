@@ -10,6 +10,14 @@
 
 **Spec:** [docs/superpowers/specs/2026-08-29-659-organise-page-design.md](../specs/2026-08-29-659-organise-page-design.md)
 
+## Execution order
+
+Run the tasks **1, 2, 3, 4, 5, 6, 7, 12, 8, 9, 10, 11, 13, 14** — Task 12
+(translations) moves ahead of the components. `provideTranslocoTesting` loads the
+real shipped `en.json`, and `settings.routes.spec.ts` asserts `hasTranslation()`
+for every registered section, so a component task that lands before its keys
+red-fails on a missing translation rather than on its own logic.
+
 ## Global Constraints
 
 **Both sides**
@@ -247,7 +255,9 @@ use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
  *
  * The count comparison catches all three cases at once: the repository only
  * returns rows the user owns, so a short result means at least one id was
- * foreign or absent, and `array_unique` makes a repeated id short too.
+ * foreign or absent — and a repeated id is short too, because `IN (...)`
+ * answers a duplicate once. Comparing against the *unique* ids instead would
+ * let `[5, 5]` through, which is the bug this replaces.
  */
 final readonly class OwnedSubscriptions
 {
@@ -263,7 +273,7 @@ final readonly class OwnedSubscriptions
     public function resolve(array $ids, int $userId): array
     {
         $owned = $this->subscriptions->findAllByIdsForUser($ids, $userId);
-        if (\count($owned) !== \count(array_unique($ids))) {
+        if (\count($owned) !== \count($ids)) {
             throw new UnprocessableEntityHttpException(
                 'subscriptionIds must all be your feeds, without duplicates.',
             );
@@ -840,7 +850,7 @@ final readonly class BulkSubscriptionUpdater
         }
 
         $owned = $this->tags->findAllByIdsForUser($tagIds, $userId);
-        if (\count($owned) !== \count(array_unique($tagIds))) {
+        if (\count($owned) !== \count($tagIds)) {
             throw new UnprocessableEntityHttpException(
                 'addTagIds and removeTagIds must all be your tags, without duplicates.',
             );
@@ -2308,7 +2318,6 @@ import { OrganiseFeedRowComponent } from './organise-feed-row.component';
 import { LayoutService } from '../../reader/layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { SubscriptionDto } from '../../reader/models';
-import en from '../../../../public/i18n/en.json';
 
 const SUBSCRIPTION = {
   id: 7,
@@ -2338,9 +2347,8 @@ describe('OrganiseFeedRowComponent', () => {
   async function render(inputs: Record<string, unknown> = {}) {
     sheetOpen.mockClear();
     await TestBed.configureTestingModule({
-      imports: [OrganiseFeedRowComponent],
+      imports: [OrganiseFeedRowComponent, provideTranslocoTesting()],
       providers: [
-        provideTranslocoTesting({ en }),
         { provide: LayoutService, useValue: { isCoarse: signal(false) } },
         { provide: ActionSheet, useValue: { open: sheetOpen } },
       ],
@@ -2416,9 +2424,8 @@ Add the coarse-pointer case to the same file. It needs its own provider set, so 
     sheetOpen.mockClear();
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
-      imports: [OrganiseFeedRowComponent],
+      imports: [OrganiseFeedRowComponent, provideTranslocoTesting()],
       providers: [
-        provideTranslocoTesting({ en }),
         { provide: LayoutService, useValue: { isCoarse: signal(true) } },
         { provide: ActionSheet, useValue: { open: sheetOpen } },
       ],
@@ -2842,7 +2849,6 @@ import { ManageActions } from '../../reader/manage/manage-actions.service';
 import { LayoutService } from '../../reader/layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { SubscriptionDto, TagDto } from '../../reader/models';
-import en from '../../../../public/i18n/en.json';
 
 const TECH: TagDto = { id: 2, name: 'Tech', color: null, icon: null, position: 0 };
 const OTHER_TAG: TagDto = { id: 4, name: 'Nachrichten', color: null, icon: null, position: 1 };
@@ -2911,10 +2917,9 @@ describe('OrganiseTagGroupComponent', () => {
 
     await TestBed.resetTestingModule()
       .configureTestingModule({
-        imports: [OrganiseTagGroupComponent],
+        imports: [OrganiseTagGroupComponent, provideTranslocoTesting()],
         providers: [
-          provideTranslocoTesting({ en }),
-          OrganiseStore,
+            OrganiseStore,
           { provide: ManageActions, useValue: manage },
           { provide: LayoutService, useValue: { isCoarse: signal(options.coarse ?? false) } },
           { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
@@ -3425,7 +3430,6 @@ import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { BulkTagDialogComponent, BulkTagDialogData } from './bulk-tag-dialog.component';
 import { SubscriptionDto, TagDto } from '../../reader/models';
-import en from '../../../../public/i18n/en.json';
 
 const TECH: TagDto = { id: 2, name: 'Tech', color: null, icon: null, position: 0 };
 const NEWS: TagDto = { id: 3, name: 'Nachrichten', color: null, icon: null, position: 1 };
@@ -3468,10 +3472,9 @@ describe('BulkTagDialogComponent', () => {
     const close = jest.fn();
     await TestBed.resetTestingModule()
       .configureTestingModule({
-        imports: [BulkTagDialogComponent],
+        imports: [BulkTagDialogComponent, provideTranslocoTesting()],
         providers: [
-          provideTranslocoTesting({ en }),
-          { provide: DIALOG_DATA, useValue: data },
+            { provide: DIALOG_DATA, useValue: data },
           { provide: DialogRef, useValue: { close } },
         ],
       })
@@ -3809,7 +3812,6 @@ import { ManageActions } from '../../reader/manage/manage-actions.service';
 import { LayoutService } from '../../reader/layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { SubscriptionDto, TagDto } from '../../reader/models';
-import en from '../../../../public/i18n/en.json';
 
 const TECH: TagDto = { id: 2, name: 'Tech', color: null, icon: null, position: 0 };
 
@@ -3875,10 +3877,9 @@ describe('OrganiseSectionComponent', () => {
 
     await TestBed.resetTestingModule()
       .configureTestingModule({
-        imports: [OrganiseSectionComponent],
+        imports: [OrganiseSectionComponent, provideTranslocoTesting()],
         providers: [
-          provideTranslocoTesting({ en }),
-          { provide: ManageActions, useValue: manage },
+            { provide: ManageActions, useValue: manage },
           { provide: Dialog, useValue: { open: jest.fn(() => ({ closed: of(undefined) })) } },
           { provide: LayoutService, useValue: { isCoarse: signal(false) } },
           { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
