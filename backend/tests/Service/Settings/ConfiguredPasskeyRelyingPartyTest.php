@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Settings;
 
 use App\Service\Settings\ConfiguredPasskeyRelyingParty;
+use App\Service\Settings\EffectivePasskeyRelyingPartyId;
 use App\Service\Settings\InstanceSettings;
 use App\Service\Settings\InstanceSettingsUpdate;
 use App\Service\Settings\PublicBaseUrl;
@@ -49,6 +50,7 @@ final class ConfiguredPasskeyRelyingPartyTest extends KernelTestCase
         $relyingParty = new ConfiguredPasskeyRelyingParty(
             $this->settingsReturning(passkeyRpId: null, passkeyRpName: null),
             $this->publicBaseUrlOf('https://lars-pohlmann.de/reader'),
+            new EffectivePasskeyRelyingPartyId(),
         );
 
         self::assertSame('lars-pohlmann.de', $relyingParty->id());
@@ -60,6 +62,7 @@ final class ConfiguredPasskeyRelyingPartyTest extends KernelTestCase
         $relyingParty = new ConfiguredPasskeyRelyingParty(
             $this->settingsReturning(passkeyRpId: 'example.test', passkeyRpName: 'My Reader'),
             $this->publicBaseUrlOf('https://lars-pohlmann.de/reader'),
+            new EffectivePasskeyRelyingPartyId(),
         );
 
         self::assertSame('example.test', $relyingParty->id());
@@ -72,6 +75,7 @@ final class ConfiguredPasskeyRelyingPartyTest extends KernelTestCase
         $relyingParty = new ConfiguredPasskeyRelyingParty(
             $this->settingsReturning(passkeyRpId: null, passkeyRpName: null),
             $this->publicBaseUrlOf('http://localhost:4200/reader'),
+            new EffectivePasskeyRelyingPartyId(),
         );
 
         self::assertSame('localhost', $relyingParty->id());
