@@ -1,5 +1,5 @@
 // src/app/settings/organise/organise.store.ts
-import { Injectable, Signal, computed, inject, signal } from '@angular/core';
+import { Injectable, Signal, computed, effect, inject, signal, untracked } from '@angular/core';
 import { SubscriptionsStore, untaggedSubs } from '../../reader/subscriptions.store';
 import { TagsStore } from '../../reader/tags.store';
 import { SubscriptionDto, TagDto } from '../../reader/models';
@@ -73,6 +73,22 @@ export class OrganiseStore {
 
   readonly selectedIds = signal<ReadonlySet<number>>(new Set());
   readonly expandedKeys = signal<ReadonlySet<GroupKey>>(readExpanded());
+
+  /** A selected feed that another tab, or the row menu's own "Unsubscribe",
+   *  removes from the loaded subscriptions must drop out of the selection
+   *  too — the backend 422s a bulk request whole when ANY id in it no longer
+   *  exists, so a stale id would silently fail every later bulk action for
+   *  the rest of the selection as well. */
+  private readonly pruneSelectionOfRemovedFeeds = effect(() => {
+    const known = new Set(this.subs.subscriptions().map((s) => s.id));
+    untracked(() => {
+      this.selectedIds.update((current) => {
+        const next = new Set([...current].filter((id) => known.has(id)));
+
+        return next.size === current.size ? current : next;
+      });
+    });
+  });
   readonly view = signal<OrganiseView>('tree');
   readonly titleFilter = signal('');
   readonly tagFilter = signal<ReadonlySet<GroupKey>>(new Set());
@@ -241,8 +257,17 @@ export class OrganiseStore {
     });
   }
 
+  /** Every group key that exists, independent of the title/tag filter —
+   *  `groups()` drops a group with no filter match, and expandAll/collapseAll
+   *  must persist a choice about ALL of the user's groups, not just the ones
+   *  a filter happens to be showing right now. */
+  private readonly allGroupKeys = computed<GroupKey[]>(() => [
+    ...this.tags().map((tag) => tag.id),
+    'untagged',
+  ]);
+
   expandAll(): void {
-    const next = new Set<GroupKey>(this.groups().map((g) => g.key));
+    const next = new Set<GroupKey>(this.allGroupKeys());
     persistExpanded(next);
     this.expandedKeys.set(next);
   }

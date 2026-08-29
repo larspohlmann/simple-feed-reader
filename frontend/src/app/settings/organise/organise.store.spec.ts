@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { WritableSignal, signal } from '@angular/core';
 import { OrganiseStore } from './organise.store';
 import { SubscriptionsStore } from '../../reader/subscriptions.store';
 import { TagsStore } from '../../reader/tags.store';
@@ -61,6 +61,26 @@ describe('OrganiseStore', () => {
     });
 
     return TestBed.inject(OrganiseStore);
+  }
+
+  /** Like `make()`, but also hands back the mock's writable subscriptions
+   *  signal so a test can simulate `SubscriptionsStore.load()` dropping a row
+   *  out from under an existing selection. */
+  function makeWithMutableSubs(
+    subs: SubscriptionDto[] = SUBS,
+    tags: TagDto[] = TAGS,
+  ): { store: OrganiseStore; subsSignal: WritableSignal<SubscriptionDto[]> } {
+    localStorage.clear();
+    const subsSignal = signal(subs);
+    TestBed.configureTestingModule({
+      providers: [
+        OrganiseStore,
+        { provide: SubscriptionsStore, useValue: { subscriptions: subsSignal } },
+        { provide: TagsStore, useValue: { tags: signal(tags) } },
+      ],
+    });
+
+    return { store: TestBed.inject(OrganiseStore), subsSignal };
   }
 
   it('groups feeds under every tag and puts untagged last', () => {
@@ -139,6 +159,26 @@ describe('OrganiseStore', () => {
     store.toggleGroup(1);
 
     expect(store.isExpanded(1)).toBe(false);
+  });
+
+  /**
+   * expandAll() used to derive its set from groups(), the FILTERED list — so
+   * clicking it while a search filter narrows the visible groups persisted
+   * only the visible subset, silently dropping the expanded state of every
+   * other group (isExpanded() then falls back to "collapsed" for them once
+   * the filter clears). "Expand all" must mean every group, not just the
+   * ones currently on screen (#659 review).
+   */
+  it('expandAll opens every group, not only the ones a filter is currently showing', () => {
+    const store = make();
+    store.titleFilter.set('heise'); // narrows groups() to Tech (2) only
+
+    store.expandAll();
+    store.titleFilter.set('');
+
+    expect(store.isExpanded(1)).toBe(true);
+    expect(store.isExpanded(2)).toBe(true);
+    expect(store.isExpanded('untagged')).toBe(true);
   });
 
   it('expandAll opens every current group; collapseAll closes them all', () => {
@@ -275,5 +315,31 @@ describe('OrganiseStore', () => {
 
     expect(localStorage.getItem('sfr.tags.collapsed')).toBeNull();
     expect(localStorage.getItem('sfr.organise.expanded')).not.toBeNull();
+  });
+
+  /**
+   * The bulk bar sends every id in `selectedIds`, and the backend 422s the
+   * WHOLE request if any one of them is absent. If a selected feed is
+   * unsubscribed from its own row menu, `subs.load()` drops it from
+   * `subscriptions()` but nothing used to prune the stale id back out of the
+   * selection — every later bulk action then failed for the other, still
+   * valid, selected feeds too (#659 review).
+   */
+  it('prunes a selected id once it disappears from the loaded subscriptions', () => {
+    const { store, subsSignal } = makeWithMutableSubs();
+    store.toggleFeed(10);
+    store.toggleFeed(11);
+    store.toggleFeed(12);
+    expect(store.selectedCount()).toBe(3);
+
+    // Simulate unsubscribing 11 (heise) from its own row menu: subs.load()
+    // reloads without it.
+    subsSignal.set(SUBS.filter((s) => s.id !== 11));
+    TestBed.tick();
+
+    expect(store.selectedIds().has(11)).toBe(false);
+    expect([...store.selectedIds()].sort()).toEqual([10, 12]);
+    expect(store.selectedCount()).toBe(2);
+    expect(store.hiddenSelectedCount()).toBe(0);
   });
 });
