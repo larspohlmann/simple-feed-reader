@@ -135,7 +135,18 @@ Two integers with a two-minute lifetime do not earn a migration, a CI migration 
 and an abandoned-run sweeper.
 
 The scope is part of the key: a sweep of all feeds, a `feedId` refresh and a `tagId`
-refresh are three different runs.
+refresh are three different runs. `RefreshRunKey` is a small value object built from
+the `RefreshRequest` — user id plus one of `all`, `feed-<id>`, `tag-<id>` — so the key
+format lives in one place rather than in `sprintf` calls at each call site.
+
+`RefreshRequest::$userId` is nullable, because `allDue()` and `forFeed()` serve the CLI
+and maintenance sweeps. Those paths call `RefreshRunner` directly and are never tracked;
+a request reaching `TrackedRefreshRunner` without a user id is a programming error and
+throws `\LogicException`. This is a precondition, not a failure mode, which is why it
+does not get a typed exception of its own next to the service.
+
+`RefreshRunProgress` is a `final readonly` class of two ints, so the filesystem adapter
+serialises it without help.
 
 ### `Service/Refresh/TrackedRefreshRunner`
 
@@ -146,7 +157,9 @@ The only place run-wide accounting lives.
 3. On `busy`, return with the store untouched — no slice ran, and folding a zeroed
    busy tally in would drop the denominator and slam the bar to full.
 4. Otherwise fold `fetched + notModified + failed + throttled` in as `handled`.
-5. Forget the run when `remaining === 0` or the status is terminal; otherwise save it.
+5. Forget the run when `remaining === 0` or the status is `aborted` — the two ways a
+   run ends. Otherwise save it. (`completed` always carries `remaining === 0`, so the
+   first condition covers it; `busy` already returned at step 3.)
 
 ### `Service/Refresh/TrackedRefreshReport`
 
