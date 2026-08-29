@@ -403,6 +403,16 @@
       "showInForYou": "In Für dich anzeigen",
       "hideFromForYou": "Aus Für dich ausblenden",
       "clear": "Zurücksetzen"
+    },
+    "passkeys": {
+      "title": "Passkeys",
+      "caption": "Melde dich ohne Passwort an, mit dem Fingerabdruck, Gesicht oder der Bildschirmsperre deines Geräts.",
+      "add": "Passkey hinzufügen",
+      "empty": "Noch keine Passkeys.",
+      "defaultLabel": "Passkey",
+      "meta": "Hinzugefügt {{created}} · Zuletzt verwendet: {{lastUsed}}",
+      "never": "Nie",
+      "removeAria": "Passkey „{{label}}“ entfernen"
     }
   },
   "dialog": {

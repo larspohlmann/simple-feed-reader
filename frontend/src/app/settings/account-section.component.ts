@@ -17,12 +17,14 @@ import { ErrorBannerComponent } from '../shared/error-banner/error-banner.compon
 import { SettingsGroupComponent } from '../shared/settings/settings-group/settings-group.component';
 import { SettingsRowComponent } from '../shared/settings/settings-row/settings-row.component';
 import { SettingsStackComponent } from '../shared/settings/stack/settings-stack.component';
+import { PasskeysGroupComponent } from './passkeys-group.component';
 
 @Component({
   selector: 'app-account-section',
   imports: [
     ButtonComponent,
     ErrorBannerComponent,
+    PasskeysGroupComponent,
     SettingsGroupComponent,
     SettingsRowComponent,
     SettingsStackComponent,
