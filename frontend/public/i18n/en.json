@@ -328,7 +328,7 @@
       "passkeyRpName": "Passkey display name",
       "passkeyRpNameHint": "The name a device shows when it asks for a passkey. Leave empty to use Simple Feed Reader.",
       "passkeyInvalidateTitle": "Change the passkey domain?",
-      "passkeyInvalidateMessage": "Changing the domain signs out {{count}} enrolled passkey(s), permanently. They cannot be repaired. Confirm to change the domain and delete them.",
+      "passkeyInvalidateMessage": "Changing the domain signs out {{count}} enrolled passkey(s), permanently. They cannot be repaired. Each person then has to add a new passkey on their device. Confirm to change the domain and delete them.",
       "passkeyInvalidateConfirm": "Change domain and delete passkeys",
       "passkeyHelp": {
         "label": "How do I find these values?",
@@ -340,7 +340,7 @@
         "rule2": "A public suffix is refused. You cannot own com or co.uk.",
         "rule3": "An IP address is refused. Use a domain name. localhost is the one exception.",
         "rule4": "Passkeys need a secure page. Use HTTPS, or localhost.",
-        "idWarning": "Changing the domain signs out every passkey, permanently. The domain is written into each passkey when it is made, so an existing one stops matching and cannot be repaired. The reader refuses the change until you confirm it, then deletes the passkeys it made unusable.",
+        "idWarning": "Changing the domain signs out every passkey, permanently. The domain is written into each passkey when it is made, so an existing one stops matching and cannot be repaired. The reader refuses the change until you confirm it, then deletes the passkeys it made unusable. Each person then has to add a new passkey on their device.",
         "nameTitle": "Passkey display name",
         "nameBody": "This is the name people see when their device asks for a passkey, and the label their password manager saves. Keep it short. Changing it is safe and every passkey keeps working. A device that already saved one keeps showing the old name."
       }
