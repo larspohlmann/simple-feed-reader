@@ -14,6 +14,7 @@ import { SubscriptionDto, TagDto } from '../../reader/models';
 
 const TECH: TagDto = { id: 2, name: 'Tech', color: null, icon: null, position: 0 };
 const OTHER_TAG: TagDto = { id: 4, name: 'Nachrichten', color: null, icon: null, position: 1 };
+const THIRD_TAG: TagDto = { id: 6, name: 'Kultur', color: null, icon: null, position: 2 };
 
 const feed = (id: number, title: string, tagIds: number[]): SubscriptionDto =>
   ({
@@ -58,6 +59,12 @@ const UNTAGGED_GROUP: OrganiseGroup = {
   tag: null,
   subscriptions: [SUB_A, SUB_B],
   totalCount: 2,
+};
+const THIRD_GROUP: OrganiseGroup = {
+  key: THIRD_TAG.id,
+  tag: THIRD_TAG,
+  subscriptions: [],
+  totalCount: 0,
 };
 
 describe('OrganiseTagGroupComponent', () => {
@@ -158,19 +165,22 @@ describe('OrganiseTagGroupComponent', () => {
     expect(manage.reorderUntagged).toHaveBeenCalledWith([SUB_B.id, SUB_A.id]);
   });
 
-  it('moves a feed out of the source tag when it is dropped on another group', async () => {
-    const { manage, component } = await render(GROUP);
+  it('moves a feed carrying two tags to a third tag that is neither of them', async () => {
+    const { manage, component } = await render(THIRD_GROUP);
 
+    // SUB_WITH_TWO_TAGS carries TECH (2) and OTHER_TAG (4). It is dragged out
+    // of the TECH group (the source container) and dropped on THIRD_GROUP
+    // (6) — a tag it did not previously carry. Only TECH, the source, must
+    // be dropped; OTHER_TAG must survive untouched alongside the new tag.
     component.onFeedDropped({
-      previousContainer: { data: { key: 4, tag: OTHER_TAG } },
-      container: { data: GROUP },
+      previousContainer: { data: GROUP },
+      container: { data: THIRD_GROUP },
       item: { data: SUB_WITH_TWO_TAGS },
       previousIndex: 0,
       currentIndex: 0,
     } as never);
 
-    // tag 4 dropped, this group's tag added — a move, not a copy.
-    expect(manage.retag).toHaveBeenCalledWith(SUB_WITH_TWO_TAGS, [GROUP.tag!.id]);
+    expect(manage.retag).toHaveBeenCalledWith(SUB_WITH_TWO_TAGS, [OTHER_TAG.id, THIRD_TAG.id]);
   });
 
   it('clears every tag when a feed is dropped on the untagged group', async () => {
@@ -185,6 +195,29 @@ describe('OrganiseTagGroupComponent', () => {
     } as never);
 
     expect(manage.retag).toHaveBeenCalledWith(SUB_A, []);
+  });
+
+  it('ignores a dropped tag header instead of mistaking it for a feed', async () => {
+    const { manage, component } = await render(THIRD_GROUP);
+
+    // The head row is itself a cdkDrag carrying the GROUP as its payload
+    // (see the template). Once the page wires a cdkDropListGroup around
+    // several tag groups (Task 11), a tag header becomes a droppable item on
+    // any group's drop lists — including this one. Without the isFeedDrag
+    // guard, `event.item.data` would be treated as a SubscriptionDto and
+    // `subscription.tags.map(...)` would throw, since an OrganiseGroup has
+    // no `tags` field.
+    component.onFeedDropped({
+      previousContainer: { data: GROUP },
+      container: { data: THIRD_GROUP },
+      item: { data: GROUP },
+      previousIndex: 0,
+      currentIndex: 0,
+    } as never);
+
+    expect(manage.retag).not.toHaveBeenCalled();
+    expect(manage.reorderTagFeeds).not.toHaveBeenCalled();
+    expect(manage.reorderUntagged).not.toHaveBeenCalled();
   });
 
   it('turns drag off on a coarse pointer, keeping the arrows', async () => {
