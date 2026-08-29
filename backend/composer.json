@@ -38,7 +38,8 @@
         "symfony/serializer": "7.4.*",
         "symfony/translation": "7.4.*",
         "symfony/validator": "7.4.*",
-        "symfony/yaml": "7.4.*"
+        "symfony/yaml": "7.4.*",
+        "web-auth/webauthn-lib": "^5.3"
     },
     "require-dev": {
         "ext-openssl": "*",
