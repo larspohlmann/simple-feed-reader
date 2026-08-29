@@ -21,6 +21,8 @@ use Webauthn\AuthenticatorAttestationResponse;
 use Webauthn\AuthenticatorAttestationResponseValidator;
 use Webauthn\CredentialRecord;
 use Webauthn\PublicKeyCredential;
+use Webauthn\PublicKeyCredentialCreationOptions;
+use Webauthn\PublicKeyCredentialDescriptor;
 
 /**
  * Verifies a WebAuthn attestation ("registration") response and turns it
@@ -43,6 +45,13 @@ use Webauthn\PublicKeyCredential;
  */
 final readonly class AttestationVerifier
 {
+    /**
+     * UserPasskey::$credentialId is VARCHAR(255): see
+     * guardCredentialIdFitsColumn() for why that needs enforcing here rather
+     * than left to the database (#624, fix round 2).
+     */
+    private const int CREDENTIAL_ID_COLUMN_MAX_LENGTH = 255;
+
     public function __construct(
         private PasskeyChallengeStore $challengeStore,
         private PasskeyCeremony $ceremony,
@@ -77,27 +86,45 @@ final readonly class AttestationVerifier
     }
 
     /**
-     * Everything in this method runs on bytes an attacker fully controls —
+     * Resolves the user handle and rebuilds the creation options BEFORE the
+     * broad catch below, deliberately: optionsFor() reaches the database
+     * through PasskeyCredentials::excludeListFor(), and a failure there is a
+     * real fault (a database outage, say), not a credential to reject. Only
+     * the actual parsing of attacker-controlled bytes belongs inside that
+     * catch — see checkAgainstLibrary() (#624, fix round 2).
+     *
+     * @param array<string, mixed> $credential
+     */
+    private function check(User $user, PasskeyChallenge $challenge, array $credential): CredentialRecord
+    {
+        $userHandle = $challenge->userHandle ?? throw new \UnexpectedValueException(
+            'A registration challenge must always carry a user handle.',
+        );
+        $options = $this->optionsFactory->optionsFor($user, $challenge->challenge, $userHandle);
+
+        return $this->checkAgainstLibrary($credential, $options);
+    }
+
+    /**
+     * Everything in THIS method runs on bytes an attacker fully controls —
      * the WebAuthn deserializer, the CBOR decoder underneath it, and the
      * ceremony's own checks. Between them they throw a scatter of types that
      * is impractical to enumerate exhaustively (the library's own
      * WebauthnException hierarchy, Symfony's serializer exceptions, and
      * plain SPL RuntimeException/InvalidArgumentException/TypeError from the
      * CBOR decoder on malformed input), so the catch is deliberately broad.
-     * That is safe specifically because nothing in this method's scope is
-     * OUR code: whatever is thrown here is, by construction, a rejection of
-     * the credential, never a bug this listener should surface as a 500.
+     * That is safe specifically because nothing else runs in this scope:
+     * $options is built by the caller, outside the catch, for exactly that
+     * reason.
      *
      * @param array<string, mixed> $credential
      */
-    private function check(User $user, PasskeyChallenge $challenge, array $credential): CredentialRecord
-    {
+    private function checkAgainstLibrary(
+        array $credential,
+        PublicKeyCredentialCreationOptions $options,
+    ): CredentialRecord {
         try {
             $response = $this->deserialize($credential);
-            $userHandle = $challenge->userHandle ?? throw new \UnexpectedValueException(
-                'A registration challenge must always carry a user handle.',
-            );
-            $options = $this->optionsFactory->optionsFor($user, $challenge->challenge, $userHandle);
 
             return AuthenticatorAttestationResponseValidator::create($this->ceremony->creation())
                 ->check($response, $options, $this->ceremony->host());
@@ -149,16 +176,38 @@ final readonly class AttestationVerifier
 
     private function passkeyFrom(User $user, CredentialRecord $record, string $label): UserPasskey
     {
+        $credentialId = Base64UrlSafe::encodeUnpadded($record->publicKeyCredentialId);
+        self::guardCredentialIdFitsColumn($credentialId);
+
         return new UserPasskey(
             $user,
-            Base64UrlSafe::encodeUnpadded($record->publicKeyCredentialId),
+            $credentialId,
             Base64UrlSafe::encodeUnpadded($record->userHandle),
             Base64UrlSafe::encodeUnpadded($record->credentialPublicKey),
             $record->counter,
             self::aaguidOrNull($record->aaguid),
-            array_values($record->transports),
+            self::knownTransports($record->transports),
             $label,
             $this->nowAsNaiveUtc(),
+        );
+    }
+
+    /**
+     * The library's own CheckCredentialId step only rejects a credential id
+     * over 1023 RAW bytes — the spec's own ceiling, and far more than
+     * UserPasskey::$credentialId's VARCHAR(255) column holds once
+     * base64url-encoded (~191 raw bytes). MySQL enforces that column width
+     * and would otherwise surface a data-too-long DBAL exception at flush
+     * time — a DIFFERENT exception than the UniqueConstraintViolationException
+     * persist() already catches, so it would reach the kernel as an
+     * unhandled 500. SQLite does not enforce VARCHAR width at all, which is
+     * why this can only be caught here, before the write is even attempted,
+     * never at the database (#624, fix round 2).
+     */
+    private static function guardCredentialIdFitsColumn(string $credentialId): void
+    {
+        \strlen($credentialId) <= self::CREDENTIAL_ID_COLUMN_MAX_LENGTH || throw new AttestationRejectedException(
+            new \LengthException('Credential id is too long to store.'),
         );
     }
 
@@ -171,6 +220,24 @@ final readonly class AttestationVerifier
     private static function aaguidOrNull(Uuid $aaguid): ?string
     {
         return (new NilUuid())->equals($aaguid) ? null : $aaguid->toRfc4122();
+    }
+
+    /**
+     * `response.transports` is client-supplied wire data the WebAuthn
+     * library never validates at all — AuthenticatorAttestationResponseDenormalizer
+     * assigns it verbatim — and PasskeyCredentials::excludeListFor() later
+     * echoes whatever is stored here straight back to a browser on every
+     * future registration attempt. Filtering to the spec's own enum before
+     * persisting is what keeps that round trip from carrying arbitrary
+     * client-supplied strings (#624, fix round 2).
+     *
+     * @param array<string> $transports
+     *
+     * @return list<string>
+     */
+    private static function knownTransports(array $transports): array
+    {
+        return array_values(array_intersect($transports, PublicKeyCredentialDescriptor::AUTHENTICATOR_TRANSPORTS));
     }
 
     /** Doctrine persists naive wall-clock values, so a non-UTC clock must be normalised first. */

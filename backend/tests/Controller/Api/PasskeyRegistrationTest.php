@@ -228,6 +228,59 @@ final class PasskeyRegistrationTest extends ApiTestCase
     }
 
     /**
+     * A malformed attestationObject must be rejected cleanly, never crash
+     * the server. This is what keeps deserialize() living inside
+     * AttestationVerifier::checkAgainstLibrary()'s broad catch from silently
+     * becoming an unhandled 500 if a later refactor ever hoists it back out
+     * (#624, fix round 2).
+     */
+    public function testAGarbageAttestationObjectIsRejected(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
+        $user = $this->factory()->create('enroller@example.test');
+        $this->authenticate($client, 'enroller@example.test');
+        [$fixture, $handle] = $this->seedRegistrationChallenge($user->getId(), 'example.test', 'https://example.test');
+
+        $this->registerPasskey($client, $handle, $this->withGarbageAttestationObject($fixture->credential), 'My phone');
+
+        $this->assertRejected($client, 400);
+    }
+
+    /**
+     * `attestation: none` carries no signature, so nothing but this
+     * application's OWN configuration stops an authenticated caller from
+     * hand-building this exact payload with the UV bit cleared. User
+     * verification is a passkey's sole authentication factor, so a ceremony
+     * that accepted this would not be verifying a registration, it would be
+     * a bypass. The library enforces USER_VERIFICATION_REQUIREMENT_REQUIRED
+     * today; this test exists so the suite would notice if that enforcement
+     * ever broke (#624, fix round 2) — proved load-bearing by temporarily
+     * relaxing RegistrationOptionsFactory::optionsFor()'s userVerification
+     * to PREFERRED and confirming this test then fails, before restoring it.
+     */
+    public function testAnAttestationWithoutUserVerificationIsRejected(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
+        $user = $this->factory()->create('enroller@example.test');
+        $this->authenticate($client, 'enroller@example.test');
+        $fixture = PasskeyFixtures::attestation(
+            'example.test',
+            'https://example.test',
+            random_bytes(32),
+            random_bytes(16),
+            random_bytes(32),
+            flags: PasskeyFixtures::FLAG_USER_PRESENT | PasskeyFixtures::FLAG_ATTESTED_CREDENTIAL_DATA_INCLUDED,
+        );
+        $handle = $this->issueChallenge($fixture->challenge, $user->getId(), $this->randomUserHandle());
+
+        $this->registerPasskey($client, $handle, $fixture->credential, 'My phone');
+
+        $this->assertRejected($client, 400);
+    }
+
+    /**
      * Reuses the fixture the origin was signed against rather than capturing
      * a second one: only the SERVER's configured origin changes, so this
      * proves the same boundary CheckAllowedOrigins enforces without a second
@@ -394,6 +447,41 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->registerPasskey($client, $handleTwo, $fixtureTwo->credential, 'My other phone');
 
         $this->assertRejected($client, 409);
+    }
+
+    // -- Fix round 2 (#624) -------------------------------------------------
+
+    /**
+     * UserPasskey::$credentialId is VARCHAR(255). The library's own
+     * CheckCredentialId step only rejects a credential id over 1023 RAW
+     * bytes — far looser than the column. Without AttestationVerifier's own
+     * guard, MySQL would 500 here (a data-too-long DBAL exception, a
+     * DIFFERENT one than the unique-constraint violation
+     * testADuplicateCredentialIdIsRejected above exercises) while SQLite
+     * enforces no VARCHAR width at all and would silently accept the
+     * oversized row. This is why the fix round 2 report runs this
+     * specifically against the MySQL leg, not just natively.
+     */
+    public function testAnOverlongCredentialIdIsRejected(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
+        $user = $this->factory()->create('enroller@example.test');
+        $this->authenticate($client, 'enroller@example.test');
+        // 200 raw bytes: within the library's own 1023-byte ceiling, but its
+        // base64url encoding (~267 chars) overflows the VARCHAR(255) column.
+        $fixture = PasskeyFixtures::attestation(
+            'example.test',
+            'https://example.test',
+            random_bytes(32),
+            random_bytes(200),
+            random_bytes(32),
+        );
+        $handle = $this->issueChallenge($fixture->challenge, $user->getId(), $this->randomUserHandle());
+
+        $this->registerPasskey($client, $handle, $fixture->credential, 'My phone');
+
+        $this->assertRejected($client, 400);
     }
 
     /**
@@ -597,6 +685,24 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $credential['response']['clientDataJSON'] = Base64UrlSafe::encodeUnpadded(
             (string) json_encode($decoded, \JSON_THROW_ON_ERROR),
         );
+
+        return $credential;
+    }
+
+    /**
+     * Truncates a real, valid attestationObject to 4 bytes — guaranteed
+     * incomplete CBOR, since even the top-level map's header and length
+     * alone take more than that to encode — rather than random garbage,
+     * so the failure is deterministic instead of depending on chance.
+     *
+     * @param PasskeyCredentialPayload $credential
+     *
+     * @return PasskeyCredentialPayload
+     */
+    private function withGarbageAttestationObject(array $credential): array
+    {
+        $attestationObject = Base64UrlSafe::decodeNoPadding($credential['response']['attestationObject']);
+        $credential['response']['attestationObject'] = Base64UrlSafe::encodeUnpadded(substr($attestationObject, 0, 4));
 
         return $credential;
     }
