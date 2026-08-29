@@ -101,6 +101,42 @@ final class TagControllerTest extends WebTestCase
         self::assertCount(1, $list['tags']);
     }
 
+    /**
+     * A newly created tag must append to the END of the user's tag list, not
+     * a fixed 0 — the same "seed from the current maximum" positioning as
+     * SubscriptionTagPositions. Creating a second tag right after the first
+     * must not collide with it at the same position.
+     */
+    public function testCreatingASecondTagAppendsAfterTheFirst(): void
+    {
+        $client = self::createClient();
+        $headers = $this->authHeader('tag-positions@example.com');
+
+        $client->request(
+            'POST',
+            '/api/tags',
+            server: $headers,
+            content: json_encode(['name' => 'First'], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(201);
+        $first = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($first);
+        self::assertIsArray($first['tag']);
+        self::assertSame(0, $first['tag']['position']);
+
+        $client->request(
+            'POST',
+            '/api/tags',
+            server: $headers,
+            content: json_encode(['name' => 'Second'], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(201);
+        $second = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($second);
+        self::assertIsArray($second['tag']);
+        self::assertSame(1, $second['tag']['position']);
+    }
+
     public function testInvalidColorIsRejected(): void
     {
         $client = self::createClient();
@@ -133,6 +169,37 @@ final class TagControllerTest extends WebTestCase
         $headers = $this->authHeader('intruder@example.com');
         $client->request('DELETE', '/api/tags/' . $tag->getId(), server: $headers);
         self::assertResponseStatusCodeSame(404); // not 403 — do not reveal existence
+    }
+
+    /**
+     * The delete endpoint's own job, not merely the join-table side effect:
+     * the tag row itself must be gone. Only asserting the DETACH (as the test
+     * below does) cannot tell "the tag was removed" apart from "flush() ran
+     * with nothing to remove, but the join rows cascaded away regardless" —
+     * the tag_id foreign key on subscription_tag is ON DELETE CASCADE, so a
+     * tag that survives a skipped em->remove() would still leave its
+     * subscriptions untagged.
+     */
+    public function testDeleteActuallyRemovesTheTagRow(): void
+    {
+        $client = self::createClient();
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+
+        $user = $this->userFactory()->create('tag-row-gone@example.com');
+        $tag = new Tag($user, 'Gone soon');
+        $em->persist($tag);
+        $em->flush();
+        $tagId = (int) $tag->getId();
+
+        $client->request('DELETE', '/api/tags/' . $tagId, server: $this->headersFor($user));
+
+        self::assertResponseStatusCodeSame(204);
+        $em->clear();
+        self::assertNull(
+            $em->getRepository(Tag::class)->find($tagId),
+            'DELETE /api/tags/{id} must remove the tag row itself, not just its joins.',
+        );
     }
 
     /**

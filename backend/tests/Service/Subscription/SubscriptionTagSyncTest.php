@@ -85,6 +85,43 @@ final class SubscriptionTagSyncTest extends DbTestCase
         self::assertSame(0, $feed->getPosition());
     }
 
+    /**
+     * currentIds must be the feed's OWN tag ids, not the Tag objects
+     * themselves — sync() strict-compares a candidate tag's (int) id against
+     * this list to decide whether it is already attached. A feed that
+     * ALREADY carries the requested tag must be a true no-op: no removeTag(),
+     * no addTag(), and — the part a same-outcome assertion on THIS feed alone
+     * cannot see — no SubscriptionTagPositions::nextForTag() call either,
+     * since addTag() is itself idempotent and would silently absorb a wrong
+     * re-add. That call is only observable through its SIDE EFFECT: the
+     * shared per-tag counter it advances. Sync a feed that already carries
+     * News (which must be a true no-op) and THEN a fresh feed newly tagged
+     * News, on the SAME SubscriptionTagSync instance — a spurious call during
+     * the first sync leaves the second feed's News position one too high.
+     */
+    public function testResyncingAnAlreadyTaggedFeedNeverConsumesTheTagsPositionCounter(): void
+    {
+        $user = $this->user('no-spurious-position@example.com');
+        $news = $this->tag($user, 'News');
+        $alreadyTagged = $this->taggedSubscription($user, 'https://a.example.com/rss', [[$news, 0]]);
+
+        $this->sync()->sync($alreadyTagged, [(int) $news->getId()], (int) $user->getId());
+        $this->em->flush();
+
+        $freshlyTagged = new Subscription($user, $this->feed('https://b.example.com/rss'), $this->now());
+        $this->em->persist($freshlyTagged);
+        $this->em->flush();
+
+        $this->sync()->sync($freshlyTagged, [(int) $news->getId()], (int) $user->getId());
+        $this->em->flush();
+
+        self::assertSame(
+            1,
+            $this->joinPosition($freshlyTagged, $news),
+            'the no-op resync above must not have advanced the shared News position counter.',
+        );
+    }
+
     public function testIgnoresTagIdsOwnedByAnotherUser(): void
     {
         $user = $this->user('owner@example.com');
