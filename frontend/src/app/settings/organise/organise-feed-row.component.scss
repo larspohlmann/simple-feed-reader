@@ -1,4 +1,6 @@
 // src/app/settings/organise/organise-feed-row.component.scss
+@use '../../theme/breakpoints' as bp;
+
 :host {
   display: block;
 }
@@ -31,15 +33,27 @@
 
 .pills {
   display: flex;
+  min-width: 0;
   gap: var(--space-1);
   overflow: hidden;
 }
 
+// A pill is itself a flex item of `.pills`, and without its own `overflow` a
+// flex item's automatic minimum width floors at its full content size (the
+// glyph plus the whole tag name) -- so when the row runs out of room, `.pills`
+// shrank below that floor while each `.pill` refused to, and the surplus
+// pixels overflowed `.pills`' own clip, cutting the last pill's rounded shape
+// off mid-way instead of truncating it. `overflow: hidden` here lets the pill
+// itself shrink, so `.name` below can ellipsize *inside* a box that actually
+// resizes to match -- the rendering is always a complete, smaller pill, never
+// a sliced one.
 .pill {
   display: inline-flex;
   align-items: center;
+  min-width: 0;
   gap: var(--space-1);
   padding: 0 var(--space-2);
+  overflow: hidden;
   border-radius: var(--radius-pill);
   background: var(--surface-0);
   border: 1px solid var(--border);
@@ -47,6 +61,12 @@
   font-size: var(--fs-xs);
   line-height: var(--lh-normal);
   white-space: nowrap;
+}
+
+.pill .name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .excluded {
@@ -63,6 +83,19 @@
 // The `.ib` icon-only button look (move up/down, edit, more) is the shared
 // `appIconButton` directive's, styled globally in `styles/_icon-button.scss`
 // — see that file's comment for why this cannot be a component style.
+
+// A phone row carries four action controls (▲▼✏⋯) beside a title that
+// already loses half the row to them. The ⋯ action sheet (coarse pointers,
+// which is what a phone-width row means here) already lists Edit as its
+// first action, so the standalone pencil is a second way to reach the same
+// thing at exactly the width that can least afford it. The ▲▼ arrows stay at
+// every width regardless -- drag-and-drop is off on a coarse pointer, so they
+// are the only way to reorder there.
+@media (width <= bp.$bp-sm) {
+  .edit {
+    display: none;
+  }
+}
 
 .menu {
   position: relative;
