@@ -1818,6 +1818,11 @@ In `frontend/src/app/settings/opml-section.component.spec.ts`, the flush in
 `imports pasted OPML…`: drop `total: 3`, add `throttled: 0` and
 `progress: { done: 3, total: 3 }`.
 
+Also fix the stale comment above `.under-header` in
+`frontend/src/app/reader/reader-shell.component.scss`. It still says its contents are
+"the 2px hairline, then the sweep banner" — the hairline moved into the app bar in
+Task 6, and only the two banners are left.
+
 Check `frontend/src/app/settings/backup-section.component.spec.ts` the same way and fix
 any refresh fixture it carries.
 
@@ -1883,16 +1888,20 @@ Expected: at or above `minMsi` in `infection.json5`. Escaped mutants on
 `RefreshRunProgress::advancedBy`'s `max()` mean a missing test — the denominator cases
 in Task 1 are the ones that kill it. Never lower `minMsi` to pass.
 
-- [ ] **Step 6: Verify on the real render**
+- [ ] **Step 6: Do NOT run the Docker stack — record the verification as outstanding**
 
-Gates green is not the deliverable — this issue is three visual defects.
+Gates green is not the deliverable — this issue is three visual defects, and they
+must be seen. But this branch lives in a git worktree, and the Docker stack binds
+`./backend` and `./frontend` by relative path from whichever checkout started it. A
+stack is already running from the MAIN checkout, on another session's branch, holding
+ports 8443/3307/7700/4200. Starting a second one from here would collide with it, and
+taking over the running one would serve another session's code and disrupt their work.
 
-```bash
-docker compose up -d
-```
+**Do not start, stop, or reconfigure any Docker stack.** Instead, write the checklist
+below into your report verbatim, as the outstanding manual verification, so it can be
+run once the branch reaches the main checkout:
 
-Then, in the running stack, with an account holding enough feeds that a sweep needs
-more than one slice:
+With an account holding enough feeds that a sweep needs more than one slice:
 
 1. Press Refresh on a wide window. **One** bar, full width, under the app bar. Nothing
    in the sidebar.
@@ -1905,11 +1914,9 @@ more than one slice:
 4. On a narrow window, start a refresh and scroll the list down. The app bar retracts
    and the bar must go with it — **no** 2px band left over the article. Scroll back up
    and it returns with the bar.
-5. Check the dev log for anything the change surfaced:
-
-```bash
-ls -t backend/var/log/dev-*.log | head -1
-```
+5. Scan the dev log for anything the change surfaced — the active file is
+   `backend/var/log/dev-YYYY-MM-DD.log`, found with
+   `ls -t backend/var/log/dev-*.log | head -1`.
 
 - [ ] **Step 7: Commit whatever the sweep and the verification changed**
 
