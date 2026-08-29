@@ -1,0 +1,128 @@
+// src/app/settings/organise/organise-feed-row.component.scss
+:host {
+  display: block;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--row-pad-y) var(--row-pad-x);
+  min-height: var(--tap-target);
+}
+
+.row.selected {
+  background: var(--accent-soft);
+}
+
+.handle {
+  display: inline-flex;
+  color: var(--text-muted);
+  cursor: grab;
+}
+
+.title {
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pills {
+  display: flex;
+  gap: var(--space-1);
+  overflow: hidden;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-normal);
+  white-space: nowrap;
+}
+
+.excluded {
+  color: var(--text-muted);
+}
+
+.acts {
+  display: flex;
+  align-items: center;
+  gap: var(--space-0);
+  margin-left: auto;
+}
+
+.ib {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.ib:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Guarded by (hover: hover): on a touch device the tap that presses this
+   button also fires :hover, and with no separate release event the hover
+   style sticks until something else is tapped (#704). */
+@media (hover: hover) {
+  .ib:hover:not(:disabled) {
+    background: var(--surface-0);
+    color: var(--text-primary);
+  }
+}
+
+.menu {
+  position: relative;
+}
+
+.pop {
+  position: absolute;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  min-width: 12rem;
+  padding: var(--space-1);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  box-shadow: var(--panel-shadow);
+}
+
+.pop button {
+  padding: var(--row-pad-y) var(--row-pad-x);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .pop button:hover {
+    background: var(--surface-0);
+  }
+}
+
+.pop button.danger {
+  color: var(--danger);
+}
