@@ -154,6 +154,20 @@ final class RefreshRunProgressTest extends TestCase
         self::assertSame(200, $progress->total);
     }
 
+    /**
+     * The store hands a run back to its next slice through this constructor, so
+     * it is exercised here rather than left for the store's own tests: a named
+     * constructor no test in this class calls is untested code, however soon its
+     * caller lands.
+     */
+    public function testARunResumesExactlyWhereTheStoreLeftIt(): void
+    {
+        $progress = RefreshRunProgress::resumed(20, 200)->advancedBy(30, 150);
+
+        self::assertSame(50, $progress->done);
+        self::assertSame(200, $progress->total);
+    }
+
     public function testItSerialisesForTheWire(): void
     {
         self::assertSame(
@@ -247,7 +261,7 @@ final readonly class RefreshRunProgress
 php bin/phpunit tests/Service/Refresh/RefreshRunProgressTest.php
 ```
 
-Expected: PASS, 8 tests.
+Expected: PASS, 9 tests.
 
 - [ ] **Step 5: Run the quality gates on the new files**
 
@@ -586,6 +600,7 @@ git commit -m "feat(#721): keep a refresh run's progress between its slices"
 - Create: `backend/src/Service/Refresh/TrackedRefreshReport.php`
 - Create: `backend/src/Service/Refresh/TrackedRefreshRunner.php`
 - Create: `backend/tests/Service/Refresh/TrackedRefreshRunnerTest.php`
+- Create: `backend/tests/Service/Refresh/FakeRefreshRunner.php`
 - Modify: `backend/src/Service/Refresh/RefreshRunner.php` (implement the interface)
 - Modify: `backend/src/Service/Refresh/RefreshReport.php` (add `STATUS_BUSY`)
 - Modify: `backend/config/services.yaml` (alias the interface, near line 89)
@@ -759,10 +774,27 @@ final class TrackedRefreshRunnerTest extends TestCase
         return new TrackedRefreshRunner(new FakeRefreshRunner(...$reports), $this->store);
     }
 }
+```
+
+Create `backend/tests/Service/Refresh/FakeRefreshRunner.php` — its own file, because
+`phpcs.xml.dist` applies PSR-12 to `tests/` and only `tests/PhpStan/data/*` is excused
+from one-class-per-file. This matches `tests/Service/Search/FakeSearchIndexReader.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Refresh;
+
+use App\Service\Refresh\RefreshReport;
+use App\Service\Refresh\RefreshRequest;
+use App\Service\Refresh\RefreshRunnerInterface;
 
 /**
  * Hands out one prepared report per call. A double rather than a mock so the
- * expectations above read as "given these slices" instead of as call counts.
+ * expectations read as "given these slices" instead of as call counts — and
+ * because RefreshRunner is final, which is why the interface exists at all.
  */
 final class FakeRefreshRunner implements RefreshRunnerInterface
 {
@@ -1092,11 +1124,12 @@ In `backend/src/Controller/Api/RefreshController.php`:
   `use App\Http\RefreshJson;` and `use App\Service\Refresh\TrackedRefreshRunner;`
 - change the constructor property
   `private readonly RefreshRunner $refreshRunner,` to
-  `private readonly TrackedRefreshRunner $refreshRunner,`
+  `private readonly TrackedRefreshRunner $trackedRefreshRunner,` — renamed, because the
+  collaborator is no longer a `RefreshRunner` and the name has to say so
 - change the return statement to:
 
 ```php
-        return new JsonResponse(RefreshJson::slice($this->refreshRunner->run($request)));
+        return new JsonResponse(RefreshJson::slice($this->trackedRefreshRunner->run($request)));
 ```
 
 Also update the class docblock's last sentence, which currently describes the loop
