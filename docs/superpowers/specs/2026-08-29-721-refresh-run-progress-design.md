@@ -161,6 +161,12 @@ The only place run-wide accounting lives.
    run ends. Otherwise save it. (`completed` always carries `remaining === 0`, so the
    first condition covers it; `busy` already returned at step 3.)
 
+`RefreshRunner` is `final`, so there is no double to give this class in a unit test.
+It therefore depends on a new one-method `RefreshRunnerInterface`, aliased to
+`RefreshRunner` in `services.yaml` the way `BatchFeedFetcherInterface` and
+`FeedBodyParserInterface` already are. The existing callers keep type-hinting the
+concrete class and are untouched.
+
 ### `Service/Refresh/TrackedRefreshReport`
 
 The pair it returns: the slice's `RefreshReport` plus the run's `RefreshRunProgress`.
@@ -235,9 +241,10 @@ Frontend:
   proving the sidebar now has no progress bar.
 - `reader-shell.component.spec.ts` — exactly one bar in the DOM; the banner's counts
   come from the service.
-- `progress-hairline.component.spec.ts` — the sheen is present while active.
+- The sheen is a pure CSS decoration with no DOM hook. Adding a class solely to assert
+  it would be testing the test, so it is verified on the real render instead.
 - The retraction is a visual behaviour Jest cannot see. It is verified on the real
-  render in the Docker stack.
+  render in the Docker stack, in both themes.
 
 ## Dead code
 
