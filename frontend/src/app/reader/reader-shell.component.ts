@@ -56,7 +56,7 @@ import {
 } from './models';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
-import { EntryListComponent } from './entry-list/entry-list.component';
+import { EntryListComponent, TitleCount } from './entry-list/entry-list.component';
 import { ReaderViewComponent } from './reader-view/reader-view.component';
 import { AddFeedDialogComponent } from './add-feed/add-feed-dialog.component';
 import {
@@ -357,6 +357,37 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     );
   });
 
+  /** How much the named list holds — the same number the sidebar row shows for
+   *  it, so the row, the heading and the tab can never disagree. The unread
+   *  count where the sidebar counts unread, the item count where it counts
+   *  items (#709).
+   *
+   *  Zero means "nothing to say", which covers three cases at once: an empty
+   *  list, which shows no number the way the sidebar drops the badge; a search,
+   *  which already carries its own result count in the heading and the tab and
+   *  must not be given a second; and a list whose count has not loaded yet. */
+  readonly titleCount = computed<TitleCount>(() => {
+    const s = this.selection();
+    switch (s.kind) {
+      case 'all':
+        return unread(this.subs.totalUnread());
+      case 'tag':
+        return unread(this.subs.tagTree().find((n) => n.tag.id === s.id)?.unreadCount ?? 0);
+      case 'subscription':
+        return unread(this.subs.subscriptions().find((x) => x.id === s.id)?.unreadCount ?? 0);
+      case 'favorites':
+        return items(this.subs.favoritesCount());
+      case 'kept':
+        return items(this.subs.keptCount());
+      case 'viewed':
+        return items(this.subs.viewedCount());
+      case 'for-you':
+        return items(this.recs.forYouCount());
+      case 'search':
+        return items(0);
+    }
+  });
+
   /** The search title's small, muted lead ("Results for"). Split out from the
    *  body below so the entry list can render it at a smaller, muted weight
    *  while the term and count stay prominent (#581 follow-up) — `title()`
@@ -481,7 +512,11 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     // while the reader is on screen.
     effect(() => {
       const entry = this.openEntry();
-      this.pageTitle.useText(entry ? entry.title : this.title());
+      if (entry !== null) {
+        this.pageTitle.useText(entry.title);
+        return;
+      }
+      this.pageTitle.useText(this.title(), this.titleCount().value);
     });
 
     // Nothing to read and nothing skipped: send the user to the picker. Purely
@@ -1099,6 +1134,18 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       this.refreshSvc.run(undefined, { feedId: sub.feedId });
     });
   }
+}
+
+/** A count of unread posts — what the sidebar badge counts for All items, a
+ *  tag and a feed, and so what the heading and the tab count there too. */
+function unread(value: number): TitleCount {
+  return { value, counts: 'unread' };
+}
+
+/** A count of posts, read or not — what the sidebar counts for the saved views
+ *  and For you, where "unread" is not the question the list answers. */
+function items(value: number): TitleCount {
+  return { value, counts: 'items' };
 }
 
 /** The entry flag a saved view filters on, or null for a list that shows every

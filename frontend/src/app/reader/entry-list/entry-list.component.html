@@ -52,10 +52,24 @@
           ><br class="mobile-search-title-break" />{{ ' '
           }}<span class="results-term">{{ searchTitleTerm() }}</span>
           @if (searchCountLabel(); as count) {
-            <span class="results-count">{{ count }}</span>
+            <span class="results-count count-pill">{{ count }}</span>
           }
         } @else {
           <span>{{ title() }}</span>
+          @if (headingCount(); as count) {
+            <!-- The count's meaning, for the heading's accessible name. The
+                 visible pill outside this h2 is a bare number and is
+                 aria-hidden, so this is where a screen reader hears what the
+                 number counts — the same arrangement the whole-word and phrase
+                 badges use, and for the same reason: it must be heard on
+                 heading navigation, not only on focus (#709). -->
+            <span class="sr-only">{{
+              (titleCount().counts === 'unread'
+                ? 'reader.titleCountUnread'
+                : 'reader.titleCountItems'
+              ) | transloco: { count }
+            }}</span>
+          }
         }
         @if (showWholeWordBadge()) {
           <!-- Carries the mode into the heading's own accessible name, so a
@@ -73,6 +87,13 @@
           <span class="sr-only">{{ 'reader.searchPhrase' | transloco }}</span>
         }
       </h2>
+      @if (headingCount(); as count) {
+        <!-- Beside the h2, not inside it: the h2 ellipsises, so a long feed
+             name would clip the very number this pill exists to show — the same
+             trade the mode badges below make. aria-hidden because the h2 above
+             already carries the count in words. -->
+        <span class="title-count count-pill" aria-hidden="true">{{ count }}</span>
+      }
       @if (showWholeWordBadge()) {
         <span
           class="whole-word-badge"

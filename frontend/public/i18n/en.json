@@ -758,6 +758,8 @@
     "searchClear": "Clear search",
     "searchClose": "Close search",
     "searchCount": "{{count}} results",
+    "titleCountUnread": "{{count}} unread",
+    "titleCountItems": "{{count}} items",
     "searchWholeWord": "Whole words",
     "searchWholeWordShort": "W",
     "searchWholeWordHint": "A trailing space makes this search match whole words only. Remove it to search for the text anywhere in a word.",

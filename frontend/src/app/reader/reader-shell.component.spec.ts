@@ -1168,11 +1168,48 @@ describe('ReaderShellComponent', () => {
   // The reader route declares DYNAMIC_TITLE, which tells the title strategy to
   // stand back — so if the reader ever stopped naming the tab, nothing else
   // would, and #549 would be back through the door built for the reader.
-  it('names the browser tab after the list on screen', () => {
+  it('names the browser tab after the list on screen, and what it holds', () => {
     const f = boot();
     f.detectChanges();
 
-    expect(TestBed.inject(Title).getTitle()).toBe('All items | simple feed reader');
+    expect(TestBed.inject(Title).getTitle()).toBe('All items (2) | simple feed reader');
+  });
+
+  it('names the browser tab after the selected feed and its unread count', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ subscription: '5' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    expect(TestBed.inject(Title).getTitle()).toBe('heise (2) | simple feed reader');
+  });
+
+  // The heading shows the same number as the tab, from the same computed — two
+  // resolutions of "how much is in this list" would drift apart.
+  it('hands the list heading the same count the tab shows', () => {
+    const f = boot();
+    f.detectChanges();
+
+    const list = f.debugElement.query(By.directive(EntryListComponent));
+    expect(list.componentInstance.titleCount()).toEqual({ value: 2, counts: 'unread' });
+  });
+
+  // A search names itself with its own result count, in the heading and in the
+  // tab; a second count would say the same thing twice and disagree while the
+  // search is in flight.
+  it('leaves a search without a count of its own', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ q: 'angular' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url.startsWith('https://api.test/api/entries/search'))
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    expect(f.componentInstance.titleCount().value).toBe(0);
   });
 
   it('names the browser tab after the open article, cut to what a tab shows', () => {

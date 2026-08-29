@@ -64,9 +64,20 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   min-width: 0;
 
   /* Only the search title (below) ever grows past one line; every other title
-     stays ellipsised and never needs the row itself to wrap. Harmless for
-     those: the row's main axis never overflows once the h2 shrinks to fit. */
+     stays ellipsised and never needs the row itself to wrap. */
   flex-wrap: wrap;
+}
+
+/* …and for those, wrapping is not merely unnecessary, it is wrong. A flex line
+   breaks BEFORE its items shrink, so a long feed name pushed the count pill
+   onto a second line and grew the bar by a whole row — the height the scroller
+   reserves (#87, #419), which moves every row under it. The h2 already carries
+   `min-width: 0` and its own ellipsis, so with the row held to one line it
+   gives up the width instead, which is the trade this header makes everywhere
+   else (#709). The search title keeps the wrap above: it is the one title
+   allowed to run to a second line. */
+.list-header:not(.is-search) .title-row {
+  flex-wrap: nowrap;
 }
 
 /* The tag's glyph, inline before its name — the same glyph and colour the
@@ -171,21 +182,21 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
 }
 
 /* The loaded count as its own quiet chip rather than trailing “— {{count}}”
-   text (#581 follow-up round 2) — a border-only pill, the same quiet
-   register as the admin badges elsewhere (`admin-catalog.component.scss`
-   `.badge`), not the filled `--accent-soft` treatment `.whole-word-badge`
-   and the sidebar's update badge use for something the reader can act on.
-   A count is read-only, so it stays the quietest pill in the app. Inline
-   after `.results-term`, so it wraps down with it rather than getting
-   stranded on its own line. */
+   text (#581 follow-up round 2). The pill itself is the global `.count-pill`
+   in theme/_utilities.scss, shared with the list count beside it; only its
+   placement in this heading belongs here. Inline after `.results-term`, so it
+   wraps down with it rather than getting stranded on its own line. */
 .results-count {
   margin-left: var(--space-1);
-  padding: 0 var(--space-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  font-size: var(--fs-xs);
-  color: var(--text-secondary);
-  white-space: nowrap;
+}
+
+/* Every other list's own count (#709). Beside the h2 rather than inside it:
+   the h2 ellipsises, so a long feed name would clip the number away. `flex:
+   none` keeps the pill at its text width and leaves the truncation to the
+   title — the same arrangement, and the same reason, as the mode badges
+   below. */
+.title-count {
+  flex: none;
 }
 
 /* Explains why a whole-word search's result set differs from the same text

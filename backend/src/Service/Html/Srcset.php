@@ -5,20 +5,25 @@ declare(strict_types=1);
 namespace App\Service\Html;
 
 /**
- * Reads a `srcset` attribute. A srcset is a comma-separated list of candidates,
- * each a URL optionally followed by a width or density descriptor; the first
- * candidate's URL is the one every reader/scraper caller wants.
+ * Reads a `srcset` attribute: a list of candidates, each a URL optionally
+ * followed by a width or density descriptor.
+ *
+ * A comma separates candidates, but a comma is also a legal URL character, so
+ * the list cannot be split on every comma. Substack serves Cloudinary transform
+ * URLs that spell their options `$s_!-_9x!,w_1456,c_limit,f_auto` (#706), and
+ * splitting those shreds each candidate into fragments. The HTML parsing rules
+ * read a URL as a run of non-space characters and treat only the comma that
+ * ends such a run as the separator, which is what this reader does.
  */
 final class Srcset
 {
+    /** The only descriptor that states a pixel width; `2x` states a density. */
+    private const string WIDTH_DESCRIPTOR = '/^(\d+)w$/';
+
     /** The first candidate URL of a srcset list, or null when it yields none. */
     public static function firstUrl(?string $srcset): ?string
     {
-        if ($srcset === null || preg_match('/\S+/', explode(',', $srcset)[0], $matches) !== 1) {
-            return null;
-        }
-
-        return $matches[0];
+        return self::candidates($srcset)[0]->url ?? null;
     }
 
     /**
@@ -28,37 +33,92 @@ final class Srcset
      */
     public static function widest(?string $srcset): ?ImageRendition
     {
-        if ($srcset === null) {
-            return null;
-        }
-
         $widest = null;
-        foreach (explode(',', $srcset) as $candidate) {
-            $rendition = self::parseCandidate($candidate);
-            if ($rendition === null) {
-                continue;
-            }
-            if ($widest === null || self::outmeasures($rendition, $widest)) {
-                $widest = $rendition;
+        foreach (self::candidates($srcset) as $candidate) {
+            if ($widest === null || self::outmeasures($candidate, $widest)) {
+                $widest = $candidate;
             }
         }
 
         return $widest;
     }
 
-    /** A single `url 768w` candidate, or null when it carries no URL. */
-    private static function parseCandidate(string $candidate): ?ImageRendition
+    /**
+     * The renditions the list declares, in source order.
+     *
+     * @return list<ImageRendition>
+     */
+    private static function candidates(?string $srcset): array
     {
-        $parts = preg_split('/\s+/', $candidate, -1, PREG_SPLIT_NO_EMPTY);
-        if ($parts === false || $parts === []) {
+        if ($srcset === null) {
+            return [];
+        }
+
+        return array_map(self::renditionFrom(...), self::candidateTokens($srcset));
+    }
+
+    /**
+     * The space-separated tokens of each candidate. A token closes its candidate
+     * when it ends in a comma; commas anywhere else stay inside the token, which
+     * is what keeps a transform URL whole.
+     *
+     * @return list<non-empty-list<string>>
+     */
+    private static function candidateTokens(string $srcset): array
+    {
+        $candidates = [];
+        $current = [];
+
+        foreach (self::spaceSeparated($srcset) as $token) {
+            $value = rtrim($token, ',');
+            if ($value !== '') {
+                $current[] = $value;
+            }
+            if ($value === $token || $current === []) {
+                continue;
+            }
+            $candidates[] = $current;
+            $current = [];
+        }
+
+        if ($current !== []) {
+            $candidates[] = $current;
+        }
+
+        return $candidates;
+    }
+
+    /**
+     * The list's tokens. Dropping the empty pieces also absorbs the whitespace
+     * around the list, so a blank srcset yields no tokens at all.
+     *
+     * @return list<string>
+     */
+    private static function spaceSeparated(string $srcset): array
+    {
+        $tokens = preg_split('/\s+/', $srcset, -1, PREG_SPLIT_NO_EMPTY);
+
+        return $tokens === false ? [] : $tokens;
+    }
+
+    /**
+     * A candidate's URL with the width its descriptor declares.
+     *
+     * @param non-empty-list<string> $tokens
+     */
+    private static function renditionFrom(array $tokens): ImageRendition
+    {
+        return new ImageRendition($tokens[0], self::declaredWidth($tokens[1] ?? null));
+    }
+
+    /** The pixel width a descriptor states, or null when it states none. */
+    private static function declaredWidth(?string $descriptor): ?int
+    {
+        if ($descriptor === null || preg_match(self::WIDTH_DESCRIPTOR, $descriptor, $matches) !== 1) {
             return null;
         }
 
-        $width = isset($parts[1]) && preg_match('/^(\d+)w$/', $parts[1], $matches) === 1
-            ? (int) $matches[1]
-            : null;
-
-        return new ImageRendition($parts[0], $width);
+        return (int) $matches[1];
     }
 
     /**
