@@ -47,7 +47,7 @@ use Symfony\Component\Lock\LockFactory;
  *
  * @SuppressWarnings("PHPMD.ExcessiveParameterList")
  */
-final class RefreshRunner
+final class RefreshRunner implements RefreshRunnerInterface
 {
     private const string LOCK_NAME = 'feed-refresh';
     private const float LOCK_TTL_SECONDS = 300.0;
