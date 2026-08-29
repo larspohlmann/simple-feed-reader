@@ -15,6 +15,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
+import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { LayoutService } from '../../reader/layout.service';
 import { SubscriptionDto } from '../../reader/models';
@@ -33,6 +34,7 @@ import { SubscriptionDto } from '../../reader/models';
     TagGlyphComponent,
     CdkDragHandle,
     DismissOnOutsideDirective,
+    IconButtonDirective,
   ],
   templateUrl: './organise-feed-row.component.html',
   styleUrl: './organise-feed-row.component.scss',

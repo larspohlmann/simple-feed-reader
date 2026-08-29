@@ -34,7 +34,7 @@
     @if (reorderable()) {
       <button
         type="button"
-        class="ib"
+        appIconButton
         data-test="move-up"
         [disabled]="!canMoveUp()"
         [attr.aria-label]="'settings.organise.moveUp' | transloco"
@@ -44,7 +44,7 @@
       </button>
       <button
         type="button"
-        class="ib"
+        appIconButton
         data-test="move-down"
         [disabled]="!canMoveDown()"
         [attr.aria-label]="'settings.organise.moveDown' | transloco"
@@ -56,7 +56,7 @@
 
     <button
       type="button"
-      class="ib"
+      appIconButton
       data-test="edit"
       [attr.aria-label]="'reader.editFeed' | transloco"
       (click)="edit.emit()"
@@ -67,7 +67,7 @@
     @if (screen.isCoarse()) {
       <button
         type="button"
-        class="ib"
+        appIconButton
         data-test="more"
         [attr.aria-label]="'reader.manage' | transloco: { name: subscription().title }"
         (click)="openSheet()"
@@ -78,7 +78,7 @@
       <div class="menu" [appDismissOnOutside]="menuOpen()" (dismiss)="closeMenu()">
         <button
           type="button"
-          class="ib"
+          appIconButton
           data-test="more"
           [attr.aria-label]="'reader.manage' | transloco: { name: subscription().title }"
           (click)="toggleMenu()"

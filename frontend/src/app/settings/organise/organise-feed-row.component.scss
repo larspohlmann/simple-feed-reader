@@ -60,33 +60,9 @@
   margin-left: auto;
 }
 
-.ib {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--icon-lg);
-  height: var(--icon-lg);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.ib:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
-/* Guarded by (hover: hover): on a touch device the tap that presses this
-   button also fires :hover, and with no separate release event the hover
-   style sticks until something else is tapped (#704). */
-@media (hover: hover) {
-  .ib:hover:not(:disabled) {
-    background: var(--surface-0);
-    color: var(--text-primary);
-  }
-}
+// The `.ib` icon-only button look (move up/down, edit, more) is the shared
+// `appIconButton` directive's, styled globally in `styles/_icon-button.scss`
+// — see that file's comment for why this cannot be a component style.
 
 .menu {
   position: relative;

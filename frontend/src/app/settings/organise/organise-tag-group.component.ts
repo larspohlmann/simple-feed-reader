@@ -6,6 +6,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { OrganiseFeedRowComponent } from './organise-feed-row.component';
 import { OrganiseGroup, OrganiseStore } from './organise.store';
+import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
 import { ManageActions } from '../../reader/manage/manage-actions.service';
 import { LayoutService } from '../../reader/layout.service';
 import { SubscriptionDto } from '../../reader/models';
@@ -31,6 +32,7 @@ import { SubscriptionDto } from '../../reader/models';
     OrganiseFeedRowComponent,
     CdkDropList,
     CdkDrag,
+    IconButtonDirective,
   ],
   templateUrl: './organise-tag-group.component.html',
   styleUrl: './organise-tag-group.component.scss',

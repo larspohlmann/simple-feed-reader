@@ -1,0 +1,42 @@
+// src/styles/_icon-button.scss
+// The shared look of a small square icon-only action button (the
+// `appIconButton` directive): move up/down, edit, delete, on the Organise
+// page's feed rows and tag panels. Global rather than component-scoped
+// because ViewEncapsulation does not let two SIBLING components share a
+// component-scoped stylesheet — the same reasoning `_list-action.scss` gives
+// for its own, differently-styled, labelled controls.
+.ib {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.ib:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.ib.danger {
+  color: var(--danger);
+}
+
+/* Guarded by (hover: hover): on a touch device the tap that presses this
+   button also fires :hover, and with no separate release event the hover
+   style sticks until something else is tapped (#704). */
+@media (hover: hover) {
+  .ib:hover:not(:disabled) {
+    background: var(--surface-0);
+    color: var(--text-primary);
+  }
+
+  .ib.danger:hover:not(:disabled) {
+    color: var(--danger);
+  }
+}

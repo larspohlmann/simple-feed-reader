@@ -47,7 +47,7 @@
       <span class="acts">
         <button
           type="button"
-          class="ib"
+          appIconButton
           data-test="tag-up"
           [disabled]="!canMoveTagUp()"
           [attr.aria-label]="'settings.organise.moveUp' | transloco"
@@ -57,7 +57,7 @@
         </button>
         <button
           type="button"
-          class="ib"
+          appIconButton
           data-test="tag-down"
           [disabled]="!canMoveTagDown()"
           [attr.aria-label]="'settings.organise.moveDown' | transloco"
@@ -68,7 +68,7 @@
         @if (group().tag; as tag) {
           <button
             type="button"
-            class="ib"
+            appIconButton
             [attr.aria-label]="'reader.editTag' | transloco"
             (click)="manage.editTag(tag)"
           >
@@ -76,7 +76,8 @@
           </button>
           <button
             type="button"
-            class="ib danger"
+            appIconButton
+            class="danger"
             [attr.aria-label]="'reader.deleteTag' | transloco"
             (click)="manage.deleteTag(tag)"
           >

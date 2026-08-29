@@ -24,8 +24,13 @@
   background: var(--accent-soft);
 }
 
-.chev,
-.ib {
+// The `.ib` icon-only button look (move up/down, edit, delete) is the shared
+// `appIconButton` directive's, styled globally in `styles/_icon-button.scss`
+// — see that file's comment for why this cannot be a component style. `.chev`
+// is this panel's own expand/collapse toggle, styled identically but with no
+// duplicate elsewhere, so it keeps a local copy of the same look rather than
+// joining a directive over a single occurrence.
+.chev {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -38,27 +43,13 @@
   cursor: pointer;
 }
 
-.ib:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
-.ib.danger {
-  color: var(--danger);
-}
-
 /* Guarded by (hover: hover): on a touch device the tap that presses this
    button also fires :hover, and with no separate release event the hover
    style sticks until something else is tapped (#704). */
 @media (hover: hover) {
-  .chev:hover,
-  .ib:hover:not(:disabled) {
+  .chev:hover {
     background: var(--surface-0);
     color: var(--text-primary);
-  }
-
-  .ib.danger:hover:not(:disabled) {
-    color: var(--danger);
   }
 }
 
