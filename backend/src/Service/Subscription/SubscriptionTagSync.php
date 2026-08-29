@@ -6,9 +6,6 @@ namespace App\Service\Subscription;
 
 use App\Entity\Subscription;
 use App\Entity\Tag;
-use App\Repository\SubscriptionRepository;
-use App\Repository\SubscriptionTagRepository;
-use App\Repository\TagRepository;
 
 /**
  * Aligns a subscription's tag set with the tags a PATCH request asked for,
@@ -17,9 +14,8 @@ use App\Repository\TagRepository;
 final readonly class SubscriptionTagSync
 {
     public function __construct(
-        private TagRepository $tags,
-        private SubscriptionTagRepository $subscriptionTags,
-        private SubscriptionRepository $subscriptions,
+        private OwnedTagsCache $tags,
+        private SubscriptionTagPositions $positions,
     ) {
     }
 
@@ -44,14 +40,14 @@ final readonly class SubscriptionTagSync
         $currentIds = array_map(static fn (Tag $tag): int => (int) $tag->getId(), $subscription->getTags()->toArray());
         foreach ($resolved as $tag) {
             if (!\in_array((int) $tag->getId(), $currentIds, true)) {
-                $subscription->addTag($tag, $this->subscriptionTags->nextPositionForTag($tag));
+                $subscription->addTag($tag, $this->positions->nextForTag($tag));
             }
         }
 
         // A feed that just lost its last tag joins the untagged "Feeds" list;
         // append it so its stale position doesn't float it to the top.
         if ($wasTagged && $subscription->getTags()->isEmpty()) {
-            $subscription->setPosition($this->subscriptions->nextPositionForUser($userId));
+            $subscription->setPosition($this->positions->nextUntaggedForUser($userId));
         }
     }
 }

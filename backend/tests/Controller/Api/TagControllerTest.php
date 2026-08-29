@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\Feed;
+use App\Entity\Subscription;
 use App\Entity\Tag;
+use App\Entity\User;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -28,6 +31,18 @@ final class TagControllerTest extends WebTestCase
     {
         $user = $this->userFactory()->create($email);
 
+        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
+        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
+
+        return [
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user),
+            'CONTENT_TYPE' => 'application/json',
+        ];
+    }
+
+    /** @return array<string, string> */
+    private function headersFor(User $user): array
+    {
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
 
@@ -118,5 +133,42 @@ final class TagControllerTest extends WebTestCase
         $headers = $this->authHeader('intruder@example.com');
         $client->request('DELETE', '/api/tags/' . $tag->getId(), server: $headers);
         self::assertResponseStatusCodeSame(404); // not 403 — do not reveal existence
+    }
+
+    /**
+     * Deleting a tag must detach it from every subscription that carried it
+     * first (portable across SQLite/MySQL — no FK cascade relied on). This
+     * pins the substitution of findForUserByTagId(userId, tagId) for the
+     * former findByTag(Tag): same set of subscriptions, resolved by the
+     * tag's owner instead of the tag entity itself.
+     */
+    public function testDeleteDetachesTheTagFromEveryCarryingSubscription(): void
+    {
+        $client = self::createClient();
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+
+        $user = $this->userFactory()->create('detacher@example.com');
+        $tag = new Tag($user, 'Detach me');
+        $em->persist($tag);
+        $feed = new Feed('https://detach.example/feed.xml');
+        $em->persist($feed);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
+        $subscription->addTag($tag, 0);
+        $em->persist($subscription);
+        $em->flush();
+        $subscriptionId = (int) $subscription->getId();
+
+        $client->request('DELETE', '/api/tags/' . $tag->getId(), server: $this->headersFor($user));
+
+        self::assertResponseStatusCodeSame(204);
+        $em->clear();
+        $reloaded = $em->getRepository(Subscription::class)->find($subscriptionId);
+        self::assertInstanceOf(Subscription::class, $reloaded);
+        self::assertCount(
+            0,
+            $reloaded->getTags(),
+            'Deleting a tag must detach it from every subscription that carried it.',
+        );
     }
 }

@@ -18,6 +18,7 @@ import { ColorFieldComponent } from '../shared/color-field/color-field.component
 import { IconPickerComponent } from '../shared/icon-picker/icon-picker.component';
 import { ReaderApi } from '../reader/reader-api';
 import { Problem, parseProblem } from '../core/problem';
+import { pluralKey } from '../core/plural-key';
 import { TagDto } from '../reader/models';
 
 @Component({
@@ -65,6 +66,13 @@ export class TagsSectionComponent implements OnInit {
     }
     return map;
   });
+
+  /** i18n key for a tag row's feed count, called from the template since
+   *  `pluralKey` itself is a plain function and cannot be invoked from a
+   *  binding expression. */
+  protected feedCountKey(tagId: number): string {
+    return pluralKey('settings.tags.feedCount', this.usage()[tagId] || 0);
+  }
 
   ngOnInit(): void {
     // The deleted SettingsComponent used to preload these for all sections;

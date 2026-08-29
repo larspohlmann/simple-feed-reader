@@ -15,6 +15,13 @@ export interface SettingsSection {
  *  means one entry here plus one route in settings.routes.ts — the shell stays
  *  untouched (#180's extensibility criterion). */
 export const SETTINGS_SECTIONS = [
+  {
+    path: 'organise',
+    icon: 'rss_feed',
+    labelKey: 'settings.organise.title',
+    group: 'general',
+    wide: true,
+  },
   { path: 'tags', icon: 'sell', labelKey: 'settings.tags.title', group: 'general' },
   { path: 'import', icon: 'import_export', labelKey: 'settings.opml.title', group: 'general' },
   { path: 'preferences', icon: 'tune', labelKey: 'settings.preferences', group: 'general' },

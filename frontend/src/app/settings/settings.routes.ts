@@ -15,6 +15,12 @@ export const SETTINGS_ROUTES: Routes = [
         loadComponent: () => import('./settings-hub.component').then((m) => m.SettingsHubComponent),
       },
       {
+        path: 'organise',
+        title: sectionLabelKey('organise'),
+        loadComponent: () =>
+          import('./organise/organise-section.component').then((m) => m.OrganiseSectionComponent),
+      },
+      {
         path: 'tags',
         title: sectionLabelKey('tags'),
         loadComponent: () => import('./tags-section.component').then((m) => m.TagsSectionComponent),

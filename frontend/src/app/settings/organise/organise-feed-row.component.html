@@ -1,0 +1,128 @@
+<div class="row" [class.selected]="selected()">
+  @if (sortable()) {
+    <span class="handle" cdkDragHandle aria-hidden="true" data-test="drag-handle">
+      <app-icon name="drag_indicator" size="sm" />
+    </span>
+  }
+
+  <input
+    class="pick"
+    type="checkbox"
+    data-test="select"
+    [checked]="selected()"
+    [attr.aria-label]="'settings.organise.selectFeed' | transloco: { title: subscription().title }"
+    (change)="selectedChange.emit($any($event.target).checked)"
+  />
+
+  <app-favicon [url]="subscription().faviconUrl" />
+  <span class="title">{{ subscription().title }}</span>
+
+  <span class="pills">
+    @for (t of visibleTags(); track t.id) {
+      <span class="pill">
+        <app-tag-glyph [name]="t.icon" [color]="t.color" size="xs" />
+        <span class="name">{{ t.name }}</span>
+      </span>
+    }
+  </span>
+
+  @if (!subscription().includeInAllItems || !subscription().includeInForYou) {
+    <app-icon class="excluded" name="visibility_off" size="xs" data-test="excluded" />
+  }
+
+  <span class="acts">
+    @if (reorderable()) {
+      <button
+        type="button"
+        appIconButton
+        data-test="move-up"
+        [disabled]="!canMoveUp()"
+        [attr.aria-label]="'settings.organise.moveUp' | transloco"
+        (click)="moveUp.emit()"
+      >
+        <app-icon name="arrow_upward" size="sm" />
+      </button>
+      <button
+        type="button"
+        appIconButton
+        data-test="move-down"
+        [disabled]="!canMoveDown()"
+        [attr.aria-label]="'settings.organise.moveDown' | transloco"
+        (click)="moveDown.emit()"
+      >
+        <app-icon name="arrow_downward" size="sm" />
+      </button>
+    }
+
+    <button
+      type="button"
+      appIconButton
+      class="edit"
+      data-test="edit"
+      [attr.aria-label]="'reader.editFeed' | transloco"
+      (click)="edit.emit()"
+    >
+      <app-icon name="edit" size="sm" />
+    </button>
+
+    @if (screen.isCoarse()) {
+      <button
+        type="button"
+        appIconButton
+        data-test="more"
+        [attr.aria-label]="'reader.manage' | transloco: { name: subscription().title }"
+        (click)="openSheet()"
+      >
+        <app-icon name="more_horiz" size="sm" />
+      </button>
+    } @else {
+      <div class="menu" [appDismissOnOutside]="menuOpen()" (dismiss)="closeMenu()">
+        <button
+          type="button"
+          appIconButton
+          data-test="more"
+          [attr.aria-label]="'reader.manage' | transloco: { name: subscription().title }"
+          (click)="toggleMenu()"
+        >
+          <app-icon name="more_horiz" size="sm" />
+        </button>
+        @if (menuOpen()) {
+          <div class="pop" role="menu">
+            <button
+              role="menuitem"
+              data-test="toggle-all-items"
+              (click)="toggleAllItems.emit(); closeMenu()"
+            >
+              {{
+                (subscription().includeInAllItems
+                  ? 'reader.excludeFromAllItems'
+                  : 'reader.includeInAllItems'
+                ) | transloco
+              }}
+            </button>
+            <button
+              role="menuitem"
+              data-test="toggle-for-you"
+              (click)="toggleForYou.emit(); closeMenu()"
+            >
+              {{
+                (subscription().includeInForYou
+                  ? 'reader.excludeFromForYou'
+                  : 'reader.includeInForYou'
+                ) | transloco
+              }}
+            </button>
+            <button
+              role="menuitem"
+              class="danger"
+              data-test="unsubscribe"
+              (click)="unsubscribe.emit(); closeMenu()"
+            >
+              {{ 'reader.unsubscribe' | transloco }}
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </span>
+</div>

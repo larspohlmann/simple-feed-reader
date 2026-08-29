@@ -86,6 +86,23 @@ export interface SubscriptionDto {
   includeInForYou: boolean;
 }
 
+/** True when a CDK drag's payload is a feed row rather than some other
+ *  draggable a shared drop list also accepts (a tag header, a group) —
+ *  duck-typed on `feedUrl`, the field only a `SubscriptionDto` carries.
+ *  Shared by the sidebar and the Organise page, the two places a drop list
+ *  mixes feed and non-feed draggables and must tell them apart. */
+export function isSubscriptionDrag(data: unknown): data is SubscriptionDto {
+  return !!data && typeof data === 'object' && 'feedUrl' in data;
+}
+
+/** True when a CDK drag's payload is a tag header — duck-typed on `color`,
+ *  a field only `TagDto` carries among this app's draggables. Lets a drop
+ *  list that also accepts feed rows (Organise's tag header, #659) tell a
+ *  tag-reorder drag apart from a retag drag. */
+export function isTagDrag(data: unknown): data is TagDto {
+  return !!data && typeof data === 'object' && 'color' in data && !isSubscriptionDrag(data);
+}
+
 /** The sidebar bootstrap payload: the feed list plus the user-wide favourite,
  *  kept and viewed totals shown as badges on the Favorites/Kept/Recently-read
  *  nav items. */
@@ -484,4 +501,20 @@ export interface RestorePreview {
 
 export interface RestoreResult {
   loaded: RestoreCounts;
+}
+
+/** The two per-feed inclusion switches, as a bulk change. An omitted field
+ *  leaves the stored value alone — the API's null-means-unchanged convention. */
+export interface SubscriptionFlags {
+  includeInAllItems?: boolean;
+  includeInForYou?: boolean;
+}
+
+/** One bulk change across many feeds. At most one tag is added and at most one
+ *  removed per request; the page never needs more, and a single tag keeps the
+ *  confirmation text exact. */
+export interface BulkSubscriptionUpdate extends SubscriptionFlags {
+  subscriptionIds: number[];
+  addTagIds?: number[];
+  removeTagIds?: number[];
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Dto\Subscription\BulkUnsubscribeRequest;
+use App\Dto\Subscription\BulkUpdateSubscriptionsRequest;
 use App\Dto\Subscription\ReorderSubscriptionsRequest;
 use App\Dto\Subscription\SubscribeRequest;
 use App\Dto\Subscription\UpdateSubscriptionRequest;
@@ -15,6 +17,8 @@ use App\Repository\EntryStateRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
+use App\Service\Subscription\BulkSubscriptionUpdater;
+use App\Service\Subscription\OwnedSubscriptions;
 use App\Service\Subscription\SubscriptionService;
 use App\Service\Subscription\SubscriptionTagSync;
 use Doctrine\ORM\EntityManagerInterface;
@@ -22,7 +26,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
-use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -36,6 +39,8 @@ final readonly class SubscriptionController
         private TagRepository $tags,
         private EntryStateRepository $entryStates,
         private EntityManagerInterface $em,
+        private OwnedSubscriptions $ownedSubscriptions,
+        private BulkSubscriptionUpdater $bulkUpdater,
     ) {
     }
 
@@ -132,22 +137,47 @@ final readonly class SubscriptionController
         #[CurrentUser] User $user,
         #[MapRequestPayload] ReorderSubscriptionsRequest $request,
     ): JsonResponse {
-        $owned = $this->subscriptionRepo->findAllByIdsForUser($request->subscriptionIds, (int) $user->getId());
-        if (\count($owned) !== \count(array_unique($request->subscriptionIds))) {
-            throw new UnprocessableEntityHttpException('subscriptionIds must all be your feeds, without duplicates.');
-        }
+        $byId = $this->ownedSubscriptions->resolve($request->subscriptionIds, (int) $user->getId());
 
-        /** @var array<int, Subscription> $byId */
-        $byId = [];
-        foreach ($owned as $sub) {
-            $byId[(int) $sub->getId()] = $sub;
-        }
         foreach ($request->subscriptionIds as $index => $subscriptionId) {
             $byId[$subscriptionId]->setPosition($index);
         }
         $this->em->flush();
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+    }
+
+    /**
+     * Change tags and inclusion flags across many feeds in one request. Every
+     * id must be the caller's; one that is not answers 422 and writes nothing.
+     */
+    #[Route('/bulk', name: 'api_subscriptions_bulk_update', methods: ['PATCH'])]
+    public function bulkUpdate(
+        #[CurrentUser] User $user,
+        #[MapRequestPayload] BulkUpdateSubscriptionsRequest $request,
+    ): JsonResponse {
+        $changed = $this->bulkUpdater->apply($request, (int) $user->getId());
+
+        return new JsonResponse([
+            'subscriptions' => array_map(
+                static fn (Subscription $subscription): array => SubscriptionJson::one($subscription),
+                $changed,
+            ),
+        ]);
+    }
+
+    /**
+     * Unsubscribe from many feeds in one request. No undo: the entries go with
+     * the subscription, so the client's confirmation is the only guard.
+     */
+    #[Route('/bulk-unsubscribe', name: 'api_subscriptions_bulk_unsubscribe', methods: ['POST'])]
+    public function bulkUnsubscribe(
+        #[CurrentUser] User $user,
+        #[MapRequestPayload] BulkUnsubscribeRequest $request,
+    ): JsonResponse {
+        $byId = $this->ownedSubscriptions->resolve($request->subscriptionIds, (int) $user->getId());
+
+        return new JsonResponse(['removed' => $this->subscriptions->unsubscribeAll(array_values($byId))]);
     }
 
     #[Route('/{id}', name: 'api_subscriptions_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]

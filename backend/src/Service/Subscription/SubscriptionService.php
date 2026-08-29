@@ -17,6 +17,17 @@ final readonly class SubscriptionService
 {
     public const int MAX_SUBSCRIPTIONS_PER_USER = 500;
 
+    /**
+     * A hard technical ceiling on how many ids ONE bulk request may name — it
+     * bounds payload/array size, nothing else. It is deliberately NOT tied to
+     * MAX_SUBSCRIPTIONS_PER_USER: SubscriptionLimitResolver lets an admin raise
+     * a single account's real cap above the global default, and a validation
+     * attribute cannot read the current user to match it exactly. Every id in
+     * the request is still checked for ownership downstream (OwnedSubscriptions),
+     * so this ceiling only needs to be generous, not exact.
+     */
+    public const int MAX_BULK_REQUEST_IDS = 5000;
+
     public function __construct(
         private FeedDiscoveryInterface $discovery,
         private SubscriptionCreator $creator,
@@ -41,6 +52,40 @@ final readonly class SubscriptionService
         $this->em->flush();
 
         $this->orphanedFeeds->reclaim($feedId);
+    }
+
+    /**
+     * Removes many subscriptions in one transaction, then reclaims each feed
+     * that lost its last subscriber.
+     *
+     * The single flush is the point: unsubscribe() flushes and reclaims per
+     * call, which a 176-feed selection would turn into 176 transactions and 176
+     * orphan sweeps. Reclaiming per DISTINCT feed after the flush also matters
+     * — two of the removed subscriptions can point at the same feed, and
+     * reclaim() must not be asked about it twice.
+     *
+     * @param list<Subscription> $subscriptions
+     *
+     * @return int how many subscriptions were removed
+     */
+    public function unsubscribeAll(array $subscriptions): int
+    {
+        if ([] === $subscriptions) {
+            return 0;
+        }
+
+        $feedIds = [];
+        foreach ($subscriptions as $subscription) {
+            $feedIds[(int) $subscription->getFeed()->getId()] = true;
+            $this->em->remove($subscription);
+        }
+        $this->em->flush();
+
+        foreach (array_keys($feedIds) as $feedId) {
+            $this->orphanedFeeds->reclaim($feedId);
+        }
+
+        return \count($subscriptions);
     }
 
     /**

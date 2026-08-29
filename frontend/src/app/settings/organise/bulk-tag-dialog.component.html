@@ -1,0 +1,46 @@
+<app-overlay-panel cdkTrapFocus [heading]="titleKey | transloco: { count: total }">
+  <p class="hint">{{ 'settings.organise.tagCountHint' | transloco }}</p>
+
+  @if (offered().length === 0) {
+    <p class="hint">{{ 'settings.organise.noTagsToRemove' | transloco }}</p>
+  } @else {
+    <div class="pills">
+      @for (tag of offered(); track tag.id) {
+        <button
+          type="button"
+          class="pill"
+          data-test="tag-pill"
+          [class.chosen]="chosen()?.id === tag.id"
+          [attr.aria-pressed]="chosen()?.id === tag.id"
+          (click)="choose(tag)"
+        >
+          <app-tag-glyph [name]="tag.icon" [color]="tag.color" size="sm" />
+          <span>{{ tag.name }}</span>
+          <span class="n">{{ carriedBy(tag) }}/{{ total }}</span>
+        </button>
+      }
+    </div>
+  }
+
+  @if (chosen(); as tag) {
+    <p class="effect">
+      {{ effectKey() | transloco: { name: tag.name, count: affected() } }}
+      @if (losingLastTag() > 0) {
+        {{ losingLastTagKey() | transloco: { count: losingLastTag() } }}
+      }
+    </p>
+  }
+
+  <app-button footer data-test="cancel" (click)="cancel()">
+    {{ 'settings.tags.cancel' | transloco }}
+  </app-button>
+  <app-button
+    footer
+    data-test="apply"
+    variant="primary"
+    [disabled]="chosen() === null"
+    (click)="apply()"
+  >
+    {{ applyKey | transloco }}
+  </app-button>
+</app-overlay-panel>

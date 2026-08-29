@@ -1,0 +1,130 @@
+// src/app/settings/organise/organise-tag-group.component.scss
+@use '../../theme/breakpoints' as bp;
+
+:host {
+  display: block;
+}
+
+// This card owns the full elevated-card treatment itself (#659 round 2): the
+// tree is a bare region now, not a second `<app-settings-group>` panel (see
+// organise-section.component.scss), so there is no outer card to borrow it
+// from any more, and a tag panel is the page's one repeated box. `--radius-lg`
+// + `--panel-shadow` is exactly what `<app-settings-group>`'s own `.panel`
+// uses for the same reason -- "a large surface that carries content" per
+// docs/design-language.md §1 "Radii".
+.panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+  box-shadow: var(--panel-shadow);
+  overflow: hidden;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--row-pad-y) var(--row-pad-x);
+  min-height: var(--tap-target);
+}
+
+.head-drop.cdk-drop-list-dragging,
+.head-drop:has(.cdk-drag-preview) {
+  background: var(--accent-soft);
+}
+
+// The `.ib` icon-only button look (move up/down, edit, delete) is the shared
+// `appIconButton` directive's, styled globally in `styles/_icon-button.scss`
+// — see that file's comment for why this cannot be a component style. `.chev`
+// is this panel's own expand/collapse toggle, styled identically but with no
+// duplicate elsewhere, so it keeps a local copy of the same look rather than
+// joining a directive over a single occurrence.
+.chev {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+/* Guarded by (hover: hover): on a touch device the tap that presses this
+   button also fires :hover, and with no separate release event the hover
+   style sticks until something else is tapped (#704). */
+@media (hover: hover) {
+  .chev:hover {
+    background: var(--surface-0);
+    color: var(--text-primary);
+  }
+}
+
+// `min-width: 0` lets the name shrink below its own content width -- a flex
+// item's default `min-width: auto` otherwise floors it at that width, and
+// with no `white-space: nowrap` the browser wraps a long German compound
+// (e.g. "Wissenschaft") mid-word to make room instead of truncating it.
+
+// `flex: 1 1 auto` claims any leftover room in the row (#659 round 4): with
+// the old `flex: 0 1 auto` default, the name never grew, so a short tag's
+// row (e.g. "Tech") left its slack sitting unused between `.count` and
+// `.acts` -- `.acts`'s own `margin-left: auto` (below) claimed it instead,
+// which visibly right-aligned the icons on short rows while a long name a
+// few rows down had nothing left to shrink into and truncated early even
+// though the card was evidently wide enough. Now the name is first in line
+// for whatever room a row actually has; `.acts` no longer needs its own
+// auto margin to reach the row's right edge, because a growing name already
+// fills the row up to it.
+.name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.count {
+  flex: none;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.acts {
+  display: flex;
+  align-items: center;
+  gap: var(--space-0);
+}
+
+// Indented past the head row's own left inset so a feed visibly nests under
+// its tag rather than merely sitting below it -- the extra step is the
+// hierarchy cue itself, not spacing for its own sake.
+.feeds {
+  padding-left: var(--space-7);
+  border-top: 1px solid var(--border);
+}
+
+// A phone row already carries a favicon, a title, tag pills and up to five
+// action icons in a narrow viewport (#212's compound-tag-name trap lives right
+// next to this); the full desktop indent would starve that row of the width
+// it needs, so the phone step keeps the hierarchy cue without the same cost.
+@media (width <= bp.$bp-sm) {
+  .feeds {
+    padding-left: var(--space-4);
+  }
+}
+
+.feeds > div + div {
+  border-top: 1px solid var(--border);
+}
+
+.empty {
+  margin: 0;
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}

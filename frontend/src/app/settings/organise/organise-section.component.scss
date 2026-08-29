@@ -1,0 +1,321 @@
+// src/app/settings/organise/organise-section.component.scss
+// The header's icon/title/caption and the toolbar's card "look" belong to
+// <app-settings-stack> / <app-settings-group> (docs/design-language.md §2, §3
+// "Settings (#541)"). The tree and the list do NOT: a second group here would
+// have wrapped this page's own tag cards inside the group's own card, one box
+// nested in another (#659). `.tree-region` is a plain, unboxed sibling of the
+// group instead -- the tag card (and, in list view, the single `.list` card)
+// is the only box on the page below the toolbar.
+// The group's `.panel` is unpadded by design (its rows pad themselves), and
+// `.tools` is not a row -- so it reads `--panel-inset-y`/`--panel-inset-x`
+// itself, the same pattern `tags-section.component.scss` and
+// `admin-catalog.component.scss` use for their own non-row panel content.
+@use '../../theme/breakpoints' as bp;
+
+// Buttons that belong to the same header row still need a real gap between
+// them, not the tight 8px `.g-actions` gives any two of its projected
+// children by default -- on a phone, where they wrap onto their own line
+// below the title, that read as one crowded cluster rather than two
+// deliberate actions (#659). `flex-wrap` keeps both pills on one line as
+// long as they fit; only the mobile step below forces the stack.
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+// A stacked flex column left both pills at their own shrink-to-fit width --
+// "New tag" narrower than "Add feed" -- which read as two mismatched lengths
+// rather than one block (#659 round 4). `<app-settings-group>`'s `.g-actions`
+// wraps to content width itself (view-encapsulated, so it cannot be widened
+// from here), so stretching `.header-actions` to "100%" had nothing wider to
+// stretch against. Grid's default `justify-items: stretch` sizes the column
+// to the widest item's own content and stretches every item to match it --
+// no dependency on an ancestor's width, and both buttons end up the same
+// width as "Add feed", the longer of the two.
+@media (width <= bp.$bp-sm) {
+  .header-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}
+
+// The toolbar groups its controls by what they do -- selection, filtering,
+// the view switch (#659) -- each in its own `.row`. `display: contents` keeps
+// every row's children flowing straight into `.tools`'s own flex line on a
+// wide screen, so the desktop arrangement (already approved) is unchanged;
+// only the mobile step below turns each `.row` into a real block so the three
+// groups stack instead of wrapping wherever the next control happens to run
+// out of width.
+.tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-2);
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+}
+
+.row {
+  display: contents;
+}
+
+@media (width <= bp.$bp-md) {
+  .tools {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .spacer {
+    display: none;
+  }
+}
+
+.selectall {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+.filter {
+  height: var(--control-h);
+  min-width: 12rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+}
+
+// The toolbar was wrapping onto three ragged rows on a phone (#659). Grouping
+// the controls into `.row`s (above) fixed the ragged part; the filter still
+// drops its fixed 12rem floor here so it can share its row with the tag-filter
+// chip instead of forcing one of its own. Unlike the earlier version of this
+// fix, no control collapses to a bare icon: the Expand/Collapse toggle keeps
+// its word at every width.
+@media (width <= bp.$bp-md) {
+  .filter {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+.spacer {
+  flex: 1;
+}
+
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.seg button {
+  padding: 0 var(--space-3);
+  height: var(--control-h);
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.seg button.on {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.chip .n {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--fs-xs);
+}
+
+.sort {
+  height: var(--control-h);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+}
+
+.menu {
+  position: relative;
+}
+
+.menu .pop {
+  position: absolute;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 14rem;
+  max-height: 18rem;
+  overflow-y: auto;
+  padding: var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  box-shadow: var(--panel-shadow);
+}
+
+.menu .pop label,
+.menu .pop button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .menu .pop label:hover,
+  .menu .pop button:hover {
+    background: var(--surface-0);
+  }
+}
+
+// The bare region below the toolbar group: no border, no background, no
+// shadow of its own -- the tag card and the `.list` card are the only boxes.
+// The horizontal inset matches the toolbar's own `--panel-inset-x` (read
+// above) so a tag card's edge lines up with "Select all" / the filter input
+// above it, not with the (now nonexistent) panel border a plain edge-to-edge
+// card would otherwise align to.
+
+// This region sits OUTSIDE `<app-settings-stack>` now, not as its second
+// child (#659 round 4): the stack's `--space-7` gap is the rhythm between
+// distinct settings groups on a page, and the toolbar-plus-tree here is one
+// section, not two -- using the between-groups gap on top of `.tree`'s own
+// `margin-top` produced a 60px dead gap on a phone (measured: 48px stack gap
+// + 12px `.tree` margin, with `.tree-region`'s own top padding at 0). One
+// `margin-top` here, matching `.tree`'s inter-card `gap` below, is the
+// single deliberate value instead.
+.tree-region {
+  margin-top: var(--space-4);
+  padding: 0 var(--panel-inset-x) var(--panel-inset-y);
+}
+
+/* A zero-height sticky dock (docs/design-language.md §3 "Sticky and scroll"):
+   `height: 0` keeps the dock from ever reserving flow space, so the bar
+   appearing and disappearing never pushes the toolbar above it or reflows the
+   page -- only the bar itself, laid out by `overflow: visible`, floats over
+   whatever is beneath. `top` sits it just under the settings shell's own
+   sticky top bar (`--bar-h`, `settings-shell.component.scss`), with one
+   `--bar-gap` of daylight, the same token that other floating bars in this
+   app use for the same purpose. An earlier decision rejected docking this bar
+   at the BOTTOM of the viewport: it would collide with the bottom-centre
+   toast. Sticky to the top has no such conflict. */
+.bulk-dock {
+  position: sticky;
+  top: calc(var(--bar-h) + var(--bar-gap));
+  z-index: 20;
+  height: 0;
+  overflow: visible;
+}
+
+// `--panel-shadow` is the token this app's other overlay/popover surfaces
+// take (`.menu .pop` below, `info-tip`, the settings group panel itself) --
+// but that token is tuned for a card resting in whitespace, and this card
+// floats directly over scrolling rows with no gap of its own. A second,
+// tighter shadow layer plus a visible border gives it a real edge against
+// whatever is scrolling underneath, so it reads as hovering rather than
+// clipping the row behind it.
+.bulk {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  box-shadow:
+    var(--panel-shadow),
+    0 2px 8px rgb(0 0 0 / 18%);
+}
+
+.bulk .count {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.bulk .hidden {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+// `margin-top` lives on `.tree-region` itself now (above), not here: it
+// applies once, whichever view is showing, instead of being duplicated on
+// both `.tree` and `.list`.
+.tree {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+// The list has no per-row card the way a tag panel does, so the list itself
+// is the page's one box for that view -- the same card treatment a tag panel
+// gives itself below, not the group panel this page no longer wraps it in.
+.list {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+  box-shadow: var(--panel-shadow);
+  overflow: hidden;
+}
+
+.list app-organise-feed-row + app-organise-feed-row {
+  border-top: 1px solid var(--border);
+}
+
+/* The floating bulk bar overlays whatever sits at the top of the tree/list --
+   reserve room for it so it never covers the first row (docs/design-language.md
+   §3 "Content beneath a floating bar offsets by the measured height plus
+   `--bar-gap`, never by a literal"). `--control-h` plus the bar's own vertical
+   padding is the single-line bar's real height; the mobile step widens the
+   reserve because the bar's five actions wrap onto a second line there. */
+.has-bulk-bar {
+  padding-top: calc(var(--control-h) + var(--space-3) * 2 + var(--bar-gap));
+}
+
+@media (width <= bp.$bp-md) {
+  .has-bulk-bar {
+    padding-top: calc((var(--control-h) + var(--space-3) * 2) * 2 + var(--bar-gap));
+  }
+}

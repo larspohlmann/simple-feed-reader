@@ -6,6 +6,7 @@ import { API_BASE_URL } from '../core/api';
 import { PAGE_SIZE } from './paging';
 import { RefreshScope } from './query';
 import {
+  BulkSubscriptionUpdate,
   DebugLogDetail,
   DebugLogPayload,
   EntriesPage,
@@ -117,6 +118,23 @@ export class ReaderApi {
   /** Persist the untagged "Feeds" order. */
   reorderSubscriptions(subscriptionIds: number[]): Observable<void> {
     return this.http.patch<void>(`${this.base}/api/subscriptions/reorder`, { subscriptionIds });
+  }
+
+  /** Change tags and inclusion flags across many feeds in one request. */
+  bulkUpdateSubscriptions(
+    body: BulkSubscriptionUpdate,
+  ): Observable<{ subscriptions: SubscriptionDto[] }> {
+    return this.http.patch<{ subscriptions: SubscriptionDto[] }>(
+      `${this.base}/api/subscriptions/bulk`,
+      body,
+    );
+  }
+
+  /** Unsubscribe from many feeds in one request; answers how many went. */
+  bulkUnsubscribe(subscriptionIds: number[]): Observable<{ removed: number }> {
+    return this.http.post<{ removed: number }>(`${this.base}/api/subscriptions/bulk-unsubscribe`, {
+      subscriptionIds,
+    });
   }
 
   tags(): Observable<{ tags: TagDto[] }> {

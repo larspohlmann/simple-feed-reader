@@ -30,7 +30,7 @@ import { SidebarFootComponent } from './sidebar-foot.component';
 import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
 import { TagNode } from '../subscriptions.store';
 import { Selection, savedSearchParams, selectionQueryParams } from '../query';
-import { SavedSearchDto, SubscriptionDto, TagDto } from '../models';
+import { SavedSearchDto, SubscriptionDto, TagDto, isSubscriptionDrag } from '../models';
 import { RefreshService } from '../refresh.service';
 import { RecommendationsService } from '../recommendations.service';
 import { AiAvailabilityService } from '../../core/ai-availability.service';
@@ -131,12 +131,8 @@ export class SidebarComponent {
    *  flips `includeInDigest`. */
   readonly toggleDigest = output<SavedSearchDto>();
 
-  /** True when the drag is a feed row (its data is a SubscriptionDto). */
-  private isFeedData(data: unknown): data is SubscriptionDto {
-    return !!data && typeof data === 'object' && 'feedUrl' in data;
-  }
   /** Feed lists accept only feed drags. */
-  readonly isFeedDrag = (drag: CdkDrag): boolean => this.isFeedData(drag.data);
+  readonly isFeedDrag = (drag: CdkDrag): boolean => isSubscriptionDrag(drag.data);
   /** A tag header accepts a tag (to reorder) and a feed (to add the tag). */
   readonly acceptOnTagHead = (): boolean => true;
 
@@ -321,7 +317,7 @@ export class SidebarComponent {
     this.dropHover.set(null);
     const target = event.container.data;
 
-    if (this.isFeedData(event.item.data)) {
+    if (isSubscriptionDrag(event.item.data)) {
       this.assignOrClear(event.item.data, target);
       return;
     }
@@ -358,7 +354,7 @@ export class SidebarComponent {
       return;
     }
 
-    if (this.isFeedData(event.item.data)) {
+    if (isSubscriptionDrag(event.item.data)) {
       this.assignOrClear(event.item.data, target);
     }
   }

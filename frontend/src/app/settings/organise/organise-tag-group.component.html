@@ -1,0 +1,124 @@
+<section class="panel">
+  <!-- The header is its own single-item drop list so a tag can be reordered by
+       drag without nesting it inside the feed list below. -->
+  <div
+    class="head-drop"
+    cdkDropList
+    [cdkDropListData]="group()"
+    [cdkDropListSortingDisabled]="true"
+    (cdkDropListDropped)="onHeaderDropped($event)"
+  >
+    <div class="head" cdkDrag [cdkDragData]="group().tag" [cdkDragDisabled]="headerDragDisabled()">
+      <button
+        type="button"
+        class="chev"
+        data-test="toggle"
+        [attr.aria-expanded]="expanded()"
+        [attr.aria-label]="'settings.organise.toggleGroup' | transloco: { name: label() }"
+        (click)="toggle()"
+      >
+        <app-icon [name]="expanded() ? 'expand_more' : 'chevron_right'" size="sm" />
+      </button>
+
+      <input
+        class="pick"
+        type="checkbox"
+        data-test="group-select"
+        [checked]="state() === 'all'"
+        [indeterminate]="state() === 'some'"
+        [attr.aria-label]="'settings.organise.selectGroup' | transloco: { name: label() }"
+        (change)="onGroupSelect($any($event.target).checked)"
+      />
+
+      @if (group().tag; as tag) {
+        <app-tag-glyph [name]="tag.icon" [color]="tag.color" size="sm" />
+      } @else {
+        <app-icon name="inbox" size="sm" />
+      }
+
+      <span class="name">{{ label() }}</span>
+      <span class="count">{{
+        (group().totalCount === 1
+          ? 'settings.organise.feedCountOne'
+          : 'settings.organise.feedCountOther'
+        ) | transloco: { count: group().totalCount }
+      }}</span>
+
+      <span class="acts">
+        <button
+          type="button"
+          appIconButton
+          data-test="tag-up"
+          [disabled]="!canMoveTagUp()"
+          [attr.aria-label]="'settings.organise.moveUp' | transloco"
+          (click)="moveTagUp.emit()"
+        >
+          <app-icon name="arrow_upward" size="sm" />
+        </button>
+        <button
+          type="button"
+          appIconButton
+          data-test="tag-down"
+          [disabled]="!canMoveTagDown()"
+          [attr.aria-label]="'settings.organise.moveDown' | transloco"
+          (click)="moveTagDown.emit()"
+        >
+          <app-icon name="arrow_downward" size="sm" />
+        </button>
+        @if (group().tag; as tag) {
+          <button
+            type="button"
+            appIconButton
+            [attr.aria-label]="'reader.editTag' | transloco"
+            (click)="manage.editTag(tag)"
+          >
+            <app-icon name="edit" size="sm" />
+          </button>
+          <button
+            type="button"
+            appIconButton
+            class="danger"
+            [attr.aria-label]="'reader.deleteTag' | transloco"
+            (click)="manage.deleteTag(tag)"
+          >
+            <app-icon name="delete" size="sm" />
+          </button>
+        }
+      </span>
+    </div>
+  </div>
+
+  @if (expanded()) {
+    <div
+      class="feeds"
+      cdkDropList
+      [cdkDropListData]="group()"
+      (cdkDropListDropped)="onFeedDropped($event)"
+    >
+      @for (s of group().subscriptions; track s.id; let i = $index, last = $last) {
+        <div cdkDrag [cdkDragData]="s" [cdkDragDisabled]="dragDisabled()">
+          <app-organise-feed-row
+            [subscription]="s"
+            [sortable]="!dragDisabled()"
+            [reorderable]="!store.filterActive()"
+            [hideTagId]="group().tag?.id ?? null"
+            [attr.data-test]="dragDisabled() ? 'arrows-only' : null"
+            [selected]="store.selectedIds().has(s.id)"
+            [canMoveUp]="i > 0"
+            [canMoveDown]="!last"
+            (selectedChange)="store.toggleFeed(s.id)"
+            (moveUp)="moveFeed(s, -1)"
+            (moveDown)="moveFeed(s, 1)"
+            (edit)="manage.editSubscription(s)"
+            (toggleAllItems)="manage.setIncludeInAllItems(s, !s.includeInAllItems)"
+            (toggleForYou)="manage.setIncludeInForYou(s, !s.includeInForYou)"
+            (unsubscribe)="manage.unsubscribe(s)"
+          />
+        </div>
+      }
+      @if (group().subscriptions.length === 0) {
+        <p class="empty">{{ 'settings.organise.groupEmpty' | transloco }}</p>
+      }
+    </div>
+  }
+</section>
