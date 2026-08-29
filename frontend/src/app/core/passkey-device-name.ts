@@ -12,7 +12,10 @@
  * Pure and Angular-free, like `webauthn.ts`'s capability checks, so browser
  * and platform sniffing -- inherently a pile of special cases -- is tested
  * against real user-agent strings directly rather than only through a
- * rendered dialog. `PasskeyNameDialogComponent` is the only caller.
+ * rendered dialog. `PasskeyNameDialogComponent` (Settings) and
+ * `PasskeyOfferDialogComponent` (the first-login offer, #624 fix round 1) are
+ * its two callers -- the latter defaults straight to this name rather than
+ * asking, since a first-ever passkey needs no disambiguating name yet.
  */
 export function defaultPasskeyName(userAgent: string): string {
   return `${browserName(userAgent)} on ${platformName(userAgent)}`;

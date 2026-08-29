@@ -124,6 +124,32 @@ describe('PasskeyOfferDialogComponent', () => {
     expect(findButton(f, 'Not now')).toBeTruthy();
   });
 
+  it('shows a translated message, not the raw DOMException text, when the authenticator is already enrolled', async () => {
+    // Mirrors PasskeysGroupComponent's own equivalent spec: near-unreachable
+    // here in practice (this dialog only ever offers a passkey to an account
+    // with none yet), but the fix round 1 review flagged that this branch had
+    // silently fallen out of step with Settings' handling -- proving it stays
+    // in step is cheap and the divergence risk is not.
+    const alreadyEnrolled: Problem = {
+      type: 'InvalidStateError',
+      title:
+        'The user attempted to register an authenticator that contains one of the credentials already registered with the relying party.',
+      status: 0,
+    };
+    passkeyService.enrol.mockRejectedValue(alreadyEnrolled);
+    const f = mount();
+
+    findButton(f, 'Set up a passkey').click();
+    await flushMicrotasks();
+    f.detectChanges();
+
+    expect(f.nativeElement.textContent).toContain(
+      'This device is already registered as a passkey for this account.',
+    );
+    expect(f.nativeElement.textContent).not.toContain('relying party');
+    expect(close).not.toHaveBeenCalled();
+  });
+
   it('swaps to state two when Not now is chosen', () => {
     const f = mount();
 

@@ -2925,6 +2925,26 @@ describe('ReaderShellComponent', () => {
       expect(open).not.toHaveBeenCalledWith(PasskeyOfferDialogComponent, expect.anything());
     });
 
+    it('does not show the offer while a zero-subscription account is waiting on the catalog to decide the /discover redirect', () => {
+      // Regression (fix round 1): the catalog request only STARTS inside the
+      // redirect effect, once subscriptions resolve empty -- so there is a
+      // real window, on every brand-new account, where subs.resolved() is
+      // true, the list is empty, and the catalog hasn't answered yet. Before
+      // the fix, onboardingAvailable() read false in that window (catalog not
+      // resolved), so subscriptionOnboardingRunning() was ALSO false, and the
+      // offer opened on top of what becomes the /discover redirect a moment
+      // later. Deliberately does not flush '/api/catalog' -- that pending
+      // window is exactly what this proves.
+      supportPasskeys();
+      const open = jest
+        .spyOn(TestBed.inject(Dialog), 'open')
+        .mockReturnValue({ closed: new Subject() } as never);
+
+      bootWith([]);
+
+      expect(open).not.toHaveBeenCalledWith(PasskeyOfferDialogComponent, expect.anything());
+    });
+
     it('shows the offer at most once per boot, even if the shell re-renders', () => {
       supportPasskeys();
       const open = jest

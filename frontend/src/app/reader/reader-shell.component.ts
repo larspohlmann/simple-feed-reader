@@ -203,25 +203,36 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   );
 
   /** #624: true while a new account's subscriptions are being introduced --
-   *  either about to be redirected to /discover (an empty list and a catalog
-   *  worth showing) or, having just come back from there, living through the
-   *  post-onboarding first-fetch sweep above. A modal offered on top of
-   *  either window steps on the onboarding (design spec §5.3), so the
-   *  first-login passkey offer waits for both to clear. */
-  private readonly subscriptionOnboardingRunning = computed(
-    () =>
-      this.awaitingFirstFetch() ||
-      this.sweeping() ||
-      (this.emptySubscriptionsNeedingOnboarding() && this.onboardingAvailable()),
-  );
+   *  about to be redirected to /discover, or, having just come back from
+   *  there, living through the post-onboarding first-fetch sweep above. A
+   *  modal offered on top of either window steps on the onboarding (design
+   *  spec §5.3), so the first-login passkey offer waits for both to clear.
+   *
+   *  Fix round 1 (a real defect this shipped with, hitting every brand-new
+   *  account): an empty list alone is not enough to rule the redirect out.
+   *  The redirect effect only starts the catalog request once subscriptions
+   *  resolve empty, so there is a real window where the list is empty and
+   *  `onboardingAvailable()` still reads false purely because the catalog
+   *  hasn't answered YET -- not because there is nothing to onboard from.
+   *  Reading `!catalog.resolved()` as "onboarding running" too closes that
+   *  window: the guard now stays true for an empty list from the moment it
+   *  resolves until the redirect decision has actually been made one way or
+   *  the other (catalog resolved with entries -> the redirect fires and this
+   *  stays true forever while the list is empty; catalog resolved empty ->
+   *  there is nothing to redirect to, and this correctly falls open). */
+  private readonly subscriptionOnboardingRunning = computed(() => {
+    if (this.awaitingFirstFetch() || this.sweeping()) return true;
+    if (!this.emptySubscriptionsNeedingOnboarding()) return false;
+    if (!this.catalog.resolved()) return true;
+    return this.onboardingAvailable();
+  });
 
   /** #624: the shell has loaded enough real state to judge the passkey offer
-   *  -- subscriptions resolved (so the redirect-or-not decision above has
-   *  already had its say) and the signed-in user loaded (so
-   *  passkeyOfferAnswered is known, not merely absent). */
-  private readonly readerSettled = computed(
-    () => this.subs.resolved() && this.auth.user() !== null,
-  );
+   *  -- the subscriptions resolved, which is what lets `subscriptionOnboardingRunning`
+   *  above give a real answer instead of the "nothing decided yet" default. The
+   *  signed-in user is checked in `passkeyOfferEligible` below, which returns
+   *  before ever reaching this -- rechecking it here would be dead code. */
+  private readonly readerSettled = computed(() => this.subs.resolved());
 
   /** #624 design spec §5.3: all four conditions the first-login passkey
    *  offer needs before it may show. The fourth (on the reader, not an auth
