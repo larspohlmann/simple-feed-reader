@@ -13,6 +13,21 @@ use Psr\Cache\InvalidArgumentException;
  * alone: it already carries thirteen collaborators, and the CLI and maintenance
  * sweeps — which nothing polls — must not pay for a feature that exists for the
  * polling client.
+ *
+ * Two quirks on the abort path, neither reachable by anything a user sees:
+ *
+ * - When {@see RefreshReport::aborted()} reports `remaining = 0` (the batch had
+ *   started every feed before persistence failed), `advancedBy()` takes
+ *   {@see RefreshRunProgress}'s completion branch and the run reads as full even
+ *   though it stopped early. This is invisible: the run is over either way, so
+ *   the bar unmounts, and the failure alert replaces the counted banner on the
+ *   same strip.
+ * - `aborted()`'s `remaining` is a lower bound derived from the current batch, at
+ *   most `RefreshRunner::BATCH_LIMIT`, not a run-wide count. A 200-feed sweep
+ *   that aborts on its very first slice therefore folds in `3 / 50`, not
+ *   `3 / 200`. Every later slice is protected by `advancedBy()`'s `max()`,
+ *   because the denominator is already established by then — only a first-slice
+ *   abort can understate it.
  */
 final readonly class TrackedRefreshRunner
 {

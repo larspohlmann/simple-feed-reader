@@ -16,6 +16,12 @@ namespace App\Service\Refresh;
  * No query is needed to seed the run. After any slice, `handled + remaining` IS the
  * number of feeds that were due when that slice began: every due feed either reached
  * an outcome or is still due. The denominator therefore falls out of the first slice.
+ *
+ * `done` is monotonic; the rendered fraction `done / total` is not, if `total` grows
+ * faster than `done` between two slices (20/200, then 30/430). That needs the due set
+ * to grow mid-run, which for a user-scoped force refresh means the run outliving the
+ * 5-minute cooldown — a very large account, and one the client's #302 stall guard
+ * would stop well before it got there.
  */
 final readonly class RefreshRunProgress
 {
