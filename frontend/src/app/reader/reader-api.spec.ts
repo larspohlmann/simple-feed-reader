@@ -174,10 +174,11 @@ describe('ReaderApi', () => {
     expect(req.request.params.has('feedId')).toBe(false);
     req.flush({
       status: 'completed',
-      total: 0,
+      progress: { done: 0, total: 0 },
       fetched: 0,
       notModified: 0,
       failed: 0,
+      throttled: 0,
       skippedForBudget: 0,
       remaining: 0,
       pruned: 0,
@@ -192,10 +193,11 @@ describe('ReaderApi', () => {
     expect(req.request.params.has('tag')).toBe(false);
     req.flush({
       status: 'completed',
-      total: 1,
+      progress: { done: 1, total: 1 },
       fetched: 1,
       notModified: 0,
       failed: 0,
+      throttled: 0,
       skippedForBudget: 0,
       remaining: 0,
       pruned: 0,
@@ -210,10 +212,11 @@ describe('ReaderApi', () => {
     expect(req.request.params.has('feedId')).toBe(false);
     req.flush({
       status: 'completed',
-      total: 1,
+      progress: { done: 1, total: 1 },
       fetched: 0,
       notModified: 1,
       failed: 0,
+      throttled: 0,
       skippedForBudget: 0,
       remaining: 0,
       pruned: 0,

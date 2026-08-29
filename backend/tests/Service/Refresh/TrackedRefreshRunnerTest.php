@@ -110,6 +110,29 @@ final class TrackedRefreshRunnerTest extends TestCase
     }
 
     /**
+     * Neither run above ever saved a denominator first, so a forget() that did
+     * nothing would pass them too. Here the first slice is partial and DOES save
+     * (20, 200); if the completing slice failed to clear it, the next press would
+     * resume that stale run instead of starting its own.
+     */
+    public function testCompletingARunClearsTheDenominatorASavedEarlierSliceLeftBehind(): void
+    {
+        $request = RefreshRequest::forUser(1, self::BUDGET);
+        $runner = $this->trackedRunner(
+            RefreshReport::finished(50, 20, 0, 0, 0, 30, 180, 0),
+            RefreshReport::finished(50, 20, 0, 0, 0, 0, 0, 0),
+            RefreshReport::finished(3, 3, 0, 0, 0, 0, 0, 0),
+        );
+
+        $runner->run($request);
+        $runner->run($request);
+        $tracked = $runner->run($request);
+
+        self::assertSame(3, $tracked->progress->done);
+        self::assertSame(3, $tracked->progress->total);
+    }
+
+    /**
      * An aborted run is over: the EntityManager is closed and the client stops.
      * Leaving its record behind would have the next run resume a dead one.
      */

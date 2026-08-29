@@ -72,10 +72,11 @@ describe('OpmlSectionComponent', () => {
     expect(refresh.request.method).toBe('POST');
     refresh.flush({
       status: 'completed',
-      total: 3,
+      progress: { done: 3, total: 3 },
       fetched: 3,
       notModified: 0,
       failed: 0,
+      throttled: 0,
       skippedForBudget: 0,
       remaining: 0,
       pruned: 0,

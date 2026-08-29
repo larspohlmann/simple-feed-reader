@@ -8,6 +8,8 @@ use App\Service\Refresh\RefreshRequest;
 use App\Service\Refresh\RefreshRunProgress;
 use App\Service\Refresh\RefreshRunStore;
 use PHPUnit\Framework\TestCase;
+use Psr\Cache\CacheItemInterface;
+use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
 final class RefreshRunStoreTest extends TestCase
@@ -140,5 +142,82 @@ final class RefreshRunStoreTest extends TestCase
         }
 
         self::assertSame(0, $store->open($request)->done);
+    }
+
+    /**
+     * `is_array` passing is not enough on its own: each field is checked
+     * independently, so a shape with exactly one bad field must still open fresh
+     * rather than hand a non-int through to `RefreshRunProgress::resumed()`.
+     */
+    public function testAnEntryWithOnlyDoneOfTheWrongTypeOpensAFreshRun(): void
+    {
+        $cache = new ArrayAdapter();
+        $store = new RefreshRunStore($cache);
+        $request = RefreshRequest::forUser(1, self::BUDGET);
+        $store->save($request, RefreshRunProgress::start()->advancedBy(20, 180));
+
+        foreach (array_keys($cache->getValues()) as $key) {
+            $item = $cache->getItem($key);
+            $item->set(['done' => 'twenty', 'total' => 200]);
+            $cache->save($item);
+        }
+
+        self::assertSame(0, $store->open($request)->done);
+    }
+
+    public function testAnEntryWithOnlyTotalOfTheWrongTypeOpensAFreshRun(): void
+    {
+        $cache = new ArrayAdapter();
+        $store = new RefreshRunStore($cache);
+        $request = RefreshRequest::forUser(1, self::BUDGET);
+        $store->save($request, RefreshRunProgress::start()->advancedBy(20, 180));
+
+        foreach (array_keys($cache->getValues()) as $key) {
+            $item = $cache->getItem($key);
+            $item->set(['done' => 20, 'total' => 'two-hundred']);
+            $cache->save($item);
+        }
+
+        self::assertSame(0, $store->open($request)->done);
+    }
+
+    public function testSavingSetsATtlSoAnAbandonedRunEventuallyExpires(): void
+    {
+        $item = $this->createMock(CacheItemInterface::class);
+        $item->method('set')->willReturnSelf();
+        $item->expects(self::once())->method('expiresAfter')->with(600);
+
+        $cache = $this->createStub(CacheItemPoolInterface::class);
+        $cache->method('getItem')->willReturn($item);
+
+        $store = new RefreshRunStore($cache);
+        $store->save(RefreshRequest::forUser(1, self::BUDGET), RefreshRunProgress::start());
+    }
+
+    /**
+     * `keyFor()`/`scopeOf()` are private, so the key is observed the way the real
+     * cache backend would see it: by asking the pool for its stored keys. Each
+     * scope must produce its own distinct string, not merely A distinct string.
+     */
+    public function testTheCacheKeyEncodesTheUserAndTheRequestsScope(): void
+    {
+        self::assertSame(['refresh_run_3.all'], $this->rawKeyFor(RefreshRequest::forUser(3, self::BUDGET)));
+        self::assertSame(
+            ['refresh_run_3.feed-7'],
+            $this->rawKeyFor(RefreshRequest::forUserFeed(3, 7, self::BUDGET)),
+        );
+        self::assertSame(
+            ['refresh_run_3.tag-9'],
+            $this->rawKeyFor(RefreshRequest::forUserTag(3, 9, self::BUDGET)),
+        );
+    }
+
+    /** @return list<string> */
+    private function rawKeyFor(RefreshRequest $request): array
+    {
+        $cache = new ArrayAdapter();
+        (new RefreshRunStore($cache))->save($request, RefreshRunProgress::start());
+
+        return array_keys($cache->getValues());
     }
 }

@@ -210,7 +210,7 @@ app-reader-header.hidden {
    height internally, so nothing in normal flow can sit "below the header". This
    wrapper is positioned instead: taken out of flow (zero layout shift for the
    main column) and dropped by the bar's own height into the visible seam just
-   under it. Its contents — the 2px hairline, then the sweep banner — flow
+   under it. Its contents — the fetch banner, then the catalog warning — flow
    normally inside it, so they stack rather than fight for the same `top`.
    z-index sits above the list's sticky header (z-index: 3, same `:host`
    stacking context) and below the article overlay (5 wide, 12 narrow) and the

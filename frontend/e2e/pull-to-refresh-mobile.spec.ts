@@ -46,7 +46,7 @@ async function stubEntries(page: Page): Promise<void> {
   await page.route('**/api/refresh*', async (route) =>
     route.fulfill({
       status: 200,
-      json: { status: 'completed', total: 1, remaining: 0, feeds: [] },
+      json: { status: 'completed', progress: { done: 1, total: 1 }, remaining: 0 },
     }),
   );
 }

@@ -2148,7 +2148,13 @@ describe('ReaderShellComponent', () => {
     // `completed` branch, so it presented exactly like a clean run.
     it('says a sweep stopped early rather than showing it as finished', () => {
       const { banner } = refreshAnsweredWith((request) =>
-        request.flush({ ...refreshDone, status: 'aborted', total: 10, remaining: 7, fetched: 3 }),
+        request.flush({
+          ...refreshDone,
+          status: 'aborted',
+          progress: { done: 3, total: 10 },
+          remaining: 7,
+          fetched: 3,
+        }),
       );
 
       expect(banner()?.textContent).toContain('The refresh stopped early.');
