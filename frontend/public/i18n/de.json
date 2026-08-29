@@ -441,7 +441,8 @@
       "removeTitle": "Diesen Passkey entfernen?",
       "removeMessage": "„{{label}}“ entfernen? Du musst dich dann anders anmelden oder dieses Gerät erneut registrieren, um ihn wieder zu nutzen.",
       "removeConfirm": "Passkey entfernen",
-      "alreadyEnrolled": "Dieses Gerät ist für dieses Konto bereits als Passkey registriert."
+      "alreadyEnrolled": "Dieses Gerät ist für dieses Konto bereits als Passkey registriert.",
+      "addFailed": "Der Passkey konnte nicht hinzugefügt werden."
     }
   },
   "dialog": {

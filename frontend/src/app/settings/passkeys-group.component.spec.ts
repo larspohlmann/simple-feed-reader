@@ -212,6 +212,30 @@ describe('PasskeysGroupComponent', () => {
       expect(f.nativeElement.textContent).not.toContain('relying party');
     });
 
+    it('shows a translated message, not the raw DOMException text, on any other ceremony failure', async () => {
+      // `status: 0` is `PasskeyService.toProblem()`'s marker for "this never
+      // reached the server" -- a `ConstraintError` or a plain `Error` lands
+      // here the same way `InvalidStateError` does, and must not surface the
+      // browser's own untranslated `title` any more than that branch does.
+      passkeyService = passkeyServiceStub([]);
+      dialogStub.open.mockReturnValue({ closed: of('MacBook Touch ID') });
+      const authenticatorError: Problem = {
+        type: 'ConstraintError',
+        title: 'The authenticator does not meet the requested criteria.',
+        status: 0,
+      };
+      passkeyService.enrol.mockRejectedValue(authenticatorError);
+      const f = mount();
+
+      clickAdd(f);
+      await Promise.resolve();
+      await Promise.resolve();
+      f.detectChanges();
+
+      expect(f.nativeElement.textContent).toContain('The passkey could not be added.');
+      expect(f.nativeElement.textContent).not.toContain('requested criteria');
+    });
+
     it('opens a confirm dialog naming the passkey, and removes only once confirmed', () => {
       passkeyService = passkeyServiceStub([TOUCH_ID]);
       dialogStub.open.mockReturnValue({ closed: of(true) });

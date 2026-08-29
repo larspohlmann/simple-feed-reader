@@ -150,6 +150,27 @@ describe('PasskeyOfferDialogComponent', () => {
     expect(close).not.toHaveBeenCalled();
   });
 
+  it('shows a translated message, not the raw DOMException text, on any other locally-raised ceremony failure', async () => {
+    // `status: 0` is `PasskeyService.toProblem()`'s marker for "this never
+    // reached the server" -- distinct from the `status: 500` case above,
+    // which is a real backend Problem and keeps its own title.
+    const authenticatorError: Problem = {
+      type: 'ConstraintError',
+      title: 'The authenticator does not meet the requested criteria.',
+      status: 0,
+    };
+    passkeyService.enrol.mockRejectedValue(authenticatorError);
+    const f = mount();
+
+    findButton(f, 'Set up a passkey').click();
+    await flushMicrotasks();
+    f.detectChanges();
+
+    expect(f.nativeElement.textContent).toContain('The passkey could not be added.');
+    expect(f.nativeElement.textContent).not.toContain('requested criteria');
+    expect(close).not.toHaveBeenCalled();
+  });
+
   it('swaps to state two when Not now is chosen', () => {
     const f = mount();
 

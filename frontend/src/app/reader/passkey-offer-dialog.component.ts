@@ -107,22 +107,30 @@ export class PasskeyOfferDialogComponent {
     this.authService.answerPasskeyOffer().subscribe({ error: () => undefined });
   }
 
-  /** Mirrors `PasskeysGroupComponent.handleEnrolFailure()`'s two special
-   *  cases exactly, since this runs the identical ceremony: a cancelled sheet
-   *  is not a failure to report, and `InvalidStateError` -- this authenticator
-   *  is already enrolled, from the server's exclude list -- gets the same
-   *  translated, actionable message rather than the browser's own raw,
-   *  untranslated `DOMException` text. Reuses the Settings copy
-   *  (`settings.passkeys.alreadyEnrolled`) rather than a second key with the
-   *  same words: this path is near-unreachable here (an account this dialog
-   *  offers a passkey to has none yet), but a duplicated string would drift
-   *  the moment one of the two is reworded. */
+  /** Mirrors `PasskeysGroupComponent.handleEnrolFailure()`'s cases exactly,
+   *  since this runs the identical ceremony: a cancelled sheet is not a
+   *  failure to report; `InvalidStateError` -- this authenticator is already
+   *  enrolled, from the server's exclude list -- and any other locally-raised
+   *  failure (`problem.status === 0`) both get a translated, actionable
+   *  message rather than the browser's own raw, untranslated `DOMException`
+   *  text (see `PasskeyService.toProblem()`'s docblock). Reuses the Settings
+   *  copies (`settings.passkeys.alreadyEnrolled`, `settings.passkeys.addFailed`)
+   *  rather than second keys with the same words: this path is near-unreachable
+   *  here (an account this dialog offers a passkey to has none yet), but a
+   *  duplicated string would drift the moment one of the two is reworded. */
   private handleEnrolFailure(problem: Problem): void {
     if (problem.type === 'NotAllowedError') return;
     if (problem.type === 'InvalidStateError') {
       this.error.set({
         ...problem,
         detail: this.i18n.translate('settings.passkeys.alreadyEnrolled'),
+      });
+      return;
+    }
+    if (problem.status === 0) {
+      this.error.set({
+        ...problem,
+        detail: this.i18n.translate('settings.passkeys.addFailed'),
       });
       return;
     }
