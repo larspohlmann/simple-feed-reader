@@ -2,10 +2,11 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { Dialog } from '@angular/cdk/dialog';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { PasskeyService, PasskeySummary } from '../core/passkey.service';
 import { Problem } from '../core/problem';
+import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { PasskeyNameDialogComponent } from './passkey-name-dialog.component';
 import { PasskeysGroupComponent } from './passkeys-group.component';
 
@@ -39,11 +40,13 @@ function passkeyServiceStub(passkeys: PasskeySummary[] = []): PasskeyServiceStub
 
 describe('PasskeysGroupComponent', () => {
   let passkeyService: PasskeyServiceStub;
-  // Enrolling now goes through the naming dialog (fix round 1, #624): "Add a
-  // passkey" opens it and only calls `enrol()` once the dialog closes with a
-  // name. Stubbed the same way `AccountSectionComponent`'s own dialog spec
-  // stubs `Dialog`, rather than rendering the real CDK overlay here -- that
-  // dialog has its own spec.
+  // Enrolling goes through the naming dialog (fix round 1, #624), and remove
+  // now goes through a confirm dialog too (fix round 2): "Add a passkey"
+  // opens PasskeyNameDialogComponent, the row's delete button opens
+  // ConfirmDialogComponent, and only a returned name / a `true` confirmation
+  // triggers the real call. Stubbed the same way
+  // `AccountSectionComponent`'s own dialog spec stubs `Dialog`, rather than
+  // rendering the real CDK overlay here -- both dialogs have their own specs.
   const dialogStub = { open: jest.fn() };
 
   function mount() {
@@ -64,6 +67,13 @@ describe('PasskeysGroupComponent', () => {
       (button as HTMLButtonElement).textContent?.includes('Add a passkey'),
     ) as HTMLButtonElement;
     addButton.click();
+  }
+
+  function clickRemove(f: ReturnType<typeof mount>): void {
+    const removeButton = f.nativeElement.querySelector(
+      '[data-test="remove-passkey"]',
+    ) as HTMLButtonElement;
+    removeButton.click();
   }
 
   beforeEach(() => dialogStub.open.mockReset());
@@ -162,17 +172,66 @@ describe('PasskeysGroupComponent', () => {
       expect(passkeyService.enrol).not.toHaveBeenCalled();
     });
 
-    it('calls remove for the clicked row and refreshes the list', () => {
+    it('does not open a second naming dialog on a fast double-click', () => {
+      // A `Subject` that never emits, unlike the `of(...)` fixtures above --
+      // it stands in for a dialog the user has not yet acted on, which is
+      // exactly the window a double-click has to land in to matter.
+      passkeyService = passkeyServiceStub([]);
+      const closed = new Subject<string | undefined>();
+      dialogStub.open.mockReturnValue({ closed });
+      const f = mount();
+
+      clickAdd(f);
+      clickAdd(f);
+
+      expect(dialogStub.open).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows a translated message, not the raw DOMException text, when the authenticator is already enrolled', async () => {
+      passkeyService = passkeyServiceStub([]);
+      dialogStub.open.mockReturnValue({ closed: of('MacBook Touch ID') });
+      const alreadyEnrolled: Problem = {
+        type: 'InvalidStateError',
+        // The real, untranslated, browser-supplied text -- asserting it is
+        // ABSENT from the rendered banner is what proves the branch fired.
+        title:
+          'The user attempted to register an authenticator that contains one of the credentials already registered with the relying party.',
+        status: 0,
+      };
+      passkeyService.enrol.mockRejectedValue(alreadyEnrolled);
+      const f = mount();
+
+      clickAdd(f);
+      await Promise.resolve();
+      await Promise.resolve();
+      f.detectChanges();
+
+      expect(f.nativeElement.textContent).toContain(
+        'This device is already registered as a passkey for this account.',
+      );
+      expect(f.nativeElement.textContent).not.toContain('relying party');
+    });
+
+    it('opens a confirm dialog naming the passkey, and removes only once confirmed', () => {
       passkeyService = passkeyServiceStub([TOUCH_ID]);
+      dialogStub.open.mockReturnValue({ closed: of(true) });
       const f = mount();
       passkeyService.list.mockReturnValue(of([]));
 
-      const removeButton = f.nativeElement.querySelector(
-        '[data-test="remove-passkey"]',
-      ) as HTMLButtonElement;
-      removeButton.click();
+      clickRemove(f);
       f.detectChanges();
 
+      expect(dialogStub.open).toHaveBeenCalledWith(
+        ConfirmDialogComponent,
+        expect.objectContaining({
+          role: 'alertdialog',
+          panelClass: 'app-dialog',
+          data: expect.objectContaining({
+            message: expect.stringContaining('MacBook Touch ID'),
+            danger: true,
+          }),
+        }),
+      );
       expect(passkeyService.remove).toHaveBeenCalledWith(TOUCH_ID.id);
       // The refresh after a successful remove re-lists: the stub above now
       // reports none left, and the row for it is gone.
@@ -180,8 +239,22 @@ describe('PasskeysGroupComponent', () => {
       expect(f.nativeElement.querySelectorAll('app-settings-row').length).toBe(0);
     });
 
+    it('sends no request when the removal confirmation is dismissed', () => {
+      passkeyService = passkeyServiceStub([TOUCH_ID]);
+      dialogStub.open.mockReturnValue({ closed: of(false) });
+      const f = mount();
+
+      clickRemove(f);
+      f.detectChanges();
+
+      expect(passkeyService.remove).not.toHaveBeenCalled();
+      expect(passkeyService.list).toHaveBeenCalledTimes(1);
+      expect(f.nativeElement.querySelectorAll('app-settings-row').length).toBe(1);
+    });
+
     it('renders the lock-out message from the problem body on a 409', () => {
       passkeyService = passkeyServiceStub([TOUCH_ID]);
+      dialogStub.open.mockReturnValue({ closed: of(true) });
       // `PasskeyService.remove()` issues a plain `HttpClient.delete()` with no
       // catch of its own, so a failure reaches this component as the raw
       // `HttpErrorResponse` -- exactly what `parseProblem()` expects, and what
@@ -199,10 +272,7 @@ describe('PasskeysGroupComponent', () => {
       );
       const f = mount();
 
-      const removeButton = f.nativeElement.querySelector(
-        '[data-test="remove-passkey"]',
-      ) as HTMLButtonElement;
-      removeButton.click();
+      clickRemove(f);
       f.detectChanges();
 
       expect(f.nativeElement.textContent).toContain(

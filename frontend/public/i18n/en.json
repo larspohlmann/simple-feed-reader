@@ -416,7 +416,11 @@
         "title": "Name this passkey",
         "label": "Name",
         "confirm": "Add"
-      }
+      },
+      "removeTitle": "Remove this passkey?",
+      "removeMessage": "Remove \"{{label}}\"? You will need to sign in another way, or re-enrol this device, to use it again.",
+      "removeConfirm": "Remove passkey",
+      "alreadyEnrolled": "This device is already registered as a passkey for this account."
     }
   },
   "dialog": {

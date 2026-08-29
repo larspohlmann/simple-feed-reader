@@ -38,7 +38,7 @@
             class="danger"
             data-test="remove-passkey"
             [attr.aria-label]="'settings.passkeys.removeAria' | transloco: { label: passkey.label }"
-            (click)="remove(passkey)"
+            (click)="confirmThenRemove(passkey)"
           >
             <app-icon name="delete" size="sm" />
           </button>

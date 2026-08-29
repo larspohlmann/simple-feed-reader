@@ -9,6 +9,10 @@ import { Problem, parseProblem } from '../core/problem';
 import { isPasskeySupported } from '../core/webauthn';
 import { formatDateOr, formatLongDate } from '../reader/format';
 import { ButtonComponent } from '../shared/button/button.component';
+import {
+  ConfirmData,
+  ConfirmDialogComponent,
+} from '../shared/confirm-dialog/confirm-dialog.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { IconButtonDirective } from '../shared/icon-button/icon-button.directive';
 import { IconComponent } from '../shared/icon/icon.component';
@@ -81,15 +85,49 @@ export class PasskeysGroupComponent {
    *  confirmed. Naming and enrolling are split across two methods because
    *  they run on two different lifecycles: the dialog closes as soon as a
    *  name is chosen, well before the ceremony -- and its own success or
-   *  failure -- resolves. */
+   *  failure -- resolves.
+   *
+   *  `adding` flips true for the whole span, dialog included, not just the
+   *  ceremony: guarding only the ceremony half left a fast double-click free
+   *  to stack two naming dialogs before the first one closes. */
   openAddDialog(): void {
+    if (this.adding()) return;
+    this.adding.set(true);
+
     const ref = this.dialog.open<string>(PasskeyNameDialogComponent, { panelClass: 'app-dialog' });
     ref.closed.subscribe((name) => {
-      if (name) this.enrolWith(name);
+      if (name) {
+        this.enrolWith(name);
+      } else {
+        this.adding.set(false);
+      }
     });
   }
 
-  remove(passkey: PasskeySummary): void {
+  /** Removing a passkey is irreversible -- the only way back is physically
+   *  re-enrolling that device -- so a stray tap on the row's small icon
+   *  button must not do it. Same two-step shape as
+   *  `AccountSectionComponent.confirmThenDelete()` and
+   *  `ManageActionsService.deleteTag()`: a `ConfirmDialogComponent` naming
+   *  the thing about to go, then the actual call only on confirmation. */
+  confirmThenRemove(passkey: PasskeySummary): void {
+    const data: ConfirmData = {
+      title: this.i18n.translate('settings.passkeys.removeTitle'),
+      message: this.i18n.translate('settings.passkeys.removeMessage', { label: passkey.label }),
+      confirmLabel: this.i18n.translate('settings.passkeys.removeConfirm'),
+      danger: true,
+    };
+    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
+      data,
+      role: 'alertdialog',
+      panelClass: 'app-dialog',
+    });
+    ref.closed.subscribe((confirmed) => {
+      if (confirmed) this.remove(passkey);
+    });
+  }
+
+  private remove(passkey: PasskeySummary): void {
     this.removeError.set(null);
     this.passkeyService.remove(passkey.id).subscribe({
       next: () => this.refresh(),
@@ -99,7 +137,6 @@ export class PasskeysGroupComponent {
 
   private async enrolWith(label: string): Promise<void> {
     this.addError.set(null);
-    this.adding.set(true);
     try {
       await this.passkeyService.enrol(label);
       this.refresh();
@@ -120,10 +157,24 @@ export class PasskeysGroupComponent {
 
   /** A cancelled ceremony (the user dismissed the platform sheet, or it timed
    *  out) is not a failure to report -- `PasskeyService`'s own docblock names
-   *  `NotAllowedError` as exactly that case. Anything else -- an authenticator
-   *  already enrolled, a rejected HTTP call -- is shown. */
+   *  `NotAllowedError` as exactly that case, and it is left alone here.
+   *
+   *  `InvalidStateError` -- this authenticator is already enrolled on the
+   *  account, produced by the server's exclude list -- gets its own
+   *  translated, actionable message rather than falling through to the
+   *  generic path: the fallback there renders `error.title`, which for a
+   *  `DOMException` is the browser's own untranslated, locale-dependent text
+   *  (see `PasskeyService.toProblem()`'s docblock). Overwriting `detail`
+   *  works because the banner reads `error.detail || error.title`. */
   private handleEnrolFailure(problem: Problem): void {
     if (problem.type === 'NotAllowedError') return;
+    if (problem.type === 'InvalidStateError') {
+      this.addError.set({
+        ...problem,
+        detail: this.i18n.translate('settings.passkeys.alreadyEnrolled'),
+      });
+      return;
+    }
     this.addError.set(problem);
   }
 }
