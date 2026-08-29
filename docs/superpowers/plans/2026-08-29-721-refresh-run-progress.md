@@ -1801,7 +1801,27 @@ In `frontend/e2e/pull-to-refresh-mobile.spec.ts`, replace the refresh stub's JSO
   );
 ```
 
-- [ ] **Step 2: Sweep for orphans**
+- [ ] **Step 2: Retire the stale refresh fixtures the plan missed**
+
+Three spec files flush a `RefreshReport` shaped the way the wire used to be — carrying
+`total`, missing `progress` and `throttled`. None of them asserts on those fields, so
+they pass either way; they are stale descriptions of a contract that no longer exists,
+which is exactly what this task removes.
+
+In `frontend/src/app/reader/reader-api.spec.ts`, all three refresh flushes (the
+`POSTs refresh`, `scopes refresh to a single feed…` and `scopes refresh to a tag…`
+tests): drop `total`, add `throttled: 0`, and add a `progress` whose numbers match the
+test's own scenario — `{ done: 0, total: 0 }` for the no-feeds case, `{ done: 1, total: 1 }`
+for each single-feed case.
+
+In `frontend/src/app/settings/opml-section.component.spec.ts`, the flush in
+`imports pasted OPML…`: drop `total: 3`, add `throttled: 0` and
+`progress: { done: 3, total: 3 }`.
+
+Check `frontend/src/app/settings/backup-section.component.spec.ts` the same way and fix
+any refresh fixture it carries.
+
+- [ ] **Step 3: Sweep for orphans**
 
 Run each of these from the repository root. Every one must come back empty, except
 where noted:
@@ -1811,6 +1831,9 @@ grep -rn "fetchProgress" frontend/src
 grep -rn "\.prog\b" frontend/src/app/reader/sidebar
 grep -rn "refreshSvc.report()\|refresh.report()" frontend/src
 grep -rn "progress-hairline" frontend/src/app/reader/reader-shell.component.ts frontend/src/app/reader/reader-shell.component.html
+# Any remaining fixture still describing the old wire shape — Step 2 should have
+# left none. Each hit is a spec flushing a RefreshReport; check it by eye.
+grep -rn "total:" frontend/src --include=*.spec.ts | grep -i "refresh"
 ```
 
 Then decide the one real question — whether `RefreshReport::$total` still has a reader:
@@ -1826,7 +1849,7 @@ is satisfied. If it has no reader at all, remove it from the constructor, from
 `busy()`, `finished()`, `aborted()` and `toArray()`, and update
 `RefreshDueFeedsHandlerTest`'s key-list assertion.
 
-- [ ] **Step 3: Run every gate, both suites**
+- [ ] **Step 4: Run every gate, both suites**
 
 From `backend/`:
 
@@ -1842,7 +1865,7 @@ npm run check
 
 Expected: all clean.
 
-- [ ] **Step 4: Run the mutation gate on what this branch changed**
+- [ ] **Step 5: Run the mutation gate on what this branch changed**
 
 From `backend/`:
 
@@ -1854,7 +1877,7 @@ Expected: at or above `minMsi` in `infection.json5`. Escaped mutants on
 `RefreshRunProgress::advancedBy`'s `max()` mean a missing test — the denominator cases
 in Task 1 are the ones that kill it. Never lower `minMsi` to pass.
 
-- [ ] **Step 5: Verify on the real render**
+- [ ] **Step 6: Verify on the real render**
 
 Gates green is not the deliverable — this issue is three visual defects.
 
@@ -1882,14 +1905,14 @@ more than one slice:
 ls -t backend/var/log/dev-*.log | head -1
 ```
 
-- [ ] **Step 6: Commit whatever the sweep and the verification changed**
+- [ ] **Step 7: Commit whatever the sweep and the verification changed**
 
 ```bash
 git add -A
 git commit -m "chore(#721): remove the replaced refresh-progress code"
 ```
 
-- [ ] **Step 7: Open the pull request**
+- [ ] **Step 8: Open the pull request**
 
 ```bash
 gh pr create --base develop --title "fix(#721): give the refresh run its own progress" --body "Closes #721"
