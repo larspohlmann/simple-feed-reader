@@ -428,7 +428,16 @@
     "unsubscribeConfirm": "Unsubscribe",
     "deleteTagTitle": "Delete tag",
     "deleteTagMessage": "Delete “{{name}}”? It will be removed from every feed that uses it.",
-    "deleteConfirm": "Delete"
+    "deleteConfirm": "Delete",
+    "bulk": {
+      "tagAdded": "Added “{{name}}” to {{count}} feeds.",
+      "tagRemoved": "Removed “{{name}}” from {{count}} feeds.",
+      "flagsSet": "Updated {{count}} feeds.",
+      "unsubscribeTitle": "Unsubscribe from {{count}} feeds",
+      "unsubscribeMessage": "Remove {{named}} and their entries from your feeds?",
+      "unsubscribeMessageMore": "Remove {{named}} and {{rest}} more, and their entries, from your feeds?",
+      "unsubscribed": "Unsubscribed from {{count}} feeds."
+    }
   },
   "admin": {
     "title": "Users",

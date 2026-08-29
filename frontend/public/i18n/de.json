@@ -428,7 +428,16 @@
     "unsubscribeConfirm": "Abbestellen",
     "deleteTagTitle": "Tag löschen",
     "deleteTagMessage": "„{{name}}“ löschen? Er wird von jedem Feed entfernt, der ihn verwendet.",
-    "deleteConfirm": "Löschen"
+    "deleteConfirm": "Löschen",
+    "bulk": {
+      "tagAdded": "„{{name}}“ zu {{count}} Feeds hinzugefügt.",
+      "tagRemoved": "„{{name}}“ von {{count}} Feeds entfernt.",
+      "flagsSet": "{{count}} Feeds aktualisiert.",
+      "unsubscribeTitle": "{{count}} Feeds abbestellen",
+      "unsubscribeMessage": "{{named}} und ihre Einträge aus deinen Feeds entfernen?",
+      "unsubscribeMessageMore": "{{named}} und {{rest}} weitere, sowie ihre Einträge, aus deinen Feeds entfernen?",
+      "unsubscribed": "{{count}} Feeds abbestellt."
+    }
   },
   "admin": {
     "title": "Benutzer",
