@@ -7,7 +7,6 @@ namespace App\Controller\Api;
 use App\Dto\Subscription\ReorderSubscriptionsRequest;
 use App\Dto\Subscription\SubscribeRequest;
 use App\Dto\Subscription\UpdateSubscriptionRequest;
-use App\Entity\Subscription;
 use App\Entity\User;
 use App\Exception\ScrapingDisabledApiException;
 use App\Http\SubscriptionJson;
@@ -15,6 +14,7 @@ use App\Repository\EntryStateRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
+use App\Service\Subscription\OwnedSubscriptions;
 use App\Service\Subscription\SubscriptionService;
 use App\Service\Subscription\SubscriptionTagSync;
 use Doctrine\ORM\EntityManagerInterface;
@@ -22,7 +22,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
-use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -36,6 +35,7 @@ final readonly class SubscriptionController
         private TagRepository $tags,
         private EntryStateRepository $entryStates,
         private EntityManagerInterface $em,
+        private OwnedSubscriptions $ownedSubscriptions,
     ) {
     }
 
@@ -132,16 +132,8 @@ final readonly class SubscriptionController
         #[CurrentUser] User $user,
         #[MapRequestPayload] ReorderSubscriptionsRequest $request,
     ): JsonResponse {
-        $owned = $this->subscriptionRepo->findAllByIdsForUser($request->subscriptionIds, (int) $user->getId());
-        if (\count($owned) !== \count(array_unique($request->subscriptionIds))) {
-            throw new UnprocessableEntityHttpException('subscriptionIds must all be your feeds, without duplicates.');
-        }
+        $byId = $this->ownedSubscriptions->resolve($request->subscriptionIds, (int) $user->getId());
 
-        /** @var array<int, Subscription> $byId */
-        $byId = [];
-        foreach ($owned as $sub) {
-            $byId[(int) $sub->getId()] = $sub;
-        }
         foreach ($request->subscriptionIds as $index => $subscriptionId) {
             $byId[$subscriptionId]->setPosition($index);
         }
