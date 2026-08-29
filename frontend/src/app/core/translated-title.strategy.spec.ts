@@ -20,7 +20,7 @@ describe('TranslatedTitleStrategy', () => {
       providers: [
         provideRouter([
           { path: 'account', title: 'settings.account.title', component: BlankComponent },
-          { path: 'tags', title: 'settings.tags.title', component: BlankComponent },
+          { path: 'organise', title: 'settings.organise.title', component: BlankComponent },
           { path: 'untitled', component: BlankComponent },
           { path: 'reader', title: DYNAMIC_TITLE, component: BlankComponent },
         ]),
@@ -38,9 +38,9 @@ describe('TranslatedTitleStrategy', () => {
 
   it('titles each page from the translation key on its route, on every navigation', async () => {
     await navigate('/account');
-    await navigate('/tags');
+    await navigate('/organise');
 
-    expect(title.getTitle()).toBe('Tags | simple feed reader');
+    expect(title.getTitle()).toBe('Organise | simple feed reader');
   });
 
   it('resets a route that declares no title instead of leaving the last one', async () => {

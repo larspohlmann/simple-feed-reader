@@ -40,7 +40,7 @@ describe('SettingsHubComponent', () => {
     isWide.set(true);
     const f = mount();
     await f.whenStable();
-    expect(TestBed.inject(Router).url).toBe('/settings/tags');
+    expect(TestBed.inject(Router).url).toBe('/settings/organise');
   });
 
   it('forwards when the viewport grows past the breakpoint while open', async () => {
@@ -50,6 +50,6 @@ describe('SettingsHubComponent', () => {
     isWide.set(true);
     f.detectChanges();
     await f.whenStable();
-    expect(TestBed.inject(Router).url).toBe('/settings/tags');
+    expect(TestBed.inject(Router).url).toBe('/settings/organise');
   });
 });

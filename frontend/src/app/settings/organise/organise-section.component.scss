@@ -8,8 +8,8 @@
 // is the only box on the page below the toolbar.
 // The group's `.panel` is unpadded by design (its rows pad themselves), and
 // `.tools` is not a row -- so it reads `--panel-inset-y`/`--panel-inset-x`
-// itself, the same pattern `tags-section.component.scss` and
-// `admin-catalog.component.scss` use for their own non-row panel content.
+// itself, the same pattern `admin-catalog.component.scss` uses for its own
+// non-row panel content.
 @use '../../theme/breakpoints' as bp;
 
 // Buttons that belong to the same header row still need a real gap between

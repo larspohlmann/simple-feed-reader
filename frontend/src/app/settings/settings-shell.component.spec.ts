@@ -59,14 +59,14 @@ describe('SettingsShellComponent', () => {
 
   it('leads back to the reader from a section on desktop', async () => {
     const f = mount();
-    await goTo('/settings/tags');
+    await goTo('/settings/preferences');
     expect(f.componentInstance.backTarget()).toBe('/');
   });
 
   it('leads back to the hub from a section on mobile', async () => {
     isWide.set(false);
     const f = mount();
-    await goTo('/settings/tags');
+    await goTo('/settings/preferences');
     expect(f.componentInstance.backTarget()).toBe('/settings');
     expect(f.componentInstance.backLabelKey()).toBe('settings.title');
   });
@@ -82,7 +82,7 @@ describe('SettingsShellComponent', () => {
     const f = mount();
     await goTo('/settings/admin/catalog');
     expect(f.componentInstance.wideSection()).toBe(true);
-    await goTo('/settings/tags');
+    await goTo('/settings/preferences');
     expect(f.componentInstance.wideSection()).toBe(false);
   });
 });

@@ -22,7 +22,7 @@ export class SettingsHubComponent {
   constructor() {
     effect(() => {
       if (this.layout.isWide()) {
-        void this.router.navigate(['/settings/tags'], { replaceUrl: true });
+        void this.router.navigate(['/settings/organise'], { replaceUrl: true });
       }
     });
   }

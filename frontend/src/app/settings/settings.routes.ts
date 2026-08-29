@@ -20,11 +20,9 @@ export const SETTINGS_ROUTES: Routes = [
         loadComponent: () =>
           import('./organise/organise-section.component').then((m) => m.OrganiseSectionComponent),
       },
-      {
-        path: 'tags',
-        title: sectionLabelKey('tags'),
-        loadComponent: () => import('./tags-section.component').then((m) => m.TagsSectionComponent),
-      },
+      // #714: Organise replaced the Tags page. The old path stays as a forward
+      // for stale bookmarks -- no section entry, no title, it is not a page.
+      { path: 'tags', redirectTo: 'organise', pathMatch: 'full' },
       {
         path: 'import',
         title: sectionLabelKey('import'),

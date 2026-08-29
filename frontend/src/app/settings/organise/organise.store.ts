@@ -61,7 +61,7 @@ function feedsInTag(subscriptions: SubscriptionDto[], tagId: number): Subscripti
  *
  * It performs no writes and injects no write-capable service. Every change to
  * the data goes through the page's own action layer, which is what keeps this
- * page, the sidebar's Organise mode and settings/tags from drifting apart.
+ * page and the sidebar's Organise mode from drifting apart.
  *
  * Provided by the page component, not in root: leaving the page must drop the
  * selection rather than leave it waiting.

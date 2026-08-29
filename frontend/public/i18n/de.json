@@ -35,19 +35,8 @@
       "statusGone": "Dieser Feed scheint nicht mehr zu existieren. Eine Aktualisierung versucht es erneut."
     },
     "tags": {
-      "title": "Tags",
       "new": "Neuer Tag",
-      "none": "Noch keine Tags – erstelle einen, um deine Feeds zu gruppieren.",
-      "feedCountOne": "{{count}} Feed",
-      "feedCountOther": "{{count}} Feeds",
-      "edit": "Bearbeiten",
-      "delete": "Löschen",
-      "loading": "Tags werden geladen",
-      "retry": "Erneut versuchen",
-      "reorder": "{{name}} verschieben",
-      "save": "Speichern",
-      "cancel": "Abbrechen",
-      "editing": "{{name}} wird bearbeitet"
+      "cancel": "Abbrechen"
     },
     "opml": {
       "title": "Import & Export",
