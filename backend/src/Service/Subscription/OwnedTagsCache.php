@@ -6,6 +6,7 @@ namespace App\Service\Subscription;
 
 use App\Entity\Tag;
 use App\Repository\TagRepository;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Caches TagRepository::findAllByIdsForUser() for the lifetime of one request.
@@ -20,18 +21,27 @@ use App\Repository\TagRepository;
  * with no home gets a collaborator that holds it as a field, not a longer
  * parameter list).
  *
- * A plain (non-shared-across-requests) service: this app runs one PHP process
- * per request, so one instance lives exactly as long as one request. Keyed by
- * user id regardless, so nothing could leak between accounts even if that
- * ever changed.
+ * Keyed by user id so nothing could leak between accounts within one request.
+ * That alone does not make the service safe to keep alive PAST one request,
+ * though: this app's own functional tests reuse one container across several
+ * requests via $client->disableReboot(), and a long-running worker process
+ * could do the same. ResetInterface (auto-tagged kernel.reset by
+ * FrameworkExtension's autoconfiguration) empties the cache between requests
+ * so a stale entry — possibly bound to an EntityManager that has since been
+ * reset — can never be served to a later one.
  */
-final class OwnedTagsCache
+final class OwnedTagsCache implements ResetInterface
 {
     /** @var array<int, array<int, Tag>> resolved tag, by id, by owning user id */
     private array $resolvedByUser = [];
 
     public function __construct(private readonly TagRepository $tags)
     {
+    }
+
+    public function reset(): void
+    {
+        $this->resolvedByUser = [];
     }
 
     /**

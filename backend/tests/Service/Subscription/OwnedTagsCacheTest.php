@@ -142,6 +142,38 @@ final class OwnedTagsCacheTest extends KernelTestCase
     }
 
     /**
+     * The class's own comment used to justify never clearing $resolvedByUser
+     * on "one PHP process per request" — already false in this suite's own
+     * functional tests that call $client->disableReboot() (#659 review).
+     * reset() must actually empty the cache: a repeated id costs a fresh
+     * query again once reset() has run.
+     */
+    public function testResetForgetsEverythingResolvedSoFar(): void
+    {
+        $user = $this->user('cache-reset@example.com');
+        $news = $this->tag($user, 'News');
+        $this->em->flush();
+        $newsId = (int) $news->getId();
+        $userId = (int) $user->getId();
+
+        $this->cache->findAllByIdsForUser([$newsId], $userId);
+
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        $recorder->reset();
+
+        $this->cache->reset();
+        $this->cache->findAllByIdsForUser([$newsId], $userId);
+
+        $reads = $recorder->queriesMatching('from tag');
+        self::assertCount(
+            1,
+            $reads,
+            "reset() must drop the cached id so it is fetched again, got:\n" . implode("\n", $reads),
+        );
+    }
+
+    /**
      * Two different users must never see each other's cached tags, even
      * though both ask this one instance within the same request.
      */
