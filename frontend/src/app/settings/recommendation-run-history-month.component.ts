@@ -4,6 +4,7 @@ import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { formatCost, formatDayInMonth, formatDuration, formatTime } from '../reader/format';
 import { RunHistoryRow } from '../reader/models';
 import { LanguageService } from '../core/language.service';
+import { pluralKey } from '../core/plural-key';
 import { DisclosureComponent } from '../shared/disclosure/disclosure.component';
 import { IconComponent } from '../shared/icon/icon.component';
 import { runHistoryStatusIcon } from './run-history-status-icon';
@@ -57,14 +58,10 @@ export class RecommendationRunHistoryMonthComponent {
 
   /** The month's own run count and spend, as the header's one line. No
    *  Transloco pluralization plugin is installed in this app, so this follows
-   *  the existing `xxxOne`/`xxxOther` key-pair convention (see
-   *  `tags-section.component.html`'s `feedCountOne`/`feedCountOther`) rather
-   *  than inventing a second mechanism. */
+   *  the existing `xxxOne`/`xxxOther` key-pair convention via `pluralKey`
+   *  rather than inventing a second mechanism. */
   readonly summary = computed(() => {
-    const key =
-      this.runCount() === 1
-        ? 'settings.ai.recommendations.historyMonthSummaryOne'
-        : 'settings.ai.recommendations.historyMonthSummaryOther';
+    const key = pluralKey('settings.ai.recommendations.historyMonthSummary', this.runCount());
     return this.i18n.translate(key, {
       runs: this.runCount(),
       cost: formatCost(this.costNanoCredits(), this.language.lang()),

@@ -98,15 +98,31 @@ export class OrganiseStore {
     });
   });
 
+  /** Each group's total feed count before any filter. Kept out of `groups()`
+   *  itself: it depends only on `subs.subscriptions()` and `tags()`, never on
+   *  `titleFilter`/`tagFilter`, so sharing `groups()`'s computed body would
+   *  re-derive every tag's total on every keystroke in the filter box for
+   *  nothing. */
+  private readonly totalCounts = computed<ReadonlyMap<GroupKey, number>>(() => {
+    const all = this.subs.subscriptions();
+    const counts = new Map<GroupKey, number>();
+    for (const tag of this.tags()) {
+      counts.set(tag.id, feedsInTag(all, tag.id).length);
+    }
+    counts.set('untagged', untaggedSubs(all).length);
+
+    return counts;
+  });
+
   readonly groups = computed<OrganiseGroup[]>(() => {
     const visible = this.filteredSubscriptions();
-    const all = this.subs.subscriptions();
+    const totalCounts = this.totalCounts();
 
     const tagGroups: OrganiseGroup[] = this.tags().map((tag) => ({
       key: tag.id,
       tag,
       subscriptions: feedsInTag(visible, tag.id),
-      totalCount: feedsInTag(all, tag.id).length,
+      totalCount: totalCounts.get(tag.id) ?? 0,
     }));
 
     const groups: OrganiseGroup[] = [
@@ -115,7 +131,7 @@ export class OrganiseStore {
         key: 'untagged',
         tag: null,
         subscriptions: untaggedSubs(visible),
-        totalCount: untaggedSubs(all).length,
+        totalCount: totalCounts.get('untagged') ?? 0,
       },
     ];
 

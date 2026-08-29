@@ -73,10 +73,7 @@
                 <app-tag-glyph [name]="t.icon" [color]="t.color" size="sm" />
                 <span class="name">{{ t.name }}</span>
                 <span class="count">{{
-                  ((usage()[t.id] || 0) === 1
-                    ? 'settings.tags.feedCountOne'
-                    : 'settings.tags.feedCountOther'
-                  ) | transloco: { count: usage()[t.id] || 0 }
+                  feedCountKey(t.id) | transloco: { count: usage()[t.id] || 0 }
                 }}</span>
               </span>
               <span class="acts">

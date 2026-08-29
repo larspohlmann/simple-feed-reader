@@ -61,9 +61,25 @@ export class BulkTagDialogComponent {
     return this.data.tags.filter((tag) => this.carriedBy(tag) > 0);
   });
 
+  /** How many of the selected feeds carry each tag id, built once from
+   *  `data.subscriptions` rather than rescanned per tag: `carriedBy` is read
+   *  from the template inside a loop over every offered tag, and again by
+   *  `offered()` and `affected()` — at the 500-id cap over 18 tags an
+   *  unmemoised scan would be ~9,000 comparisons per change-detection pass. */
+  private readonly carrierCounts = computed<ReadonlyMap<number, number>>(() => {
+    const counts = new Map<number, number>();
+    for (const subscription of this.data.subscriptions) {
+      for (const tag of subscription.tags) {
+        counts.set(tag.id, (counts.get(tag.id) ?? 0) + 1);
+      }
+    }
+
+    return counts;
+  });
+
   /** How many of the selected feeds already carry this tag. */
   carriedBy(tag: TagDto): number {
-    return this.data.subscriptions.filter((s) => s.tags.some((t) => t.id === tag.id)).length;
+    return this.carrierCounts().get(tag.id) ?? 0;
   }
 
   /** In remove mode, how many feeds would be left with no tag at all. */

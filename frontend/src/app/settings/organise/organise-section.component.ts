@@ -22,6 +22,16 @@ import { TagsStore } from '../../reader/tags.store';
 import { Problem, parseProblem } from '../../core/problem';
 import { SubscriptionFlags, TagDto } from '../../reader/models';
 
+/** One item of the bulk bar's "Visibility" menu: which flag it sets, to what
+ *  value, and the i18n key for its label. A readonly literal array so the
+ *  template renders the four commands from one loop instead of four
+ *  near-identical buttons. */
+interface VisibilityMenuItem {
+  readonly flag: keyof SubscriptionFlags;
+  readonly value: boolean;
+  readonly labelKey: string;
+}
+
 /**
  * The Organise page: every tag and every feed, in a tree or a flat list, with
  * multi-select and one bulk bar.
@@ -61,6 +71,16 @@ export class OrganiseSectionComponent implements OnInit {
   readonly error = signal<Problem | null>(null);
   protected readonly tagFilterOpen = signal(false);
   protected readonly visibilityOpen = signal(false);
+
+  /** Four commands, not two toggles: a toggle over a mixed selection has no
+   *  correct starting position (see the bulk bar's own comment in the
+   *  template). */
+  protected readonly visibilityMenuItems: readonly VisibilityMenuItem[] = [
+    { flag: 'includeInAllItems', value: true, labelKey: 'settings.organise.showInAllItems' },
+    { flag: 'includeInAllItems', value: false, labelKey: 'settings.organise.hideFromAllItems' },
+    { flag: 'includeInForYou', value: true, labelKey: 'settings.organise.showInForYou' },
+    { flag: 'includeInForYou', value: false, labelKey: 'settings.organise.hideFromForYou' },
+  ];
 
   protected toggleTagFilter(key: GroupKey): void {
     this.store.tagFilter.update((current) => {
@@ -103,6 +123,12 @@ export class OrganiseSectionComponent implements OnInit {
 
   setFlags(flags: SubscriptionFlags): void {
     this.runBulk(this.manage.bulkSetFlags([...this.store.selectedIds()], flags));
+  }
+
+  /** One visibility menu command was chosen: set its flag, then close the menu. */
+  protected chooseVisibility(item: VisibilityMenuItem): void {
+    this.setFlags({ [item.flag]: item.value });
+    this.visibilityOpen.set(false);
   }
 
   /** Selection clears after an unsubscribe: the feeds are gone. */

@@ -1,6 +1,6 @@
 // src/app/settings/organise/organise-tag-group.component.ts
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
-import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
+import { CdkDrag, CdkDragDrop, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
@@ -9,7 +9,7 @@ import { OrganiseGroup, OrganiseStore } from './organise.store';
 import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
 import { ManageActions } from '../../reader/manage/manage-actions.service';
 import { LayoutService } from '../../reader/layout.service';
-import { SubscriptionDto } from '../../reader/models';
+import { SubscriptionDto, isSubscriptionDrag } from '../../reader/models';
 
 /**
  * One tag panel: a header row, and — when open — its feeds.
@@ -80,10 +80,6 @@ export class OrganiseTagGroupComponent {
   }
 
   protected moveFeed(subscription: SubscriptionDto, offset: number): void {
-    // Defense in depth: the template also disables the arrows under a
-    // filter, but `group().subscriptions` is the filtered list either way —
-    // reordering against it is meaningless, not merely hidden.
-    if (this.store.filterActive()) return;
     const ids = this.group().subscriptions.map((s) => s.id);
     const from = ids.indexOf(subscription.id);
     const to = from + offset;
@@ -100,7 +96,7 @@ export class OrganiseTagGroupComponent {
    *  cross-group view to reorder tags by drag (that is the arrows' job), so a
    *  non-feed drop is ignored rather than treated as a subscription. */
   onFeedDropped(event: CdkDragDrop<OrganiseGroup>): void {
-    if (!this.isFeedDrag(event.item.data)) return;
+    if (!isSubscriptionDrag(event.item.data)) return;
     const subscription = event.item.data;
 
     if (event.previousContainer === event.container) {
@@ -114,25 +110,23 @@ export class OrganiseTagGroupComponent {
     );
   }
 
-  /** True when the dragged item is a feed row rather than a tag header —
-   *  same duck-typing the sidebar uses (`sidebar.component.ts` `isFeedData`),
-   *  since an `OrganiseGroup` carries no `feedUrl`. */
-  private isFeedDrag(data: unknown): data is SubscriptionDto {
-    return !!data && typeof data === 'object' && 'feedUrl' in data;
-  }
-
   private reorderTo(subscription: SubscriptionDto, from: number, to: number): void {
     if (from === to) return;
-    // Same reasoning as moveFeed(): the drag handle is already disabled
-    // under a filter, but a same-list drop is guarded here too.
-    if (this.store.filterActive()) return;
     const ids = this.group().subscriptions.map((s) => s.id);
-    ids.splice(to, 0, ...ids.splice(from, 1));
+    moveItemInArray(ids, from, to);
 
     this.persistOrder(ids);
   }
 
+  /** Persists a reordering of this group's feeds. Guarded here, once, rather
+   *  than at each caller: `group().subscriptions` is always the FILTERED
+   *  list, so an order derived from it under an active filter would be an
+   *  order over a subset — the drop would either corrupt the untagged list's
+   *  positions (no permutation check on that endpoint) or 422 silently on a
+   *  tag's feed order. The template also disables the arrows and the drag
+   *  handle under a filter; this is the defense in depth. */
   private persistOrder(ids: number[]): void {
+    if (this.store.filterActive()) return;
     const tag = this.group().tag;
     if (tag === null) {
       this.manage.reorderUntagged(ids);

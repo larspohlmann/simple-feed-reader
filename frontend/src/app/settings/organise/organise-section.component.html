@@ -188,30 +188,11 @@
             </app-button>
             @if (visibilityOpen()) {
               <div class="pop" role="menu">
-                <button
-                  role="menuitem"
-                  (click)="setFlags({ includeInAllItems: true }); visibilityOpen.set(false)"
-                >
-                  {{ 'settings.organise.showInAllItems' | transloco }}
-                </button>
-                <button
-                  role="menuitem"
-                  (click)="setFlags({ includeInAllItems: false }); visibilityOpen.set(false)"
-                >
-                  {{ 'settings.organise.hideFromAllItems' | transloco }}
-                </button>
-                <button
-                  role="menuitem"
-                  (click)="setFlags({ includeInForYou: true }); visibilityOpen.set(false)"
-                >
-                  {{ 'settings.organise.showInForYou' | transloco }}
-                </button>
-                <button
-                  role="menuitem"
-                  (click)="setFlags({ includeInForYou: false }); visibilityOpen.set(false)"
-                >
-                  {{ 'settings.organise.hideFromForYou' | transloco }}
-                </button>
+                @for (item of visibilityMenuItems; track item.labelKey) {
+                  <button role="menuitem" (click)="chooseVisibility(item)">
+                    {{ item.labelKey | transloco }}
+                  </button>
+                }
               </div>
             }
           </div>

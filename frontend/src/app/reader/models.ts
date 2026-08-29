@@ -86,6 +86,15 @@ export interface SubscriptionDto {
   includeInForYou: boolean;
 }
 
+/** True when a CDK drag's payload is a feed row rather than some other
+ *  draggable a shared drop list also accepts (a tag header, a group) —
+ *  duck-typed on `feedUrl`, the field only a `SubscriptionDto` carries.
+ *  Shared by the sidebar and the Organise page, the two places a drop list
+ *  mixes feed and non-feed draggables and must tell them apart. */
+export function isSubscriptionDrag(data: unknown): data is SubscriptionDto {
+  return !!data && typeof data === 'object' && 'feedUrl' in data;
+}
+
 /** The sidebar bootstrap payload: the feed list plus the user-wide favourite,
  *  kept and viewed totals shown as badges on the Favorites/Kept/Recently-read
  *  nav items. */
