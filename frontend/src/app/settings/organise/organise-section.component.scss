@@ -1,24 +1,10 @@
 // src/app/settings/organise/organise-section.component.scss
+// The page's header, title and panel "look" belong to <app-settings-stack> /
+// <app-settings-group> (docs/design-language.md §2, §3 "Settings (#541)") —
+// this file holds layout glue for the toolbar row, the tree, the list and the
+// bulk bar, plus the handful of controls (the tag-filter chip, the segmented
+// view control, the popover menus) that have no shared/settings/ primitive yet.
 @use '../../theme/breakpoints' as bp;
-
-:host {
-  display: block;
-  padding-bottom: var(--space-7);
-}
-
-.title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-1);
-  font-size: var(--fs-xl);
-}
-
-.sub {
-  margin: 0 0 var(--space-4);
-  color: var(--text-secondary);
-  font-size: var(--fs-sm);
-}
 
 .tools {
   display: flex;
@@ -150,19 +136,17 @@
   }
 }
 
-/* In the flow, never floating: the toast docks bottom-centre, and a floating
-   bar would both collide with it and cover the rows nearest the bottom. */
+/* Layout glue only: the group panel already supplies the surface. In the
+   flow, never floating — the toast docks bottom-centre, and a floating bar
+   would both collide with it and cover the rows nearest the bottom. */
 .bulk {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-2);
-  margin: var(--space-3) 0;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius);
-  background: var(--surface-2);
-  box-shadow: var(--panel-shadow);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
 }
 
 .bulk .count {
@@ -184,11 +168,6 @@
 
 .list {
   margin-top: var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface-1);
-  box-shadow: var(--panel-shadow);
-  overflow: hidden;
 }
 
 .list app-organise-feed-row + app-organise-feed-row {
@@ -200,5 +179,6 @@
     position: sticky;
     bottom: 0;
     z-index: 1;
+    background: var(--surface-1);
   }
 }

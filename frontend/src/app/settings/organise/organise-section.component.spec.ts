@@ -45,7 +45,11 @@ const feed = (id: number, title: string, tagIds: number[]): SubscriptionDto =>
     includeInForYou: true,
   }) as SubscriptionDto;
 
-const SUBS = [feed(10, 'taz', [TECH.id]), feed(11, 'heise', [])];
+const SUBS = [
+  feed(10, 'taz', [TECH.id]),
+  feed(11, 'heise', []),
+  feed(12, 'netzpolitik', [TECH.id]),
+];
 
 describe('OrganiseSectionComponent', () => {
   let fixture: ComponentFixture<OrganiseSectionComponent>;
@@ -76,6 +80,7 @@ describe('OrganiseSectionComponent', () => {
     manage.bulkRemoveTag.mockReturnValue(of(undefined));
     manage.bulkSetFlags.mockReturnValue(of(undefined));
     manage.bulkUnsubscribe.mockReturnValue(of(true));
+    manage.addFeed.mockReturnValue(of(undefined));
 
     await TestBed.resetTestingModule()
       .configureTestingModule({
@@ -128,13 +133,19 @@ describe('OrganiseSectionComponent', () => {
     const store = await render();
     store.toggleFeed(10);
     store.toggleFeed(11);
+    store.toggleFeed(12);
 
     store.titleFilter.set('heise');
     fixture.detectChanges();
 
+    // Only heise (11) stays visible; taz (10) and netzpolitik (12) are
+    // hidden. Selecting 3 against 1 visible keeps hidden (2) and
+    // visible-and-selected (1) from coinciding, so a hiddenSelectedCount
+    // that accidentally counted the wrong side of the filter would be
+    // caught here (mirrors organise.store.spec.ts's own fixture).
     expect(
       fixture.debugElement.query(By.css('[data-test="bulk-hidden"]')).nativeElement.textContent,
-    ).toContain('1');
+    ).toContain('2');
   });
 
   it('select all takes exactly the visible rows', async () => {
@@ -256,6 +267,7 @@ describe('OrganiseSectionComponent', () => {
     const NEWS: TagDto = { id: 3, name: 'News', color: null, icon: null, position: 1 };
     localStorage.clear();
     for (const spy of Object.values(manage)) spy.mockReset();
+    manage.addFeed.mockReturnValue(of(undefined));
 
     await TestBed.resetTestingModule()
       .configureTestingModule({
