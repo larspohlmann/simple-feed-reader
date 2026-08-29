@@ -7,10 +7,11 @@ import { RefreshService } from './refresh.service';
 
 const report = (over: Partial<Record<string, unknown>>) => ({
   status: 'partial',
-  total: 10,
+  progress: { done: 5, total: 10 },
   fetched: 0,
   notModified: 0,
   failed: 0,
+  throttled: 0,
   skippedForBudget: 0,
   remaining: 5,
   pruned: 0,
@@ -39,11 +40,16 @@ describe('RefreshService', () => {
       .expectOne('https://api.test/api/refresh')
       .flush(report({ status: 'partial', remaining: 5 }));
     expect(svc.running()).toBe(true);
-    ctrl
-      .expectOne('https://api.test/api/refresh')
-      .flush(report({ status: 'completed', remaining: 0, fetched: 10 }));
+    ctrl.expectOne('https://api.test/api/refresh').flush(
+      report({
+        status: 'completed',
+        remaining: 0,
+        fetched: 10,
+        progress: { done: 10, total: 10 },
+      }),
+    );
     expect(svc.running()).toBe(false);
-    expect(svc.progress()).toBe(1);
+    expect(svc.fraction()).toBe(1);
     expect(done).toHaveBeenCalledTimes(1);
   });
 
@@ -106,6 +112,77 @@ describe('RefreshService', () => {
 
     // 0 on subscribe, then one increment per landed report.
     expect(ticks).toEqual([0, 1, 2]);
+  });
+
+  // The client used to divide a slice's server-capped batch size by a run-wide
+  // count of what was still due. On a 200-feed sweep that is (50 - 180) / 50 —
+  // negative, clamped to 0 — so the bar sat still for minutes, then snapped to
+  // full on the last slice (#721). The server now owns the figure and the client
+  // renders it.
+  describe('progress comes from the server, not from arithmetic here', () => {
+    it('reports the run the server describes, not the slice', () => {
+      svc.run();
+      ctrl.expectOne('https://api.test/api/refresh').flush(
+        report({
+          status: 'partial',
+          remaining: 180,
+          fetched: 20,
+          progress: { done: 20, total: 200 },
+        }),
+      );
+
+      expect(svc.progress()).toEqual({ done: 20, total: 200 });
+      expect(svc.fraction()).toBeCloseTo(0.1);
+    });
+
+    it('is empty before the first slice lands', () => {
+      svc.run();
+
+      expect(svc.progress()).toEqual({ done: 0, total: 0 });
+      expect(svc.fraction()).toBe(0);
+    });
+
+    it('starts the next run from zero rather than from the last one', () => {
+      svc.run();
+      ctrl.expectOne('https://api.test/api/refresh').flush(
+        report({
+          status: 'completed',
+          remaining: 0,
+          fetched: 4,
+          progress: { done: 4, total: 4 },
+        }),
+      );
+      expect(svc.fraction()).toBe(1);
+
+      svc.run();
+
+      expect(svc.progress()).toEqual({ done: 0, total: 0 });
+      expect(svc.fraction()).toBe(0);
+      ctrl.expectOne('https://api.test/api/refresh').flush(
+        report({
+          status: 'completed',
+          remaining: 0,
+          fetched: 4,
+          progress: { done: 4, total: 4 },
+        }),
+      );
+    });
+
+    // A server that reports more done than total would be a bug, but the bar must
+    // not render past its own track if one ever does.
+    it('never renders past full', () => {
+      svc.run();
+      ctrl.expectOne('https://api.test/api/refresh').flush(
+        report({
+          status: 'completed',
+          remaining: 0,
+          fetched: 12,
+          progress: { done: 12, total: 10 },
+        }),
+      );
+
+      expect(svc.fraction()).toBe(1);
+    });
   });
 
   it('scopes every request to the given feed id across the poll loop', () => {

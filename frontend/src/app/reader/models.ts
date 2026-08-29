@@ -173,9 +173,20 @@ export interface EntryStateDto {
   viewedAt: string | null;
 }
 
+/** How far a refresh RUN has got, straight from the server.
+ *
+ *  Run-wide, across every slice — which is why no client computes it. A slice's own
+ *  counters describe that slice, and only the server sees the run (#721). */
+export interface RefreshProgress {
+  /** Feeds this run has taken to an outcome. */
+  done: number;
+  /** What the run has to do: `done` plus what is still due. */
+  total: number;
+}
+
 export interface RefreshReport {
   status: 'busy' | 'partial' | 'completed' | 'aborted';
-  total: number;
+  progress: RefreshProgress;
   fetched: number;
   notModified: number;
   failed: number;
