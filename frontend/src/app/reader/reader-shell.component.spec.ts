@@ -933,10 +933,11 @@ describe('ReaderShellComponent', () => {
 
   const refreshDone = {
     status: 'completed',
-    total: 0,
+    progress: { done: 0, total: 0 },
     fetched: 0,
     notModified: 0,
     failed: 0,
+    throttled: 0,
     skippedForBudget: 0,
     remaining: 0,
     pruned: 0,
@@ -998,7 +999,13 @@ describe('ReaderShellComponent', () => {
       // First slice: partial, more feeds still due → the list must reload now.
       // RefreshService.step() re-fires the next /api/refresh synchronously from
       // inside this flush, so it is already queued below alongside the reload.
-      refresh.flush({ ...refreshDone, status: 'partial', total: 2, fetched: 1, remaining: 1 });
+      refresh.flush({
+        ...refreshDone,
+        status: 'partial',
+        progress: { done: 1, total: 2 },
+        fetched: 1,
+        remaining: 1,
+      });
       f.detectChanges();
       const firstSliceEntries = ctrl.match((r) => r.url === 'https://api.test/api/entries');
       expect(firstSliceEntries.length).toBe(1);
@@ -1021,7 +1028,7 @@ describe('ReaderShellComponent', () => {
       // Second slice: the sweep's poll loop re-fires /api/refresh on its own;
       // finishing it reloads again — proof the first reload was not the only one.
       const next = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
-      next.flush({ ...refreshDone, total: 2, fetched: 2 });
+      next.flush({ ...refreshDone, progress: { done: 2, total: 2 }, fetched: 2 });
       f.detectChanges();
 
       // The finishing slice reloads once more (entries + subs + tags). match()
@@ -1786,6 +1793,20 @@ describe('ReaderShellComponent', () => {
     expect(f.nativeElement.querySelector('.list-header [role="alert"]')).toBeNull();
   });
 
+  it('draws the refresh bar inside the app bar, and nowhere else', () => {
+    const f = boot();
+    TestBed.inject(RefreshService).running.set(true);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+
+    // Exactly one. Two bars for one refresh is #721's first symptom.
+    expect(el.querySelectorAll('app-progress-hairline').length).toBe(1);
+    // Inside the bar, so it travels with the bar. Parked in the strip below it,
+    // the bar retracted on scroll and left a 2px band over the content.
+    expect(el.querySelector('app-reader-header app-progress-hairline')).not.toBeNull();
+    expect(el.querySelector('.under-header app-progress-hairline')).toBeNull();
+  });
+
   it('offers a way back to the pill only once the pill has been closed', () => {
     // A phone-layout concern: above the drawer breakpoint the app bar carries
     // the run and there is no ✕, so there is nothing to offer back (#435).
@@ -2050,7 +2071,13 @@ describe('ReaderShellComponent', () => {
       // counted banner shows this-much-done.
       ctrl
         .expectOne((r) => r.url === 'https://api.test/api/refresh')
-        .flush({ ...refreshDone, status: 'partial', total: 2, remaining: 1, fetched: 1 });
+        .flush({
+          ...refreshDone,
+          status: 'partial',
+          progress: { done: 1, total: 2 },
+          remaining: 1,
+          fetched: 1,
+        });
       f.detectChanges();
       const banner = (f.nativeElement as HTMLElement).querySelector('.fetch-banner');
       expect(banner).not.toBeNull();

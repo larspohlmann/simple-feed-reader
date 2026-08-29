@@ -10,12 +10,12 @@
   (scrollTop)="onScrollListTop()"
   (search)="onSearch($event)"
 />
-<!-- Out of flow, dropped into the seam just under the (absolute, opaque)
-     header: an in-flow hairline would paint at y=0 behind the header and add
-     2px of column height when it toggles. The wrapper holds the permanent
-     hairline (every refresh) stacked above the sweep-only counted banner. -->
+<!-- Out of flow, dropped into the seam just under the (absolute, opaque) header:
+     an in-flow banner would paint at y=0 behind the header. The hairline used to
+     live here too and now sits inside the bar itself, so that it retracts with it
+     (#721); what is left are the two banners, which are correct to stay put and
+     visible the way the list header does. -->
 <div class="under-header">
-  <app-progress-hairline [active]="refreshSvc.running()" [value]="refreshSvc.progress()" />
   <!-- A failed refresh takes the strip whichever refresh it was; the counted
        progress belongs to the onboarding sweep alone. -->
   @if (fetchFailureKey(); as failureKey) {
@@ -25,7 +25,7 @@
     </p>
   } @else if (showFetchProgress()) {
     <p class="fetch-banner" role="status" aria-live="polite">
-      {{ 'reader.fetchingFeeds' | transloco: fetchProgress() }}
+      {{ 'reader.fetchingFeeds' | transloco: refreshSvc.progress() }}
     </p>
   }
   @if (showCatalogEmptyWarning()) {

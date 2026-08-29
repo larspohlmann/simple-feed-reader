@@ -137,3 +137,10 @@
     }
   </nav>
 }
+
+<!-- The refresh bar belongs to the app bar, so it retracts with it. Parked in a
+     strip below the bar it stayed behind when the bar slid away on scroll, leaving
+     a 2px band over the article (#721). Absolutely positioned on the bar's bottom
+     edge, so it adds nothing to the height the shell's ResizeObserver publishes as
+     --app-bar-h and starting a refresh no longer thickens the chrome. -->
+<app-progress-hairline [active]="refreshSvc.running()" [value]="refreshSvc.fraction()" />
