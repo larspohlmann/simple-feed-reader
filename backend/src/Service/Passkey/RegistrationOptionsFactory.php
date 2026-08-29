@@ -62,8 +62,27 @@ final readonly class RegistrationOptionsFactory
     public function create(User $user): array
     {
         $challenge = random_bytes(self::CHALLENGE_LENGTH_BYTES);
+        $options = $this->optionsFor($user, $challenge);
 
-        $options = PublicKeyCredentialCreationOptions::create(
+        return [
+            'options' => $this->serializeWithRelyingPartyName($options),
+            'handle' => $this->challengeStore->issue($challenge, $user->getId()),
+        ];
+    }
+
+    /**
+     * Rebuilds the exact same options a creation ceremony was started with,
+     * given the same user and the challenge PasskeyChallengeStore handed
+     * back on consume(). Pulled out of create() so AttestationVerifier can
+     * share it: the resident-key and user-verification requirements below
+     * are security-relevant, and a second, independently written copy of
+     * this construction could silently drift from the one the browser was
+     * actually shown — for instance stop enforcing user verification —
+     * without either call site's own tests noticing.
+     */
+    public function optionsFor(User $user, string $challenge): PublicKeyCredentialCreationOptions
+    {
+        return PublicKeyCredentialCreationOptions::create(
             rp: PublicKeyCredentialRpEntity::create('', $this->relyingParty->id()),
             user: $this->userEntityFor($user),
             challenge: $challenge,
@@ -78,11 +97,6 @@ final readonly class RegistrationOptionsFactory
             attestation: PublicKeyCredentialCreationOptions::ATTESTATION_CONVEYANCE_PREFERENCE_NONE,
             excludeCredentials: $this->credentials->excludeListFor($user),
         );
-
-        return [
-            'options' => $this->serializeWithRelyingPartyName($options),
-            'handle' => $this->challengeStore->issue($challenge, $user->getId()),
-        ];
     }
 
     private function userEntityFor(User $user): PublicKeyCredentialUserEntity

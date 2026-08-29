@@ -539,3 +539,21 @@ services:
     App\Service\Backup\AccountRestorer:
         autowire: true
         public: true
+
+    # PasskeyRegistrationTest seeds a registration challenge with a known
+    # value (the exact one a synthetic attestation fixture was signed
+    # against) and, for one case, an already-past `expires_at`. Same
+    # `autowire` caveat as the entries above, and the same "flow tests must
+    # reach a value that exists nowhere else" reasoning as OAuthStateStore.
+    App\Service\Passkey\PasskeyChallengeStore:
+        autowire: true
+        public: true
+
+    # Backs the expired-handle test above: it builds a SECOND, throwaway
+    # PasskeyChallengeStore over this same pool with a MockClock set minutes
+    # in the past, so only that one seeded entry is affected — no test
+    # anywhere else has its clock swapped, matching OAuthFlowTest's stated
+    # reasoning for never driving expiry through a shared functional clock.
+    test.cache.passkey_challenge:
+        alias: passkey.challenge.cache
+        public: true

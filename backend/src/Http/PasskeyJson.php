@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Entity\UserPasskey;
+
 /**
  * The passkey enrolment response bodies (#624). `RegistrationOptionsFactory`
  * already returns the registration-options body in its final wire shape, so
  * `registrationOptions()` is a pass-through today. It stays its own mapper
  * rather than a private method on `PasskeyController` because
  * ThinControllerRule forbids response assembly there, and because the
- * credential-listing and revocation responses Task 8 adds belong beside this
- * one, not duplicated into a second convention.
+ * credential-listing (Task 8) response belongs beside this one, not
+ * duplicated into a second convention — `passkeys()` is shared by both the
+ * register action's response and that later listing endpoint.
  */
 final readonly class PasskeyJson
 {
@@ -23,5 +26,32 @@ final readonly class PasskeyJson
     public static function registrationOptions(array $registrationOptions): array
     {
         return $registrationOptions;
+    }
+
+    /**
+     * Never the public key: it is opaque, verification-only material a
+     * client has no use for, and every field here — including `label` — is
+     * one Task 8's revocation confirmation also needs to show.
+     *
+     * @param list<UserPasskey> $passkeys
+     *
+     * @return array{passkeys: list<array{id: ?int, label: string, createdAt: string, lastUsedAt: ?string}>}
+     */
+    public static function passkeys(array $passkeys): array
+    {
+        return ['passkeys' => array_map(self::passkey(...), $passkeys)];
+    }
+
+    /**
+     * @return array{id: ?int, label: string, createdAt: string, lastUsedAt: ?string}
+     */
+    private static function passkey(UserPasskey $passkey): array
+    {
+        return [
+            'id' => $passkey->getId(),
+            'label' => $passkey->getLabel(),
+            'createdAt' => $passkey->getCreatedAt()->format(\DateTimeInterface::ATOM),
+            'lastUsedAt' => $passkey->getLastUsedAt()?->format(\DateTimeInterface::ATOM),
+        ];
     }
 }

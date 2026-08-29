@@ -6,16 +6,35 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\User;
 use App\Entity\UserPasskey;
+use App\Repository\UserPasskeyRepository;
+use App\Service\Passkey\PasskeyChallengeStore;
 use App\Service\Settings\InstanceSettings;
 use App\Service\Settings\InstanceSettingsUpdate;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\PasskeyAttestationFixture;
+use App\Tests\Support\PasskeyFixtures;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use ParagonIE\ConstantTime\Base64UrlSafe;
+use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
+use Symfony\Component\Clock\MockClock;
 
 /**
- * Issuing WebAuthn registration ("attestation") options (#624): the relying
- * party, the resident-key/user-verification requirements, and the exclude
- * list that stops one authenticator enrolling twice on the same account.
+ * WebAuthn registration ("attestation"): issuing the options (#624, the
+ * relying party, the resident-key/user-verification requirements, and the
+ * exclude list that stops one authenticator enrolling twice on the same
+ * account) and completing the ceremony — verifying the browser's response
+ * and turning it into a stored credential.
+ *
+ * The completion tests use PasskeyFixtures to build a synthetic
+ * `attestation: none` response entirely in PHP rather than capturing one
+ * from a real browser — see that class's docblock for why this is possible
+ * and not a shortcut. Every completion test pins BOTH the relying-party id
+ * AND the public base URL (the origin) to the exact values its fixture was
+ * built for, in the test itself, and never relies on `APP_FRONTEND_URL` or
+ * any other environment default — the mismatch tests specifically exist to
+ * prove what happens when one of the two is wrong, so both must otherwise be
+ * pinned with certainty.
  *
  * Every test that reads `options.rp.id` pins the relying party explicitly via
  * the `instance_setting` row rather than asserting against whatever
@@ -23,6 +42,8 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
  * ConfiguredPasskeyRelyingPartyTest for the same reasoning. A hard-coded
  * `'localhost'` would pass locally for the wrong reason and could fail in CI
  * for one unrelated to this feature.
+ *
+ * @phpstan-import-type PasskeyCredentialPayload from PasskeyAttestationFixture
  */
 final class PasskeyRegistrationTest extends ApiTestCase
 {
@@ -103,6 +124,160 @@ final class PasskeyRegistrationTest extends ApiTestCase
         self::assertSame(['Y3JlZC1hYmM'], array_column($excludeCredentials, 'id'));
     }
 
+    // -- Completing the ceremony (#624 Task 7) ------------------------------
+
+    public function testAValidAttestationStoresACredentialAndListsIt(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
+        $user = $this->factory()->create('enroller@example.test');
+        $this->authenticate($client, 'enroller@example.test');
+        [$fixture, $handle] = $this->seedRegistrationChallenge($user->getId(), 'example.test', 'https://example.test');
+
+        $this->registerPasskey($client, $handle, $fixture->credential, 'My phone');
+
+        self::assertResponseStatusCodeSame(201);
+        $passkeys = $this->passkeysFromResponse($client);
+        self::assertCount(1, $passkeys);
+        self::assertSame('My phone', $passkeys[0]['label']);
+        /** @var UserPasskeyRepository $repository */
+        $repository = self::getContainer()->get(UserPasskeyRepository::class);
+        self::assertSame(1, $repository->countForUser($user));
+    }
+
+    /** Spec §5.2: a user who enrols from Settings is never shown the one-time offer again. */
+    public function testAValidAttestationStampsTheOfferAnswered(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
+        $user = $this->factory()->create('enroller@example.test');
+        $this->authenticate($client, 'enroller@example.test');
+        [$fixture, $handle] = $this->seedRegistrationChallenge($user->getId(), 'example.test', 'https://example.test');
+
+        $this->registerPasskey($client, $handle, $fixture->credential, 'My phone');
+
+        self::assertResponseStatusCodeSame(201);
+        $stored = $this->users()->findOneByEmail('enroller@example.test');
+        self::assertInstanceOf(User::class, $stored);
+        self::assertNotNull($stored->getPreferences()->getPasskeyOfferAnsweredAt());
+    }
+
+    public function testAReplayedHandleIsRejected(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
+        $user = $this->factory()->create('enroller@example.test');
+        $this->authenticate($client, 'enroller@example.test');
+        [$fixture, $handle] = $this->seedRegistrationChallenge($user->getId(), 'example.test', 'https://example.test');
+        $this->registerPasskey($client, $handle, $fixture->credential, 'My phone');
+        self::assertResponseStatusCodeSame(201);
+
+        $this->registerPasskey($client, $handle, $fixture->credential, 'My phone, again');
+
+        $this->assertRejected($client, 400);
+    }
+
+    /**
+     * The window is not driven with a MockClock swapped into the whole test
+     * container — see OAuthFlowTest's comment on the same question for why
+     * that would taint every other functional test's clock. Instead a
+     * throwaway PasskeyChallengeStore is built over the SAME cache pool the
+     * real, container-wired one reads from, with its own MockClock set
+     * minutes in the past; only the one entry it writes is affected.
+     */
+    public function testAnExpiredHandleIsRejected(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
+        $user = $this->factory()->create('enroller@example.test');
+        $this->authenticate($client, 'enroller@example.test');
+        $fixture = $this->buildFixture('example.test', 'https://example.test');
+
+        $handle = $this->issueExpiredChallenge($fixture->challenge, $user->getId());
+        $this->registerPasskey($client, $handle, $fixture->credential, 'My phone');
+
+        $this->assertRejected($client, 400);
+    }
+
+    /** This is the check that keeps a registration challenge bound to its owner. */
+    public function testAHandleIssuedForADifferentUserIsRejected(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
+        $this->factory()->create('caller@example.test');
+        $owner = $this->factory()->create('owner@example.test');
+        $this->authenticate($client, 'caller@example.test');
+        [$fixture, $handle] = $this->seedRegistrationChallenge($owner->getId(), 'example.test', 'https://example.test');
+
+        $this->registerPasskey($client, $handle, $fixture->credential, 'My phone');
+
+        $this->assertRejected($client, 403);
+    }
+
+    public function testATamperedClientDataJsonIsRejected(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
+        $user = $this->factory()->create('enroller@example.test');
+        $this->authenticate($client, 'enroller@example.test');
+        [$fixture, $handle] = $this->seedRegistrationChallenge($user->getId(), 'example.test', 'https://example.test');
+
+        $this->registerPasskey($client, $handle, $this->withTamperedChallenge($fixture->credential), 'My phone');
+
+        $this->assertRejected($client, 400);
+    }
+
+    /**
+     * Reuses the fixture the origin was signed against rather than capturing
+     * a second one: only the SERVER's configured origin changes, so this
+     * proves the same boundary CheckAllowedOrigins enforces without a second
+     * capture (PasskeyFixtures' own docblock explains why one call is enough).
+     */
+    public function testAnOriginMismatchIsRejected(): void
+    {
+        $client = static::createClient();
+        // The server accepts a different origin than the one the fixture
+        // below is actually signed for.
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://different.test');
+        $user = $this->factory()->create('enroller@example.test');
+        $this->authenticate($client, 'enroller@example.test');
+        $fixture = $this->buildFixture('example.test', 'https://example.test');
+        $handle = $this->issueChallenge($fixture->challenge, $user->getId());
+
+        $this->registerPasskey($client, $handle, $fixture->credential, 'My phone');
+
+        $this->assertRejected($client, 400);
+    }
+
+    public function testAnRpIdMismatchIsRejected(): void
+    {
+        $client = static::createClient();
+        // The server's configured relying-party id differs from the one the
+        // fixture's authenticator data hashed at capture time.
+        $this->pinRelyingParty('different-domain.test', 'Example Reader', 'https://example.test');
+        $user = $this->factory()->create('enroller@example.test');
+        $this->authenticate($client, 'enroller@example.test');
+        $fixture = $this->buildFixture('example.test', 'https://example.test');
+        $handle = $this->issueChallenge($fixture->challenge, $user->getId());
+
+        $this->registerPasskey($client, $handle, $fixture->credential, 'My phone');
+
+        $this->assertRejected($client, 400);
+    }
+
+    public function testABlankLabelIsRejected(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
+        $user = $this->factory()->create('enroller@example.test');
+        $this->authenticate($client, 'enroller@example.test');
+        [$fixture, $handle] = $this->seedRegistrationChallenge($user->getId(), 'example.test', 'https://example.test');
+
+        $this->registerPasskey($client, $handle, $fixture->credential, '');
+
+        $this->assertRejected($client, 422);
+    }
+
     /**
      * @param array<string, mixed> $body
      *
@@ -162,16 +337,134 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->em()->flush();
     }
 
-    private function pinRelyingParty(string $relyingPartyId, string $relyingPartyName): void
-    {
+    /**
+     * $publicBaseUrl defaults to null (falling back to whatever
+     * APP_FRONTEND_URL resolves to) only for the pre-existing options tests
+     * above, which never validate an attestation against it. Every
+     * completion test below passes an explicit value, per this class's
+     * docblock.
+     */
+    private function pinRelyingParty(
+        string $relyingPartyId,
+        string $relyingPartyName,
+        ?string $publicBaseUrl = null,
+    ): void {
         /** @var InstanceSettings $settings */
         $settings = self::getContainer()->get(InstanceSettings::class);
         $settings->update(new InstanceSettingsUpdate(
             requireEmailConfirmation: true,
             requireApproval: true,
-            publicBaseUrl: null,
+            publicBaseUrl: $publicBaseUrl,
             passkeyRpId: $relyingPartyId,
             passkeyRpName: $relyingPartyName,
         ));
+    }
+
+    private function buildFixture(string $relyingPartyId, string $origin): PasskeyAttestationFixture
+    {
+        return PasskeyFixtures::attestation(
+            $relyingPartyId,
+            $origin,
+            random_bytes(32),
+            random_bytes(16),
+            random_bytes(32),
+        );
+    }
+
+    /**
+     * Builds a fixture and seeds PasskeyChallengeStore with the exact
+     * challenge it was signed against, the way RegistrationOptionsFactory
+     * would have — so a test can go straight to posting the completed
+     * ceremony without a second round trip through the options endpoint.
+     *
+     * @return array{0: PasskeyAttestationFixture, 1: string}
+     */
+    private function seedRegistrationChallenge(?int $userId, string $relyingPartyId, string $origin): array
+    {
+        $fixture = $this->buildFixture($relyingPartyId, $origin);
+
+        return [$fixture, $this->issueChallenge($fixture->challenge, $userId)];
+    }
+
+    private function issueChallenge(string $challenge, ?int $userId): string
+    {
+        /** @var PasskeyChallengeStore $store */
+        $store = self::getContainer()->get(PasskeyChallengeStore::class);
+
+        return $store->issue($challenge, $userId);
+    }
+
+    /**
+     * Shares the container's own cache pool but not its clock — see
+     * testAnExpiredHandleIsRejected for why that matters.
+     */
+    private function issueExpiredChallenge(string $challenge, ?int $userId): string
+    {
+        /** @var CacheItemPoolInterface $pool */
+        $pool = self::getContainer()->get('test.cache.passkey_challenge');
+
+        return (new PasskeyChallengeStore($pool, new MockClock('2020-01-01 00:00:00')))->issue($challenge, $userId);
+    }
+
+    /**
+     * Mutates the CHALLENGE inside an already-built clientDataJSON, leaving
+     * the attestationObject (and so the credential id and public key) alone.
+     * Distinct from the origin/RP-id mismatch tests: those change what the
+     * SERVER is configured to accept, this changes what the CLIENT claims to
+     * have signed, so it exercises CheckChallenge rather than
+     * CheckAllowedOrigins or CheckRelyingPartyIdIdHash.
+     *
+     * @param PasskeyCredentialPayload $credential
+     *
+     * @return PasskeyCredentialPayload
+     */
+    private function withTamperedChallenge(array $credential): array
+    {
+        $clientDataJson = Base64UrlSafe::decodeNoPadding($credential['response']['clientDataJSON']);
+        /** @var array<string, mixed> $decoded */
+        $decoded = json_decode($clientDataJson, true, flags: \JSON_THROW_ON_ERROR);
+        $decoded['challenge'] = Base64UrlSafe::encodeUnpadded(random_bytes(32));
+
+        $credential['response']['clientDataJSON'] = Base64UrlSafe::encodeUnpadded(
+            (string) json_encode($decoded, \JSON_THROW_ON_ERROR),
+        );
+
+        return $credential;
+    }
+
+    /**
+     * @param array<string, mixed> $credential
+     */
+    private function registerPasskey(KernelBrowser $client, string $handle, array $credential, string $label): void
+    {
+        $client->request(
+            'POST',
+            '/api/auth/passkey/register',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: (string) json_encode(
+                ['handle' => $handle, 'credential' => $credential, 'label' => $label],
+                \JSON_THROW_ON_ERROR,
+            ),
+        );
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function passkeysFromResponse(KernelBrowser $client): array
+    {
+        $body = $this->payload($client);
+        self::assertIsArray($body['passkeys']);
+
+        /** @var list<array<string, mixed>> $passkeys */
+        $passkeys = $body['passkeys'];
+
+        return $passkeys;
+    }
+
+    private function assertRejected(KernelBrowser $client, int $status): void
+    {
+        self::assertResponseStatusCodeSame($status);
+        self::assertSame('application/problem+json', $client->getResponse()->headers->get('Content-Type'));
     }
 }
