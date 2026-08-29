@@ -7,25 +7,28 @@ namespace App\Http;
 use App\Entity\UserPasskey;
 
 /**
- * The passkey enrolment response bodies (#624). `RegistrationOptionsFactory`
- * already returns the registration-options body in its final wire shape, so
- * `registrationOptions()` is a pass-through today. It stays its own mapper
- * rather than a private method on `PasskeyController` because
- * ThinControllerRule forbids response assembly there, and because the
- * credential-listing (Task 8) response belongs beside this one, not
- * duplicated into a second convention — `passkeys()` is shared by both the
- * register action's response and that later listing endpoint.
+ * The passkey enrolment and login response bodies (#624).
+ * `RegistrationOptionsFactory` and `AssertionOptionsFactory` already return
+ * their options body in its final wire shape, so `optionsResponse()` is a
+ * pass-through today, shared by both rather than duplicated under two names —
+ * the two factories return the identical `{options, handle}` shape for the
+ * two different ceremonies. It stays its own mapper rather than a private
+ * method on `PasskeyController` because ThinControllerRule forbids response
+ * assembly there, and because the credential-listing (Task 8) response
+ * belongs beside this one, not duplicated into a second convention —
+ * `passkeys()` is shared by both the register action's response and that
+ * later listing endpoint.
  */
 final readonly class PasskeyJson
 {
     /**
-     * @param array{options: array<string, mixed>, handle: string} $registrationOptions
+     * @param array{options: array<string, mixed>, handle: string} $ceremonyOptions
      *
      * @return array{options: array<string, mixed>, handle: string}
      */
-    public static function registrationOptions(array $registrationOptions): array
+    public static function optionsResponse(array $ceremonyOptions): array
     {
-        return $registrationOptions;
+        return $ceremonyOptions;
     }
 
     /**

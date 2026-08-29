@@ -8,39 +8,63 @@ use App\Dto\Passkey\RegisterPasskeyRequest;
 use App\Entity\User;
 use App\Http\PasskeyJson;
 use App\Repository\UserPasskeyRepository;
+use App\Service\Passkey\AssertionOptionsFactory;
 use App\Service\Passkey\AttestationVerifier;
 use App\Service\Passkey\PasskeyRemovalPolicy;
 use App\Service\Passkey\RegistrationOptionsFactory;
+use App\Service\RateLimit\RateLimitGuard;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Cache\InvalidArgumentException;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 /**
- * The passkey enrolment, listing and removal endpoints (#624). Every route on
- * this controller requires a bearer token — see the access_control comment in
- * config/packages/security.yaml for why that needs an explicit rule despite
- * living under the otherwise-public `^/api/auth/` prefix.
+ * The passkey enrolment, login-options, listing and removal endpoints
+ * (#624). Every route except `loginOptions()` requires a bearer token — see
+ * the access_control comment in config/packages/security.yaml for why the
+ * others need an explicit rule despite living under the otherwise-public
+ * `^/api/auth/` prefix, and for why `loginOptions()` is deliberately left
+ * out of that rule: a discoverable-credential login has no account to
+ * authenticate as until the assertion comes back.
  */
 final readonly class PasskeyController
 {
     public function __construct(
         private RegistrationOptionsFactory $registrationOptionsFactory,
+        private AssertionOptionsFactory $assertionOptionsFactory,
         private AttestationVerifier $attestationVerifier,
         private UserPasskeyRepository $passkeys,
         private PasskeyRemovalPolicy $removalPolicy,
         private EntityManagerInterface $em,
+        private RateLimitGuard $rateLimitGuard,
+        private RateLimiterFactoryInterface $passkeyChallengeLimiter,
     ) {
     }
 
     #[Route('/api/auth/passkey/register/options', name: 'api_auth_passkey_register_options', methods: ['POST'])]
     public function registerOptions(#[CurrentUser] User $user): JsonResponse
     {
-        return new JsonResponse(PasskeyJson::registrationOptions($this->registrationOptionsFactory->create($user)));
+        return new JsonResponse(PasskeyJson::optionsResponse($this->registrationOptionsFactory->create($user)));
+    }
+
+    /**
+     * Anonymous on purpose — see the class docblock. Rate-limited on its own
+     * budget (`passkey_challenge` in rate_limiter.yaml) because conditional
+     * mediation calls this on every login-page view, from every visitor, and
+     * each call writes a cache entry.
+     */
+    #[Route('/api/auth/passkey/login/options', name: 'api_auth_passkey_login_options', methods: ['POST'])]
+    public function loginOptions(Request $request): JsonResponse
+    {
+        $this->rateLimitGuard->enforceForClient($this->passkeyChallengeLimiter, $request);
+
+        return new JsonResponse(PasskeyJson::optionsResponse($this->assertionOptionsFactory->create()));
     }
 
     /**
