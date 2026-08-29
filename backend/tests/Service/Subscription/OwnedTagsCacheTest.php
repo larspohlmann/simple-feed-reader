@@ -174,6 +174,61 @@ final class OwnedTagsCacheTest extends KernelTestCase
     }
 
     /**
+     * findAllByIdsForUser() must return a plain list, in request order, even
+     * when a requested id in the MIDDLE of the list drops out (foreign or
+     * missing). array_filter() alone would leave a gap at that id's original
+     * key — array_values() closes it. assertSame() is key-sensitive, so a
+     * gapped result (e.g. keyed 0 => $news, 2 => $tech instead of 0, 1) fails
+     * this assertion even though both "contain the right two tags".
+     */
+    public function testReturnsAPlainListWhenAMiddleIdDropsOut(): void
+    {
+        $user = $this->user('cache-gap@example.com');
+        $news = $this->tag($user, 'News');
+        $tech = $this->tag($user, 'Tech');
+        $this->em->flush();
+
+        $resolved = $this->cache->findAllByIdsForUser(
+            [(int) $news->getId(), 999_999, (int) $tech->getId()],
+            (int) $user->getId(),
+        );
+
+        self::assertSame([$news, $tech], $resolved);
+    }
+
+    /**
+     * The cache's whole job is to turn a repeated id into a map lookup, not a
+     * query — but that guarantee is not only about the NUMBER of queries
+     * resolveMissing() issues. Asking for the SAME id twice in one call must
+     * still de-duplicate before it ever reaches the repository: without
+     * array_unique(), the one query resolveMissing() does run would carry the
+     * id twice in its IN (...) list. That is invisible to a query COUNT, but
+     * not to the query's own SQL text — a duplicated bound value shows up as
+     * an extra placeholder, "IN (?, ?)" instead of "IN (?)".
+     */
+    public function testARepeatedIdWithinOneCallIsDeduplicatedBeforeQuerying(): void
+    {
+        $user = $this->user('cache-dedup@example.com');
+        $news = $this->tag($user, 'News');
+        $this->em->flush();
+        $newsId = (int) $news->getId();
+
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        $recorder->reset();
+
+        $this->cache->findAllByIdsForUser([$newsId, $newsId], (int) $user->getId());
+
+        $reads = $recorder->queriesMatching('from tag');
+        self::assertCount(1, $reads, "a duplicated id must still cost one query, got:\n" . implode("\n", $reads));
+        self::assertStringNotContainsString(
+            'IN (?, ?)',
+            $reads[0],
+            "a duplicated id must not be bound twice in the IN (...) list, got:\n" . $reads[0],
+        );
+    }
+
+    /**
      * Two different users must never see each other's cached tags, even
      * though both ask this one instance within the same request.
      */

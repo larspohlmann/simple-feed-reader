@@ -116,6 +116,63 @@ final class ReorderTest extends WebTestCase
         self::assertSame(2, $positions[(int) $b->getId()]);
     }
 
+    /**
+     * testReorderTagsPersistsNewOrder re-reads through a second HTTP request
+     * on the SAME client, which this suite's own KernelBrowser does not
+     * reboot between requests within one test — so that assertion is
+     * satisfied by Doctrine's identity map serving the still-attached, merely
+     * in-memory-mutated Tag entities, whether or not flush() actually ran.
+     * Only a read that goes around the identity map — em->clear() first, like
+     * the unsubscribe tests elsewhere in this suite — can tell "persisted"
+     * apart from "changed in memory, never written".
+     */
+    public function testReorderTagsPersistsNewOrderToTheDatabaseNotJustTheEntityManager(): void
+    {
+        $client = self::createClient();
+        $user = $this->user('reorder-tags-db@example.com');
+        $a = $this->makeTag($user, 'Alpha', 0);
+        $b = $this->makeTag($user, 'Beta', 1);
+        $c = $this->makeTag($user, 'Gamma', 2);
+        $this->em()->flush();
+
+        $this->patch($client, $user, '/api/tags/reorder', ['tagIds' => [$c->getId(), $a->getId(), $b->getId()]]);
+        self::assertResponseIsSuccessful();
+
+        $this->em()->clear();
+        $reload = fn (int $id): Tag => $this->em()->getRepository(Tag::class)->find($id) ?? self::fail("tag $id gone");
+        self::assertSame(0, $reload((int) $c->getId())->getPosition());
+        self::assertSame(1, $reload((int) $a->getId())->getPosition());
+        self::assertSame(2, $reload((int) $b->getId())->getPosition());
+    }
+
+    /**
+     * The PATCH response itself must carry the reordered tags — the other
+     * tests here only ever check status codes or re-read via a fresh
+     * request, so nothing pins the response BODY reorder() actually builds.
+     */
+    public function testReorderTagsResponseCarriesTheReorderedTags(): void
+    {
+        $client = self::createClient();
+        $user = $this->user('reorder-tags-response@example.com');
+        $a = $this->makeTag($user, 'Alpha', 0);
+        $b = $this->makeTag($user, 'Beta', 1);
+        $this->em()->flush();
+
+        $this->patch($client, $user, '/api/tags/reorder', ['tagIds' => [$b->getId(), $a->getId()]]);
+        self::assertResponseIsSuccessful();
+
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['tags']);
+        self::assertCount(2, $body['tags']);
+        self::assertIsArray($body['tags'][0]);
+        self::assertSame('Beta', $body['tags'][0]['name']);
+        self::assertSame(0, $body['tags'][0]['position']);
+        self::assertIsArray($body['tags'][1]);
+        self::assertSame('Alpha', $body['tags'][1]['name']);
+        self::assertSame(1, $body['tags'][1]['position']);
+    }
+
     public function testReorderTagsRejectsIncompleteSet(): void
     {
         $client = self::createClient();
@@ -202,6 +259,44 @@ final class ReorderTest extends WebTestCase
         self::assertSame(0, $perTag[(int) $s3->getId()]);
         self::assertSame(1, $perTag[(int) $s1->getId()]);
         self::assertSame(2, $perTag[(int) $s2->getId()]);
+    }
+
+    /**
+     * Same identity-map trap as
+     * testReorderTagsPersistsNewOrderToTheDatabaseNotJustTheEntityManager:
+     * re-reading through a second request on the same client would be
+     * satisfied by the still-attached, merely in-memory-mutated join rows
+     * even if feedOrder() never flushed. em->clear() forces a real read.
+     */
+    public function testFeedOrderPersistsToTheDatabaseNotJustTheEntityManager(): void
+    {
+        $client = self::createClient();
+        $user = $this->user('reorder-in-tag-db@example.com');
+        $tag = $this->makeTag($user, 'Tech', 0);
+        $s1 = $this->makeSub($user, 'https://db/1', 0, $tag, 0);
+        $s2 = $this->makeSub($user, 'https://db/2', 1, $tag, 1);
+        $s3 = $this->makeSub($user, 'https://db/3', 2, $tag, 2);
+        $this->em()->flush();
+
+        $this->patch($client, $user, '/api/tags/' . $tag->getId() . '/feed-order', [
+            'subscriptionIds' => [$s3->getId(), $s1->getId(), $s2->getId()],
+        ]);
+        self::assertResponseStatusCodeSame(204);
+
+        $this->em()->clear();
+        $joinPosition = function (int $subscriptionId) use ($tag): int {
+            $subscription = $this->em()->getRepository(Subscription::class)->find($subscriptionId);
+            self::assertInstanceOf(Subscription::class, $subscription);
+            foreach ($subscription->getSubscriptionTags() as $join) {
+                if ((int) $join->getTag()->getId() === (int) $tag->getId()) {
+                    return $join->getPosition();
+                }
+            }
+            self::fail('subscription is not tagged');
+        };
+        self::assertSame(0, $joinPosition((int) $s3->getId()));
+        self::assertSame(1, $joinPosition((int) $s1->getId()));
+        self::assertSame(2, $joinPosition((int) $s2->getId()));
     }
 
     public function testClearingTheLastTagAppendsTheFeedToTheUntaggedList(): void
