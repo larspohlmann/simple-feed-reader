@@ -63,7 +63,13 @@ class UserPasskeyRepository extends ServiceEntityRepository
 
     /**
      * Wipes every credential on the instance. Used by the account-reset
-     * command and by test teardown; never by anything a request reaches.
+     * command, by test teardown, and — since #624 — by
+     * {@see \App\Service\Settings\RelyingPartyChange} when an admin changes
+     * the WebAuthn relying party id: that is the one request-reachable caller,
+     * and it only reaches this method after the request has already been
+     * refused once with a 409 naming the credential count and the admin
+     * resent it with `invalidateExistingPasskeys` set. No other request path
+     * calls this.
      */
     public function deleteAll(): void
     {
