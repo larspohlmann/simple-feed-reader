@@ -21,7 +21,9 @@ export class ReaderCacheService {
   // v5: v4 records carry a `readerHero` field and a contentHtml with no lead
   // picture in it (#681); an already-read article would come back missing its
   // lead until refetched.
-  private static readonly VERSION = 5;
+  // v6: v5 records hold image URLs that a comma-splitting srcset reader cut
+  // short (#706); an already-read article would keep its broken pictures.
+  private static readonly VERSION = 6;
 
   private db: Promise<IDBDatabase | null> | null = null;
   /** Strictly monotonic clock so puts within the same millisecond keep insertion order. */
