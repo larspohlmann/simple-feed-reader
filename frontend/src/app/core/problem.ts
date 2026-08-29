@@ -12,6 +12,21 @@ export interface Problem {
    *  credentials still exist -- the count the confirmation prompt quotes
    *  (RelyingPartyChangeRequiresConfirmationException, #624). */
   invalidatedPasskeyCount?: number;
+  /** Set only by `PasskeyService.toProblem()`'s `DOMException`/local-`Error`
+   *  branch (#624) -- never by `parseProblem()`/`fallbackProblem()`. Exists
+   *  because `status: 0` alone does not say why: a rejected WebAuthn ceremony
+   *  never reached the server and also gets `status: 0` there, but so does a
+   *  genuine dropped connection during one of `PasskeyService`'s own HTTP
+   *  calls (`fallbackProblem()` in this file). `title` means something
+   *  different in each case -- the browser's raw, untranslated
+   *  `DOMException.message` in the first, this app's own translated-ish
+   *  "Could not reach the server" in the second -- so a caller that wants to
+   *  hide the first must not also hide the second. See
+   *  `settings/backup-section.component.ts`'s `outcomeIsUnproven()` for a
+   *  second, unrelated reading of plain `status === 0` ("a dropped connection
+   *  leaves the outcome unproven") -- proof that the status alone is
+   *  overloaded across this app and cannot be the discriminator here. */
+  ceremonyRejected?: true;
 }
 
 /** An oversized request body, refused by the web server before the app ran.

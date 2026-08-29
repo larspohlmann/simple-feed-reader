@@ -137,6 +137,7 @@ describe('PasskeyService', () => {
       type: 'NotAllowedError',
       title: expect.any(String),
       status: expect.any(Number),
+      ceremonyRejected: true,
     });
   });
 
@@ -155,7 +156,11 @@ describe('PasskeyService', () => {
         .expectOne('https://api.test/api/auth/passkey/register/options')
         .flush({ options: creationOptions, handle: 'register-handle' });
 
-      await expect(enrolment).rejects.toMatchObject({ type: name, status: 0 });
+      await expect(enrolment).rejects.toMatchObject({
+        type: name,
+        status: 0,
+        ceremonyRejected: true,
+      });
     },
   );
 
@@ -171,6 +176,7 @@ describe('PasskeyService', () => {
       type: 'about:blank',
       title: 'something else went wrong',
       status: 0,
+      ceremonyRejected: true,
     });
   });
 
@@ -184,6 +190,22 @@ describe('PasskeyService', () => {
       );
 
     await expect(enrolment).rejects.toMatchObject({ status: 401, title: 'Unauthorized' });
+  });
+
+  // A dropped connection during the options request also produces
+  // status: 0 (through parseProblem() -> fallbackProblem()), the same status
+  // the DOMException branch above uses -- but it must NOT carry
+  // ceremonyRejected, since it never reached the browser's ceremony at all.
+  // A caller that hides the browser's raw title on ceremonyRejected must not
+  // also hide this one's already-app-owned "could not reach the server" text.
+  it('does not mark a genuine network failure as a rejected ceremony', async () => {
+    const enrolment = svc.enrol('MacBook Touch ID');
+    ctrl
+      .expectOne('https://api.test/api/auth/passkey/register/options')
+      .error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
+
+    await expect(enrolment).rejects.toMatchObject({ status: 0 });
+    await expect(enrolment).rejects.not.toHaveProperty('ceremonyRejected');
   });
 
   it('list unwraps the {passkeys} envelope', () => {

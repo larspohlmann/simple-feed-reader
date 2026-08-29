@@ -93,6 +93,7 @@ describe('PasskeyOfferDialogComponent', () => {
       type: 'NotAllowedError',
       title: 'The operation either timed out or was not allowed.',
       status: 0,
+      ceremonyRejected: true,
     };
     passkeyService.enrol.mockRejectedValue(cancelled);
     const f = mount();
@@ -135,6 +136,7 @@ describe('PasskeyOfferDialogComponent', () => {
       title:
         'The user attempted to register an authenticator that contains one of the credentials already registered with the relying party.',
       status: 0,
+      ceremonyRejected: true,
     };
     passkeyService.enrol.mockRejectedValue(alreadyEnrolled);
     const f = mount();
@@ -151,13 +153,17 @@ describe('PasskeyOfferDialogComponent', () => {
   });
 
   it('shows a translated message, not the raw DOMException text, on any other locally-raised ceremony failure', async () => {
-    // `status: 0` is `PasskeyService.toProblem()`'s marker for "this never
-    // reached the server" -- distinct from the `status: 500` case above,
-    // which is a real backend Problem and keeps its own title.
+    // `ceremonyRejected` is `PasskeyService.toProblem()`'s flag for "this
+    // came from the browser, not the server" -- distinct from both the
+    // `status: 500` case above (a real backend Problem, keeps its own title)
+    // and the network-failure spec below (`status: 0` too, but not from a
+    // rejected ceremony -- see that spec for why `status` alone can't tell
+    // the two apart).
     const authenticatorError: Problem = {
       type: 'ConstraintError',
       title: 'The authenticator does not meet the requested criteria.',
       status: 0,
+      ceremonyRejected: true,
     };
     passkeyService.enrol.mockRejectedValue(authenticatorError);
     const f = mount();
@@ -168,6 +174,30 @@ describe('PasskeyOfferDialogComponent', () => {
 
     expect(f.nativeElement.textContent).toContain('The passkey could not be added.');
     expect(f.nativeElement.textContent).not.toContain('requested criteria');
+    expect(close).not.toHaveBeenCalled();
+  });
+
+  it('shows the server-unreachable message on a genuine network failure during enrolment, not the generic passkey fallback', async () => {
+    // Mirrors PasskeysGroupComponent's own equivalent spec: a dropped
+    // connection during enrol()'s own HTTP calls reaches this component as a
+    // Problem with status: 0 too -- the same status the DOMException branch
+    // above uses. status alone cannot tell the two apart (see
+    // backup-section.component.ts's outcomeIsUnproven(), which reads
+    // status === 0 as "dropped connection" -- the opposite reading).
+    const networkFailure: Problem = {
+      type: 'about:blank',
+      title: 'Could not reach the server',
+      status: 0,
+    };
+    passkeyService.enrol.mockRejectedValue(networkFailure);
+    const f = mount();
+
+    findButton(f, 'Set up a passkey').click();
+    await flushMicrotasks();
+    f.detectChanges();
+
+    expect(f.nativeElement.textContent).toContain('Could not reach the server');
+    expect(f.nativeElement.textContent).not.toContain('The passkey could not be added.');
     expect(close).not.toHaveBeenCalled();
   });
 

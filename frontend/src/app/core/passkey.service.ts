@@ -165,7 +165,13 @@ export class PasskeyService {
    *  exclude list produced it) among others. That name is a fixed,
    *  non-localised identifier a caller can branch on directly; `error.message`
    *  is free text that varies by browser and locale, so it goes into `title`
-   *  for display, never as the thing callers switch on. */
+   *  for display, never as the thing callers switch on.
+   *
+   *  This branch also stamps `ceremonyRejected: true` (`Problem`'s own
+   *  docblock has the full reasoning): both this branch and a genuine dropped
+   *  connection through `parseProblem()` below produce `status: 0`, so a
+   *  caller that wants to hide only the browser's raw `title` needs a flag
+   *  that says which of the two this is, not the shared status. */
   private toProblem(error: unknown): Problem {
     if (error instanceof HttpErrorResponse) {
       return parseProblem(error);
@@ -174,6 +180,7 @@ export class PasskeyService {
       type: error instanceof DOMException ? error.name : 'about:blank',
       title: error instanceof Error ? error.message : 'The passkey ceremony failed.',
       status: 0,
+      ceremonyRejected: true,
     };
   }
 }

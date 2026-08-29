@@ -110,14 +110,20 @@ export class PasskeyOfferDialogComponent {
   /** Mirrors `PasskeysGroupComponent.handleEnrolFailure()`'s cases exactly,
    *  since this runs the identical ceremony: a cancelled sheet is not a
    *  failure to report; `InvalidStateError` -- this authenticator is already
-   *  enrolled, from the server's exclude list -- and any other locally-raised
-   *  failure (`problem.status === 0`) both get a translated, actionable
+   *  enrolled, from the server's exclude list -- and any other
+   *  `problem.ceremonyRejected` failure both get a translated, actionable
    *  message rather than the browser's own raw, untranslated `DOMException`
-   *  text (see `PasskeyService.toProblem()`'s docblock). Reuses the Settings
-   *  copies (`settings.passkeys.alreadyEnrolled`, `settings.passkeys.addFailed`)
-   *  rather than second keys with the same words: this path is near-unreachable
-   *  here (an account this dialog offers a passkey to has none yet), but a
-   *  duplicated string would drift the moment one of the two is reworded. */
+   *  text (see `PasskeyService.toProblem()`'s docblock). This is deliberately
+   *  NOT keyed on `problem.status === 0`: a genuine dropped connection during
+   *  one of `PasskeyService`'s own HTTP calls produces that same status with
+   *  an already-app-owned title ("Could not reach the server") that must
+   *  reach the user unchanged -- `ceremonyRejected` is the flag that actually
+   *  says "this came from the browser, not the server" (see `Problem`'s own
+   *  docblock). Reuses the Settings copies (`settings.passkeys.alreadyEnrolled`,
+   *  `settings.passkeys.addFailed`) rather than second keys with the same
+   *  words: this path is near-unreachable here (an account this dialog offers
+   *  a passkey to has none yet), but a duplicated string would drift the
+   *  moment one of the two is reworded. */
   private handleEnrolFailure(problem: Problem): void {
     if (problem.type === 'NotAllowedError') return;
     if (problem.type === 'InvalidStateError') {
@@ -127,7 +133,7 @@ export class PasskeyOfferDialogComponent {
       });
       return;
     }
-    if (problem.status === 0) {
+    if (problem.ceremonyRejected) {
       this.error.set({
         ...problem,
         detail: this.i18n.translate('settings.passkeys.addFailed'),

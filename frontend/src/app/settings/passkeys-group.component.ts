@@ -161,15 +161,19 @@ export class PasskeysGroupComponent {
    *
    *  `InvalidStateError` -- this authenticator is already enrolled on the
    *  account, produced by the server's exclude list -- gets its own
-   *  translated, actionable message. Any other locally-raised failure
-   *  (`problem.status === 0`, `PasskeyService.toProblem()`'s marker for "this
-   *  never reached the server") gets the same treatment for the same reason:
-   *  the fallback path renders `error.title`, which for a `DOMException` or a
-   *  plain `Error` is the browser's own untranslated, locale-dependent text
-   *  (see `PasskeyService.toProblem()`'s docblock). A real HTTP failure
-   *  (`status !== 0`) keeps its backend-supplied `title` -- that one is
-   *  already app text, not browser text. Overwriting `detail` works because
-   *  the banner reads `error.detail || error.title`. */
+   *  translated, actionable message. Any other `problem.ceremonyRejected`
+   *  failure gets the same treatment for the same reason: the fallback path
+   *  renders `error.title`, which for a `DOMException` or a plain `Error` is
+   *  the browser's own untranslated, locale-dependent text (see
+   *  `PasskeyService.toProblem()`'s docblock). This is deliberately NOT keyed
+   *  on `problem.status === 0` -- a genuine dropped connection during one of
+   *  `PasskeyService`'s own HTTP calls produces that same status (through
+   *  `parseProblem()`/`fallbackProblem()`) with an already-app-owned title
+   *  ("Could not reach the server"), which must reach the user unchanged, not
+   *  get overwritten by the generic passkey message. `ceremonyRejected` is
+   *  the flag that actually says "this came from the browser, not the
+   *  server" (see `Problem`'s own docblock). Overwriting `detail` works
+   *  because the banner reads `error.detail || error.title`. */
   private handleEnrolFailure(problem: Problem): void {
     if (problem.type === 'NotAllowedError') return;
     if (problem.type === 'InvalidStateError') {
@@ -179,7 +183,7 @@ export class PasskeysGroupComponent {
       });
       return;
     }
-    if (problem.status === 0) {
+    if (problem.ceremonyRejected) {
       this.addError.set({
         ...problem,
         detail: this.i18n.translate('settings.passkeys.addFailed'),
