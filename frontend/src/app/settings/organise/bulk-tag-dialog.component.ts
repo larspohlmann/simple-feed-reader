@@ -1,5 +1,6 @@
 // src/app/settings/organise/bulk-tag-dialog.component.ts
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.component';
@@ -23,7 +24,7 @@ export interface BulkTagDialogData {
  */
 @Component({
   selector: 'app-bulk-tag-dialog',
-  imports: [TranslocoPipe, OverlayPanelComponent, ButtonComponent, TagGlyphComponent],
+  imports: [A11yModule, TranslocoPipe, OverlayPanelComponent, ButtonComponent, TagGlyphComponent],
   templateUrl: './bulk-tag-dialog.component.html',
   styleUrl: './bulk-tag-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,6 +36,24 @@ export class BulkTagDialogComponent {
   readonly chosen = signal<TagDto | null>(null);
 
   readonly total = this.data.subscriptions.length;
+
+  private readonly isAddMode = this.data.mode === 'add';
+
+  /** i18n key for the panel heading — resolved once here rather than three
+   *  times in the template (also `effectKey`, `applyKey` below). */
+  readonly titleKey = this.isAddMode
+    ? 'settings.organise.addTagTitle'
+    : 'settings.organise.removeTagTitle';
+
+  /** i18n key for the sentence describing what Apply will do. */
+  readonly effectKey = this.isAddMode
+    ? 'settings.organise.addEffect'
+    : 'settings.organise.removeEffect';
+
+  /** i18n key for the Apply button's label. */
+  readonly applyKey = this.isAddMode
+    ? 'settings.organise.addTagApply'
+    : 'settings.organise.removeTagApply';
 
   /** Add mode offers every tag; remove mode offers only what the selection
    *  actually carries — a tag nobody has is not a tag anybody can lose. */

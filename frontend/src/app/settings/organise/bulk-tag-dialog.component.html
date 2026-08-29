@@ -1,9 +1,4 @@
-<app-overlay-panel
-  [heading]="
-    (data.mode === 'add' ? 'settings.organise.addTagTitle' : 'settings.organise.removeTagTitle')
-      | transloco: { count: total }
-  "
->
+<app-overlay-panel cdkTrapFocus [heading]="titleKey | transloco: { count: total }">
   <p class="hint">{{ 'settings.organise.tagCountHint' | transloco }}</p>
 
   @if (offered().length === 0) {
@@ -29,10 +24,7 @@
 
   @if (chosen(); as tag) {
     <p class="effect">
-      {{
-        (data.mode === 'add' ? 'settings.organise.addEffect' : 'settings.organise.removeEffect')
-          | transloco: { name: tag.name, count: affected() }
-      }}
+      {{ effectKey | transloco: { name: tag.name, count: affected() } }}
       @if (losingLastTag() > 0) {
         {{ 'settings.organise.losingLastTag' | transloco: { count: losingLastTag() } }}
       }
@@ -49,9 +41,6 @@
     [disabled]="chosen() === null"
     (click)="apply()"
   >
-    {{
-      (data.mode === 'add' ? 'settings.organise.addTagApply' : 'settings.organise.removeTagApply')
-        | transloco
-    }}
+    {{ applyKey | transloco }}
   </app-button>
 </app-overlay-panel>
