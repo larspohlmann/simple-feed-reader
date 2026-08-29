@@ -111,13 +111,21 @@ public function advancedBy(int $handled, int $remaining): self;
 public function toArray(): array;                                      // {done, total}
 ```
 
-`advancedBy()` returns a new instance with `done + $handled` and
-`total = max($this->total, $done + $remaining)`.
+`advancedBy()` returns a new instance with `done + $handled` and, while work remains,
+`total = max($this->total, $done + $remaining)`. When `$remaining` is 0 the run is over
+and the denominator collapses to `$done`.
 
 The `max` is the honesty rule. Feeds that fall due while a run is in flight would
 otherwise push `done` past `total`; instead the denominator grows and the bar stays
 below full. Combined with the loop's own guarantee that `remaining` strictly falls,
 progress is monotonic.
+
+The completion branch is why `max` alone is not enough. The global refresh lock
+serialises individual **slices**, not runs, so another sweep — the worker's, or the CLI's
+— can fetch our due feeds between two of our slices. Those feeds leave `remaining`
+without this run having handled them, and a denominator that only ever rises would
+strand the bar short of full on a run that genuinely finished. A run that reports
+nothing left to do is done, whatever it turned out to be worth.
 
 Starting from `(0, 0)`, the first `advancedBy()` sets `total = handled + remaining`,
 which is the run-start due count. No query, no repository dependency.
