@@ -9,6 +9,11 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\FeedRepository;
 use App\Repository\SubscriptionRepository;
+use App\Service\Discovery\FeedDiscoveryInterface;
+use App\Service\Discovery\ScrapeFallbackPolicy;
+use App\Service\OrphanedFeedReclaimer;
+use App\Service\Subscription\FirstFetchRecorder;
+use App\Service\Subscription\SubscriptionCreator;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\Support\QueryRecorder;
 use Doctrine\ORM\EntityManagerInterface;
@@ -105,6 +110,11 @@ final class UnsubscribeAllTest extends KernelTestCase
 
         $this->subscriptions->unsubscribeAll([$ours]);
 
+        // Same identity-map staleness as testReclaimsAFeedNobodySubscribesToAnyMore:
+        // reclaim() deletes via bulk DQL, which bypasses the unit of work, so
+        // find() would serve the Feed entity persisted above instead of asking
+        // the database.
+        $this->em->clear();
         $feeds = self::getContainer()->get(FeedRepository::class);
         self::assertInstanceOf(FeedRepository::class, $feeds);
         self::assertNotNull($feeds->find($sharedId));
@@ -153,5 +163,44 @@ final class UnsubscribeAllTest extends KernelTestCase
     public function testAnEmptyListRemovesNothing(): void
     {
         self::assertSame(0, $this->subscriptions->unsubscribeAll([]));
+    }
+
+    /**
+     * testAnEmptyListRemovesNothing only pins the return value, and
+     * `\count([])` is 0 whether or not the empty-list guard runs — Doctrine's
+     * own UnitOfWork::commit() already no-ops a flush with nothing scheduled,
+     * so even counting executed queries cannot tell the guard apart from its
+     * absence. Only a mock that would fail the test on a call to flush() or
+     * remove() can: it proves the guard, not just its externally-identical
+     * result.
+     */
+    public function testAnEmptyListNeverTouchesTheEntityManager(): void
+    {
+        $container = self::getContainer();
+        $discovery = $container->get(FeedDiscoveryInterface::class);
+        self::assertInstanceOf(FeedDiscoveryInterface::class, $discovery);
+        $creator = $container->get(SubscriptionCreator::class);
+        self::assertInstanceOf(SubscriptionCreator::class, $creator);
+        $scrapeFallbackPolicy = $container->get(ScrapeFallbackPolicy::class);
+        self::assertInstanceOf(ScrapeFallbackPolicy::class, $scrapeFallbackPolicy);
+        $firstFetch = $container->get(FirstFetchRecorder::class);
+        self::assertInstanceOf(FirstFetchRecorder::class, $firstFetch);
+        $orphanedFeeds = $container->get(OrphanedFeedReclaimer::class);
+        self::assertInstanceOf(OrphanedFeedReclaimer::class, $orphanedFeeds);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects(self::never())->method('flush');
+        $em->expects(self::never())->method('remove');
+
+        $service = new SubscriptionService(
+            $discovery,
+            $creator,
+            $scrapeFallbackPolicy,
+            $firstFetch,
+            $orphanedFeeds,
+            $em,
+        );
+
+        self::assertSame(0, $service->unsubscribeAll([]));
     }
 }
