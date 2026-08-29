@@ -1,13 +1,20 @@
 // src/app/settings/organise/organise-tag-group.component.scss
+@use '../../theme/breakpoints' as bp;
+
 :host {
   display: block;
 }
 
+// `--radius-sm`, not `--radius-lg`, and no shadow: this panel repeats inside
+// the settings group's own already-elevated `.panel` (border-radius-lg,
+// `--panel-shadow`, `--surface-1`), so the full card treatment here read as a
+// box nested inside a box. `--radius-sm` is exactly the token
+// docs/design-language.md §1 "Radii" names for "an element nested inside an
+// already-rounded container" -- a thin border is enough to separate one tag's
+// feeds from the next; the elevation stays owned by the outer group.
 .panel {
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface-1);
-  box-shadow: var(--panel-shadow);
+  border-radius: var(--radius-sm);
   overflow: hidden;
 }
 
@@ -53,13 +60,22 @@
   }
 }
 
+// `min-width: 0` lets the name shrink below its own content width -- a flex
+// item's default `min-width: auto` otherwise floors it at that width, and
+// with no `white-space: nowrap` the browser wraps a long German compound
+// (e.g. "Wissenschaft") mid-word to make room instead of truncating it.
 .name {
+  min-width: 0;
+  overflow: hidden;
   font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .count {
+  flex: none;
   font-size: var(--fs-xs);
   color: var(--text-muted);
 }
@@ -71,8 +87,22 @@
   margin-left: auto;
 }
 
+// Indented past the head row's own left inset so a feed visibly nests under
+// its tag rather than merely sitting below it -- the extra step is the
+// hierarchy cue itself, not spacing for its own sake.
 .feeds {
+  padding-left: var(--space-7);
   border-top: 1px solid var(--border);
+}
+
+// A phone row already carries a favicon, a title, tag pills and up to five
+// action icons in a narrow viewport (#212's compound-tag-name trap lives right
+// next to this); the full desktop indent would starve that row of the width
+// it needs, so the phone step keeps the hierarchy cue without the same cost.
+@media (width <= bp.$bp-sm) {
+  .feeds {
+    padding-left: var(--space-4);
+  }
 }
 
 .feeds > div + div {

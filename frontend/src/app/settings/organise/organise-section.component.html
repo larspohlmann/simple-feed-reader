@@ -33,10 +33,10 @@
       </label>
 
       @if (store.view() === 'tree') {
-        <app-button size="sm" (click)="store.expandAll()">
+        <app-button (click)="store.expandAll()">
           <app-icon name="unfold_more" size="sm" /> {{ 'settings.organise.expandAll' | transloco }}
         </app-button>
-        <app-button size="sm" (click)="store.collapseAll()">
+        <app-button (click)="store.collapseAll()">
           <app-icon name="unfold_less" size="sm" />
           {{ 'settings.organise.collapseAll' | transloco }}
         </app-button>
@@ -132,83 +132,90 @@
       </div>
     </div>
 
-    @if (store.selectedCount() > 0) {
-      <div class="bulk" data-test="bulk-bar">
-        <span class="count" data-test="bulk-count">{{
-          'settings.organise.selectedCount' | transloco: { count: store.selectedCount() }
-        }}</span>
-        @if (store.hiddenSelectedCount() > 0) {
-          <span class="hidden" data-test="bulk-hidden">{{
-            'settings.organise.hiddenCount' | transloco: { count: store.hiddenSelectedCount() }
+    <!-- Zero-height sticky dock (docs/design-language.md #3 "Sticky and scroll"):
+         the dock itself never reserves flow height, so the bar toggling on and
+         off never shifts the toolbar above it. The tree/list below reserves its
+         own top space (`.has-bulk-bar`) so the floating bar never covers the
+         first row. -->
+    <div class="bulk-dock">
+      @if (store.selectedCount() > 0) {
+        <div class="bulk" data-test="bulk-bar">
+          <span class="count" data-test="bulk-count">{{
+            'settings.organise.selectedCount' | transloco: { count: store.selectedCount() }
           }}</span>
-        }
-        <span class="spacer"></span>
-        <app-button size="sm" [disabled]="store.busy()" (click)="openTagDialog('add')">
-          {{ 'settings.organise.addTag' | transloco }}
-        </app-button>
-        <app-button size="sm" [disabled]="store.busy()" (click)="openTagDialog('remove')">
-          {{ 'settings.organise.removeTag' | transloco }}
-        </app-button>
-        <!-- Four commands, not two toggles: a toggle over a mixed selection has no
+          @if (store.hiddenSelectedCount() > 0) {
+            <span class="hidden" data-test="bulk-hidden">{{
+              'settings.organise.hiddenCount' | transloco: { count: store.hiddenSelectedCount() }
+            }}</span>
+          }
+          <span class="spacer"></span>
+          <app-button size="sm" [disabled]="store.busy()" (click)="openTagDialog('add')">
+            {{ 'settings.organise.addTag' | transloco }}
+          </app-button>
+          <app-button size="sm" [disabled]="store.busy()" (click)="openTagDialog('remove')">
+            {{ 'settings.organise.removeTag' | transloco }}
+          </app-button>
+          <!-- Four commands, not two toggles: a toggle over a mixed selection has no
              correct starting position. They sit behind one menu so the bar stays
              narrow enough to hold every action on one line. -->
-        <div
-          class="menu"
-          [appDismissOnOutside]="visibilityOpen()"
-          (dismiss)="visibilityOpen.set(false)"
-        >
+          <div
+            class="menu"
+            [appDismissOnOutside]="visibilityOpen()"
+            (dismiss)="visibilityOpen.set(false)"
+          >
+            <app-button
+              size="sm"
+              data-test="visibility"
+              [disabled]="store.busy()"
+              (click)="visibilityOpen.set(!visibilityOpen())"
+            >
+              {{ 'settings.organise.visibility' | transloco }}
+              <app-icon name="expand_more" size="sm" />
+            </app-button>
+            @if (visibilityOpen()) {
+              <div class="pop" role="menu">
+                <button
+                  role="menuitem"
+                  (click)="setFlags({ includeInAllItems: true }); visibilityOpen.set(false)"
+                >
+                  {{ 'settings.organise.showInAllItems' | transloco }}
+                </button>
+                <button
+                  role="menuitem"
+                  (click)="setFlags({ includeInAllItems: false }); visibilityOpen.set(false)"
+                >
+                  {{ 'settings.organise.hideFromAllItems' | transloco }}
+                </button>
+                <button
+                  role="menuitem"
+                  (click)="setFlags({ includeInForYou: true }); visibilityOpen.set(false)"
+                >
+                  {{ 'settings.organise.showInForYou' | transloco }}
+                </button>
+                <button
+                  role="menuitem"
+                  (click)="setFlags({ includeInForYou: false }); visibilityOpen.set(false)"
+                >
+                  {{ 'settings.organise.hideFromForYou' | transloco }}
+                </button>
+              </div>
+            }
+          </div>
           <app-button
             size="sm"
-            data-test="visibility"
+            variant="danger-outline"
+            data-test="bulk-unsubscribe"
             [disabled]="store.busy()"
-            (click)="visibilityOpen.set(!visibilityOpen())"
+            (click)="unsubscribeSelected()"
           >
-            {{ 'settings.organise.visibility' | transloco }}
-            <app-icon name="expand_more" size="sm" />
+            {{ 'reader.unsubscribe' | transloco }}
           </app-button>
-          @if (visibilityOpen()) {
-            <div class="pop" role="menu">
-              <button
-                role="menuitem"
-                (click)="setFlags({ includeInAllItems: true }); visibilityOpen.set(false)"
-              >
-                {{ 'settings.organise.showInAllItems' | transloco }}
-              </button>
-              <button
-                role="menuitem"
-                (click)="setFlags({ includeInAllItems: false }); visibilityOpen.set(false)"
-              >
-                {{ 'settings.organise.hideFromAllItems' | transloco }}
-              </button>
-              <button
-                role="menuitem"
-                (click)="setFlags({ includeInForYou: true }); visibilityOpen.set(false)"
-              >
-                {{ 'settings.organise.showInForYou' | transloco }}
-              </button>
-              <button
-                role="menuitem"
-                (click)="setFlags({ includeInForYou: false }); visibilityOpen.set(false)"
-              >
-                {{ 'settings.organise.hideFromForYou' | transloco }}
-              </button>
-            </div>
-          }
+          <app-button size="sm" [disabled]="store.busy()" (click)="store.clearSelection()">
+            {{ 'settings.organise.clear' | transloco }}
+          </app-button>
         </div>
-        <app-button
-          size="sm"
-          variant="danger-outline"
-          data-test="bulk-unsubscribe"
-          [disabled]="store.busy()"
-          (click)="unsubscribeSelected()"
-        >
-          {{ 'reader.unsubscribe' | transloco }}
-        </app-button>
-        <app-button size="sm" [disabled]="store.busy()" (click)="store.clearSelection()">
-          {{ 'settings.organise.clear' | transloco }}
-        </app-button>
-      </div>
-    }
+      }
+    </div>
 
     @if (error(); as problem) {
       <app-error-banner class="state" [message]="problem.detail || problem.title" />
@@ -217,7 +224,7 @@
     @if (subs.loading()) {
       <app-skeleton class="state" [label]="'settings.organise.loading' | transloco" [rows]="6" />
     } @else if (store.view() === 'tree') {
-      <div class="tree" cdkDropListGroup>
+      <div class="tree" [class.has-bulk-bar]="store.selectedCount() > 0" cdkDropListGroup>
         @for (group of store.groups(); track group.key; let i = $index, last = $last) {
           <app-organise-tag-group
             [group]="group"
@@ -234,7 +241,7 @@
         }
       </div>
     } @else {
-      <div class="list">
+      <div class="list" [class.has-bulk-bar]="store.selectedCount() > 0">
         @for (s of store.listRows(); track s.id) {
           <app-organise-feed-row
             [subscription]="s"

@@ -4,6 +4,10 @@
 // this file holds layout glue for the toolbar row, the tree, the list and the
 // bulk bar, plus the handful of controls (the tag-filter chip, the segmented
 // view control, the popover menus) that have no shared/settings/ primitive yet.
+// The group's `.panel` is unpadded by design (its rows pad themselves), and
+// none of `.tools`, `.tree`, `.list` or the bulk dock is a row -- so each
+// reads `--panel-inset-y`/`--panel-inset-x` itself, the same pattern
+// `tags-section.component.scss` and `admin-catalog.component.scss` use.
 @use '../../theme/breakpoints' as bp;
 
 .tools {
@@ -11,7 +15,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-2);
-  padding-bottom: var(--space-3);
+  padding: var(--panel-inset-y) var(--panel-inset-x) var(--space-3);
   border-bottom: 1px solid var(--border);
 }
 
@@ -136,17 +140,35 @@
   }
 }
 
-/* Layout glue only: the group panel already supplies the surface. In the
-   flow, never floating — the toast docks bottom-centre, and a floating bar
-   would both collide with it and cover the rows nearest the bottom. */
+/* A zero-height sticky dock (docs/design-language.md §3 "Sticky and scroll"):
+   `height: 0` keeps the dock from ever reserving flow space, so the bar
+   appearing and disappearing never pushes the toolbar above it or reflows the
+   page -- only the bar itself, laid out by `overflow: visible`, floats over
+   whatever is beneath. `top` sits it just under the settings shell's own
+   sticky top bar (`--bar-h`, `settings-shell.component.scss`), with one
+   `--bar-gap` of daylight, the same token that other floating bars in this
+   app use for the same purpose. An earlier decision rejected docking this bar
+   at the BOTTOM of the viewport: it would collide with the bottom-centre
+   toast. Sticky to the top has no such conflict. */
+.bulk-dock {
+  position: sticky;
+  top: calc(var(--bar-h) + var(--bar-gap));
+  z-index: 20;
+  height: 0;
+  overflow: visible;
+}
+
 .bulk {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-2);
-  margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--border);
+  margin: 0 var(--panel-inset-x);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  box-shadow: var(--panel-shadow);
 }
 
 .bulk .count {
@@ -163,10 +185,12 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  padding: 0 var(--panel-inset-x) var(--panel-inset-y);
   margin-top: var(--space-3);
 }
 
 .list {
+  padding: 0 var(--panel-inset-x) var(--panel-inset-y);
   margin-top: var(--space-3);
 }
 
@@ -174,11 +198,18 @@
   border-top: 1px solid var(--border);
 }
 
+/* The floating bulk bar overlays whatever sits at the top of the tree/list --
+   reserve room for it so it never covers the first row (docs/design-language.md
+   §3 "Content beneath a floating bar offsets by the measured height plus
+   `--bar-gap`, never by a literal"). `--control-h` plus the bar's own vertical
+   padding is the single-line bar's real height; the mobile step widens the
+   reserve because the bar's five actions wrap onto a second line there. */
+.has-bulk-bar {
+  padding-top: calc(var(--control-h) + var(--space-3) * 2 + var(--bar-gap));
+}
+
 @media (width <= bp.$bp-md) {
-  .bulk {
-    position: sticky;
-    bottom: 0;
-    z-index: 1;
-    background: var(--surface-1);
+  .has-bulk-bar {
+    padding-top: calc((var(--control-h) + var(--space-3) * 2) * 2 + var(--bar-gap));
   }
 }
