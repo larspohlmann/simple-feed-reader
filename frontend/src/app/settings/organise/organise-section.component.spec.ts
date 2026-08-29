@@ -158,6 +158,25 @@ describe('OrganiseSectionComponent', () => {
     expect([...store.selectedIds()]).toEqual([11]);
   });
 
+  it('the expand toggle reads "Expand all" collapsed, flips to "Collapse all" once every group is open', async () => {
+    await render();
+
+    const toggle = () =>
+      fixture.debugElement.query(By.css('[data-test="expand-toggle"]')).nativeElement;
+
+    expect((toggle() as HTMLElement).textContent).toContain('Expand all');
+
+    toggle().click();
+    fixture.detectChanges();
+
+    expect((toggle() as HTMLElement).textContent).toContain('Collapse all');
+
+    toggle().click();
+    fixture.detectChanges();
+
+    expect((toggle() as HTMLElement).textContent).toContain('Expand all');
+  });
+
   it('renders no arrows and no handles in the list view', async () => {
     const store = await render();
 

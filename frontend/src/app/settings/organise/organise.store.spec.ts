@@ -197,6 +197,42 @@ describe('OrganiseStore', () => {
     expect(store.isExpanded('untagged')).toBe(false);
   });
 
+  it('allExpanded is false until every group is open, then true', () => {
+    const store = make();
+
+    expect(store.allExpanded()).toBe(false);
+
+    store.toggleGroup(1);
+    store.toggleGroup(2);
+
+    expect(store.allExpanded()).toBe(false); // 'untagged' is still closed
+
+    store.toggleGroup('untagged');
+
+    expect(store.allExpanded()).toBe(true);
+  });
+
+  it('toggleExpandAll expands from any state short of fully open, and collapses once everything is', () => {
+    const store = make();
+
+    // A mixed state -- one group open, the rest closed -- still reads as
+    // "not fully expanded", so the toggle's next action is to open the rest.
+    store.toggleGroup(1);
+    store.toggleExpandAll();
+
+    expect(store.isExpanded(1)).toBe(true);
+    expect(store.isExpanded(2)).toBe(true);
+    expect(store.isExpanded('untagged')).toBe(true);
+    expect(store.allExpanded()).toBe(true);
+
+    store.toggleExpandAll();
+
+    expect(store.allExpanded()).toBe(false);
+    expect(store.isExpanded(1)).toBe(false);
+    expect(store.isExpanded(2)).toBe(false);
+    expect(store.isExpanded('untagged')).toBe(false);
+  });
+
   it('reports a group as none when nothing in it is selected', () => {
     const store = make();
     store.toggleFeed(11);

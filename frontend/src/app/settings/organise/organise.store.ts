@@ -277,6 +277,26 @@ export class OrganiseStore {
     persistExpanded(next);
     this.expandedKeys.set(next);
   }
+
+  /** Whether every group — not only the ones a filter currently shows — is
+   *  open. Drives the toolbar's single Expand/Collapse toggle: a mixed state
+   *  (some groups open, some closed) reads as "not all expanded", so the
+   *  toggle offers "Expand all" and, true to its word, opens the rest. */
+  readonly allExpanded = computed(() => {
+    const keys = this.allGroupKeys();
+    if (keys.length === 0) return false;
+    const expanded = this.expandedKeys();
+
+    return keys.every((key) => expanded.has(key));
+  });
+
+  /** One control instead of two: collapses if every group is already open,
+   *  otherwise expands the rest. See `allExpanded` for why a mixed state is
+   *  never ambiguous here. */
+  toggleExpandAll(): void {
+    if (this.allExpanded()) this.collapseAll();
+    else this.expandAll();
+  }
 }
 
 function persistExpanded(keys: ReadonlySet<GroupKey>): void {

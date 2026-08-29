@@ -12,12 +12,66 @@
 // `admin-catalog.component.scss` use for their own non-row panel content.
 @use '../../theme/breakpoints' as bp;
 
+// Buttons that belong to the same header row still need a real gap between
+// them, not the tight 8px `.g-actions` gives any two of its projected
+// children by default -- on a phone, where they wrap onto their own line
+// below the title, that read as one crowded cluster rather than two
+// deliberate actions (#659). `flex-wrap` keeps both pills on one line as
+// long as they fit; only the mobile step below forces the stack.
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+@media (width <= bp.$bp-sm) {
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+
+    // `.g-actions`'s own `margin-left: auto` only has room to act while this
+    // wrapper is narrower than the row it sits in; claiming the full width
+    // here is what turns the two same-height pills into an even, stacked
+    // pair instead of a right-aligned cluster.
+    width: 100%;
+  }
+}
+
+// The toolbar groups its controls by what they do -- selection, filtering,
+// the view switch (#659) -- each in its own `.row`. `display: contents` keeps
+// every row's children flowing straight into `.tools`'s own flex line on a
+// wide screen, so the desktop arrangement (already approved) is unchanged;
+// only the mobile step below turns each `.row` into a real block so the three
+// groups stack instead of wrapping wherever the next control happens to run
+// out of width.
 .tools {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-3) var(--space-2);
   padding: var(--panel-inset-y) var(--panel-inset-x);
+}
+
+.row {
+  display: contents;
+}
+
+@media (width <= bp.$bp-md) {
+  .tools {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .spacer {
+    display: none;
+  }
 }
 
 .selectall {
@@ -39,16 +93,13 @@
   font-size: var(--fs-sm);
 }
 
-// The toolbar was wrapping onto four ragged rows on a phone: "Expand all" and
-// "Collapse all" collapse to their icon (matching `tags-section`'s own
-// Edit/Delete-to-icon convention at this breakpoint -- `aria-label` keeps the
-// accessible name), and the filter drops its fixed 12rem floor so it can
-// share a row instead of forcing its own.
-@media (width <= bp.$bp-sm) {
-  .tools app-button .txt {
-    display: none;
-  }
-
+// The toolbar was wrapping onto three ragged rows on a phone (#659). Grouping
+// the controls into `.row`s (above) fixed the ragged part; the filter still
+// drops its fixed 12rem floor here so it can share its row with the tag-filter
+// chip instead of forcing one of its own. Unlike the earlier version of this
+// fix, no control collapses to a bare icon: the Expand/Collapse toggle keeps
+// its word at every width.
+@media (width <= bp.$bp-md) {
   .filter {
     flex: 1 1 auto;
     min-width: 0;

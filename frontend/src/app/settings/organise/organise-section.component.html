@@ -7,7 +7,7 @@
         | transloco: { feeds: subs.subscriptions().length, tags: tags.tags().length }
     "
   >
-    <div groupActions>
+    <div class="header-actions" groupActions>
       <app-button size="sm" (click)="manage.createTag()">
         <app-icon name="add" size="sm" /> {{ 'settings.tags.new' | transloco }}
       </app-button>
@@ -22,120 +22,129 @@
     </div>
 
     <div class="tools">
-      <label class="selectall">
-        <input
-          type="checkbox"
-          data-test="select-all"
-          [checked]="store.allVisibleSelected()"
-          (change)="store.toggleSelectAllVisible()"
-        />
-        {{ 'settings.organise.selectAll' | transloco }}
-      </label>
+      <!-- Selection: what is checked, and — in tree view — whether the
+           groups holding it are open. -->
+      <div class="row selection">
+        <label class="selectall">
+          <input
+            type="checkbox"
+            data-test="select-all"
+            [checked]="store.allVisibleSelected()"
+            (change)="store.toggleSelectAllVisible()"
+          />
+          {{ 'settings.organise.selectAll' | transloco }}
+        </label>
 
-      @if (store.view() === 'tree') {
-        <app-button
-          [ariaLabel]="'settings.organise.expandAll' | transloco"
-          (click)="store.expandAll()"
-        >
-          <app-icon name="unfold_more" size="sm" />
-          <span class="txt">{{ 'settings.organise.expandAll' | transloco }}</span>
-        </app-button>
-        <app-button
-          [ariaLabel]="'settings.organise.collapseAll' | transloco"
-          (click)="store.collapseAll()"
-        >
-          <app-icon name="unfold_less" size="sm" />
-          <span class="txt">{{ 'settings.organise.collapseAll' | transloco }}</span>
-        </app-button>
-      }
-
-      <input
-        class="filter"
-        type="search"
-        data-test="filter"
-        [value]="store.titleFilter()"
-        [attr.placeholder]="'settings.organise.filterPlaceholder' | transloco"
-        [attr.aria-label]="'settings.organise.filterPlaceholder' | transloco"
-        (input)="store.titleFilter.set($any($event.target).value)"
-      />
-
-      <!-- The tag filter answers what the tree cannot: "which feeds carry both
-           Tech and Nachrichten?" and "which have no tag at all?" -->
-      <div
-        class="menu"
-        [appDismissOnOutside]="tagFilterOpen()"
-        (dismiss)="tagFilterOpen.set(false)"
-      >
-        <button
-          type="button"
-          class="chip"
-          data-test="tag-filter"
-          (click)="tagFilterOpen.set(!tagFilterOpen())"
-        >
-          <app-icon name="sell" size="sm" />
-          {{ 'settings.organise.tagFilter' | transloco }}
-          @if (store.tagFilter().size > 0) {
-            <span class="n">{{ store.tagFilter().size }}</span>
-          }
-        </button>
-        @if (tagFilterOpen()) {
-          <div class="pop">
-            <label>
-              <input
-                type="checkbox"
-                [checked]="store.tagFilter().has('untagged')"
-                (change)="toggleTagFilter('untagged')"
-              />
-              {{ 'settings.organise.untagged' | transloco }}
-            </label>
-            @for (t of tags.tags(); track t.id) {
-              <label>
-                <input
-                  type="checkbox"
-                  [checked]="store.tagFilter().has(t.id)"
-                  (change)="toggleTagFilter(t.id)"
-                />
-                {{ t.name }}
-              </label>
-            }
-          </div>
+        @if (store.view() === 'tree') {
+          <!-- One toggle, not two buttons: its label always states the action
+               it is about to take, driven by the store's own expanded state
+               (#659 -- two bare chevron icons read as unlabelled and, sitting
+               right against "Select all", as part of it). -->
+          <app-button size="sm" data-test="expand-toggle" (click)="store.toggleExpandAll()">
+            <app-icon [name]="store.allExpanded() ? 'unfold_less' : 'unfold_more'" size="sm" />
+            {{
+              (store.allExpanded()
+                ? 'settings.organise.collapseAll'
+                : 'settings.organise.expandAll'
+              ) | transloco
+            }}
+          </app-button>
         }
       </div>
 
-      @if (store.view() === 'list') {
-        <select
-          class="sort"
-          data-test="sort"
-          [value]="store.sort()"
-          [attr.aria-label]="'settings.organise.sort' | transloco"
-          (change)="store.sort.set($any($event.target).value)"
+      <!-- Filtering: narrow by title, by tag, and (list view only) sort. -->
+      <div class="row filtering">
+        <input
+          class="filter"
+          type="search"
+          data-test="filter"
+          [value]="store.titleFilter()"
+          [attr.placeholder]="'settings.organise.filterPlaceholder' | transloco"
+          [attr.aria-label]="'settings.organise.filterPlaceholder' | transloco"
+          (input)="store.titleFilter.set($any($event.target).value)"
+        />
+
+        <!-- The tag filter answers what the tree cannot: "which feeds carry both
+             Tech and Nachrichten?" and "which have no tag at all?" -->
+        <div
+          class="menu"
+          [appDismissOnOutside]="tagFilterOpen()"
+          (dismiss)="tagFilterOpen.set(false)"
         >
-          <option value="title">{{ 'settings.organise.sortTitle' | transloco }}</option>
-          <option value="added">{{ 'settings.organise.sortAdded' | transloco }}</option>
-        </select>
-      }
+          <button
+            type="button"
+            class="chip"
+            data-test="tag-filter"
+            (click)="tagFilterOpen.set(!tagFilterOpen())"
+          >
+            <app-icon name="sell" size="sm" />
+            {{ 'settings.organise.tagFilter' | transloco }}
+            @if (store.tagFilter().size > 0) {
+              <span class="n">{{ store.tagFilter().size }}</span>
+            }
+          </button>
+          @if (tagFilterOpen()) {
+            <div class="pop">
+              <label>
+                <input
+                  type="checkbox"
+                  [checked]="store.tagFilter().has('untagged')"
+                  (change)="toggleTagFilter('untagged')"
+                />
+                {{ 'settings.organise.untagged' | transloco }}
+              </label>
+              @for (t of tags.tags(); track t.id) {
+                <label>
+                  <input
+                    type="checkbox"
+                    [checked]="store.tagFilter().has(t.id)"
+                    (change)="toggleTagFilter(t.id)"
+                  />
+                  {{ t.name }}
+                </label>
+              }
+            </div>
+          }
+        </div>
+
+        @if (store.view() === 'list') {
+          <select
+            class="sort"
+            data-test="sort"
+            [value]="store.sort()"
+            [attr.aria-label]="'settings.organise.sort' | transloco"
+            (change)="store.sort.set($any($event.target).value)"
+          >
+            <option value="title">{{ 'settings.organise.sortTitle' | transloco }}</option>
+            <option value="added">{{ 'settings.organise.sortAdded' | transloco }}</option>
+          </select>
+        }
+      </div>
 
       <span class="spacer"></span>
 
-      <div class="seg" role="group" [attr.aria-label]="'settings.organise.view' | transloco">
-        <button
-          type="button"
-          data-test="view-tree"
-          [class.on]="store.view() === 'tree'"
-          [attr.aria-pressed]="store.view() === 'tree'"
-          (click)="store.view.set('tree')"
-        >
-          {{ 'settings.organise.viewTree' | transloco }}
-        </button>
-        <button
-          type="button"
-          data-test="view-list"
-          [class.on]="store.view() === 'list'"
-          [attr.aria-pressed]="store.view() === 'list'"
-          (click)="store.view.set('list')"
-        >
-          {{ 'settings.organise.viewList' | transloco }}
-        </button>
+      <!-- View: tree or flat list. -->
+      <div class="row viewing">
+        <div class="seg" role="group" [attr.aria-label]="'settings.organise.view' | transloco">
+          <button
+            type="button"
+            data-test="view-tree"
+            [class.on]="store.view() === 'tree'"
+            [attr.aria-pressed]="store.view() === 'tree'"
+            (click)="store.view.set('tree')"
+          >
+            {{ 'settings.organise.viewTree' | transloco }}
+          </button>
+          <button
+            type="button"
+            data-test="view-list"
+            [class.on]="store.view() === 'list'"
+            [attr.aria-pressed]="store.view() === 'list'"
+            (click)="store.view.set('list')"
+          >
+            {{ 'settings.organise.viewList' | transloco }}
+          </button>
+        </div>
       </div>
     </div>
   </app-settings-group>
