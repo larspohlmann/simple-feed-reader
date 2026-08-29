@@ -135,9 +135,9 @@ Two integers with a two-minute lifetime do not earn a migration, a CI migration 
 and an abandoned-run sweeper.
 
 The scope is part of the key: a sweep of all feeds, a `feedId` refresh and a `tagId`
-refresh are three different runs. `RefreshRunKey` is a small value object built from
-the `RefreshRequest` — user id plus one of `all`, `feed-<id>`, `tag-<id>` — so the key
-format lives in one place rather than in `sprintf` calls at each call site.
+refresh are three different runs. The key is `<user id>.<all|feed-N|tag-N>`, built by a
+private method on the store. It has exactly one call site, so it does not get a value
+object of its own.
 
 `RefreshRequest::$userId` is nullable, because `allDue()` and `forFeed()` serve the CLI
 and maintenance sweeps. Those paths call `RefreshRunner` directly and are never tracked;
@@ -238,6 +238,27 @@ Frontend:
 - `progress-hairline.component.spec.ts` — the sheen is present while active.
 - The retraction is a visual behaviour Jest cannot see. It is verified on the real
   render in the Docker stack.
+
+## Dead code
+
+The change is not finished while a replaced mechanism is still in the tree. Each of
+these must be gone, and each is proven gone by grepping the symbol rather than by
+assuming:
+
+- `RefreshReport::$total` and its constructor and factory arguments — **only if**
+  nothing still reads it. `RefreshReport::toArray()` stays for the worker's logging, so
+  this has to be checked, not assumed.
+- `frontend` `RefreshReport.total` in `models.ts`.
+- `RefreshService.progress()`'s old arithmetic and the `report()` signal's public
+  visibility.
+- `reader-shell.component.ts`'s `fetchProgress()` computed.
+- `sidebar.component.html`'s `.prog` element, and the `.prog` and `.prog i` rules in
+  `sidebar.component.scss`.
+- Any import, translation key or spec assertion left without a subject by the above.
+
+PHPStan at level max reports unused private members, and ESLint reports unused imports.
+Stylelint reports neither an unused class nor an orphaned rule, so the `.scss` removals
+are verified by grepping the class names across `src/`.
 
 ## Out of scope
 
