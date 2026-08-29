@@ -1,0 +1,239 @@
+<h1 class="title">
+  <app-icon name="rss_feed" size="lg" /> {{ 'settings.organise.title' | transloco }}
+</h1>
+<p class="sub">
+  {{
+    'settings.organise.summary'
+      | transloco: { feeds: subs.subscriptions().length, tags: tags.tags().length }
+  }}
+</p>
+
+<div class="tools">
+  <label class="selectall">
+    <input
+      type="checkbox"
+      data-test="select-all"
+      [checked]="store.allVisibleSelected()"
+      (change)="store.toggleSelectAllVisible()"
+    />
+    {{ 'settings.organise.selectAll' | transloco }}
+  </label>
+
+  @if (store.view() === 'tree') {
+    <app-button size="sm" (click)="store.expandAll()">
+      <app-icon name="unfold_more" size="sm" /> {{ 'settings.organise.expandAll' | transloco }}
+    </app-button>
+    <app-button size="sm" (click)="store.collapseAll()">
+      <app-icon name="unfold_less" size="sm" /> {{ 'settings.organise.collapseAll' | transloco }}
+    </app-button>
+  }
+
+  <input
+    class="filter"
+    type="search"
+    data-test="filter"
+    [value]="store.titleFilter()"
+    [attr.placeholder]="'settings.organise.filterPlaceholder' | transloco"
+    [attr.aria-label]="'settings.organise.filterPlaceholder' | transloco"
+    (input)="store.titleFilter.set($any($event.target).value)"
+  />
+
+  <!-- The tag filter answers what the tree cannot: "which feeds carry both
+       Tech and Nachrichten?" and "which have no tag at all?" -->
+  <div class="menu" [appDismissOnOutside]="tagFilterOpen()" (dismiss)="tagFilterOpen.set(false)">
+    <button
+      type="button"
+      class="chip"
+      data-test="tag-filter"
+      (click)="tagFilterOpen.set(!tagFilterOpen())"
+    >
+      <app-icon name="sell" size="sm" />
+      {{ 'settings.organise.tagFilter' | transloco }}
+      @if (store.tagFilter().size > 0) {
+        <span class="n">{{ store.tagFilter().size }}</span>
+      }
+    </button>
+    @if (tagFilterOpen()) {
+      <div class="pop">
+        <label>
+          <input
+            type="checkbox"
+            [checked]="store.tagFilter().has('untagged')"
+            (change)="toggleTagFilter('untagged')"
+          />
+          {{ 'settings.organise.untagged' | transloco }}
+        </label>
+        @for (t of tags.tags(); track t.id) {
+          <label>
+            <input
+              type="checkbox"
+              [checked]="store.tagFilter().has(t.id)"
+              (change)="toggleTagFilter(t.id)"
+            />
+            {{ t.name }}
+          </label>
+        }
+      </div>
+    }
+  </div>
+
+  @if (store.view() === 'list') {
+    <select
+      class="sort"
+      data-test="sort"
+      [value]="store.sort()"
+      [attr.aria-label]="'settings.organise.sort' | transloco"
+      (change)="store.sort.set($any($event.target).value)"
+    >
+      <option value="title">{{ 'settings.organise.sortTitle' | transloco }}</option>
+      <option value="added">{{ 'settings.organise.sortAdded' | transloco }}</option>
+    </select>
+  }
+
+  <span class="spacer"></span>
+
+  <div class="seg" role="group" [attr.aria-label]="'settings.organise.view' | transloco">
+    <button
+      type="button"
+      data-test="view-tree"
+      [class.on]="store.view() === 'tree'"
+      [attr.aria-pressed]="store.view() === 'tree'"
+      (click)="store.view.set('tree')"
+    >
+      {{ 'settings.organise.viewTree' | transloco }}
+    </button>
+    <button
+      type="button"
+      data-test="view-list"
+      [class.on]="store.view() === 'list'"
+      [attr.aria-pressed]="store.view() === 'list'"
+      (click)="store.view.set('list')"
+    >
+      {{ 'settings.organise.viewList' | transloco }}
+    </button>
+  </div>
+
+  <app-button size="sm" (click)="manage.createTag()">
+    <app-icon name="add" size="sm" /> {{ 'settings.tags.new' | transloco }}
+  </app-button>
+  <app-button
+    size="sm"
+    variant="primary"
+    data-test="add-feed"
+    (click)="manage.addFeed().subscribe()"
+  >
+    <app-icon name="add" size="sm" /> {{ 'reader.addFeed' | transloco }}
+  </app-button>
+</div>
+
+@if (store.selectedCount() > 0) {
+  <div class="bulk" data-test="bulk-bar">
+    <span class="count" data-test="bulk-count">{{
+      'settings.organise.selectedCount' | transloco: { count: store.selectedCount() }
+    }}</span>
+    @if (store.hiddenSelectedCount() > 0) {
+      <span class="hidden" data-test="bulk-hidden">{{
+        'settings.organise.hiddenCount' | transloco: { count: store.hiddenSelectedCount() }
+      }}</span>
+    }
+    <span class="spacer"></span>
+    <app-button size="sm" [disabled]="store.busy()" (click)="openTagDialog('add')">
+      {{ 'settings.organise.addTag' | transloco }}
+    </app-button>
+    <app-button size="sm" [disabled]="store.busy()" (click)="openTagDialog('remove')">
+      {{ 'settings.organise.removeTag' | transloco }}
+    </app-button>
+    <!-- Four commands, not two toggles: a toggle over a mixed selection has no
+         correct starting position. They sit behind one menu so the bar stays
+         narrow enough to hold every action on one line. -->
+    <div
+      class="menu"
+      [appDismissOnOutside]="visibilityOpen()"
+      (dismiss)="visibilityOpen.set(false)"
+    >
+      <app-button
+        size="sm"
+        data-test="visibility"
+        [disabled]="store.busy()"
+        (click)="visibilityOpen.set(!visibilityOpen())"
+      >
+        {{ 'settings.organise.visibility' | transloco }}
+        <app-icon name="expand_more" size="sm" />
+      </app-button>
+      @if (visibilityOpen()) {
+        <div class="pop" role="menu">
+          <button
+            role="menuitem"
+            (click)="setFlags({ includeInAllItems: true }); visibilityOpen.set(false)"
+          >
+            {{ 'settings.organise.showInAllItems' | transloco }}
+          </button>
+          <button
+            role="menuitem"
+            (click)="setFlags({ includeInAllItems: false }); visibilityOpen.set(false)"
+          >
+            {{ 'settings.organise.hideFromAllItems' | transloco }}
+          </button>
+          <button
+            role="menuitem"
+            (click)="setFlags({ includeInForYou: true }); visibilityOpen.set(false)"
+          >
+            {{ 'settings.organise.showInForYou' | transloco }}
+          </button>
+          <button
+            role="menuitem"
+            (click)="setFlags({ includeInForYou: false }); visibilityOpen.set(false)"
+          >
+            {{ 'settings.organise.hideFromForYou' | transloco }}
+          </button>
+        </div>
+      }
+    </div>
+    <app-button
+      size="sm"
+      variant="danger-outline"
+      data-test="bulk-unsubscribe"
+      [disabled]="store.busy()"
+      (click)="unsubscribeSelected()"
+    >
+      {{ 'reader.unsubscribe' | transloco }}
+    </app-button>
+    <app-button size="sm" [disabled]="store.busy()" (click)="store.clearSelection()">
+      {{ 'settings.organise.clear' | transloco }}
+    </app-button>
+  </div>
+}
+
+@if (error(); as problem) {
+  <app-error-banner class="state" [message]="problem.detail || problem.title" />
+}
+
+@if (subs.loading()) {
+  <app-skeleton class="state" [label]="'settings.organise.loading' | transloco" [rows]="6" />
+} @else if (store.view() === 'tree') {
+  <div class="tree" cdkDropListGroup>
+    @for (group of store.groups(); track group.key; let i = $index, last = $last) {
+      <app-organise-tag-group
+        [group]="group"
+        [canMoveTagUp]="group.tag !== null && i > 0"
+        [canMoveTagDown]="group.tag !== null && !last && store.groups()[i + 1].tag !== null"
+        (moveTagUp)="moveTag(group, -1)"
+        (moveTagDown)="moveTag(group, 1)"
+      />
+    }
+  </div>
+} @else {
+  <div class="list">
+    @for (s of store.listRows(); track s.id) {
+      <app-organise-feed-row
+        [subscription]="s"
+        [selected]="store.selectedIds().has(s.id)"
+        (selectedChange)="store.toggleFeed(s.id)"
+        (edit)="manage.editSubscription(s)"
+        (toggleAllItems)="manage.setIncludeInAllItems(s, !s.includeInAllItems)"
+        (toggleForYou)="manage.setIncludeInForYou(s, !s.includeInForYou)"
+        (unsubscribe)="manage.unsubscribe(s)"
+      />
+    }
+  </div>
+}
