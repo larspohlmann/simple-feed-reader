@@ -44,6 +44,40 @@ final readonly class SubscriptionService
     }
 
     /**
+     * Removes many subscriptions in one transaction, then reclaims each feed
+     * that lost its last subscriber.
+     *
+     * The single flush is the point: unsubscribe() flushes and reclaims per
+     * call, which a 176-feed selection would turn into 176 transactions and 176
+     * orphan sweeps. Reclaiming per DISTINCT feed after the flush also matters
+     * — two of the removed subscriptions can point at the same feed, and
+     * reclaim() must not be asked about it twice.
+     *
+     * @param list<Subscription> $subscriptions
+     *
+     * @return int how many subscriptions were removed
+     */
+    public function unsubscribeAll(array $subscriptions): int
+    {
+        if ([] === $subscriptions) {
+            return 0;
+        }
+
+        $feedIds = [];
+        foreach ($subscriptions as $subscription) {
+            $feedIds[(int) $subscription->getFeed()->getId()] = true;
+            $this->em->remove($subscription);
+        }
+        $this->em->flush();
+
+        foreach (array_keys($feedIds) as $feedId) {
+            $this->orphanedFeeds->reclaim($feedId);
+        }
+
+        return \count($subscriptions);
+    }
+
+    /**
      * @param list<Tag> $tags the user-owned tags to attach to a newly created
      *                        subscription; ignored when the outcome is a
      *                        candidate list rather than a subscription
