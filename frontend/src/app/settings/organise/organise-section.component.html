@@ -33,12 +33,19 @@
       </label>
 
       @if (store.view() === 'tree') {
-        <app-button (click)="store.expandAll()">
-          <app-icon name="unfold_more" size="sm" /> {{ 'settings.organise.expandAll' | transloco }}
+        <app-button
+          [ariaLabel]="'settings.organise.expandAll' | transloco"
+          (click)="store.expandAll()"
+        >
+          <app-icon name="unfold_more" size="sm" />
+          <span class="txt">{{ 'settings.organise.expandAll' | transloco }}</span>
         </app-button>
-        <app-button (click)="store.collapseAll()">
+        <app-button
+          [ariaLabel]="'settings.organise.collapseAll' | transloco"
+          (click)="store.collapseAll()"
+        >
           <app-icon name="unfold_less" size="sm" />
-          {{ 'settings.organise.collapseAll' | transloco }}
+          <span class="txt">{{ 'settings.organise.collapseAll' | transloco }}</span>
         </app-button>
       }
 
@@ -131,7 +138,14 @@
         </button>
       </div>
     </div>
+  </app-settings-group>
 
+  <!-- The tree/list is a plain region, not a second `<app-settings-group>` panel:
+       wrapping it in a group nested this page's own tag cards inside the
+       group's own card, reading as "boxes inside a box" (#659). The repeated
+       unit here -- a tag card, a plain feed row -- is the only box; this
+       region itself carries no border, background or shadow of its own. -->
+  <div class="tree-region">
     <!-- Zero-height sticky dock (docs/design-language.md #3 "Sticky and scroll"):
          the dock itself never reserves flow height, so the bar toggling on and
          off never shifts the toolbar above it. The tree/list below reserves its
@@ -255,5 +269,5 @@
         }
       </div>
     }
-  </app-settings-group>
+  </div>
 </app-settings-stack>

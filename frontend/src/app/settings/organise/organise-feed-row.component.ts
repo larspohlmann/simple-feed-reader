@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  computed,
   inject,
   input,
   output,
@@ -52,6 +53,12 @@ export class OrganiseFeedRowComponent {
   readonly reorderable = input(false);
   readonly canMoveUp = input(false);
   readonly canMoveDown = input(false);
+  /** The id of the tag whose own group this row is rendered inside, so its
+   *  pill can be left out -- a tag panel already says which tag a feed sits
+   *  under, so repeating it as the row's own pill is redundant by
+   *  construction (#659). `null` in the flat list, where pills are the only
+   *  place a feed's tags show at all. */
+  readonly hideTagId = input<number | null>(null);
 
   readonly selectedChange = output<boolean>();
   readonly moveUp = output<void>();
@@ -67,6 +74,10 @@ export class OrganiseFeedRowComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly menuOpen = signal(false);
+
+  protected readonly visibleTags = computed(() =>
+    this.subscription().tags.filter((tag) => tag.id !== this.hideTagId()),
+  );
 
   protected toggleMenu(): void {
     this.menuOpen.update((open) => !open);

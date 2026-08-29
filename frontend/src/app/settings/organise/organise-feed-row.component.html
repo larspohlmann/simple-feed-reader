@@ -18,7 +18,7 @@
   <span class="title">{{ subscription().title }}</span>
 
   <span class="pills">
-    @for (t of subscription().tags; track t.id) {
+    @for (t of visibleTags(); track t.id) {
       <span class="pill">
         <app-tag-glyph [name]="t.icon" [color]="t.color" size="xs" />
         <span class="name">{{ t.name }}</span>

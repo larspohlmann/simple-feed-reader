@@ -101,6 +101,7 @@
             [subscription]="s"
             [sortable]="!dragDisabled()"
             [reorderable]="!store.filterActive()"
+            [hideTagId]="group().tag?.id ?? null"
             [attr.data-test]="dragDisabled() ? 'arrows-only' : null"
             [selected]="store.selectedIds().has(s.id)"
             [canMoveUp]="i > 0"
