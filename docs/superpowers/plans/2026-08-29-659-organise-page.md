@@ -4708,7 +4708,7 @@ Under `settings`, add an `organise` object, and under `manage`, a `bulk` object:
 
 - [ ] **Step 2: Add the same keys to `de.json`**
 
-German, same key paths. For example: `"title": "Verwalten"`, `"viewTree": "Baum"`, `"viewList": "Liste"`, `"untagged": "Ohne Tag"`, `"addTag": "Tag hinzufügen…"`, `"removeTag": "Tag entfernen…"`, `"unsubscribeTitle": "{{count}} Feeds abbestellen?"`. Translate every key; leaving an English string in `de.json` is the same defect as a missing key.
+German, same key paths. For example: `"title": "Organisieren"`, `"viewTree": "Baum"`, `"viewList": "Liste"`, `"untagged": "Ohne Tag"`, `"addTag": "Tag hinzufügen…"`, `"removeTag": "Tag entfernen…"`, `"unsubscribeTitle": "{{count}} Feeds abbestellen?"`. Translate every key; leaving an English string in `de.json` is the same defect as a missing key.
 
 - [ ] **Step 3: Prove both files carry the same keys**
 
