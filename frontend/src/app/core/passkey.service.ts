@@ -155,13 +155,23 @@ export class PasskeyService {
 
   /** Every failure this service can throw -- a rejected HTTP call or a
    *  rejected ceremony -- surfaces through here as a `Problem`, so no caller
-   *  ever has to distinguish an `HttpErrorResponse` from a `DOMException`. */
+   *  ever has to distinguish an `HttpErrorResponse` from a `DOMException`.
+   *
+   *  A rejected ceremony's `type` is the DOMException's own `name` --
+   *  `NotAllowedError` (the user cancelled the sheet, or it timed out),
+   *  `AbortError` (the caller itself aborted the request, e.g. Task 15's
+   *  conditional-mediation ceremony on every password-form submit), or
+   *  `InvalidStateError` (this authenticator is already enrolled -- the
+   *  exclude list produced it) among others. That name is a fixed,
+   *  non-localised identifier a caller can branch on directly; `error.message`
+   *  is free text that varies by browser and locale, so it goes into `title`
+   *  for display, never as the thing callers switch on. */
   private toProblem(error: unknown): Problem {
     if (error instanceof HttpErrorResponse) {
       return parseProblem(error);
     }
     return {
-      type: 'about:blank',
+      type: error instanceof DOMException ? error.name : 'about:blank',
       title: error instanceof Error ? error.message : 'The passkey ceremony failed.',
       status: 0,
     };

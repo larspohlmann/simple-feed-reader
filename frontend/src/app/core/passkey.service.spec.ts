@@ -134,9 +134,43 @@ describe('PasskeyService', () => {
       .flush({ options: creationOptions, handle: 'register-handle' });
 
     await expect(enrolment).rejects.toMatchObject({
-      type: expect.any(String),
+      type: 'NotAllowedError',
       title: expect.any(String),
       status: expect.any(Number),
+    });
+  });
+
+  // Task 15 aborts the conditional-mediation ceremony on every password-form
+  // submit; Task 17's revocation dialog must keep the offer unanswered on a
+  // cancelled sheet. Both need a stable identifier to branch on rather than
+  // string-matching `title`, so each DOMException name a real authenticator
+  // rejects with must survive into `Problem.type` unchanged.
+  it.each([['NotAllowedError'], ['AbortError'], ['InvalidStateError']])(
+    'preserves the DOMException name %s as the Problem type, for callers to branch on',
+    async (name) => {
+      create.mockRejectedValue(new DOMException(`${name} message`, name));
+
+      const enrolment = svc.enrol('MacBook Touch ID');
+      ctrl
+        .expectOne('https://api.test/api/auth/passkey/register/options')
+        .flush({ options: creationOptions, handle: 'register-handle' });
+
+      await expect(enrolment).rejects.toMatchObject({ type: name, status: 0 });
+    },
+  );
+
+  it('degrades a non-DOMException ceremony rejection to about:blank', async () => {
+    create.mockRejectedValue(new Error('something else went wrong'));
+
+    const enrolment = svc.enrol('MacBook Touch ID');
+    ctrl
+      .expectOne('https://api.test/api/auth/passkey/register/options')
+      .flush({ options: creationOptions, handle: 'register-handle' });
+
+    await expect(enrolment).rejects.toMatchObject({
+      type: 'about:blank',
+      title: 'something else went wrong',
+      status: 0,
     });
   });
 
