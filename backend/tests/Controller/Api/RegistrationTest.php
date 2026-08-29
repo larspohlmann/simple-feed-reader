@@ -10,6 +10,7 @@ use App\Enum\UserStatus;
 use App\Service\Auth\ActionTokenService;
 use App\Service\Auth\AltchaService;
 use App\Service\Settings\InstanceSettings;
+use App\Service\Settings\InstanceSettingsUpdate;
 use App\Tests\Support\AltchaSolver;
 use App\Tests\Support\ApiTestCase;
 use Psr\Cache\CacheItemPoolInterface;
@@ -262,7 +263,13 @@ final class RegistrationTest extends ApiTestCase
     {
         $this->assertRegisterIsByteIdenticalForFreshAndDuplicateAddress('policy-default@example.com');
 
-        $this->instanceSettings()->update(requireEmailConfirmation: false, requireApproval: false, publicBaseUrl: null);
+        $this->instanceSettings()->update(new InstanceSettingsUpdate(
+            requireEmailConfirmation: false,
+            requireApproval: false,
+            publicBaseUrl: null,
+            passkeyRpId: null,
+            passkeyRpName: null,
+        ));
         $this->assertRegisterIsByteIdenticalForFreshAndDuplicateAddress('policy-open@example.com');
     }
 

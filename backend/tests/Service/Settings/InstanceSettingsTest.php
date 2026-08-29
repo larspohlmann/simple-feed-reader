@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Settings;
 
 use App\Service\Settings\InstanceSettings;
+use App\Service\Settings\InstanceSettingsUpdate;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -29,7 +30,13 @@ final class InstanceSettingsTest extends KernelTestCase
 
     public function testUpdatePersistsAndIsReadBack(): void
     {
-        $this->settings->update(requireEmailConfirmation: false, requireApproval: true, publicBaseUrl: null);
+        $this->settings->update(new InstanceSettingsUpdate(
+            requireEmailConfirmation: false,
+            requireApproval: true,
+            publicBaseUrl: null,
+            passkeyRpId: null,
+            passkeyRpName: null,
+        ));
         $this->em->clear();
 
         self::assertFalse($this->settings->requireEmailConfirmation());
@@ -40,16 +47,30 @@ final class InstanceSettingsTest extends KernelTestCase
     {
         self::assertNull($this->settings->getPublicBaseUrl());
 
-        $this->settings->update(true, true, 'https://reader.example.ts.net/reader');
+        $this->settings->update(
+            new InstanceSettingsUpdate(true, true, 'https://reader.example.ts.net/reader', null, null),
+        );
         $this->em->clear();
 
         self::assertSame('https://reader.example.ts.net/reader', $this->settings->getPublicBaseUrl());
     }
 
+    public function testPasskeyRelyingPartyOverridesDefaultToNullAndRoundTrip(): void
+    {
+        self::assertNull($this->settings->getPasskeyRpId());
+        self::assertNull($this->settings->getPasskeyRpName());
+
+        $this->settings->update(new InstanceSettingsUpdate(true, true, null, 'example.test', 'My Reader'));
+        $this->em->clear();
+
+        self::assertSame('example.test', $this->settings->getPasskeyRpId());
+        self::assertSame('My Reader', $this->settings->getPasskeyRpName());
+    }
+
     public function testUpdateReusesTheSingleRowRatherThanInsertingASecond(): void
     {
-        $this->settings->update(false, false, null);
-        $this->settings->update(true, false, null);
+        $this->settings->update(new InstanceSettingsUpdate(false, false, null, null, null));
+        $this->settings->update(new InstanceSettingsUpdate(true, false, null, null, null));
         $this->em->clear();
 
         $count = (int) $this->em

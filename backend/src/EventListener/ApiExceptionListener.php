@@ -9,6 +9,7 @@ use App\Exception\ApiException;
 use App\Exception\RateLimitedException;
 use App\Http\ApiProblem;
 use App\Http\ResolvedProblem;
+use App\Service\Settings\Exception\RelyingPartyChangeRequiresConfirmationException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
@@ -152,6 +153,12 @@ final readonly class ApiExceptionListener
             // firewall short-circuits before kernel.exception — so the two
             // sign-in paths report a blocked account in one shape.
             $extensions['accountStatus'] = $exception->accountStatus;
+        }
+
+        if ($exception instanceof RelyingPartyChangeRequiresConfirmationException) {
+            // The admin UI needs the count to phrase its confirmation prompt
+            // without a second round trip.
+            $extensions['invalidatedPasskeyCount'] = $exception->invalidatedPasskeyCount;
         }
 
         return new ResolvedProblem($problem, $headers, $extensions);

@@ -14,6 +14,7 @@ use App\Service\Auth\RegistrationPolicy;
 use App\Service\Mail\MailCapability;
 use App\Service\OAuth\OAuthAccountLinker;
 use App\Service\Settings\InstanceSettings;
+use App\Service\Settings\InstanceSettingsUpdate;
 use App\Tests\DbTestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\EventDispatcher\EventDispatcher;
@@ -395,7 +396,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
     {
         /** @var InstanceSettings $settings */
         $settings = self::getContainer()->get(InstanceSettings::class);
-        $settings->update(true, $approve, null);
+        $settings->update(new InstanceSettingsUpdate(true, $approve, null, null, null));
 
         return new RegistrationPolicy(new MailCapability(''), $settings);
     }

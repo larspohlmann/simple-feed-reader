@@ -36,7 +36,17 @@ final readonly class InstanceSettings
         return $this->repository->findSingleton()?->getPublicBaseUrl();
     }
 
-    public function update(bool $requireEmailConfirmation, bool $requireApproval, ?string $publicBaseUrl): void
+    public function getPasskeyRpId(): ?string
+    {
+        return $this->repository->findSingleton()?->getPasskeyRpId();
+    }
+
+    public function getPasskeyRpName(): ?string
+    {
+        return $this->repository->findSingleton()?->getPasskeyRpName();
+    }
+
+    public function update(InstanceSettingsUpdate $update): void
     {
         $setting = $this->repository->findSingleton();
 
@@ -45,7 +55,7 @@ final readonly class InstanceSettings
             $this->em->persist($setting);
         }
 
-        $setting->apply($requireEmailConfirmation, $requireApproval, $publicBaseUrl);
+        $setting->apply($update);
         $this->em->flush();
     }
 }
