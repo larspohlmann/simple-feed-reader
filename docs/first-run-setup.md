@@ -85,3 +85,10 @@ matter how it is set — nothing can deliver the confirmation link — while
 approve an account by hand. The settings endpoint's response includes
 `mailEnabled` so a caller can tell the two apart: the stored toggle versus
 the effective, mail-forced value.
+
+## The passkey relying party
+
+The same `GET`/`PUT /api/admin/settings` endpoint also holds the WebAuthn
+relying party. It defaults to the host of the public base URL; an
+administrator can override it in Settings → Admin, and that page explains
+the value in full. Changing it invalidates every passkey already enrolled.

@@ -336,6 +336,7 @@
         "idIntro": "A browser uses a passkey only on the domain it was made for. Write the domain on its own: no https://, no port, no path.",
         "tableServing": "You serve the reader at",
         "tableUse": "Use",
+        "tableOr": "or",
         "rule1": "It must be the host you serve from, or a parent of it. example.com works for reader.example.com. It does not work for other.com.",
         "rule2": "A public suffix is refused. You cannot own com or co.uk.",
         "rule3": "An IP address is refused. Use a domain name. localhost is the one exception.",

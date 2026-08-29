@@ -336,6 +336,7 @@
         "idIntro": "Ein Browser verwendet einen Passkey nur auf der Domain, für die er erstellt wurde. Trage nur die Domain ein: kein https://, kein Port, kein Pfad.",
         "tableServing": "Du betreibst den Reader unter",
         "tableUse": "Eintragen",
+        "tableOr": "oder",
         "rule1": "Es muss der Host sein, unter dem du den Reader betreibst, oder eine übergeordnete Domain. example.com funktioniert für reader.example.com. Für other.com funktioniert es nicht.",
         "rule2": "Eine öffentliche Endung wird abgelehnt. com oder co.uk kannst du nicht besitzen.",
         "rule3": "Eine IP-Adresse wird abgelehnt. Verwende einen Domainnamen. localhost ist die einzige Ausnahme.",
