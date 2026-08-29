@@ -143,9 +143,9 @@ Two integers with a two-minute lifetime do not earn a migration, a CI migration 
 and an abandoned-run sweeper.
 
 The scope is part of the key: a sweep of all feeds, a `feedId` refresh and a `tagId`
-refresh are three different runs. The key is `<user id>.<all|feed-N|tag-N>`, built by a
-private method on the store. It has exactly one call site, so it does not get a value
-object of its own.
+refresh are three different runs. The key is `refresh_run_<user id>.<all|feed-N|tag-N>`,
+built by a private method on the store. It has exactly one call site, so it does not
+get a value object of its own.
 
 `RefreshRequest::$userId` is nullable, because `allDue()` and `forFeed()` serve the CLI
 and maintenance sweeps. Those paths call `RefreshRunner` directly and are never tracked;
