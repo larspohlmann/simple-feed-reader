@@ -104,6 +104,16 @@ interface RunHeaderBlock {
 /** What the magazine branch actually renders: planner blocks plus run dividers. */
 type ListBlock = MagazineBlock | RunHeaderBlock;
 
+/** How much the list on screen holds, and what that number counts. The two
+ *  travel together because every surface that shows the count needs both: the
+ *  pill renders the value, the heading's accessible name says what it counts.
+ *  The shell resolves them once for the tab title and for this heading — two
+ *  resolutions of "how much is in this list" would drift apart (#709). */
+export interface TitleCount {
+  readonly value: number;
+  readonly counts: 'unread' | 'items';
+}
+
 @Component({
   selector: 'app-entry-list',
   imports: [
@@ -148,6 +158,12 @@ export class EntryListComponent implements OnDestroy {
    *  null while the search is still in flight, so the count never flashes a
    *  stale or false number (see `ReaderShellComponent.searchCountLabel`). */
   readonly searchCountLabel = input<string | null>(null);
+  /** How much this list holds, shown as a quiet pill beside the name. A value
+   *  of 0 renders nothing — an empty list reads as its name alone, the way the
+   *  sidebar drops its badge rather than showing a zero. A search ignores this
+   *  and keeps `searchCountLabel` above: that count follows the loaded page and
+   *  carries its own "+" rule. */
+  readonly titleCount = input<TitleCount>({ value: 0, counts: 'items' });
   /** The tag the heading names, when the list is scoped to one. It carries the
    *  glyph and the colour the sidebar row already shows, so the same tag reads
    *  the same in both places; null for every other selection. */
@@ -223,6 +239,13 @@ export class EntryListComponent implements OnDestroy {
 
   /** The refresh button + pull gesture are hidden in the cross-feed saved views. */
   readonly canRefresh = computed(() => canScopedRefresh(this.selection()));
+
+  /** The number the heading shows, or 0 for the two cases that show none: a
+   *  list with nothing in it, and a search — whose heading already carries its
+   *  own result count, with its own rules about when it may be shown. */
+  readonly headingCount = computed(() =>
+    this.selection().kind === 'search' ? 0 : this.titleCount().value,
+  );
 
   /** The current search's words, passed down to every row for marking. Prefers
    *  what the engine actually matched: it tolerates typos, so the literal term

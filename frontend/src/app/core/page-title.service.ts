@@ -3,12 +3,19 @@ import { Injectable, effect, inject, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
 import { TranslocoService } from '@jsverse/transloco';
-import { of, switchMap } from 'rxjs';
+import { map, of, switchMap } from 'rxjs';
 
 /** What the current page adds in front of the product name: a translation key
  *  for a page whose name is fixed, or finished text for one that names itself
- *  after its content (the reader). */
-type PageName = { readonly key: string } | { readonly text: string } | null;
+ *  after its content (the reader). A page that names itself after a list also
+ *  says how much is in it; a page with a fixed name has nothing to count. */
+type PageName = { readonly key: string } | { readonly text: string; readonly count: number } | null;
+
+/** A page name with its count resolved — what the tab is composed from. */
+interface ResolvedName {
+  readonly text: string;
+  readonly count: number;
+}
 
 const BASE_TITLE = 'simple feed reader';
 
@@ -29,11 +36,14 @@ export class PageTitleService {
   /** `selectTranslate`, not `translate`: it waits for the dictionary instead of
    *  echoing the key back while it is still loading, and it re-emits on a
    *  language switch, which keeps the tab in the language of the UI. */
-  private readonly name = toSignal(
+  private readonly name = toSignal<ResolvedName | null>(
     toObservable(this.page).pipe(
       switchMap((page) => {
         if (page === null) return of(null);
-        return 'text' in page ? of(page.text) : this.i18n.selectTranslate<string>(page.key);
+        if ('text' in page) return of({ text: page.text, count: page.count });
+        return this.i18n
+          .selectTranslate<string>(page.key)
+          .pipe(map((text) => ({ text, count: 0 })));
       }),
     ),
     { initialValue: null },
@@ -49,9 +59,11 @@ export class PageTitleService {
   }
 
   /** Name the page with text it produced itself, already translated — a
-   *  headline may arrive at full length, the tab cut is taken here. */
-  useText(text: string): void {
-    this.page.set({ text });
+   *  headline may arrive at full length, the tab cut is taken here. `count` is
+   *  what the named list holds; zero says the page has nothing to count, which
+   *  covers both an empty list and a page (an open article) that is not one. */
+  useText(text: string, count = 0): void {
+    this.page.set({ text, count });
   }
 
   /** Drop back to the product name alone. */
@@ -60,10 +72,18 @@ export class PageTitleService {
   }
 }
 
-function compose(name: string | null): string {
-  const shown = cutToTab(name ?? '');
+function compose(name: ResolvedName | null): string {
+  const shown = cutToTab(name?.text ?? '');
   if (shown === '' || shown === BASE_TITLE) return BASE_TITLE;
-  return `${shown} | ${BASE_TITLE}`;
+  return `${shown}${countSuffix(name?.count ?? 0)} | ${BASE_TITLE}`;
+}
+
+/** The count trails the NAME CUT, not the name: a feed whose title overruns the
+ *  tab would otherwise lose the very number this suffix exists to show. Nothing
+ *  to count renders nothing — an empty list reads as its name alone, the way
+ *  the sidebar drops the badge rather than showing a zero. */
+function countSuffix(count: number): string {
+  return count > 0 ? ` (${count})` : '';
 }
 
 function cutToTab(name: string): string {
@@ -73,6 +93,6 @@ function cutToTab(name: string): string {
 
 function sameName(a: PageName, b: PageName): boolean {
   if (a === null || b === null) return a === b;
-  if ('text' in a) return 'text' in b && a.text === b.text;
+  if ('text' in a) return 'text' in b && a.text === b.text && a.count === b.count;
   return 'key' in b && a.key === b.key;
 }
