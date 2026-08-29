@@ -253,6 +253,24 @@ final class LazyImageSourcesTest extends TestCase
     }
 
     /** The `src` the resolver leaves on the first image, or null if it removed it. */
+    public function testKeepsACommaBearingTransformUrlWhenAdoptingAPictureSource(): void
+    {
+        // Substack wraps its images in a <picture> whose candidates are Cloudinary
+        // transform URLs, and those spell their options with commas. A list split
+        // on every comma leaves the tail as a relative URL (#706, entry 487639).
+        $source = $this->resolvedSource(
+            '<picture><source type="image/webp" srcset="'
+            . 'https://cdn.example.com/fetch/$s_!-_9x!,w_424,c_limit,f_webp,fl_progressive:steep/photo.png 424w,'
+            . ' https://cdn.example.com/fetch/$s_!-_9x!,w_1456,c_limit,f_webp,fl_progressive:steep/photo.png 1456w">'
+            . '<img src="https://cdn.example.com/fetch/$s_!-_9x!,f_auto,fl_progressive:steep/photo.png"></picture>'
+        );
+
+        self::assertSame(
+            'https://cdn.example.com/fetch/$s_!-_9x!,w_1456,c_limit,f_webp,fl_progressive:steep/photo.png',
+            $source,
+        );
+    }
+
     private function resolvedSource(string $bodyHtml): ?string
     {
         $image = $this->resolvedDocument($bodyHtml)->getElementsByTagName('img')->item(0);

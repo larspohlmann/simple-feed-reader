@@ -94,6 +94,39 @@ final class SrcsetTest extends TestCase
         self::assertSame(800, $widest->width);
     }
 
+    public function testKeepsCommasInsideTheFirstCandidateUrl(): void
+    {
+        // Substack serves Cloudinary transform URLs that spell their options
+        // "w_320,c_limit,f_auto" (entry 487639). Only a comma that ends a URL
+        // separates candidates, so these commas belong to the URL.
+        self::assertSame(
+            'https://cdn.test/fetch/w_320,c_limit,f_auto/a.png',
+            Srcset::firstUrl('https://cdn.test/fetch/w_320,c_limit,f_auto/a.png 320w, b.png 800w'),
+        );
+    }
+
+    public function testWidestKeepsCommasInsideTheCandidateUrl(): void
+    {
+        $widest = Srcset::widest(
+            'https://cdn.test/fetch/w_320,c_limit,f_auto/a.png 320w, '
+            . 'https://cdn.test/fetch/w_1456,c_limit,f_auto/a.png 1456w',
+        );
+
+        self::assertNotNull($widest);
+        self::assertSame('https://cdn.test/fetch/w_1456,c_limit,f_auto/a.png', $widest->url);
+        self::assertSame(1456, $widest->width);
+    }
+
+    public function testSeparatesBareCandidatesOnTheCommaThatEndsAUrl(): void
+    {
+        // Without descriptors the comma is the only separator, and it must not
+        // be left on the URL it terminates.
+        self::assertSame(
+            'https://cdn.test/fetch/w_320,f_auto/a.png',
+            Srcset::firstUrl('https://cdn.test/fetch/w_320,f_auto/a.png, https://cdn.test/b.png'),
+        );
+    }
+
     public function testWidestReturnsNullForNull(): void
     {
         self::assertNull(Srcset::widest(null));
