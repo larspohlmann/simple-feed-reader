@@ -1668,9 +1668,7 @@ describe('ReaderShellComponent', () => {
     const f = bootForYou();
     const recs = TestBed.inject(RecommendationsService);
 
-    const button = f.nativeElement.querySelector(
-      '.list-header .for-you-run button',
-    ) as HTMLButtonElement;
+    const button = f.nativeElement.querySelector('.list-header .for-you-run') as HTMLButtonElement;
     expect(button).not.toBeNull();
     // "Refresh", not "Get recommendations" (#710): the action is named after
     // what it produces, like every other header action beside it. The sparkle
@@ -1680,9 +1678,12 @@ describe('ReaderShellComponent', () => {
     expect(button.textContent).not.toContain('Get recommendations');
     expect(button.getAttribute('aria-label')).toBe('Refresh recommendations');
     expect(button.querySelector('app-icon')?.textContent?.trim()).toBe('auto_awesome');
-    // Outlined, not the solid primary it used to be: it is one quiet header
-    // action among three, not the loudest thing in the bar.
-    expect(button.classList.contains('accent-outline')).toBe(true);
+    // The same control the unread switch and Mark all read are, down to the
+    // border: three actions in one header must not wear three chromes. It used
+    // to be a filled primary button, which made it the loudest thing in a bar
+    // of quiet ones.
+    expect(button.classList.contains('list-action')).toBe(true);
+    expect(button.classList.contains('accent-outline')).toBe(false);
     expect(button.classList.contains('primary')).toBe(false);
     // The header never carries the progress caption: it is the pill's, on
     // every route, running or not (#398).
@@ -1708,7 +1709,7 @@ describe('ReaderShellComponent', () => {
   it('starts no run when the confirmation is dismissed', () => {
     const f = bootForYou();
 
-    (f.nativeElement.querySelector('.for-you-run button') as HTMLButtonElement).click();
+    (f.nativeElement.querySelector('.for-you-run') as HTMLButtonElement).click();
     f.detectChanges();
 
     const cancel = [...document.querySelectorAll('app-button button')].find(
@@ -1728,7 +1729,7 @@ describe('ReaderShellComponent', () => {
     recs.report.set(failedReport);
     f.detectChanges();
 
-    (f.nativeElement.querySelector('.for-you-run button') as HTMLButtonElement).click();
+    (f.nativeElement.querySelector('.for-you-run') as HTMLButtonElement).click();
     f.detectChanges();
 
     // The plain confirm never opens; the choice sheet stands in for it, and
@@ -1748,7 +1749,7 @@ describe('ReaderShellComponent', () => {
     TestBed.inject(RecommendationsService).report.set(failedReport);
     f.detectChanges();
 
-    (f.nativeElement.querySelector('.for-you-run button') as HTMLButtonElement).click();
+    (f.nativeElement.querySelector('.for-you-run') as HTMLButtonElement).click();
     f.detectChanges();
 
     menuItem('Start a new run').click();
