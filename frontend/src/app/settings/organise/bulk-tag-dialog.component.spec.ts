@@ -68,6 +68,38 @@ describe('BulkTagDialogComponent', () => {
     expect(text).toContain('0/2');
   });
 
+  it('singularises the panel heading at a selection of one', async () => {
+    await render({ mode: 'add', subscriptions: [SUB_WITHOUT], tags: [TECH] });
+
+    const heading = fixture.debugElement.query(By.css('h2')).nativeElement.textContent as string;
+    expect(heading).toContain('1 feed');
+    expect(heading).not.toContain('1 feeds');
+  });
+
+  it('counts affected() as the feeds that do not yet carry the tag in add mode', async () => {
+    const SUB_WITHOUT_TOO = feed(13, []);
+    await render({
+      mode: 'add',
+      subscriptions: [SUB_WITH_TECH, SUB_WITHOUT, SUB_WITHOUT_TOO],
+      tags: [TECH],
+    });
+    fixture.debugElement.query(By.css('[data-test="tag-pill"]')).nativeElement.click();
+    fixture.detectChanges();
+
+    // SUB_WITH_TECH already carries TECH (carried=1 of total=3); the other
+    // two would change. A carried/total swap would read 1, not 2.
+    expect(fixture.componentInstance.affected()).toBe(2);
+  });
+
+  it('counts affected() as the feeds that carry the tag in remove mode', async () => {
+    const SUB_WITH_BOTH = feed(12, [TECH.id, NEWS.id]);
+    await render({ mode: 'remove', subscriptions: [SUB_WITH_TECH, SUB_WITH_BOTH], tags: [TECH] });
+    fixture.debugElement.query(By.css('[data-test="tag-pill"]')).nativeElement.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.affected()).toBe(2);
+  });
+
   it('offers every tag in add mode', async () => {
     await render({ mode: 'add', subscriptions: [SUB_WITHOUT], tags: [TECH, NEWS] });
 

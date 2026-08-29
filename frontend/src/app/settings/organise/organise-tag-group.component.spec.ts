@@ -166,28 +166,28 @@ describe('OrganiseTagGroupComponent', () => {
   });
 
   it('disables the feed arrows and drag under an active filter, and writes nothing', async () => {
-    const { store, manage, component } = await render(GROUP);
+    const { store, manage } = await render(GROUP);
     store.titleFilter.set('heise');
     fixture.detectChanges();
 
     const row = fixture.debugElement.queryAll(By.css('app-organise-feed-row'))[0];
     expect(row.componentInstance.reorderable()).toBe(false);
-    expect(component.dragDisabled()).toBe(true);
+    expect(fixture.debugElement.query(By.css('[data-test="arrows-only"]'))).not.toBeNull();
 
-    component.moveFeed(SUB_A, 1);
+    row.componentInstance.moveDown.emit();
 
     expect(manage.reorderTagFeeds).not.toHaveBeenCalled();
   });
 
   it('disables the untagged arrows under an active filter, and writes nothing', async () => {
-    const { store, manage, component } = await render(UNTAGGED_GROUP);
+    const { store, manage } = await render(UNTAGGED_GROUP);
     store.titleFilter.set('heise');
     fixture.detectChanges();
 
     const row = fixture.debugElement.queryAll(By.css('app-organise-feed-row'))[0];
     expect(row.componentInstance.reorderable()).toBe(false);
 
-    component.moveFeed(SUB_A, 1);
+    row.componentInstance.moveDown.emit();
 
     expect(manage.reorderUntagged).not.toHaveBeenCalled();
   });

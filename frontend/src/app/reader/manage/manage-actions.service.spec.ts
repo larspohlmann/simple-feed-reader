@@ -217,7 +217,7 @@ describe('ManageActions', () => {
       const closed = new ReplaySubject<unknown>(1);
       const dialogOpen = jest.fn<
         { closed: ReplaySubject<unknown> },
-        [unknown, { data: { message: string; requireText?: string } }]
+        [unknown, { data: { title: string; message: string; requireText?: string } }]
       >(() => ({ closed }));
       TestBed.configureTestingModule({
         imports: [provideTranslocoTesting()],
@@ -326,6 +326,14 @@ describe('ManageActions', () => {
       actions.bulkUnsubscribe(subs(4)).subscribe();
 
       expect(dialogOpen.mock.calls[0][1].data.requireText).toBeUndefined();
+    });
+
+    it('singularises the confirmation title at a selection of one', () => {
+      const { actions, dialogOpen } = setup();
+
+      actions.bulkUnsubscribe(subs(1)).subscribe();
+
+      expect(dialogOpen.mock.calls[0][1].data.title).toBe('Unsubscribe from 1 feed?');
     });
 
     it('names at most five titles and counts the rest', () => {

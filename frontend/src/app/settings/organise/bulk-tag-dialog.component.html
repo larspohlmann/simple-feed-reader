@@ -24,9 +24,9 @@
 
   @if (chosen(); as tag) {
     <p class="effect">
-      {{ effectKey | transloco: { name: tag.name, count: affected() } }}
+      {{ effectKey() | transloco: { name: tag.name, count: affected() } }}
       @if (losingLastTag() > 0) {
-        {{ 'settings.organise.losingLastTag' | transloco: { count: losingLastTag() } }}
+        {{ losingLastTagKey() | transloco: { count: losingLastTag() } }}
       }
     </p>
   }

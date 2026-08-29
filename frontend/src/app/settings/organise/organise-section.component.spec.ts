@@ -341,9 +341,7 @@ describe('OrganiseSectionComponent', () => {
 
     const groups = fixture.debugElement.queryAll(By.directive(OrganiseTagGroupComponent));
     expect(groups.length).toBe(2);
-    expect(
-      (groups[0].componentInstance as OrganiseTagGroupComponent).canMoveTagDown(),
-    ).toBe(false);
+    expect((groups[0].componentInstance as OrganiseTagGroupComponent).canMoveTagDown()).toBe(false);
 
     (groups[0].componentInstance as OrganiseTagGroupComponent).moveTagDown.emit();
 

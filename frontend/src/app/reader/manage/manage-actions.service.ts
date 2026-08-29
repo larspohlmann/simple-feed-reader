@@ -15,6 +15,7 @@ import { ToastService, CONFIRMATION_DURATION_MS } from '../../shared/toast/toast
 import { EditSubscriptionDialogComponent } from './edit-subscription-dialog.component';
 import { TagFormDialogComponent } from './tag-form-dialog.component';
 import { AddFeedDialogComponent } from '../add-feed/add-feed-dialog.component';
+import { pluralKey } from '../../core/plural-key';
 
 /** The most feed titles a bulk confirmation names before it says "and N more".
  *  Five is enough to recognise the selection and short enough to read. */
@@ -234,7 +235,7 @@ export class ManageActions {
   bulkAddTag(subscriptionIds: number[], tag: TagDto): Observable<void> {
     return this.bulkPatch(
       { subscriptionIds, addTagIds: [tag.id] },
-      this.i18n.translate('manage.bulk.tagAdded', {
+      this.i18n.translate(pluralKey('manage.bulk.tagAdded', subscriptionIds.length), {
         count: subscriptionIds.length,
         name: tag.name,
       }),
@@ -245,7 +246,7 @@ export class ManageActions {
   bulkRemoveTag(subscriptionIds: number[], tag: TagDto): Observable<void> {
     return this.bulkPatch(
       { subscriptionIds, removeTagIds: [tag.id] },
-      this.i18n.translate('manage.bulk.tagRemoved', {
+      this.i18n.translate(pluralKey('manage.bulk.tagRemoved', subscriptionIds.length), {
         count: subscriptionIds.length,
         name: tag.name,
       }),
@@ -256,7 +257,9 @@ export class ManageActions {
   bulkSetFlags(subscriptionIds: number[], flags: SubscriptionFlags): Observable<void> {
     return this.bulkPatch(
       { subscriptionIds, ...flags },
-      this.i18n.translate('manage.bulk.flagsSet', { count: subscriptionIds.length }),
+      this.i18n.translate(pluralKey('manage.bulk.flagsSet', subscriptionIds.length), {
+        count: subscriptionIds.length,
+      }),
     );
   }
 
@@ -276,7 +279,9 @@ export class ManageActions {
           tap((result) => {
             this.subs.load();
             this.toast.show({
-              message: this.i18n.translate('manage.bulk.unsubscribed', { count: result.removed }),
+              message: this.i18n.translate(pluralKey('manage.bulk.unsubscribed', result.removed), {
+                count: result.removed,
+              }),
               durationMs: CONFIRMATION_DURATION_MS,
             });
           }),
@@ -321,7 +326,7 @@ export class ManageActions {
     const rest = count - Math.min(count, CONFIRM_TITLE_LIMIT);
 
     return {
-      title: this.i18n.translate('manage.bulk.unsubscribeTitle', { count }),
+      title: this.i18n.translate(pluralKey('manage.bulk.unsubscribeTitle', count), { count }),
       message:
         rest > 0
           ? this.i18n.translate('manage.bulk.unsubscribeMessageMore', { named, rest })
