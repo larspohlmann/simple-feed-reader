@@ -51,6 +51,17 @@ final class PasskeyCeremonyTest extends TestCase
         self::assertInstanceOf(SerializerInterface::class, $ceremony->serializer());
     }
 
+    /** Mirrors testTheManagersAreBuiltOnceAndReused: serializer() memoises too. */
+    public function testTheSerializerIsBuiltOnceAndReused(): void
+    {
+        $ceremony = new PasskeyCeremony(
+            $this->relyingPartyOf('localhost'),
+            new FixedPublicBaseUrl('http://localhost:4200'),
+        );
+
+        self::assertSame($ceremony->serializer(), $ceremony->serializer());
+    }
+
     private function relyingPartyOf(string $id): PasskeyRelyingParty
     {
         return new class ($id) implements PasskeyRelyingParty {

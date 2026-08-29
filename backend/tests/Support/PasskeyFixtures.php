@@ -67,7 +67,12 @@ final readonly class PasskeyFixtures
     private const string OPENSSL_EC_CURVE = 'prime256v1';
     private const int EC_COORDINATE_LENGTH_BYTES = 32;
 
-    /** All-zero: the spec's "no AAGUID assigned" value. Not asserted on by any test in this task. */
+    /**
+     * All-zero: the spec's "no AAGUID assigned" value, and attestation()'s
+     * default. AttestationVerifierTest overrides it with a real 16-byte value
+     * to prove aaguidOrNull() round-trips a genuine AAGUID, not only the nil
+     * one every other test in this feature happens to use.
+     */
     private const string AAGUID = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
     /**
@@ -109,6 +114,7 @@ final readonly class PasskeyFixtures
         string $userHandle,
         int $signCount = 0,
         int $flags = self::DEFAULT_FLAGS,
+        string $aaguid = self::AAGUID,
     ): PasskeyAttestationFixture {
         $privateKey = self::generatePrivateKey();
         [$x, $y] = self::publicKeyCoordinates($privateKey);
@@ -120,6 +126,7 @@ final readonly class PasskeyFixtures
             $publicKeyCose,
             $signCount,
             $flags,
+            $aaguid,
         );
         $clientDataJson = self::clientDataJson('webauthn.create', $challenge, $origin);
         $attestationObject = self::attestationObject($authenticatorData);
@@ -231,11 +238,12 @@ final readonly class PasskeyFixtures
         string $publicKeyCose,
         int $signCount,
         int $flags,
+        string $aaguid,
     ): string {
         return hash('sha256', $relyingPartyId, true)
             . \chr($flags)
             . pack('N', $signCount)
-            . self::AAGUID
+            . $aaguid
             . pack('n', \strlen($credentialId))
             . $credentialId
             . $publicKeyCose;

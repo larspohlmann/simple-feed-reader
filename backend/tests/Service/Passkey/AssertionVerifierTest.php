@@ -113,6 +113,33 @@ final class AssertionVerifierTest extends KernelTestCase
     }
 
     /**
+     * parse() deserializes the wire payload through the SAME PublicKeyCredential
+     * class an attestation (registration) response uses; only the runtime type
+     * of ->response tells the two apart. Submitting an attestation-shaped
+     * credential — the exact payload a registration ceremony would send —
+     * to the login endpoint must still be rejected cleanly, not let a
+     * differently-typed response fall through to code that expects an
+     * AuthenticatorAssertionResponse.
+     *
+     * The credential MUST already be enrolled: resolveCredential() runs
+     * BEFORE the response is ever passed to checkAssertion(), so an
+     * unenrolled credential id would reject the request for an unrelated
+     * reason and never actually exercise the type guard this test is for.
+     */
+    public function testAnAttestationResponseSubmittedAsAnAssertionIsRejected(): void
+    {
+        self::bootKernel();
+        $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+        $user = $this->createUser('wrong-response-type@example.test');
+        $enrolled = $this->enrol($user, signCount: 0);
+        $handle = $this->issueLoginChallenge($enrolled->challenge);
+
+        $this->expectException(AssertionRejectedException::class);
+
+        $this->verifier()->verify($handle, $enrolled->credential);
+    }
+
+    /**
      * The scenario the brief calls out by name: a counter that goes
      * backwards must be rejected AND logged, with the credential id and the
      * user id an incident response would need — asserted through a real

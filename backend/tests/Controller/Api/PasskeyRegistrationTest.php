@@ -485,6 +485,90 @@ final class PasskeyRegistrationTest extends ApiTestCase
     }
 
     /**
+     * The exact boundary the guard exists to enforce: 191 raw bytes encodes
+     * to exactly 255 base64url characters, filling VARCHAR(255) to the byte.
+     * Pinned alongside testAnOverlongCredentialIdIsRejected, whose 200-byte
+     * fixture is comfortably over the line and so cannot tell "<=" from "<".
+     */
+    public function testACredentialIdAtTheColumnLimitIsAccepted(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
+        $user = $this->factory()->create('at-limit@example.test');
+        $this->authenticate($client, 'at-limit@example.test');
+        $fixture = PasskeyFixtures::attestation(
+            'example.test',
+            'https://example.test',
+            random_bytes(32),
+            random_bytes(191),
+            random_bytes(32),
+        );
+        $handle = $this->issueChallenge($fixture->challenge, $user->getId(), $this->randomUserHandle());
+
+        $this->registerPasskey($client, $handle, $fixture->credential, 'My phone');
+
+        self::assertResponseStatusCodeSame(201);
+    }
+
+    /** The converse of the test above: one raw byte more crosses the line. */
+    public function testACredentialIdOneByteOverTheColumnLimitIsRejected(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
+        $user = $this->factory()->create('over-limit@example.test');
+        $this->authenticate($client, 'over-limit@example.test');
+        $fixture = PasskeyFixtures::attestation(
+            'example.test',
+            'https://example.test',
+            random_bytes(32),
+            random_bytes(192),
+            random_bytes(32),
+        );
+        $handle = $this->issueChallenge($fixture->challenge, $user->getId(), $this->randomUserHandle());
+
+        $this->registerPasskey($client, $handle, $fixture->credential, 'My phone');
+
+        $this->assertRejected($client, 400);
+    }
+
+    /**
+     * `response.transports` is client-supplied and the WebAuthn library
+     * never validates it (AttestationVerifier::knownTransports()'s own
+     * docblock) — an authenticator, or a forged request, can claim any
+     * string. Only the spec's own enum should ever reach storage, since
+     * PasskeyCredentials::excludeListFor() echoes whatever is stored here
+     * back to a browser on every later registration attempt.
+     */
+    public function testAnUnknownTransportIsFilteredOutBeforeStorage(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
+        $user = $this->factory()->create('transports@example.test');
+        $this->authenticate($client, 'transports@example.test');
+        $fixture = PasskeyFixtures::attestation(
+            'example.test',
+            'https://example.test',
+            random_bytes(32),
+            random_bytes(16),
+            random_bytes(32),
+        );
+        $handle = $this->issueChallenge($fixture->challenge, $user->getId(), $this->randomUserHandle());
+        $credential = $fixture->credential;
+        // The bogus value comes first: array_intersect() preserves the
+        // SOURCE array's keys, so a naive "keep the intersection" without
+        // re-indexing would leave 'internal' at index 1, not 0.
+        $credential['response']['transports'] = ['not-a-real-transport', 'internal'];
+
+        $this->registerPasskey($client, $handle, $credential, 'My phone');
+
+        self::assertResponseStatusCodeSame(201);
+        /** @var UserPasskeyRepository $repository */
+        $repository = self::getContainer()->get(UserPasskeyRepository::class);
+        $stored = $repository->findForUser($user);
+        self::assertSame(['internal'], $stored[0]->getTransports());
+    }
+
+    /**
      * @param array<string, mixed> $body
      *
      * @return array<string, mixed>

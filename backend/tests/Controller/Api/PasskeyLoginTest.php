@@ -238,6 +238,48 @@ final class PasskeyLoginTest extends ApiTestCase
         self::assertSame($user->getId(), $record->context['userId']);
     }
 
+    /**
+     * PasskeyAuthenticator::verifiedUser() guards this BEFORE calling
+     * AssertionVerifier::verify(string $handle, array $credential) — both
+     * parameters are typed, so a caller reaching that method with a null
+     * handle would hit a TypeError, not the clean 401 every other rejection
+     * in this suite produces. This proves the guard, not the verifier, is
+     * what turns a malformed body into a normal login failure.
+     */
+    public function testAPayloadMissingTheHandleIsRejected(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+
+        $client->request(
+            'POST',
+            self::LOGIN_PATH,
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: (string) json_encode(['credential' => ['id' => 'x']], \JSON_THROW_ON_ERROR),
+        );
+
+        $this->assertRejected($client, 401);
+    }
+
+    /** The converse of the case above: a handle with no credential array at all. */
+    public function testAPayloadMissingTheCredentialIsRejected(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+        $this->factory()->create('missing-credential@example.test');
+        $fixture = $this->enrol($client, 'missing-credential@example.test');
+        $handle = $this->issueLoginChallenge($fixture->challenge);
+
+        $client->request(
+            'POST',
+            self::LOGIN_PATH,
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: (string) json_encode(['handle' => $handle], \JSON_THROW_ON_ERROR),
+        );
+
+        $this->assertRejected($client, 401);
+    }
+
     public function testATamperedClientDataJsonIsRejected(): void
     {
         $client = static::createClient();
