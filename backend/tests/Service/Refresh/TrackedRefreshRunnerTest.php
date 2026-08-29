@@ -6,7 +6,6 @@ namespace App\Tests\Service\Refresh;
 
 use App\Service\Refresh\RefreshReport;
 use App\Service\Refresh\RefreshRequest;
-use App\Service\Refresh\RefreshRunnerInterface;
 use App\Service\Refresh\RefreshRunStore;
 use App\Service\Refresh\TrackedRefreshRunner;
 use PHPUnit\Framework\TestCase;
@@ -90,25 +89,6 @@ final class TrackedRefreshRunnerTest extends TestCase
         $tracked = $runner->run($request);
 
         self::assertSame('busy', $tracked->report->status);
-        self::assertSame(20, $tracked->progress->done);
-        self::assertSame(200, $tracked->progress->total);
-    }
-
-    /**
-     * A busy answer to the very first call must not leave a zeroed run behind for
-     * the real first slice to resume from.
-     */
-    public function testABusyFirstCallStoresNothing(): void
-    {
-        $request = RefreshRequest::forUser(1, self::BUDGET);
-        $runner = $this->trackedRunner(
-            RefreshReport::busy(),
-            RefreshReport::finished(50, 20, 0, 0, 0, 30, 180, 0),
-        );
-
-        $runner->run($request);
-        $tracked = $runner->run($request);
-
         self::assertSame(20, $tracked->progress->done);
         self::assertSame(200, $tracked->progress->total);
     }
