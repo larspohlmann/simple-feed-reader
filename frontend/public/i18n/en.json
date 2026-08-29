@@ -35,19 +35,8 @@
       "statusGone": "This feed appears gone. A refresh will retry it."
     },
     "tags": {
-      "title": "Tags",
       "new": "New tag",
-      "none": "No tags yet — create one to group your feeds.",
-      "feedCountOne": "{{count}} feed",
-      "feedCountOther": "{{count}} feeds",
-      "edit": "Edit",
-      "delete": "Delete",
-      "loading": "Loading tags",
-      "retry": "Try again",
-      "reorder": "Reorder {{name}}",
-      "save": "Save",
-      "cancel": "Cancel",
-      "editing": "Editing {{name}}"
+      "cancel": "Cancel"
     },
     "opml": {
       "title": "Import & export",

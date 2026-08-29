@@ -125,7 +125,7 @@ In use by `discover/category-rail`, `discover/category-chips`,
 
 **Comfortable** — the primary content lists a reader actually reads, and the
 settings/admin rows that carry a control per line. In use by
-`reader/entry-row`, `settings/tags-section`, `admin/admin-users`. The reader's
+`reader/entry-row`, `settings/organise-feed-row`, `admin/admin-users`. The reader's
 entry list is the standard the picker was measured against in #126, so it is the
 one that must never get tighter.
 
@@ -257,7 +257,8 @@ names on one left edge. Callers highlighting a selected row pass the highlight
 colour in `color` (`'currentColor'`, say) — both branches honour it.
 
 **Not for:** a surface that wants the dot **and** the glyph side by side. That is
-a different design; see [§6](#6-deliberate-exceptions) on `settings/tags-section`.
+a different design, and no surface here asks for it — every caller takes the
+either/or.
 
 ### `<app-field>`
 
@@ -1415,13 +1416,6 @@ view would still leave an image block with no image.
 
 Each of these was decided during #126 and looks like an oversight from the
 outside. They are not. Read the reason before "fixing" one.
-
-**`settings/tags-section` renders the colour dot *and* the icon.** It shows a
-`--space-2` swatch followed by an `<app-icon>` — a swatch-plus-glyph pair, not
-`<app-tag-glyph>`'s either/or fallback. Converting it to `<app-tag-glyph>` would
-change the design: the colour would stop being visible on tags that have an
-icon, which on the tag-management screen is exactly the information the user is
-there to edit.
 
 **`admin-catalog`'s feed and category rows are a dense data grid, not a form.**
 Most controls there have no visible label and no translation key — they are

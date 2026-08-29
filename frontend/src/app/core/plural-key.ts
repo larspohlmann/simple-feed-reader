@@ -3,7 +3,7 @@
 /**
  * Picks between `${base}One` and `${base}Other`, the key-pair convention this
  * app uses in place of a Transloco pluralization plugin (see
- * `tags-section.component.html`'s `feedCountOne`/`feedCountOther` and
+ * `bulk-tag-dialog.component.ts`'s `addTagTitleOne`/`addTagTitleOther` and
  * `recommendation-run-history-month.component.ts`'s
  * `historyMonthSummaryOne`/`historyMonthSummaryOther`).
  *

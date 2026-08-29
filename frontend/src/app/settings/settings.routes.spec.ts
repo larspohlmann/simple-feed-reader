@@ -1,4 +1,5 @@
-import { Route } from '@angular/router';
+import { Route, Router, provideRouter } from '@angular/router';
+import { TestBed } from '@angular/core/testing';
 import { hasTranslation } from '../../testing/translation-keys';
 import { SETTINGS_ROUTES } from './settings.routes';
 
@@ -6,7 +7,7 @@ describe('SETTINGS_ROUTES', () => {
   const sections = SETTINGS_ROUTES[0].children ?? [];
 
   it('gives every section its own title, so the tab names the section on screen', () => {
-    for (const section of sections.filter(hasOwnPath)) {
+    for (const section of sections.filter(isSection)) {
       expect(section.title).toBeDefined();
     }
   });
@@ -16,7 +17,7 @@ describe('SETTINGS_ROUTES', () => {
   });
 
   it('titles sections by a key the dictionary holds', () => {
-    for (const section of sections.filter(hasOwnPath)) {
+    for (const section of sections.filter(isSection)) {
       expect(hasTranslation(String(section.title))).toBe(true);
     }
   });
@@ -27,9 +28,20 @@ describe('SETTINGS_ROUTES', () => {
 
     expect((loaded as { name: string }).name).toBe('ImportSectionComponent');
   });
+
+  it('forwards the retired Tags path to Organise, so an old bookmark still lands', async () => {
+    TestBed.configureTestingModule({ providers: [provideRouter(SETTINGS_ROUTES)] });
+    const router = TestBed.inject(Router);
+
+    await router.navigateByUrl('/tags');
+
+    expect(router.url).toBe('/organise');
+  });
 });
 
-/** The hub answers on the area's own path and takes the area's title with it. */
-function hasOwnPath(route: Route): boolean {
-  return route.path !== undefined && route.path !== '';
+/** A section owns a path and renders a page. The hub answers on the area's own
+ *  path and takes the area's title with it; the retired Tags path is a forward
+ *  and renders nothing — neither carries a title of its own. */
+function isSection(route: Route): boolean {
+  return route.path !== undefined && route.path !== '' && route.redirectTo === undefined;
 }

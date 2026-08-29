@@ -22,7 +22,6 @@ export const SETTINGS_SECTIONS = [
     group: 'general',
     wide: true,
   },
-  { path: 'tags', icon: 'sell', labelKey: 'settings.tags.title', group: 'general' },
   { path: 'import', icon: 'import_export', labelKey: 'settings.opml.title', group: 'general' },
   { path: 'preferences', icon: 'tune', labelKey: 'settings.preferences', group: 'general' },
   { path: 'email', icon: 'mail', labelKey: 'settings.email.title', group: 'general' },
