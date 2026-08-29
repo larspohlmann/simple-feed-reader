@@ -39,7 +39,28 @@ use ParagonIE\ConstantTime\Base64UrlSafe;
  * the same identity, and a real authenticator would never invent a new key
  * for a credential it already holds.
  *
+ * assertion() (#624 Task 10) builds the sibling ceremony — a WebAuthn LOGIN
+ * response over a credential this class already minted. It signs the real
+ * bytes CheckSignature verifies (`authData ‖ sha256(clientDataJSON)`) with
+ * openssl_sign() over the attestation fixture's own private key: that
+ * produces a standard ASN.1 DER ECDSA signature, exactly the shape a real
+ * authenticator's WebAuthn API returns, and `Webauthn\Util\CoseSignatureFixer`
+ * — already in the library's verification path — is what converts it to the
+ * raw fixed-length form the underlying COSE verifier compares. No signature
+ * math is duplicated here; only the bytes to sign are assembled.
+ *
  * @phpstan-import-type PasskeyCredentialPayload from PasskeyAttestationFixture
+ * @phpstan-type PasskeyAssertionCredentialPayload array{
+ *     id: string,
+ *     rawId: string,
+ *     type: string,
+ *     response: array{
+ *         clientDataJSON: string,
+ *         authenticatorData: string,
+ *         signature: string,
+ *         userHandle: string,
+ *     },
+ * }
  */
 final readonly class PasskeyFixtures
 {
@@ -62,6 +83,13 @@ final readonly class PasskeyFixtures
     private const int DEFAULT_FLAGS = self::FLAG_USER_PRESENT
         | self::FLAG_USER_VERIFIED
         | self::FLAG_ATTESTED_CREDENTIAL_DATA_INCLUDED;
+
+    /**
+     * An assertion's authenticatorData carries no attested credential data —
+     * spec §6.1, only a registration ceremony's does — so this omits
+     * FLAG_ATTESTED_CREDENTIAL_DATA_INCLUDED from DEFAULT_FLAGS above.
+     */
+    private const int DEFAULT_ASSERTION_FLAGS = self::FLAG_USER_PRESENT | self::FLAG_USER_VERIFIED;
 
     private const int COSE_KEY_TYPE_EC2 = 2;
     private const int COSE_ALGORITHM_ES256 = -7;
@@ -93,7 +121,7 @@ final readonly class PasskeyFixtures
             $signCount,
             $flags,
         );
-        $clientDataJson = self::clientDataJson($challenge, $origin);
+        $clientDataJson = self::clientDataJson('webauthn.create', $challenge, $origin);
         $attestationObject = self::attestationObject($authenticatorData);
 
         return new PasskeyAttestationFixture(
@@ -105,6 +133,42 @@ final readonly class PasskeyFixtures
             $origin,
             $privateKey,
         );
+    }
+
+    /**
+     * The WebAuthn LOGIN ("assertion") ceremony sibling to attestation()
+     * above: signs a fresh authenticatorData/clientDataJSON pair, over the
+     * SAME identity, with the private key attestation() minted and kept on
+     * $enrolledCredential — a real authenticator never invents a new key for
+     * a credential it already holds, so neither does this fixture.
+     *
+     * $relyingPartyId, $origin and $challenge are independent parameters
+     * rather than read off $enrolledCredential, the same reasoning
+     * PasskeyRegistrationTest's mismatch tests rely on for attestation(): a
+     * caller can sign against the credential's real identity while telling
+     * the SERVER to check a different one, exercising the origin/RP-id
+     * mismatch checks without a second capture.
+     *
+     * @return PasskeyAssertionCredentialPayload
+     */
+    public static function assertion(
+        string $relyingPartyId,
+        string $origin,
+        string $challenge,
+        PasskeyAttestationFixture $enrolledCredential,
+        int $signCount = 1,
+        int $flags = self::DEFAULT_ASSERTION_FLAGS,
+    ): array {
+        $authenticatorData = self::authenticatorDataForAssertion($relyingPartyId, $signCount, $flags);
+        $clientDataJson = self::clientDataJson('webauthn.get', $challenge, $origin);
+        $signature = self::sign($authenticatorData, $clientDataJson, $enrolledCredential->privateKey);
+
+        return self::assertionCredentialPayload($enrolledCredential, [
+            'clientDataJSON' => Base64UrlSafe::encodeUnpadded($clientDataJson),
+            'authenticatorData' => Base64UrlSafe::encodeUnpadded($authenticatorData),
+            'signature' => Base64UrlSafe::encodeUnpadded($signature),
+            'userHandle' => Base64UrlSafe::encodeUnpadded($enrolledCredential->userHandle),
+        ]);
     }
 
     private static function generatePrivateKey(): \OpenSSLAsymmetricKey
@@ -177,14 +241,75 @@ final readonly class PasskeyFixtures
             . $publicKeyCose;
     }
 
-    private static function clientDataJson(string $challenge, string $origin): string
+    /**
+     * Shared by attestation() ("webauthn.create") and assertion()
+     * ("webauthn.get") — the two ceremony types differ only in this one
+     * field, per CheckClientDataCollectorType.
+     */
+    private static function clientDataJson(string $type, string $challenge, string $origin): string
     {
         return json_encode([
-            'type' => 'webauthn.create',
+            'type' => $type,
             'challenge' => Base64UrlSafe::encodeUnpadded($challenge),
             'origin' => $origin,
             'crossOrigin' => false,
         ], \JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * An assertion's authenticatorData is the registration one's prefix —
+     * rpIdHash, flags, signCount — with no attested credential data
+     * appended (spec §6.1); see DEFAULT_ASSERTION_FLAGS.
+     */
+    private static function authenticatorDataForAssertion(string $relyingPartyId, int $signCount, int $flags): string
+    {
+        return hash('sha256', $relyingPartyId, true)
+            . \chr($flags)
+            . pack('N', $signCount);
+    }
+
+    /**
+     * The exact bytes CheckSignature verifies: authenticatorData followed by
+     * the SHA-256 of the raw clientDataJSON bytes — never the JSON re-decoded
+     * and re-encoded, which could disagree byte-for-byte with what the
+     * "browser" claims to have hashed.
+     *
+     * openssl_sign() over an EC key returns a standard ASN.1 DER signature —
+     * the same shape a real authenticator's assertion carries — so nothing
+     * here needs to know about the library's internal raw-r‖s COSE format;
+     * Webauthn\Util\CoseSignatureFixer converts on the verifying side.
+     */
+    private static function sign(
+        string $authenticatorData,
+        string $clientDataJson,
+        \OpenSSLAsymmetricKey $privateKey,
+    ): string {
+        $dataToVerify = $authenticatorData . hash('sha256', $clientDataJson, true);
+
+        openssl_sign($dataToVerify, $signature, $privateKey, \OPENSSL_ALGO_SHA256)
+            || throw new \RuntimeException('Unable to sign a passkey assertion fixture.');
+
+        /** @var string $signature */
+        return $signature;
+    }
+
+    /**
+     * @param array{clientDataJSON: string, authenticatorData: string, signature: string, userHandle: string} $response
+     *
+     * @return PasskeyAssertionCredentialPayload
+     */
+    private static function assertionCredentialPayload(
+        PasskeyAttestationFixture $enrolledCredential,
+        array $response,
+    ): array {
+        $id = Base64UrlSafe::encodeUnpadded($enrolledCredential->credentialId);
+
+        return [
+            'id' => $id,
+            'rawId' => $id,
+            'type' => 'public-key',
+            'response' => $response,
+        ];
     }
 
     private static function attestationObject(string $authenticatorData): string

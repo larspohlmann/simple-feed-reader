@@ -56,6 +56,31 @@ security:
                 max_attempts: 5
                 interval: '15 minutes'
 
+        # ORDER MATTERS. Firewalls match in declaration order and `api` below
+        # matches every `^/api` path, so this block MUST stay between `login`
+        # and `api` — placed after `api`, it would never be reached and every
+        # passkey login would silently fall through to the jwt-only firewall
+        # and 401. See PasskeyAuthenticator's own docblock for how the
+        # authenticator reuses json_login's success/failure handlers despite
+        # authenticating differently.
+        passkey_login:
+            pattern: ^/api/auth/passkey/login$
+            stateless: true
+            provider: app_users
+            # The same checker json_login uses: status is tested only after
+            # the credential is verified, never before — see
+            # App\Security\LoginUserChecker.
+            user_checker: App\Security\LoginUserChecker
+            custom_authenticator: App\Security\PasskeyAuthenticator
+            # The request carries no e-mail, so DefaultLoginRateLimiter finds
+            # an empty identifier (PasskeyAuthenticator passes '' to
+            # UserBadge) and this becomes five attempts per quarter hour per
+            # client IP. That is the right budget for a flow with no
+            # identifier to key on.
+            login_throttling:
+                max_attempts: 5
+                interval: '15 minutes'
+
         api:
             pattern: ^/api
             stateless: true

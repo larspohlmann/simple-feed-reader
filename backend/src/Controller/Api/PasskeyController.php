@@ -68,6 +68,21 @@ final readonly class PasskeyController
     }
 
     /**
+     * Never executed: PasskeyAuthenticator's own firewall intercepts the
+     * request and its injected success/failure handlers write the response
+     * — see that class's docblock. The route exists purely so the firewall's
+     * pattern resolves to a real one: RouterListener runs before the
+     * firewall (priority 32 vs 8), so with no route here a POST would 404
+     * before PasskeyAuthenticator ever saw it — the same reasoning
+     * AuthController::login() documents for the password equivalent.
+     */
+    #[Route('/api/auth/passkey/login', name: 'api_auth_passkey_login', methods: ['POST'])]
+    public function login(): JsonResponse
+    {
+        throw new \LogicException('Handled by PasskeyAuthenticator.');
+    }
+
+    /**
      * @throws InvalidArgumentException
      */
     #[Route('/api/auth/passkey/register', name: 'api_auth_passkey_register', methods: ['POST'])]
