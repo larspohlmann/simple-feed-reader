@@ -8,7 +8,6 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Repository\SubscriptionRepository;
 use App\Repository\SubscriptionTagRepository;
-use App\Repository\TagRepository;
 
 /**
  * Aligns a subscription's tag set with the tags a PATCH request asked for,
@@ -17,7 +16,7 @@ use App\Repository\TagRepository;
 final readonly class SubscriptionTagSync
 {
     public function __construct(
-        private TagRepository $tags,
+        private OwnedTagsCache $tags,
         private SubscriptionTagRepository $subscriptionTags,
         private SubscriptionRepository $subscriptions,
     ) {

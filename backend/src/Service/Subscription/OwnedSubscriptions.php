@@ -36,7 +36,33 @@ final readonly class OwnedSubscriptions
      */
     public function resolve(array $ids, int $userId): array
     {
-        $owned = $this->subscriptions->findAllByIdsForUser($ids, $userId);
+        return $this->keyedById($this->subscriptions->findAllByIdsForUser($ids, $userId), $ids);
+    }
+
+    /**
+     * Same guarantee as resolve(), but with each subscription's feed and tags
+     * eager-loaded — for a caller that goes on to serialize the result (the
+     * bulk-update response, say) rather than only write through it.
+     *
+     * @param list<int> $ids
+     *
+     * @return array<int, Subscription> the resolved subscriptions, keyed by id
+     */
+    public function resolveWithAssociations(array $ids, int $userId): array
+    {
+        $owned = $this->subscriptions->findAllByIdsForUserWithAssociations($ids, $userId);
+
+        return $this->keyedById($owned, $ids);
+    }
+
+    /**
+     * @param list<Subscription> $owned
+     * @param list<int>          $ids
+     *
+     * @return array<int, Subscription>
+     */
+    private function keyedById(array $owned, array $ids): array
+    {
         if (\count($owned) !== \count($ids)) {
             throw new UnprocessableEntityHttpException(
                 'subscriptionIds must all be your feeds, without duplicates.',

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Subscription;
-use App\Entity\Tag;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -87,6 +86,40 @@ class SubscriptionRepository extends ServiceEntityRepository
     }
 
     /**
+     * The user's subscriptions matching the given ids, with their feed and tags
+     * eager-loaded (no N+1) — for a caller that will serialize the result, same
+     * as findForUserWithTags(). Fewer results than ids means one or more ids
+     * were invalid or belonged to another user, same as findAllByIdsForUser().
+     *
+     * A separate method rather than adding the joins to findAllByIdsForUser():
+     * reorder() and bulkUnsubscribe() resolve the same ids only to write
+     * through them, never to serialize, so the extra joins would cost them a
+     * heavier query for nothing.
+     *
+     * @param list<int> $ids
+     *
+     * @return list<Subscription>
+     */
+    public function findAllByIdsForUserWithAssociations(array $ids, int $userId): array
+    {
+        if ([] === $ids) {
+            return [];
+        }
+
+        /** @var list<Subscription> $rows */
+        $rows = $this->createQueryBuilder('s')
+            ->leftJoin('s.feed', 'f')->addSelect('f')
+            ->leftJoin('s.subscriptionTags', 'st')->addSelect('st')
+            ->leftJoin('st.tag', 't')->addSelect('t')
+            ->andWhere('s.id IN (:ids)')->setParameter('ids', $ids)
+            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
+            ->getQuery()
+            ->getResult();
+
+        return $rows;
+    }
+
+    /**
      * The next append position in the untagged "Feeds" list: one past the user's
      * current max (0 when they have none).
      */
@@ -129,24 +162,6 @@ class SubscriptionRepository extends ServiceEntityRepository
             ->innerJoin('s.subscriptionTags', 'st')->innerJoin('st.tag', 't')
             ->andWhere('s.user = :user')->setParameter('user', $userId)
             ->andWhere('t.id = :tagId')->setParameter('tagId', $tagId)
-            ->getQuery()
-            ->getResult();
-
-        return $rows;
-    }
-
-    /**
-     * Subscriptions carrying a given tag — used to detach the tag before it is
-     * deleted (portable: does not rely on join-table FK cascade behaviour).
-     *
-     * @return list<Subscription>
-     */
-    public function findByTag(Tag $tag): array
-    {
-        /** @var list<Subscription> $rows */
-        $rows = $this->createQueryBuilder('s')
-            ->innerJoin('s.subscriptionTags', 'st')->innerJoin('st.tag', 't')
-            ->andWhere('t = :tag')->setParameter('tag', $tag)
             ->getQuery()
             ->getResult();
 

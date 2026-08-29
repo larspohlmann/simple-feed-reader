@@ -148,7 +148,9 @@ final readonly class TagController
             ?? throw new NotFoundHttpException('No such tag.');
 
         // Detach from every subscription first (portable across SQLite/MySQL).
-        foreach ($this->subscriptions->findByTag($tag) as $sub) {
+        // A tag's subscriptions are always its own owner's, so findForUserByTagId
+        // (userId + tagId) resolves the identical set findByTag(Tag) once did.
+        foreach ($this->subscriptions->findForUserByTagId((int) $user->getId(), $id) as $sub) {
             $sub->removeTag($tag);
         }
         $this->em->remove($tag);

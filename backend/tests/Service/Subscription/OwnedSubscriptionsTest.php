@@ -98,4 +98,40 @@ final class OwnedSubscriptionsTest extends KernelTestCase
         $this->expectException(UnprocessableEntityHttpException::class);
         $this->owned->resolve([$id, $id], (int) $user->getId());
     }
+
+    /**
+     * Same ownership guarantee as resolve() — the eager variant must reject
+     * and key results identically, differing only in what it eager-loads.
+     */
+    public function testResolveWithAssociationsResolvesOwnedIdsKeyedById(): void
+    {
+        $user = $this->user('owner-assoc-resolves@example.com');
+        $first = $this->subscription($user, 'https://assoc-first.example/feed.xml');
+        $second = $this->subscription($user, 'https://assoc-second.example/feed.xml');
+        $this->em->flush();
+
+        $resolved = $this->owned->resolveWithAssociations(
+            [(int) $second->getId(), (int) $first->getId()],
+            (int) $user->getId(),
+        );
+
+        self::assertCount(2, $resolved);
+        self::assertSame($first, $resolved[(int) $first->getId()]);
+        self::assertSame($second, $resolved[(int) $second->getId()]);
+    }
+
+    public function testResolveWithAssociationsRejectsAnIdThatBelongsToAnotherUser(): void
+    {
+        $mine = $this->user('owner-assoc-mine@example.com');
+        $theirs = $this->user('owner-assoc-theirs@example.com');
+        $ours = $this->subscription($mine, 'https://assoc-ours.example/feed.xml');
+        $foreign = $this->subscription($theirs, 'https://assoc-foreign.example/feed.xml');
+        $this->em->flush();
+
+        $this->expectException(UnprocessableEntityHttpException::class);
+        $this->owned->resolveWithAssociations(
+            [(int) $ours->getId(), (int) $foreign->getId()],
+            (int) $mine->getId(),
+        );
+    }
 }

@@ -8,6 +8,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -235,6 +236,96 @@ final class SubscriptionBulkTest extends WebTestCase
         ]);
 
         self::assertResponseStatusCodeSame(422);
+    }
+
+    /**
+     * SubscriptionJson::one() touches getFeed() (lazy ManyToOne) and
+     * getSubscriptionTags() (lazy OneToMany) for every subscription it
+     * serializes. findAllByIdsForUser() — what OwnedSubscriptions::resolve()
+     * used to route the bulk-update path through — selects with no joins, so
+     * serializing N subscriptions cost up to 2N extra SELECTs. The eager
+     * resolveWithAssociations() path must keep it at one read per association,
+     * however many subscriptions are in the response.
+     */
+    public function testSerializingTheBulkResponseCostsOneReadPerAssociationNotOnePerSubscription(): void
+    {
+        $client = self::createClient();
+        $user = $this->user('bulk-endpoint-n1@example.com');
+        $tech = $this->makeTag($user, 'Tech');
+        $subscriptions = [];
+        for ($i = 0; $i < 5; ++$i) {
+            $subscriptions[] = $this->makeSub($user, "https://n1-{$i}.example/feed.xml", $tech);
+        }
+        $this->em()->flush();
+
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        $recorder->reset();
+
+        $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
+            'subscriptionIds' => array_map(static fn (Subscription $s): int => (int) $s->getId(), $subscriptions),
+            'includeInAllItems' => false,
+        ]);
+
+        self::assertResponseIsSuccessful();
+
+        // One joined SELECT carries subscription, feed, subscription_tag AND
+        // tag together (resolveWithAssociations()) — assert on the JOIN
+        // clauses, not a bare "from feed", since feed/subscription_tag never
+        // head their own FROM here.
+        $feedReads = $recorder->queriesMatching('join feed');
+        self::assertCount(
+            1,
+            $feedReads,
+            "the response's feed lookups must be one batched read, got:\n" . implode("\n", $feedReads),
+        );
+
+        $tagJoinReads = $recorder->queriesMatching('join subscription_tag');
+        self::assertCount(
+            1,
+            $tagJoinReads,
+            "the response's tag-join lookups must be one batched read, got:\n" . implode("\n", $tagJoinReads),
+        );
+    }
+
+    /**
+     * SubscriptionTagSync::sync() resolves its requested tag ids on every
+     * call, and BulkSubscriptionUpdater::apply() calls sync() once per
+     * subscription — a naive implementation queries the tag table once per
+     * subscription even though every id was already validated once up front
+     * (assertOwnedTagIds()). Expect exactly two "from tag" reads: the
+     * up-front validation, and the sync loop's first (cache-priming) lookup —
+     * never a third for a fifth identical subscription.
+     */
+    public function testAddingATagAcrossManySubscriptionsCostsOneTagQueryNotOnePerSubscription(): void
+    {
+        $client = self::createClient();
+        $user = $this->user('bulk-endpoint-tag-n1@example.com');
+        $tech = $this->makeTag($user, 'Tech');
+        $subscriptions = [];
+        for ($i = 0; $i < 5; ++$i) {
+            $subscriptions[] = $this->makeSub($user, "https://tag-n1-{$i}.example/feed.xml");
+        }
+        $this->em()->flush();
+
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        $recorder->reset();
+
+        $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
+            'subscriptionIds' => array_map(static fn (Subscription $s): int => (int) $s->getId(), $subscriptions),
+            'addTagIds' => [(int) $tech->getId()],
+        ]);
+
+        self::assertResponseIsSuccessful();
+
+        $tagReads = $recorder->queriesMatching('from tag');
+        self::assertCount(
+            2,
+            $tagReads,
+            "adding one tag across 5 subscriptions must not query the tag table once per "
+                . "subscription, got:\n" . implode("\n", $tagReads),
+        );
     }
 
     public function testUnsubscribesEveryListedFeedAndKeepsTheRest(): void

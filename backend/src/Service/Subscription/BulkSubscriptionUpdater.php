@@ -44,7 +44,10 @@ final readonly class BulkSubscriptionUpdater
 
         $addTagIds = $this->assertOwnedTagIds($request->addTagIds, $userId);
         $removeTagIds = $this->assertOwnedTagIds($request->removeTagIds, $userId);
-        $byId = $this->ownedSubscriptions->resolve($request->subscriptionIds, $userId);
+        // The eager variant: the controller serializes every changed
+        // subscription's feed and tags into the response, and the plain
+        // resolve() leaves both lazy — up to 500 extra SELECTs for one request.
+        $byId = $this->ownedSubscriptions->resolveWithAssociations($request->subscriptionIds, $userId);
 
         $changed = [];
         foreach ($request->subscriptionIds as $subscriptionId) {
