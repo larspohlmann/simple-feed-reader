@@ -57,17 +57,20 @@ final class RefreshRunProgressTest extends TestCase
     }
 
     /**
-     * The denominator is a high-water mark, so a slice that handles work without
-     * new feeds arriving must not shrink it — a shrinking total is a bar that
-     * jumps forward for no reason.
+     * The clamp, exercised where it actually clamps. Another sweep can fetch our
+     * due feeds between two of our slices, so `remaining` can collapse without
+     * this run having handled anything; `done + remaining` is then 75 and the
+     * denominator must hold at 200. Every earlier version of this test chose
+     * numbers where `done + remaining` already exceeded the total, so it passed
+     * with max() deleted.
      */
-    public function testTheDenominatorNeverShrinks(): void
+    public function testTheDenominatorHoldsWhenWorkLeavesTheDueSetWithoutBeingHandled(): void
     {
         $progress = RefreshRunProgress::start()
-            ->advancedBy(20, 180)
-            ->advancedBy(180, 0);
+            ->advancedBy(20, 180)   // 20 of 200
+            ->advancedBy(5, 50);    // 25 done, only 50 left — 130 feeds went elsewhere
 
-        self::assertSame(200, $progress->done);
+        self::assertSame(25, $progress->done);
         self::assertSame(200, $progress->total);
     }
 
@@ -76,6 +79,21 @@ final class RefreshRunProgressTest extends TestCase
         $progress = RefreshRunProgress::start()->advancedBy(8, 0);
 
         self::assertSame($progress->total, $progress->done);
+    }
+
+    /**
+     * …and the same run reaching its end. Holding the denominator at 200 here
+     * would leave a finished run reading 37% and then vanishing.
+     */
+    public function testAFinishedRunIsFullEvenWhenItsWorkVanishedMidFlight(): void
+    {
+        $progress = RefreshRunProgress::start()
+            ->advancedBy(20, 180)
+            ->advancedBy(5, 50)
+            ->advancedBy(50, 0);
+
+        self::assertSame(75, $progress->done);
+        self::assertSame(75, $progress->total);
     }
 
     /**

@@ -46,10 +46,19 @@ final readonly class RefreshRunProgress
     {
         $done = $this->done + $handled;
 
-        // A high-water mark, not a recomputation. Feeds fall due while a long sweep
-        // runs, which would otherwise push `done` past a denominator fixed by the
-        // first slice; and a slice that handles work without new arrivals must not
-        // shrink the denominator, because a shrinking total is a bar that lurches
+        // Nothing left to do: the run is over, and whatever it turned out to be
+        // worth, all of it is done. The high-water denominator below would
+        // otherwise strand the bar short of full whenever work left the due set
+        // without this run handling it — the global lock serialises SLICES, not
+        // runs, so another sweep can fetch our due feeds between two of ours.
+        if (0 === $remaining) {
+            return new self($done, $done);
+        }
+
+        // A high-water mark, not a recomputation. Feeds fall due while a long
+        // sweep runs, which would otherwise push `done` past a denominator fixed
+        // by the first slice; and a slice that handles work without new arrivals
+        // must not shrink it, because a shrinking total is a bar that lurches
         // forward for no reason the user can see.
         return new self($done, max($this->total, $done + $remaining));
     }
