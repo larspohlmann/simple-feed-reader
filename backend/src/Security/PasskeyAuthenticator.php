@@ -47,23 +47,35 @@ use Symfony\Component\Security\Http\Authenticator\Passport\SelfValidatingPasspor
  *
  * VERIFICATION IS DELIBERATELY LAZY — done inside the UserBadge's user
  * loader, not called eagerly here in authenticate(). authenticate() only
- * builds the Passport; nothing invokes UserBadge::getUser() until
- * createToken() does, several steps later in AuthenticatorManager's own
- * pipeline — and login_throttling's LoginThrottlingListener runs on
- * CheckPassportEvent, which fires BEFORE that point. Calling
- * AssertionVerifier::verify() eagerly here would make every rejected
- * assertion throw before CheckPassportEvent ever gets dispatched, so the
- * throttle's own pre-emptive check would never get a chance to reject a
- * sixth attempt with a 429 — it would keep calling the verifier and keep
- * answering 401, forever. Deferring the actual verification into the
- * lazily-invoked loader is what lets the throttle listener's priority
- * (2080, checked first) actually gate it.
+ * builds the Passport; UserBadge::getUser() is NOT called eagerly by this
+ * class or the passport itself. It IS invoked earlier than that: Symfony's
+ * own UserCheckerListener::preCheckCredentials calls it on CheckPassportEvent
+ * at priority 256 (to hand the user to LoginUserChecker::checkPreAuth,
+ * itself a no-op on this firewall — see that class). What matters is the
+ * ORDER relative to login_throttling's OWN listener on the same event:
+ * LoginThrottlingListener::checkPassport runs at priority 2080, higher than
+ * 256, so it always executes FIRST and can reject an over-budget request
+ * with a 429 before anything — including UserCheckerListener — ever forces
+ * the badge to resolve. Calling AssertionVerifier::verify() eagerly inside
+ * authenticate() instead would make every rejected assertion throw BEFORE
+ * CheckPassportEvent is even dispatched, so the throttle's pre-emptive check
+ * would never get a chance to run at all — it would keep calling the
+ * verifier and keep answering 401, forever, never 429. Deferring the actual
+ * verification into the lazily-invoked loader is what lets
+ * LoginThrottlingListener's priority actually gate it.
  *
- * The user identifier passed to UserBadge is deliberately the empty string:
- * a discoverable-credential login carries no e-mail or username to key
- * throttling on, so DefaultLoginRateLimiter's per-identifier bucket
- * collapses to a single one shared by every request from one IP — which is
- * the budget this firewall's login_throttling config is sized for.
+ * The user identifier passed to UserBadge is a fixed, non-secret sentinel
+ * (THROTTLE_IDENTIFIER), not the empty string a first pass at this class
+ * used: a discoverable-credential login carries no e-mail or username to key
+ * throttling on, and UserBadge's own constructor deprecates (and, in Symfony
+ * 8.0, will throw on) an empty identifier — a live BadCredentialsException
+ * on every passkey login attempt with no test able to catch it first, since
+ * this branch's own suite runs with that deprecation not yet fatal. A
+ * constant string works identically for throttling purposes:
+ * DefaultLoginRateLimiter's local bucket is keyed on `identifier-IP`, so a
+ * FIXED identifier still collapses to exactly one bucket per client IP —
+ * the same budget the login_throttling config below is sized for — without
+ * relying on a value the framework is actively phasing out.
  *
  * `final class`, not `final readonly class` — PHP refuses a readonly class
  * that extends a non-readonly parent, and AbstractAuthenticator is not one.
@@ -73,6 +85,12 @@ use Symfony\Component\Security\Http\Authenticator\Passport\SelfValidatingPasspor
 final class PasskeyAuthenticator extends AbstractAuthenticator
 {
     private const string LOGIN_PATH = '/api/auth/passkey/login';
+
+    /**
+     * Not a real identifier — see the class docblock for why this is a
+     * fixed sentinel rather than the empty string or anything client-supplied.
+     */
+    private const string THROTTLE_IDENTIFIER = 'passkey';
 
     public function __construct(
         private readonly AssertionVerifier $verifier,
@@ -91,7 +109,9 @@ final class PasskeyAuthenticator extends AbstractAuthenticator
     {
         $payload = self::decodedPayload($request);
 
-        return new SelfValidatingPassport(new UserBadge('', fn (): User => $this->verifiedUser($payload)));
+        return new SelfValidatingPassport(
+            new UserBadge(self::THROTTLE_IDENTIFIER, fn (): User => $this->verifiedUser($payload)),
+        );
     }
 
     public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): ?Response

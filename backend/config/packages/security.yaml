@@ -72,11 +72,13 @@ security:
             # App\Security\LoginUserChecker.
             user_checker: App\Security\LoginUserChecker
             custom_authenticator: App\Security\PasskeyAuthenticator
-            # The request carries no e-mail, so DefaultLoginRateLimiter finds
-            # an empty identifier (PasskeyAuthenticator passes '' to
-            # UserBadge) and this becomes five attempts per quarter hour per
-            # client IP. That is the right budget for a flow with no
-            # identifier to key on.
+            # The request carries no e-mail, so PasskeyAuthenticator passes a
+            # fixed, non-secret sentinel identifier to UserBadge instead (see
+            # its own docblock — an empty string is deprecated by Symfony and
+            # becomes a hard failure in 8.0). A fixed identifier still keys
+            # DefaultLoginRateLimiter's local bucket to exactly one per
+            # client IP, so this is five attempts per quarter hour per IP —
+            # the right budget for a flow with no real identifier to key on.
             login_throttling:
                 max_attempts: 5
                 interval: '15 minutes'

@@ -6,19 +6,23 @@ namespace App\Tests\Service\Passkey;
 
 use App\Dto\Passkey\RegisterPasskeyRequest;
 use App\Entity\User;
+use App\Entity\UserPasskey;
 use App\Repository\UserPasskeyRepository;
+use App\Service\Passkey\AssertionOptionsFactory;
 use App\Service\Passkey\AssertionVerifier;
+use App\Service\Passkey\AttestationVerifier;
 use App\Service\Passkey\Exception\AssertionRejectedException;
 use App\Service\Passkey\PasskeyCeremony;
 use App\Service\Passkey\PasskeyChallengeStore;
-use App\Service\Passkey\AttestationVerifier;
 use App\Tests\Support\PasskeyAttestationFixture;
 use App\Tests\Support\PasskeyFixtures;
 use App\Tests\Support\PinsPasskeyRelyingParty;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Monolog\Handler\TestHandler;
+use Monolog\Level;
 use Monolog\Logger;
+use Monolog\LogRecord;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use Psr\Clock\ClockInterface;
 use Psr\Log\NullLogger;
@@ -46,6 +50,19 @@ final class AssertionVerifierTest extends KernelTestCase
     private const string RELYING_PARTY_ID = 'example.test';
     private const string ORIGIN = 'https://example.test';
 
+    /**
+     * Fix round 1 (#624 Task 10): asserting on the object verify() RETURNS
+     * proves nothing about persistence — it is the SAME managed entity
+     * whether or not anything was ever flushed to the database. This test
+     * clears the entity manager's identity map before re-reading, so a
+     * repository lookup afterwards can only be satisfied by a real row,
+     * never by Doctrine handing back the in-memory mutated object. Confirmed
+     * this actually catches a missing flush: temporarily removed the
+     * `$this->em->flush()` call from AssertionVerifier::verify() and re-ran
+     * this test — it failed (the re-fetched row still had counter 3, not
+     * 7) — before restoring it. See task-10-report.md's "Fix round 1"
+     * section for the removal experiment's real output.
+     */
     public function testAValidAssertionRecordsTheNewCounterAndTimestamp(): void
     {
         self::bootKernel();
@@ -64,10 +81,11 @@ final class AssertionVerifierTest extends KernelTestCase
         );
 
         $stored = $this->verifier(clock: new MockClock($now))->verify($handle, $credential);
-
         self::assertSame($user->getId(), $stored->getUser()->getId());
-        self::assertSame(7, $stored->getSignatureCounter());
-        self::assertEquals($now, $stored->getLastUsedAt());
+
+        $rehydrated = $this->rereadFromDatabase($user);
+        self::assertSame(7, $rehydrated->getSignatureCounter());
+        self::assertEquals($now, $rehydrated->getLastUsedAt());
     }
 
     public function testAnUnenrolledCredentialIdIsRejected(): void
@@ -124,20 +142,58 @@ final class AssertionVerifierTest extends KernelTestCase
             // Expected — the assertion under test is the log below.
         }
 
-        self::assertTrue($logSpy->hasWarningThatContains('signature counter did not advance'));
-        $record = $logSpy->getRecords()[0];
+        $record = $this->warningRecordContaining($logSpy, 'signature counter did not advance');
         self::assertSame($this->storedCredentialId($user), $record->context['credentialId']);
         self::assertSame($user->getId(), $record->context['userId']);
     }
 
+    /**
+     * Selects the record BY MESSAGE rather than assuming it is the first one
+     * captured — see PasskeyLoginTest's identical helper for the same
+     * reasoning.
+     */
+    private function warningRecordContaining(TestHandler $logSpy, string $needle): LogRecord
+    {
+        foreach ($logSpy->getRecords() as $record) {
+            if (Level::Warning === $record->level && str_contains($record->message, $needle)) {
+                return $record;
+            }
+        }
+
+        self::fail(\sprintf('No warning log record contains "%s".', $needle));
+    }
+
     private function createUser(string $email): User
     {
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
 
-        return (new UserFactory($em, $hasher))->create($email);
+        return (new UserFactory($this->em(), $hasher))->create($email);
+    }
+
+    private function em(): EntityManagerInterface
+    {
+        /** @var EntityManagerInterface $em */
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+
+        return $em;
+    }
+
+    /**
+     * Clears the identity map first, so the repository lookup that follows
+     * can only be satisfied by a real database row — see
+     * testAValidAssertionRecordsTheNewCounterAndTimestamp's docblock.
+     */
+    private function rereadFromDatabase(User $user): UserPasskey
+    {
+        $this->em()->clear();
+
+        /** @var UserPasskeyRepository $repository */
+        $repository = self::getContainer()->get(UserPasskeyRepository::class);
+        $stored = $repository->findForUser($user);
+        self::assertCount(1, $stored);
+
+        return $stored[0];
     }
 
     /**
@@ -203,13 +259,17 @@ final class AssertionVerifierTest extends KernelTestCase
         $challengeStore = self::getContainer()->get(PasskeyChallengeStore::class);
         /** @var PasskeyCeremony $ceremony */
         $ceremony = self::getContainer()->get(PasskeyCeremony::class);
+        /** @var AssertionOptionsFactory $optionsFactory */
+        $optionsFactory = self::getContainer()->get(AssertionOptionsFactory::class);
         /** @var UserPasskeyRepository $passkeys */
         $passkeys = self::getContainer()->get(UserPasskeyRepository::class);
 
         return new AssertionVerifier(
             $challengeStore,
             $ceremony,
+            $optionsFactory,
             $passkeys,
+            $this->em(),
             $clock ?? new MockClock(),
             $logger ?? new NullLogger(),
         );

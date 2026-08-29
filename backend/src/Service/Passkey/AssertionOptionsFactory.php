@@ -33,6 +33,16 @@ use Webauthn\PublicKeyCredentialRequestOptions;
  * does: `PublicKeyCredentialRequestOptions::$rpId` is a plain, un-deprecated
  * constructor property, not a value the library's own constructor refuses
  * to accept.
+ *
+ * `optionsFor()` is public and reused, unchanged, by AssertionVerifier to
+ * rebuild the exact same options a login ceremony was started with, given
+ * the challenge PasskeyChallengeStore handed back on consume() (#624 Task
+ * 10, fix round 1) — the same reasoning RegistrationOptionsFactory's own
+ * optionsFor() gives for AttestationVerifier's sake: a second,
+ * independently written copy of the resident-key/user-verification
+ * requirements could silently drift from what the browser was shown,
+ * without either call site's tests noticing. Before this fix,
+ * AssertionVerifier carried a byte-identical private copy of this method.
  */
 final readonly class AssertionOptionsFactory
 {
@@ -60,7 +70,7 @@ final readonly class AssertionOptionsFactory
         ];
     }
 
-    private function optionsFor(string $challenge): PublicKeyCredentialRequestOptions
+    public function optionsFor(string $challenge): PublicKeyCredentialRequestOptions
     {
         return PublicKeyCredentialRequestOptions::create(
             challenge: $challenge,

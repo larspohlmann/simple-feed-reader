@@ -7,6 +7,7 @@ namespace App\Service\Passkey;
 use App\Entity\UserPasskey;
 use App\Repository\UserPasskeyRepository;
 use App\Service\Passkey\Exception\AssertionRejectedException;
+use Doctrine\ORM\EntityManagerInterface;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use Psr\Cache\InvalidArgumentException;
 use Psr\Clock\ClockInterface;
@@ -19,7 +20,6 @@ use Webauthn\CredentialRecord;
 use Webauthn\Exception\CounterException;
 use Webauthn\PublicKeyCredential;
 use Webauthn\PublicKeyCredentialDescriptor;
-use Webauthn\PublicKeyCredentialRequestOptions;
 use Webauthn\TrustPath\EmptyTrustPath;
 
 /**
@@ -47,13 +47,31 @@ use Webauthn\TrustPath\EmptyTrustPath;
  * failed to advance — the standard defence against a cloned authenticator.
  * This class's only job around that check is to log the rejection with the
  * identifiers an incident response would need; see logRejectedCounter().
+ *
+ * The options AuthenticatorAssertionResponseValidator checks against come
+ * from AssertionOptionsFactory::optionsFor() — the SAME method the options
+ * endpoint uses to build what the browser was shown — rather than a second,
+ * private copy here. AssertionOptionsFactory's own docblock explains why:
+ * two independently written copies of the user-verification requirement
+ * could silently drift apart (#624 Task 10, fix round 1; before this fix
+ * they were byte-identical, an accident waiting to happen).
+ *
+ * verify() FLUSHES explicitly (#624 Task 10, fix round 1). Before this fix
+ * the new counter and lastUsedAt were only ever written because
+ * StampLastLoginOnTokenIssue happens to flush the whole UnitOfWork on
+ * JWTCreatedEvent — an accidental dependency: if that listener ever stopped
+ * flushing, a cloned authenticator's advancing counter would silently stop
+ * being recorded, and CheckCounter's replay defence would quietly go blind.
+ * This class owns the entity it mutates, so it owns persisting the mutation.
  */
 final readonly class AssertionVerifier
 {
     public function __construct(
         private PasskeyChallengeStore $challengeStore,
         private PasskeyCeremony $ceremony,
+        private AssertionOptionsFactory $optionsFactory,
         private UserPasskeyRepository $passkeys,
+        private EntityManagerInterface $em,
         private ClockInterface $clock,
         private LoggerInterface $logger,
     ) {
@@ -73,6 +91,7 @@ final readonly class AssertionVerifier
 
         $newCounter = $this->checkAssertion($storedPasskey, $response, $challenge->challenge);
         $storedPasskey->recordUse($this->nowAsNaiveUtc(), $newCounter);
+        $this->em->flush();
 
         return $storedPasskey;
     }
@@ -143,7 +162,7 @@ final readonly class AssertionVerifier
             $verified = AuthenticatorAssertionResponseValidator::create($this->ceremony->request())->check(
                 $record,
                 $response,
-                $this->optionsFor($challenge),
+                $this->optionsFactory->optionsFor($challenge),
                 $this->ceremony->host(),
                 $userHandle,
             );
@@ -184,16 +203,6 @@ final readonly class AssertionVerifier
             Base64UrlSafe::decodeNoPadding($storedPasskey->getPublicKey()),
             Base64UrlSafe::decodeNoPadding($storedPasskey->getUserHandle()),
             $storedPasskey->getSignatureCounter(),
-        );
-    }
-
-    private function optionsFor(string $challenge): PublicKeyCredentialRequestOptions
-    {
-        return PublicKeyCredentialRequestOptions::create(
-            challenge: $challenge,
-            rpId: $this->ceremony->host(),
-            allowCredentials: [],
-            userVerification: PublicKeyCredentialRequestOptions::USER_VERIFICATION_REQUIREMENT_REQUIRED,
         );
     }
 

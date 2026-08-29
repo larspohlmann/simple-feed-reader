@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Entity\UserPasskey;
 use App\Enum\UserStatus;
 use App\Repository\UserPasskeyRepository;
+use App\Service\Passkey\AssertionOptionsFactory;
 use App\Service\Passkey\AssertionVerifier;
 use App\Service\Passkey\PasskeyCeremony;
 use App\Service\Passkey\PasskeyChallengeStore;
@@ -17,7 +18,9 @@ use App\Tests\Support\PasskeyFixtures;
 use App\Tests\Support\PinsPasskeyRelyingParty;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Monolog\Handler\TestHandler;
+use Monolog\Level;
 use Monolog\Logger;
+use Monolog\LogRecord;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Clock\ClockInterface;
@@ -230,8 +233,7 @@ final class PasskeyLoginTest extends ApiTestCase
         ));
 
         $this->assertRejected($client, 401);
-        self::assertTrue($logSpy->hasWarningThatContains('signature counter did not advance'));
-        $record = $logSpy->getRecords()[0];
+        $record = $this->warningRecordContaining($logSpy, 'signature counter did not advance');
         self::assertSame($this->onlyStoredPasskeyFor($user)->getCredentialId(), $record->context['credentialId']);
         self::assertSame($user->getId(), $record->context['userId']);
     }
@@ -246,6 +248,79 @@ final class PasskeyLoginTest extends ApiTestCase
         $credential = PasskeyFixtures::assertion(self::RELYING_PARTY_ID, self::ORIGIN, $fixture->challenge, $fixture);
 
         $this->login($client, $handle, $this->withTamperedChallenge($credential));
+
+        $this->assertRejected($client, 401);
+    }
+
+    /**
+     * Fix round 1 (#624 Task 10): every OTHER negative case in this suite
+     * trips a ceremony step earlier than CheckSignature — challenge, origin,
+     * rpId, counter and credential-id resolution all short-circuit before
+     * the signature is ever examined. Without this test, dropping
+     * CheckSignature entirely (a library upgrade, a change to
+     * CeremonyStepManagerFactory) would leave the whole suite green while
+     * anyone holding a victim's credential id — stored in plain base64url
+     * and echoed back in every assertion, not a secret — could log in as
+     * them with a garbage signature.
+     *
+     * Verified this actually exercises CheckSignature and nothing earlier:
+     * temporarily removed `new CheckSignature($this->algorithmManager)`
+     * from CeremonyStepManagerFactory::requestCeremony() (vendor code) and
+     * re-ran this file plus AssertionVerifierTest. ONLY this test failed
+     * (200 instead of 401, since a request with a garbage signature was
+     * then accepted); the other 20 tests across both files, including every
+     * other negative case, stayed green. Restored the vendor file
+     * immediately after — see task-10-report.md's "Fix round 1" section for
+     * the full command output.
+     */
+    public function testATamperedSignatureIsRejected(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+        $this->factory()->create('bad-signature@example.test');
+        $fixture = $this->enrol($client, 'bad-signature@example.test');
+        $handle = $this->issueLoginChallenge($fixture->challenge);
+        $credential = PasskeyFixtures::assertion(self::RELYING_PARTY_ID, self::ORIGIN, $fixture->challenge, $fixture);
+
+        $this->login($client, $handle, $this->withTamperedSignature($credential));
+
+        $this->assertRejected($client, 401);
+    }
+
+    /**
+     * AssertionOptionsFactory's own docblock calls user verification "the
+     * only check standing between 'the device is unlocked' and 'this
+     * account is logged in'" for a passkey login — this is the regression
+     * test for that enforcement actually firing on the ASSERTION side (the
+     * registration side already has its own equivalent,
+     * PasskeyRegistrationTest::testAnAttestationWithoutUserVerificationIsRejected).
+     *
+     * Verified load-bearing the same way that sibling test was: temporarily
+     * relaxed AssertionOptionsFactory::optionsFor()'s userVerification to
+     * PREFERRED and re-ran this file plus PasskeyLoginOptionsTest. Both this
+     * test AND PasskeyLoginOptionsTest::testTheOptionsAreIssuedToAnAnonymousCaller
+     * went red — exactly the coupling fix round 1's m1 fix intends:
+     * AssertionOptionsFactory::optionsFor() is now the ONE place this
+     * requirement lives, shared by the options endpoint and the verifier, so
+     * a regression here cannot pass one half and fail the other silently.
+     * Restored immediately after.
+     */
+    public function testAnAssertionWithoutUserVerificationIsRejected(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+        $this->factory()->create('no-uv@example.test');
+        $fixture = $this->enrol($client, 'no-uv@example.test');
+        $handle = $this->issueLoginChallenge($fixture->challenge);
+        $credential = PasskeyFixtures::assertion(
+            self::RELYING_PARTY_ID,
+            self::ORIGIN,
+            $fixture->challenge,
+            $fixture,
+            flags: PasskeyFixtures::FLAG_USER_PRESENT,
+        );
+
+        $this->login($client, $handle, $credential);
 
         $this->assertRejected($client, 401);
     }
@@ -490,18 +565,45 @@ final class PasskeyLoginTest extends ApiTestCase
         );
     }
 
+    /**
+     * Selects the record BY MESSAGE rather than assuming it is the first one
+     * captured — a spy Logger attached to a real container service can see
+     * other log lines (framework noise, other listeners) before the one this
+     * test cares about.
+     */
+    private function warningRecordContaining(TestHandler $logSpy, string $needle): LogRecord
+    {
+        foreach ($logSpy->getRecords() as $record) {
+            if (Level::Warning === $record->level && str_contains($record->message, $needle)) {
+                return $record;
+            }
+        }
+
+        self::fail(\sprintf('No warning log record contains "%s".', $needle));
+    }
+
     private function verifierWithLogger(TestHandler $logSpy): AssertionVerifier
     {
         /** @var PasskeyChallengeStore $challengeStore */
         $challengeStore = self::getContainer()->get(PasskeyChallengeStore::class);
         /** @var PasskeyCeremony $ceremony */
         $ceremony = self::getContainer()->get(PasskeyCeremony::class);
+        /** @var AssertionOptionsFactory $optionsFactory */
+        $optionsFactory = self::getContainer()->get(AssertionOptionsFactory::class);
         /** @var UserPasskeyRepository $passkeys */
         $passkeys = self::getContainer()->get(UserPasskeyRepository::class);
         /** @var ClockInterface $clock */
         $clock = self::getContainer()->get(ClockInterface::class);
 
-        return new AssertionVerifier($challengeStore, $ceremony, $passkeys, $clock, new Logger('test', [$logSpy]));
+        return new AssertionVerifier(
+            $challengeStore,
+            $ceremony,
+            $optionsFactory,
+            $passkeys,
+            $this->em(),
+            $clock,
+            new Logger('test', [$logSpy]),
+        );
     }
 
     /**
@@ -523,8 +625,39 @@ final class PasskeyLoginTest extends ApiTestCase
         return $credential;
     }
 
+    /**
+     * Flips one bit in the signature — enough to make it fail ECDSA
+     * verification while leaving every earlier ceremony step (challenge,
+     * origin, rpId, counter, credential id) untouched, so this is the one
+     * negative case that reaches CheckSignature. See
+     * testATamperedSignatureIsRejected for the removal experiment proving
+     * that.
+     *
+     * @param PasskeyAssertionCredentialPayload $credential
+     *
+     * @return PasskeyAssertionCredentialPayload
+     */
+    private function withTamperedSignature(array $credential): array
+    {
+        $signature = Base64UrlSafe::decodeNoPadding($credential['response']['signature']);
+        $signature[0] = \chr(\ord($signature[0]) ^ 0xFF);
+        $credential['response']['signature'] = Base64UrlSafe::encodeUnpadded($signature);
+
+        return $credential;
+    }
+
+    /**
+     * Clears the identity map first (#624 Task 10, fix round 1): without
+     * this, the repository lookup below is served through the SAME entity
+     * manager that handled the request, so Doctrine hands back the in-memory
+     * mutated UserPasskey whether or not AssertionVerifier::verify() ever
+     * flushed it — this repo's own #556-style trap. Clearing forces the
+     * lookup to hit the database for real.
+     */
     private function onlyStoredPasskeyFor(User $user): UserPasskey
     {
+        $this->em()->clear();
+
         /** @var UserPasskeyRepository $repository */
         $repository = self::getContainer()->get(UserPasskeyRepository::class);
         $stored = $repository->findForUser($user);
