@@ -90,6 +90,28 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         self::assertSame(['Tech'], $this->tagNames($second));
     }
 
+    public function testAddingATagKeepsAnUnrelatedExistingTag(): void
+    {
+        $user = $this->user('bulk-keep-existing@example.com');
+        $news = $this->tag($user, 'News', 0);
+        $tech = $this->tag($user, 'Tech', 1);
+        $subscription = $this->subscription($user, 'https://a.example/feed.xml', $news, 0);
+        $this->em->flush();
+
+        $this->updater->apply(
+            new BulkUpdateSubscriptionsRequest(
+                subscriptionIds: [(int) $subscription->getId()],
+                addTagIds: [(int) $tech->getId()],
+            ),
+            (int) $user->getId(),
+        );
+
+        $this->em->refresh($subscription);
+        $names = $this->tagNames($subscription);
+        sort($names);
+        self::assertSame(['News', 'Tech'], $names, 'A tag not named in the request must survive the bulk update.');
+    }
+
     public function testAFeedThatAlreadyCarriesTheTagKeepsItsPosition(): void
     {
         $user = $this->user('bulk-idempotent@example.com');

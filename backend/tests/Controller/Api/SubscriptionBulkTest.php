@@ -121,6 +121,34 @@ final class SubscriptionBulkTest extends WebTestCase
         }
     }
 
+    public function testTagChangesArePersistedNotJustReturned(): void
+    {
+        $client = self::createClient();
+        $user = $this->user('bulk-endpoint-persist@example.com');
+        $tech = $this->makeTag($user, 'Tech');
+        $subscription = $this->makeSub($user, 'https://persist.example/feed.xml');
+        $this->em()->flush();
+        $subscriptionId = (int) $subscription->getId();
+
+        $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
+            'subscriptionIds' => [$subscriptionId],
+            'addTagIds' => [(int) $tech->getId()],
+        ]);
+
+        self::assertResponseIsSuccessful();
+        $this->em()->clear();
+        $reloaded = $this->em()->getRepository(Subscription::class)->find($subscriptionId);
+        self::assertInstanceOf(Subscription::class, $reloaded);
+        self::assertCount(
+            1,
+            $reloaded->getTags(),
+            'The tag change must be flushed, not only reflected on the response entity.',
+        );
+        $tags = $reloaded->getTags()->toArray();
+        self::assertInstanceOf(Tag::class, $tags[0]);
+        self::assertSame('Tech', $tags[0]->getName());
+    }
+
     public function testSetsAnInclusionFlagInTheSameRequest(): void
     {
         $client = self::createClient();

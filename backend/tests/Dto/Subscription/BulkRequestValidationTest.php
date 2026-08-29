@@ -66,4 +66,11 @@ final class BulkRequestValidationTest extends KernelTestCase
         self::assertCount(0, $this->validator->validate(new BulkUnsubscribeRequest([1])));
         self::assertGreaterThan(0, \count($this->validator->validate(new BulkUnsubscribeRequest($tooMany))));
     }
+
+    public function testAnEmptyUnsubscribeIdListIsRejected(): void
+    {
+        $request = new BulkUnsubscribeRequest([]);
+
+        self::assertGreaterThan(0, \count($this->validator->validate($request)));
+    }
 }
