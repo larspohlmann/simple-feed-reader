@@ -65,3 +65,19 @@
   line-height: var(--lh-tight);
   white-space: nowrap;
 }
+
+/* A count beside a title: the search header's result count and every other
+   list's own count are the same pill (#709), so it lives here for the same
+   reason the mode badges above do. Border-only, the quietest register in the
+   app — a count is read-only, unlike the `--accent-soft` badges above, which
+   mark something the reader can act on. Placement stays with the component:
+   the search count sits inline after the term, every other list's beside the
+   ellipsised heading. */
+.count-pill {
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}

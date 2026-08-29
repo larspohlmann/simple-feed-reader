@@ -54,6 +54,38 @@ describe('PageTitleService', () => {
     expect(title.getTitle()).toBe('simple feed reader');
   });
 
+  it('appends the count of what the page holds', () => {
+    service.useText('The Verge', 4);
+    TestBed.tick();
+
+    expect(title.getTitle()).toBe('The Verge (4) | simple feed reader');
+  });
+
+  it('shows no count for a page with nothing in it', () => {
+    service.useText('The Verge', 0);
+    TestBed.tick();
+
+    expect(title.getTitle()).toBe('The Verge | simple feed reader');
+  });
+
+  it('keeps the count after a long name is cut to what a tab shows', () => {
+    const name = 'A feed name far longer than any browser tab has ever been able to show';
+    service.useText(name, 12);
+    TestBed.tick();
+
+    expect(title.getTitle()).toBe(`${name.slice(0, 60)}… (12) | simple feed reader`);
+  });
+
+  it('drops the count with the name on reset', () => {
+    service.useText('The Verge', 4);
+    TestBed.tick();
+
+    service.reset();
+    TestBed.tick();
+
+    expect(title.getTitle()).toBe('simple feed reader');
+  });
+
   it('does not repeat the product name for a feed that carries it', () => {
     service.useText('simple feed reader');
     TestBed.tick();

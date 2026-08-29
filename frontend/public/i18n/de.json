@@ -695,6 +695,8 @@
     "searchClear": "Suche löschen",
     "searchClose": "Suche schließen",
     "searchCount": "{{count}} Ergebnisse",
+    "titleCountUnread": "{{count}} ungelesen",
+    "titleCountItems": "{{count}} Beiträge",
     "searchWholeWord": "Ganze Wörter",
     "searchWholeWordShort": "W",
     "searchWholeWordHint": "Ein Leerzeichen am Ende sucht nur nach ganzen Wörtern. Entfernen Sie es, um den Text an beliebiger Stelle in einem Wort zu suchen.",

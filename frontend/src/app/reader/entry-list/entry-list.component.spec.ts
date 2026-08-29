@@ -337,6 +337,68 @@ describe('EntryListComponent', () => {
     });
   });
 
+  // The heading says how much the list holds, the same number the sidebar row
+  // beside it shows (#709). The shell resolves it once and hands it down; this
+  // list only renders it.
+  describe('the list count (#709)', () => {
+    it('shows how much the list holds beside its name', () => {
+      const el = mount({ titleCount: { value: 12, counts: 'unread' } })
+        .nativeElement as HTMLElement;
+
+      expect(el.querySelector('.list-header .title-count')?.textContent?.trim()).toBe('12');
+    });
+
+    it('shows no count for a list with nothing in it', () => {
+      const el = mount({ titleCount: { value: 0, counts: 'unread' } }).nativeElement as HTMLElement;
+
+      expect(el.querySelector('.list-header .title-count')).toBeNull();
+    });
+
+    // Outside the h2, beside it: the h2 ellipsises, so a long feed name would
+    // clip the count away — the same arrangement the whole-word badge uses.
+    it('keeps the count out of the ellipsised title so a long name cannot clip it', () => {
+      const el = mount({
+        title: 'A feed name far longer than this header has ever been able to show',
+        titleCount: { value: 12, counts: 'unread' },
+      }).nativeElement as HTMLElement;
+
+      expect(el.querySelector('.list-header h2 .title-count')).toBeNull();
+      expect(el.querySelector('.list-header .title-row > .title-count')).not.toBeNull();
+    });
+
+    // The visible pill is a bare number; on its own it would announce as one.
+    // The heading carries the phrase instead, so heading navigation hears what
+    // the number counts.
+    it('names an unread count in the heading for a screen reader', () => {
+      const el = mount({ titleCount: { value: 12, counts: 'unread' } })
+        .nativeElement as HTMLElement;
+
+      expect(el.querySelector('.list-header h2 .sr-only')?.textContent).toContain('12 unread');
+    });
+
+    it('names an item count where the list counts items rather than unread', () => {
+      const el = mount({
+        selection: { kind: 'kept', id: null, unread: false },
+        titleCount: { value: 3, counts: 'items' },
+      }).nativeElement as HTMLElement;
+
+      expect(el.querySelector('.list-header h2 .sr-only')?.textContent).toContain('3 items');
+    });
+
+    it('leaves a search the result count it already carries, and adds no second one', () => {
+      const el = mount({
+        selection: { kind: 'search', id: null, unread: false, term: 'punk' },
+        searchTitlePrefix: 'Results for',
+        searchTitleTerm: '"punk"',
+        searchCountLabel: '2',
+        titleCount: { value: 12, counts: 'unread' },
+      }).nativeElement as HTMLElement;
+
+      expect(el.querySelector('.list-header .title-count')).toBeNull();
+      expect(el.querySelector('.list-header .results-count')?.textContent).toBe('2');
+    });
+  });
+
   // A tag's heading carries the same glyph and colour its sidebar row does, so
   // the list a reader lands in is recognisably the tag they clicked.
   describe('the tag heading', () => {
