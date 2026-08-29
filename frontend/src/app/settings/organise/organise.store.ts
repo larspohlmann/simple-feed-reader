@@ -1,6 +1,6 @@
 // src/app/settings/organise/organise.store.ts
 import { Injectable, Signal, computed, inject, signal } from '@angular/core';
-import { SubscriptionsStore } from '../../reader/subscriptions.store';
+import { SubscriptionsStore, untaggedSubs } from '../../reader/subscriptions.store';
 import { TagsStore } from '../../reader/tags.store';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 
@@ -40,10 +40,12 @@ function readExpanded(): ReadonlySet<GroupKey> {
 /**
  * The feeds carrying one tag, in that tag's own order.
  *
- * `buildTagTree` in subscriptions.store.ts sorts the same way, but it drops a
- * tag that has no feeds and computes unread counts. This page shows every tag,
- * including the empty ones, and shows no unread count — so it sorts here rather
- * than bending that function to two callers.
+ * `buildTagTree` in subscriptions.store.ts sorts the same way and also
+ * computes unread counts this page has no use for, so it sorts here rather
+ * than bending that function to two callers. Both build their tag NODES from
+ * the full tag list (every tag shows, empty ones included) — `buildTagTree`
+ * drops a tag only in its no-`orderedTags` fallback, which this page's
+ * `tags()` signal never hits.
  */
 function feedsInTag(subscriptions: SubscriptionDto[], tagId: number): SubscriptionDto[] {
   const position = (s: SubscriptionDto): number =>
@@ -52,10 +54,6 @@ function feedsInTag(subscriptions: SubscriptionDto[], tagId: number): Subscripti
   return subscriptions
     .filter((s) => s.tags.some((t) => t.id === tagId))
     .sort((a, b) => position(a) - position(b));
-}
-
-function untaggedFeeds(subscriptions: SubscriptionDto[]): SubscriptionDto[] {
-  return subscriptions.filter((s) => s.tags.length === 0).sort((a, b) => a.position - b.position);
 }
 
 /**
@@ -116,8 +114,8 @@ export class OrganiseStore {
       {
         key: 'untagged',
         tag: null,
-        subscriptions: untaggedFeeds(visible),
-        totalCount: untaggedFeeds(all).length,
+        subscriptions: untaggedSubs(visible),
+        totalCount: untaggedSubs(all).length,
       },
     ];
 
