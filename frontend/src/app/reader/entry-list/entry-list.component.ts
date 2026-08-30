@@ -404,9 +404,8 @@ export class EntryListComponent implements OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
   private readonly magazineStyle = inject(MagazineStyleService);
 
-  /** Mirrors when `.rows.magazine.airy` renders, so `.list-header` can gate on
-   *  it too. Style first: computeds track dynamically, so a boxed account never
-   *  takes a dependency on `entries()` at all (#723). */
+  /** Gates `.rows.magazine.airy`. Style first: computeds track dynamically, so
+   *  a boxed account never takes a dependency on `entries()` at all (#723). */
   protected readonly isAiryMagazine = computed(
     () =>
       this.magazineStyle.style() === 'airy' &&
