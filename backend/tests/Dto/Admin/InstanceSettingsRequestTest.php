@@ -41,4 +41,17 @@ final class InstanceSettingsRequestTest extends TestCase
         self::assertCount(0, $this->validator->validate($atLimit));
         self::assertGreaterThan(0, \count($this->validator->validate($overLimit)));
     }
+
+    /**
+     * #624 follow-up, addendum: a `PUT` that omits `passkeySignInEnabled`
+     * must reset it to `false`, not silently keep the toggle on — see this
+     * class's own docblock on the full-replace contract.
+     */
+    public function testPasskeySignInEnabledDefaultsToFalseAndForwardsToTheUpdate(): void
+    {
+        $request = new InstanceSettingsRequest();
+
+        self::assertFalse($request->passkeySignInEnabled);
+        self::assertFalse($request->toUpdate()->passkeySignInEnabled);
+    }
 }

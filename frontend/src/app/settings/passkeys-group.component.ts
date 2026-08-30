@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { catchError, of } from 'rxjs';
 import { AuthService } from '../core/auth.service';
 import { LanguageService } from '../core/language.service';
 import { toEnrolFailureProblem } from '../core/passkey-enrol-failure';
@@ -87,9 +88,17 @@ export class PasskeysGroupComponent {
 
   constructor() {
     if (!this.isSupported) return;
-    this.setup.ensureLoaded().subscribe(() => {
-      if (this.visible()) this.refresh();
-    });
+    // catchError mirrors setupRedirectGuard/requireSetupGuard's own handling
+    // of this exact observable (fix round 1) -- an uncaught failure here
+    // would otherwise throw on every Settings visit rather than just
+    // leaving the group hidden the way a `false`/null availability already
+    // does.
+    this.setup
+      .ensureLoaded()
+      .pipe(catchError(() => of(false)))
+      .subscribe(() => {
+        if (this.visible()) this.refresh();
+      });
   }
 
   /** One row's meta line: when it was added, and when it was last used -- or

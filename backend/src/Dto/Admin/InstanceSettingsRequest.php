@@ -10,10 +10,10 @@ use Symfony\Component\Validator\Constraints as Assert;
 /**
  * This is a full-replace payload, not a partial patch. `#[MapRequestPayload]`
  * fills any field missing from the request body with the constructor default
- * (every boolean, including `passkeySignInEnabled`, defaults to `true`, the
- * URL and both relying-party fields to `null`), so a `PUT` that sends only one
- * field silently resets the others. Clients must always send every field
- * together.
+ * (`requireEmailConfirmation` and `requireApproval` default to `true`,
+ * `passkeySignInEnabled` to `false`, the URL and both relying-party fields to
+ * `null`), so a `PUT` that sends only one field silently resets the others.
+ * Clients must always send every field together.
  *
  * `publicBaseUrl` is null when the admin clears it — the client sends `null`,
  * not an empty string — which restores the APP_FRONTEND_URL fallback.
@@ -24,7 +24,10 @@ use Symfony\Component\Validator\Constraints as Assert;
  * {@see \App\Service\Passkey\PasskeySignInAvailability} reads alongside the
  * relying-party validity check — turning it off refuses every passkey
  * endpoint (registration, listing, login) regardless of configuration,
- * without touching a single stored credential.
+ * without touching a single stored credential. Defaults to `false` (#624
+ * follow-up, addendum): see {@see \App\Entity\InstanceSetting}'s
+ * `$passkeySignInEnabled` docblock for the full list of five places this
+ * default has to agree.
  *
  * `invalidateExistingPasskeys` is NOT a setting — it is not part of
  * InstanceSettingsUpdate and is never persisted. It is a one-shot command
@@ -50,7 +53,7 @@ final readonly class InstanceSettingsRequest
         public bool $invalidateExistingPasskeys = false,
         #[Assert\NotNull]
         #[Assert\Type('bool')]
-        public bool $passkeySignInEnabled = true,
+        public bool $passkeySignInEnabled = false,
     ) {
     }
 

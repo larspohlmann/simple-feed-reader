@@ -43,6 +43,29 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
  * it, and doing so carries no sign-in risk. The login path itself has no
  * controller action to guard; see AssertionVerifier::verify() for the
  * equivalent enforcement on that side.
+ *
+ * A narrowing worth knowing (review, fix round 1): DELETE only helps a user
+ * with a SECOND sign-in method. Every route here needs a bearer token, and a
+ * passkey-only account — no password, no linked OAuth identity — has no way
+ * to obtain one while sign-in is disabled, since AssertionVerifier's own
+ * guard refuses the login that would mint that token. That account cannot
+ * reach `delete()` either, and stays stuck until an admin re-enables the
+ * toggle. The exemption still stands — it costs nothing and helps everyone
+ * it can reach — it just does not reach everyone who might want it.
+ *
+ * REVIEWER NOTE, worth reading before adding a seventh passkey endpoint: the
+ * guard is written out FIVE separate times across this codebase —
+ * `registerOptions()`, `register()`, `list()`, `loginOptions()` here, plus
+ * `AssertionVerifier::verify()` for the login path — with `delete()`
+ * deliberately left out. That per-call-site repetition is the honest
+ * encoding given the one intentional exemption; a single shared "every
+ * passkey action" wrapper would either have to special-case DELETE anyway or
+ * silently start guarding it. But it also means nothing enforces the list —
+ * a new endpoint that forgets to call `$availability->guard()` (or
+ * `AssertionVerifier`'s, if it bypasses the controller) fails open, not
+ * closed. Check this docblock's own count against the endpoint table in
+ * `docs/superpowers/specs/2026-08-29-624-passkey-login-design.md` §4.2 when
+ * adding one.
  */
 final readonly class PasskeyController
 {
@@ -72,12 +95,20 @@ final readonly class PasskeyController
      * budget (`passkey_challenge` in rate_limiter.yaml) because conditional
      * mediation calls this on every login-page view, from every visitor, and
      * each call writes a cache entry.
+     *
+     * The limiter runs BEFORE the availability guard, deliberately (fix
+     * round 1): swapping the order would let an anonymous caller hammer this
+     * endpoint — which still touches the database on every call — for free
+     * on a disabled instance, since a 403 would fire before any budget was
+     * ever charged. Charging the limiter first means a disabled instance
+     * still 429s an attacker who exceeds the budget, exactly like an enabled
+     * one does.
      */
     #[Route('/api/auth/passkey/login/options', name: 'api_auth_passkey_login_options', methods: ['POST'])]
     public function loginOptions(Request $request): JsonResponse
     {
-        $this->availability->guard();
         $this->rateLimitGuard->enforceForClient($this->passkeyChallengeLimiter, $request);
+        $this->availability->guard();
 
         return new JsonResponse($this->assertionOptionsFactory->create());
     }

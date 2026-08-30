@@ -11,6 +11,7 @@ use App\Service\Passkey\PasskeyChallengeStore;
 use App\Service\Settings\InstanceSettings;
 use App\Service\Settings\InstanceSettingsUpdate;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\TogglesPasskeySignIn;
 use App\Tests\Support\PasskeyAttestationFixture;
 use App\Tests\Support\PasskeyFixtures;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -47,6 +48,8 @@ use Symfony\Component\Clock\MockClock;
  */
 final class PasskeyRegistrationTest extends ApiTestCase
 {
+    use TogglesPasskeySignIn;
+
     public function testTheOptionsCarryTheRelyingPartyAndRequireUserVerification(): void
     {
         $client = static::createClient();
@@ -75,7 +78,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
     public function testRegisterOptionsRefusesWhenPasskeySignInIsDisabled(): void
     {
         $client = static::createClient();
-        $this->pinRelyingParty('example.test', 'Example Reader', passkeySignInEnabled: false);
+        $this->disablePasskeySignIn();
         $this->factory()->create('disabled-options@example.test');
         $this->authenticate($client, 'disabled-options@example.test');
 
@@ -88,7 +91,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
     public function testRegisterRefusesWhenPasskeySignInIsDisabled(): void
     {
         $client = static::createClient();
-        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test', passkeySignInEnabled: false);
+        $this->disablePasskeySignIn();
         $this->factory()->create('disabled-register@example.test');
         $this->authenticate($client, 'disabled-register@example.test');
 
@@ -153,6 +156,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $user = $this->factory()->create('enroller@example.test');
         $this->givenAPasskeyFor($user, credentialId: 'Y3JlZC1hYmM');
         $this->authenticate($client, 'enroller@example.test');
+        $this->enablePasskeySignIn();
 
         $client->request('POST', '/api/auth/passkey/register/options');
 
@@ -679,12 +683,18 @@ final class PasskeyRegistrationTest extends ApiTestCase
      * above, which never validate an attestation against it. Every
      * completion test below passes an explicit value, per this class's
      * docblock.
+     *
+     * Always leaves passkey sign-in ON (fix round 1): a boolean flag
+     * parameter here would be a second one on a helper CLAUDE.md's house
+     * style caps at three params, and every disabled-instance scenario in
+     * this file short-circuits on PasskeySignInAvailability::guard() before
+     * ever reaching the relying party this method pins — so those scenarios
+     * use the separate TogglesPasskeySignIn trait instead of this method.
      */
     private function pinRelyingParty(
         string $relyingPartyId,
         string $relyingPartyName,
         ?string $publicBaseUrl = null,
-        bool $passkeySignInEnabled = true,
     ): void {
         /** @var InstanceSettings $settings */
         $settings = self::getContainer()->get(InstanceSettings::class);
@@ -694,7 +704,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
             publicBaseUrl: $publicBaseUrl,
             passkeyRpId: $relyingPartyId,
             passkeyRpName: $relyingPartyName,
-            passkeySignInEnabled: $passkeySignInEnabled,
+            passkeySignInEnabled: true,
         ));
     }
 

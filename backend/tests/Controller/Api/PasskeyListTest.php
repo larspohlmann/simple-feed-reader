@@ -7,9 +7,8 @@ namespace App\Tests\Controller\Api;
 use App\Entity\User;
 use App\Entity\UserPasskey;
 use App\Repository\UserPasskeyRepository;
-use App\Service\Settings\InstanceSettings;
-use App\Service\Settings\InstanceSettingsUpdate;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\TogglesPasskeySignIn;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
@@ -22,6 +21,8 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
  */
 final class PasskeyListTest extends ApiTestCase
 {
+    use TogglesPasskeySignIn;
+
     /**
      * Pinned as its own test so a future addition to PasskeyJson::passkey()
      * cannot silently widen the payload — the public key, the credential id
@@ -33,6 +34,7 @@ final class PasskeyListTest extends ApiTestCase
         $user = $this->factory()->create('lister@example.test');
         $this->givenAPasskeyFor($user, credentialId: 'Y3JlZC1hYmM', label: 'My phone');
         $this->authenticate($client, 'lister@example.test');
+        $this->enablePasskeySignIn();
 
         $client->request('GET', '/api/auth/passkeys');
 
@@ -53,6 +55,7 @@ final class PasskeyListTest extends ApiTestCase
         $caller = $this->factory()->create('caller@example.test');
         $this->givenAPasskeyFor($caller, credentialId: 'Y2FsbGVyLWNyZWQ');
         $this->authenticate($client, 'caller@example.test');
+        $this->enablePasskeySignIn();
 
         $client->request('GET', '/api/auth/passkeys');
 
@@ -164,20 +167,6 @@ final class PasskeyListTest extends ApiTestCase
         $client->request('DELETE', \sprintf('/api/auth/passkeys/%d', (int) $toDelete->getId()));
 
         self::assertResponseStatusCodeSame(204);
-    }
-
-    private function disablePasskeySignIn(): void
-    {
-        /** @var InstanceSettings $settings */
-        $settings = self::getContainer()->get(InstanceSettings::class);
-        $settings->update(new InstanceSettingsUpdate(
-            requireEmailConfirmation: true,
-            requireApproval: true,
-            publicBaseUrl: null,
-            passkeyRpId: null,
-            passkeyRpName: null,
-            passkeySignInEnabled: false,
-        ));
     }
 
     /** Attaches a bearer token to every subsequent request this client makes. */

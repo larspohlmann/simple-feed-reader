@@ -46,9 +46,15 @@ final readonly class InstanceSettings
         return $this->repository->findSingleton()?->getPasskeyRpName();
     }
 
+    /**
+     * `?? false`, not `?? true` like the two gates above (#624 follow-up,
+     * addendum): the no-row case must agree with the column's own DEFAULT,
+     * and both now say "off". See InstanceSetting::$passkeySignInEnabled's
+     * docblock for the full list of five places this default has to match.
+     */
     public function passkeySignInEnabled(): bool
     {
-        return $this->repository->findSingleton()?->passkeySignInEnabled() ?? true;
+        return $this->repository->findSingleton()?->passkeySignInEnabled() ?? false;
     }
 
     public function update(InstanceSettingsUpdate $update): void

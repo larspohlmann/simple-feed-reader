@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Passkey;
 
 use App\Service\Passkey\Exception\PasskeySignInDisabledException;
+use App\Service\Settings\EffectivePasskeyRelyingPartyId;
 use App\Service\Settings\InstanceSettings;
 use App\Service\Settings\PasskeyRelyingParty;
 use App\Service\Settings\PublicBaseUrl;
@@ -36,6 +37,7 @@ final readonly class PasskeySignInAvailability
         private PublicBaseUrl $publicBaseUrl,
         private PasskeyRelyingParty $relyingParty,
         private RelyingPartyIdRule $relyingPartyIdRule,
+        private EffectivePasskeyRelyingPartyId $effectiveId,
     ) {
     }
 
@@ -45,9 +47,22 @@ final readonly class PasskeySignInAvailability
             return false;
         }
 
-        $host = parse_url($this->publicBaseUrl->get(), PHP_URL_HOST);
+        return $this->relyingPartyIdRule->isValidForHost($this->relyingParty->id(), $this->host());
+    }
 
-        return \is_string($host) && $this->relyingPartyIdRule->isValidForHost($this->relyingParty->id(), $host);
+    /**
+     * The public base URL's host, without a scheme or path — the same
+     * `parse_url(..., PHP_URL_HOST)` fallback RelyingPartyChange and
+     * ConfiguredPasskeyRelyingParty both already need, so it lives in
+     * EffectivePasskeyRelyingPartyId rather than a fourth copy here (fix
+     * round 1). Passing `null` as the "configured id" forces derive() into
+     * its host-fallback branch — the exact thing this method wants — and an
+     * unparseable URL degrades to `''`, which RelyingPartyIdRule::
+     * isValidForHost() already refuses for any real relying-party id.
+     */
+    private function host(): string
+    {
+        return $this->effectiveId->derive(null, $this->publicBaseUrl->get());
     }
 
     /**

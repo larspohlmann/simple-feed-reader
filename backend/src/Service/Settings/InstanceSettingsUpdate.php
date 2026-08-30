@@ -19,12 +19,16 @@ final readonly class InstanceSettingsUpdate
         public ?string $publicBaseUrl,
         public ?string $passkeyRpId,
         public ?string $passkeyRpName,
-        // Defaulted, unlike the fields above: every existing call site in
-        // this codebase — and the many test fixtures constructing this with
-        // positional arguments — predates the toggle and is entitled to keep
-        // meaning "passkeys stay on", the same default InstanceSetting itself
-        // ships with.
-        public bool $passkeySignInEnabled = true,
+        // Defaulted, unlike the fields above, purely so the many pre-#624
+        // call sites that never mention passkeys at all can keep using
+        // positional/partial construction. `false` (#624 follow-up,
+        // addendum) matches InstanceSetting::$passkeySignInEnabled's own
+        // default — see that property's docblock for the full list of five
+        // places this has to agree. A test that wants a WORKING passkey
+        // configuration (PinsPasskeyRelyingParty, for one) must now pass
+        // `passkeySignInEnabled: true` explicitly; it can no longer ride
+        // this default the way it could when the default was `true`.
+        public bool $passkeySignInEnabled = false,
     ) {
     }
 }

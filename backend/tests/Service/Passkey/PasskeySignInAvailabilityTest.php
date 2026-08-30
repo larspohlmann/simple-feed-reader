@@ -7,12 +7,14 @@ namespace App\Tests\Service\Passkey;
 use App\Entity\UserPasskey;
 use App\Service\Passkey\Exception\PasskeySignInDisabledException;
 use App\Service\Passkey\PasskeySignInAvailability;
+use App\Service\Settings\EffectivePasskeyRelyingPartyId;
 use App\Service\Settings\InstanceSettings;
 use App\Service\Settings\InstanceSettingsUpdate;
 use App\Service\Settings\PasskeyRelyingParty;
 use App\Service\Settings\PublicBaseUrl;
 use App\Service\Settings\RelyingPartyIdRule;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\TogglesPasskeySignIn;
 use App\Tests\Support\FixedPublicBaseUrl;
 
 /**
@@ -28,6 +30,8 @@ use App\Tests\Support\FixedPublicBaseUrl;
  */
 final class PasskeySignInAvailabilityTest extends ApiTestCase
 {
+    use TogglesPasskeySignIn;
+
     private InstanceSettings $settings;
 
     protected function setUp(): void
@@ -37,8 +41,21 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
         $this->settings = self::getContainer()->get(InstanceSettings::class);
     }
 
-    public function testAvailableByDefault(): void
+    /**
+     * Off by default (#624 follow-up, addendum): a fresh instance with no
+     * row, and no explicit enable call, must read as unavailable even with a
+     * perfectly valid relying party.
+     */
+    public function testUnavailableByDefault(): void
     {
+        $availability = $this->availabilityFor('example.test', 'https://example.test');
+
+        self::assertFalse($availability->isAvailable());
+    }
+
+    public function testAvailableOnceEnabledWithAValidRelyingParty(): void
+    {
+        $this->enablePasskeySignIn();
         $availability = $this->availabilityFor('example.test', 'https://example.test');
 
         self::assertTrue($availability->isAvailable());
@@ -46,14 +63,7 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
 
     public function testUnavailableWhenTheToggleIsOff(): void
     {
-        $this->settings->update(new InstanceSettingsUpdate(
-            requireEmailConfirmation: true,
-            requireApproval: true,
-            publicBaseUrl: null,
-            passkeyRpId: null,
-            passkeyRpName: null,
-            passkeySignInEnabled: false,
-        ));
+        $this->disablePasskeySignIn();
         $availability = $this->availabilityFor('example.test', 'https://example.test');
 
         self::assertFalse($availability->isAvailable());
@@ -62,6 +72,7 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
     /** The toggle is on, but the configured relying-party id fails the suffix rule. */
     public function testUnavailableWhenTheRelyingPartyIdIsNotValidForTheHost(): void
     {
+        $this->enablePasskeySignIn();
         $availability = $this->availabilityFor('evil.test', 'https://example.test');
 
         self::assertFalse($availability->isAvailable());
@@ -73,6 +84,7 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
      */
     public function testTheAnswerNeverVariesWithHowManyCredentialsOrAccountsExist(): void
     {
+        $this->enablePasskeySignIn();
         $availability = $this->availabilityFor('example.test', 'https://example.test');
         self::assertTrue($availability->isAvailable());
 
@@ -96,6 +108,7 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
 
     public function testGuardIsANoOpWhenAvailable(): void
     {
+        $this->enablePasskeySignIn();
         $availability = $this->availabilityFor('example.test', 'https://example.test');
         $this->expectNotToPerformAssertions();
 
@@ -104,19 +117,28 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
 
     public function testGuardThrowsWhenUnavailable(): void
     {
+        $this->disablePasskeySignIn();
+        $availability = $this->availabilityFor('example.test', 'https://example.test');
+
+        $this->expectException(PasskeySignInDisabledException::class);
+
+        $availability->guard();
+    }
+
+    /** The mirror of TogglesPasskeySignIn's trait method, local to this file:
+     *  no other suite needs "toggle on, everything else default" as its own
+     *  reusable step, so this one stays private rather than becoming a
+     *  second Support trait for a single caller. */
+    private function enablePasskeySignIn(): void
+    {
         $this->settings->update(new InstanceSettingsUpdate(
             requireEmailConfirmation: true,
             requireApproval: true,
             publicBaseUrl: null,
             passkeyRpId: null,
             passkeyRpName: null,
-            passkeySignInEnabled: false,
+            passkeySignInEnabled: true,
         ));
-        $availability = $this->availabilityFor('example.test', 'https://example.test');
-
-        $this->expectException(PasskeySignInDisabledException::class);
-
-        $availability->guard();
     }
 
     private function availabilityFor(string $relyingPartyId, string $publicBaseUrl): PasskeySignInAvailability
@@ -126,6 +148,7 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
             new FixedPublicBaseUrl($publicBaseUrl),
             $this->relyingPartyOf($relyingPartyId),
             new RelyingPartyIdRule(),
+            new EffectivePasskeyRelyingPartyId(),
         );
     }
 

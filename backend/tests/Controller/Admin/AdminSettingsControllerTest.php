@@ -109,12 +109,20 @@ final class AdminSettingsControllerTest extends ApiTestCase
                 'passkeyRpName' => null,
                 // Derived from APP_FRONTEND_URL (http://localhost:4200) in the test env.
                 'passkeyRpIdEffective' => 'localhost',
-                'passkeySignInEnabled' => true,
+                // Off by default (#624 follow-up, addendum): a fresh install
+                // ships with passkey sign-in invisible until an admin opts in.
+                'passkeySignInEnabled' => false,
             ],
             $this->payload($client),
         );
     }
 
+    /**
+     * The PUT body below omits passkeySignInEnabled on purpose: this is a
+     * full-replace payload (InstanceSettingsRequest's own docblock), so the
+     * missing field resets to the constructor default — false (#624
+     * follow-up, addendum) — same as every other omitted field here.
+     */
     public function testPutUpdatesTheToggles(): void
     {
         $client = $this->adminClient();
@@ -135,7 +143,7 @@ final class AdminSettingsControllerTest extends ApiTestCase
                 'passkeyRpId' => null,
                 'passkeyRpName' => null,
                 'passkeyRpIdEffective' => 'localhost',
-                'passkeySignInEnabled' => true,
+                'passkeySignInEnabled' => false,
             ],
             $this->payload($client),
         );
@@ -152,7 +160,7 @@ final class AdminSettingsControllerTest extends ApiTestCase
                 'passkeyRpId' => null,
                 'passkeyRpName' => null,
                 'passkeyRpIdEffective' => 'localhost',
-                'passkeySignInEnabled' => true,
+                'passkeySignInEnabled' => false,
             ],
             $this->payload($client),
         );
@@ -383,28 +391,30 @@ final class AdminSettingsControllerTest extends ApiTestCase
     }
 
     /**
-     * The instance-wide passkey sign-in switch (#624 follow-up): defaults to
-     * true, and a PUT that turns it off round-trips on the next GET.
+     * The instance-wide passkey sign-in switch (#624 follow-up, addendum):
+     * off by default — a fresh install ships with the feature invisible
+     * until an admin opts in — and a PUT that turns it on round-trips on the
+     * next GET.
      */
-    public function testPasskeySignInEnabledDefaultsToTrueAndRoundTrips(): void
+    public function testPasskeySignInEnabledDefaultsToFalseAndRoundTrips(): void
     {
         $client = $this->adminClient();
 
         $client->request('GET', self::SETTINGS);
-        self::assertTrue($this->payload($client)['passkeySignInEnabled']);
+        self::assertFalse($this->payload($client)['passkeySignInEnabled']);
 
         $client->jsonRequest('PUT', self::SETTINGS, [
             'requireEmailConfirmation' => true,
             'requireApproval' => true,
             'publicBaseUrl' => null,
-            'passkeySignInEnabled' => false,
+            'passkeySignInEnabled' => true,
         ]);
 
         self::assertResponseIsSuccessful();
-        self::assertFalse($this->payload($client)['passkeySignInEnabled']);
+        self::assertTrue($this->payload($client)['passkeySignInEnabled']);
 
         $client->request('GET', self::SETTINGS);
-        self::assertFalse($this->payload($client)['passkeySignInEnabled']);
+        self::assertTrue($this->payload($client)['passkeySignInEnabled']);
     }
 
     public function testPasskeyRpIdEffectiveReflectsTheStoredOverrideOrTheDerivedHost(): void

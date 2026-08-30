@@ -61,16 +61,20 @@ export class LoginComponent implements OnInit, OnDestroy {
    * the browser has to understand WebAuthn AND this instance has to be able
    * to complete the ceremony -- toggled on, with a valid relying party. The
    * second half comes from `SetupService.passkeySignInAvailable`, fetched
-   * alongside `mailEnabled` by the same `/api/setup/status` call
-   * `setupRedirectGuard` already runs before this route activates.
+   * alongside `mailEnabled` by the same `/api/setup/status` call.
    *
-   * `!== false` fails OPEN, mirroring `mailEnabled`'s own convention just
-   * below rather than `AiAvailabilityService`'s fail-CLOSED one: this is the
-   * same page, reading the same endpoint, through the same guard, so it
-   * follows the local precedent instead of introducing a second philosophy.
-   * The guard has normally already resolved the flag by the time this
-   * component renders, so "unknown" is a transient state in practice, not a
-   * steady one to design defensively around.
+   * `!== false` fails OPEN (fix round 1, sharpened): NOT because "unknown"
+   * is merely rare here, but because `setupRedirectGuard` (`setup.guard.ts`)
+   * always resolves `ensureLoaded()` -- and so this signal -- BEFORE the
+   * login route is allowed to activate. By the time this component exists,
+   * the value is either `true`, `false`, or `null` because the status call
+   * itself already failed (the guard's own `catchError` lets navigation
+   * through regardless). So `null` here is never "still loading" -- it is
+   * specifically "the server didn't answer", the same failure `mailEnabled`
+   * already treats as fail-open just below, for the same reason: showing a
+   * button that then 403s on click is no worse than the network failure the
+   * visitor is already having, and hiding a real feature because one status
+   * call hiccuped would be worse.
    */
   protected readonly passkeyOfferedHere = computed(
     () => this.passkeySupported && this.setup.passkeySignInAvailable() !== false,

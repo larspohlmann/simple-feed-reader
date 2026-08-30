@@ -29,16 +29,24 @@ final class InstanceSettingsTest extends KernelTestCase
     }
 
     /**
-     * Deliberately true: the relying party derives correctly with no
-     * configuration at all, so passkey sign-in works out of the box, and
-     * defaulting it off would silently suppress the first-login enrolment
-     * offer this branch exists to deliver (#624 follow-up).
+     * Deliberately false (#624 follow-up, addendum — the product owner
+     * reversed the original `true` default): "activated" should mean
+     * activated, so a fresh install ships with passkey sign-in invisible
+     * until an admin opts in, even though the relying party would derive
+     * correctly with no configuration at all.
      */
-    public function testPasskeySignInDefaultsToEnabledWhenNoRowExists(): void
+    public function testPasskeySignInDefaultsToDisabledWhenNoRowExists(): void
     {
-        self::assertTrue($this->settings->passkeySignInEnabled());
+        self::assertFalse($this->settings->passkeySignInEnabled());
     }
 
+    /**
+     * Sets it to TRUE and reads TRUE back, deliberately — not false: the
+     * no-row default is ALSO false now, so a round trip that merely sets and
+     * reads false back would pass even if update()/apply() silently did
+     * nothing at all. Setting the non-default value is what actually proves
+     * persistence.
+     */
     public function testPasskeySignInEnabledRoundTrips(): void
     {
         $this->settings->update(new InstanceSettingsUpdate(
@@ -47,11 +55,11 @@ final class InstanceSettingsTest extends KernelTestCase
             publicBaseUrl: null,
             passkeyRpId: null,
             passkeyRpName: null,
-            passkeySignInEnabled: false,
+            passkeySignInEnabled: true,
         ));
         $this->em->clear();
 
-        self::assertFalse($this->settings->passkeySignInEnabled());
+        self::assertTrue($this->settings->passkeySignInEnabled());
     }
 
     public function testUpdatePersistsAndIsReadBack(): void

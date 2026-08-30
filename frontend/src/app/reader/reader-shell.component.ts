@@ -14,6 +14,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink, convertToParamMap } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { catchError, of } from 'rxjs';
 import { Dialog } from '@angular/cdk/dialog';
 import { AuthService } from '../core/auth.service';
 import { PageTitleService } from '../core/page-title.service';
@@ -564,9 +565,16 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     // triggers that fetch here. Gated on isPasskeySupported() first: false
     // for nearly every test in this suite (jsdom carries no
     // PublicKeyCredential), and a browser that cannot run the ceremony at all
-    // has no use for the answer regardless.
+    // has no use for the answer regardless. catchError mirrors
+    // setupRedirectGuard/requireSetupGuard's own handling of this exact
+    // observable (fix round 1) -- an uncaught failure here would otherwise
+    // throw on reader boot, a hot path, rather than just leaving the offer
+    // unavailable the way a `false`/null availability already does.
     if (isPasskeySupported()) {
-      this.setup.ensureLoaded().subscribe();
+      this.setup
+        .ensureLoaded()
+        .pipe(catchError(() => of(false)))
+        .subscribe();
     }
     // Reload the list and sidebar counts whenever the selection (not the open
     // entry) changes. A new list has no removed rows, so clear the collapsed set

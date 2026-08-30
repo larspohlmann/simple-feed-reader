@@ -14,9 +14,8 @@ use App\Service\Passkey\NaiveUtcClock;
 use App\Service\Passkey\PasskeyCeremony;
 use App\Service\Passkey\PasskeyChallengeStore;
 use App\Service\Passkey\PasskeySignInAvailability;
-use App\Service\Settings\InstanceSettings;
-use App\Service\Settings\InstanceSettingsUpdate;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\TogglesPasskeySignIn;
 use App\Tests\Support\PasskeyAttestationFixture;
 use App\Tests\Support\PasskeyFixtures;
 use App\Tests\Support\PinsPasskeyRelyingParty;
@@ -49,6 +48,7 @@ use Symfony\Component\Clock\MockClock;
  */
 final class PasskeyLoginTest extends ApiTestCase
 {
+    use TogglesPasskeySignIn;
     use PinsPasskeyRelyingParty;
 
     private const string RELYING_PARTY_ID = 'example.test';
@@ -528,20 +528,6 @@ final class PasskeyLoginTest extends ApiTestCase
     }
 
     // -- Setup helpers -------------------------------------------------
-
-    private function disablePasskeySignIn(): void
-    {
-        /** @var InstanceSettings $settings */
-        $settings = self::getContainer()->get(InstanceSettings::class);
-        $settings->update(new InstanceSettingsUpdate(
-            requireEmailConfirmation: true,
-            requireApproval: true,
-            publicBaseUrl: self::ORIGIN,
-            passkeyRpId: self::RELYING_PARTY_ID,
-            passkeyRpName: 'Example Reader',
-            passkeySignInEnabled: false,
-        ));
-    }
 
     /**
      * passkey_login has its OWN login_throttling budget, separate from the

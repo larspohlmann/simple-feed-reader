@@ -7,6 +7,7 @@ namespace App\Tests\Controller\Api;
 use App\Repository\UserRepository;
 use App\Service\Settings\InstanceSettings;
 use App\Service\Settings\InstanceSettingsUpdate;
+use App\Tests\Support\TogglesPasskeySignIn;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
@@ -16,6 +17,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class SetupControllerTest extends WebTestCase
 {
+    use TogglesPasskeySignIn;
+
     private const string SECRET = 'test-setup-secret-abcdef0123456789';
 
     /**
@@ -131,17 +134,21 @@ final class SetupControllerTest extends WebTestCase
      * to know whether this instance can complete a passkey sign-in, but never
      * anything about which accounts exist — see PasskeySignInAvailability's
      * own docblock for why this reads no credential or user row.
+     *
+     * Off by default (addendum: the product owner reversed the original
+     * `true` default) — a fresh install ships with passkey sign-in invisible
+     * until an admin opts in.
      */
-    public function testStatusReportsPasskeySignInAvailableByDefault(): void
+    public function testStatusReportsPasskeySignInUnavailableByDefault(): void
     {
         $client = self::createClient();
         $client->request('GET', '/api/setup/status');
 
         self::assertResponseIsSuccessful();
-        self::assertTrue($this->body($client)['passkeySignInAvailable']);
+        self::assertFalse($this->body($client)['passkeySignInAvailable']);
     }
 
-    public function testStatusReportsPasskeySignInUnavailableWhenTheToggleIsOff(): void
+    public function testStatusReportsPasskeySignInAvailableOnceEnabledWithAValidRelyingParty(): void
     {
         $client = self::createClient();
         $settings = $client->getContainer()->get(InstanceSettings::class);
@@ -152,8 +159,19 @@ final class SetupControllerTest extends WebTestCase
             publicBaseUrl: null,
             passkeyRpId: null,
             passkeyRpName: null,
-            passkeySignInEnabled: false,
+            passkeySignInEnabled: true,
         ));
+
+        $client->request('GET', '/api/setup/status');
+
+        self::assertResponseIsSuccessful();
+        self::assertTrue($this->body($client)['passkeySignInAvailable']);
+    }
+
+    public function testStatusReportsPasskeySignInUnavailableWhenTheToggleIsOff(): void
+    {
+        $client = self::createClient();
+        $this->disablePasskeySignIn();
 
         $client->request('GET', '/api/setup/status');
 

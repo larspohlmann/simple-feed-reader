@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
-use App\Service\Settings\InstanceSettings;
-use App\Service\Settings\InstanceSettingsUpdate;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\TogglesPasskeySignIn;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
@@ -21,6 +20,8 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
  */
 final class PasskeyLoginOptionsTest extends ApiTestCase
 {
+    use TogglesPasskeySignIn;
+
     private const string OPTIONS_PATH = '/api/auth/passkey/login/options';
 
     /**
@@ -66,6 +67,7 @@ final class PasskeyLoginOptionsTest extends ApiTestCase
     public function testTheOptionsAreIssuedToAnAnonymousCaller(): void
     {
         $client = static::createClient();
+        $this->enablePasskeySignIn();
 
         $client->request('POST', self::OPTIONS_PATH);
 
@@ -85,6 +87,7 @@ final class PasskeyLoginOptionsTest extends ApiTestCase
     public function testTheResponseShapeDoesNotDependOnWhetherAccountsExist(): void
     {
         $client = static::createClient();
+        $this->enablePasskeySignIn();
 
         $empty = $this->optionsBodyShape($client);
         $this->factory()->create('somebody@example.test');
@@ -104,6 +107,7 @@ final class PasskeyLoginOptionsTest extends ApiTestCase
     public function testTheChallengeEndpointIsRateLimited(): void
     {
         $client = static::createClient();
+        $this->enablePasskeySignIn();
 
         for ($attempt = 0; $attempt < 30; $attempt++) {
             $client->request('POST', self::OPTIONS_PATH);
@@ -146,21 +150,36 @@ final class PasskeyLoginOptionsTest extends ApiTestCase
     public function testTheOptionsEndpointRefusesWhenPasskeySignInIsDisabled(): void
     {
         $client = static::createClient();
-        /** @var InstanceSettings $settings */
-        $settings = self::getContainer()->get(InstanceSettings::class);
-        $settings->update(new InstanceSettingsUpdate(
-            requireEmailConfirmation: true,
-            requireApproval: true,
-            publicBaseUrl: null,
-            passkeyRpId: null,
-            passkeyRpName: null,
-            passkeySignInEnabled: false,
-        ));
+        $this->disablePasskeySignIn();
 
         $client->request('POST', self::OPTIONS_PATH);
 
         self::assertResponseStatusCodeSame(403);
         self::assertSame('application/problem+json', $client->getResponse()->headers->get('Content-Type'));
+    }
+
+    /**
+     * Fix round 1: the limiter must charge BEFORE the availability guard
+     * runs, or a disabled instance would let an anonymous caller hammer this
+     * database-touching endpoint for free, forever 403 and never 429. Proves
+     * the ordering rather than just the unit count: every one of the first
+     * 30 calls is 403 (disabled, not throttled), and the 31st is 429 —
+     * exactly the shape testTheChallengeEndpointIsRateLimited proves for an
+     * ENABLED instance, so a regression that put the guard back in front of
+     * the limiter would show up here as a 403 on the 31st call instead.
+     */
+    public function testTheDisabledInstanceStillGetsThrottledRatherThanRefusingForever(): void
+    {
+        $client = static::createClient();
+        $this->disablePasskeySignIn();
+
+        for ($attempt = 0; $attempt < 30; $attempt++) {
+            $client->request('POST', self::OPTIONS_PATH);
+            self::assertResponseStatusCodeSame(403, \sprintf('attempt %d should still be 403', $attempt));
+        }
+
+        $client->request('POST', self::OPTIONS_PATH);
+        self::assertResponseStatusCodeSame(429);
     }
 
     private function rateLimiterCache(): CacheItemPoolInterface
