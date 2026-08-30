@@ -16,12 +16,21 @@ use Doctrine\ORM\EntityManagerInterface;
  * InstanceSetting already carries exactly the defaults its properties
  * declare, so every getter below just reads off it instead of each one
  * carrying its own fallback that could drift from the entity.
+ *
+ * `final class`, not `final readonly`: settings() memoises the resolved row
+ * so a request reading several settings — a WebAuthn ceremony reads it three
+ * or four times — issues one SELECT, not one per getter. The memo is a plain
+ * field on purpose: Symfony services are per-request under PHP-FPM, so it is
+ * request-scoped and must stay that way — do not promote it to a shared cache.
+ * update() clears it so a read after a write returns the new value.
  */
-final readonly class InstanceSettings
+final class InstanceSettings
 {
+    private ?InstanceSetting $memoisedSettings = null;
+
     public function __construct(
-        private InstanceSettingRepository $repository,
-        private EntityManagerInterface $em,
+        private readonly InstanceSettingRepository $repository,
+        private readonly EntityManagerInterface $em,
     ) {
     }
 
@@ -66,6 +75,7 @@ final readonly class InstanceSettings
 
         $setting->apply($update);
         $this->em->flush();
+        $this->memoisedSettings = null;
     }
 
     /**
@@ -75,6 +85,6 @@ final readonly class InstanceSettings
      */
     private function settings(): InstanceSetting
     {
-        return $this->repository->findSingleton() ?? new InstanceSetting();
+        return $this->memoisedSettings ??= $this->repository->findSingleton() ?? new InstanceSetting();
     }
 }
