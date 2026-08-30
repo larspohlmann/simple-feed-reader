@@ -45,13 +45,9 @@ const ENTRIES = [
   entry(6, 'Der Spiegel'),
 ];
 
-/**
- * A large, non-portrait image on every entry so `hero` and `wide` both fit
- * (they need width >= 500 / >= 400 respectively) and neither ever demotes.
- * Seven entries across three alternating sources: the leading six fill the
- * planner's opener template (`wide, split, thumb, split, thumb, split`), and
- * the seventh spills onto a second page whose template opens with `hero`.
- */
+/** A large, non-portrait image on every entry so `hero` (>= 500px) and `wide`
+ *  (>= 400px) both fit without demoting; seven entries across three sources
+ *  spill a `wide` opener onto a second page whose template opens `hero`. */
 function imageEntry(id: number, source: string) {
   return { ...entry(id, source), imageUrl: IMG, imageWidth: 1200, imageHeight: 800 };
 }
@@ -94,6 +90,19 @@ async function stubAccount(
     async (route) => {
       if (route.request().method() !== 'GET') return route.fallback();
       await route.fulfill({ status: 200, json: { entries, nextCursor: null } });
+    },
+  );
+}
+
+/** The store applies its own optimistic patch before this resolves, so the
+ *  response body is never read — only a non-error status keeps the row from
+ *  reverting (and so from un-leaving) once the PATCH round-trips. */
+async function stubEntryStateWrites(page: Page): Promise<void> {
+  await page.route(
+    (url) => /^\/api\/entries\/\d+\/state$/.test(url.pathname),
+    async (route) => {
+      if (route.request().method() !== 'PATCH') return route.fallback();
+      await route.fulfill({ status: 200, json: { state: {} } });
     },
   );
 }
@@ -263,4 +272,44 @@ test('boxed hero and wide images keep square corners and the card padding', asyn
     await wideBody.evaluate((el) => getComputedStyle(el).padding),
     'the boxed wide body keeps its card padding',
   ).toBe('12px 16px');
+});
+
+/**
+ * The regression this branch shipped twice: the first fix zeroed
+ * `padding-top` on removal but left `border-top` on `.magazine-slot` itself,
+ * which `grid-template-rows: 0fr` cannot collapse — a permanent 1px residue
+ * under `forwards`. The fix moved the border onto `.row-slot-inner` so one
+ * keyframe (`magazine-rule-pad-close`) closes both. Nothing before this test
+ * drove a real removal, so a third property added to that element and left
+ * open would pass every other assertion in this file unchanged.
+ */
+test('an un-favourited row collapses its slot to zero height, not a residue', async ({ page }) => {
+  const favourited = ENTRIES.map((e) => ({ ...e, isFavorite: true }));
+  await stubAccount(page, 'airy', favourited);
+  await stubEntryStateWrites(page);
+  const signedIn = await signInAsAdmin(page);
+  test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
+
+  await page.getByRole('link', { name: 'Favorites' }).click();
+
+  // Not the first slot: that one carries no rule to close, so a border or
+  // padding left behind would not show up on it.
+  const slot = page.locator('.rows.magazine .magazine-slot').nth(1);
+  await expect(slot).toBeVisible();
+
+  // Ambiguous without `exact`: the enclosing card is itself a `role="button"`
+  // whose name-from-content rolls up every descendant's own accessible name,
+  // "Favorite" included.
+  await slot.getByRole('button', { name: 'Favorite', exact: true }).click();
+  await expect(slot, 'un-favouriting should drop the row out of the Favorites view').toHaveClass(
+    /leaving/,
+  );
+
+  // `row-leave` + `magazine-rule-pad-close` both run on a 0.26s `forwards`
+  // animation; poll rather than sleep so the assertion reads the settled state.
+  await expect
+    .poll(() => slot.evaluate((el) => Math.round(el.getBoundingClientRect().height)), {
+      timeout: 2000,
+    })
+    .toBe(0);
 });
