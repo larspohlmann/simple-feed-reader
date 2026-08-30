@@ -175,12 +175,29 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *  list. This sweep-scoped flag is what keeps the banner to the sweep alone. */
   private readonly sweeping = signal(false);
 
-  /** The counted banner belongs to the post-onboarding sweep only. Every other
+  /** Read once, in a field initialiser, the way `entry-list` and `reader-view`
+   *  read it. The preference does not change mid-session in practice, and a
+   *  live query would buy nothing for the one decision below. */
+  private readonly reduceMotion =
+    typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /** The counted banner belongs to the post-onboarding sweep — every other
    *  refresh has the hairline, which is enough context for a user who already
-   *  knows what their reader looks like. A failure takes the strip over, so the
-   *  two never compete for it. */
+   *  knows what their reader looks like.
+   *
+   *  Enough context, that is, only if the bar can move. The server reports at
+   *  slice boundaries and a slice is budgeted at 25 s, so between two of them
+   *  the width holds still and the sheen is the only thing saying the run is
+   *  alive — and under `prefers-reduced-motion` the sheen holds still too. That
+   *  leaves a reader who asked for reduced motion staring at a bar they cannot
+   *  tell from a stuck one. The count says the same thing without moving, so
+   *  they get it on every refresh.
+   *
+   *  A failure takes the strip over, so the two never compete for it. */
   readonly showFetchProgress = computed(
-    () => this.sweeping() && this.refreshSvc.failure() === null,
+    () =>
+      (this.sweeping() || (this.reduceMotion && this.refreshSvc.running())) &&
+      this.refreshSvc.failure() === null,
   );
 
   /** An empty subscription list, once resolved, that has not been explicitly

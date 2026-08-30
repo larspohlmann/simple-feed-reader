@@ -2119,6 +2119,103 @@ describe('ReaderShellComponent', () => {
       f.detectChanges();
       expect((f.nativeElement as HTMLElement).querySelector('.fetch-banner')).toBeNull();
     });
+
+    // The guard for the clause below: mid-run, with motion allowed, the counted
+    // banner must still stay away. The test above only looks after the run has
+    // ended, when `running()` is false anyway — so on its own it would pass even
+    // if the banner were shown to everybody for the whole run.
+    it('leaves an ordinary refresh uncounted while it is still going', () => {
+      // jsdom answers "no" to every media query, so this is the motion-allowed path.
+      const f = bootWith([
+        { ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' },
+      ]);
+      f.componentInstance.onRefresh();
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/refresh')
+        .flush({
+          ...refreshDone,
+          status: 'partial',
+          progress: { done: 20, total: 200 },
+          remaining: 180,
+          fetched: 20,
+        });
+      f.detectChanges();
+
+      expect((f.nativeElement as HTMLElement).querySelector('.fetch-banner')).toBeNull();
+
+      ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh').flush(refreshDone);
+    });
+
+    // ...unless the reader cannot see the bar move. The hairline's sheen is the
+    // only thing that says "still working" between two slices, and a slice is
+    // budgeted at 25 s; under prefers-reduced-motion that sheen holds still, so
+    // the bar is indistinguishable from a stuck one. The count is the same
+    // signal without the motion.
+    describe('under prefers-reduced-motion', () => {
+      const realMatchMedia = window.matchMedia;
+
+      afterEach(() => {
+        Object.defineProperty(window, 'matchMedia', { writable: true, value: realMatchMedia });
+      });
+
+      /** The shell reads the preference once, in a field initialiser, so the
+       *  stub has to be in place before boot() — not before the refresh. */
+      const preferReducedMotion = (): void => {
+        Object.defineProperty(window, 'matchMedia', {
+          writable: true,
+          value: (query: string) => ({
+            matches: query.includes('prefers-reduced-motion'),
+            media: query,
+            onchange: null,
+            addEventListener: () => undefined,
+            removeEventListener: () => undefined,
+            addListener: () => undefined,
+            removeListener: () => undefined,
+            dispatchEvent: () => false,
+          }),
+        });
+      };
+
+      it('counts the feeds on an ordinary refresh, not just the onboarding sweep', () => {
+        preferReducedMotion();
+        const f = bootWith([
+          { ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' },
+        ]);
+        f.componentInstance.onRefresh();
+        f.detectChanges();
+        ctrl
+          .expectOne((r) => r.url === 'https://api.test/api/refresh')
+          .flush({
+            ...refreshDone,
+            status: 'partial',
+            progress: { done: 20, total: 200 },
+            remaining: 180,
+            fetched: 20,
+          });
+        f.detectChanges();
+
+        const banner = (f.nativeElement as HTMLElement).querySelector('.fetch-banner');
+        expect(banner).not.toBeNull();
+        expect(banner!.textContent).toContain('20 of 200');
+
+        // The partial re-armed the poll; finish it so nothing is left in flight.
+        ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh').flush(refreshDone);
+      });
+
+      it('drops the count again once the run is over', () => {
+        preferReducedMotion();
+        const f = bootWith([
+          { ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' },
+        ]);
+        f.componentInstance.onRefresh();
+        f.detectChanges();
+        ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh').flush(refreshDone);
+        f.detectChanges();
+
+        expect((f.nativeElement as HTMLElement).querySelector('.fetch-banner')).toBeNull();
+      });
+    });
   });
 
   describe('refresh failures', () => {
