@@ -331,7 +331,7 @@
       "passkeyRpNameHint": "The name a device shows when it asks for a passkey. Leave empty to use Simple Feed Reader.",
       "passkeyInvalidateTitle": "Change the passkey domain?",
       "passkeyInvalidateMessage": "Changing the domain signs out {{count}} enrolled passkey(s), permanently. They cannot be repaired. Each person then has to add a new passkey on their device. Confirm to change the domain and delete them.",
-      "passkeyInvalidateConfirm": "Change domain and delete passkeys",
+      "passkeyInvalidateConfirm": "Change and delete",
       "save": "Save",
       "reset": "Reset",
       "unsaved": "Unsaved changes",

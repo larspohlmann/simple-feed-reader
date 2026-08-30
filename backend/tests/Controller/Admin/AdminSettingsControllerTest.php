@@ -226,7 +226,7 @@ final class AdminSettingsControllerTest extends ApiTestCase
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
     }
 
-    public function testAnRelyingPartyIdThatIsNotASuffixOfTheHostIsRefused(): void
+    public function testARelyingPartyIdThatCouldNeverWorkIsRefused(): void
     {
         $client = $this->adminClient();
 
@@ -234,7 +234,7 @@ final class AdminSettingsControllerTest extends ApiTestCase
             'requireEmailConfirmation' => true,
             'requireApproval' => true,
             'publicBaseUrl' => 'https://example.test',
-            'passkeyRpId' => 'evil.test',
+            'passkeyRpId' => '203.0.113.5',
             'passkeyRpName' => 'Reader',
         ]);
 

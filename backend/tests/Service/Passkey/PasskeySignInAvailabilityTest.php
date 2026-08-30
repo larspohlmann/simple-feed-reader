@@ -70,13 +70,25 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
         self::assertFalse($availability->isAvailable());
     }
 
-    /** The toggle is on, but the configured relying-party id fails the suffix rule. */
-    public function testUnavailableWhenTheRelyingPartyIdIsNotValidForTheHost(): void
+    /** The toggle is on, but an IP can never be a relying-party id. */
+    public function testUnavailableWhenTheRelyingPartyIdCouldNeverWork(): void
     {
         $this->enablePasskeySignIn();
-        $availability = $this->availabilityFor('evil.test', 'https://example.test');
+        $availability = $this->availabilityFor('203.0.113.5', 'https://example.test');
 
         self::assertFalse($availability->isAvailable());
+    }
+
+    /**
+     * The proxied case: the id names a host this server cannot see, and sign-in
+     * is offered anyway. Judging it against a guessed host hid the feature.
+     */
+    public function testAvailableForADomainThisServerCannotSee(): void
+    {
+        $this->enablePasskeySignIn();
+        $availability = $this->availabilityFor('green-tara.aardvark-koi.ts.net', 'http://localhost:4200');
+
+        self::assertTrue($availability->isAvailable());
     }
 
     /**

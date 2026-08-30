@@ -51,15 +51,15 @@ final readonly class RelyingPartyChange
      * as part of this call, not as a documented-only side effect a reader has
      * to already know about.
      *
-     * @throws ValidationException if passkeyRpId is not a registrable suffix
-     *         of the host the server would actually use
+     * @throws ValidationException if passkeyRpId could not work as a
+     *         relying-party id at all
      * @throws RelyingPartyChangeRequiresConfirmationException if the
      *         effective id is changing, credentials exist, and the request
      *         did not confirm
      */
     public function guardAndInvalidatePasskeysIfChanged(InstanceSettingsRequest $request): void
     {
-        $this->assertSuffixOfHost($request);
+        $this->assertUsableRelyingPartyId($request);
 
         $requestedEffectiveId = $this->effectiveId->derive(
             $request->passkeyRpId,
@@ -81,19 +81,19 @@ final readonly class RelyingPartyChange
         $this->passkeys->deleteAll();
     }
 
-    private function assertSuffixOfHost(InstanceSettingsRequest $request): void
+    private function assertUsableRelyingPartyId(InstanceSettingsRequest $request): void
     {
         if (null === $request->passkeyRpId) {
             return;
         }
 
-        if ($this->relyingPartyIdRule->isValidForHost($request->passkeyRpId, $this->servingHost->get())) {
+        if ($this->relyingPartyIdRule->isUsable($request->passkeyRpId)) {
             return;
         }
 
         throw new ValidationException([
             'passkeyRpId' => [
-                'Must be the host, or a registrable parent domain of the host, that the reader is served from.',
+                'Must be a domain name, not an IP address or a bare top-level domain.',
             ],
         ]);
     }

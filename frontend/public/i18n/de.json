@@ -331,7 +331,7 @@
       "passkeyRpNameHint": "Der Name, den ein Gerät bei der Passkey-Abfrage zeigt. Leer lassen für Simple Feed Reader.",
       "passkeyInvalidateTitle": "Passkey-Domain ändern?",
       "passkeyInvalidateMessage": "Eine Änderung der Domain meldet {{count}} registrierte Passkey(s) dauerhaft ab. Sie lassen sich nicht reparieren. Jede Person muss danach auf ihrem Gerät einen neuen Passkey anlegen. Bestätige, um die Domain zu ändern und sie zu löschen.",
-      "passkeyInvalidateConfirm": "Domain ändern und Passkeys löschen",
+      "passkeyInvalidateConfirm": "Ändern und löschen",
       "save": "Speichern",
       "reset": "Zurücksetzen",
       "unsaved": "Nicht gespeicherte Änderungen",
