@@ -123,6 +123,71 @@ describe('LoginComponent — forgot-password link visibility', () => {
   });
 });
 
+describe('LoginComponent — passkey sign-in availability (#624 follow-up)', () => {
+  let ctrl: HttpTestingController;
+
+  /** jsdom carries neither `PublicKeyCredential` nor
+   *  `isConditionalMediationAvailable`; leaving a stub behind would leak
+   *  "supported" into sibling specs (`webauthn.spec.ts`'s own convention). */
+  afterEach(() => {
+    delete (window as unknown as { PublicKeyCredential?: unknown }).PublicKeyCredential;
+  });
+
+  function stubPasskeySupport(): void {
+    (window as unknown as { PublicKeyCredential: unknown }).PublicKeyCredential = {
+      isConditionalMediationAvailable: jest.fn().mockResolvedValue(false),
+    };
+  }
+
+  function create(passkeySignInAvailable: boolean | null) {
+    TestBed.configureTestingModule({
+      imports: [LoginComponent, provideTranslocoTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: API_BASE_URL, useValue: 'https://api.test' },
+        {
+          provide: SetupService,
+          useValue: { mailEnabled: signal(true), passkeySignInAvailable: signal(passkeySignInAvailable) },
+        },
+      ],
+    }).compileComponents();
+    ctrl = TestBed.inject(HttpTestingController);
+    const f = TestBed.createComponent(LoginComponent);
+    f.detectChanges();
+    ctrl.expectOne('https://api.test/api/auth/oauth/providers').flush({ providers: [] });
+    f.detectChanges();
+    return f;
+  }
+
+  function passkeyButton(f: ReturnType<typeof create>): HTMLButtonElement | null {
+    return (f.nativeElement as HTMLElement).querySelector('[data-test="passkey-login"]');
+  }
+
+  it('hides the passkey button once the instance reports it unavailable', () => {
+    stubPasskeySupport();
+    const f = create(false);
+    expect(passkeyButton(f)).toBeNull();
+  });
+
+  it('shows the passkey button once the instance reports it available', () => {
+    stubPasskeySupport();
+    const f = create(true);
+    expect(passkeyButton(f)).not.toBeNull();
+  });
+
+  /** Fails open while the flag is still in flight, mirroring mailEnabled's
+   *  own `!== false` convention on this same page: setupRedirectGuard has
+   *  normally already resolved it by the time this component renders, so the
+   *  unknown state is transient in practice. */
+  it('shows the passkey button while availability is still unknown', () => {
+    stubPasskeySupport();
+    const f = create(null);
+    expect(passkeyButton(f)).not.toBeNull();
+  });
+});
+
 interface PasskeyServiceStub {
   signIn: jest.Mock;
   signInConditionally: jest.Mock;

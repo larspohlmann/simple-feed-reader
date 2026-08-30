@@ -22,11 +22,11 @@
     }}</app-button>
   </form>
 
-  @if (providers().length || passkeySupported) {
+  @if (providers().length || passkeyOfferedHere()) {
     <div class="divider">
       <span>{{ 'auth.login.or' | transloco }}</span>
     </div>
-    @if (passkeySupported) {
+    @if (passkeyOfferedHere()) {
       <button
         class="oauth"
         type="button"

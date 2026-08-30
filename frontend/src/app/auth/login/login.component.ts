@@ -1,5 +1,5 @@
 // src/app/auth/login/login.component.ts
-import { Component, ElementRef, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -56,6 +56,26 @@ export class LoginComponent implements OnInit, OnDestroy {
    *  the same reasoning `PasskeysGroupComponent.isSupported` documents. */
   protected readonly passkeySupported = isPasskeySupported();
 
+  /**
+   * Whether passkey sign-in belongs on this page at all (#624 follow-up):
+   * the browser has to understand WebAuthn AND this instance has to be able
+   * to complete the ceremony -- toggled on, with a valid relying party. The
+   * second half comes from `SetupService.passkeySignInAvailable`, fetched
+   * alongside `mailEnabled` by the same `/api/setup/status` call
+   * `setupRedirectGuard` already runs before this route activates.
+   *
+   * `!== false` fails OPEN, mirroring `mailEnabled`'s own convention just
+   * below rather than `AiAvailabilityService`'s fail-CLOSED one: this is the
+   * same page, reading the same endpoint, through the same guard, so it
+   * follows the local precedent instead of introducing a second philosophy.
+   * The guard has normally already resolved the flag by the time this
+   * component renders, so "unknown" is a transient state in practice, not a
+   * steady one to design defensively around.
+   */
+  protected readonly passkeyOfferedHere = computed(
+    () => this.passkeySupported && this.setup.passkeySignInAvailable() !== false,
+  );
+
   /** Held so the conditional ceremony started in `ngOnInit` can be cancelled
    *  from `submit()` and `ngOnDestroy()` -- two live `navigator.credentials`
    *  calls compete and the browser rejects one (#624 task 15, trap 2). */
@@ -67,7 +87,7 @@ export class LoginComponent implements OnInit, OnDestroy {
       error: () => this.providers.set([]),
     });
 
-    if (this.passkeySupported) {
+    if (this.passkeyOfferedHere()) {
       void this.offerConditionalPasskey();
     }
   }
