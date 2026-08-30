@@ -26,10 +26,6 @@
         <app-icon name="add" size="sm" /><span>{{ 'reader.addFeed' | transloco }}</span>
       </button>
     </div>
-    @if (refreshSvc.running()) {
-      <span class="prog"><i [style.width.%]="refreshSvc.progress() * 100"></i></span>
-    }
-
     <a
       class="nav all"
       [class.active]="selection().kind === 'all'"

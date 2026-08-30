@@ -8,6 +8,9 @@ final readonly class RefreshReport
 {
     public const string STATUS_ABORTED = 'aborted';
 
+    /** The global refresh lock was held: NO slice ran, and every counter is zero. */
+    public const string STATUS_BUSY = 'busy';
+
     private function __construct(
         public string $status,
         public int $total,
@@ -24,7 +27,7 @@ final readonly class RefreshReport
 
     public static function busy(): self
     {
-        return new self('busy', 0, 0, 0, 0, 0, 0, 0, 0);
+        return new self(self::STATUS_BUSY, 0, 0, 0, 0, 0, 0, 0, 0);
     }
 
     public static function finished(

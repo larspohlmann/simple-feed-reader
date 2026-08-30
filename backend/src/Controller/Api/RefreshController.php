@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Entity\User;
+use App\Http\RefreshJson;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Refresh\RefreshRequest;
-use App\Service\Refresh\RefreshRunner;
+use App\Service\Refresh\TrackedRefreshRunner;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -22,7 +23,8 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
  * via `?feedId=` — and returns the tally as JSON. Always HTTP 200: the client
  * switches on the `status` field (busy → wait and retry; partial → keep
  * looping; completed → done; aborted → terminal error) and loops until
- * `remaining` reaches 0.
+ * `remaining` reaches 0. `progress` is the run as a whole — every
+ * slice of it — and is the only figure a client should render.
  */
 final class RefreshController
 {
@@ -33,7 +35,7 @@ final class RefreshController
     private const int BUDGET_SECONDS = 25;
 
     public function __construct(
-        private readonly RefreshRunner $refreshRunner,
+        private readonly TrackedRefreshRunner $trackedRefreshRunner,
         private readonly SubscriptionRepository $subscriptions,
         private readonly TagRepository $tags,
         private readonly RateLimitGuard $rateLimitGuard,
@@ -71,6 +73,6 @@ final class RefreshController
             $request = RefreshRequest::forUser($userId, self::BUDGET_SECONDS);
         }
 
-        return new JsonResponse($this->refreshRunner->run($request)->toArray());
+        return new JsonResponse(RefreshJson::slice($this->trackedRefreshRunner->run($request)));
     }
 }

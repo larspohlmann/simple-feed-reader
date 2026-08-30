@@ -47,6 +47,7 @@ services:
             Psr\Cache\CacheItemPoolInterface $loginCodeCache: '@oauth.login_code.cache'
             Psr\Cache\CacheItemPoolInterface $githubReleaseCache: '@github.release.cache'
             Psr\Cache\CacheItemPoolInterface $passkeyChallengeCache: '@passkey.challenge.cache'
+            Psr\Cache\CacheItemPoolInterface $refreshRunCache: '@refresh.run.cache'
             Symfony\Contracts\Cache\CacheInterface $schedulerStateCache: '@scheduler.state.cache'
             # A name-matched bind, unlike the $concurrency case further down: there
             # the global match was the objection, here it is the point. Any service
@@ -88,6 +89,7 @@ services:
     App\Service\Fetch\DnsResolverInterface: '@App\Service\Fetch\NativeDnsResolver'
     App\Service\Fetch\FeedFetcherInterface: '@App\Service\Fetch\HttpFeedFetcher'
     App\Service\Fetch\BatchFeedFetcherInterface: '@App\Service\Fetch\ConcurrentFeedFetcher'
+    App\Service\Refresh\RefreshRunnerInterface: '@App\Service\Refresh\RefreshRunner'
     App\Service\Discovery\FeedDiscoveryInterface: '@App\Service\Discovery\FeedDiscovery'
     App\Service\Reader\ArticleExtractorInterface: '@App\Service\Reader\ArticleExtractor'
     App\Service\Search\EntrySearchInterface: '@App\Service\Search\EntrySearchWithFallback'
