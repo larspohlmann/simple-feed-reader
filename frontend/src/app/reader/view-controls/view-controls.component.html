@@ -35,3 +35,18 @@
     </button>
   }
 </div>
+
+@if (layout.mode() === 'magazine') {
+  <div class="seg" role="group" [attr.aria-label]="'reader.style.aria' | transloco">
+    @for (s of styles; track s.id) {
+      <button
+        [class.active]="magazineStyle.style() === s.id"
+        [attr.aria-pressed]="magazineStyle.style() === s.id"
+        [title]="'reader.style.' + s.id | transloco"
+        (click)="magazineStyle.set(s.id)"
+      >
+        <app-icon [name]="s.icon" size="md" />
+      </button>
+    }
+  </div>
+}

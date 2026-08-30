@@ -848,6 +848,11 @@
       "dark": "Dunkel",
       "system": "System"
     },
+    "style": {
+      "aria": "Magazin-Stil",
+      "boxed": "Mit Rahmen",
+      "airy": "Luftig"
+    },
     "versionLabel": "Version {{version}} — Einstellungen öffnen",
     "updateAvailable": "Update {{version}}",
     "updateAvailableLabel": "Update verfügbar: Version {{version}} — Versionshinweise öffnen",

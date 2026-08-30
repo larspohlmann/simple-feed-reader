@@ -848,6 +848,11 @@
       "dark": "Dark",
       "system": "System"
     },
+    "style": {
+      "aria": "Magazine style",
+      "boxed": "Boxed",
+      "airy": "Airy"
+    },
     "versionLabel": "Version {{version}} — open settings",
     "updateAvailable": "Update {{version}}",
     "updateAvailableLabel": "Update available: version {{version}} — open the release notes",

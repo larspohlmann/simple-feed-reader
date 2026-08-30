@@ -1,4 +1,7 @@
 import { TestBed } from '@angular/core/testing';
+import { of } from 'rxjs';
+import { MAGAZINE_STYLE_WRITER } from '../../core/magazine-style-writer';
+import { MagazineStyleService } from '../../core/magazine-style.service';
 import { ReadingLayoutService } from '../reading-layout.service';
 import { ThemeService } from '../../theme/theme.service';
 import { ViewControlsComponent } from './view-controls.component';
@@ -9,6 +12,7 @@ describe('ViewControlsComponent', () => {
     localStorage.clear();
     TestBed.configureTestingModule({
       imports: [ViewControlsComponent, provideTranslocoTesting()],
+      providers: [{ provide: MAGAZINE_STYLE_WRITER, useValue: { write: () => of(true) } }],
     });
   });
 
@@ -51,5 +55,30 @@ describe('ViewControlsComponent', () => {
     expect(theme.mode()).toBe('dark');
     f.detectChanges();
     expect(dark.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('shows the magazine style group only in magazine layout', () => {
+    const f = create();
+    const layout = TestBed.inject(ReadingLayoutService);
+    expect(f.nativeElement.querySelector('[aria-label="Magazine style"]')).toBeTruthy();
+
+    layout.set('list');
+    f.detectChanges();
+    expect(f.nativeElement.querySelector('[aria-label="Magazine style"]')).toBeNull();
+  });
+
+  it('switches the magazine style and marks the active one pressed', () => {
+    const f = create();
+    const magazineStyle = TestBed.inject(MagazineStyleService);
+    const group = f.nativeElement.querySelector('[aria-label="Magazine style"]') as HTMLElement;
+    const boxed = group.querySelector('[title="Boxed"]') as HTMLButtonElement;
+    const airy = group.querySelector('[title="Airy"]') as HTMLButtonElement;
+    expect(boxed.getAttribute('aria-pressed')).toBe('true');
+
+    airy.click();
+    expect(magazineStyle.style()).toBe('airy');
+    f.detectChanges();
+    expect(airy.getAttribute('aria-pressed')).toBe('true');
+    expect(boxed.getAttribute('aria-pressed')).toBe('false');
   });
 });
