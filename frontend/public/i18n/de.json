@@ -323,6 +323,8 @@
       "publicBaseUrl": "Öffentliche Basis-URL",
       "publicBaseUrlHint": "Die Adresse, aus der Links in ausgehenden E-Mails gebaut werden. Trage die URL ein, die von außen funktioniert — ein Handy außerhalb des Netzwerks, ein anderer Rechner — nicht die lokale Adresse. Leer lassen, um den Standard aus dem Deployment zu verwenden.",
       "publicBaseUrlPlaceholder": "https://reader.example.com/",
+      "passkeySignInEnabled": "Passkey-Anmeldung erlauben",
+      "passkeySignInEnabledHint": "Ermöglicht die Anmeldung per Passkey statt mit Passwort. Schalte das aus, um sie überall auszublenden, zum Beispiel solange die Domain unten falsch ist.",
       "passkeyRpId": "Passkey-Domain",
       "passkeyRpIdHint": "Die Domain, zu der deine Passkeys gehören. Leer lassen, um {{host}} zu verwenden.",
       "passkeyRpName": "Passkey-Anzeigename",

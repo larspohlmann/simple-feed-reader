@@ -22,6 +22,10 @@ export interface InstanceSettings {
    *  PUT; it exists so the UI can show the real value even when passkeyRpId
    *  is empty. */
   passkeyRpIdEffective: string;
+  /** The instance-wide passkey sign-in switch (#624 follow-up). Off refuses
+   *  every passkey endpoint server-side, regardless of what the frontend
+   *  shows -- see PasskeySignInAvailability. */
+  passkeySignInEnabled: boolean;
 }
 
 /**
@@ -38,6 +42,7 @@ export interface InstanceSettingsUpdate {
   passkeyRpId: string | null;
   passkeyRpName: string | null;
   invalidateExistingPasskeys: boolean;
+  passkeySignInEnabled: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

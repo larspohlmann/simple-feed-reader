@@ -17,6 +17,7 @@ const BASE_SETTINGS: InstanceSettings = {
   passkeyRpId: null,
   passkeyRpName: null,
   passkeyRpIdEffective: 'lars-pohlmann.de',
+  passkeySignInEnabled: true,
 };
 
 const BASE_UPDATE: InstanceSettingsUpdate = {
@@ -26,6 +27,7 @@ const BASE_UPDATE: InstanceSettingsUpdate = {
   passkeyRpId: null,
   passkeyRpName: null,
   invalidateExistingPasskeys: false,
+  passkeySignInEnabled: true,
 };
 
 describe('AdminSettingsComponent', () => {
@@ -67,7 +69,7 @@ describe('AdminSettingsComponent', () => {
 
     const el = f.nativeElement as HTMLElement;
     const checkboxes = el.querySelectorAll('input[type="checkbox"]');
-    expect(checkboxes.length).toBe(2);
+    expect(checkboxes.length).toBe(3);
   });
 
   it('disables the email-confirmation control and shows an explanation when mail is off', () => {
@@ -132,6 +134,27 @@ describe('AdminSettingsComponent', () => {
     expect(f.componentInstance.requireApproval()).toBe(false);
   });
 
+  /** #624 follow-up: the third toggle, round-tripped the same way `toggling
+   *  approval calls update and applies the response` proves the second one. */
+  it('toggling passkey sign-in calls update and applies the response', () => {
+    const f = mount();
+    flushInitial(f);
+
+    const el = f.nativeElement as HTMLElement;
+    const passkeyToggle = el.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')[2];
+    expect(passkeyToggle.checked).toBe(true);
+    passkeyToggle.checked = false;
+    passkeyToggle.dispatchEvent(new Event('change'));
+
+    const req = ctrl.expectOne('https://api.test/api/admin/settings');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ ...BASE_UPDATE, passkeySignInEnabled: false });
+    req.flush({ ...BASE_SETTINGS, passkeySignInEnabled: false });
+
+    f.detectChanges();
+    expect(f.componentInstance.passkeySignInEnabled()).toBe(false);
+  });
+
   it('surfaces an error banner with a retry when the load fails', () => {
     const f = mount();
     ctrl
@@ -156,7 +179,7 @@ describe('AdminSettingsComponent', () => {
     const el = f.nativeElement as HTMLElement;
 
     expect(el.querySelectorAll('app-settings-group').length).toBe(1);
-    expect(el.querySelectorAll('app-settings-row app-toggle').length).toBe(2);
+    expect(el.querySelectorAll('app-settings-row app-toggle').length).toBe(3);
   });
 
   it('toggles the control when the visible label text is clicked, not only the switch', () => {
@@ -166,8 +189,8 @@ describe('AdminSettingsComponent', () => {
 
     const labels = el.querySelectorAll<HTMLLabelElement>('.row-title label');
     const checkboxes = el.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
-    // Two toggle rows plus the text rows (publicBaseUrl, passkeyRpId, passkeyRpName).
-    expect(labels.length).toBe(5);
+    // Three toggle rows plus the text rows (publicBaseUrl, passkeyRpId, passkeyRpName).
+    expect(labels.length).toBe(6);
     expect(labels[0].htmlFor).toBe(checkboxes[0].id);
     expect(labels[1].htmlFor).toBe(checkboxes[1].id);
 

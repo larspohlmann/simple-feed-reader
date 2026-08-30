@@ -43,6 +43,10 @@ export class AdminSettingsComponent implements OnInit {
 
   readonly requireEmailConfirmation = signal(false);
   readonly requireApproval = signal(false);
+  // The instance-wide passkey sign-in switch (#624 follow-up). Off refuses
+  // every passkey endpoint server-side, not just this frontend's own
+  // buttons -- see PasskeySignInAvailability.
+  readonly passkeySignInEnabled = signal(true);
   // The external base URL for links in outgoing email; null falls back to the
   // APP_FRONTEND_URL deploy env (#636).
   readonly publicBaseUrl = signal<string | null>(null);
@@ -91,6 +95,10 @@ export class AdminSettingsComponent implements OnInit {
     this.save({ ...this.currentUpdate(), requireApproval: !this.requireApproval() });
   }
 
+  togglePasskeySignIn(): void {
+    this.save({ ...this.currentUpdate(), passkeySignInEnabled: !this.passkeySignInEnabled() });
+  }
+
   savePublicBaseUrl(value: string): void {
     this.save({ ...this.currentUpdate(), publicBaseUrl: emptyToNull(value) });
   }
@@ -111,6 +119,7 @@ export class AdminSettingsComponent implements OnInit {
       passkeyRpId: this.passkeyRpId(),
       passkeyRpName: this.passkeyRpName(),
       invalidateExistingPasskeys: false,
+      passkeySignInEnabled: this.passkeySignInEnabled(),
     };
   }
 
@@ -165,6 +174,7 @@ export class AdminSettingsComponent implements OnInit {
     this.passkeyRpId.set(settings.passkeyRpId);
     this.passkeyRpName.set(settings.passkeyRpName);
     this.passkeyRpIdEffective.set(settings.passkeyRpIdEffective);
+    this.passkeySignInEnabled.set(settings.passkeySignInEnabled);
   }
 }
 

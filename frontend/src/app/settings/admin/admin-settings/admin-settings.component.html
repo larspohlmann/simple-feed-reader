@@ -61,6 +61,19 @@
       </app-settings-row>
 
       <app-settings-row
+        [title]="'settings.instance.passkeySignInEnabled' | transloco"
+        [description]="'settings.instance.passkeySignInEnabledHint' | transloco"
+        labelFor="passkey-sign-in-enabled-toggle"
+      >
+        <app-toggle
+          inputId="passkey-sign-in-enabled-toggle"
+          [checked]="passkeySignInEnabled()"
+          [label]="'settings.instance.passkeySignInEnabled' | transloco"
+          (toggled)="togglePasskeySignIn()"
+        />
+      </app-settings-row>
+
+      <app-settings-row
         [title]="'settings.instance.passkeyRpId' | transloco"
         [description]="
           'settings.instance.passkeyRpIdHint' | transloco: { host: passkeyRpIdEffective() }
