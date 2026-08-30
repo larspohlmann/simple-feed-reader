@@ -507,6 +507,15 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   background: linear-gradient(var(--surface-2), var(--surface-2)) center center / var(--airy-sheet)
     100% no-repeat;
 
+  /* The rule between blocks is airy's only separator. In dark mode --border
+     sits a hair off the sheet (--surface-2) and vanishes, so lift it well
+     clear of the ground there; light keeps --border. */
+  --airy-rule: var(--border);
+}
+
+:host-context([data-theme='dark']) .rows.magazine.airy {
+  --airy-rule: color-mix(in srgb, var(--border-strong), var(--text-muted));
+
   /* Boxed's gutter is the list's 12px plus the card's own inline padding; with
      the card gone the list has to carry the whole inset itself, or the text
      runs to 12px off the edge (#732). */
@@ -533,7 +542,7 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
    wrapper, not the slot, so leaving can zero it (#723). */
 .rows.magazine.airy > .magazine-slot:not(.leaving) ~ .magazine-slot {
   > .row-slot-inner {
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--airy-rule);
     padding-top: var(--magazine-gap);
   }
 
