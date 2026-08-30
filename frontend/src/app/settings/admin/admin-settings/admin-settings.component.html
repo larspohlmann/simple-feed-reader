@@ -2,10 +2,10 @@
   <app-settings-group icon="toggle_on" [title]="'settings.instance.title' | transloco">
     @if (loading()) {
       <app-skeleton class="state" [label]="'settings.instance.loading' | transloco" [rows]="2" />
-    } @else if (error()) {
+    } @else if (loadError()) {
       <app-error-banner
         class="state"
-        [message]="error()!.detail || error()!.title"
+        [message]="loadError()!.detail || loadError()!.title"
         [actionLabel]="'settings.instance.retry' | transloco"
         (action)="load()"
       />
@@ -53,10 +53,10 @@
           type="url"
           inputmode="url"
           autocomplete="off"
-          [value]="publicBaseUrl() ?? ''"
+          [value]="publicBaseUrlDraft()"
           [attr.aria-label]="'settings.instance.publicBaseUrl' | transloco"
           [placeholder]="'settings.instance.publicBaseUrlPlaceholder' | transloco"
-          (change)="savePublicBaseUrl($any($event.target).value)"
+          (input)="publicBaseUrlDraft.set($any($event.target).value)"
         />
       </app-settings-row>
 
@@ -86,10 +86,10 @@
           type="text"
           inputmode="url"
           autocomplete="off"
-          [value]="passkeyRpId() ?? ''"
+          [value]="passkeyRpIdDraft()"
           [attr.aria-label]="'settings.instance.passkeyRpId' | transloco"
           [placeholder]="passkeyRpIdEffective()"
-          (change)="savePasskeyRpId($any($event.target).value)"
+          (input)="passkeyRpIdDraft.set($any($event.target).value)"
         />
       </app-settings-row>
 
@@ -103,9 +103,9 @@
           id="passkey-rp-name-input"
           type="text"
           autocomplete="off"
-          [value]="passkeyRpName() ?? ''"
+          [value]="passkeyRpNameDraft()"
           [attr.aria-label]="'settings.instance.passkeyRpName' | transloco"
-          (change)="savePasskeyRpName($any($event.target).value)"
+          (input)="passkeyRpNameDraft.set($any($event.target).value)"
         />
       </app-settings-row>
 
@@ -155,6 +155,22 @@
           <p>{{ 'settings.instance.passkeyHelp.nameBody' | transloco }}</p>
         </div>
       </app-disclosure>
+
+      @if (saveErrorMessage(); as message) {
+        <div class="panel-banner">
+          <app-error-banner [message]="message" />
+        </div>
+      }
+
+      <app-settings-save-bar
+        [dirty]="dirty()"
+        [saving]="saving()"
+        [saveLabel]="'settings.instance.save' | transloco"
+        [resetLabel]="'settings.instance.reset' | transloco"
+        [unsavedLabel]="'settings.instance.unsaved' | transloco"
+        (save)="onSave()"
+        (reset)="onReset()"
+      />
     }
   </app-settings-group>
 </app-settings-stack>

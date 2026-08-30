@@ -1,6 +1,6 @@
 // src/app/settings/admin/admin-settings/admin-settings.component.ts
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, linkedSignal, signal } from '@angular/core';
 import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../../../core/problem';
@@ -12,6 +12,7 @@ import { DisclosureComponent } from '../../../shared/disclosure/disclosure.compo
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
 import { SettingsGroupComponent } from '../../../shared/settings/settings-group/settings-group.component';
 import { SettingsRowComponent } from '../../../shared/settings/settings-row/settings-row.component';
+import { SettingsSaveBarComponent } from '../../../shared/settings/save-bar/save-bar.component';
 import { SettingsStackComponent } from '../../../shared/settings/stack/settings-stack.component';
 import { SkeletonComponent } from '../../../shared/skeleton/skeleton.component';
 import { ToggleComponent } from '../../../shared/toggle/toggle.component';
@@ -20,8 +21,8 @@ import { AdminSettingsApi, InstanceSettings, InstanceSettingsUpdate } from './ad
 /** The registration-gate toggles (#224): whether a new signup needs email
  *  confirmation and/or admin approval before it becomes active. Plus the
  *  passkey sign-in switch (#624 follow-up), beside the relying-party fields
- *  it governs. Each toggle saves immediately on change, mirroring the admin
- *  user queue's row actions — there is no separate save step to forget. */
+ *  it governs. Save by control type, per docs/design-language.md: the toggles
+ *  persist on change, the text fields are dirty-tracked behind the save bar. */
 @Component({
   selector: 'app-admin-settings',
   imports: [
@@ -29,6 +30,7 @@ import { AdminSettingsApi, InstanceSettings, InstanceSettingsUpdate } from './ad
     ErrorBannerComponent,
     SettingsGroupComponent,
     SettingsRowComponent,
+    SettingsSaveBarComponent,
     SettingsStackComponent,
     SkeletonComponent,
     ToggleComponent,
@@ -66,7 +68,35 @@ export class AdminSettingsComponent implements OnInit {
   // switch is disabled.
   readonly mailEnabled = signal(false);
   readonly loading = signal(false);
-  readonly error = signal<Problem | null>(null);
+  /** A failed load leaves nothing to render, so it replaces the form. A failed
+   *  save must not: the form still holds the edit that caused it. */
+  readonly loadError = signal<Problem | null>(null);
+  readonly saveError = signal<Problem | null>(null);
+  readonly saving = signal(false);
+
+  // Drafts for the three text fields. Reseeded whenever server truth changes,
+  // so a save or a reload adopts it, while an edit the admin has typed but not
+  // saved survives an unrelated instant toggle.
+  readonly publicBaseUrlDraft = linkedSignal(() => this.publicBaseUrl() ?? '');
+  readonly passkeyRpIdDraft = linkedSignal(() => this.passkeyRpId() ?? '');
+  readonly passkeyRpNameDraft = linkedSignal(() => this.passkeyRpName() ?? '');
+
+  readonly dirty = computed(
+    () =>
+      emptyToNull(this.publicBaseUrlDraft()) !== this.publicBaseUrl() ||
+      emptyToNull(this.passkeyRpIdDraft()) !== this.passkeyRpId() ||
+      emptyToNull(this.passkeyRpNameDraft()) !== this.passkeyRpName(),
+  );
+
+  /** Prefers the server's per-field messages: the shared 422 detail only says
+   *  "One or more fields are invalid.", which names neither field nor reason. */
+  readonly saveErrorMessage = computed(() => {
+    const problem = this.saveError();
+    if (!problem) return null;
+
+    const fieldMessages = Object.values(problem.errors ?? {}).flat();
+    return fieldMessages.length > 0 ? fieldMessages.join(' ') : (problem.detail ?? problem.title);
+  });
 
   ngOnInit(): void {
     this.load();
@@ -74,14 +104,15 @@ export class AdminSettingsComponent implements OnInit {
 
   load(): void {
     this.loading.set(true);
-    this.error.set(null);
+    this.loadError.set(null);
+    this.saveError.set(null);
     this.api.get().subscribe({
       next: (settings) => {
         this.applySettings(settings);
         this.loading.set(false);
       },
       error: (failure: HttpErrorResponse) => {
-        this.error.set(parseProblem(failure));
+        this.loadError.set(parseProblem(failure));
         this.loading.set(false);
       },
     });
@@ -102,18 +133,24 @@ export class AdminSettingsComponent implements OnInit {
     this.save({ ...this.currentUpdate(), passkeySignInEnabled: !this.passkeySignInEnabled() });
   }
 
-  savePublicBaseUrl(value: string): void {
-    this.save({ ...this.currentUpdate(), publicBaseUrl: emptyToNull(value) });
+  onSave(): void {
+    this.save({
+      ...this.currentUpdate(),
+      publicBaseUrl: emptyToNull(this.publicBaseUrlDraft()),
+      passkeyRpId: emptyToNull(this.passkeyRpIdDraft()),
+      passkeyRpName: emptyToNull(this.passkeyRpNameDraft()),
+    });
   }
 
-  savePasskeyRpId(value: string): void {
-    this.save({ ...this.currentUpdate(), passkeyRpId: emptyToNull(value) });
+  onReset(): void {
+    this.publicBaseUrlDraft.set(this.publicBaseUrl() ?? '');
+    this.passkeyRpIdDraft.set(this.passkeyRpId() ?? '');
+    this.passkeyRpNameDraft.set(this.passkeyRpName() ?? '');
+    this.saveError.set(null);
   }
 
-  savePasskeyRpName(value: string): void {
-    this.save({ ...this.currentUpdate(), passkeyRpName: emptyToNull(value) });
-  }
-
+  /** The text fields read server truth, not the drafts: this is the body a
+   *  toggle sends, and a toggle must not smuggle an unsaved text edit with it. */
   private currentUpdate(): InstanceSettingsUpdate {
     return {
       requireEmailConfirmation: this.requireEmailConfirmation(),
@@ -127,24 +164,31 @@ export class AdminSettingsComponent implements OnInit {
   }
 
   private save(update: InstanceSettingsUpdate): void {
-    this.error.set(null);
+    this.saveError.set(null);
+    this.saving.set(true);
     this.api.update(update).subscribe({
-      next: (settings) => this.applySettings(settings),
-      error: (failure: HttpErrorResponse) => this.handleSaveError(failure, update),
+      next: (settings) => {
+        this.applySettings(settings);
+        this.saving.set(false);
+      },
+      error: (failure: HttpErrorResponse) => {
+        this.handleSaveError(failure, update);
+        this.saving.set(false);
+      },
     });
   }
 
   /** A relying-party id change that would orphan enrolled passkeys comes back
    *  as a 409 quoting the count (RelyingPartyChangeRequiresConfirmationException).
    *  Every other failure -- including the 422 a disallowed id gets -- renders
-   *  through the plain error banner, same as any other row on this page. */
+   *  inline above the save bar, with the form and the edit still on screen. */
   private handleSaveError(failure: HttpErrorResponse, update: InstanceSettingsUpdate): void {
     const problem = parseProblem(failure);
     if (failure.status === 409 && problem.invalidatedPasskeyCount !== undefined) {
       this.confirmInvalidation(update, problem.invalidatedPasskeyCount);
       return;
     }
-    this.error.set(problem);
+    this.saveError.set(problem);
   }
 
   private confirmInvalidation(

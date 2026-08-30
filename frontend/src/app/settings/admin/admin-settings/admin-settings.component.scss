@@ -53,3 +53,9 @@
   color: var(--text-secondary);
   font-weight: 600;
 }
+
+// Matches proxy-section: the save-failure banner sits inside the group, above
+// the save bar, so the form it belongs to stays on screen.
+.panel-banner {
+  padding: 0 var(--space-5) var(--space-4);
+}

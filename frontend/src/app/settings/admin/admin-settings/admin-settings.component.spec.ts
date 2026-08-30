@@ -63,6 +63,23 @@ describe('AdminSettingsComponent', () => {
     f.detectChanges();
   }
 
+  const savebar = (f: ReturnType<typeof mount>) =>
+    (f.nativeElement as HTMLElement).querySelector('app-settings-save-bar')!;
+  const saveButton = (f: ReturnType<typeof mount>) =>
+    savebar(f).querySelector<HTMLButtonElement>('app-button[variant="primary"] button')!;
+  const resetButton = (f: ReturnType<typeof mount>) =>
+    savebar(f).querySelector<HTMLButtonElement>('app-button[variant="ghost"] button')!;
+
+  /** Text fields are dirty-tracked behind the save bar, so an edit is two
+   *  steps: type, then Save. */
+  function type(f: ReturnType<typeof mount>, selector: string, value: string) {
+    const input = (f.nativeElement as HTMLElement).querySelector<HTMLInputElement>(selector)!;
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+    f.detectChanges();
+    return input;
+  }
+
   it('loads the settings on init and renders both toggles', () => {
     const f = mount();
     flushInitial(f);
@@ -210,7 +227,9 @@ describe('AdminSettingsComponent', () => {
       '#public-base-url-input',
     )!;
     input.value = 'https://reader.example.ts.net/reader';
-    input.dispatchEvent(new Event('change'));
+    input.dispatchEvent(new Event('input'));
+    f.detectChanges();
+    saveButton(f).click();
 
     const req = ctrl.expectOne('https://api.test/api/admin/settings');
     expect(req.request.method).toBe('PUT');
@@ -243,7 +262,9 @@ describe('AdminSettingsComponent', () => {
       '#public-base-url-input',
     )!;
     input.value = '   ';
-    input.dispatchEvent(new Event('change'));
+    input.dispatchEvent(new Event('input'));
+    f.detectChanges();
+    saveButton(f).click();
 
     const req = ctrl.expectOne('https://api.test/api/admin/settings');
     expect(req.request.body).toEqual({
@@ -275,7 +296,9 @@ describe('AdminSettingsComponent', () => {
       expect(nameInput.value).toBe('My Reader');
 
       idInput.value = 'other.example.com';
-      idInput.dispatchEvent(new Event('change'));
+      idInput.dispatchEvent(new Event('input'));
+      f.detectChanges();
+      saveButton(f).click();
 
       const req = ctrl.expectOne('https://api.test/api/admin/settings');
       expect(req.request.body).toEqual({
@@ -301,7 +324,9 @@ describe('AdminSettingsComponent', () => {
         '#passkey-rp-id-input',
       )!;
       idInput.value = '   ';
-      idInput.dispatchEvent(new Event('change'));
+      idInput.dispatchEvent(new Event('input'));
+      f.detectChanges();
+      saveButton(f).click();
 
       const req = ctrl.expectOne('https://api.test/api/admin/settings');
       expect(req.request.body).toEqual({ ...BASE_UPDATE, passkeyRpId: null });
@@ -316,7 +341,9 @@ describe('AdminSettingsComponent', () => {
         '#passkey-rp-name-input',
       )!;
       nameInput.value = '';
-      nameInput.dispatchEvent(new Event('change'));
+      nameInput.dispatchEvent(new Event('input'));
+      f.detectChanges();
+      saveButton(f).click();
 
       const req = ctrl.expectOne('https://api.test/api/admin/settings');
       expect(req.request.body).toEqual({ ...BASE_UPDATE, passkeyRpName: null });
@@ -349,7 +376,9 @@ describe('AdminSettingsComponent', () => {
         '#passkey-rp-id-input',
       )!;
       idInput.value = 'not-this-host.example';
-      idInput.dispatchEvent(new Event('change'));
+      idInput.dispatchEvent(new Event('input'));
+      f.detectChanges();
+      saveButton(f).click();
 
       ctrl.expectOne('https://api.test/api/admin/settings').flush(
         {
@@ -369,7 +398,75 @@ describe('AdminSettingsComponent', () => {
 
       const el = f.nativeElement as HTMLElement;
       expect(el.querySelector('app-error-banner')).not.toBeNull();
-      expect(el.textContent).toContain('One or more fields are invalid.');
+      // The server's per-field reason, not the shared 422 detail, which names
+      // neither the field nor what is wrong with it.
+      expect(el.textContent).toContain(
+        'Must be the host, or a registrable parent domain of the host',
+      );
+      expect(el.textContent).not.toContain('One or more fields are invalid.');
+    });
+
+    it('keeps the form and the rejected edit on screen when a save fails', () => {
+      const f = mount();
+      flushInitial(f);
+
+      type(f, '#passkey-rp-id-input', 'not-this-host.example');
+      saveButton(f).click();
+      ctrl
+        .expectOne('https://api.test/api/admin/settings')
+        .flush(
+          { type: 'validation_error', title: 'Validation failed', status: 422 },
+          { status: 422, statusText: 'Unprocessable Entity' },
+        );
+      f.detectChanges();
+
+      const el = f.nativeElement as HTMLElement;
+      const idInput = el.querySelector<HTMLInputElement>('#passkey-rp-id-input');
+      expect(idInput).not.toBeNull();
+      expect(idInput!.value).toBe('not-this-host.example');
+      expect(el.querySelector('app-settings-save-bar')).not.toBeNull();
+    });
+
+    it('offers Save only once a field is edited, and drops the edit on Reset', () => {
+      const f = mount();
+      flushInitial(f, { ...BASE_SETTINGS, passkeyRpId: 'reader.example.com' });
+
+      expect(saveButton(f).disabled).toBe(true);
+
+      type(f, '#passkey-rp-id-input', 'other.example.com');
+      expect(saveButton(f).disabled).toBe(false);
+
+      resetButton(f).click();
+      f.detectChanges();
+
+      const el = f.nativeElement as HTMLElement;
+      expect(el.querySelector<HTMLInputElement>('#passkey-rp-id-input')!.value).toBe(
+        'reader.example.com',
+      );
+      expect(saveButton(f).disabled).toBe(true);
+      // No request at all: Reset is local, it never asks the server to undo.
+      ctrl.verify();
+    });
+
+    it('a toggle never carries an unsaved text edit with it', () => {
+      const f = mount();
+      flushInitial(f, { ...BASE_SETTINGS, passkeyRpId: 'reader.example.com' });
+
+      type(f, '#passkey-rp-id-input', 'typed-but-not-saved.example.com');
+      (f.nativeElement as HTMLElement)
+        .querySelectorAll<HTMLInputElement>('input[type="checkbox"]')[1]
+        .dispatchEvent(new Event('change'));
+
+      const req = ctrl.expectOne('https://api.test/api/admin/settings');
+      expect(req.request.body.passkeyRpId).toBe('reader.example.com');
+      req.flush({ ...BASE_SETTINGS, passkeyRpId: 'reader.example.com', requireApproval: true });
+      f.detectChanges();
+
+      // …and the edit is still in the field, waiting for Save.
+      expect(
+        (f.nativeElement as HTMLElement).querySelector<HTMLInputElement>('#passkey-rp-id-input')!
+          .value,
+      ).toBe('typed-but-not-saved.example.com');
     });
 
     it('opens a confirm dialog quoting the invalidated count on a 409, and resends only on confirmation', () => {
@@ -381,7 +478,9 @@ describe('AdminSettingsComponent', () => {
         '#passkey-rp-id-input',
       )!;
       idInput.value = 'other.example.com';
-      idInput.dispatchEvent(new Event('change'));
+      idInput.dispatchEvent(new Event('input'));
+      f.detectChanges();
+      saveButton(f).click();
 
       ctrl.expectOne('https://api.test/api/admin/settings').flush(
         {
@@ -429,7 +528,9 @@ describe('AdminSettingsComponent', () => {
         '#passkey-rp-id-input',
       )!;
       idInput.value = 'other.example.com';
-      idInput.dispatchEvent(new Event('change'));
+      idInput.dispatchEvent(new Event('input'));
+      f.detectChanges();
+      saveButton(f).click();
 
       ctrl.expectOne('https://api.test/api/admin/settings').flush(
         {

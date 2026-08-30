@@ -332,6 +332,9 @@
       "passkeyInvalidateTitle": "Change the passkey domain?",
       "passkeyInvalidateMessage": "Changing the domain signs out {{count}} enrolled passkey(s), permanently. They cannot be repaired. Each person then has to add a new passkey on their device. Confirm to change the domain and delete them.",
       "passkeyInvalidateConfirm": "Change domain and delete passkeys",
+      "save": "Save",
+      "reset": "Reset",
+      "unsaved": "Unsaved changes",
       "passkeyHelp": {
         "label": "How do I find these values?",
         "idTitle": "Passkey domain",
