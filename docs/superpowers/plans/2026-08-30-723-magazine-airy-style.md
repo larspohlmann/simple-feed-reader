@@ -208,7 +208,6 @@ run `bin/console cache:warmup` and diff again.
 - [ ] **Step 7: Run the migration on both dialects**
 
 ```bash
-cd backend && php bin/phpunit tests/Service/Backup
 docker compose exec php bin/console doctrine:migrations:migrate --no-interaction
 docker compose exec php bin/console doctrine:schema:validate
 ```
@@ -217,6 +216,11 @@ Expected: the MySQL migration applies and `schema:validate` reports the mapping
 and the database in sync. `tests/bootstrap.php` builds the schema from ORM
 metadata, so no unit test ever executes a migration — this step is the only
 proof the migration itself works.
+
+**`tests/Service/Backup` is expected to be RED from this commit until Task 3.**
+Adding a mapped column to a backed-up entity is exactly what `BackupSchemaCoverageTest`
+exists to catch (#556), and watching it fail is Task 3's opening step. Do not
+silence it here, and do not run that directory as part of this task's gate.
 
 - [ ] **Step 8: Gates and commit**
 
@@ -1155,6 +1159,7 @@ In `entry-list.component.scss`, inside the existing `.rows.magazine` block:
   --card-border: 1px solid var(--border);
   --card-radius: var(--radius-lg);
   --card-pad: var(--space-3);
+  --card-pad-x: var(--space-4);
 ```
 
 - [ ] **Step 2: Consume them in each block**
@@ -1177,8 +1182,13 @@ Do the same for `.wide`, `.split`, `.thumb`, `.kicker-card`, `.quote` and
 `--card-pad` too:
 
 - `.split`, `.thumb`, `.kicker-card`, `.quote`: `padding: var(--card-pad);`
-- `.hero .body`, `.wide .body`: `padding: var(--card-pad) var(--space-4);`
-- `source-group`'s `.ghead` and `.more`: `padding: var(--card-pad) var(--space-4);`
+- `.hero .body`, `.wide .body`: `padding: var(--card-pad) var(--card-pad-x);`
+- `source-group`'s `.ghead` and `.more`: `padding: var(--card-pad) var(--card-pad-x);`
+- `entry-compact`'s `.compact`: `padding: var(--card-pad) var(--card-pad-x);`
+
+Both axes go through a property. Only the vertical one would leave hero, wide,
+the group header and compact rows inset by 16px in airy while split, thumb and
+kicker sat flush at the column edge — one design with two left margins.
 
 Leave every other declaration in those files untouched — the hover rules, the
 image sizing, the line clamps and their comments all stay exactly as they are.
@@ -1288,6 +1298,7 @@ In `entry-list.component.scss`, after the `.rows.magazine` block:
   --card-border: 0;
   --card-radius: 0;
   --card-pad: 0;
+  --card-pad-x: 0;
   --magazine-gap: var(--space-5);
 }
 
@@ -1321,14 +1332,18 @@ change.
 - [ ] **Step 8: Give hover somewhere to live**
 
 Airy has no border to darken. In each of the seven block stylesheets, beside the
-existing pointer-guarded hover rule, add its airy counterpart. In
+existing pointer-guarded hover rule, add its airy counterpart.
+
+The selector is `:host-context(.airy)`, never a bare `.airy` descendant: the
+class sits on `.rows.magazine`, outside the block's own template, and Angular's
+emulated encapsulation will not match across that boundary. In
 `entry-hero.component.scss`:
 
 ```scss
 /* No border to darken, so hover marks what the block opens: its title — the
    idiom `.source:hover` already uses here. Pointer-only (#704). */
 @media (hover: hover) {
-  .airy .hero:hover .title {
+  :host-context(.airy) .hero:hover .title {
     text-decoration: underline;
     text-underline-offset: 3px;
   }
@@ -1343,22 +1358,19 @@ be invisible:
 
 ```scss
 @media (hover: hover) {
-  .airy .compact:hover {
+  :host-context(.airy) .compact:hover {
     background: none;
   }
 
-  .airy .compact:hover .title {
+  :host-context(.airy) .compact:hover .title {
     text-decoration: underline;
     text-underline-offset: 3px;
   }
 }
 ```
 
-These rules cross a host boundary, so `.airy` must reach the block. Use
-`:host-context(.airy)` in each block stylesheet instead of a bare `.airy`
-descendant selector — a plain `.airy .hero` cannot match across Angular's
-emulated encapsulation. Verify the first one in the browser before writing the
-other six.
+Verify the first of these in a browser before writing the other six — if
+`:host-context` does not reach the block, none of the seven will.
 
 - [ ] **Step 9: Mark the pull quote**
 
