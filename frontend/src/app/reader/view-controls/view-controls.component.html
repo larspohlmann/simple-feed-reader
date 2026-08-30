@@ -3,8 +3,8 @@
     <button
       [class.active]="layout.mode() === 'magazine' && magazineStyle.style() === s.id"
       [attr.aria-pressed]="layout.mode() === 'magazine' && magazineStyle.style() === s.id"
-      [title]="'reader.layout.magazine' + s.key | transloco"
-      [attr.aria-label]="'reader.layout.magazine' + s.key | transloco"
+      [title]="s.label | transloco"
+      [attr.aria-label]="s.label | transloco"
       (click)="showMagazine(s.id)"
     >
       <app-icon [name]="s.icon" size="md" />

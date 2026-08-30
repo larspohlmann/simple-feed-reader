@@ -19,7 +19,7 @@ async function signInAsAdmin(page: Page): Promise<boolean> {
   await page.goto('/login');
   await page.locator('input[type=email]').fill(ADMIN_EMAIL);
   await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 
   // Success mounts the reader sidebar; failure surfaces the login error alert.
   const sidebar = page.getByRole('navigation', { name: 'Feeds' });

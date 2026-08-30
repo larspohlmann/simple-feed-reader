@@ -472,6 +472,8 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   --card-radius: var(--radius-lg);
   --card-pad: var(--space-3);
   --card-pad-x: var(--space-4);
+  --card-hover-bg: var(--surface-0);
+  --card-hover-decoration: none;
   --magazine-gap: var(--space-3);
 
   padding: var(--space-3);
@@ -495,20 +497,15 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   --card-radius: 0;
   --card-pad: 0;
   --card-pad-x: 0;
+
+  /* No border and no fill left to darken, so hover marks what the block opens:
+     its own text (#723). */
+  --card-hover-bg: none;
+  --card-hover-decoration: underline;
   --magazine-gap: var(--space-5);
 
   /* No cards left, so the canvas itself becomes the card colour (#723). */
   background: var(--surface-2);
-}
-
-/* On the inner wrapper, not the slot, so leaving can zero it below (#723).
-   Skips `app-run-header`: that header is already a rule, and a second beside
-   it reads wrong. `:not(.leaving)` on the preceding sibling, with `~` rather
-   than `+`, means a slot with no non-collapsed predecessor draws no rule —
-   the removed-first-entry case, not just the removed-adjacent one. */
-.rows.magazine.airy > .magazine-slot:not(.leaving) ~ .magazine-slot > .row-slot-inner {
-  border-top: 1px solid var(--border);
-  padding-top: var(--space-5);
 }
 
 /* Neither is overflowing content, so `row-leave`'s collapse alone leaves them
@@ -517,7 +514,7 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   0%,
   46% {
     border-top-width: 1px;
-    padding-top: var(--space-5);
+    padding-top: var(--magazine-gap);
   }
 
   100% {
@@ -526,16 +523,25 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   }
 }
 
-.rows.magazine.airy > .magazine-slot:not(.leaving) ~ .magazine-slot.leaving > .row-slot-inner {
-  animation: magazine-rule-pad-close 0.26s ease forwards;
-}
+/* `:not(.leaving)` with `~`, not `+`: a slot whose only predecessors are
+   collapsing draws no rule — the removed-first-entry case. On the inner
+   wrapper, not the slot, so leaving can zero it (#723). */
+.rows.magazine.airy > .magazine-slot:not(.leaving) ~ .magazine-slot {
+  > .row-slot-inner {
+    border-top: 1px solid var(--border);
+    padding-top: var(--magazine-gap);
+  }
 
-/* Same reduced-motion honouring as the pair above, kept after the shorthand
-   it overrides — an earlier `animation-duration` would lose to this rule's
-   `animation` shorthand on source order alone. */
-@media (prefers-reduced-motion: reduce) {
-  .rows.magazine.airy > .magazine-slot:not(.leaving) ~ .magazine-slot.leaving > .row-slot-inner {
-    animation-duration: 1ms;
+  &.leaving > .row-slot-inner {
+    animation: magazine-rule-pad-close 0.26s ease forwards;
+  }
+
+  /* Kept after the shorthand it overrides — an earlier `animation-duration`
+     would lose to that `animation` shorthand on source order alone. */
+  @media (prefers-reduced-motion: reduce) {
+    &.leaving > .row-slot-inner {
+      animation-duration: 1ms;
+    }
   }
 }
 

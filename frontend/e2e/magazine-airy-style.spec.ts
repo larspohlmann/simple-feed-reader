@@ -5,8 +5,7 @@ import { test, expect, Page } from '@playwright/test';
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
 
-/** An inline fixture image: an external host 404'd during Task 7 and silently
- *  cost that task its radius check. */
+/** Inline, so no external host can 404 and cost this file its radius check. */
 const IMG =
   'data:image/svg+xml;base64,' +
   Buffer.from(
@@ -274,15 +273,9 @@ test('boxed hero and wide images keep square corners and the card padding', asyn
   ).toBe('12px 16px');
 });
 
-/**
- * The regression this branch shipped twice: the first fix zeroed
- * `padding-top` on removal but left `border-top` on `.magazine-slot` itself,
- * which `grid-template-rows: 0fr` cannot collapse — a permanent 1px residue
- * under `forwards`. The fix moved the border onto `.row-slot-inner` so one
- * keyframe (`magazine-rule-pad-close`) closes both. Nothing before this test
- * drove a real removal, so a third property added to that element and left
- * open would pass every other assertion in this file unchanged.
- */
+/** Only a real removal catches a property that `grid-template-rows: 0fr`
+ *  cannot collapse — a border or padding left open is a permanent residue
+ *  every other assertion in this file passes over. */
 test('an un-favourited row collapses its slot to zero height, not a residue', async ({ page }) => {
   const favourited = ENTRIES.map((e) => ({ ...e, isFavorite: true }));
   await stubAccount(page, 'airy', favourited);

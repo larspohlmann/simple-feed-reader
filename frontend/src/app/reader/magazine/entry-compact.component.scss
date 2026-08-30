@@ -12,24 +12,14 @@
 
 /* Hover is a pointer affordance, gated to devices that actually have one:
    a touch browser fires :hover on tap, so without this guard, touching a card
-   while drag-scrolling the page darkened it (most visible on a collapsed
-   group's compact rows in dark mode) (#704). */
+   while drag-scrolling the page darkened it (#704). */
 @media (hover: hover) {
   .compact:hover {
-    background: var(--surface-0);
-  }
-}
-
-/* Airy drops fills everywhere else, so a hover chip here would be the one
-   surface still boxing something: switch it off and underline the title
-   instead — the idiom `.gsource:hover` already uses here. Pointer-only (#704). */
-@media (hover: hover) {
-  :host-context(.airy) .compact:hover {
-    background: none;
+    background: var(--card-hover-bg);
   }
 
-  :host-context(.airy) .compact:hover .title {
-    text-decoration: underline;
+  .compact:hover .title {
+    text-decoration: var(--card-hover-decoration);
     text-underline-offset: 3px;
   }
 }

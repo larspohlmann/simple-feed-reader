@@ -16,13 +16,9 @@
   .wide:hover {
     border-color: var(--border-strong);
   }
-}
 
-/* No border to darken, so hover marks what the block opens: its title — the
-   idiom `.source:hover` already uses here. Pointer-only (#704). */
-@media (hover: hover) {
-  :host-context(.airy) .wide:hover .title {
-    text-decoration: underline;
+  .wide:hover .title {
+    text-decoration: var(--card-hover-decoration);
     text-underline-offset: 3px;
   }
 }

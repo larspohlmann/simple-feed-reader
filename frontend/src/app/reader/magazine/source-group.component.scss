@@ -71,17 +71,8 @@
    darkens the toggle (#704). */
 @media (hover: hover) {
   .more:hover {
-    background: var(--surface-0);
-  }
-}
-
-/* Airy drops fills everywhere else in this column, so a hover chip here would
-   be the one surface still boxing something: underline instead, matching
-   `.gsource:hover` and the compact row's own airy hover (#723). */
-@media (hover: hover) {
-  :host-context(.airy) .more:hover {
-    background: none;
-    text-decoration: underline;
+    background: var(--card-hover-bg);
+    text-decoration: var(--card-hover-decoration);
   }
 }
 

@@ -29,10 +29,9 @@ export class ViewControlsComponent {
     { id: 'system', icon: 'contrast' },
   ];
 
-  // `key` builds the `reader.layout.magazine<Key>` label.
-  readonly magazineStyles: { id: MagazineStyle; key: string; icon: string }[] = [
-    { id: 'boxed', key: 'Boxed', icon: 'grid_view' },
-    { id: 'airy', key: 'Airy', icon: 'density_large' },
+  readonly magazineStyles: { id: MagazineStyle; label: string; icon: string }[] = [
+    { id: 'boxed', label: 'reader.layout.magazineBoxed', icon: 'grid_view' },
+    { id: 'airy', label: 'reader.layout.magazineAiry', icon: 'density_large' },
   ];
 
   showMagazine(style: MagazineStyle): void {
