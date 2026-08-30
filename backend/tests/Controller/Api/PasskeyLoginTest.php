@@ -10,6 +10,7 @@ use App\Enum\UserStatus;
 use App\Repository\UserPasskeyRepository;
 use App\Service\Passkey\AssertionOptionsFactory;
 use App\Service\Passkey\AssertionVerifier;
+use App\Service\Passkey\NaiveUtcClock;
 use App\Service\Passkey\PasskeyCeremony;
 use App\Service\Passkey\PasskeyChallengeStore;
 use App\Tests\Support\ApiTestCase;
@@ -23,7 +24,6 @@ use Monolog\Logger;
 use Monolog\LogRecord;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use Psr\Cache\CacheItemPoolInterface;
-use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\Clock\MockClock;
 
@@ -634,8 +634,8 @@ final class PasskeyLoginTest extends ApiTestCase
         $optionsFactory = self::getContainer()->get(AssertionOptionsFactory::class);
         /** @var UserPasskeyRepository $passkeys */
         $passkeys = self::getContainer()->get(UserPasskeyRepository::class);
-        /** @var ClockInterface $clock */
-        $clock = self::getContainer()->get(ClockInterface::class);
+        /** @var NaiveUtcClock $clock */
+        $clock = self::getContainer()->get(NaiveUtcClock::class);
 
         return new AssertionVerifier(
             $challengeStore,

@@ -6,6 +6,7 @@ namespace App\Tests\Service\Passkey;
 
 use App\Entity\Preferences;
 use App\Entity\User;
+use App\Service\Passkey\NaiveUtcClock;
 use App\Service\Passkey\PasskeyOffer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
@@ -20,7 +21,7 @@ final class PasskeyOfferTest extends TestCase
     public function testFirstAnswerRecordsNow(): void
     {
         $now = new \DateTimeImmutable('2026-08-28T12:00:00Z');
-        $offer = new PasskeyOffer(new MockClock($now));
+        $offer = new PasskeyOffer(new NaiveUtcClock(new MockClock($now)));
         $prefs = $this->preferences();
         self::assertNull($prefs->getPasskeyOfferAnsweredAt());
 
@@ -40,7 +41,7 @@ final class PasskeyOfferTest extends TestCase
     public function testASecondAnswerDoesNotMoveTheAlreadySetTimestamp(): void
     {
         $clock = new MockClock('2026-08-01T00:00:00Z');
-        $offer = new PasskeyOffer($clock);
+        $offer = new PasskeyOffer(new NaiveUtcClock($clock));
         $prefs = $this->preferences();
         $seededAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $prefs->markPasskeyOfferAnswered($seededAt);
@@ -54,7 +55,7 @@ final class PasskeyOfferTest extends TestCase
     public function testANonUtcClockIsNormalisedToNaiveUtcBeforeRecording(): void
     {
         $clock = new MockClock('2026-08-28T12:00:00+02:00');
-        $offer = new PasskeyOffer($clock);
+        $offer = new PasskeyOffer(new NaiveUtcClock($clock));
         $prefs = $this->preferences();
 
         $offer->markAnswered($prefs->getUser());

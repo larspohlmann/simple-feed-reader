@@ -12,6 +12,7 @@ use App\Service\Passkey\AssertionOptionsFactory;
 use App\Service\Passkey\AssertionVerifier;
 use App\Service\Passkey\AttestationVerifier;
 use App\Service\Passkey\Exception\AssertionRejectedException;
+use App\Service\Passkey\NaiveUtcClock;
 use App\Service\Passkey\PasskeyCeremony;
 use App\Service\Passkey\PasskeyChallengeStore;
 use App\Tests\Support\PasskeyAttestationFixture;
@@ -297,7 +298,7 @@ final class AssertionVerifierTest extends KernelTestCase
             $optionsFactory,
             $passkeys,
             $this->em(),
-            $clock ?? new MockClock(),
+            new NaiveUtcClock($clock ?? new MockClock()),
             $logger ?? new NullLogger(),
         );
     }

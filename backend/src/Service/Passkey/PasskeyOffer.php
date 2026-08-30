@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Passkey;
 
 use App\Entity\User;
-use Psr\Clock\ClockInterface;
 
 /**
  * Records that the one-time passkey enrolment offer (#624) has been shown to
@@ -19,7 +18,7 @@ use Psr\Clock\ClockInterface;
 final readonly class PasskeyOffer
 {
     public function __construct(
-        private ClockInterface $clock,
+        private NaiveUtcClock $clock,
     ) {
     }
 
@@ -31,12 +30,6 @@ final readonly class PasskeyOffer
             return;
         }
 
-        $preferences->markPasskeyOfferAnswered($this->nowAsNaiveUtc());
-    }
-
-    /** Doctrine persists naive wall-clock values, so a non-UTC clock must be normalised first. */
-    private function nowAsNaiveUtc(): \DateTimeImmutable
-    {
-        return $this->clock->now()->setTimezone(new \DateTimeZone('UTC'));
+        $preferences->markPasskeyOfferAnswered($this->clock->now());
     }
 }

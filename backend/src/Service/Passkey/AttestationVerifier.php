@@ -14,7 +14,6 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use Psr\Cache\InvalidArgumentException;
-use Psr\Clock\ClockInterface;
 use Symfony\Component\Uid\NilUuid;
 use Symfony\Component\Uid\Uuid;
 use Webauthn\AuthenticatorAttestationResponse;
@@ -58,7 +57,7 @@ final readonly class AttestationVerifier
         private RegistrationOptionsFactory $optionsFactory,
         private PasskeyOffer $offer,
         private EntityManagerInterface $em,
-        private ClockInterface $clock,
+        private NaiveUtcClock $clock,
     ) {
     }
 
@@ -188,7 +187,7 @@ final readonly class AttestationVerifier
             self::aaguidOrNull($record->aaguid),
             self::knownTransports($record->transports),
             $label,
-            $this->nowAsNaiveUtc(),
+            $this->clock->now(),
         );
     }
 
@@ -238,11 +237,5 @@ final readonly class AttestationVerifier
     private static function knownTransports(array $transports): array
     {
         return array_values(array_intersect($transports, PublicKeyCredentialDescriptor::AUTHENTICATOR_TRANSPORTS));
-    }
-
-    /** Doctrine persists naive wall-clock values, so a non-UTC clock must be normalised first. */
-    private function nowAsNaiveUtc(): \DateTimeImmutable
-    {
-        return $this->clock->now()->setTimezone(new \DateTimeZone('UTC'));
     }
 }

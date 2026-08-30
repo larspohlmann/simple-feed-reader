@@ -10,7 +10,6 @@ use App\Service\Passkey\Exception\AssertionRejectedException;
 use Doctrine\ORM\EntityManagerInterface;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use Psr\Cache\InvalidArgumentException;
-use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Uid\NilUuid;
 use Symfony\Component\Uid\Uuid;
@@ -72,7 +71,7 @@ final readonly class AssertionVerifier
         private AssertionOptionsFactory $optionsFactory,
         private UserPasskeyRepository $passkeys,
         private EntityManagerInterface $em,
-        private ClockInterface $clock,
+        private NaiveUtcClock $clock,
         private LoggerInterface $logger,
     ) {
     }
@@ -90,7 +89,7 @@ final readonly class AssertionVerifier
         $storedPasskey = $this->resolveCredential($rawCredentialId);
 
         $newCounter = $this->checkAssertion($storedPasskey, $response, $challenge->challenge);
-        $storedPasskey->recordUse($this->nowAsNaiveUtc(), $newCounter);
+        $storedPasskey->recordUse($this->clock->now(), $newCounter);
         $this->em->flush();
 
         return $storedPasskey;
@@ -215,11 +214,5 @@ final readonly class AssertionVerifier
     private static function aaguidOrNil(?string $aaguid): Uuid
     {
         return null === $aaguid ? new NilUuid() : Uuid::fromString($aaguid);
-    }
-
-    /** Doctrine persists naive wall-clock values, so a non-UTC clock must be normalised first. */
-    private function nowAsNaiveUtc(): \DateTimeImmutable
-    {
-        return $this->clock->now()->setTimezone(new \DateTimeZone('UTC'));
     }
 }
