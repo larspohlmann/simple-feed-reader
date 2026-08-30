@@ -1,12 +1,14 @@
 // src/app/settings/passkeys-group.component.spec.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { Dialog } from '@angular/cdk/dialog';
 import { Subject, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { AuthService } from '../core/auth.service';
 import { PasskeyService, PasskeySummary } from '../core/passkey.service';
 import { Problem } from '../core/problem';
+import { SetupService } from '../setup/setup.service';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { PasskeyNameDialogComponent } from './passkey-name-dialog.component';
 import { PasskeysGroupComponent } from './passkeys-group.component';
@@ -51,13 +53,26 @@ describe('PasskeysGroupComponent', () => {
   const dialogStub = { open: jest.fn() };
   const authService = { markPasskeyOfferAnswered: jest.fn() };
 
-  function mount() {
+  /**
+   * $passkeySignInAvailable defaults to `true` so every pre-existing test
+   * below -- written before #624 follow-up's instance-wide toggle existed --
+   * keeps exercising the group without having to know about it. The
+   * dedicated `describe` block further down covers `false` and `null`.
+   */
+  function mount(passkeySignInAvailable: boolean | null = true) {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
         { provide: PasskeyService, useValue: passkeyService },
         { provide: Dialog, useValue: dialogStub },
         { provide: AuthService, useValue: authService },
+        {
+          provide: SetupService,
+          useValue: {
+            ensureLoaded: () => of(false),
+            passkeySignInAvailable: signal(passkeySignInAvailable),
+          },
+        },
       ],
     });
     const f = TestBed.createComponent(PasskeysGroupComponent);
@@ -97,6 +112,44 @@ describe('PasskeysGroupComponent', () => {
 
       expect(f.nativeElement.textContent.trim()).toBe('');
       expect(passkeyService.list).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * #624 follow-up: a toggle that only hides the button is cosmetic if the
+   * group underneath still lets a user create a credential they can no
+   * longer sign in with. Fails CLOSED -- `null` (still loading) renders
+   * nothing, unlike the login page's `mailEnabled`/`passkeySignInAvailable`
+   * convention, which fails open: there, the worst case is a stale link; here
+   * it is a credential the user is then stuck with.
+   */
+  describe('when the browser supports passkeys but the instance does not offer sign-in', () => {
+    beforeEach(() => {
+      (window as unknown as { PublicKeyCredential: unknown }).PublicKeyCredential = {};
+    });
+
+    it('renders nothing when the instance reports it unavailable', () => {
+      passkeyService = passkeyServiceStub([TOUCH_ID]);
+      const f = mount(false);
+
+      expect(f.nativeElement.textContent.trim()).toBe('');
+      expect(passkeyService.list).not.toHaveBeenCalled();
+    });
+
+    it('renders nothing while availability is still unknown', () => {
+      passkeyService = passkeyServiceStub([TOUCH_ID]);
+      const f = mount(null);
+
+      expect(f.nativeElement.textContent.trim()).toBe('');
+      expect(passkeyService.list).not.toHaveBeenCalled();
+    });
+
+    it('renders the group once availability is confirmed', () => {
+      passkeyService = passkeyServiceStub([TOUCH_ID]);
+      const f = mount(true);
+
+      expect(f.nativeElement.textContent.trim()).not.toBe('');
+      expect(passkeyService.list).toHaveBeenCalledTimes(1);
     });
   });
 

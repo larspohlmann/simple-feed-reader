@@ -1,6 +1,6 @@
 // src/app/settings/passkeys-group.component.ts
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { AuthService } from '../core/auth.service';
@@ -10,6 +10,7 @@ import { PasskeyService, PasskeySummary } from '../core/passkey.service';
 import { Problem, parseProblem } from '../core/problem';
 import { isPasskeySupported } from '../core/webauthn';
 import { formatDateOr, formatLongDate } from '../reader/format';
+import { SetupService } from '../setup/setup.service';
 import { ButtonComponent } from '../shared/button/button.component';
 import {
   ConfirmData,
@@ -30,7 +31,13 @@ import { PasskeyNameDialogComponent } from './passkey-name-dialog.component';
  *
  * Absent entirely when `isPasskeySupported()` is false: a browser with no
  * WebAuthn support cannot enrol or use one, so offering the group would be a
- * dead end with no way to act on it.
+ * dead end with no way to act on it. Absent too when
+ * `SetupService.passkeySignInAvailable` is not `true` (#624 follow-up): a
+ * user who enrols while the instance has sign-in turned off ends up with a
+ * credential they can never use. Fails CLOSED, unlike the login page's
+ * `mailEnabled`/`passkeySignInAvailable` convention: showing an *Add a
+ * passkey* action that then produces a dead credential is worse here than a
+ * moment's extra hiding while the flag loads.
  */
 @Component({
   selector: 'app-passkeys-group',
@@ -53,10 +60,20 @@ export class PasskeysGroupComponent {
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);
   private readonly dialog = inject(Dialog);
+  private readonly setup = inject(SetupService);
 
   /** Read once: a browser does not gain or lose WebAuthn support mid-session,
    *  so there is nothing to react to by making this a signal. */
   protected readonly isSupported = isPasskeySupported();
+
+  /** See the class docblock for why this fails closed. This route is never
+   *  behind `setupRedirectGuard` -- the constructor below triggers the same
+   *  `ensureLoaded()` that guard runs, so a cached load resolves the signal
+   *  synchronously and an uncached one resolves it the moment the response
+   *  arrives. */
+  protected readonly visible = computed(
+    () => this.isSupported && this.setup.passkeySignInAvailable() === true,
+  );
 
   readonly passkeys = signal<PasskeySummary[]>([]);
   /**
@@ -69,7 +86,10 @@ export class PasskeysGroupComponent {
   readonly adding = signal(false);
 
   constructor() {
-    if (this.isSupported) this.refresh();
+    if (!this.isSupported) return;
+    this.setup.ensureLoaded().subscribe(() => {
+      if (this.visible()) this.refresh();
+    });
   }
 
   /** One row's meta line: when it was added, and when it was last used -- or

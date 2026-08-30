@@ -1,5 +1,5 @@
 <!-- src/app/settings/passkeys-group.component.html -->
-@if (isSupported) {
+@if (visible()) {
   <app-settings-group
     icon="key"
     [title]="'settings.passkeys.title' | transloco"
