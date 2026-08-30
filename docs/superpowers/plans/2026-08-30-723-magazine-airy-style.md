@@ -31,6 +31,20 @@ PHPUnit, Jest and Playwright.
 - **Clean Code is mandatory.** Names reveal intent, functions do one thing,
   `final readonly class` with constructor promotion is the house style,
   controllers hold no private method that carries responsibility.
+- **Comments: default to none.** A clear name or a smaller method beats a
+  sentence about the code. Comment only for the *why* the code cannot state — a
+  non-obvious invariant, a defensive branch, a decision that costs more to
+  rediscover than to read. **One line; three at the absolute most**, docblocks
+  included, in every language in this tree. Delete on sight, in code you write
+  and code you touch: a comment restating the next line, a `@param`/`@return`
+  that repeats the signature, a docblock repeating the class name, a section
+  banner, a narration of the change, and all commented-out code. The code blocks
+  in this plan are held to the same rule — if one of them carries a comment that
+  breaks it, cut the comment, do not copy it.
+- **Migrations follow the house shape:** a real `getDescription()`, the
+  generator's "auto-generated, please modify" boilerplate deleted, and
+  platform-neutral SQL guarded by `assertSupportedPlatform()`. 54 of the 55
+  migrations in the tree already do this — read `Version20260829165039.php`.
 - No hex colours in `.scss` outside `src/app/theme/`, and no ad-hoc `px`
   spacing or media-query literals. Stylelint fails the build on all three.
 - Component styles live in a sibling `.scss` file, never inline in the `.ts`.
@@ -403,10 +417,9 @@ namespace App\Dto\Me;
 use App\Service\Reader\MagazineStyle;
 
 /**
- * Its own request, not a second field on UpdatePreferencesRequest: folding it in
- * would make every scrape-fallback write resend the magazine style, the coupling
- * #180 refused. The promoted enum type answers a missing or unknown value with a
- * 422 on its own, so an Assert here would be dead decoration.
+ * Its own request, not a field on UpdatePreferencesRequest: folding it in would
+ * make every scrape-fallback write resend the style, the coupling #180 refused.
+ * The promoted enum type answers a bad value with a 422, so no Assert is needed.
  */
 final readonly class UpdateMagazineStyleRequest
 {
@@ -846,11 +859,9 @@ import { MAGAZINE_STYLE_KEY, MagazineStyle, asMagazineStyle } from './magazine-s
 import { MAGAZINE_STYLE_WRITER } from './magazine-style-writer';
 
 /**
- * The account is the source of truth; `localStorage` is a paint cache.
- * `PreferencesService` warns that it has no loaded/unloaded state and that the
- * next preference must not repeat that coincidence — the cache is this
- * preference's answer: the first frame is drawn from the last known style, so
- * there is no window in which a wrong value can be shown or written.
+ * The account is the record; `localStorage` is a paint cache. It answers the
+ * warning in `PreferencesService`: the first frame comes from the last known
+ * style, so no window exists in which a wrong value is shown or written.
  */
 @Injectable({ providedIn: 'root' })
 export class MagazineStyleService {
@@ -1302,10 +1313,9 @@ In `entry-list.component.scss`, after the `.rows.magazine` block:
   --magazine-gap: var(--space-5);
 }
 
-/* On the SLOT, not the block: no block stylesheet learns about the rule, and
-   nothing is drawn above the first or below the last. It skips `app-run-header`,
-   which is not a slot — that header is already a labelled accent rule, and a
-   second rule 24px from it reads as a mistake. */
+/* On the SLOT, so no block stylesheet learns about the rule and none is drawn
+   above the first or below the last. It skips `app-run-header`, which is not a
+   slot: that header is already a rule, and a second one beside it reads wrong. */
 .rows.magazine.airy > .magazine-slot + .magazine-slot {
   border-top: 1px solid var(--border);
 }
@@ -1377,10 +1387,9 @@ Verify the first of these in a browser before writing the other six — if
 In `entry-quote.component.scss`:
 
 ```scss
-/* Boxed, the card is what says "quote". On a text-rich feed a quote is roughly
-   one block in five (every TEXT_TEMPLATE carries one) among kicker and compact
-   blocks that are also title-and-dek text, so it keeps the blockquote mark.
-   No radius — a single-sided border with rounded corners never is (#723). */
+/* The card is what said "quote". On a text-rich feed a quote is one block in
+   five among other title-and-dek text, so it keeps the blockquote mark instead.
+   No radius: a single-sided border never takes one (#723). */
 :host-context(.airy) .quote {
   border-left: 2px solid var(--border-strong);
   border-radius: 0;
