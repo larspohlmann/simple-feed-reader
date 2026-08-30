@@ -1,7 +1,13 @@
 <app-settings-stack>
   <app-settings-group icon="tune" [title]="'settings.preferences' | transloco">
     <app-settings-row [title]="'lang.label' | transloco" [stackable]="true">
-      <app-language-switcher />
+      <app-segmented-choice
+        [options]="languages"
+        [selected]="language.lang()"
+        ariaLabelKey="lang.label"
+        labelPrefix="lang."
+        (pick)="language.set($event)"
+      />
     </app-settings-row>
     @if (language.saveFailed()) {
       <app-error-banner class="state" [message]="'settings.languageSaveFailed' | transloco" />
@@ -36,5 +42,22 @@
         (toggled)="readingFocus.setEnabled($event)"
       />
     </app-settings-row>
+
+    <app-settings-row
+      [title]="'settings.magazineStyle' | transloco"
+      [description]="'settings.magazineStyleHint' | transloco"
+      [stackable]="true"
+    >
+      <app-segmented-choice
+        [options]="magazineStyles"
+        [selected]="magazineStyle.style()"
+        ariaLabelKey="settings.magazineStyle"
+        labelPrefix="settings.magazineStyleOption."
+        (pick)="magazineStyle.set($event)"
+      />
+    </app-settings-row>
+    @if (magazineStyle.saveFailed()) {
+      <app-error-banner class="state" [message]="'settings.magazineStyleSaveFailed' | transloco" />
+    }
   </app-settings-group>
 </app-settings-stack>

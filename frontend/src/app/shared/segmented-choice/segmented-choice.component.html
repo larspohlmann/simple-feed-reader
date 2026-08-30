@@ -1,0 +1,12 @@
+<div class="seg" role="group" [attr.aria-label]="ariaLabelKey() | transloco">
+  @for (option of options(); track option) {
+    <button
+      type="button"
+      [class.on]="selected() === option"
+      [attr.aria-pressed]="selected() === option"
+      (click)="pick.emit(option)"
+    >
+      {{ labelPrefix() + option | transloco }}
+    </button>
+  }
+</div>

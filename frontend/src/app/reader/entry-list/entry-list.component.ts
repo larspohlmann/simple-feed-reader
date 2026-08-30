@@ -65,6 +65,7 @@ import { ListScrollMemory } from '../list-scroll-memory';
 import { nextHeaderHidden } from '../header-scroll';
 import { prefetchMargin } from '../paging';
 import { ReadingFocusService } from '../../core/reading-focus.service';
+import { MagazineStyleService } from '../../core/magazine-style.service';
 
 // Scroll-restore settle window: re-assert the target for at most this many frames,
 // stopping early once the content height has held steady for this many in a row.
@@ -401,6 +402,18 @@ export class EntryListComponent implements OnDestroy {
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly catalog = inject(CatalogStore);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly magazineStyle = inject(MagazineStyleService);
+
+  /** Mirrors when `.rows.magazine.airy` renders, so `.list-header` can gate on
+   *  it too. Style first: computeds track dynamically, so a boxed account never
+   *  takes a dependency on `entries()` at all (#723). */
+  protected readonly isAiryMagazine = computed(
+    () =>
+      this.magazineStyle.style() === 'airy' &&
+      this.effectiveLayout() === 'magazine' &&
+      !(this.loading() && this.entries().length === 0) &&
+      this.visibleEntryCount() !== 0,
+  );
 
   /** True only once the catalog has been resolved AND has no entries.
    *  Unresolved reads as not-empty, so the /discover link is never hidden on a

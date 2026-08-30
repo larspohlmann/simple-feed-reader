@@ -19,7 +19,7 @@ async function signInAsAdmin(page: Page): Promise<boolean> {
   await page.goto('/login');
   await page.locator('input[type=email]').fill(ADMIN_EMAIL);
   await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 
   // Success mounts the reader sidebar; failure surfaces the login error alert.
   const sidebar = page.getByRole('navigation', { name: 'Feeds' });
@@ -35,7 +35,8 @@ test('magazine is the default layout and the toggle switches modes', async ({ pa
   // Magazine is the default reading layout, so signing in lands here directly.
   const group = page.getByRole('group', { name: 'Reading layout' });
   await expect(group).toBeVisible();
-  await expect(group.getByRole('button', { name: 'Magazine layout' })).toBeVisible();
+  await expect(group.getByRole('button', { name: 'Magazine layout, boxed' })).toBeVisible();
+  await expect(group.getByRole('button', { name: 'Magazine layout, airy' })).toBeVisible();
   await expect(group.getByRole('button', { name: 'List layout' })).toBeVisible();
   await expect(group.getByRole('button', { name: 'Pane layout' })).toBeVisible();
 
@@ -43,6 +44,6 @@ test('magazine is the default layout and the toggle switches modes', async ({ pa
   await group.getByRole('button', { name: 'List layout' }).click();
   await expect(page.locator('app-reader-header')).toBeVisible();
 
-  await group.getByRole('button', { name: 'Magazine layout' }).click();
+  await group.getByRole('button', { name: 'Magazine layout, boxed' }).click();
   await expect(page.locator('app-reader-header')).toBeVisible();
 });

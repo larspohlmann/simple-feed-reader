@@ -18,6 +18,13 @@
     "scrapingSaveFailed": "Die Einstellung wurde auf diesem Gerät geändert, konnte aber nicht in deinem Konto gespeichert werden.",
     "readingFocus": "Lesefokus",
     "readingFocusHint": "Inhalte außerhalb der Lesemitte abdunkeln.",
+    "magazineStyle": "Magazin-Stil",
+    "magazineStyleHint": "Wie die Magazinansicht einen Eintrag darstellt.",
+    "magazineStyleSaveFailed": "Der Magazin-Stil konnte nicht in deinem Konto gespeichert werden.",
+    "magazineStyleOption": {
+      "boxed": "Mit Rahmen",
+      "airy": "Luftig"
+    },
     "loadingVersion": "Versionsinformationen werden geladen",
     "feeds": {
       "title": "Feeds",
@@ -831,7 +838,8 @@
     "selectArticle": "Wähle einen Artikel zum Lesen aus.",
     "layout": {
       "aria": "Layout",
-      "magazine": "Magazin-Layout",
+      "magazineBoxed": "Magazin-Layout, mit Rahmen",
+      "magazineAiry": "Magazin-Layout, luftig",
       "list": "Listen-Layout",
       "pane": "Spalten-Layout"
     },

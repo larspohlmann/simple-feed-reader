@@ -39,9 +39,13 @@ describe('PreferencesSectionComponent', () => {
     );
   });
 
-  it('offers the language switcher', () => {
+  it('offers a segmented choice for the language and for the magazine style', () => {
     const el = mount().nativeElement as HTMLElement;
-    expect(el.querySelector('app-language-switcher')).not.toBeNull();
+    const labels = Array.from(el.querySelectorAll('app-segmented-choice [role="group"]')).map((g) =>
+      g.getAttribute('aria-label'),
+    );
+
+    expect(labels).toEqual(['Language', 'Magazine style']);
   });
 
   it('shows no banner while the language write has not failed', () => {

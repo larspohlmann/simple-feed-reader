@@ -1,5 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, TemplateRef, ViewChild, signal } from '@angular/core';
+import { By } from '@angular/platform-browser';
+import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { provideRouter } from '@angular/router';
 import { EntryListComponent, REFRESH_REVEAL } from './entry-list.component';
@@ -8,6 +10,8 @@ import { CatalogStore } from '../../discover/catalog.store';
 import { prefetchMargin } from '../paging';
 import { EntryDto } from '../models';
 import { ReadingFocusService } from '../../core/reading-focus.service';
+import { MagazineStyleService } from '../../core/magazine-style.service';
+import { MAGAZINE_STYLE_WRITER } from '../../core/magazine-style-writer';
 
 const memory = { save: jest.fn(), read: jest.fn().mockReturnValue(0) };
 // A stub for the two signals `catalogEmpty` reads — keeps the real CatalogStore
@@ -46,6 +50,7 @@ function mount(over: Record<string, unknown> = {}) {
       provideRouter([]),
       { provide: ListScrollMemory, useValue: memory },
       { provide: CatalogStore, useValue: catalog },
+      { provide: MAGAZINE_STYLE_WRITER, useValue: { write: () => of(true) } },
     ],
   });
   const f = TestBed.createComponent(EntryListComponent);
@@ -1029,6 +1034,24 @@ describe('EntryListComponent', () => {
     const el = mount({ layout: 'list' }).nativeElement as HTMLElement;
     expect(el.querySelectorAll('app-entry-row').length).toBe(2);
     expect(el.querySelector('app-source-group')).toBeNull();
+  });
+
+  describe('airy style (#723)', () => {
+    it('draws the magazine boxed by default', () => {
+      const fixture = mount({ layout: 'magazine' });
+      const rows = fixture.debugElement.query(By.css('.rows.magazine'));
+
+      expect(rows.nativeElement.classList).not.toContain('airy');
+    });
+
+    it('marks the magazine airy when the account chose it', () => {
+      const fixture = mount({ layout: 'magazine' });
+      TestBed.inject(MagazineStyleService).set('airy');
+      fixture.detectChanges();
+
+      const rows = fixture.debugElement.query(By.css('.rows.magazine'));
+      expect(rows.nativeElement.classList).toContain('airy');
+    });
   });
 
   describe('search forces the list layout (#408)', () => {

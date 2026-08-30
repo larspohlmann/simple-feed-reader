@@ -3,9 +3,9 @@
 }
 
 .group {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  background: var(--card-bg);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
   overflow: hidden;
 }
 
@@ -14,7 +14,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--card-pad) var(--card-pad-x);
   border-bottom: 1px solid var(--border);
 }
 
@@ -56,7 +56,7 @@
   align-items: center;
   gap: var(--space-1);
   width: 100%;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--card-pad) var(--card-pad-x);
   border: none;
   border-top: 1px solid var(--border);
   background: none;
@@ -71,6 +71,15 @@
    darkens the toggle (#704). */
 @media (hover: hover) {
   .more:hover {
-    background: var(--surface-0);
+    background: var(--card-hover-bg);
+    text-decoration: var(--card-hover-decoration);
   }
+}
+
+/* The box is gone, so indentation carries the nesting instead. The header
+   keeps its full-width rule — it belongs to the group, not between two of
+   its items (#723). */
+:host-context(.airy) .item,
+:host-context(.airy) .more {
+  margin-inline: var(--space-3);
 }

@@ -48,6 +48,12 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
      notice now that nothing around it moves. */
 }
 
+/* The rows scrolling behind it take the card colour in airy (#723) — must
+   follow, or the opaque strip above stops matching what passes under it. */
+.list-header.airy {
+  background: var(--surface-2);
+}
+
 .heading {
   display: flex;
   flex-direction: column;
@@ -436,7 +442,8 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
 
 /* The magazine variant reuses `row-leave` for the collapse and fade, and only
    adds the gap close on top — held until the collapse starts (46%), so the two
-   move together. */
+   move together. The gap is a variable because airy widens it, and a
+   hardcoded close would leave half a gap behind there. */
 @keyframes magazine-gap-close {
   0%,
   46% {
@@ -444,7 +451,7 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   }
 
   100% {
-    margin-top: calc(-1 * var(--space-3));
+    margin-top: calc(-1 * var(--magazine-gap));
   }
 }
 
@@ -458,17 +465,84 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
 }
 
 .rows.magazine {
+  /* The card's chrome in one place, so airy is a different set of VALUES
+     rather than a branch in seven block components (#723). */
+  --card-bg: var(--surface-2);
+  --card-border: 1px solid var(--border);
+  --card-radius: var(--radius-lg);
+  --card-pad: var(--space-3);
+  --card-pad-x: var(--space-4);
+  --card-hover-bg: var(--surface-0);
+  --card-hover-decoration: none;
+  --magazine-gap: var(--space-3);
+
   padding: var(--space-3);
   padding-top: $header-clear;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--magazine-gap);
 }
 
 .rows.magazine > * {
   width: 100%;
   max-width: var(--magazine-measure);
+}
+
+/* The gap grows because it is now the block's only padding AND the bed the rule
+   sits in: centred in the gap, the rule reads as a strikethrough (#723). */
+.rows.magazine.airy {
+  --card-bg: none;
+  --card-border: 0;
+  --card-radius: 0;
+  --card-pad: 0;
+  --card-pad-x: 0;
+
+  /* No border and no fill left to darken, so hover marks what the block opens:
+     its own text (#723). */
+  --card-hover-bg: none;
+  --card-hover-decoration: underline;
+  --magazine-gap: var(--space-5);
+
+  /* No cards left, so the canvas itself becomes the card colour (#723). */
+  background: var(--surface-2);
+}
+
+/* Neither is overflowing content, so `row-leave`'s collapse alone leaves them
+   as a residual band — this zeroes both, on `magazine-gap-close`'s timing. */
+@keyframes magazine-rule-pad-close {
+  0%,
+  46% {
+    border-top-width: 1px;
+    padding-top: var(--magazine-gap);
+  }
+
+  100% {
+    border-top-width: 0;
+    padding-top: 0;
+  }
+}
+
+/* `:not(.leaving)` with `~`, not `+`: a slot whose only predecessors are
+   collapsing draws no rule — the removed-first-entry case. On the inner
+   wrapper, not the slot, so leaving can zero it (#723). */
+.rows.magazine.airy > .magazine-slot:not(.leaving) ~ .magazine-slot {
+  > .row-slot-inner {
+    border-top: 1px solid var(--border);
+    padding-top: var(--magazine-gap);
+  }
+
+  &.leaving > .row-slot-inner {
+    animation: magazine-rule-pad-close 0.26s ease forwards;
+  }
+
+  /* Kept after the shorthand it overrides — an earlier `animation-duration`
+     would lose to that `animation` shorthand on source order alone. */
+  @media (prefers-reduced-motion: reduce) {
+    &.leaving > .row-slot-inner {
+      animation-duration: 1ms;
+    }
+  }
 }
 
 /* The outlet's own wrapper. Outside the magazine column it is a plain block and

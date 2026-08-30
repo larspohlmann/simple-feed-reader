@@ -33,6 +33,7 @@ final class MeJson
             'emailVerified' => $user->isEmailVerified(),
             'preferences' => [
                 'scrapeFallbackEnabled' => $preferences->isScrapeFallbackEnabled(),
+                'magazineStyle' => $preferences->getMagazineStyle()->value,
                 'passkeyOfferAnswered' => null !== $preferences->getPasskeyOfferAnsweredAt(),
                 'digest' => [
                     'enabled' => $preferences->isDigestEnabled(),

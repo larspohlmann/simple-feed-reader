@@ -104,6 +104,7 @@ final class RestoreLoadPass
     {
         $this->user->setLocale($line->locale);
         $this->user->getPreferences()->setScrapeFallbackEnabled($line->scrapeFallbackEnabled);
+        $this->user->getPreferences()->setMagazineStyle($line->magazineStyle);
         if (null === $line->recommendationSettings) {
             return;
         }

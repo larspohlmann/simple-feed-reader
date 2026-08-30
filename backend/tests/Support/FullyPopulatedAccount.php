@@ -13,6 +13,7 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SourceFormat;
+use App\Service\Reader\MagazineStyle;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Url\UrlNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
@@ -41,6 +42,7 @@ final readonly class FullyPopulatedAccount
     {
         $user = (new UserFactory($this->em, $this->hasher))->create($email, locale: 'de');
         $user->getPreferences()->setScrapeFallbackEnabled(true);
+        $user->getPreferences()->setMagazineStyle(MagazineStyle::Airy);
 
         $this->em->persist($this->settingsFor($user));
 

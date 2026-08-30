@@ -10,10 +10,10 @@
      can drop to the bottom of the card. The image is pinned back to the top
      below — stretching it would override its fixed 88x66 box. */
   align-items: stretch;
-  padding: var(--space-3);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  padding: var(--card-pad);
+  background: var(--card-bg);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
   cursor: pointer;
 }
 
@@ -22,6 +22,11 @@
 @media (hover: hover) {
   .thumb:hover {
     border-color: var(--border-strong);
+  }
+
+  .thumb:hover .title {
+    text-decoration: var(--card-hover-decoration);
+    text-underline-offset: 3px;
   }
 }
 

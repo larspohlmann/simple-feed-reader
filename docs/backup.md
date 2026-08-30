@@ -134,7 +134,7 @@ restore again with the same file.
 | Line | What the line holds |
 |---|---|
 | `header` | The format version, the export date, the address of the instance the file came from, and the account address the file came from. |
-| `account` | Your language (`locale`), the scrape fallback setting (`scrapeFallbackEnabled`), and all "For you" settings (`recommendationSettings`). |
+| `account` | Your language (`locale`), the scrape fallback setting (`scrapeFallbackEnabled`), the magazine style (`magazineStyle`), and all "For you" settings (`recommendationSettings`). |
 | `tag` | Each tag: `name`, `color`, `icon` and `position`. |
 | `savedSearch` | Each saved search: `term`, `wholeWord`, `phrase` and `position`. |
 | `feed` | Each feed you subscribe to: `url`, `siteUrl`, `title`, `description`, `faviconUrl`, `imageUrl` and `sourceFormat`. |

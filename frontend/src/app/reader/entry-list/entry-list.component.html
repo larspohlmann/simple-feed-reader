@@ -6,6 +6,7 @@
   #listHdr
   [class.collapsed]="collapsed()"
   [class.is-search]="selection().kind === 'search'"
+  [class.airy]="isAiryMagazine()"
 >
   <div class="heading">
     <!-- Title and badge share one row so the badge never adds a second one:
@@ -270,6 +271,7 @@
 } @else if (effectiveLayout() === 'magazine') {
   <div
     class="rows magazine"
+    [class.airy]="isAiryMagazine()"
     [class.reloading]="reloadCue()"
     [attr.inert]="reloadCue() ? '' : null"
     [attr.aria-busy]="loading() ? 'true' : null"

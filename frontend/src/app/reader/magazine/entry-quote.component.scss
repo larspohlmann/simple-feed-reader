@@ -7,10 +7,10 @@
   flex-direction: column;
   gap: var(--space-3);
   align-items: flex-start;
-  padding: var(--space-3);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  padding: var(--card-pad);
+  background: var(--card-bg);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
   cursor: pointer;
 }
 
@@ -20,6 +20,18 @@
   .quote:hover {
     border-color: var(--border-strong);
   }
+
+  .quote:hover .pull {
+    text-decoration: var(--card-hover-decoration);
+    text-underline-offset: 3px;
+  }
+}
+
+/* The card is what said "quote". On a text-rich feed a quote is one block in
+   five among other title-and-dek text, so it keeps the blockquote mark. */
+:host-context(.airy) .quote {
+  border-left: 2px solid var(--border-strong);
+  padding-left: var(--space-3);
 }
 
 .pull {

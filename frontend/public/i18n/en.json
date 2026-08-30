@@ -18,6 +18,13 @@
     "scrapingSaveFailed": "The setting changed on this device, but could not be saved to your account.",
     "readingFocus": "Reading focus",
     "readingFocusHint": "Dim content away from the reading centre.",
+    "magazineStyle": "Magazine style",
+    "magazineStyleHint": "How the magazine view draws an entry.",
+    "magazineStyleSaveFailed": "The magazine style could not be saved to your account.",
+    "magazineStyleOption": {
+      "boxed": "Boxed",
+      "airy": "Airy"
+    },
     "loadingVersion": "Loading version information",
     "feeds": {
       "title": "Feeds",
@@ -831,7 +838,8 @@
     "selectArticle": "Select an article to read.",
     "layout": {
       "aria": "Reading layout",
-      "magazine": "Magazine layout",
+      "magazineBoxed": "Magazine layout, boxed",
+      "magazineAiry": "Magazine layout, airy",
       "list": "List layout",
       "pane": "Pane layout"
     },

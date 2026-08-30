@@ -154,7 +154,7 @@ test.describe('desktop search split view', () => {
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
     );
 
-    await page.getByRole('button', { name: 'Magazine layout' }).click();
+    await page.getByRole('button', { name: 'Magazine layout, boxed' }).click();
     await expect(page.locator('.rows.magazine')).toBeVisible();
 
     await page.getByPlaceholder('Search articles').fill(SEARCH_TERM);

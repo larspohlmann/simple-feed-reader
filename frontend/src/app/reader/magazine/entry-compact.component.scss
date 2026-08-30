@@ -6,17 +6,21 @@
   display: flex;
   gap: var(--space-3);
   align-items: baseline;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--card-pad) var(--card-pad-x);
   cursor: pointer;
 }
 
 /* Hover is a pointer affordance, gated to devices that actually have one:
    a touch browser fires :hover on tap, so without this guard, touching a card
-   while drag-scrolling the page darkened it (most visible on a collapsed
-   group's compact rows in dark mode) (#704). */
+   while drag-scrolling the page darkened it (#704). */
 @media (hover: hover) {
   .compact:hover {
-    background: var(--surface-0);
+    background: var(--card-hover-bg);
+  }
+
+  .compact:hover .title {
+    text-decoration: var(--card-hover-decoration);
+    text-underline-offset: 3px;
   }
 }
 

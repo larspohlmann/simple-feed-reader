@@ -5,9 +5,12 @@
   gap: var(--space-2);
 }
 
+/* `flex: 1 1 auto`, not `flex: 1`: a zero basis splits the row evenly, which
+   starves the four-button layout group while the three-button theme group has
+   room to spare — and `overflow: hidden` then clips the last button silently. */
 .seg {
   display: inline-flex;
-  flex: 1;
+  flex: 1 1 auto;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
@@ -18,7 +21,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-2);
+
+  /* Tight horizontally: four layout buttons share the sidebar with three theme
+     buttons, and 8px each side clipped the glyph inside `overflow: hidden`. */
+  padding: var(--space-2) var(--space-1);
   background: var(--surface-2);
   border: none;
   color: var(--text-secondary);

@@ -7,6 +7,7 @@ namespace App\Controller\Api;
 use App\Dto\Me\SendTestDigestRequest;
 use App\Dto\Me\UpdateDigestRequest;
 use App\Dto\Me\UpdateLocaleRequest;
+use App\Dto\Me\UpdateMagazineStyleRequest;
 use App\Dto\Me\UpdatePreferencesRequest;
 use App\Entity\User;
 use App\Http\MeJson;
@@ -81,6 +82,18 @@ final readonly class MeController
         #[MapRequestPayload] UpdatePreferencesRequest $request,
     ): JsonResponse {
         $user->getPreferences()->setScrapeFallbackEnabled($request->scrapeFallbackEnabled);
+        $this->entityManager->flush();
+
+        return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled(), $this->instanceTimezone));
+    }
+
+    /** Its own PATCH for the reason updatePreferences() gives (#723). */
+    #[Route('/api/me/magazine-style', name: 'api_me_update_magazine_style', methods: ['PATCH'])]
+    public function updateMagazineStyle(
+        #[CurrentUser] User $user,
+        #[MapRequestPayload] UpdateMagazineStyleRequest $request,
+    ): JsonResponse {
+        $user->getPreferences()->setMagazineStyle($request->magazineStyle);
         $this->entityManager->flush();
 
         return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled(), $this->instanceTimezone));
