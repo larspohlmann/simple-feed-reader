@@ -173,6 +173,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'digestCadence' => self::DIGEST_BACKUP_NOT_YET_WIRED,
             'digestSendHour' => self::DIGEST_BACKUP_NOT_YET_WIRED,
             'digestWeekday' => self::DIGEST_BACKUP_NOT_YET_WIRED,
+            'digestFormat' => self::DIGEST_BACKUP_NOT_YET_WIRED,
             'digestLastSentAt' => 'System-written, like lastLoginAt: the next send overwrites it, '
                 . 'and a restored value would only delay that send by a stale watermark.',
             'passkeyOfferAnsweredAt' => 'Interface state, not account configuration: it records that the '
