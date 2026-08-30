@@ -18,6 +18,11 @@
     "scrapingSaveFailed": "The setting changed on this device, but could not be saved to your account.",
     "readingFocus": "Reading focus",
     "readingFocusHint": "Dim content away from the reading centre.",
+    "magazineStyle": "Magazine style",
+    "magazineStyleHint": "How the magazine view draws an entry.",
+    "magazineStyleSaveFailed": "The magazine style could not be saved to your account.",
+    "magazineStyleBoxed": "Boxed",
+    "magazineStyleAiry": "Airy",
     "loadingVersion": "Loading version information",
     "feeds": {
       "title": "Feeds",

@@ -18,6 +18,11 @@
     "scrapingSaveFailed": "Die Einstellung wurde auf diesem Gerät geändert, konnte aber nicht in deinem Konto gespeichert werden.",
     "readingFocus": "Lesefokus",
     "readingFocusHint": "Inhalte außerhalb der Lesemitte abdunkeln.",
+    "magazineStyle": "Magazin-Stil",
+    "magazineStyleHint": "Wie die Magazinansicht einen Eintrag darstellt.",
+    "magazineStyleSaveFailed": "Der Magazin-Stil konnte nicht in deinem Konto gespeichert werden.",
+    "magazineStyleBoxed": "Mit Rahmen",
+    "magazineStyleAiry": "Luftig",
     "loadingVersion": "Versionsinformationen werden geladen",
     "feeds": {
       "title": "Feeds",

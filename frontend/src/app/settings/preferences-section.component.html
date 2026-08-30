@@ -36,5 +36,16 @@
         (toggled)="readingFocus.setEnabled($event)"
       />
     </app-settings-row>
+
+    <app-settings-row
+      [title]="'settings.magazineStyle' | transloco"
+      [description]="'settings.magazineStyleHint' | transloco"
+      [stackable]="true"
+    >
+      <app-magazine-style-switcher />
+    </app-settings-row>
+    @if (magazineStyle.saveFailed()) {
+      <app-error-banner class="state" [message]="'settings.magazineStyleSaveFailed' | transloco" />
+    }
   </app-settings-group>
 </app-settings-stack>

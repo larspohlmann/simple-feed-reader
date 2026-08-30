@@ -1,0 +1,12 @@
+<div class="seg" role="group" [attr.aria-label]="'settings.magazineStyle' | transloco">
+  @for (s of styles; track s) {
+    <button
+      type="button"
+      [class.on]="magazineStyle.style() === s"
+      [attr.aria-pressed]="magazineStyle.style() === s"
+      (click)="magazineStyle.set(s)"
+    >
+      {{ 'settings.magazineStyle' + (s === 'boxed' ? 'Boxed' : 'Airy') | transloco }}
+    </button>
+  }
+</div>
