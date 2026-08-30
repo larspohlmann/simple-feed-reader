@@ -450,4 +450,31 @@ final class RecommendationFeedTest extends DbTestCase
 
         self::assertSame(1, $this->repo()->countForYou((int) $this->user->getId()));
     }
+
+    public function testCountForYouCountsUnreadPicksOnly(): void
+    {
+        $unread = $this->entry('unread');
+        $hidden = $this->entry('hidden');
+        $underWatermark = $this->entry('under-watermark');
+
+        // An explicit unread row beats the watermark below, so 'unread' is the
+        // one pick the count must keep.
+        $unreadState = new EntryState($this->user, $unread);
+        $unreadState->markUnread();
+        $this->em->persist($unreadState);
+        $hiddenState = new EntryState($this->user, $hidden);
+        $hiddenState->hide(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
+        $this->em->persist($hiddenState);
+        // 'under-watermark' keeps its 2026-07-01 effectiveDate and gets no state
+        // row, so only the subscription watermark can read it as read.
+        $this->sub->setMarkedReadUntil(new \DateTimeImmutable('2026-08-07T00:00:00Z'));
+        $this->em->flush();
+
+        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $this->item($run, $unread, 1, 'reason unread');
+        $this->item($run, $hidden, 2, 'reason hidden');
+        $this->item($run, $underWatermark, 3, 'reason under watermark');
+
+        self::assertSame(1, $this->repo()->countForYou((int) $this->user->getId()));
+    }
 }

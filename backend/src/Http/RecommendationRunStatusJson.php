@@ -28,6 +28,8 @@ final class RecommendationRunStatusJson
             'elapsedSeconds' => $report->elapsedSecondsAt($clock->now()),
             'etaSeconds' => $etaSeconds,
             'forYou' => [
+                // The count of unread surviving picks (#724); the field name
+                // stays `itemCount` for wire compatibility.
                 'itemCount' => $summary->itemCount,
                 'generatedAt' => $summary->generatedAt?->format(\DateTimeInterface::ATOM),
                 'newestRunId' => $summary->newestRunId,

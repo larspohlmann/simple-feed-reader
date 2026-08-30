@@ -13,6 +13,9 @@ namespace App\Service\Recommendation;
 final readonly class RecommendationForYouSummary
 {
     public function __construct(
+        // The count of UNREAD surviving picks — the same "unread" the rest of
+        // the sidebar counts, so the For-You badge drops to zero once the reader
+        // has read every pick (#724).
         public int $itemCount,
         public ?\DateTimeImmutable $generatedAt,
         // The newest completed run's id — the run whose generation time the
