@@ -7,7 +7,7 @@ current bordered-card design (`boxed`) and a boxless one separated by hairline
 rules (`airy`).
 
 **Architecture:** The card chrome stops being three lines copied into seven
-component stylesheets and becomes four custom properties set once on
+component stylesheets and becomes five custom properties set once on
 `.rows.magazine`. Airy is then a different set of values for those properties,
 plus one `.airy` class that carries the structural half — the wider gap, the
 rules on the slots, the group inset and the hover idiom. The chosen style is an
@@ -1155,7 +1155,7 @@ and so the refactor is not tangled with the feature in one diff.
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: four custom properties declared on `.rows.magazine` and read by the
+- Produces: five custom properties declared on `.rows.magazine` and read by the
   seven block stylesheets — `--card-bg`, `--card-border`, `--card-radius`,
   `--card-pad`.
 
