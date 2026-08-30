@@ -506,6 +506,11 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
 
   /* No cards left, so the canvas itself becomes the card colour (#723). */
   background: var(--surface-2);
+
+  /* Boxed's gutter is the list's 12px plus the card's own inline padding; with
+     the card gone the list has to carry the whole inset itself, or the text
+     runs to 12px off the edge (#732). */
+  padding-inline: var(--space-5);
 }
 
 /* Neither is overflowing content, so `row-leave`'s collapse alone leaves them
