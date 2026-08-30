@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dto\Me;
 
 use App\Service\Mail\Digest\DigestCadence;
+use App\Service\Mail\Digest\DigestFormat;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -23,6 +24,7 @@ final readonly class UpdateDigestRequest
         public int $sendHour,
         #[Assert\Range(min: 1, max: 7)]
         public int $weekday,
+        public DigestFormat $format,
     ) {
     }
 }

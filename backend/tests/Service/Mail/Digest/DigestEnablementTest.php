@@ -9,6 +9,7 @@ use App\Entity\Preferences;
 use App\Entity\User;
 use App\Service\Mail\Digest\DigestCadence;
 use App\Service\Mail\Digest\DigestEnablement;
+use App\Service\Mail\Digest\DigestFormat;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 
@@ -29,6 +30,7 @@ final class DigestEnablementTest extends TestCase
             cadence: DigestCadence::Weekly,
             sendHour: 9,
             weekday: 3,
+            format: DigestFormat::Html,
         ));
 
         self::assertTrue($prefs->isDigestEnabled());
@@ -50,6 +52,7 @@ final class DigestEnablementTest extends TestCase
             cadence: DigestCadence::Daily,
             sendHour: 8,
             weekday: 1,
+            format: DigestFormat::Html,
         ));
 
         self::assertEquals($now, $prefs->getDigestLastSentAt());
@@ -68,6 +71,7 @@ final class DigestEnablementTest extends TestCase
             cadence: DigestCadence::Weekly,
             sendHour: 10,
             weekday: 5,
+            format: DigestFormat::Html,
         ));
 
         self::assertEquals($seededAt, $prefs->getDigestLastSentAt());
@@ -85,6 +89,7 @@ final class DigestEnablementTest extends TestCase
             cadence: DigestCadence::Daily,
             sendHour: 8,
             weekday: 1,
+            format: DigestFormat::Html,
         ));
 
         self::assertFalse($prefs->isDigestEnabled());
@@ -104,6 +109,7 @@ final class DigestEnablementTest extends TestCase
             cadence: DigestCadence::Daily,
             sendHour: 8,
             weekday: 1,
+            format: DigestFormat::Html,
         ));
 
         self::assertFalse($prefs->isDigestEnabled());
@@ -126,6 +132,7 @@ final class DigestEnablementTest extends TestCase
             cadence: DigestCadence::Daily,
             sendHour: 8,
             weekday: 1,
+            format: DigestFormat::Html,
         ));
 
         self::assertEquals($seededAt, $prefs->getDigestLastSentAt());
@@ -142,11 +149,28 @@ final class DigestEnablementTest extends TestCase
             cadence: DigestCadence::Daily,
             sendHour: 8,
             weekday: 1,
+            format: DigestFormat::Html,
         ));
 
         $seededAt = $prefs->getDigestLastSentAt();
         self::assertNotNull($seededAt);
         self::assertSame('UTC', $seededAt->getTimezone()->getName());
         self::assertEquals(new \DateTimeImmutable('2026-08-28T10:00:00Z'), $seededAt);
+    }
+
+    public function testApplyToSetsTheDigestFormat(): void
+    {
+        $enablement = new DigestEnablement(new MockClock('2026-08-28T12:00:00Z'));
+        $prefs = $this->preferences();
+
+        $enablement->applyTo($prefs, new UpdateDigestRequest(
+            enabled: true,
+            cadence: DigestCadence::Daily,
+            sendHour: 8,
+            weekday: 1,
+            format: DigestFormat::Text,
+        ));
+
+        self::assertSame(DigestFormat::Text, $prefs->getDigestFormat());
     }
 }

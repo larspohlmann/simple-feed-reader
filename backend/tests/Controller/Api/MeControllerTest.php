@@ -175,6 +175,7 @@ final class MeControllerTest extends ApiTestCase
                 'digest' => [
                     'enabled' => false,
                     'cadence' => 'daily',
+                    'format' => 'html',
                     'sendHour' => 8,
                     'weekday' => 1,
                     'timezone' => 'UTC',
@@ -252,6 +253,7 @@ final class MeControllerTest extends ApiTestCase
                 'digest' => [
                     'enabled' => false,
                     'cadence' => 'daily',
+                    'format' => 'html',
                     'sendHour' => 8,
                     'weekday' => 1,
                     'timezone' => 'UTC',

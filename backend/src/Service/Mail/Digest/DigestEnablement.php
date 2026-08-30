@@ -32,6 +32,7 @@ final readonly class DigestEnablement
         $preferences->setDigestCadence($request->cadence);
         $preferences->setDigestSendHour($request->sendHour);
         $preferences->setDigestWeekday($request->weekday);
+        $preferences->setDigestFormat($request->format);
 
         if ($this->isFirstEnable($wasEnabled, $request->enabled, $preferences)) {
             $preferences->setDigestLastSentAt($this->nowAsNaiveUtc());
