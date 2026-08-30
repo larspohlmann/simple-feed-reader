@@ -78,8 +78,6 @@ final class DigestMailerTest extends TestCase
                 null,
                 null,
                 null,
-                null,
-                null,
             ),
         ];
         $group = new DigestGroup('rust', 1, $entries, false, '');

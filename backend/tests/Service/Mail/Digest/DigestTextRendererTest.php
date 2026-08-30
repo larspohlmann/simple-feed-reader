@@ -87,15 +87,13 @@ final class DigestTextRendererTest extends TestCase
                 null,
                 null,
                 null,
-                null,
-                null,
             ),
-            new DigestEntry('Second post', 'Rust Blog', '', 'https://example.com/2', null, null, null, null, null),
+            new DigestEntry('Second post', 'Rust Blog', '', 'https://example.com/2', null, null, null),
         ];
         $rust = new DigestGroup('rust', 5, $rustEntries, true, 'https://reader.example/digest?q=rust');
 
         $golangEntries = [
-            new DigestEntry('Golang release', 'Go Blog', '', 'https://example.com/3', null, null, null, null, null),
+            new DigestEntry('Golang release', 'Go Blog', '', 'https://example.com/3', null, null, null),
         ];
         $golang = new DigestGroup('golang', 2, $golangEntries, false, '');
 

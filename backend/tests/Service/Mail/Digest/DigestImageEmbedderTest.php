@@ -19,7 +19,7 @@ final class DigestImageEmbedderTest extends TestCase
 {
     private function card(string $imageUrl, string $faviconUrl): DigestEntry
     {
-        return new DigestEntry('T', 'Feed', '', 'https://example.com/e', null, $imageUrl, null, null, $faviconUrl);
+        return new DigestEntry('T', 'Feed', '', 'https://example.com/e', null, $imageUrl, $faviconUrl);
     }
 
     private function page(DigestEntry ...$cards): DigestPage

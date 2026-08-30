@@ -14,7 +14,7 @@ final class DigestPageBuilderTest extends TestCase
 {
     private function entry(string $title): DigestEntry
     {
-        return new DigestEntry($title, 'Feed', '', 'https://example.com/e', null, null, null, null, null);
+        return new DigestEntry($title, 'Feed', '', 'https://example.com/e', null, null, null);
     }
 
     private function group(string $term, int $count, int $totalCount): DigestGroup

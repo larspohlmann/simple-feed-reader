@@ -21,7 +21,8 @@ final readonly class DigestHtmlRenderer
 
     public function render(DigestPage $page, DigestImageSet $images, string $locale): string
     {
-        $render = fn (DigestPageGroup $group): string => $this->group($group, $images, $locale);
+        $dateFormatter = new \IntlDateFormatter($locale, \IntlDateFormatter::MEDIUM, \IntlDateFormatter::SHORT, 'UTC');
+        $render = fn (DigestPageGroup $group): string => $this->group($group, $images, $locale, $dateFormatter);
         $groups = array_map($render, $page->groups);
 
         $body = $this->header($page->totalCount, $locale)
@@ -62,11 +63,16 @@ final readonly class DigestHtmlRenderer
             . $this->escapeText($this->trans('digest.intro', [], $locale)) . '</td></tr>';
     }
 
-    private function group(DigestPageGroup $group, DigestImageSet $images, string $locale): string
-    {
+    private function group(
+        DigestPageGroup $group,
+        DigestImageSet $images,
+        string $locale,
+        \IntlDateFormatter $dateFormatter,
+    ): string {
         $parameters = ['%term%' => $group->term, '%count%' => (string) $group->totalCount];
         $heading = $this->trans('digest.group_heading', $parameters, $locale);
-        $cardRenders = array_map(fn (DigestEntry $card): string => $this->card($card, $images, $locale), $group->cards);
+        $render = fn (DigestEntry $card): string => $this->card($card, $images, $locale, $dateFormatter);
+        $cardRenders = array_map($render, $group->cards);
         $cards = implode('', $cardRenders);
         $more = $group->remaining > 0 ? $this->moreLink($group, $locale) : '';
         $headingStyle = 'padding-bottom:10px;border-bottom:1px solid #e4e4e2;font-size:13px;'
@@ -78,8 +84,12 @@ final readonly class DigestHtmlRenderer
             . $cards . $more . '</td></tr>';
     }
 
-    private function card(DigestEntry $card, DigestImageSet $images, string $locale): string
-    {
+    private function card(
+        DigestEntry $card,
+        DigestImageSet $images,
+        string $locale,
+        \IntlDateFormatter $dateFormatter,
+    ): string {
         $thumbnailCid = $images->cidFor($card->imageUrl);
         $thumbnail = $thumbnailCid === null ? '' : '<td valign="top" width="88" style="width:88px;padding:0 12px 0 0;">'
             . '<img src="cid:' . $thumbnailCid . '" width="88" height="66" alt="" '
@@ -93,18 +103,18 @@ final readonly class DigestHtmlRenderer
         return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
             . 'style="border-top:1px solid #e4e4e2;margin-top:20px;padding-top:20px;"><tr>'
             . $thumbnail
-            . '<td valign="top">' . $this->kicker($card, $images, $locale)
+            . '<td valign="top">' . $this->kicker($card, $images, $dateFormatter)
             . $title
             . $this->dek($card)
             . '</td></tr></table>';
     }
 
-    private function kicker(DigestEntry $card, DigestImageSet $images, string $locale): string
+    private function kicker(DigestEntry $card, DigestImageSet $images, \IntlDateFormatter $dateFormatter): string
     {
         $faviconCid = $images->cidFor($card->faviconUrl);
         $favicon = $faviconCid === null ? '' : '<img src="cid:' . $faviconCid . '" width="16" height="16" alt="" '
             . 'style="width:16px;height:16px;border-radius:4px;vertical-align:middle;margin-right:6px;">';
-        $when = $this->when($card->publishedAt, $locale);
+        $when = $this->when($card->publishedAt, $dateFormatter);
         $time = $when === '' ? '' : '<span style="color:#c4c4c1;"> · </span>' . $this->escapeText($when);
 
         return '<div style="font-size:13px;color:#8f8f8b;">' . $favicon
@@ -158,15 +168,13 @@ final readonly class DigestHtmlRenderer
         return (string) $formatter->format(new \DateTimeImmutable('now', new \DateTimeZone('UTC')));
     }
 
-    private function when(?\DateTimeImmutable $publishedAt, string $locale): string
+    private function when(?\DateTimeImmutable $publishedAt, \IntlDateFormatter $dateFormatter): string
     {
         if ($publishedAt === null) {
             return '';
         }
 
-        $formatter = new \IntlDateFormatter($locale, \IntlDateFormatter::MEDIUM, \IntlDateFormatter::SHORT, 'UTC');
-
-        return (string) $formatter->format($publishedAt);
+        return (string) $dateFormatter->format($publishedAt);
     }
 
     /** @param array<string, string> $parameters */

@@ -71,8 +71,6 @@ final readonly class DigestComposer
             $this->links->entryUrl((int) $entry->getId()),
             $entry->getPublishedAt(),
             $entry->getImageUrl(),
-            $entry->getImageWidth(),
-            $entry->getImageHeight(),
             $entry->getFeed()->getFaviconUrl(),
         );
     }

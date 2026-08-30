@@ -39,8 +39,6 @@ final class DigestHtmlRendererTest extends TestCase
             'https://reader.example/?entry=1',
             new \DateTimeImmutable('2026-08-30T09:48:00Z'),
             $imageUrl,
-            null,
-            null,
             'https://site/favicon.ico',
         );
     }

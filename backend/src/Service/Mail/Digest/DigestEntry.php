@@ -13,8 +13,6 @@ final readonly class DigestEntry
         public string $url,
         public ?\DateTimeImmutable $publishedAt,
         public ?string $imageUrl,
-        public ?int $imageWidth,
-        public ?int $imageHeight,
         public ?string $faviconUrl,
     ) {
     }

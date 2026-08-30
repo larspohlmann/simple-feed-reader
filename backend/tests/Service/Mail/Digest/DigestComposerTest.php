@@ -140,8 +140,6 @@ final class DigestComposerTest extends TestCase
         self::assertNotNull($model);
         $entry = $model->groups[0]->entries[0];
         self::assertSame('https://cdn.example.com/1.jpg', $entry->imageUrl);
-        self::assertSame(1200, $entry->imageWidth);
-        self::assertSame(900, $entry->imageHeight);
         self::assertSame('https://example.com/favicon.ico', $entry->faviconUrl);
         self::assertEquals(new \DateTimeImmutable('2026-08-15T09:48:00Z'), $entry->publishedAt);
     }

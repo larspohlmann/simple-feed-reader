@@ -57,8 +57,6 @@ final class DigestMailBuilderTest extends TestCase
             null,
             null,
             null,
-            null,
-            null,
         );
 
         return new DigestModel([new DigestGroup('rust', 1, [$entry], false, 'https://reader.example/?q=rust')], 1);
