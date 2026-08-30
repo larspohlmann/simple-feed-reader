@@ -722,7 +722,15 @@ final class RefreshRunnerTest extends DbTestCase
         $report = $this->runner()->run(RefreshRequest::allDue(300));
 
         self::assertSame('busy', $report->status);
+        // Every counter is zero: the lock was held, so no slice ran at all.
         self::assertSame(0, $report->total);
+        self::assertSame(0, $report->fetched);
+        self::assertSame(0, $report->notModified);
+        self::assertSame(0, $report->failed);
+        self::assertSame(0, $report->throttled);
+        self::assertSame(0, $report->skippedForBudget);
+        self::assertSame(0, $report->remaining);
+        self::assertSame(0, $report->pruned);
         self::assertSame([], $this->fetcher->fetchedUrls);
         $lock->release();
     }

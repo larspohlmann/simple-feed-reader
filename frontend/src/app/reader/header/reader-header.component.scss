@@ -258,3 +258,19 @@ header {
   max-width: 22rem;
   margin: 0 auto;
 }
+
+/* The shell positions this component (`app-reader-header` in
+   reader-shell.component.scss), so the host is the containing block and the bar
+   hangs off its bottom edge. Above `header`'s own z-index 2 so it paints over the
+   bottom border rather than under it. */
+app-progress-hairline {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+
+  // On mobile this edge is the bottom of the tag-chip row; without this the
+  // 2px strip would swallow taps that land on a chip's bottom edge.
+  pointer-events: none;
+}

@@ -69,7 +69,6 @@ import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { SidebarCountsPoll } from './sidebar-counts-poll.service';
 import { CatalogStore } from '../discover/catalog.store';
 import { OnboardingSkip } from '../discover/onboarding-skip';
-import { ProgressHairlineComponent } from '../shared/progress-hairline/progress-hairline.component';
 import { IconComponent } from '../shared/icon/icon.component';
 import { ListActionDirective } from '../shared/list-action/list-action.directive';
 import { ButtonComponent } from '../shared/button/button.component';
@@ -85,7 +84,6 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
     EntryListComponent,
     ReaderViewComponent,
     DrawerSwipeDirective,
-    ProgressHairlineComponent,
     IconComponent,
     ListActionDirective,
     ButtonComponent,
@@ -186,12 +184,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly fetchFailureKey = computed(() => {
     const failure = this.refreshSvc.failure();
     return failure ? refreshFailureKey(failure) : null;
-  });
-
-  readonly fetchProgress = computed(() => {
-    const report = this.refreshSvc.report();
-    if (!report) return { done: 0, total: 0 };
-    return { done: report.total - report.remaining, total: report.total };
   });
 
   private readonly params = toSignal(this.route.queryParamMap, {

@@ -145,7 +145,7 @@ describe('SidebarComponent', () => {
     expect(addFeed).toHaveBeenCalledTimes(1);
   });
 
-  it('disables Refresh and shows a progress bar while refreshing', () => {
+  it('disables Refresh while refreshing and shows no progress bar of its own', () => {
     const f = mount();
     TestBed.inject(RefreshService).running.set(true);
     f.detectChanges();
@@ -153,7 +153,10 @@ describe('SidebarComponent', () => {
     expect((el.querySelector('.act[aria-label="Refresh"]') as HTMLButtonElement).disabled).toBe(
       true,
     );
-    expect(el.querySelector('.prog')).not.toBeNull();
+    // The refresh has exactly one bar and it belongs to the app bar. A second one
+    // here was narrower than the first, sat directly under it on desktop, and drew
+    // the same number twice (#721).
+    expect(el.querySelector('.prog')).toBeNull();
   });
 
   it('renders tags with summed counts and reveals subs when expanded', () => {

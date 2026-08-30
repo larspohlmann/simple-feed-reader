@@ -2,9 +2,13 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 /**
- * A 2px determinate bar under the header. Zero layout shift, so it can sit in
- * the reader permanently and upgrade EVERY refresh — not just the onboarding
- * sweep — from "an icon is spinning" to "this much of it is done".
+ * A 2px determinate bar. Zero layout shift, so it sits in the app bar permanently
+ * and upgrades EVERY refresh — not just the onboarding sweep — from "an icon is
+ * spinning" to "this much of it is done".
+ *
+ * The width is only ever what the server has reported. A slice is budgeted at 25 s,
+ * so it steps rather than creeps; the stylesheet's sheen carries the activity in
+ * between (#721).
  */
 @Component({
   selector: 'app-progress-hairline',

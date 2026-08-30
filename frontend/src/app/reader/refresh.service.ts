@@ -4,7 +4,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Problem, parseProblem } from '../core/problem';
 import { ReaderApi } from './reader-api';
 import { RefreshScope } from './query';
-import { RefreshReport } from './models';
+import { RefreshProgress, RefreshReport } from './models';
 
 const BUSY_BACKOFF_MS = 1500;
 const MAX_BUSY_RETRIES = 5;
@@ -26,7 +26,10 @@ export class RefreshService {
   private readonly api = inject(ReaderApi);
 
   readonly running = signal(false);
-  readonly report = signal<RefreshReport | null>(null);
+  /** The newest slice. Private: it describes ONE slice, and every consumer that
+   *  did its own arithmetic over it got a different answer (#721). What callers
+   *  want is `progress`, which describes the run. */
+  private readonly report = signal<RefreshReport | null>(null);
   /** Null while a refresh is doing its job. Set exactly once per run, on the
    *  three paths that end it without the feeds being fetched. */
   readonly failure = signal<RefreshFailure | null>(null);
@@ -40,10 +43,18 @@ export class RefreshService {
    *  a standstill. Reset per run; only one run is ever in flight. */
   private previousRemaining = Number.POSITIVE_INFINITY;
 
-  readonly progress = computed(() => {
-    const r = this.report();
-    if (!r || r.total <= 0) return 0;
-    return Math.min(1, Math.max(0, (r.total - r.remaining) / r.total));
+  /** The run's progress exactly as the server reports it. Nothing here recomputes
+   *  it — that is the whole point of #721. */
+  readonly progress = computed<RefreshProgress>(
+    () => this.report()?.progress ?? { done: 0, total: 0 },
+  );
+
+  /** The same figure as a 0..1 fraction, for anything that draws a bar. Clamped
+   *  only so a bar can never render past its own track. */
+  readonly fraction = computed(() => {
+    const { done, total } = this.progress();
+    if (total <= 0) return 0;
+    return Math.min(1, Math.max(0, done / total));
   });
 
   /** Pass a scope to sweep just one feed (feedId) or one tag's feeds (tagId);

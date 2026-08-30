@@ -539,3 +539,14 @@ services:
     App\Service\Backup\AccountRestorer:
         autowire: true
         public: true
+
+    # refresh.run.cache is a FILESYSTEM pool with a ten-minute TTL, so an entry
+    # from one test process outlives it. Auto-increment ids repeat between runs
+    # and tests/bootstrap.php rebuilds the database but never this pool, so a
+    # `refresh_run_<id>.<scope>` key a previous run left behind could be resumed
+    # by a same-id user in a later run and confuse the `progress` assertions.
+    # RefreshControllerTest clears this between cases the same way it already
+    # clears test.cache.rate_limiter.
+    test.cache.refresh_run:
+        alias: refresh.run.cache
+        public: true

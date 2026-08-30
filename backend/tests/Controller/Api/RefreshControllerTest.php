@@ -24,6 +24,15 @@ final class RefreshControllerTest extends WebTestCase
         /** @var CacheItemPoolInterface $rateLimiterCache */
         $rateLimiterCache = self::getContainer()->get('test.cache.rate_limiter');
         $rateLimiterCache->clear();
+        // refresh.run.cache is a filesystem pool with a ten-minute TTL and
+        // reused auto-increment ids, so a run left behind by an earlier test
+        // process could be resumed by a same-id user here and corrupt the
+        // `progress` assertions with no cause visible in this file. Not
+        // reachable today — every test in this class ends `completed` and
+        // TrackedRefreshRunner forgets a completed run — but cheap insurance.
+        /** @var CacheItemPoolInterface $refreshRunCache */
+        $refreshRunCache = self::getContainer()->get('test.cache.refresh_run');
+        $refreshRunCache->clear();
         self::ensureKernelShutdown();
     }
 
@@ -53,7 +62,11 @@ final class RefreshControllerTest extends WebTestCase
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
         self::assertSame('completed', $body['status']);
-        self::assertSame(0, $body['total']);
+        self::assertSame(['done' => 0, 'total' => 0], $body['progress']);
+        // `total` was this slice's server-capped batch size sitting next to a
+        // run-wide `remaining`, and dividing one by the other is issue #721. It is
+        // gone, and this asserts it stays gone.
+        self::assertArrayNotHasKey('total', $body);
     }
 
     public function testPerFeedRefreshOfANonSubscribedFeedIs404(): void
@@ -103,9 +116,7 @@ final class RefreshControllerTest extends WebTestCase
         );
         self::assertResponseIsSuccessful();
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($body);
-        self::assertContains($body['status'], ['completed', 'partial']);
-        self::assertSame(1, $body['total']);
+        $this->assertReportsARunOfOneFeed($body);
     }
 
     public function testTagRefreshOfAForeignTagIs404(): void
@@ -174,8 +185,27 @@ final class RefreshControllerTest extends WebTestCase
         );
         self::assertResponseIsSuccessful();
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        $this->assertReportsARunOfOneFeed($body);
+    }
+
+    /**
+     * The per-feed and the per-tag scope each sweep exactly one feed, so both
+     * end in the same claim about the run.
+     *
+     * Asserted as an invariant rather than as two literals: either scope may
+     * answer `completed` or `partial`, and a partial slice leaves feeds in
+     * `remaining` that belong in the run's denominator. `total` is absent
+     * because it was this slice's server-capped batch size sitting next to a
+     * run-wide `remaining`, and dividing one by the other is issue #721.
+     */
+    private function assertReportsARunOfOneFeed(mixed $body): void
+    {
         self::assertIsArray($body);
         self::assertContains($body['status'], ['completed', 'partial']);
-        self::assertSame(1, $body['total']);
+        self::assertIsArray($body['progress']);
+        self::assertIsInt($body['remaining']);
+        self::assertSame(1, $body['progress']['done']);
+        self::assertSame(1 + $body['remaining'], $body['progress']['total']);
+        self::assertArrayNotHasKey('total', $body);
     }
 }

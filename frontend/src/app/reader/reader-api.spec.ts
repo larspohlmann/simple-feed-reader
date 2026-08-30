@@ -5,6 +5,7 @@ import { API_BASE_URL } from '../core/api';
 import { ReaderApi } from './reader-api';
 import { PAGE_SIZE } from './paging';
 import { ReaderContent } from './models';
+import { refreshReport } from '../../testing/refresh-report';
 
 describe('ReaderApi', () => {
   let api: ReaderApi;
@@ -172,16 +173,7 @@ describe('ReaderApi', () => {
     const req = ctrl.expectOne('https://api.test/api/refresh');
     expect(req.request.method).toBe('POST');
     expect(req.request.params.has('feedId')).toBe(false);
-    req.flush({
-      status: 'completed',
-      total: 0,
-      fetched: 0,
-      notModified: 0,
-      failed: 0,
-      skippedForBudget: 0,
-      remaining: 0,
-      pruned: 0,
-    });
+    req.flush(refreshReport());
   });
 
   it('scopes refresh to a single feed when given a feedId', () => {
@@ -190,16 +182,7 @@ describe('ReaderApi', () => {
     expect(req.request.method).toBe('POST');
     expect(req.request.params.get('feedId')).toBe('42');
     expect(req.request.params.has('tag')).toBe(false);
-    req.flush({
-      status: 'completed',
-      total: 1,
-      fetched: 1,
-      notModified: 0,
-      failed: 0,
-      skippedForBudget: 0,
-      remaining: 0,
-      pruned: 0,
-    });
+    req.flush(refreshReport({ progress: { done: 1, total: 1 }, fetched: 1 }));
   });
 
   it('scopes refresh to a tag when given a tagId', () => {
@@ -208,16 +191,7 @@ describe('ReaderApi', () => {
     expect(req.request.method).toBe('POST');
     expect(req.request.params.get('tag')).toBe('3');
     expect(req.request.params.has('feedId')).toBe(false);
-    req.flush({
-      status: 'completed',
-      total: 1,
-      fetched: 0,
-      notModified: 1,
-      failed: 0,
-      skippedForBudget: 0,
-      remaining: 0,
-      pruned: 0,
-    });
+    req.flush(refreshReport({ progress: { done: 1, total: 1 }, notModified: 1 }));
   });
 
   describe('ReaderApi management methods', () => {

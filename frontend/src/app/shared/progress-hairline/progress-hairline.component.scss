@@ -5,7 +5,39 @@
 
 span {
   display: block;
+  position: relative;
   height: 100%;
   background: var(--accent);
+  overflow: hidden;
   transition: width 0.3s ease-out;
+}
+
+/* The server reports at slice boundaries and a slice is budgeted at 25 s, so the
+   width steps rather than creeps. This says "still working" in between WITHOUT
+   claiming progress the server has not reported — the alternative, gliding the
+   width toward a guessed value, shows work nobody has done and then has to correct
+   itself (#721). */
+span::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--accent-soft), transparent);
+  animation: hairline-sheen 1.6s ease-in-out infinite;
+}
+
+@keyframes hairline-sheen {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  span::after {
+    animation: none;
+    opacity: 0;
+  }
 }
