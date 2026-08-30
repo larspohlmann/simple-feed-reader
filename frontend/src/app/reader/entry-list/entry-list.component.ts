@@ -404,6 +404,17 @@ export class EntryListComponent implements OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
   protected readonly magazineStyle = inject(MagazineStyleService);
 
+  /** Mirrors exactly when `.rows.magazine.airy` renders, so `.list-header`
+   *  can gate on it too — the loading/empty branches above it in the `@if`
+   *  chain keep the old canvas, and the header must match whichever shows (#723). */
+  protected readonly isAiryMagazine = computed(
+    () =>
+      !(this.loading() && this.entries().length === 0) &&
+      this.visibleEntryCount() !== 0 &&
+      this.effectiveLayout() === 'magazine' &&
+      this.magazineStyle.style() === 'airy',
+  );
+
   /** True only once the catalog has been resolved AND has no entries.
    *  Unresolved reads as not-empty, so the /discover link is never hidden on a
    *  guess — it simply shows until the shell (which loads the catalog on the

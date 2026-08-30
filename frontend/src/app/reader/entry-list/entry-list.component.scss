@@ -48,6 +48,12 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
      notice now that nothing around it moves. */
 }
 
+/* The rows scrolling behind it take the card colour in airy (#723) — must
+   follow, or the opaque strip above stops matching what passes under it. */
+.list-header.airy {
+  background: var(--surface-2);
+}
+
 .heading {
   display: flex;
   flex-direction: column;
@@ -494,32 +500,30 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   --card-pad: 0;
   --card-pad-x: 0;
   --magazine-gap: var(--space-5);
+
+  /* No cards left, so the canvas itself becomes the card colour (#723). */
+  background: var(--surface-2);
 }
 
-/* On the SLOT, so no block stylesheet learns about the rule and none is drawn
-   above the first or below the last. It skips `app-run-header`, which is not a
-   slot: that header is already a rule, and a second one beside it reads wrong. */
-.rows.magazine.airy > .magazine-slot + .magazine-slot {
-  border-top: 1px solid var(--border);
-}
-
-/* border-top draws at the slot's top edge, so without this the whole gap falls
-   above the rule and none below it; the inner wrapper (not the slot) takes the
-   padding so a leaving row can zero it below, in step with its own collapse. */
+/* On the inner wrapper, not the slot, so leaving can zero it below (#723).
+   Skips `app-run-header`: that header is already a rule, and a second beside
+   it reads wrong. */
 .rows.magazine.airy > .magazine-slot + .magazine-slot > .row-slot-inner {
+  border-top: 1px solid var(--border);
   padding-top: var(--space-5);
 }
 
-/* Padding is part of the box, not overflowing content, so `row-leave`'s grid
-   collapse alone leaves it behind as a residual band — this zeroes it, on
-   `magazine-gap-close`'s own timing, so the two finish together. */
+/* Neither is overflowing content, so `row-leave`'s collapse alone leaves them
+   as a residual band — this zeroes both, on `magazine-gap-close`'s timing. */
 @keyframes magazine-rule-pad-close {
   0%,
   46% {
+    border-top-width: 1px;
     padding-top: var(--space-5);
   }
 
   100% {
+    border-top-width: 0;
     padding-top: 0;
   }
 }
