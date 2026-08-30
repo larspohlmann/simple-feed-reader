@@ -40,6 +40,7 @@ import { TagsStore } from './tags.store';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { RecommendationsService } from './recommendations.service';
 import { AiAvailabilityService } from '../core/ai-availability.service';
+import { SetupService } from '../setup/setup.service';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../shared/toast/toast.service';
 import { PasskeyOfferDialogComponent } from './passkey-offer-dialog.component';
 
@@ -132,6 +133,14 @@ describe('ReaderShellComponent', () => {
         { provide: ActivatedRoute, useValue: { queryParamMap: qp.asObservable() } },
         { provide: AuthService, useValue: auth },
         { provide: LayoutService, useValue: screen },
+        // Defaults to "available", matching every test in this file written
+        // before #624 follow-up's instance-wide toggle existed. The
+        // "first-login passkey offer" describe block below overrides this
+        // per test to cover false/null.
+        {
+          provide: SetupService,
+          useValue: { ensureLoaded: () => of(true), passkeySignInAvailable: signal(true) },
+        },
       ],
     });
     ctrl = TestBed.inject(HttpTestingController);
@@ -2901,6 +2910,66 @@ describe('ReaderShellComponent', () => {
 
     it('does not show the offer when the browser has no WebAuthn support', () => {
       // No supportPasskeys() call -- jsdom's own default.
+      const open = jest
+        .spyOn(TestBed.inject(Dialog), 'open')
+        .mockReturnValue({ closed: new Subject() } as never);
+
+      boot();
+
+      expect(open).not.toHaveBeenCalledWith(PasskeyOfferDialogComponent, expect.anything());
+    });
+
+    /**
+     * A fresh testing module, not `TestBed.overrideProvider` -- the outer
+     * `beforeEach` has already called `TestBed.inject(HttpTestingController)`
+     * by the time a test body runs, which Angular refuses to override past.
+     * Mirrors "drawer breakpoint driven by class, not media query" further
+     * down, which hits the identical constraint for `LayoutService`.
+     */
+    function configureAvailability(passkeySignInAvailable: boolean | null): void {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [ReaderShellComponent, provideTranslocoTesting()],
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          provideRouter([]),
+          { provide: API_BASE_URL, useValue: 'https://api.test' },
+          { provide: ActivatedRoute, useValue: { queryParamMap: qp.asObservable() } },
+          { provide: AuthService, useValue: auth },
+          { provide: LayoutService, useValue: screen },
+          {
+            provide: SetupService,
+            useValue: {
+              ensureLoaded: () => of(true),
+              passkeySignInAvailable: signal(passkeySignInAvailable),
+            },
+          },
+        ],
+      });
+      ctrl = TestBed.inject(HttpTestingController);
+    }
+
+    /**
+     * #624 follow-up: the instance-wide toggle gates the offer the same way
+     * it gates enrolment everywhere else -- offering it while sign-in cannot
+     * complete would hand the account a credential it can never use.
+     */
+    it('does not show the offer once the instance reports passkey sign-in unavailable', () => {
+      supportPasskeys();
+      configureAvailability(false);
+      const open = jest
+        .spyOn(TestBed.inject(Dialog), 'open')
+        .mockReturnValue({ closed: new Subject() } as never);
+
+      boot();
+
+      expect(open).not.toHaveBeenCalledWith(PasskeyOfferDialogComponent, expect.anything());
+    });
+
+    it('does not show the offer while availability is still unknown', () => {
+      supportPasskeys();
+      configureAvailability(null);
       const open = jest
         .spyOn(TestBed.inject(Dialog), 'open')
         .mockReturnValue({ closed: new Subject() } as never);

@@ -70,6 +70,7 @@ import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { SidebarCountsPoll } from './sidebar-counts-poll.service';
 import { CatalogStore } from '../discover/catalog.store';
 import { OnboardingSkip } from '../discover/onboarding-skip';
+import { SetupService } from '../setup/setup.service';
 import { ProgressHairlineComponent } from '../shared/progress-hairline/progress-hairline.component';
 import { IconComponent } from '../shared/icon/icon.component';
 import { ListActionDirective } from '../shared/list-action/list-action.directive';
@@ -128,6 +129,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly skip = inject(OnboardingSkip);
   private readonly catalog = inject(CatalogStore);
   private readonly pageTitle = inject(PageTitleService);
+  private readonly setup = inject(SetupService);
   /** Injected for its effect: it watches navigations so that a clicked list
    *  starts at the top while a list returned to keeps its place (#286). The
    *  reader is the only place that imports it, which is what keeps it out of
@@ -240,9 +242,18 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *  route (`app.routes.ts`), never on an auth screen. `isPasskeySupported()`
    *  is checked first because it is the cheapest -- false for nearly every
    *  test in this suite, since jsdom carries no `PublicKeyCredential` -- so a
-   *  user fixture without `preferences` set never has that field touched. */
+   *  user fixture without `preferences` set never has that field touched.
+   *
+   *  #624 follow-up adds a fifth: `SetupService.passkeySignInAvailable()`
+   *  must be exactly `true`. Offering enrolment while the instance cannot
+   *  complete a passkey sign-in would hand the account a credential it can
+   *  never use -- the same reasoning `PasskeysGroupComponent.visible` gives
+   *  for failing CLOSED rather than open. This route is never behind
+   *  `setupRedirectGuard`, so the constructor below triggers the identical
+   *  `ensureLoaded()` that guard runs. */
   private readonly passkeyOfferEligible = computed(() => {
     if (!isPasskeySupported()) return false;
+    if (this.setup.passkeySignInAvailable() !== true) return false;
     const user = this.auth.user();
     if (!user || user.preferences.passkeyOfferAnswered) return false;
     return this.readerSettled() && !this.subscriptionOnboardingRunning();
@@ -548,6 +559,15 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly leavingIds = signal<ReadonlySet<number>>(new Set());
 
   constructor() {
+    // Loads SetupService.passkeySignInAvailable, gating passkeyOfferEligible
+    // above -- this route is never behind setupRedirectGuard, so nothing else
+    // triggers that fetch here. Gated on isPasskeySupported() first: false
+    // for nearly every test in this suite (jsdom carries no
+    // PublicKeyCredential), and a browser that cannot run the ceremony at all
+    // has no use for the answer regardless.
+    if (isPasskeySupported()) {
+      this.setup.ensureLoaded().subscribe();
+    }
     // Reload the list and sidebar counts whenever the selection (not the open
     // entry) changes. A new list has no removed rows, so clear the collapsed set
     // with it — otherwise a recycled id would render an incoming row already
