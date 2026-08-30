@@ -47,6 +47,7 @@ final readonly class RelyingPartyChange
         private PublicBaseUrl $publicBaseUrl,
         private EffectivePasskeyRelyingPartyId $effectiveId,
         private UserPasskeyRepository $passkeys,
+        private RelyingPartyIdRule $relyingPartyIdRule,
     ) {
     }
 
@@ -94,7 +95,7 @@ final readonly class RelyingPartyChange
 
         $host = parse_url($this->resolvedPublicBaseUrl($request), PHP_URL_HOST);
 
-        if (\is_string($host) && $this->isSuffixOf($request->passkeyRpId, $host)) {
+        if (\is_string($host) && $this->relyingPartyIdRule->isValidForHost($request->passkeyRpId, $host)) {
             return;
         }
 
@@ -113,48 +114,5 @@ final readonly class RelyingPartyChange
     private function resolvedPublicBaseUrl(InstanceSettingsRequest $request): string
     {
         return $request->publicBaseUrl ?? $this->publicBaseUrl->get();
-    }
-
-    private function isSuffixOf(string $relyingPartyId, string $host): bool
-    {
-        if (!$this->isRegistrableRelyingPartyId($relyingPartyId)) {
-            return false;
-        }
-
-        if (false !== filter_var($host, \FILTER_VALIDATE_IP)) {
-            // An IP literal has no notion of a "subdomain" the way a DNS name
-            // does, so a dot-suffix match is meaningless here — only an exact
-            // match is. Without this, an id like '1.5' would pass simply
-            // because it happens to be a dot-suffix of the host's own IP
-            // literal (e.g. '192.168.1.5'), which is exactly the shape
-            // `settings.instance.passkeyHelp.rule3` promises is refused.
-            return $relyingPartyId === $host;
-        }
-
-        return $relyingPartyId === $host || str_ends_with($host, '.' . $relyingPartyId);
-    }
-
-    /**
-     * The shipped help copy (`settings.instance.passkeyHelp.rule2` and
-     * `.rule3`, both locales) promises two things this used to accept: a
-     * public suffix, and an IP address. A full public-suffix list is out of
-     * scope, so a two-label suffix such as `co.uk` still slips through
-     * undetected here — but a bare, single-label TLD such as `com` is
-     * unambiguous and is refused outright, `localhost` excepted. An IP
-     * address given as the id itself is refused outright too, whether or not
-     * it happens to equal the host: rule3 promises IP addresses are refused
-     * with no exception besides `localhost`.
-     */
-    private function isRegistrableRelyingPartyId(string $relyingPartyId): bool
-    {
-        if ('localhost' === $relyingPartyId) {
-            return true;
-        }
-
-        if (false !== filter_var($relyingPartyId, \FILTER_VALIDATE_IP)) {
-            return false;
-        }
-
-        return str_contains($relyingPartyId, '.');
     }
 }

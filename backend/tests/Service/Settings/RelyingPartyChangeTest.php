@@ -10,6 +10,7 @@ use App\Repository\UserPasskeyRepository;
 use App\Service\Settings\EffectivePasskeyRelyingPartyId;
 use App\Service\Settings\PasskeyRelyingParty;
 use App\Service\Settings\RelyingPartyChange;
+use App\Service\Settings\RelyingPartyIdRule;
 use App\Tests\Support\FixedPublicBaseUrl;
 use PHPUnit\Framework\TestCase;
 
@@ -138,6 +139,7 @@ final class RelyingPartyChangeTest extends TestCase
             new FixedPublicBaseUrl($publicBaseUrl),
             new EffectivePasskeyRelyingPartyId(),
             $this->createStub(UserPasskeyRepository::class),
+            new RelyingPartyIdRule(),
         );
     }
 
