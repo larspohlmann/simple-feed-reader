@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Passkey;
 
 use App\Service\Settings\PasskeyRelyingParty;
-use App\Service\Settings\PublicBaseUrl;
 use Symfony\Component\Serializer\SerializerInterface;
 use Webauthn\AttestationStatement\AttestationStatementSupportManager;
 use Webauthn\CeremonyStep\CeremonyStepManager;
@@ -13,26 +12,9 @@ use Webauthn\CeremonyStep\CeremonyStepManagerFactory;
 use Webauthn\Denormalizer\WebauthnSerializerFactory;
 
 /**
- * Builds the WebAuthn library's ceremony machinery — the two
- * `CeremonyStepManager`s and the serializer they share a wire format with.
- *
- * `final class`, not `final readonly class` — the one deliberate exception to
- * this codebase's house style. `CeremonyStepManagerFactory::setAllowedOrigins()`
- * bakes its argument into the `CeremonyStepManager` it hands back, and the
- * allowed origin here is PublicBaseUrl, which reads the `instance_setting` row
- * from the database. That means the managers cannot be built at container
- * compile time — there would be no request, and so no guarantee the setting
- * has even been read yet — so this class defers building them to first use and
- * memoises the result for the rest of the request. A `readonly` property
- * cannot be assigned lazily outside the constructor, which is why the class
- * cannot be `readonly` while doing this.
- *
- * Two verification rules are already enforced by the managers this class
- * builds: `CeremonyStepManagerFactory` wires `CheckCounter` to the library's
- * `ThrowExceptionIfInvalid`, which rejects an authenticator whose signature
- * counter has not advanced — the standard defence against a cloned
- * authenticator — and `CheckUserVerification` enforces `userVerification:
- * required` by reading it off the options passed into the ceremony.
+ * Builds the WebAuthn library's ceremony machinery. `final class`, not
+ * `final readonly`: the managers are built lazily and memoised, which a
+ * readonly property cannot do.
  */
 final class PasskeyCeremony
 {
@@ -42,7 +24,6 @@ final class PasskeyCeremony
 
     public function __construct(
         private readonly PasskeyRelyingParty $relyingParty,
-        private readonly PublicBaseUrl $publicBaseUrl,
     ) {
     }
 
@@ -98,14 +79,18 @@ final class PasskeyCeremony
     }
 
     /**
-     * Rebuilt on every call rather than memoised itself: creation() and
-     * request() each memoise their own result, and the factory is cheap and
-     * carries no state worth keeping beyond that.
+     * No allowed-origin list on purpose. Given none, the library compares the
+     * browser's origin against the relying-party id itself (CheckOrigin) --
+     * the spec rule, and the only one that works when a proxy rewrites Host so
+     * the server cannot see the origin the browser is really at.
+     *
+     * `localhost` is exempted from the HTTPS requirement so development over
+     * http keeps working, matching `settings.instance.passkeyHelp.rule4`.
      */
     private function factory(): CeremonyStepManagerFactory
     {
         $factory = new CeremonyStepManagerFactory();
-        $factory->setAllowedOrigins([$this->publicBaseUrl->get()]);
+        $factory->setSecuredRelyingPartyId(['localhost']);
 
         return $factory;
     }

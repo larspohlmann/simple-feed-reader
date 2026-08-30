@@ -383,10 +383,8 @@ final class PasskeyLoginTest extends ApiTestCase
         $this->assertRejected($client, 401);
     }
 
-    /**
-     * Reuses the fixture the origin was signed against rather than
-     * capturing a second one: only the SERVER's configured origin changes.
-     */
+    /** The browser's origin must belong to the relying-party id: an assertion
+     *  signed for an unrelated host is refused however it reached us. */
     public function testAnOriginMismatchIsRejected(): void
     {
         $client = static::createClient();
@@ -395,13 +393,10 @@ final class PasskeyLoginTest extends ApiTestCase
         $this->factory()->create('origin-mismatch@example.test');
         $fixture = $this->enrol($client, 'origin-mismatch@example.test');
         $handle = $this->issueLoginChallenge($fixture->challenge);
-        // The server now accepts a different origin than the one the
-        // fixture below is actually signed for.
-        $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', 'https://different.test');
 
         $this->login($client, $handle, PasskeyFixtures::assertion(
             self::RELYING_PARTY_ID,
-            self::ORIGIN,
+            'https://evil.test',
             $fixture->challenge,
             $fixture,
         ));

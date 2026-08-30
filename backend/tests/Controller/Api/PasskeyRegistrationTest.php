@@ -336,23 +336,36 @@ final class PasskeyRegistrationTest extends ApiTestCase
     }
 
     /**
-     * Reuses the fixture the origin was signed against rather than capturing
-     * a second one: only the SERVER's configured origin changes, so this
-     * proves the same boundary CheckAllowedOrigins enforces without a second
-     * capture (PasskeyFixtures' own docblock explains why one call is enough).
+     * The reported case (#624): the dev-server proxy rewrites Host to
+     * localhost and the public base URL names localhost too, so the server
+     * cannot see the origin the browser is at. Verification must still accept
+     * a ceremony signed for the configured relying party.
      */
+    public function testACeremonyFromAProxiedOriginTheServerCannotSeeIsAccepted(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty('green-tara.example.ts.net', 'Reader', 'http://localhost:4200');
+        $this->serveFrom($client, 'http://localhost');
+        $user = $this->factory()->create('proxied@example.test');
+        $this->authenticate($client, 'proxied@example.test');
+        $fixture = $this->buildFixture('green-tara.example.ts.net', 'https://green-tara.example.ts.net');
+        $handle = $this->issueChallenge($fixture->challenge, $user->getId(), $this->randomUserHandle());
+
+        $this->registerPasskey($client, $handle, $fixture->credential, 'This Mac');
+
+        self::assertResponseStatusCodeSame(201);
+    }
+
+    /** The browser's origin must belong to the relying-party id: a ceremony
+     *  signed for an unrelated host is refused however it reached us. */
     public function testAnOriginMismatchIsRejected(): void
     {
         $client = static::createClient();
-        // Same HOST as the relying-party id — so PasskeySignInAvailability's
-        // guard still passes (#624 follow-up) — but a different SCHEME, which
-        // is all CheckAllowedOrigins compares: the fixture below is signed
-        // for https, the server now only accepts http.
-        $this->pinRelyingParty('example.test', 'Example Reader', 'http://example.test');
-        $this->serveFrom($client, 'http://example.test');
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
+        $this->serveFrom($client, 'https://example.test');
         $user = $this->factory()->create('enroller@example.test');
         $this->authenticate($client, 'enroller@example.test');
-        $fixture = $this->buildFixture('example.test', 'https://example.test');
+        $fixture = $this->buildFixture('example.test', 'https://evil.test');
         $handle = $this->issueChallenge($fixture->challenge, $user->getId(), $this->randomUserHandle());
 
         $this->registerPasskey($client, $handle, $fixture->credential, 'My phone');

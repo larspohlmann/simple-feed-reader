@@ -6,7 +6,6 @@ namespace App\Tests\Service\Passkey;
 
 use App\Service\Passkey\PasskeyCeremony;
 use App\Service\Settings\PasskeyRelyingParty;
-use App\Tests\Support\FixedPublicBaseUrl;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Serializer\SerializerInterface;
 use Webauthn\CeremonyStep\CeremonyStepManager;
@@ -14,18 +13,17 @@ use Webauthn\CeremonyStep\CeremonyStepManager;
 final class PasskeyCeremonyTest extends TestCase
 {
     /**
-     * The origin comes from PublicBaseUrl, which reads the database, so the
-     * managers cannot be built when the container is compiled. This test is
-     * what stops somebody "simplifying" them into constructor-time state.
+     * The relying party reads the database, so the managers cannot be built
+     * when the container is compiled. This test is what stops somebody
+     * "simplifying" them into constructor-time state.
      */
-    public function testTheCeremonyManagersAreBuiltFromTheRuntimeOrigin(): void
+    public function testTheCeremonyManagersAreBuiltFromTheRuntimeRelyingParty(): void
     {
         $ceremony = new PasskeyCeremony(
-            $this->relyingPartyOf('lars-pohlmann.de'),
-            new FixedPublicBaseUrl('https://lars-pohlmann.de/reader'),
+            $this->relyingPartyOf('reader.example.com'),
         );
 
-        self::assertSame('lars-pohlmann.de', $ceremony->host());
+        self::assertSame('reader.example.com', $ceremony->host());
         self::assertInstanceOf(CeremonyStepManager::class, $ceremony->creation());
         self::assertInstanceOf(CeremonyStepManager::class, $ceremony->request());
     }
@@ -34,7 +32,6 @@ final class PasskeyCeremonyTest extends TestCase
     {
         $ceremony = new PasskeyCeremony(
             $this->relyingPartyOf('localhost'),
-            new FixedPublicBaseUrl('http://localhost:4200'),
         );
 
         self::assertSame($ceremony->creation(), $ceremony->creation());
@@ -45,7 +42,6 @@ final class PasskeyCeremonyTest extends TestCase
     {
         $ceremony = new PasskeyCeremony(
             $this->relyingPartyOf('localhost'),
-            new FixedPublicBaseUrl('http://localhost:4200'),
         );
 
         self::assertInstanceOf(SerializerInterface::class, $ceremony->serializer());
@@ -56,7 +52,6 @@ final class PasskeyCeremonyTest extends TestCase
     {
         $ceremony = new PasskeyCeremony(
             $this->relyingPartyOf('localhost'),
-            new FixedPublicBaseUrl('http://localhost:4200'),
         );
 
         self::assertSame($ceremony->serializer(), $ceremony->serializer());

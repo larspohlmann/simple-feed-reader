@@ -12,10 +12,7 @@ use App\Service\Settings\InstanceSettings;
 use App\Service\Settings\PasskeyRelyingParty;
 use App\Service\Settings\PublicBaseUrl;
 use App\Service\Settings\RelyingPartyIdRule;
-use App\Service\Settings\ServingHost;
-use Symfony\Component\HttpFoundation\RequestStack;
 use App\Tests\Support\ApiTestCase;
-use App\Tests\Support\FixedPublicBaseUrl;
 use App\Tests\Support\TogglesPasskeySignIn;
 
 /**
@@ -49,7 +46,7 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
      */
     public function testUnavailableByDefault(): void
     {
-        $availability = $this->availabilityFor('example.test', 'https://example.test');
+        $availability = $this->availabilityFor('example.test');
 
         self::assertFalse($availability->isAvailable());
     }
@@ -57,7 +54,7 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
     public function testAvailableOnceEnabledWithAValidRelyingParty(): void
     {
         $this->enablePasskeySignIn();
-        $availability = $this->availabilityFor('example.test', 'https://example.test');
+        $availability = $this->availabilityFor('example.test');
 
         self::assertTrue($availability->isAvailable());
     }
@@ -65,7 +62,7 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
     public function testUnavailableWhenTheToggleIsOff(): void
     {
         $this->disablePasskeySignIn();
-        $availability = $this->availabilityFor('example.test', 'https://example.test');
+        $availability = $this->availabilityFor('example.test');
 
         self::assertFalse($availability->isAvailable());
     }
@@ -74,7 +71,7 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
     public function testUnavailableWhenTheRelyingPartyIdCouldNeverWork(): void
     {
         $this->enablePasskeySignIn();
-        $availability = $this->availabilityFor('203.0.113.5', 'https://example.test');
+        $availability = $this->availabilityFor('203.0.113.5');
 
         self::assertFalse($availability->isAvailable());
     }
@@ -86,7 +83,7 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
     public function testAvailableForADomainThisServerCannotSee(): void
     {
         $this->enablePasskeySignIn();
-        $availability = $this->availabilityFor('green-tara.aardvark-koi.ts.net', 'http://localhost:4200');
+        $availability = $this->availabilityFor('green-tara.aardvark-koi.ts.net');
 
         self::assertTrue($availability->isAvailable());
     }
@@ -98,7 +95,7 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
     public function testTheAnswerNeverVariesWithHowManyCredentialsOrAccountsExist(): void
     {
         $this->enablePasskeySignIn();
-        $availability = $this->availabilityFor('example.test', 'https://example.test');
+        $availability = $this->availabilityFor('example.test');
         self::assertTrue($availability->isAvailable());
 
         $owner = $this->factory()->create('passkey-owner@example.test');
@@ -116,13 +113,13 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
         $this->em()->flush();
         $this->factory()->create('another-user@example.test');
 
-        self::assertTrue($this->availabilityFor('example.test', 'https://example.test')->isAvailable());
+        self::assertTrue($this->availabilityFor('example.test')->isAvailable());
     }
 
     public function testGuardIsANoOpWhenAvailable(): void
     {
         $this->enablePasskeySignIn();
-        $availability = $this->availabilityFor('example.test', 'https://example.test');
+        $availability = $this->availabilityFor('example.test');
         $this->expectNotToPerformAssertions();
 
         $availability->guard();
@@ -131,20 +128,19 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
     public function testGuardThrowsWhenUnavailable(): void
     {
         $this->disablePasskeySignIn();
-        $availability = $this->availabilityFor('example.test', 'https://example.test');
+        $availability = $this->availabilityFor('example.test');
 
         $this->expectException(PasskeySignInDisabledException::class);
 
         $availability->guard();
     }
 
-    private function availabilityFor(string $relyingPartyId, string $publicBaseUrl): PasskeySignInAvailability
+    private function availabilityFor(string $relyingPartyId): PasskeySignInAvailability
     {
         return new PasskeySignInAvailability(
             $this->settings,
             $this->relyingPartyOf($relyingPartyId),
             new RelyingPartyIdRule(),
-            new ServingHost(new RequestStack(), new FixedPublicBaseUrl($publicBaseUrl)),
         );
     }
 
