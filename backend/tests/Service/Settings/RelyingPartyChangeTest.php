@@ -11,6 +11,8 @@ use App\Service\Settings\EffectivePasskeyRelyingPartyId;
 use App\Service\Settings\PasskeyRelyingParty;
 use App\Service\Settings\RelyingPartyChange;
 use App\Service\Settings\RelyingPartyIdRule;
+use App\Service\Settings\ServingHost;
+use Symfony\Component\HttpFoundation\RequestStack;
 use App\Tests\Support\FixedPublicBaseUrl;
 use PHPUnit\Framework\TestCase;
 
@@ -136,10 +138,10 @@ final class RelyingPartyChangeTest extends TestCase
     {
         return new RelyingPartyChange(
             $this->relyingPartyOf($currentRelyingPartyId),
-            new FixedPublicBaseUrl($publicBaseUrl),
             new EffectivePasskeyRelyingPartyId(),
             $this->createStub(UserPasskeyRepository::class),
             new RelyingPartyIdRule(),
+            new ServingHost(new RequestStack(), new FixedPublicBaseUrl($publicBaseUrl)),
         );
     }
 

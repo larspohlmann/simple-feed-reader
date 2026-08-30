@@ -57,6 +57,15 @@ final class AdminSettingsControllerTest extends ApiTestCase
         return $this->authenticateAs($this->factory()->create($email, roles: ['ROLE_ADMIN']));
     }
 
+    /** The relying party is judged against the host the request arrived on, so
+     *  a test about relying-party ids has to say which host it is on. */
+    private function servedFrom(KernelBrowser $client, string $host): KernelBrowser
+    {
+        $client->setServerParameter('HTTP_HOST', $host);
+
+        return $client;
+    }
+
     private function passkeys(): UserPasskeyRepository
     {
         /** @var UserPasskeyRepository $repository */
@@ -224,7 +233,7 @@ final class AdminSettingsControllerTest extends ApiTestCase
         $client->jsonRequest('PUT', self::SETTINGS, [
             'requireEmailConfirmation' => true,
             'requireApproval' => true,
-            'publicBaseUrl' => 'https://lars-pohlmann.de',
+            'publicBaseUrl' => 'https://example.test',
             'passkeyRpId' => 'evil.test',
             'passkeyRpName' => 'Reader',
         ]);
@@ -235,13 +244,12 @@ final class AdminSettingsControllerTest extends ApiTestCase
     public function testChangingTheRelyingPartyIdIsRefusedWhileCredentialsExist(): void
     {
         $this->givenAnEnrolledPasskey();
-        $client = $this->adminClient();
+        $client = $this->servedFrom($this->adminClient(), 'a.example.test');
 
         $client->jsonRequest('PUT', self::SETTINGS, [
             'requireEmailConfirmation' => true,
             'requireApproval' => true,
-            'publicBaseUrl' => 'https://lars-pohlmann.de',
-            'passkeyRpId' => 'lars-pohlmann.de',
+            'passkeyRpId' => 'example.test',
             'passkeyRpName' => 'Reader',
         ]);
 
@@ -252,13 +260,12 @@ final class AdminSettingsControllerTest extends ApiTestCase
     public function testAConfirmedChangeDeletesEveryCredential(): void
     {
         $this->givenAnEnrolledPasskey();
-        $client = $this->adminClient();
+        $client = $this->servedFrom($this->adminClient(), 'a.example.test');
 
         $client->jsonRequest('PUT', self::SETTINGS, [
             'requireEmailConfirmation' => true,
             'requireApproval' => true,
-            'publicBaseUrl' => 'https://lars-pohlmann.de',
-            'passkeyRpId' => 'lars-pohlmann.de',
+            'passkeyRpId' => 'example.test',
             'passkeyRpName' => 'Reader',
             'invalidateExistingPasskeys' => true,
         ]);
@@ -270,38 +277,33 @@ final class AdminSettingsControllerTest extends ApiTestCase
     }
 
     /**
-     * passkeyRpId stays null on both sides — only publicBaseUrl moves — so the
-     * EFFECTIVE id still changes (a.example -> b.example). A guard comparing
-     * the raw stored passkeyRpId column would miss this entirely, since that
-     * column never changes; comparing the effective id is the whole point.
+     * The reported case: the reader is reached through a proxy on one host
+     * while APP_FRONTEND_URL still names another. Judging the id by the public
+     * base URL refused the only id that could ever have worked here.
      */
-    public function testChangingPublicBaseUrlAloneChangesTheEffectiveIdAndIsRefusedWhileCredentialsExist(): void
+    public function testTheProxiedHostIsAcceptedWhileThePublicBaseUrlNamesAnother(): void
     {
-        $client = $this->adminClient();
+        $client = $this->servedFrom($this->adminClient(), 'reader.example.ts.net');
 
         $client->jsonRequest('PUT', self::SETTINGS, [
             'requireEmailConfirmation' => true,
             'requireApproval' => true,
-            'publicBaseUrl' => 'https://a.example',
+            'publicBaseUrl' => 'http://localhost:4200',
+            'passkeyRpId' => 'reader.example.ts.net',
+            'passkeyRpName' => 'Reader',
         ]);
+
         self::assertResponseIsSuccessful();
-
-        $this->givenAnEnrolledPasskey();
-
-        $client->jsonRequest('PUT', self::SETTINGS, [
-            'requireEmailConfirmation' => true,
-            'requireApproval' => true,
-            'publicBaseUrl' => 'https://b.example',
-        ]);
-
-        self::assertResponseStatusCodeSame(409);
-        self::assertSame(1, $this->payload($client)['invalidatedPasskeyCount']);
+        self::assertSame('reader.example.ts.net', $this->payload($client)['passkeyRpIdEffective']);
     }
 
-    /** The confirmed counterpart of the test above: same effective-id change, now confirmed. */
-    public function testConfirmingAnEffectiveIdChangeFromPublicBaseUrlAloneDeletesEveryCredential(): void
+    /**
+     * publicBaseUrl is where email links point; it is not an origin. Moving it
+     * must leave the relying party — and every enrolled passkey — where it was.
+     */
+    public function testChangingPublicBaseUrlAloneLeavesTheRelyingPartyAlone(): void
     {
-        $client = $this->adminClient();
+        $client = $this->servedFrom($this->adminClient(), 'a.example.test');
 
         $client->jsonRequest('PUT', self::SETTINGS, [
             'requireEmailConfirmation' => true,
@@ -316,13 +318,10 @@ final class AdminSettingsControllerTest extends ApiTestCase
             'requireEmailConfirmation' => true,
             'requireApproval' => true,
             'publicBaseUrl' => 'https://b.example',
-            'invalidateExistingPasskeys' => true,
         ]);
 
         self::assertResponseIsSuccessful();
-        // A fresh repository read, not an entity handle: after a bulk DELETE,
-        // find() would serve the stale identity map instead of the real state.
-        self::assertSame(0, $this->passkeys()->countAll());
+        self::assertSame(1, $this->passkeys()->countAll());
     }
 
     /**
@@ -333,7 +332,7 @@ final class AdminSettingsControllerTest extends ApiTestCase
      */
     public function testPinningTheRelyingPartyIdSurvivesAPublicBaseUrlChangeWithNoConfirmation(): void
     {
-        $client = $this->adminClient();
+        $client = $this->servedFrom($this->adminClient(), 'a.example.test');
 
         $client->jsonRequest('PUT', self::SETTINGS, [
             'requireEmailConfirmation' => true,
@@ -365,26 +364,20 @@ final class AdminSettingsControllerTest extends ApiTestCase
      */
     public function testResendingTheSameRelyingPartyIdSucceedsWithCredentialsPresent(): void
     {
-        $client = $this->adminClient();
-
-        $client->jsonRequest('PUT', self::SETTINGS, [
+        $client = $this->servedFrom($this->adminClient(), 'a.example.test');
+        $body = [
             'requireEmailConfirmation' => true,
             'requireApproval' => true,
-            'publicBaseUrl' => 'https://lars-pohlmann.de',
-            'passkeyRpId' => 'lars-pohlmann.de',
+            'passkeyRpId' => 'example.test',
             'passkeyRpName' => 'Reader',
-        ]);
+        ];
+
+        $client->jsonRequest('PUT', self::SETTINGS, $body);
         self::assertResponseIsSuccessful();
 
         $this->givenAnEnrolledPasskey();
 
-        $client->jsonRequest('PUT', self::SETTINGS, [
-            'requireEmailConfirmation' => true,
-            'requireApproval' => true,
-            'publicBaseUrl' => 'https://lars-pohlmann.de',
-            'passkeyRpId' => 'lars-pohlmann.de',
-            'passkeyRpName' => 'Reader',
-        ]);
+        $client->jsonRequest('PUT', self::SETTINGS, $body);
 
         self::assertResponseIsSuccessful();
         self::assertSame(1, $this->passkeys()->countAll());
@@ -417,17 +410,16 @@ final class AdminSettingsControllerTest extends ApiTestCase
         self::assertTrue($this->payload($client)['passkeySignInEnabled']);
     }
 
-    public function testPasskeyRpIdEffectiveReflectsTheStoredOverrideOrTheDerivedHost(): void
+    public function testPasskeyRpIdEffectiveReflectsTheStoredOverrideOrTheServingHost(): void
     {
-        $client = $this->adminClient();
+        $client = $this->servedFrom($this->adminClient(), 'a.example.test');
 
         $client->request('GET', self::SETTINGS);
-        self::assertSame('localhost', $this->payload($client)['passkeyRpIdEffective']);
+        self::assertSame('a.example.test', $this->payload($client)['passkeyRpIdEffective']);
 
         $client->jsonRequest('PUT', self::SETTINGS, [
             'requireEmailConfirmation' => true,
             'requireApproval' => true,
-            'publicBaseUrl' => 'https://example.test',
             'passkeyRpId' => 'example.test',
             'passkeyRpName' => 'Reader',
         ]);

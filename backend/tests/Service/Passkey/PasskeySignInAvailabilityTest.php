@@ -12,6 +12,8 @@ use App\Service\Settings\InstanceSettings;
 use App\Service\Settings\PasskeyRelyingParty;
 use App\Service\Settings\PublicBaseUrl;
 use App\Service\Settings\RelyingPartyIdRule;
+use App\Service\Settings\ServingHost;
+use Symfony\Component\HttpFoundation\RequestStack;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\FixedPublicBaseUrl;
 use App\Tests\Support\TogglesPasskeySignIn;
@@ -128,10 +130,9 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
     {
         return new PasskeySignInAvailability(
             $this->settings,
-            new FixedPublicBaseUrl($publicBaseUrl),
             $this->relyingPartyOf($relyingPartyId),
             new RelyingPartyIdRule(),
-            new EffectivePasskeyRelyingPartyId(),
+            new ServingHost(new RequestStack(), new FixedPublicBaseUrl($publicBaseUrl)),
         );
     }
 

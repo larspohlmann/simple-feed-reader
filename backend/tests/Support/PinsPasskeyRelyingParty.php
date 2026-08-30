@@ -6,6 +6,7 @@ namespace App\Tests\Support;
 
 use App\Service\Settings\InstanceSettings;
 use App\Service\Settings\InstanceSettingsUpdate;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 /**
  * Pins the WebAuthn relying party AND the public base URL (the origin) to
@@ -42,5 +43,13 @@ trait PinsPasskeyRelyingParty
             passkeyRpName: $relyingPartyName,
             passkeySignInEnabled: true,
         ));
+    }
+
+    /** The relying party is judged against the host the request arrived on, so
+     *  the client must come from the pinned origin, as a real browser would. */
+    private function serveFrom(KernelBrowser $client, string $publicBaseUrl): void
+    {
+        $host = parse_url($publicBaseUrl, PHP_URL_HOST);
+        $client->setServerParameter('HTTP_HOST', \is_string($host) ? $host : 'localhost');
     }
 }

@@ -75,6 +75,7 @@ final class PasskeyLoginTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+        $this->serveFrom($client, self::ORIGIN);
         $this->factory()->create('login@example.test');
         $fixture = $this->enrol($client, 'login@example.test');
         $handle = $this->issueLoginChallenge($fixture->challenge);
@@ -106,6 +107,7 @@ final class PasskeyLoginTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+        $this->serveFrom($client, self::ORIGIN);
         $this->factory()->create('claims@example.test');
         $fixture = $this->enrol($client, 'claims@example.test');
         $handle = $this->issueLoginChallenge($fixture->challenge);
@@ -137,6 +139,7 @@ final class PasskeyLoginTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+        $this->serveFrom($client, self::ORIGIN);
         $this->factory()->create('replay@example.test');
         $fixture = $this->enrol($client, 'replay@example.test');
         $handle = $this->issueLoginChallenge($fixture->challenge);
@@ -159,6 +162,7 @@ final class PasskeyLoginTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+        $this->serveFrom($client, self::ORIGIN);
         $this->factory()->create('expired@example.test');
         $fixture = $this->enrol($client, 'expired@example.test');
 
@@ -181,6 +185,7 @@ final class PasskeyLoginTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+        $this->serveFrom($client, self::ORIGIN);
         $neverEnrolled = PasskeyFixtures::attestation(
             self::RELYING_PARTY_ID,
             self::ORIGIN,
@@ -217,6 +222,7 @@ final class PasskeyLoginTest extends ApiTestCase
         // the login request that needs it ever ran.
         $client->disableReboot();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+        $this->serveFrom($client, self::ORIGIN);
         $user = $this->factory()->create('clone-victim@example.test');
         $fixture = $this->enrol($client, 'clone-victim@example.test');
         // Swapped in BEFORE the first login: the container refuses set() on
@@ -255,6 +261,7 @@ final class PasskeyLoginTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+        $this->serveFrom($client, self::ORIGIN);
 
         $client->request(
             'POST',
@@ -271,6 +278,7 @@ final class PasskeyLoginTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+        $this->serveFrom($client, self::ORIGIN);
         $this->factory()->create('missing-credential@example.test');
         $fixture = $this->enrol($client, 'missing-credential@example.test');
         $handle = $this->issueLoginChallenge($fixture->challenge);
@@ -289,6 +297,7 @@ final class PasskeyLoginTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+        $this->serveFrom($client, self::ORIGIN);
         $this->factory()->create('tampered@example.test');
         $fixture = $this->enrol($client, 'tampered@example.test');
         $handle = $this->issueLoginChallenge($fixture->challenge);
@@ -324,6 +333,7 @@ final class PasskeyLoginTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+        $this->serveFrom($client, self::ORIGIN);
         $this->factory()->create('bad-signature@example.test');
         $fixture = $this->enrol($client, 'bad-signature@example.test');
         $handle = $this->issueLoginChallenge($fixture->challenge);
@@ -356,6 +366,7 @@ final class PasskeyLoginTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+        $this->serveFrom($client, self::ORIGIN);
         $this->factory()->create('no-uv@example.test');
         $fixture = $this->enrol($client, 'no-uv@example.test');
         $handle = $this->issueLoginChallenge($fixture->challenge);
@@ -380,6 +391,7 @@ final class PasskeyLoginTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+        $this->serveFrom($client, self::ORIGIN);
         $this->factory()->create('origin-mismatch@example.test');
         $fixture = $this->enrol($client, 'origin-mismatch@example.test');
         $handle = $this->issueLoginChallenge($fixture->challenge);
@@ -401,6 +413,7 @@ final class PasskeyLoginTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+        $this->serveFrom($client, self::ORIGIN);
         $this->factory()->create('rpid-mismatch@example.test');
         $fixture = $this->enrol($client, 'rpid-mismatch@example.test');
         $handle = $this->issueLoginChallenge($fixture->challenge);
@@ -423,6 +436,7 @@ final class PasskeyLoginTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+        $this->serveFrom($client, self::ORIGIN);
         $user = $this->factory()->create('suspended@example.test');
         $fixture = $this->enrol($client, 'suspended@example.test');
         $user->setStatus(UserStatus::Suspended);
@@ -448,6 +462,7 @@ final class PasskeyLoginTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+        $this->serveFrom($client, self::ORIGIN);
         $neverEnrolled = PasskeyFixtures::attestation(
             self::RELYING_PARTY_ID,
             self::ORIGIN,
@@ -483,6 +498,7 @@ final class PasskeyLoginTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+        $this->serveFrom($client, self::ORIGIN);
         $user = $this->factory()->create('counter@example.test');
         $fixture = $this->enrol($client, 'counter@example.test');
         $handle = $this->issueLoginChallenge($fixture->challenge);
@@ -528,6 +544,7 @@ final class PasskeyLoginTest extends ApiTestCase
     {
         $client = static::createClient();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+        $this->serveFrom($client, self::ORIGIN);
         $this->factory()->create('disabled-login@example.test');
         $fixture = $this->enrol($client, 'disabled-login@example.test');
         $this->disablePasskeySignInKeepingRelyingParty();
