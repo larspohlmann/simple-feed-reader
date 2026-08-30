@@ -16,7 +16,7 @@ const BASE_SETTINGS: InstanceSettings = {
   publicBaseUrl: null,
   passkeyRpId: null,
   passkeyRpName: null,
-  passkeyRpIdEffective: 'lars-pohlmann.de',
+  passkeyRpIdEffective: 'example.com',
   passkeySignInEnabled: true,
 };
 
