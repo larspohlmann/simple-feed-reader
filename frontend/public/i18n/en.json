@@ -21,8 +21,10 @@
     "magazineStyle": "Magazine style",
     "magazineStyleHint": "How the magazine view draws an entry.",
     "magazineStyleSaveFailed": "The magazine style could not be saved to your account.",
-    "magazineStyleBoxed": "Boxed",
-    "magazineStyleAiry": "Airy",
+    "magazineStyleOption": {
+      "boxed": "Boxed",
+      "airy": "Airy"
+    },
     "loadingVersion": "Loading version information",
     "feeds": {
       "title": "Feeds",

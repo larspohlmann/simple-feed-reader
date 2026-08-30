@@ -6,7 +6,7 @@
       [attr.aria-pressed]="magazineStyle.style() === s"
       (click)="magazineStyle.set(s)"
     >
-      {{ 'settings.magazineStyle' + (s === 'boxed' ? 'Boxed' : 'Airy') | transloco }}
+      {{ 'settings.magazineStyleOption.' + s | transloco }}
     </button>
   }
 </div>

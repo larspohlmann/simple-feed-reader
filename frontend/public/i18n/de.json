@@ -21,8 +21,10 @@
     "magazineStyle": "Magazin-Stil",
     "magazineStyleHint": "Wie die Magazinansicht einen Eintrag darstellt.",
     "magazineStyleSaveFailed": "Der Magazin-Stil konnte nicht in deinem Konto gespeichert werden.",
-    "magazineStyleBoxed": "Mit Rahmen",
-    "magazineStyleAiry": "Luftig",
+    "magazineStyleOption": {
+      "boxed": "Mit Rahmen",
+      "airy": "Luftig"
+    },
     "loadingVersion": "Versionsinformationen werden geladen",
     "feeds": {
       "title": "Feeds",
