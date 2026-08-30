@@ -5,6 +5,7 @@ import { DialogRef } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { AuthService } from '../core/auth.service';
 import { defaultPasskeyName } from '../core/passkey-device-name';
+import { toEnrolFailureProblem } from '../core/passkey-enrol-failure';
 import { PasskeyService } from '../core/passkey.service';
 import { Problem } from '../core/problem';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../shared/toast/toast.service';
@@ -107,39 +108,14 @@ export class PasskeyOfferDialogComponent {
     this.authService.answerPasskeyOffer().subscribe({ error: () => undefined });
   }
 
-  /** Mirrors `PasskeysGroupComponent.handleEnrolFailure()`'s cases exactly,
-   *  since this runs the identical ceremony: a cancelled sheet is not a
-   *  failure to report; `InvalidStateError` -- this authenticator is already
-   *  enrolled, from the server's exclude list -- and any other
-   *  `problem.ceremonyRejected` failure both get a translated, actionable
-   *  message rather than the browser's own raw, untranslated `DOMException`
-   *  text (see `PasskeyService.toProblem()`'s docblock). This is deliberately
-   *  NOT keyed on `problem.status === 0`: a genuine dropped connection during
-   *  one of `PasskeyService`'s own HTTP calls produces that same status with
-   *  an already-app-owned title ("Could not reach the server") that must
-   *  reach the user unchanged -- `ceremonyRejected` is the flag that actually
-   *  says "this came from the browser, not the server" (see `Problem`'s own
-   *  docblock). Reuses the Settings copies (`settings.passkeys.alreadyEnrolled`,
-   *  `settings.passkeys.addFailed`) rather than second keys with the same
-   *  words: this path is near-unreachable here (an account this dialog offers
-   *  a passkey to has none yet), but a duplicated string would drift the
-   *  moment one of the two is reworded. */
+  /** Shared with `PasskeysGroupComponent` (#624 finding 5) -- this runs the
+   *  identical ceremony, so it faces the identical failure shapes; see
+   *  `toEnrolFailureProblem()`'s own docblock for the branch-by-branch
+   *  reasoning, including why it reuses the Settings copies
+   *  (`settings.passkeys.alreadyEnrolled`, `settings.passkeys.addFailed`)
+   *  rather than second keys with the same words. */
   private handleEnrolFailure(problem: Problem): void {
-    if (problem.type === 'NotAllowedError') return;
-    if (problem.type === 'InvalidStateError') {
-      this.error.set({
-        ...problem,
-        detail: this.i18n.translate('settings.passkeys.alreadyEnrolled'),
-      });
-      return;
-    }
-    if (problem.ceremonyRejected) {
-      this.error.set({
-        ...problem,
-        detail: this.i18n.translate('settings.passkeys.addFailed'),
-      });
-      return;
-    }
-    this.error.set(problem);
+    const display = toEnrolFailureProblem(problem, this.i18n);
+    if (display) this.error.set(display);
   }
 }

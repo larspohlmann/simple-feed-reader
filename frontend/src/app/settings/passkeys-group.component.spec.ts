@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { Dialog } from '@angular/cdk/dialog';
 import { Subject, of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
+import { AuthService } from '../core/auth.service';
 import { PasskeyService, PasskeySummary } from '../core/passkey.service';
 import { Problem } from '../core/problem';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
@@ -48,6 +49,7 @@ describe('PasskeysGroupComponent', () => {
   // `AccountSectionComponent`'s own dialog spec stubs `Dialog`, rather than
   // rendering the real CDK overlay here -- both dialogs have their own specs.
   const dialogStub = { open: jest.fn() };
+  const authService = { markPasskeyOfferAnswered: jest.fn() };
 
   function mount() {
     TestBed.configureTestingModule({
@@ -55,6 +57,7 @@ describe('PasskeysGroupComponent', () => {
       providers: [
         { provide: PasskeyService, useValue: passkeyService },
         { provide: Dialog, useValue: dialogStub },
+        { provide: AuthService, useValue: authService },
       ],
     });
     const f = TestBed.createComponent(PasskeysGroupComponent);
@@ -76,7 +79,10 @@ describe('PasskeysGroupComponent', () => {
     removeButton.click();
   }
 
-  beforeEach(() => dialogStub.open.mockReset());
+  beforeEach(() => {
+    dialogStub.open.mockReset();
+    authService.markPasskeyOfferAnswered.mockReset();
+  });
 
   afterEach(() => {
     // jsdom carries neither: leaving a stub behind would leak "supported"
@@ -160,6 +166,24 @@ describe('PasskeysGroupComponent', () => {
         expect.objectContaining({ panelClass: 'app-dialog' }),
       );
       expect(passkeyService.enrol).toHaveBeenCalledWith('MacBook Touch ID');
+    });
+
+    it('marks the first-login offer answered locally after a successful enrolment from Settings', async () => {
+      // Finding 1: the server already stamps the flag as a side effect of a
+      // successful enrol() (AttestationVerifier::persist()), but the local
+      // `auth.user()` signal is not refetched on route change. Without this
+      // call, navigating to `/` straight after adding a passkey here reopens
+      // the first-login offer for a passkey that already exists, and its
+      // ceremony then fails with InvalidStateError.
+      passkeyService = passkeyServiceStub([]);
+      dialogStub.open.mockReturnValue({ closed: of('MacBook Touch ID') });
+      const f = mount();
+
+      clickAdd(f);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(authService.markPasskeyOfferAnswered).toHaveBeenCalled();
     });
 
     it('does not enrol when the naming dialog is dismissed with no name', () => {

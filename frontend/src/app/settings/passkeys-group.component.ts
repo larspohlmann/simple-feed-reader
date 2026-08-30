@@ -3,7 +3,9 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { AuthService } from '../core/auth.service';
 import { LanguageService } from '../core/language.service';
+import { toEnrolFailureProblem } from '../core/passkey-enrol-failure';
 import { PasskeyService, PasskeySummary } from '../core/passkey.service';
 import { Problem, parseProblem } from '../core/problem';
 import { isPasskeySupported } from '../core/webauthn';
@@ -47,6 +49,7 @@ import { PasskeyNameDialogComponent } from './passkey-name-dialog.component';
 })
 export class PasskeysGroupComponent {
   private readonly passkeyService = inject(PasskeyService);
+  private readonly authService = inject(AuthService);
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);
   private readonly dialog = inject(Dialog);
@@ -135,10 +138,17 @@ export class PasskeysGroupComponent {
     });
   }
 
+  /** A successful enrolment here stamps the offer flag server-side as a side
+   *  effect (`AttestationVerifier::persist()`, #624 design spec §5.2), the
+   *  same as it does from the first-login offer dialog. Without the local
+   *  signal update below, a stale `passkeyOfferAnswered: false` survives
+   *  until the next full reload -- long enough for `ReaderShellComponent` to
+   *  reopen the offer for a passkey that already exists (finding 1). */
   private async enrolWith(label: string): Promise<void> {
     this.addError.set(null);
     try {
       await this.passkeyService.enrol(label);
+      this.authService.markPasskeyOfferAnswered();
       this.refresh();
     } catch (error) {
       this.handleEnrolFailure(error as Problem);
@@ -155,41 +165,12 @@ export class PasskeysGroupComponent {
     });
   }
 
-  /** A cancelled ceremony (the user dismissed the platform sheet, or it timed
-   *  out) is not a failure to report -- `PasskeyService`'s own docblock names
-   *  `NotAllowedError` as exactly that case, and it is left alone here.
-   *
-   *  `InvalidStateError` -- this authenticator is already enrolled on the
-   *  account, produced by the server's exclude list -- gets its own
-   *  translated, actionable message. Any other `problem.ceremonyRejected`
-   *  failure gets the same treatment for the same reason: the fallback path
-   *  renders `error.title`, which for a `DOMException` or a plain `Error` is
-   *  the browser's own untranslated, locale-dependent text (see
-   *  `PasskeyService.toProblem()`'s docblock). This is deliberately NOT keyed
-   *  on `problem.status === 0` -- a genuine dropped connection during one of
-   *  `PasskeyService`'s own HTTP calls produces that same status (through
-   *  `parseProblem()`/`fallbackProblem()`) with an already-app-owned title
-   *  ("Could not reach the server"), which must reach the user unchanged, not
-   *  get overwritten by the generic passkey message. `ceremonyRejected` is
-   *  the flag that actually says "this came from the browser, not the
-   *  server" (see `Problem`'s own docblock). Overwriting `detail` works
-   *  because the banner reads `error.detail || error.title`. */
+  /** Shared with `PasskeyOfferDialogComponent` -- both run the identical
+   *  ceremony and so face the identical failure shapes; see
+   *  `toEnrolFailureProblem()`'s own docblock for the branch-by-branch
+   *  reasoning (#624 finding 5). */
   private handleEnrolFailure(problem: Problem): void {
-    if (problem.type === 'NotAllowedError') return;
-    if (problem.type === 'InvalidStateError') {
-      this.addError.set({
-        ...problem,
-        detail: this.i18n.translate('settings.passkeys.alreadyEnrolled'),
-      });
-      return;
-    }
-    if (problem.ceremonyRejected) {
-      this.addError.set({
-        ...problem,
-        detail: this.i18n.translate('settings.passkeys.addFailed'),
-      });
-      return;
-    }
-    this.addError.set(problem);
+    const display = toEnrolFailureProblem(problem, this.i18n);
+    if (display) this.addError.set(display);
   }
 }
