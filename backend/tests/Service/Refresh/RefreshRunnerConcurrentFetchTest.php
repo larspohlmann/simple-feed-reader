@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Refresh;
 
+use App\Tests\Support\RecordingContentChangeMarker;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
@@ -137,6 +138,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
             $this->lockFactory,
             $this->clock,
             new NullLogger(),
+            new RecordingContentChangeMarker(),
         );
     }
 

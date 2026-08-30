@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Refresh;
 
+use App\Tests\Support\RecordingContentChangeMarker;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
@@ -59,11 +60,13 @@ final class RefreshRunnerTest extends DbTestCase
     private LockFactory $lockFactory;
     private User $subscriber;
     private RecordingSearchIndexWriter $indexWriter;
+    private RecordingContentChangeMarker $changeMarker;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->clock = new MockClock('2026-07-21 12:00:00', 'UTC');
+        $this->changeMarker = new RecordingContentChangeMarker();
         $this->fetcher = new StubFeedFetcher($this->clock);
         // Favicon resolution has its own fetcher so homepage fetches never
         // pollute assertions on which FEEDS the runner fetched.
@@ -105,6 +108,7 @@ final class RefreshRunnerTest extends DbTestCase
             $this->lockFactory,
             $this->clock,
             new NullLogger(),
+            $this->changeMarker,
         );
     }
 
@@ -209,6 +213,34 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertNotNull($feedA->getNextFetchAt());
         self::assertGreaterThan($this->clock->now(), $feedA->getNextFetchAt());
         self::assertCount(1, $this->em->getRepository(Entry::class)->findAll());
+    }
+
+    public function testMovesTheChangeMarkerWhenAnImportStoredNewEntries(): void
+    {
+        $feed = $this->dueFeed('https://a.example.com/feed');
+        $this->em->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::fetched($feed->getUrl(), false, $this->rss('A', 'a-1'), '"etag-a"', null),
+        );
+
+        $this->runner()->run(RefreshRequest::allDue(300));
+
+        self::assertSame(1, $this->changeMarker->marks);
+    }
+
+    public function testLeavesTheChangeMarkerWhenTheSweepStoredNoNewEntries(): void
+    {
+        $feed = $this->dueFeed('https://a.example.com/feed');
+        $this->em->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::notModified($feed->getUrl(), false, null, null),
+        );
+
+        $this->runner()->run(RefreshRequest::allDue(300));
+
+        self::assertSame(0, $this->changeMarker->marks);
     }
 
     /**

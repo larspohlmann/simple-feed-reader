@@ -32,6 +32,7 @@ use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\StubFeedFetcher;
+use App\Tests\Support\RecordingContentChangeMarker;
 use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
@@ -144,6 +145,7 @@ final class MaintenanceTickTest extends DbTestCase
             new LockFactory(new InMemoryStore()),
             $clock,
             new NullLogger(),
+            new RecordingContentChangeMarker(),
         );
 
         $forYouSweep = self::getContainer()->get(ForYouSweep::class);
