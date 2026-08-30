@@ -48,12 +48,6 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
      notice now that nothing around it moves. */
 }
 
-/* The rows scrolling behind it take the card colour in airy (#723) — must
-   follow, or the opaque strip above stops matching what passes under it. */
-.list-header.airy {
-  background: var(--surface-2);
-}
-
 .heading {
   display: flex;
   flex-direction: column;
@@ -504,8 +498,14 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   --card-hover-decoration: underline;
   --magazine-gap: var(--space-5);
 
-  /* No cards left, so the canvas itself becomes the card colour (#723). */
-  background: var(--surface-2);
+  /* No cards left, so the card colour becomes the sheet the column sits on —
+     the measure plus this block's own inset, centred, not the whole scroller.
+     Painted as a background image because the box IS the scroller: narrowing
+     the box would leave the space beside it dead to the wheel (#723). */
+  --airy-sheet: min(100%, calc(var(--magazine-measure) + 2 * var(--space-5)));
+
+  background: linear-gradient(var(--surface-2), var(--surface-2)) center center / var(--airy-sheet)
+    100% no-repeat;
 
   /* Boxed's gutter is the list's 12px plus the card's own inline padding; with
      the card gone the list has to carry the whole inset itself, or the text
