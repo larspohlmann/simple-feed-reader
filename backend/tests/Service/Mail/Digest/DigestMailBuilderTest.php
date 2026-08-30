@@ -6,6 +6,7 @@ namespace App\Tests\Service\Mail\Digest;
 
 use App\Tests\Support\FixedPublicBaseUrl;
 use App\Entity\User;
+use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestEntry;
 use App\Service\Mail\Digest\DigestFormat;
 use App\Service\Mail\Digest\DigestGroup;
@@ -42,6 +43,7 @@ final class DigestMailBuilderTest extends TestCase
             new DigestTextRenderer($translator),
             new DigestHtmlRenderer($translator, $links),
             $links,
+            new DigestBrandLogo(\dirname(__DIR__, 4)),
             'noreply@feeds.example.com',
             'Simple Feed Reader',
         );
@@ -78,7 +80,10 @@ final class DigestMailBuilderTest extends TestCase
 
         self::assertNotNull($email->getHtmlBody());
         self::assertNotNull($email->getTextBody());
-        self::assertCount(1, $email->getAttachments(), 'The one embedded image is an inline part.');
+        $attachments = $email->getAttachments();
+        self::assertCount(2, $attachments, 'The brand logo and the one embedded image are inline parts.');
+        $filenames = array_map(static fn ($part) => $part->getFilename(), $attachments);
+        self::assertContains(DigestHtmlRenderer::LOGO_CID, $filenames, 'The brand logo is embedded by its CID name.');
         self::assertNotEmpty($email->getHeaders()->get('List-Unsubscribe'));
     }
 

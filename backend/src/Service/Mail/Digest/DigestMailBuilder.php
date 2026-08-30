@@ -22,6 +22,7 @@ final readonly class DigestMailBuilder
         private DigestTextRenderer $textRenderer,
         private DigestHtmlRenderer $htmlRenderer,
         private DigestLinkBuilder $links,
+        private DigestBrandLogo $brandLogo,
         #[Autowire('%env(MAIL_FROM)%')]
         private string $fromAddress,
         #[Autowire('%env(MAIL_FROM_NAME)%')]
@@ -58,6 +59,7 @@ final readonly class DigestMailBuilder
         foreach ($images->images as $image) {
             $email->embed($image->bytes, $image->cid, $image->contentType);
         }
+        $email->embed($this->brandLogo->bytes(), DigestHtmlRenderer::LOGO_CID, $this->brandLogo->contentType());
 
         return $email;
     }

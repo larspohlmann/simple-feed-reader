@@ -62,6 +62,8 @@ final class DigestHtmlRendererTest extends TestCase
         self::assertStringContainsString('cid:imgABC', $html);
         self::assertStringContainsString('cid:imgFAV', $html);
         self::assertStringContainsString('+7 more in "Thailand"', $html);
+        self::assertStringContainsString('cid:digestlogo', $html);
+        self::assertStringContainsString('simple feed reader', $html);
     }
 
     public function testTextOnlyCardHasNoImgTag(): void

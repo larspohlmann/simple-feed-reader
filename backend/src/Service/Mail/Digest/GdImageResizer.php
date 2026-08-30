@@ -26,7 +26,7 @@ final readonly class GdImageResizer implements DigestImageResizerInterface
         $scale = max($width / imagesx($source), $height / imagesy($source));
         $this->drawCentred($canvas, $source, $scale, $width, $height);
 
-        $out = $this->capture(static fn (\GdImage $image): bool => imagejpeg($image, null, 80), $canvas);
+        $out = $this->capture(static fn (\GdImage $image): bool => imagejpeg($image, null, 72), $canvas);
         imagedestroy($source);
         imagedestroy($canvas);
 

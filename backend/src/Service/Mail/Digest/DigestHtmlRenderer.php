@@ -13,6 +13,8 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  */
 final readonly class DigestHtmlRenderer
 {
+    public const string LOGO_CID = 'digestlogo';
+
     public function __construct(
         private TranslatorInterface $translator,
         private DigestLinkBuilder $links,
@@ -51,8 +53,11 @@ final readonly class DigestHtmlRenderer
         $parameters = ['%date%' => $this->today($locale), '%count%' => (string) $totalCount];
         $line = $this->trans('digest.header', $parameters, $locale);
 
+        $logo = '<img src="cid:' . self::LOGO_CID . '" width="20" height="20" alt="" '
+            . 'style="display:inline-block;width:20px;height:20px;vertical-align:middle;margin-right:8px;border:0;">';
+
         return '<tr><td style="padding:24px 24px 18px;border-bottom:1px solid #e4e4e2;">'
-            . '<span style="font-size:15px;font-weight:600;color:#2a2a2a;">simple feed reader</span>'
+            . $logo . '<span style="font-size:15px;font-weight:600;color:#2a2a2a;">simple feed reader</span>'
             . '<div style="margin-top:14px;font-size:13px;color:#8f8f8b;">' . $this->escapeText($line) . '</div>'
             . '</td></tr>';
     }
@@ -71,9 +76,7 @@ final readonly class DigestHtmlRenderer
     ): string {
         $parameters = ['%term%' => $group->term, '%count%' => (string) $group->totalCount];
         $heading = $this->trans('digest.group_heading', $parameters, $locale);
-        $render = fn (DigestEntry $card): string => $this->card($card, $images, $locale, $dateFormatter);
-        $cardRenders = array_map($render, $group->cards);
-        $cards = implode('', $cardRenders);
+        $cards = $this->cards($group->cards, $images, $locale, $dateFormatter);
         $more = $group->remaining > 0 ? $this->moreLink($group, $locale) : '';
         $headingStyle = 'padding-bottom:10px;border-bottom:1px solid #e4e4e2;font-size:13px;'
             . 'font-weight:600;color:#5f5f5c;';
@@ -82,6 +85,31 @@ final readonly class DigestHtmlRenderer
             . '<div style="' . $headingStyle . '">'
             . $this->escapeText($heading) . '</div>'
             . $cards . $more . '</td></tr>';
+    }
+
+    /** @param list<DigestEntry> $cards */
+    private function cards(
+        array $cards,
+        DigestImageSet $images,
+        string $locale,
+        \IntlDateFormatter $dateFormatter,
+    ): string {
+        $html = '';
+        foreach ($cards as $index => $card) {
+            $html .= $this->cardSeparator($index) . $this->card($card, $images, $locale, $dateFormatter);
+        }
+
+        return $html;
+    }
+
+    /** Spaces the heading's own underline from the first card; a hairline between cards after that. */
+    private function cardSeparator(int $index): string
+    {
+        if ($index === 0) {
+            return '<div style="padding-top:20px;"></div>';
+        }
+
+        return '<div style="margin-top:20px;padding-top:20px;border-top:1px solid #e4e4e2;"></div>';
     }
 
     private function card(
@@ -100,8 +128,7 @@ final readonly class DigestHtmlRenderer
         $title = '<a href="' . $this->escape($card->url) . '" style="' . $titleStyle . '">'
             . $this->escapeText($card->title) . '</a>';
 
-        return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
-            . 'style="border-top:1px solid #e4e4e2;margin-top:20px;padding-top:20px;"><tr>'
+        return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>'
             . $thumbnail
             . '<td valign="top">' . $this->kicker($card, $images, $dateFormatter)
             . $title

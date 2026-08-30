@@ -34,7 +34,9 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  */
 final readonly class CatalogFaviconFetcher implements CatalogFaviconFetcherInterface
 {
-    public const int MAX_BYTES = 262144;
+    /** Also bounds digest article thumbnails (#726), not only favicons — the
+     *  pixel cap in GdImageResizer is the real memory guard. */
+    public const int MAX_BYTES = 3_145_728;
 
     private const int TIMEOUT_SECONDS = 8;
     private const int MAX_REDIRECTS = 3;

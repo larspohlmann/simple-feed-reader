@@ -13,6 +13,7 @@ use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
 use App\Repository\EntrySearchQuery;
 use App\Repository\SavedSearchRepository;
+use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestComposer;
 use App\Service\Mail\Digest\DigestEntryFinder;
 use App\Service\Mail\Digest\DigestFormat;
@@ -163,6 +164,7 @@ final class SendTestDigestTest extends TestCase
             new DigestTextRenderer($translator),
             new DigestHtmlRenderer($translator, $links),
             $links,
+            new DigestBrandLogo(\dirname(__DIR__, 4)),
             'noreply@feeds.example.com',
             'Simple Feed Reader',
         );

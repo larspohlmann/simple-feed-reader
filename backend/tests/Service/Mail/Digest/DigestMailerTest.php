@@ -6,6 +6,7 @@ namespace App\Tests\Service\Mail\Digest;
 
 use App\Tests\Support\FixedPublicBaseUrl;
 use App\Entity\User;
+use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestEntry;
 use App\Service\Mail\Digest\DigestFormat;
 use App\Service\Mail\Digest\DigestGroup;
@@ -60,6 +61,7 @@ final class DigestMailerTest extends TestCase
             new DigestTextRenderer($translator),
             new DigestHtmlRenderer($translator, $links),
             $links,
+            new DigestBrandLogo(\dirname(__DIR__, 4)),
             'noreply@feeds.example.com',
             'Simple Feed Reader',
         );
