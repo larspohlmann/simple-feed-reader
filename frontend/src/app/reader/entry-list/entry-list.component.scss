@@ -458,6 +458,14 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
 }
 
 .rows.magazine {
+  /* The card's chrome in one place, so airy is a different set of VALUES
+     rather than a branch in seven block components (#723). */
+  --card-bg: var(--surface-2);
+  --card-border: 1px solid var(--border);
+  --card-radius: var(--radius-lg);
+  --card-pad: var(--space-3);
+  --card-pad-x: var(--space-4);
+
   padding: var(--space-3);
   padding-top: $header-clear;
   display: flex;
