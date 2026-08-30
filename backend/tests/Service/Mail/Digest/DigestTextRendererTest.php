@@ -79,13 +79,23 @@ final class DigestTextRendererTest extends TestCase
     private function twoGroupModel(): DigestModel
     {
         $rustEntries = [
-            new DigestEntry('Rust 1.80 released', 'Rust Blog', 'A short summary.', 'https://example.com/1'),
-            new DigestEntry('Second post', 'Rust Blog', '', 'https://example.com/2'),
+            new DigestEntry(
+                'Rust 1.80 released',
+                'Rust Blog',
+                'A short summary.',
+                'https://example.com/1',
+                null,
+                null,
+                null,
+                null,
+                null,
+            ),
+            new DigestEntry('Second post', 'Rust Blog', '', 'https://example.com/2', null, null, null, null, null),
         ];
         $rust = new DigestGroup('rust', 5, $rustEntries, true, 'https://reader.example/digest?q=rust');
 
         $golangEntries = [
-            new DigestEntry('Golang release', 'Go Blog', '', 'https://example.com/3'),
+            new DigestEntry('Golang release', 'Go Blog', '', 'https://example.com/3', null, null, null, null, null),
         ];
         $golang = new DigestGroup('golang', 2, $golangEntries, false, '');
 

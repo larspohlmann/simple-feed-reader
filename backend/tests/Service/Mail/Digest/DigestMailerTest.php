@@ -54,7 +54,17 @@ final class DigestMailerTest extends TestCase
     private function model(): DigestModel
     {
         $entries = [
-            new DigestEntry('Rust 1.80 released', 'Rust Blog', 'A short summary.', 'https://example.com/1'),
+            new DigestEntry(
+                'Rust 1.80 released',
+                'Rust Blog',
+                'A short summary.',
+                'https://example.com/1',
+                null,
+                null,
+                null,
+                null,
+                null,
+            ),
         ];
         $group = new DigestGroup('rust', 1, $entries, false, '');
 
