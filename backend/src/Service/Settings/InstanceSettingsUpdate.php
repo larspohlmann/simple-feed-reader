@@ -19,6 +19,12 @@ final readonly class InstanceSettingsUpdate
         public ?string $publicBaseUrl,
         public ?string $passkeyRpId,
         public ?string $passkeyRpName,
+        // Defaulted, unlike the fields above: every existing call site in
+        // this codebase — and the many test fixtures constructing this with
+        // positional arguments — predates the toggle and is entitled to keep
+        // meaning "passkeys stay on", the same default InstanceSetting itself
+        // ships with.
+        public bool $passkeySignInEnabled = true,
     ) {
     }
 }

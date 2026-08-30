@@ -60,6 +60,18 @@ class InstanceSetting
     #[ORM\Column(name: 'passkey_rp_name', length: 100, nullable: true)]
     private ?string $passkeyRpName = null;
 
+    /**
+     * The instance-wide passkey sign-in switch (#624 follow-up). Defaults to
+     * true: the relying party derives correctly with no configuration at all,
+     * so the feature works out of the box, and defaulting it off would
+     * silently suppress the first-login enrolment offer. The switch exists to
+     * turn passkeys OFF, or for an admin whose relying-party configuration is
+     * wrong — see {@see \App\Service\Passkey\PasskeySignInAvailability}, which
+     * combines this with the relying-party validity check.
+     */
+    #[ORM\Column(name: 'passkey_sign_in_enabled')]
+    private bool $passkeySignInEnabled = true;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -90,6 +102,11 @@ class InstanceSetting
         return $this->passkeyRpName;
     }
 
+    public function passkeySignInEnabled(): bool
+    {
+        return $this->passkeySignInEnabled;
+    }
+
     public function apply(InstanceSettingsUpdate $update): void
     {
         $this->requireEmailConfirmation = $update->requireEmailConfirmation;
@@ -97,5 +114,6 @@ class InstanceSetting
         $this->publicBaseUrl = $update->publicBaseUrl;
         $this->passkeyRpId = $update->passkeyRpId;
         $this->passkeyRpName = $update->passkeyRpName;
+        $this->passkeySignInEnabled = $update->passkeySignInEnabled;
     }
 }

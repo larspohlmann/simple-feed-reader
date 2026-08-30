@@ -109,6 +109,7 @@ final class AdminSettingsControllerTest extends ApiTestCase
                 'passkeyRpName' => null,
                 // Derived from APP_FRONTEND_URL (http://localhost:4200) in the test env.
                 'passkeyRpIdEffective' => 'localhost',
+                'passkeySignInEnabled' => true,
             ],
             $this->payload($client),
         );
@@ -134,6 +135,7 @@ final class AdminSettingsControllerTest extends ApiTestCase
                 'passkeyRpId' => null,
                 'passkeyRpName' => null,
                 'passkeyRpIdEffective' => 'localhost',
+                'passkeySignInEnabled' => true,
             ],
             $this->payload($client),
         );
@@ -150,6 +152,7 @@ final class AdminSettingsControllerTest extends ApiTestCase
                 'passkeyRpId' => null,
                 'passkeyRpName' => null,
                 'passkeyRpIdEffective' => 'localhost',
+                'passkeySignInEnabled' => true,
             ],
             $this->payload($client),
         );
@@ -377,6 +380,31 @@ final class AdminSettingsControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(1, $this->passkeys()->countAll());
+    }
+
+    /**
+     * The instance-wide passkey sign-in switch (#624 follow-up): defaults to
+     * true, and a PUT that turns it off round-trips on the next GET.
+     */
+    public function testPasskeySignInEnabledDefaultsToTrueAndRoundTrips(): void
+    {
+        $client = $this->adminClient();
+
+        $client->request('GET', self::SETTINGS);
+        self::assertTrue($this->payload($client)['passkeySignInEnabled']);
+
+        $client->jsonRequest('PUT', self::SETTINGS, [
+            'requireEmailConfirmation' => true,
+            'requireApproval' => true,
+            'publicBaseUrl' => null,
+            'passkeySignInEnabled' => false,
+        ]);
+
+        self::assertResponseIsSuccessful();
+        self::assertFalse($this->payload($client)['passkeySignInEnabled']);
+
+        $client->request('GET', self::SETTINGS);
+        self::assertFalse($this->payload($client)['passkeySignInEnabled']);
     }
 
     public function testPasskeyRpIdEffectiveReflectsTheStoredOverrideOrTheDerivedHost(): void

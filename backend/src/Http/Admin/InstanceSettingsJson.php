@@ -29,6 +29,7 @@ final readonly class InstanceSettingsJson
      *     passkeyRpId: string|null,
      *     passkeyRpName: string|null,
      *     passkeyRpIdEffective: string,
+     *     passkeySignInEnabled: bool,
      * }
      */
     public static function from(
@@ -46,6 +47,7 @@ final readonly class InstanceSettingsJson
             'passkeyRpId' => $settings->getPasskeyRpId(),
             'passkeyRpName' => $settings->getPasskeyRpName(),
             'passkeyRpIdEffective' => $relyingParty->id(),
+            'passkeySignInEnabled' => $settings->passkeySignInEnabled(),
         ];
     }
 }

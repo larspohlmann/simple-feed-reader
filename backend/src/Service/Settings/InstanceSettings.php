@@ -46,6 +46,11 @@ final readonly class InstanceSettings
         return $this->repository->findSingleton()?->getPasskeyRpName();
     }
 
+    public function passkeySignInEnabled(): bool
+    {
+        return $this->repository->findSingleton()?->passkeySignInEnabled() ?? true;
+    }
+
     public function update(InstanceSettingsUpdate $update): void
     {
         $setting = $this->repository->findSingleton();

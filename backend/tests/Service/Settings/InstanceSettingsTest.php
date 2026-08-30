@@ -28,6 +28,32 @@ final class InstanceSettingsTest extends KernelTestCase
         self::assertTrue($this->settings->requireApproval());
     }
 
+    /**
+     * Deliberately true: the relying party derives correctly with no
+     * configuration at all, so passkey sign-in works out of the box, and
+     * defaulting it off would silently suppress the first-login enrolment
+     * offer this branch exists to deliver (#624 follow-up).
+     */
+    public function testPasskeySignInDefaultsToEnabledWhenNoRowExists(): void
+    {
+        self::assertTrue($this->settings->passkeySignInEnabled());
+    }
+
+    public function testPasskeySignInEnabledRoundTrips(): void
+    {
+        $this->settings->update(new InstanceSettingsUpdate(
+            requireEmailConfirmation: true,
+            requireApproval: true,
+            publicBaseUrl: null,
+            passkeyRpId: null,
+            passkeyRpName: null,
+            passkeySignInEnabled: false,
+        ));
+        $this->em->clear();
+
+        self::assertFalse($this->settings->passkeySignInEnabled());
+    }
+
     public function testUpdatePersistsAndIsReadBack(): void
     {
         $this->settings->update(new InstanceSettingsUpdate(
