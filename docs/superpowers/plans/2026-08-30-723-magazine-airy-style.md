@@ -1590,6 +1590,44 @@ If `/api/me` cannot be rewritten this way in this Playwright version, set the
 style through the Settings UI instead of stubbing it, and keep the same computed
 -style assertions — they are the part that matters.
 
+**Extend that spec with the assertions below before committing it.** Every defect
+this branch shipped was geometry no assertion looked at, and two of them were the
+BOXED style regressing after Task 6 had already proved it pixel-identical. The
+suite must guard both styles, not just the new one.
+
+Airy, in addition to the above:
+
+- the ruled slot's `.row-slot-inner` has a `padding-top` equal to the column's
+  row-gap, so the space above and below the hairline match. Without it the whole
+  gap falls above the rule — `border-top` draws at the slot's top edge — and the
+  kicker line starts 1px beneath the hairline;
+- `hero` and `wide` leave 16px between the image's bottom edge and the kicker's
+  top edge. Airy zeroes `--card-pad`, and those two blocks are the only ones with
+  a full-width image directly above the body;
+- `hero`/`wide` `.img` carries the `--radius-lg` value on all four corners.
+
+Boxed, as an explicit regression guard:
+
+- the ruled slot's `.row-slot-inner` has `padding-top: 0px`;
+- `hero`/`wide` `.img` has a computed `border-radius` of `0px`. The card's
+  `overflow: hidden` does the clipping, so the image's top corners follow the
+  card while its bottom edge stays square against the body; an own-radius on the
+  image rounds all four and curves the bottom two inside the card;
+- `hero`/`wide` `.body` keeps its `var(--space-3) var(--space-4)` padding.
+
+Getting a `hero` or `wide` to render needs a fixture entry with a large image.
+Use an inline `data:` URI SVG rather than an external host — an external image
+404'd during Task 7 and silently cost that task its radius check:
+
+```typescript
+const IMG = 'data:image/svg+xml;base64,' + Buffer.from(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="#8a8a86"/></svg>'
+).toString('base64');
+```
+
+Note also that `getByRole('button', { name: 'Sign in' })` is ambiguous on the
+login page — it also matches "Sign in with a passkey". Use `{ exact: true }`.
+
 - [ ] **Step 2: Run it**
 
 ```bash
