@@ -18,9 +18,10 @@ import { ToggleComponent } from '../../../shared/toggle/toggle.component';
 import { AdminSettingsApi, InstanceSettings, InstanceSettingsUpdate } from './admin-settings-api';
 
 /** The registration-gate toggles (#224): whether a new signup needs email
- *  confirmation and/or admin approval before it becomes active. Each toggle
- *  saves immediately on change, mirroring the admin user queue's row actions —
- *  there is no separate save step to forget. */
+ *  confirmation and/or admin approval before it becomes active. Plus the
+ *  passkey sign-in switch (#624 follow-up), beside the relying-party fields
+ *  it governs. Each toggle saves immediately on change, mirroring the admin
+ *  user queue's row actions — there is no separate save step to forget. */
 @Component({
   selector: 'app-admin-settings',
   imports: [
