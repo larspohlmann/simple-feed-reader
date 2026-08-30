@@ -167,7 +167,18 @@ async function registerAndVerify(page: Page): Promise<void> {
   await page.goto('/login');
   await page.locator('input[type=email]').fill(email);
   await page.locator('input[type=password]').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+}
+
+async function dismissPasskeyOffer(page: Page): Promise<void> {
+  const setup = await page.request.get('/api/setup/status');
+  const status = (await setup.json()) as { passkeySignInAvailable: boolean };
+  if (!status.passkeySignInAvailable) return;
+
+  const offer = page.getByRole('dialog', { name: 'Set up a passkey?' });
+  await expect(offer).toBeVisible();
+  await offer.getByRole('button', { name: 'Not now', exact: true }).click();
+  await page.locator('[data-test="passkey-offer-ok"]').click();
 }
 
 test('a new user is sent to the picker and lands in a reader with their tags', async ({ page }) => {
@@ -199,6 +210,7 @@ test('a new user is sent to the picker and lands in a reader with their tags', a
   await page.getByTestId('subscribe').click();
 
   await expect(page).toHaveURL(/\/$/);
+  await dismissPasskeyOffer(page);
   // Scope to the sidebar: once the post-onboarding sweep lands, "Technology" and
   // "Science" also appear as entry tag-pills, and the sidebar link's own name
   // carries the unread count ("Technology 65"). The sidebar tag link is the one
@@ -217,6 +229,7 @@ test('skipping goes to the reader and leaves a way back', async ({ page }) => {
   await page.getByRole('button', { name: 'Skip for now' }).click();
 
   await expect(page).toHaveURL(/\/$/);
+  await dismissPasskeyOffer(page);
   await expect(page.getByRole('link', { name: /Browse suggested feeds/ })).toBeVisible();
 
   await page.reload();

@@ -84,6 +84,9 @@ async function stubReader(page: Page): Promise<void> {
     }
     if (path.endsWith('/api/tags')) return json({ tags: [] });
     if (path.endsWith('/api/saved-searches')) return json({ savedSearches: [] });
+    if (path.endsWith('/api/setup/status')) {
+      return json({ needsSetup: false, mailEnabled: true, passkeySignInAvailable: false });
+    }
     if (path.endsWith('/api/entries')) {
       return json({ entries: [entry(1), entry(2), entry(3)], nextCursor: null });
     }

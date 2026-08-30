@@ -13,7 +13,7 @@ test('a wrong password shows the backend message (real cross-origin + problem+js
   await page.goto('/login');
   await page.locator('input[type=email]').fill('nobody@example.com');
   await page.locator('input[type=password]').fill('definitely-wrong-1');
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByText(/incorrect/i)).toBeVisible();
 });
 

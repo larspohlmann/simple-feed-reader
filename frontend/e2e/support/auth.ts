@@ -10,5 +10,10 @@ import { Page } from '@playwright/test';
  * keep doing so; this is for the ones testing what happens once you are in.
  */
 export async function stubAuthToken(page: Page): Promise<void> {
+  await page.route('**/api/setup/status', async (route) => {
+    await route.fulfill({
+      json: { needsSetup: false, mailEnabled: true, passkeySignInAvailable: false },
+    });
+  });
   await page.addInitScript(() => localStorage.setItem('sfr.jwt', 'stub-token-for-the-guard'));
 }
