@@ -50,7 +50,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
     public function testTheOptionsCarryTheRelyingPartyAndRequireUserVerification(): void
     {
         $client = static::createClient();
-        $this->pinRelyingParty('example.test', 'Example Reader');
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->factory()->create('enroller@example.test');
         $this->authenticate($client, 'enroller@example.test');
 
@@ -68,6 +68,45 @@ final class PasskeyRegistrationTest extends ApiTestCase
     }
 
     /**
+     * The server-side enforcement half of #624 follow-up: a toggle that only
+     * hides frontend buttons is cosmetic, so every enrolment endpoint must
+     * itself refuse once the instance-wide switch is off.
+     */
+    public function testRegisterOptionsRefusesWhenPasskeySignInIsDisabled(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty('example.test', 'Example Reader', passkeySignInEnabled: false);
+        $this->factory()->create('disabled-options@example.test');
+        $this->authenticate($client, 'disabled-options@example.test');
+
+        $client->request('POST', '/api/auth/passkey/register/options');
+
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame('application/problem+json', $client->getResponse()->headers->get('Content-Type'));
+    }
+
+    public function testRegisterRefusesWhenPasskeySignInIsDisabled(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test', passkeySignInEnabled: false);
+        $this->factory()->create('disabled-register@example.test');
+        $this->authenticate($client, 'disabled-register@example.test');
+
+        $client->request(
+            'POST',
+            '/api/auth/passkey/register',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: (string) json_encode(
+                ['handle' => 'anything', 'credential' => ['id' => 'x'], 'label' => 'Test key'],
+                \JSON_THROW_ON_ERROR,
+            ),
+        );
+
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame('application/problem+json', $client->getResponse()->headers->get('Content-Type'));
+    }
+
+    /**
      * `rp.name` is a required WebAuthn IDL member, not decoration: the
      * browser's and the password manager's enrolment prompt show it. Fix
      * round 1 (#624) found `RegistrationOptionsFactory` had silently emptied
@@ -78,7 +117,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
     public function testTheOptionsCarryTheConfiguredRelyingPartyName(): void
     {
         $client = static::createClient();
-        $this->pinRelyingParty('example.test', 'Example Reader');
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->factory()->create('name-checker@example.test');
         $this->authenticate($client, 'name-checker@example.test');
 
@@ -289,9 +328,11 @@ final class PasskeyRegistrationTest extends ApiTestCase
     public function testAnOriginMismatchIsRejected(): void
     {
         $client = static::createClient();
-        // The server accepts a different origin than the one the fixture
-        // below is actually signed for.
-        $this->pinRelyingParty('example.test', 'Example Reader', 'https://different.test');
+        // Same HOST as the relying-party id — so PasskeySignInAvailability's
+        // guard still passes (#624 follow-up) — but a different SCHEME, which
+        // is all CheckAllowedOrigins compares: the fixture below is signed
+        // for https, the server now only accepts http.
+        $this->pinRelyingParty('example.test', 'Example Reader', 'http://example.test');
         $user = $this->factory()->create('enroller@example.test');
         $this->authenticate($client, 'enroller@example.test');
         $fixture = $this->buildFixture('example.test', 'https://example.test');
@@ -305,12 +346,16 @@ final class PasskeyRegistrationTest extends ApiTestCase
     public function testAnRpIdMismatchIsRejected(): void
     {
         $client = static::createClient();
-        // The server's configured relying-party id differs from the one the
-        // fixture's authenticator data hashed at capture time.
-        $this->pinRelyingParty('different-domain.test', 'Example Reader', 'https://example.test');
+        // The configured relying-party id ('example.test') is still a valid
+        // registrable parent of the public base URL's host
+        // ('sub.example.test'), so PasskeySignInAvailability's guard passes
+        // (#624 follow-up) — but it differs from the id the fixture's
+        // authenticator data actually hashed at capture time
+        // ('different-domain.test'), which is what CheckRpIdHash catches.
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://sub.example.test');
         $user = $this->factory()->create('enroller@example.test');
         $this->authenticate($client, 'enroller@example.test');
-        $fixture = $this->buildFixture('example.test', 'https://example.test');
+        $fixture = $this->buildFixture('different-domain.test', 'https://sub.example.test');
         $handle = $this->issueChallenge($fixture->challenge, $user->getId(), $this->randomUserHandle());
 
         $this->registerPasskey($client, $handle, $fixture->credential, 'My phone');
@@ -639,6 +684,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
         string $relyingPartyId,
         string $relyingPartyName,
         ?string $publicBaseUrl = null,
+        bool $passkeySignInEnabled = true,
     ): void {
         /** @var InstanceSettings $settings */
         $settings = self::getContainer()->get(InstanceSettings::class);
@@ -648,6 +694,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
             publicBaseUrl: $publicBaseUrl,
             passkeyRpId: $relyingPartyId,
             passkeyRpName: $relyingPartyName,
+            passkeySignInEnabled: $passkeySignInEnabled,
         ));
     }
 

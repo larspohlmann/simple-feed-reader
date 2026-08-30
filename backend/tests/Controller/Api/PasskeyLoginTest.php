@@ -13,6 +13,9 @@ use App\Service\Passkey\AssertionVerifier;
 use App\Service\Passkey\NaiveUtcClock;
 use App\Service\Passkey\PasskeyCeremony;
 use App\Service\Passkey\PasskeyChallengeStore;
+use App\Service\Passkey\PasskeySignInAvailability;
+use App\Service\Settings\InstanceSettings;
+use App\Service\Settings\InstanceSettingsUpdate;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\PasskeyAttestationFixture;
 use App\Tests\Support\PasskeyFixtures;
@@ -496,7 +499,49 @@ final class PasskeyLoginTest extends ApiTestCase
         self::assertNotNull($stored->getLastUsedAt());
     }
 
+    /**
+     * The trap the design brief calls out by name: the login path runs
+     * through PasskeyAuthenticator, not PasskeyController, so
+     * PasskeySignInAvailability's guard is wired into AssertionVerifier::
+     * verify() instead — caught there by the SAME `catch (ApiException)`
+     * block that already rewrites AssertionRejectedException, so a disabled
+     * instance fails a passkey login exactly like a rejected assertion: a
+     * clean 401 through LoginFailureHandler, never a 500.
+     */
+    public function testADisabledInstanceRejectsLoginWith401NotA500(): void
+    {
+        $client = static::createClient();
+        $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
+        $this->factory()->create('disabled-login@example.test');
+        $fixture = $this->enrol($client, 'disabled-login@example.test');
+        $this->disablePasskeySignIn();
+        $handle = $this->issueLoginChallenge($fixture->challenge);
+
+        $this->login($client, $handle, PasskeyFixtures::assertion(
+            self::RELYING_PARTY_ID,
+            self::ORIGIN,
+            $fixture->challenge,
+            $fixture,
+        ));
+
+        $this->assertRejected($client, 401);
+    }
+
     // -- Setup helpers -------------------------------------------------
+
+    private function disablePasskeySignIn(): void
+    {
+        /** @var InstanceSettings $settings */
+        $settings = self::getContainer()->get(InstanceSettings::class);
+        $settings->update(new InstanceSettingsUpdate(
+            requireEmailConfirmation: true,
+            requireApproval: true,
+            publicBaseUrl: self::ORIGIN,
+            passkeyRpId: self::RELYING_PARTY_ID,
+            passkeyRpName: 'Example Reader',
+            passkeySignInEnabled: false,
+        ));
+    }
 
     /**
      * passkey_login has its OWN login_throttling budget, separate from the
@@ -636,6 +681,8 @@ final class PasskeyLoginTest extends ApiTestCase
         $passkeys = self::getContainer()->get(UserPasskeyRepository::class);
         /** @var NaiveUtcClock $clock */
         $clock = self::getContainer()->get(NaiveUtcClock::class);
+        /** @var PasskeySignInAvailability $availability */
+        $availability = self::getContainer()->get(PasskeySignInAvailability::class);
 
         return new AssertionVerifier(
             $challengeStore,
@@ -645,6 +692,7 @@ final class PasskeyLoginTest extends ApiTestCase
             $this->em(),
             $clock,
             new Logger('test', [$logSpy]),
+            $availability,
         );
     }
 

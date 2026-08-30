@@ -7,6 +7,8 @@ namespace App\Tests\Controller\Api;
 use App\Entity\User;
 use App\Entity\UserPasskey;
 use App\Repository\UserPasskeyRepository;
+use App\Service\Settings\InstanceSettings;
+use App\Service\Settings\InstanceSettingsUpdate;
 use App\Tests\Support\ApiTestCase;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -124,6 +126,58 @@ final class PasskeyListTest extends ApiTestCase
         /** @var UserPasskeyRepository $repository */
         $repository = self::getContainer()->get(UserPasskeyRepository::class);
         self::assertNotNull($repository->find($onlyPasskey->getId()));
+    }
+
+    /**
+     * The list endpoint is one of the six #624 follow-up enforces: a
+     * disabled instance refuses even a read of the caller's own credentials,
+     * the same as it refuses enrolment and login.
+     */
+    public function testListingRefusesWhenPasskeySignInIsDisabled(): void
+    {
+        $client = static::createClient();
+        $user = $this->factory()->create('list-disabled@example.test');
+        $this->givenAPasskeyFor($user, credentialId: 'ZGlzYWJsZWQtY3JlZA');
+        $this->authenticate($client, 'list-disabled@example.test');
+        $this->disablePasskeySignIn();
+
+        $client->request('GET', '/api/auth/passkeys');
+
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame('application/problem+json', $client->getResponse()->headers->get('Content-Type'));
+    }
+
+    /**
+     * The judgement call #624 follow-up leaves deliberate: DELETE stays
+     * allowed even while sign-in is disabled, so a user can still clean up a
+     * credential they can no longer use. Disabling the feature must not trap
+     * that credential on the account forever.
+     */
+    public function testDeletingOwnCredentialStillSucceedsWhenPasskeySignInIsDisabled(): void
+    {
+        $client = static::createClient();
+        $user = $this->factory()->create('delete-while-disabled@example.test');
+        $toDelete = $this->givenAPasskeyFor($user, credentialId: 'c3RpbGwtZGVsZXRhYmxl');
+        $this->authenticate($client, 'delete-while-disabled@example.test');
+        $this->disablePasskeySignIn();
+
+        $client->request('DELETE', \sprintf('/api/auth/passkeys/%d', (int) $toDelete->getId()));
+
+        self::assertResponseStatusCodeSame(204);
+    }
+
+    private function disablePasskeySignIn(): void
+    {
+        /** @var InstanceSettings $settings */
+        $settings = self::getContainer()->get(InstanceSettings::class);
+        $settings->update(new InstanceSettingsUpdate(
+            requireEmailConfirmation: true,
+            requireApproval: true,
+            publicBaseUrl: null,
+            passkeyRpId: null,
+            passkeyRpName: null,
+            passkeySignInEnabled: false,
+        ));
     }
 
     /** Attaches a bearer token to every subsequent request this client makes. */

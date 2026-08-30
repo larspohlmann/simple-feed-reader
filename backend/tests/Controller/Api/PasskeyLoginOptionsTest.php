@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Service\Settings\InstanceSettings;
+use App\Service\Settings\InstanceSettingsUpdate;
 use App\Tests\Support\ApiTestCase;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -135,6 +137,30 @@ final class PasskeyLoginOptionsTest extends ApiTestCase
         $body['options'] = $options;
 
         return $body;
+    }
+
+    /**
+     * The one anonymous endpoint among the six #624 follow-up enforces: a
+     * disabled instance must not even hand out a login challenge.
+     */
+    public function testTheOptionsEndpointRefusesWhenPasskeySignInIsDisabled(): void
+    {
+        $client = static::createClient();
+        /** @var InstanceSettings $settings */
+        $settings = self::getContainer()->get(InstanceSettings::class);
+        $settings->update(new InstanceSettingsUpdate(
+            requireEmailConfirmation: true,
+            requireApproval: true,
+            publicBaseUrl: null,
+            passkeyRpId: null,
+            passkeyRpName: null,
+            passkeySignInEnabled: false,
+        ));
+
+        $client->request('POST', self::OPTIONS_PATH);
+
+        self::assertResponseStatusCodeSame(403);
+        self::assertSame('application/problem+json', $client->getResponse()->headers->get('Content-Type'));
     }
 
     private function rateLimiterCache(): CacheItemPoolInterface

@@ -15,6 +15,7 @@ use App\Service\Passkey\Exception\AssertionRejectedException;
 use App\Service\Passkey\NaiveUtcClock;
 use App\Service\Passkey\PasskeyCeremony;
 use App\Service\Passkey\PasskeyChallengeStore;
+use App\Service\Passkey\PasskeySignInAvailability;
 use App\Tests\Support\PasskeyAttestationFixture;
 use App\Tests\Support\PasskeyFixtures;
 use App\Tests\Support\PinsPasskeyRelyingParty;
@@ -291,6 +292,8 @@ final class AssertionVerifierTest extends KernelTestCase
         $optionsFactory = self::getContainer()->get(AssertionOptionsFactory::class);
         /** @var UserPasskeyRepository $passkeys */
         $passkeys = self::getContainer()->get(UserPasskeyRepository::class);
+        /** @var PasskeySignInAvailability $availability */
+        $availability = self::getContainer()->get(PasskeySignInAvailability::class);
 
         return new AssertionVerifier(
             $challengeStore,
@@ -300,6 +303,7 @@ final class AssertionVerifierTest extends KernelTestCase
             $this->em(),
             new NaiveUtcClock($clock ?? new MockClock()),
             $logger ?? new NullLogger(),
+            $availability,
         );
     }
 }

@@ -73,16 +73,30 @@ final readonly class AssertionVerifier
         private EntityManagerInterface $em,
         private NaiveUtcClock $clock,
         private LoggerInterface $logger,
+        private PasskeySignInAvailability $availability,
     ) {
     }
 
     /**
+     * $availability->guard() runs FIRST, before the challenge is even
+     * consumed: the login path has no controller action to gate (#624
+     * follow-up) — PasskeyAuthenticator calls this method from inside a
+     * lazily-invoked UserBadge loader, never through PasskeyController — so
+     * this is the one place that can refuse a disabled instance's login.
+     * PasskeySignInDisabledException extends ApiException, which
+     * PasskeyAuthenticator::verifiedUser() already catches and rewrites into
+     * a plain AuthenticationException, so a disabled instance fails exactly
+     * like a rejected assertion: a clean 401 through LoginFailureHandler,
+     * never a 500.
+     *
      * @param array<string, mixed> $credential
      *
      * @throws InvalidArgumentException
      */
     public function verify(string $handle, array $credential): UserPasskey
     {
+        $this->availability->guard();
+
         $challenge = $this->challengeStore->consume($handle);
 
         [$rawCredentialId, $response] = $this->parse($credential);

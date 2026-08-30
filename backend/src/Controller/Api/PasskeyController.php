@@ -11,6 +11,7 @@ use App\Repository\UserPasskeyRepository;
 use App\Service\Passkey\AssertionOptionsFactory;
 use App\Service\Passkey\AttestationVerifier;
 use App\Service\Passkey\PasskeyRemovalPolicy;
+use App\Service\Passkey\PasskeySignInAvailability;
 use App\Service\Passkey\RegistrationOptionsFactory;
 use App\Service\RateLimit\RateLimitGuard;
 use Doctrine\ORM\EntityManagerInterface;
@@ -32,6 +33,16 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
  * `^/api/auth/` prefix, and for why `loginOptions()` is deliberately left
  * out of that rule: a discoverable-credential login has no account to
  * authenticate as until the assertion comes back.
+ *
+ * `$availability->guard()` gates every action here EXCEPT `delete()` and the
+ * unreachable `login()` stub (#624 follow-up): when the instance-wide
+ * passkey-sign-in switch is off, or the configured relying party is not
+ * valid for the public base URL, registering, listing and requesting a login
+ * challenge all refuse with a 403. DELETE stays reachable on purpose — a
+ * user with a credential they can no longer use must still be able to remove
+ * it, and doing so carries no sign-in risk. The login path itself has no
+ * controller action to guard; see AssertionVerifier::verify() for the
+ * equivalent enforcement on that side.
  */
 final readonly class PasskeyController
 {
@@ -44,12 +55,15 @@ final readonly class PasskeyController
         private EntityManagerInterface $em,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $passkeyChallengeLimiter,
+        private PasskeySignInAvailability $availability,
     ) {
     }
 
     #[Route('/api/auth/passkey/register/options', name: 'api_auth_passkey_register_options', methods: ['POST'])]
     public function registerOptions(#[CurrentUser] User $user): JsonResponse
     {
+        $this->availability->guard();
+
         return new JsonResponse($this->registrationOptionsFactory->create($user));
     }
 
@@ -62,6 +76,7 @@ final readonly class PasskeyController
     #[Route('/api/auth/passkey/login/options', name: 'api_auth_passkey_login_options', methods: ['POST'])]
     public function loginOptions(Request $request): JsonResponse
     {
+        $this->availability->guard();
         $this->rateLimitGuard->enforceForClient($this->passkeyChallengeLimiter, $request);
 
         return new JsonResponse($this->assertionOptionsFactory->create());
@@ -90,6 +105,7 @@ final readonly class PasskeyController
         #[CurrentUser] User $user,
         #[MapRequestPayload] RegisterPasskeyRequest $request,
     ): JsonResponse {
+        $this->availability->guard();
         $this->attestationVerifier->verifyAndStore($user, $request);
 
         return new JsonResponse(
@@ -101,6 +117,8 @@ final readonly class PasskeyController
     #[Route('/api/auth/passkeys', name: 'api_auth_passkeys_list', methods: ['GET'])]
     public function list(#[CurrentUser] User $user): JsonResponse
     {
+        $this->availability->guard();
+
         return new JsonResponse(PasskeyJson::passkeys($this->passkeys->findForUser($user)));
     }
 
