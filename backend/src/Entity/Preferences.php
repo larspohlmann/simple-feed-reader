@@ -6,6 +6,7 @@ namespace App\Entity;
 
 use App\Repository\PreferencesRepository;
 use App\Service\Mail\Digest\DigestCadence;
+use App\Service\Reader\MagazineStyle;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -35,6 +36,10 @@ class Preferences
      */
     #[ORM\Column(options: ['default' => false])]
     private bool $scrapeFallbackEnabled = false;
+
+    /** Boxed by default: what every existing account already sees (#723). */
+    #[ORM\Column(name: 'magazine_style', length: 10, enumType: MagazineStyle::class, options: ['default' => 'boxed'])]
+    private MagazineStyle $magazineStyle = MagazineStyle::Boxed;
 
     #[ORM\Column(name: 'digest_enabled', options: ['default' => false])]
     private bool $digestEnabled = false;
@@ -84,6 +89,16 @@ class Preferences
     public function setScrapeFallbackEnabled(bool $scrapeFallbackEnabled): void
     {
         $this->scrapeFallbackEnabled = $scrapeFallbackEnabled;
+    }
+
+    public function getMagazineStyle(): MagazineStyle
+    {
+        return $this->magazineStyle;
+    }
+
+    public function setMagazineStyle(MagazineStyle $magazineStyle): void
+    {
+        $this->magazineStyle = $magazineStyle;
     }
 
     public function isDigestEnabled(): bool
