@@ -92,7 +92,7 @@ describe('SidebarCountsPoll', () => {
       await start('A');
       await elapse(SIDEBAR_RELOAD_INTERVAL_MS);
 
-      expect(fetchMock).toHaveBeenCalledWith('https://api.test/state/counts', {
+      expect(fetchMock).toHaveBeenCalledWith('https://api.test/state/counts.json', {
         cache: 'no-cache',
       });
     });

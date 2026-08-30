@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace App\Service\Refresh;
 
+use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 
 /**
- * Writes one opaque, contentless token into the web root so the browser can
- * revalidate it without touching PHP. The token is global on purpose: a
- * per-user marker in a public directory would leak when a named user reads
- * their feeds; a single token leaks only "the reader imported something" (#720).
+ * Writes the last-import time into the web root so the browser can revalidate it
+ * without touching PHP. A plain `{"lastUpdated": "..."}` JSON document on
+ * purpose: anyone who inspects the poll's request sees exactly what it is, and
+ * the timestamp changes every import so the tick can tell one from the next. It
+ * is global — a per-user marker in a public directory would leak when a named
+ * user reads their feeds; this leaks only "the reader last imported at this
+ * time" (#720).
  *
  * A write failure is logged and swallowed. The marker is an optimisation, never
  * the source of truth — the poll keeps a floor that fetches regardless — so a
@@ -20,6 +24,7 @@ final readonly class ContentChangeMarker implements ContentChangeMarkerInterface
 {
     public function __construct(
         private string $projectDir,
+        private ClockInterface $clock,
         private LoggerInterface $logger,
     ) {
     }
@@ -30,7 +35,17 @@ final readonly class ContentChangeMarker implements ContentChangeMarkerInterface
         if (!$this->ensureDirectory($directory)) {
             return;
         }
-        $this->writeAtomically($directory, $directory . '/counts', bin2hex(random_bytes(8)));
+        $this->writeAtomically($directory, $directory . '/counts.json', $this->payload());
+    }
+
+    // UTC to the microsecond: the worker clock is not UTC on Strato, and two
+    // imports can share a second. The microseconds also keep every write
+    // distinct, which is the whole job of the marker.
+    private function payload(): string
+    {
+        $lastUpdated = $this->clock->now()->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
+
+        return json_encode(['lastUpdated' => $lastUpdated], \JSON_THROW_ON_ERROR);
     }
 
     private function ensureDirectory(string $directory): bool

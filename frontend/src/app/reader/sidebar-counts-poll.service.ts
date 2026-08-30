@@ -23,7 +23,7 @@ export const SIDEBAR_POLL_MARKER_FLOOR_TICKS = 10;
 /** The static change marker the refresh moves on a real import (#720). Served
  *  straight off disk by the web server — no PHP, no JWT, no database — so a
  *  tick that finds it unmoved costs a conditional request and nothing more. */
-const CHANGE_MARKER_PATH = '/state/counts';
+const CHANGE_MARKER_PATH = '/state/counts.json';
 
 /** What counts as "somebody is still here". `pointerdown` covers mouse, touch
  *  and pen; `wheel` covers the reader who only scrolls; `keydown` covers the
