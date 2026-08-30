@@ -36,8 +36,8 @@ final readonly class SubscriptionLine
             markedReadUntil: LineField::dateOrNull($line, 'markedReadUntil'),
             createdAt: LineField::date($line, 'createdAt'),
             tags: self::tagsFromLine($line),
-            includeInAllItems: LineField::boolWithDefault($line, 'includeInAllItems', true),
-            includeInForYou: LineField::boolWithDefault($line, 'includeInForYou', true),
+            includeInAllItems: LineFieldWithDefault::bool($line, 'includeInAllItems', true),
+            includeInForYou: LineFieldWithDefault::bool($line, 'includeInForYou', true),
         );
     }
 

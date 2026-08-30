@@ -188,6 +188,7 @@ final readonly class AccountBackupExporter
             'kind' => BackupSchema::KIND_ACCOUNT,
             'locale' => $user->getLocale(),
             'scrapeFallbackEnabled' => $user->getPreferences()->isScrapeFallbackEnabled(),
+            'magazineStyle' => $user->getPreferences()->getMagazineStyle()->value,
             'recommendationSettings' => $this->recommendationSettingsFields($user),
         ];
     }

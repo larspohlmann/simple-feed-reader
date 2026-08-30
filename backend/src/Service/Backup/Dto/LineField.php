@@ -89,22 +89,6 @@ final class LineField
     }
 
     /**
-     * Reads a boolean that a pre-existing backup may not carry. A file written
-     * before the key existed omits it, and must import as the given default
-     * rather than being rejected as malformed.
-     *
-     * @param array<string, mixed> $line
-     */
-    public static function boolWithDefault(array $line, string $key, bool $default): bool
-    {
-        if (!\array_key_exists($key, $line)) {
-            return $default;
-        }
-
-        return self::bool($line, $key);
-    }
-
-    /**
      * @param array<string, mixed> $line
      */
     public static function date(array $line, string $key): \DateTimeImmutable

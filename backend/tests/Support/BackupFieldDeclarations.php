@@ -46,7 +46,10 @@ final class BackupFieldDeclarations
             'locale' => 'locale',
             'recommendationSettings' => 'recommendationSettings',
         ],
-        Preferences::class => ['scrapeFallbackEnabled' => 'scrapeFallbackEnabled'],
+        Preferences::class => [
+            'scrapeFallbackEnabled' => 'scrapeFallbackEnabled',
+            'magazineStyle' => 'magazineStyle',
+        ],
         RecommendationSettings::class => [
             'guidancePrompt' => 'recommendationSettings.guidancePrompt',
             'profileText' => 'recommendationSettings.profileText',

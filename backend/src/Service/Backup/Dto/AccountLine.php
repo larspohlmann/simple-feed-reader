@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Dto;
 
+use App\Service\Reader\MagazineStyle;
 use App\Service\Recommendation\RecommendationSettingsValues;
 
 /**
@@ -14,6 +15,7 @@ final readonly class AccountLine
     public function __construct(
         public string $locale,
         public bool $scrapeFallbackEnabled,
+        public MagazineStyle $magazineStyle,
         public ?RecommendationSettingsValues $recommendationSettings,
     ) {
     }
@@ -26,6 +28,8 @@ final readonly class AccountLine
         return new self(
             locale: LineField::string($line, 'locale'),
             scrapeFallbackEnabled: LineField::bool($line, 'scrapeFallbackEnabled'),
+            magazineStyle: MagazineStyle::tryFrom(LineFieldWithDefault::string($line, 'magazineStyle', 'boxed'))
+                ?? MagazineStyle::Boxed,
             recommendationSettings: self::recommendationSettingsFromLine($line),
         );
     }
@@ -53,7 +57,7 @@ final readonly class AccountLine
             batchCount: LineField::intOrNull($settings, 'batchCount'),
             debugEnabled: LineField::bool($settings, 'debugEnabled'),
             autoGenerateIntervalHours: LineField::intOrNull($settings, 'autoGenerateIntervalHours'),
-            showReasons: LineField::boolWithDefault($settings, 'showReasons', false),
+            showReasons: LineFieldWithDefault::bool($settings, 'showReasons', false),
         );
     }
 }
