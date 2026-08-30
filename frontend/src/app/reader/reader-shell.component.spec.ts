@@ -2861,20 +2861,38 @@ describe('ReaderShellComponent', () => {
   });
 
   describe('the counts poll (#708)', () => {
-    afterEach(() => jest.useRealTimers());
+    const realFetch = globalThis.fetch;
+
+    // The steady tick reads the static change marker (#720) before it fetches.
+    // A missing marker falls back to fetching, which is the behaviour these
+    // tests assert; a stubbed non-ok response reaches that path deterministically.
+    const countsBody = {
+      subscriptions: [{ id: 5, unreadCount: 2 }],
+      favoritesCount: 0,
+      keptCount: 0,
+      viewedCount: 0,
+    };
+
+    afterEach(() => {
+      jest.useRealTimers();
+      globalThis.fetch = realFetch;
+    });
 
     // The poll's interval is created while the reader is built, so the fake
     // clock has to be in place before that — installed afterwards, it would
     // never own the timer it is supposed to drive.
-    beforeEach(() => jest.useFakeTimers());
+    beforeEach(() => {
+      jest.useFakeTimers();
+      globalThis.fetch = jest.fn(async () => ({ ok: false, text: async () => '' }) as Response);
+    });
 
-    it('refreshes the sidebar counts on its own while the reader is open', () => {
+    it('refreshes the sidebar counts on its own while the reader is open', async () => {
       const f = boot();
 
-      jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+      await jest.advanceTimersByTimeAsync(SIDEBAR_RELOAD_INTERVAL_MS);
 
-      // Both count endpoints, with no user action of any kind in between.
-      ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
+      // The cheap counts endpoint and saved searches, with no user action between.
+      ctrl.expectOne('https://api.test/api/subscriptions/counts').flush(countsBody);
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
       f.detectChanges();
     });
@@ -2883,14 +2901,14 @@ describe('ReaderShellComponent', () => {
     // surface, held in the stores, and the sidebar badge, the list heading and
     // the tab title all read it. A tick moves the store, so it moves all three
     // at once — none of them can be refreshed and leave another behind.
-    it('moves the sidebar badge, the list heading and the tab title on one tick', () => {
+    it('moves the sidebar badge, the list heading and the tab title on one tick', async () => {
       const f = boot();
       expect(TestBed.inject(Title).getTitle()).toBe('All items (2) | simple feed reader');
 
-      jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
-      ctrl.expectOne('https://api.test/api/subscriptions').flush({
-        ...subsBody,
-        subscriptions: [{ ...subsBody.subscriptions[0], unreadCount: 9 }],
+      await jest.advanceTimersByTimeAsync(SIDEBAR_RELOAD_INTERVAL_MS);
+      ctrl.expectOne('https://api.test/api/subscriptions/counts').flush({
+        ...countsBody,
+        subscriptions: [{ id: 5, unreadCount: 9 }],
       });
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
       f.detectChanges();
@@ -2901,13 +2919,13 @@ describe('ReaderShellComponent', () => {
       expect(TestBed.inject(Title).getTitle()).toBe('All items (9) | simple feed reader');
     });
 
-    it('ends with the reader, so a closed reader polls nothing', () => {
+    it('ends with the reader, so a closed reader polls nothing', async () => {
       const f = boot();
 
       f.destroy();
-      jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS * 5);
+      await jest.advanceTimersByTimeAsync(SIDEBAR_RELOAD_INTERVAL_MS * 5);
 
-      ctrl.expectNone('https://api.test/api/subscriptions');
+      ctrl.expectNone('https://api.test/api/subscriptions/counts');
       ctrl.expectNone('https://api.test/api/saved-searches');
     });
   });

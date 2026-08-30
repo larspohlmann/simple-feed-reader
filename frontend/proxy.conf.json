@@ -5,5 +5,12 @@
     "headers": {
       "Host": "localhost"
     }
+  },
+  "/state": {
+    "target": "https://nginx",
+    "secure": false,
+    "headers": {
+      "Host": "localhost"
+    }
   }
 }

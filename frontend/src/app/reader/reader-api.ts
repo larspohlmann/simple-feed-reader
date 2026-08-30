@@ -26,6 +26,7 @@ import {
   SavedSearchWire,
   SubscribeResult,
   SubscriptionDto,
+  SubscriptionCountsResponse,
   SubscriptionsResponse,
   SubscriptionUpdate,
   EntryStateDto,
@@ -40,6 +41,11 @@ export class ReaderApi {
 
   subscriptions(): Observable<SubscriptionsResponse> {
     return this.http.get<SubscriptionsResponse>(`${this.base}/api/subscriptions`);
+  }
+
+  /** The sidebar poll's cheap tick (#720): counts only, no feeds or tags. */
+  subscriptionCounts(): Observable<SubscriptionCountsResponse> {
+    return this.http.get<SubscriptionCountsResponse>(`${this.base}/api/subscriptions/counts`);
   }
 
   subscribe(url: string, format?: string, tagIds?: number[]): Observable<SubscribeResult> {
