@@ -19,68 +19,45 @@ use Symfony\Component\Security\Http\Authenticator\Passport\Passport;
 use Symfony\Component\Security\Http\Authenticator\Passport\SelfValidatingPassport;
 
 /**
- * Authenticates a WebAuthn login ("assertion") response as its OWN firewall
+ * Authenticates a WebAuthn login ("assertion") response as its own firewall
  * (#624) — config/packages/security.yaml's `passkey_login` block, inserted
- * BETWEEN `login` and `api` because firewalls match in declaration order and
- * `api` already matches every `^/api` path; a block placed after it would
- * never be reached.
+ * between `login` and `api` because firewalls match in declaration order and
+ * `api` already matches every `^/api` path.
  *
- * A FIREWALL, DELIBERATELY, NOT A CONTROLLER: the point is that "the JWT a
- * passkey login returns is the same JWT password login returns" is
- * structural rather than copied. $successHandler is the exact
+ * A firewall, not a controller: "the JWT a passkey login returns is the same
+ * JWT password login returns" is then structural rather than copied.
+ * $successHandler is the exact
  * `lexik_jwt_authentication.handler.authentication_success` service
- * `json_login` uses, injected directly rather than re-implemented, so both
- * flows call the identical `JWTTokenManager::create()` on the resolved user
- * and pick up every listener already wired to JWT issuance —
- * StampLastLoginOnTokenIssue among them — for free. $failureHandler is the
- * same App\Security\LoginFailureHandler password login uses, for the same
- * reason: one place decides what a login failure's response looks like.
+ * `json_login` uses, so both flows call the identical
+ * `JWTTokenManager::create()` and pick up every listener already wired to
+ * JWT issuance — StampLastLoginOnTokenIssue among them. $failureHandler is
+ * the same `App\Security\LoginFailureHandler` password login uses.
  *
  * Reusing LoginFailureHandler means LoginTimingEqualizer runs on every
- * passkey login failure too, but with an EMPTY submitted identifier — this
- * flow's request body carries no e-mail for it to read. That gives every
- * failure the SAME constant delay regardless of which check inside
- * AssertionVerifier rejected it. That leaks nothing: a discoverable-credential
- * login has no address to enumerate in the first place. And it costs the
- * success path nothing, since the equalizer only ever runs from
- * onAuthenticationFailure().
+ * passkey login failure too, with an empty submitted identifier — this
+ * flow's request body carries no e-mail for it to read — giving every
+ * failure the same constant delay regardless of which check inside
+ * AssertionVerifier rejected it. That leaks nothing, since a
+ * discoverable-credential login has no address to enumerate in the first
+ * place.
  *
- * VERIFICATION IS DELIBERATELY LAZY — done inside the UserBadge's user
- * loader, not called eagerly here in authenticate(). authenticate() only
- * builds the Passport; UserBadge::getUser() is NOT called eagerly by this
- * class or the passport itself. It IS invoked earlier than that: Symfony's
- * own UserCheckerListener::preCheckCredentials calls it on CheckPassportEvent
- * at priority 256 (to hand the user to LoginUserChecker::checkPreAuth,
- * itself a no-op on this firewall — see that class). What matters is the
- * ORDER relative to login_throttling's OWN listener on the same event:
- * LoginThrottlingListener::checkPassport runs at priority 2080, higher than
- * 256, so it always executes FIRST and can reject an over-budget request
- * with a 429 before anything — including UserCheckerListener — ever forces
- * the badge to resolve. Calling AssertionVerifier::verify() eagerly inside
- * authenticate() instead would make every rejected assertion throw BEFORE
- * CheckPassportEvent is even dispatched, so the throttle's pre-emptive check
- * would never get a chance to run at all — it would keep calling the
- * verifier and keep answering 401, forever, never 429. Deferring the actual
- * verification into the lazily-invoked loader is what lets
- * LoginThrottlingListener's priority actually gate it.
+ * Verification runs lazily, inside the UserBadge's user loader, rather than
+ * eagerly in authenticate(). Symfony's LoginThrottlingListener::checkPassport
+ * runs on the same CheckPassportEvent at a higher priority than the listener
+ * that forces the badge to resolve, so it can reject an over-budget request
+ * with a 429 before AssertionVerifier ever runs. Calling verify() eagerly in
+ * authenticate() would skip that: every rejected assertion would throw
+ * before the throttle's own check got a chance to run at all.
  *
- * The user identifier passed to UserBadge is a fixed, non-secret sentinel
- * (THROTTLE_IDENTIFIER), not the empty string a first pass at this class
- * used: a discoverable-credential login carries no e-mail or username to key
- * throttling on, and UserBadge's own constructor deprecates (and, in Symfony
- * 8.0, will throw on) an empty identifier — a live BadCredentialsException
- * on every passkey login attempt with no test able to catch it first, since
- * this branch's own suite runs with that deprecation not yet fatal. A
- * constant string works identically for throttling purposes:
- * DefaultLoginRateLimiter's local bucket is keyed on `identifier-IP`, so a
- * FIXED identifier still collapses to exactly one bucket per client IP —
- * the same budget the login_throttling config below is sized for — without
- * relying on a value the framework is actively phasing out.
+ * UserBadge is given a fixed, non-secret sentinel identifier
+ * (THROTTLE_IDENTIFIER) rather than an empty string: a discoverable-credential
+ * login carries no e-mail or username to key throttling on, and UserBadge's
+ * own constructor deprecates an empty identifier. DefaultLoginRateLimiter
+ * keys its local bucket on `identifier-IP`, so a fixed identifier still
+ * collapses to exactly one bucket per client IP.
  *
- * `final class`, not `final readonly class` — PHP refuses a readonly class
+ * `final class`, not `final readonly class`: PHP refuses a readonly class
  * that extends a non-readonly parent, and AbstractAuthenticator is not one.
- * The constructor-promoted properties below are still individually
- * readonly, which is as close to the house style as that constraint allows.
  */
 final class PasskeyAuthenticator extends AbstractAuthenticator
 {

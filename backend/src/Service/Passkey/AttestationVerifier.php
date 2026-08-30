@@ -37,17 +37,17 @@ use Webauthn\PublicKeyCredentialDescriptor;
  *
  * This class never calls PasskeyCredentials::userHandleFor() — it reads the
  * user handle straight off the consumed PasskeyChallenge instead. See that
- * class's docblock (#624, fix round 1) for why re-minting one here would be
- * a real bug: userHandleFor() returns a fresh random value on every call for
- * an account's first credential, and options and verification are two
- * separate HTTP requests.
+ * class's docblock for why re-minting one here would be a real bug:
+ * userHandleFor() returns a fresh random value on every call for an
+ * account's first credential, and options and verification are two separate
+ * HTTP requests.
  */
 final readonly class AttestationVerifier
 {
     /**
      * UserPasskey::$credentialId is VARCHAR(255): see
      * guardCredentialIdFitsColumn() for why that needs enforcing here rather
-     * than left to the database (#624, fix round 2).
+     * than left to the database.
      */
     private const int CREDENTIAL_ID_COLUMN_MAX_LENGTH = 255;
 
@@ -90,7 +90,7 @@ final readonly class AttestationVerifier
      * through PasskeyCredentials::excludeListFor(), and a failure there is a
      * real fault (a database outage, say), not a credential to reject. Only
      * the actual parsing of attacker-controlled bytes belongs inside that
-     * catch — see checkAgainstLibrary() (#624, fix round 2).
+     * catch — see checkAgainstLibrary().
      *
      * @param array<string, mixed> $credential
      */
@@ -201,7 +201,7 @@ final readonly class AttestationVerifier
      * persist() already catches, so it would reach the kernel as an
      * unhandled 500. SQLite does not enforce VARCHAR width at all, which is
      * why this can only be caught here, before the write is even attempted,
-     * never at the database (#624, fix round 2).
+     * never at the database.
      */
     private static function guardCredentialIdFitsColumn(string $credentialId): void
     {
@@ -228,7 +228,7 @@ final readonly class AttestationVerifier
      * echoes whatever is stored here straight back to a browser on every
      * future registration attempt. Filtering to the spec's own enum before
      * persisting is what keeps that round trip from carrying arbitrary
-     * client-supplied strings (#624, fix round 2).
+     * client-supplied strings.
      *
      * @param array<string> $transports
      *

@@ -159,7 +159,7 @@ export class PasskeyService {
    *
    *  A rejected ceremony's `type` is the DOMException's own `name` --
    *  `NotAllowedError` (the user cancelled the sheet, or it timed out),
-   *  `AbortError` (the caller itself aborted the request, e.g. Task 15's
+   *  `AbortError` (the caller itself aborted the request, e.g. the
    *  conditional-mediation ceremony on every password-form submit), or
    *  `InvalidStateError` (this authenticator is already enrolled -- the
    *  exclude list produced it) among others. That name is a fixed,

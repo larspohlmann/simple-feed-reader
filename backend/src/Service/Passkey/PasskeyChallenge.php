@@ -13,12 +13,10 @@ namespace App\Service\Passkey;
  *
  * $userHandle exists on this record, rather than being re-derived at
  * verification time, because PasskeyCredentials::userHandleFor() mints a
- * fresh random value for an account's first credential on every call: minted
- * once at options time and again at verification time, in two separate HTTP
- * requests, those two calls return DIFFERENT bytes. The value shown to the
- * browser at options time is the one a real authenticator remembers and
- * later returns at login, so verification MUST reuse that exact value
- * rather than asking PasskeyCredentials for a new one (#624, fix round 1).
+ * fresh random value for an account's first credential on every call. The
+ * value shown to the browser at options time is the one an authenticator
+ * remembers and returns at login, so verification must reuse that exact
+ * value rather than minting a new one.
  */
 final readonly class PasskeyChallenge
 {

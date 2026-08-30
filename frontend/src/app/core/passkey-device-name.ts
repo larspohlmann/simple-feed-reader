@@ -2,20 +2,19 @@
 
 /**
  * A sensible default name for a passkey being enrolled right now, e.g.
- * "Chrome on macOS" (#624 fix round 1 -- issue #624's scope names
- * "rename-on-create" explicitly, and a fixed label for every enrolment
- * defeats the point of listing several side by side). Other passkey managers
- * default to the same shape, because the name's whole job is to remind the
- * user which device this credential lives on, and "the device this was
- * created on" is the one fact the user always knows at that moment.
+ * "Chrome on macOS" -- a fixed label for every enrolment would defeat the
+ * point of listing several side by side. Other passkey managers default to
+ * the same shape, because the name's whole job is to remind the user which
+ * device this credential lives on, and "the device this was created on" is
+ * the one fact the user always knows at that moment.
  *
  * Pure and Angular-free, like `webauthn.ts`'s capability checks, so browser
  * and platform sniffing -- inherently a pile of special cases -- is tested
  * against real user-agent strings directly rather than only through a
  * rendered dialog. `PasskeyNameDialogComponent` (Settings) and
- * `PasskeyOfferDialogComponent` (the first-login offer, #624 fix round 1) are
- * its two callers -- the latter defaults straight to this name rather than
- * asking, since a first-ever passkey needs no disambiguating name yet.
+ * `PasskeyOfferDialogComponent` (the first-login offer) are its two
+ * callers -- the latter defaults straight to this name rather than asking,
+ * since a first-ever passkey needs no disambiguating name yet.
  */
 export function defaultPasskeyName(userAgent: string): string {
   return `${browserName(userAgent)} on ${platformName(userAgent)}`;

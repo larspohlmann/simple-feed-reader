@@ -18,41 +18,23 @@ use Webauthn\PublicKeyCredentialUserEntity;
 
 /**
  * Builds the options for a WebAuthn registration ("attestation") ceremony
- * (#624): resident-key discoverable credentials only — the login flow reads
- * one back with no username step — user verification required because the
- * passkey is this account's sole factor, and no attestation conveyance,
- * since this instance never inspects an attestation statement and asking for
- * one would only make the browser's enrolment prompt collect data nobody
- * reads.
+ * (#624): resident-key discoverable credentials only, user verification
+ * required since the passkey is this account's sole factor, and no
+ * attestation conveyance, since nothing here inspects an attestation
+ * statement.
  *
- * `PublicKeyCredentialRpEntity` is built with an empty name, and `rp.name` is
- * then set on the serialised array afterwards, from `PasskeyRelyingParty::
- * name()` — NOT by threading the configured name through the entity's own
- * constructor. Do not "clean this up" back to an empty name: `rp.name` is
- * still a REQUIRED member of the WebAuthn IDL, and an empty one degrades the
- * browser's and the password manager's enrolment prompt to showing the bare
- * domain instead of the admin-configured name (#624, Task 3). The two-step
- * shape exists only because `web-auth/webauthn-lib` 5.3 deprecated passing a
- * non-empty `$name` to `PublicKeyCredentialEntity`'s constructor (removed in
- * 6.0) — `PublicKeyCredentialRpEntity` forwards its constructor argument to
- * that parent unshielded, unlike `PublicKeyCredentialUserEntity`, which
- * always passes `''` up and sets its own `$name` property directly
- * afterwards — and this project's PHPUnit configuration turns that
- * deprecation into a test failure (`failOnDeprecation`). The library
- * deprecated its own carrier for this field; the wire contract we hand the
- * browser is ours to fill in regardless.
+ * `rp.name` is set on the serialised array after building
+ * `PublicKeyCredentialRpEntity` with an empty name, rather than through its
+ * constructor: `rp.name` is a required WebAuthn IDL member, but
+ * `web-auth/webauthn-lib` 5.3 deprecated passing it there directly.
  *
- * `create()` mints the user handle EXACTLY ONCE via PasskeyCredentials::
- * userHandleFor() and threads that one value through both the options shown
- * to the browser and PasskeyChallengeStore::issue(). It must never be minted
- * a second time for the same ceremony: userHandleFor() returns a fresh
- * random value on every call for an account with no credential yet, so a
- * second mint at verification time — in a separate HTTP request — would
- * return different bytes than the ones already shown to the browser (#624,
- * fix round 1). optionsFor() therefore takes the handle as a parameter
- * rather than deriving it itself, so AttestationVerifier can pass in the
- * value it read back off the consumed PasskeyChallenge instead of minting
- * its own.
+ * `create()` mints the user handle once, via `PasskeyCredentials::
+ * userHandleFor()`, and threads it through both the options and
+ * `PasskeyChallengeStore::issue()`. `optionsFor()` takes the handle as a
+ * parameter rather than deriving it, so `AttestationVerifier` can rebuild the
+ * same options from the value stored on the consumed challenge instead of
+ * minting a new one — `userHandleFor()` returns a fresh random value each
+ * time an account has no credential yet.
  */
 final readonly class RegistrationOptionsFactory
 {

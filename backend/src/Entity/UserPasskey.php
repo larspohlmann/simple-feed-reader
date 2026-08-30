@@ -38,8 +38,8 @@ class UserPasskey
     /**
      * `_bin` collation, pinned for the same reason as $credentialId above.
      *
-     * Spec §4.1.1: `Webauthn\CredentialRecord` requires a non-nullable
-     * `userHandle`, checked on every assertion. The handle is 32 random bytes,
+     * `Webauthn\CredentialRecord` requires a non-nullable `userHandle`,
+     * checked on every assertion. The handle is 32 random bytes,
      * base64url-encoded. It is deliberately NOT the e-mail address — the
      * authenticator stores the handle and syncs it to the user's password
      * manager, so it must carry no personal data — and NOT the numeric account

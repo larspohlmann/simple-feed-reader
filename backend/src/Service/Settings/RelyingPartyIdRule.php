@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Settings;
 
 /**
- * The one place the WebAuthn registrable-suffix rule is written (#624 follow-up).
+ * The one place the WebAuthn registrable-suffix rule is written.
  * Extracted out of RelyingPartyChange, whose write-path guard was the rule's
  * only caller until PasskeySignInAvailability needed the identical check to
  * decide whether passkey sign-in may be offered at all. A second,

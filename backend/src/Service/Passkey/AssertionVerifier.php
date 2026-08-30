@@ -29,39 +29,31 @@ use Webauthn\TrustPath\EmptyTrustPath;
  * "did an enrolled authenticator sign this challenge?", and hands the caller
  * a persisted entity to build a Passport from.
  *
- * The steps run in the same deliberate order AttestationVerifier's do: the
- * challenge is consumed first, so a replayed or expired handle is rejected
- * before any attacker-controlled bytes are even parsed.
+ * The steps run in the same order AttestationVerifier's do: the challenge is
+ * consumed first, so a replayed or expired handle is rejected before any
+ * attacker-controlled bytes are even parsed.
  *
  * $userHandle passed to AuthenticatorAssertionResponseValidator::check() is
- * always the STORED value read off the resolved UserPasskey, never one the
- * client supplied — spec §4.5. An assertion resolves the account from the
- * credential id alone; it must never trust a user handle the caller sent,
- * since discoverable login exists precisely because the server does not
- * know who is asking until the credential says so.
+ * always the stored value read off the resolved UserPasskey, never one the
+ * client supplied. An assertion resolves the account from the credential id
+ * alone; it must never trust a user handle the caller sent, since
+ * discoverable login exists precisely because the server does not know who
+ * is asking until the credential says so.
  *
- * Do NOT re-implement the signature-counter comparison here.
- * PasskeyCeremony::request() already wires CheckCounter to the library's
- * ThrowExceptionIfInvalid, which is what actually rejects a counter that
- * failed to advance — the standard defence against a cloned authenticator.
- * This class's only job around that check is to log the rejection with the
- * identifiers an incident response would need; see logRejectedCounter().
+ * The signature-counter comparison itself lives in the library:
+ * PasskeyCeremony::request() wires CheckCounter to ThrowExceptionIfInvalid,
+ * which rejects a counter that failed to advance — the standard defence
+ * against a cloned authenticator. This class's only added behaviour around
+ * that check is logging the rejection; see logRejectedCounter().
  *
  * The options AuthenticatorAssertionResponseValidator checks against come
- * from AssertionOptionsFactory::optionsFor() — the SAME method the options
+ * from AssertionOptionsFactory::optionsFor() — the same method the options
  * endpoint uses to build what the browser was shown — rather than a second,
- * private copy here. AssertionOptionsFactory's own docblock explains why:
- * two independently written copies of the user-verification requirement
- * could silently drift apart (#624 Task 10, fix round 1; before this fix
- * they were byte-identical, an accident waiting to happen).
+ * private copy here, so the two cannot silently drift apart.
  *
- * verify() FLUSHES explicitly (#624 Task 10, fix round 1). Before this fix
- * the new counter and lastUsedAt were only ever written because
- * StampLastLoginOnTokenIssue happens to flush the whole UnitOfWork on
- * JWTCreatedEvent — an accidental dependency: if that listener ever stopped
- * flushing, a cloned authenticator's advancing counter would silently stop
- * being recorded, and CheckCounter's replay defence would quietly go blind.
- * This class owns the entity it mutates, so it owns persisting the mutation.
+ * verify() flushes explicitly rather than relying on
+ * StampLastLoginOnTokenIssue's incidental flush on JWTCreatedEvent: this
+ * class owns the entity it mutates, so it owns persisting the mutation.
  */
 final readonly class AssertionVerifier
 {
@@ -78,11 +70,11 @@ final readonly class AssertionVerifier
     }
 
     /**
-     * $availability->guard() runs FIRST, before the challenge is even
-     * consumed: the login path has no controller action to gate (#624
-     * follow-up) — PasskeyAuthenticator calls this method from inside a
-     * lazily-invoked UserBadge loader, never through PasskeyController — so
-     * this is the one place that can refuse a disabled instance's login.
+     * $availability->guard() runs first, before the challenge is even
+     * consumed: the login path has no controller action to gate —
+     * PasskeyAuthenticator calls this method from inside a lazily-invoked
+     * UserBadge loader, never through PasskeyController — so this is the one
+     * place that can refuse a disabled instance's login.
      * PasskeySignInDisabledException extends ApiException, which
      * PasskeyAuthenticator::verifiedUser() already catches and rewrites into
      * a plain AuthenticationException, so a disabled instance fails exactly

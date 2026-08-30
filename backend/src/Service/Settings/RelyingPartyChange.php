@@ -23,22 +23,20 @@ use App\Service\Settings\Exception\RelyingPartyChangeRequiresConfirmationExcepti
  * drives the effective id whenever passkeyRpId is left null (it feeds every
  * outgoing email link too, so admins do edit it), so an admin who edits
  * ONLY publicBaseUrl can silently move the id a stored-value comparison would
- * never notice. Do not "simplify" this back to comparing the stored column —
- * that reopens exactly the hole this guard exists to close.
+ * never notice.
  *
  * Only a CHANGE to the effective id is guarded — a PUT that leaves it exactly
  * where it was always succeeds, or the admin could never edit the other
  * fields once a passkey exists.
  *
- * The design spec (§3.5) describes the confirmed delete as happening "in the
- * same transaction" as the settings write. That is not what the code does:
- * `UserPasskeyRepository::deleteAll()` is a bulk DQL DELETE, which commits
- * immediately, and `InstanceSettings::update()` flushes independently,
- * later, from `AdminSettingsController::update()`. A crash or a failed flush
- * between the two would leave every credential deleted but the id unchanged
- * — recorded here rather than restructured, because forcing both into one
- * transaction is a bigger change than the risk (an admin-only, rarely-hit
- * path) justifies.
+ * The confirmed delete does not run in the same transaction as the settings
+ * write: `UserPasskeyRepository::deleteAll()` is a bulk DQL DELETE, which
+ * commits immediately, and `InstanceSettings::update()` flushes
+ * independently, later, from `AdminSettingsController::update()`. A crash or
+ * a failed flush between the two would leave every credential deleted but
+ * the id unchanged — accepted rather than restructured, since forcing both
+ * into one transaction is a bigger change than this admin-only, rarely-hit
+ * path justifies.
  */
 final readonly class RelyingPartyChange
 {

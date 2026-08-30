@@ -16,38 +16,27 @@ use Random\RandomException;
  * handed to the browser and the moment its response comes back. Server-side,
  * because the challenge must not be guessable and the API keeps no session.
  *
- * Modelled directly on OAuthStateStore, which the same reasoning about opaque
- * handles and hashed cache keys already applies to:
+ * Modelled on OAuthStateStore: the handle issue() returns is a bearer
+ * credential for its five-minute lifetime, so only its digest is used as the
+ * cache key — a readable cache directory on shared hosting must not double
+ * as a list of usable handles — and consume() deletes the entry before
+ * validating it, so a handle that fails the expiry check is burned rather
+ * than left available to retry.
  *
- * - The handle returned by issue() is a bearer credential for the five
- *   minutes it lives. Only its DIGEST is ever used as the cache key, because a
- *   readable cache directory — files on shared hosting we do not own
- *   exclusively — must not double as a list of usable handles.
- * - consume() deletes the entry before validating it, so a handle that fails
- *   the expiry check is burned rather than left available to retry.
+ * $userHandle rides along with a registration challenge because
+ * PasskeyCredentials::userHandleFor() mints a fresh random value for an
+ * account's first credential on every call. The value shown to the browser
+ * at options time is the one an authenticator remembers and returns at
+ * login, so verification must reuse that exact value rather than minting a
+ * new one. It is null for a login ceremony, same as $userId.
  *
- * $userHandle (#624, fix round 1) rides along with the challenge for a
- * registration ceremony because PasskeyCredentials::userHandleFor() mints a
- * fresh random value for an account's first credential on every call: a
- * second, independent call at verification time would return DIFFERENT
- * bytes than the ones already shown to the browser at options time, and
- * those are the bytes a real authenticator remembers and later returns at
- * login. Storing the minted value here, once, is what lets the verifier
- * reuse it instead of asking PasskeyCredentials a second time. It is null
- * for a login ceremony's challenge, same as $userId.
- *
- * SINGLE USE IS BEST-EFFORT UNDER CONCURRENCY. PSR-6 has no compare-and-swap,
- * and deleteItem() reports success whether or not the key existed, so it
- * cannot be pressed into service as one either. Two simultaneous redemptions
- * of the same handle can both observe isHit() before either deletes, and both
- * would then be handed the same PasskeyChallenge. Deleting before validating
- * narrows that window to the gap between getItem() and deleteItem(); it does
- * not close it. Closing it would mean a lock on every ceremony completion,
- * which is a real per-request cost this deploys nothing to justify — see
- * OAuthStateStore's docblock for the fuller argument, including why the
- * remaining race here is not a security hole: both racers would go on to
- * present the SAME challenge to the same authenticator response, and the
- * WebAuthn signature check downstream can only ever accept one of them.
+ * Single use is best-effort under concurrency: PSR-6 has no
+ * compare-and-swap, so two simultaneous redemptions of the same handle can
+ * both observe isHit() before either deletes. Deleting before validating
+ * narrows that window but does not close it — closing it fully would mean a
+ * lock on every ceremony completion. See OAuthStateStore's docblock for why
+ * the remaining race is not a security hole: both racers present the same
+ * challenge, and only one can pass the signature check downstream.
  */
 final readonly class PasskeyChallengeStore
 {

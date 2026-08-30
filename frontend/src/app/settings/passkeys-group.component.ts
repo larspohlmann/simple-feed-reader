@@ -33,9 +33,9 @@ import { PasskeyNameDialogComponent } from './passkey-name-dialog.component';
  * Absent entirely when `isPasskeySupported()` is false: a browser with no
  * WebAuthn support cannot enrol or use one, so offering the group would be a
  * dead end with no way to act on it. Absent too when
- * `SetupService.passkeySignInAvailable` is not `true` (#624 follow-up): a
- * user who enrols while the instance has sign-in turned off ends up with a
- * credential they can never use. Fails CLOSED, unlike the login page's
+ * `SetupService.passkeySignInAvailable` is not `true`: a user who enrols
+ * while the instance has sign-in turned off ends up with a credential they
+ * can never use. Fails CLOSED, unlike the login page's
  * `mailEnabled`/`passkeySignInAvailable` convention: showing an *Add a
  * passkey* action that then produces a dead credential is worse here than a
  * moment's extra hiding while the flag loads.
@@ -89,10 +89,9 @@ export class PasskeysGroupComponent {
   constructor() {
     if (!this.isSupported) return;
     // catchError mirrors setupRedirectGuard/requireSetupGuard's own handling
-    // of this exact observable (fix round 1) -- an uncaught failure here
-    // would otherwise throw on every Settings visit rather than just
-    // leaving the group hidden the way a `false`/null availability already
-    // does.
+    // of this exact observable -- an uncaught failure here would otherwise
+    // throw on every Settings visit rather than just leaving the group
+    // hidden the way a `false`/null availability already does.
     this.setup
       .ensureLoaded()
       .pipe(catchError(() => of(false)))
@@ -172,11 +171,11 @@ export class PasskeysGroupComponent {
   }
 
   /** A successful enrolment here stamps the offer flag server-side as a side
-   *  effect (`AttestationVerifier::persist()`, #624 design spec §5.2), the
-   *  same as it does from the first-login offer dialog. Without the local
-   *  signal update below, a stale `passkeyOfferAnswered: false` survives
-   *  until the next full reload -- long enough for `ReaderShellComponent` to
-   *  reopen the offer for a passkey that already exists (finding 1). */
+   *  effect (`AttestationVerifier::persist()`), the same as it does from the
+   *  first-login offer dialog. Without the local signal update below, a
+   *  stale `passkeyOfferAnswered: false` survives until the next full reload
+   *  -- long enough for `ReaderShellComponent` to reopen the offer for a
+   *  passkey that already exists. */
   private async enrolWith(label: string): Promise<void> {
     this.error.set(null);
     try {
@@ -201,7 +200,7 @@ export class PasskeysGroupComponent {
   /** Shared with `PasskeyOfferDialogComponent` -- both run the identical
    *  ceremony and so face the identical failure shapes; see
    *  `toEnrolFailureProblem()`'s own docblock for the branch-by-branch
-   *  reasoning (#624 finding 5). */
+   *  reasoning. */
   private handleEnrolFailure(problem: Problem): void {
     const display = toEnrolFailureProblem(problem, this.i18n);
     if (display) this.error.set(display);

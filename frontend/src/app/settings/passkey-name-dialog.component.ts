@@ -16,10 +16,9 @@ import { FieldComponent } from '../shared/field/field.component';
 import { OverlayPanelComponent } from '../shared/overlay-panel/overlay-panel.component';
 
 /**
- * Names a passkey as part of adding it (#624 fix round 1 -- issue #624's
- * scope names "rename-on-create" explicitly; a fixed label for every
- * enrolment, which is what `PasskeysGroupComponent` shipped with before this
- * round, defeats the point of listing several credentials side by side).
+ * Names a passkey as part of adding it (#624) -- a fixed label for every
+ * enrolment would defeat the point of listing several credentials side by
+ * side.
  *
  * Pre-fills a device-derived default (`defaultPasskeyName`) rather than an
  * empty box -- the name's whole job is to remind the user which device this

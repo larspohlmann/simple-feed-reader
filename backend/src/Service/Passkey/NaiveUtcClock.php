@@ -15,8 +15,8 @@ use Psr\Clock\ClockInterface;
  *
  * One home for what `AttestationVerifier`, `AssertionVerifier` and
  * `PasskeyOffer` each used to carry as their own identical private
- * `nowAsNaiveUtc()` method (#624 finding 4) — inject this instead of
- * `ClockInterface` directly wherever a "now" is about to be persisted.
+ * `nowAsNaiveUtc()` method — inject this instead of `ClockInterface`
+ * directly wherever a "now" is about to be persisted.
  */
 final readonly class NaiveUtcClock
 {

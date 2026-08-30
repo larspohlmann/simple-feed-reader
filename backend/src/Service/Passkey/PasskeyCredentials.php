@@ -33,8 +33,8 @@ final readonly class PasskeyCredentials
     }
 
     /**
-     * Spec §4.1.1: every credential a user owns must carry the same handle,
-     * so an account with at least one existing credential gets that one back
+     * Every credential a user owns must carry the same handle, so an
+     * account with at least one existing credential gets that one back
      * rather than a fresh mint. This is the only place a handle is minted.
      *
      * @throws RandomException

@@ -9,7 +9,7 @@ use App\Exception\ApiException;
 /**
  * Refused by PasskeySignInAvailability::guard(): the instance-wide
  * `passkeySignInEnabled` toggle is off, or the configured relying-party id is
- * not valid for the public base URL's host (#624 follow-up).
+ * not valid for the public base URL's host.
  *
  * Thrown from every enforcement point that gates a passkey endpoint. On the
  * PasskeyController-routed paths it surfaces as-is, `application/problem+json`,

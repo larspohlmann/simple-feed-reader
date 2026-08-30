@@ -12,8 +12,8 @@ use App\Service\Settings\PublicBaseUrl;
 use App\Service\Settings\RelyingPartyIdRule;
 
 /**
- * Whether passkey sign-in may be offered at all (#624 follow-up) — the
- * question `GET /api/setup/status` answers for an anonymous visitor as
+ * Whether passkey sign-in may be offered at all — the question
+ * `GET /api/setup/status` answers for an anonymous visitor as
  * `passkeySignInAvailable`, and the one every passkey endpoint enforces
  * server-side rather than trusting the frontend to hide its own buttons.
  *
@@ -23,12 +23,10 @@ use App\Service\Settings\RelyingPartyIdRule;
  * RelyingPartyChange enforces on write, shared through RelyingPartyIdRule so
  * the two can never disagree on what counts as a workable configuration.
  *
- * NEVER derived from a credential or account count. Both checks read only
- * instance-wide configuration, so the answer — and its cost — cannot vary
- * with how many accounts exist or how many passkeys are enrolled. That is
- * the same no-enumeration property AssertionOptionsFactory's own docblock
- * calls out for the login-options endpoint; this class must not become the
- * back door that reintroduces it.
+ * Both checks read only instance-wide configuration, so the answer — and its
+ * cost — cannot vary with how many accounts exist or how many passkeys are
+ * enrolled, the same no-enumeration property AssertionOptionsFactory's own
+ * docblock describes for the login-options endpoint.
  */
 final readonly class PasskeySignInAvailability
 {
@@ -54,11 +52,11 @@ final readonly class PasskeySignInAvailability
      * The public base URL's host, without a scheme or path — the same
      * `parse_url(..., PHP_URL_HOST)` fallback RelyingPartyChange and
      * ConfiguredPasskeyRelyingParty both already need, so it lives in
-     * EffectivePasskeyRelyingPartyId rather than a fourth copy here (fix
-     * round 1). Passing `null` as the "configured id" forces derive() into
-     * its host-fallback branch — the exact thing this method wants — and an
-     * unparseable URL degrades to `''`, which RelyingPartyIdRule::
-     * isValidForHost() already refuses for any real relying-party id.
+     * EffectivePasskeyRelyingPartyId rather than a copy here. Passing `null`
+     * as the "configured id" forces derive() into its host-fallback branch —
+     * the exact thing this method wants — and an unparseable URL degrades to
+     * `''`, which RelyingPartyIdRule::isValidForHost() already refuses for
+     * any real relying-party id.
      */
     private function host(): string
     {

@@ -17,9 +17,8 @@ use App\Entity\UserPasskey;
 final readonly class PasskeyJson
 {
     /**
-     * Never the public key: it is opaque, verification-only material a
-     * client has no use for, and every field here — including `label` — is
-     * one Task 8's revocation confirmation also needs to show.
+     * Never the public key or the credential id: both are opaque,
+     * verification-only material a client has no use for.
      *
      * @param list<UserPasskey> $passkeys
      *

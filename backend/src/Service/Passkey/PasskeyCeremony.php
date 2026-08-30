@@ -28,15 +28,11 @@ use Webauthn\Denormalizer\WebauthnSerializerFactory;
  * cannot be `readonly` while doing this.
  *
  * Two verification rules are already enforced by the managers this class
- * builds, and must NOT be re-implemented anywhere else:
- * - `CeremonyStepManagerFactory` wires `CheckCounter` to the library's
- *   `ThrowExceptionIfInvalid`, which rejects an authenticator whose signature
- *   counter has not advanced — the standard defence against a cloned
- *   authenticator. A later task adds LOGGING around that exception; nothing in
- *   this codebase should ever compare counters itself.
- * - `CheckUserVerification` enforces `userVerification: required` by reading
- *   it off the options passed into the ceremony, not from anything this class
- *   configures.
+ * builds: `CeremonyStepManagerFactory` wires `CheckCounter` to the library's
+ * `ThrowExceptionIfInvalid`, which rejects an authenticator whose signature
+ * counter has not advanced — the standard defence against a cloned
+ * authenticator — and `CheckUserVerification` enforces `userVerification:
+ * required` by reading it off the options passed into the ceremony.
  */
 final class PasskeyCeremony
 {
