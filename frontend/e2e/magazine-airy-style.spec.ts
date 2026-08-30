@@ -313,3 +313,77 @@ test('an un-favourited row collapses its slot to zero height, not a residue', as
     })
     .toBe(0);
 });
+
+/**
+ * Issue #723: "No rule above the first block." The rule selector must not
+ * match a slot whose only preceding siblings are collapsed/leaving — else
+ * un-favouriting the FIRST entry leaves the new first block still drawing
+ * the divider that used to sit between it and its predecessor.
+ */
+test('un-favouriting the first entry leaves no rule above the new first block', async ({
+  page,
+}) => {
+  const favourited = ENTRIES.map((e) => ({ ...e, isFavorite: true }));
+  await stubAccount(page, 'airy', favourited);
+  await stubEntryStateWrites(page);
+  const signedIn = await signInAsAdmin(page);
+  test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
+
+  await page.getByRole('link', { name: 'Favorites' }).click();
+
+  const slots = page.locator('.rows.magazine .magazine-slot');
+  const first = slots.nth(0);
+  const newFirst = slots.nth(1);
+  await expect(first).toBeVisible();
+
+  await first.getByRole('button', { name: 'Favorite', exact: true }).click();
+  await expect(first, 'un-favouriting the first entry should mark it leaving').toHaveClass(
+    /leaving/,
+  );
+
+  const inner = newFirst.locator('.row-slot-inner');
+  await expect(
+    inner.evaluate((el) => getComputedStyle(el).borderTopWidth),
+    'the new first block must not draw a rule above it',
+  ).resolves.toBe('0px');
+  await expect(
+    inner.evaluate((el) => getComputedStyle(el).paddingTop),
+    'the new first block must not reserve the rule padding above it',
+  ).resolves.toBe('0px');
+});
+
+/**
+ * A reduced-motion viewer should not sit through the 260ms rule-close: the
+ * override selector must beat the shorthand `animation` rule that re-sets
+ * the duration, not just share its (dead) specificity.
+ */
+test('reduced motion collapses the airy leaving slot in ~1ms, not 260ms', async ({ page }) => {
+  const favourited = ENTRIES.map((e) => ({ ...e, isFavorite: true }));
+  await stubAccount(page, 'airy', favourited);
+  await stubEntryStateWrites(page);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const signedIn = await signInAsAdmin(page);
+  test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
+
+  await page.getByRole('link', { name: 'Favorites' }).click();
+
+  // Not the first slot: that one carries no rule to close in the first place.
+  const slot = page.locator('.rows.magazine .magazine-slot').nth(1);
+  await expect(slot).toBeVisible();
+  await slot.getByRole('button', { name: 'Favorite', exact: true }).click();
+  await expect(slot, 'un-favouriting should drop the row out of the Favorites view').toHaveClass(
+    /leaving/,
+  );
+
+  const inner = slot.locator('.row-slot-inner');
+  await expect(
+    inner.evaluate((el) => getComputedStyle(el).animationDuration),
+    'the rule-close animation must honour reduced motion, not the 0.26s shorthand',
+  ).resolves.toBe('0.001s');
+
+  await expect
+    .poll(() => slot.evaluate((el) => Math.round(el.getBoundingClientRect().height)), {
+      timeout: 500,
+    })
+    .toBe(0);
+});

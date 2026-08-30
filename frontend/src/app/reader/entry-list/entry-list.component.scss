@@ -462,10 +462,6 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   .magazine-slot.leaving {
     animation-duration: 1ms;
   }
-
-  .rows.magazine.airy > .magazine-slot + .magazine-slot.leaving > .row-slot-inner {
-    animation-duration: 1ms;
-  }
 }
 
 .rows.magazine {
@@ -507,8 +503,10 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
 
 /* On the inner wrapper, not the slot, so leaving can zero it below (#723).
    Skips `app-run-header`: that header is already a rule, and a second beside
-   it reads wrong. */
-.rows.magazine.airy > .magazine-slot + .magazine-slot > .row-slot-inner {
+   it reads wrong. `:not(.leaving)` on the preceding sibling, with `~` rather
+   than `+`, means a slot with no non-collapsed predecessor draws no rule —
+   the removed-first-entry case, not just the removed-adjacent one. */
+.rows.magazine.airy > .magazine-slot:not(.leaving) ~ .magazine-slot > .row-slot-inner {
   border-top: 1px solid var(--border);
   padding-top: var(--space-5);
 }
@@ -528,8 +526,17 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   }
 }
 
-.rows.magazine.airy > .magazine-slot + .magazine-slot.leaving > .row-slot-inner {
+.rows.magazine.airy > .magazine-slot:not(.leaving) ~ .magazine-slot.leaving > .row-slot-inner {
   animation: magazine-rule-pad-close 0.26s ease forwards;
+}
+
+/* Same reduced-motion honouring as the pair above, kept after the shorthand
+   it overrides — an earlier `animation-duration` would lose to this rule's
+   `animation` shorthand on source order alone. */
+@media (prefers-reduced-motion: reduce) {
+  .rows.magazine.airy > .magazine-slot:not(.leaving) ~ .magazine-slot.leaving > .row-slot-inner {
+    animation-duration: 1ms;
+  }
 }
 
 /* The outlet's own wrapper. Outside the magazine column it is a plain block and
