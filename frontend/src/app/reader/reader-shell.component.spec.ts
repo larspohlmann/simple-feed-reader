@@ -40,6 +40,7 @@ import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { RecommendationsService } from './recommendations.service';
 import { AiAvailabilityService } from '../core/ai-availability.service';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../shared/toast/toast.service';
+import { refreshReport } from '../../testing/refresh-report';
 
 describe('ReaderShellComponent', () => {
   let screen: {
@@ -931,17 +932,7 @@ describe('ReaderShellComponent', () => {
     );
   });
 
-  const refreshDone = {
-    status: 'completed',
-    progress: { done: 0, total: 0 },
-    fetched: 0,
-    notModified: 0,
-    failed: 0,
-    throttled: 0,
-    skippedForBudget: 0,
-    remaining: 0,
-    pruned: 0,
-  };
+  const refreshDone = refreshReport();
 
   it('scopes an all-items refresh to nothing (sweeps every due feed)', () => {
     const f = boot();

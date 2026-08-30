@@ -4,19 +4,11 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../core/api';
 import { RefreshService } from './refresh.service';
+import { RefreshReport } from './models';
+import { refreshReport } from '../../testing/refresh-report';
 
-const report = (over: Partial<Record<string, unknown>>) => ({
-  status: 'partial',
-  progress: { done: 5, total: 10 },
-  fetched: 0,
-  notModified: 0,
-  failed: 0,
-  throttled: 0,
-  skippedForBudget: 0,
-  remaining: 5,
-  pruned: 0,
-  ...over,
-});
+const report = (over: Partial<RefreshReport>) =>
+  refreshReport({ status: 'partial', progress: { done: 5, total: 10 }, remaining: 5, ...over });
 
 describe('RefreshService', () => {
   let svc: RefreshService;
@@ -213,7 +205,7 @@ describe('RefreshService', () => {
     svc.run();
     ctrl
       .expectOne('https://api.test/api/refresh')
-      .flush(report({ status: 'busy', total: 0, remaining: 0 }));
+      .flush(report({ status: 'busy', progress: { done: 0, total: 0 }, remaining: 0 }));
     expect(svc.running()).toBe(true);
     tick(1500);
     ctrl
@@ -228,7 +220,7 @@ describe('RefreshService', () => {
   it('records a busy failure once the retry budget is spent', fakeAsync(() => {
     const done = jest.fn();
     svc.run(done);
-    const busy = report({ status: 'busy', total: 0, remaining: 0 });
+    const busy = report({ status: 'busy', progress: { done: 0, total: 0 }, remaining: 0 });
 
     // The first call plus MAX_BUSY_RETRIES more, all answered busy.
     for (let attempt = 0; attempt <= 5; attempt++) {
@@ -248,7 +240,9 @@ describe('RefreshService', () => {
     svc.run();
     ctrl
       .expectOne('https://api.test/api/refresh')
-      .flush(report({ status: 'aborted', total: 10, remaining: 7, fetched: 3 }));
+      .flush(
+        report({ status: 'aborted', progress: { done: 3, total: 10 }, remaining: 7, fetched: 3 }),
+      );
     expect(svc.running()).toBe(false);
     expect(svc.failure()).toEqual({ kind: 'aborted' });
   });

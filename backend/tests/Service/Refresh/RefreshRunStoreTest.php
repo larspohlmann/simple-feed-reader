@@ -97,18 +97,7 @@ final class RefreshRunStoreTest extends TestCase
      */
     public function testAMalformedEntryOpensAFreshRun(): void
     {
-        $cache = new ArrayAdapter();
-        $store = new RefreshRunStore($cache);
-        $request = RefreshRequest::forUser(1, self::BUDGET);
-        $store->save($request, RefreshRunProgress::start()->advancedBy(20, 180));
-
-        foreach (array_keys($cache->getValues()) as $key) {
-            $item = $cache->getItem($key);
-            $item->set('not an array');
-            $cache->save($item);
-        }
-
-        self::assertSame(0, $store->open($request)->done);
+        self::assertSame(0, $this->openAfterCorrupting('not an array')->done);
     }
 
     /**
@@ -130,18 +119,7 @@ final class RefreshRunStoreTest extends TestCase
      */
     public function testAnEntryOfTheWrongTypeEntirelyOpensAFreshRun(): void
     {
-        $cache = new ArrayAdapter();
-        $store = new RefreshRunStore($cache);
-        $request = RefreshRequest::forUser(1, self::BUDGET);
-        $store->save($request, RefreshRunProgress::start()->advancedBy(20, 180));
-
-        foreach (array_keys($cache->getValues()) as $key) {
-            $item = $cache->getItem($key);
-            $item->set(new \stdClass());
-            $cache->save($item);
-        }
-
-        self::assertSame(0, $store->open($request)->done);
+        self::assertSame(0, $this->openAfterCorrupting(new \stdClass())->done);
     }
 
     /**
@@ -151,34 +129,12 @@ final class RefreshRunStoreTest extends TestCase
      */
     public function testAnEntryWithOnlyDoneOfTheWrongTypeOpensAFreshRun(): void
     {
-        $cache = new ArrayAdapter();
-        $store = new RefreshRunStore($cache);
-        $request = RefreshRequest::forUser(1, self::BUDGET);
-        $store->save($request, RefreshRunProgress::start()->advancedBy(20, 180));
-
-        foreach (array_keys($cache->getValues()) as $key) {
-            $item = $cache->getItem($key);
-            $item->set(['done' => 'twenty', 'total' => 200]);
-            $cache->save($item);
-        }
-
-        self::assertSame(0, $store->open($request)->done);
+        self::assertSame(0, $this->openAfterCorrupting(['done' => 'twenty', 'total' => 200])->done);
     }
 
     public function testAnEntryWithOnlyTotalOfTheWrongTypeOpensAFreshRun(): void
     {
-        $cache = new ArrayAdapter();
-        $store = new RefreshRunStore($cache);
-        $request = RefreshRequest::forUser(1, self::BUDGET);
-        $store->save($request, RefreshRunProgress::start()->advancedBy(20, 180));
-
-        foreach (array_keys($cache->getValues()) as $key) {
-            $item = $cache->getItem($key);
-            $item->set(['done' => 20, 'total' => 'two-hundred']);
-            $cache->save($item);
-        }
-
-        self::assertSame(0, $store->open($request)->done);
+        self::assertSame(0, $this->openAfterCorrupting(['done' => 20, 'total' => 'two-hundred'])->done);
     }
 
     public function testSavingSetsATtlSoAnAbandonedRunEventuallyExpires(): void
@@ -210,6 +166,27 @@ final class RefreshRunStoreTest extends TestCase
             ['refresh_run_3.tag-9'],
             $this->rawKeyFor(RefreshRequest::forUserTag(3, 9, self::BUDGET)),
         );
+    }
+
+    /**
+     * Saves a good run, replaces whatever the pool holds with $storedValue, and
+     * reopens. The four tests above differ only in that value, so the
+     * save-corrupt-reopen dance lives here once rather than four times over.
+     */
+    private function openAfterCorrupting(mixed $storedValue): RefreshRunProgress
+    {
+        $cache = new ArrayAdapter();
+        $store = new RefreshRunStore($cache);
+        $request = RefreshRequest::forUser(1, self::BUDGET);
+        $store->save($request, RefreshRunProgress::start()->advancedBy(20, 180));
+
+        foreach (array_keys($cache->getValues()) as $key) {
+            $item = $cache->getItem($key);
+            $item->set($storedValue);
+            $cache->save($item);
+        }
+
+        return $store->open($request);
     }
 
     /** @return list<string> */

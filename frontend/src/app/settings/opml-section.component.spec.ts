@@ -5,6 +5,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { API_BASE_URL } from '../core/api';
 import { OpmlSectionComponent } from './opml-section.component';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
+import { refreshReport } from '../../testing/refresh-report';
 
 describe('OpmlSectionComponent', () => {
   let ctrl: HttpTestingController;
@@ -70,17 +71,7 @@ describe('OpmlSectionComponent', () => {
     // Imported feeds are due but empty until fetched, so a refresh is kicked off.
     const refresh = ctrl.expectOne('https://api.test/api/refresh');
     expect(refresh.request.method).toBe('POST');
-    refresh.flush({
-      status: 'completed',
-      progress: { done: 3, total: 3 },
-      fetched: 3,
-      notModified: 0,
-      failed: 0,
-      throttled: 0,
-      skippedForBudget: 0,
-      remaining: 0,
-      pruned: 0,
-    });
+    refresh.flush(refreshReport({ progress: { done: 3, total: 3 }, fetched: 3 }));
   });
 
   it('does not refresh when nothing new was imported', () => {

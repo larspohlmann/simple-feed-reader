@@ -116,16 +116,7 @@ final class RefreshControllerTest extends WebTestCase
         );
         self::assertResponseIsSuccessful();
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($body);
-        self::assertContains($body['status'], ['completed', 'partial']);
-        self::assertIsArray($body['progress']);
-        self::assertIsInt($body['remaining']);
-        // Asserted as the invariant rather than as two literals: these tests accept
-        // either `completed` or `partial`, and a partial slice leaves feeds in
-        // `remaining` that belong in the run's denominator.
-        self::assertSame(1, $body['progress']['done']);
-        self::assertSame(1 + $body['remaining'], $body['progress']['total']);
-        self::assertArrayNotHasKey('total', $body);
+        $this->assertReportsARunOfOneFeed($body);
     }
 
     public function testTagRefreshOfAForeignTagIs404(): void
@@ -194,13 +185,25 @@ final class RefreshControllerTest extends WebTestCase
         );
         self::assertResponseIsSuccessful();
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        $this->assertReportsARunOfOneFeed($body);
+    }
+
+    /**
+     * The per-feed and the per-tag scope each sweep exactly one feed, so both
+     * end in the same claim about the run.
+     *
+     * Asserted as an invariant rather than as two literals: either scope may
+     * answer `completed` or `partial`, and a partial slice leaves feeds in
+     * `remaining` that belong in the run's denominator. `total` is absent
+     * because it was this slice's server-capped batch size sitting next to a
+     * run-wide `remaining`, and dividing one by the other is issue #721.
+     */
+    private function assertReportsARunOfOneFeed(mixed $body): void
+    {
         self::assertIsArray($body);
         self::assertContains($body['status'], ['completed', 'partial']);
         self::assertIsArray($body['progress']);
         self::assertIsInt($body['remaining']);
-        // Asserted as the invariant rather than as two literals: these tests accept
-        // either `completed` or `partial`, and a partial slice leaves feeds in
-        // `remaining` that belong in the run's denominator.
         self::assertSame(1, $body['progress']['done']);
         self::assertSame(1 + $body['remaining'], $body['progress']['total']);
         self::assertArrayNotHasKey('total', $body);
