@@ -285,9 +285,7 @@ describe('PasskeyService', () => {
     await expect(signIn).resolves.toBe('jwt-conditional');
   });
 
-  // Enrolling from a desktop used to save the credential on a phone, because
-  // Chrome puts the cross-device QR flow first when the options express no
-  // preference -- and sign-in then had nothing local to find.
+  // Without a hint, Chrome put the QR flow first and enrolment landed on a phone.
   describe('steering both ceremonies at this device', () => {
     it('asks enrolment for the passkey store on the machine the user is at', async () => {
       create.mockResolvedValue(fixtureAttestationCredential());
