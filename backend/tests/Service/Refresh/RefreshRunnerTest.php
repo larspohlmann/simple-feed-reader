@@ -229,6 +229,28 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(1, $this->changeMarker->marks);
     }
 
+    public function testMovesTheMarkerWhenAnEarlierFeedImportedButTheLastDidNot(): void
+    {
+        // The run-wide total must ACCUMULATE across feeds: a feed that imported
+        // then a NotModified feed still means new content this run. A total that
+        // only remembered the last feed would leave the marker unmoved here.
+        $feedA = $this->dueFeed('https://a.example.com/feed');
+        $feedB = $this->dueFeed('https://b.example.com/feed');
+        $this->em->flush();
+        $this->fetcher->willReturn(
+            $feedA->getUrl(),
+            FetchResponse::fetched($feedA->getUrl(), false, $this->rss('A', 'a-1'), '"etag-a"', null),
+        );
+        $this->fetcher->willReturn(
+            $feedB->getUrl(),
+            FetchResponse::notModified($feedB->getUrl(), false, null, null),
+        );
+
+        $this->runner()->run(RefreshRequest::allDue(300));
+
+        self::assertSame(1, $this->changeMarker->marks);
+    }
+
     public function testLeavesTheChangeMarkerWhenTheSweepStoredNoNewEntries(): void
     {
         $feed = $this->dueFeed('https://a.example.com/feed');

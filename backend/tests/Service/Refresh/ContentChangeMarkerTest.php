@@ -6,6 +6,7 @@ namespace App\Tests\Service\Refresh;
 
 use App\Service\Refresh\ContentChangeMarker;
 use PHPUnit\Framework\TestCase;
+use App\Tests\Support\RecordingLogger;
 use Psr\Log\NullLogger;
 
 final class ContentChangeMarkerTest extends TestCase
@@ -57,6 +58,37 @@ final class ContentChangeMarkerTest extends TestCase
         $this->marker()->markChanged();
 
         self::assertSame('0644', substr(sprintf('%o', fileperms($this->markerPath())), -4));
+    }
+
+    public function testLeavesNoTempFileBesideTheMarker(): void
+    {
+        $this->marker()->markChanged();
+
+        $entries = array_diff((array) scandir($this->projectDir . '/public/state'), ['.', '..']);
+        self::assertSame(['counts'], array_values($entries));
+    }
+
+    public function testAWrittenMarkerLogsNothing(): void
+    {
+        $logger = new RecordingLogger();
+
+        (new ContentChangeMarker($this->projectDir, $logger))->markChanged();
+
+        self::assertSame([], $logger->records);
+    }
+
+    public function testAnUnwritableWebRootLogsExactlyOneWarningNamingTheDirectory(): void
+    {
+        $file = $this->projectDir . '/a-file-not-a-tree';
+        file_put_contents($file, 'x');
+        $logger = new RecordingLogger();
+
+        (new ContentChangeMarker($file, $logger))->markChanged();
+
+        self::assertCount(1, $logger->records);
+        self::assertStringContainsString('{directory}', $logger->records[0]['message']);
+        self::assertSame($file . '/public/state', $logger->records[0]['context']['directory']);
+        self::assertFileDoesNotExist($file . '/public/state/counts');
     }
 
     public function testAnUnwritableWebRootDoesNotThrow(): void
