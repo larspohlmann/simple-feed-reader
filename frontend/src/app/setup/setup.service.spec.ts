@@ -45,9 +45,9 @@ describe('SetupService', () => {
   });
 
   it('exposes passkeySignInAvailable from the status response', (done) => {
-    const status = jest.fn().mockReturnValue(
-      of({ needsSetup: false, mailEnabled: true, passkeySignInAvailable: false }),
-    );
+    const status = jest
+      .fn()
+      .mockReturnValue(of({ needsSetup: false, mailEnabled: true, passkeySignInAvailable: false }));
     const service = configure(status);
 
     expect(service.passkeySignInAvailable()).toBeNull();

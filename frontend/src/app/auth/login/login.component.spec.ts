@@ -149,7 +149,10 @@ describe('LoginComponent — passkey sign-in availability (#624 follow-up)', () 
         { provide: API_BASE_URL, useValue: 'https://api.test' },
         {
           provide: SetupService,
-          useValue: { mailEnabled: signal(true), passkeySignInAvailable: signal(passkeySignInAvailable) },
+          useValue: {
+            mailEnabled: signal(true),
+            passkeySignInAvailable: signal(passkeySignInAvailable),
+          },
         },
       ],
     }).compileComponents();
