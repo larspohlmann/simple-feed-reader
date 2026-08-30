@@ -8,9 +8,8 @@ import { ThemeMode } from '../../theme/themes/registry';
 import { ReadingLayoutService } from '../reading-layout.service';
 
 /**
- * The reading-layout, theme and (magazine-only) style segmented controls. They
- * live in the sidebar so the top bar has room for the article's back button
- * and reader-mode switch.
+ * The reading-layout and theme segmented controls. They live in the sidebar so
+ * the top bar has room for the article's back button and reader-mode switch.
  */
 @Component({
   selector: 'app-view-controls',
@@ -30,9 +29,19 @@ export class ViewControlsComponent {
     { id: 'system', icon: 'contrast' },
   ];
 
-  // The label for each style comes from the `reader.style.<id>` translation key.
-  readonly styles: { id: MagazineStyle; icon: string }[] = [
-    { id: 'boxed', icon: 'grid_view' },
-    { id: 'airy', icon: 'view_stream' },
+  /**
+   * The magazine's two designs read as two layout choices here, so `key` builds
+   * the `reader.layout.magazine<Key>` label rather than reusing the settings
+   * page's own style keys.
+   */
+  readonly magazineStyles: { id: MagazineStyle; key: string; icon: string }[] = [
+    { id: 'boxed', key: 'Boxed', icon: 'grid_view' },
+    { id: 'airy', key: 'Airy', icon: 'density_large' },
   ];
+
+  /** One button picks the layout and the design together. */
+  showMagazine(style: MagazineStyle): void {
+    this.layout.set('magazine');
+    this.magazineStyle.set(style);
+  }
 }

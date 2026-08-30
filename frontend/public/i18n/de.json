@@ -838,7 +838,8 @@
     "selectArticle": "Wähle einen Artikel zum Lesen aus.",
     "layout": {
       "aria": "Layout",
-      "magazine": "Magazin-Layout",
+      "magazineBoxed": "Magazin-Layout, mit Rahmen",
+      "magazineAiry": "Magazin-Layout, luftig",
       "list": "Listen-Layout",
       "pane": "Spalten-Layout"
     },
@@ -847,11 +848,6 @@
       "light": "Hell",
       "dark": "Dunkel",
       "system": "System"
-    },
-    "style": {
-      "aria": "Magazin-Stil",
-      "boxed": "Mit Rahmen",
-      "airy": "Luftig"
     },
     "versionLabel": "Version {{version}} — Einstellungen öffnen",
     "updateAvailable": "Update {{version}}",

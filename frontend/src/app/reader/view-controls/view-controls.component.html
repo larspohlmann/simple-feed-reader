@@ -1,13 +1,19 @@
 <div class="seg" role="group" [attr.aria-label]="'reader.layout.aria' | transloco">
-  <button
-    [attr.aria-label]="'reader.layout.magazine' | transloco"
-    [class.active]="layout.mode() === 'magazine'"
-    (click)="layout.set('magazine')"
-  >
-    <app-icon name="view_quilt" size="md" />
-  </button>
+  @for (s of magazineStyles; track s.id) {
+    <button
+      [class.active]="layout.mode() === 'magazine' && magazineStyle.style() === s.id"
+      [attr.aria-pressed]="layout.mode() === 'magazine' && magazineStyle.style() === s.id"
+      [title]="'reader.layout.magazine' + s.key | transloco"
+      [attr.aria-label]="'reader.layout.magazine' + s.key | transloco"
+      (click)="showMagazine(s.id)"
+    >
+      <app-icon [name]="s.icon" size="md" />
+    </button>
+  }
   <button
     [attr.aria-label]="'reader.layout.list' | transloco"
+    [title]="'reader.layout.list' | transloco"
+    [attr.aria-pressed]="layout.mode() === 'list'"
     [class.active]="layout.mode() === 'list'"
     (click)="layout.set('list')"
   >
@@ -16,6 +22,8 @@
   <button
     class="pane"
     [attr.aria-label]="'reader.layout.pane' | transloco"
+    [title]="'reader.layout.pane' | transloco"
+    [attr.aria-pressed]="layout.mode() === 'pane'"
     [class.active]="layout.mode() === 'pane'"
     (click)="layout.set('pane')"
   >
@@ -35,18 +43,3 @@
     </button>
   }
 </div>
-
-@if (layout.mode() === 'magazine') {
-  <div class="seg" role="group" [attr.aria-label]="'reader.style.aria' | transloco">
-    @for (s of styles; track s.id) {
-      <button
-        [class.active]="magazineStyle.style() === s.id"
-        [attr.aria-pressed]="magazineStyle.style() === s.id"
-        [title]="'reader.style.' + s.id | transloco"
-        (click)="magazineStyle.set(s.id)"
-      >
-        <app-icon [name]="s.icon" size="md" />
-      </button>
-    }
-  </div>
-}
