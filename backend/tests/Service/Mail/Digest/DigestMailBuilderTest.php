@@ -15,7 +15,6 @@ use App\Service\Mail\Digest\DigestImageSet;
 use App\Service\Mail\Digest\DigestLinkBuilder;
 use App\Service\Mail\Digest\DigestMailBuilder;
 use App\Service\Mail\Digest\DigestModel;
-use App\Service\Mail\Digest\DigestPage;
 use App\Service\Mail\Digest\DigestPageBuilder;
 use App\Service\Mail\Digest\DigestTextRenderer;
 use App\Service\Mail\Digest\EmbeddedImage;

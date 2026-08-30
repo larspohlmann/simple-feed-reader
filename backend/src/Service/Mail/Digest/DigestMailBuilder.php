@@ -11,9 +11,8 @@ use Symfony\Component\Mime\Email;
 
 /**
  * Builds the digest Email from a DigestModel, honouring the recipient's
- * digest_format: `text` sends the existing plain body only; `html` adds the
- * airy HTML body plus its CID images, keeping the text part as the alternative
- * fallback (#726).
+ * digest_format: `text` sends the plain body only; `html` adds the airy HTML
+ * body plus its CID images, keeping text as the alternative fallback (#726).
  */
 final readonly class DigestMailBuilder
 {

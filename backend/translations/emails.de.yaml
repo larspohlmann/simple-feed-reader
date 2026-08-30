@@ -23,4 +23,4 @@ digest:
     open_reader: 'Im Reader öffnen'
     manage_html: 'Verwalte deinen Digest unter %link%.'
     manage_link_label: 'Einstellungen → E-Mail'
-    more_link: '+%count% weitere in „%term%"'
+    more_link: '+%count% weitere in „%term%“'

@@ -28,7 +28,9 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * The warmer resolves a whole slice at once through the shared, concurrent
  * `FaviconResolver::resolveAll()` (see #116) and hands each URL here to download.
  *
- * Invoked ONLY by the warmer. No request path fetches an icon.
+ * Called by the warmer, and by DigestImageEmbedder to fetch thumbnails and
+ * favicons for a digest send. Neither caller is a live HTTP request path;
+ * the digest runs in the worker/CLI, same as the warmer.
  */
 final readonly class CatalogFaviconFetcher implements CatalogFaviconFetcherInterface
 {

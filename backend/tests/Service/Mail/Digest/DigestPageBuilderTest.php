@@ -17,7 +17,6 @@ final class DigestPageBuilderTest extends TestCase
         return new DigestEntry($title, 'Feed', '', 'https://example.com/e', null, null, null, null, null);
     }
 
-    /** @param int $count */
     private function group(string $term, int $count, int $totalCount): DigestGroup
     {
         $entries = array_map(fn (int $i): DigestEntry => $this->entry("{$term} {$i}"), range(1, $count));

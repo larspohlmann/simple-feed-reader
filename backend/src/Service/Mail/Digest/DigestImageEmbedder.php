@@ -11,9 +11,8 @@ use Psr\Log\LoggerInterface;
 
 /**
  * Fetches every thumbnail and favicon a rendered page references, resizes each,
- * and returns them as CID parts keyed by source URL. Downloads run through the
- * shared SSRF-guarded fetcher; a distinct URL is fetched once and reused, and
- * any fetch or resize failure drops that one image rather than the mail.
+ * and returns them as CID parts keyed by source URL. A distinct URL is fetched
+ * once and reused; any fetch or resize failure drops that image, not the mail.
  */
 final readonly class DigestImageEmbedder implements DigestImageEmbedderInterface
 {
@@ -47,8 +46,7 @@ final readonly class DigestImageEmbedder implements DigestImageEmbedderInterface
     }
 
     /**
-     * Distinct source URLs, each flagged favicon-or-thumbnail. A favicon URL and
-     * a thumbnail URL never collide in practice; first sighting wins the flag.
+     * Distinct source URLs, each flagged favicon-or-thumbnail; first sighting wins.
      *
      * @return array<string, bool>
      */
