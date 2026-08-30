@@ -62,11 +62,16 @@ final readonly class DigestComposer
 
     private function entry(EntryListRow $row): DigestEntry
     {
+        $entry = $row->entry;
+
         return new DigestEntry(
-            $row->entry->getTitle(),
+            $entry->getTitle(),
             $row->subscriptionTitle,
             $this->shortDescription($row),
-            $this->links->entryUrl((int) $row->entry->getId()),
+            $this->links->entryUrl((int) $entry->getId()),
+            $entry->getPublishedAt(),
+            $entry->getImageUrl(),
+            $entry->getFeed()->getFaviconUrl(),
         );
     }
 

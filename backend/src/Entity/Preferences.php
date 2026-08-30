@@ -6,6 +6,7 @@ namespace App\Entity;
 
 use App\Repository\PreferencesRepository;
 use App\Service\Mail\Digest\DigestCadence;
+use App\Service\Mail\Digest\DigestFormat;
 use App\Service\Reader\MagazineStyle;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -46,6 +47,9 @@ class Preferences
 
     #[ORM\Column(name: 'digest_cadence', length: 10, enumType: DigestCadence::class, options: ['default' => 'daily'])]
     private DigestCadence $digestCadence = DigestCadence::Daily;
+
+    #[ORM\Column(name: 'digest_format', length: 10, enumType: DigestFormat::class, options: ['default' => 'html'])]
+    private DigestFormat $digestFormat = DigestFormat::Html;
 
     /** The local hour (0–23) the digest is sent, interpreted in the instance timezone. */
     #[ORM\Column(name: 'digest_send_hour', type: Types::SMALLINT, options: ['default' => 8])]
@@ -119,6 +123,16 @@ class Preferences
     public function setDigestCadence(DigestCadence $digestCadence): void
     {
         $this->digestCadence = $digestCadence;
+    }
+
+    public function getDigestFormat(): DigestFormat
+    {
+        return $this->digestFormat;
+    }
+
+    public function setDigestFormat(DigestFormat $digestFormat): void
+    {
+        $this->digestFormat = $digestFormat;
     }
 
     public function getDigestSendHour(): int

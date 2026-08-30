@@ -44,6 +44,21 @@
         </select>
       </app-settings-row>
 
+      <app-settings-row [stackable]="true" [title]="'settings.email.format' | transloco">
+        <select
+          data-testid="digest-format"
+          [disabled]="controlsDisabled()"
+          (change)="onFormat($event)"
+        >
+          <option value="html" [selected]="digest.format() === 'html'">
+            {{ 'settings.email.formatHtml' | transloco }}
+          </option>
+          <option value="text" [selected]="digest.format() === 'text'">
+            {{ 'settings.email.formatText' | transloco }}
+          </option>
+        </select>
+      </app-settings-row>
+
       <app-settings-row
         [stackable]="true"
         [title]="'settings.email.sendHour' | transloco"

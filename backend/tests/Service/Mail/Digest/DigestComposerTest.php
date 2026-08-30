@@ -128,6 +128,22 @@ final class DigestComposerTest extends TestCase
         self::assertNull($composer->compose($this->user, $this->since));
     }
 
+    public function testEntryCarriesImagePublishedDateAndFavicon(): void
+    {
+        $rust = new SavedSearch($this->user, 'rust', false);
+        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$rust]);
+        $this->entries->method('unreadMatchIdsSince')->willReturn([1]);
+        $this->entries->method('rowsByIdsForUser')->willReturn([$this->row(1, 'Title', 'Feed A')]);
+
+        $model = $this->composer()->compose($this->user, $this->since);
+
+        self::assertNotNull($model);
+        $entry = $model->groups[0]->entries[0];
+        self::assertSame('https://cdn.example.com/1.jpg', $entry->imageUrl);
+        self::assertSame('https://example.com/favicon.ico', $entry->faviconUrl);
+        self::assertEquals(new \DateTimeImmutable('2026-08-15T09:48:00Z'), $entry->publishedAt);
+    }
+
     private function composer(): DigestComposer
     {
         return new DigestComposer(
@@ -150,6 +166,9 @@ final class DigestComposerTest extends TestCase
         // Entry has no id setter: the id only exists once Doctrine assigns it,
         // and this test builds the row by hand without booting the kernel.
         new \ReflectionProperty(Entry::class, 'id')->setValue($entry, $id);
+        $entry->setPublishedAt(new \DateTimeImmutable('2026-08-15T09:48:00Z'));
+        $entry->setImage('https://cdn.example.com/' . $id . '.jpg', 1200, 900);
+        $entry->getFeed()->setFaviconUrl('https://example.com/favicon.ico');
 
         return new EntryListRow(
             entry: $entry,

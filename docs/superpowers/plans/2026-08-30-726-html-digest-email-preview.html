@@ -1,0 +1,362 @@
+<title>Airy Digest Email</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    /* Page chrome — a picked warm grey, biased toward the teal accent */
+    --ground: #ecebe8;
+    --panel: #f7f6f4;
+    --chrome-ink: #2c2b29;
+    --chrome-muted: #6b6a66;
+    --chrome-faint: #9a9894;
+    --chrome-line: #dcdad6;
+    --accent: #3f8676;
+    --accent-ink: #2f6357;
+    --shadow: 0 1px 2px rgba(30, 28, 24, .06), 0 12px 40px rgba(30, 28, 24, .12);
+    --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    --ui: system-ui, -apple-system, 'Segoe UI', roboto, sans-serif;
+  }
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --ground: #17171a;
+      --panel: #202024;
+      --chrome-ink: #e8e7e4;
+      --chrome-muted: #a3a19c;
+      --chrome-faint: #6f6d69;
+      --chrome-line: #303035;
+      --accent: #5aa593;
+      --accent-ink: #7cbcac;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 18px 50px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #17171a;
+    --panel: #202024;
+    --chrome-ink: #e8e7e4;
+    --chrome-muted: #a3a19c;
+    --chrome-faint: #6f6d69;
+    --chrome-line: #303035;
+    --accent: #5aa593;
+    --accent-ink: #7cbcac;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 18px 50px rgba(0,0,0,.5);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--chrome-ink);
+    font-family: var(--ui);
+    -webkit-font-smoothing: antialiased;
+    padding: 40px 20px 72px;
+  }
+
+  .wrap { max-width: 640px; margin: 0 auto; }
+
+  .pagehead { margin: 0 auto 26px; padding: 0 4px; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+    margin: 0 0 8px;
+  }
+  .pagehead h1 {
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: -.01em;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+  .pagehead p {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--chrome-muted);
+    margin: 0;
+    max-width: 60ch;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin: 16px 4px 24px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--chrome-muted);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .swatch { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+
+  /* ============================================================
+     THE EMAIL — light only, exact reader/graphite tokens.
+     A committed single-theme object: it renders identically on
+     any host ground, because it is what actually ships.
+     ============================================================ */
+  .mail {
+    background: #f5f5f4;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    border: 1px solid rgba(0,0,0,.04);
+  }
+  .sheet {
+    background: #ffffff;
+    max-width: 600px;
+    margin: 0 auto;
+    /* email uses only these colors + system-ui, nothing inherited */
+    font-family: system-ui, -apple-system, 'Segoe UI', roboto, sans-serif;
+    color: #2a2a2a;
+  }
+
+  .m-head {
+    padding: 24px 24px 18px;
+    border-bottom: 1px solid #e4e4e2;
+  }
+  .brand { display: flex; align-items: center; gap: 9px; }
+  .brand .mark { width: 20px; height: 20px; flex: none; color: #3f8676; display: block; }
+  .brand .mark svg { display: block; width: 20px; height: 20px; }
+  .brand .word {
+    font-size: 15px; font-weight: 600; letter-spacing: -.01em; color: #2a2a2a;
+  }
+  .m-head .digestline {
+    margin: 14px 0 0; font-size: 13px; color: #8f8f8b;
+  }
+  .m-head .digestline strong { color: #5f5f5c; font-weight: 600; }
+
+  .m-body { padding: 8px 24px 4px; }
+
+  .intro {
+    font-size: 14px; line-height: 1.5; color: #5f5f5c;
+    margin: 14px 0 2px;
+  }
+
+  .group { padding: 20px 0 4px; }
+  .group-kicker {
+    display: flex; align-items: baseline; gap: 8px;
+    padding-bottom: 10px; margin-bottom: 4px;
+    border-bottom: 1px solid #e4e4e2;
+  }
+  .group-kicker .term {
+    font-size: 13px; font-weight: 600; color: #5f5f5c; letter-spacing: .01em;
+  }
+  .group-kicker .n { font-size: 12px; color: #8f8f8b; }
+
+  /* card */
+  .card {
+    display: flex; gap: 12px; align-items: stretch;
+    padding: 20px 0;
+    border-top: 1px solid #e4e4e2;
+    text-decoration: none;
+  }
+  .card:first-of-type { border-top: 0; }
+  .thumb {
+    width: 88px; height: 66px; flex: none;
+    border-radius: 8px; margin-top: 2px;
+    background-size: cover; background-position: center;
+  }
+  .thumb.a { background-image: linear-gradient(135deg,#c8d7d2,#e3b98f 60%,#d98f6a); }
+  .thumb.b { background-image: linear-gradient(140deg,#9fb4c9,#c7d2dc 55%,#e6e2d7); }
+  .thumb.c { background-image: linear-gradient(135deg,#d7cbe0,#e9d9c4 60%,#cfe0d5); }
+  .body { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+
+  .kicker {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: #8f8f8b; white-space: nowrap;
+  }
+  .kicker .fav {
+    width: 16px; height: 16px; border-radius: 4px; flex: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 700; color: #fff;
+  }
+  .kicker .src { color: #8f8f8b; }
+  .kicker .mid { color: #c4c4c1; }
+  .kicker .time { color: #8f8f8b; }
+
+  .title {
+    font-size: 15px; font-weight: 500; line-height: 1.35; color: #2a2a2a;
+    margin: 0;
+  }
+  .card:hover .title { text-decoration: underline; text-underline-offset: 2px; }
+  .dek {
+    font-size: 13px; line-height: 1.4; color: #5f5f5c; margin: 0;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .more {
+    display: inline-block; margin: 4px 0 2px;
+    font-size: 13px; color: #3f8676; text-decoration: none; font-weight: 500;
+  }
+  .more:hover { text-decoration: underline; }
+
+  /* overflow group — heading + count only, no cards (the ~30 cap) */
+  .group.overflow { padding-bottom: 8px; }
+  .group.overflow .more { margin-top: 12px; }
+
+  .m-foot {
+    padding: 22px 24px 26px;
+    border-top: 1px solid #e4e4e2;
+    margin-top: 12px;
+  }
+  .m-foot .links { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 12px; }
+  .m-foot a { font-size: 13px; color: #3f8676; text-decoration: none; }
+  .m-foot a.mutedlink { color: #8f8f8b; text-decoration: underline; text-underline-offset: 2px; }
+  .m-foot .why { font-size: 12px; line-height: 1.5; color: #a7a7a3; margin: 0; }
+
+  .caption {
+    font-family: var(--mono);
+    font-size: 11px; color: var(--chrome-faint);
+    text-align: center; margin: 20px auto 0; max-width: 60ch; line-height: 1.6;
+  }
+
+  @media (max-width: 560px) {
+    body { padding: 24px 12px 48px; }
+    .thumb { width: 72px; height: 54px; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="pagehead">
+    <p class="eyebrow">#726 · Design preview</p>
+    <h1>The daily digest, as an HTML email</h1>
+    <p>The reader's magazine <em>airy/light</em> view, translated to a 600px email: a white sheet of hairline-separated cards, each a thumbnail beside a headline, source and excerpt. Light-only, no action icons — the whole card links into the reader. This is a static mockup; thumbnails stand in for the CID-embedded images.</p>
+  </header>
+
+  <div class="legend">
+    <span><i class="swatch" style="background:#3f8676"></i>whole card = link</span>
+    <span><i class="swatch" style="background:linear-gradient(135deg,#c8d7d2,#d98f6a)"></i>card with thumbnail</span>
+    <span><i class="swatch" style="background:#e4e4e2"></i>text-only card (no image)</span>
+    <span><i class="swatch" style="background:#8f8f8b"></i>overflow group @ ~30 cap</span>
+  </div>
+
+  <div class="mail">
+    <div class="sheet">
+
+      <!-- HEADER -->
+      <div class="m-head">
+        <div class="brand">
+          <span class="mark"><svg viewBox="0 -960 960 960" width="20" height="20" aria-hidden="true"><path d="M200-120q-33 0-56.5-23.5T120-200q0-33 23.5-56.5T200-280q33 0 56.5 23.5T280-200q0 33-23.5 56.5T200-120Z" fill="currentColor"/><path d="M440-120q0-67-25-124.5T346-346q-44-44-101.5-69T120-440v-120q92 0 171.5 34.5T431-431q60 60 94.5 139.5T560-120H440Z" fill="currentColor"/><path d="M680-120q0-117-44-218.5T516-516q-76-76-177.5-120T120-680v-120q142 0 265 53t216 146q93 93 146 216t53 265H680Z" fill="currentColor"/></svg></span>
+          <span class="word">simple feed reader</span>
+        </div>
+        <p class="digestline">Deine Übersicht · Samstag, 30. Aug. · <strong>14 neue Beiträge</strong></p>
+      </div>
+
+      <div class="m-body">
+
+        <p class="intro">Das sind neue Einträge, die zu deinen gespeicherten Suchen passen, nach Suche gruppiert.</p>
+
+        <!-- GROUP 1 -->
+        <div class="group">
+          <div class="group-kicker">
+            <span class="term">Thailand</span>
+            <span class="n">(10)</span>
+          </div>
+
+          <a class="card" href="#">
+            <span class="thumb a"></span>
+            <span class="body">
+              <span class="kicker">
+                <span class="fav" style="background:#c8362d">Z</span>
+                <span class="src">ZDFheute</span>
+                <span class="mid">·</span>
+                <span class="time">30. Aug., 09:48</span>
+              </span>
+              <p class="title">Thailand-Urlaub: Wie man bei Fernreisen clever sparen kann</p>
+              <p class="dek">Thailand gilt als Traumziel. Doch Fernreisen sind teurer geworden. Wie lässt sich vor Ort Geld sparen und trotzdem Spaß haben? Eine fünfköpfige Familie aus Bayern macht den Test.</p>
+            </span>
+          </a>
+
+          <a class="card" href="#">
+            <span class="thumb b"></span>
+            <span class="body">
+              <span class="kicker">
+                <span class="fav" style="background:#2a6df4">t</span>
+                <span class="src">tagesschau</span>
+                <span class="mid">·</span>
+                <span class="time">30. Aug., 07:12</span>
+              </span>
+              <p class="title">Monsunzeit in Südostasien: Was Reisende jetzt wissen müssen</p>
+              <p class="dek">Überschwemmte Straßen, gestrichene Fähren: Der späte Monsun trifft mehrere Urlaubsregionen. Ein Überblick, welche Provinzen betroffen sind.</p>
+            </span>
+          </a>
+
+          <!-- text-only card: no thumbnail cell -->
+          <a class="card" href="#">
+            <span class="body">
+              <span class="kicker">
+                <span class="fav" style="background:#7a7a7a">✦</span>
+                <span class="src">Fernweh-Blog</span>
+                <span class="mid">·</span>
+                <span class="time">29. Aug., 21:03</span>
+              </span>
+              <p class="title">Sieben Inseln, ein Roller: unsere Route durch den Süden</p>
+              <p class="dek">Kein Titelbild, aber die volle Zusammenfassung — der Kartenausschnitt zeigt, wie eine Karte ganz ohne Bild aussieht: sauber, ohne leere Lücke.</p>
+            </span>
+          </a>
+
+          <a class="more" href="#">+7 weitere in „Thailand" →</a>
+        </div>
+
+        <!-- GROUP 2 -->
+        <div class="group">
+          <div class="group-kicker">
+            <span class="term">KI &amp; Regulierung</span>
+            <span class="n">(4)</span>
+          </div>
+
+          <a class="card" href="#">
+            <span class="thumb c"></span>
+            <span class="body">
+              <span class="kicker">
+                <span class="fav" style="background:#111">H</span>
+                <span class="src">heise online</span>
+                <span class="mid">·</span>
+                <span class="time">30. Aug., 11:20</span>
+              </span>
+              <p class="title">EU-KI-Verordnung: Die nächste Umsetzungsfrist rückt näher</p>
+              <p class="dek">Ab August greifen weitere Pflichten für Anbieter von KI-Modellen. Was Unternehmen bis dahin vorbereiten sollten.</p>
+            </span>
+          </a>
+
+          <a class="card" href="#">
+            <span class="body">
+              <span class="kicker">
+                <span class="fav" style="background:#d94f2b">n</span>
+                <span class="src">netzpolitik.org</span>
+                <span class="mid">·</span>
+                <span class="time">29. Aug., 18:44</span>
+              </span>
+              <p class="title">Transparenzpflichten: Was die neuen Regeln für Nutzer bedeuten</p>
+              <p class="dek">Kennzeichnung von KI-Inhalten, Auskunftsrechte, Beschwerdewege — ein nüchterner Blick auf das, was ankommt.</p>
+            </span>
+          </a>
+        </div>
+
+        <!-- OVERFLOW GROUP: heading + count only (past the ~30-card budget) -->
+        <div class="group overflow">
+          <div class="group-kicker">
+            <span class="term">Bundesliga</span>
+            <span class="n">(12)</span>
+          </div>
+          <a class="more" href="#">Alle 12 in „Bundesliga" öffnen →</a>
+        </div>
+
+      </div>
+
+      <!-- FOOTER -->
+      <div class="m-foot">
+        <div class="links">
+          <a href="#">Im Reader öffnen →</a>
+        </div>
+        <p class="why">Verwalte deinen Digest unter <a class="mutedlink" href="#">Einstellungen → E-Mail</a>.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <p class="caption">Static preview. Real thumbnails + favicons are fetched, resized (176×132 JPEG / 32×32 PNG) and CID-embedded, so the mail makes no external requests.</p>
+</div>

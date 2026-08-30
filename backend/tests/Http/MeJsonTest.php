@@ -95,6 +95,7 @@ final class MeJsonTest extends TestCase
             [
                 'enabled' => true,
                 'cadence' => 'weekly',
+                'format' => 'html',
                 'sendHour' => 9,
                 'weekday' => 3,
                 'timezone' => 'Europe/Berlin',

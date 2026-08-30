@@ -49,7 +49,7 @@ final class MeDigestControllerTest extends ApiTestCase
             '/api/me/digest',
             server: ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(
-                ['enabled' => true, 'cadence' => 'weekly', 'sendHour' => 9, 'weekday' => 3],
+                ['enabled' => true, 'cadence' => 'weekly', 'sendHour' => 9, 'weekday' => 3, 'format' => 'html'],
                 \JSON_THROW_ON_ERROR,
             ),
         );
@@ -61,6 +61,7 @@ final class MeDigestControllerTest extends ApiTestCase
             [
                 'enabled' => true,
                 'cadence' => 'weekly',
+                'format' => 'html',
                 'sendHour' => 9,
                 'weekday' => 3,
                 'timezone' => 'UTC',
@@ -85,7 +86,7 @@ final class MeDigestControllerTest extends ApiTestCase
             '/api/me/digest',
             server: ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(
-                ['enabled' => true, 'cadence' => 'daily', 'sendHour' => 0, 'weekday' => 1],
+                ['enabled' => true, 'cadence' => 'daily', 'sendHour' => 0, 'weekday' => 1, 'format' => 'html'],
                 \JSON_THROW_ON_ERROR,
             ),
         );
@@ -97,7 +98,7 @@ final class MeDigestControllerTest extends ApiTestCase
             '/api/me/digest',
             server: ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(
-                ['enabled' => true, 'cadence' => 'daily', 'sendHour' => 23, 'weekday' => 1],
+                ['enabled' => true, 'cadence' => 'daily', 'sendHour' => 23, 'weekday' => 1, 'format' => 'html'],
                 \JSON_THROW_ON_ERROR,
             ),
         );
@@ -120,7 +121,7 @@ final class MeDigestControllerTest extends ApiTestCase
             '/api/me/digest',
             server: ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(
-                ['enabled' => true, 'cadence' => 'daily', 'sendHour' => -1, 'weekday' => 1],
+                ['enabled' => true, 'cadence' => 'daily', 'sendHour' => -1, 'weekday' => 1, 'format' => 'html'],
                 \JSON_THROW_ON_ERROR,
             ),
         );
@@ -143,7 +144,7 @@ final class MeDigestControllerTest extends ApiTestCase
             '/api/me/digest',
             server: ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(
-                ['enabled' => true, 'cadence' => 'weekly', 'sendHour' => 30, 'weekday' => 3],
+                ['enabled' => true, 'cadence' => 'weekly', 'sendHour' => 30, 'weekday' => 3, 'format' => 'html'],
                 \JSON_THROW_ON_ERROR,
             ),
         );
@@ -166,7 +167,7 @@ final class MeDigestControllerTest extends ApiTestCase
             '/api/me/digest',
             server: ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(
-                ['enabled' => true, 'cadence' => 'weekly', 'sendHour' => 9, 'weekday' => 7],
+                ['enabled' => true, 'cadence' => 'weekly', 'sendHour' => 9, 'weekday' => 7, 'format' => 'html'],
                 \JSON_THROW_ON_ERROR,
             ),
         );
@@ -190,7 +191,7 @@ final class MeDigestControllerTest extends ApiTestCase
             '/api/me/digest',
             server: ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(
-                ['enabled' => true, 'cadence' => 'weekly', 'sendHour' => 9, 'weekday' => 8],
+                ['enabled' => true, 'cadence' => 'weekly', 'sendHour' => 9, 'weekday' => 8, 'format' => 'html'],
                 \JSON_THROW_ON_ERROR,
             ),
         );
@@ -213,7 +214,7 @@ final class MeDigestControllerTest extends ApiTestCase
             '/api/me/digest',
             server: ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(
-                ['enabled' => true, 'cadence' => 'weekly', 'sendHour' => 9, 'weekday' => 0],
+                ['enabled' => true, 'cadence' => 'weekly', 'sendHour' => 9, 'weekday' => 0, 'format' => 'html'],
                 \JSON_THROW_ON_ERROR,
             ),
         );
@@ -236,7 +237,7 @@ final class MeDigestControllerTest extends ApiTestCase
             '/api/me/digest',
             server: ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(
-                ['enabled' => true, 'cadence' => 'hourly', 'sendHour' => 9, 'weekday' => 3],
+                ['enabled' => true, 'cadence' => 'hourly', 'sendHour' => 9, 'weekday' => 3, 'format' => 'html'],
                 \JSON_THROW_ON_ERROR,
             ),
         );
@@ -261,7 +262,7 @@ final class MeDigestControllerTest extends ApiTestCase
             '/api/me/digest',
             server: ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(
-                ['enabled' => true, 'cadence' => 'daily', 'sendHour' => 8, 'weekday' => 1],
+                ['enabled' => true, 'cadence' => 'daily', 'sendHour' => 8, 'weekday' => 1, 'format' => 'html'],
                 \JSON_THROW_ON_ERROR,
             ),
         );
@@ -285,7 +286,7 @@ final class MeDigestControllerTest extends ApiTestCase
             '/api/me/digest',
             server: ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(
-                ['enabled' => true, 'cadence' => 'daily', 'sendHour' => 8, 'weekday' => 1],
+                ['enabled' => true, 'cadence' => 'daily', 'sendHour' => 8, 'weekday' => 1, 'format' => 'html'],
                 \JSON_THROW_ON_ERROR,
             ),
         );
@@ -303,7 +304,7 @@ final class MeDigestControllerTest extends ApiTestCase
             '/api/me/digest',
             server: ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(
-                ['enabled' => true, 'cadence' => 'weekly', 'sendHour' => 10, 'weekday' => 5],
+                ['enabled' => true, 'cadence' => 'weekly', 'sendHour' => 10, 'weekday' => 5, 'format' => 'html'],
                 \JSON_THROW_ON_ERROR,
             ),
         );
@@ -326,7 +327,7 @@ final class MeDigestControllerTest extends ApiTestCase
             '/api/me/digest',
             server: ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(
-                ['enabled' => true, 'cadence' => 'daily', 'sendHour' => 8, 'weekday' => 1],
+                ['enabled' => true, 'cadence' => 'daily', 'sendHour' => 8, 'weekday' => 1, 'format' => 'html'],
                 \JSON_THROW_ON_ERROR,
             ),
         );
@@ -344,7 +345,7 @@ final class MeDigestControllerTest extends ApiTestCase
             '/api/me/digest',
             server: ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(
-                ['enabled' => false, 'cadence' => 'daily', 'sendHour' => 8, 'weekday' => 1],
+                ['enabled' => false, 'cadence' => 'daily', 'sendHour' => 8, 'weekday' => 1, 'format' => 'html'],
                 \JSON_THROW_ON_ERROR,
             ),
         );
@@ -356,7 +357,7 @@ final class MeDigestControllerTest extends ApiTestCase
             '/api/me/digest',
             server: ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(
-                ['enabled' => true, 'cadence' => 'daily', 'sendHour' => 8, 'weekday' => 1],
+                ['enabled' => true, 'cadence' => 'daily', 'sendHour' => 8, 'weekday' => 1, 'format' => 'html'],
                 \JSON_THROW_ON_ERROR,
             ),
         );
@@ -377,7 +378,7 @@ final class MeDigestControllerTest extends ApiTestCase
             '/api/me/digest',
             server: ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(
-                ['enabled' => true, 'cadence' => 'daily', 'sendHour' => 8, 'weekday' => 1],
+                ['enabled' => true, 'cadence' => 'daily', 'sendHour' => 8, 'weekday' => 1, 'format' => 'html'],
                 \JSON_THROW_ON_ERROR,
             ),
         );

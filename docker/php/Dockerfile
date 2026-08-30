@@ -15,7 +15,7 @@ FROM php:8.4-fpm-alpine AS dev
 # alpine (icu for intl, libzip for zip, phpize toolchain for the xdebug pecl
 # build) and cleans the build deps up afterwards.
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
-RUN install-php-extensions pdo_mysql intl opcache zip xdebug
+RUN install-php-extensions pdo_mysql intl opcache zip xdebug gd
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
@@ -30,7 +30,7 @@ FROM php:8.4-fpm-alpine AS prod
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 # su-exec: the entrypoint fixes volume ownership as root, then drops to
 # www-data for the cache warmup so runtime writes stay www-data-owned.
-RUN install-php-extensions pdo_mysql intl opcache zip \
+RUN install-php-extensions pdo_mysql intl opcache zip gd \
     && apk add --no-cache su-exec
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer

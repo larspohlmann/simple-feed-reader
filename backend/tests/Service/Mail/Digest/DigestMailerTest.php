@@ -4,11 +4,20 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Digest;
 
+use App\Tests\Support\FixedPublicBaseUrl;
 use App\Entity\User;
+use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestEntry;
+use App\Service\Mail\Digest\DigestFormat;
 use App\Service\Mail\Digest\DigestGroup;
+use App\Service\Mail\Digest\DigestHtmlRenderer;
+use App\Service\Mail\Digest\DigestImageEmbedderInterface;
+use App\Service\Mail\Digest\DigestImageSet;
+use App\Service\Mail\Digest\DigestLinkBuilder;
+use App\Service\Mail\Digest\DigestMailBuilder;
 use App\Service\Mail\Digest\DigestMailer;
 use App\Service\Mail\Digest\DigestModel;
+use App\Service\Mail\Digest\DigestPageBuilder;
 use App\Service\Mail\Digest\DigestTextRenderer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Mailer\MailerInterface;
@@ -17,10 +26,9 @@ use Symfony\Component\Translation\Loader\YamlFileLoader;
 use Symfony\Component\Translation\Translator;
 
 /**
- * DigestMailer renders (per User::$locale) and hands the MailerInterface a
- * plain-text Email (#636). The renderer is the real DigestTextRenderer
- * against the shipped `emails` translation files, so this test exercises
- * the actual localised subject/body rather than a fixture that could drift.
+ * DigestMailer is now a thin transport: DigestMailBuilder decides the message
+ * shape from the recipient's digest_format (#726), so this test wraps a REAL
+ * builder and asserts what survives through the stubbed MailerInterface.
  */
 final class DigestMailerTest extends TestCase
 {
@@ -42,30 +50,54 @@ final class DigestMailerTest extends TestCase
         $dir = \dirname(__DIR__, 4) . '/translations';
         $translator->addResource('yaml', "{$dir}/emails.en.yaml", 'en', 'emails');
         $translator->addResource('yaml', "{$dir}/emails.de.yaml", 'de', 'emails');
+        $links = new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example'));
 
-        $this->mailer = new DigestMailer(
-            $transport,
+        $embedder = $this->createStub(DigestImageEmbedderInterface::class);
+        $embedder->method('embed')->willReturn(new DigestImageSet([], []));
+
+        $builder = new DigestMailBuilder(
+            new DigestPageBuilder(),
+            $embedder,
             new DigestTextRenderer($translator),
+            new DigestHtmlRenderer($translator, $links),
+            $links,
+            new DigestBrandLogo(\dirname(__DIR__, 4)),
             'noreply@feeds.example.com',
             'Simple Feed Reader',
         );
+
+        $this->mailer = new DigestMailer($transport, $builder);
     }
 
     private function model(): DigestModel
     {
         $entries = [
-            new DigestEntry('Rust 1.80 released', 'Rust Blog', 'A short summary.', 'https://example.com/1'),
+            new DigestEntry(
+                'Rust 1.80 released',
+                'Rust Blog',
+                'A short summary.',
+                'https://example.com/1',
+                null,
+                null,
+                null,
+            ),
         ];
         $group = new DigestGroup('rust', 1, $entries, false, '');
 
         return new DigestModel([$group], 1);
     }
 
-    public function testSendHandsTheMailerAPlainTextEmailWithFromToSubjectAndBody(): void
+    private function user(DigestFormat $format): User
     {
         $user = new User('reader@example.com', new \DateTimeImmutable('2026-07-21 12:00:00'));
+        $user->getPreferences()->setDigestFormat($format);
 
-        $this->mailer->send($user, $this->model());
+        return $user;
+    }
+
+    public function testSendHandsTheMailerAnEmailWithFromToSubjectAndBody(): void
+    {
+        $this->mailer->send($this->user(DigestFormat::Html), $this->model());
 
         self::assertCount(1, $this->sent);
         $email = $this->sent[0];
@@ -74,7 +106,6 @@ final class DigestMailerTest extends TestCase
         self::assertSame('Simple Feed Reader', $email->getFrom()[0]->getName());
         self::assertSame('reader@example.com', $email->getTo()[0]->getAddress());
         self::assertStringContainsString('1', (string) $email->getSubject());
-        self::assertNull($email->getHtmlBody());
 
         $body = (string) $email->getTextBody();
         self::assertStringContainsString('Rust 1.80 released', $body);
@@ -83,7 +114,7 @@ final class DigestMailerTest extends TestCase
 
     public function testSendRendersInTheUsersLocale(): void
     {
-        $user = new User('reader@example.com', new \DateTimeImmutable('2026-07-21 12:00:00'));
+        $user = $this->user(DigestFormat::Html);
         $user->setLocale('de');
 
         $this->mailer->send($user, $this->model());
@@ -93,10 +124,27 @@ final class DigestMailerTest extends TestCase
 
     public function testSendDefaultsToEnglishWhenNoLocaleIsSet(): void
     {
-        $user = new User('reader@example.com', new \DateTimeImmutable('2026-07-21 12:00:00'));
-
-        $this->mailer->send($user, $this->model());
+        $this->mailer->send($this->user(DigestFormat::Html), $this->model());
 
         self::assertStringContainsString('Settings', (string) $this->sent[0]->getTextBody());
+    }
+
+    public function testHtmlFormatUserGetsBothHtmlAndTextParts(): void
+    {
+        $this->mailer->send($this->user(DigestFormat::Html), $this->model());
+
+        $email = $this->sent[0];
+        self::assertNotNull($email->getHtmlBody());
+        self::assertNotNull($email->getTextBody());
+        self::assertStringContainsString('Settings', (string) $email->getTextBody());
+    }
+
+    public function testTextFormatUserGetsNoHtmlPart(): void
+    {
+        $this->mailer->send($this->user(DigestFormat::Text), $this->model());
+
+        $email = $this->sent[0];
+        self::assertNull($email->getHtmlBody());
+        self::assertNotNull($email->getTextBody());
     }
 }

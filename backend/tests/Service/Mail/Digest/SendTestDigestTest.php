@@ -13,16 +13,29 @@ use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
 use App\Repository\EntrySearchQuery;
 use App\Repository\SavedSearchRepository;
+use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestComposer;
 use App\Service\Mail\Digest\DigestEntryFinder;
+use App\Service\Mail\Digest\DigestFormat;
+use App\Service\Mail\Digest\DigestHtmlRenderer;
+use App\Service\Mail\Digest\DigestImageEmbedderInterface;
+use App\Service\Mail\Digest\DigestImageSet;
 use App\Service\Mail\Digest\DigestLinkBuilder;
+use App\Service\Mail\Digest\DigestMailBuilder;
+use App\Service\Mail\Digest\DigestMailer;
 use App\Service\Mail\Digest\DigestMailerInterface;
 use App\Service\Mail\Digest\DigestModel;
+use App\Service\Mail\Digest\DigestPageBuilder;
+use App\Service\Mail\Digest\DigestTextRenderer;
 use App\Service\Mail\Digest\SendTestDigest;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Email;
+use Symfony\Component\Translation\Loader\YamlFileLoader;
+use Symfony\Component\Translation\Translator;
 
 /**
  * The "send me a test digest" action (#636): it must compose over exactly the
@@ -38,8 +51,12 @@ final class SendTestDigestTest extends TestCase
     private DigestMailerInterface&Stub $mailer;
     private User $user;
 
+    /** @var list<Email> */
+    private array $sentEmails = [];
+
     protected function setUp(): void
     {
+        $this->sentEmails = [];
         $this->savedSearches = $this->createStub(SavedSearchRepository::class);
         $this->entries = $this->createStub(EntryListRepository::class);
         $this->mailer = $this->createStub(DigestMailerInterface::class);
@@ -117,6 +134,78 @@ final class SendTestDigestTest extends TestCase
         $this->sendTestDigest(new MockClock('2026-08-28T12:00:00Z'))->send($this->user, 3);
 
         self::assertEquals(new \DateTimeImmutable('2026-08-25T12:00:00Z'), $capturedSince);
+    }
+
+    /**
+     * A real DigestMailer/DigestMailBuilder chain (task 8's pattern), fed by a
+     * stubbed transport, proves SendTestDigest routes through the format
+     * branch end to end rather than through a mocked mailer.
+     */
+    private function realMailer(): DigestMailer
+    {
+        $transport = $this->createStub(MailerInterface::class);
+        $transport->method('send')->willReturnCallback(function (Email $email): void {
+            $this->sentEmails[] = $email;
+        });
+
+        $translator = new Translator('en');
+        $translator->addLoader('yaml', new YamlFileLoader());
+        $dir = \dirname(__DIR__, 4) . '/translations';
+        $translator->addResource('yaml', "{$dir}/emails.en.yaml", 'en', 'emails');
+        $translator->addResource('yaml', "{$dir}/emails.de.yaml", 'de', 'emails');
+        $links = new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example'));
+
+        $embedder = $this->createStub(DigestImageEmbedderInterface::class);
+        $embedder->method('embed')->willReturn(new DigestImageSet([], []));
+
+        $builder = new DigestMailBuilder(
+            new DigestPageBuilder(),
+            $embedder,
+            new DigestTextRenderer($translator),
+            new DigestHtmlRenderer($translator, $links),
+            $links,
+            new DigestBrandLogo(\dirname(__DIR__, 4)),
+            'noreply@feeds.example.com',
+            'Simple Feed Reader',
+        );
+
+        return new DigestMailer($transport, $builder);
+    }
+
+    private function stubAMatchToCompose(): void
+    {
+        $search = new SavedSearch($this->user, 'rust', false);
+        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
+        $this->entries->method('unreadMatchIdsSince')->willReturn([1]);
+        $this->entries->method('rowsByIdsForUser')->willReturn([$this->row(1)]);
+    }
+
+    public function testHtmlFormatUserGetsAnHtmlBodyThroughTheRealMailer(): void
+    {
+        $this->stubAMatchToCompose();
+        $this->user->getPreferences()->setDigestFormat(DigestFormat::Html);
+
+        $result = $this->sendTestDigest(new MockClock('2026-08-28T12:00:00Z'), $this->realMailer())
+            ->send($this->user, 7);
+
+        self::assertTrue($result);
+        self::assertCount(1, $this->sentEmails);
+        self::assertNotNull($this->sentEmails[0]->getHtmlBody());
+        self::assertNotNull($this->sentEmails[0]->getTextBody());
+    }
+
+    public function testTextFormatUserGetsNoHtmlBodyThroughTheRealMailer(): void
+    {
+        $this->stubAMatchToCompose();
+        $this->user->getPreferences()->setDigestFormat(DigestFormat::Text);
+
+        $result = $this->sendTestDigest(new MockClock('2026-08-28T12:00:00Z'), $this->realMailer())
+            ->send($this->user, 7);
+
+        self::assertTrue($result);
+        self::assertCount(1, $this->sentEmails);
+        self::assertNull($this->sentEmails[0]->getHtmlBody());
+        self::assertNotNull($this->sentEmails[0]->getTextBody());
     }
 
     private function row(int $id): EntryListRow

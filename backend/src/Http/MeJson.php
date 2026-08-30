@@ -38,6 +38,7 @@ final class MeJson
                 'digest' => [
                     'enabled' => $preferences->isDigestEnabled(),
                     'cadence' => $preferences->getDigestCadence()->value,
+                    'format' => $preferences->getDigestFormat()->value,
                     'sendHour' => $preferences->getDigestSendHour(),
                     'weekday' => $preferences->getDigestWeekday(),
                     'timezone' => $instanceTimezone,

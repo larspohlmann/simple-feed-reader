@@ -30,7 +30,12 @@ final readonly class DigestLinkBuilder
         return $this->base() . '?q=' . rawurlencode($query);
     }
 
-    private function base(): string
+    public function settingsEmailUrl(): string
+    {
+        return $this->base() . 'settings/email';
+    }
+
+    public function base(): string
     {
         return rtrim($this->publicBaseUrl->get(), '/') . '/';
     }

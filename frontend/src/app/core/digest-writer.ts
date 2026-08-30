@@ -7,6 +7,7 @@ export interface DigestConfig {
   cadence: 'daily' | 'weekly';
   sendHour: number;
   weekday: number;
+  format: 'html' | 'text';
 }
 
 /** Outcome of a one-off test-digest send. `empty` is a successful request
