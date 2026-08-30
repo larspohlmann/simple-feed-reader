@@ -185,10 +185,31 @@ export class PasskeyService {
   }
 }
 
+/** WebAuthn L3's `hints`, which `lib.dom.d.ts` (TypeScript 5.9) declares only
+ *  on the JSON variants of these options, never on the ones
+ *  `navigator.credentials` actually takes. */
+type PasskeyHint = 'client-device' | 'security-key' | 'hybrid';
+type WithHints<TOptions> = TOptions & { hints: PasskeyHint[] };
+
+/**
+ * Points both ceremonies at the passkey store on the machine the user is
+ * sitting at. Without it Chrome tends to put the cross-device QR flow first,
+ * so enrolling from a desktop saved the credential on a phone -- and sign-in
+ * then had nothing local to find and offered the QR again.
+ *
+ * A preference, not a restriction: a phone or a security key is still one
+ * click away in the browser's own chooser. It lives here rather than in the
+ * server's options because nothing verifies it -- the server sends the policy
+ * it enforces (`userVerification`, `residentKey`), and a hint only reorders a
+ * chooser this layer is the one that has.
+ */
+const LOCAL_DEVICE_FIRST: PasskeyHint[] = ['client-device'];
+
 function decodeCreationOptions(
   json: PublicKeyCredentialCreationOptionsJSON,
-): PublicKeyCredentialCreationOptions {
+): WithHints<PublicKeyCredentialCreationOptions> {
   return {
+    hints: LOCAL_DEVICE_FIRST,
     rp: json.rp,
     user: { ...json.user, id: base64UrlToBytes(json.user.id) },
     challenge: base64UrlToBytes(json.challenge),
@@ -202,8 +223,9 @@ function decodeCreationOptions(
 
 function decodeRequestOptions(
   json: PublicKeyCredentialRequestOptionsJSON,
-): PublicKeyCredentialRequestOptions {
+): WithHints<PublicKeyCredentialRequestOptions> {
   return {
+    hints: LOCAL_DEVICE_FIRST,
     challenge: base64UrlToBytes(json.challenge),
     rpId: json.rpId,
     // Cast: the server only ever sends one of the enum's own string values.

@@ -285,6 +285,43 @@ describe('PasskeyService', () => {
     await expect(signIn).resolves.toBe('jwt-conditional');
   });
 
+  // Enrolling from a desktop used to save the credential on a phone, because
+  // Chrome puts the cross-device QR flow first when the options express no
+  // preference -- and sign-in then had nothing local to find.
+  describe('steering both ceremonies at this device', () => {
+    it('asks enrolment for the passkey store on the machine the user is at', async () => {
+      create.mockResolvedValue(fixtureAttestationCredential());
+
+      const enrolment = svc.enrol('MacBook Touch ID');
+      ctrl
+        .expectOne('https://api.test/api/auth/passkey/register/options')
+        .flush({ options: creationOptions, handle: 'register-handle' });
+
+      await flushMicrotasks();
+
+      expect(create.mock.calls[0][0].publicKey.hints).toEqual(['client-device']);
+
+      ctrl.expectOne('https://api.test/api/auth/passkey/register').flush(null);
+      await enrolment;
+    });
+
+    it('asks sign-in for the same, so a local passkey beats the QR flow', async () => {
+      get.mockResolvedValue(fixtureAssertionCredential());
+
+      const signIn = svc.signIn();
+      ctrl
+        .expectOne('https://api.test/api/auth/passkey/login/options')
+        .flush({ options: requestOptions, handle: 'login-handle' });
+
+      await flushMicrotasks();
+
+      expect(get.mock.calls[0][0].publicKey.hints).toEqual(['client-device']);
+
+      ctrl.expectOne('https://api.test/api/auth/passkey/login').flush({ token: 'jwt-abc' });
+      await signIn;
+    });
+  });
+
   it('surfaces a rejected login ceremony as a Problem', async () => {
     get.mockRejectedValue(new DOMException('No credential available.', 'NotAllowedError'));
 
