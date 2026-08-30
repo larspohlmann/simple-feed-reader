@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Settings;
 
+use App\Entity\InstanceSetting;
 use App\Service\Settings\InstanceSettings;
 use App\Service\Settings\InstanceSettingsUpdate;
 use Doctrine\ORM\EntityManagerInterface;
@@ -26,6 +27,25 @@ final class InstanceSettingsTest extends KernelTestCase
     {
         self::assertTrue($this->settings->requireEmailConfirmation());
         self::assertTrue($this->settings->requireApproval());
+    }
+
+    /**
+     * The entity is the single source of truth for what a setting means when
+     * nobody has set it: every InstanceSettings getter, with no row present,
+     * must return exactly what a freshly constructed InstanceSetting reports
+     * on its own. This fails if a getter ever grows its own `??` fallback
+     * that disagrees with the entity's property default.
+     */
+    public function testEveryGetterMatchesAFreshInstanceSettingWhenNoRowExists(): void
+    {
+        $fresh = new InstanceSetting();
+
+        self::assertSame($fresh->requireEmailConfirmation(), $this->settings->requireEmailConfirmation());
+        self::assertSame($fresh->requireApproval(), $this->settings->requireApproval());
+        self::assertSame($fresh->getPublicBaseUrl(), $this->settings->getPublicBaseUrl());
+        self::assertSame($fresh->getPasskeyRpId(), $this->settings->getPasskeyRpId());
+        self::assertSame($fresh->getPasskeyRpName(), $this->settings->getPasskeyRpName());
+        self::assertSame($fresh->passkeySignInEnabled(), $this->settings->passkeySignInEnabled());
     }
 
     /**

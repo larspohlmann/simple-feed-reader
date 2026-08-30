@@ -61,21 +61,17 @@ class InstanceSetting
     private ?string $passkeyRpName = null;
 
     /**
-     * The instance-wide passkey sign-in switch (#624 follow-up). Defaults to
-     * FALSE (addendum to the follow-up: the product owner reversed the
-     * original true default) — "activated" means activated, so a fresh
-     * install ships with passkey sign-in invisible until an admin opts in
-     * from the instance settings page, even though the relying party would
-     * derive correctly with no configuration at all. See
+     * The instance-wide passkey sign-in switch (#624). Defaults to false —
+     * a fresh install ships with passkey sign-in invisible until an admin
+     * opts in, even though the relying party would derive correctly with no
+     * configuration at all. See
      * {@see \App\Service\Passkey\PasskeySignInAvailability}, which combines
      * this with the relying-party validity check.
      *
-     * FIVE PLACES must agree on this default or a fresh install disagrees
-     * with an existing one, or the no-row case disagrees with the column:
-     * this property AND its `options: ['default' => ...]` below, the
-     * migration's column DEFAULT, {@see \App\Service\Settings\InstanceSettings::passkeySignInEnabled()}'s
-     * `??` fallback, and both {@see \App\Service\Settings\InstanceSettingsUpdate}
-     * and {@see \App\Dto\Admin\InstanceSettingsRequest}'s constructor defaults.
+     * This default is also declared in the migration's column DEFAULT (this
+     * property's own `options`), and in the constructor defaults of
+     * {@see \App\Service\Settings\InstanceSettingsUpdate} and
+     * {@see \App\Dto\Admin\InstanceSettingsRequest}.
      */
     #[ORM\Column(name: 'passkey_sign_in_enabled', options: ['default' => false])]
     private bool $passkeySignInEnabled = false;

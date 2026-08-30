@@ -24,10 +24,8 @@ use Symfony\Component\Validator\Constraints as Assert;
  * {@see \App\Service\Passkey\PasskeySignInAvailability} reads alongside the
  * relying-party validity check — turning it off refuses every passkey
  * endpoint (registration, listing, login) regardless of configuration,
- * without touching a single stored credential. Defaults to `false` (#624
- * follow-up, addendum): see {@see \App\Entity\InstanceSetting}'s
- * `$passkeySignInEnabled` docblock for the full list of five places this
- * default has to agree.
+ * without touching a single stored credential. Defaults to `false`, matching
+ * {@see \App\Entity\InstanceSetting::$passkeySignInEnabled}.
  *
  * `invalidateExistingPasskeys` is NOT a setting — it is not part of
  * InstanceSettingsUpdate and is never persisted. It is a one-shot command

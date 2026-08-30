@@ -44,13 +44,11 @@ export class AdminSettingsComponent implements OnInit {
 
   readonly requireEmailConfirmation = signal(false);
   readonly requireApproval = signal(false);
-  // The instance-wide passkey sign-in switch (#624 follow-up). Off refuses
-  // every passkey endpoint server-side, not just this frontend's own
-  // buttons -- see PasskeySignInAvailability. Initial value matches the
-  // backend default -- false, off until an admin opts in (addendum) -- for
-  // the instant before load() below replaces it with the real value; see
-  // InstanceSetting::$passkeySignInEnabled's docblock for the full list of
-  // five places this default has to agree.
+  // The instance-wide passkey sign-in switch (#624). Off refuses every
+  // passkey endpoint server-side, not just this frontend's own buttons --
+  // see PasskeySignInAvailability. Initial value matches the backend
+  // default, false, for the instant before load() below replaces it with
+  // the real value.
   readonly passkeySignInEnabled = signal(false);
   // The external base URL for links in outgoing email; null falls back to the
   // APP_FRONTEND_URL deploy env (#636).
