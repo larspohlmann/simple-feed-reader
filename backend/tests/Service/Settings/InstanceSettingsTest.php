@@ -7,6 +7,7 @@ namespace App\Tests\Service\Settings;
 use App\Entity\InstanceSetting;
 use App\Service\Settings\InstanceSettings;
 use App\Service\Settings\InstanceSettingsUpdate;
+use App\Tests\Support\QueryRecorder;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -141,6 +142,48 @@ final class InstanceSettingsTest extends KernelTestCase
 
         self::assertSame('example.test', $this->settings->getPasskeyRpId());
         self::assertSame('My Reader', $this->settings->getPasskeyRpName());
+    }
+
+    /**
+     * The row is resolved once per request, not once per getter: reading five
+     * settings in a row must issue a single SELECT. This is the whole reason
+     * the memo exists (#725) — a WebAuthn ceremony reads the row three or four
+     * times, and each read used to be its own round trip.
+     */
+    public function testResolvesTheRowOnceAcrossSeveralGetters(): void
+    {
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        $recorder->reset();
+
+        $this->settings->requireEmailConfirmation();
+        $this->settings->requireApproval();
+        $this->settings->getPublicBaseUrl();
+        $this->settings->getPasskeyRpId();
+        $this->settings->passkeySignInEnabled();
+
+        $reads = $recorder->queriesMatching('from instance_setting');
+        self::assertCount(
+            1,
+            $reads,
+            "Five getters must share one resolved row, got:\n" . implode("\n", $reads),
+        );
+    }
+
+    /**
+     * update() must drop the memo, so the admin who just saved reads back their
+     * own new value in the same request — not the row memoised before the save.
+     * Deliberately no em->clear() here: clearing would hide a missing memo
+     * invalidation. This test is what stops a future change reintroducing the
+     * stale read (#725).
+     */
+    public function testReadAfterWriteInTheSameRequestReturnsTheNewValue(): void
+    {
+        self::assertTrue($this->settings->requireEmailConfirmation());
+
+        $this->settings->update(new InstanceSettingsUpdate(false, true, null, null, null));
+
+        self::assertFalse($this->settings->requireEmailConfirmation());
     }
 
     public function testUpdateReusesTheSingleRowRatherThanInsertingASecond(): void
