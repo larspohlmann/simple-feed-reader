@@ -20,9 +20,9 @@
   }
 }
 
-/* No border to darken, and `--surface-0` is the airy canvas colour, so the
-   fill would be invisible: switch it off and underline the title instead —
-   the idiom `.source:hover` already uses here. Pointer-only (#704). */
+/* Airy drops fills everywhere else, so a hover chip here would be the one
+   surface still boxing something: switch it off and underline the title
+   instead — the idiom `.gsource:hover` already uses here. Pointer-only (#704). */
 @media (hover: hover) {
   :host-context(.airy) .compact:hover {
     background: none;

@@ -75,10 +75,20 @@
   }
 }
 
+/* Airy drops fills everywhere else in this column, so a hover chip here would
+   be the one surface still boxing something: underline instead, matching
+   `.gsource:hover` and the compact row's own airy hover (#723). */
+@media (hover: hover) {
+  :host-context(.airy) .more:hover {
+    background: none;
+    text-decoration: underline;
+  }
+}
+
 /* The box is gone, so indentation carries the nesting instead. The header
    keeps its full-width rule — it belongs to the group, not between two of
    its items (#723). */
 :host-context(.airy) .item,
 :host-context(.airy) .more {
-  margin-left: var(--space-3);
+  margin-inline: var(--space-3);
 }
