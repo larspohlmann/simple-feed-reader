@@ -6,8 +6,8 @@ import { MAGAZINE_STYLE_WRITER } from './magazine-style-writer';
 
 /**
  * The account is the record; `localStorage` is a paint cache. It answers the
- * warning in `PreferencesService`: the first frame comes from the last known
- * style, so no window exists in which a wrong value is shown or written.
+ * warning in `PreferencesService`: once a style has been cached, no later
+ * window shows or writes a wrong one — first login still seeds `boxed`.
  */
 @Injectable({ providedIn: 'root' })
 export class MagazineStyleService {
