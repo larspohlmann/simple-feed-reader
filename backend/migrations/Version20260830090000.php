@@ -19,14 +19,7 @@ final class Version20260830090000 extends AbstractMigration
     public function up(Schema $schema): void
     {
         $this->assertSupportedPlatform();
-
-        if ($this->connection->getDatabasePlatform() instanceof AbstractMySQLPlatform) {
-            $this->addSql('ALTER TABLE instance_setting ADD passkey_sign_in_enabled TINYINT(1) NOT NULL DEFAULT 1');
-
-            return;
-        }
-
-        $this->addSql('ALTER TABLE instance_setting ADD passkey_sign_in_enabled BOOLEAN NOT NULL DEFAULT true');
+        $this->addSql('ALTER TABLE instance_setting ADD passkey_sign_in_enabled TINYINT(1) DEFAULT 1 NOT NULL');
     }
 
     public function down(Schema $schema): void

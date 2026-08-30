@@ -69,7 +69,7 @@ class InstanceSetting
      * wrong — see {@see \App\Service\Passkey\PasskeySignInAvailability}, which
      * combines this with the relying-party validity check.
      */
-    #[ORM\Column(name: 'passkey_sign_in_enabled')]
+    #[ORM\Column(name: 'passkey_sign_in_enabled', options: ['default' => true])]
     private bool $passkeySignInEnabled = true;
 
     public function getId(): ?int
