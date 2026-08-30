@@ -129,25 +129,12 @@ final readonly class RegistrationOptionsFactory
      */
     private function serializeWithRelyingPartyName(PublicKeyCredentialCreationOptions $options): array
     {
-        $decoded = $this->serialize($options);
+        $decoded = $this->ceremony->encode($options);
 
         /** @var array<string, mixed> $relyingParty */
         $relyingParty = \is_array($decoded['rp'] ?? null) ? $decoded['rp'] : [];
         $relyingParty['name'] = $this->relyingParty->name();
         $decoded['rp'] = $relyingParty;
-
-        return $decoded;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function serialize(PublicKeyCredentialCreationOptions $options): array
-    {
-        $json = $this->ceremony->serializer()->serialize($options, 'json');
-
-        /** @var array<string, mixed> $decoded */
-        $decoded = json_decode($json, true, flags: \JSON_THROW_ON_ERROR);
 
         return $decoded;
     }

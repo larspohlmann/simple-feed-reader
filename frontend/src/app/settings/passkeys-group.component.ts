@@ -59,9 +59,13 @@ export class PasskeysGroupComponent {
   protected readonly isSupported = isPasskeySupported();
 
   readonly passkeys = signal<PasskeySummary[]>([]);
-  readonly loadError = signal<Problem | null>(null);
-  readonly addError = signal<Problem | null>(null);
-  readonly removeError = signal<Problem | null>(null);
+  /**
+   * One slot, because loading, adding and removing are mutually exclusive
+   * user-triggered flows that render their failure in the same place. Each
+   * clears it on entry, so the banner always describes the last thing the
+   * user actually did rather than stacking a stale one above it.
+   */
+  readonly error = signal<Problem | null>(null);
   readonly adding = signal(false);
 
   constructor() {
@@ -131,10 +135,10 @@ export class PasskeysGroupComponent {
   }
 
   private remove(passkey: PasskeySummary): void {
-    this.removeError.set(null);
+    this.error.set(null);
     this.passkeyService.remove(passkey.id).subscribe({
       next: () => this.refresh(),
-      error: (failure: HttpErrorResponse) => this.removeError.set(parseProblem(failure)),
+      error: (failure: HttpErrorResponse) => this.error.set(parseProblem(failure)),
     });
   }
 
@@ -145,7 +149,7 @@ export class PasskeysGroupComponent {
    *  until the next full reload -- long enough for `ReaderShellComponent` to
    *  reopen the offer for a passkey that already exists (finding 1). */
   private async enrolWith(label: string): Promise<void> {
-    this.addError.set(null);
+    this.error.set(null);
     try {
       await this.passkeyService.enrol(label);
       this.authService.markPasskeyOfferAnswered();
@@ -158,10 +162,10 @@ export class PasskeysGroupComponent {
   }
 
   private refresh(): void {
-    this.loadError.set(null);
+    this.error.set(null);
     this.passkeyService.list().subscribe({
       next: (list) => this.passkeys.set(list),
-      error: (failure: HttpErrorResponse) => this.loadError.set(parseProblem(failure)),
+      error: (failure: HttpErrorResponse) => this.error.set(parseProblem(failure)),
     });
   }
 
@@ -171,6 +175,6 @@ export class PasskeysGroupComponent {
    *  reasoning (#624 finding 5). */
   private handleEnrolFailure(problem: Problem): void {
     const display = toEnrolFailureProblem(problem, this.i18n);
-    if (display) this.addError.set(display);
+    if (display) this.error.set(display);
   }
 }

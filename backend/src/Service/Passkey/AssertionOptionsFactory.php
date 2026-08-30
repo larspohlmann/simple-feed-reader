@@ -65,7 +65,7 @@ final readonly class AssertionOptionsFactory
         $challenge = random_bytes(self::CHALLENGE_LENGTH_BYTES);
 
         return [
-            'options' => $this->serialize($this->optionsFor($challenge)),
+            'options' => $this->ceremony->encode($this->optionsFor($challenge)),
             'handle' => $this->challengeStore->issue($challenge, userId: null, userHandle: null),
         ];
     }
@@ -78,18 +78,5 @@ final readonly class AssertionOptionsFactory
             allowCredentials: [],
             userVerification: PublicKeyCredentialRequestOptions::USER_VERIFICATION_REQUIREMENT_REQUIRED,
         );
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function serialize(PublicKeyCredentialRequestOptions $options): array
-    {
-        $json = $this->ceremony->serializer()->serialize($options, 'json');
-
-        /** @var array<string, mixed> $decoded */
-        $decoded = json_decode($json, true, flags: \JSON_THROW_ON_ERROR);
-
-        return $decoded;
     }
 }

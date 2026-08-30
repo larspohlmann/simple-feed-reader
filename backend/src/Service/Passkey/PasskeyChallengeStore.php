@@ -101,8 +101,8 @@ final readonly class PasskeyChallengeStore
         // expiry check is still burned rather than left available to retry.
         $this->passkeyChallengeCache->deleteItem($key);
 
-        $stored = self::decodeStored($item->get());
-        if (null === $stored) {
+        $stored = $item->get();
+        if (!self::isWellFormed($stored)) {
             throw new UnknownChallengeException();
         }
 
@@ -118,27 +118,9 @@ final readonly class PasskeyChallengeStore
     }
 
     /**
-     * Validates the shape of a cache entry written by issue(), returning it
-     * typed or null if anything is missing or of the wrong type. A corrupt or
+     * Validates the shape of a cache entry written by issue(). A corrupt or
      * tampered entry is thereby treated exactly like an unknown handle.
      *
-     * @return array{challenge: string, user_id: ?int, user_handle: ?string, expires_at: int}|null
-     */
-    private static function decodeStored(mixed $stored): ?array
-    {
-        if (!self::isWellFormed($stored)) {
-            return null;
-        }
-
-        return [
-            'challenge' => $stored['challenge'],
-            'user_id' => $stored['user_id'],
-            'user_handle' => $stored['user_handle'],
-            'expires_at' => $stored['expires_at'],
-        ];
-    }
-
-    /**
      * @phpstan-assert-if-true array{challenge: string, user_id: ?int, user_handle: ?string, expires_at: int} $stored
      */
     private static function isWellFormed(mixed $stored): bool

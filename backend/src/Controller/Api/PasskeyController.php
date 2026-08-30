@@ -50,7 +50,7 @@ final readonly class PasskeyController
     #[Route('/api/auth/passkey/register/options', name: 'api_auth_passkey_register_options', methods: ['POST'])]
     public function registerOptions(#[CurrentUser] User $user): JsonResponse
     {
-        return new JsonResponse(PasskeyJson::optionsResponse($this->registrationOptionsFactory->create($user)));
+        return new JsonResponse($this->registrationOptionsFactory->create($user));
     }
 
     /**
@@ -64,7 +64,7 @@ final readonly class PasskeyController
     {
         $this->rateLimitGuard->enforceForClient($this->passkeyChallengeLimiter, $request);
 
-        return new JsonResponse(PasskeyJson::optionsResponse($this->assertionOptionsFactory->create()));
+        return new JsonResponse($this->assertionOptionsFactory->create());
     }
 
     /**

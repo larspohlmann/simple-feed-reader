@@ -68,6 +68,27 @@ final class PasskeyCeremony
     }
 
     /**
+     * The wire shape of a set of ceremony options, as the client receives it.
+     *
+     * Lives here rather than in each options factory because both of them
+     * already depend on this class for the serializer, and both need the
+     * identical serialize-then-decode pair. Keeping one copy means a change
+     * to the encoding — a JSON flag, say — cannot be applied to the
+     * registration ceremony and forgotten for the login one.
+     *
+     * @return array<string, mixed>
+     */
+    public function encode(object $options): array
+    {
+        $json = $this->serializer()->serialize($options, 'json');
+
+        /** @var array<string, mixed> $decoded */
+        $decoded = json_decode($json, true, flags: \JSON_THROW_ON_ERROR);
+
+        return $decoded;
+    }
+
+    /**
      * The registrable domain credentials are bound to. Delegates to
      * PasskeyRelyingParty rather than re-parsing PublicBaseUrl: the relying
      * party id already applies the "stored override, else derive from the

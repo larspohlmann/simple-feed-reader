@@ -11,19 +11,9 @@
       </app-button>
     </div>
 
-    @if (loadError(); as error) {
+    @if (error(); as failure) {
       <div class="notice">
-        <app-error-banner [message]="error.detail || error.title" />
-      </div>
-    }
-    @if (addError(); as error) {
-      <div class="notice">
-        <app-error-banner [message]="error.detail || error.title" />
-      </div>
-    }
-    @if (removeError(); as error) {
-      <div class="notice">
-        <app-error-banner [message]="error.detail || error.title" />
+        <app-error-banner [message]="failure.detail || failure.title" />
       </div>
     }
 
