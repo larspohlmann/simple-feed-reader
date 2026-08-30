@@ -36,10 +36,6 @@
   height: auto;
   object-fit: cover;
   display: block;
-
-  /* Boxed clipped this to the card's corners; airy has no card, so the image
-     carries the radius itself and both styles round it alike (#723). */
-  border-radius: var(--radius-lg);
 }
 
 .body {
@@ -52,6 +48,11 @@
 /* The image is the only hard edge airy leaves against text (#723). */
 :host-context(.airy) .body {
   padding-top: var(--space-4);
+}
+
+/* Boxed clips the image's corners via the card's own overflow: hidden. */
+:host-context(.airy) .img {
+  border-radius: var(--radius-lg);
 }
 
 .title {
