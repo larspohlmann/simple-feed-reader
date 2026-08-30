@@ -147,14 +147,38 @@ async function slotInnerStyle(page: Page): Promise<{ borderTopWidth: string; pad
   });
 }
 
-async function backgrounds(page: Page): Promise<{ rows: string; header: string }> {
+async function backgrounds(page: Page): Promise<{
+  rowsColor: string;
+  rowsImage: string;
+  rowsSize: string;
+  rowsWidth: number;
+  sheetWidth: number;
+  headerColor: string;
+}> {
   const rows = page.locator('.rows.magazine');
   const header = page.locator('.list-header');
   await expect(rows).toBeVisible();
   await expect(header).toBeVisible();
+  const rowsBackground = await rows.evaluate((el) => {
+    const style = getComputedStyle(el);
+    const rowsWidth = el.getBoundingClientRect().width;
+    const magazineMeasure = Number.parseFloat(style.getPropertyValue('--magazine-measure'));
+    const space5 = Number.parseFloat(style.getPropertyValue('--space-5'));
+    return {
+      color: style.backgroundColor,
+      image: style.backgroundImage,
+      size: style.backgroundSize,
+      rowsWidth,
+      sheetWidth: Math.min(rowsWidth, magazineMeasure + 2 * space5),
+    };
+  });
   return {
-    rows: await rows.evaluate((el) => getComputedStyle(el).backgroundColor),
-    header: await header.evaluate((el) => getComputedStyle(el).backgroundColor),
+    rowsColor: rowsBackground.color,
+    rowsImage: rowsBackground.image,
+    rowsSize: rowsBackground.size,
+    rowsWidth: rowsBackground.rowsWidth,
+    sheetWidth: rowsBackground.sheetWidth,
+    headerColor: await header.evaluate((el) => getComputedStyle(el).backgroundColor),
   };
 }
 
@@ -196,9 +220,18 @@ test('the airy magazine drops the card border and rules the slots instead', asyn
   expect(inner.paddingTop, 'the rule sits without the row-gap padding above it').toBe('24px');
 
   const colors = await backgrounds(page);
-  expect(colors.rows, 'the airy canvas should take the card colour').toBe('rgb(255, 255, 255)');
-  expect(colors.header, 'the sticky header should match the airy canvas').toBe(
+  expect(colors.rowsColor, 'the airy scroller should stay transparent').toBe('rgba(0, 0, 0, 0)');
+  expect(colors.rowsImage, 'the airy column sheet should take the card colour').toContain(
     'rgb(255, 255, 255)',
+  );
+  expect(colors.rowsSize, 'the airy column sheet should use the constrained width').toMatch(
+    /^min\(100%, .+\) 100%$/,
+  );
+  expect(colors.sheetWidth, 'the airy sheet should be narrower than its scroller').toBeLessThan(
+    colors.rowsWidth,
+  );
+  expect(colors.headerColor, 'the sticky header should keep the page colour').toBe(
+    'rgb(245, 245, 244)',
   );
 });
 
@@ -216,8 +249,9 @@ test('the boxed magazine keeps the card border and rules nothing', async ({ page
   expect(inner.paddingTop, 'a boxed slot must never reserve the rule padding').toBe('0px');
 
   const colors = await backgrounds(page);
-  expect(colors.rows, 'a boxed canvas has no card colour of its own').toBe('rgba(0, 0, 0, 0)');
-  expect(colors.header, 'the sticky header should keep the boxed page colour').toBe(
+  expect(colors.rowsColor, 'a boxed canvas has no card colour of its own').toBe('rgba(0, 0, 0, 0)');
+  expect(colors.rowsImage, 'a boxed canvas should draw no column sheet').toBe('none');
+  expect(colors.headerColor, 'the sticky header should keep the boxed page colour').toBe(
     'rgb(245, 245, 244)',
   );
 });

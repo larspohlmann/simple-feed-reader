@@ -37,7 +37,7 @@ async function signInAsAdmin(page: Page): Promise<boolean> {
   await page.goto('/login');
   await page.locator('input[type=email]').fill(ADMIN_EMAIL);
   await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   const sidebar = page.getByRole('navigation', { name: 'Feeds' });
   const loginError = page.getByRole('alert');
   await expect(sidebar.or(loginError)).toBeVisible();
@@ -45,6 +45,10 @@ async function signInAsAdmin(page: Page): Promise<boolean> {
 }
 
 async function stubEntries(page: Page): Promise<void> {
+  await page.route('**/api/tags', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({ status: 200, json: { tags: [] } });
+  });
   await page.route('**/api/entries/*/state', async (route) => {
     await route.fulfill({
       status: 200,
@@ -118,18 +122,21 @@ test.describe('Hide-on-scroll header on a phone', () => {
 
     // Scroll far enough to retract the header, and let the 0.2s transition end.
     const before = (await anchor.boundingBox())!;
+    const scrollBefore = await rows.evaluate((el) => el.scrollTop);
     await rows.evaluate((el) => el.scrollBy(0, 300));
     await waitForHeaderTransitionEnd(page);
+    const scrollAfter = await rows.evaluate((el) => el.scrollTop);
     const after = (await anchor.boundingBox())!;
 
     // The header really did retract — otherwise this test proves nothing.
     const headerAfter = (await header.boundingBox())!;
     expect(headerAfter.y).toBeLessThan(headerBefore.y - 20);
 
-    // The row moved by the scroll distance and by nothing else. Before the fix
-    // the header's collapse handed the content area ~96px of extra height and
-    // the row travelled that much further.
-    expect(after.y).toBeCloseTo(before.y - 300, 0);
+    // The row moved by the distance the browser actually scrolled and by
+    // nothing else. Before the fix the header's collapse added ~96px beyond
+    // this measured distance.
+    expect(scrollAfter - scrollBefore).toBeGreaterThan(40);
+    expect(after.y).toBeCloseTo(before.y - (scrollAfter - scrollBefore), 0);
   });
 
   test('expanding the header again does not move the content', async ({ page }) => {
@@ -438,7 +445,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
     await page.goto('/login');
     await page.locator('input[type=email]').fill(ADMIN_EMAIL);
     await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-    await page.getByRole('button', { name: 'Sign in' }).click();
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
     const sidebar = page.getByRole('navigation', { name: 'Feeds' });
     const loginError = page.getByRole('alert');
     await expect(sidebar.or(loginError)).toBeVisible();

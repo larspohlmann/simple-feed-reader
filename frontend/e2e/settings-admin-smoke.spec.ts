@@ -19,7 +19,7 @@ async function signInAsAdmin(page: Page): Promise<boolean> {
   await page.goto('/login');
   await page.locator('input[type=email]').fill(ADMIN_EMAIL);
   await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 
   // Success mounts the reader sidebar; failure surfaces the login error alert.
   const sidebar = page.getByRole('navigation', { name: 'Feeds' });
@@ -91,16 +91,53 @@ function tagGroups(page: Page) {
     .filter({ has: page.getByRole('button', { name: 'Edit tag' }) });
 }
 
-/** Renames the first tag group through the shared tag dialog — the one editor
- *  for a tag now that the Tags page is gone (#714). */
-async function renameFirstGroup(page: Page, to: string): Promise<void> {
-  const group = tagGroups(page).first();
+function tagGroupByName(page: Page, name: string) {
+  return tagGroups(page)
+    .filter({ has: page.locator('.head .name', { hasText: name }) })
+    .first();
+}
+
+async function createTag(page: Page, name: string): Promise<void> {
+  await page.getByRole('button', { name: 'New tag' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New tag' });
+  await dialog.locator('#tag-name').fill(name);
+  await dialog.getByRole('button', { name: 'Save' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(tagGroupByName(page, name)).toBeVisible();
+}
+
+/** Renames one owned tag through the shared tag dialog — the one editor for a
+ *  tag now that the Tags page is gone (#714). */
+async function renameTag(page: Page, from: string, to: string): Promise<void> {
+  const group = tagGroupByName(page, from);
   await group.getByRole('button', { name: 'Edit tag' }).click();
   const dialog = page.getByRole('dialog', { name: 'Edit tag' });
   await dialog.locator('#tag-name').fill(to);
   await dialog.getByRole('button', { name: 'Save' }).click();
   await expect(dialog).toBeHidden();
-  await expect(group.locator('.head .name')).toHaveText(to);
+  await expect(tagGroupByName(page, to)).toBeVisible();
+}
+
+async function expectTagBefore(page: Page, before: string, after: string): Promise<void> {
+  await expect
+    .poll(async () => {
+      const names = await tagGroups(page).locator('.head .name').allTextContents();
+      const beforeIndex = names.indexOf(before);
+      const afterIndex = names.indexOf(after);
+      return beforeIndex >= 0 && afterIndex >= 0 && beforeIndex < afterIndex;
+    })
+    .toBe(true);
+}
+
+async function moveTagDown(page: Page, name: string): Promise<void> {
+  const response = page.waitForResponse(
+    (candidate) =>
+      candidate.request().method() === 'PATCH' &&
+      new URL(candidate.url()).pathname.endsWith('/api/tags/reorder') &&
+      candidate.ok(),
+  );
+  await tagGroupByName(page, name).locator('[data-test="tag-down"]').click();
+  await response;
 }
 
 /**
@@ -109,12 +146,20 @@ async function renameFirstGroup(page: Page, to: string): Promise<void> {
  * leaves fixture debris behind for the next one.
  */
 async function deleteTagByName(page: Page, name: string): Promise<void> {
-  const group = tagGroups(page).filter({ has: page.locator('.head .name', { hasText: name }) });
+  const group = tagGroupByName(page, name);
   if ((await group.count()) === 0) return;
-  await group.first().getByRole('button', { name: 'Delete tag' }).click();
+  await group.getByRole('button', { name: 'Delete tag' }).click();
   const confirmDialog = page.getByRole('alertdialog');
+  const response = page.waitForResponse(
+    (candidate) =>
+      candidate.request().method() === 'DELETE' &&
+      /\/api\/tags\/\d+$/.test(new URL(candidate.url()).pathname) &&
+      candidate.ok(),
+  );
   await confirmDialog.getByRole('button', { name: /^(delete|löschen)$/i }).click();
+  await response;
   await expect(confirmDialog).toBeHidden();
+  await expect(group).toHaveCount(0);
 }
 
 test('a tag can be reordered and renamed from Organise', async ({ page }) => {
@@ -123,68 +168,53 @@ test('a tag can be reordered and renamed from Organise', async ({ page }) => {
 
   await page.goto('/settings/organise');
 
-  const groups = tagGroups(page);
   // The page loads before it has anything to show — wait past the skeleton
   // rather than assuming groups exist yet.
   await expect(page.locator('app-skeleton')).toHaveCount(0);
 
-  // The seeded fixture is not guaranteed to carry two tags (it may carry none
-  // at all). Create them through the real "New tag" dialog rather than
-  // weakening the assertions below to fit whatever the fixture happens to
-  // hold. Names created here are deleted again in `finally` so repeat runs
-  // never accumulate fixture debris.
-  const ownedNames: string[] = [];
-  while ((await groups.count()) < 2) {
-    const name = `E2E reorder tag ${Date.now()}-${ownedNames.length}`;
-    await page.getByRole('button', { name: 'New tag' }).click();
-    const newDialog = page.getByRole('dialog', { name: 'New tag' });
-    await newDialog.locator('#tag-name').fill(name);
-    await newDialog.getByRole('button', { name: 'Save' }).click();
-    await expect(newDialog).toBeHidden();
-    // Wait for this exact tag to render before the next count check — the
-    // dialog closing does not imply the tree has re-rendered yet, and without
-    // this wait the loop outraces the store update and keeps creating tags.
-    await expect(
-      tagGroups(page).filter({ has: page.locator('.head .name', { hasText: name }) }),
-    ).toBeVisible();
-    ownedNames.push(name);
-  }
+  // Always create the two tags this test manipulates. Existing account tags
+  // belong to other tests or the developer; their count and order are not test
+  // data and must not decide which records this flow edits.
+  const run = Date.now();
+  const firstName = `E2E reorder tag ${run}-0`;
+  const secondName = `E2E reorder tag ${run}-1`;
+  const renamedTo = `E2E renamed ${run}`;
 
   try {
-    await expect(groups.first()).toBeVisible();
-    const firstName = await groups.first().locator('.head .name').innerText();
-    const secondName = await groups.nth(1).locator('.head .name').innerText();
+    await createTag(page, firstName);
+    await createTag(page, secondName);
 
     // Reorder through the header's own arrow, not a drag: the arrows are the
     // keyboard-reachable path and they exercise the same reorder request.
-    await groups.first().locator('[data-test="tag-down"]').click();
-
-    await expect(groups.first().locator('.head .name')).toHaveText(secondName);
+    await moveTagDown(page, firstName);
+    await expectTagBefore(page, secondName, firstName);
 
     // The new order is the server's, not just a local list splice — reload
     // and check it stuck.
     await page.reload();
-    await expect(tagGroups(page).first().locator('.head .name')).toHaveText(secondName);
+    await expectTagBefore(page, secondName, firstName);
 
     // Actually change the name, not merely open the dialog, and confirm the
     // save both updates the header and survives a reload.
-    const renamedTo = `E2E renamed ${Date.now()}`;
-    await renameFirstGroup(page, renamedTo);
+    await renameTag(page, secondName, renamedTo);
     await page.reload();
-    await expect(tagGroups(page).first().locator('.head .name')).toHaveText(renamedTo);
+    await expect(tagGroupByName(page, renamedTo)).toBeVisible();
 
-    // Put the original name back. The group here may be a fixture tag this
-    // test does not own and so never deletes; leaving it renamed made every
-    // run rename an already-renamed tag, until the name hit the server's
-    // 100-char cap and the save came back truncated.
-    await renameFirstGroup(page, secondName);
+    await renameTag(page, renamedTo, secondName);
 
-    // And put the order back, for the same reason.
-    await tagGroups(page).first().locator('[data-test="tag-down"]').click();
-    await expect(tagGroups(page).first().locator('.head .name')).toHaveText(firstName);
+    // Restore the owned pair's order before cleanup, proving the reverse write
+    // as well without touching any pre-existing tag.
+    await moveTagDown(page, secondName);
+    await expectTagBefore(page, firstName, secondName);
   } finally {
-    for (const name of ownedNames) {
-      await deleteTagByName(page, name);
+    let cleanupFailure: unknown;
+    for (const name of [firstName, secondName, renamedTo]) {
+      try {
+        await deleteTagByName(page, name);
+      } catch (error) {
+        cleanupFailure ??= error;
+      }
     }
+    if (cleanupFailure) throw cleanupFailure;
   }
 });
