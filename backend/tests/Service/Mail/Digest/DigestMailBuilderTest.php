@@ -84,7 +84,9 @@ final class DigestMailBuilderTest extends TestCase
         self::assertCount(2, $attachments, 'The brand logo and the one embedded image are inline parts.');
         $filenames = array_map(static fn ($part) => $part->getFilename(), $attachments);
         self::assertContains(DigestHtmlRenderer::LOGO_CID, $filenames, 'The brand logo is embedded by its CID name.');
-        self::assertNotEmpty($email->getHeaders()->get('List-Unsubscribe'));
+        $header = $email->getHeaders()->get('List-Unsubscribe');
+        self::assertNotNull($header);
+        self::assertSame('<https://reader.example/settings/email>', $header->getBodyAsString());
     }
 
     public function testTextFormatBuildsPlainTextOnly(): void

@@ -54,4 +54,19 @@ final class DigestPageBuilderTest extends TestCase
         self::assertCount(0, $page->groups[1]->cards);
         self::assertSame(5, $page->groups[1]->remaining);
     }
+
+    /**
+     * A negative budget must still floor at zero cards, not slice with a negative
+     * length (array_slice(..., 0, -1) would drop the last entry instead of taking
+     * none).
+     */
+    public function testANegativeBudgetTakesNoCards(): void
+    {
+        $model = new DigestModel([$this->group('a', 3, 3)], 3);
+
+        $page = (new DigestPageBuilder())->build($model, -5);
+
+        self::assertCount(0, $page->groups[0]->cards);
+        self::assertSame(3, $page->groups[0]->remaining);
+    }
 }
