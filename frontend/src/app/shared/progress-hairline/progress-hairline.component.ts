@@ -6,9 +6,12 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
  * and upgrades EVERY refresh — not just the onboarding sweep — from "an icon is
  * spinning" to "this much of it is done".
  *
- * The width is only ever what the server has reported. A slice is budgeted at 25 s,
- * so it steps rather than creeps; the stylesheet's sheen carries the activity in
- * between (#721).
+ * The width is only ever what the server has reported, and a slice is budgeted at
+ * 25 s, so it steps rather than creeps. It carried a sweeping sheen for a while to
+ * fill those gaps; the sheen lived inside the filled portion, which is `width: 0`
+ * until the first slice lands, so it was invisible for the first 25 s of every run
+ * and for the whole of a run with nothing due — exactly when it was supposed to be
+ * saying something. A solid bar that steps is the honest version (#721).
  */
 @Component({
   selector: 'app-progress-hairline',
