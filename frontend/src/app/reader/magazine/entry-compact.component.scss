@@ -20,6 +20,20 @@
   }
 }
 
+/* No border to darken, and `--surface-0` is the airy canvas colour, so the
+   fill would be invisible: switch it off and underline the title instead —
+   the idiom `.source:hover` already uses here. Pointer-only (#704). */
+@media (hover: hover) {
+  :host-context(.airy) .compact:hover {
+    background: none;
+  }
+
+  :host-context(.airy) .compact:hover .title {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
 /* A column so the byline, title and the tags/actions meta row stack with even
    spacing; `flex: 1` keeps it filling the card width so `app-entry-meta` can
    right-align its actions. */

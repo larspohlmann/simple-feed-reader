@@ -21,6 +21,15 @@
   }
 }
 
+/* No border to darken, so hover marks what the block opens: its title — the
+   idiom `.source:hover` already uses here. Pointer-only (#704). */
+@media (hover: hover) {
+  :host-context(.airy) .split:hover .title {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
 /* Image beside text. The meta row is a sibling below, so its actions align to
    the whole card's edge, not this row's. */
 .top {

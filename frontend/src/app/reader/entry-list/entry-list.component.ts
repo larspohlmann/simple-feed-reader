@@ -65,6 +65,7 @@ import { ListScrollMemory } from '../list-scroll-memory';
 import { nextHeaderHidden } from '../header-scroll';
 import { prefetchMargin } from '../paging';
 import { ReadingFocusService } from '../../core/reading-focus.service';
+import { MagazineStyleService } from '../../core/magazine-style.service';
 
 // Scroll-restore settle window: re-assert the target for at most this many frames,
 // stopping early once the content height has held steady for this many in a row.
@@ -401,6 +402,7 @@ export class EntryListComponent implements OnDestroy {
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly catalog = inject(CatalogStore);
   private readonly destroyRef = inject(DestroyRef);
+  protected readonly magazineStyle = inject(MagazineStyleService);
 
   /** True only once the catalog has been resolved AND has no entries.
    *  Unresolved reads as not-empty, so the /discover link is never hidden on a

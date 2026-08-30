@@ -74,3 +74,12 @@
     background: var(--surface-0);
   }
 }
+
+/* The box is gone, so indentation carries the nesting: the full-width slot rule
+   separates ENTRIES, and an indented item with an indented rule is one item
+   inside a group. The header keeps its full-width rule — it belongs to the
+   group, it does not sit between two of its items (#723). */
+:host-context(.airy) .item,
+:host-context(.airy) .more {
+  margin-left: var(--space-3);
+}

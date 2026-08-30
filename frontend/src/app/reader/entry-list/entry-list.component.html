@@ -270,6 +270,7 @@
 } @else if (effectiveLayout() === 'magazine') {
   <div
     class="rows magazine"
+    [class.airy]="magazineStyle.style() === 'airy'"
     [class.reloading]="reloadCue()"
     [attr.inert]="reloadCue() ? '' : null"
     [attr.aria-busy]="loading() ? 'true' : null"

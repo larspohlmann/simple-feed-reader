@@ -436,7 +436,8 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
 
 /* The magazine variant reuses `row-leave` for the collapse and fade, and only
    adds the gap close on top — held until the collapse starts (46%), so the two
-   move together. */
+   move together. The gap is a variable because airy widens it, and a
+   hardcoded close would leave half a gap behind there. */
 @keyframes magazine-gap-close {
   0%,
   46% {
@@ -444,7 +445,7 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   }
 
   100% {
-    margin-top: calc(-1 * var(--space-3));
+    margin-top: calc(-1 * var(--magazine-gap));
   }
 }
 
@@ -465,18 +466,38 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   --card-radius: var(--radius-lg);
   --card-pad: var(--space-3);
   --card-pad-x: var(--space-4);
+  --magazine-gap: var(--space-3);
 
   padding: var(--space-3);
   padding-top: $header-clear;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--magazine-gap);
 }
 
 .rows.magazine > * {
   width: 100%;
   max-width: var(--magazine-measure);
+}
+
+/* The gap grows because it is now the block's only padding AND the bed the rule
+   sits in: centred in a 12px gap the rule leaves 6px each side and reads as a
+   strikethrough (#723). */
+.rows.magazine.airy {
+  --card-bg: none;
+  --card-border: 0;
+  --card-radius: 0;
+  --card-pad: 0;
+  --card-pad-x: 0;
+  --magazine-gap: var(--space-5);
+}
+
+/* On the SLOT, so no block stylesheet learns about the rule and none is drawn
+   above the first or below the last. It skips `app-run-header`, which is not a
+   slot: that header is already a rule, and a second one beside it reads wrong. */
+.rows.magazine.airy > .magazine-slot + .magazine-slot {
+  border-top: 1px solid var(--border);
 }
 
 /* The outlet's own wrapper. Outside the magazine column it is a plain block and

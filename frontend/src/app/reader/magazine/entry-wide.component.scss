@@ -18,6 +18,15 @@
   }
 }
 
+/* No border to darken, so hover marks what the block opens: its title — the
+   idiom `.source:hover` already uses here. Pointer-only (#704). */
+@media (hover: hover) {
+  :host-context(.airy) .wide:hover .title {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
 .img {
   width: 100%;
 
@@ -30,6 +39,10 @@
   aspect-ratio: 2 / 1;
   object-fit: cover;
   display: block;
+
+  /* Boxed clipped this to the card's corners; airy has no card, so the image
+     carries the radius itself and both styles round it alike (#723). */
+  border-radius: var(--radius-lg);
 }
 
 .body {
