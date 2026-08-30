@@ -35,17 +35,39 @@ final class InstanceSettingsTest extends KernelTestCase
      * must return exactly what a freshly constructed InstanceSetting reports
      * on its own. This fails if a getter ever grows its own `??` fallback
      * that disagrees with the entity's property default.
+     *
+     * Reflects over InstanceSettings' own zero-argument public methods
+     * (fix round 2) rather than naming each getter by hand: a hand-enumerated
+     * list catches an EXISTING getter regaining a drifting fallback, but a
+     * NEW setting added with its own literal default would add a getter this
+     * test never calls, and pass silently — precisely the drift this test
+     * exists to catch. update() is the only public method with a required
+     * parameter, so filtering on parameter count excludes it without naming
+     * it specifically.
      */
     public function testEveryGetterMatchesAFreshInstanceSettingWhenNoRowExists(): void
     {
         $fresh = new InstanceSetting();
+        $reflection = new \ReflectionClass(InstanceSettings::class);
+        $getters = array_filter(
+            $reflection->getMethods(\ReflectionMethod::IS_PUBLIC),
+            static fn (\ReflectionMethod $method): bool => !$method->isStatic()
+                && !$method->isConstructor()
+                && 0 === $method->getNumberOfParameters(),
+        );
+        self::assertNotEmpty($getters, 'Expected InstanceSettings to expose at least one getter.');
 
-        self::assertSame($fresh->requireEmailConfirmation(), $this->settings->requireEmailConfirmation());
-        self::assertSame($fresh->requireApproval(), $this->settings->requireApproval());
-        self::assertSame($fresh->getPublicBaseUrl(), $this->settings->getPublicBaseUrl());
-        self::assertSame($fresh->getPasskeyRpId(), $this->settings->getPasskeyRpId());
-        self::assertSame($fresh->getPasskeyRpName(), $this->settings->getPasskeyRpName());
-        self::assertSame($fresh->passkeySignInEnabled(), $this->settings->passkeySignInEnabled());
+        foreach ($getters as $getter) {
+            $name = $getter->getName();
+            self::assertSame(
+                $fresh->$name(),
+                $this->settings->$name(),
+                \sprintf(
+                    'InstanceSettings::%s() disagrees with a fresh InstanceSetting when no row exists.',
+                    $name,
+                ),
+            );
+        }
     }
 
     /**

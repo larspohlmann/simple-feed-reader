@@ -14,11 +14,13 @@ use App\Service\Passkey\NaiveUtcClock;
 use App\Service\Passkey\PasskeyCeremony;
 use App\Service\Passkey\PasskeyChallengeStore;
 use App\Service\Passkey\PasskeySignInAvailability;
+use App\Service\Settings\InstanceSettings;
+use App\Service\Settings\InstanceSettingsUpdate;
 use App\Tests\Support\ApiTestCase;
-use App\Tests\Support\TogglesPasskeySignIn;
 use App\Tests\Support\PasskeyAttestationFixture;
 use App\Tests\Support\PasskeyFixtures;
 use App\Tests\Support\PinsPasskeyRelyingParty;
+use App\Tests\Support\TogglesPasskeySignIn;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Monolog\Handler\TestHandler;
 use Monolog\Level;
@@ -507,6 +509,20 @@ final class PasskeyLoginTest extends ApiTestCase
      * block that already rewrites AssertionRejectedException, so a disabled
      * instance fails a passkey login exactly like a rejected assertion: a
      * clean 401 through LoginFailureHandler, never a 500.
+     *
+     * Re-pins the SAME relying party and origin the fixture was enrolled
+     * against, rather than using the generic `disablePasskeySignIn()` (fix
+     * round 2): that helper resets `passkeyRpId`/`publicBaseUrl` to null,
+     * which derives the relying party as `localhost` — a mismatch against
+     * `self::RELYING_PARTY_ID`/`self::ORIGIN` on its own, so the assertion
+     * would be rejected on origin/RP-id grounds regardless of the toggle.
+     * `LoginFailureHandler` collapses every passkey login failure to the
+     * same generic `invalid_credentials` body by design (no-enumeration), so
+     * asserting the problem `type` cannot discriminate either — only a
+     * request that would otherwise SUCCEED, with the toggle as the one
+     * variable, proves the guard is what rejected it. Verified: removing
+     * `$this->availability->guard()` from `AssertionVerifier::verify()`
+     * turns this test red (see fix round 2 report for the exact failure).
      */
     public function testADisabledInstanceRejectsLoginWith401NotA500(): void
     {
@@ -514,7 +530,7 @@ final class PasskeyLoginTest extends ApiTestCase
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
         $this->factory()->create('disabled-login@example.test');
         $fixture = $this->enrol($client, 'disabled-login@example.test');
-        $this->disablePasskeySignIn();
+        $this->disablePasskeySignInKeepingRelyingParty();
         $handle = $this->issueLoginChallenge($fixture->challenge);
 
         $this->login($client, $handle, PasskeyFixtures::assertion(
@@ -525,6 +541,29 @@ final class PasskeyLoginTest extends ApiTestCase
         ));
 
         $this->assertRejected($client, 401);
+    }
+
+    /**
+     * Disables the toggle while leaving the relying party pinned to
+     * `self::RELYING_PARTY_ID`/`self::ORIGIN` — the exact configuration the
+     * enrolled fixture is valid against — so the toggle is the only variable
+     * between this and a request that would otherwise succeed. Deliberately
+     * NOT the shared `TogglesPasskeySignIn::disablePasskeySignIn()`, which
+     * resets the relying party to null and so cannot isolate the toggle from
+     * an incidental origin/RP-id mismatch (fix round 2).
+     */
+    private function disablePasskeySignInKeepingRelyingParty(): void
+    {
+        /** @var InstanceSettings $settings */
+        $settings = self::getContainer()->get(InstanceSettings::class);
+        $settings->update(new InstanceSettingsUpdate(
+            requireEmailConfirmation: true,
+            requireApproval: true,
+            publicBaseUrl: self::ORIGIN,
+            passkeyRpId: self::RELYING_PARTY_ID,
+            passkeyRpName: 'Example Reader',
+            passkeySignInEnabled: false,
+        ));
     }
 
     // -- Setup helpers -------------------------------------------------

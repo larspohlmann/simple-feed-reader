@@ -9,13 +9,12 @@ use App\Service\Passkey\Exception\PasskeySignInDisabledException;
 use App\Service\Passkey\PasskeySignInAvailability;
 use App\Service\Settings\EffectivePasskeyRelyingPartyId;
 use App\Service\Settings\InstanceSettings;
-use App\Service\Settings\InstanceSettingsUpdate;
 use App\Service\Settings\PasskeyRelyingParty;
 use App\Service\Settings\PublicBaseUrl;
 use App\Service\Settings\RelyingPartyIdRule;
 use App\Tests\Support\ApiTestCase;
-use App\Tests\Support\TogglesPasskeySignIn;
 use App\Tests\Support\FixedPublicBaseUrl;
+use App\Tests\Support\TogglesPasskeySignIn;
 
 /**
  * Whether passkey sign-in may be offered at all (#624 follow-up) — the toggle
@@ -123,22 +122,6 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
         $this->expectException(PasskeySignInDisabledException::class);
 
         $availability->guard();
-    }
-
-    /** The mirror of TogglesPasskeySignIn's trait method, local to this file:
-     *  no other suite needs "toggle on, everything else default" as its own
-     *  reusable step, so this one stays private rather than becoming a
-     *  second Support trait for a single caller. */
-    private function enablePasskeySignIn(): void
-    {
-        $this->settings->update(new InstanceSettingsUpdate(
-            requireEmailConfirmation: true,
-            requireApproval: true,
-            publicBaseUrl: null,
-            passkeyRpId: null,
-            passkeyRpName: null,
-            passkeySignInEnabled: true,
-        ));
     }
 
     private function availabilityFor(string $relyingPartyId, string $publicBaseUrl): PasskeySignInAvailability
