@@ -34,7 +34,7 @@ final class RelyingPartyChangeTest extends TestCase
 
         $this->expectException(ValidationException::class);
 
-        $change->guard($this->requestFor('example.test', 'https://evilexample.test'));
+        $change->guardAndInvalidatePasskeysIfChanged($this->requestFor('example.test', 'https://evilexample.test'));
     }
 
     /** The genuine article: a real subdomain, one dot away from the relying party id. */
@@ -43,7 +43,63 @@ final class RelyingPartyChangeTest extends TestCase
         $change = $this->change(currentRelyingPartyId: 'example.test', publicBaseUrl: 'https://reader.example.test');
         $this->expectNotToPerformAssertions();
 
-        $change->guard($this->requestFor('example.test', 'https://reader.example.test'));
+        $change->guardAndInvalidatePasskeysIfChanged($this->requestFor('example.test', 'https://reader.example.test'));
+    }
+
+    /**
+     * `settings.instance.passkeyHelp.rule2` (both locales) promises a public
+     * suffix is refused. A full public-suffix list is out of scope, but a
+     * bare, single-label TLD like this one is unambiguous.
+     */
+    public function testASingleLabelRelyingPartyIdIsRefused(): void
+    {
+        $change = $this->change(
+            currentRelyingPartyId: 'reader.example.com',
+            publicBaseUrl: 'https://reader.example.com',
+        );
+
+        $this->expectException(ValidationException::class);
+
+        $change->guardAndInvalidatePasskeysIfChanged($this->requestFor('com', 'https://reader.example.com'));
+    }
+
+    /**
+     * `settings.instance.passkeyHelp.rule3` (both locales) promises an IP
+     * address is refused outright, with `localhost` the one exception — even
+     * when, as here, the id exactly matches the host the reader is served
+     * from.
+     */
+    public function testAnIpAddressRelyingPartyIdIsRefusedEvenWhenItExactlyMatchesTheHost(): void
+    {
+        $change = $this->change(currentRelyingPartyId: '203.0.113.5', publicBaseUrl: 'https://203.0.113.5');
+
+        $this->expectException(ValidationException::class);
+
+        $change->guardAndInvalidatePasskeysIfChanged($this->requestFor('203.0.113.5', 'https://203.0.113.5'));
+    }
+
+    /**
+     * The bug this closes: a fragment of the host's own IP literal used to
+     * pass isSuffixOf()'s dot-boundary check exactly like a real subdomain
+     * would, because an IP has no notion of a "subdomain" the way a DNS name
+     * does.
+     */
+    public function testAFragmentOfAnIpHostIsRefused(): void
+    {
+        $change = $this->change(currentRelyingPartyId: '192.168.1.5', publicBaseUrl: 'https://192.168.1.5');
+
+        $this->expectException(ValidationException::class);
+
+        $change->guardAndInvalidatePasskeysIfChanged($this->requestFor('1.5', 'https://192.168.1.5'));
+    }
+
+    /** Development depends on this: rule3's one named exception must still work. */
+    public function testLocalhostIsAccepted(): void
+    {
+        $change = $this->change(currentRelyingPartyId: 'localhost', publicBaseUrl: 'https://localhost');
+        $this->expectNotToPerformAssertions();
+
+        $change->guardAndInvalidatePasskeysIfChanged($this->requestFor('localhost', 'https://localhost'));
     }
 
     public function testTheValidationErrorNamesTheFieldAndExplainsTheRule(): void
@@ -51,7 +107,7 @@ final class RelyingPartyChangeTest extends TestCase
         $change = $this->change(currentRelyingPartyId: 'example.test', publicBaseUrl: 'https://evilexample.test');
 
         try {
-            $change->guard($this->requestFor('example.test', 'https://evilexample.test'));
+            $change->guardAndInvalidatePasskeysIfChanged($this->requestFor('example.test', 'https://evilexample.test'));
             self::fail('Expected a ValidationException.');
         } catch (ValidationException $exception) {
             self::assertSame(

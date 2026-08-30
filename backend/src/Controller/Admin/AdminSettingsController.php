@@ -34,7 +34,7 @@ final readonly class AdminSettingsController
     #[Route('', name: 'api_admin_settings_update', methods: ['PUT'])]
     public function update(#[MapRequestPayload] InstanceSettingsRequest $request): JsonResponse
     {
-        $this->relyingPartyChange->guard($request);
+        $this->relyingPartyChange->guardAndInvalidatePasskeysIfChanged($request);
         $this->settings->update($request->toUpdate());
 
         return new JsonResponse(InstanceSettingsJson::from($this->policy, $this->settings, $this->relyingParty));
