@@ -83,10 +83,12 @@ describe('ViewControlsComponent', () => {
 
     layout.set('list');
     f.detectChanges();
-    (group.querySelector(AIRY) as HTMLButtonElement).click();
+    layout.set('magazine');
+    f.detectChanges();
 
     expect(TestBed.inject(MagazineStyleService).style()).toBe('airy');
-    expect(layout.mode()).toBe('magazine');
+    expect(group.querySelector(AIRY)!.getAttribute('aria-pressed')).toBe('true');
+    expect(group.querySelector(BOXED)!.getAttribute('aria-pressed')).toBe('false');
   });
 
   it('toggles the reading layout to pane', () => {

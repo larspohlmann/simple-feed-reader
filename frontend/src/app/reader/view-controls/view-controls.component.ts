@@ -29,17 +29,12 @@ export class ViewControlsComponent {
     { id: 'system', icon: 'contrast' },
   ];
 
-  /**
-   * The magazine's two designs read as two layout choices here, so `key` builds
-   * the `reader.layout.magazine<Key>` label rather than reusing the settings
-   * page's own style keys.
-   */
+  // `key` builds the `reader.layout.magazine<Key>` label.
   readonly magazineStyles: { id: MagazineStyle; key: string; icon: string }[] = [
     { id: 'boxed', key: 'Boxed', icon: 'grid_view' },
     { id: 'airy', key: 'Airy', icon: 'density_large' },
   ];
 
-  /** One button picks the layout and the design together. */
   showMagazine(style: MagazineStyle): void {
     this.layout.set('magazine');
     this.magazineStyle.set(style);
