@@ -139,7 +139,16 @@ export class LoginComponent implements OnInit, OnDestroy {
    *  browser can (`mediation: 'conditional'`); a no-op wherever it can't,
    *  per `isConditionalMediationSupported()`'s own contract. Runs for the
    *  page's whole lifetime, so `submit()` and `ngOnDestroy()` both have to be
-   *  able to cut it short. */
+   *  able to cut it short.
+   *
+   *  A failure here is deliberately silent (#624 finding 7), not routed
+   *  through `showPasskeyFailure()`: this ceremony starts on its own the
+   *  moment the page loads, before the visitor has done anything, so any
+   *  rejection -- including a 429 from the shared `passkey_challenge`
+   *  limiter, which a page view alone can trigger for the 31st visitor in its
+   *  window -- must not paint an error banner on a page nobody interacted
+   *  with. Only the explicit "Sign in with a passkey" button may surface a
+   *  failure to the visitor. */
   private async offerConditionalPasskey(): Promise<void> {
     if (!(await isConditionalMediationSupported())) return;
 
@@ -147,8 +156,8 @@ export class LoginComponent implements OnInit, OnDestroy {
     try {
       await this.passkeyService.signInConditionally(this.conditionalAbort.signal);
       this.afterSignIn();
-    } catch (error) {
-      this.showPasskeyFailure(error as Problem);
+    } catch {
+      // Silent by design -- see the docblock above.
     }
   }
 
@@ -169,14 +178,13 @@ export class LoginComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** A cancelled or self-aborted ceremony is not a failure to report:
-   *  `NotAllowedError` is the user dismissing the platform sheet (or it
-   *  timing out), `AbortError` is this component's own `abortConditionalPasskey()`
-   *  firing under a live request -- see `PasskeyService`'s docblock. Anything
-   *  else renders through the same `app-form-error` a failed password sign-in
-   *  does. */
+  /** Only `signInWithPasskey()` -- the explicit button -- calls this; the
+   *  background conditional ceremony never does (#624 finding 7, see
+   *  `offerConditionalPasskey()`'s docblock). A cancelled sheet
+   *  (`NotAllowedError`) is not a failure to report; anything else renders
+   *  through the same `app-form-error` a failed password sign-in does. */
   private showPasskeyFailure(problem: Problem): void {
-    if (problem.type === 'NotAllowedError' || problem.type === 'AbortError') return;
+    if (problem.type === 'NotAllowedError') return;
     this.error.set(problem.detail ?? this.i18n.translate('auth.login.passkeyFailed'));
   }
 }

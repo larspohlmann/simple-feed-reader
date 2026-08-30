@@ -311,6 +311,28 @@ describe('LoginComponent — passkey login', () => {
     expect(f.componentInstance.error()).toBeNull();
   });
 
+  it('renders no banner for a rate-limit failure from the conditional ceremony (finding 7: a background ceremony must fail silently)', async () => {
+    // The passkey_challenge limiter allows 30 requests / 15 minutes; the 31st
+    // visitor to merely LOAD the login page in that window would otherwise
+    // see a 429 painted on a page they have not interacted with yet. Unlike
+    // the NotAllowedError/AbortError specs above, this is neither of those
+    // two -- it proves the silence is unconditional for the background path,
+    // not keyed to a specific error type.
+    stubPasskeySupport(true);
+    passkeyService.signInConditionally.mockRejectedValue({
+      type: 'about:blank',
+      title: 'Too Many Requests',
+      status: 429,
+      detail: 'Too many attempts. Try again later.',
+    });
+    const f = create();
+    await flushMicrotasks();
+    f.detectChanges();
+
+    expect(f.componentInstance.error()).toBeNull();
+    expect((f.nativeElement as HTMLElement).querySelector('.err')).toBeNull();
+  });
+
   it('aborts the conditional request on destroy', async () => {
     stubPasskeySupport(true);
     let capturedSignal: AbortSignal | undefined;
