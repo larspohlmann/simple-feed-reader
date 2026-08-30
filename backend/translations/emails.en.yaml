@@ -19,3 +19,8 @@ digest:
     group_heading: '%term% (%count%)'
     more: '+ more → %url%'
     footer: 'Manage your digest in Settings → Email.'
+    header: '%date% · %count% new entries'
+    open_reader: 'Open in the reader'
+    manage_html: 'Manage your digest in %link%.'
+    manage_link_label: 'Settings → Email'
+    more_link: '+%count% more in "%term%"'

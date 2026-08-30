@@ -6,6 +6,7 @@ namespace App\Tests\Service\Mail\Digest;
 
 use App\Service\Mail\Digest\DigestLinkBuilder;
 use App\Service\Settings\PublicBaseUrl;
+use App\Tests\Support\FixedPublicBaseUrl;
 use PHPUnit\Framework\TestCase;
 
 final class DigestLinkBuilderTest extends TestCase
@@ -48,5 +49,12 @@ final class DigestLinkBuilderTest extends TestCase
 
         self::assertSame('https://lars-pohlmann.de/reader/?q=rust', $builder->savedSearchUrl('rust', false));
         self::assertSame('https://lars-pohlmann.de/reader/?q=rust%20', $builder->savedSearchUrl('rust', true));
+    }
+
+    public function testSettingsEmailUrl(): void
+    {
+        $links = new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example'));
+
+        self::assertSame('https://reader.example/settings/email', $links->settingsEmailUrl());
     }
 }
