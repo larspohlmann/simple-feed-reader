@@ -19,9 +19,7 @@ final class MagazineStyleTest extends TestCase
 
     public function testAnUnknownValueIsNotAStyle(): void
     {
-        // PHPStan proves 'cards' matches neither backed case, so it already
-        // knows tryFrom() returns null here (staticMethod.alreadyNarrowedType)
-        // — that guarantee is exactly what this test exists to pin down.
+        // This guaranteed null is the point of the test.
         // @phpstan-ignore staticMethod.alreadyNarrowedType
         self::assertNull(MagazineStyle::tryFrom('cards'));
     }
