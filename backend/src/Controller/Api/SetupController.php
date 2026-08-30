@@ -8,6 +8,7 @@ use App\Dto\Setup\SetupAdminRequest;
 use App\Repository\UserRepository;
 use App\Service\Auth\RegistrationPolicy;
 use App\Service\Auth\WebAdminSetup;
+use App\Service\Passkey\PasskeySignInAvailability;
 use App\Service\RateLimit\RateLimitGuard;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -25,6 +26,7 @@ final readonly class SetupController
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $setupLimiter,
         private RegistrationPolicy $policy,
+        private PasskeySignInAvailability $passkeySignInAvailability,
     ) {
     }
 
@@ -34,6 +36,10 @@ final readonly class SetupController
         return new JsonResponse([
             'needsSetup' => !$this->users->hasAnyAdmin(),
             'mailEnabled' => $this->policy->mailEnabled(),
+            // Instance configuration only, never a credential or account
+            // lookup — see PasskeySignInAvailability's own docblock for the
+            // no-enumeration guarantee this relies on.
+            'passkeySignInAvailable' => $this->passkeySignInAvailability->isAvailable(),
         ]);
     }
 

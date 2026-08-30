@@ -4,7 +4,7 @@
 >
   <form [formGroup]="form">
     <app-field [label]="'auth.email' | transloco">
-      <input type="email" formControlName="email" name="email" autocomplete="email" />
+      <input type="email" formControlName="email" name="email" autocomplete="username webauthn" />
     </app-field>
     <app-field [label]="'auth.password' | transloco">
       <app-password-input>
@@ -22,10 +22,21 @@
     }}</app-button>
   </form>
 
-  @if (providers().length) {
+  @if (providers().length || passkeyOfferedHere()) {
     <div class="divider">
       <span>{{ 'auth.login.or' | transloco }}</span>
     </div>
+    @if (passkeyOfferedHere()) {
+      <button
+        class="oauth"
+        type="button"
+        data-test="passkey-login"
+        [disabled]="loading()"
+        (click)="signInWithPasskey()"
+      >
+        {{ 'auth.login.passkey' | transloco }}
+      </button>
+    }
     @for (p of providers(); track p) {
       <button class="oauth" type="button" (click)="startOAuth(p)">
         {{ 'auth.login.continueWith' | transloco: { provider: label(p) } }}

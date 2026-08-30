@@ -12,6 +12,14 @@ export class SetupService {
   private cached: boolean | null = null;
   readonly needsSetup = signal<boolean | null>(null);
   readonly mailEnabled = signal<boolean | null>(null);
+  /** Whether THIS instance can actually complete a passkey sign-in right now
+   *  -- the toggle AND the relying-party configuration both hold (#624
+   *  follow-up). Distinct from `isPasskeySupported()`, which only asks
+   *  whether the BROWSER understands WebAuthn at all. `null` until loaded;
+   *  every gate below treats that the same as `false` -- see
+   *  AiAvailabilityService's docblock for why staying hidden a moment longer
+   *  is right where showing a control that then fails is not. */
+  readonly passkeySignInAvailable = signal<boolean | null>(null);
 
   ensureLoaded(): Observable<boolean> {
     if (this.cached !== null) return of(this.cached);
@@ -20,6 +28,7 @@ export class SetupService {
         this.cached = r.needsSetup;
         this.needsSetup.set(r.needsSetup);
         this.mailEnabled.set(r.mailEnabled);
+        this.passkeySignInAvailable.set(r.passkeySignInAvailable);
       }),
       map((r) => r.needsSetup),
     );

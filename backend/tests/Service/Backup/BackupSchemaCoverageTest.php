@@ -24,6 +24,7 @@ use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Entity\UserIdentity;
+use App\Entity\UserPasskey;
 use App\Entity\WorkerHeartbeat;
 use App\Service\Backup\AccountBackupExporter;
 use App\Service\Backup\BackupSchema;
@@ -121,6 +122,10 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'meaningless once its entries are gone.',
         RecommendationRunLog::class => 'Per-run diagnostics, tied to a run that is not restored.',
         RecommendationItem::class => 'Per-run picks, tied to a run that is not restored.',
+        UserPasskey::class => 'Passkeys are bound to a device and to a relying-party id, so a '
+            . 'credential restored into another account or onto another device could never '
+            . 'authenticate. Exporting credential ids and public keys would widen the blast '
+            . 'radius of a leaked backup file for no gain.',
     ];
 
     /**
@@ -170,6 +175,9 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'digestWeekday' => self::DIGEST_BACKUP_NOT_YET_WIRED,
             'digestLastSentAt' => 'System-written, like lastLoginAt: the next send overwrites it, '
                 . 'and a restored value would only delay that send by a stale watermark.',
+            'passkeyOfferAnsweredAt' => 'Interface state, not account configuration: it records that the '
+                . 'one-time enrolment offer was shown and answered. A restore into a fresh account should '
+                . 'let that account see the offer.',
         ],
         RecommendationSettings::class => [
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,

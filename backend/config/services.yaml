@@ -46,6 +46,7 @@ services:
             Psr\Cache\CacheItemPoolInterface $oauthStateCache: '@oauth.state.cache'
             Psr\Cache\CacheItemPoolInterface $loginCodeCache: '@oauth.login_code.cache'
             Psr\Cache\CacheItemPoolInterface $githubReleaseCache: '@github.release.cache'
+            Psr\Cache\CacheItemPoolInterface $passkeyChallengeCache: '@passkey.challenge.cache'
             Psr\Cache\CacheItemPoolInterface $refreshRunCache: '@refresh.run.cache'
             Symfony\Contracts\Cache\CacheInterface $schedulerStateCache: '@scheduler.state.cache'
             # A name-matched bind, unlike the $concurrency case further down: there

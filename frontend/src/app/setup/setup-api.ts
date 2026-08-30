@@ -9,10 +9,16 @@ export class SetupApi {
   private readonly http = inject(HttpClient);
   private readonly base = inject(API_BASE_URL);
 
-  status(): Observable<{ needsSetup: boolean; mailEnabled: boolean }> {
-    return this.http.get<{ needsSetup: boolean; mailEnabled: boolean }>(
-      `${this.base}/api/setup/status`,
-    );
+  status(): Observable<{
+    needsSetup: boolean;
+    mailEnabled: boolean;
+    passkeySignInAvailable: boolean;
+  }> {
+    return this.http.get<{
+      needsSetup: boolean;
+      mailEnabled: boolean;
+      passkeySignInAvailable: boolean;
+    }>(`${this.base}/api/setup/status`);
   }
 
   createAdmin(email: string, password: string, secret: string): Observable<{ token: string }> {

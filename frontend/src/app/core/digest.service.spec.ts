@@ -29,7 +29,11 @@ const user = (digest: DigestConfig, timezone = 'UTC'): CurrentUser => ({
   createdAt: '2026-08-02T10:00:00+00:00',
   locale: 'en',
   trialEndsAt: null,
-  preferences: { scrapeFallbackEnabled: false, digest: { ...digest, timezone } },
+  preferences: {
+    scrapeFallbackEnabled: false,
+    digest: { ...digest, timezone },
+    passkeyOfferAnswered: true,
+  },
   ai: { ready: false, model: null },
   mail: { enabled: true },
   emailVerified: true,

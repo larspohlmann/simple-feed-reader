@@ -111,4 +111,20 @@ final class UserIdentityRepositoryTest extends DbTestCase
     {
         self::assertNull($this->repository->findOneByProviderAndSubject('google', 'nobody'));
     }
+
+    /**
+     * PasskeyRemovalPolicy's whole reason for calling this: a user with no
+     * linked provider must not be told their passkey is safe to remove
+     * because SOME OTHER account happens to have one.
+     */
+    public function testExistsForUserIsScopedToThatUser(): void
+    {
+        $linked = $this->identity('linked@example.com', 'google', 'sub-123');
+        $unlinked = new User('unlinked@example.com', $this->now);
+        $this->em->persist($unlinked);
+        $this->em->flush();
+
+        self::assertTrue($this->repository->existsForUser($linked->getUser()));
+        self::assertFalse($this->repository->existsForUser($unlinked));
+    }
 }

@@ -8,6 +8,7 @@ use App\Enum\UserStatus;
 use App\Service\Auth\RegistrationPolicy;
 use App\Service\Mail\MailCapability;
 use App\Service\Settings\InstanceSettings;
+use App\Service\Settings\InstanceSettingsUpdate;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
@@ -28,7 +29,7 @@ final class RegistrationPolicyTest extends KernelTestCase
 
     private function policy(bool $mailOn, bool $confirm, bool $approve): RegistrationPolicy
     {
-        $this->settings->update($confirm, $approve, null);
+        $this->settings->update(new InstanceSettingsUpdate($confirm, $approve, null, null, null));
 
         return new RegistrationPolicy(
             new MailCapability($mailOn ? '' : '1'),

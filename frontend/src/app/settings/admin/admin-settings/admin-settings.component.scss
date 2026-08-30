@@ -1,0 +1,84 @@
+// src/app/settings/admin/admin-settings/admin-settings.component.scss
+@use '../../../theme/breakpoints' as bp;
+
+// A bare <input> is about 20 characters wide, and every value these fields hold
+// is longer: 'green-tara.aardvark-koi.ts.net' alone is 30. Sized in `ch`, the
+// unit that means what the number is for. They live here, not in
+// app-settings-row: projected content carries this component's scope attribute,
+// so a selector scoped to the row never matches.
+.url-field {
+  width: 40ch;
+}
+
+.domain-field {
+  width: 32ch;
+}
+
+// Narrow viewport: the row stacks, so a field takes the whole line.
+@media (width <= bp.$bp-sm) {
+  .url-field,
+  .domain-field {
+    width: 100%;
+  }
+}
+
+.passkey-help {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0 var(--panel-inset-x) var(--panel-inset-y);
+}
+
+.passkey-help h4 {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.passkey-help p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+.passkey-help ul {
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+.passkey-help .warning {
+  font-style: italic;
+}
+
+// The table's columns (a full URL plus a host) do not fit a narrow viewport.
+// Scrolling it inside its own box keeps the page itself from widening.
+.example-scroll {
+  overflow-x: auto;
+}
+
+.examples {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--fs-sm);
+}
+
+.examples th,
+.examples td {
+  padding: var(--space-1) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.examples th {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+// Matches proxy-section: the save-failure banner sits inside the group, above
+// the save bar, so the form it belongs to stays on screen.
+.panel-banner {
+  padding: 0 var(--space-5) var(--space-4);
+}

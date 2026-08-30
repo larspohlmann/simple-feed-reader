@@ -9,9 +9,13 @@ use App\Repository\InstanceSettingRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Reads and writes the instance-wide settings row, defaulting to "both gates on"
- * when no row exists. The rest of the app depends on this, never on the entity
- * or repository directly, so "no row yet" is handled in exactly one place.
+ * Reads and writes the instance-wide settings row. The rest of the app
+ * depends on this, never on the entity or repository directly.
+ *
+ * `settings()` is where "no row yet" is handled: a fresh, unpersisted
+ * InstanceSetting already carries exactly the defaults its properties
+ * declare, so every getter below just reads off it instead of each one
+ * carrying its own fallback that could drift from the entity.
  */
 final readonly class InstanceSettings
 {
@@ -23,20 +27,35 @@ final readonly class InstanceSettings
 
     public function requireEmailConfirmation(): bool
     {
-        return $this->repository->findSingleton()?->requireEmailConfirmation() ?? true;
+        return $this->settings()->requireEmailConfirmation();
     }
 
     public function requireApproval(): bool
     {
-        return $this->repository->findSingleton()?->requireApproval() ?? true;
+        return $this->settings()->requireApproval();
     }
 
     public function getPublicBaseUrl(): ?string
     {
-        return $this->repository->findSingleton()?->getPublicBaseUrl();
+        return $this->settings()->getPublicBaseUrl();
     }
 
-    public function update(bool $requireEmailConfirmation, bool $requireApproval, ?string $publicBaseUrl): void
+    public function getPasskeyRpId(): ?string
+    {
+        return $this->settings()->getPasskeyRpId();
+    }
+
+    public function getPasskeyRpName(): ?string
+    {
+        return $this->settings()->getPasskeyRpName();
+    }
+
+    public function passkeySignInEnabled(): bool
+    {
+        return $this->settings()->passkeySignInEnabled();
+    }
+
+    public function update(InstanceSettingsUpdate $update): void
     {
         $setting = $this->repository->findSingleton();
 
@@ -45,7 +64,17 @@ final readonly class InstanceSettings
             $this->em->persist($setting);
         }
 
-        $setting->apply($requireEmailConfirmation, $requireApproval, $publicBaseUrl);
+        $setting->apply($update);
         $this->em->flush();
+    }
+
+    /**
+     * Never persisted: a fresh InstanceSetting stands in for the no-row case
+     * only for the span of one read. update() above has its own
+     * findSingleton()-then-persist path and never calls this.
+     */
+    private function settings(): InstanceSetting
+    {
+        return $this->repository->findSingleton() ?? new InstanceSetting();
     }
 }

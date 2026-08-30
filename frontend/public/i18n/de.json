@@ -322,7 +322,34 @@
       "mailDisabledHint": "Diese Instanz versendet keine E-Mails, daher kann die E-Mail-Bestätigung nicht laufen — gib Konten stattdessen manuell frei.",
       "publicBaseUrl": "Öffentliche Basis-URL",
       "publicBaseUrlHint": "Die Adresse, aus der Links in ausgehenden E-Mails gebaut werden. Trage die URL ein, die von außen funktioniert — ein Handy außerhalb des Netzwerks, ein anderer Rechner — nicht die lokale Adresse. Leer lassen, um den Standard aus dem Deployment zu verwenden.",
-      "publicBaseUrlPlaceholder": "https://reader.example.com/"
+      "publicBaseUrlPlaceholder": "https://reader.example.com/",
+      "passkeySignInEnabled": "Passkey-Anmeldung erlauben",
+      "passkeySignInEnabledHint": "Ermöglicht die Anmeldung per Passkey statt mit Passwort. Standardmäßig aus — schalte sie ein, sobald die Domain unten stimmt.",
+      "passkeyRpId": "Passkey-Domain",
+      "passkeyRpIdHint": "Die Domain, zu der deine Passkeys gehören. Leer lassen, um {{host}} zu verwenden.",
+      "passkeyRpName": "Passkey-Anzeigename",
+      "passkeyRpNameHint": "Der Name, den ein Gerät bei der Passkey-Abfrage zeigt. Leer lassen für Simple Feed Reader.",
+      "passkeyInvalidateTitle": "Passkey-Domain ändern?",
+      "passkeyInvalidateMessage": "Eine Änderung der Domain meldet {{count}} registrierte Passkey(s) dauerhaft ab. Sie lassen sich nicht reparieren. Jede Person muss danach auf ihrem Gerät einen neuen Passkey anlegen. Bestätige, um die Domain zu ändern und sie zu löschen.",
+      "passkeyInvalidateConfirm": "Ändern und löschen",
+      "save": "Speichern",
+      "reset": "Zurücksetzen",
+      "unsaved": "Nicht gespeicherte Änderungen",
+      "passkeyHelp": {
+        "label": "Wie finde ich diese Werte?",
+        "idTitle": "Passkey-Domain",
+        "idIntro": "Ein Browser verwendet einen Passkey nur auf der Domain, für die er erstellt wurde. Trage nur die Domain ein: kein https://, kein Port, kein Pfad.",
+        "tableServing": "Du betreibst den Reader unter",
+        "tableUse": "Eintragen",
+        "tableOr": "oder",
+        "rule1": "Es muss der Host sein, unter dem du den Reader betreibst, oder eine übergeordnete Domain. example.com funktioniert für reader.example.com. Für other.com funktioniert es nicht.",
+        "rule2": "Eine öffentliche Endung wird abgelehnt. com oder co.uk kannst du nicht besitzen.",
+        "rule3": "Eine IP-Adresse wird abgelehnt. Verwende einen Domainnamen. localhost ist die einzige Ausnahme.",
+        "rule4": "Passkeys brauchen eine sichere Seite. Verwende HTTPS oder localhost.",
+        "idWarning": "Eine Änderung der Domain meldet jeden Passkey dauerhaft ab. Die Domain wird bei der Erstellung in jeden Passkey geschrieben. Ein vorhandener Passkey passt dann nicht mehr und lässt sich nicht reparieren. Der Reader lehnt die Änderung ab, bis du sie bestätigst, und löscht danach die unbrauchbar gewordenen Passkeys. Jede Person muss danach auf ihrem Gerät einen neuen Passkey anlegen.",
+        "nameTitle": "Passkey-Anzeigename",
+        "nameBody": "Das ist der Name, den Nutzer sehen, wenn ihr Gerät nach einem Passkey fragt, und die Bezeichnung, die ihr Passwortmanager speichert. Halte ihn kurz. Eine Änderung ist unbedenklich, alle Passkeys funktionieren weiter. Ein Gerät, das bereits einen gespeichert hat, zeigt weiterhin den alten Namen."
+      }
     },
     "proxy": {
       "title": "Ausgehender Proxy",
@@ -403,6 +430,25 @@
       "showInForYou": "In Für dich anzeigen",
       "hideFromForYou": "Aus Für dich ausblenden",
       "clear": "Zurücksetzen"
+    },
+    "passkeys": {
+      "title": "Passkeys",
+      "caption": "Melde dich ohne Passwort an, mit dem Fingerabdruck, Gesicht oder der Bildschirmsperre deines Geräts.",
+      "add": "Passkey hinzufügen",
+      "empty": "Noch keine Passkeys.",
+      "meta": "Hinzugefügt {{created}} · Zuletzt verwendet: {{lastUsed}}",
+      "never": "Nie",
+      "removeAria": "Passkey „{{label}}“ entfernen",
+      "nameDialog": {
+        "title": "Passkey benennen",
+        "label": "Name",
+        "confirm": "Hinzufügen"
+      },
+      "removeTitle": "Diesen Passkey entfernen?",
+      "removeMessage": "„{{label}}“ entfernen? Du musst dich dann anders anmelden oder dieses Gerät erneut registrieren, um ihn wieder zu nutzen.",
+      "removeConfirm": "Passkey entfernen",
+      "alreadyEnrolled": "Dieses Gerät ist für dieses Konto bereits als Passkey registriert.",
+      "addFailed": "Der Passkey konnte nicht hinzugefügt werden."
     }
   },
   "dialog": {
@@ -614,10 +660,12 @@
       "submit": "Anmelden",
       "or": "oder",
       "continueWith": "Weiter mit {{provider}}",
+      "passkey": "Mit einem Passkey anmelden",
       "createAccount": "Konto erstellen",
       "forgotPassword": "Passwort vergessen?",
       "invalidInput": "Bitte gib eine gültige E-Mail-Adresse und ein Passwort ein.",
-      "failed": "Anmeldung fehlgeschlagen."
+      "failed": "Anmeldung fehlgeschlagen.",
+      "passkeyFailed": "Passkey-Anmeldung fehlgeschlagen."
     },
     "register": {
       "title": "Konto erstellen",
@@ -696,6 +744,16 @@
       "disableConfirm": "Diese Suche aus dem Digest entfernen?",
       "disableConfirmMessage": "\"{{term}}\" erscheint nicht mehr in Ihrem E-Mail-Digest.",
       "disableConfirmAction": "Entfernen"
+    },
+    "passkeyOffer": {
+      "title": "Passkey einrichten?",
+      "message": "Melde dich beim nächsten Mal schneller an — mit dem Fingerabdruck, Gesicht oder der Bildschirmsperre deines Geräts. Kein Passwort nötig.",
+      "setUp": "Passkey einrichten",
+      "notNow": "Nicht jetzt",
+      "success": "Passkey hinzugefügt.",
+      "declinedTitle": "Kein Problem",
+      "declinedMessage": "Du kannst jederzeit über Einstellungen → Konto → Passkeys einen Passkey hinzufügen.",
+      "ok": "OK"
     },
     "tagFallback": "Tag",
     "feedFallback": "Feed",

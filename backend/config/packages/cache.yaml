@@ -57,6 +57,16 @@ framework:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 21600
 
+            # WebAuthn ceremony challenges (#624). PasskeyChallengeStore already
+            # calls expiresAfter(300) on every entry it writes, so this lifetime
+            # is never the thing actually expiring a live challenge -- it is a
+            # backstop for an entry whose explicit expiry was somehow lost, the
+            # same relationship oauth.login_code.cache has to its store. Twice
+            # the store's own 300 s window, matching that ratio.
+            passkey.challenge.cache:
+                adapter: cache.adapter.filesystem
+                default_lifetime: 600
+
             # One refresh run's progress between two of its slices (#721). The
             # store sets an explicit ten-minute expiry on every entry it writes;
             # this lifetime is only a backstop for an entry whose expiry was

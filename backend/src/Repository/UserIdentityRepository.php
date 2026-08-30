@@ -50,6 +50,17 @@ class UserIdentityRepository extends ServiceEntityRepository
     }
 
     /**
+     * Whether $user has ANY linked provider — which provider, and how many,
+     * is not the question here. Used by PasskeyRemovalPolicy, which only
+     * needs to know whether OAuth is a fallback sign-in route at all before
+     * it lets the account's last passkey go.
+     */
+    public function existsForUser(User $user): bool
+    {
+        return $this->count(['user' => $user]) > 0;
+    }
+
+    /**
      * The sign-in providers of every given user, read in ONE query and indexed
      * by user id.
      *

@@ -11,6 +11,38 @@ export interface InstanceSettings {
   /** The external base URL used to build links in outgoing email, or null to
    *  fall back to the APP_FRONTEND_URL deploy env (#636). */
   publicBaseUrl: string | null;
+  /** The stored passkey relying-party id override, or null to derive it from
+   *  publicBaseUrl's host (#624). */
+  passkeyRpId: string | null;
+  /** The stored passkey relying-party display name override, or null to fall
+   *  back to "Simple Feed Reader" (#624). */
+  passkeyRpName: string | null;
+  /** Read-only: the relying-party id the server would actually use right
+   *  now -- the stored override, or the derived host. Never sent back on a
+   *  PUT; it exists so the UI can show the real value even when passkeyRpId
+   *  is empty. */
+  passkeyRpIdEffective: string;
+  /** The instance-wide passkey sign-in switch (#624 follow-up). Off refuses
+   *  every passkey endpoint server-side, regardless of what the frontend
+   *  shows -- see PasskeySignInAvailability. */
+  passkeySignInEnabled: boolean;
+}
+
+/**
+ * The full-replace PUT body `InstanceSettingsRequest` expects (#624): every
+ * field must be sent together, or the server resets whatever is missing to
+ * its constructor default. `invalidateExistingPasskeys` is a one-shot command
+ * modifier, not a stored setting -- it confirms a relying-party id change the
+ * server already refused with a 409.
+ */
+export interface InstanceSettingsUpdate {
+  requireEmailConfirmation: boolean;
+  requireApproval: boolean;
+  publicBaseUrl: string | null;
+  passkeyRpId: string | null;
+  passkeyRpName: string | null;
+  invalidateExistingPasskeys: boolean;
+  passkeySignInEnabled: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -22,15 +54,7 @@ export class AdminSettingsApi {
     return this.http.get<InstanceSettings>(`${this.base}/api/admin/settings`);
   }
 
-  update(
-    requireEmailConfirmation: boolean,
-    requireApproval: boolean,
-    publicBaseUrl: string | null,
-  ): Observable<InstanceSettings> {
-    return this.http.put<InstanceSettings>(`${this.base}/api/admin/settings`, {
-      requireEmailConfirmation,
-      requireApproval,
-      publicBaseUrl,
-    });
+  update(update: InstanceSettingsUpdate): Observable<InstanceSettings> {
+    return this.http.put<InstanceSettings>(`${this.base}/api/admin/settings`, update);
   }
 }

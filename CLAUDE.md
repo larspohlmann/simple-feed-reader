@@ -86,6 +86,10 @@ Non-negotiables:
 - **Comments explain *why*, never *what*.** The codebase's existing comments are
   the standard: they justify a defensive branch or record a decision. Delete
   commented-out code.
+- **Keep comments short.** One line is usually enough; three lines is the upper
+  end of normal. More than three lines needs a VERY GOOD reason — a non-obvious
+  invariant, a hard-won bug, or a decision that costs more to rediscover than to
+  read. This applies to every language in the tree, not only PHP.
 - **DRY.** Third occurrence is a refactor, not a copy.
 - **Controllers hold no private methods that carry responsibility.** An action
   reads the request, delegates, and returns a response. Querying, response

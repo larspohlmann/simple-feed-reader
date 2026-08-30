@@ -1,0 +1,18 @@
+<!-- The form wraps the panel rather than sitting inside it, mirroring
+     tag-form-dialog.component.html: Add is projected into the panel's
+     footer, and a submit button only submits a form it is a DOM descendant
+     of. -->
+<form [formGroup]="form" (ngSubmit)="confirm()" cdkTrapFocus>
+  <app-overlay-panel [heading]="'settings.passkeys.nameDialog.title' | transloco">
+    <app-field [label]="'settings.passkeys.nameDialog.label' | transloco">
+      <input id="passkey-name" formControlName="name" maxlength="100" cdkFocusInitial />
+    </app-field>
+
+    <app-button footer (click)="ref.close()">
+      {{ 'dialog.cancel' | transloco }}
+    </app-button>
+    <app-button footer type="submit" variant="primary" [disabled]="form.invalid">
+      {{ 'settings.passkeys.nameDialog.confirm' | transloco }}
+    </app-button>
+  </app-overlay-panel>
+</form>

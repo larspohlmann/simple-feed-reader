@@ -56,6 +56,33 @@ security:
                 max_attempts: 5
                 interval: '15 minutes'
 
+        # ORDER MATTERS. Firewalls match in declaration order and `api` below
+        # matches every `^/api` path, so this block MUST stay between `login`
+        # and `api` — placed after `api`, it would never be reached and every
+        # passkey login would silently fall through to the jwt-only firewall
+        # and 401. See PasskeyAuthenticator's own docblock for how the
+        # authenticator reuses json_login's success/failure handlers despite
+        # authenticating differently.
+        passkey_login:
+            pattern: ^/api/auth/passkey/login$
+            stateless: true
+            provider: app_users
+            # The same checker json_login uses: status is tested only after
+            # the credential is verified, never before — see
+            # App\Security\LoginUserChecker.
+            user_checker: App\Security\LoginUserChecker
+            custom_authenticator: App\Security\PasskeyAuthenticator
+            # The request carries no e-mail, so PasskeyAuthenticator passes a
+            # fixed, non-secret sentinel identifier to UserBadge instead (see
+            # its own docblock — an empty string is deprecated by Symfony and
+            # becomes a hard failure in 8.0). A fixed identifier still keys
+            # DefaultLoginRateLimiter's local bucket to exactly one per
+            # client IP, so this is five attempts per quarter hour per IP —
+            # the right budget for a flow with no real identifier to key on.
+            login_throttling:
+                max_attempts: 5
+                interval: '15 minutes'
+
         api:
             pattern: ^/api
             stateless: true
@@ -66,6 +93,13 @@ security:
 
     access_control:
         - { path: ^/api/health$, roles: PUBLIC_ACCESS }
+        # Both sit under ^/api/auth/, which the next rule makes public, and the
+        # first match wins — so without these two the enrolment endpoints are
+        # open to anyone. The first also covers /register/options; the second
+        # also covers /passkeys/{id}. Neither matches /passkey/login, which is
+        # public on purpose (the flow is discoverable-credential only).
+        - { path: ^/api/auth/passkey/register, roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api/auth/passkeys, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/api/auth/, roles: PUBLIC_ACCESS }
         - { path: ^/api/setup/, roles: PUBLIC_ACCESS }
         # Catalog favicons are public image bytes (cached icon or a monogram

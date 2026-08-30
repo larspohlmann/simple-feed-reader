@@ -106,6 +106,31 @@ framework:
             interval: '15 minutes'
             cache_pool: cache.rate_limiter
 
+        # Conditional mediation calls POST /api/auth/passkey/login/options on
+        # every login-page view, from every anonymous visitor — there is no
+        # user to authenticate yet, so the key can only be the client IP.
+        # Each call writes a cache entry (PasskeyChallengeStore::issue()), and
+        # without its own budget that is an unbounded cache-write surface a
+        # stranger controls: nothing about the flow, honest or not, caps how
+        # many times a browser reloads the login page. Compare
+        # OAuthStateStore's docblock, which records the identical concern for
+        # its own anonymous, cache-writing endpoint.
+        #
+        # Deliberately its OWN budget, separate from the login throttling
+        # firewall listener enforces on /api/auth/login: sharing one would
+        # mean loading the login page spent tokens from the same allowance a
+        # real sign-in attempt needs, so a handful of page views could lock an
+        # honest user out of their own login attempts before they ever typed
+        # a password. 30 in 15 minutes is generous for a human — a login page
+        # left open re-arms conditional mediation at most a few times in that
+        # window — while still bounding a scripted caller. Sliding window and
+        # the same pool as its neighbours, for the reasons documented above.
+        passkey_challenge:
+            policy: 'sliding_window'
+            limit: 30
+            interval: '15 minutes'
+            cache_pool: cache.rate_limiter
+
         # Both AI writes call the account's own provider before they store
         # anything, so an uncapped pair is an outbound request generator keyed
         # to whatever address the account last entered. The budget is per user

@@ -322,7 +322,34 @@
       "mailDisabledHint": "This instance sends no mail, so email confirmation cannot run — approve accounts by hand instead.",
       "publicBaseUrl": "Public base URL",
       "publicBaseUrlHint": "The address used to build links in outgoing email. Set this to the URL that works from outside — a phone off the network, another machine — not the local serving address. Leave empty to use the deploy default.",
-      "publicBaseUrlPlaceholder": "https://reader.example.com/"
+      "publicBaseUrlPlaceholder": "https://reader.example.com/",
+      "passkeySignInEnabled": "Allow passkey sign-in",
+      "passkeySignInEnabledHint": "Lets people sign in with a passkey instead of a password. Off by default — turn it on once the domain below is right.",
+      "passkeyRpId": "Passkey domain",
+      "passkeyRpIdHint": "The domain your passkeys belong to. Leave empty to use {{host}}.",
+      "passkeyRpName": "Passkey display name",
+      "passkeyRpNameHint": "The name a device shows when it asks for a passkey. Leave empty to use Simple Feed Reader.",
+      "passkeyInvalidateTitle": "Change the passkey domain?",
+      "passkeyInvalidateMessage": "Changing the domain signs out {{count}} enrolled passkey(s), permanently. They cannot be repaired. Each person then has to add a new passkey on their device. Confirm to change the domain and delete them.",
+      "passkeyInvalidateConfirm": "Change and delete",
+      "save": "Save",
+      "reset": "Reset",
+      "unsaved": "Unsaved changes",
+      "passkeyHelp": {
+        "label": "How do I find these values?",
+        "idTitle": "Passkey domain",
+        "idIntro": "A browser uses a passkey only on the domain it was made for. Write the domain on its own: no https://, no port, no path.",
+        "tableServing": "You serve the reader at",
+        "tableUse": "Use",
+        "tableOr": "or",
+        "rule1": "It must be the host you serve from, or a parent of it. example.com works for reader.example.com. It does not work for other.com.",
+        "rule2": "A public suffix is refused. You cannot own com or co.uk.",
+        "rule3": "An IP address is refused. Use a domain name. localhost is the one exception.",
+        "rule4": "Passkeys need a secure page. Use HTTPS, or localhost.",
+        "idWarning": "Changing the domain signs out every passkey, permanently. The domain is written into each passkey when it is made, so an existing one stops matching and cannot be repaired. The reader refuses the change until you confirm it, then deletes the passkeys it made unusable. Each person then has to add a new passkey on their device.",
+        "nameTitle": "Passkey display name",
+        "nameBody": "This is the name people see when their device asks for a passkey, and the label their password manager saves. Keep it short. Changing it is safe and every passkey keeps working. A device that already saved one keeps showing the old name."
+      }
     },
     "proxy": {
       "title": "Egress proxy",
@@ -403,6 +430,25 @@
       "showInForYou": "Show in For you",
       "hideFromForYou": "Hide from For you",
       "clear": "Clear"
+    },
+    "passkeys": {
+      "title": "Passkeys",
+      "caption": "Sign in without a password, using your device's fingerprint, face or screen lock.",
+      "add": "Add a passkey",
+      "empty": "No passkeys yet.",
+      "meta": "Added {{created}} · Last used: {{lastUsed}}",
+      "never": "Never",
+      "removeAria": "Remove the passkey \"{{label}}\"",
+      "nameDialog": {
+        "title": "Name this passkey",
+        "label": "Name",
+        "confirm": "Add"
+      },
+      "removeTitle": "Remove this passkey?",
+      "removeMessage": "Remove \"{{label}}\"? You will need to sign in another way, or re-enrol this device, to use it again.",
+      "removeConfirm": "Remove passkey",
+      "alreadyEnrolled": "This device is already registered as a passkey for this account.",
+      "addFailed": "The passkey could not be added."
     }
   },
   "dialog": {
@@ -614,10 +660,12 @@
       "submit": "Sign in",
       "or": "or",
       "continueWith": "Continue with {{provider}}",
+      "passkey": "Sign in with a passkey",
       "createAccount": "Create account",
       "forgotPassword": "Forgot password?",
       "invalidInput": "Please enter a valid email and password.",
-      "failed": "Sign in failed."
+      "failed": "Sign in failed.",
+      "passkeyFailed": "Passkey sign-in failed."
     },
     "register": {
       "title": "Create account",
@@ -696,6 +744,16 @@
       "disableConfirm": "Remove this search from the digest?",
       "disableConfirmMessage": "\"{{term}}\" will no longer appear in your email digest.",
       "disableConfirmAction": "Remove"
+    },
+    "passkeyOffer": {
+      "title": "Set up a passkey?",
+      "message": "Sign in faster next time — with your device's fingerprint, face, or screen lock. No password to remember.",
+      "setUp": "Set up a passkey",
+      "notNow": "Not now",
+      "success": "Passkey added.",
+      "declinedTitle": "No problem",
+      "declinedMessage": "You can add a passkey any time from Settings → Account → Passkeys.",
+      "ok": "OK"
     },
     "tagFallback": "Tag",
     "feedFallback": "Feed",

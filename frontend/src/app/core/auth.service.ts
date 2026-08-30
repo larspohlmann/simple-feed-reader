@@ -23,6 +23,10 @@ export interface UserDigestPreferences {
 export interface UserPreferences {
   scrapeFallbackEnabled: boolean;
   digest: UserDigestPreferences;
+  /** Whether the account has answered the first-login passkey offer --
+   *  accepted, declined, or dismissed without either (#624 design spec §5).
+   *  Never reset once true: the offer must never ask twice. */
+  passkeyOfferAnswered: boolean;
 }
 
 export interface CurrentUser {
@@ -101,5 +105,29 @@ export class AuthService {
    *  than in a dedicated service. */
   resendVerification(): Observable<void> {
     return this.http.post<void>(`${this.base}/api/me/resend-verification`, {});
+  }
+
+  /** Tells the server the first-login passkey offer was answered -- accepted,
+   *  declined, or dismissed without either -- so it never asks again (#624
+   *  design spec §5.4). `PasskeyOfferDialogComponent` is the only caller,
+   *  from every path that closes it. A failed write (e.g. offline) is
+   *  accepted: the offer simply returns on the next boot (design spec §5.4),
+   *  so no retry lives here. */
+  answerPasskeyOffer(): Observable<void> {
+    return this.http
+      .post<void>(`${this.base}/api/me/passkey-offer/answer`, {})
+      .pipe(tap(() => this.markPasskeyOfferAnswered()));
+  }
+
+  /** Marks the offer answered in the local signal alone, with no request --
+   *  for the one path that has already told the server: a successful passkey
+   *  enrolment stamps the flag server-side as a side effect of enrolling
+   *  (design spec §5.2), so calling `answerPasskeyOffer()` there too would be
+   *  a redundant write. A re-render inside the same boot then reads the
+   *  offer as already answered, rather than opening it a second time. */
+  markPasskeyOfferAnswered(): void {
+    const user = this.user();
+    if (!user) return;
+    this.user.set({ ...user, preferences: { ...user.preferences, passkeyOfferAnswered: true } });
   }
 }

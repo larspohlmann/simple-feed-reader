@@ -175,6 +175,7 @@ These rows belong to your account. A backup drops each of them completely.
 | `RecommendationRun` | The history of your "For you" runs. Run the engine again to get new results. The history is large, and it points at articles the restore has replaced. |
 | `RecommendationRunLog` | The diagnostic log of one run. It has no meaning without the run, and the run is not restored. |
 | `RecommendationItem` | The picks of one run. They have no meaning without the run, and the run is not restored. |
+| `UserPasskey` | Your passkeys. A passkey is tied to one device and to this instance's identity. A credential restored onto another account, or onto another device, could never sign you in. Carrying credential ids and keys in the file would only make a stolen backup more dangerous. |
 
 Your "For you" **settings** are carried. Only the **results** are dropped.
 
@@ -195,6 +196,7 @@ Your "For you" **settings** are carried. Only the **results** are dropped.
 | `activeAiProviderSettings` | The pointer to the AI connection in use. It points at data that section 6.2 drops in full. |
 | `digestEnabled`, `digestCadence`, `digestSendHour`, `digestWeekday` | The email digest settings (#636). Added ahead of the backup format's support for them; a later task carries them. |
 | `digestLastSentAt` | The date the digest last sent. The next send writes it again, so a restored value would only delay that send. |
+| `passkeyOfferAnsweredAt` | Whether you have already been offered a passkey (#624). This is the state of the app on this device, not a setting of your account. A restore into a fresh account should let that account see the offer. |
 
 **On each row you own.** The preferences, the "For you" settings, each tag, each
 subscription and each article mark all hold one pointer to their owner.

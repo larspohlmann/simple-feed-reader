@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Dialog } from '@angular/cdk/dialog';
+import { OverlayContainer } from '@angular/cdk/overlay';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { provideHttpClient } from '@angular/common/http';
 import {
@@ -39,7 +40,9 @@ import { TagsStore } from './tags.store';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { RecommendationsService } from './recommendations.service';
 import { AiAvailabilityService } from '../core/ai-availability.service';
+import { SetupService } from '../setup/setup.service';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../shared/toast/toast.service';
+import { PasskeyOfferDialogComponent } from './passkey-offer-dialog.component';
 import { refreshReport } from '../../testing/refresh-report';
 
 describe('ReaderShellComponent', () => {
@@ -50,11 +53,18 @@ describe('ReaderShellComponent', () => {
   };
   let ctrl: HttpTestingController;
   const qp = new BehaviorSubject(convertToParamMap({}));
+  // passkeyOfferAnswered defaults to true so the #624 passkey-offer suite is
+  // the only place a boot ever sees the flag unanswered -- every other test
+  // in this file is otherwise unaffected either way, since isPasskeySupported()
+  // is false by default in jsdom regardless (see the passkey-offer describe
+  // block below for the one place that stubs it in).
   const auth = {
-    user: signal({ email: 'a@b.c' }),
+    user: signal({ email: 'a@b.c', preferences: { passkeyOfferAnswered: true } }),
     loadMe: () => of({}),
     logout: jest.fn(),
     isAdmin: jest.fn().mockReturnValue(false),
+    answerPasskeyOffer: jest.fn(() => of(undefined)),
+    markPasskeyOfferAnswered: jest.fn(),
   };
 
   const subsBody = {
@@ -102,6 +112,12 @@ describe('ReaderShellComponent', () => {
     sessionStorage.clear(); // OnboardingSkip persists here; don't leak across tests
     localStorage.clear(); // LanguageService caches the chosen lang here — a de test must not leak into the next
     auth.isAdmin.mockReturnValue(false); // default non-admin; a test opting in overrides it
+    // Reset the #624 offer state too: a test below sets passkeyOfferAnswered
+    // to false and calls the two marking methods, and neither must leak into
+    // an unrelated test later in this file.
+    auth.user.set({ email: 'a@b.c', preferences: { passkeyOfferAnswered: true } });
+    auth.answerPasskeyOffer.mockClear();
+    auth.markPasskeyOfferAnswered.mockClear();
     qp.next(convertToParamMap({}));
     // Provided rather than left to the real service: jsdom's matchMedia answers
     // "no" to every query, so the real one is stuck on the wide layout and a
@@ -118,6 +134,14 @@ describe('ReaderShellComponent', () => {
         { provide: ActivatedRoute, useValue: { queryParamMap: qp.asObservable() } },
         { provide: AuthService, useValue: auth },
         { provide: LayoutService, useValue: screen },
+        // Defaults to "available", matching every test in this file written
+        // before #624 follow-up's instance-wide toggle existed. The
+        // "first-login passkey offer" describe block below overrides this
+        // per test to cover false/null.
+        {
+          provide: SetupService,
+          useValue: { ensureLoaded: () => of(true), passkeySignInAvailable: signal(true) },
+        },
       ],
     });
     ctrl = TestBed.inject(HttpTestingController);
@@ -2871,6 +2895,226 @@ describe('ReaderShellComponent', () => {
       // never finishes, so the zone never settles and every `whenStable()` in
       // the app hangs until it times out. The poll schedules outside the zone.
       await expect(f.whenStable()).resolves.toBeDefined();
+    });
+  });
+
+  describe('the first-login passkey offer (#624)', () => {
+    // jsdom has neither `PublicKeyCredential` nor `navigator.credentials` --
+    // "unsupported" is what every other test in this file gets by default, so
+    // only this block stubs it in, and only for the span of a test.
+    function supportPasskeys(): void {
+      (window as unknown as { PublicKeyCredential: unknown }).PublicKeyCredential = {};
+    }
+
+    beforeEach(() => {
+      auth.user.set({ email: 'a@b.c', preferences: { passkeyOfferAnswered: false } });
+    });
+
+    afterEach(() => {
+      delete (window as unknown as { PublicKeyCredential?: unknown }).PublicKeyCredential;
+    });
+
+    it('shows the offer once the shell has settled, WebAuthn is available, and onboarding is not running', () => {
+      supportPasskeys();
+      const open = jest
+        .spyOn(TestBed.inject(Dialog), 'open')
+        .mockReturnValue({ closed: new Subject() } as never);
+
+      boot();
+
+      expect(open).toHaveBeenCalledWith(
+        PasskeyOfferDialogComponent,
+        expect.objectContaining({ panelClass: 'app-dialog' }),
+      );
+    });
+
+    it('does not show the offer once the account has already answered it', () => {
+      supportPasskeys();
+      auth.user.set({ email: 'a@b.c', preferences: { passkeyOfferAnswered: true } });
+      const open = jest
+        .spyOn(TestBed.inject(Dialog), 'open')
+        .mockReturnValue({ closed: new Subject() } as never);
+
+      boot();
+
+      expect(open).not.toHaveBeenCalledWith(PasskeyOfferDialogComponent, expect.anything());
+    });
+
+    it('does not show the offer when the browser has no WebAuthn support', () => {
+      // No supportPasskeys() call -- jsdom's own default.
+      const open = jest
+        .spyOn(TestBed.inject(Dialog), 'open')
+        .mockReturnValue({ closed: new Subject() } as never);
+
+      boot();
+
+      expect(open).not.toHaveBeenCalledWith(PasskeyOfferDialogComponent, expect.anything());
+    });
+
+    /**
+     * A fresh testing module, not `TestBed.overrideProvider` -- the outer
+     * `beforeEach` has already called `TestBed.inject(HttpTestingController)`
+     * by the time a test body runs, which Angular refuses to override past.
+     * Mirrors "drawer breakpoint driven by class, not media query" further
+     * down, which hits the identical constraint for `LayoutService`.
+     */
+    function configureAvailability(passkeySignInAvailable: boolean | null): void {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [ReaderShellComponent, provideTranslocoTesting()],
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          provideRouter([]),
+          { provide: API_BASE_URL, useValue: 'https://api.test' },
+          { provide: ActivatedRoute, useValue: { queryParamMap: qp.asObservable() } },
+          { provide: AuthService, useValue: auth },
+          { provide: LayoutService, useValue: screen },
+          {
+            provide: SetupService,
+            useValue: {
+              ensureLoaded: () => of(true),
+              passkeySignInAvailable: signal(passkeySignInAvailable),
+            },
+          },
+        ],
+      });
+      ctrl = TestBed.inject(HttpTestingController);
+    }
+
+    /**
+     * #624 follow-up: the instance-wide toggle gates the offer the same way
+     * it gates enrolment everywhere else -- offering it while sign-in cannot
+     * complete would hand the account a credential it can never use.
+     */
+    it('does not show the offer once the instance reports passkey sign-in unavailable', () => {
+      supportPasskeys();
+      configureAvailability(false);
+      const open = jest
+        .spyOn(TestBed.inject(Dialog), 'open')
+        .mockReturnValue({ closed: new Subject() } as never);
+
+      boot();
+
+      expect(open).not.toHaveBeenCalledWith(PasskeyOfferDialogComponent, expect.anything());
+    });
+
+    it('does not show the offer while availability is still unknown', () => {
+      supportPasskeys();
+      configureAvailability(null);
+      const open = jest
+        .spyOn(TestBed.inject(Dialog), 'open')
+        .mockReturnValue({ closed: new Subject() } as never);
+
+      boot();
+
+      expect(open).not.toHaveBeenCalledWith(PasskeyOfferDialogComponent, expect.anything());
+    });
+
+    it('does not show the offer while the post-onboarding first-fetch sweep is running', () => {
+      supportPasskeys();
+      const open = jest
+        .spyOn(TestBed.inject(Dialog), 'open')
+        .mockReturnValue({ closed: new Subject() } as never);
+
+      // Every subscription unfetched -> awaitingFirstFetch()/sweeping() are
+      // true -> the shell itself fires the post-onboarding sweep (see the
+      // "onboarding redirect and first sweep" describe above). A modal on
+      // top of it is exactly what design spec §5.3 rules out.
+      bootWith([{ ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: null }]);
+
+      expect(open).not.toHaveBeenCalledWith(PasskeyOfferDialogComponent, expect.anything());
+    });
+
+    it('does not show the offer while a zero-subscription account is waiting on the catalog to decide the /discover redirect', () => {
+      // Regression (fix round 1): the catalog request only STARTS inside the
+      // redirect effect, once subscriptions resolve empty -- so there is a
+      // real window, on every brand-new account, where subs.resolved() is
+      // true, the list is empty, and the catalog hasn't answered yet. Before
+      // the fix, onboardingAvailable() read false in that window (catalog not
+      // resolved), so subscriptionOnboardingRunning() was ALSO false, and the
+      // offer opened on top of what becomes the /discover redirect a moment
+      // later. Deliberately does not flush '/api/catalog' -- that pending
+      // window is exactly what this proves.
+      supportPasskeys();
+      const open = jest
+        .spyOn(TestBed.inject(Dialog), 'open')
+        .mockReturnValue({ closed: new Subject() } as never);
+
+      bootWith([]);
+
+      expect(open).not.toHaveBeenCalledWith(PasskeyOfferDialogComponent, expect.anything());
+    });
+
+    it('shows the offer at most once per boot, even if the shell re-renders', () => {
+      supportPasskeys();
+      const open = jest
+        .spyOn(TestBed.inject(Dialog), 'open')
+        .mockReturnValue({ closed: new Subject() } as never);
+
+      const f = boot();
+      // Re-render without anything about eligibility changing.
+      f.detectChanges();
+      f.detectChanges();
+
+      expect(open).toHaveBeenCalledTimes(1);
+    });
+
+    describe('any close marks the offer answered', () => {
+      // The real Dialog (not spied) so the real PasskeyOfferDialogComponent
+      // renders into the real overlay -- these three tests are the one place
+      // in this suite proving the actual button/Escape/backdrop paths reach
+      // AuthService, not just that the component *would* call it in
+      // isolation (that is `passkey-offer-dialog.component.spec.ts`'s job).
+      function container(): HTMLElement {
+        return TestBed.inject(OverlayContainer).getContainerElement();
+      }
+
+      it('via the button path -- Not now, then OK', () => {
+        supportPasskeys();
+        boot();
+
+        const notNow = Array.from(container().querySelectorAll('button')).find((button) =>
+          button.textContent?.includes('Not now'),
+        ) as HTMLButtonElement;
+        notNow.click();
+
+        // Declining marks the offer the moment state two opens.
+        expect(auth.answerPasskeyOffer).toHaveBeenCalledTimes(1);
+
+        const ok = container().querySelector<HTMLButtonElement>('[data-test="passkey-offer-ok"]')!;
+        ok.click();
+
+        expect(container().querySelector('.cdk-overlay-pane')).toBeNull();
+      });
+
+      it('via Escape, before choosing anything', () => {
+        supportPasskeys();
+        boot();
+        expect(container().querySelector('.cdk-overlay-pane')).not.toBeNull();
+
+        // CDK's overlay keyboard dispatcher listens on `body`, not `document`
+        // (`OverlayKeyboardDispatcher`, `@angular/cdk/overlay`), and reads the
+        // legacy `keyCode` field to recognise Escape (`ESCAPE = 27`,
+        // `@angular/cdk/keycodes`), not `key`.
+        document.body.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }),
+        );
+
+        expect(auth.answerPasskeyOffer).toHaveBeenCalledTimes(1);
+        expect(container().querySelector('.cdk-overlay-pane')).toBeNull();
+      });
+
+      it('via the backdrop, before choosing anything', () => {
+        supportPasskeys();
+        boot();
+        const backdrop = container().querySelector<HTMLElement>('.cdk-overlay-backdrop')!;
+
+        backdrop.click();
+
+        expect(auth.answerPasskeyOffer).toHaveBeenCalledTimes(1);
+        expect(container().querySelector('.cdk-overlay-pane')).toBeNull();
+      });
     });
   });
 });

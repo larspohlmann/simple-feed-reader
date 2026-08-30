@@ -1,0 +1,39 @@
+<!-- src/app/settings/passkeys-group.component.html -->
+@if (visible()) {
+  <app-settings-group
+    icon="key"
+    [title]="'settings.passkeys.title' | transloco"
+    [caption]="'settings.passkeys.caption' | transloco"
+  >
+    <div groupActions>
+      <app-button size="sm" [loading]="adding()" (click)="openAddDialog()">
+        <app-icon name="add" size="sm" /> {{ 'settings.passkeys.add' | transloco }}
+      </app-button>
+    </div>
+
+    @if (error(); as failure) {
+      <div class="notice">
+        <app-error-banner [message]="failure.detail || failure.title" />
+      </div>
+    }
+
+    @if (passkeys().length === 0) {
+      <p class="empty">{{ 'settings.passkeys.empty' | transloco }}</p>
+    } @else {
+      @for (passkey of passkeys(); track passkey.id) {
+        <app-settings-row [title]="passkey.label" [description]="meta(passkey)">
+          <button
+            type="button"
+            appIconButton
+            class="danger"
+            data-test="remove-passkey"
+            [attr.aria-label]="'settings.passkeys.removeAria' | transloco: { label: passkey.label }"
+            (click)="confirmThenRemove(passkey)"
+          >
+            <app-icon name="delete" size="sm" />
+          </button>
+        </app-settings-row>
+      }
+    }
+  </app-settings-group>
+}

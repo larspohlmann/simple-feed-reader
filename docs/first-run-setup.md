@@ -85,3 +85,22 @@ matter how it is set — nothing can deliver the confirmation link — while
 approve an account by hand. The settings endpoint's response includes
 `mailEnabled` so a caller can tell the two apart: the stored toggle versus
 the effective, mail-forced value.
+
+## The passkey relying party
+
+The same `GET`/`PUT /api/admin/settings` endpoint also holds the WebAuthn
+relying party. It defaults to the host of the public base URL; an
+administrator can override it in Settings → Admin, and that page explains
+the value in full. Changing it invalidates every passkey already enrolled.
+
+**Passkey sign-in is off by default.** A fresh install ships with it
+invisible — no "Sign in with a passkey" button, no Settings → Account
+passkeys group, no first-login enrolment offer — until an administrator
+switches it on from **Settings → Admin**, the "Allow passkey sign-in" toggle
+beside the relying-party fields above. This is deliberate: "activated" is
+meant to mean activated, not "on until someone remembers to turn it off."
+Turning it off again — for example while the relying party above is
+misconfigured — refuses every passkey endpoint server-side, not just the
+frontend buttons; an already-enrolled user can still remove their own
+passkeys while it is off, but cannot sign in, register a new one, or list
+the ones they already have.

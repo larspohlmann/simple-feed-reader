@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Repository\InstanceSettingRepository;
+use App\Service\Settings\InstanceSettingsUpdate;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -39,6 +40,42 @@ class InstanceSetting
     #[ORM\Column(name: 'public_base_url', length: 255, nullable: true)]
     private ?string $publicBaseUrl = null;
 
+    /**
+     * The WebAuthn relying-party id every stored credential is bound to
+     * (#624). Null means "no override" — {@see \App\Service\Settings\ConfiguredPasskeyRelyingParty}
+     * derives it from the public base URL's host instead. It exists because
+     * an RP id is baked into every credential at registration time: changing
+     * it invalidates every passkey on the instance, which is why the write
+     * path guards a change with {@see \App\Service\Settings\RelyingPartyChange}.
+     */
+    #[ORM\Column(name: 'passkey_rp_id', length: 255, nullable: true)]
+    private ?string $passkeyRpId = null;
+
+    /**
+     * The relying-party display name shown by the authenticator's own UI.
+     * Purely cosmetic — unlike passkeyRpId, changing it does not affect any
+     * stored credential. Null means "no override", falling back to the
+     * literal "Simple Feed Reader".
+     */
+    #[ORM\Column(name: 'passkey_rp_name', length: 100, nullable: true)]
+    private ?string $passkeyRpName = null;
+
+    /**
+     * The instance-wide passkey sign-in switch (#624). Defaults to false —
+     * a fresh install ships with passkey sign-in invisible until an admin
+     * opts in, even though the relying party would derive correctly with no
+     * configuration at all. See
+     * {@see \App\Service\Passkey\PasskeySignInAvailability}, which combines
+     * this with the relying-party validity check.
+     *
+     * This default is also declared in the migration's column DEFAULT (this
+     * property's own `options`), and in the constructor defaults of
+     * {@see \App\Service\Settings\InstanceSettingsUpdate} and
+     * {@see \App\Dto\Admin\InstanceSettingsRequest}.
+     */
+    #[ORM\Column(name: 'passkey_sign_in_enabled', options: ['default' => false])]
+    private bool $passkeySignInEnabled = false;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -59,10 +96,28 @@ class InstanceSetting
         return $this->publicBaseUrl;
     }
 
-    public function apply(bool $requireEmailConfirmation, bool $requireApproval, ?string $publicBaseUrl): void
+    public function getPasskeyRpId(): ?string
     {
-        $this->requireEmailConfirmation = $requireEmailConfirmation;
-        $this->requireApproval = $requireApproval;
-        $this->publicBaseUrl = $publicBaseUrl;
+        return $this->passkeyRpId;
+    }
+
+    public function getPasskeyRpName(): ?string
+    {
+        return $this->passkeyRpName;
+    }
+
+    public function passkeySignInEnabled(): bool
+    {
+        return $this->passkeySignInEnabled;
+    }
+
+    public function apply(InstanceSettingsUpdate $update): void
+    {
+        $this->requireEmailConfirmation = $update->requireEmailConfirmation;
+        $this->requireApproval = $update->requireApproval;
+        $this->publicBaseUrl = $update->publicBaseUrl;
+        $this->passkeyRpId = $update->passkeyRpId;
+        $this->passkeyRpName = $update->passkeyRpName;
+        $this->passkeySignInEnabled = $update->passkeySignInEnabled;
     }
 }

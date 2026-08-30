@@ -18,6 +18,7 @@ use App\Service\Mail\AccountMailer;
 use App\Service\Mail\AccountMailerInterface;
 use App\Service\Mail\MailCapability;
 use App\Service\Settings\InstanceSettings;
+use App\Service\Settings\InstanceSettingsUpdate;
 use App\Tests\DbTestCase;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\EventDispatcher\EventDispatcher;
@@ -76,7 +77,7 @@ final class RegistrationServiceTest extends DbTestCase
     {
         /** @var InstanceSettings $settings */
         $settings = self::getContainer()->get(InstanceSettings::class);
-        $settings->update($confirm, $approve, null);
+        $settings->update(new InstanceSettingsUpdate($confirm, $approve, null, null, null));
 
         return new RegistrationPolicy(new MailCapability(''), $settings);
     }

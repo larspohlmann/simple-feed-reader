@@ -14,9 +14,11 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink, convertToParamMap } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { catchError, of } from 'rxjs';
 import { Dialog } from '@angular/cdk/dialog';
 import { AuthService } from '../core/auth.service';
 import { PageTitleService } from '../core/page-title.service';
+import { isPasskeySupported } from '../core/webauthn';
 import { LanguageService } from '../core/language.service';
 import { ReaderApi } from './reader-api';
 import { SubscriptionsStore } from './subscriptions.store';
@@ -69,10 +71,12 @@ import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { SidebarCountsPoll } from './sidebar-counts-poll.service';
 import { CatalogStore } from '../discover/catalog.store';
 import { OnboardingSkip } from '../discover/onboarding-skip';
+import { SetupService } from '../setup/setup.service';
 import { IconComponent } from '../shared/icon/icon.component';
 import { ListActionDirective } from '../shared/list-action/list-action.directive';
 import { ButtonComponent } from '../shared/button/button.component';
 import { FeedIntroComponent } from './feed-intro/feed-intro.component';
+import { PasskeyOfferDialogComponent } from './passkey-offer-dialog.component';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../shared/toast/toast.service';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
@@ -124,6 +128,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly skip = inject(OnboardingSkip);
   private readonly catalog = inject(CatalogStore);
   private readonly pageTitle = inject(PageTitleService);
+  private readonly setup = inject(SetupService);
   /** Injected for its effect: it watches navigations so that a clicked list
    *  starts at the top while a list returned to keeps its place (#286). The
    *  reader is the only place that imports it, which is what keeps it out of
@@ -177,6 +182,100 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly showFetchProgress = computed(
     () => this.sweeping() && this.refreshSvc.failure() === null,
   );
+
+  /** An empty subscription list, once resolved, that has not been explicitly
+   *  skipped this session -- the redirect effect further down's own guard
+   *  before it decides whether the catalog makes the picker worth showing.
+   *  Extracted so #624's onboarding guard below can read the identical
+   *  condition instead of re-deriving it (`onboardingAvailable` is already
+   *  its own shared computed; this is the other half of that effect's
+   *  guard).
+   *
+   *  A failed load resolves with an empty list too; that is not "zero
+   *  subscriptions" but "we could not read them", so `!this.subs.error()`
+   *  keeps a retry-able failure from reading as onboarding, on both sides
+   *  that read this (#691). */
+  private readonly emptySubscriptionsNeedingOnboarding = computed(
+    () =>
+      this.subs.resolved() &&
+      !this.subs.error() &&
+      this.subs.subscriptions().length === 0 &&
+      !this.skip.wasSkipped(),
+  );
+
+  /** #624: true while a new account's subscriptions are being introduced --
+   *  about to be redirected to /discover, or, having just come back from
+   *  there, living through the post-onboarding first-fetch sweep above. A
+   *  modal offered on top of either window steps on the onboarding (design
+   *  spec §5.3), so the first-login passkey offer waits for both to clear.
+   *
+   *  Fix round 1 (a real defect this shipped with, hitting every brand-new
+   *  account): an empty list alone is not enough to rule the redirect out.
+   *  The redirect effect only starts the catalog request once subscriptions
+   *  resolve empty, so there is a real window where the list is empty and
+   *  `onboardingAvailable()` still reads false purely because the catalog
+   *  hasn't answered YET -- not because there is nothing to onboard from.
+   *  Reading `!catalog.resolved()` as "onboarding running" too closes that
+   *  window: the guard now stays true for an empty list from the moment it
+   *  resolves until the redirect decision has actually been made one way or
+   *  the other (catalog resolved with entries -> the redirect fires and this
+   *  stays true forever while the list is empty; catalog resolved empty ->
+   *  there is nothing to redirect to, and this correctly falls open). */
+  private readonly subscriptionOnboardingRunning = computed(() => {
+    if (this.awaitingFirstFetch() || this.sweeping()) return true;
+    if (!this.emptySubscriptionsNeedingOnboarding()) return false;
+    if (!this.catalog.resolved()) return true;
+    return this.onboardingAvailable();
+  });
+
+  /** #624: the shell has loaded enough real state to judge the passkey offer
+   *  -- the subscriptions resolved, which is what lets `subscriptionOnboardingRunning`
+   *  above give a real answer instead of the "nothing decided yet" default. The
+   *  signed-in user is checked in `passkeyOfferEligible` below, which returns
+   *  before ever reaching this -- rechecking it here would be dead code. */
+  private readonly readerSettled = computed(() => this.subs.resolved());
+
+  /** #624 design spec §5.3: all four conditions the first-login passkey
+   *  offer needs before it may show. The fourth (on the reader, not an auth
+   *  route) needs no check here -- this component exists only on the reader
+   *  route (`app.routes.ts`), never on an auth screen. `isPasskeySupported()`
+   *  is checked first because it is the cheapest -- false for nearly every
+   *  test in this suite, since jsdom carries no `PublicKeyCredential` -- so a
+   *  user fixture without `preferences` set never has that field touched.
+   *
+   *  #624 follow-up adds a fifth: `SetupService.passkeySignInAvailable()`
+   *  must be exactly `true`. Offering enrolment while the instance cannot
+   *  complete a passkey sign-in would hand the account a credential it can
+   *  never use -- the same reasoning `PasskeysGroupComponent.visible` gives
+   *  for failing CLOSED rather than open. This route is never behind
+   *  `setupRedirectGuard`, so the constructor below triggers the identical
+   *  `ensureLoaded()` that guard runs. */
+  private readonly passkeyOfferEligible = computed(() => {
+    if (!isPasskeySupported()) return false;
+    if (this.setup.passkeySignInAvailable() !== true) return false;
+    const user = this.auth.user();
+    if (!user || user.preferences.passkeyOfferAnswered) return false;
+    return this.readerSettled() && !this.subscriptionOnboardingRunning();
+  });
+
+  /** Latches true the moment the offer opens so a later re-render -- the
+   *  eligibility computed re-evaluating true again before the answer has
+   *  round-tripped to the server -- cannot open a second one in the same
+   *  boot (design spec §5.3/§5.4). Never reset: the offer is a once-per-boot
+   *  event, not a once-per-condition one. */
+  private readonly passkeyOfferShown = signal(false);
+
+  /** Opens the first-login passkey offer at most once per boot (#624). The
+   *  dialog owns everything about what happens next -- both ceremonies, both
+   *  states, and marking the offer answered on every way out -- so this
+   *  effect's only job is deciding when. */
+  private readonly offerPasskeyOnFirstBoot = effect(() => {
+    if (!this.passkeyOfferEligible() || this.passkeyOfferShown()) return;
+    untracked(() => {
+      this.passkeyOfferShown.set(true);
+      this.dialog.open<void>(PasskeyOfferDialogComponent, { panelClass: 'app-dialog' });
+    });
+  });
 
   /** What to tell the user about a refresh that fetched nothing, from ANY
    *  refresh — not just the sweep. Gating this on the sweep window is what left
@@ -453,6 +552,22 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly leavingIds = signal<ReadonlySet<number>>(new Set());
 
   constructor() {
+    // Loads SetupService.passkeySignInAvailable, gating passkeyOfferEligible
+    // above -- this route is never behind setupRedirectGuard, so nothing else
+    // triggers that fetch here. Gated on isPasskeySupported() first: false
+    // for nearly every test in this suite (jsdom carries no
+    // PublicKeyCredential), and a browser that cannot run the ceremony at all
+    // has no use for the answer regardless. catchError mirrors
+    // setupRedirectGuard/requireSetupGuard's own handling of this exact
+    // observable (fix round 1) -- an uncaught failure here would otherwise
+    // throw on reader boot, a hot path, rather than just leaving the offer
+    // unavailable the way a `false`/null availability already does.
+    if (isPasskeySupported()) {
+      this.setup
+        .ensureLoaded()
+        .pipe(catchError(() => of(false)))
+        .subscribe();
+    }
     // Reload the list and sidebar counts whenever the selection (not the open
     // entry) changes. A new list has no removed rows, so clear the collapsed set
     // with it — otherwise a recycled id would render an incoming row already
@@ -526,13 +641,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     // otherwise Back from /discover lands here and redirects again — a dead Back
     // button.
     effect(() => {
-      if (!this.subs.resolved()) return;
-      // A failed load resolves with an empty list; that is not "zero
-      // subscriptions" but "we could not read them", so it must not send the
-      // user to the picker over what a retry may fill (#691).
-      if (this.subs.error()) return;
-      if (this.subs.subscriptions().length > 0) return;
-      if (this.skip.wasSkipped()) return;
+      if (!this.emptySubscriptionsNeedingOnboarding()) return;
 
       // Ask what the catalog holds before deciding. load() is a no-op once
       // resolved, and the store is shared with /discover, so the redirect path
