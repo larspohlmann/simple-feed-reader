@@ -171,6 +171,17 @@ async function imageToKickerGap(page: Page, selector: string): Promise<number> {
   return kickerBox.y - (imageBox.y + imageBox.height);
 }
 
+/** How far a block's own text sits from the viewport's left edge. Boxed builds
+ *  that inset from the list's padding PLUS the card's; airy has no card, so the
+ *  list carries the whole of it (#732). */
+async function textInsetFromEdge(page: Page): Promise<number> {
+  const title = page.locator('.rows.magazine .title').first();
+  await expect(title).toBeVisible();
+  const box = await title.boundingBox();
+  if (!box) throw new Error('the first block title did not lay out');
+  return Math.round(box.x);
+}
+
 test('the airy magazine drops the card border and rules the slots instead', async ({ page }) => {
   await stubAccount(page, 'airy', ENTRIES);
   const signedIn = await signInAsAdmin(page);
@@ -379,4 +390,33 @@ test('reduced motion collapses the airy leaving slot in ~1ms, not 260ms', async 
       timeout: 500,
     })
     .toBe(0);
+});
+
+/* Phone width is where the gutter is load-bearing: the magazine column is
+   narrower than `--magazine-measure`, so the list's own padding is the only
+   thing between the text and the screen edge. */
+test.describe('on a phone', () => {
+  test.use({ viewport: { width: 375, height: 800 } });
+
+  test('airy keeps the text off the edge, within a few px of boxed', async ({ page }) => {
+    await stubAccount(page, 'boxed', ENTRIES);
+    const signedIn = await signInAsAdmin(page);
+    test.skip(
+      !signedIn,
+      'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
+    );
+    const boxed = await textInsetFromEdge(page);
+
+    expect(boxed, 'boxed no longer insets its text from the edge').toBeGreaterThanOrEqual(20);
+
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+    await stubAccount(page, 'airy', ENTRIES);
+    await page.reload();
+    await expect(page.locator('.rows.magazine')).toHaveClass(/airy/);
+    const airy = await textInsetFromEdge(page);
+
+    expect(airy, 'airy runs its text to the screen edge again (#732)').toBeGreaterThanOrEqual(
+      boxed - 4,
+    );
+  });
 });
