@@ -237,7 +237,8 @@ export class RecommendationsService {
     this.toast.dismiss();
   });
 
-  /** The surviving for-you list's item count, for the sidebar badge. */
+  /** The surviving for-you list's unread count, for the sidebar badge (#724).
+   *  The wire field stays `itemCount` for compatibility. */
   readonly forYouCount = computed(() => this.report()?.forYou.itemCount ?? 0);
   /** The surviving for-you list's generation time (ISO), for the list
    *  header's "Last refreshed" hint. */

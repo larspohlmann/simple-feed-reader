@@ -482,7 +482,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       case 'viewed':
         return items(this.subs.viewedCount());
       case 'for-you':
-        return items(this.recs.forYouCount());
+        return unread(this.recs.forYouCount());
       case 'search':
         return items(0);
     }
@@ -994,6 +994,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
           this.entries.load(queryFromSelection(this.selection()));
           this.subs.load();
           this.savedSearchesStore.load();
+          // The badge counts unread picks (#724); the marked picks move no
+          // watermark the reloads above would see, so re-read the for-you
+          // summary to drop it to zero.
+          this.recs.refreshStatus();
         },
       });
       return;
@@ -1261,13 +1265,14 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 }
 
 /** A count of unread posts — what the sidebar badge counts for All items, a
- *  tag and a feed, and so what the heading and the tab count there too. */
+ *  tag, a feed and For you, and so what the heading and the tab count there
+ *  too. */
 function unread(value: number): TitleCount {
   return { value, counts: 'unread' };
 }
 
-/** A count of posts, read or not — what the sidebar counts for the saved views
- *  and For you, where "unread" is not the question the list answers. */
+/** A count of posts, read or not — what the sidebar counts for the saved views,
+ *  where "unread" is not the question the list answers. */
 function items(value: number): TitleCount {
   return { value, counts: 'items' };
 }

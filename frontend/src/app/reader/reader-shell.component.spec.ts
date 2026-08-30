@@ -1192,6 +1192,32 @@ describe('ReaderShellComponent', () => {
     expect(f.componentInstance.title()).toBe('For you');
   });
 
+  // The For-You badge counts unread picks (#724), so the heading and the tab
+  // must label it "unread" too — not "items" — the way All items, a tag and a
+  // feed already do. Otherwise the same number is described two ways.
+  it('titles the for-you count as unread, matching the sidebar badge', () => {
+    const f = boot();
+    TestBed.inject(RecommendationsService).report.set({
+      status: 'completed',
+      batchesTotal: 1,
+      batchesDone: 1,
+      error: null,
+      background: false,
+      streamedChars: 0,
+      elapsedSeconds: null,
+      forYou: { itemCount: 7, generatedAt: null, newestRunId: null },
+    });
+    qp.next(convertToParamMap({ view: 'for-you' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    const list = f.debugElement.query(By.directive(EntryListComponent));
+    expect(list.componentInstance.titleCount()).toEqual({ value: 7, counts: 'unread' });
+  });
+
   // The reader route declares DYNAMIC_TITLE, which tells the title strategy to
   // stand back — so if the reader ever stopped naming the tab, nothing else
   // would, and #549 would be back through the door built for the reader.
@@ -2671,6 +2697,56 @@ describe('ReaderShellComponent', () => {
         .flush({ entries: [], nextCursor: null });
       ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+      ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
+        status: 'none',
+        batchesTotal: null,
+        batchesDone: 0,
+        error: null,
+        background: false,
+        streamedChars: 0,
+        forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+      });
+    });
+
+    // The badge counts unread picks now (#724), so marking them all read must
+    // drop it to zero — the for-you summary is re-read after the mark-read,
+    // since the marked picks do not move a watermark the list reload would see.
+    it('refreshes the for-you count to zero after marking all read', () => {
+      const f = bootWithForYouSelected();
+      const recs = TestBed.inject(RecommendationsService);
+      recs.report.set({
+        status: 'completed',
+        batchesTotal: 1,
+        batchesDone: 1,
+        error: null,
+        background: false,
+        streamedChars: 0,
+        elapsedSeconds: null,
+        forYou: { itemCount: 5, generatedAt: null, newestRunId: null },
+      });
+      expect(recs.forYouCount()).toBe(5);
+      const ref = { closed: of(true) };
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
+
+      f.componentInstance.onMarkAllRead();
+
+      ctrl.expectOne('https://api.test/api/entries/for-you/mark-read').flush(null);
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({ entries: [], nextCursor: null });
+      ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
+      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+      ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
+        status: 'completed',
+        batchesTotal: 1,
+        batchesDone: 1,
+        error: null,
+        background: false,
+        streamedChars: 0,
+        forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+      });
+
+      expect(recs.forYouCount()).toBe(0);
     });
 
     // A watermark is what the feed and tag scopes move; this list must never
@@ -2689,6 +2765,15 @@ describe('ReaderShellComponent', () => {
         .flush({ entries: [], nextCursor: null });
       ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+      ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
+        status: 'none',
+        batchesTotal: null,
+        batchesDone: 0,
+        error: null,
+        background: false,
+        streamedChars: 0,
+        forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+      });
     });
   });
 

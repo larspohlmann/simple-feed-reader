@@ -104,13 +104,18 @@ final class RecommendationItemRepository extends ServiceEntityRepository
         return array_map(static fn (array $row): int => (int) $row['id'], $rows);
     }
 
+    /** The unread picks in this user's for-you feed. "Unread" is the shared
+     *  `UnreadDql` definition — the entry state folded with the subscription's
+     *  read watermark — so the sidebar badge never counts a pick the reader has
+     *  already read. */
     public function countForYou(int $userId): int
     {
-        $count = $this->applyForYouCriteria($this->createQueryBuilder('i')->select('COUNT(i.id)'), $userId)
-            ->getQuery()
-            ->getSingleScalarResult();
+        $qb = $this->applyForYouCriteria($this->createQueryBuilder('i')->select('COUNT(i.id)'), $userId)
+            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user');
 
-        return (int) $count;
+        $this->applyUnread($qb);
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
     /**

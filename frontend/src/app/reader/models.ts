@@ -371,8 +371,9 @@ export interface RecommendationRunReport {
    *  reads the same as null. The client ticks it down between polls with a
    *  local monotonic delta, the same way it keeps `elapsedSeconds` live. */
   readonly etaSeconds?: number | null;
-  /** The surviving for-you list's own summary: how many entries it holds, when
-   *  it was last generated, and the id of the run that generated it. Describes
+  /** The surviving for-you list's own summary: how many UNREAD entries it holds
+   *  (#724), when it was last generated, and the id of the run that generated
+   *  it. `itemCount` keeps its name for wire compatibility. Describes
    *  the *list*, not this run — a failed latest run still carries the previous
    *  list's timestamp and run id. `newestRunId` lets the reader suppress that
    *  run's boundary divider by identity rather than by timestamp (#348). */
