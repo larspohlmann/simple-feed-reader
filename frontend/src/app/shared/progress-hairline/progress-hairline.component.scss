@@ -35,9 +35,14 @@ span::after {
   }
 }
 
+/* Frozen, not erased. This block used to set `opacity: 0`, which deleted the
+   only in-between signal a run has: between two slices the width does not move
+   for 25 s, so a reader who asks for reduced motion saw a bar indistinguishable
+   from a stuck one. Stopping the motion is the accommodation; removing the
+   indicator is not. The spinner and the skeleton both do it this way — hold
+   still, stay visible. */
 @media (prefers-reduced-motion: reduce) {
   span::after {
     animation: none;
-    opacity: 0;
   }
 }
