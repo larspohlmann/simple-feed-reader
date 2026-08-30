@@ -7,6 +7,7 @@ import { AiAvailabilityService } from './ai-availability.service';
 import { API_BASE_URL } from './api';
 import { DigestService } from './digest.service';
 import { LanguageService } from './language.service';
+import { MagazineStyleService } from './magazine-style.service';
 import { PreferencesService } from './preferences.service';
 import { TokenStore } from './token.store';
 
@@ -27,6 +28,7 @@ export interface UserPreferences {
    *  accepted, declined, or dismissed without either (#624 design spec §5).
    *  Never reset once true: the offer must never ask twice. */
   passkeyOfferAnswered: boolean;
+  magazineStyle: string;
 }
 
 export interface CurrentUser {
@@ -51,6 +53,7 @@ export class AuthService {
   private readonly router = inject(Router);
   private readonly language = inject(LanguageService);
   private readonly preferences = inject(PreferencesService);
+  private readonly magazineStyle = inject(MagazineStyleService);
   private readonly digest = inject(DigestService);
   private readonly ai = inject(AiAvailabilityService);
 
@@ -72,6 +75,7 @@ export class AuthService {
         this.user.set(u);
         this.language.adopt(u.locale);
         this.preferences.adopt(u);
+        this.magazineStyle.adopt(u);
         this.digest.adopt(u);
         this.ai.adopt(u);
       }),
@@ -85,6 +89,7 @@ export class AuthService {
     // account see the previous one's toggle state until (or unless) its own
     // loadMe() resolves.
     this.preferences.reset();
+    this.magazineStyle.reset();
     this.digest.reset();
     this.ai.reset();
     void this.router.navigate(['/login']);

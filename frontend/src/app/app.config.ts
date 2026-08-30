@@ -19,12 +19,14 @@ import { startNavigationWatchdog } from './core/navigation-watchdog';
 import { DIGEST_WRITER } from './core/digest-writer';
 import { HttpDigestWriter } from './core/http-digest-writer';
 import { HttpLocaleWriter } from './core/http-locale-writer';
+import { HttpMagazineStyleWriter } from './core/http-magazine-style-writer';
 import { HttpPreferencesWriter } from './core/http-preferences-writer';
 import { HttpTranslocoLoader } from './core/transloco-loader';
 import { TranslatedTitleStrategy } from './core/translated-title.strategy';
 import { FALLBACK_LANG, LANGS } from './core/language';
 import { LanguageService } from './core/language.service';
 import { LOCALE_WRITER } from './core/locale-writer';
+import { MAGAZINE_STYLE_WRITER } from './core/magazine-style-writer';
 import { PREFERENCES_WRITER } from './core/preferences-writer';
 import { environment } from '../environments/environment';
 
@@ -55,6 +57,7 @@ export const appConfig: ApplicationConfig = {
     // PREFERENCES_WRITER defaults to a no-op (see preferences-writer.ts) for the
     // same reason LOCALE_WRITER does; the running app overrides it here too.
     { provide: PREFERENCES_WRITER, useExisting: HttpPreferencesWriter },
+    { provide: MAGAZINE_STYLE_WRITER, useExisting: HttpMagazineStyleWriter },
     // DIGEST_WRITER defaults to a no-op (see digest-writer.ts) for the same
     // reason LOCALE_WRITER does; the running app overrides it here too.
     { provide: DIGEST_WRITER, useExisting: HttpDigestWriter },

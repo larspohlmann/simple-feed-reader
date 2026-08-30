@@ -49,6 +49,7 @@ function user(overrides: Partial<CurrentUser> = {}): CurrentUser {
         timezone: 'Europe/Berlin',
       },
       passkeyOfferAnswered: true,
+      magazineStyle: 'boxed',
     },
     ai: { ready: false, model: null },
     mail: { enabled: true },

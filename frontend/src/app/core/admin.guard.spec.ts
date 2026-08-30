@@ -18,6 +18,7 @@ const admin: CurrentUser = {
     scrapeFallbackEnabled: false,
     digest: { enabled: false, cadence: 'daily', sendHour: 8, weekday: 1, timezone: 'UTC' },
     passkeyOfferAnswered: true,
+    magazineStyle: 'boxed',
   },
   ai: { ready: false, model: null },
   mail: { enabled: true },

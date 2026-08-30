@@ -33,6 +33,7 @@ const user = (digest: DigestConfig, timezone = 'UTC'): CurrentUser => ({
     scrapeFallbackEnabled: false,
     digest: { ...digest, timezone },
     passkeyOfferAnswered: true,
+    magazineStyle: 'boxed',
   },
   ai: { ready: false, model: null },
   mail: { enabled: true },
