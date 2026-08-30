@@ -49,6 +49,11 @@
   gap: var(--space-2);
 }
 
+/* The image is the only hard edge airy leaves against text (#723). */
+:host-context(.airy) .body {
+  padding-top: var(--space-4);
+}
+
 .title {
   margin: 0;
   font-size: var(--fs-xl);
