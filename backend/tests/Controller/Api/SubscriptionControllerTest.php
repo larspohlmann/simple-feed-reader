@@ -146,6 +146,58 @@ final class SubscriptionControllerTest extends WebTestCase
         self::assertSame(0, $list['keptCount']);
     }
 
+    public function testCountsReturnsUnreadPerFeedAndSurfaceTotals(): void
+    {
+        $client = self::createClient();
+        $headers = $this->authHeader('counter@example.com');
+
+        $rss = file_get_contents(__DIR__ . '/../../Fixtures/feeds/rss2-basic.xml');
+        self::assertIsString($rss);
+        $stub = new StubFeedFetcher();
+        $stub->willReturn(
+            'https://example.com/feed',
+            FetchResponse::fetched(
+                'https://example.com/feed.xml',
+                permanentRedirect: false,
+                body: $rss,
+                etag: null,
+                lastModified: null,
+            ),
+        );
+        $this->installFetcher($stub);
+        $client->request(
+            'POST',
+            '/api/subscriptions',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['url' => 'https://example.com/feed'], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(201);
+        $created = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($created);
+        self::assertIsArray($created['subscription']);
+        $subscriptionId = $created['subscription']['id'];
+
+        // The literal `/counts` must not be swallowed by `/{id}` (numeric only).
+        $client->request('GET', '/api/subscriptions/counts', server: $headers);
+        self::assertResponseIsSuccessful();
+
+        $counts = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($counts);
+        self::assertSame([['id' => $subscriptionId, 'unreadCount' => 2]], $counts['subscriptions']);
+        self::assertSame(0, $counts['favoritesCount']);
+        self::assertSame(0, $counts['keptCount']);
+        self::assertSame(0, $counts['viewedCount']);
+    }
+
+    public function testCountsRejectsAnonymous(): void
+    {
+        $client = self::createClient();
+
+        $client->request('GET', '/api/subscriptions/counts');
+
+        self::assertResponseStatusCodeSame(401);
+    }
+
     public function testSubscribeWithTagIdsCreatesAlreadyTaggedFeed(): void
     {
         $client = self::createClient();

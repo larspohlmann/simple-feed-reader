@@ -197,6 +197,11 @@ services:
         arguments:
             $projectDir: '%kernel.project_dir%'
 
+    App\Service\Refresh\ContentChangeMarker:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+    App\Service\Refresh\ContentChangeMarkerInterface: '@App\Service\Refresh\ContentChangeMarker'
+
     # A child of the framework's http_client so the rot-check command holds its
     # own injectable client id. The point of the separate id is the test: it can
     # `set('catalog.rot_check.http_client', $mockClient)` to swap in a

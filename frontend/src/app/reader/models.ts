@@ -113,6 +113,16 @@ export interface SubscriptionsResponse {
   viewedCount: number;
 }
 
+/** The sidebar poll's cheap payload (#720): unread per feed plus the three
+ *  surface totals, without the feeds, tags or descriptions the full list
+ *  carries. A feed absent from `subscriptions` has no unread entries. */
+export interface SubscriptionCountsResponse {
+  subscriptions: { id: number; unreadCount: number }[];
+  favoritesCount: number;
+  keptCount: number;
+  viewedCount: number;
+}
+
 export interface EntryDto {
   id: number;
   title: string;

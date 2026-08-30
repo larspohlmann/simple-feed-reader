@@ -12,6 +12,7 @@ use App\Dto\Subscription\UpdateSubscriptionRequest;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Exception\ScrapingDisabledApiException;
+use App\Http\SubscriptionCountsJson;
 use App\Http\SubscriptionJson;
 use App\Repository\EntryStateRepository;
 use App\Repository\SubscriptionRepository;
@@ -60,6 +61,20 @@ final readonly class SubscriptionController
             'keptCount' => $flags['kept'],
             'viewedCount' => $flags['viewed'],
         ]);
+    }
+
+    /**
+     * The sidebar poll's cheap tick (#720): unread counts and the three surface
+     * totals, without hydrating feeds, tags or descriptions. Route declared
+     * before `/{id}`, which requires a numeric id, so `/counts` reaches here.
+     */
+    #[Route('/counts', name: 'api_subscriptions_counts', methods: ['GET'])]
+    public function counts(#[CurrentUser] User $user): JsonResponse
+    {
+        return new JsonResponse(SubscriptionCountsJson::from(
+            $this->entryStates->unreadCountsForUser((int) $user->getId()),
+            $this->entryStates->stateCountsForUser((int) $user->getId()),
+        ));
     }
 
     #[Route('', name: 'api_subscriptions_create', methods: ['POST'])]

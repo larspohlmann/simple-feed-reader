@@ -71,6 +71,7 @@ final class RefreshRunner implements RefreshRunnerInterface
         private readonly LockFactory $lockFactory,
         private readonly ClockInterface $clock,
         private readonly LoggerInterface $logger,
+        private readonly ContentChangeMarkerInterface $changeMarker,
     ) {
     }
 
@@ -133,6 +134,15 @@ final class RefreshRunner implements RefreshRunnerInterface
         // ceiling, so it is spelled out here rather than left to be rediscovered.
         $queue = new BudgetedFeedQueue($feeds, $this->clock, $now->getTimestamp() + $request->budgetSeconds);
         $tally = $this->processOutcomes($feeds, $queue, $now);
+
+        // The whole point of the poll's static marker: move it only when a real
+        // import stored new content, so a tick that finds it unmoved does no PHP
+        // work at all (#720). An all-NotModified sweep creates nothing and must
+        // leave it. Checked before the abort branch on purpose: entries created
+        // before an abort were flushed and committed, so they are real content.
+        if ($tally->entriesCreated > 0) {
+            $this->changeMarker->markChanged();
+        }
 
         if ($tally->aborted) {
             // The EntityManager is likely closed: no favicons, no countDue, no
@@ -224,10 +234,10 @@ final class RefreshRunner implements RefreshRunnerInterface
 
         foreach ($this->fetcher->fetchAll($queue->tickets()) as $feedId => $outcome) {
             $feed = $byId[$feedId];
-            $outcomeKind = $this->applyOutcome($feed, $outcome, $now);
-            $tally->record($outcomeKind, $feed);
+            $result = $this->applyOutcome($feed, $outcome, $now);
+            $tally->record($result, $feed);
 
-            if (FeedOutcome::Aborted === $outcomeKind) {
+            if (FeedOutcome::Aborted === $result->outcome) {
                 break;
             }
         }
@@ -240,7 +250,7 @@ final class RefreshRunner implements RefreshRunnerInterface
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      */
-    private function applyOutcome(Feed $feed, FetchOutcome $outcome, \DateTimeImmutable $now): FeedOutcome
+    private function applyOutcome(Feed $feed, FetchOutcome $outcome, \DateTimeImmutable $now): FeedRefreshResult
     {
         // Built here, not inside persistOutcome(): reading lastSuccessfulFetchAt
         // is only safe before recordSuccess() stamps the new one, and building
@@ -265,7 +275,7 @@ final class RefreshRunner implements RefreshRunnerInterface
                 ['url' => $feed->getUrl(), 'exception' => $e],
             );
 
-            return FeedOutcome::Aborted;
+            return FeedRefreshResult::of(FeedOutcome::Aborted);
         }
     }
 
@@ -309,7 +319,7 @@ final class RefreshRunner implements RefreshRunnerInterface
      * @throws NotFoundExceptionInterface
      * @throws ContainerExceptionInterface
      */
-    private function persistOutcome(Feed $feed, FetchOutcome $outcome, FeedIngestContext $context): FeedOutcome
+    private function persistOutcome(Feed $feed, FetchOutcome $outcome, FeedIngestContext $context): FeedRefreshResult
     {
         try {
             $response = $outcome->responseOrThrow();
@@ -322,7 +332,7 @@ final class RefreshRunner implements RefreshRunnerInterface
                 $this->scheduler->recordSuccess($feed, 0);
                 $this->em->flush();
 
-                return FeedOutcome::NotModified;
+                return FeedRefreshResult::of(FeedOutcome::NotModified);
             }
 
             $body = $response->body;
@@ -350,25 +360,25 @@ final class RefreshRunner implements RefreshRunnerInterface
             // slow or unreachable engine here never turns into a failed refresh.
             $this->indexer->index($createdEntries);
 
-            return FeedOutcome::Fetched;
+            return FeedRefreshResult::fetched(\count($createdEntries));
         } catch (FeedThrottledException $e) {
             $this->scheduler->recordThrottled($feed, $e->retryAfterSeconds);
             $this->em->flush();
             $this->logger->info('Feed rate limited: {url}', ['url' => $feed->getUrl()]);
 
-            return FeedOutcome::Throttled;
+            return FeedRefreshResult::of(FeedOutcome::Throttled);
         } catch (FeedGoneException $e) {
             $this->scheduler->recordGone($feed, $e->getMessage());
             $this->em->flush();
             $this->logger->warning('Feed gone: {url}', ['url' => $feed->getUrl(), 'exception' => $e]);
 
-            return FeedOutcome::Failed;
+            return FeedRefreshResult::of(FeedOutcome::Failed);
         } catch (FetchException | FeedParseException $e) {
             $this->scheduler->recordFailure($feed, $e->getMessage());
             $this->em->flush();
             $this->logger->warning('Feed refresh failed: {url}', ['url' => $feed->getUrl(), 'exception' => $e]);
 
-            return FeedOutcome::Failed;
+            return FeedRefreshResult::of(FeedOutcome::Failed);
         }
     }
 

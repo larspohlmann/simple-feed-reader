@@ -1,13 +1,18 @@
 // src/app/reader/subscriptions.store.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, WritableSignal, computed, inject, signal } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 import { Problem, parseProblem } from '../core/problem';
 import { onIdentityChange } from '../core/session-identity';
 import { ReaderApi } from './reader-api';
 import { countsAreStale } from './sidebar-freshness';
 import { TagsStore } from './tags.store';
-import { SubscriptionDto, SubscriptionsResponse, TagDto } from './models';
+import {
+  SubscriptionCountsResponse,
+  SubscriptionDto,
+  SubscriptionsResponse,
+  TagDto,
+} from './models';
 
 export interface TagNode {
   tag: TagDto;
@@ -187,6 +192,29 @@ export class SubscriptionsStore {
    *  onboarding redirect. So a tick can never spin, flicker or move the user.
    *  A failure is dropped without a word; the next tick tries again. */
   reloadQuietlyIfStale(): void {
+    this.quietReload(
+      () => this.api.subscriptions(),
+      (r) => this.applyCounts(r),
+    );
+  }
+
+  /** The counts-only tick (#720): the same quiet semantics as
+   *  `reloadQuietlyIfStale`, but against the ~5 KB counts endpoint instead of
+   *  the 137 KB bootstrap. It patches `unreadCount` into the list it already
+   *  holds; the full list, with its feeds and tags, is left to `load()` and to
+   *  the visibility-regain reload above. */
+  reloadCountsIfStale(): void {
+    this.quietReload(
+      () => this.api.subscriptionCounts(),
+      (r) => this.applyCountsOnly(r),
+    );
+  }
+
+  /** The shared body of every silent tick: refresh only when it is worth a
+   *  request, drop an answer the user has overtaken, and never touch `loading`
+   *  or `resolved`. The `apply` closure is the only difference between the full
+   *  reload and the counts-only one. */
+  private quietReload<T>(fetch: () => Observable<T>, apply: (response: T) => void): void {
     // A tick refreshes counts; it never bootstraps them. Fetching before the
     // first real load would stamp the freshness clock, silence that load for a
     // whole window, and leave `resolved` false — so the onboarding redirect
@@ -201,7 +229,7 @@ export class SubscriptionsStore {
     const request = this.beginRequest();
     const editsWhenSent = this.localEdits;
     this.inFlight = this.trackWhileOpen(
-      this.api.subscriptions().subscribe({
+      fetch().subscribe({
         next: (r) => {
           if (!this.settle(request)) return;
           // The user changed a count while this was on the wire — marked an
@@ -210,7 +238,7 @@ export class SubscriptionsStore {
           // up. Drop it; the next tick reconciles against a server that has
           // seen the change.
           if (this.localEdits !== editsWhenSent) return;
-          this.applyCounts(r);
+          apply(r);
         },
         error: () => void this.settle(request),
       }),
@@ -222,6 +250,30 @@ export class SubscriptionsStore {
     this.favoritesCount.set(response.favoritesCount);
     this.keptCount.set(response.keptCount);
     this.viewedCount.set(response.viewedCount);
+  }
+
+  /** Patch unread counts into the list already held, replacing the array only
+   *  when a number actually moved. A tick that changes nothing keeps the same
+   *  array identity, so `tagTree`, `untagged` and `totalUnread` do not
+   *  recompute (#720). A feed absent from the payload has no unread entries. */
+  private applyCountsOnly(response: SubscriptionCountsResponse): void {
+    const unreadById = new Map(response.subscriptions.map((s) => [s.id, s.unreadCount]));
+    let moved = false;
+    const next = this.subscriptions().map((sub) => {
+      const unreadCount = unreadById.get(sub.id) ?? 0;
+      if (unreadCount === sub.unreadCount) return sub;
+      moved = true;
+      return { ...sub, unreadCount };
+    });
+    if (moved) this.subscriptions.set(next);
+
+    this.setIfMoved(this.favoritesCount, response.favoritesCount);
+    this.setIfMoved(this.keptCount, response.keptCount);
+    this.setIfMoved(this.viewedCount, response.viewedCount);
+  }
+
+  private setIfMoved(count: WritableSignal<number>, value: number): void {
+    if (count() !== value) count.set(value);
   }
 
   /** Keep the sidebar favourite/kept badges live after a toggle without a reload;

@@ -508,3 +508,119 @@ describe('SubscriptionsStore against an API that answers synchronously', () => {
     jest.useRealTimers();
   });
 });
+
+describe('SubscriptionsStore counts-only reload', () => {
+  let store: SubscriptionsStore;
+  let ctrl: HttpTestingController;
+
+  const list = 'https://api.test/api/subscriptions';
+  const countsUrl = 'https://api.test/api/subscriptions/counts';
+
+  const fullCounts = (subscriptions: SubscriptionDto[], favorites = 0, kept = 0, viewed = 0) => ({
+    subscriptions,
+    favoritesCount: favorites,
+    keptCount: kept,
+    viewedCount: viewed,
+  });
+
+  const countsBody = (
+    subscriptions: { id: number; unreadCount: number }[],
+    favorites = 0,
+    kept = 0,
+    viewed = 0,
+  ) => ({ subscriptions, favoritesCount: favorites, keptCount: kept, viewedCount: viewed });
+
+  /** A settled store, one interval old, so a counts tick may fire. */
+  const settleAndAge = (subscriptions: SubscriptionDto[]) => {
+    store.load();
+    ctrl.expectOne(list).flush(fullCounts(subscriptions, 1, 2, 3));
+    jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+  };
+
+  beforeEach(() => {
+    localStorage.clear();
+    jest.useFakeTimers({ now: new Date('2026-08-29T16:00:00Z') });
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'https://api.test' },
+      ],
+    });
+    TestBed.inject(TokenStore).set('user-a.jwt');
+    store = TestBed.inject(SubscriptionsStore);
+    ctrl = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    ctrl.verify();
+    jest.useRealTimers();
+  });
+
+  it('fetches the cheap counts endpoint, not the full list', () => {
+    settleAndAge([sub(1, 2)]);
+
+    store.reloadCountsIfStale();
+
+    ctrl.expectNone(list);
+    ctrl.expectOne(countsUrl).flush(countsBody([{ id: 1, unreadCount: 7 }], 4, 5, 6));
+    expect(store.totalUnread()).toBe(7);
+    expect(store.favoritesCount()).toBe(4);
+    expect(store.keptCount()).toBe(5);
+    expect(store.viewedCount()).toBe(6);
+    expect(store.loading()).toBe(false);
+  });
+
+  it('patches unread into the feed rows it already holds', () => {
+    settleAndAge([sub(1, 2), sub(2, 9)]);
+
+    store.reloadCountsIfStale();
+    ctrl.expectOne(countsUrl).flush(countsBody([{ id: 2, unreadCount: 3 }]));
+
+    // Feed 1 is absent from the payload, so it has no unread entries.
+    expect(store.subscriptions().find((s) => s.id === 1)?.unreadCount).toBe(0);
+    expect(store.subscriptions().find((s) => s.id === 2)?.unreadCount).toBe(3);
+  });
+
+  it('keeps the same array identity when no count moved', () => {
+    settleAndAge([sub(1, 2)]);
+    const before = store.subscriptions();
+
+    store.reloadCountsIfStale();
+    ctrl.expectOne(countsUrl).flush(countsBody([{ id: 1, unreadCount: 2 }], 1, 2, 3));
+
+    // Nothing moved, so the array is not replaced and the derived signals do
+    // not recompute (#720).
+    expect(store.subscriptions()).toBe(before);
+  });
+
+  it('drops a response the user has overtaken by reading an entry', () => {
+    settleAndAge([sub(1, 5)]);
+    store.reloadCountsIfStale();
+    const tick = ctrl.expectOne(countsUrl);
+
+    store.decrementUnread(1);
+    tick.flush(countsBody([{ id: 1, unreadCount: 5 }], 9, 9, 9));
+
+    expect(store.subscriptions()[0].unreadCount).toBe(4);
+    expect(store.favoritesCount()).toBe(1);
+  });
+
+  it('stands aside until a real load has resolved the store', () => {
+    store.reloadCountsIfStale();
+    ctrl.expectNone(countsUrl);
+    expect(store.resolved()).toBe(false);
+  });
+
+  it('leaves a load in flight alone', () => {
+    settleAndAge([sub(1, 1)]);
+    store.load();
+    const pendingLoad = ctrl.expectOne(list);
+    jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+
+    store.reloadCountsIfStale();
+    ctrl.expectNone(countsUrl);
+    expect(pendingLoad.cancelled).toBe(false);
+    pendingLoad.flush(fullCounts([sub(1, 4)]));
+  });
+});

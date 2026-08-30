@@ -14,6 +14,7 @@ final class RefreshTally
     public int $failed = 0;
     public int $throttled = 0;
     public int $processed = 0;
+    public int $entriesCreated = 0;
     public bool $aborted = false;
 
     /**
@@ -32,8 +33,9 @@ final class RefreshTally
      */
     public array $faviconEligibleFeeds = [];
 
-    public function record(FeedOutcome $outcome, Feed $feed): void
+    public function record(FeedRefreshResult $result, Feed $feed): void
     {
+        $outcome = $result->outcome;
         // An aborted feed is deliberately NOT counted as processed: its flush
         // rolled back, so it is still due and must appear in `remaining`.
         // Counting it here would under-report by one and let a polling client
@@ -46,6 +48,7 @@ final class RefreshTally
         }
 
         $this->processed++;
+        $this->entriesCreated += $result->entriesCreated;
 
         match ($outcome) {
             FeedOutcome::Fetched => $this->fetched++,

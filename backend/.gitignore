@@ -34,3 +34,6 @@
 ###> lexik/jwt-authentication-bundle ###
 /config/jwt/*.pem
 ###< lexik/jwt-authentication-bundle ###
+
+# Runtime sidebar change marker (#720); written by the refresh, never committed.
+/public/state/
