@@ -83,13 +83,17 @@ Non-negotiables:
   (see `Service/Refresh/FeedBodyParser.php` for the pattern).
 - **Errors are exceptions**, typed and namespaced next to their service
   (`Service/*/Exception/`). Never signal failure with `null` or a magic value.
-- **Comments explain *why*, never *what*.** The codebase's existing comments are
-  the standard: they justify a defensive branch or record a decision. Delete
-  commented-out code.
-- **Keep comments short.** One line is usually enough; three lines is the upper
-  end of normal. More than three lines needs a VERY GOOD reason — a non-obvious
-  invariant, a hard-won bug, or a decision that costs more to rediscover than to
-  read. This applies to every language in the tree, not only PHP.
+- **Default to no comment.** A clear name or a smaller method beats a sentence
+  about the code. Write a comment only for the *why* the code cannot state: a
+  non-obvious invariant, a defensive branch, a hard-won bug, a decision that
+  costs more to rediscover than to read.
+- **One line. Three at the absolute most.** More than three lines needs a VERY
+  GOOD reason, and the reason goes in the comment. Holds for every language in
+  the tree and for docblocks.
+- **Delete on sight**, in code you write and code you touch: a comment that
+  restates the next line, a `@param`/`@return` that repeats the signature, a
+  docblock that repeats the class name, a section banner, a narration of the
+  change or the review that caused it, and all commented-out code.
 - **DRY.** Third occurrence is a refactor, not a copy.
 - **Controllers hold no private methods that carry responsibility.** An action
   reads the request, delegates, and returns a response. Querying, response
