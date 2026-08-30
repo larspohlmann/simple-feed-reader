@@ -181,4 +181,9 @@ export class EmailSectionComponent {
   onWeekday(event: Event): void {
     this.digest.setWeekday(+(event.target as HTMLSelectElement).value);
   }
+
+  onFormat(event: Event): void {
+    const format = (event.target as HTMLSelectElement).value as 'html' | 'text';
+    this.digest.setFormat(format);
+  }
 }

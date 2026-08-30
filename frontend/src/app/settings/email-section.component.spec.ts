@@ -46,6 +46,7 @@ function user(overrides: Partial<CurrentUser> = {}): CurrentUser {
         cadence: 'daily',
         sendHour: 8,
         weekday: 1,
+        format: 'html',
         timezone: 'Europe/Berlin',
       },
       passkeyOfferAnswered: true,

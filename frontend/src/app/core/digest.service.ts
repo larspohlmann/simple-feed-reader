@@ -9,6 +9,7 @@ const DEFAULT_CADENCE = 'daily';
 const DEFAULT_SEND_HOUR = 8;
 const DEFAULT_WEEKDAY = 1;
 const DEFAULT_TIMEZONE = 'UTC';
+const DEFAULT_FORMAT = 'html';
 
 /**
  * Per-account digest settings, mirroring `PreferencesService`: the account is
@@ -29,6 +30,7 @@ export class DigestService {
   /** The instance's configured timezone, read-only instance config adopted
    *  from the account -- never written back through `writeAll()`. */
   readonly timezone = signal(DEFAULT_TIMEZONE);
+  readonly format = signal<'html' | 'text'>(DEFAULT_FORMAT);
 
   /** True when the value applied locally but the account write failed. */
   readonly saveFailed = signal(false);
@@ -53,6 +55,11 @@ export class DigestService {
     this.writeAll();
   }
 
+  setFormat(format: 'html' | 'text'): void {
+    this.format.set(format);
+    this.writeAll();
+  }
+
   /** Sends a one-off test digest; the caller (the email section) owns the
    *  in-flight and result state, the same split as `AuthService.resendVerification()`. */
   sendTest(days: number): Observable<DigestTestMailResult> {
@@ -74,6 +81,7 @@ export class DigestService {
     this.sendHour.set(digest?.sendHour ?? DEFAULT_SEND_HOUR);
     this.weekday.set(digest?.weekday ?? DEFAULT_WEEKDAY);
     this.timezone.set(digest?.timezone ?? DEFAULT_TIMEZONE);
+    this.format.set(digest?.format ?? DEFAULT_FORMAT);
   }
 
   /**
@@ -88,6 +96,7 @@ export class DigestService {
     this.sendHour.set(DEFAULT_SEND_HOUR);
     this.weekday.set(DEFAULT_WEEKDAY);
     this.timezone.set(DEFAULT_TIMEZONE);
+    this.format.set(DEFAULT_FORMAT);
     this.saveFailed.set(false);
   }
 
@@ -99,6 +108,7 @@ export class DigestService {
       cadence: this.cadence(),
       sendHour: this.sendHour(),
       weekday: this.weekday(),
+      format: this.format(),
     };
 
     this.writer.write(config).subscribe((ok) => {

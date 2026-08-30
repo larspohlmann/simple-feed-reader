@@ -52,7 +52,7 @@ describe('DigestService', () => {
     });
   });
 
-  it('defaults to disabled, daily, 8am, Monday, UTC', () => {
+  it('defaults to disabled, daily, 8am, Monday, UTC, html', () => {
     const s = service();
 
     expect(s.enabled()).toBe(false);
@@ -60,6 +60,7 @@ describe('DigestService', () => {
     expect(s.sendHour()).toBe(8);
     expect(s.weekday()).toBe(1);
     expect(s.timezone()).toBe('UTC');
+    expect(s.format()).toBe('html');
   });
 
   it('applies a changed field locally and writes the full config through', () => {
@@ -68,7 +69,9 @@ describe('DigestService', () => {
     s.setEnabled(true);
 
     expect(s.enabled()).toBe(true);
-    expect(writer.written).toEqual([{ enabled: true, cadence: 'daily', sendHour: 8, weekday: 1 }]);
+    expect(writer.written).toEqual([
+      { enabled: true, cadence: 'daily', sendHour: 8, weekday: 1, format: 'html' },
+    ]);
     expect(s.saveFailed()).toBe(false);
   });
 
@@ -79,12 +82,25 @@ describe('DigestService', () => {
     s.setCadence('weekly');
     s.setSendHour(20);
     s.setWeekday(5);
+    s.setFormat('text');
 
     expect(writer.written).toEqual([
-      { enabled: true, cadence: 'daily', sendHour: 8, weekday: 1 },
-      { enabled: true, cadence: 'weekly', sendHour: 8, weekday: 1 },
-      { enabled: true, cadence: 'weekly', sendHour: 20, weekday: 1 },
-      { enabled: true, cadence: 'weekly', sendHour: 20, weekday: 5 },
+      { enabled: true, cadence: 'daily', sendHour: 8, weekday: 1, format: 'html' },
+      { enabled: true, cadence: 'weekly', sendHour: 8, weekday: 1, format: 'html' },
+      { enabled: true, cadence: 'weekly', sendHour: 20, weekday: 1, format: 'html' },
+      { enabled: true, cadence: 'weekly', sendHour: 20, weekday: 5, format: 'html' },
+      { enabled: true, cadence: 'weekly', sendHour: 20, weekday: 5, format: 'text' },
+    ]);
+  });
+
+  it('writes the full config when only the format changes', () => {
+    const s = service();
+
+    s.setFormat('text');
+
+    expect(s.format()).toBe('text');
+    expect(writer.written).toEqual([
+      { enabled: false, cadence: 'daily', sendHour: 8, weekday: 1, format: 'text' },
     ]);
   });
 
@@ -101,20 +117,29 @@ describe('DigestService', () => {
   it('adopts the account values without writing them back', () => {
     const s = service();
 
-    s.adopt(user({ enabled: true, cadence: 'weekly', sendHour: 20, weekday: 5 }, 'Europe/Berlin'));
+    s.adopt(
+      user(
+        { enabled: true, cadence: 'weekly', sendHour: 20, weekday: 5, format: 'text' },
+        'Europe/Berlin',
+      ),
+    );
 
     expect(s.enabled()).toBe(true);
     expect(s.cadence()).toBe('weekly');
     expect(s.sendHour()).toBe(20);
     expect(s.weekday()).toBe(5);
     expect(s.timezone()).toBe('Europe/Berlin');
+    expect(s.format()).toBe('text');
     expect(writer.written).toEqual([]);
   });
 
   it('adopts defaults without throwing when preferences.digest is missing', () => {
     const s = service();
     const malformedUser = {
-      ...user({ enabled: true, cadence: 'weekly', sendHour: 20, weekday: 5 }, 'Europe/Berlin'),
+      ...user(
+        { enabled: true, cadence: 'weekly', sendHour: 20, weekday: 5, format: 'text' },
+        'Europe/Berlin',
+      ),
       preferences: { scrapeFallbackEnabled: false } as unknown as CurrentUser['preferences'],
     };
 
@@ -125,12 +150,18 @@ describe('DigestService', () => {
     expect(s.sendHour()).toBe(8);
     expect(s.weekday()).toBe(1);
     expect(s.timezone()).toBe('UTC');
+    expect(s.format()).toBe('html');
     expect(writer.written).toEqual([]);
   });
 
   it('resets to defaults', () => {
     const s = service();
-    s.adopt(user({ enabled: true, cadence: 'weekly', sendHour: 20, weekday: 5 }, 'Europe/Berlin'));
+    s.adopt(
+      user(
+        { enabled: true, cadence: 'weekly', sendHour: 20, weekday: 5, format: 'text' },
+        'Europe/Berlin',
+      ),
+    );
 
     s.reset();
 
@@ -139,6 +170,7 @@ describe('DigestService', () => {
     expect(s.sendHour()).toBe(8);
     expect(s.weekday()).toBe(1);
     expect(s.timezone()).toBe('UTC');
+    expect(s.format()).toBe('html');
     expect(s.saveFailed()).toBe(false);
   });
 
