@@ -79,6 +79,6 @@ final readonly class PasskeyCredentials
      */
     private static function randomHandle(): string
     {
-        return rtrim(strtr(base64_encode(random_bytes(self::HANDLE_LENGTH_BYTES)), '+/', '-_'), '=');
+        return Base64UrlSafe::encodeUnpadded(random_bytes(self::HANDLE_LENGTH_BYTES));
     }
 }

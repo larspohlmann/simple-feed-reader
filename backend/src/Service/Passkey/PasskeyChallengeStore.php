@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Passkey;
 
 use App\Service\Passkey\Exception\UnknownChallengeException;
+use ParagonIE\ConstantTime\Base64UrlSafe;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Cache\InvalidArgumentException;
 use Psr\Clock\ClockInterface;
@@ -177,6 +178,6 @@ final readonly class PasskeyChallengeStore
      */
     private static function randomHandle(): string
     {
-        return rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+        return Base64UrlSafe::encodeUnpadded(random_bytes(32));
     }
 }
