@@ -456,6 +456,10 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   .magazine-slot.leaving {
     animation-duration: 1ms;
   }
+
+  .rows.magazine.airy > .magazine-slot + .magazine-slot.leaving > .row-slot-inner {
+    animation-duration: 1ms;
+  }
 }
 
 .rows.magazine {
@@ -482,8 +486,7 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
 }
 
 /* The gap grows because it is now the block's only padding AND the bed the rule
-   sits in: centred in a 12px gap the rule leaves 6px each side and reads as a
-   strikethrough (#723). */
+   sits in: centred in the gap, the rule reads as a strikethrough (#723). */
 .rows.magazine.airy {
   --card-bg: none;
   --card-border: 0;
@@ -498,6 +501,31 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
    slot: that header is already a rule, and a second one beside it reads wrong. */
 .rows.magazine.airy > .magazine-slot + .magazine-slot {
   border-top: 1px solid var(--border);
+}
+
+/* border-top draws at the slot's top edge, so without this the whole gap falls
+   above the rule and none below it; the inner wrapper (not the slot) takes the
+   padding so a leaving row can zero it below, in step with its own collapse. */
+.rows.magazine.airy > .magazine-slot + .magazine-slot > .row-slot-inner {
+  padding-top: var(--space-5);
+}
+
+/* Padding is part of the box, not overflowing content, so `row-leave`'s grid
+   collapse alone leaves it behind as a residual band — this zeroes it, on
+   `magazine-gap-close`'s own timing, so the two finish together. */
+@keyframes magazine-rule-pad-close {
+  0%,
+  46% {
+    padding-top: var(--space-5);
+  }
+
+  100% {
+    padding-top: 0;
+  }
+}
+
+.rows.magazine.airy > .magazine-slot + .magazine-slot.leaving > .row-slot-inner {
+  animation: magazine-rule-pad-close 0.26s ease forwards;
 }
 
 /* The outlet's own wrapper. Outside the magazine column it is a plain block and
