@@ -1,0 +1,77 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Reader\Media\Source;
+
+use App\Service\Html\HtmlDocumentParser;
+use App\Service\Reader\Media\MediaCandidate;
+use App\Service\Reader\Media\MediaCandidateSourceInterface;
+use App\Service\Reader\Media\MediaKind;
+use App\Service\Reader\Media\MediaUrlKind;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
+
+/**
+ * `<audio>` and `<video>` elements, read at face value. The case that needs no
+ * cleverness at all — no host adapter covers it because none has to.
+ */
+#[AsTaggedItem(priority: 70)]
+final readonly class SemanticMediaSource implements MediaCandidateSourceInterface
+{
+    public function __construct(private MediaUrlKind $urlKind)
+    {
+    }
+
+    public function find(string $pageHtml, string $pageUrl): array
+    {
+        $document = HtmlDocumentParser::parseOrNull($pageHtml);
+        if ($document === null) {
+            return [];
+        }
+
+        $found = [];
+        foreach ($document->querySelectorAll('audio, video') as $element) {
+            $candidate = $this->candidateFor($element);
+            if ($candidate !== null) {
+                $found[] = $candidate;
+            }
+        }
+
+        return $found;
+    }
+
+    private function candidateFor(\Dom\Element $element): ?MediaCandidate
+    {
+        $kind = $element->nodeName === 'VIDEO' ? MediaKind::Video : MediaKind::Audio;
+        $url = $this->usableUrl($element);
+        if ($url === null) {
+            return null;
+        }
+
+        if ($kind !== MediaKind::Video) {
+            return new MediaCandidate($kind, $url);
+        }
+
+        // A video with no poster rots into a dead frame in a cache with no TTL.
+        $poster = $element->getAttribute('poster');
+
+        return $poster === null ? null : new MediaCandidate($kind, $url, $poster);
+    }
+
+    private function usableUrl(\Dom\Element $element): ?string
+    {
+        $src = $element->getAttribute('src');
+        if ($src !== null && $this->urlKind->of($src) !== null) {
+            return $src;
+        }
+
+        foreach ($element->querySelectorAll('source') as $source) {
+            $sourceUrl = $source->getAttribute('src');
+            if ($sourceUrl !== null && $this->urlKind->of($sourceUrl) !== null) {
+                return $sourceUrl;
+            }
+        }
+
+        return null;
+    }
+}
