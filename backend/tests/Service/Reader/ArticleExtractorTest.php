@@ -15,6 +15,15 @@ use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\LazyImageSources;
 use App\Service\Reader\LeadingTitleRemover;
+use App\Service\Reader\Media\DurableMediaUrl;
+use App\Service\Reader\Media\EmbedProviders;
+use App\Service\Reader\Media\InBodyEmbedRewriter;
+use App\Service\Reader\Media\MediaMarkup;
+use App\Service\Reader\Media\PageMediaInserter;
+use App\Service\Reader\Media\PageMediaScanner;
+use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
+use App\Service\Reader\Media\Source\DeutschlandradioAudioSource;
+use App\Service\Reader\Media\SubstackPosterLink;
 use App\Service\Reader\NavigationChromeTrimmer;
 use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\ReaderLeadImage;
@@ -62,13 +71,9 @@ final class ArticleExtractorTest extends TestCase
                 new ShareIntentLinkRemover(),
                 new SubstackGatedVideoPlaceholder(),
             ),
-            new ReaderBodyCleaner(
-                new NavigationChromeTrimmer(),
-                new LeadingTitleRemover(),
-                new EdgeBoilerplateTrimmer(),
-                new ReaderLeadImage(),
-            ),
+            $this->bodyCleaner(),
             new EntrySanitizer(),
+            $this->mediaScanner(),
         );
     }
 
@@ -78,6 +83,26 @@ final class ArticleExtractorTest extends TestCase
         $resolver->method('resolve')->willReturn(null);
 
         return $resolver;
+    }
+
+    private function bodyCleaner(): ReaderBodyCleaner
+    {
+        $markup = new MediaMarkup();
+
+        return new ReaderBodyCleaner(
+            new NavigationChromeTrimmer(),
+            new LeadingTitleRemover(),
+            new EdgeBoilerplateTrimmer(),
+            new ReaderLeadImage(),
+            new InBodyEmbedRewriter(new EmbedProviders([new YouTubeEmbedProvider()]), $markup),
+            new SubstackPosterLink(),
+            new PageMediaInserter($markup),
+        );
+    }
+
+    private function mediaScanner(): PageMediaScanner
+    {
+        return new PageMediaScanner([new DeutschlandradioAudioSource(new DurableMediaUrl())]);
     }
 
     public function testExtractsAndAbsolutisesImages(): void
@@ -180,13 +205,9 @@ final class ArticleExtractorTest extends TestCase
                 new ShareIntentLinkRemover(),
                 new SubstackGatedVideoPlaceholder(),
             ),
-            new ReaderBodyCleaner(
-                new NavigationChromeTrimmer(),
-                new LeadingTitleRemover(),
-                new EdgeBoilerplateTrimmer(),
-                new ReaderLeadImage(),
-            ),
+            $this->bodyCleaner(),
             new EntrySanitizer(),
+            $this->mediaScanner(),
         );
 
         $result = $extractor->extract('http://169.254.169.254/');
@@ -300,5 +321,27 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringNotContainsString('Jetzt anmelden', (string) $result->contentHtml);
         self::assertStringNotContainsString('unseren Newsletter', (string) $result->contentHtml);
         self::assertStringContainsString('Fliesstext', (string) $result->contentHtml);
+    }
+
+    /**
+     * On a public-radio page the audio IS the article: the prose extracts to a
+     * duration line and a few teaser links, under the length gate. Media found
+     * on the page is enough to call it an article.
+     */
+    public function testAMediaCandidateSatisfiesTheLengthGate(): void
+    {
+        $html = '<html><head><title>Bildung</title></head><body><article>'
+            . '<div data-audio-src="https://ondemand-mp3.dradio.de/file/dradio/2026/08/bildung.mp3"></div>'
+            . '<p>85:29 Minuten. Ein kurzer Teasertext.</p>'
+            . '</article></body></html>';
+        $extractor = $this->extractor(
+            [new MockResponse($html, ['http_code' => 200])],
+            ['www.deutschlandfunkkultur.de' => ['93.184.216.34']],
+        );
+
+        $result = $extractor->extract('https://www.deutschlandfunkkultur.de/bildung-100.html');
+
+        self::assertTrue($result->ok);
+        self::assertStringContainsString('bildung.mp3', (string) $result->contentHtml);
     }
 }

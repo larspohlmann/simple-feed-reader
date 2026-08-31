@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Service\Reader\Exception\PageFetchException;
+use App\Service\Reader\Media\PageMediaScanner;
 use App\Service\Sanitize\EntrySanitizer;
 use Dom\HTMLDocument;
 use fivefilters\Readability\Article;
@@ -14,12 +15,12 @@ use fivefilters\Readability\Readability;
 
 /**
  * Turns an article URL into clean, sanitized, distraction-free HTML:
- * fetch (SSRF-guarded) → page normalization → readability extraction → body
- * cleaning (duplicate-title removal, edge-boilerplate trimming, lead-image
- * restore) → EntrySanitizer (the same XSS barrier feed HTML crosses). Never
- * throws for an ordinary failure — returns a `failed` ExtractionResult with a
- * machine reason so the endpoint stays 200 and the client can fall back to feed
- * content.
+ * fetch (SSRF-guarded) → page normalization → page-media scan → readability
+ * extraction → body cleaning (duplicate-title removal, edge-boilerplate
+ * trimming, lead-image restore, media insertion) → EntrySanitizer (the same
+ * XSS barrier feed HTML crosses). Never throws for an ordinary failure —
+ * returns a `failed` ExtractionResult with a machine reason so the endpoint
+ * stays 200 and the client can fall back to feed content.
  *
  * Readability strips a page-header image as chrome and reports it apart as the
  * og:image. ReaderBodyCleaner restores that picture into the extracted body via
@@ -27,6 +28,10 @@ use fivefilters\Readability\Readability;
  * (#681). The "does the page draw it?" answer is a PageImageInventory this class
  * builds once from the normalised page document, before readability consumes it
  * (#684).
+ *
+ * PageMediaScanner also runs on the raw page before readability, so recovered
+ * media can both satisfy the length gate below and be inserted by
+ * ReaderBodyCleaner even when readability's own extraction is thin (#748).
  */
 final class ArticleExtractor implements ArticleExtractorInterface
 {
@@ -38,6 +43,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
         private readonly FetchedPageNormalizer $normalizer,
         private readonly ReaderBodyCleaner $bodyCleaner,
         private readonly EntrySanitizer $sanitizer,
+        private readonly PageMediaScanner $mediaScanner,
     ) {
     }
 
@@ -51,6 +57,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
 
         $normalized = $this->normalizer->normalize($page->html);
         $pageImages = PageImageInventory::fromDocument($normalized);
+        $media = $this->mediaScanner->scan($page->html, $page->finalUrl);
 
         $article = $this->richestArticle($normalized, $page);
         if ($article === null) {
@@ -60,12 +67,14 @@ final class ArticleExtractor implements ArticleExtractorInterface
         if ($article->content === null || !$article->hasContent()) {
             return ExtractionResult::failed($url, 'empty');
         }
-        if (mb_strlen(trim((string) $article->textContent)) < self::MIN_CONTENT_LENGTH) {
+        // A page whose media IS the article carries little prose. Recovered media
+        // is itself evidence that this is an article worth showing.
+        if ($media->isEmpty() && mb_strlen(trim((string) $article->textContent)) < self::MIN_CONTENT_LENGTH) {
             return ExtractionResult::failed($url, 'empty');
         }
 
         $leadImage = new LeadImageCandidate($article->image, $pageImages);
-        $body = $this->bodyCleaner->clean($article->content, [$article->title, $entryTitle], $leadImage);
+        $body = $this->bodyCleaner->clean($article->content, [$article->title, $entryTitle], $leadImage, $media);
         $clean = $this->sanitizer->sanitize($body);
         if ($clean === null) {
             return ExtractionResult::failed($url, 'empty');
