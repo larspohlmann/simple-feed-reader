@@ -172,10 +172,13 @@
   position: relative;
 }
 
+// Above the floating bulk bar's `.bulk-dock` (z-index 20): the tag-filter
+// dropdown opens in the toolbar directly over that bar, so a lower layer let
+// the bar cover it.
 .menu .pop {
   position: absolute;
   left: 0;
-  z-index: 2;
+  z-index: 21;
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
