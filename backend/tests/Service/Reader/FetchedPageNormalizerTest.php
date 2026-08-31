@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\LazyImageSources;
+use App\Service\Reader\ShareIntentLinkRemover;
 use App\Service\Reader\ShareWidgetRemover;
 use PHPUnit\Framework\TestCase;
 
@@ -18,6 +19,7 @@ final class FetchedPageNormalizerTest extends TestCase
         $this->normalizer = new FetchedPageNormalizer(
             new LazyImageSources(),
             new ShareWidgetRemover(),
+            new ShareIntentLinkRemover(),
         );
     }
 
@@ -119,6 +121,22 @@ final class FetchedPageNormalizerTest extends TestCase
         $normalized = $this->normalizer->normalize($html)?->saveHtml() ?? '';
 
         self::assertStringNotContainsString('teilen', $normalized);
+        self::assertStringContainsString('Body text', $normalized);
+    }
+
+    public function testStripsAShareIntentLinkBeforeReadabilitySeesIt(): void
+    {
+        // A hand-rolled Bluesky share link carrying the page's own URL is gone
+        // after normalize() (#627); it is not a plugin widget, so ShareWidgetRemover
+        // alone would leave it for readability to keep.
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><body><article><p>Body text long enough to be real content.</p>'
+            . '<a href="https://bsky.app/intent/compose?text=https://canarymedia.com/x">Share</a>'
+            . '</article></body></html>';
+
+        $normalized = $this->normalizer->normalize($html)?->saveHtml() ?? '';
+
+        self::assertStringNotContainsString('bsky.app', $normalized);
         self::assertStringContainsString('Body text', $normalized);
     }
 

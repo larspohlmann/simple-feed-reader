@@ -18,6 +18,7 @@ use App\Service\Reader\LeadingTitleRemover;
 use App\Service\Reader\NavigationChromeTrimmer;
 use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\ReaderLeadImage;
+use App\Service\Reader\ShareIntentLinkRemover;
 use App\Service\Reader\ShareWidgetRemover;
 use App\Service\Sanitize\EntrySanitizer;
 use PHPUnit\Framework\TestCase;
@@ -54,7 +55,7 @@ final class ArticleExtractorTest extends TestCase
 
         return new ArticleExtractor(
             $fetcher,
-            new FetchedPageNormalizer(new LazyImageSources(), new ShareWidgetRemover()),
+            new FetchedPageNormalizer(new LazyImageSources(), new ShareWidgetRemover(), new ShareIntentLinkRemover()),
             new ReaderBodyCleaner(
                 new NavigationChromeTrimmer(),
                 new LeadingTitleRemover(),
@@ -167,7 +168,7 @@ final class ArticleExtractorTest extends TestCase
         );
         $extractor = new ArticleExtractor(
             $fetcher,
-            new FetchedPageNormalizer(new LazyImageSources(), new ShareWidgetRemover()),
+            new FetchedPageNormalizer(new LazyImageSources(), new ShareWidgetRemover(), new ShareIntentLinkRemover()),
             new ReaderBodyCleaner(
                 new NavigationChromeTrimmer(),
                 new LeadingTitleRemover(),
