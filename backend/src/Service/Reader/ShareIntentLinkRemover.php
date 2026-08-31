@@ -211,10 +211,11 @@ final readonly class ShareIntentLinkRemover
     private function matchesEndpointBoundary(string $hostAndPath, string $endpoint): bool
     {
         $endpoint = rtrim($endpoint, '/');
+        $hasPathSegment = str_contains($endpoint, '/');
 
         return $hostAndPath === $endpoint
             || str_starts_with($hostAndPath, $endpoint . '/')
-            || str_starts_with($hostAndPath, $endpoint . '.');
+            || ($hasPathSegment && str_starts_with($hostAndPath, $endpoint . '.'));
     }
 
     private function hostAndPath(string $href): string

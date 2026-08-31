@@ -124,6 +124,17 @@ final class ShareIntentLinkRemoverTest extends TestCase
         self::assertStringNotContainsString('facebook.com/sharer.php', $this->cleaned($html));
     }
 
+    public function testKeepsAWaMeLookAlikeDomainThatIsNotTheHostOnlyEndpoint(): void
+    {
+        // "wa.me" is a host-only endpoint, so it must not gain the file-extension
+        // boundary that "facebook.com/sharer" earns from its path segment (#627
+        // fix round 3): "wa.me.example.com" is an unrelated domain.
+        $html = '<div><p>Body.</p>'
+            . '<a href="https://wa.me.example.com/share?u=https://x.test/a">Share</a></div>';
+
+        self::assertStringContainsString('wa.me.example.com', $this->cleaned($html));
+    }
+
     public function testRemovesAClusterWhoseLabelSitsExactlyAtTheBudget(): void
     {
         $label = str_repeat('a', 60);
