@@ -57,10 +57,9 @@ final readonly class SubstackGatedVideoPlaceholder
         $page->querySelector(self::PAYWALL)?->remove();
         $page->querySelector(self::PLAYER)?->remove();
 
-        // Readability keeps only its chosen content region, which starts at the
-        // teaser prose — a poster placed at the top of the article, above the
-        // byline card, falls outside it and is dropped. Sit the poster right
-        // before the teaser so it lives inside the region readability keeps.
+        // Readability keeps only content adjacent to the teaser prose; a poster
+        // at the top of the article, above the byline card, falls outside that
+        // region and is dropped. Sit it right before the teaser so it survives.
         $teaser = $this->teaserParagraph($page);
         if ($teaser === null || $teaser->parentNode === null) {
             return;

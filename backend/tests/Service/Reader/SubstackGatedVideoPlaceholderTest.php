@@ -45,9 +45,27 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
 
         $poster = $document->querySelector('a[href="https://x.substack.com/p/a"]');
         self::assertNotNull($poster);
-        self::assertSame('https://cdn.test/og.jpg', $poster->querySelector('img')?->getAttribute('src'));
+        $image = $poster->querySelector('img');
+        self::assertNotNull($image);
+        self::assertSame('https://cdn.test/og.jpg', $image->getAttribute('src'));
+        self::assertSame('Video — open the original article to watch', $image->getAttribute('alt'));
+        self::assertSame('1280', $image->getAttribute('width'));
+        self::assertSame('720', $image->getAttribute('height'));
         $teaser = $this->teaser($document);
         self::assertSame($teaser, $poster->nextElementSibling, 'the poster precedes the teaser paragraph');
+    }
+
+    public function testPrefersOgUrlOverTheCanonicalLinkWhenBothArePresent(): void
+    {
+        $head = '<meta property="og:image" content="https://cdn.test/og.jpg">'
+            . '<meta property="og:url" content="https://x.substack.com/p/og">'
+            . '<link rel="canonical" href="https://x.substack.com/p/canonical">';
+        $result = $this->replaceIn(
+            $this->page($head, $this->gatedArticle(self::PLAYER . self::TEASER . self::PAYWALL)),
+        )->saveHtml();
+
+        self::assertStringContainsString('<a href="https://x.substack.com/p/og">', $result);
+        self::assertStringNotContainsString('<a href="https://x.substack.com/p/canonical">', $result);
     }
 
     public function testUsesTheCanonicalLinkWhenOgUrlIsAbsent(): void
@@ -60,6 +78,24 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
 
         self::assertStringContainsString('<a href="https://x.substack.com/p/canonical">', $result);
         self::assertStringNotContainsString('Playback speed', $result);
+    }
+
+    public function testInsertsThePosterWhenTheTeaserIsExactlyTheMinimumLength(): void
+    {
+        // Exactly 80 trimmed characters — the >= boundary. A `>` mutant would
+        // drop the poster here; this pins the poster to fire at the minimum.
+        $prose = 'Plants have souls and take part in the wider life of the world, an old idea now.';
+        self::assertSame(80, mb_strlen($prose));
+
+        $result = $this->replaceIn(
+            $this->page(
+                $this->ogHead('https://cdn.test/og.jpg', 'https://x.substack.com/p/a'),
+                $this->gatedArticle(self::PLAYER . '<p>' . $prose . '</p>' . self::PAYWALL),
+            ),
+        )->saveHtml();
+
+        self::assertStringContainsString('<a href="https://x.substack.com/p/a"><img', $result);
+        self::assertStringContainsString('an old idea now.', $result);
     }
 
     public function testRemovesTheChromeButSkipsThePosterWhenNoTeaserIsLongEnough(): void
@@ -128,6 +164,7 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
         )->saveHtml();
 
         self::assertStringContainsString('Playback speed', $result);
+        self::assertStringNotContainsString('<img', $result);
     }
 
     public function testDoesNothingWhenThePosterUrlIsNotHttp(): void
