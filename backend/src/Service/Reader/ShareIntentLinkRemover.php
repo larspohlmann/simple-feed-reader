@@ -16,11 +16,14 @@ use Dom\HTMLDocument;
  * editorial, not a control, and stays.
  *
  * A share link rarely stands alone: it sits in a bar with sibling share links
- * and a "Share this article" label. removeFrom() climbs from each share
- * intent link to the outermost ancestor that still holds only share-intent
- * links (directly) and no more than a short label's worth of other text, so
- * the whole bar goes with its label. The climb stops at <main>/<article>/
- * <body>, so it never reaches into real prose.
+ * and a "Share this article" label, often as a `<ul><li>` list. removeFrom()
+ * climbs from each share intent link to the outermost ancestor that still
+ * holds only share-intent links and no more than a short label's worth of
+ * other text, so the whole bar goes with its label. The climb sees through a
+ * plain `<ul>`/`<ol>`/`<li>` wrapper — a list is structure, not content — but
+ * stops at any other container (a `<div>`, a `<p>`) that is not itself
+ * link-only, so a real sibling paragraph is never swept in. It also stops at
+ * <main>/<article>/<body>, so it never reaches into real prose.
  */
 final readonly class ShareIntentLinkRemover
 {
@@ -46,6 +49,9 @@ final readonly class ShareIntentLinkRemover
 
     /** Elements that hold the article body; the climb never crosses into them. */
     private const array CONTENT_BOUNDARIES = ['main', 'article', 'body'];
+
+    /** Pure list structure the climb sees through when looking for a cluster's links. */
+    private const array LIST_WRAPPER_TAGS = ['ul', 'ol', 'li'];
 
     public function removeFrom(HTMLDocument $document): void
     {
@@ -99,26 +105,37 @@ final readonly class ShareIntentLinkRemover
     }
 
     /**
-     * True when every direct-child link is a share intent and the rest of the
-     * element's own text reads as a label, not as content of its own.
+     * True when every link reachable through the element (directly, or through
+     * a plain list wrapper) is a share intent and the rest of the element's own
+     * text reads as a label, not as content of its own.
      */
     private function holdsShareControlsOnly(Element $element): bool
     {
-        $directLinks = $this->directLinkChildren($element);
-        if ($directLinks === [] || !array_all($directLinks, fn (Element $link): bool => $this->isShareIntent($link))) {
+        $links = $this->reachableLinks($element);
+        if ($links === [] || !array_all($links, fn (Element $link): bool => $this->isShareIntent($link))) {
             return false;
         }
 
         return $this->textLengthOutsideLinks($element) <= self::CLUSTER_LABEL_LENGTH;
     }
 
-    /** @return list<Element> */
-    private function directLinkChildren(Element $element): array
+    /**
+     * The <a> children of $element, plus any reached by descending through a
+     * <ul>/<ol>/<li> wrapper — list structure a share bar commonly uses. A
+     * wrapper of any other kind (a <div>, a <p>) is opaque: its links do not
+     * count here, so a genuine content container never gets treated as if its
+     * links belonged to its parent.
+     *
+     * @return list<Element>
+     */
+    private function reachableLinks(Element $element): array
     {
         $links = [];
-        foreach ($element->childNodes as $child) {
-            if ($child instanceof Element && $child->localName === 'a') {
+        foreach ($this->elementChildren($element) as $child) {
+            if ($child->localName === 'a') {
                 $links[] = $child;
+            } elseif (in_array($child->localName, self::LIST_WRAPPER_TAGS, true)) {
+                array_push($links, ...$this->reachableLinks($child));
             }
         }
 
@@ -127,14 +144,40 @@ final readonly class ShareIntentLinkRemover
 
     private function textLengthOutsideLinks(Element $element): int
     {
+        return mb_strlen($this->collapsedText($this->textOutsideLinks($element)));
+    }
+
+    /**
+     * The element's own text minus the text of every link reachableLinks()
+     * finds — recursing through the same list wrappers, so a label sitting
+     * beside a <ul> is counted once, not swallowed as opaque list text.
+     */
+    private function textOutsideLinks(Element $element): string
+    {
         $text = '';
         foreach ($element->childNodes as $child) {
-            if (!($child instanceof Element && $child->localName === 'a')) {
-                $text .= $child->textContent;
+            if ($child instanceof Element && $child->localName === 'a') {
+                continue;
+            }
+            $text .= $child instanceof Element && in_array($child->localName, self::LIST_WRAPPER_TAGS, true)
+                ? $this->textOutsideLinks($child)
+                : $child->textContent;
+        }
+
+        return $text;
+    }
+
+    /** @return list<Element> */
+    private function elementChildren(Element $element): array
+    {
+        $children = [];
+        foreach ($element->childNodes as $child) {
+            if ($child instanceof Element) {
+                $children[] = $child;
             }
         }
 
-        return mb_strlen($this->collapsedText($text));
+        return $children;
     }
 
     private function isShareIntent(Element $link): bool
@@ -154,8 +197,21 @@ final readonly class ShareIntentLinkRemover
 
         return array_any(
             self::SHARE_ENDPOINTS,
-            static fn (string $endpoint): bool => str_starts_with($hostAndPath, $endpoint),
+            fn (string $endpoint): bool => $this->matchesEndpointBoundary($hostAndPath, $endpoint),
         );
+    }
+
+    /**
+     * A prefix match alone lets `reddit.com/submit-guidelines` match the
+     * `reddit.com/submit` endpoint. The path must end there — the next
+     * character is a separator or the string ends — so a longer, unrelated
+     * path segment is rejected.
+     */
+    private function matchesEndpointBoundary(string $hostAndPath, string $endpoint): bool
+    {
+        $endpoint = rtrim($endpoint, '/');
+
+        return $hostAndPath === $endpoint || str_starts_with($hostAndPath, $endpoint . '/');
     }
 
     private function hostAndPath(string $href): string

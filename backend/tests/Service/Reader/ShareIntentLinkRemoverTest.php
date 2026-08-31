@@ -79,6 +79,73 @@ final class ShareIntentLinkRemoverTest extends TestCase
         self::assertStringContainsString('Related story', $this->cleaned($html));
     }
 
+    public function testRemovesANestedListShareBarIncludingItsLabel(): void
+    {
+        // A <ul><li> bar is the common markup shape a hand-rolled share widget
+        // uses; the climb must see through the list structure to reach the
+        // wrapping label, not stop at the first <li> (#627 fix round 1).
+        $html = '<article><p>Body.</p>'
+            . '<div><span>Share this article</span>'
+            . '<ul class="bar">'
+            . '<li><a href="https://www.facebook.com/sharer/sharer.php?u=https://x.test/a">FB</a></li>'
+            . '<li><a href="https://x.com/intent/tweet?url=https://x.test/a">X</a></li>'
+            . '</ul></div></article>';
+
+        $result = $this->cleaned($html);
+
+        self::assertStringNotContainsString('Share this article', $result);
+        self::assertStringNotContainsString('sharer', $result);
+        self::assertStringNotContainsString('<ul', $result);
+        self::assertStringContainsString('Body.', $result);
+    }
+
+    public function testKeepsAReddiGuidelinesLinkButRemovesAPlainRedditSubmitLink(): void
+    {
+        // A path segment boundary, not a bare prefix: "submit-guidelines" is a
+        // different endpoint from "submit" and must not match it (#627 fix round 1).
+        $kept = $this->cleaned(
+            '<div><p>Body.</p><a href="https://reddit.com/submit-guidelines?url=https://x.test/a">Guidelines</a></div>',
+        );
+        self::assertStringContainsString('reddit.com/submit-guidelines', $kept);
+
+        $removed = $this->cleaned(
+            '<div><p>Body.</p><a href="https://reddit.com/submit?url=https://x.test/a">Share</a></div>',
+        );
+        self::assertStringNotContainsString('reddit.com/submit', $removed);
+    }
+
+    public function testRemovesAClusterWhoseLabelSitsExactlyAtTheBudget(): void
+    {
+        $label = str_repeat('a', 60);
+        $html = '<div><span>' . $label . '</span>'
+            . '<a href="https://x.com/intent/tweet?url=https://x.test/a">X</a></div>';
+
+        self::assertStringNotContainsString($label, $this->cleaned($html));
+    }
+
+    public function testKeepsAClusterWhoseLabelIsOneCharacterOverTheBudget(): void
+    {
+        $label = str_repeat('a', 61);
+        $html = '<div><span>' . $label . '</span>'
+            . '<a href="https://x.com/intent/tweet?url=https://x.test/a">X</a></div>';
+
+        $result = $this->cleaned($html);
+
+        self::assertStringContainsString($label, $result);
+        self::assertStringNotContainsString('x.com/intent', $result);
+    }
+
+    public function testRemovesAClusterWithAMultibyteLabelUnderTheCharacterBudget(): void
+    {
+        // 40 "ü" characters: 40 chars by mb_strlen, ~80 bytes by strlen — an
+        // mb_strlen -> strlen mutant would wrongly see it as over budget.
+        $label = str_repeat('ü', 40);
+        $html = '<div><span>' . $label . '</span>'
+            . '<a href="https://x.com/intent/tweet?url=https://x.test/a">X</a></div>';
+
+        self::assertStringNotContainsString($label, $this->cleaned($html));
+    }
+
     private function cleaned(string $html): string
     {
         $document = HtmlDocumentParser::parseOrNull($html);
