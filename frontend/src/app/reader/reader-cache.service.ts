@@ -25,7 +25,9 @@ export class ReaderCacheService {
   // short (#706); an already-read article would keep its broken pictures.
   // v7: v6 records hold reader extractions with Substack player chrome and
   // un-stripped share buttons (#627); an already-read article would keep them.
-  private static readonly VERSION = 7;
+  // v8: v7 records were extracted before media recovery (#748); an
+  // already-read article would keep its dropped embeds as plain links.
+  private static readonly VERSION = 8;
 
   private db: Promise<IDBDatabase | null> | null = null;
   /** Strictly monotonic clock so puts within the same millisecond keep insertion order. */

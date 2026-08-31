@@ -723,3 +723,27 @@ article {
   color: var(--text-muted);
   margin: 0 0 var(--space-3);
 }
+
+/* Recovered media (#748). The embed box keeps a 16:9 frame at any width; the
+   players stretch to the column so controls stay reachable on a phone. */
+.content ::ng-deep .reader-embed {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin: var(--space-5) 0;
+}
+
+.content ::ng-deep .reader-embed iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.content ::ng-deep audio,
+.content ::ng-deep video {
+  display: block;
+  width: 100%;
+  margin: var(--space-5) 0;
+}

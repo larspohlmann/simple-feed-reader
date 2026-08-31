@@ -54,6 +54,7 @@ import {
 import { relativeTime } from '../format';
 import { markLeadParagraph } from '../lead-paragraph';
 import { markInsetCards } from '../reader-cards';
+import { upgradeMediaEmbeds } from '../media-embeds';
 import { estimateReadingMinutes } from '../reading-time';
 import { selectionQueryParams } from '../query';
 import { ReadingFocusService } from '../../core/reading-focus.service';
@@ -345,6 +346,7 @@ export class ReaderViewComponent {
         }
         markLeadParagraph(host);
         markInsetCards(host);
+        upgradeMediaEmbeds(host);
         this.buildToc(host);
         this.scheduleFocus();
         this.measureScrollRange();
