@@ -50,7 +50,7 @@ final class CleanupMarkersTest extends TestCase
     public function testASuccessfulExtractionIsMeasuredByShapeAndByWording(): void
     {
         $html = '<ul>' . str_repeat('<li><a href="/x">Ressort</a></li>', 4) . '</ul>'
-            . '<p><a href="https://x.com/intent/tweet">Teilen</a></p>';
+            . '<p><a href="https://x.com/intent/tweet?url=https://example.test/a">Teilen</a></p>';
         $result = ExtractionResult::ok('https://example.test/a', 'Titel', null, null, $html, null);
 
         $codes = array_map(

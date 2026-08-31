@@ -38,6 +38,9 @@ final readonly class SocialWidgetMarkers
     private const int ICON_TEXT_CHARS = 25;
     private const int MIN_SOCIAL_ROW = 3;
 
+    /** A query value that is itself an address — http(s), plain or percent-encoded. */
+    private const string PAGE_URL_PATTERN = '#https?(://|%3a%2f%2f)#i';
+
     /** @return list<CleanupMarker> */
     public function detect(ExtractedBody $body): array
     {
@@ -50,19 +53,32 @@ final readonly class SocialWidgetMarkers
     {
         foreach ($body->links as $link) {
             $href = strtolower($link->href);
-            foreach (self::SHARE_INTENTS as $intent) {
-                if (str_contains($href, $intent)) {
-                    return new CleanupMarker(
-                        'share_intent_link',
-                        4,
-                        'ShareWidgetRemover',
-                        'share button: ' . $link->href,
-                    );
-                }
+            $matchesAnIntent = array_any(
+                self::SHARE_INTENTS,
+                fn (string $intent): bool => str_contains($href, $intent),
+            );
+            if ($matchesAnIntent && $this->carriesThePageUrl($link->href)) {
+                return new CleanupMarker(
+                    'share_intent_link',
+                    4,
+                    'ShareWidgetRemover',
+                    'share button: ' . $link->href,
+                );
             }
         }
 
         return null;
+    }
+
+    /**
+     * The mark of a real share button, not an editorial link to a share host:
+     * its own query string carries an absolute page address.
+     */
+    private function carriesThePageUrl(string $href): bool
+    {
+        $query = strstr($href, '?');
+
+        return $query !== false && preg_match(self::PAGE_URL_PATTERN, $query) === 1;
     }
 
     private function socialRow(ExtractedBody $body): ?CleanupMarker
