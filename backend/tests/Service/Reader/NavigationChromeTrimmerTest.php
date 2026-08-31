@@ -139,6 +139,54 @@ final class NavigationChromeTrimmerTest extends TestCase
         self::assertStringContainsString('href="/a"', $this->trimmed($html));
     }
 
+    public function testRemovesALeadingMenuShapedListWithoutALandmark(): void
+    {
+        // Dissent's masthead menu is a bare <ul>, no <nav>/role. Four+ outbound
+        // link-only items before the first paragraph = a site menu.
+        $menu = '<ul class="side-nav">'
+            . '<li><a href="https://d.test/subscribe">Subscribe</a></li>'
+            . '<li><a href="https://d.test/magazine">Magazine</a></li>'
+            . '<li><a href="https://d.test/online">Online</a></li>'
+            . '<li><a href="https://d.test/store">Store</a></li></ul>';
+        $html = '<div>' . $menu . '<div><p>' . self::PROSE . '</p></div></div>';
+
+        $result = $this->trimmed($html);
+
+        self::assertStringNotContainsString('side-nav', $result);
+        self::assertStringContainsString(self::PROSE, $result);
+    }
+
+    public function testKeepsALeadingListWithFewerThanFourLinks(): void
+    {
+        $menu = '<ul><li><a href="https://d.test/a">A</a></li>'
+            . '<li><a href="https://d.test/b">B</a></li>'
+            . '<li><a href="https://d.test/c">C</a></li></ul>';
+        $html = '<div>' . $menu . '<p>' . self::PROSE . '</p></div>';
+
+        self::assertStringContainsString('href="https://d.test/a"', $this->trimmed($html));
+    }
+
+    public function testKeepsAnInPageTableOfContentsList(): void
+    {
+        // Every item is an in-page (#) link — the article's own affordance.
+        $toc = '<ul><li><a href="#one">One</a></li><li><a href="#two">Two</a></li>'
+            . '<li><a href="#three">Three</a></li><li><a href="#four">Four</a></li></ul>';
+        $html = '<div>' . $toc . '<p>' . self::PROSE . '</p></div>';
+
+        self::assertStringContainsString('#one', $this->trimmed($html));
+    }
+
+    public function testKeepsAMenuShapedListThatFollowsTheFirstParagraph(): void
+    {
+        // After the article started, a link list is "further reading", not chrome.
+        $menu = '<ul><li><a href="https://d.test/a">A</a></li>'
+            . '<li><a href="https://d.test/b">B</a></li><li><a href="https://d.test/c">C</a></li>'
+            . '<li><a href="https://d.test/d">D</a></li></ul>';
+        $html = '<div><p>' . self::PROSE . '</p>' . $menu . '</div>';
+
+        self::assertStringContainsString('href="https://d.test/a"', $this->trimmed($html));
+    }
+
     /**
      * Parses the fragment, runs the in-place trim and serialises the shared
      * document — mirroring the parse-once/serialise-once window ReaderBodyCleaner
