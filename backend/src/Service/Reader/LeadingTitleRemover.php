@@ -8,8 +8,8 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Drops the first heading of extracted content when it repeats the article's
- * title. The reader view renders the title itself, so a kept headline shows
+ * Drops the first heading or paragraph of extracted content when it repeats
+ * the article's title. The reader view renders the title itself, so a kept headline shows
  * twice. Readability's own duplicate check misses headlines that sit in their
  * own wrapper block (it demotes the page's <h1> to <h2> and only inspects the
  * top candidate), which is exactly the block-component layout of #235.
@@ -26,16 +26,16 @@ final readonly class LeadingTitleRemover
     /** @param list<string|null> $titleCandidates */
     public function removeFrom(HTMLDocument $document, array $titleCandidates): void
     {
-        $firstHeading = $this->findFirstHeading($document);
-        if ($firstHeading === null) {
+        $firstTextBlock = $this->findFirstTextBlock($document);
+        if ($firstTextBlock === null) {
             return;
         }
 
-        if (!$this->repeatsTitle($firstHeading, $this->normalizeCandidates($titleCandidates))) {
+        if (!$this->repeatsTitle($firstTextBlock, $this->normalizeCandidates($titleCandidates))) {
             return;
         }
 
-        $firstHeading->remove();
+        $firstTextBlock->remove();
     }
 
     /**
@@ -53,19 +53,26 @@ final readonly class LeadingTitleRemover
     }
 
     /**
-     * The first h1/h2/h3 in document order. An element-named XPath expression
-     * would not match — the HTML5 parser puts elements in the XHTML namespace,
-     * which `//h1` does not select — so this reads the tree with a CSS selector.
+     * The first h1/h2/h3/p in document order with non-empty text. An
+     * element-named XPath expression would not match — the HTML5 parser puts
+     * elements in the XHTML namespace, which `//h1` does not select — so this
+     * reads the tree with a CSS selector.
      */
-    private function findFirstHeading(HTMLDocument $document): ?Element
+    private function findFirstTextBlock(HTMLDocument $document): ?Element
     {
-        return $document->querySelector('h1, h2, h3');
+        foreach ($document->querySelectorAll('h1, h2, h3, p') as $block) {
+            if (trim((string) $block->textContent) !== '') {
+                return $block;
+            }
+        }
+
+        return null;
     }
 
     /** @param list<string> $normalizedTitles */
-    private function repeatsTitle(Element $heading, array $normalizedTitles): bool
+    private function repeatsTitle(Element $firstTextBlock, array $normalizedTitles): bool
     {
-        return \in_array($this->normalize((string) $heading->textContent), $normalizedTitles, true);
+        return \in_array($this->normalize((string) $firstTextBlock->textContent), $normalizedTitles, true);
     }
 
     private function normalize(string $text): string

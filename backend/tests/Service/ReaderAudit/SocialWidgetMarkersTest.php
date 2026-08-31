@@ -29,7 +29,20 @@ final class SocialWidgetMarkersTest extends TestCase
 
     public function testRecognisesAMailtoShareButtonWhichCarriesNoHostAtAll(): void
     {
-        self::assertSame(['share_intent_link'], $this->codesFor('<p><a href="mailto:?subject=Artikel">Mail</a></p>'));
+        $html = '<p><a href="mailto:?subject=Artikel&amp;body=https://example.test/a">Mail</a></p>';
+
+        self::assertSame(['share_intent_link'], $this->codesFor($html));
+    }
+
+    public function testDoesNotFlagAWhatsAppContactLinkThatCarriesNoPageUrl(): void
+    {
+        // POLITICO's write-to-the-hosts link: a share host, but no page URL —
+        // the reader cleaner deliberately keeps it (ShareIntentLinkRemover), so
+        // the audit marker must not flag it either.
+        $html = '<p><a href="https://api.whatsapp.com/send/?phone=32491050629&amp;'
+            . 'text=Hey+Zoya+and+crew!">Message us</a></p>';
+
+        self::assertSame([], $this->codesFor($html));
     }
 
     public function testReportsARowOfIconLinksToDifferentNetworks(): void
@@ -61,7 +74,7 @@ final class SocialWidgetMarkersTest extends TestCase
     {
         // Publishers spell the host and the path both ways; a case-sensitive
         // match would report the same site as clean on half its articles.
-        $html = '<p><a href="https://WWW.Facebook.com/Sharer/sharer.php?u=x">f</a></p>';
+        $html = '<p><a href="https://WWW.Facebook.com/Sharer/sharer.php?u=https://example.test/a">f</a></p>';
 
         self::assertSame(['share_intent_link'], $this->codesFor($html));
     }
@@ -126,7 +139,7 @@ final class SocialWidgetMarkersTest extends TestCase
     public function testEachMarkerCarriesItsWeightStageAndTheEvidence(): void
     {
         $intent = $this->markers->detect(ExtractedBody::fromHtml(
-            '<p><a href="https://x.com/intent/tweet?url=a">t</a></p>',
+            '<p><a href="https://x.com/intent/tweet?url=https://example.test/a">t</a></p>',
         ));
         $row = $this->markers->detect(ExtractedBody::fromHtml(
             '<p><a href="https://facebook.com/a">f</a><a href="https://x.com/a">x</a>'
@@ -135,7 +148,7 @@ final class SocialWidgetMarkersTest extends TestCase
 
         self::assertSame(4, $intent[0]->weight);
         self::assertSame('ShareWidgetRemover', $intent[0]->suspect);
-        self::assertSame('share button: https://x.com/intent/tweet?url=a', $intent[0]->detail);
+        self::assertSame('share button: https://x.com/intent/tweet?url=https://example.test/a', $intent[0]->detail);
         self::assertSame(3, $row[0]->weight);
         self::assertSame('icon links to facebook.com, x.com, reddit.com', $row[0]->detail);
     }

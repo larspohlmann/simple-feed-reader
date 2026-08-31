@@ -29,9 +29,6 @@ final readonly class EdgeBoilerplateTrimmer
     /** Characters of text that mark a block as a real, substantial paragraph. */
     private const int SUBSTANTIAL_PROSE_LENGTH = 200;
 
-    /** The outer share of top-level blocks, at each end, that may count as edge. */
-    private const float EDGE_FRACTION = 0.25;
-
     /** Whole class tokens that fingerprint an edge-boilerplate block. */
     private const array BOILERPLATE_CLASS_TOKENS = [
         // related-post grids
@@ -47,6 +44,9 @@ final readonly class EdgeBoilerplateTrimmer
 
     /** A link list carries at least this many links. */
     private const int MIN_LINKS_FOR_LIST = 3;
+
+    /** Standalone labels that mark a block as ad chrome, no corroboration needed. */
+    private const array AD_LABELS = ['advertisement', 'anzeige', 'werbung', 'sponsored'];
 
     /**
      * Lowercase heading fragments that corroborate a boilerplate verdict, German
@@ -139,9 +139,8 @@ final readonly class EdgeBoilerplateTrimmer
     /**
      * The indexes of blocks that sit in the leading or trailing edge region.
      * Leading edge = blocks before the first substantial paragraph; trailing
-     * edge = blocks after the last one; each capped at EDGE_FRACTION of the
-     * block count so a short article cannot have its whole body classed as edge.
-     * An article with no substantial paragraph has no defined edge.
+     * edge = blocks after the last one. An article with no substantial
+     * paragraph has no defined edge.
      *
      * @param list<Element> $blocks
      * @return list<int>
@@ -154,7 +153,7 @@ final readonly class EdgeBoilerplateTrimmer
             return [];
         }
 
-        [$leadingEnd, $trailingStart] = $this->edgeBounds($count, $substantial);
+        [$leadingEnd, $trailingStart] = $this->edgeBounds($substantial);
 
         $leading = $leadingEnd > 0 ? range(0, $leadingEnd - 1) : [];
         $trailing = $trailingStart <= $count - 1 ? range($trailingStart, $count - 1) : [];
@@ -164,16 +163,15 @@ final readonly class EdgeBoilerplateTrimmer
 
     /**
      * The last index of the leading edge region and the first index of the
-     * trailing edge region, both capped at EDGE_FRACTION of the block count.
+     * trailing edge region.
      *
      * @param non-empty-list<int> $substantial
      * @return array{0: int, 1: int}
      */
-    private function edgeBounds(int $count, array $substantial): array
+    private function edgeBounds(array $substantial): array
     {
-        $cap = (int) floor(self::EDGE_FRACTION * $count);
-        $leadingEnd = min($substantial[0], $cap);
-        $trailingStart = max($substantial[array_key_last($substantial)] + 1, $count - $cap);
+        $leadingEnd = $substantial[0];
+        $trailingStart = $substantial[array_key_last($substantial)] + 1;
 
         return [$leadingEnd, $trailingStart];
     }
@@ -201,6 +199,10 @@ final readonly class EdgeBoilerplateTrimmer
      */
     private function shouldRemove(Element $block): bool
     {
+        if ($this->isAdLabel($block)) {
+            return true;
+        }
+
         $structural = (int) $this->hasFingerprint($block)
             + (int) $this->isLinkList($block)
             + (int) $this->hasFormOrEmail($block);
@@ -210,6 +212,22 @@ final readonly class EdgeBoilerplateTrimmer
         }
 
         return $structural >= 1 && $this->hasCorroboratingPhrase($block);
+    }
+
+    /**
+     * A block whose entire (separator-collapsed) text is one of AD_LABELS, e.g.
+     * "- Advertisement -" or "Anzeige". A block that merely mentions the word
+     * among other prose does not match.
+     */
+    private function isAdLabel(Element $block): bool
+    {
+        $text = mb_strtolower(trim((string) preg_replace(
+            '/[\s\-–—|:]+/u',
+            ' ',
+            (string) $block->textContent,
+        )));
+
+        return in_array(trim($text), self::AD_LABELS, true);
     }
 
     private function hasFingerprint(Element $block): bool

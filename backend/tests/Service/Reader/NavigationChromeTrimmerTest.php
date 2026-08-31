@@ -130,13 +130,162 @@ final class NavigationChromeTrimmerTest extends TestCase
 
     public function testKeepsAPlainLinkListThatCarriesNoNavigationLandmark(): void
     {
-        // A leading list of links with no <nav>/role landmark is not addressed
-        // here — that shape is EdgeBoilerplateTrimmer's job. This step acts only
-        // on an explicit navigation landmark, so the list survives.
+        // A bare link list with no <nav>/role landmark is kept here only when
+        // it is under the menu link-count threshold. At >=3 links a leading
+        // list like this is now removed — see
+        // testRemovesALeadingMenuShapedListWithoutALandmark.
         $list = '<ul><li><a href="/a">A</a></li><li><a href="/b">B</a></li></ul>';
         $html = '<div>' . $list . '<p>' . self::PROSE . '</p></div>';
 
         self::assertStringContainsString('href="/a"', $this->trimmed($html));
+    }
+
+    public function testRemovesALeadingMenuShapedListWithoutALandmark(): void
+    {
+        // Dissent's masthead menu is a bare <ul>, no <nav>/role. Four+ outbound
+        // link-only items before the first paragraph = a site menu.
+        $menu = '<ul class="side-nav">'
+            . '<li><a href="https://d.test/subscribe">Subscribe</a></li>'
+            . '<li><a href="https://d.test/magazine">Magazine</a></li>'
+            . '<li><a href="https://d.test/online">Online</a></li>'
+            . '<li><a href="https://d.test/store">Store</a></li></ul>';
+        $html = '<div>' . $menu . '<div><p>' . self::PROSE . '</p></div></div>';
+
+        $result = $this->trimmed($html);
+
+        self::assertStringNotContainsString('side-nav', $result);
+        self::assertStringContainsString(self::PROSE, $result);
+    }
+
+    public function testRemovesALeadingMenuListOfExactlyThreeLinks(): void
+    {
+        // A 3-link site breadcrumb ("Umwelt | Philosophie | Meinung & Debatte")
+        // is the motivating case: the threshold now removes a leading link-only
+        // list of three, not just four or more.
+        $menu = '<ul><li><a href="https://d.test/a">A</a></li>'
+            . '<li><a href="https://d.test/b">B</a></li>'
+            . '<li><a href="https://d.test/c">C</a></li></ul>';
+        $html = '<div>' . $menu . '<p>' . self::PROSE . '</p></div>';
+
+        $result = $this->trimmed($html);
+
+        self::assertStringNotContainsString('href="https://d.test/a"', $result);
+        self::assertStringContainsString(self::PROSE, $result);
+    }
+
+    public function testKeepsALeadingListWithFewerThanThreeLinks(): void
+    {
+        $menu = '<ul><li><a href="https://d.test/a">A</a></li>'
+            . '<li><a href="https://d.test/b">B</a></li></ul>';
+        $html = '<div>' . $menu . '<p>' . self::PROSE . '</p></div>';
+
+        self::assertStringContainsString('href="https://d.test/a"', $this->trimmed($html));
+    }
+
+    public function testKeepsAnInPageTableOfContentsList(): void
+    {
+        // Every item is an in-page (#) link — the article's own affordance.
+        $toc = '<ul><li><a href="#one">One</a></li><li><a href="#two">Two</a></li>'
+            . '<li><a href="#three">Three</a></li><li><a href="#four">Four</a></li></ul>';
+        $html = '<div>' . $toc . '<p>' . self::PROSE . '</p></div>';
+
+        self::assertStringContainsString('#one', $this->trimmed($html));
+    }
+
+    public function testKeepsAMenuShapedListThatFollowsTheFirstParagraph(): void
+    {
+        // After the article started, a link list is "further reading", not chrome.
+        $menu = '<ul><li><a href="https://d.test/a">A</a></li>'
+            . '<li><a href="https://d.test/b">B</a></li><li><a href="https://d.test/c">C</a></li>'
+            . '<li><a href="https://d.test/d">D</a></li></ul>';
+        $html = '<div><p>' . self::PROSE . '</p>' . $menu . '</div>';
+
+        self::assertStringContainsString('href="https://d.test/a"', $this->trimmed($html));
+    }
+
+    public function testRemovesALeadingMenuListWhenTheFollowingParagraphIsJustUnderTheProseThreshold(): void
+    {
+        // 119 non-link chars, one under SUBSTANTIAL_PROSE_LENGTH: no paragraph
+        // in the document qualifies, so the menu still counts as leading.
+        $menu = $this->fourLinkMenu();
+        $shortParagraph = str_repeat('x', 119);
+        $html = '<div>' . $menu . '<p>' . $shortParagraph . '</p></div>';
+
+        self::assertStringNotContainsString('d.test/a', $this->trimmed($html));
+    }
+
+    public function testKeepsAMenuListFollowingAParagraphAtExactlyTheProseThreshold(): void
+    {
+        // 120 non-link chars meets SUBSTANTIAL_PROSE_LENGTH: the article has
+        // started, so a menu-shaped list after it is "further reading", kept.
+        $paragraph = str_repeat('x', 120);
+        $menu = $this->fourLinkMenu();
+        $html = '<div><p>' . $paragraph . '</p>' . $menu . '</div>';
+
+        self::assertStringContainsString('d.test/a', $this->trimmed($html));
+    }
+
+    public function testRemovesALeadingMenuListAtExactlyTheLinkTextRatioThreshold(): void
+    {
+        // Each item is "AAA" (link) + "BB" (plain): 12 link chars of 20 total,
+        // exactly the 0.6 LINK_TEXT_RATIO threshold — still chrome.
+        $list = $this->fourItemList('BB');
+        $html = '<div>' . $list . '</div>';
+
+        self::assertStringNotContainsString('d.test/a', $this->trimmed($html));
+    }
+
+    public function testKeepsALeadingListJustBelowTheLinkTextRatioThreshold(): void
+    {
+        // Each item is "AAA" (link) + "BBB" (plain): 12 link chars of 24
+        // total, below the 0.6 threshold — no longer link-dominated, kept.
+        $list = $this->fourItemList('BBB');
+        $html = '<div>' . $list . '</div>';
+
+        self::assertStringContainsString('d.test/a', $this->trimmed($html));
+    }
+
+    public function testKeepsATrailingMenuListInAPostWithNoSubstantialProse(): void
+    {
+        // A photo/link post: every paragraph is short (< SUBSTANTIAL_PROSE_LENGTH),
+        // and a "more stories" list follows them. With no substantial prose the
+        // anchor falls back to the first short paragraph, so the trailing list is
+        // not mistaken for a masthead and is kept.
+        $shortParagraph = '<p>' . str_repeat('x', 40) . '</p>';
+        $menu = $this->fourLinkMenu();
+        $html = '<div>' . $shortParagraph . $shortParagraph . $menu . '</div>';
+
+        self::assertStringContainsString('d.test/a', $this->trimmed($html));
+    }
+
+    public function testRemovesALeadingMenuListFromAPageWithNoParagraphAtAll(): void
+    {
+        // Div-soup with no <p>/heading anywhere: no prose candidate exists, so
+        // the anchor is null and the menu counts as leading regardless of position.
+        $menu = $this->fourLinkMenu();
+        $bodyText = str_repeat('y', 150);
+        $html = '<div>' . $menu . '<div>' . $bodyText . '</div></div>';
+
+        $result = $this->trimmed($html);
+
+        self::assertStringNotContainsString('d.test/a', $result);
+        self::assertStringContainsString($bodyText, $result);
+    }
+
+    private function fourLinkMenu(): string
+    {
+        return '<ul><li><a href="https://d.test/a">A</a></li>'
+            . '<li><a href="https://d.test/b">B</a></li>'
+            . '<li><a href="https://d.test/c">C</a></li>'
+            . '<li><a href="https://d.test/d">D</a></li></ul>';
+    }
+
+    private function fourItemList(string $trailingText): string
+    {
+        $item = static fn (string $path): string => '<li><a href="https://d.test/' . $path . '">AAA</a>'
+            . $trailingText . '</li>';
+
+        return '<ul>' . $item('a') . $item('b') . $item('c') . $item('d') . '</ul>';
     }
 
     /**

@@ -635,6 +635,34 @@ article {
   border-radius: var(--radius);
 }
 
+/* Substack video placeholders (#627) carry no class -- the shared sanitizer
+   strips class/style/data-*, so the alt text the backend writes is the only
+   stable hook. A centered play badge marks the poster as a video, not a
+   still image, in both themes. */
+.content ::ng-deep a:has(> img[alt='Video — open the original article to watch']) {
+  position: relative;
+  display: inline-block;
+}
+
+.content ::ng-deep a:has(> img[alt='Video — open the original article to watch'])::after {
+  content: '▶';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  padding-left: 0.25em;
+  place-items: center;
+  transform: translate(-50%, -50%);
+  border-radius: var(--radius-pill);
+  background: rgb(0 0 0 / 55%);
+  color: rgb(255 255 255 / 92%);
+  font-size: var(--fs-xl);
+  line-height: 1;
+  pointer-events: none;
+}
+
 .content ::ng-deep :not(pre) > code {
   padding: 0.1em 0.35em;
   background: var(--surface-1);
