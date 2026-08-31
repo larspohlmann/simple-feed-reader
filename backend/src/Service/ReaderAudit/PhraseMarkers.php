@@ -29,7 +29,10 @@ final readonly class PhraseMarkers
     /** @return list<BodyBlock> */
     private function scopeFor(PhraseFamily $family, ExtractedBody $body): array
     {
-        return $family->leadingOnly ? $body->leadingBlocks() : $body->blocks;
+        return match ($family->scope) {
+            PhraseScope::AboveTheArticle => $body->leadingBlocks(),
+            PhraseScope::OnlyWhenNoArticle => $body->hasArticleText() ? [] : $body->blocks,
+        };
     }
 
     /** @param list<BodyBlock> $blocks */

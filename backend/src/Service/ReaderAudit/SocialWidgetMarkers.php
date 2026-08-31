@@ -69,10 +69,11 @@ final readonly class SocialWidgetMarkers
         foreach ($body->links as $link) {
             $host = $this->socialHostOf($link);
             if ($host !== null && mb_strlen($link->text) <= self::ICON_TEXT_CHARS) {
-                $hosts[$host] = true;
+                $hosts[] = $host;
             }
         }
-        if (\count($hosts) < self::MIN_SOCIAL_ROW) {
+        $distinct = array_unique($hosts);
+        if (\count($distinct) < self::MIN_SOCIAL_ROW) {
             return null;
         }
 
@@ -80,7 +81,7 @@ final readonly class SocialWidgetMarkers
             'social_row',
             3,
             'ShareWidgetRemover',
-            'icon links to ' . implode(', ', array_keys($hosts)),
+            'icon links to ' . implode(', ', $distinct),
         );
     }
 

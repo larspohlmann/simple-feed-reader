@@ -7,7 +7,7 @@ namespace App\Service\ReaderAudit;
 /**
  * One family of leftover-furniture wording, with the two limits that keep it
  * from firing on prose: the block length above which a match means nothing, and
- * whether the family may match anywhere or only above the first paragraph.
+ * the region of the body it may look at.
  *
  * "Newsletter" in a 40-character line before the article starts is a signup box
  * in the reader's way; the same word in a 900-character paragraph is the article
@@ -22,7 +22,7 @@ final readonly class PhraseFamily
         public string $suspect,
         public int $weight,
         public int $maxBlockChars,
-        public bool $leadingOnly,
+        public PhraseScope $scope,
         public array $phrases,
     ) {
     }

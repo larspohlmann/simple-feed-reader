@@ -80,6 +80,92 @@ final class ExtractedBodyTest extends TestCase
         self::assertSame('x.com', $body->links[0]->host());
     }
 
+    public function testAParagraphOfExactlyTwoHundredCharactersStartsTheArticle(): void
+    {
+        $atLimit = '<p>' . str_repeat('a', 200) . '</p><p>Kurz</p>';
+        $justUnder = '<p>' . str_repeat('a', 199) . '</p><p>Kurz</p>';
+
+        self::assertSame([], ExtractedBody::fromHtml($atLimit)->leadingBlocks());
+        self::assertCount(2, ExtractedBody::fromHtml($justUnder)->leadingBlocks());
+    }
+
+    public function testProseLengthCountsCharactersNotBytes(): void
+    {
+        // Two hundred umlauts are four hundred bytes; counting bytes would call
+        // a short caption the start of the article and empty the leading region.
+        $umlauts = '<p>' . str_repeat('ä', 199) . '</p><p>Kurz</p>';
+
+        self::assertCount(2, ExtractedBody::fromHtml($umlauts)->leadingBlocks());
+    }
+
+    public function testABlockIsLinkDominatedAtEightyPercentOfItsCharacters(): void
+    {
+        $block = static fn (int $linked): string => '<p><a href="/a">' . str_repeat('a', $linked) . '</a>'
+            . str_repeat('b', 100 - $linked) . '</p>';
+        $exactly = ExtractedBody::fromHtml($block(80));
+        $justUnder = ExtractedBody::fromHtml($block(79));
+
+        self::assertTrue($exactly->blocks[0]->isLinkDominated());
+        self::assertFalse($justUnder->blocks[0]->isLinkDominated());
+    }
+
+    public function testAnEmptyBlockIsNotLinkDominated(): void
+    {
+        // Division by its own length would throw, and calling it chrome would
+        // make every stray empty element a menu entry.
+        $body = ExtractedBody::fromHtml('<p><a href="/a"></a></p><p>Text</p>');
+
+        self::assertSame(['Text'], array_map(static fn (BodyBlock $b): string => $b->text, $body->blocks));
+    }
+
+    public function testHasArticleTextAnswersWhetherTheBodyEverReachesAParagraph(): void
+    {
+        $wall = ExtractedBody::fromHtml('<p>Wir verwenden Cookies</p><p>Akzeptieren</p>');
+        $article = ExtractedBody::fromHtml('<p>' . self::PROSE . '</p>');
+
+        self::assertFalse($wall->hasArticleText());
+        self::assertTrue($article->hasArticleText());
+    }
+
+    public function testCountsTheLinksInEachBlockSeparatelyFromTheBodysOwn(): void
+    {
+        $body = ExtractedBody::fromHtml('<p><a href="/a">eins</a> und <a href="/b">zwei</a></p>');
+
+        self::assertSame(2, $body->blocks[0]->linkCount);
+        self::assertSame(8, $body->blocks[0]->linkedChars);
+        self::assertSame(13, $body->blocks[0]->length());
+    }
+
+    public function testCollapsesRunsOfWhitespaceSoAWrappedMenuEntryReadsAsOneLine(): void
+    {
+        $body = ExtractedBody::fromHtml("<p>  Zwei \n\t Woerter  </p>");
+
+        self::assertSame('Zwei Woerter', $body->blocks[0]->text);
+        self::assertSame('Zwei Woerter', $body->text);
+    }
+
+    public function testALinkWithNoHrefReadsAsAnEmptyTargetRatherThanFailing(): void
+    {
+        $body = ExtractedBody::fromHtml('<p><a>kein Ziel</a></p>');
+
+        self::assertSame('', $body->links[0]->href);
+        self::assertSame('', $body->links[0]->host());
+    }
+
+    public function testReportsTheBlocksTagSoAListItemCanBeToldFromAParagraph(): void
+    {
+        $body = ExtractedBody::fromHtml('<ul><li>Eins</li></ul><p>Zwei</p>');
+
+        self::assertSame(['li', 'p'], array_map(static fn (BodyBlock $b): string => $b->tag, $body->blocks));
+    }
+
+    public function testCountsHeadingsOfEveryLevel(): void
+    {
+        $body = ExtractedBody::fromHtml('<h1>a</h1><h2>b</h2><h3>c</h3><h4>d</h4><h5>e</h5><h6>f</h6>');
+
+        self::assertSame(6, $body->headingCount);
+    }
+
     public function testAnUnparseableBodyMeasuresAsEmptyRatherThanFailing(): void
     {
         $body = ExtractedBody::fromHtml('');

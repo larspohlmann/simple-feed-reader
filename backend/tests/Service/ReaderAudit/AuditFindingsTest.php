@@ -72,6 +72,95 @@ final class AuditFindingsTest extends TestCase
         );
     }
 
+    public function testAFindingsScoreIsTheSumOfItsMarkerWeights(): void
+    {
+        $finding = $this->finding(1, 11, 'A', [$this->marker('a', 2), $this->marker('b', 3)]);
+
+        self::assertSame(5, $finding->score());
+    }
+
+    public function testAnUnflaggedFindingScoresZero(): void
+    {
+        self::assertSame(0, $this->finding(1, 11, 'A', [])->score());
+    }
+
+    public function testAFindingRoundTripsThroughJsonWithEveryFieldIntact(): void
+    {
+        $original = $this->finding(7, 11, 'Ein Feed', [$this->marker('body_short', 2, 'EdgeBoilerplateTrimmer')]);
+
+        $restored = AuditFindings::fromJsonlFiles([$this->jsonl([$original])])->findings[0];
+
+        self::assertSame(7, $restored->entryId);
+        self::assertSame(11, $restored->feedId);
+        self::assertSame('Ein Feed', $restored->feedTitle);
+        self::assertSame('Titel', $restored->title);
+        self::assertSame('https://example.test/a', $restored->sourceUrl);
+        self::assertSame('http://localhost:4200/?entry=1', $restored->readerLink);
+        self::assertTrue($restored->extracted);
+        self::assertSame(['chars' => 10], $restored->metrics);
+        self::assertSame(['body_short'], $restored->markerCodes());
+        self::assertSame('EdgeBoilerplateTrimmer', $restored->markers[0]->suspect);
+        self::assertSame('detail', $restored->markers[0]->detail);
+        self::assertSame(2, $restored->markers[0]->weight);
+    }
+
+    public function testCountsHowManyOfTheAuditedArticlesWereExtractedAtAll(): void
+    {
+        $failed = new AuditFinding(2, 11, 'A', 'T', 'u', 'l', false, [], []);
+
+        $findings = AuditFindings::fromJsonlFiles([
+            $this->jsonl([$this->finding(1, 11, 'A', []), $failed]),
+        ]);
+
+        self::assertSame(2, $findings->audited());
+        self::assertSame(1, $findings->extracted());
+    }
+
+    public function testOneFeedAuditedTwiceCountsAsOneFeed(): void
+    {
+        $findings = AuditFindings::fromJsonlFiles([$this->jsonl([
+            $this->finding(1, 11, 'A', []),
+            $this->finding(2, 11, 'A', []),
+        ])]);
+
+        self::assertSame(1, $findings->feedCount());
+    }
+
+    public function testAFeedRowCarriesItsWorstScoreNotItsLast(): void
+    {
+        $findings = AuditFindings::fromJsonlFiles([$this->jsonl([
+            $this->finding(1, 11, 'A', [$this->marker('a', 7)]),
+            $this->finding(2, 11, 'A', [$this->marker('b', 2)]),
+        ])]);
+
+        self::assertSame(7, $findings->byFeed()[0]['worst']);
+        self::assertSame(2, $findings->byFeed()[0]['audited']);
+        self::assertSame(2, $findings->byFeed()[0]['flagged']);
+    }
+
+    public function testFeedsWithTheSameShareAreOrderedByHowManyArticlesFailed(): void
+    {
+        // Both feeds fail every article; the one that failed more of them is the
+        // bigger problem and has to come first.
+        $findings = AuditFindings::fromJsonlFiles([$this->jsonl([
+            $this->finding(1, 11, 'Klein', [$this->marker('a', 2)]),
+            $this->finding(2, 12, 'Gross', [$this->marker('a', 2)]),
+            $this->finding(3, 12, 'Gross', [$this->marker('a', 2)]),
+        ])]);
+
+        self::assertSame('Gross', $findings->byFeed()[0]['feed']);
+    }
+
+    public function testAnEmptySweepAnswersEveryQuestionWithNothing(): void
+    {
+        $findings = AuditFindings::fromJsonlFiles([$this->jsonl([])]);
+
+        self::assertSame(0, $findings->audited());
+        self::assertSame(0, $findings->feedCount());
+        self::assertSame([], $findings->ranked());
+        self::assertSame([], $findings->byFeed());
+    }
+
     /** @param list<AuditFinding> $findings */
     private function jsonl(array $findings): string
     {
@@ -79,7 +168,7 @@ final class AuditFindingsTest extends TestCase
         $this->files[] = $path;
         $encode = static fn (AuditFinding $f): string => json_encode($f->toArray(), \JSON_THROW_ON_ERROR);
         $lines = array_map($encode, $findings);
-        file_put_contents($path, implode("\n", $lines) . "\n");
+        file_put_contents($path, $lines === [] ? '' : implode("\n", $lines) . "\n");
 
         return $path;
     }

@@ -25,10 +25,6 @@ final readonly class LeadingChromeMarkers
     public function detect(ExtractedBody $body): array
     {
         $leading = $body->leadingBlocks();
-        if ($leading === []) {
-            return [];
-        }
-
         $candidates = [
             $this->linkList($leading),
             $this->navigationRun($leading),

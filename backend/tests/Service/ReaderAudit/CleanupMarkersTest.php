@@ -38,12 +38,36 @@ final class CleanupMarkersTest extends TestCase
         self::assertStringContainsString('CoverageGate', $markers[0]->suspect);
     }
 
-    public function testTheCoverageGateOutranksAFetchFailureBecauseItMeansTheCleanersMisread(): void
+    public function testAPageThatNeverArrivedIsNotAFindingBecauseNoCleanerCanFixIt(): void
+    {
+        // A publisher blocking the fetcher, or an outage: real, and nothing in
+        // this codebase changes it. 59 of the first sweep's 159 findings were
+        // these, and they buried the ones worth acting on (#744).
+        self::assertSame([], $this->markers->detect(ExtractionResult::failed(null, 'fetch'), $this->entry(), null));
+    }
+
+    public function testAnEntryWithoutASourceUrlIsNotAFindingEither(): void
+    {
+        self::assertSame([], $this->markers->detect(ExtractionResult::failed(null, 'no_url'), $this->entry(), null));
+    }
+
+    public function testTheCoverageGateOutranksReadabilityFindingNothingBecauseItMeansTheCleanersMisread(): void
     {
         $mismatch = $this->markers->detect(ExtractionResult::failed(null, 'mismatch'), $this->entry(), null);
-        $unreachable = $this->markers->detect(ExtractionResult::failed(null, 'fetch'), $this->entry(), null);
+        $nothing = $this->markers->detect(ExtractionResult::failed(null, 'unextractable'), $this->entry(), null);
 
-        self::assertGreaterThan($unreachable[0]->weight, $mismatch[0]->weight);
+        self::assertGreaterThan($nothing[0]->weight, $mismatch[0]->weight);
+    }
+
+    public function testEachReportableFailureNamesItsStageAndSaysWhatTheReaderDid(): void
+    {
+        foreach (['unextractable' => 4, 'empty' => 4, 'mismatch' => 5] as $reason => $weight) {
+            $markers = $this->markers->detect(ExtractionResult::failed(null, $reason), $this->entry(), null);
+
+            self::assertSame('extraction_failed_' . $reason, $markers[0]->code, $reason);
+            self::assertSame($weight, $markers[0]->weight, $reason);
+            self::assertSame('the reader fell back to the feed body', $markers[0]->detail, $reason);
+        }
     }
 
     public function testASuccessfulExtractionIsMeasuredByShapeAndByWording(): void

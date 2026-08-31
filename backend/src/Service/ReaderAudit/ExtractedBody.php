@@ -61,6 +61,22 @@ final readonly class ExtractedBody
     }
 
     /**
+     * Whether the body reaches a paragraph at all. False means the reader showed
+     * the user no article — a wall, an index page, a stub — which is what makes
+     * a wall's wording believable rather than the article's own fine print.
+     */
+    public function hasArticleText(): bool
+    {
+        foreach ($this->blocks as $block) {
+            if ($block->isProse()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Everything above the article's first real paragraph. A body that never
      * reaches one is leading region throughout — it is all chrome, which is
      * exactly what the rules should then see.

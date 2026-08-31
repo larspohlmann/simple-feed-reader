@@ -13,13 +13,18 @@ use App\Service\Reader\ExtractionResult;
  */
 final readonly class CleanupMarkers
 {
-    /** Reason from ExtractionResult => [weight, the stage to look at first]. */
+    /**
+     * Reason from ExtractionResult => [weight, the stage to look at first]. Only
+     * the reasons a change to this codebase could fix are listed. A page that
+     * never arrived (`fetch`) is a publisher blocking the fetcher or an outage,
+     * and an entry with no URL (`no_url`) has nothing to fetch; no cleaner fixes
+     * either. 59 of the first sweep's 159 findings were unreachable pages, and
+     * they buried the ones worth acting on (#744).
+     */
     private const array FAILURE_SUSPECTS = [
-        'fetch' => [3, 'HtmlPageFetcher — the page never arrived'],
         'unextractable' => [4, 'readability found no article on the page'],
         'empty' => [4, 'extraction or cleaning left nothing'],
         'mismatch' => [5, 'ExtractionCoverageGate rejected the extraction (#654)'],
-        'no_url' => [0, 'the entry has no source URL'],
     ];
 
     public function __construct(
@@ -39,7 +44,7 @@ final readonly class CleanupMarkers
     public function detect(ExtractionResult $result, SampledEntry $entry, ?ExtractedBody $body): array
     {
         if (!$result->ok || $body === null) {
-            return [$this->failure((string) $result->reason)];
+            return $this->failure((string) $result->reason);
         }
 
         return [
@@ -50,15 +55,19 @@ final readonly class CleanupMarkers
         ];
     }
 
-    private function failure(string $reason): CleanupMarker
+    /** @return list<CleanupMarker> */
+    private function failure(string $reason): array
     {
-        [$weight, $suspect] = self::FAILURE_SUSPECTS[$reason] ?? [3, 'unknown failure reason'];
+        $reportable = self::FAILURE_SUSPECTS[$reason] ?? null;
+        if ($reportable === null) {
+            return [];
+        }
 
-        return new CleanupMarker(
+        return [new CleanupMarker(
             'extraction_failed_' . $reason,
-            $weight,
-            $suspect,
-            'the reader fell back to the feed body'
-        );
+            $reportable[0],
+            $reportable[1],
+            'the reader fell back to the feed body',
+        )];
     }
 }
