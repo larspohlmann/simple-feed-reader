@@ -34,14 +34,18 @@ if [ -n "${USER_ACCOUNT:-}" ]; then
   user_option=(--user "$USER_ACCOUNT")
 fi
 
-echo "Sweeping $LIMIT articles in $SHARDS shards (seed $SEED)…"
+# One cutoff for every shard: the refresh worker keeps ingesting during a sweep,
+# and a shard that saw a newer entry set would draw a different sample.
+BEFORE="$(date -u '+%Y-%m-%d %H:%M:%S')"
+
+echo "Sweeping $LIMIT articles in $SHARDS shards (seed $SEED, entries before $BEFORE UTC)…"
 docker compose exec -T php sh -c "rm -f $OUT_DIR/findings*.jsonl"
 
 pids=()
 for shard in $(seq 0 $((SHARDS - 1))); do
   docker compose exec -T php bin/console app:reader:audit \
     ${user_option[@]+"${user_option[@]}"} \
-    --limit "$LIMIT" --per-feed "$PER_FEED" --seed "$SEED" \
+    --limit "$LIMIT" --per-feed "$PER_FEED" --seed "$SEED" --before "$BEFORE" \
     --shards "$SHARDS" --shard "$shard" \
     --base-url "$BASE_URL" \
     --out "$OUT_DIR/findings-$shard.jsonl" \

@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Service\ReaderAudit\AuditSample;
 use App\Service\ReaderAudit\AuditSampler;
 use App\Service\ReaderAudit\SampledEntry;
 use App\Tests\DbTestCase;
@@ -36,7 +37,7 @@ final class AuditSamplerTest extends DbTestCase
         $this->feedWithEntries('quiet', 1);
         $this->em->flush();
 
-        $sample = $this->sampler()->sample($this->userId(), limit: 10, perFeed: 10, seed: 1);
+        $sample = $this->drawn(limit: 10, perFeed: 10, seed: 1);
 
         self::assertSame(['loud', 'quiet'], $this->feedTitlesOf($sample));
     }
@@ -47,7 +48,7 @@ final class AuditSamplerTest extends DbTestCase
         $this->feedWithEntries('b', 5);
         $this->em->flush();
 
-        $sample = $this->sampler()->sample($this->userId(), limit: 2, perFeed: 5, seed: 1);
+        $sample = $this->drawn(limit: 2, perFeed: 5, seed: 1);
 
         self::assertSame(['a', 'b'], $this->feedTitlesOf($sample));
     }
@@ -57,8 +58,8 @@ final class AuditSamplerTest extends DbTestCase
         $this->feedWithEntries('a', 20);
         $this->em->flush();
 
-        $first = $this->sampler()->sample($this->userId(), limit: 5, perFeed: 5, seed: 99);
-        $second = $this->sampler()->sample($this->userId(), limit: 5, perFeed: 5, seed: 99);
+        $first = $this->drawn(limit: 5, perFeed: 5, seed: 99);
+        $second = $this->drawn(limit: 5, perFeed: 5, seed: 99);
 
         self::assertSame($this->entryIdsOf($first), $this->entryIdsOf($second));
     }
@@ -70,7 +71,7 @@ final class AuditSamplerTest extends DbTestCase
         $this->em->persist(new Entry($feed, 'no-url', null, 'Ohne URL', $moment, $moment));
         $this->em->flush();
 
-        self::assertSame([], $this->sampler()->sample($this->userId(), limit: 10, perFeed: 10, seed: 1));
+        self::assertSame([], $this->drawn(limit: 10, perFeed: 10, seed: 1));
     }
 
     public function testAFeedThePublisherNeverTitledIsNamedByItsUrlRatherThanDropped(): void
@@ -82,7 +83,7 @@ final class AuditSamplerTest extends DbTestCase
         $this->em->persist(new Entry($feed, 'g', 'https://untitled.example.com/g', 'T', $moment, $moment));
         $this->em->flush();
 
-        $sample = $this->sampler()->sample($this->userId(), limit: 10, perFeed: 10, seed: 1);
+        $sample = $this->drawn(limit: 10, perFeed: 10, seed: 1);
 
         self::assertSame(['https://untitled.example.com/feed.xml'], $this->feedTitlesOf($sample));
     }
@@ -100,7 +101,7 @@ final class AuditSamplerTest extends DbTestCase
         $this->feedWithEntries('mine', 1);
         $this->em->flush();
 
-        $sample = $this->sampler()->sample($this->userId(), limit: 10, perFeed: 10, seed: 1);
+        $sample = $this->drawn(limit: 10, perFeed: 10, seed: 1);
 
         self::assertSame(['mine'], $this->feedTitlesOf($sample));
     }
@@ -152,6 +153,41 @@ final class AuditSamplerTest extends DbTestCase
     private function userId(): int
     {
         return (int) $this->user->getId();
+    }
+
+    public function testAnEntryStoredAfterTheCutoffIsNotDrawnSoEveryShardSeesTheSameSet(): void
+    {
+        // The refresh worker ingests during a sweep. Without the cutoff, a shard
+        // that started a minute later would reshuffle a larger candidate set and
+        // audit different articles than its siblings.
+        $feed = $this->feedWithEntries('late', 0);
+        $stored = new \DateTimeImmutable('2026-07-05T00:00:00Z');
+        $this->em->persist(new Entry($feed, 'late', 'https://late.example.com/1', 'T', $stored, $stored));
+        $this->em->flush();
+
+        $sample = $this->drawn(limit: 10, perFeed: 10, seed: 1, before: '2026-07-02T00:00:00Z');
+
+        self::assertSame([], $sample);
+    }
+
+    public function testPickAuditsTheNamedArticlesWithoutDrawingAtAll(): void
+    {
+        $this->feedWithEntries('a', 3);
+        $this->em->flush();
+        $drawn = $this->drawn(limit: 10, perFeed: 10, seed: 1);
+        $wanted = $drawn[2]->entryId;
+
+        $picked = $this->sampler()->pick([$wanted], $this->userId());
+
+        self::assertSame([$wanted], $this->entryIdsOf($picked));
+    }
+
+    /** @return list<SampledEntry> */
+    private function drawn(int $limit, int $perFeed, int $seed, string $before = '2030-01-01T00:00:00Z'): array
+    {
+        return $this->sampler()->sample(
+            new AuditSample($this->userId(), $limit, $perFeed, $seed, new \DateTimeImmutable($before)),
+        );
     }
 
     private function sampler(): AuditSampler

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Service\ReaderAudit\AuditSample;
 use App\Service\ReaderAudit\AuditSampler;
 use App\Service\ReaderAudit\AuditUserResolver;
 use App\Service\ReaderAudit\ReaderAuditRunner;
@@ -59,6 +60,8 @@ final class ReaderAuditCommand extends Command
             ->addOption('limit', null, $required, 'Articles to audit in total', (string) self::DEFAULT_LIMIT)
             ->addOption('per-feed', null, $required, 'Cap per feed', (string) self::DEFAULT_PER_FEED)
             ->addOption('seed', null, $required, 'Sample seed; shards share it', (string) self::DEFAULT_SEED)
+            ->addOption('before', null, $required, 'Sample entries stored before this instant; shards share it')
+            ->addOption('entries', null, $required, 'Audit these entry ids instead of drawing a sample')
             ->addOption('shards', null, $required, 'Split the sample into this many runs', '1')
             ->addOption('shard', null, $required, 'Which shard this process runs, from 0', '0')
             ->addOption('base-url', null, $required, 'SPA origin the report links to', self::DEFAULT_BASE_URL)
@@ -70,12 +73,7 @@ final class ReaderAuditCommand extends Command
         $io = new SymfonyStyle($input, $output);
 
         $userId = $this->users->resolve($this->option($input, 'user'));
-        $sample = $this->sampler->sample(
-            $userId,
-            $this->number($input, 'limit'),
-            $this->number($input, 'per-feed'),
-            $this->number($input, 'seed'),
-        );
+        $sample = $this->articlesToAudit($input, $userId);
         $mine = $this->shardOf($sample, $this->number($input, 'shard'), $this->number($input, 'shards'));
 
         $io->text(\sprintf(
@@ -102,6 +100,23 @@ final class ReaderAuditCommand extends Command
         $io->success(\sprintf('%d of %d audited articles carry at least one marker.', $flagged, \count($mine)));
 
         return Command::SUCCESS;
+    }
+
+    /** @return list<SampledEntry> */
+    private function articlesToAudit(InputInterface $input, int $userId): array
+    {
+        $named = $this->option($input, 'entries');
+        if ($named !== null) {
+            return $this->sampler->pick(array_map(intval(...), explode(',', $named)), $userId);
+        }
+
+        return $this->sampler->sample(new AuditSample(
+            $userId,
+            $this->number($input, 'limit'),
+            $this->number($input, 'per-feed'),
+            $this->number($input, 'seed'),
+            new \DateTimeImmutable($this->option($input, 'before') ?? 'now'),
+        ));
     }
 
     /**

@@ -17,7 +17,11 @@ use Doctrine\DBAL\Connection;
  *
  * The shuffle is seeded in PHP rather than by the database, so the same seed
  * draws the same sample on MySQL and SQLite and parallel shards of one run can
- * each recompute the identical list without a shared file.
+ * each recompute the identical list without a shared file. A seed alone is not
+ * enough for that: the refresh worker keeps ingesting during a sweep, and a
+ * changed candidate set reshuffles into a different sample. So the caller also
+ * fixes a cutoff instant, and every shard draws from the entries that existed
+ * when the sweep began.
  */
 final readonly class AuditSampler
 {
@@ -26,11 +30,25 @@ final readonly class AuditSampler
     }
 
     /** @return list<SampledEntry> */
-    public function sample(int $userId, int $limit, int $perFeed, int $seed): array
+    public function sample(AuditSample $request): array
     {
-        $chosenIds = $this->roundRobin($this->candidatesByFeed($userId, $seed), $limit, $perFeed);
+        $byFeed = $this->candidatesByFeed($request->userId, $request->seed, $request->before);
+        $chosenIds = $this->roundRobin($byFeed, $request->limit, $request->perFeed);
 
-        return $chosenIds === [] ? [] : $this->detailsOf($chosenIds, $userId);
+        return $chosenIds === [] ? [] : $this->detailsOf($chosenIds, $request->userId);
+    }
+
+    /**
+     * The named articles instead of a draw — how a cleaner change is re-checked
+     * against the pages that motivated it.
+     *
+     * @param list<int> $entryIds
+     *
+     * @return list<SampledEntry>
+     */
+    public function pick(array $entryIds, int $userId): array
+    {
+        return $entryIds === [] ? [] : $this->detailsOf($entryIds, $userId);
     }
 
     /**
@@ -38,15 +56,16 @@ final readonly class AuditSampler
      *
      * @return array<int, list<int>>
      */
-    private function candidatesByFeed(int $userId, int $seed): array
+    private function candidatesByFeed(int $userId, int $seed, \DateTimeImmutable $before): array
     {
         $rows = $this->connection->fetchAllAssociative(
             'SELECT s.feed_id AS feed_id, e.id AS entry_id
                FROM subscription s
                JOIN entry e ON e.feed_id = s.feed_id
               WHERE s.user_id = :user AND e.url IS NOT NULL AND e.url <> \'\'
+                AND e.created_at < :before
               ORDER BY s.feed_id, e.id',
-            ['user' => $userId],
+            ['user' => $userId, 'before' => $before->format('Y-m-d H:i:s')],
         );
 
         $byFeed = [];
