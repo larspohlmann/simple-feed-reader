@@ -58,4 +58,15 @@ final class DeutschlandradioAudioSourceTest extends TestCase
     {
         self::assertSame([], $this->source->find('<html><body><p>text</p></body></html>', self::URL));
     }
+
+    public function testFindsTheAudioInTheCapturedPage(): void
+    {
+        $html = file_get_contents(__DIR__ . '/../../../../Fixtures/reader/media/deutschlandradio-audio.html');
+        self::assertIsString($html);
+
+        $found = $this->source->find($html, self::URL);
+
+        self::assertCount(1, $found);
+        self::assertStringContainsString('.mp3', $found[0]->url);
+    }
 }
