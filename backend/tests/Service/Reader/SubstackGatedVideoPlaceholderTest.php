@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader;
 
 use App\Service\Html\HtmlDocumentParser;
-use App\Service\Reader\GatedMediaContext;
 use App\Service\Reader\SubstackGatedVideoPlaceholder;
 use PHPUnit\Framework\TestCase;
 
@@ -13,8 +12,9 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
 {
     private const string PLAYER =
         '<div class="shows-video-player-container container-abc">'
-        . '<div class="settingsControlsContainer-def">'
-        . '<p>Playback speed</p><p>Share post</p><p>0:00</p><p>Preview</p></div></div>';
+        . '<div class="settingsControlsContainer-x">'
+        . '<p>Playback speed</p><p>×</p><p>Share post</p></div>'
+        . '<div><p>0:00</p><p>/</p><p>Preview</p></div></div>';
     private const string TEASER =
         '<p>An ancient intuition is that plants have souls and participate in life.</p>';
     private const string PAYWALL =
@@ -30,85 +30,124 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
 
     public function testReplacesTheGatedPlayerWithAPosterLinkingToTheSource(): void
     {
-        $body = $this->gatedPost(self::PLAYER . self::TEASER . self::PAYWALL);
-        $context = new GatedMediaContext(
-            'https://rupertsheldrake.substack.com/p/the-souls-of-plants',
-            'https://substackcdn.com/image/og.jpg',
+        $result = $this->apply(
+            self::PLAYER . self::TEASER . self::PAYWALL,
+            'https://cdn.test/og.jpg',
+            'https://x.substack.com/p/a',
         );
 
-        $acted = $this->apply($body, $context, $result);
-
-        self::assertTrue($acted);
         self::assertStringNotContainsString('Playback speed', $result);
+        self::assertStringNotContainsString('Share post', $result);
         self::assertStringNotContainsString('Continue reading this post for free', $result);
-        self::assertStringContainsString('substackcdn.com/image/og.jpg', $result);
-        self::assertStringContainsString('rupertsheldrake.substack.com/p/the-souls-of-plants', $result);
+        self::assertStringContainsString('<a href="https://x.substack.com/p/a">', $result);
+        self::assertStringContainsString('src="https://cdn.test/og.jpg"', $result);
+        self::assertStringContainsString('width="1280"', $result);
         self::assertStringContainsString('An ancient intuition', $result);
+    }
+
+    public function testUsesTheCanonicalLinkWhenOgUrlIsAbsent(): void
+    {
+        $head = '<meta property="og:image" content="https://cdn.test/og.jpg">'
+            . '<link rel="canonical" href="https://x.substack.com/p/canonical">';
+        $result = $this->applyWithHead($head, self::PLAYER . self::TEASER . self::PAYWALL);
+
+        self::assertStringContainsString('<a href="https://x.substack.com/p/canonical">', $result);
+        self::assertStringNotContainsString('Playback speed', $result);
     }
 
     public function testDoesNothingWhenThereIsNoPaywallLandmark(): void
     {
-        $body = $this->gatedPost(self::PLAYER . self::TEASER);
-        $context = new GatedMediaContext('https://x.substack.com/p/free', 'https://x/og.jpg');
+        $result = $this->apply(
+            self::PLAYER . self::TEASER,
+            'https://cdn.test/og.jpg',
+            'https://x.substack.com/p/a',
+        );
 
-        self::assertFalse($this->apply($body, $context, $result));
-        self::assertStringContainsString('An ancient intuition', $result);
+        self::assertStringContainsString('Playback speed', $result);
+        self::assertStringNotContainsString('<img', $result);
+    }
+
+    public function testDoesNothingWhenThereIsNoPlayerContainer(): void
+    {
+        $renamedPlayer =
+            '<div class="shows-video-player-renamed container-abc">'
+            . '<div class="settingsControlsContainer-x"><p>Playback speed</p><p>Preview</p></div></div>';
+        $result = $this->apply(
+            $renamedPlayer . self::TEASER . self::PAYWALL,
+            'https://cdn.test/og.jpg',
+            'https://x.substack.com/p/a',
+        );
+
+        self::assertStringContainsString('Playback speed', $result);
+        self::assertStringContainsString('Continue reading this post for free', $result);
+        self::assertStringNotContainsString('<img', $result);
     }
 
     public function testDoesNothingWhenThereIsNoVideoArticle(): void
     {
+        $head = '<meta property="og:image" content="https://cdn.test/og.jpg">'
+            . '<meta property="og:url" content="https://x.substack.com/p/a">';
         $body = '<div class="single-post-container"><article class="post">'
-            . self::TEASER . self::PAYWALL . '</article></div>';
-        $context = new GatedMediaContext('https://x.substack.com/p/plain', 'https://x/og.jpg');
+            . self::PLAYER . self::TEASER . self::PAYWALL . '</article></div>';
+        $result = $this->normalize($this->page($head, $body));
 
-        self::assertFalse($this->apply($body, $context, $result));
-        self::assertStringContainsString('An ancient intuition', $result);
-    }
-
-    public function testFailsClosedWhenThePlayerContainerIsRenamed(): void
-    {
-        $renamedPlayer =
-            '<div class="shows-video-player-renamed container-abc">'
-            . '<div class="settingsControlsContainer-def"><p>Playback speed</p><p>Preview</p></div></div>';
-        $body = $this->gatedPost($renamedPlayer . self::TEASER . self::PAYWALL);
-        $context = new GatedMediaContext('https://x.substack.com/p/a', 'https://x/og.jpg');
-
-        self::assertFalse($this->apply($body, $context, $result));
         self::assertStringContainsString('Playback speed', $result);
-        self::assertStringContainsString('Continue reading this post for free', $result);
-        self::assertStringNotContainsString('og.jpg', $result);
+        self::assertStringNotContainsString('<img', $result);
     }
 
     public function testDoesNothingWhenThePosterUrlIsMissing(): void
     {
-        $body = $this->gatedPost(self::PLAYER . self::TEASER . self::PAYWALL);
-        $context = new GatedMediaContext('https://x.substack.com/p/a', null);
+        $head = '<meta property="og:url" content="https://x.substack.com/p/a">';
+        $result = $this->applyWithHead($head, self::PLAYER . self::TEASER . self::PAYWALL);
 
-        self::assertFalse($this->apply($body, $context, $result));
+        self::assertStringContainsString('Playback speed', $result);
     }
 
     public function testDoesNothingWhenThePosterUrlIsNotHttp(): void
     {
-        $body = $this->gatedPost(self::PLAYER . self::TEASER . self::PAYWALL);
-        $context = new GatedMediaContext('https://x.substack.com/p/a', 'ftp://x/og.jpg');
+        $result = $this->apply(
+            self::PLAYER . self::TEASER . self::PAYWALL,
+            'ftp://cdn.test/og.jpg',
+            'https://x.substack.com/p/a',
+        );
 
-        self::assertFalse($this->apply($body, $context, $result));
+        self::assertStringContainsString('Playback speed', $result);
+        self::assertStringNotContainsString('<img', $result);
     }
 
-    private function gatedPost(string $inner): string
+    private function apply(string $inner, string $ogImage, string $ogUrl): string
+    {
+        $head = '<meta property="og:image" content="' . $ogImage . '">'
+            . '<meta property="og:url" content="' . $ogUrl . '">';
+
+        return $this->applyWithHead($head, $inner);
+    }
+
+    private function applyWithHead(string $head, string $inner): string
+    {
+        return $this->normalize($this->page($head, $this->gatedArticle($inner)));
+    }
+
+    private function gatedArticle(string $inner): string
     {
         return '<div class="single-post-container" aria-label="Post" role="main">'
             . '<article class="typography podcast-post post shows-post">' . $inner . '</article></div>';
     }
 
-    /** @param-out string $result */
-    private function apply(string $bodyHtml, GatedMediaContext $context, ?string &$result): bool
+    private function page(string $head, string $body): string
     {
-        $document = HtmlDocumentParser::parseOrNull($bodyHtml);
-        self::assertNotNull($document);
-        $acted = $this->placeholder->replaceIn($document, $context);
-        $result = $document->saveHtml();
+        // The fixture is the input under test, so it keeps its `lang`-less
+        // <html> instead of being edited to please the IDE.
+        /** @noinspection HtmlRequiredLangAttribute */
+        return '<html><head>' . $head . '</head><body>' . $body . '</body></html>';
+    }
 
-        return $acted;
+    private function normalize(string $html): string
+    {
+        $document = HtmlDocumentParser::parseOrNull($html);
+        self::assertNotNull($document);
+        $this->placeholder->replaceIn($document);
+
+        return $document->saveHtml();
     }
 }

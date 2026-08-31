@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Service\Html\HtmlDocumentParser;
-use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
  * Cleans readability's article HTML for the reader view through one shared
@@ -25,24 +24,17 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
  */
 final readonly class ReaderBodyCleaner
 {
-    /** @param iterable<GatedMediaPlaceholderInterface> $gatedMediaPlaceholders */
     public function __construct(
         private NavigationChromeTrimmer $navigationTrimmer,
         private LeadingTitleRemover $titleRemover,
         private EdgeBoilerplateTrimmer $boilerplateTrimmer,
         private ReaderLeadImage $leadImage,
-        #[AutowireIterator('app.gated_media_placeholder')]
-        private iterable $gatedMediaPlaceholders,
     ) {
     }
 
     /** @param list<string|null> $titleCandidates */
-    public function clean(
-        string $contentHtml,
-        array $titleCandidates,
-        LeadImageCandidate $leadImage,
-        GatedMediaContext $gatedMedia,
-    ): string {
+    public function clean(string $contentHtml, array $titleCandidates, LeadImageCandidate $leadImage): string
+    {
         $document = HtmlDocumentParser::parseOrNull($contentHtml);
         if ($document === null) {
             return $contentHtml;
@@ -52,11 +44,6 @@ final readonly class ReaderBodyCleaner
         $this->titleRemover->removeFrom($document, $titleCandidates);
         $this->boilerplateTrimmer->trimIn($document);
         $this->leadImage->restore($document, $leadImage);
-        foreach ($this->gatedMediaPlaceholders as $placeholder) {
-            if ($placeholder->replaceIn($document, $gatedMedia)) {
-                break;
-            }
-        }
 
         return $document->saveHtml();
     }

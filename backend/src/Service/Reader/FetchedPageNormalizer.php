@@ -41,6 +41,10 @@ use Dom\XPath;
  *    ShareWidgetRemover strips them here, by class fingerprint, before scoring
  *    (#582). ShareIntentLinkRemover follows it, stripping hand-rolled share
  *    links a plugin fingerprint would not catch (#627).
+ *  - A paywalled Substack video post extracts to dead player chrome above a
+ *    teaser. SubstackGatedVideoPlaceholder replaces the player with a poster
+ *    linking to the source here, where the player class and the <head> og tags
+ *    survive — the wrapper-chain collapse strips that class later (#627, #748).
  *  - <script> and <style> blocks are stripped from the raw source, bounded by
  *    the real close tag. This keeps their text out of the extraction — the
  *    same content readability's own script removal drops — and does it before
@@ -79,6 +83,7 @@ final readonly class FetchedPageNormalizer
         private LazyImageSources $lazyImages,
         private ShareWidgetRemover $shareWidgets,
         private ShareIntentLinkRemover $shareIntentLinks,
+        private SubstackGatedVideoPlaceholder $substackPlaceholder,
     ) {
     }
 
@@ -124,6 +129,7 @@ final readonly class FetchedPageNormalizer
         $this->lazyImages->resolveIn($document);
         $this->shareWidgets->removeFrom($document);
         $this->shareIntentLinks->removeFrom($document);
+        $this->substackPlaceholder->replaceIn($document);
         $this->removeScreenReaderOnlyElements($document);
         $this->removeOrphanIconGlyphs($document);
 

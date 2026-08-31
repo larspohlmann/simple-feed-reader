@@ -4,64 +4,69 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use Dom\Element;
+use Dom\HTMLDocument;
+
 /**
  * A paywalled Substack podcast/video post extracts to nothing but dead player
  * chrome ("Playback speed / Share post / 0:00 / Preview") above a short teaser.
- * This drops the dead player and the paywall landmark and puts a poster image
- * linking to the source article in their place, so the teaser reads inline with
- * a clear way back to the original (#627, #748).
+ * This runs before readability, on the page document, while the player class
+ * and the <head> og tags are still intact: the wrapper-chain collapse strips
+ * the `shows-video-player-container` class, so the winning collapsed variant
+ * showed nothing to a post-readability pass (#627, #748). It drops the dead
+ * player and the paywall landmark and puts a poster image that links to the
+ * source article in the player's place.
  */
-final readonly class SubstackGatedVideoPlaceholder implements GatedMediaPlaceholderInterface
+final readonly class SubstackGatedVideoPlaceholder
 {
     private const string PAYWALL = '[aria-label="Paywall"], [data-testid="paywall"]';
-    private const string ARTICLE = 'article.podcast-post, article.shows-post';
     private const string PLAYER = '.shows-video-player-container';
+    private const string ARTICLE = 'article.podcast-post, article.shows-post';
+    private const string HTTP_URL_PATTERN = '#^https?://#i';
 
-    public function replaceIn(\Dom\HTMLDocument $body, GatedMediaContext $context): bool
+    public function replaceIn(HTMLDocument $page): void
     {
-        if (!$this->isGatedVideoPost($body, $context->posterUrl)) {
-            return false;
-        }
-
-        $this->replacePlayerWithPoster($body, $context->sourceUrl, (string) $context->posterUrl);
-
-        return true;
-    }
-
-    private function isGatedVideoPost(\Dom\HTMLDocument $body, ?string $posterUrl): bool
-    {
-        if ($posterUrl === null || preg_match('#^https?://#i', $posterUrl) !== 1) {
-            return false;
-        }
-        if ($body->querySelector(self::PAYWALL) === null) {
-            return false;
-        }
-        if ($body->querySelector(self::PLAYER) === null) {
-            return false;
-        }
-
-        return $body->querySelector(self::ARTICLE) !== null;
-    }
-
-    private function replacePlayerWithPoster(\Dom\HTMLDocument $body, string $sourceUrl, string $posterUrl): void
-    {
-        $body->querySelector(self::PAYWALL)?->remove();
-        $body->querySelector(self::PLAYER)?->remove();
-
-        $article = $body->querySelector(self::ARTICLE);
-        if ($article === null) {
+        $posterUrl = $this->httpUrlFrom($page, 'meta[property="og:image"]', 'content');
+        $sourceUrl = $this->sourceUrl($page);
+        if ($posterUrl === null || $sourceUrl === null || !$this->isGatedVideoPost($page)) {
             return;
         }
 
-        $article->insertBefore($this->posterLink($body, $sourceUrl, $posterUrl), $article->firstChild);
+        $this->replacePlayerWithPoster($page, $sourceUrl, $posterUrl);
     }
 
-    private function posterLink(\Dom\HTMLDocument $document, string $sourceUrl, string $posterUrl): \Dom\Element
+    /** og:url, or the canonical link when the page carries no og:url. */
+    private function sourceUrl(HTMLDocument $page): ?string
     {
-        $link = $document->createElement('a');
+        return $this->httpUrlFrom($page, 'meta[property="og:url"]', 'content')
+            ?? $this->httpUrlFrom($page, 'link[rel="canonical"]', 'href');
+    }
+
+    private function isGatedVideoPost(HTMLDocument $page): bool
+    {
+        return $page->querySelector(self::PAYWALL) !== null
+            && $page->querySelector(self::PLAYER) !== null
+            && $page->querySelector(self::ARTICLE) !== null;
+    }
+
+    private function replacePlayerWithPoster(HTMLDocument $page, string $sourceUrl, string $posterUrl): void
+    {
+        $page->querySelector(self::PAYWALL)?->remove();
+
+        $player = $page->querySelector(self::PLAYER);
+        if ($player === null || $player->parentNode === null) {
+            return;
+        }
+
+        $player->parentNode->replaceChild($this->posterLink($page, $sourceUrl, $posterUrl), $player);
+    }
+
+    private function posterLink(HTMLDocument $page, string $sourceUrl, string $posterUrl): Element
+    {
+        $link = $page->createElement('a');
         $link->setAttribute('href', $sourceUrl);
 
-        $image = $document->createElement('img');
+        $image = $page->createElement('img');
         $image->setAttribute('src', $posterUrl);
         $image->setAttribute('alt', 'Video — open the original article to watch');
         $image->setAttribute('width', '1280');
@@ -69,5 +74,13 @@ final readonly class SubstackGatedVideoPlaceholder implements GatedMediaPlacehol
         $link->appendChild($image);
 
         return $link;
+    }
+
+    /** The attribute's value when it is present and a non-empty http(s) URL. */
+    private function httpUrlFrom(HTMLDocument $page, string $selector, string $attribute): ?string
+    {
+        $value = $page->querySelector($selector)?->getAttribute($attribute);
+
+        return $value !== null && preg_match(self::HTTP_URL_PATTERN, $value) === 1 ? $value : null;
     }
 }

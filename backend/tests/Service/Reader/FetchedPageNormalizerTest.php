@@ -8,6 +8,7 @@ use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\LazyImageSources;
 use App\Service\Reader\ShareIntentLinkRemover;
 use App\Service\Reader\ShareWidgetRemover;
+use App\Service\Reader\SubstackGatedVideoPlaceholder;
 use PHPUnit\Framework\TestCase;
 
 final class FetchedPageNormalizerTest extends TestCase
@@ -20,6 +21,7 @@ final class FetchedPageNormalizerTest extends TestCase
             new LazyImageSources(),
             new ShareWidgetRemover(),
             new ShareIntentLinkRemover(),
+            new SubstackGatedVideoPlaceholder(),
         );
     }
 
@@ -253,6 +255,33 @@ final class FetchedPageNormalizerTest extends TestCase
 
         self::assertStringContainsString('<img src="https://images.example.com/photo.jpg"', $normalized);
         self::assertStringNotContainsString('data:image', $normalized);
+    }
+
+    public function testNormalizeReplacesTheSubstackGatedPlayerWithThePoster(): void
+    {
+        // The fixture is the input under test, so it keeps its `lang`-less
+        // <html> instead of being edited to please the IDE.
+        /** @noinspection HtmlRequiredLangAttribute */
+        $html = '<html><head>'
+            . '<meta property="og:image" content="https://cdn.test/og.jpg">'
+            . '<meta property="og:url" content="https://x.substack.com/p/a">'
+            . '</head><body>'
+            . '<div class="single-post-container" aria-label="Post" role="main">'
+            . '<article class="typography podcast-post post shows-post">'
+            . '<div class="shows-video-player-container container-abc">'
+            . '<div class="settingsControlsContainer-x"><p>Playback speed</p><p>Share post</p></div></div>'
+            . '<p>An ancient intuition is that plants have souls and participate in life.</p>'
+            . '<div data-testid="paywall" role="region" aria-label="Paywall">'
+            . '<h2>Continue reading this post for free.</h2></div>'
+            . '</article></div></body></html>';
+
+        $normalized = $this->normalized($html);
+
+        self::assertStringNotContainsString('Playback speed', $normalized);
+        self::assertStringNotContainsString('Continue reading this post for free', $normalized);
+        self::assertStringContainsString('<a href="https://x.substack.com/p/a">', $normalized);
+        self::assertStringContainsString('src="https://cdn.test/og.jpg"', $normalized);
+        self::assertStringContainsString('An ancient intuition', $normalized);
     }
 
     /** normalize() then serialize; the fixtures under test always parse. */

@@ -56,13 +56,17 @@ final class ArticleExtractorTest extends TestCase
 
         return new ArticleExtractor(
             $fetcher,
-            new FetchedPageNormalizer(new LazyImageSources(), new ShareWidgetRemover(), new ShareIntentLinkRemover()),
+            new FetchedPageNormalizer(
+                new LazyImageSources(),
+                new ShareWidgetRemover(),
+                new ShareIntentLinkRemover(),
+                new SubstackGatedVideoPlaceholder(),
+            ),
             new ReaderBodyCleaner(
                 new NavigationChromeTrimmer(),
                 new LeadingTitleRemover(),
                 new EdgeBoilerplateTrimmer(),
                 new ReaderLeadImage(),
-                [new SubstackGatedVideoPlaceholder()],
             ),
             new EntrySanitizer(),
         );
@@ -170,13 +174,17 @@ final class ArticleExtractorTest extends TestCase
         );
         $extractor = new ArticleExtractor(
             $fetcher,
-            new FetchedPageNormalizer(new LazyImageSources(), new ShareWidgetRemover(), new ShareIntentLinkRemover()),
+            new FetchedPageNormalizer(
+                new LazyImageSources(),
+                new ShareWidgetRemover(),
+                new ShareIntentLinkRemover(),
+                new SubstackGatedVideoPlaceholder(),
+            ),
             new ReaderBodyCleaner(
                 new NavigationChromeTrimmer(),
                 new LeadingTitleRemover(),
                 new EdgeBoilerplateTrimmer(),
                 new ReaderLeadImage(),
-                [new SubstackGatedVideoPlaceholder()],
             ),
             new EntrySanitizer(),
         );

@@ -77,10 +77,6 @@ services:
         # tag to collect the dialect parsers. FeedParserWiringTest guards it.
         App\Service\Parser\FeedFormatParserInterface:
             tags: ['app.feed_parser']
-        # Same reason again: ReaderBodyCleaner's #[AutowireIterator] collects the
-        # gated-media placeholder strategies only if this plain interface is tagged.
-        App\Service\Reader\GatedMediaPlaceholderInterface:
-            tags: ['app.gated_media_placeholder']
 
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name
