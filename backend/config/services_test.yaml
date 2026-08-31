@@ -19,6 +19,14 @@ services:
         autowire: true
         public: true
 
+    # PageMediaScannerWiringTest drives scan() through the real tagged
+    # iterator. Its only production caller arrives in a later #748 task, so
+    # until then the compiler would inline it away and the test container
+    # could not fetch it. Same `autowire` caveat as the entries below.
+    App\Service\Reader\Media\PageMediaScanner:
+        autowire: true
+        public: true
+
     # AiProviderConfiguratorTest swaps the real catalog for a stub via
     # `self::getContainer()->set(...)`, which the container only allows on
     # public services, and fetches the configurator itself with `->get(...)`,
