@@ -342,6 +342,38 @@ final class ImageIdentityTest extends TestCase
         self::assertTrue($poster->matches($bodyImg));
     }
 
+    public function testMatchesRejectsTheSameStemUnderDifferentPathUuids(): void
+    {
+        // Intended, not a bug: the pathUuid branch pre-empts the stem check,
+        // so a same-named "sendungsbild.jpg" under two different CMS asset
+        // UUIDs no longer matches even though the stems agree. The only
+        // consequence flows through PageImageInventory::draws() into
+        // ReaderLeadImage::restore(): the lead is SKIPPED (an omitted image),
+        // never duplicated — a different UUID genuinely is a different asset.
+        $first = ImageIdentity::fromUrl(
+            'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/AAAAAA/sendungsbild.jpg',
+        );
+        $second = ImageIdentity::fromUrl(
+            'https://media.tagesschau.de/image/58e272fd-1234-5678-9abc-def012345678/AAAAAA/sendungsbild.jpg',
+        );
+
+        self::assertFalse($first->matches($second));
+    }
+
+    public function testIsSameAssetFallsBackToStemWhenOnlyOneSideHasAPathUuid(): void
+    {
+        // #681 regression pin (54 articles): the UUID branch only fires when
+        // BOTH sides have a path UUID. One-sided UUID presence must fall
+        // through to the stem check, not treat the UUID-less side as having
+        // no identity at all.
+        $withPathUuid = ImageIdentity::fromUrl(
+            'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/AAAAAA/photo-story.jpg',
+        );
+        $withImageId = ImageIdentity::fromUrl('https://cdn.example.com/img/photo-story.jpg?imageid=XYZ123');
+
+        self::assertTrue($withPathUuid->isSameAsset($withImageId));
+    }
+
     public function testIsSameAssetRejectsDifferentPathUuids(): void
     {
         // tagesschau 491912: video2's UUID has no matching body img.

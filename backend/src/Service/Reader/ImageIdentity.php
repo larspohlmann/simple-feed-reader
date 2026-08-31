@@ -68,9 +68,9 @@ final readonly class ImageIdentity
     }
 
     /**
-     * A path UUID, when both sides have one, decides matches() too, not just
-     * isSameAsset(): that is what lets ReaderLeadImage::restore() recognise a
-     * body img as the lead it would otherwise re-insert.
+     * A differing path UUID overrides an identical stem here too, not just in
+     * isSameAsset(); the only effect is a skipped ReaderLeadImage::restore(),
+     * never an inserted wrong image.
      */
     public function matches(self $other): bool
     {
@@ -86,10 +86,9 @@ final readonly class ImageIdentity
     }
 
     /**
-     * A path UUID, when both sides have one, decides the outcome outright: same
-     * UUID is always the same asset regardless of rendition, and a different
-     * UUID is never the same asset even when a stem or token would otherwise
-     * have matched.
+     * A path UUID, when both sides have one, decides the outcome outright and
+     * overrides a stem/id/token match: same UUID is always the same asset,
+     * different UUID never is, even when the stem agrees.
      */
     public function isSameAsset(self $other): bool
     {
