@@ -15,6 +15,11 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         . 'fuer einen substantiellen Absatz sicher ueberschreitet und daher als '
         . 'echter Artikelinhalt zaehlt und nicht als Randblock behandelt wird.';
 
+    private const string LONG_PROSE =
+        'Ein ausreichend langer Absatz mit echtem Fliesstext, der die Schwelle '
+        . 'fuer einen substantiellen Absatz sicher ueberschreitet und daher als '
+        . 'echter Artikelinhalt zaehlt und nicht als Randblock behandelt wird.';
+
     private EdgeBoilerplateTrimmer $trimmer;
 
     protected function setUp(): void
@@ -47,8 +52,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
     {
         // Trailing edge, two structural signals: the "related" class fingerprint
         // and a link-list shape (mostly anchors, little prose). Three leading
-        // substantial paragraphs push the block count to 4 so the trailing cap
-        // (floor(0.25*4)=1) actually admits the grid as an edge block.
+        // substantial paragraphs put it right after the last one, in the
+        // trailing edge.
         $grid = '<div class="jp-relatedposts"><a href="/a">A</a><a href="/b">B</a>'
             . '<a href="/c">C</a><a href="/d">D</a></div>';
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
@@ -75,8 +80,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
     public function testRemovesALeadingCommentPromptWithFingerprintAndPhrase(): void
     {
         // Leading edge, one structural signal (the "comment-respond" fingerprint)
-        // corroborated by a German heading phrase. Three trailing substantial
-        // paragraphs push the block count to 4 so the leading cap admits it.
+        // corroborated by a German heading phrase. It sits before the first
+        // substantial paragraph, so it is in the leading edge.
         $prompt = '<div class="comment-respond"><h3>Schreibe einen Kommentar</h3>'
             . '<p>Deine Meinung.</p></div>';
         $html = '<div>' . $prompt . '<p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>'
@@ -89,8 +94,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
     {
         // A single "related" fingerprint with no link-list shape and no phrase is
         // not enough under the conservative rule: the block stays, even though it
-        // genuinely sits in the trailing edge (three leading substantial
-        // paragraphs make the block count 4, so the cap admits it).
+        // genuinely sits in the trailing edge, right after the last of three
+        // leading substantial paragraphs.
         $block = '<div class="related"><p>Kurzer Hinweis.</p></div>';
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $block . '</div>';
@@ -116,8 +121,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // "Related posts" matches the phrase list via the heading, but the block
         // carries no fingerprint class, no link-list shape and no form/email —
         // zero structural signals. A phrase alone never removes a block, even
-        // when it sits in a real trailing edge (three leading substantial
-        // paragraphs make the block count 4, so the cap admits it).
+        // when it sits in a real trailing edge, right after three leading
+        // substantial paragraphs.
         $block = '<div><h3>Related posts</h3><p>x</p></div>';
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $block . '</div>';
@@ -143,9 +148,11 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
     {
         // The sole top-level element is a <span>, not one of the recognised
         // container tags (div/article/section/main), so the trimmer must not
-        // descend into it. Treated as a single opaque block, the article has
-        // no edge region (count=1, cap=0), so the grid inside survives even
-        // though it looks exactly like the removable pattern from
+        // descend into it. Treated as a single opaque block, the article's
+        // one block is itself substantial (its combined text clears the
+        // threshold), so it is the boundary anchor and has no edge region —
+        // the grid inside survives even though it looks exactly like the
+        // removable pattern from
         // testRemovesATrailingRelatedGridWithFingerprintAndLinkShape.
         $grid = '<div class="jp-relatedposts"><a href="/a">A</a><a href="/b">B</a>'
             . '<a href="/c">C</a><a href="/d">D</a></div>';
@@ -157,12 +164,11 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testNeverExtendsTheLeadingEdgeBeyondItsComputedBound(): void
     {
-        // Four blocks, leading cap = floor(0.25*4) = 1. The first substantial
-        // paragraph sits at index 1, so the leading edge is exactly [0]:
-        // index 1 itself — a block that happens to carry two structural
-        // signals (fingerprint + link list) as well as enough prose to count
-        // as substantial — is the boundary anchor, not an edge candidate, and
-        // must survive untouched.
+        // The first substantial paragraph sits at index 1, so the leading
+        // edge is exactly [0]: index 1 itself — a block that happens to
+        // carry two structural signals (fingerprint + link list) as well as
+        // enough prose to count as substantial — is the boundary anchor, not
+        // an edge candidate, and must survive untouched.
         $comboAnchor = '<div class="related">' . self::PROSE
             . '<a href="/a">' . self::PROSE . '</a><a href="/b">' . self::PROSE . '</a>'
             . '<a href="/c">' . self::PROSE . '</a></div>';
@@ -173,10 +179,11 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testNeverShrinksTheTrailingEdgeBelowItsComputedBound(): void
     {
-        // Eight blocks, trailing cap = floor(0.25*8) = 2, so the trailing
-        // edge is exactly the last two indexes. A boilerplate block with two
-        // structural signals sits at the very last index and must be
-        // reachable and removed — nothing may narrow that range and skip it.
+        // Six leading substantial paragraphs put trailingStart right after
+        // the last one, so the trailing edge is exactly the last two
+        // indexes. A boilerplate block with two structural signals sits at
+        // the very last index and must be reachable and removed — nothing
+        // may narrow that range and skip it.
         $boilerplate = '<div class="related"><a href="/a">A</a><a href="/b">B</a>'
             . '<a href="/c">C</a></div>';
         $html = '<div>'
@@ -187,30 +194,14 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         self::assertStringNotContainsString('class="related"', $this->trimmed($html));
     }
 
-    public function testCapUsesFloorNotCeilOrRound(): void
-    {
-        // Six blocks: 0.25*6 = 1.5, which floor() rounds to 1 but ceil() and
-        // round() both round to 2. A boilerplate block at index 4 falls
-        // outside the floor-based trailing edge (which is only index 5) and
-        // must survive — a wider cap would wrongly pull it in and remove it.
-        $boilerplate = '<div class="related"><a href="/a">A</a><a href="/b">B</a>'
-            . '<a href="/c">C</a></div>';
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
-            . '<p>Filler.</p>' . $boilerplate . '<p>Tail.</p></div>';
-
-        self::assertStringContainsString('class="related"', $this->trimmed($html));
-    }
-
     public function testLeadingBoundUsesTheFirstSubstantialIndexNotTheSecond(): void
     {
-        // Eight blocks: the first substantial paragraph is at index 3, the
-        // second at index... no — here the FIRST substantial block is at
-        // index 1 (a combo block: long enough to count and structurally
-        // boilerplate) and a second substantial paragraph sits later at
-        // index 3. The leading cap is floor(0.25*8)=2, so the correct
-        // leading edge is [0] only (min(1,2)=1 -> range(0,0)); using the
-        // second substantial index instead of the first would widen it to
-        // [0,1] and wrongly catch the combo block at index 1.
+        // The FIRST substantial block is at index 1 (a combo block: long
+        // enough to count and structurally boilerplate) and a second
+        // substantial paragraph sits later at index 3. The correct leading
+        // edge is [0] only; using the second substantial index instead of
+        // the first would widen it to [0,1] and wrongly catch the combo
+        // block at index 1.
         $comboAnchor = '<div class="related">' . self::PROSE
             . '<a href="/a">' . self::PROSE . '</a><a href="/b">' . self::PROSE . '</a>'
             . '<a href="/c">' . self::PROSE . '</a></div>';
@@ -241,16 +232,20 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testTrailingBoundStaysAtSubstantialIndexPlusOneNotMinusOne(): void
     {
-        // Ten blocks, all but the last are non-substantial; the last (index
-        // 9) is a plain substantial paragraph, so trailingStart correctly
-        // computes to 10, past the last real index — the whole article ends
-        // on real content and has no trailing edge at all. A boilerplate
-        // block at index 8, immediately before that closing paragraph,
-        // sits in that undefined region and must be left alone.
+        // A substantial paragraph opens the article (index 0), so the
+        // leading edge is empty and cannot reach the boilerplate. Seven
+        // filler blocks and a closing substantial paragraph (index 8) put
+        // the last substantial index at 8, so trailingStart correctly
+        // computes to 9, past the last real index — the article ends on
+        // real content and has no trailing edge at all. A boilerplate block
+        // at index 7, immediately before that closing paragraph, sits in
+        // that undefined region and must be left alone. Were trailingStart
+        // computed as substantialIndex - 1 instead of + 1, it would land on
+        // 7 and wrongly pull the boilerplate into a trailing edge.
         $boilerplate = '<div class="related"><a href="/a">A</a><a href="/b">B</a>'
             . '<a href="/c">C</a></div>';
-        $html = '<div>'
-            . '<p>F.</p><p>F.</p><p>F.</p><p>F.</p><p>F.</p><p>F.</p><p>F.</p><p>F.</p>'
+        $html = '<div><p>' . self::PROSE . '</p>'
+            . '<p>F.</p><p>F.</p><p>F.</p><p>F.</p><p>F.</p><p>F.</p>'
             . $boilerplate . '<p>' . self::PROSE . '</p></div>';
 
         self::assertStringContainsString('class="related"', $this->trimmed($html));
@@ -483,6 +478,44 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
             . '<p>' . self::PROSE . '</p><p>' . self::PROSE . '</p></div>';
 
         self::assertSame(4, substr_count($this->trimmed($html), self::PROSE));
+    }
+
+    public function testRemovesAStandaloneLeadingAdvertisementLabel(): void
+    {
+        $body = '<div><p><span>- Advertisement -</span></p>'
+            . '<p>' . self::LONG_PROSE . '</p></div>';
+
+        $result = $this->trimmed($body);
+
+        self::assertStringNotContainsString('Advertisement', $result);
+        self::assertStringContainsString(self::LONG_PROSE, $result);
+    }
+
+    public function testRemovesAGermanAnzeigeLabel(): void
+    {
+        $body = '<div><p>Anzeige</p><p>' . self::LONG_PROSE . '</p></div>';
+
+        self::assertStringNotContainsString('Anzeige', $this->trimmed($body));
+    }
+
+    public function testKeepsAParagraphThatMerelyContainsTheWordAdvertisement(): void
+    {
+        $body = '<div><p>The advertisement industry changed in 2026 for many reasons here.</p>'
+            . '<p>' . self::LONG_PROSE . '</p></div>';
+
+        self::assertStringContainsString('advertisement industry', $this->trimmed($body));
+    }
+
+    public function testRemovesLeadingBoilerplateOnATwoBlockWrapper(): void
+    {
+        // With the cap gone, a 2-block wrapper's leading link-list + phrase is
+        // reachable (floor(0.25 * 2) was 0 before).
+        $related = '<div class="related"><h3>Related posts</h3>'
+            . '<a href="https://x.test/a">A</a><a href="https://x.test/b">B</a>'
+            . '<a href="https://x.test/c">C</a></div>';
+        $body = '<div>' . $related . '<p>' . self::LONG_PROSE . '</p></div>';
+
+        self::assertStringNotContainsString('class="related"', $this->trimmed($body));
     }
 
     /**
