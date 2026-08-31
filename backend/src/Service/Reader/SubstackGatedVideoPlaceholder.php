@@ -14,9 +14,8 @@ namespace App\Service\Reader;
 final readonly class SubstackGatedVideoPlaceholder implements GatedMediaPlaceholderInterface
 {
     private const string PAYWALL = '[aria-label="Paywall"], [data-testid="paywall"]';
-    private const string VIDEO_ARTICLE = 'article.podcast-post, article.shows-post, .shows-video-player-container';
     private const string ARTICLE = 'article.podcast-post, article.shows-post';
-    private const string PLAYER = '.shows-video-player-container, .player';
+    private const string PLAYER = '.shows-video-player-container';
 
     public function replaceIn(\Dom\HTMLDocument $body, GatedMediaContext $context): bool
     {
@@ -38,7 +37,7 @@ final readonly class SubstackGatedVideoPlaceholder implements GatedMediaPlacehol
             return false;
         }
 
-        return $body->querySelector(self::VIDEO_ARTICLE) !== null;
+        return $body->querySelector(self::ARTICLE) !== null;
     }
 
     private function replacePlayerWithPoster(\Dom\HTMLDocument $body, string $sourceUrl, string $posterUrl): void
