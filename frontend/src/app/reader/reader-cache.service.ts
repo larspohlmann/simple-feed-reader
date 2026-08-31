@@ -27,7 +27,10 @@ export class ReaderCacheService {
   // un-stripped share buttons (#627); an already-read article would keep them.
   // v8: v7 records were extracted before media recovery (#748); an
   // already-read article would keep its dropped embeds as plain links.
-  private static readonly VERSION = 8;
+  // v9: v8 records were extracted before recovered media was reconciled into
+  // the body in place (#755); an already-read article would keep a video's
+  // poster duplicated as a header image and its players stranded at the top.
+  private static readonly VERSION = 9;
 
   private db: Promise<IDBDatabase | null> | null = null;
   /** Strictly monotonic clock so puts within the same millisecond keep insertion order. */
