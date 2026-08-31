@@ -4,46 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
-/**
- * A deliberately light fingerprint of an image URL, used to answer one question:
- * do two URLs point at the same photo? It reads the filename stem, any
- * `imageId=` token, and the stem's distinct words — and ignores the host, the
- * directory, the extension and the size/format query.
- *
- * It is light on purpose. The reader once carried per-CDN URL normalisation to
- * collapse crop and size variants (#520/#590/#592/#608/#610/#619/#625); that
- * whack-a-mole was deleted in #657. This does NOT bring it back. Two renders of
- * one photo that share no distinct filename token — a Drupal share-render beside
- * the original upload (beat.de), or two generic crop names under one image-group
- * directory (zeit) — are reported as different. That miss is safe by design: the
- * one caller (ReaderLeadImage) only ever skips restoring a picture on a miss, so
- * the cost is today's behaviour, never a duplicated photo.
- *
- * One transform runs before the fingerprint: a proxying image CDN is unwrapped to
- * the source URL it carries (#686), so the direct og:image and its proxied copy
- * on the page read as the same photo. A host-only proxy (Jetpack Photon,
- * Cloudinary fetch) already keeps the filename, so only the spellings that hide
- * it need this: imgproxy's base64-in-the-path and a `?url=` query parameter.
- */
+/** Fingerprints image URLs for broad rendition matching and conservative asset equality. */
 final readonly class ImageIdentity
 {
-    /**
-     * Filename words that name a photo library or a boilerplate role, not the
-     * photo. Two unrelated Getty pictures share `gettyimages`, two unrelated
-     * crops share `image`; matching on those fabricates identity, and a false
-     * match is the one direction that can duplicate a picture — so the list
-     * leans complete, and over-listing only ever costs a match, which is safe.
-     *
-     * A structural rule was tried instead of a list — a token counts only if it
-     * carries a digit, so numeric ids and hashes qualify but generic words do
-     * not — and measured over the whole feed corpus (#686): it dropped ~40 real
-     * matches, below even the pre-#686 recall. What it discarded is the ordinary
-     * WordPress size variant: `vegane-burrata-002.jpg` beside
-     * `vegane-burrata-002-1280x854.jpg`, `BruceSpringsteen-1.jpg` beside
-     * `brucespringsteen-1.jpg` — whose only tie is a descriptive, all-letters
-     * filename. A generic word and a distinctive one are both plain text; only a
-     * word list tells them apart, so the list stays.
-     */
+    /** Filename tokens that name libraries or generic roles, not individual photos. */
     private const array GENERIC_TOKENS = [
         'image', 'images', 'photo', 'photos', 'picture', 'pictures', 'photograph',
         'thumbnail', 'thumb', 'default', 'featured', 'header', 'hero', 'cover',
@@ -95,11 +59,37 @@ final readonly class ImageIdentity
             || array_intersect($this->tokens, $other->tokens) !== [];
     }
 
-    /**
-     * The real source URL a proxying CDN embeds, or the URL unchanged when it is
-     * not a wrapper. Only an http(s) result is trusted; anything else is not a
-     * proxy and the original stands, so a miss keeps the fingerprint as it was.
-     */
+    public function isSameAsset(self $other): bool
+    {
+        if ($this->stem !== '' && $this->stem === $other->stem) {
+            return true;
+        }
+        if (array_intersect($this->ids, $other->ids) !== []) {
+            return true;
+        }
+
+        return array_intersect($this->tokens, $other->tokens) !== []
+            && !$this->hasDifferentNumericAsset($other);
+    }
+
+    private function hasDifferentNumericAsset(self $other): bool
+    {
+        if ($this->tokens === []) {
+            return false;
+        }
+        if ($other->tokens === []) {
+            return false;
+        }
+
+        $asset = $this->tokens[array_key_last($this->tokens)];
+        $otherAsset = $other->tokens[array_key_last($other->tokens)];
+
+        return $asset !== $otherAsset
+            && ctype_digit($asset)
+            && ctype_digit($otherAsset);
+    }
+
+    /** Return an embedded HTTP source URL, or keep the original URL. */
     private static function unwrapProxy(string $url): string
     {
         return self::sourceFromQuery($url)
@@ -121,11 +111,7 @@ final readonly class ImageIdentity
         return is_string($embedded) && self::isHttpUrl($embedded) ? $embedded : null;
     }
 
-    /**
-     * imgproxy carries the source as the final path segment, url-safe base64.
-     * Strict decoding rejects a real filename on its own (it is not a base64 http
-     * URL) and tolerates the unpadded spelling once `-_` map back to `+/`.
-     */
+    /** Decode imgproxy's URL-safe base64 source in the final path segment. */
     private static function sourceFromPath(string $url): ?string
     {
         $segment = basename((string) (parse_url($url, PHP_URL_PATH) ?? ''));

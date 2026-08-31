@@ -80,6 +80,24 @@ final class ReaderLeadImageTest extends TestCase
         );
     }
 
+    public function testPrependsTheLeadWhenBodyImageSharesOnlyAnArticlePrefix(): void
+    {
+        $lead = 'https://media.nature.com/d41586-026-02684-1_53170876.jpg';
+        $drawnLead = 'https://media.nature.com/d41586-026-02684-1_53170874.jpg';
+        $related = 'https://media.nature.com/d41586-026-02684-1_52157812.jpg';
+        $body = '<p>Story.</p><figure><img src="' . $related . '" alt=""></figure>';
+
+        $result = $this->restoredBody($body, $this->pageDrawing($drawnLead), $lead);
+
+        self::assertStringContainsString('53170876.jpg', $result);
+        self::assertStringContainsString('52157812.jpg', $result);
+        self::assertLessThan(
+            strpos($result, '52157812.jpg'),
+            strpos($result, '53170876.jpg'),
+            'the distinct lead asset must lead the body',
+        );
+    }
+
     public function testPrependsTheLeadWhenTheBodyHasNoImage(): void
     {
         $lead = 'https://cdn.test/hero-photo.jpg';
