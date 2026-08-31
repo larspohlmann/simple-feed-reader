@@ -124,6 +124,17 @@ final class ShareIntentLinkRemoverTest extends TestCase
         self::assertStringNotContainsString('facebook.com/sharer.php', $this->cleaned($html));
     }
 
+    public function testRemovesALinkedInShareArticleLinkWithACamelCasePath(): void
+    {
+        // Nature's shape: LinkedIn's own share link uses camelCase in the path
+        // ("/shareArticle"), which must still match the lowercase endpoint
+        // ("linkedin.com/sharearticle") (#627 fix round 3).
+        $html = '<div><p>Body.</p>'
+            . '<a href="https://www.linkedin.com/shareArticle?url=https://nature.test/a&amp;title=T">Share</a></div>';
+
+        self::assertStringNotContainsString('linkedin.com', $this->cleaned($html));
+    }
+
     public function testKeepsAWaMeLookAlikeDomainThatIsNotTheHostOnlyEndpoint(): void
     {
         // "wa.me" is a host-only endpoint, so it must not gain the file-extension

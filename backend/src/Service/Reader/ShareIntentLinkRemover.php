@@ -218,12 +218,14 @@ final readonly class ShareIntentLinkRemover
             || ($hasPathSegment && str_starts_with($hostAndPath, $endpoint . '.'));
     }
 
+    /** Lowercased throughout — LinkedIn's own share link uses `/shareArticle`. */
     private function hostAndPath(string $href): string
     {
         $host = strtolower((string) parse_url($href, PHP_URL_HOST));
         $host = preg_replace('/^www\./', '', $host) ?? $host;
+        $path = strtolower((string) parse_url($href, PHP_URL_PATH));
 
-        return $host . parse_url($href, PHP_URL_PATH);
+        return $host . $path;
     }
 
     private function carriesTheSharedAddress(string $href): bool
