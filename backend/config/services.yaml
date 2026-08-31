@@ -77,6 +77,11 @@ services:
         # tag to collect the dialect parsers. FeedParserWiringTest guards it.
         App\Service\Parser\FeedFormatParserInterface:
             tags: ['app.feed_parser']
+        # Same reason as the blocks above: a plain application interface is not
+        # auto-tagged, so EmbedProviders' #[AutowireIterator] would silently
+        # collect nothing. EmbedProvidersWiringTest guards it.
+        App\Service\Reader\Media\EmbedProviderInterface:
+            tags: ['app.embed_provider']
 
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name

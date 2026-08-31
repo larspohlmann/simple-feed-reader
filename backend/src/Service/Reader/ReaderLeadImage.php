@@ -7,10 +7,13 @@ namespace App\Service\Reader;
 use Dom\Element;
 use Dom\HTMLDocument;
 
-/** Restores a page-drawn lead unless the body starts with an image or already contains that asset. */
+/**
+ * Restores a page-drawn lead unless the body starts with an image, already
+ * contains that asset, or a recovered player is about to be top-placed.
+ */
 final readonly class ReaderLeadImage
 {
-    public function restore(HTMLDocument $document, LeadImageCandidate $lead): void
+    public function restore(HTMLDocument $document, LeadImageCandidate $lead, bool $willTopPlace): void
     {
         $leadUrl = $lead->url;
         if ($leadUrl === null || preg_match('#^https?://#i', $leadUrl) !== 1) {
@@ -19,6 +22,12 @@ final readonly class ReaderLeadImage
 
         $body = $document->body;
         if ($body === null) {
+            return;
+        }
+
+        // A top-placed player becomes the article's lead visual and carries its
+        // own poster; adding the hero above it would stack a second picture.
+        if ($willTopPlace) {
             return;
         }
 
