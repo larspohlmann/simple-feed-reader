@@ -7,39 +7,7 @@ namespace App\Service\Reader;
 use Dom\Element;
 use Dom\HTMLDocument;
 
-/**
- * Puts the article's lead photo back at the top of the extracted body when
- * readability dropped it.
- *
- * Readability strips a page-header image as chrome (mopo's `<figure
- * class="headerImage">`), then reports it separately as the og:image. The reader
- * used to re-add it as a floating "hero", suppressed whenever the body held any
- * image (#657) — which lost the lead on every article that also carries a second
- * picture. This restores the lead into the body itself instead.
- *
- * It mutates the shared \Dom\HTMLDocument in place, like LeadingTitleRemover and
- * EdgeBoilerplateTrimmer, so ReaderBodyCleaner parses and serialises once around
- * it — the lead restore never re-parses the body or the page (#684).
- *
- * The lead is left out only to avoid stacking a picture the body already shows.
- * So it is added whenever the body has no image at all, and otherwise only when:
- *
- *   - the body does not OPEN with an image (it already leads with a picture);
- *   - the body does not already SHOW that photo (readability kept it); and
- *   - the lead is actually DRAWN on the fetched page — not a meta-only
- *     share-render (beat.de's opengraph file lives in the <meta> alone), which
- *     against a body that has its own image would only duplicate it.
- *
- * "Drawn on the page" is answered by the PageImageInventory the caller built once
- * from the normalised page document, where LazyImageSources has already resolved
- * every lazy source — so this class no longer digs `data-*` attributes itself.
- *
- * Same-photo identity is the light ImageIdentity fingerprint, not the per-CDN
- * URL normalisation #657 deleted: a missed match simply skips the restore, so
- * the worst case is today's behaviour and never a duplicated photo. Measured
- * over 120 articles from 20 feeds (#681): fixes 54, duplicates none. A purely
- * positional rule (no identity) was measured to duplicate 45 of the 120.
- */
+/** Restores a page-drawn lead unless the body starts with an image or already contains that asset. */
 final readonly class ReaderLeadImage
 {
     public function restore(HTMLDocument $document, LeadImageCandidate $lead): void
@@ -78,7 +46,7 @@ final readonly class ReaderLeadImage
     {
         foreach ($body->getElementsByTagName('img') as $image) {
             $source = $image->getAttribute('src') ?? '';
-            if ($source !== '' && $lead->matches(ImageIdentity::fromUrl($source))) {
+            if ($source !== '' && $lead->isSameAsset(ImageIdentity::fromUrl($source))) {
                 return true;
             }
         }
