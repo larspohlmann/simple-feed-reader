@@ -65,6 +65,20 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
         self::assertStringContainsString('An ancient intuition', $result);
     }
 
+    public function testFailsClosedWhenThePlayerContainerIsRenamed(): void
+    {
+        $renamedPlayer =
+            '<div class="shows-video-player-renamed container-abc">'
+            . '<div class="settingsControlsContainer-def"><p>Playback speed</p><p>Preview</p></div></div>';
+        $body = $this->gatedPost($renamedPlayer . self::TEASER . self::PAYWALL);
+        $context = new GatedMediaContext('https://x.substack.com/p/a', 'https://x/og.jpg');
+
+        self::assertFalse($this->apply($body, $context, $result));
+        self::assertStringContainsString('Playback speed', $result);
+        self::assertStringContainsString('Continue reading this post for free', $result);
+        self::assertStringNotContainsString('og.jpg', $result);
+    }
+
     public function testDoesNothingWhenThePosterUrlIsMissing(): void
     {
         $body = $this->gatedPost(self::PLAYER . self::TEASER . self::PAYWALL);

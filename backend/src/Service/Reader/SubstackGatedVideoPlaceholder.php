@@ -36,6 +36,9 @@ final readonly class SubstackGatedVideoPlaceholder implements GatedMediaPlacehol
         if ($body->querySelector(self::PAYWALL) === null) {
             return false;
         }
+        if ($body->querySelector(self::PLAYER) === null) {
+            return false;
+        }
 
         return $body->querySelector(self::ARTICLE) !== null;
     }
