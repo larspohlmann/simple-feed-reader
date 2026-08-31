@@ -16,6 +16,9 @@ final readonly class ImageIdentity
         'unsplash', 'pexels', 'adobestock',
     ];
 
+    private const string UUID_PATH_SEGMENT_PATTERN =
+        '#/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:/|$)#i';
+
     /**
      * @param list<string> $ids    every `imageId=` token, lower-cased
      * @param list<string> $tokens the filename stem's distinct, photo-specific words
@@ -25,6 +28,7 @@ final readonly class ImageIdentity
         private array $ids,
         private array $tokens,
         private ?string $numericAsset,
+        private ?string $pathUuid,
     ) {
     }
 
@@ -42,7 +46,20 @@ final readonly class ImageIdentity
         $words = preg_split('/[^a-z0-9]+/', $stem, -1, \PREG_SPLIT_NO_EMPTY) ?: [];
         $tokens = array_values(array_filter($words, self::isPhotoSpecificToken(...)));
 
-        return new self($stem, $ids, $tokens, self::numericAsset($words));
+        return new self($stem, $ids, $tokens, self::numericAsset($words), self::pathUuid($path));
+    }
+
+    /**
+     * A path segment shaped like a full UUID (8-4-4-4-12 hex) is the CMS asset
+     * id (tagesschau, ARD): different rendition folders and filenames around
+     * it still name the same photo. A per-rendition transform hash has no such
+     * shape and must not be mistaken for one.
+     */
+    private static function pathUuid(string $path): ?string
+    {
+        return preg_match(self::UUID_PATH_SEGMENT_PATTERN, $path, $matches) === 1
+            ? strtolower($matches[1])
+            : null;
     }
 
     private static function isPhotoSpecificToken(string $word): bool
@@ -50,8 +67,16 @@ final readonly class ImageIdentity
         return strlen($word) >= 5 && !in_array($word, self::GENERIC_TOKENS, true);
     }
 
+    /**
+     * A path UUID, when both sides have one, decides matches() too, not just
+     * isSameAsset(): that is what lets ReaderLeadImage::restore() recognise a
+     * body img as the lead it would otherwise re-insert.
+     */
     public function matches(self $other): bool
     {
+        if ($this->pathUuid !== null && $other->pathUuid !== null) {
+            return $this->pathUuid === $other->pathUuid;
+        }
         if ($this->stem !== '' && $this->stem === $other->stem) {
             return true;
         }
@@ -60,8 +85,17 @@ final readonly class ImageIdentity
             || array_intersect($this->tokens, $other->tokens) !== [];
     }
 
+    /**
+     * A path UUID, when both sides have one, decides the outcome outright: same
+     * UUID is always the same asset regardless of rendition, and a different
+     * UUID is never the same asset even when a stem or token would otherwise
+     * have matched.
+     */
     public function isSameAsset(self $other): bool
     {
+        if ($this->pathUuid !== null && $other->pathUuid !== null) {
+            return $this->pathUuid === $other->pathUuid;
+        }
         if ($this->ids !== [] && $other->ids !== []) {
             return array_intersect($this->ids, $other->ids) !== [];
         }

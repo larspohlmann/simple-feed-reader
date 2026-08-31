@@ -4,16 +4,21 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media;
 
+use App\Service\Reader\ImageIdentity;
 use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Puts media the extracted body never had at the top of it.
+ * Places media the source page offers but the extracted body never had.
  *
- * These candidates come from the source page, where position is not knowable —
- * and on the pages that need this most (a public-radio article that extracts to
- * a duration line and three teaser links) the media IS the article, so the top
- * is where it belongs. The existing prose is kept below, untouched.
+ * Two phases, run around ReaderLeadImage::restore() (see ReaderBodyCleaner):
+ * `plan()` is a read-only classification of each candidate as either
+ * reconcilable — its poster is the same asset as a body `<img>`, so the
+ * player belongs where that picture already sits — or top-placed, for a
+ * candidate the body shows no trace of. `apply()` performs the mutation:
+ * swap each reconciled `<img>` for its player in place, then prepend the
+ * top-placed remainder, in source order. Splitting the phases lets restore()
+ * consult the plan's `hasTopPlaced()` before either mutation happens.
  */
 final readonly class PageMediaInserter
 {
@@ -21,38 +26,113 @@ final readonly class PageMediaInserter
     {
     }
 
-    public function insertInto(HTMLDocument $body, ArticleMedia $media): void
+    public function plan(HTMLDocument $document, ArticleMedia $media): MediaInsertionPlan
     {
-        $root = $body->body;
+        $root = $document->body;
         if ($root === null || $media->isEmpty()) {
+            return new MediaInsertionPlan([], []);
+        }
+
+        return $this->classify($media, $this->reconcilableImages($root));
+    }
+
+    public function apply(HTMLDocument $document, MediaInsertionPlan $plan): void
+    {
+        foreach ($plan->reconcilePairs as $pair) {
+            $pair['image']->parentNode?->replaceChild($this->element($document, $pair['candidate']), $pair['image']);
+        }
+
+        $this->prependTopPlaced($document, $plan->topPlaced);
+    }
+
+    /** @param list<Element> $pool candidate body images, in document order */
+    private function classify(ArticleMedia $media, array $pool): MediaInsertionPlan
+    {
+        $pairs = [];
+        $topPlaced = [];
+        foreach ($media->candidates as $candidate) {
+            $image = $candidate->posterUrl === null ? null : $this->claim($pool, $candidate->posterUrl);
+            if ($image === null) {
+                $topPlaced[] = $candidate;
+                continue;
+            }
+            $pairs[] = ['image' => $image, 'candidate' => $candidate];
+        }
+
+        return new MediaInsertionPlan($pairs, $topPlaced);
+    }
+
+    /**
+     * @param list<Element> $pool mutated: a claimed image is removed so a
+     *                             later candidate cannot also claim it
+     */
+    private function claim(array &$pool, string $posterUrl): ?Element
+    {
+        $posterIdentity = ImageIdentity::fromUrl($posterUrl);
+        foreach ($pool as $index => $image) {
+            $source = $image->getAttribute('src') ?? '';
+            if ($source !== '' && $posterIdentity->isSameAsset(ImageIdentity::fromUrl($source))) {
+                array_splice($pool, $index, 1);
+
+                return $image;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Body content images are bare or in a <figure>; one inside an <a> belongs
+     * to another feature.
+     *
+     * @return list<Element>
+     */
+    private function reconcilableImages(Element $root): array
+    {
+        $images = [];
+        foreach ($root->getElementsByTagName('img') as $image) {
+            if ($image->closest('a') === null) {
+                $images[] = $image;
+            }
+        }
+
+        return $images;
+    }
+
+    /** @param list<MediaCandidate> $topPlaced */
+    private function prependTopPlaced(HTMLDocument $document, array $topPlaced): void
+    {
+        $root = $document->body;
+        if ($root === null) {
             return;
         }
 
-        foreach (array_reverse($media->candidates) as $candidate) {
-            $root->insertBefore($this->element($body, $candidate), $root->firstChild);
+        foreach (array_reverse($topPlaced) as $candidate) {
+            $root->insertBefore($this->element($document, $candidate), $root->firstChild);
         }
     }
 
-    private function element(HTMLDocument $body, MediaCandidate $candidate): Element
+    private function element(HTMLDocument $document, MediaCandidate $candidate): Element
     {
         return match ($candidate->kind) {
-            MediaKind::Audio => $this->player($body, 'audio', $candidate),
-            MediaKind::Video => $this->player($body, 'video', $candidate),
+            MediaKind::Audio => $this->player($document, 'audio', $candidate),
+            MediaKind::Video => $this->player($document, 'video', $candidate),
             MediaKind::Embed => $this->markup->embedLink(
-                $body,
+                $document,
                 new EmbedTarget($candidate->url, $candidate->posterUrl, $candidate->label ?? 'Open the media'),
             ),
         };
     }
 
-    private function player(HTMLDocument $body, string $tag, MediaCandidate $candidate): Element
+    private function player(HTMLDocument $document, string $tag, MediaCandidate $candidate): Element
     {
-        $player = $body->createElement($tag);
+        $player = $document->createElement($tag);
         $player->setAttribute('controls', '');
         // Never fetch megabytes for an article the reader may only be skimming.
         $player->setAttribute('preload', 'none');
         $player->setAttribute('src', $candidate->url);
-        if ($candidate->posterUrl !== null) {
+        // <audio> has no poster attribute; only a video ever gets one (defect i).
+        if ($candidate->kind === MediaKind::Video && $candidate->posterUrl !== null) {
             $player->setAttribute('poster', $candidate->posterUrl);
         }
 

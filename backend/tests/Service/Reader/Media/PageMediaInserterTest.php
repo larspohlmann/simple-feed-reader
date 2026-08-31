@@ -25,7 +25,8 @@ final class PageMediaInserterTest extends TestCase
     {
         $document = HtmlDocumentParser::parseOrNull($html);
         self::assertNotNull($document);
-        $this->inserter->insertInto($document, $media);
+        $plan = $this->inserter->plan($document, $media);
+        $this->inserter->apply($document, $plan);
 
         return $document->saveHtml();
     }
@@ -50,6 +51,19 @@ final class PageMediaInserterTest extends TestCase
 
         self::assertStringContainsString('poster="https://x.test/p.jpg"', $out);
         self::assertStringContainsString('preload="none"', $out);
+    }
+
+    public function testAudioNeverCarriesAPosterAttribute(): void
+    {
+        // Defect i: <audio> has no poster attribute, so even a candidate that
+        // somehow carries a posterUrl must not render one.
+        $media = new ArticleMedia([
+            new MediaCandidate(MediaKind::Audio, 'https://x.test/a.mp3', 'https://x.test/p.jpg'),
+        ]);
+
+        $out = $this->insert('<body><p>Teaser</p></body>', $media);
+
+        self::assertStringNotContainsString('poster', $out);
     }
 
     public function testAnEmbedBecomesTheSameLinkShapeAsAnInBodyOne(): void
@@ -85,5 +99,78 @@ final class PageMediaInserterTest extends TestCase
         $out = $this->insert('<body><p>Teaser</p></body>', $media);
 
         self::assertLessThan(strpos($out, 'second.mp3'), strpos($out, 'first.mp3'));
+    }
+
+    public function testReconcilesAMatchingBodyImageInPlace(): void
+    {
+        // tagesschau 491512: the same asset UUID, a different rendition.
+        $poster = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/AAAAAA/16x9-1920/p.jpg';
+        $bodyImg = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/BBBBBB/16x9-big/t.jpg';
+        $media = new ArticleMedia([new MediaCandidate(MediaKind::Video, 'https://x.test/v.mp4', $poster)]);
+        $html = '<body><p>Intro</p><figure><img src="' . $bodyImg . '" alt=""></figure><p>Tail</p></body>';
+
+        $out = $this->insert($html, $media);
+
+        self::assertStringNotContainsString('<img', $out);
+        self::assertStringContainsString('<video', $out);
+        self::assertStringContainsString('poster="' . $poster . '"', $out);
+        self::assertLessThan(strpos($out, 'Tail'), strpos($out, '<video'));
+        self::assertLessThan(strpos($out, '<video'), strpos($out, 'Intro'));
+    }
+
+    public function testDoesNotReconcileAnImageInsideAnAnchor(): void
+    {
+        // The <a> guard: protects embed poster anchors, SubstackPosterLink's
+        // output, and #627's gated placeholder even when the asset matches.
+        $poster = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/AAAAAA/16x9-1920/p.jpg';
+        $bodyImg = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/BBBBBB/16x9-big/t.jpg';
+        $media = new ArticleMedia([new MediaCandidate(MediaKind::Video, 'https://x.test/v.mp4', $poster)]);
+        $html = '<body><p>Intro</p><a href="https://x.test"><img src="' . $bodyImg . '" alt=""></a></body>';
+
+        $out = $this->insert($html, $media);
+
+        self::assertStringContainsString('<img', $out);
+        self::assertStringContainsString('<video', $out);
+    }
+
+    public function testACandidateWithNoMatchingImageIsTopPlaced(): void
+    {
+        $media = new ArticleMedia([
+            new MediaCandidate(MediaKind::Video, 'https://x.test/v.mp4', 'https://x.test/no-match-poster.jpg'),
+        ]);
+        $html = '<body><p>Intro</p><figure><img src="https://x.test/unrelated-photo.jpg" alt=""></figure></body>';
+
+        $out = $this->insert($html, $media);
+
+        self::assertStringContainsString('<img', $out);
+        self::assertLessThan(strpos($out, 'Intro'), strpos($out, '<video'));
+    }
+
+    public function testTwoCandidatesOneMatchingImageReconcilesOneAndTopPlacesTheOther(): void
+    {
+        // tagesschau 491912 mix: video1 reconciles, video2 has no match and goes
+        // to the top, and an unrelated map img is left untouched.
+        $video1Poster = 'https://media.tagesschau.de/image/80085f9c-1234-5678-9abc-def012345678/A/16x9-1920/p.jpg';
+        $video1Body = 'https://media.tagesschau.de/image/80085f9c-1234-5678-9abc-def012345678/B/16x9-big/t.jpg';
+        $video2Poster = 'https://media.tagesschau.de/image/58e272fd-1234-5678-9abc-def012345678/A/16x9-1920/p.jpg';
+        $mapImg = 'https://media.tagesschau.de/image/deadbeef-0000-0000-0000-000000000000/A/map.jpg';
+
+        $media = new ArticleMedia([
+            new MediaCandidate(MediaKind::Video, 'https://x.test/v1.mp4', $video1Poster),
+            new MediaCandidate(MediaKind::Video, 'https://x.test/v2.mp4', $video2Poster),
+        ]);
+        $html = '<body><p>Intro</p>'
+            . '<figure><img src="' . $video1Body . '" alt=""></figure>'
+            . '<figure><img src="' . $mapImg . '" alt=""></figure>'
+            . '</body>';
+
+        $out = $this->insert($html, $media);
+
+        self::assertSame(2, substr_count($out, '<video'));
+        self::assertSame(1, substr_count($out, '<img'));
+        self::assertStringContainsString($mapImg, $out);
+        self::assertStringContainsString('v2.mp4', $out);
+        self::assertStringContainsString($video1Poster, $out);
+        self::assertLessThan(strpos($out, 'v1.mp4'), strpos($out, 'v2.mp4'), 'the top-placed video leads');
     }
 }
