@@ -130,9 +130,10 @@ final class NavigationChromeTrimmerTest extends TestCase
 
     public function testKeepsAPlainLinkListThatCarriesNoNavigationLandmark(): void
     {
-        // A leading list of links with no <nav>/role landmark is not addressed
-        // here — that shape is EdgeBoilerplateTrimmer's job. This step acts only
-        // on an explicit navigation landmark, so the list survives.
+        // A bare link list with no <nav>/role landmark is kept here only when
+        // it is under the menu link-count threshold. At >=4 links a leading
+        // list like this is now removed — see
+        // testRemovesALeadingMenuShapedListWithoutALandmark.
         $list = '<ul><li><a href="/a">A</a></li><li><a href="/b">B</a></li></ul>';
         $html = '<div>' . $list . '<p>' . self::PROSE . '</p></div>';
 
@@ -185,6 +186,78 @@ final class NavigationChromeTrimmerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p>' . $menu . '</div>';
 
         self::assertStringContainsString('href="https://d.test/a"', $this->trimmed($html));
+    }
+
+    public function testRemovesALeadingMenuListWhenTheFollowingParagraphIsJustUnderTheProseThreshold(): void
+    {
+        // 119 non-link chars, one under SUBSTANTIAL_PROSE_LENGTH: no paragraph
+        // in the document qualifies, so the menu still counts as leading.
+        $menu = $this->fourLinkMenu();
+        $shortParagraph = str_repeat('x', 119);
+        $html = '<div>' . $menu . '<p>' . $shortParagraph . '</p></div>';
+
+        self::assertStringNotContainsString('d.test/a', $this->trimmed($html));
+    }
+
+    public function testKeepsAMenuListFollowingAParagraphAtExactlyTheProseThreshold(): void
+    {
+        // 120 non-link chars meets SUBSTANTIAL_PROSE_LENGTH: the article has
+        // started, so a menu-shaped list after it is "further reading", kept.
+        $paragraph = str_repeat('x', 120);
+        $menu = $this->fourLinkMenu();
+        $html = '<div><p>' . $paragraph . '</p>' . $menu . '</div>';
+
+        self::assertStringContainsString('d.test/a', $this->trimmed($html));
+    }
+
+    public function testRemovesALeadingMenuListAtExactlyTheLinkTextRatioThreshold(): void
+    {
+        // Each item is "AAA" (link) + "BB" (plain): 12 link chars of 20 total,
+        // exactly the 0.6 LINK_TEXT_RATIO threshold — still chrome.
+        $list = $this->fourItemList('BB');
+        $html = '<div>' . $list . '</div>';
+
+        self::assertStringNotContainsString('d.test/a', $this->trimmed($html));
+    }
+
+    public function testKeepsALeadingListJustBelowTheLinkTextRatioThreshold(): void
+    {
+        // Each item is "AAA" (link) + "BBB" (plain): 12 link chars of 24
+        // total, below the 0.6 threshold — no longer link-dominated, kept.
+        $list = $this->fourItemList('BBB');
+        $html = '<div>' . $list . '</div>';
+
+        self::assertStringContainsString('d.test/a', $this->trimmed($html));
+    }
+
+    public function testRemovesALeadingMenuListFromAPageWithNoParagraphAtAll(): void
+    {
+        // Div-soup with no <p>/heading anywhere: firstSubstantialParagraph()
+        // returns null, so the menu counts as leading regardless of position.
+        $menu = $this->fourLinkMenu();
+        $bodyText = str_repeat('y', 150);
+        $html = '<div>' . $menu . '<div>' . $bodyText . '</div></div>';
+
+        $result = $this->trimmed($html);
+
+        self::assertStringNotContainsString('d.test/a', $result);
+        self::assertStringContainsString($bodyText, $result);
+    }
+
+    private function fourLinkMenu(): string
+    {
+        return '<ul><li><a href="https://d.test/a">A</a></li>'
+            . '<li><a href="https://d.test/b">B</a></li>'
+            . '<li><a href="https://d.test/c">C</a></li>'
+            . '<li><a href="https://d.test/d">D</a></li></ul>';
+    }
+
+    private function fourItemList(string $trailingText): string
+    {
+        $item = static fn (string $path): string => '<li><a href="https://d.test/' . $path . '">AAA</a>'
+            . $trailingText . '</li>';
+
+        return '<ul>' . $item('a') . $item('b') . $item('c') . $item('d') . '</ul>';
     }
 
     /**
