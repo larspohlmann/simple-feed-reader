@@ -46,7 +46,7 @@ final readonly class NavigationChromeTrimmer
     private const float LINK_TEXT_RATIO = 0.6;
 
     /** A leading link list needs at least this many outbound links to be a menu. */
-    private const int MENU_MIN_LINKS = 4;
+    private const int MENU_MIN_LINKS = 3;
 
     /** A paragraph at or above this length marks the article as started. */
     private const int SUBSTANTIAL_PROSE_LENGTH = 120;

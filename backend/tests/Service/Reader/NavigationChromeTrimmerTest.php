@@ -131,7 +131,7 @@ final class NavigationChromeTrimmerTest extends TestCase
     public function testKeepsAPlainLinkListThatCarriesNoNavigationLandmark(): void
     {
         // A bare link list with no <nav>/role landmark is kept here only when
-        // it is under the menu link-count threshold. At >=4 links a leading
+        // it is under the menu link-count threshold. At >=3 links a leading
         // list like this is now removed — see
         // testRemovesALeadingMenuShapedListWithoutALandmark.
         $list = '<ul><li><a href="/a">A</a></li><li><a href="/b">B</a></li></ul>';
@@ -157,11 +157,26 @@ final class NavigationChromeTrimmerTest extends TestCase
         self::assertStringContainsString(self::PROSE, $result);
     }
 
-    public function testKeepsALeadingListWithFewerThanFourLinks(): void
+    public function testRemovesALeadingMenuListOfExactlyThreeLinks(): void
     {
+        // A 3-link site breadcrumb ("Umwelt | Philosophie | Meinung & Debatte")
+        // is the motivating case: the threshold now removes a leading link-only
+        // list of three, not just four or more.
         $menu = '<ul><li><a href="https://d.test/a">A</a></li>'
             . '<li><a href="https://d.test/b">B</a></li>'
             . '<li><a href="https://d.test/c">C</a></li></ul>';
+        $html = '<div>' . $menu . '<p>' . self::PROSE . '</p></div>';
+
+        $result = $this->trimmed($html);
+
+        self::assertStringNotContainsString('href="https://d.test/a"', $result);
+        self::assertStringContainsString(self::PROSE, $result);
+    }
+
+    public function testKeepsALeadingListWithFewerThanThreeLinks(): void
+    {
+        $menu = '<ul><li><a href="https://d.test/a">A</a></li>'
+            . '<li><a href="https://d.test/b">B</a></li></ul>';
         $html = '<div>' . $menu . '<p>' . self::PROSE . '</p></div>';
 
         self::assertStringContainsString('href="https://d.test/a"', $this->trimmed($html));
