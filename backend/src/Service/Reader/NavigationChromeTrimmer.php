@@ -108,13 +108,13 @@ final readonly class NavigationChromeTrimmer
     /** @return list<Element> */
     private function leadingMenuLists(HTMLDocument $document): array
     {
-        $firstProse = $this->firstSubstantialParagraph($document);
+        $anchor = $this->leadingAnchor($document);
         $lists = [];
         foreach ($document->getElementsByTagName('*') as $element) {
             if (!in_array($element->localName, ['ul', 'ol'], true)) {
                 continue;
             }
-            if ($this->isMenuShaped($element) && $this->precedesInDocument($element, $firstProse)) {
+            if ($this->isMenuShaped($element) && $this->precedesInDocument($element, $anchor)) {
                 $lists[] = $element;
             }
         }
@@ -151,13 +151,24 @@ final readonly class NavigationChromeTrimmer
         return true;
     }
 
-    private function firstSubstantialParagraph(HTMLDocument $document): ?Element
+    /**
+     * The element a menu list must precede to count as leading chrome. Falls back
+     * to the first prose of any length when none is substantial, so a trailing
+     * link list on a prose-thin post is not mistaken for a masthead.
+     */
+    private function leadingAnchor(HTMLDocument $document): ?Element
+    {
+        return $this->firstProseCandidate($document, self::SUBSTANTIAL_PROSE_LENGTH)
+            ?? $this->firstProseCandidate($document, 0);
+    }
+
+    private function firstProseCandidate(HTMLDocument $document, int $minLength): ?Element
     {
         foreach ($document->getElementsByTagName('*') as $element) {
             if (!$this->isProseCandidate($element)) {
                 continue;
             }
-            if (mb_strlen($this->collapsedText($element)) >= self::SUBSTANTIAL_PROSE_LENGTH) {
+            if (mb_strlen($this->collapsedText($element)) >= $minLength) {
                 return $element;
             }
         }
@@ -173,13 +184,13 @@ final readonly class NavigationChromeTrimmer
             && $this->linkTextRatio($element) < self::LINK_TEXT_RATIO;
     }
 
-    private function precedesInDocument(Element $list, ?Element $firstProse): bool
+    private function precedesInDocument(Element $list, ?Element $anchor): bool
     {
-        if ($firstProse === null) {
+        if ($anchor === null) {
             return true;
         }
 
-        return (bool) ($firstProse->compareDocumentPosition($list) & Node::DOCUMENT_POSITION_PRECEDING);
+        return (bool) ($anchor->compareDocumentPosition($list) & Node::DOCUMENT_POSITION_PRECEDING);
     }
 
     private function isNavigationLandmark(Element $element): bool

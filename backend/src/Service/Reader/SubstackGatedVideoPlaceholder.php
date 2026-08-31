@@ -92,6 +92,9 @@ final readonly class SubstackGatedVideoPlaceholder
 
         $image = $page->createElement('img');
         $image->setAttribute('src', $posterUrl);
+        // The sanitizer strips class/style, so this alt is the only hook the
+        // reader's play-button overlay has (reader-view.component.scss). Keep the
+        // two in lockstep — a reword here silently drops the overlay.
         $image->setAttribute('alt', 'Video — open the original article to watch');
         $image->setAttribute('width', '1280');
         $image->setAttribute('height', '720');

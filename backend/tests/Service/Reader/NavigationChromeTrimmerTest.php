@@ -245,10 +245,23 @@ final class NavigationChromeTrimmerTest extends TestCase
         self::assertStringContainsString('d.test/a', $this->trimmed($html));
     }
 
+    public function testKeepsATrailingMenuListInAPostWithNoSubstantialProse(): void
+    {
+        // A photo/link post: every paragraph is short (< SUBSTANTIAL_PROSE_LENGTH),
+        // and a "more stories" list follows them. With no substantial prose the
+        // anchor falls back to the first short paragraph, so the trailing list is
+        // not mistaken for a masthead and is kept.
+        $shortParagraph = '<p>' . str_repeat('x', 40) . '</p>';
+        $menu = $this->fourLinkMenu();
+        $html = '<div>' . $shortParagraph . $shortParagraph . $menu . '</div>';
+
+        self::assertStringContainsString('d.test/a', $this->trimmed($html));
+    }
+
     public function testRemovesALeadingMenuListFromAPageWithNoParagraphAtAll(): void
     {
-        // Div-soup with no <p>/heading anywhere: firstSubstantialParagraph()
-        // returns null, so the menu counts as leading regardless of position.
+        // Div-soup with no <p>/heading anywhere: no prose candidate exists, so
+        // the anchor is null and the menu counts as leading regardless of position.
         $menu = $this->fourLinkMenu();
         $bodyText = str_repeat('y', 150);
         $html = '<div>' . $menu . '<div>' . $bodyText . '</div></div>';
