@@ -81,4 +81,16 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
 
         self::assertStringContainsString('soundcloud', $media->candidates[0]->url);
     }
+
+    public function testAnUnseenPublisherYieldsItsMediaWithNoNewCode(): void
+    {
+        $media = $this->scanner()->scan(
+            $this->fixture('unseen-publisher.html'),
+            'https://9to5mac.com/2026/08/27/happy-hour-605/',
+        );
+
+        self::assertFalse($media->isEmpty());
+        self::assertSame(MediaKind::Audio, $media->candidates[0]->kind);
+        self::assertStringEndsWith('.mp3', $media->candidates[0]->url);
+    }
 }
