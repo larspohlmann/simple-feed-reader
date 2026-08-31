@@ -52,9 +52,9 @@ final readonly class MetaMediaSource implements MediaCandidateSourceInterface
     private function candidateFor(\Dom\HTMLDocument $document, string $property): ?MediaCandidate
     {
         $url = $this->content($document, $property);
-        $kind = $url === null ? null : $this->mediaUrlKind->of($url);
+        $resolved = $url === null ? null : $this->mediaUrlKind->resolve($url);
 
-        return $kind === null ? null : new MediaCandidate($kind, $url);
+        return $resolved === null ? null : new MediaCandidate($resolved->kind, $resolved->url);
     }
 
     private function content(\Dom\HTMLDocument $document, string $property): ?string

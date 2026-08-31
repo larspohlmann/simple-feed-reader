@@ -84,12 +84,12 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
 
     private function toCandidate(string $url): ?MediaCandidate
     {
-        $kind = $this->mediaUrlKind->of($url);
-        if ($kind === null) {
+        $resolved = $this->mediaUrlKind->resolve($url);
+        if ($resolved === null) {
             return null;
         }
-        if ($kind !== MediaKind::Embed) {
-            return new MediaCandidate($kind, $url);
+        if ($resolved->kind !== MediaKind::Embed) {
+            return new MediaCandidate($resolved->kind, $resolved->url);
         }
 
         $target = $this->embedProviders->resolve($url);

@@ -80,9 +80,9 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
     {
         $byKind = [];
         foreach ($urls as $url) {
-            $mediaKind = $this->kind->of($url);
-            if ($mediaKind === MediaKind::Audio || $mediaKind === MediaKind::Video) {
-                $byKind[$mediaKind->value][] = $url;
+            $resolved = $this->kind->resolve($url);
+            if ($resolved !== null && $resolved->kind !== MediaKind::Embed) {
+                $byKind[$resolved->kind->value][] = $resolved->url;
             }
         }
 
@@ -107,16 +107,12 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
         return $candidates;
     }
 
-    /** @param list<string> $urls */
+    /** @param list<string> $urls already resolved to their durable form */
     private function bestCandidate(MediaKind $kind, array $urls, string $pageHtml, string $pageUrl): ?MediaCandidate
     {
         $best = $this->relevance->rank($urls, $pageUrl)[0];
-        $durableUrl = $this->kind->durableUrl($best);
-        if ($durableUrl === null) {
-            return null;
-        }
         if ($kind === MediaKind::Audio) {
-            return new MediaCandidate(MediaKind::Audio, $durableUrl);
+            return new MediaCandidate(MediaKind::Audio, $best);
         }
 
         $poster = $this->ogImagePoster($pageHtml);
@@ -124,7 +120,7 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
         // A publisher depublishes video on a schedule and the reader's cache
         // has no TTL; a poster-less video would rot into a dead frame instead
         // of a still with a failing play control, so it is dropped outright.
-        return $poster === null ? null : new MediaCandidate(MediaKind::Video, $durableUrl, $poster);
+        return $poster === null ? null : new MediaCandidate(MediaKind::Video, $best, $poster);
     }
 
     private function ogImagePoster(string $pageHtml): ?string

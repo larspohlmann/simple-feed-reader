@@ -61,14 +61,16 @@ final readonly class SemanticMediaSource implements MediaCandidateSourceInterfac
     private function usableUrl(\Dom\Element $element, MediaKind $expectedKind): ?string
     {
         $src = $element->getAttribute('src');
-        if ($src !== null && $this->urlKind->of($src) === $expectedKind) {
-            return $src;
+        $resolved = $src === null ? null : $this->urlKind->resolve($src);
+        if ($resolved !== null && $resolved->kind === $expectedKind) {
+            return $resolved->url;
         }
 
         foreach ($element->querySelectorAll('source') as $source) {
             $sourceUrl = $source->getAttribute('src');
-            if ($sourceUrl !== null && $this->urlKind->of($sourceUrl) === $expectedKind) {
-                return $sourceUrl;
+            $resolvedSource = $sourceUrl === null ? null : $this->urlKind->resolve($sourceUrl);
+            if ($resolvedSource !== null && $resolvedSource->kind === $expectedKind) {
+                return $resolvedSource->url;
             }
         }
 

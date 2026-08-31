@@ -26,18 +26,32 @@ final class MediaUrlKindTest extends TestCase
 
     public function testRecognisesAudioByExtension(): void
     {
-        self::assertSame(MediaKind::Audio, $this->kind->of('https://x.test/a.mp3'));
-        self::assertSame(MediaKind::Audio, $this->kind->of('https://x.test/a.m4a'));
+        $a = $this->kind->resolve('https://x.test/a.mp3');
+        self::assertNotNull($a);
+        self::assertSame(MediaKind::Audio, $a->kind);
+        self::assertSame('https://x.test/a.mp3', $a->url);
+
+        $m4a = $this->kind->resolve('https://x.test/a.m4a');
+        self::assertNotNull($m4a);
+        self::assertSame(MediaKind::Audio, $m4a->kind);
     }
 
     public function testRecognisesVideoByExtension(): void
     {
-        self::assertSame(MediaKind::Video, $this->kind->of('https://x.test/v.mp4'));
+        $video = $this->kind->resolve('https://x.test/v.mp4');
+
+        self::assertNotNull($video);
+        self::assertSame(MediaKind::Video, $video->kind);
+        self::assertSame('https://x.test/v.mp4', $video->url);
     }
 
-    public function testRecognisesAnEmbedByProvider(): void
+    public function testRecognisesAnEmbedByProviderAndReturnsItsCanonicalUrl(): void
     {
-        self::assertSame(MediaKind::Embed, $this->kind->of('https://www.youtube.com/watch?v=M1j_uRqKMKI'));
+        $embed = $this->kind->resolve('https://www.youtube.com/watch?v=M1j_uRqKMKI');
+
+        self::assertNotNull($embed);
+        self::assertSame(MediaKind::Embed, $embed->kind);
+        self::assertStringContainsString('M1j_uRqKMKI', $embed->url);
     }
 
     /**
@@ -46,57 +60,47 @@ final class MediaUrlKindTest extends TestCase
      */
     public function testRejectsAPlayerPage(): void
     {
-        self::assertNull($this->kind->of('https://www.tagesschau.de/video/video-1640158~player.html'));
+        self::assertNull($this->kind->resolve('https://www.tagesschau.de/video/video-1640158~player.html'));
     }
 
     public function testRejectsAnImage(): void
     {
-        self::assertNull($this->kind->of('https://x.test/photo.jpg'));
+        self::assertNull($this->kind->resolve('https://x.test/photo.jpg'));
     }
 
     public function testRejectsAnHlsPlaylist(): void
     {
-        self::assertNull($this->kind->of('https://x.test/master.m3u8'));
+        self::assertNull($this->kind->resolve('https://x.test/master.m3u8'));
     }
 
     /** A query is stripped before the extension is read, then re-checked. */
     public function testStripsAQueryBeforeJudging(): void
     {
-        self::assertSame(MediaKind::Audio, $this->kind->of('https://x.test/a.mp3?t=progseg&sc=siteplayer'));
+        $resolved = $this->kind->resolve('https://x.test/a.mp3?t=progseg&sc=siteplayer');
+
+        self::assertNotNull($resolved);
+        self::assertSame(MediaKind::Audio, $resolved->kind);
+        self::assertSame('https://x.test/a.mp3', $resolved->url);
+    }
+
+    /** The exact failure this refactor closes: a signed url must never survive into the resolved form. */
+    public function testStripsASignedUrlsQueryBeforeEmitting(): void
+    {
+        $resolved = $this->kind->resolve('https://x.test/v.mp4?Expires=1&Signature=abc');
+
+        self::assertNotNull($resolved);
+        self::assertSame(MediaKind::Video, $resolved->kind);
+        self::assertSame('https://x.test/v.mp4', $resolved->url);
     }
 
     /** DurableMediaUrl's exclusions still bind: narration is not this article. */
     public function testRejectsMachineNarration(): void
     {
-        self::assertNull($this->kind->of('https://x.test/tts/a-OnyxTurboMultilingualNeural.mp3'));
+        self::assertNull($this->kind->resolve('https://x.test/tts/a-OnyxTurboMultilingualNeural.mp3'));
     }
 
     public function testRejectsALiveStream(): void
     {
-        self::assertNull($this->kind->of('https://st01.sslstream.dlf.de/dlf/01/128/mp3/stream.mp3'));
-    }
-
-    public function testDurableUrlStripsAQuery(): void
-    {
-        $url = 'https://x.test/a.mp3?t=progseg&sc=siteplayer';
-
-        self::assertSame('https://x.test/a.mp3', $this->kind->durableUrl($url));
-    }
-
-    public function testDurableUrlIsNullForANonMediaUrl(): void
-    {
-        self::assertNull($this->kind->durableUrl('https://x.test/photo.jpg'));
-        self::assertNull($this->kind->durableUrl('https://www.tagesschau.de/video/video-1640158~player.html'));
-    }
-
-    public function testDurableUrlIsNullForAnEmbed(): void
-    {
-        self::assertNull($this->kind->durableUrl('https://www.youtube.com/watch?v=M1j_uRqKMKI'));
-    }
-
-    public function testDurableUrlIsNullForNarrationAndALiveStream(): void
-    {
-        self::assertNull($this->kind->durableUrl('https://x.test/tts/a-OnyxTurboMultilingualNeural.mp3'));
-        self::assertNull($this->kind->durableUrl('https://st01.sslstream.dlf.de/dlf/01/128/mp3/stream.mp3'));
+        self::assertNull($this->kind->resolve('https://st01.sslstream.dlf.de/dlf/01/128/mp3/stream.mp3'));
     }
 }

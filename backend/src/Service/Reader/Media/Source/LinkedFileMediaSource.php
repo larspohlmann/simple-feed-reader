@@ -36,15 +36,15 @@ final readonly class LinkedFileMediaSource implements MediaCandidateSourceInterf
         return $this->candidates($this->hrefsByKind($document), $pageUrl);
     }
 
-    /** @return array<value-of<MediaKind>, list<string>> */
+    /** @return array<value-of<MediaKind>, list<string>> durable urls, keyed by kind */
     private function hrefsByKind(\Dom\HTMLDocument $document): array
     {
         $byKind = [];
         foreach ($document->querySelectorAll('a[href]') as $anchor) {
             $href = $anchor->getAttribute('href');
-            $mediaKind = $href === null ? null : $this->kind->of($href);
-            if ($mediaKind === MediaKind::Audio || $mediaKind === MediaKind::Video) {
-                $byKind[$mediaKind->value][] = $href;
+            $resolved = $href === null ? null : $this->kind->resolve($href);
+            if ($resolved !== null && $resolved->kind !== MediaKind::Embed) {
+                $byKind[$resolved->kind->value][] = $resolved->url;
             }
         }
 
@@ -69,7 +69,7 @@ final readonly class LinkedFileMediaSource implements MediaCandidateSourceInterf
         return $candidates;
     }
 
-    /** @param list<string> $hrefs */
+    /** @param list<string> $hrefs already resolved to their durable form */
     private function bestCandidate(MediaKind $kind, array $hrefs, string $pageUrl): ?MediaCandidate
     {
         // A linked video file has no poster to show alongside it, unlike the
@@ -79,8 +79,7 @@ final readonly class LinkedFileMediaSource implements MediaCandidateSourceInterf
         }
 
         $best = $this->relevance->rank($hrefs, $pageUrl)[0];
-        $durableUrl = $this->kind->durableUrl($best);
 
-        return $durableUrl === null ? null : new MediaCandidate($kind, $durableUrl);
+        return new MediaCandidate($kind, $best);
     }
 }

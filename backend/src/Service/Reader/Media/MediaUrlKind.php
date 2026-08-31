@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace App\Service\Reader\Media;
 
 /**
- * What a URL is, if it is playable media at all.
+ * What a URL is, and the durable form a layer must emit for it.
  *
  * Every layer asks this instead of carrying its own idea of a media URL, which
  * is what keeps a player page, a poster image or an HLS playlist from being
- * emitted as a file. Analytics parameters are stripped before judging, then the
- * bare URL must still satisfy DurableMediaUrl — so a real signature, which does
- * not survive stripping, is refused.
+ * emitted as a file. The cache has no TTL, so a signed or analytics-bearing
+ * query string can never survive into an emitted candidate: resolve() judges
+ * the bare form and hands that same bare form back, so no caller can emit the
+ * raw, query-bearing url by mistake.
  */
 final readonly class MediaUrlKind
 {
@@ -24,29 +25,26 @@ final readonly class MediaUrlKind
     ) {
     }
 
-    /** The cache has no TTL, so a query-bearing url is never written to it. */
-    public function durableUrl(string $url): ?string
+    public function resolve(string $url): ?ResolvedMediaUrl
     {
-        $kind = $this->of($url);
-        if ($kind !== MediaKind::Audio && $kind !== MediaKind::Video) {
-            return null;
+        $embed = $this->providers->resolve($url);
+        if ($embed !== null) {
+            return new ResolvedMediaUrl(MediaKind::Embed, $embed->url);
         }
 
-        return $this->withoutQuery($url);
+        return $this->resolveFile($url);
     }
 
-    public function of(string $url): ?MediaKind
+    private function resolveFile(string $url): ?ResolvedMediaUrl
     {
-        if ($this->providers->resolve($url) !== null) {
-            return MediaKind::Embed;
-        }
-
         $bare = $this->withoutQuery($url);
         if ($bare === null || !$this->durable->accepts($bare)) {
             return null;
         }
 
-        return $this->byExtension($bare);
+        $kind = $this->byExtension($bare);
+
+        return $kind === null ? null : new ResolvedMediaUrl($kind, $bare);
     }
 
     private function withoutQuery(string $url): ?string

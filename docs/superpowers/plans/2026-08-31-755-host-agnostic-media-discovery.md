@@ -60,7 +60,7 @@ Every layer needs the same answer, and it is what stops a layer emitting a playe
 
 **Interfaces:**
 - Consumes: `MediaKind`, `DurableMediaUrl`, `EmbedProviders`.
-- Produces: `final readonly class MediaUrlKind { public function of(string $url): ?MediaKind; }` — `null` when the URL is not playable media.
+- Produces: `final readonly class MediaUrlKind { public function resolve(string $url): ?ResolvedMediaUrl; }` — `null` when the URL is not playable media, otherwise `ResolvedMediaUrl { MediaKind $kind; string $url; }` carrying the URL already reduced to its durable form. Superseded from `of(): ?MediaKind` during Task 7's follow-up (durability-fix round 1): `of()` returned only the kind and left every caller to re-derive (or forget to re-derive) the durable URL, which is exactly the signed-URL cache leak the round-1 fix closed — the kind and its durable URL are now a single indivisible result, so no caller can emit the raw, query-bearing URL.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -918,7 +918,7 @@ Expected: FAIL — class not found.
 
 - [ ] **Step 3: Write `AttributeMediaSource`**
 
-Walk every element's every attribute. For each value, pull out `https://…` URLs — an attribute may hold a whole JSON blob, so use `preg_match_all` for URL-shaped substrings rather than treating the value as one URL. Judge each with `MediaUrlKind`, keep audio and video, rank with `MediaRelevance`, and return **one candidate per kind** — the best-ranked. Read `og:image` for a video's poster and drop the video if there is none.
+Walk every element's every attribute. For each value, pull out `https://…` URLs — an attribute may hold a whole JSON blob, so use `preg_match_all` for URL-shaped substrings rather than treating the value as one URL. Resolve each with `MediaUrlKind::resolve()`, keep audio and video, rank the resolved (already durable) URLs with `MediaRelevance`, and return **one candidate per kind** — the best-ranked, emitted exactly as the resolver returned it. Read `og:image` for a video's poster and drop the video if there is none.
 
 Tag `#[AsTaggedItem(priority: 60)]`.
 
@@ -991,7 +991,7 @@ public function testFindsTheSegmentInTheCapturedNprPage(): void
 
 - [ ] **Step 2: Run it, confirm it fails, then write `LinkedFileMediaSource`**
 
-Query `a[href]`, judge each with `MediaUrlKind`, rank with `MediaRelevance`, return the best per kind. Tag `#[AsTaggedItem(priority: 50)]`.
+Query `a[href]`, resolve each with `MediaUrlKind::resolve()`, rank the resolved (already durable) URLs per kind with `MediaRelevance`, return the best per kind emitted exactly as the resolver returned it. Tag `#[AsTaggedItem(priority: 50)]`.
 
 - [ ] **Step 3: Run and commit**
 
@@ -1293,6 +1293,6 @@ The body should carry the before-and-after table from Step 3, the note that `Ent
 
 **Placeholder scan.** Tasks 4–7 give full test code and specify the implementation as concrete rules rather than as code, because each layer is a short walk whose real content is its acceptance test; where a rule is subtle — entity-decoding attribute values, one-candidate-per-kind, the poster requirement — it is stated explicitly. No step says "handle edge cases".
 
-**Type consistency.** `MediaUrlKind::of(): ?MediaKind`, `MediaRelevance::rank(array, string): array`, `MediaCandidateSourceInterface::find(string, string): array`, `PageMediaScanner::scan(string, string): ArticleMedia`, `MediaCandidate(kind, url, posterUrl, label)` and `ArticleMedia::MAX_ITEMS` are used identically throughout, and match what is already in the branch. Priorities 100 / 90 / 80 / 70 / 60 / 50 are assigned once each and never reused.
+**Type consistency.** `MediaUrlKind::resolve(): ?ResolvedMediaUrl` (superseding `of(): ?MediaKind`, round 1), `MediaRelevance::rank(array, string): array`, `MediaCandidateSourceInterface::find(string, string): array`, `PageMediaScanner::scan(string, string): ArticleMedia`, `MediaCandidate(kind, url, posterUrl, label)` and `ArticleMedia::MAX_ITEMS` are used identically throughout, and match what is already in the branch. Priorities 100 / 90 / 80 / 70 / 60 / 50 are assigned once each and never reused.
 
 **One risk to state.** #748's final whole-branch review never ran, so this plan builds on unreviewed code. Task 10 verifies both issues at once, but a reviewer should still read the #748 commits as part of the combined PR rather than assuming they were cleared.
