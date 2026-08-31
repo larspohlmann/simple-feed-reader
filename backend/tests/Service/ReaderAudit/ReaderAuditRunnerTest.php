@@ -134,7 +134,11 @@ final class ReaderAuditRunnerTest extends TestCase
         );
         $findings = iterator_to_array($runner->run([$entry], new ReaderLink('http://localhost:4200')));
 
-        self::assertSame(['extraction_failed_mismatch'], $findings[0]->markerCodes());
+        // The gate's verdict reaches the finding as `extracted: false`, which is
+        // how the report tells a fallback from a cleaned article. It earns no
+        // marker: no cleaner fixes an extraction the gate had to reject.
+        self::assertFalse($findings[0]->extracted);
+        self::assertSame([], $findings[0]->markerCodes());
     }
 
     public function testEveryEntryHandedInComesBackAsAFinding(): void

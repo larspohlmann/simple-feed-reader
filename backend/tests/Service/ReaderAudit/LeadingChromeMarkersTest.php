@@ -117,7 +117,11 @@ final class LeadingChromeMarkersTest extends TestCase
 
         self::assertSame(4, $markers[0]->weight);
         self::assertSame('NavigationChromeTrimmer', $markers[0]->suspect);
-        self::assertSame('4 link-only list items stand before the first paragraph', $markers[0]->detail);
+        self::assertSame(
+            '4 link-only list items stand before the first paragraph: '
+            . '"Ressort" | "Ressort" | "Ressort" | …',
+            $markers[0]->detail,
+        );
     }
 
     public function testTheLinkWallDetailNamesBothCounts(): void
@@ -126,7 +130,11 @@ final class LeadingChromeMarkersTest extends TestCase
         $markers = $this->markers->detect(ExtractedBody::fromHtml($wall . $this->article()));
 
         self::assertSame(3, $markers[0]->weight);
-        self::assertSame('5 links across 6 blocks before the article starts', $markers[0]->detail);
+        self::assertSame(
+            '5 links across 6 blocks before the article starts: '
+            . '"Ressort Politik" | "Ressort Politik" | "Ressort Politik" | …',
+            $markers[0]->detail,
+        );
     }
 
     public function testTheNavRunDetailReportsTheLongestRunNotTheLast(): void
@@ -139,7 +147,10 @@ final class LeadingChromeMarkersTest extends TestCase
             static fn (CleanupMarker $marker): bool => $marker->code === 'leading_nav_run',
         ));
 
-        self::assertSame('5 consecutive link-only blocks before the first paragraph', $run[0]->detail);
+        self::assertSame(
+            '5 consecutive link-only blocks before the first paragraph: "A" | "A" | "A" | …',
+            $run[0]->detail,
+        );
     }
 
     private function article(): string

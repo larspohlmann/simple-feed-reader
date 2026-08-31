@@ -16,6 +16,9 @@ namespace App\Service\ReaderAudit;
  */
 final readonly class LeadingChromeMarkers
 {
+    /** Offending lines quoted in a finding's detail, so it can be judged without opening the page. */
+    private const int QUOTED_LINES = 3;
+
     private const int MIN_LIST_ITEMS = 3;
     private const int MIN_NAV_RUN = 4;
     private const int MIN_LEADING_LINKS = 5;
@@ -42,13 +45,13 @@ final readonly class LeadingChromeMarkers
      */
     private function linkList(array $leading): ?CleanupMarker
     {
-        $items = 0;
+        $items = [];
         foreach ($leading as $block) {
-            if ($block->tag === 'li' && $block->isLinkDominated()) {
-                ++$items;
+            if ($block->tag === 'li' && $block->isChrome()) {
+                $items[] = $block->text;
             }
         }
-        if ($items < self::MIN_LIST_ITEMS) {
+        if (\count($items) < self::MIN_LIST_ITEMS) {
             return null;
         }
 
@@ -56,7 +59,11 @@ final readonly class LeadingChromeMarkers
             'leading_link_list',
             4,
             'NavigationChromeTrimmer',
-            \sprintf('%d link-only list items stand before the first paragraph', $items),
+            \sprintf(
+                '%d link-only list items stand before the first paragraph: %s',
+                \count($items),
+                $this->quoted($items),
+            ),
         );
     }
 
@@ -68,13 +75,13 @@ final readonly class LeadingChromeMarkers
      */
     private function navigationRun(array $leading): ?CleanupMarker
     {
-        $run = 0;
-        $longest = 0;
+        $run = [];
+        $longest = [];
         foreach ($leading as $block) {
-            $run = $block->isLinkDominated() && $block->tag !== 'li' ? $run + 1 : 0;
-            $longest = max($longest, $run);
+            $run = $block->isChrome() && $block->tag !== 'li' ? [...$run, $block->text] : [];
+            $longest = \count($run) > \count($longest) ? $run : $longest;
         }
-        if ($longest < self::MIN_NAV_RUN) {
+        if (\count($longest) < self::MIN_NAV_RUN) {
             return null;
         }
 
@@ -82,7 +89,11 @@ final readonly class LeadingChromeMarkers
             'leading_nav_run',
             4,
             'NavigationChromeTrimmer',
-            \sprintf('%d consecutive link-only blocks before the first paragraph', $longest),
+            \sprintf(
+                '%d consecutive link-only blocks before the first paragraph: %s',
+                \count($longest),
+                $this->quoted($longest),
+            ),
         );
     }
 
@@ -96,7 +107,7 @@ final readonly class LeadingChromeMarkers
     {
         $links = 0;
         foreach ($leading as $block) {
-            $links += $block->linkCount;
+            $links += $block->outboundLinks();
         }
         if ($links < self::MIN_LEADING_LINKS || \count($leading) < self::MIN_LEADING_BLOCKS_FOR_WALL) {
             return null;
@@ -106,7 +117,21 @@ final readonly class LeadingChromeMarkers
             'leading_link_wall',
             3,
             'NavigationChromeTrimmer',
-            \sprintf('%d links across %d blocks before the article starts', $links, \count($leading)),
+            \sprintf(
+                '%d links across %d blocks before the article starts: %s',
+                $links,
+                \count($leading),
+                $this->quoted(array_map(static fn (BodyBlock $block): string => $block->text, $leading)),
+            ),
         );
+    }
+
+    /** @param list<string> $lines */
+    private function quoted(array $lines): string
+    {
+        $shown = \array_slice($lines, 0, self::QUOTED_LINES);
+        $quoted = implode(' | ', array_map(static fn (string $line): string => '"' . $line . '"', $shown));
+
+        return \count($lines) > self::QUOTED_LINES ? $quoted . ' | …' : $quoted;
     }
 }

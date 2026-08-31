@@ -21,6 +21,9 @@ final readonly class ExtractedBody
 {
     private const array BLOCK_TAGS = ['p', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'figcaption', 'div'];
 
+    /** Below this much text the page produced a notice, not an article. */
+    private const int ARTICLE_TEXT_CHARS = 1200;
+
     /**
      * @param list<BodyBlock> $blocks
      * @param list<BodyLink>  $links
@@ -61,19 +64,14 @@ final readonly class ExtractedBody
     }
 
     /**
-     * Whether the body reaches a paragraph at all. False means the reader showed
-     * the user no article — a wall, an index page, a stub — which is what makes
-     * a wall's wording believable rather than the article's own fine print.
+     * Whether the page yielded an article at all. Measured as total text, not as
+     * "is one block long enough": consent legalese is a paragraph too, so a
+     * per-block test would call a cookie wall an article and stop reporting it.
+     * A wall notice is short; an article is not.
      */
     public function hasArticleText(): bool
     {
-        foreach ($this->blocks as $block) {
-            if ($block->isProse()) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->textLength() >= self::ARTICLE_TEXT_CHARS;
     }
 
     /**
@@ -115,14 +113,12 @@ final readonly class ExtractedBody
 
     private static function blockOf(Element $element, string $text): BodyBlock
     {
-        $linkCount = 0;
-        $linkedChars = 0;
+        $links = [];
         foreach ($element->getElementsByTagName('a') as $link) {
-            ++$linkCount;
-            $linkedChars += mb_strlen(self::collapsed($link->textContent));
+            $links[] = self::linkOf($link);
         }
 
-        return new BodyBlock($element->localName, $text, $linkCount, $linkedChars);
+        return new BodyBlock($element->localName, $text, $links);
     }
 
     /** A block that wraps other blocks reports its children's text, not its own. */
@@ -142,10 +138,15 @@ final readonly class ExtractedBody
     {
         $links = [];
         foreach ($body->getElementsByTagName('a') as $link) {
-            $links[] = new BodyLink((string) $link->getAttribute('href'), self::collapsed($link->textContent));
+            $links[] = self::linkOf($link);
         }
 
         return $links;
+    }
+
+    private static function linkOf(Element $link): BodyLink
+    {
+        return new BodyLink((string) $link->getAttribute('href'), self::collapsed($link->textContent));
     }
 
     /** @return list<string> */

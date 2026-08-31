@@ -77,7 +77,7 @@ final class AuditReportHtmlTest extends TestCase
             $this->clean('Zweiter'),
         ]);
 
-        self::assertStringContainsString('Feeds by failure rate', $html);
+        self::assertStringContainsString('Feeds that failed', $html);
         self::assertStringContainsString('<th>Feed</th>', $html);
         self::assertStringContainsString('<th class="n">Audited</th>', $html);
         self::assertStringContainsString('<th class="n">Flagged</th>', $html);
@@ -174,7 +174,7 @@ final class AuditReportHtmlTest extends TestCase
     private function failed(string $title): AuditFinding
     {
         return new AuditFinding(10, 11, 'Ein Feed', $title, 'https://example.test/d', 'http://l/?entry=10', false, [
-            new CleanupMarker('extraction_failed_mismatch', 5, 'EdgeBoilerplateTrimmer', 'wrong region'),
+            new CleanupMarker('no_paragraphs', 4, 'EdgeBoilerplateTrimmer', 'not one <p>'),
         ], ['chars' => 0]);
     }
 

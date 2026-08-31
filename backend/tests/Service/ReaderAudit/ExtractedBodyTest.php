@@ -80,10 +80,10 @@ final class ExtractedBodyTest extends TestCase
         self::assertSame('x.com', $body->links[0]->host());
     }
 
-    public function testAParagraphOfExactlyTwoHundredCharactersStartsTheArticle(): void
+    public function testAParagraphOfExactlyOneHundredAndTwentyCharactersStartsTheArticle(): void
     {
-        $atLimit = '<p>' . str_repeat('a', 200) . '</p><p>Kurz</p>';
-        $justUnder = '<p>' . str_repeat('a', 199) . '</p><p>Kurz</p>';
+        $atLimit = '<p>' . str_repeat('a', 120) . '</p><p>Kurz</p>';
+        $justUnder = '<p>' . str_repeat('a', 119) . '</p><p>Kurz</p>';
 
         self::assertSame([], ExtractedBody::fromHtml($atLimit)->leadingBlocks());
         self::assertCount(2, ExtractedBody::fromHtml($justUnder)->leadingBlocks());
@@ -91,9 +91,10 @@ final class ExtractedBodyTest extends TestCase
 
     public function testProseLengthCountsCharactersNotBytes(): void
     {
-        // Two hundred umlauts are four hundred bytes; counting bytes would call
-        // a short caption the start of the article and empty the leading region.
-        $umlauts = '<p>' . str_repeat('ä', 199) . '</p><p>Kurz</p>';
+        // These umlauts are twice as many bytes as characters; counting bytes
+        // would call a short caption the start of the article and empty the
+        // leading region.
+        $umlauts = '<p>' . str_repeat('ä', 119) . '</p><p>Kurz</p>';
 
         self::assertCount(2, ExtractedBody::fromHtml($umlauts)->leadingBlocks());
     }
@@ -118,21 +119,39 @@ final class ExtractedBodyTest extends TestCase
         self::assertSame(['Text'], array_map(static fn (BodyBlock $b): string => $b->text, $body->blocks));
     }
 
-    public function testHasArticleTextAnswersWhetherTheBodyEverReachesAParagraph(): void
+    public function testHasArticleTextAnswersWhetherThePageYieldedAnArticleAtAll(): void
     {
-        $wall = ExtractedBody::fromHtml('<p>Wir verwenden Cookies</p><p>Akzeptieren</p>');
-        $article = ExtractedBody::fromHtml('<p>' . self::PROSE . '</p>');
+        $notice = ExtractedBody::fromHtml('<p>' . str_repeat('a', 1199) . '</p>');
+        $article = ExtractedBody::fromHtml('<p>' . str_repeat('a', 1200) . '</p>');
 
-        self::assertFalse($wall->hasArticleText());
+        self::assertFalse($notice->hasArticleText());
         self::assertTrue($article->hasArticleText());
+    }
+
+    public function testAnAnchorIntoThePagesOwnSectionsDoesNotLeaveThePage(): void
+    {
+        // An article's table of contents. Counting its entries as navigation
+        // reported deutschlandfunk.de's own long-read format as chrome (#744).
+        $body = ExtractedBody::fromHtml('<li><a href="#kapitel">Regelfall Einzelzimmer</a></li>');
+
+        self::assertSame(0, $body->blocks[0]->outboundLinks());
+        self::assertFalse($body->links[0]->leavesThePage());
+    }
+
+    public function testAnAnchorWithNoTargetAtAllDoesNotLeaveThePageEither(): void
+    {
+        $body = ExtractedBody::fromHtml('<li><a>Regelfall Einzelzimmer</a></li>');
+
+        self::assertSame(0, $body->blocks[0]->outboundLinks());
     }
 
     public function testCountsTheLinksInEachBlockSeparatelyFromTheBodysOwn(): void
     {
         $body = ExtractedBody::fromHtml('<p><a href="/a">eins</a> und <a href="/b">zwei</a></p>');
 
-        self::assertSame(2, $body->blocks[0]->linkCount);
-        self::assertSame(8, $body->blocks[0]->linkedChars);
+        self::assertCount(2, $body->blocks[0]->links);
+        self::assertSame(2, $body->blocks[0]->outboundLinks());
+        self::assertSame(['eins', 'zwei'], array_map(static fn ($l): string => $l->text, $body->blocks[0]->links));
         self::assertSame(13, $body->blocks[0]->length());
     }
 

@@ -50,7 +50,10 @@ final readonly class AuditFindings
     }
 
     /**
-     * Per feed: [feedTitle, audited, flagged, share, worstScore], worst share first.
+     * Per feed: [feedTitle, audited, flagged, share, worstScore], worst share
+     * first. Only feeds that failed at least once — a sweep covers every
+     * subscribed feed, so listing the clean ones buried nine rows worth reading
+     * under a hundred and sixty reading "0%".
      *
      * @return list<array{feed: string, audited: int, flagged: int, share: float, worst: int}>
      */
@@ -68,6 +71,9 @@ final readonly class AuditFindings
 
         $rows = [];
         foreach ($feeds as $row) {
+            if ($row['flagged'] === 0) {
+                continue;
+            }
             $row['share'] = (float) $row['flagged'] / $row['audited'];
             $rows[] = $row;
         }

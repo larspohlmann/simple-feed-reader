@@ -70,7 +70,7 @@ final class PhraseMarkersTest extends TestCase
         // sits inside a 3000-character article the reader renders correctly. A
         // wall is the ABSENCE of the article, so a body that has one cannot be
         // behind a wall (#744).
-        $article = '<p>' . str_repeat(self::PROSE, 2) . '</p>'
+        $article = '<p>' . str_repeat(self::PROSE, 7) . '</p>'
             . '<p>Mit der Anmeldung willigen Sie der Verarbeitung Ihrer Daten gemäß unserer '
             . 'Datenschutzerklärung ein.</p>';
 

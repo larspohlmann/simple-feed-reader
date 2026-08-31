@@ -9,6 +9,10 @@ namespace App\Service\ReaderAudit;
  * family over the region it is allowed to match. Reports each family at most
  * once, with the offending line as the detail, so a page with eight share
  * buttons produces one reviewable finding instead of eight.
+ *
+ * A block that is a link back into the same page is skipped whatever it says. A
+ * "Skip to content" is the page's own accessibility affordance, not a menu, and
+ * every Missy Magazine article carries one (#744).
  */
 final readonly class PhraseMarkers
 {
@@ -39,6 +43,9 @@ final readonly class PhraseMarkers
     private function firstMatch(PhraseFamily $family, array $blocks): ?CleanupMarker
     {
         foreach ($blocks as $block) {
+            if ($block->isInPageAffordance()) {
+                continue;
+            }
             $phrase = $family->matchIn(mb_strtolower($block->text));
             if ($phrase === null) {
                 continue;
