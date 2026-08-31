@@ -24,6 +24,17 @@ final readonly class MediaUrlKind
     ) {
     }
 
+    /** The cache has no TTL, so a query-bearing url is never written to it. */
+    public function durableUrl(string $url): ?string
+    {
+        $kind = $this->of($url);
+        if ($kind !== MediaKind::Audio && $kind !== MediaKind::Video) {
+            return null;
+        }
+
+        return $this->withoutQuery($url);
+    }
+
     public function of(string $url): ?MediaKind
     {
         if ($this->providers->resolve($url) !== null) {

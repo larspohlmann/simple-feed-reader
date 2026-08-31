@@ -75,4 +75,28 @@ final class MediaUrlKindTest extends TestCase
     {
         self::assertNull($this->kind->of('https://st01.sslstream.dlf.de/dlf/01/128/mp3/stream.mp3'));
     }
+
+    public function testDurableUrlStripsAQuery(): void
+    {
+        $url = 'https://x.test/a.mp3?t=progseg&sc=siteplayer';
+
+        self::assertSame('https://x.test/a.mp3', $this->kind->durableUrl($url));
+    }
+
+    public function testDurableUrlIsNullForANonMediaUrl(): void
+    {
+        self::assertNull($this->kind->durableUrl('https://x.test/photo.jpg'));
+        self::assertNull($this->kind->durableUrl('https://www.tagesschau.de/video/video-1640158~player.html'));
+    }
+
+    public function testDurableUrlIsNullForAnEmbed(): void
+    {
+        self::assertNull($this->kind->durableUrl('https://www.youtube.com/watch?v=M1j_uRqKMKI'));
+    }
+
+    public function testDurableUrlIsNullForNarrationAndALiveStream(): void
+    {
+        self::assertNull($this->kind->durableUrl('https://x.test/tts/a-OnyxTurboMultilingualNeural.mp3'));
+        self::assertNull($this->kind->durableUrl('https://st01.sslstream.dlf.de/dlf/01/128/mp3/stream.mp3'));
+    }
 }

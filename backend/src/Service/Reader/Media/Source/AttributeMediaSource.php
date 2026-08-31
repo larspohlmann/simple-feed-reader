@@ -111,8 +111,12 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
     private function bestCandidate(MediaKind $kind, array $urls, string $pageHtml, string $pageUrl): ?MediaCandidate
     {
         $best = $this->relevance->rank($urls, $pageUrl)[0];
+        $durableUrl = $this->kind->durableUrl($best);
+        if ($durableUrl === null) {
+            return null;
+        }
         if ($kind === MediaKind::Audio) {
-            return new MediaCandidate(MediaKind::Audio, $best);
+            return new MediaCandidate(MediaKind::Audio, $durableUrl);
         }
 
         $poster = $this->ogImagePoster($pageHtml);
@@ -120,7 +124,7 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
         // A publisher depublishes video on a schedule and the reader's cache
         // has no TTL; a poster-less video would rot into a dead frame instead
         // of a still with a failing play control, so it is dropped outright.
-        return $poster === null ? null : new MediaCandidate(MediaKind::Video, $best, $poster);
+        return $poster === null ? null : new MediaCandidate(MediaKind::Video, $durableUrl, $poster);
     }
 
     private function ogImagePoster(string $pageHtml): ?string

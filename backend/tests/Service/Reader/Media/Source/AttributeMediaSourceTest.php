@@ -83,6 +83,18 @@ final class AttributeMediaSourceTest extends TestCase
         self::assertStringContainsString('bildung-episode', $found[0]->url);
     }
 
+    /** The durable url has one home: a query-bearing attribute url is stripped before it is cached. */
+    public function testStripsAQueryFromTheAttributeUrlBeforeEmitting(): void
+    {
+        $html = '<body><div data-audio-src="https://x.test/bildung-episode.mp3?utm=x"></div></body>';
+
+        $found = $this->source->find($html, 'https://x.test/bildung-100.html');
+
+        self::assertCount(1, $found);
+        self::assertStringNotContainsString('?', $found[0]->url);
+        self::assertSame('https://x.test/bildung-episode.mp3', $found[0]->url);
+    }
+
     public function testFindsTheEpisodeInTheCapturedDeutschlandradioPage(): void
     {
         $html = file_get_contents(__DIR__ . '/../../../../Fixtures/reader/media/deutschlandradio-audio.html');
