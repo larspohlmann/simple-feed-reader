@@ -12,7 +12,7 @@
 .reader {
   position: relative;
   min-height: 100%;
-  background: var(--surface-0);
+  background: var(--surface-read);
   container-type: inline-size;
   container-name: reader;
 
@@ -242,7 +242,7 @@ app-to-top-button {
      pane passes *under* it (#87), so a smaller offset would slide this toolbar
      — back button and all — underneath that bar on the first scroll (#97). */
   top: var(--reader-mini-h);
-  transition: transform 0.2s ease;
+  transition: transform 0.12s ease;
 
   /* Sticky alone does not win the paint order here. Reading-focus sets an inline
      `opacity` on every article block (applyFocus()), and an element with
@@ -256,7 +256,13 @@ app-to-top-button {
   justify-content: space-between;
   padding: var(--space-2) var(--space-4);
   border-bottom: 1px solid var(--border);
+
+  /* Translucent so the article passes under it; the solid colour is the
+     fallback where backdrop-filter is unsupported. The nameplate above stays
+     opaque so this bar still retracts behind it out of sight. */
   background: var(--surface-1);
+  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+  backdrop-filter: blur(12px) saturate(1.4);
 }
 
 .bar.hidden {
