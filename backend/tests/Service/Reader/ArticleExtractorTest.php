@@ -19,10 +19,12 @@ use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\InBodyEmbedRewriter;
 use App\Service\Reader\Media\MediaMarkup;
+use App\Service\Reader\Media\MediaRelevance;
+use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\PageMediaInserter;
 use App\Service\Reader\Media\PageMediaScanner;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
-use App\Service\Reader\Media\Source\DeutschlandradioAudioSource;
+use App\Service\Reader\Media\Source\AttributeMediaSource;
 use App\Service\Reader\Media\SubstackPosterLink;
 use App\Service\Reader\NavigationChromeTrimmer;
 use App\Service\Reader\ReaderBodyCleaner;
@@ -102,7 +104,9 @@ final class ArticleExtractorTest extends TestCase
 
     private function mediaScanner(): PageMediaScanner
     {
-        return new PageMediaScanner([new DeutschlandradioAudioSource(new DurableMediaUrl())]);
+        $urlKind = new MediaUrlKind(new DurableMediaUrl(), new EmbedProviders([]));
+
+        return new PageMediaScanner([new AttributeMediaSource($urlKind, new MediaRelevance())]);
     }
 
     public function testExtractsAndAbsolutisesImages(): void

@@ -44,8 +44,8 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
 
         $found = [];
         foreach ($document->querySelectorAll('script[type="application/ld+json"]') as $script) {
-            foreach ($this->urlsIn($script->textContent ?? '') as $url) {
-                $candidate = $this->toCandidate($url);
+            foreach ($this->urlsIn($script->textContent ?? '') as $urlWithPoster) {
+                $candidate = $this->toCandidate($urlWithPoster['url'], $urlWithPoster['poster']);
                 if ($candidate !== null) {
                     $found[$candidate->url] = $candidate;
                 }
@@ -55,7 +55,7 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
         return array_values($found);
     }
 
-    /** @return list<string> */
+    /** @return list<array{url: string, poster: ?string}> */
     private function urlsIn(string $jsonLd): array
     {
         $decoded = json_decode($jsonLd, true);
@@ -64,17 +64,24 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
     }
 
     /**
+     * schema.org nests a video's `thumbnailUrl` beside its `contentUrl` on the
+     * same node, so the poster for a media URL is read from the node it was
+     * found on, not searched for independently.
+     *
      * @param array<mixed> $node
      *
-     * @return list<string>
+     * @return list<array{url: string, poster: ?string}>
      */
     private function collect(array $node): array
     {
         $urls = [];
-        foreach ($node as $key => $value) {
-            if (\is_string($value) && \in_array($key, self::URL_KEYS, true)) {
-                $urls[] = $value;
-            } elseif (\is_array($value)) {
+        foreach (self::URL_KEYS as $key) {
+            if (isset($node[$key]) && \is_string($node[$key])) {
+                $urls[] = ['url' => $node[$key], 'poster' => $this->thumbnailIn($node)];
+            }
+        }
+        foreach ($node as $value) {
+            if (\is_array($value)) {
                 array_push($urls, ...$this->collect($value));
             }
         }
@@ -82,14 +89,25 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
         return $urls;
     }
 
-    private function toCandidate(string $url): ?MediaCandidate
+    /** @param array<mixed> $node */
+    private function thumbnailIn(array $node): ?string
+    {
+        $thumbnail = $node['thumbnailUrl'] ?? null;
+        if (\is_string($thumbnail)) {
+            return $thumbnail;
+        }
+
+        return \is_array($thumbnail) && \is_string($thumbnail[0] ?? null) ? $thumbnail[0] : null;
+    }
+
+    private function toCandidate(string $url, ?string $poster): ?MediaCandidate
     {
         $resolved = $this->mediaUrlKind->resolve($url);
         if ($resolved === null) {
             return null;
         }
         if ($resolved->kind !== MediaKind::Embed) {
-            return new MediaCandidate($resolved->kind, $resolved->url);
+            return new MediaCandidate($resolved->kind, $resolved->url, $poster);
         }
 
         $target = $this->embedProviders->resolve($url);
