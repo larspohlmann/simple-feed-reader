@@ -24,6 +24,9 @@ final readonly class SubstackGatedVideoPlaceholder
     private const string ARTICLE = 'article.podcast-post, article.shows-post';
     private const string HTTP_URL_PATTERN = '#^https?://#i';
 
+    /** A paragraph this long is prose readability keeps, not chrome or a caption. */
+    private const int TEASER_MIN_LENGTH = 80;
+
     public function replaceIn(HTMLDocument $page): void
     {
         $posterUrl = $this->httpUrlFrom($page, 'meta[property="og:image"]', 'content');
@@ -52,13 +55,35 @@ final readonly class SubstackGatedVideoPlaceholder
     private function replacePlayerWithPoster(HTMLDocument $page, string $sourceUrl, string $posterUrl): void
     {
         $page->querySelector(self::PAYWALL)?->remove();
+        $page->querySelector(self::PLAYER)?->remove();
 
-        $player = $page->querySelector(self::PLAYER);
-        if ($player === null || $player->parentNode === null) {
+        // Readability keeps only its chosen content region, which starts at the
+        // teaser prose — a poster placed at the top of the article, above the
+        // byline card, falls outside it and is dropped. Sit the poster right
+        // before the teaser so it lives inside the region readability keeps.
+        $teaser = $this->teaserParagraph($page);
+        if ($teaser === null || $teaser->parentNode === null) {
             return;
         }
 
-        $player->parentNode->replaceChild($this->posterLink($page, $sourceUrl, $posterUrl), $player);
+        $teaser->parentNode->insertBefore($this->posterLink($page, $sourceUrl, $posterUrl), $teaser);
+    }
+
+    /** The first article paragraph long enough to be prose readability keeps. */
+    private function teaserParagraph(HTMLDocument $page): ?Element
+    {
+        $article = $page->querySelector(self::ARTICLE);
+        if ($article === null) {
+            return null;
+        }
+
+        foreach ($article->getElementsByTagName('p') as $paragraph) {
+            if (mb_strlen(trim((string) $paragraph->textContent)) >= self::TEASER_MIN_LENGTH) {
+                return $paragraph;
+            }
+        }
+
+        return null;
     }
 
     private function posterLink(HTMLDocument $page, string $sourceUrl, string $posterUrl): Element

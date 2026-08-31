@@ -16,7 +16,7 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
         . '<p>Playback speed</p><p>×</p><p>Share post</p></div>'
         . '<div><p>0:00</p><p>/</p><p>Preview</p></div></div>';
     private const string TEASER =
-        '<p>An ancient intuition is that plants have souls and participate in life.</p>';
+        '<p>An ancient intuition is that plants have souls and participate in the wider life of the world.</p>';
     private const string PAYWALL =
         '<div data-testid="paywall" role="region" aria-label="Paywall">'
         . '<h2>Continue reading this post for free.</h2></div>';
@@ -28,40 +28,64 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
         $this->placeholder = new SubstackGatedVideoPlaceholder();
     }
 
-    public function testReplacesTheGatedPlayerWithAPosterLinkingToTheSource(): void
+    public function testInsertsThePosterImmediatelyBeforeTheTeaser(): void
     {
-        $result = $this->apply(
-            self::PLAYER . self::TEASER . self::PAYWALL,
-            'https://cdn.test/og.jpg',
-            'https://x.substack.com/p/a',
+        $document = $this->replaceIn(
+            $this->page(
+                $this->ogHead('https://cdn.test/og.jpg', 'https://x.substack.com/p/a'),
+                $this->gatedArticle(self::PLAYER . self::TEASER . self::PAYWALL),
+            ),
         );
+        $result = $document->saveHtml();
 
+        self::assertStringNotContainsString('shows-video-player-container', $result);
         self::assertStringNotContainsString('Playback speed', $result);
-        self::assertStringNotContainsString('Share post', $result);
         self::assertStringNotContainsString('Continue reading this post for free', $result);
-        self::assertStringContainsString('<a href="https://x.substack.com/p/a">', $result);
-        self::assertStringContainsString('src="https://cdn.test/og.jpg"', $result);
-        self::assertStringContainsString('width="1280"', $result);
         self::assertStringContainsString('An ancient intuition', $result);
+
+        $poster = $document->querySelector('a[href="https://x.substack.com/p/a"]');
+        self::assertNotNull($poster);
+        self::assertSame('https://cdn.test/og.jpg', $poster->querySelector('img')?->getAttribute('src'));
+        $teaser = $this->teaser($document);
+        self::assertSame($teaser, $poster->nextElementSibling, 'the poster precedes the teaser paragraph');
     }
 
     public function testUsesTheCanonicalLinkWhenOgUrlIsAbsent(): void
     {
         $head = '<meta property="og:image" content="https://cdn.test/og.jpg">'
             . '<link rel="canonical" href="https://x.substack.com/p/canonical">';
-        $result = $this->applyWithHead($head, self::PLAYER . self::TEASER . self::PAYWALL);
+        $result = $this->replaceIn(
+            $this->page($head, $this->gatedArticle(self::PLAYER . self::TEASER . self::PAYWALL)),
+        )->saveHtml();
 
         self::assertStringContainsString('<a href="https://x.substack.com/p/canonical">', $result);
         self::assertStringNotContainsString('Playback speed', $result);
     }
 
+    public function testRemovesTheChromeButSkipsThePosterWhenNoTeaserIsLongEnough(): void
+    {
+        $shortParagraph = '<p>Watch below.</p>';
+        $result = $this->replaceIn(
+            $this->page(
+                $this->ogHead('https://cdn.test/og.jpg', 'https://x.substack.com/p/a'),
+                $this->gatedArticle(self::PLAYER . $shortParagraph . self::PAYWALL),
+            ),
+        )->saveHtml();
+
+        self::assertStringNotContainsString('shows-video-player-container', $result);
+        self::assertStringNotContainsString('Continue reading this post for free', $result);
+        self::assertStringContainsString('Watch below.', $result);
+        self::assertStringNotContainsString('<img', $result);
+    }
+
     public function testDoesNothingWhenThereIsNoPaywallLandmark(): void
     {
-        $result = $this->apply(
-            self::PLAYER . self::TEASER,
-            'https://cdn.test/og.jpg',
-            'https://x.substack.com/p/a',
-        );
+        $result = $this->replaceIn(
+            $this->page(
+                $this->ogHead('https://cdn.test/og.jpg', 'https://x.substack.com/p/a'),
+                $this->gatedArticle(self::PLAYER . self::TEASER),
+            ),
+        )->saveHtml();
 
         self::assertStringContainsString('Playback speed', $result);
         self::assertStringNotContainsString('<img', $result);
@@ -72,11 +96,12 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
         $renamedPlayer =
             '<div class="shows-video-player-renamed container-abc">'
             . '<div class="settingsControlsContainer-x"><p>Playback speed</p><p>Preview</p></div></div>';
-        $result = $this->apply(
-            $renamedPlayer . self::TEASER . self::PAYWALL,
-            'https://cdn.test/og.jpg',
-            'https://x.substack.com/p/a',
-        );
+        $result = $this->replaceIn(
+            $this->page(
+                $this->ogHead('https://cdn.test/og.jpg', 'https://x.substack.com/p/a'),
+                $this->gatedArticle($renamedPlayer . self::TEASER . self::PAYWALL),
+            ),
+        )->saveHtml();
 
         self::assertStringContainsString('Playback speed', $result);
         self::assertStringContainsString('Continue reading this post for free', $result);
@@ -85,11 +110,11 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
 
     public function testDoesNothingWhenThereIsNoVideoArticle(): void
     {
-        $head = '<meta property="og:image" content="https://cdn.test/og.jpg">'
-            . '<meta property="og:url" content="https://x.substack.com/p/a">';
         $body = '<div class="single-post-container"><article class="post">'
             . self::PLAYER . self::TEASER . self::PAYWALL . '</article></div>';
-        $result = $this->normalize($this->page($head, $body));
+        $result = $this->replaceIn(
+            $this->page($this->ogHead('https://cdn.test/og.jpg', 'https://x.substack.com/p/a'), $body),
+        )->saveHtml();
 
         self::assertStringContainsString('Playback speed', $result);
         self::assertStringNotContainsString('<img', $result);
@@ -98,34 +123,30 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
     public function testDoesNothingWhenThePosterUrlIsMissing(): void
     {
         $head = '<meta property="og:url" content="https://x.substack.com/p/a">';
-        $result = $this->applyWithHead($head, self::PLAYER . self::TEASER . self::PAYWALL);
+        $result = $this->replaceIn(
+            $this->page($head, $this->gatedArticle(self::PLAYER . self::TEASER . self::PAYWALL)),
+        )->saveHtml();
 
         self::assertStringContainsString('Playback speed', $result);
     }
 
     public function testDoesNothingWhenThePosterUrlIsNotHttp(): void
     {
-        $result = $this->apply(
-            self::PLAYER . self::TEASER . self::PAYWALL,
-            'ftp://cdn.test/og.jpg',
-            'https://x.substack.com/p/a',
-        );
+        $result = $this->replaceIn(
+            $this->page(
+                $this->ogHead('ftp://cdn.test/og.jpg', 'https://x.substack.com/p/a'),
+                $this->gatedArticle(self::PLAYER . self::TEASER . self::PAYWALL),
+            ),
+        )->saveHtml();
 
         self::assertStringContainsString('Playback speed', $result);
         self::assertStringNotContainsString('<img', $result);
     }
 
-    private function apply(string $inner, string $ogImage, string $ogUrl): string
+    private function ogHead(string $ogImage, string $ogUrl): string
     {
-        $head = '<meta property="og:image" content="' . $ogImage . '">'
+        return '<meta property="og:image" content="' . $ogImage . '">'
             . '<meta property="og:url" content="' . $ogUrl . '">';
-
-        return $this->applyWithHead($head, $inner);
-    }
-
-    private function applyWithHead(string $head, string $inner): string
-    {
-        return $this->normalize($this->page($head, $this->gatedArticle($inner)));
     }
 
     private function gatedArticle(string $inner): string
@@ -142,12 +163,23 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
         return '<html><head>' . $head . '</head><body>' . $body . '</body></html>';
     }
 
-    private function normalize(string $html): string
+    private function replaceIn(string $html): \Dom\HTMLDocument
     {
         $document = HtmlDocumentParser::parseOrNull($html);
         self::assertNotNull($document);
         $this->placeholder->replaceIn($document);
 
-        return $document->saveHtml();
+        return $document;
+    }
+
+    private function teaser(\Dom\HTMLDocument $document): \Dom\Element
+    {
+        foreach ($document->querySelectorAll('article p') as $paragraph) {
+            if (str_contains((string) $paragraph->textContent, 'An ancient intuition')) {
+                return $paragraph;
+            }
+        }
+
+        self::fail('teaser paragraph not found');
     }
 }

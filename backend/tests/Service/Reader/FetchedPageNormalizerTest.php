@@ -270,7 +270,7 @@ final class FetchedPageNormalizerTest extends TestCase
             . '<article class="typography podcast-post post shows-post">'
             . '<div class="shows-video-player-container container-abc">'
             . '<div class="settingsControlsContainer-x"><p>Playback speed</p><p>Share post</p></div></div>'
-            . '<p>An ancient intuition is that plants have souls and participate in life.</p>'
+            . '<p>An ancient intuition is that plants have souls and participate in the wider life of the world.</p>'
             . '<div data-testid="paywall" role="region" aria-label="Paywall">'
             . '<h2>Continue reading this post for free.</h2></div>'
             . '</article></div></body></html>';
