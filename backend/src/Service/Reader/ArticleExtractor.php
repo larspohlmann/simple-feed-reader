@@ -65,7 +65,8 @@ final class ArticleExtractor implements ArticleExtractorInterface
         }
 
         $leadImage = new LeadImageCandidate($article->image, $pageImages);
-        $body = $this->bodyCleaner->clean($article->content, [$article->title, $entryTitle], $leadImage);
+        $gatedMedia = new GatedMediaContext($page->finalUrl, $article->image);
+        $body = $this->bodyCleaner->clean($article->content, [$article->title, $entryTitle], $leadImage, $gatedMedia);
         $clean = $this->sanitizer->sanitize($body);
         if ($clean === null) {
             return ExtractionResult::failed($url, 'empty');

@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\EdgeBoilerplateTrimmer;
+use App\Service\Reader\GatedMediaContext;
 use App\Service\Reader\LeadImageCandidate;
 use App\Service\Reader\LeadingTitleRemover;
 use App\Service\Reader\NavigationChromeTrimmer;
 use App\Service\Reader\PageImageInventory;
 use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\ReaderLeadImage;
+use App\Service\Reader\SubstackGatedVideoPlaceholder;
 use PHPUnit\Framework\TestCase;
 
 final class ReaderBodyCleanerTest extends TestCase
@@ -29,6 +31,7 @@ final class ReaderBodyCleanerTest extends TestCase
             new LeadingTitleRemover(),
             new EdgeBoilerplateTrimmer(),
             new ReaderLeadImage(),
+            [new SubstackGatedVideoPlaceholder()],
         );
     }
 
@@ -37,13 +40,18 @@ final class ReaderBodyCleanerTest extends TestCase
         return new LeadImageCandidate(null, PageImageInventory::fromDocument(null));
     }
 
+    private function noGate(): GatedMediaContext
+    {
+        return new GatedMediaContext('https://x.test/a', null);
+    }
+
     public function testStripsALeadingNavigationChromeRegionInTheSamePass(): void
     {
         $header = '<div class="site-header"><nav><a href="/a">Editorial</a>'
             . '<a href="/b">Blog</a><a href="/c">Debate</a><a href="/d">About</a></nav></div>';
         $content = '<div>' . $header . '<main><p>' . self::PROSE . '</p></main></div>';
 
-        $result = $this->cleaner->clean($content, [null], $this->noLead());
+        $result = $this->cleaner->clean($content, [null], $this->noLead(), $this->noGate());
 
         self::assertStringNotContainsString('site-header', $result);
         self::assertStringContainsString('Fliesstext', $result);
@@ -53,7 +61,7 @@ final class ReaderBodyCleanerTest extends TestCase
     {
         $content = '<div><h2>My Article</h2><p>' . self::PROSE . '</p></div>';
 
-        $result = $this->cleaner->clean($content, ['My Article'], $this->noLead());
+        $result = $this->cleaner->clean($content, ['My Article'], $this->noLead(), $this->noGate());
 
         self::assertStringNotContainsString('<h2>', $result);
         self::assertStringContainsString('Fliesstext', $result);
@@ -66,7 +74,7 @@ final class ReaderBodyCleanerTest extends TestCase
         $content = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $grid . '</div>';
 
-        $result = $this->cleaner->clean($content, [null], $this->noLead());
+        $result = $this->cleaner->clean($content, [null], $this->noLead(), $this->noGate());
 
         self::assertStringNotContainsString('jp-relatedposts', $result);
         self::assertStringContainsString('Fliesstext', $result);
@@ -79,7 +87,7 @@ final class ReaderBodyCleanerTest extends TestCase
         $content = '<div><h2>My Article</h2><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . '<p>' . self::PROSE . '</p>' . $grid . '</div>';
 
-        $result = $this->cleaner->clean($content, ['My Article'], $this->noLead());
+        $result = $this->cleaner->clean($content, ['My Article'], $this->noLead(), $this->noGate());
 
         self::assertStringNotContainsString('<h2>', $result);
         self::assertStringNotContainsString('jp-relatedposts', $result);
@@ -90,7 +98,7 @@ final class ReaderBodyCleanerTest extends TestCase
     {
         // Readability output is always non-empty in the pipeline, but a body that
         // cannot be parsed must fall through untouched rather than crash the pass.
-        self::assertSame('   ', $this->cleaner->clean('   ', ['My Article'], $this->noLead()));
+        self::assertSame('   ', $this->cleaner->clean('   ', ['My Article'], $this->noLead(), $this->noGate()));
     }
 
     public function testRestoresTheLeadIntoATextOnlyBodyInTheSharedWindow(): void
@@ -101,7 +109,7 @@ final class ReaderBodyCleanerTest extends TestCase
             PageImageInventory::fromDocument(null),
         );
 
-        $result = $this->cleaner->clean($content, [null], $candidate);
+        $result = $this->cleaner->clean($content, [null], $candidate, $this->noGate());
 
         self::assertStringContainsString('<img src="https://cdn.test/hero.jpg"', $result);
         self::assertStringContainsString('Fliesstext', $result);

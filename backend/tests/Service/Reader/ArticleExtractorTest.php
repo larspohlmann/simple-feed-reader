@@ -20,6 +20,7 @@ use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\ReaderLeadImage;
 use App\Service\Reader\ShareIntentLinkRemover;
 use App\Service\Reader\ShareWidgetRemover;
+use App\Service\Reader\SubstackGatedVideoPlaceholder;
 use App\Service\Sanitize\EntrySanitizer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -61,6 +62,7 @@ final class ArticleExtractorTest extends TestCase
                 new LeadingTitleRemover(),
                 new EdgeBoilerplateTrimmer(),
                 new ReaderLeadImage(),
+                [new SubstackGatedVideoPlaceholder()],
             ),
             new EntrySanitizer(),
         );
@@ -174,6 +176,7 @@ final class ArticleExtractorTest extends TestCase
                 new LeadingTitleRemover(),
                 new EdgeBoilerplateTrimmer(),
                 new ReaderLeadImage(),
+                [new SubstackGatedVideoPlaceholder()],
             ),
             new EntrySanitizer(),
         );
