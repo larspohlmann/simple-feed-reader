@@ -56,5 +56,6 @@ final class LinkedFileMediaSourceTest extends TestCase
         self::assertNotSame([], $found);
         self::assertStringEndsWith('.mp3', $found[0]->url);
         self::assertStringNotContainsString('?', $found[0]->url);
+        self::assertStringContainsString('telescope', $found[0]->url);
     }
 }

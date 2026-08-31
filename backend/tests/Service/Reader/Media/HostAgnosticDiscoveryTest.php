@@ -40,6 +40,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
 
         self::assertSame(MediaKind::Audio, $media->candidates[0]->kind);
         self::assertStringNotContainsString('sslstream', $media->candidates[0]->url);
+        self::assertStringContainsString('bildung', $media->candidates[0]->url);
     }
 
     public function testNprYieldsItsSegment(): void
@@ -50,6 +51,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
         );
 
         self::assertFalse($media->isEmpty());
+        self::assertStringContainsString('telescope', $media->candidates[0]->url);
     }
 
     public function testArdYieldsAVideoWithAPoster(): void

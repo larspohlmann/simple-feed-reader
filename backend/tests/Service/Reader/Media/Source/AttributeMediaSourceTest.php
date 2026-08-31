@@ -105,6 +105,7 @@ final class AttributeMediaSourceTest extends TestCase
         self::assertNotSame([], $found);
         self::assertStringContainsString('.mp3', $found[0]->url);
         self::assertStringNotContainsString('sslstream', $found[0]->url);
+        self::assertStringContainsString('bildung', $found[0]->url);
     }
 
     public function testFindsTheVideoInTheCapturedArdPage(): void
