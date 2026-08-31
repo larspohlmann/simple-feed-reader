@@ -44,10 +44,40 @@ final class JsonLdMediaSourceTest extends TestCase
     public function testFindsAVideoObjectNestedUnderAnArticle(): void
     {
         $html = '<html><body><script type="application/ld+json">'
-            . '{"@type":"NewsArticle","video":{"@type":"VideoObject","contentUrl":"https://x.test/v.mp4"}}'
+            . '{"@type":"NewsArticle","video":{"@type":"VideoObject",'
+            . '"contentUrl":"https://x.test/v.mp4","thumbnailUrl":"https://x.test/poster.jpg"}}'
             . '</script></body></html>';
 
-        self::assertCount(1, $this->source->find($html, 'https://x.test/a.html'));
+        $found = $this->source->find($html, 'https://x.test/a.html');
+
+        self::assertCount(1, $found);
+        self::assertSame(MediaKind::Video, $found[0]->kind);
+        self::assertSame('https://x.test/poster.jpg', $found[0]->posterUrl);
+    }
+
+    /** D5: a video with no poster rots into a dead frame, so it is dropped, not emitted. */
+    public function testDropsAPosterlessVideoObject(): void
+    {
+        $html = '<html><body><script type="application/ld+json">'
+            . '{"@type":"VideoObject","contentUrl":"https://x.test/v.mp4"}'
+            . '</script></body></html>';
+
+        self::assertSame([], $this->source->find($html, 'https://x.test/a.html'));
+    }
+
+    /** An <audio> element has no poster attribute; a phantom thumbnailUrl must not become one. */
+    public function testAnAudioObjectNeverCarriesAPoster(): void
+    {
+        $html = '<html><body><script type="application/ld+json">'
+            . '{"@type":"AudioObject","contentUrl":"https://x.test/a.mp3",'
+            . '"thumbnailUrl":"https://x.test/logo.jpg"}'
+            . '</script></body></html>';
+
+        $found = $this->source->find($html, 'https://x.test/a.html');
+
+        self::assertCount(1, $found);
+        self::assertSame(MediaKind::Audio, $found[0]->kind);
+        self::assertNull($found[0]->posterUrl);
     }
 
     /** 5 Magazine's JSON-LD contentUrls are images; they must not become media. */
