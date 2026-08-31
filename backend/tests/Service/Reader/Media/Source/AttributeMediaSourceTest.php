@@ -50,6 +50,16 @@ final class AttributeMediaSourceTest extends TestCase
         self::assertSame('https://x.test/p.jpg', $found[0]->posterUrl);
     }
 
+    /** D5: a video with no og:image poster would rot into a dead frame, so it is dropped. */
+    public function testDropsAVideoWhenThePageHasNoOgImage(): void
+    {
+        $html = '<body><div data-v="https://x.test/clip.mp4"></div></body>';
+
+        $found = $this->source->find($html, 'https://x.test/a.html');
+
+        self::assertSame([], $found);
+    }
+
     /** The live stream sits beside the episode on the same page; it must lose. */
     public function testExcludesALiveStreamBesideAnEpisode(): void
     {
