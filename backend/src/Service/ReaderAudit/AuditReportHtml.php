@@ -98,13 +98,14 @@ final readonly class AuditReportHtml
     {
         return \sprintf(
             '<article><h3><span class="score">%d</span> <a href="%s">%s</a></h3>'
-            . '<p class="meta">%s — <a class="src" href="%s">source page</a> — %s</p>%s</article>',
+            . '<p class="meta">%s — %s</p><p class="src"><a href="%s">%s</a></p>%s</article>',
             $finding->score(),
             $this->escape($finding->readerLink),
             $this->escape($finding->title),
             $this->escape($finding->feedTitle),
-            $this->escape($finding->sourceUrl),
             $this->escape($this->metricLine($finding)),
+            $this->escape($finding->sourceUrl),
+            $this->escape($finding->sourceUrl),
             $this->markers($finding),
         );
     }
@@ -153,7 +154,8 @@ final readonly class AuditReportHtml
         h3{margin:.2rem 0;font-size:1rem;font-weight:600}
         .score{display:inline-block;min-width:1.8rem;padding:0 .35rem;border-radius:.25rem;
         background:#c62828;color:#fff;text-align:center;font-size:.8rem}
-        a{color:#0b57d0}a.src{color:#666}
+        a{color:#0b57d0}
+        .src{margin:.15rem 0;font-size:.8rem;word-break:break-all}.src a{color:#666}
         ul.markers{margin:.4rem 0 0;padding-left:1.1rem;font-size:.85rem}
         li{margin:.15rem 0}code{background:#f2f2f2;padding:0 .25rem;border-radius:.2rem}
         .suspect{color:#8a4b00}.detail{color:#555}

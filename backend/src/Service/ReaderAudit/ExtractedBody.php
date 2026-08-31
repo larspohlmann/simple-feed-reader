@@ -12,26 +12,27 @@ use Dom\Element;
  * HTML. Parsing the body per rule would re-parse it a dozen times per article
  * and put the audit's cost in the DOM instead of in the network.
  *
- * "Block" means a paragraph-level element that carries text: the unit a reader
- * sees as a line of the article, and the unit leftover chrome arrives in.
+ * The body is kept in document order, because the audit's sharpest question is
+ * positional: what stands between the top of the reader view and the first real
+ * paragraph. Everything above that paragraph is the leading region, and chrome
+ * there is what the reader's user actually runs into (#744).
  */
 final readonly class ExtractedBody
 {
     private const array BLOCK_TAGS = ['p', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'figcaption', 'div'];
 
     /**
-     * @param list<string> $blockTexts
-     * @param list<string> $linkTexts
-     * @param list<string> $imageSources
+     * @param list<BodyBlock> $blocks
+     * @param list<BodyLink>  $links
+     * @param list<string>    $imageSources
      */
     private function __construct(
         public string $text,
-        public array $blockTexts,
-        public array $linkTexts,
+        public array $blocks,
+        public array $links,
         public array $imageSources,
         public int $paragraphCount,
         public int $headingCount,
-        public int $linkDominatedListItems,
     ) {
     }
 
@@ -39,19 +40,18 @@ final readonly class ExtractedBody
     {
         $document = HtmlDocumentParser::parseOrNull($html);
         if ($document === null || $document->body === null) {
-            return new self('', [], [], [], 0, 0, 0);
+            return new self('', [], [], [], 0, 0);
         }
 
         $body = $document->body;
 
         return new self(
             text: self::collapsed($body->textContent),
-            blockTexts: self::blockTexts($body),
-            linkTexts: self::linkTexts($body),
+            blocks: self::blocks($body),
+            links: self::links($body),
             imageSources: self::imageSources($body),
             paragraphCount: $body->getElementsByTagName('p')->length,
             headingCount: self::headingCount($body),
-            linkDominatedListItems: self::linkDominatedListItems($body),
         );
     }
 
@@ -60,42 +60,53 @@ final readonly class ExtractedBody
         return mb_strlen($this->text);
     }
 
-    public function wordCount(): int
+    /**
+     * Everything above the article's first real paragraph. A body that never
+     * reaches one is leading region throughout — it is all chrome, which is
+     * exactly what the rules should then see.
+     *
+     * @return list<BodyBlock>
+     */
+    public function leadingBlocks(): array
     {
-        return $this->text === '' ? 0 : \count(explode(' ', $this->text));
-    }
-
-    /** Share of the body's characters that sit inside a link. */
-    public function linkTextRatio(): float
-    {
-        $total = $this->textLength();
-        if ($total === 0) {
-            return 0.0;
+        $leading = [];
+        foreach ($this->blocks as $block) {
+            if ($block->isProse()) {
+                return $leading;
+            }
+            $leading[] = $block;
         }
 
-        $linked = 0;
-        foreach ($this->linkTexts as $linkText) {
-            $linked += mb_strlen($linkText);
-        }
-
-        return min(1.0, $linked / $total);
+        return $leading;
     }
 
-    /** @return list<string> */
-    private static function blockTexts(Element $body): array
+    /** @return list<BodyBlock> */
+    private static function blocks(Element $body): array
     {
-        $texts = [];
+        $blocks = [];
         foreach ($body->getElementsByTagName('*') as $element) {
-            if (!\in_array($element->localName, self::BLOCK_TAGS, true)) {
+            if (!\in_array($element->localName, self::BLOCK_TAGS, true) || self::hasBlockChild($element)) {
                 continue;
             }
             $text = self::collapsed($element->textContent);
-            if ($text !== '' && !self::hasBlockChild($element)) {
-                $texts[] = $text;
+            if ($text !== '') {
+                $blocks[] = self::blockOf($element, $text);
             }
         }
 
-        return $texts;
+        return $blocks;
+    }
+
+    private static function blockOf(Element $element, string $text): BodyBlock
+    {
+        $linkCount = 0;
+        $linkedChars = 0;
+        foreach ($element->getElementsByTagName('a') as $link) {
+            ++$linkCount;
+            $linkedChars += mb_strlen(self::collapsed($link->textContent));
+        }
+
+        return new BodyBlock($element->localName, $text, $linkCount, $linkedChars);
     }
 
     /** A block that wraps other blocks reports its children's text, not its own. */
@@ -110,15 +121,15 @@ final readonly class ExtractedBody
         return false;
     }
 
-    /** @return list<string> */
-    private static function linkTexts(Element $body): array
+    /** @return list<BodyLink> */
+    private static function links(Element $body): array
     {
-        $texts = [];
+        $links = [];
         foreach ($body->getElementsByTagName('a') as $link) {
-            $texts[] = self::collapsed($link->textContent);
+            $links[] = new BodyLink((string) $link->getAttribute('href'), self::collapsed($link->textContent));
         }
 
-        return $texts;
+        return $links;
     }
 
     /** @return list<string> */
@@ -137,27 +148,6 @@ final readonly class ExtractedBody
         $count = 0;
         foreach (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as $tag) {
             $count += $body->getElementsByTagName($tag)->length;
-        }
-
-        return $count;
-    }
-
-    /** List items whose text is mostly link text — the shape a menu or a "related" list keeps. */
-    private static function linkDominatedListItems(Element $body): int
-    {
-        $count = 0;
-        foreach ($body->getElementsByTagName('li') as $item) {
-            $total = mb_strlen(self::collapsed($item->textContent));
-            if ($total === 0) {
-                continue;
-            }
-            $linked = 0;
-            foreach ($item->getElementsByTagName('a') as $link) {
-                $linked += mb_strlen(self::collapsed($link->textContent));
-            }
-            if ($linked / $total >= 0.8) {
-                ++$count;
-            }
         }
 
         return $count;

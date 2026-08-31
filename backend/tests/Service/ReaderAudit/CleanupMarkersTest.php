@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Service\ReaderAudit;
 
 use App\Service\Reader\ExtractionResult;
+use App\Service\ReaderAudit\BodyShapeMarkers;
 use App\Service\ReaderAudit\CleanupMarkers;
 use App\Service\ReaderAudit\ExtractedBody;
+use App\Service\ReaderAudit\LeadingChromeMarkers;
 use App\Service\ReaderAudit\PhraseMarkers;
 use App\Service\ReaderAudit\SampledEntry;
-use App\Service\ReaderAudit\StructureMarkers;
+use App\Service\ReaderAudit\SocialWidgetMarkers;
 use PHPUnit\Framework\TestCase;
 
 final class CleanupMarkersTest extends TestCase
@@ -18,7 +20,12 @@ final class CleanupMarkersTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->markers = new CleanupMarkers(new StructureMarkers(), new PhraseMarkers());
+        $this->markers = new CleanupMarkers(
+            new LeadingChromeMarkers(),
+            new SocialWidgetMarkers(),
+            new BodyShapeMarkers(),
+            new PhraseMarkers(),
+        );
     }
 
     public function testAFailedExtractionEarnsOnlyTheReasonItFailed(): void
@@ -41,7 +48,8 @@ final class CleanupMarkersTest extends TestCase
 
     public function testASuccessfulExtractionIsMeasuredByShapeAndByWording(): void
     {
-        $html = '<p>Zu kurz.</p><p>Diesen Artikel teilen</p>';
+        $html = '<ul>' . str_repeat('<li><a href="/x">Ressort</a></li>', 4) . '</ul>'
+            . '<p><a href="https://x.com/intent/tweet">Teilen</a></p>';
         $result = ExtractionResult::ok('https://example.test/a', 'Titel', null, null, $html, null);
 
         $codes = array_map(
@@ -49,8 +57,8 @@ final class CleanupMarkersTest extends TestCase
             $this->markers->detect($result, $this->entry(), ExtractedBody::fromHtml($html)),
         );
 
-        self::assertContains('body_short', $codes);
-        self::assertContains('chrome_share', $codes);
+        self::assertContains('leading_link_list', $codes);
+        self::assertContains('share_intent_link', $codes);
     }
 
     private function entry(): SampledEntry

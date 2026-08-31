@@ -29,6 +29,14 @@ final class AuditReportHtmlTest extends TestCase
         self::assertStringContainsString('Ein Titel', $html);
     }
 
+    public function testTheSourcePageIsPrintedAsItsFullUrlNotAsAWordToClickOn(): void
+    {
+        $html = $this->render([$this->finding('Ein Titel', 'http://localhost:4200/?entry=7')]);
+
+        self::assertStringContainsString('>https://example.test/a</a>', $html);
+        self::assertStringNotContainsString('source page', $html);
+    }
+
     public function testAHeadlineCarryingMarkupCannotBreakOutOfTheReport(): void
     {
         // Headlines are publisher-supplied; the report is opened in a browser.

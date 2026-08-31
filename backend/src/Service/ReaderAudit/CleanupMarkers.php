@@ -23,7 +23,9 @@ final readonly class CleanupMarkers
     ];
 
     public function __construct(
-        private StructureMarkers $structure,
+        private LeadingChromeMarkers $leadingChrome,
+        private SocialWidgetMarkers $socialWidgets,
+        private BodyShapeMarkers $bodyShape,
         private PhraseMarkers $phrases,
     ) {
     }
@@ -41,7 +43,9 @@ final readonly class CleanupMarkers
         }
 
         return [
-            ...$this->structure->detect($body, $entry, $result->title),
+            ...$this->leadingChrome->detect($body),
+            ...$this->socialWidgets->detect($body),
+            ...$this->bodyShape->detect($body, $entry, $result->title),
             ...$this->phrases->detect($body),
         ];
     }
