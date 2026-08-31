@@ -256,13 +256,7 @@ app-to-top-button {
   justify-content: space-between;
   padding: var(--space-2) var(--space-4);
   border-bottom: 1px solid var(--border);
-
-  /* Translucent so the article passes under it; the solid colour is the
-     fallback where backdrop-filter is unsupported. The nameplate above stays
-     opaque so this bar still retracts behind it out of sight. */
   background: var(--surface-1);
-  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
-  backdrop-filter: blur(12px) saturate(1.4);
 }
 
 .bar.hidden {
