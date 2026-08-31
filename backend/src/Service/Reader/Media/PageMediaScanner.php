@@ -7,13 +7,13 @@ namespace App\Service\Reader\Media;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
- * Runs every candidate source over the raw page and returns what they find, in
- * source order, capped.
+ * Runs every candidate source over the raw page, highest priority first, and
+ * lets the first source to yield a MediaKind own it, capped.
  *
  * It reads the raw HTML rather than FetchedPageNormalizer's document on purpose:
- * that pass strips <script> blocks from the string before parsing, and ARD keeps
- * its renditions in player JSON. Working from the source costs one extra parse,
- * the same trade collapseWrapperChains() already makes.
+ * that pass is tuned for readability scoring and removes elements, so discovery
+ * must not depend on it. Working from the source costs one extra parse, the
+ * same trade collapseWrapperChains() already makes.
  */
 final readonly class PageMediaScanner
 {
@@ -26,13 +26,29 @@ final readonly class PageMediaScanner
 
     public function scan(string $pageHtml, string $pageUrl): ArticleMedia
     {
-        $found = [];
+        $byKind = [];
         foreach ($this->sources as $source) {
-            foreach ($source->find($pageHtml, $pageUrl) as $candidate) {
-                $found[$candidate->url] = $candidate;
-            }
+            $this->claimUnownedKinds($source->find($pageHtml, $pageUrl), $byKind);
         }
 
-        return new ArticleMedia(\array_slice(array_values($found), 0, ArticleMedia::MAX_ITEMS));
+        $found = $byKind === [] ? [] : array_merge(...array_values($byKind));
+
+        return new ArticleMedia(\array_slice($found, 0, ArticleMedia::MAX_ITEMS));
+    }
+
+    /**
+     * @param list<MediaCandidate>                 $candidates
+     * @param array<string, list<MediaCandidate>>  $byKind
+     */
+    private function claimUnownedKinds(array $candidates, array &$byKind): void
+    {
+        $bySourceKind = [];
+        foreach ($candidates as $candidate) {
+            $bySourceKind[$candidate->kind->value][] = $candidate;
+        }
+
+        foreach ($bySourceKind as $kind => $candidatesOfKind) {
+            $byKind[$kind] ??= $candidatesOfKind;
+        }
     }
 }

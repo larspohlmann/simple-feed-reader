@@ -9,6 +9,7 @@ use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaCandidateSourceInterface;
 use App\Service\Reader\Media\MediaKind;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
  * Host-agnostic: any `[src]` element on the page an embed provider claims —
@@ -21,6 +22,7 @@ use App\Service\Reader\Media\MediaKind;
  * suppresses these whenever the body recovered its own, so nothing outside the
  * article is inserted while the article has media of its own.
  */
+#[AsTaggedItem(priority: 80)]
 final readonly class PageEmbedSource implements MediaCandidateSourceInterface
 {
     public function __construct(private EmbedProviders $providers)

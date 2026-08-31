@@ -82,10 +82,6 @@ services:
         # collect nothing. EmbedProvidersWiringTest guards it.
         App\Service\Reader\Media\EmbedProviderInterface:
             tags: ['app.embed_provider']
-        # As above: PageMediaScanner's #[AutowireIterator] collects the candidate
-        # sources only if this plain interface is tagged.
-        App\Service\Reader\Media\MediaCandidateSourceInterface:
-            tags: ['app.media_candidate_source']
 
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name
