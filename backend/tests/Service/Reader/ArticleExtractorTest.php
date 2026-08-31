@@ -15,6 +15,7 @@ use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\LazyImageSources;
 use App\Service\Reader\LeadingTitleRemover;
+use App\Service\Reader\NavigationChromeTrimmer;
 use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\ReaderLeadImage;
 use App\Service\Reader\ShareWidgetRemover;
@@ -54,7 +55,12 @@ final class ArticleExtractorTest extends TestCase
         return new ArticleExtractor(
             $fetcher,
             new FetchedPageNormalizer(new LazyImageSources(), new ShareWidgetRemover()),
-            new ReaderBodyCleaner(new LeadingTitleRemover(), new EdgeBoilerplateTrimmer(), new ReaderLeadImage()),
+            new ReaderBodyCleaner(
+                new NavigationChromeTrimmer(),
+                new LeadingTitleRemover(),
+                new EdgeBoilerplateTrimmer(),
+                new ReaderLeadImage(),
+            ),
             new EntrySanitizer(),
         );
     }
@@ -162,7 +168,12 @@ final class ArticleExtractorTest extends TestCase
         $extractor = new ArticleExtractor(
             $fetcher,
             new FetchedPageNormalizer(new LazyImageSources(), new ShareWidgetRemover()),
-            new ReaderBodyCleaner(new LeadingTitleRemover(), new EdgeBoilerplateTrimmer(), new ReaderLeadImage()),
+            new ReaderBodyCleaner(
+                new NavigationChromeTrimmer(),
+                new LeadingTitleRemover(),
+                new EdgeBoilerplateTrimmer(),
+                new ReaderLeadImage(),
+            ),
             new EntrySanitizer(),
         );
 

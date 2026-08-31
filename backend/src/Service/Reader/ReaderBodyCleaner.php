@@ -25,6 +25,7 @@ use App\Service\Html\HtmlDocumentParser;
 final readonly class ReaderBodyCleaner
 {
     public function __construct(
+        private NavigationChromeTrimmer $navigationTrimmer,
         private LeadingTitleRemover $titleRemover,
         private EdgeBoilerplateTrimmer $boilerplateTrimmer,
         private ReaderLeadImage $leadImage,
@@ -39,6 +40,7 @@ final readonly class ReaderBodyCleaner
             return $contentHtml;
         }
 
+        $this->navigationTrimmer->trimIn($document);
         $this->titleRemover->removeFrom($document, $titleCandidates);
         $this->boilerplateTrimmer->trimIn($document);
         $this->leadImage->restore($document, $leadImage);
