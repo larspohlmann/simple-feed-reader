@@ -29,7 +29,17 @@ app-reader-header {
   left: 0;
   right: 0;
   z-index: 10;
-  transition: transform 0.2s ease;
+
+  /* iOS WebKit will not animate a transition whose style change lands inside a
+     scroll event unless the element is ALREADY its own composited layer — a
+     transition that must both promote a layer and move it snaps straight to the
+     end there. The list header and under-header slide because their resting
+     transform is an explicit translateY (a live layer); this bar rested at
+     `none` and so snapped on the phone. An explicit base transform plus the hint
+     keeps its layer alive so the retraction actually animates. */
+  transform: translateY(0);
+  will-change: transform;
+  transition: transform 0.4s ease;
 }
 
 app-reader-header.hidden {
@@ -228,7 +238,7 @@ app-reader-header.hidden {
      alert and is correct to stay visible at the top — unlike the refresh
      hairline, which is chrome and now retracts with the bar itself (#721). */
   transform: translateY(var(--app-bar-shift, 0));
-  transition: transform 0.2s ease;
+  transition: transform 0.4s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {

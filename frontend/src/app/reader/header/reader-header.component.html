@@ -1,6 +1,20 @@
 <header>
   @if (!searchOpen()) {
     <div class="left">
+      <a
+        class="brand"
+        [routerLink]="[]"
+        [queryParams]="selectionQueryParams({})"
+        queryParamsHandling="merge"
+      >
+        <app-spinner
+          class="brand-mark"
+          [size]="22"
+          [decorative]="true"
+          [animate]="refreshSvc.running()"
+        />
+        <span class="name">simple feed reader</span>
+      </a>
       <button
         class="menu-btn"
         [attr.aria-label]="'reader.toggleSidebar' | transloco"
@@ -19,20 +33,6 @@
           <app-icon name="search" size="md" />
         </button>
       }
-      <a
-        class="brand"
-        [routerLink]="[]"
-        [queryParams]="selectionQueryParams({})"
-        queryParamsHandling="merge"
-      >
-        <app-spinner
-          class="brand-mark"
-          [size]="22"
-          [decorative]="true"
-          [animate]="refreshSvc.running()"
-        />
-        <span class="name">simple feed reader</span>
-      </a>
     </div>
     <!-- A live run's progress, in the room this bar has and the phone bar does
          not. It carries no ✕: with the pill suppressed at this width, this is

@@ -1,13 +1,14 @@
 @use '../../theme/breakpoints' as bp;
 
-/* Opaque backing for the whole floating bar. The bar slides on scroll (a
-   composited layer) and the tag row below is its own momentum-scroll layer
-   (`-webkit-overflow-scrolling: touch`); on iOS Safari those two layers round
-   their bounds to device pixels independently, so a hairline can open between
-   them — and with no background on the host, the list scrolling underneath
-   shows through it (#122). Both bands are `--surface-1`, so this fill is
-   invisible except exactly in that seam. The host's box is positioned by the
-   shell (`app-reader-header` in reader-shell.component.scss). */
+/* An opaque backing for the whole floating bar — the topmost band stays solid
+   while the chrome below it turns to glass. The header row and the tag row are
+   themselves transparent and share this one fill, which also spans the seam
+   between them: the bar slides on scroll (a composited layer) and the tag row is
+   its own momentum-scroll layer (`-webkit-overflow-scrolling: touch`), so on iOS
+   Safari a hairline can open where their bounds round to device pixels
+   independently (#122) — behind it sits this continuous backing, not the list.
+   The host's box is positioned by the shell (`app-reader-header` in
+   reader-shell.component.scss). */
 :host {
   display: block;
   background: var(--surface-1);
@@ -20,7 +21,6 @@ header {
   justify-content: space-between;
   padding: 0 var(--space-4);
   border-bottom: 1px solid var(--border);
-  background: var(--surface-1);
 
   /* Own stacking context above the mobile tag row, which is a later sibling and
      would otherwise paint over the account dropdown that overflows the bar. */
@@ -41,7 +41,6 @@ header {
     align-items: center;
     padding: var(--space-2) var(--space-3);
     border-bottom: 1px solid var(--border);
-    background: var(--surface-1);
     overflow-x: auto;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;

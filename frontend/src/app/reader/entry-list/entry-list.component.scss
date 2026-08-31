@@ -19,7 +19,8 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
    mid-gesture and made the rows jump — the same defect as the app header, one
    level down (#87). The scroller reserves the expanded height as padding and
    the rows scroll underneath, so a collapsed bar reveals content rather than
-   leaving a gap. Opaque for that reason: rows pass behind it. */
+   leaving a gap. A translucent glass for that reason: rows pass behind it,
+   softened by the blur rather than hidden. */
 .list-header {
   position: absolute;
   top: var(--app-bar-h, var(--bar-h));
@@ -31,8 +32,12 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
      while the bar retracted it would float over a strip of nothing. Only this
      bar moves — the rows below are untouched. */
   transform: translateY(var(--app-bar-shift, 0));
-  transition: transform 0.2s ease;
+  transition: transform 0.4s ease;
+
+  /* The solid colour is the fallback where backdrop-filter is unsupported. */
   background: var(--surface-0);
+  background: color-mix(in srgb, var(--surface-0) 92%, transparent);
+  backdrop-filter: blur(12px) saturate(1.4);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -504,8 +509,13 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
      the box would leave the space beside it dead to the wheel (#723). */
   --airy-sheet: min(100%, calc(var(--magazine-measure) + 2 * var(--space-5)));
 
-  background: linear-gradient(var(--surface-2), var(--surface-2)) center center / var(--airy-sheet)
-    100% no-repeat;
+  /* Dark mode pulls this down to --surface-read so the sheet matches the open
+     article; light keeps --surface-2, which the sheet needs to stay distinct
+     from the page it floats on. */
+  --airy-sheet-fill: var(--surface-2);
+
+  background: linear-gradient(var(--airy-sheet-fill), var(--airy-sheet-fill)) center center /
+    var(--airy-sheet) 100% no-repeat;
 
   /* The rule between blocks is airy's only separator. In dark mode --border
      sits a hair off the sheet (--surface-2) and vanishes, so lift it well
@@ -515,6 +525,7 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
 
 :host-context([data-theme='dark']) .rows.magazine.airy {
   --airy-rule: color-mix(in srgb, var(--border-strong), var(--text-muted));
+  --airy-sheet-fill: var(--surface-read);
 
   /* Boxed's gutter is the list's 12px plus the card's own inline padding; with
      the card gone the list has to carry the whole inset itself, or the text

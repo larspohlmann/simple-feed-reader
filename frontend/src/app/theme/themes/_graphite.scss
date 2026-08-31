@@ -7,6 +7,7 @@
   --surface-0: #f5f5f4; // page canvas
   --surface-1: #fff; // panel / sidebar
   --surface-2: #fff; // raised card
+  --surface-read: #f5f5f4; // reading canvas: article body + airy magazine sheet
   --border: #e4e4e2;
   --border-strong: #d4d4d1;
   --text-primary: #2a2a2a;
@@ -28,6 +29,10 @@
   --surface-0: #161616;
   --surface-1: #1c1c1c;
   --surface-2: #242424;
+
+  // Lifts the article and the airy sheet off the near-black page. The two share
+  // it so they read as one surface.
+  --surface-read: #1e1e1e;
   --border: #2a2a2a;
   --border-strong: #383836;
   --text-primary: #c2c2c0;
