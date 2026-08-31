@@ -23,7 +23,9 @@ export class ReaderCacheService {
   // lead until refetched.
   // v6: v5 records hold image URLs that a comma-splitting srcset reader cut
   // short (#706); an already-read article would keep its broken pictures.
-  private static readonly VERSION = 6;
+  // v7: v6 records hold reader extractions with Substack player chrome and
+  // un-stripped share buttons (#627); an already-read article would keep them.
+  private static readonly VERSION = 7;
 
   private db: Promise<IDBDatabase | null> | null = null;
   /** Strictly monotonic clock so puts within the same millisecond keep insertion order. */
