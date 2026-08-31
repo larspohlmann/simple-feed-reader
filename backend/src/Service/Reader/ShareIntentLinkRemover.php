@@ -204,14 +204,17 @@ final readonly class ShareIntentLinkRemover
     /**
      * A prefix match alone lets `reddit.com/submit-guidelines` match the
      * `reddit.com/submit` endpoint. The path must end there — the next
-     * character is a separator or the string ends — so a longer, unrelated
-     * path segment is rejected.
+     * character is a separator, a file extension's dot (`facebook.com/sharer.php`,
+     * 5 Magazine and Nature's shape), or the string ends — so a longer,
+     * unrelated path segment is rejected.
      */
     private function matchesEndpointBoundary(string $hostAndPath, string $endpoint): bool
     {
         $endpoint = rtrim($endpoint, '/');
 
-        return $hostAndPath === $endpoint || str_starts_with($hostAndPath, $endpoint . '/');
+        return $hostAndPath === $endpoint
+            || str_starts_with($hostAndPath, $endpoint . '/')
+            || str_starts_with($hostAndPath, $endpoint . '.');
     }
 
     private function hostAndPath(string $href): string

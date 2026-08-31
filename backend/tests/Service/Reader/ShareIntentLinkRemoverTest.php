@@ -114,6 +114,16 @@ final class ShareIntentLinkRemoverTest extends TestCase
         self::assertStringNotContainsString('reddit.com/submit', $removed);
     }
 
+    public function testRemovesAFacebookSharerPhpLink(): void
+    {
+        // The 5 Magazine / Nature shape: no "/sharer/" segment, just the bare
+        // "sharer.php" file — the "." must count as a boundary too (#627 fix round 2).
+        $html = '<div><p>Body.</p>'
+            . '<a href="https://www.facebook.com/sharer.php?u=https://5mag.test/a">Share</a></div>';
+
+        self::assertStringNotContainsString('facebook.com/sharer.php', $this->cleaned($html));
+    }
+
     public function testRemovesAClusterWhoseLabelSitsExactlyAtTheBudget(): void
     {
         $label = str_repeat('a', 60);
