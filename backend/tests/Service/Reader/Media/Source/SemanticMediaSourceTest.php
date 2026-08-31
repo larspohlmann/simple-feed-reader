@@ -57,4 +57,19 @@ final class SemanticMediaSourceTest extends TestCase
 
         self::assertSame([], $this->source->find($html, 'https://x.test/a'));
     }
+
+    public function testSkipsAVideoWithEmptyPoster(): void
+    {
+        $html = '<body><video poster=""><source src="https://x.test/v.mp4" type="video/mp4"></video></body>';
+
+        self::assertSame([], $this->source->find($html, 'https://x.test/a'));
+    }
+
+    public function testSkipsAVideoSourceThatResolvesToAnEmbedInsteadOfANativeFile(): void
+    {
+        $html = '<body><video poster="https://x.test/p.jpg">'
+            . '<source src="https://www.youtube.com/embed/aaaaaaaaaaa"></video></body>';
+
+        self::assertSame([], $this->source->find($html, 'https://x.test/a'));
+    }
 }

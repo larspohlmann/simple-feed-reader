@@ -43,7 +43,7 @@ final readonly class SemanticMediaSource implements MediaCandidateSourceInterfac
     private function candidateFor(\Dom\Element $element): ?MediaCandidate
     {
         $kind = $element->nodeName === 'VIDEO' ? MediaKind::Video : MediaKind::Audio;
-        $url = $this->usableUrl($element);
+        $url = $this->usableUrl($element, $kind);
         if ($url === null) {
             return null;
         }
@@ -52,22 +52,22 @@ final readonly class SemanticMediaSource implements MediaCandidateSourceInterfac
             return new MediaCandidate($kind, $url);
         }
 
-        // A video with no poster rots into a dead frame in a cache with no TTL.
+        // A video with no poster (absent or empty) rots into a dead frame in a cache with no TTL.
         $poster = $element->getAttribute('poster');
 
-        return $poster === null ? null : new MediaCandidate($kind, $url, $poster);
+        return $poster === null || $poster === '' ? null : new MediaCandidate($kind, $url, $poster);
     }
 
-    private function usableUrl(\Dom\Element $element): ?string
+    private function usableUrl(\Dom\Element $element, MediaKind $expectedKind): ?string
     {
         $src = $element->getAttribute('src');
-        if ($src !== null && $this->urlKind->of($src) !== null) {
+        if ($src !== null && $this->urlKind->of($src) === $expectedKind) {
             return $src;
         }
 
         foreach ($element->querySelectorAll('source') as $source) {
             $sourceUrl = $source->getAttribute('src');
-            if ($sourceUrl !== null && $this->urlKind->of($sourceUrl) !== null) {
+            if ($sourceUrl !== null && $this->urlKind->of($sourceUrl) === $expectedKind) {
                 return $sourceUrl;
             }
         }
