@@ -71,7 +71,7 @@ final readonly class AuditReportHtml
             );
         }
 
-        return '<h2>Feeds by failure rate</h2><table><thead><tr><th>Feed</th><th class="n">Audited</th>'
+        return '<h2>Feeds that failed</h2><table><thead><tr><th>Feed</th><th class="n">Audited</th>'
             . '<th class="n">Flagged</th><th class="n">Share</th><th class="n">Worst score</th></tr></thead><tbody>'
             . $rows . '</tbody></table>';
     }

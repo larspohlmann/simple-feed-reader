@@ -58,6 +58,18 @@ final class AuditFindingsTest extends TestCase
         self::assertSame(1.0, $feeds[0]['share']);
     }
 
+    public function testAFeedThatFailedNothingIsNotListedAmongTheFeedsThatFailed(): void
+    {
+        // A sweep covers every subscribed feed, so most rows would read "0%" and
+        // bury the handful worth acting on.
+        $findings = AuditFindings::fromJsonlFiles([$this->jsonl([
+            $this->finding(1, 11, 'Sauber', []),
+            $this->finding(2, 12, 'Kaputt', [$this->marker('link_dense', 3)]),
+        ])]);
+
+        self::assertSame(['Kaputt'], array_column($findings->byFeed(), 'feed'));
+    }
+
     public function testTalliesHowManyArticlesEachSuspectAccountsFor(): void
     {
         $findings = AuditFindings::fromJsonlFiles([$this->jsonl([

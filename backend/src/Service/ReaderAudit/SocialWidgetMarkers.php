@@ -10,9 +10,11 @@ namespace App\Service\ReaderAudit;
  * to match, and its wording is different on every site anyway.
  *
  * A share-intent URL is proof on its own: nothing but a share button ever links
- * to facebook.com/sharer or twitter.com/intent/tweet. A plain profile link is
- * not, because articles legitimately link to a post being written about, so that
- * shape needs a row of them before it counts.
+ * to facebook.com/sharer or twitter.com/intent/tweet. A profile link is not, and
+ * a row of them is not either — an Attack Magazine interview links the artist's
+ * Spotify, Instagram and TikTok inside its own sentences. What separates a share
+ * bar is that it stands alone: its links sit in blocks that are nothing BUT
+ * links, with no prose around them (#744).
  */
 final readonly class SocialWidgetMarkers
 {
@@ -66,10 +68,15 @@ final readonly class SocialWidgetMarkers
     private function socialRow(ExtractedBody $body): ?CleanupMarker
     {
         $hosts = [];
-        foreach ($body->links as $link) {
-            $host = $this->socialHostOf($link);
-            if ($host !== null && mb_strlen($link->text) <= self::ICON_TEXT_CHARS) {
-                $hosts[] = $host;
+        foreach ($body->blocks as $block) {
+            if (!$block->isChrome()) {
+                continue;
+            }
+            foreach ($block->links as $link) {
+                $host = $this->socialHostOf($link);
+                if ($host !== null && mb_strlen($link->text) <= self::ICON_TEXT_CHARS) {
+                    $hosts[] = $host;
+                }
             }
         }
         $distinct = array_unique($hosts);

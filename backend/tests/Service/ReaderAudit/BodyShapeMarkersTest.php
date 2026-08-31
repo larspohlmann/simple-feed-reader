@@ -41,21 +41,25 @@ final class BodyShapeMarkersTest extends TestCase
         self::assertContains('no_paragraphs', $this->codesFor('<div>' . str_repeat(self::PROSE, 5) . '</div>'));
     }
 
-    public function testReportsAnIndexPageThatHasMoreHeadingsThanParagraphs(): void
+    public function testReportsAnIndexPageWhoseHeadingsAreLinksToOtherArticles(): void
     {
-        $html = '<h2>Eins</h2><h2>Zwei</h2><h2>Drei</h2><p>' . str_repeat(self::PROSE, 5) . '</p>';
+        $html = '<h2><a href="https://example.test/1">Eins</a></h2>'
+            . '<h2><a href="https://example.test/2">Zwei</a></h2>'
+            . '<h2><a href="https://example.test/3">Drei</a></h2><p>' . str_repeat(self::PROSE, 5) . '</p>';
 
         self::assertContains('heading_heavy', $this->codesFor($html));
     }
 
-    public function testReportsAReaderBodyThatShowsLessThanTheFeedAlreadyCarries(): void
+    public function testASectionedEssayIsNotAnIndexPage(): void
     {
-        $feedHtml = '<p>' . str_repeat(self::PROSE, 10) . '</p>';
-        $body = ExtractedBody::fromHtml('<p>' . str_repeat(self::PROSE, 2) . '</p>');
+        // An Anarchist Library pamphlet: nineteen section titles, all of them
+        // plain text, all of them the article's own (#744).
+        $html = '<p>' . str_repeat(self::PROSE, 3) . '</p>';
+        foreach (range(1, 19) as $section) {
+            $html .= '<h2>Abschnitt ' . $section . '</h2><p>Ein kurzer Absatz.</p>';
+        }
 
-        $codes = $this->codesOf($this->markers->detect($body, $this->entry($feedHtml), null));
-
-        self::assertContains('body_below_feed', $codes);
+        self::assertSame([], $this->codesFor($html));
     }
 
     public function testReportsABodyThatOpensWithTheHeadlineAgain(): void
@@ -74,73 +78,20 @@ final class BodyShapeMarkersTest extends TestCase
 
     public function testThreeHeadingsAreAHubAndTwoAreNot(): void
     {
-        $two = '<h2>Eins</h2><h2>Zwei</h2><p>a</p>';
-        $three = '<h2>Eins</h2><h2>Zwei</h2><h2>Drei</h2><p>a</p>';
+        $heading = static fn (string $text): string => '<h2><a href="https://example.test/x">' . $text . '</a></h2>';
+        $two = $heading('Eins') . $heading('Zwei') . '<p>a</p>';
+        $three = $two . $heading('Drei');
 
         self::assertSame([], $this->codesFor($two));
         self::assertSame(['heading_heavy'], $this->codesFor($three));
     }
 
-    public function testAsManyParagraphsAsHeadingsIsStillAnArticle(): void
+    public function testAsManyParagraphsAsLinkedHeadingsIsStillAnArticle(): void
     {
-        $balanced = '<h2>Eins</h2><h2>Zwei</h2><h2>Drei</h2><p>a</p><p>b</p><p>c</p>';
+        $heading = static fn (string $text): string => '<h2><a href="https://example.test/x">' . $text . '</a></h2>';
+        $balanced = $heading('Eins') . $heading('Zwei') . $heading('Drei') . '<p>a</p><p>b</p><p>c</p>';
 
         self::assertSame([], $this->codesFor($balanced));
-    }
-
-    public function testABodyOfExactlyTheHugeLimitIsStillOneArticle(): void
-    {
-        $atLimit = '<p>' . str_repeat('a', 40_000) . '</p>';
-        $overLimit = '<p>' . str_repeat('a', 40_001) . '</p>';
-
-        self::assertSame([], $this->codesFor($atLimit));
-        self::assertSame(['body_huge'], $this->codesFor($overLimit));
-    }
-
-    public function testAFeedBodyUnderTheSubstantialLengthIsATeaserAndProvesNothing(): void
-    {
-        // Below this the feed carries a summary, which the reader is supposed to
-        // beat; comparing against it would report every well-extracted article.
-        $teaser = '<p>' . str_repeat('a', 799) . '</p>';
-        $full = '<p>' . str_repeat('a', 800) . '</p>';
-        $short = ExtractedBody::fromHtml('<p>' . str_repeat('b', 100) . '</p>');
-
-        self::assertSame([], $this->codesOf($this->markers->detect($short, $this->entry($teaser), null)));
-        self::assertSame(
-            ['body_below_feed'],
-            $this->codesOf($this->markers->detect($short, $this->entry($full), null)),
-        );
-    }
-
-    public function testAReaderBodyAtSixtyPercentOfTheFeedIsNotAShortfall(): void
-    {
-        $feedHtml = '<p>' . str_repeat('a', 1000) . '</p>';
-        $atShare = ExtractedBody::fromHtml('<p>' . str_repeat('b', 600) . '</p>');
-        $under = ExtractedBody::fromHtml('<p>' . str_repeat('b', 599) . '</p>');
-
-        self::assertSame([], $this->codesOf($this->markers->detect($atShare, $this->entry($feedHtml), null)));
-        self::assertSame(
-            ['body_below_feed'],
-            $this->codesOf($this->markers->detect($under, $this->entry($feedHtml), null)),
-        );
-    }
-
-    public function testTheFeedBodyIsMeasuredAsTextNotAsMarkup(): void
-    {
-        // A teaser wrapped in a kilobyte of tracking markup would otherwise read
-        // as a full article and make every extraction of it look short.
-        $markupHeavyTeaser = '<div class="' . str_repeat('x', 900) . '"><p>Kurz.</p></div>';
-        $short = ExtractedBody::fromHtml('<p>Auch kurz.</p>');
-
-        self::assertSame([], $this->codesOf($this->markers->detect($short, $this->entry($markupHeavyTeaser), null)));
-    }
-
-    public function testTheFeedBodyIsMeasuredInCharactersNotBytes(): void
-    {
-        $umlautTeaser = '<p>' . str_repeat('ä', 700) . '</p>';
-        $short = ExtractedBody::fromHtml('<p>Kurz.</p>');
-
-        self::assertSame([], $this->codesOf($this->markers->detect($short, $this->entry($umlautTeaser), null)));
     }
 
     public function testTheHeadlineIsMatchedPastPunctuationAndCasing(): void
@@ -159,8 +110,9 @@ final class BodyShapeMarkersTest extends TestCase
 
     public function testEachMarkerCarriesItsWeightStageAndEvidence(): void
     {
+        $heading = static fn (string $text): string => '<h2><a href="https://example.test/x">' . $text . '</a></h2>';
         $markers = $this->markers->detect(
-            ExtractedBody::fromHtml('<h2>Eins</h2><h2>Zwei</h2><h2>Drei</h2><p>a</p>'),
+            ExtractedBody::fromHtml($heading('Eins') . $heading('Zwei') . $heading('Drei') . '<p>a</p>'),
             $this->entry(null),
             null,
         );
@@ -168,7 +120,7 @@ final class BodyShapeMarkersTest extends TestCase
         self::assertSame('heading_heavy', $markers[0]->code);
         self::assertSame(3, $markers[0]->weight);
         self::assertSame('readability picked an index page', $markers[0]->suspect);
-        self::assertSame('3 headings against 1 paragraphs', $markers[0]->detail);
+        self::assertSame('3 headings are links to other articles, against 1 paragraphs', $markers[0]->detail);
     }
 
     public function testTheNoParagraphMarkerNamesItsWeightAndStage(): void
@@ -182,32 +134,6 @@ final class BodyShapeMarkersTest extends TestCase
         self::assertSame(4, $markers[0]->weight);
         self::assertSame('readability picked a non-article region', $markers[0]->suspect);
         self::assertSame('the body holds text but not one <p>', $markers[0]->detail);
-    }
-
-    public function testTheHugeBodyMarkerNamesItsWeightAndLength(): void
-    {
-        $markers = $this->markers->detect(
-            ExtractedBody::fromHtml('<p>' . str_repeat('a', 40_001) . '</p>'),
-            $this->entry(null),
-            null,
-        );
-
-        self::assertSame(2, $markers[0]->weight);
-        self::assertSame('readability picked a section or index page', $markers[0]->suspect);
-        self::assertSame('40001 characters — more than one article', $markers[0]->detail);
-    }
-
-    public function testTheShortfallMarkerNamesBothLengths(): void
-    {
-        $markers = $this->markers->detect(
-            ExtractedBody::fromHtml('<p>' . str_repeat('b', 100) . '</p>'),
-            $this->entry('<p>' . str_repeat('a', 1000) . '</p>'),
-            null,
-        );
-
-        self::assertSame(3, $markers[0]->weight);
-        self::assertSame('the cleaners over-trimmed', $markers[0]->suspect);
-        self::assertSame('reader shows 100 chars, the feed body already has 1000', $markers[0]->detail);
     }
 
     public function testTheDuplicateTitleMarkerNamesItsWeightStageAndTheLine(): void

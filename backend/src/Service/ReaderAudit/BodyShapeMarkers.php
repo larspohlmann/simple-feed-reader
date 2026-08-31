@@ -13,12 +13,15 @@ namespace App\Service\ReaderAudit;
  * Deliberately blind to what sits after the last paragraph. An audit that scored
  * the tail reported every well-cleaned page on sites that end with a
  * related-articles box, which is most of them (#744).
+ *
+ * Length alone says nothing, in either direction. A Volts podcast transcript is
+ * 88,000 characters and is one article, and a page whose feed body runs longer
+ * than its article is a publisher shipping a fuller press release, not a cleaner
+ * cutting prose — the two are indistinguishable by length, and the coverage gate
+ * already guards the case where the extraction is the wrong text entirely (#744).
  */
 final readonly class BodyShapeMarkers
 {
-    private const int HUGE_BODY_CHARS = 40_000;
-    private const int SUBSTANTIAL_FEED_CHARS = 800;
-    private const float FEED_SHORTFALL = 0.6;
     private const int MIN_HEADINGS_FOR_HUB = 3;
 
     /** @return list<CleanupMarker> */
@@ -27,8 +30,6 @@ final readonly class BodyShapeMarkers
         $candidates = [
             $this->noParagraphs($body),
             $this->headingHeavy($body),
-            $this->hugeBody($body),
-            $this->belowFeedBody($body, $entry),
             $this->duplicateTitle($body, $entry, $articleTitle),
         ];
 
@@ -49,9 +50,19 @@ final readonly class BodyShapeMarkers
         );
     }
 
+    /**
+     * An index page is not a page with many headings — a sectioned essay has
+     * those, and counting them reported an Anarchist Library pamphlet with 19
+     * section titles. What an index page has is headings that are LINKS, each
+     * one a teaser for a different article (#744).
+     */
     private function headingHeavy(ExtractedBody $body): ?CleanupMarker
     {
-        if ($body->headingCount < self::MIN_HEADINGS_FOR_HUB || $body->headingCount <= $body->paragraphCount) {
+        $linkedHeadings = 0;
+        foreach ($body->blocks as $block) {
+            $linkedHeadings += $block->isHeading() && $block->isChrome() ? 1 : 0;
+        }
+        if ($linkedHeadings < self::MIN_HEADINGS_FOR_HUB || $linkedHeadings <= $body->paragraphCount) {
             return null;
         }
 
@@ -59,43 +70,11 @@ final readonly class BodyShapeMarkers
             'heading_heavy',
             3,
             'readability picked an index page',
-            \sprintf('%d headings against %d paragraphs', $body->headingCount, $body->paragraphCount)
-        );
-    }
-
-    private function hugeBody(ExtractedBody $body): ?CleanupMarker
-    {
-        if ($body->textLength() <= self::HUGE_BODY_CHARS) {
-            return null;
-        }
-
-        return new CleanupMarker(
-            'body_huge',
-            2,
-            'readability picked a section or index page',
-            \sprintf('%d characters — more than one article', $body->textLength())
-        );
-    }
-
-    /**
-     * The reader exists to add to the feed body. Falling below it means a cleaner
-     * cut article text, not furniture.
-     */
-    private function belowFeedBody(ExtractedBody $body, SampledEntry $entry): ?CleanupMarker
-    {
-        $feedLength = mb_strlen($this->plainText($entry->feedContentHtml));
-        if ($feedLength < self::SUBSTANTIAL_FEED_CHARS) {
-            return null;
-        }
-        if ($body->textLength() >= (int) ($feedLength * self::FEED_SHORTFALL)) {
-            return null;
-        }
-
-        return new CleanupMarker(
-            'body_below_feed',
-            3,
-            'the cleaners over-trimmed',
-            \sprintf('reader shows %d chars, the feed body already has %d', $body->textLength(), $feedLength)
+            \sprintf(
+                '%d headings are links to other articles, against %d paragraphs',
+                $linkedHeadings,
+                $body->paragraphCount,
+            ),
         );
     }
 
@@ -124,17 +103,16 @@ final readonly class BodyShapeMarkers
         return null;
     }
 
+    /**
+     * The headline reduced to its words. Deliberately not a letters-only smash:
+     * deutschlandfunk.de runs its kicker straight into the headline
+     * ("Privatsphäre im AltenheimDer Abschied…") where the feed writes them with
+     * a separator, and stripping every non-letter made those two identical (#744).
+     */
     private function titleKey(string $text): string
     {
-        return (string) preg_replace('/[^a-z0-9]+/u', '', mb_strtolower($text));
-    }
+        $words = preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower($text), -1, \PREG_SPLIT_NO_EMPTY);
 
-    private function plainText(?string $html): string
-    {
-        if ($html === null) {
-            return '';
-        }
-
-        return trim((string) preg_replace('/\s+/u', ' ', strip_tags($html)));
+        return implode(' ', $words === false ? [] : $words);
     }
 }

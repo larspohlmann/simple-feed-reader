@@ -13,18 +13,30 @@ namespace App\Service\ReaderAudit;
  */
 final readonly class BodyBlock
 {
-    /** Below this many characters a block is a caption or a label, not a paragraph. */
-    private const int PROSE_CHARS = 200;
+    /**
+     * Below this many characters a block is a caption or a label, not a
+     * paragraph. Two hundred was too strict: a German standfirst, a news brief
+     * and every answer of a Q&A interview sit under it, so the article never
+     * "started" and its whole body read as the region above it — 111 blocks of
+     * an Attack Magazine interview, every one of them prose (#744).
+     */
+    private const int PROSE_CHARS = 120;
 
     /** A block whose text is this share links is a menu entry, not a sentence. */
     private const float LINK_DOMINATED = 0.8;
 
+    /** @param list<BodyLink> $links */
     public function __construct(
         public string $tag,
         public string $text,
-        public int $linkCount,
-        public int $linkedChars,
+        public array $links,
     ) {
+    }
+
+    /** Links that would take the reader off this page — the only ones chrome is made of. */
+    public function outboundLinks(): int
+    {
+        return \count(array_filter($this->links, static fn (BodyLink $link): bool => $link->leavesThePage()));
     }
 
     public function length(): int
@@ -32,9 +44,50 @@ final readonly class BodyBlock
         return mb_strlen($this->text);
     }
 
+    /** Mostly link text of any kind: not a sentence, so not where the article begins. */
     public function isLinkDominated(): bool
     {
-        return $this->length() > 0 && $this->linkedChars / $this->length() >= self::LINK_DOMINATED;
+        return $this->dominatedBy(static fn (BodyLink $link): bool => true);
+    }
+
+    /**
+     * Mostly links that leave the page: a menu entry, a share button, a teaser
+     * row. An article's own table of contents is link-dominated but not this —
+     * its entries go nowhere but further down the same article (#744).
+     */
+    public function isChrome(): bool
+    {
+        return $this->dominatedBy(static fn (BodyLink $link): bool => $link->leavesThePage());
+    }
+
+    /** @param callable(BodyLink): bool $counts */
+    private function dominatedBy(callable $counts): bool
+    {
+        if ($this->length() === 0) {
+            return false;
+        }
+
+        $linked = 0;
+        foreach ($this->links as $link) {
+            $linked += $counts($link) ? mb_strlen($link->text) : 0;
+        }
+
+        return $linked / $this->length() >= self::LINK_DOMINATED;
+    }
+
+    /**
+     * A block that is a link back into this same page: a skip link, a table of
+     * contents entry, a back-to-top. It reads like chrome and is the page's own
+     * affordance, so no rule should score it (#744).
+     */
+    public function isInPageAffordance(): bool
+    {
+        return $this->isLinkDominated() && !$this->isChrome();
+    }
+
+    public function isHeading(): bool
+    {
+        return \in_array($this->tag, ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], true);
     }
 
     /** The first block that answers true is where the article begins. */

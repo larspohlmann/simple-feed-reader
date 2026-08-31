@@ -28,46 +28,23 @@ final class CleanupMarkersTest extends TestCase
         );
     }
 
-    public function testAFailedExtractionEarnsOnlyTheReasonItFailed(): void
+    public function testNoFailedExtractionIsAFindingWhateverItsReason(): void
     {
-        $failed = ExtractionResult::failed('https://example.test/a', 'mismatch');
-        $markers = $this->markers->detect($failed, $this->entry(), null);
+        // Whatever went wrong, the reader falls back to the feed body and shows
+        // the user the original. That is a real outcome and no cleaner changes
+        // it; listing it filled the report with work nobody could do (#744).
+        foreach (['fetch', 'no_url', 'unextractable', 'empty', 'mismatch'] as $reason) {
+            $failed = ExtractionResult::failed(null, $reason);
 
-        self::assertCount(1, $markers);
-        self::assertSame('extraction_failed_mismatch', $markers[0]->code);
-        self::assertStringContainsString('CoverageGate', $markers[0]->suspect);
-    }
-
-    public function testAPageThatNeverArrivedIsNotAFindingBecauseNoCleanerCanFixIt(): void
-    {
-        // A publisher blocking the fetcher, or an outage: real, and nothing in
-        // this codebase changes it. 59 of the first sweep's 159 findings were
-        // these, and they buried the ones worth acting on (#744).
-        self::assertSame([], $this->markers->detect(ExtractionResult::failed(null, 'fetch'), $this->entry(), null));
-    }
-
-    public function testAnEntryWithoutASourceUrlIsNotAFindingEither(): void
-    {
-        self::assertSame([], $this->markers->detect(ExtractionResult::failed(null, 'no_url'), $this->entry(), null));
-    }
-
-    public function testTheCoverageGateOutranksReadabilityFindingNothingBecauseItMeansTheCleanersMisread(): void
-    {
-        $mismatch = $this->markers->detect(ExtractionResult::failed(null, 'mismatch'), $this->entry(), null);
-        $nothing = $this->markers->detect(ExtractionResult::failed(null, 'unextractable'), $this->entry(), null);
-
-        self::assertGreaterThan($nothing[0]->weight, $mismatch[0]->weight);
-    }
-
-    public function testEachReportableFailureNamesItsStageAndSaysWhatTheReaderDid(): void
-    {
-        foreach (['unextractable' => 4, 'empty' => 4, 'mismatch' => 5] as $reason => $weight) {
-            $markers = $this->markers->detect(ExtractionResult::failed(null, $reason), $this->entry(), null);
-
-            self::assertSame('extraction_failed_' . $reason, $markers[0]->code, $reason);
-            self::assertSame($weight, $markers[0]->weight, $reason);
-            self::assertSame('the reader fell back to the feed body', $markers[0]->detail, $reason);
+            self::assertSame([], $this->markers->detect($failed, $this->entry(), null), $reason);
         }
+    }
+
+    public function testABodyThatCouldNotBeMeasuredEarnsNothingEither(): void
+    {
+        $ok = ExtractionResult::ok('https://example.test/a', 'Titel', null, null, '<p>x</p>', null);
+
+        self::assertSame([], $this->markers->detect($ok, $this->entry(), null));
     }
 
     public function testASuccessfulExtractionIsMeasuredByShapeAndByWording(): void
