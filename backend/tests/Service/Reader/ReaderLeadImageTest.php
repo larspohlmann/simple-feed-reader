@@ -47,11 +47,15 @@ final class ReaderLeadImageTest extends TestCase
     }
 
     /** Run restore in place and return the serialised body markup. */
-    private function restoredBody(string $bodyHtml, PageImageInventory $pageImages, ?string $leadUrl): string
-    {
+    private function restoredBody(
+        string $bodyHtml,
+        PageImageInventory $pageImages,
+        ?string $leadUrl,
+        bool $willTopPlace = false,
+    ): string {
         $document = HtmlDocumentParser::parseOrNull($bodyHtml);
         self::assertNotNull($document);
-        $this->leadImage->restore($document, new LeadImageCandidate($leadUrl, $pageImages));
+        $this->leadImage->restore($document, new LeadImageCandidate($leadUrl, $pageImages), $willTopPlace);
 
         return (string) $document->body?->innerHTML;
     }
@@ -168,6 +172,30 @@ final class ReaderLeadImageTest extends TestCase
             $this->unchangedBody($body),
             $this->restoredBody($body, $this->pageDrawingNothing(), null),
         );
+    }
+
+    public function testSkipsRestoringTheHeroWhenAPlayerWillBeTopPlaced(): void
+    {
+        // heise 487576: an embed poster and the hero are the same picture from
+        // different CDNs, so identity cannot match them — but a player is about
+        // to be prepended, so the hero must not stack a second copy above it.
+        $lead = 'https://cdn.test/hero-photo.jpg';
+        $body = '<p>Just words.</p>';
+
+        $result = $this->restoredBody($body, $this->pageDrawing($lead), $lead, true);
+
+        self::assertSame($this->unchangedBody($body), $result);
+    }
+
+    public function testStillRestoresTheHeroWhenNothingWillBeTopPlaced(): void
+    {
+        // willTopPlace=false must behave exactly as before: a legitimately
+        // distinct hero on a mid-body-video article is not dropped.
+        $lead = 'https://cdn.test/hero-photo.jpg';
+
+        $result = $this->restoredBody('<p>Just words.</p>', $this->pageDrawing($lead), $lead, false);
+
+        self::assertStringContainsString('hero-photo.jpg', $result);
     }
 
     public function testDrawsALazyLoadedLeadOnceLazyImageSourcesResolvedIt(): void

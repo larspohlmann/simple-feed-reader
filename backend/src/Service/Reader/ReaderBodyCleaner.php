@@ -13,8 +13,9 @@ use App\Service\Reader\Media\SubstackPosterLink;
 /**
  * Cleans readability's article HTML for the reader view through one shared
  * \Dom\HTMLDocument: parse once, rewrite in-body media, drop the duplicate
- * leading title, trim edge boilerplate, restore the lead image and insert
- * page-discovered media, serialise once. This mirrors FetchedPageNormalizer's
+ * leading title, trim edge boilerplate, plan where page-discovered media
+ * belongs, restore the lead image against that plan, reconcile the media
+ * into the body, serialise once. This mirrors FetchedPageNormalizer's
  * discipline of never serialising and re-parsing between steps — every step
  * mutates the same document, so the body is parsed once instead of many times
  * (#586, #684, #748).
@@ -61,9 +62,14 @@ final readonly class ReaderBodyCleaner
         $this->navigationTrimmer->trimIn($document);
         $this->titleRemover->removeFrom($document, $titleCandidates);
         $this->boilerplateTrimmer->trimIn($document);
-        $this->leadImage->restore($document, $leadImage);
 
-        $this->mediaInserter->insertInto($document, $recoveredInBody ? $media->withoutEmbeds() : $media);
+        // plan() only classifies, so restore() still sees every body image and
+        // can skip the hero when a player will land at the top; apply()'s
+        // mutation runs after, or the hero would come back (#755).
+        $discoveredMedia = $recoveredInBody ? $media->withoutEmbeds() : $media;
+        $plan = $this->mediaInserter->plan($document, $discoveredMedia);
+        $this->leadImage->restore($document, $leadImage, $plan->hasTopPlaced());
+        $this->mediaInserter->apply($document, $plan);
 
         return $document->saveHtml();
     }
