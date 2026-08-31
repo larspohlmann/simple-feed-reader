@@ -24,6 +24,7 @@ final readonly class ImageIdentity
         private string $stem,
         private array $ids,
         private array $tokens,
+        private ?string $numericAsset,
     ) {
     }
 
@@ -41,7 +42,7 @@ final readonly class ImageIdentity
         $words = preg_split('/[^a-z0-9]+/', $stem, -1, \PREG_SPLIT_NO_EMPTY) ?: [];
         $tokens = array_values(array_filter($words, self::isPhotoSpecificToken(...)));
 
-        return new self($stem, $ids, $tokens);
+        return new self($stem, $ids, $tokens, self::numericAsset($words));
     }
 
     private static function isPhotoSpecificToken(string $word): bool
@@ -61,10 +62,10 @@ final readonly class ImageIdentity
 
     public function isSameAsset(self $other): bool
     {
-        if ($this->stem !== '' && $this->stem === $other->stem) {
-            return true;
+        if ($this->ids !== [] && $other->ids !== []) {
+            return array_intersect($this->ids, $other->ids) !== [];
         }
-        if (array_intersect($this->ids, $other->ids) !== []) {
+        if ($this->stem !== '' && $this->stem === $other->stem) {
             return true;
         }
 
@@ -74,19 +75,20 @@ final readonly class ImageIdentity
 
     private function hasDifferentNumericAsset(self $other): bool
     {
-        if ($this->tokens === []) {
-            return false;
-        }
-        if ($other->tokens === []) {
-            return false;
+        return $this->numericAsset !== null
+            && $other->numericAsset !== null
+            && $this->numericAsset !== $other->numericAsset;
+    }
+
+    /** @param list<string> $words */
+    private static function numericAsset(array $words): ?string
+    {
+        $last = array_pop($words);
+        if (is_string($last) && preg_match('/^\d+x\d+$/', $last) === 1) {
+            $last = array_pop($words);
         }
 
-        $asset = $this->tokens[array_key_last($this->tokens)];
-        $otherAsset = $other->tokens[array_key_last($other->tokens)];
-
-        return $asset !== $otherAsset
-            && ctype_digit($asset)
-            && ctype_digit($otherAsset);
+        return is_string($last) && ctype_digit($last) ? $last : null;
     }
 
     /** Return an embedded HTTP source URL, or keep the original URL. */

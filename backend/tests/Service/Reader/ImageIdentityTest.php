@@ -126,6 +126,62 @@ final class ImageIdentityTest extends TestCase
         self::assertFalse($first->isSameAsset($second));
     }
 
+    public function testSameAssetRejectsDifferentShortNumericAssetTokens(): void
+    {
+        $first = ImageIdentity::fromUrl('https://cdn.test/article-prefix_1234.jpg');
+        $second = ImageIdentity::fromUrl('https://cdn.test/article-prefix_5678.jpg');
+
+        self::assertFalse($first->isSameAsset($second));
+    }
+
+    public function testSameAssetRejectsDifferentAssetsWithTheSameSizeSuffix(): void
+    {
+        $first = ImageIdentity::fromUrl('https://cdn.test/article-prefix_11111-1280x720.jpg');
+        $second = ImageIdentity::fromUrl('https://cdn.test/article-prefix_22222-1280x720.jpg');
+
+        self::assertFalse($first->isSameAsset($second));
+    }
+
+    public function testSameAssetAcceptsTheSameAssetWithASizeSuffix(): void
+    {
+        $original = ImageIdentity::fromUrl('https://cdn.test/article-prefix_11111.jpg');
+        $sized = ImageIdentity::fromUrl('https://cdn.test/article-prefix_11111-1280x720.webp');
+
+        self::assertTrue($original->isSameAsset($sized));
+    }
+
+    public function testSameAssetRejectsDifferentExplicitIdsWithTheSameStem(): void
+    {
+        $first = ImageIdentity::fromUrl('https://cdn.test/image.jpg?imageId=11111');
+        $second = ImageIdentity::fromUrl('https://cdn.test/image.jpg?imageId=22222');
+
+        self::assertFalse($first->isSameAsset($second));
+    }
+
+    public function testSameAssetAcceptsTheSameStemWhenOnlyOneUrlHasAnExplicitId(): void
+    {
+        $withId = ImageIdentity::fromUrl('https://cdn.test/image.jpg?imageId=11111');
+        $withoutId = ImageIdentity::fromUrl('https://cdn.test/image.jpg');
+
+        self::assertTrue($withId->isSameAsset($withoutId));
+    }
+
+    public function testSameAssetDoesNotTreatAPrefixedDimensionAsASizeSuffix(): void
+    {
+        $first = ImageIdentity::fromUrl('https://cdn.test/article-prefix_11111-foo1280x720.jpg');
+        $second = ImageIdentity::fromUrl('https://cdn.test/article-prefix_22222-foo1280x720.jpg');
+
+        self::assertTrue($first->isSameAsset($second));
+    }
+
+    public function testSameAssetDoesNotTreatASuffixedDimensionAsASizeSuffix(): void
+    {
+        $first = ImageIdentity::fromUrl('https://cdn.test/article-prefix_11111-1280x720foo.jpg');
+        $second = ImageIdentity::fromUrl('https://cdn.test/article-prefix_22222-1280x720foo.jpg');
+
+        self::assertTrue($first->isSameAsset($second));
+    }
+
     public function testDoesNotMatchTwoUnrelatedRendersOfTheSamePhoto(): void
     {
         // beat.de: the opengraph share-render and the article's own upload are
