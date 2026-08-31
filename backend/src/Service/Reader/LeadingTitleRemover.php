@@ -70,9 +70,9 @@ final readonly class LeadingTitleRemover
     }
 
     /** @param list<string> $normalizedTitles */
-    private function repeatsTitle(Element $heading, array $normalizedTitles): bool
+    private function repeatsTitle(Element $firstTextBlock, array $normalizedTitles): bool
     {
-        return \in_array($this->normalize((string) $heading->textContent), $normalizedTitles, true);
+        return \in_array($this->normalize((string) $firstTextBlock->textContent), $normalizedTitles, true);
     }
 
     private function normalize(string $text): string

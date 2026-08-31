@@ -113,6 +113,17 @@ final class LeadingTitleRemoverTest extends TestCase
         self::assertStringContainsString('Chill Space Top Tracks July 2026', $result);
     }
 
+    public function testSkipsAnEmptyLeadingParagraphAndRemovesTheRealTitleParagraph(): void
+    {
+        $content = '<div><p>   </p><p>Chill Space Top Tracks July 2026</p>'
+            . '<p>Welcome to our July tribute to ambient music.</p></div>';
+
+        $result = $this->removeFrom($content, ['Chill Space Top Tracks July 2026']);
+
+        self::assertStringNotContainsString('Chill Space Top Tracks', $result);
+        self::assertStringContainsString('Welcome to our July tribute', $result);
+    }
+
     /**
      * Parses the fragment, runs the in-place removal, and serialises the shared
      * document — mirroring the parse-once/serialise-once window ReaderBodyCleaner
