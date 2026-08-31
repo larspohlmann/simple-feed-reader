@@ -14,7 +14,8 @@ use App\Service\Reader\Media\EmbedProviderInterface;
 final readonly class SoundCloudEmbedProvider implements EmbedProviderInterface
 {
     private const string HOST = 'w.soundcloud.com';
-    private const string TRACK_PATTERN = '#^https?://api\.soundcloud\.com/tracks/(\d+)$#';
+    /** Some widgets store the id as a double-encoded `soundcloud%3Atracks%3A` URN, not a bare id. */
+    private const string TRACK_PATTERN = '#^https?://api\.soundcloud\.com/tracks/(?:soundcloud%3Atracks%3A)?(\d+)$#i';
 
     public function matches(string $url): bool
     {
