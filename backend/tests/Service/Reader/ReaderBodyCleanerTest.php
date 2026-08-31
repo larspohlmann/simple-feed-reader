@@ -7,6 +7,7 @@ namespace App\Tests\Service\Reader;
 use App\Service\Reader\EdgeBoilerplateTrimmer;
 use App\Service\Reader\LeadImageCandidate;
 use App\Service\Reader\LeadingTitleRemover;
+use App\Service\Reader\NavigationChromeTrimmer;
 use App\Service\Reader\PageImageInventory;
 use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\ReaderLeadImage;
@@ -24,6 +25,7 @@ final class ReaderBodyCleanerTest extends TestCase
     protected function setUp(): void
     {
         $this->cleaner = new ReaderBodyCleaner(
+            new NavigationChromeTrimmer(),
             new LeadingTitleRemover(),
             new EdgeBoilerplateTrimmer(),
             new ReaderLeadImage(),
@@ -33,6 +35,18 @@ final class ReaderBodyCleanerTest extends TestCase
     private function noLead(): LeadImageCandidate
     {
         return new LeadImageCandidate(null, PageImageInventory::fromDocument(null));
+    }
+
+    public function testStripsALeadingNavigationChromeRegionInTheSamePass(): void
+    {
+        $header = '<div class="site-header"><nav><a href="/a">Editorial</a>'
+            . '<a href="/b">Blog</a><a href="/c">Debate</a><a href="/d">About</a></nav></div>';
+        $content = '<div>' . $header . '<main><p>' . self::PROSE . '</p></main></div>';
+
+        $result = $this->cleaner->clean($content, [null], $this->noLead());
+
+        self::assertStringNotContainsString('site-header', $result);
+        self::assertStringContainsString('Fliesstext', $result);
     }
 
     public function testDropsTheLeadingDuplicateHeadingInOnePass(): void
