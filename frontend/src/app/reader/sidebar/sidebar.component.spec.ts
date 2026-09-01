@@ -644,7 +644,7 @@ describe('SidebarComponent', () => {
       expect(head.querySelector('.count')?.textContent).toContain('7');
     });
 
-    it('expands on click, revealing the term rows while keeping the summed count', () => {
+    it('expands on a chevron click, revealing the term rows while keeping the summed count', () => {
       const f = mount({
         savedSearches: [
           {
@@ -668,9 +668,9 @@ describe('SidebarComponent', () => {
         ],
       });
       const head: HTMLElement = f.nativeElement.querySelector('.savedsearch-head');
-      const toggle: HTMLButtonElement = head.querySelector('.savedsearch-toggle')!;
-      expect(toggle.getAttribute('aria-expanded')).toBe('false');
-      toggle.click();
+      const chevron: HTMLButtonElement = head.querySelector('.chevzone')!;
+      expect(chevron.getAttribute('aria-expanded')).toBe('false');
+      chevron.click();
       f.detectChanges();
 
       const text = f.nativeElement.textContent;
@@ -681,9 +681,72 @@ describe('SidebarComponent', () => {
       // Task-12 behaviour.
       expect(head.querySelector('.count')?.textContent).toContain('7');
       expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(2);
-      // Activating the title itself must announce the new state to a screen
-      // reader, not only the trailing chevron button (#581 follow-up).
-      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      expect(chevron.getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('navigates to the combined view instead of expanding', () => {
+      const f = mount({
+        savedSearches: [
+          {
+            id: 1,
+            term: 'climate',
+            wholeWord: false,
+            phrase: false,
+            position: 0,
+            unreadCount: 3,
+            includeInDigest: false,
+          },
+        ],
+      });
+      const label: HTMLAnchorElement = f.nativeElement.querySelector('.savedsearch-toggle')!;
+      expect(label.tagName).toBe('A');
+
+      label.click();
+      f.detectChanges();
+
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(0);
+    });
+
+    it('expands and collapses from the chevron', () => {
+      const f = mount({
+        savedSearches: [
+          {
+            id: 1,
+            term: 'climate',
+            wholeWord: false,
+            phrase: false,
+            position: 0,
+            unreadCount: 3,
+            includeInDigest: false,
+          },
+        ],
+      });
+      const chevron: HTMLButtonElement = f.nativeElement.querySelector(
+        '.savedsearch-head .chevzone',
+      );
+      chevron.click();
+      f.detectChanges();
+
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(1);
+    });
+
+    it('marks the row active while the combined view is on screen', () => {
+      const f = mount({
+        savedSearches: [
+          {
+            id: 1,
+            term: 'climate',
+            wholeWord: false,
+            phrase: false,
+            position: 0,
+            unreadCount: 3,
+            includeInDigest: false,
+          },
+        ],
+        selection: { kind: 'saved-searches', id: null, unread: false },
+      });
+
+      expect(f.nativeElement.querySelector('.savedsearch-toggle')!.classList).toContain('active');
     });
 
     it('also expands on a click of its trailing chevron button', () => {
