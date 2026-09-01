@@ -114,17 +114,22 @@ final class MeControllerTest extends ApiTestCase
 
     public function testTrialEndsAtIsExposedWhenSet(): void
     {
+        // The date must stay in the future against the real system clock: an
+        // account whose trial has ended is suspended by TrialExpiryGuard on its
+        // next request and can no longer authenticate.
+        $trialEndsAt = new \DateTimeImmutable('2999-01-01T00:00:00Z');
+
         $client = static::createClient();
-        $this->factory()->create(
-            'has-trial@example.test',
-            trialEndsAt: new \DateTimeImmutable('2026-09-01T00:00:00Z'),
-        );
+        $this->factory()->create('has-trial@example.test', trialEndsAt: $trialEndsAt);
         $this->authenticate($client, 'has-trial@example.test');
 
         $client->request('GET', '/api/me');
 
         self::assertResponseIsSuccessful();
-        self::assertSame('2026-09-01T00:00:00+00:00', $this->payload($client)['trialEndsAt']);
+        self::assertSame(
+            $trialEndsAt->format(\DateTimeInterface::ATOM),
+            $this->payload($client)['trialEndsAt'],
+        );
     }
 
     public function testTrialEndsAtIsNullWhenUnset(): void
