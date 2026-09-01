@@ -33,12 +33,7 @@ final readonly class LeadingEngagementMarkers
         return LeadingEngagementRules::isEmojiOnly($block->text)
             || LeadingEngagementRules::isCounter($block->text)
             || $block->isTimeOnly
-            || ($this->hasAuthor($entryAuthor) && LeadingEngagementRules::isByline($block->text));
-    }
-
-    private function hasAuthor(?string $entryAuthor): bool
-    {
-        return $entryAuthor !== null && trim($entryAuthor) !== '';
+            || (LeadingEngagementRules::hasAuthor($entryAuthor) && LeadingEngagementRules::isByline($block->text));
     }
 
     /** @param list<BodyBlock> $blocks */

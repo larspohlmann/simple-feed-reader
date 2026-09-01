@@ -15,13 +15,6 @@ use App\Service\Reader\LeadingEngagementRules;
  */
 final readonly class BodyBlock
 {
-    /**
-     * Below this many characters a block is a caption or a label, not a
-     * paragraph. Two hundred was too strict: a German standfirst, a news brief
-     * and every answer of a Q&A interview sit under it, so the article never
-     * "started" and its whole body read as the region above it — 111 blocks of
-     * an Attack Magazine interview, every one of them prose (#744).
-     */
     /** A block whose text is this share links is a menu entry, not a sentence. */
     private const float LINK_DOMINATED = 0.8;
 

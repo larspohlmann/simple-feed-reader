@@ -27,6 +27,14 @@ final class LeadingEngagementBlocks
         return $blocks;
     }
 
+    public static function isTimeOnly(Element $element): bool
+    {
+        $times = $element->getElementsByTagName('time');
+
+        return $times->length === 1
+            && self::collapsed($element->textContent) === self::collapsed($times->item(0)?->textContent);
+    }
+
     private static function isLeafTextBlock(Element $element): bool
     {
         return in_array($element->localName, self::BLOCK_TAGS, true)

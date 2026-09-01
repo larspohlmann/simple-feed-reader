@@ -26,7 +26,7 @@ final readonly class LeadingEngagementCleaner
         $leading = array_slice($blocks, 0, $anchor);
         $removedEngagement = false;
         foreach ($leading as $block) {
-            if (!$this->isEngagement($block, $this->hasAuthor($entryAuthor))) {
+            if (!$this->isEngagement($block, $entryAuthor)) {
                 continue;
             }
 
@@ -120,28 +120,20 @@ final readonly class LeadingEngagementCleaner
         return ($element->compareDocumentPosition($anchor) & Node::DOCUMENT_POSITION_FOLLOWING) !== 0;
     }
 
-    private function isEngagement(Element $element, bool $hasAuthor): bool
+    private function isEngagement(Element $element, ?string $entryAuthor): bool
     {
         $text = (string) $element->textContent;
 
         return LeadingEngagementRules::isEmojiOnly($text)
             || LeadingEngagementRules::isCounter($text)
-            || $this->isTimeOnly($element)
-            || ($hasAuthor && LeadingEngagementRules::isByline($text));
+            || LeadingEngagementBlocks::isTimeOnly($element)
+            || (LeadingEngagementRules::hasAuthor($entryAuthor) && LeadingEngagementRules::isByline($text));
     }
 
     private function isDuplicateByline(Element $element, ?string $entryAuthor): bool
     {
-        return $this->hasAuthor($entryAuthor)
+        return LeadingEngagementRules::hasAuthor($entryAuthor)
             && LeadingEngagementRules::isByline((string) $element->textContent);
-    }
-
-    private function isTimeOnly(Element $element): bool
-    {
-        $times = $element->getElementsByTagName('time');
-
-        return $times->length === 1
-            && $this->collapsed($element->textContent) === $this->collapsed($times->item(0)?->textContent);
     }
 
     private function isRemainder(Element $element): bool
@@ -159,11 +151,6 @@ final readonly class LeadingEngagementCleaner
         }
 
         return false;
-    }
-
-    private function hasAuthor(?string $entryAuthor): bool
-    {
-        return $entryAuthor !== null && trim($entryAuthor) !== '';
     }
 
     private function collapsed(?string $text): string

@@ -49,9 +49,11 @@ function isLinkedImageTeaser(element: Element): boolean {
     (link) =>
       images.some((image) => link.contains(image)) && (link.textContent ?? '').trim() === '',
   );
-  const hasCopy = ownedElements(element, 'p').some((paragraph) => !paragraph.closest('figure'));
+  if (!linksAnImage) return false;
   const length = ownedText(element).length;
-  return linksAnImage && (length === 0 || (hasCopy && length <= MAX_TEASER_LENGTH));
+  if (length === 0) return true;
+  const hasCopy = ownedElements(element, 'p').some((paragraph) => !paragraph.closest('figure'));
+  return hasCopy && length <= MAX_TEASER_LENGTH;
 }
 
 function hasCaptionedFigure(element: Element): boolean {

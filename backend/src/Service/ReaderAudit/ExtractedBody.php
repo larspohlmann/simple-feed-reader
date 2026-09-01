@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\ReaderAudit;
 
 use App\Service\Html\HtmlDocumentParser;
+use App\Service\Reader\LeadingEngagementBlocks;
 use Dom\Element;
 
 /**
@@ -19,8 +20,6 @@ use Dom\Element;
  */
 final readonly class ExtractedBody
 {
-    private const array BLOCK_TAGS = ['p', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'figcaption', 'div'];
-
     /** Below this much text the page produced a notice, not an article. */
     private const int ARTICLE_TEXT_CHARS = 1200;
 
@@ -98,14 +97,8 @@ final readonly class ExtractedBody
     private static function blocks(Element $body): array
     {
         $blocks = [];
-        foreach ($body->getElementsByTagName('*') as $element) {
-            if (!\in_array($element->localName, self::BLOCK_TAGS, true) || self::hasBlockChild($element)) {
-                continue;
-            }
-            $text = self::collapsed($element->textContent);
-            if ($text !== '') {
-                $blocks[] = self::blockOf($element, $text);
-            }
+        foreach (LeadingEngagementBlocks::in($body) as $element) {
+            $blocks[] = self::blockOf($element, self::collapsed($element->textContent));
         }
 
         return $blocks;
@@ -118,27 +111,7 @@ final readonly class ExtractedBody
             $links[] = self::linkOf($link);
         }
 
-        return new BodyBlock($element->localName, $text, $links, self::isTimeOnly($element));
-    }
-
-    /** A block that wraps another block reports the innermost block's text, not its own. */
-    private static function hasBlockChild(Element $element): bool
-    {
-        foreach ($element->getElementsByTagName('*') as $descendant) {
-            if (\in_array($descendant->localName, self::BLOCK_TAGS, true)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static function isTimeOnly(Element $element): bool
-    {
-        $times = $element->getElementsByTagName('time');
-
-        return $times->length === 1
-            && self::collapsed($element->textContent) === self::collapsed($times->item(0)?->textContent);
+        return new BodyBlock($element->localName, $text, $links, LeadingEngagementBlocks::isTimeOnly($element));
     }
 
     /** @return list<BodyLink> */

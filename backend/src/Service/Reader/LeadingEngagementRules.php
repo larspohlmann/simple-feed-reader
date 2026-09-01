@@ -45,6 +45,11 @@ final class LeadingEngagementRules
         return preg_match('/^(?:von|by)\\s+\\S.*$/ui', self::collapsed($text)) === 1;
     }
 
+    public static function hasAuthor(?string $entryAuthor): bool
+    {
+        return $entryAuthor !== null && trim($entryAuthor) !== '';
+    }
+
     private static function withoutWhitespace(string $text): string
     {
         return (string) preg_replace('/\s+/u', '', $text);
