@@ -1,6 +1,5 @@
 // src/app/reader/entry-row/entry-row.component.ts
 import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
-import { TranslocoPipe } from '@jsverse/transloco';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { MarkedTextComponent } from '../../shared/marked-text/marked-text.component';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
@@ -12,13 +11,7 @@ import { relativeTime } from '../format';
 
 @Component({
   selector: 'app-entry-row',
-  imports: [
-    FaviconComponent,
-    MarkedTextComponent,
-    SourceTagsComponent,
-    EntryActionsComponent,
-    TranslocoPipe,
-  ],
+  imports: [FaviconComponent, MarkedTextComponent, SourceTagsComponent, EntryActionsComponent],
   templateUrl: './entry-row.component.html',
   styleUrl: './entry-row.component.scss',
 })

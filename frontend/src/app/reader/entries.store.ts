@@ -24,6 +24,17 @@ function unionMatchedWords(existing: string[], incoming: string[]): string[] {
   return union;
 }
 
+/** Value-equality for the id => term map `termsBySavedSearchId` produces, so
+ *  its `computed` can tell a real change (a term edited or a search added)
+ *  from a same-content reallocation (#769 fix round 1). */
+function sameEntries(a: Map<number, string>, b: Map<number, string>): boolean {
+  if (a.size !== b.size) return false;
+  for (const [id, term] of a) {
+    if (b.get(id) !== term) return false;
+  }
+  return true;
+}
+
 @Injectable({ providedIn: 'root' })
 export class EntriesStore {
   private readonly api = inject(ReaderApi);
@@ -31,18 +42,30 @@ export class EntriesStore {
 
   private readonly rawEntries = signal<EntryDto[]>([]);
   /** Entry id (stringified, as the wire sends it) => the saved search that
-   *  matched it. Kept apart from `rawEntries` and re-joined by `entries`
-   *  below, a computed, rather than baked into the entries at load time: the
-   *  combined saved-search list's own load and the sidebar's SavedSearchesStore
-   *  load race on boot, so a term arriving after its entries must still reach
-   *  the pill instead of leaving it decided once and wrong. */
+   *  matched it (#769). Kept apart from `rawEntries` so a term arriving after
+   *  its entries — see `termsBySavedSearchId` below — still reaches the pill
+   *  instead of the decoration being decided once, at load time, and wrong. */
   private readonly savedSearchIdsByEntryId = signal<Record<string, number>>({});
+  /** Saved search id => its display term, re-derived whenever
+   *  `SavedSearchesStore.savedSearches()` changes but — via `equal` — only
+   *  propagated to `entries` below when the id/term pairs themselves changed.
+   *  `savedSearches()` is itself a computed over the sidebar's unread-tally
+   *  bookkeeping, so it emits a new array on every read in the combined view
+   *  and every counts poll; without this, each such tick would reallocate a
+   *  new object for every decorated row, and identity-sensitive effects
+   *  elsewhere (`entry-row`'s image-error reset, the shell's open-entry
+   *  tracking) would fire on a plain unread-count change (#769 fix round 1). */
+  private readonly termsBySavedSearchId = computed(
+    () =>
+      new Map(
+        this.savedSearchesStore.savedSearches().map((s) => [s.id, visibleSearchTerm(s.term)]),
+      ),
+    { equal: sameEntries },
+  );
   readonly entries = computed(() => {
     const savedSearchIds = this.savedSearchIdsByEntryId();
     if (Object.keys(savedSearchIds).length === 0) return this.rawEntries();
-    const termsById = new Map(
-      this.savedSearchesStore.savedSearches().map((s) => [s.id, visibleSearchTerm(s.term)]),
-    );
+    const termsById = this.termsBySavedSearchId();
     return this.rawEntries().map((entry) => {
       const term = termsById.get(savedSearchIds[String(entry.id)]);
       return term ? { ...entry, savedSearchTerm: term } : entry;

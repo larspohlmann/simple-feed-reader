@@ -470,6 +470,39 @@ describe('EntriesStore', () => {
 
       expect(store.entries()[0].savedSearchTerm).toBe('climate');
     });
+
+    // #769 fix round 1: SavedSearchesStore.savedSearches() is itself a
+    // computed over unread-tally bookkeeping, so it emits a new array on
+    // every read in this view and every counts poll. Decoration must not
+    // reallocate the decorated entries on a tick that changed no id or term
+    // — entry-row's image-error-reset effect (#594's failure mode) and the
+    // shell's open-entry tracking both key off entry object identity.
+    it('leaves decorated entries reference-equal when only an unrelated saved-search field changes', () => {
+      const savedSearches = signal<SavedSearchDto[]>([savedSearch()]);
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: API_BASE_URL, useValue: 'https://api.test' },
+          { provide: SavedSearchesStore, useValue: { savedSearches } },
+        ],
+      });
+      store = TestBed.inject(EntriesStore);
+      ctrl = TestBed.inject(HttpTestingController);
+
+      store.load({ view: 'saved-searches' });
+      ctrl
+        .expectOne((r) => r.url.endsWith('/api/entries/saved-searches'))
+        .flush({ entries: [entry(1)], nextCursor: null, savedSearchIds: { 1: 7 } });
+
+      const before = store.entries();
+      savedSearches.set([savedSearch({ unreadCount: 42 })]); // id/term unchanged
+
+      const after = store.entries();
+      expect(after).toBe(before);
+      expect(after[0]).toBe(before[0]);
+    });
   });
 
   it('invokes the onError callback on a failed state PATCH', () => {

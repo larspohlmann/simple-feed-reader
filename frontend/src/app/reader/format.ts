@@ -1,21 +1,47 @@
 // src/app/reader/format.ts
 
+/** The signed magnitude and unit `relativeTime`/`relativeTimeNarrow` share —
+ *  which bucket (second/minute/hour/day) an instant falls into is one
+ *  decision; how wide to render it is a second, independent one. */
+function relativeMagnitude(
+  iso: string,
+  now: Date,
+): { value: number; unit: Intl.RelativeTimeFormatUnit } | null {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return null;
+  const s = Math.max(0, Math.floor((now.getTime() - then) / 1000));
+  if (s < 60) return { value: 0, unit: 'second' }; // numeric:auto → "now" / "jetzt"
+  const m = Math.floor(s / 60);
+  if (m < 60) return { value: -m, unit: 'minute' };
+  const h = Math.floor(m / 60);
+  if (h < 24) return { value: -h, unit: 'hour' };
+  return { value: -Math.floor(h / 24), unit: 'day' };
+}
+
 /**
  * A short, localised "time ago" label (e.g. "5 min ago" / "vor 5 Min.") built from
  * Intl.RelativeTimeFormat so it follows the active UI language. `locale` is the
  * language tag ('en' | 'de'); pass a fixed `now` in tests.
  */
 export function relativeTime(iso: string, locale = 'en', now: Date = new Date()): string {
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return '';
-  const s = Math.max(0, Math.floor((now.getTime() - then) / 1000));
+  const magnitude = relativeMagnitude(iso, now);
+  if (!magnitude) return '';
   const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'short' });
-  if (s < 60) return rtf.format(0, 'second'); // numeric:auto → "now" / "jetzt"
-  const m = Math.floor(s / 60);
-  if (m < 60) return rtf.format(-m, 'minute');
-  const h = Math.floor(m / 60);
-  if (h < 24) return rtf.format(-h, 'hour');
-  return rtf.format(-Math.floor(h / 24), 'day');
+  return rtf.format(magnitude.value, magnitude.unit);
+}
+
+/**
+ * The narrowest form `relativeTime` has (e.g. "5m ago" / "vor 5 m") — same
+ * bucketing, `Intl.RelativeTimeFormat`'s `style: 'narrow'` instead of
+ * `'short'`. For a kicker line whose card is too tight for the full label
+ * (#769); never longer than `relativeTime`'s own output, though German's
+ * narrow and short forms coincide for some units.
+ */
+export function relativeTimeNarrow(iso: string, locale = 'en', now: Date = new Date()): string {
+  const magnitude = relativeMagnitude(iso, now);
+  if (!magnitude) return '';
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'narrow' });
+  return rtf.format(magnitude.value, magnitude.unit);
 }
 
 /** A localised long date (e.g. "July 22, 2026" / "22. Juli 2026"). */

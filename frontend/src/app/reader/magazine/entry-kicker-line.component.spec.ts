@@ -100,4 +100,15 @@ describe('EntryKickerLineComponent', () => {
     const el = mount(entry());
     expect(el.querySelector('.saved-search-pill')).toBeNull();
   });
+
+  // #769: a container query, not JSDOM-visible here, picks between these two
+  // at render time — both are always in the DOM so the swap never refetches.
+  it('renders both the wide and the narrow relative-time forms', () => {
+    const el = mount(entry());
+    const wide = el.querySelector('.when-wide')!;
+    const narrow = el.querySelector('.when-narrow')!;
+    expect(wide.textContent).toContain('5');
+    expect(narrow.textContent).toContain('5');
+    expect(narrow.textContent!.length).toBeLessThan(wide.textContent!.length);
+  });
 });

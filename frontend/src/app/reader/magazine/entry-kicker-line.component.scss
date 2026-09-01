@@ -6,6 +6,11 @@
   display: block;
   width: 100%;
   min-width: 0;
+
+  /* A media query sees the viewport, not the card: the magazine grid caps a
+     card's width well below it, so a wide desktop still has a narrow split
+     card (#769). The kicker's own inline size IS that card's text column. */
+  container-type: inline-size;
 }
 
 /* Never wraps. The source is the only elastic item in the row: it shrinks and
@@ -47,6 +52,24 @@
   flex: none;
 }
 
+/* Below the measured width of a split card's own text column (#769), the
+   short form gives way to the narrow one ("15 days ago" -> "15d ago") so
+   `.source` keeps more of the space it actually needs. `display: none`, not
+   a visual clip, so the swapped-out form is not also announced. */
+.when-narrow {
+  display: none;
+}
+
+@container (width < 17rem) {
+  .when-wide {
+    display: none;
+  }
+
+  .when-narrow {
+    display: inline;
+  }
+}
+
 /* The row's `gap` already spaces both sides of the favicon; its own inline
    margin, meant for text runs that have no gap, would land on the right only
    and double the space there. */
@@ -68,26 +91,5 @@
   border-color: var(--accent);
 }
 
-/* The saved search this entry came from — the tag pill's look (source-tags
-   .pill), copied rather than shared: that class lives private to source-tags
-   and this component cannot restructure it. A second elastic item beside the
-   source (#769): it must ellipsise rather than grow, so the dot and the time
-   after it never get pushed out of the row (#155). `min-width: 0` plus the
-   ellipsis on the one element (no inner .name to split it across, since this
-   pill carries no glyph) is the same load-bearing chain as source-tags'. */
-.saved-search-pill {
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-  max-inline-size: 12ch;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  padding: var(--space-0) var(--space-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  background: var(--surface-1);
-  color: var(--text-secondary);
-  font-size: var(--fs-xs, 0.72rem);
-  line-height: 1.5;
-}
+/* `.saved-search-pill` lives in theme/_utilities.scss (#769); its own
+   `min-inline-size` floor is what keeps `.source` yielding space first. */
