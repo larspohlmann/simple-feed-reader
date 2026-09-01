@@ -462,6 +462,11 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $lifetimes = [];
         $this->stubChatClient()->duringNextCall(function () use ($lockFactory, &$lifetimes): void {
             $lock = $this->tickLock($lockFactory);
+            // The lock and its remaining lifetime both live in the real store,
+            // so each read is a DB round-trip. Let the freshly-acquired lock
+            // age past that round-trip's jitter first, or the refresh's bump is
+            // lost in it and the comparison below turns into a coin-flip.
+            usleep(250_000);
             $lifetimes[] = $lock->getRemainingLifetime();
             $this->streamHeartbeat()->beat();
             $lifetimes[] = $lock->getRemainingLifetime();

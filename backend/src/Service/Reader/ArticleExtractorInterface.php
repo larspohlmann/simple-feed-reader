@@ -17,5 +17,5 @@ interface ArticleExtractorInterface
      *                                knows it — extraction uses it to recognize
      *                                (and drop) a headline repeated in the body
      */
-    public function extract(string $url, ?string $entryTitle = null): ExtractionResult;
+    public function extract(string $url, ?string $entryTitle = null, ?string $entryAuthor = null): ExtractionResult;
 }

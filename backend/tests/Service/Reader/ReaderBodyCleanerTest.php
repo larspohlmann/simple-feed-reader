@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\EdgeBoilerplateTrimmer;
 use App\Service\Reader\LeadImageCandidate;
+use App\Service\Reader\LeadingEngagementCleaner;
 use App\Service\Reader\LeadingTitleRemover;
 use App\Service\Reader\Media\ArticleMedia;
 use App\Service\Reader\Media\EmbedProviders;
@@ -37,6 +38,7 @@ final class ReaderBodyCleanerTest extends TestCase
         $this->cleaner = new ReaderBodyCleaner(
             new NavigationChromeTrimmer(),
             new LeadingTitleRemover(),
+            new LeadingEngagementCleaner(),
             new EdgeBoilerplateTrimmer(),
             new ReaderLeadImage(),
             new InBodyEmbedRewriter(new EmbedProviders([new YouTubeEmbedProvider()]), $markup),
@@ -69,6 +71,17 @@ final class ReaderBodyCleanerTest extends TestCase
         $result = $this->cleaner->clean($content, ['My Article'], $this->noLead(), ArticleMedia::none());
 
         self::assertStringNotContainsString('<h2>', $result);
+        self::assertStringContainsString('Fliesstext', $result);
+    }
+
+    public function testRemovesLeadingEngagementChromeInTheSamePass(): void
+    {
+        $content = '<div><p>1.251 Klicks</p><p>❤️️</p><p>' . self::PROSE . '</p></div>';
+
+        $result = $this->cleaner->clean($content, [null], $this->noLead(), ArticleMedia::none());
+
+        self::assertStringNotContainsString('Klicks', $result);
+        self::assertStringNotContainsString('❤️', $result);
         self::assertStringContainsString('Fliesstext', $result);
     }
 

@@ -11,6 +11,7 @@ use App\Service\ReaderAudit\AuditFinding;
 use App\Service\ReaderAudit\BodyShapeMarkers;
 use App\Service\ReaderAudit\CleanupMarkers;
 use App\Service\ReaderAudit\LeadingChromeMarkers;
+use App\Service\ReaderAudit\LeadingEngagementMarkers;
 use App\Service\ReaderAudit\PhraseMarkers;
 use App\Service\ReaderAudit\ReaderAuditRunner;
 use App\Service\ReaderAudit\ReaderLink;
@@ -43,8 +44,11 @@ final class ReaderAuditRunnerTest extends TestCase
         // A thousand publishers produce markup no fixture holds; the sweep has to
         // survive the one page that throws.
         $throwing = new class implements ArticleExtractorInterface {
-            public function extract(string $url, ?string $entryTitle = null): ExtractionResult
-            {
+            public function extract(
+                string $url,
+                ?string $entryTitle = null,
+                ?string $entryAuthor = null,
+            ): ExtractionResult {
                 throw new \RuntimeException('lexbor gave up');
             }
         };
@@ -68,6 +72,28 @@ final class ReaderAuditRunnerTest extends TestCase
         self::assertSame('Ein Feed', $finding->feedTitle);
         self::assertSame('Eine Schlagzeile', $finding->title);
         self::assertSame('https://example.test/a', $finding->sourceUrl);
+    }
+
+    public function testCarriesTheSampledEntryAuthorIntoTheReaderExtraction(): void
+    {
+        $extractor = new FakeArticleExtractor();
+        $extractor->willReturn(ExtractionResult::ok('https://example.test/a', 'Titel', null, null, '<p>x</p>', null));
+        $runner = new ReaderAuditRunner($extractor, new ExtractionCoverageGate(), $this->markers());
+        $entry = new SampledEntry(
+            7,
+            42,
+            11,
+            'Ein Feed',
+            'Eine Schlagzeile',
+            'https://example.test/a',
+            null,
+            false,
+            'Jana Steger',
+        );
+
+        iterator_to_array($runner->run([$entry], new ReaderLink('http://localhost:4200')));
+
+        self::assertSame('Jana Steger', $extractor->requests[0]['author']);
     }
 
     public function testMeasuresTheCleanedBodyForTheReport(): void
@@ -159,8 +185,11 @@ final class ReaderAuditRunnerTest extends TestCase
     public function testACrashedPageStillCarriesItsLinkSoItCanBeOpened(): void
     {
         $throwing = new class implements ArticleExtractorInterface {
-            public function extract(string $url, ?string $entryTitle = null): ExtractionResult
-            {
+            public function extract(
+                string $url,
+                ?string $entryTitle = null,
+                ?string $entryAuthor = null,
+            ): ExtractionResult {
                 throw new \RuntimeException('lexbor gave up');
             }
         };
@@ -177,6 +206,7 @@ final class ReaderAuditRunnerTest extends TestCase
     {
         return new CleanupMarkers(
             new LeadingChromeMarkers(),
+            new LeadingEngagementMarkers(),
             new SocialWidgetMarkers(),
             new BodyShapeMarkers(),
             new PhraseMarkers(),
@@ -190,6 +220,7 @@ final class ReaderAuditRunnerTest extends TestCase
             new ExtractionCoverageGate(),
             new CleanupMarkers(
                 new LeadingChromeMarkers(),
+                new LeadingEngagementMarkers(),
                 new SocialWidgetMarkers(),
                 new BodyShapeMarkers(),
                 new PhraseMarkers(),

@@ -113,7 +113,7 @@ final readonly class AuditSampler
     private function detailsOf(array $entryIds, int $userId): array
     {
         $rows = $this->connection->fetchAllAssociative(
-            'SELECT e.id, e.title, e.url, e.content_html, e.image_url, f.id AS feed_id,
+            'SELECT e.id, e.title, e.url, e.author, e.content_html, e.image_url, f.id AS feed_id,
                     f.title AS feed_title, f.url AS feed_url, s.id AS subscription_id
                FROM entry e
                JOIN feed f ON f.id = e.feed_id
@@ -138,6 +138,7 @@ final readonly class AuditSampler
                 url: DatabaseValue::string($row['url']),
                 feedContentHtml: DatabaseValue::nullableString($row['content_html']),
                 hasFeedImage: DatabaseValue::isPresent($row['image_url']),
+                author: DatabaseValue::nullableString($row['author']),
             );
         }
 

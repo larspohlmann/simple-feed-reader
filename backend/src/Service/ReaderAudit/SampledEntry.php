@@ -16,6 +16,7 @@ final readonly class SampledEntry
         public string $url,
         public ?string $feedContentHtml,
         public bool $hasFeedImage,
+        public ?string $author = null,
     ) {
     }
 }

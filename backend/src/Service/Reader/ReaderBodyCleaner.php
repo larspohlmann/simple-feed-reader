@@ -33,6 +33,7 @@ final readonly class ReaderBodyCleaner
     public function __construct(
         private NavigationChromeTrimmer $navigationTrimmer,
         private LeadingTitleRemover $titleRemover,
+        private LeadingEngagementCleaner $engagementCleaner,
         private EdgeBoilerplateTrimmer $boilerplateTrimmer,
         private ReaderLeadImage $leadImage,
         private InBodyEmbedRewriter $embedRewriter,
@@ -47,6 +48,7 @@ final readonly class ReaderBodyCleaner
         array $titleCandidates,
         LeadImageCandidate $leadImage,
         ArticleMedia $media,
+        ?string $entryAuthor = null,
     ): string {
         $document = HtmlDocumentParser::parseOrNull($contentHtml);
         if ($document === null) {
@@ -61,6 +63,7 @@ final readonly class ReaderBodyCleaner
 
         $this->navigationTrimmer->trimIn($document);
         $this->titleRemover->removeFrom($document, $titleCandidates);
+        $this->engagementCleaner->removeFrom($document, $entryAuthor);
         $this->boilerplateTrimmer->trimIn($document);
 
         // plan() only classifies, so restore() still sees every body image and

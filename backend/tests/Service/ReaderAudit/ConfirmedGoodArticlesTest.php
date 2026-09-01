@@ -9,6 +9,7 @@ use App\Service\ReaderAudit\BodyShapeMarkers;
 use App\Service\ReaderAudit\CleanupMarkers;
 use App\Service\ReaderAudit\ExtractedBody;
 use App\Service\ReaderAudit\LeadingChromeMarkers;
+use App\Service\ReaderAudit\LeadingEngagementMarkers;
 use App\Service\ReaderAudit\PhraseMarkers;
 use App\Service\ReaderAudit\SampledEntry;
 use App\Service\ReaderAudit\SocialWidgetMarkers;
@@ -161,6 +162,7 @@ final class ConfirmedGoodArticlesTest extends TestCase
     ): array {
         $markers = new CleanupMarkers(
             new LeadingChromeMarkers(),
+            new LeadingEngagementMarkers(),
             new SocialWidgetMarkers(),
             new BodyShapeMarkers(),
             new PhraseMarkers(),
