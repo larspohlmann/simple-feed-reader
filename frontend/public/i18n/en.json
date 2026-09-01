@@ -332,7 +332,6 @@
       "mailDisabledHint": "This instance sends no mail, so email confirmation cannot run — approve accounts by hand instead.",
       "publicBaseUrl": "Public base URL",
       "publicBaseUrlHint": "The address used to build links in outgoing email. Set this to the URL that works from outside — a phone off the network, another machine — not the local serving address. Leave empty to use the deploy default.",
-      "publicBaseUrlPlaceholder": "https://reader.example.com/",
       "passkeySignInEnabled": "Allow passkey sign-in",
       "passkeySignInEnabledHint": "Lets people sign in with a passkey instead of a password. Off by default — turn it on once the domain below is right.",
       "passkeyRpId": "Passkey domain",

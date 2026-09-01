@@ -11,6 +11,8 @@ export interface InstanceSettings {
   /** The external base URL used to build links in outgoing email, or null to
    *  fall back to the APP_FRONTEND_URL deploy env (#636). */
   publicBaseUrl: string | null;
+  /** The deploy-time fallback used when publicBaseUrl is null. */
+  publicBaseUrlDefault: string;
   /** The stored passkey relying-party id override, or null to derive it from
    *  publicBaseUrl's host (#624). */
   passkeyRpId: string | null;

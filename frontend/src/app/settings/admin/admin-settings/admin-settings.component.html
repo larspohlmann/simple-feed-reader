@@ -56,7 +56,7 @@
           autocomplete="off"
           [value]="publicBaseUrlDraft()"
           [attr.aria-label]="'settings.instance.publicBaseUrl' | transloco"
-          [placeholder]="'settings.instance.publicBaseUrlPlaceholder' | transloco"
+          [placeholder]="publicBaseUrlDefault()"
           (input)="publicBaseUrlDraft.set($any($event.target).value)"
         />
       </app-settings-row>

@@ -55,6 +55,7 @@ export class AdminSettingsComponent implements OnInit {
   // The external base URL for links in outgoing email; null falls back to the
   // APP_FRONTEND_URL deploy env (#636).
   readonly publicBaseUrl = signal<string | null>(null);
+  readonly publicBaseUrlDefault = signal('');
   // The stored passkey relying-party overrides; null falls back to the
   // derived host / the "Simple Feed Reader" default respectively (#624).
   readonly passkeyRpId = signal<string | null>(null);
@@ -218,6 +219,7 @@ export class AdminSettingsComponent implements OnInit {
     this.requireApproval.set(settings.requireApproval);
     this.mailEnabled.set(settings.mailEnabled);
     this.publicBaseUrl.set(settings.publicBaseUrl);
+    this.publicBaseUrlDefault.set(settings.publicBaseUrlDefault);
     this.passkeyRpId.set(settings.passkeyRpId);
     this.passkeyRpName.set(settings.passkeyRpName);
     this.passkeyRpIdEffective.set(settings.passkeyRpIdEffective);
