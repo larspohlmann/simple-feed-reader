@@ -2777,6 +2777,52 @@ describe('ReaderShellComponent', () => {
     });
   });
 
+  describe('titling the combined saved-search list (#769)', () => {
+    function bootWithSavedSearches(saved: SavedSearchWire[]) {
+      const f = boot();
+      f.componentInstance.savedSearchesStore.load();
+      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: saved });
+      qp.next(convertToParamMap({ view: 'saved-searches' }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/saved-searches')
+        .flush({ entries: [], nextCursor: null });
+      f.detectChanges();
+      return f;
+    }
+
+    it('titles the combined saved-search list with the sidebar label', () => {
+      const f = bootWithSavedSearches([]);
+
+      expect(f.componentInstance.title()).toBe('Saved searches');
+    });
+
+    it('counts the same unread total the sidebar row shows', () => {
+      const f = bootWithSavedSearches([
+        {
+          id: 1,
+          term: 'a',
+          wholeWord: false,
+          phrase: false,
+          position: 0,
+          unreadEntryIds: [1, 2],
+          includeInDigest: false,
+        },
+        {
+          id: 2,
+          term: 'b',
+          wholeWord: false,
+          phrase: false,
+          position: 1,
+          unreadEntryIds: [3, 4, 5],
+          includeInDigest: false,
+        },
+      ]);
+
+      expect(f.componentInstance.titleCount()).toEqual({ value: 5, counts: 'unread' });
+    });
+  });
+
   describe('mark all read for the combined saved-searches view (#769)', () => {
     function bootWithSavedSearchesSelected() {
       const f = boot();

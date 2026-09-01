@@ -447,6 +447,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     if (s.kind === 'kept') return this.i18n.translate('reader.kept');
     if (s.kind === 'viewed') return this.i18n.translate('reader.viewed');
     if (s.kind === 'for-you') return this.i18n.translate('reader.forYou');
+    if (s.kind === 'saved-searches') return this.i18n.translate('reader.savedSearches');
     if (s.kind === 'all') return this.i18n.translate('reader.allItems');
     if (s.kind === 'tag')
       return this.selectedTag()?.name ?? this.i18n.translate('reader.tagFallback');
@@ -484,7 +485,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       case 'for-you':
         return unread(this.recs.forYouCount());
       case 'saved-searches':
-        return unread(0);
+        return unread(this.savedSearchesUnread());
       case 'search':
         return items(0);
     }
@@ -1084,6 +1085,13 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
         ) ?? null
     );
   });
+
+  /** The badge the sidebar's Saved searches row shows: the sum of the per-search
+   *  counts. A post matching two searches counts twice here and once in the
+   *  list — accepted, so the row and the heading show one number (#769). */
+  readonly savedSearchesUnread = computed(() =>
+    this.savedSearchesStore.savedSearches().reduce((sum, saved) => sum + saved.unreadCount, 0),
+  );
 
   protected readonly savedSearchActionLabel = computed(() =>
     this.currentSavedSearch() ? 'reader.removeSavedSearch' : 'reader.saveSearch',

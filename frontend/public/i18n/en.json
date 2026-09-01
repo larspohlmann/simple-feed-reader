@@ -737,6 +737,7 @@
     "viewed": "Recently read",
     "forYou": "For you",
     "savedSearches": "Saved searches",
+    "savedSearchesEmpty": "No saved searches yet. Save a search to see it here.",
     "toggleSavedSearches": "Toggle saved searches",
     "saveSearch": "Save search",
     "saveSearchShort": "Save",

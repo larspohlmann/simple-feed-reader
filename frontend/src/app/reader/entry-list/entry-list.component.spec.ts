@@ -605,6 +605,30 @@ describe('EntryListComponent', () => {
     expect(empty.querySelector('a')).toBeNull();
   });
 
+  describe('the combined saved-search list empty state (#769)', () => {
+    it('says there are no saved searches yet when the account keeps none', () => {
+      const el = mount({
+        loading: false,
+        entries: [],
+        selection: { kind: 'saved-searches', id: null, unread: false },
+        savedSearchCount: 0,
+      }).nativeElement as HTMLElement;
+
+      expect(el.querySelector('.empty')!.textContent).toContain('No saved searches yet');
+    });
+
+    it('says the list is empty when saved searches exist but match nothing', () => {
+      const el = mount({
+        loading: false,
+        entries: [],
+        selection: { kind: 'saved-searches', id: null, unread: false },
+        savedSearchCount: 2,
+      }).nativeElement as HTMLElement;
+
+      expect(el.querySelector('.empty')!.textContent).not.toContain('No saved searches yet');
+    });
+  });
+
   it(
     'derives highlighting terms from a trailing-space term without a trailing empty ' +
       "entry (#408 follow-up: the trailing space is the server's whole-word signal, " +
