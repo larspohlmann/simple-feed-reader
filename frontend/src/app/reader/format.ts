@@ -18,6 +18,20 @@ function relativeMagnitude(
   return { value: -Math.floor(h / 24), unit: 'day' };
 }
 
+/** One formatter per locale and style, not one per row: constructing an
+ *  `Intl.RelativeTimeFormat` resolves locale data, and every card in the
+ *  magazine builds two labels. */
+const relativeFormatters = new Map<string, Intl.RelativeTimeFormat>();
+
+function relativeFormatter(locale: string, style: 'short' | 'narrow'): Intl.RelativeTimeFormat {
+  const key = `${locale}:${style}`;
+  const cached = relativeFormatters.get(key);
+  if (cached) return cached;
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style });
+  relativeFormatters.set(key, formatter);
+  return formatter;
+}
+
 /**
  * A short, localised "time ago" label (e.g. "5 min ago" / "vor 5 Min.") built from
  * Intl.RelativeTimeFormat so it follows the active UI language. `locale` is the
@@ -26,8 +40,7 @@ function relativeMagnitude(
 export function relativeTime(iso: string, locale = 'en', now: Date = new Date()): string {
   const magnitude = relativeMagnitude(iso, now);
   if (!magnitude) return '';
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'short' });
-  return rtf.format(magnitude.value, magnitude.unit);
+  return relativeFormatter(locale, 'short').format(magnitude.value, magnitude.unit);
 }
 
 /**
@@ -40,8 +53,7 @@ export function relativeTime(iso: string, locale = 'en', now: Date = new Date())
 export function relativeTimeNarrow(iso: string, locale = 'en', now: Date = new Date()): string {
   const magnitude = relativeMagnitude(iso, now);
   if (!magnitude) return '';
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'narrow' });
-  return rtf.format(magnitude.value, magnitude.unit);
+  return relativeFormatter(locale, 'narrow').format(magnitude.value, magnitude.unit);
 }
 
 /** A localised long date (e.g. "July 22, 2026" / "22. Juli 2026"). */

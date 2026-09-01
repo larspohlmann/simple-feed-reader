@@ -23,9 +23,8 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 /**
  * The combined saved-search list: one stream of everything the caller's saved
- * searches match. Its own endpoint rather than a mode on `/entries/search`,
- * which answers one term, and rather than a `view` on `/entries`, which filters
- * feeds rather than content (#769).
+ * searches match. Its own endpoint because `/entries/search` answers one term
+ * and `/entries`' views filter feeds, not content.
  */
 #[Route('/api/entries/saved-searches')]
 final readonly class SavedSearchEntriesController
@@ -45,10 +44,10 @@ final readonly class SavedSearchEntriesController
         #[MapQueryParameter] bool $unread = false,
     ): JsonResponse {
         $userId = (int) $user->getId();
-        $searches = $this->terms->forUserWithIds($userId);
+        $savedSearches = $this->terms->forUser($userId);
         $query = new SavedSearchEntryQuery(
             userId: $userId,
-            termsPerSearch: $searches->terms,
+            savedSearches: $savedSearches,
             onlyUnread: $unread,
             cursor: EntryCursor::fromRequestValue($cursor),
             limit: $limit,
@@ -60,7 +59,7 @@ final readonly class SavedSearchEntriesController
         return new JsonResponse(SavedSearchPage::of(
             $rows,
             $query->limit,
-            $this->entries->matchedSavedSearchIds($entryIds, $searches->terms, $searches->ids),
+            $this->entries->matchedSavedSearchIds($entryIds, $savedSearches),
         ));
     }
 

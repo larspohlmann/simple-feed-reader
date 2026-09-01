@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Http\EntryCursor;
 use App\Repository\SavedSearchEntryQuery;
 use App\Repository\SavedSearchEntryRepository;
+use App\Service\Search\SavedSearchTerm;
 use App\Service\Search\SearchMode;
 use App\Service\Search\SearchTerms;
 use App\Tests\DbTestCase;
@@ -117,7 +118,7 @@ final class SavedSearchEntryListTest extends DbTestCase
 
         $ids = $this->repo()->unreadMatchIdsForSavedSearches(
             (int) $this->user->getId(),
-            $this->query(['climate'])->termsPerSearch,
+            $this->savedSearches(['climate']),
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
         );
 
@@ -162,7 +163,7 @@ final class SavedSearchEntryListTest extends DbTestCase
 
         $ids = $this->repo()->unreadMatchIdsForSavedSearches(
             (int) $this->user->getId(),
-            $this->query([])->termsPerSearch,
+            $this->savedSearches([]),
             new \DateTimeImmutable('2026-07-31T00:00:00Z'),
         );
 
@@ -176,8 +177,7 @@ final class SavedSearchEntryListTest extends DbTestCase
 
         $matched = $this->repo()->matchedSavedSearchIds(
             [(int) $climate->getId(), (int) $rocket->getId()],
-            $this->query(['climate', 'rocket'])->termsPerSearch,
-            [10, 20],
+            $this->savedSearches(['climate', 'rocket']),
         );
 
         self::assertSame([(int) $climate->getId() => 10, (int) $rocket->getId() => 20], $matched);
@@ -189,8 +189,7 @@ final class SavedSearchEntryListTest extends DbTestCase
 
         $matched = $this->repo()->matchedSavedSearchIds(
             [(int) $both->getId()],
-            $this->query(['climate', 'rocket'])->termsPerSearch,
-            [10, 20],
+            $this->savedSearches(['climate', 'rocket']),
         );
 
         self::assertSame([(int) $both->getId() => 10], $matched);
@@ -200,7 +199,7 @@ final class SavedSearchEntryListTest extends DbTestCase
     {
         self::assertSame(
             [],
-            $this->repo()->matchedSavedSearchIds([], $this->query(['climate'])->termsPerSearch, [10]),
+            $this->repo()->matchedSavedSearchIds([], $this->savedSearches(['climate'])),
         );
     }
 
@@ -213,16 +212,30 @@ final class SavedSearchEntryListTest extends DbTestCase
     ): SavedSearchEntryQuery {
         return new SavedSearchEntryQuery(
             (int) $this->user->getId(),
-            array_map(
-                static fn (string $term): SearchTerms => SearchTerms::fromTermAndMode(
-                    $term,
-                    SearchMode::Substring,
-                ),
-                $terms,
-            ),
+            $this->savedSearches($terms),
             $onlyUnread,
             $cursor,
             $limit,
+        );
+    }
+
+    /**
+     * The saved searches a test runs against, keyed 10, 20, … so an assertion
+     * on a reported id cannot pass by matching a position instead.
+     *
+     * @param list<string> $terms
+     *
+     * @return list<SavedSearchTerm>
+     */
+    private function savedSearches(array $terms): array
+    {
+        return array_map(
+            static fn (int $position, string $term): SavedSearchTerm => new SavedSearchTerm(
+                ($position + 1) * 10,
+                SearchTerms::fromTermAndMode($term, SearchMode::Substring),
+            ),
+            array_keys($terms),
+            $terms,
         );
     }
 
@@ -232,7 +245,11 @@ final class SavedSearchEntryListTest extends DbTestCase
         return new SavedSearchEntryQuery(
             (int) $this->user->getId(),
             array_map(
-                static fn (array $termAndMode): SearchTerms => SearchTerms::fromTermAndMode(...$termAndMode),
+                static fn (int $position, array $termAndMode): SavedSearchTerm => new SavedSearchTerm(
+                    ($position + 1) * 10,
+                    SearchTerms::fromTermAndMode(...$termAndMode),
+                ),
+                array_keys($termsAndModes),
                 $termsAndModes,
             ),
         );

@@ -471,12 +471,9 @@ describe('EntriesStore', () => {
       expect(store.entries()[0].savedSearchTerm).toBe('climate');
     });
 
-    // #769 fix round 1: SavedSearchesStore.savedSearches() is itself a
-    // computed over unread-tally bookkeeping, so it emits a new array on
-    // every read in this view and every counts poll. Decoration must not
-    // reallocate the decorated entries on a tick that changed no id or term
-    // — entry-row's image-error-reset effect (#594's failure mode) and the
-    // shell's open-entry tracking both key off entry object identity.
+    // savedSearches() emits a new array on every read and every counts poll, so
+    // decoration must not reallocate rows on a tick that changed no id or term:
+    // entry-row's image-error reset keys off entry identity (#594).
     it('leaves decorated entries reference-equal when only an unrelated saved-search field changes', () => {
       const savedSearches = signal<SavedSearchDto[]>([savedSearch()]);
       TestBed.resetTestingModule();

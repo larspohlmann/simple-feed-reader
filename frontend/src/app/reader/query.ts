@@ -151,7 +151,9 @@ export function visibleSearchTerm(term: string): string {
   return phraseWithin(term) ?? term.trimEnd();
 }
 
-/** Whether the list offers the "All posts / only unread" switch. */
+/** Whether the list offers the "All posts / only unread" switch. The saved
+ *  views and a single search are already filters, on state and on content; a
+ *  standing list the reader keeps is not (#710, #769). */
 export function hasUnreadFilter(s: Selection): boolean {
   return canScopedRefresh(s) || s.kind === 'for-you' || s.kind === 'saved-searches';
 }

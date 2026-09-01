@@ -24,10 +24,9 @@ function unionMatchedWords(existing: string[], incoming: string[]): string[] {
   return union;
 }
 
-/** Value-equality for the id => term map `termsBySavedSearchId` produces, so
- *  its `computed` can tell a real change (a term edited or a search added)
- *  from a same-content reallocation (#769 fix round 1). */
-function sameEntries(a: Map<number, string>, b: Map<number, string>): boolean {
+/** Value-equality for the id => term map below: `savedSearches()` reallocates
+ *  whenever an unread tally moves, which is not a change to the terms. */
+function sameTermsById(a: Map<number, string>, b: Map<number, string>): boolean {
   if (a.size !== b.size) return false;
   for (const [id, term] of a) {
     if (b.get(id) !== term) return false;
@@ -42,25 +41,18 @@ export class EntriesStore {
 
   private readonly rawEntries = signal<EntryDto[]>([]);
   /** Entry id (stringified, as the wire sends it) => the saved search that
-   *  matched it (#769). Kept apart from `rawEntries` so a term arriving after
-   *  its entries — see `termsBySavedSearchId` below — still reaches the pill
-   *  instead of the decoration being decided once, at load time, and wrong. */
+   *  matched it. Kept apart from `rawEntries` so a term arriving after its
+   *  entries still reaches the pill. */
   private readonly savedSearchIdsByEntryId = signal<Record<string, number>>({});
-  /** Saved search id => its display term, re-derived whenever
-   *  `SavedSearchesStore.savedSearches()` changes but — via `equal` — only
-   *  propagated to `entries` below when the id/term pairs themselves changed.
-   *  `savedSearches()` is itself a computed over the sidebar's unread-tally
-   *  bookkeeping, so it emits a new array on every read in the combined view
-   *  and every counts poll; without this, each such tick would reallocate a
-   *  new object for every decorated row, and identity-sensitive effects
-   *  elsewhere (`entry-row`'s image-error reset, the shell's open-entry
-   *  tracking) would fire on a plain unread-count change (#769 fix round 1). */
+  /** Saved search id => its display term. The `equal` is load-bearing: without
+   *  it every unread tick would hand `entries` a new object per row, and
+   *  identity-sensitive effects downstream would fire on a badge change. */
   private readonly termsBySavedSearchId = computed(
     () =>
       new Map(
         this.savedSearchesStore.savedSearches().map((s) => [s.id, visibleSearchTerm(s.term)]),
       ),
-    { equal: sameEntries },
+    { equal: sameTermsById },
   );
   readonly entries = computed(() => {
     const savedSearchIds = this.savedSearchIdsByEntryId();

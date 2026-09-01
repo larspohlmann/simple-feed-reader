@@ -443,19 +443,32 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     // switch. Every arm below reads a translation, so every arm needs it (#411).
     this.language.lang();
     const s = this.selection();
-    if (s.kind === 'favorites') return this.i18n.translate('reader.favorites');
-    if (s.kind === 'kept') return this.i18n.translate('reader.kept');
-    if (s.kind === 'viewed') return this.i18n.translate('reader.viewed');
-    if (s.kind === 'for-you') return this.i18n.translate('reader.forYou');
-    if (s.kind === 'saved-searches') return this.i18n.translate('reader.savedSearches');
-    if (s.kind === 'all') return this.i18n.translate('reader.allItems');
-    if (s.kind === 'tag')
-      return this.selectedTag()?.name ?? this.i18n.translate('reader.tagFallback');
-    if (s.kind === 'search') return `${this.searchTitlePrefix()} ${this.searchTitleBody()}`;
-    return (
-      this.subs.subscriptions().find((x) => x.id === s.id)?.title ??
-      this.i18n.translate('reader.feedFallback')
-    );
+    // A switch with no default, like `titleCount` and `queryFromSelection`: a
+    // new selection kind must fail to compile here rather than quietly
+    // rendering as a feed title.
+    switch (s.kind) {
+      case 'favorites':
+        return this.i18n.translate('reader.favorites');
+      case 'kept':
+        return this.i18n.translate('reader.kept');
+      case 'viewed':
+        return this.i18n.translate('reader.viewed');
+      case 'for-you':
+        return this.i18n.translate('reader.forYou');
+      case 'saved-searches':
+        return this.i18n.translate('reader.savedSearches');
+      case 'all':
+        return this.i18n.translate('reader.allItems');
+      case 'tag':
+        return this.selectedTag()?.name ?? this.i18n.translate('reader.tagFallback');
+      case 'search':
+        return `${this.searchTitlePrefix()} ${this.searchTitleBody()}`;
+      case 'subscription':
+        return (
+          this.subs.subscriptions().find((x) => x.id === s.id)?.title ??
+          this.i18n.translate('reader.feedFallback')
+        );
+    }
   });
 
   /** How much the named list holds — the same number the sidebar row shows for

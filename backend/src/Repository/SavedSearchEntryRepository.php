@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Entry;
-use App\Service\Search\SearchTerms;
+use App\Service\Search\SavedSearchTerm;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -26,26 +26,21 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
 
     /**
      * Every entry matching ANY of the caller's saved searches, newest first and
-     * keyset-paginated exactly like the entry list. One query, so the cursor
-     * and the sort are the list's own; collecting ids per search and merging
-     * them could not page. No join here multiplies a row, so an entry that
-     * matches several searches is returned once without a DISTINCT.
-     *
-     * Deliberately no `includeInAllItems` filter: a search ignores that flag,
-     * and this view is built from searches (#769).
+     * keyset-paginated like the entry list. No join here multiplies a row, so an
+     * entry matching several searches is returned once without a DISTINCT.
      *
      * @return list<EntryListRow>
      */
     public function listForSavedSearches(SavedSearchEntryQuery $query): array
     {
         // An empty predicate list would OR to nothing and match every entry.
-        if ($query->termsPerSearch === []) {
+        if ($query->savedSearches === []) {
             return [];
         }
 
         $qb = $this->newestFirst($this->rowQueryBuilder($query->userId))
             ->setMaxResults($query->limit);
-        $qb->andWhere($this->anySearchMatches($qb, $query->termsPerSearch));
+        $qb->andWhere($this->anySearchMatches($qb, $query->savedSearches));
 
         if ($query->onlyUnread) {
             $qb->andWhere(UnreadDql::predicate())->setParameter('notHidden', false, Types::BOOLEAN);
@@ -64,16 +59,16 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
      * search — the set the combined mark-read flips. Matched through the same
      * predicate the list uses, so it marks exactly what it shows.
      *
-     * @param list<SearchTerms> $termsPerSearch
+     * @param list<SavedSearchTerm> $savedSearches
      *
      * @return list<int>
      */
     public function unreadMatchIdsForSavedSearches(
         int $userId,
-        array $termsPerSearch,
+        array $savedSearches,
         \DateTimeImmutable $until,
     ): array {
-        if ($termsPerSearch === []) {
+        if ($savedSearches === []) {
             return [];
         }
 
@@ -82,31 +77,26 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
         return $this->scalarIds(
             $qb->select('e.id')
                 ->distinct()
-                ->andWhere($this->anySearchMatches($qb, $termsPerSearch))
+                ->andWhere($this->anySearchMatches($qb, $savedSearches))
                 ->andWhere('e.effectiveDate <= :until')
                 ->setParameter('until', $until),
         );
     }
 
     /**
-     * Entry id => the id of the first saved search that matches it, in the
-     * order given. The order is the sidebar's, so the row names the search the
-     * reader would look for first. Takes the terms alone, not a
-     * SavedSearchEntryQuery: this read restricts by id, not by owner or
-     * unread state, so its signature must not suggest otherwise.
+     * Entry id => the id of the first saved search matching it, in the order
+     * given — the sidebar's, so the row names the search the reader would look
+     * for first. Takes the searches alone, not a SavedSearchEntryQuery: this
+     * read restricts by id, not by owner or unread state.
      *
-     * @param list<int>          $entryIds
-     * @param list<SearchTerms>  $termsPerSearch
-     * @param list<int>          $savedSearchIds
+     * @param list<int>             $entryIds
+     * @param list<SavedSearchTerm> $savedSearches
      *
      * @return array<int, int>
      */
-    public function matchedSavedSearchIds(
-        array $entryIds,
-        array $termsPerSearch,
-        array $savedSearchIds,
-    ): array {
-        if ($entryIds === [] || $termsPerSearch === []) {
+    public function matchedSavedSearchIds(array $entryIds, array $savedSearches): array
+    {
+        if ($entryIds === [] || $savedSearches === []) {
             return [];
         }
 
@@ -116,7 +106,7 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
 
         /** @var list<array{id: int, matchedId: int}> $rows */
         $rows = $qb
-            ->select('e.id', $this->firstMatchExpression($qb, $termsPerSearch, $savedSearchIds))
+            ->select('e.id', $this->firstMatchExpression($qb, $savedSearches))
             ->getQuery()
             ->getScalarResult();
 
@@ -136,13 +126,17 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
      * One predicate for "matches any of these searches" — each search's own
      * terms still ANDed inside it, the searches ORed between them.
      *
-     * @param list<SearchTerms> $termsPerSearch
+     * @param list<SavedSearchTerm> $savedSearches
      */
-    private function anySearchMatches(QueryBuilder $qb, array $termsPerSearch): string
+    private function anySearchMatches(QueryBuilder $qb, array $savedSearches): string
     {
         $predicates = [];
-        foreach ($termsPerSearch as $position => $terms) {
-            $predicates[] = $this->termsPredicateBuilder->build($qb, $terms, 'saved' . $position . 'term');
+        foreach ($savedSearches as $position => $savedSearch) {
+            $predicates[] = $this->termsPredicateBuilder->build(
+                $qb,
+                $savedSearch->terms,
+                'saved' . $position . 'term',
+            );
         }
 
         return '(' . implode(' OR ', $predicates) . ')';
@@ -153,20 +147,20 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
      * by the same predicates the list itself matched on rather than by a second
      * implementation of the matching rules.
      *
-     * @param list<SearchTerms> $termsPerSearch
-     * @param list<int>         $savedSearchIds
+     * @param list<SavedSearchTerm> $savedSearches
      */
-    private function firstMatchExpression(
-        QueryBuilder $qb,
-        array $termsPerSearch,
-        array $savedSearchIds,
-    ): string {
+    private function firstMatchExpression(QueryBuilder $qb, array $savedSearches): string
+    {
         $branches = '';
-        foreach ($termsPerSearch as $position => $terms) {
+        foreach ($savedSearches as $position => $savedSearch) {
             $branches .= \sprintf(
                 ' WHEN %s THEN %d',
-                $this->termsPredicateBuilder->build($qb, $terms, 'match' . $position . 'term'),
-                $savedSearchIds[$position],
+                $this->termsPredicateBuilder->build(
+                    $qb,
+                    $savedSearch->terms,
+                    'match' . $position . 'term',
+                ),
+                $savedSearch->id,
             );
         }
 
