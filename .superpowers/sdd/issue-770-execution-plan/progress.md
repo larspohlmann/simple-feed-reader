@@ -29,3 +29,13 @@ and touched-file PHPMD pass. Docker MySQL full-suite verification twice reached
 the same unrelated clock-comparison failure in
 `RecommendationRunAdvancerTest::testATickThatStreamsRefreshesItsLock`; its
 isolated Docker test passes. This remains a task concern, not a Task 1 change.
+
+## Task 2 implementation
+
+Implemented inside-out reader-card classification with nearest-candidate signal
+ownership and a captioned-figure guard. Focused RED failed in the three expected
+branches. Focused GREEN passed 12 tests. The full frontend check passed 193
+suites and 2,257 tests. The host production build passed outside the sandbox.
+The implementation is ready for the Task 2 review; see `task-2-report.md`.
+
+Task 2 implementation commit: `6993c780`.

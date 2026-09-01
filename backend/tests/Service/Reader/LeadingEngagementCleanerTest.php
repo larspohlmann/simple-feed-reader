@@ -107,6 +107,18 @@ final class LeadingEngagementCleanerTest extends TestCase
         self::assertSame($this->documentHtml($html), $this->clean($html, 'Jana Steger'));
     }
 
+    public function testRemovesTheNestedLeadingChromeFromEntry494422(): void
+    {
+        $clean = $this->clean($this->entry494422(), 'Svenja-Marie Kahl');
+
+        self::assertStringNotContainsString('01.09.2026 18:39', $clean);
+        self::assertStringNotContainsString('❤️', $clean);
+        self::assertStringNotContainsString('😂', $clean);
+        self::assertStringNotContainsString('Von Svenja-Marie Kahl', $clean);
+        self::assertStringContainsString('Frischer Wind in Hamburg', $clean);
+        self::assertStringContainsString('Überraschung für alle Musical-Fans', $clean);
+    }
+
     private function clean(string $html, ?string $entryAuthor): string
     {
         $document = HtmlDocumentParser::parseOrNull($html);
@@ -123,5 +135,17 @@ final class LeadingEngagementCleanerTest extends TestCase
         self::assertNotNull($document);
 
         return $document->saveHtml();
+    }
+
+    private function entry494422(): string
+    {
+        return '<div><section><article><header><hr></header><section>'
+            . '<div><p class="lead"><time>01.09.2026 18:39</time></p></div>'
+            . '<div><div><p><span>❤️️</span></p><p><span>😂️</span></p><p><span>😱️</span></p>'
+            . '<p><span>🔥️</span></p><p><span>😥️</span></p><p><span>👏️</span></p></div></div>'
+            . '<p>Frischer Wind in Hamburg: Ab Herbst spielt Erik Hamilton die Hauptrolle im "MJ - Das Michael Jackson '
+            . 'Musical" in Hamburg.</p><p>Von Svenja-Marie Kahl</p><p>Hamburg - Überraschung für alle Musical-Fans: '
+            . '"MJ - Das Michael Jackson Musical" in Hamburg bekommt einen neuen Hauptdarsteller. ' . self::PROSE
+            . '</p></section></article></section></div>';
     }
 }

@@ -121,11 +121,11 @@ final readonly class ExtractedBody
         return new BodyBlock($element->localName, $text, $links, self::isTimeOnly($element));
     }
 
-    /** A block that wraps other blocks reports its children's text, not its own. */
+    /** A block that wraps another block reports the innermost block's text, not its own. */
     private static function hasBlockChild(Element $element): bool
     {
-        for ($child = $element->firstElementChild; $child !== null; $child = $child->nextElementSibling) {
-            if (\in_array($child->localName, self::BLOCK_TAGS, true)) {
+        foreach ($element->getElementsByTagName('*') as $descendant) {
+            if (\in_array($descendant->localName, self::BLOCK_TAGS, true)) {
                 return true;
             }
         }

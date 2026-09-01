@@ -6,6 +6,7 @@ namespace App\Service\Reader;
 
 use Dom\Element;
 use Dom\HTMLDocument;
+use Dom\Node;
 
 final readonly class LeadingEngagementCleaner
 {
@@ -15,7 +16,8 @@ final readonly class LeadingEngagementCleaner
             return;
         }
 
-        $blocks = $this->elementChildren($this->contentRoot($document->body));
+        $root = $this->contentRoot($document->body);
+        $blocks = LeadingEngagementBlocks::in($root);
         $anchor = $this->firstProseAnchor($blocks);
         if ($anchor === null) {
             return;
@@ -24,12 +26,25 @@ final readonly class LeadingEngagementCleaner
         $leading = array_slice($blocks, 0, $anchor);
         $removedEngagement = false;
         foreach ($leading as $block) {
-            $removed = $this->removeEngagementFrom($block, $this->hasAuthor($entryAuthor));
-            $removedEngagement = $removed || $removedEngagement;
+            if (!$this->isEngagement($block, $this->hasAuthor($entryAuthor))) {
+                continue;
+            }
+
+            $block->remove();
+            $removedEngagement = true;
+        }
+
+        $followingByline = $blocks[$anchor + 1] ?? null;
+        if (
+            $removedEngagement
+            && $followingByline !== null
+            && $this->isDuplicateByline($followingByline, $entryAuthor)
+        ) {
+            $followingByline->remove();
         }
 
         if ($removedEngagement) {
-            $this->removeRemainders($leading);
+            $this->removeRemaindersBefore($root, $blocks[$anchor]);
         }
     }
 
@@ -89,43 +104,20 @@ final readonly class LeadingEngagementCleaner
         return $length;
     }
 
-    private function removeEngagementFrom(Element $element, bool $hasAuthor): bool
+    private function removeRemaindersBefore(Element $element, Element $anchor): void
     {
-        if ($this->isEngagement($element, $hasAuthor)) {
-            $element->remove();
-
-            return true;
-        }
-
-        $removedChild = false;
         foreach ($this->elementChildren($element) as $child) {
-            $removedChild = $this->removeEngagementFrom($child, $hasAuthor) || $removedChild;
+            $this->removeRemaindersBefore($child, $anchor);
         }
 
-        if ($removedChild && $this->isRemainder($element)) {
+        if ($element->parentNode !== null && $this->precedes($element, $anchor) && $this->isRemainder($element)) {
             $element->remove();
-        }
-
-        return $removedChild;
-    }
-
-    /** @param list<Element> $elements */
-    private function removeRemainders(array $elements): void
-    {
-        foreach ($elements as $element) {
-            $this->removeRemaindersFrom($element);
         }
     }
 
-    private function removeRemaindersFrom(Element $element): void
+    private function precedes(Element $element, Element $anchor): bool
     {
-        foreach ($this->elementChildren($element) as $child) {
-            $this->removeRemaindersFrom($child);
-        }
-
-        if ($element->parentNode !== null && $this->isRemainder($element)) {
-            $element->remove();
-        }
+        return ($element->compareDocumentPosition($anchor) & Node::DOCUMENT_POSITION_FOLLOWING) !== 0;
     }
 
     private function isEngagement(Element $element, bool $hasAuthor): bool
@@ -136,6 +128,12 @@ final readonly class LeadingEngagementCleaner
             || LeadingEngagementRules::isCounter($text)
             || $this->isTimeOnly($element)
             || ($hasAuthor && LeadingEngagementRules::isByline($text));
+    }
+
+    private function isDuplicateByline(Element $element, ?string $entryAuthor): bool
+    {
+        return $this->hasAuthor($entryAuthor)
+            && LeadingEngagementRules::isByline((string) $element->textContent);
     }
 
     private function isTimeOnly(Element $element): bool
