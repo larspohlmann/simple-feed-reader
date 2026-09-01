@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\ReaderAudit;
 
+use App\Service\Reader\LeadingEngagementRules;
+
 /**
  * One paragraph-level line of the cleaned article, with enough about its links
  * to say whether it is prose or chrome. Where a block sits matters more than
@@ -20,8 +22,6 @@ final readonly class BodyBlock
      * "started" and its whole body read as the region above it — 111 blocks of
      * an Attack Magazine interview, every one of them prose (#744).
      */
-    private const int PROSE_CHARS = 120;
-
     /** A block whose text is this share links is a menu entry, not a sentence. */
     private const float LINK_DOMINATED = 0.8;
 
@@ -30,6 +30,7 @@ final readonly class BodyBlock
         public string $tag,
         public string $text,
         public array $links,
+        public bool $isTimeOnly = false,
     ) {
     }
 
@@ -93,6 +94,16 @@ final readonly class BodyBlock
     /** The first block that answers true is where the article begins. */
     public function isProse(): bool
     {
-        return $this->length() >= self::PROSE_CHARS && !$this->isLinkDominated();
+        return LeadingEngagementRules::isProse($this->text, $this->linkedTextLength());
+    }
+
+    private function linkedTextLength(): int
+    {
+        $length = 0;
+        foreach ($this->links as $link) {
+            $length += mb_strlen($link->text);
+        }
+
+        return $length;
     }
 }

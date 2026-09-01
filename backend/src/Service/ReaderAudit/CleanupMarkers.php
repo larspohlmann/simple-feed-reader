@@ -20,6 +20,7 @@ final readonly class CleanupMarkers
 {
     public function __construct(
         private LeadingChromeMarkers $leadingChrome,
+        private LeadingEngagementMarkers $leadingEngagement,
         private SocialWidgetMarkers $socialWidgets,
         private BodyShapeMarkers $bodyShape,
         private PhraseMarkers $phrases,
@@ -40,6 +41,7 @@ final readonly class CleanupMarkers
 
         return [
             ...$this->leadingChrome->detect($body),
+            ...$this->leadingEngagement->detect($body, $entry->author),
             ...$this->socialWidgets->detect($body),
             ...$this->bodyShape->detect($body, $entry, $result->title),
             ...$this->phrases->detect($body),

@@ -118,7 +118,7 @@ final readonly class ExtractedBody
             $links[] = self::linkOf($link);
         }
 
-        return new BodyBlock($element->localName, $text, $links);
+        return new BodyBlock($element->localName, $text, $links, self::isTimeOnly($element));
     }
 
     /** A block that wraps other blocks reports its children's text, not its own. */
@@ -131,6 +131,14 @@ final readonly class ExtractedBody
         }
 
         return false;
+    }
+
+    private static function isTimeOnly(Element $element): bool
+    {
+        $times = $element->getElementsByTagName('time');
+
+        return $times->length === 1
+            && self::collapsed($element->textContent) === self::collapsed($times->item(0)?->textContent);
     }
 
     /** @return list<BodyLink> */

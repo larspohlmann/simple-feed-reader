@@ -44,7 +44,7 @@ final readonly class ReaderAuditRunner
     private function audit(SampledEntry $entry, ReaderLink $link): AuditFinding
     {
         $result = $this->coverageGate->verify(
-            $this->extractor->extract($entry->url, $entry->title),
+            $this->extractor->extract($entry->url, $entry->title, $entry->author),
             $entry->feedContentHtml,
         );
 

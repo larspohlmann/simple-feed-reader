@@ -47,7 +47,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
     ) {
     }
 
-    public function extract(string $url, ?string $entryTitle = null): ExtractionResult
+    public function extract(string $url, ?string $entryTitle = null, ?string $entryAuthor = null): ExtractionResult
     {
         try {
             $page = $this->fetcher->fetch($url);
@@ -74,7 +74,13 @@ final class ArticleExtractor implements ArticleExtractorInterface
         }
 
         $leadImage = new LeadImageCandidate($article->image, $pageImages);
-        $body = $this->bodyCleaner->clean($article->content, [$article->title, $entryTitle], $leadImage, $media);
+        $body = $this->bodyCleaner->clean(
+            $article->content,
+            [$article->title, $entryTitle],
+            $leadImage,
+            $media,
+            $entryAuthor,
+        );
         $clean = $this->sanitizer->sanitize($body);
         if ($clean === null) {
             return ExtractionResult::failed($url, 'empty');

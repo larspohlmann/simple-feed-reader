@@ -9,6 +9,7 @@ use App\Service\ReaderAudit\BodyShapeMarkers;
 use App\Service\ReaderAudit\CleanupMarkers;
 use App\Service\ReaderAudit\ExtractedBody;
 use App\Service\ReaderAudit\LeadingChromeMarkers;
+use App\Service\ReaderAudit\LeadingEngagementMarkers;
 use App\Service\ReaderAudit\PhraseMarkers;
 use App\Service\ReaderAudit\SampledEntry;
 use App\Service\ReaderAudit\SocialWidgetMarkers;
@@ -22,6 +23,7 @@ final class CleanupMarkersTest extends TestCase
     {
         $this->markers = new CleanupMarkers(
             new LeadingChromeMarkers(),
+            new LeadingEngagementMarkers(),
             new SocialWidgetMarkers(),
             new BodyShapeMarkers(),
             new PhraseMarkers(),
@@ -60,6 +62,19 @@ final class CleanupMarkersTest extends TestCase
 
         self::assertContains('leading_link_list', $codes);
         self::assertContains('share_intent_link', $codes);
+    }
+
+    public function testIncludesTheLeadingEngagementMarker(): void
+    {
+        $html = '<p>1.251 Klicks</p><p>' . str_repeat('Artikeltext. ', 20) . '</p>';
+        $result = ExtractionResult::ok('https://example.test/a', 'Titel', null, null, $html, null);
+
+        $codes = array_map(
+            static fn ($marker): string => $marker->code,
+            $this->markers->detect($result, $this->entry(), ExtractedBody::fromHtml($html)),
+        );
+
+        self::assertContains('leading_engagement_chrome', $codes);
     }
 
     private function entry(): SampledEntry

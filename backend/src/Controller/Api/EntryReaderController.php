@@ -54,7 +54,7 @@ final readonly class EntryReaderController
         $url = $entry->getUrl();
         $result = $url === null || $url === ''
             ? ExtractionResult::failed(null, 'no_url')
-            : $this->extractor->extract($url, $entry->getTitle());
+            : $this->extractor->extract($url, $entry->getTitle(), $entry->getAuthor());
 
         // A confident-but-wrong extraction (page furniture instead of the article)
         // is failed here so the client falls back to the feed body (#654).

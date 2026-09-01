@@ -145,6 +145,29 @@ final class EntryReaderControllerTest extends WebTestCase
         );
     }
 
+    public function testCarriesTheEntryAuthorIntoTheReaderExtraction(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('reader-author@example.com');
+        $fake = $this->installFake();
+        $fake->willReturn(ExtractionResult::ok(
+            'https://example.com/article',
+            'The Title',
+            null,
+            null,
+            '<p>Body</p>',
+            null,
+        ));
+        $entry = $this->seedEntry($user, 'https://example.com/article');
+        $entry->setAuthor('Jana Steger');
+        $this->flush();
+
+        $client->request('GET', '/api/entries/' . $entry->getId() . '/reader', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('Jana Steger', $fake->requests[0]['author']);
+    }
+
     public function testOffTopicExtractionOfAFullFeedArticleFallsBackToTheFeed(): void
     {
         $client = self::createClient();
@@ -202,6 +225,13 @@ final class EntryReaderControllerTest extends WebTestCase
         $em = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $em);
         $entry->setContentHtml($html);
+        $em->flush();
+    }
+
+    private function flush(): void
+    {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
         $em->flush();
     }
 

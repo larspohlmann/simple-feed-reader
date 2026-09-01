@@ -14,6 +14,7 @@ use App\Service\Reader\EdgeBoilerplateTrimmer;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\LazyImageSources;
+use App\Service\Reader\LeadingEngagementCleaner;
 use App\Service\Reader\LeadingTitleRemover;
 use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProviders;
@@ -94,6 +95,7 @@ final class ArticleExtractorTest extends TestCase
         return new ReaderBodyCleaner(
             new NavigationChromeTrimmer(),
             new LeadingTitleRemover(),
+            new LeadingEngagementCleaner(),
             new EdgeBoilerplateTrimmer(),
             new ReaderLeadImage(),
             new InBodyEmbedRewriter(new EmbedProviders([new YouTubeEmbedProvider()]), $markup),
