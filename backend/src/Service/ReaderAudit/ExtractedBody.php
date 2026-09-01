@@ -6,6 +6,7 @@ namespace App\Service\ReaderAudit;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\LeadingEngagementBlocks;
+use App\Service\Reader\LeadingEngagementRules;
 use Dom\Element;
 
 /**
@@ -48,7 +49,7 @@ final readonly class ExtractedBody
         $body = $document->body;
 
         return new self(
-            text: self::collapsed($body->textContent),
+            text: LeadingEngagementRules::collapse($body->textContent),
             blocks: self::blocks($body),
             links: self::links($body),
             imageSources: self::imageSources($body),
@@ -97,8 +98,8 @@ final readonly class ExtractedBody
     private static function blocks(Element $body): array
     {
         $blocks = [];
-        foreach (LeadingEngagementBlocks::in($body) as $element) {
-            $blocks[] = self::blockOf($element, self::collapsed($element->textContent));
+        foreach (LeadingEngagementBlocks::in($body) as $block) {
+            $blocks[] = self::blockOf($block->element, $block->text);
         }
 
         return $blocks;
@@ -127,7 +128,7 @@ final readonly class ExtractedBody
 
     private static function linkOf(Element $link): BodyLink
     {
-        return new BodyLink((string) $link->getAttribute('href'), self::collapsed($link->textContent));
+        return new BodyLink((string) $link->getAttribute('href'), LeadingEngagementRules::collapse($link->textContent));
     }
 
     /** @return list<string> */
@@ -149,10 +150,5 @@ final readonly class ExtractedBody
         }
 
         return $count;
-    }
-
-    private static function collapsed(?string $text): string
-    {
-        return trim((string) preg_replace('/\s+/u', ' ', (string) $text));
     }
 }

@@ -119,6 +119,18 @@ final class LeadingEngagementCleanerTest extends TestCase
         self::assertStringContainsString('Überraschung für alle Musical-Fans', $clean);
     }
 
+    public function testKeepsARealParagraphAfterTheAnchorThatMerelyOpensWithVon(): void
+    {
+        $paragraph = 'Von Beginn an war klar, dass dieser Fall die Ermittler noch lange beschäftigen würde, '
+            . 'denn die Spuren führten quer durch die ganze Stadt und weit über ihre Grenzen hinaus.';
+        $html = '<div><p>1.251 Klicks</p><p>' . self::PROSE . '</p><p>' . $paragraph . '</p></div>';
+
+        $clean = $this->clean($html, 'Jana Steger');
+
+        self::assertStringNotContainsString('Klicks', $clean);
+        self::assertStringContainsString($paragraph, $clean);
+    }
+
     private function clean(string $html, ?string $entryAuthor): string
     {
         $document = HtmlDocumentParser::parseOrNull($html);

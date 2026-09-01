@@ -30,7 +30,7 @@ final readonly class LeadingEngagementCleaner
                 continue;
             }
 
-            $block->remove();
+            $block->element->remove();
             $removedEngagement = true;
         }
 
@@ -40,11 +40,11 @@ final readonly class LeadingEngagementCleaner
             && $followingByline !== null
             && $this->isDuplicateByline($followingByline, $entryAuthor)
         ) {
-            $followingByline->remove();
+            $followingByline->element->remove();
         }
 
         if ($removedEngagement) {
-            $this->removeRemaindersBefore($root, $blocks[$anchor]);
+            $this->removeRemaindersBefore($root, $blocks[$anchor]->element);
         }
     }
 
@@ -82,11 +82,11 @@ final readonly class LeadingEngagementCleaner
         return $children;
     }
 
-    /** @param list<Element> $blocks */
+    /** @param list<LeadingBlock> $blocks */
     private function firstProseAnchor(array $blocks): ?int
     {
         foreach ($blocks as $index => $block) {
-            if (LeadingEngagementRules::isProse((string) $block->textContent, $this->linkTextLength($block))) {
+            if ($this->isProse($block)) {
                 return $index;
             }
         }
@@ -94,11 +94,16 @@ final readonly class LeadingEngagementCleaner
         return null;
     }
 
+    private function isProse(LeadingBlock $block): bool
+    {
+        return LeadingEngagementRules::isProse($block->text, $this->linkTextLength($block->element));
+    }
+
     private function linkTextLength(Element $element): int
     {
         $length = 0;
         foreach ($element->getElementsByTagName('a') as $link) {
-            $length += mb_strlen(trim((string) $link->textContent));
+            $length += mb_strlen(LeadingEngagementRules::collapse($link->textContent));
         }
 
         return $length;
@@ -120,26 +125,30 @@ final readonly class LeadingEngagementCleaner
         return ($element->compareDocumentPosition($anchor) & Node::DOCUMENT_POSITION_FOLLOWING) !== 0;
     }
 
-    private function isEngagement(Element $element, ?string $entryAuthor): bool
+    private function isEngagement(LeadingBlock $block, ?string $entryAuthor): bool
     {
-        $text = (string) $element->textContent;
-
-        return LeadingEngagementRules::isEmojiOnly($text)
-            || LeadingEngagementRules::isCounter($text)
-            || LeadingEngagementBlocks::isTimeOnly($element)
-            || (LeadingEngagementRules::hasAuthor($entryAuthor) && LeadingEngagementRules::isByline($text));
+        return LeadingEngagementRules::isEmojiOnly($block->text)
+            || LeadingEngagementRules::isCounter($block->text)
+            || LeadingEngagementBlocks::isTimeOnly($block->element)
+            || (LeadingEngagementRules::hasAuthor($entryAuthor) && LeadingEngagementRules::isByline($block->text));
     }
 
-    private function isDuplicateByline(Element $element, ?string $entryAuthor): bool
+    /**
+     * A byline block sitting right after the first prose block still duplicates
+     * the reader meta line. Guard on non-prose so a real paragraph that merely
+     * opens with "Von"/"By" is never mistaken for the byline and deleted.
+     */
+    private function isDuplicateByline(LeadingBlock $block, ?string $entryAuthor): bool
     {
         return LeadingEngagementRules::hasAuthor($entryAuthor)
-            && LeadingEngagementRules::isByline((string) $element->textContent);
+            && !$this->isProse($block)
+            && LeadingEngagementRules::isByline($block->text);
     }
 
     private function isRemainder(Element $element): bool
     {
         return $element->localName === 'hr'
-            || ($this->collapsed($element->textContent) === '' && !$this->hasMedia($element));
+            || (LeadingEngagementRules::collapse($element->textContent) === '' && !$this->hasMedia($element));
     }
 
     private function hasMedia(Element $element): bool
@@ -151,10 +160,5 @@ final readonly class LeadingEngagementCleaner
         }
 
         return false;
-    }
-
-    private function collapsed(?string $text): string
-    {
-        return trim((string) preg_replace('/\s+/u', ' ', (string) $text));
     }
 }

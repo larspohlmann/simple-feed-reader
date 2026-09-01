@@ -15,9 +15,16 @@ final class LeadingEngagementRules
         'clicks', 'views', 'reactions', 'comments',
     ];
 
+    /** The single whitespace-collapse every rule and both layers normalize with. */
+    public static function collapse(?string $text): string
+    {
+        return trim((string) preg_replace('/\s+/u', ' ', (string) $text));
+    }
+
+    /** Callers pass already-collapsed text (see {@see collapse()}). */
     public static function isProse(string $text, int $linkTextLength): bool
     {
-        $textLength = mb_strlen(self::collapsed($text));
+        $textLength = mb_strlen($text);
 
         return $textLength >= self::PROSE_CHARS && $linkTextLength / $textLength < self::LINK_DOMINATED;
     }
@@ -37,12 +44,12 @@ final class LeadingEngagementRules
         $number = '(?:\\d{1,3}(?:[., ]\\d{3})*|\\d+)';
         $nouns = implode('|', self::COUNTER_NOUNS);
 
-        return preg_match('/^' . $number . '\\s+(?:' . $nouns . ')$/u', mb_strtolower(self::collapsed($text))) === 1;
+        return preg_match('/^' . $number . '\\s+(?:' . $nouns . ')$/u', mb_strtolower($text)) === 1;
     }
 
     public static function isByline(string $text): bool
     {
-        return preg_match('/^(?:von|by)\\s+\\S.*$/ui', self::collapsed($text)) === 1;
+        return preg_match('/^(?:von|by)\\s+\\S.*$/ui', $text) === 1;
     }
 
     public static function hasAuthor(?string $entryAuthor): bool
@@ -53,10 +60,5 @@ final class LeadingEngagementRules
     private static function withoutWhitespace(string $text): string
     {
         return (string) preg_replace('/\s+/u', '', $text);
-    }
-
-    private static function collapsed(string $text): string
-    {
-        return trim((string) preg_replace('/\s+/u', ' ', $text));
     }
 }

@@ -10,7 +10,7 @@ final class LeadingEngagementBlocks
 {
     private const array BLOCK_TAGS = ['p', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'figcaption', 'div'];
 
-    /** @return list<Element> */
+    /** @return list<LeadingBlock> */
     public static function in(Element $root): array
     {
         $blocks = [];
@@ -19,8 +19,9 @@ final class LeadingEngagementBlocks
                 continue;
             }
 
-            if (self::collapsed($element->textContent) !== '') {
-                $blocks[] = $element;
+            $text = LeadingEngagementRules::collapse($element->textContent);
+            if ($text !== '') {
+                $blocks[] = new LeadingBlock($element, $text);
             }
         }
 
@@ -32,7 +33,8 @@ final class LeadingEngagementBlocks
         $times = $element->getElementsByTagName('time');
 
         return $times->length === 1
-            && self::collapsed($element->textContent) === self::collapsed($times->item(0)?->textContent);
+            && LeadingEngagementRules::collapse($element->textContent)
+                === LeadingEngagementRules::collapse($times->item(0)?->textContent);
     }
 
     private static function isLeafTextBlock(Element $element): bool
@@ -50,10 +52,5 @@ final class LeadingEngagementBlocks
         }
 
         return false;
-    }
-
-    private static function collapsed(?string $text): string
-    {
-        return trim((string) preg_replace('/\s+/u', ' ', (string) $text));
     }
 }
