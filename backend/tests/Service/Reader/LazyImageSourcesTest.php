@@ -199,6 +199,35 @@ final class LazyImageSourcesTest extends TestCase
         self::assertSame('https://images.example.com/photo.jpg?width=800', $source);
     }
 
+    public function testRemovesStaleDimensionsWhenAdoptingAPictureSource(): void
+    {
+        $image = $this->resolvedDocument(
+            '<picture>'
+            . '<source srcset="https://images.example.com/photo-1300.jpg 1300w">'
+            . '<img src="https://images.example.com/photo-480.jpg" width="480" height="274">'
+            . '</picture>'
+        )->getElementsByTagName('img')->item(0);
+
+        self::assertInstanceOf(\Dom\Element::class, $image);
+        self::assertSame('https://images.example.com/photo-1300.jpg', $image->getAttribute('src'));
+        self::assertNull($image->getAttribute('width'));
+        self::assertNull($image->getAttribute('height'));
+    }
+
+    public function testKeepsDimensionsWhenThePictureSourceUsesTheSameUrl(): void
+    {
+        $image = $this->resolvedDocument(
+            '<picture>'
+            . '<source srcset="https://images.example.com/photo.jpg 1300w">'
+            . '<img src="https://images.example.com/photo.jpg" width="1300" height="742">'
+            . '</picture>'
+        )->getElementsByTagName('img')->item(0);
+
+        self::assertInstanceOf(\Dom\Element::class, $image);
+        self::assertSame('1300', $image->getAttribute('width'));
+        self::assertSame('742', $image->getAttribute('height'));
+    }
+
     public function testKeepsTheImageWhenItsWidthEqualsTheWidestSource(): void
     {
         // Equal widths leave the <img> in place: the source is no improvement.

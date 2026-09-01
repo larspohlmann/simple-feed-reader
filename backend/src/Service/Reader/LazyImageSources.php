@@ -105,12 +105,19 @@ final readonly class LazyImageSources
             return;
         }
 
-        $imageWidth = $this->declaredWidth($image->getAttribute('src'));
+        $imageSource = $image->getAttribute('src');
+        if ($imageSource === $widest->url) {
+            return;
+        }
+
+        $imageWidth = $this->declaredWidth($imageSource);
         if ($imageWidth !== null && ($widest->width === null || $imageWidth >= $widest->width)) {
             return;
         }
 
         $image->setAttribute('src', $widest->url);
+        $image->removeAttribute('width');
+        $image->removeAttribute('height');
     }
 
     /**

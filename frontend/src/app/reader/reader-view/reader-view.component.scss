@@ -635,6 +635,10 @@ article {
   border-radius: var(--radius);
 }
 
+.content ::ng-deep img {
+  width: auto;
+}
+
 /* Substack video placeholders (#627) carry no class -- the shared sanitizer
    strips class/style/data-*, so the alt text the backend writes is the only
    stable hook. A centered play badge marks the poster as a video, not a
