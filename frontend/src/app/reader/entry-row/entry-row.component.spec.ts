@@ -148,4 +148,16 @@ describe('EntryRowComponent', () => {
 
     expect(out).toEqual({ favorite: 1, open: 0 });
   });
+
+  it('names the saved search the entry came from (#769)', () => {
+    const el = mount(entry({ savedSearchTerm: 'climate' })).nativeElement as HTMLElement;
+    const pill = el.querySelector('.saved-search-pill')!;
+    expect(pill.textContent).toContain('climate');
+    expect(pill.getAttribute('title')).toBe('climate');
+  });
+
+  it('renders no pill outside the combined saved-search list (#769)', () => {
+    const el = mount(entry()).nativeElement as HTMLElement;
+    expect(el.querySelector('.saved-search-pill')).toBeNull();
+  });
 });

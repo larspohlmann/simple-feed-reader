@@ -27,6 +27,31 @@
   border-color: var(--accent);
 }
 
+/* The saved search this entry came from, appended to the meta line — the tag
+   pill's look (source-tags .pill), copied rather than shared: that class
+   lives private to source-tags and this component cannot restructure it.
+   `min-width: 0` plus the ellipsis on the one element (no inner .name to
+   split it across, since this pill carries no glyph) is the same
+   load-bearing chain as source-tags' (#769). */
+.saved-search-pill {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-inline-size: 12ch;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  margin-left: var(--space-2);
+  padding: var(--space-0) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: var(--fs-xs, 0.72rem);
+  line-height: 1.5;
+}
+
 .body {
   flex: 1;
   min-width: 0;

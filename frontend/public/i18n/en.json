@@ -741,6 +741,7 @@
     "toggleSavedSearches": "Toggle saved searches",
     "saveSearch": "Save search",
     "saveSearchShort": "Save",
+    "matchedSavedSearch": "Matched the saved search {{term}}",
     "removeSavedSearch": "Remove saved search",
     "removeSavedSearchShort": "Remove",
     "searchSaved": "Search saved",

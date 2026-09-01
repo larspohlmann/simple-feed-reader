@@ -1,9 +1,11 @@
 // src/app/reader/entries.store.ts
 import { HttpErrorResponse } from '@angular/common/http';
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { Problem, parseProblem } from '../core/problem';
 import { ReaderApi } from './reader-api';
 import { EntryDto, EntryQuery, EntryStatePatch } from './models';
+import { SavedSearchesStore } from './saved-searches.store';
+import { visibleSearchTerm } from './query';
 
 /** Adds `incoming` to `existing`, deduplicated case-insensitively but keeping
  *  the casing first seen — mirrors how the backend already dedupes matched
@@ -25,8 +27,27 @@ function unionMatchedWords(existing: string[], incoming: string[]): string[] {
 @Injectable({ providedIn: 'root' })
 export class EntriesStore {
   private readonly api = inject(ReaderApi);
+  private readonly savedSearchesStore = inject(SavedSearchesStore);
 
-  readonly entries = signal<EntryDto[]>([]);
+  private readonly rawEntries = signal<EntryDto[]>([]);
+  /** Entry id (stringified, as the wire sends it) => the saved search that
+   *  matched it. Kept apart from `rawEntries` and re-joined by `entries`
+   *  below, a computed, rather than baked into the entries at load time: the
+   *  combined saved-search list's own load and the sidebar's SavedSearchesStore
+   *  load race on boot, so a term arriving after its entries must still reach
+   *  the pill instead of leaving it decided once and wrong. */
+  private readonly savedSearchIdsByEntryId = signal<Record<string, number>>({});
+  readonly entries = computed(() => {
+    const savedSearchIds = this.savedSearchIdsByEntryId();
+    if (Object.keys(savedSearchIds).length === 0) return this.rawEntries();
+    const termsById = new Map(
+      this.savedSearchesStore.savedSearches().map((s) => [s.id, visibleSearchTerm(s.term)]),
+    );
+    return this.rawEntries().map((entry) => {
+      const term = termsById.get(savedSearchIds[String(entry.id)]);
+      return term ? { ...entry, savedSearchTerm: term } : entry;
+    });
+  });
   readonly nextCursor = signal<string | null>(null);
   readonly loading = signal(false);
   readonly loadingMore = signal(false);
@@ -68,7 +89,8 @@ export class EntriesStore {
     this.api.entries(query).subscribe({
       next: (page) => {
         if (seq !== this.loadSeq) return;
-        this.entries.set(page.entries);
+        this.rawEntries.set(page.entries);
+        this.savedSearchIdsByEntryId.set(page.savedSearchIds ?? {});
         this.nextCursor.set(page.nextCursor);
         this.matchedWords.set(page.matchedWords ?? []);
         this.loading.set(false);
@@ -77,7 +99,8 @@ export class EntriesStore {
         if (seq !== this.loadSeq) return;
         // Drop the retained rows: loading ends here, so they would un-dim and
         // turn interactive again while belonging to a view the user has left.
-        this.entries.set([]);
+        this.rawEntries.set([]);
+        this.savedSearchIdsByEntryId.set({});
         this.matchedWords.set([]);
         this.error.set(parseProblem(e));
         this.loading.set(false);
@@ -93,7 +116,8 @@ export class EntriesStore {
     this.api.entries(this.query, cursor).subscribe({
       next: (page) => {
         if (seq !== this.loadSeq) return; // a load() has since replaced the list
-        this.entries.update((cur) => [...cur, ...page.entries]);
+        this.rawEntries.update((cur) => [...cur, ...page.entries]);
+        this.savedSearchIdsByEntryId.update((cur) => ({ ...cur, ...page.savedSearchIds }));
         this.nextCursor.set(page.nextCursor);
         // Unioned, not replaced: the previous page's rows are still on
         // screen and are still marked by the words they matched — see the
@@ -114,15 +138,15 @@ export class EntriesStore {
   /** Optimistic patch of one entry's flags; reverts only that entry if the PATCH
    *  fails (never clobbering pages appended in the meantime) and surfaces the error. */
   setState(entryId: number, patch: EntryStatePatch, onError?: () => void): void {
-    const before = this.entries().find((e) => e.id === entryId);
+    const before = this.rawEntries().find((e) => e.id === entryId);
     if (!before) return;
     this.error.set(null);
-    this.entries.update((cur) =>
+    this.rawEntries.update((cur) =>
       cur.map((e) => (e.id === entryId ? { ...e, ...localStatePatch(patch) } : e)),
     );
     this.api.updateState(entryId, patch).subscribe({
       error: (err: HttpErrorResponse) => {
-        this.entries.update((cur) => cur.map((e) => (e.id === entryId ? before : e)));
+        this.rawEntries.update((cur) => cur.map((e) => (e.id === entryId ? before : e)));
         this.error.set(parseProblem(err));
         onError?.();
       },

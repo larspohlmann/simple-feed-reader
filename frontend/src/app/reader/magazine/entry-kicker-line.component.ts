@@ -1,6 +1,7 @@
 // src/app/reader/magazine/entry-kicker-line.component.ts
 import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { EntryDto } from '../models';
 import { relativeTime } from '../format';
 import { LanguageService } from '../../core/language.service';
@@ -16,7 +17,7 @@ import { selectionQueryParams } from '../query';
  */
 @Component({
   selector: 'app-entry-kicker-line',
-  imports: [FaviconComponent, RouterLink],
+  imports: [FaviconComponent, RouterLink, TranslocoPipe],
   templateUrl: './entry-kicker-line.component.html',
   styleUrl: './entry-kicker-line.component.scss',
 })

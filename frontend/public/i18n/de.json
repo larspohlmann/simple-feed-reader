@@ -741,6 +741,7 @@
     "toggleSavedSearches": "Gespeicherte Suchen ein-/ausklappen",
     "saveSearch": "Suche speichern",
     "saveSearchShort": "Speichern",
+    "matchedSavedSearch": "Passt zur gespeicherten Suche {{term}}",
     "removeSavedSearch": "Gespeicherte Suche entfernen",
     "removeSavedSearchShort": "Entfernen",
     "searchSaved": "Suche gespeichert",

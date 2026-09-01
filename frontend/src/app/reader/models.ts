@@ -158,6 +158,9 @@ export interface EntryDto {
   /** When that run generated (ISO, RFC 3339); set only on for-you results. Drives
    *  the run-boundary divider's "Generated ..." label (#348). */
   runGeneratedAt?: string;
+  /** The saved search this entry came from, for the kicker's pill. Set by the
+   *  store from the combined list's own provenance map, and by nothing else. */
+  savedSearchTerm?: string;
 }
 
 export interface EntriesPage {
@@ -171,6 +174,9 @@ export interface EntriesPage {
    *  this over splitting the typed term. Absent entirely on the plain entry
    *  list, which carries no search at all. */
   matchedWords?: string[];
+  /** Entry id => the saved search that matched it. Only the combined
+   *  saved-search list reports it; keys arrive as strings on the wire. */
+  savedSearchIds?: Record<string, number>;
 }
 
 export interface EntryStateDto {

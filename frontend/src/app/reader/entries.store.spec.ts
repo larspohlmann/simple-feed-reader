@@ -1,10 +1,12 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../core/api';
 import { EntriesStore } from './entries.store';
-import { EntryDto } from './models';
+import { EntryDto, SavedSearchDto } from './models';
 import { markTerms } from './search-marks';
+import { SavedSearchesStore } from './saved-searches.store';
 
 const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   id,
@@ -368,6 +370,105 @@ describe('EntriesStore', () => {
         .expectOne((r) => r.url === 'https://api.test/api/entries/search')
         .flush({ entries: [entry(3)], nextCursor: null, matchedWords: [] });
       expect(store.matchedWords()).toEqual([]);
+    });
+  });
+
+  // #769: the combined saved-search list decorates each entry with the term
+  // that matched it; every other list reports no provenance at all, so it
+  // must pass entries through untouched.
+  describe('saved-search provenance (#769)', () => {
+    function configureWith(savedSearches: SavedSearchDto[]): void {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: API_BASE_URL, useValue: 'https://api.test' },
+          { provide: SavedSearchesStore, useValue: { savedSearches: () => savedSearches } },
+        ],
+      });
+      store = TestBed.inject(EntriesStore);
+      ctrl = TestBed.inject(HttpTestingController);
+    }
+
+    const savedSearch = (over: Partial<SavedSearchDto> = {}): SavedSearchDto => ({
+      id: 7,
+      term: 'climate',
+      wholeWord: false,
+      phrase: false,
+      position: 0,
+      unreadCount: 0,
+      includeInDigest: false,
+      ...over,
+    });
+
+    it('labels each entry with the saved search that matched it', () => {
+      configureWith([savedSearch()]);
+      store.load({ view: 'saved-searches' });
+      ctrl
+        .expectOne((r) => r.url.endsWith('/api/entries/saved-searches'))
+        .flush({
+          entries: [entry(1, { title: 'Climate report' })],
+          nextCursor: null,
+          savedSearchIds: { 1: 7 },
+        });
+
+      expect(store.entries()[0].savedSearchTerm).toBe('climate');
+    });
+
+    it('leaves entries unlabelled on a list that reports no provenance', () => {
+      configureWith([savedSearch()]);
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((r) => r.url.includes('/api/entries'))
+        .flush({ entries: [entry(1, { title: 'Anything' })], nextCursor: null });
+
+      expect(store.entries()[0].savedSearchTerm).toBeUndefined();
+    });
+
+    it('decorates an appended page the same way as the first', () => {
+      configureWith([savedSearch()]);
+      store.load({ view: 'saved-searches' });
+      ctrl
+        .expectOne((r) => r.url.endsWith('/api/entries/saved-searches'))
+        .flush({ entries: [entry(1)], nextCursor: 'C1', savedSearchIds: { 1: 7 } });
+
+      store.loadMore();
+      ctrl
+        .expectOne((r) => r.params.get('cursor') === 'C1')
+        .flush({ entries: [entry(2)], nextCursor: null, savedSearchIds: { 2: 7 } });
+
+      expect(store.entries().map((e) => e.savedSearchTerm)).toEqual(['climate', 'climate']);
+    });
+
+    // The sidebar's SavedSearchesStore.load() and this store's own load() are
+    // fired together on boot and race; on a slow SavedSearchesStore response
+    // the entries page can land first. Decoration must not be decided once at
+    // that moment — it has to catch up once the term arrives.
+    it('decorates entries once the saved-search store catches up after a boot-time race', () => {
+      const savedSearches = signal<SavedSearchDto[]>([]);
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: API_BASE_URL, useValue: 'https://api.test' },
+          { provide: SavedSearchesStore, useValue: { savedSearches } },
+        ],
+      });
+      store = TestBed.inject(EntriesStore);
+      ctrl = TestBed.inject(HttpTestingController);
+
+      store.load({ view: 'saved-searches' });
+      ctrl
+        .expectOne((r) => r.url.endsWith('/api/entries/saved-searches'))
+        .flush({ entries: [entry(1)], nextCursor: null, savedSearchIds: { 1: 7 } });
+
+      expect(store.entries()[0].savedSearchTerm).toBeUndefined();
+
+      savedSearches.set([savedSearch()]);
+
+      expect(store.entries()[0].savedSearchTerm).toBe('climate');
     });
   });
 
