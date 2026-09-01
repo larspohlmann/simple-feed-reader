@@ -40,6 +40,32 @@ describe('markInsetCards', () => {
     expect(carded[0].tagName).toBe('DIV');
   });
 
+  it('cards a nested image-only promo instead of its body-block ancestor', () => {
+    const el = host(
+      `${BODY}<div data-body-block><p>First body paragraph beside the article image.</p>` +
+        '<p>Second body paragraph that belongs to the article.</p>' +
+        '<div data-image-promo><a href="https://example.com/other">' +
+        '<img src="https://example.com/promo.png" alt=""></a></div></div>',
+    );
+
+    markInsetCards(el);
+
+    expect(el.querySelector('[data-image-promo]')?.classList.contains('reader-card')).toBe(true);
+    expect(el.querySelector('[data-body-block]')?.classList.contains('reader-card')).toBe(false);
+  });
+
+  it('does not combine a nested linked image with unrelated nested copy', () => {
+    const el = host(
+      `${BODY}<div data-ancestor><div data-image-owner>` +
+        '<a href="https://example.com/other"><img src="https://example.com/promo.png" alt=""></a>' +
+        '</div><div data-copy-owner><p>Article copy owned by a different block.</p></div></div>',
+    );
+
+    markInsetCards(el);
+
+    expect(el.querySelector('[data-ancestor]')?.classList.contains('reader-card')).toBe(false);
+  });
+
   it('does not card a <section> that wraps the whole article', () => {
     // Some sites (DJ Mag, Ibsen/Arday) wrap the entire body in a <section>;
     // carding that would box the whole article.
@@ -71,6 +97,21 @@ describe('markInsetCards', () => {
     markInsetCards(el);
 
     expect(el.querySelector('.reader-card')).toBeNull();
+  });
+
+  it('does not card a body block with a captioned figure and several paragraphs', () => {
+    const el = host(
+      `${BODY}<div data-body-block><figure>` +
+        '<a href="https://example.com/full.webp"><img src="https://example.com/i.webp" alt=""></a>' +
+        '<figcaption>A photo caption.</figcaption></figure>' +
+        '<p>The first paragraph explains the image in the article.</p>' +
+        '<p>The second paragraph continues the running article.</p>' +
+        '<p>The third paragraph is still body copy.</p></div>',
+    );
+
+    markInsetCards(el);
+
+    expect(el.querySelector('[data-body-block]')?.classList.contains('reader-card')).toBe(false);
   });
 
   it('does not card a body block that merely opens with a linked image', () => {
