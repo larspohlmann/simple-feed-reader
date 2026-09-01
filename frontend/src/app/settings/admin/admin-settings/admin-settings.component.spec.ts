@@ -14,6 +14,7 @@ const BASE_SETTINGS: InstanceSettings = {
   requireApproval: false,
   mailEnabled: true,
   publicBaseUrl: null,
+  publicBaseUrlDefault: 'http://localhost:4200',
   passkeyRpId: null,
   passkeyRpName: null,
   passkeyRpIdEffective: 'example.com',
@@ -247,6 +248,19 @@ describe('AdminSettingsComponent', () => {
     });
     f.detectChanges();
     expect(f.componentInstance.publicBaseUrl()).toBe('https://reader.example.ts.net/reader');
+  });
+
+  it('uses the deployment default as the public base URL placeholder', () => {
+    const f = mount();
+    flushInitial(f, {
+      ...BASE_SETTINGS,
+      publicBaseUrlDefault: 'http://localhost:4200',
+    });
+
+    const input = (f.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      '#public-base-url-input',
+    )!;
+    expect(input.placeholder).toBe('http://localhost:4200');
   });
 
   it('clearing the public base URL sends null', () => {

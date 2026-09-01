@@ -114,6 +114,7 @@ final class AdminSettingsControllerTest extends ApiTestCase
                 'requireApproval' => true,
                 'mailEnabled' => true,
                 'publicBaseUrl' => null,
+                'publicBaseUrlDefault' => 'http://localhost:4200',
                 'passkeyRpId' => null,
                 'passkeyRpName' => null,
                 // Derived from APP_FRONTEND_URL (http://localhost:4200) in the test env.
@@ -149,6 +150,7 @@ final class AdminSettingsControllerTest extends ApiTestCase
                 'requireApproval' => true,
                 'mailEnabled' => true,
                 'publicBaseUrl' => null,
+                'publicBaseUrlDefault' => 'http://localhost:4200',
                 'passkeyRpId' => null,
                 'passkeyRpName' => null,
                 'passkeyRpIdEffective' => 'localhost',
@@ -166,6 +168,7 @@ final class AdminSettingsControllerTest extends ApiTestCase
                 'requireApproval' => true,
                 'mailEnabled' => true,
                 'publicBaseUrl' => null,
+                'publicBaseUrlDefault' => 'http://localhost:4200',
                 'passkeyRpId' => null,
                 'passkeyRpName' => null,
                 'passkeyRpIdEffective' => 'localhost',
