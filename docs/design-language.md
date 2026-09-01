@@ -188,6 +188,10 @@ Stylelint's `media-feature-name-unit-allowed-list: { "width": [] }` forbids any
 unit inside a `width` media feature, so a literal `@media (width <= 720px)` is a
 lint failure. The variable is the only way through.
 
+`@container` queries take their thresholds from `_breakpoints.scss` too:
+Stylelint's media-feature rules do not walk `@container`, so a literal there
+lints clean but is exactly the drift the rule exists to prevent.
+
 **The reader drawer's 720px boundary is class-driven, not media-driven.**
 `LayoutService.NARROW_QUERY` is its single declaration; the shell binds
 `.is-narrow` from that signal and `reader-shell.component.scss` keys the drawer

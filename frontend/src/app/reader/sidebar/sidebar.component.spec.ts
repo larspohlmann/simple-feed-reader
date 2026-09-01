@@ -728,6 +728,11 @@ describe('SidebarComponent', () => {
       f.detectChanges();
 
       expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(1);
+
+      chevron.click();
+      f.detectChanges();
+
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(0);
     });
 
     it('marks the row active while the combined view is on screen', () => {

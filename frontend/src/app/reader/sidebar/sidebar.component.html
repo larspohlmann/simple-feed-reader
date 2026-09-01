@@ -94,6 +94,7 @@
   @if (savedSearches().length) {
     <div>
       <div class="tag savedsearch-head">
+        <!-- savedsearch-toggle carries no CSS; it is a test anchor for specs and e2e. Keep it. -->
         <a
           class="nav grow savedsearch-toggle"
           [class.active]="selection().kind === 'saved-searches'"

@@ -62,12 +62,20 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         $user = $this->factory()->create('list-matches@example.com');
         $headers = $this->authHeaderFor($user);
         $feed = $this->seedSubscribedFeed($user);
-        $this->seedEntry($feed, 'Climate report', new \DateTimeImmutable('2026-07-02T00:00:00Z'));
+        $climate = $this->seedEntry($feed, 'Climate report', new \DateTimeImmutable('2026-07-02T00:00:00Z'));
         $this->seedEntry($feed, 'Rocket launch', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->seedEntry($feed, 'Nothing to see', new \DateTimeImmutable('2026-07-03T00:00:00Z'));
         $this->em()->persist(new SavedSearch($user, 'climate', false));
         $this->em()->persist(new SavedSearch($user, 'rocket', false));
         $this->em()->flush();
+
+        $client->request(
+            'PATCH',
+            '/api/entries/' . $climate->getId() . '/state',
+            server: $headers,
+            content: json_encode(['isHidden' => true], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseIsSuccessful();
 
         $client->request('GET', '/api/entries/saved-searches', server: $headers);
 

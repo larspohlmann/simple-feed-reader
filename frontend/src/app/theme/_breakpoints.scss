@@ -9,3 +9,6 @@
 $bp-sm: 560px; // phone
 $bp-md: 720px; // small tablet, phone landscape
 $bp-lg: 900px; // desktop layout switch
+
+// Container queries take their thresholds from here too, for the same reason.
+$container-kicker-narrow: 17rem; // measured against a split-card kicker line at 249.64px

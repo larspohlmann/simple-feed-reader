@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Entity\User;
-use App\Repository\SavedSearchEntryQuery;
 use App\Repository\SavedSearchEntryRepository;
 use App\Service\Search\SavedSearchTerms;
 
@@ -29,7 +28,8 @@ final readonly class SavedSearchMarkReadService
         $userId = (int) $user->getId();
 
         $this->readMarker->markRead($userId, $this->entries->unreadMatchIdsForSavedSearches(
-            new SavedSearchEntryQuery($userId, $this->terms->forUser($userId)),
+            $userId,
+            $this->terms->forUser($userId),
             $until,
         ));
     }

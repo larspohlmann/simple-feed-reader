@@ -116,7 +116,8 @@ final class SavedSearchEntryListTest extends DbTestCase
         $newer = $this->entry('b', 'Climate new', effectiveDate: '2026-07-11T00:00:00Z');
 
         $ids = $this->repo()->unreadMatchIdsForSavedSearches(
-            $this->query(['climate']),
+            (int) $this->user->getId(),
+            $this->query(['climate'])->termsPerSearch,
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
         );
 
@@ -160,7 +161,8 @@ final class SavedSearchEntryListTest extends DbTestCase
         $this->entry('a', 'Climate report');
 
         $ids = $this->repo()->unreadMatchIdsForSavedSearches(
-            $this->query([]),
+            (int) $this->user->getId(),
+            $this->query([])->termsPerSearch,
             new \DateTimeImmutable('2026-07-31T00:00:00Z'),
         );
 

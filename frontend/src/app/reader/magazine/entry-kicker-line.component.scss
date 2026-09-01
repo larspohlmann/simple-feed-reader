@@ -1,3 +1,5 @@
+@use '../../theme/breakpoints' as bp;
+
 /* `width` is not belt-and-braces with `min-width`, it is the load-bearing half.
    A block whose parent sets `align-items: flex-start` (the kicker card) is not
    stretched, so a nowrap row would take its max-content width — 476px inside a
@@ -60,7 +62,7 @@
   display: none;
 }
 
-@container (width < 17rem) {
+@container (width < bp.$container-kicker-narrow) {
   .when-wide {
     display: none;
   }
@@ -90,6 +92,3 @@
   background: var(--accent);
   border-color: var(--accent);
 }
-
-/* `.saved-search-pill` lives in theme/_utilities.scss (#769); its own
-   `min-inline-size` floor is what keeps `.source` yielding space first. */

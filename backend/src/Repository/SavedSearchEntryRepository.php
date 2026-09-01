@@ -64,22 +64,25 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
      * search — the set the combined mark-read flips. Matched through the same
      * predicate the list uses, so it marks exactly what it shows.
      *
+     * @param list<SearchTerms> $termsPerSearch
+     *
      * @return list<int>
      */
     public function unreadMatchIdsForSavedSearches(
-        SavedSearchEntryQuery $query,
+        int $userId,
+        array $termsPerSearch,
         \DateTimeImmutable $until,
     ): array {
-        if ($query->termsPerSearch === []) {
+        if ($termsPerSearch === []) {
             return [];
         }
 
-        $qb = $this->unreadEntriesQueryBuilder($query->userId);
+        $qb = $this->unreadEntriesQueryBuilder($userId);
 
         return $this->scalarIds(
             $qb->select('e.id')
                 ->distinct()
-                ->andWhere($this->anySearchMatches($qb, $query->termsPerSearch))
+                ->andWhere($this->anySearchMatches($qb, $termsPerSearch))
                 ->andWhere('e.effectiveDate <= :until')
                 ->setParameter('until', $until),
         );
