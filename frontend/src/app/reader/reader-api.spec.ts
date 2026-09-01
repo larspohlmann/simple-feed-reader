@@ -161,6 +161,29 @@ describe('ReaderApi', () => {
     req.flush({ entries: [], nextCursor: null });
   });
 
+  it('reads the combined saved-search list from its own endpoint', () => {
+    api.entries({ view: 'saved-searches' }).subscribe();
+    const req = ctrl.expectOne((r) => r.url.endsWith('/api/entries/saved-searches'));
+    expect(req.request.params.get('unread')).toBeNull();
+    expect(req.request.params.get('view')).toBeNull();
+    req.flush({ entries: [], nextCursor: null });
+  });
+
+  it('sends unread=1 when the list is filtered', () => {
+    api.entries({ view: 'saved-searches', unread: true }).subscribe();
+    const req = ctrl.expectOne((r) => r.url.endsWith('/api/entries/saved-searches'));
+    expect(req.request.params.get('unread')).toBe('1');
+    req.flush({ entries: [], nextCursor: null });
+  });
+
+  it('marks the combined saved-search list read with only a watermark', () => {
+    api.markSavedSearchesRead('2026-09-01T10:00:00.000Z').subscribe();
+    const req = ctrl.expectOne((r) => r.url.endsWith('/api/entries/saved-searches/mark-read'));
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ until: '2026-09-01T10:00:00.000Z' });
+    req.flush(null);
+  });
+
   it('sends no unread flag for a feed that shows everything', () => {
     api.entries({ view: 'all' }).subscribe();
     const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');

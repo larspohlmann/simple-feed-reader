@@ -483,6 +483,8 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
         return items(this.subs.viewedCount());
       case 'for-you':
         return unread(this.recs.forYouCount());
+      case 'saved-searches':
+        return unread(0);
       case 'search':
         return items(0);
     }
@@ -1002,6 +1004,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       });
       return;
     }
+    // Task 4 wires the real saved-searches mark-read call; nothing in this
+    // branch can select that scope yet, so this only satisfies the compiler.
+    if (target.scope === 'saved-searches') return;
     this.api
       .markRead(target.scope, until, target.scope === 'all' ? undefined : target.id)
       .subscribe({

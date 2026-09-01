@@ -528,3 +528,51 @@ describe('normalizeSearchInput and a trailing NBSP (#408 follow-up)', () => {
     expect(normalizeSearchInput('daft punk')).toBe('daft punk');
   });
 });
+
+describe('the combined saved-searches view', () => {
+  it('reads view=saved-searches as its own selection', () => {
+    const { selection } = selectionFromParams(convertToParamMap({ view: 'saved-searches' }));
+
+    expect(selection).toEqual({ kind: 'saved-searches', id: null, unread: false });
+  });
+
+  it('takes the unread refinement like every browsable list', () => {
+    const { selection } = selectionFromParams(
+      convertToParamMap({ view: 'saved-searches', unread: '1' }),
+    );
+
+    expect(selection.unread).toBe(true);
+  });
+
+  it('offers the unread switch', () => {
+    expect(hasUnreadFilter({ kind: 'saved-searches', id: null, unread: false })).toBe(true);
+  });
+
+  it('asks for its own list, with the unread filter beside the view', () => {
+    expect(queryFromSelection({ kind: 'saved-searches', id: null, unread: false })).toEqual({
+      view: 'saved-searches',
+    });
+    expect(queryFromSelection({ kind: 'saved-searches', id: null, unread: true })).toEqual({
+      view: 'saved-searches',
+      unread: true,
+    });
+  });
+
+  it('marks all read through its own scope', () => {
+    expect(markReadTarget({ kind: 'saved-searches', id: null, unread: false })).toEqual({
+      scope: 'saved-searches',
+    });
+  });
+
+  it('is not a scoped-refresh list', () => {
+    expect(canScopedRefresh({ kind: 'saved-searches', id: null, unread: false })).toBe(false);
+  });
+
+  it('loses to a searchable q in the URL, like every other list', () => {
+    const { selection } = selectionFromParams(
+      convertToParamMap({ view: 'saved-searches', q: 'climate' }),
+    );
+
+    expect(selection.kind).toBe('search');
+  });
+});

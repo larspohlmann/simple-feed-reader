@@ -252,7 +252,8 @@ export type SubscribeResult =
   | { subscription: SubscriptionDto }
   | { candidates: FeedCandidate[]; scrapeFailureReason?: ScrapeFailureReason };
 
-export type EntryView = 'all' | 'unread' | 'favorites' | 'kept' | 'viewed' | 'for-you';
+export type EntryView =
+  'all' | 'unread' | 'favorites' | 'kept' | 'viewed' | 'for-you' | 'saved-searches';
 
 /** A resolved selection the entry list turns into query params. */
 export interface EntryQuery {
