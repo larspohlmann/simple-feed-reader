@@ -123,6 +123,10 @@ test('the Saved searches row opens one combined list', async ({ page }) => {
 
   await expect(page).toHaveURL(/view=saved-searches/);
   await expect(page.getByRole('heading', { name: 'Saved searches' })).toBeVisible();
+  // The label navigates INSTEAD of expanding the child list now — only the
+  // chevron does that. The fixture seeds two saved searches, so an empty
+  // list can't produce a false pass here.
+  await expect(page.locator('a.savedsearch-item')).toHaveCount(0);
 
   const rows = page.locator('.rows article');
   await expect(rows).toHaveCount(2);
