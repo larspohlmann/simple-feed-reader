@@ -19,6 +19,7 @@
 - Comments: one line, three at the absolute most, and only for the *why*. Delete any comment that restates the next line.
 - Frontend: no hex colours and no ad-hoc `px` outside `src/app/theme/`; component styles live in the sibling `.scss`.
 - The combined view does **not** hide feeds excluded from All items (`includeInAllItems` is a list-read filter only) and does **not** mark search terms in the rows.
+- Each row DOES carry one pill naming the saved search it came from — the first match, in the sidebar's order (scope addition after the plan was written; Tasks 5a and 5b). That is provenance, not term marking: the matched words are still not highlighted.
 - Every new user-visible string needs both `frontend/public/i18n/en.json` and `frontend/public/i18n/de.json`.
 - Backend tests run natively on SQLite: use ASCII-only search terms in assertions (MySQL folds accents, SQLite does not).
 
@@ -1386,6 +1387,391 @@ git commit -m "feat(#769): open the combined view from the Saved searches row"
 
 ---
 
+### Task 5a: Which saved search matched (backend)
+
+**Files:**
+- Modify: `backend/src/Repository/SavedSearchEntryRepository.php`
+- Modify: `backend/src/Controller/Api/SavedSearchEntriesController.php`
+- Create: `backend/src/Http/SavedSearchPage.php`
+- Test: `backend/tests/Repository/SavedSearchEntryListTest.php`, `backend/tests/Controller/Api/SavedSearchEntriesControllerTest.php`
+
+**Interfaces:**
+- Consumes: `SavedSearchEntryQuery`, the private `anySearchMatches`/`termsPredicate` predicate builders, `App\Http\EntryPage::of()`, `App\Repository\SavedSearchRepository::findForUser()` ordering (id DESC — newest saved first, the order the sidebar lists).
+- Produces:
+  - `SavedSearchEntryRepository::matchedSavedSearchIds(SavedSearchEntryQuery $query, list<int> $entryIds, list<int> $savedSearchIds): array<int, int>` — entry id → the id of the FIRST saved search that matched it, in the given order.
+  - `SavedSearchTerms::forUser()` gains a sibling that keeps the ids: `SavedSearchTerms::idsForUser(int $userId): list<int>` — or, better, a single call returning both. Decide when you see the file; the constraint is that the ids and the terms stay in ONE order, learned in one read, never two.
+  - `GET /api/entries/saved-searches` answers `{entries, nextCursor, savedSearchIds}` where `savedSearchIds` maps an entry id to the saved-search id that matched it. Absent keys are impossible: every listed entry matched something.
+
+Why a side map and not a field on the entry: `EntryListRow` and `EntryJson` are shared by every list in the app, and this fact belongs to one endpoint. `SearchPage` already sets the precedent by putting `matchedWords` beside `entries` rather than inside them.
+
+- [ ] **Step 1: Write the failing repository test**
+
+Add to `backend/tests/Repository/SavedSearchEntryListTest.php`:
+
+```php
+    public function testReportsWhichSavedSearchMatchedEachEntry(): void
+    {
+        $climate = $this->entry('a', 'Climate report', effectiveDate: '2026-07-10T00:00:00Z');
+        $rocket = $this->entry('b', 'Rocket launch', effectiveDate: '2026-07-09T00:00:00Z');
+
+        $query = $this->query(['climate', 'rocket']);
+        $matched = $this->repo()->matchedSavedSearchIds(
+            $query,
+            [(int) $climate->getId(), (int) $rocket->getId()],
+            [10, 20],
+        );
+
+        self::assertSame([(int) $climate->getId() => 10, (int) $rocket->getId() => 20], $matched);
+    }
+
+    public function testAnEntryMatchingTwoSavedSearchesReportsTheFirst(): void
+    {
+        $both = $this->entry('a', 'Climate rocket');
+
+        $matched = $this->repo()->matchedSavedSearchIds(
+            $this->query(['climate', 'rocket']),
+            [(int) $both->getId()],
+            [10, 20],
+        );
+
+        self::assertSame([(int) $both->getId() => 10], $matched);
+    }
+
+    public function testNoEntriesNeedsNoQuery(): void
+    {
+        self::assertSame([], $this->repo()->matchedSavedSearchIds($this->query(['climate']), [], [10]));
+    }
+```
+
+- [ ] **Step 2: Run it and watch it fail**
+
+Run: `cd backend && php bin/phpunit tests/Repository/SavedSearchEntryListTest.php`
+Expected: FAIL — `matchedSavedSearchIds` does not exist.
+
+- [ ] **Step 3: Implement the read**
+
+In `backend/src/Repository/SavedSearchEntryRepository.php`:
+
+```php
+    /**
+     * Entry id => the id of the first saved search that matches it, in the
+     * order given. The order is the sidebar's, so the row names the search the
+     * reader would look for first.
+     *
+     * @param list<int> $entryIds
+     * @param list<int> $savedSearchIds
+     *
+     * @return array<int, int>
+     */
+    public function matchedSavedSearchIds(
+        SavedSearchEntryQuery $query,
+        array $entryIds,
+        array $savedSearchIds,
+    ): array {
+        if ($entryIds === [] || $query->termsPerSearch === []) {
+            return [];
+        }
+
+        $qb = $this->createQueryBuilder('e')
+            ->andWhere('e.id IN (:ids)')
+            ->setParameter('ids', $entryIds);
+
+        /** @var list<array{id: int, matchedId: int}> $rows */
+        $rows = $qb
+            ->select('e.id', $this->firstMatchExpression($qb, $query->termsPerSearch, $savedSearchIds))
+            ->getQuery()
+            ->getScalarResult();
+
+        $matched = [];
+        foreach ($rows as $row) {
+            $matched[(int) $row['id']] = (int) $row['matchedId'];
+        }
+
+        return $matched;
+    }
+```
+
+and the private expression builder beside `anySearchMatches`:
+
+```php
+    /**
+     * A CASE that answers the first matching search's id, so "first" is decided
+     * by the same predicates the list itself matched on rather than by a second
+     * implementation of the matching rules.
+     *
+     * @param list<SearchTerms> $termsPerSearch
+     * @param list<int>         $savedSearchIds
+     */
+    private function firstMatchExpression(
+        QueryBuilder $qb,
+        array $termsPerSearch,
+        array $savedSearchIds,
+    ): string {
+        $branches = '';
+        foreach ($termsPerSearch as $position => $terms) {
+            $branches .= \sprintf(
+                ' WHEN %s THEN %d',
+                $this->termsPredicate($qb, $terms, 'match' . $position . 'term'),
+                $savedSearchIds[$position],
+            );
+        }
+
+        return 'CASE' . $branches . ' ELSE 0 END AS matchedId';
+    }
+```
+
+Note the parameter prefix `match…` — it must not collide with the `saved…` prefix `anySearchMatches` uses, since a caller could one day build both on one builder.
+
+Verify the DQL actually parses: `CASE WHEN … THEN … ELSE … END` in a SELECT is supported by Doctrine, but the predicate strings must be valid comparison expressions in that position. If Doctrine rejects the expression, do NOT re-implement the matching in PHP — report BLOCKED and say what it rejected.
+
+- [ ] **Step 4: Run the repository test**
+
+Run: `cd backend && php bin/phpunit tests/Repository/SavedSearchEntryListTest.php`
+Expected: PASS.
+
+- [ ] **Step 5: Write the failing endpoint test**
+
+Add to `backend/tests/Controller/Api/SavedSearchEntriesControllerTest.php`, in the file's own seeding idiom:
+
+```php
+    public function testTheListSaysWhichSavedSearchMatchedEachEntry(): void
+    {
+        // seed: saved searches "climate" then "rocket"; entries "Climate report" and "Rocket launch"
+        $this->client->request('GET', '/api/entries/saved-searches', server: $this->authHeaders());
+
+        self::assertResponseIsSuccessful();
+        $page = $this->json();
+        $byTitle = array_column($page['entries'], 'id', 'title');
+        self::assertSame(
+            $page['savedSearchIds'][$byTitle['Climate report']],
+            $this->savedSearchIdFor('climate'),
+        );
+    }
+```
+
+Adapt the helper names to what the file already has; keep the assertion.
+
+- [ ] **Step 6: Add the page shape**
+
+Create `backend/src/Http/SavedSearchPage.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http;
+
+use App\Repository\EntryListRow;
+use App\Repository\EntryListSort;
+
+/**
+ * The `{entries, nextCursor, savedSearchIds}` shape the combined saved-search
+ * list returns. The cursor rule belongs to EntryPage and must exist exactly
+ * once; this adds only what the combined list has beyond a plain entry list.
+ */
+final readonly class SavedSearchPage
+{
+    private function __construct()
+    {
+    }
+
+    /**
+     * @param list<EntryListRow> $rows
+     * @param array<int, int>    $savedSearchIds
+     *
+     * @return array{entries: list<array<string, mixed>>, nextCursor: string|null, savedSearchIds: array<int, int>}
+     */
+    public static function of(array $rows, int $limit, array $savedSearchIds): array
+    {
+        return [
+            ...EntryPage::of($rows, $limit, EntryListSort::PublishedDate),
+            'savedSearchIds' => $savedSearchIds,
+        ];
+    }
+}
+```
+
+- [ ] **Step 7: Wire the controller**
+
+`SavedSearchEntriesController::list` reads the rows, then asks for the provenance of exactly those rows, then answers `SavedSearchPage::of(...)`. Keep the action thin: no private method, no loop over rows beyond collecting their ids. If collecting the ids inline makes the action more than a handful of lines, put the whole "page plus provenance" assembly in a small `final readonly` service in `Service/Search/` and let the action call that instead — the thin-controller rule wins over saving a file.
+
+- [ ] **Step 8: Run everything and the gates**
+
+Run: `cd backend && php bin/phpunit && composer cs && composer stan && composer md && composer tramp`
+Expected: PASS, no findings.
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add backend/src backend/tests
+git commit -m "feat(#769): report which saved search matched each entry"
+```
+
+---
+
+### Task 5b: The saved-search pill (frontend)
+
+**Files:**
+- Modify: `frontend/src/app/reader/models.ts` (`EntriesPage`, `EntryDto`)
+- Modify: `frontend/src/app/reader/entries.store.ts`
+- Modify: `frontend/src/app/reader/magazine/entry-kicker-line.component.html`, `.scss`
+- Modify: `frontend/src/app/reader/entry-row/entry-row.component.html`, `.scss`
+- Modify: `frontend/public/i18n/{en,de}.json` (the pill's accessible label)
+- Test: `frontend/src/app/reader/entries.store.spec.ts`, `frontend/src/app/reader/magazine/entry-kicker-line.component.spec.ts` (create if absent), `frontend/src/app/reader/entry-row/entry-row.component.spec.ts`
+
+**Interfaces:**
+- Consumes: `savedSearchIds` on the combined list's page; `SavedSearchesStore.savedSearches()` for id → term.
+- Produces: `EntryDto.savedSearchTerm?: string` — set ONLY by the combined saved-search list, so every other list renders no pill without a single conditional at the call sites.
+
+Why decorate the entry rather than thread an input: the kicker line is one shared component behind seven magazine blocks (that sharing is what fixed #155). An input would have to be forwarded through all seven templates; a field on the entry the blocks already receive reaches the line for free.
+
+- [ ] **Step 1: Write the failing store spec**
+
+In `frontend/src/app/reader/entries.store.spec.ts`, following the file's idiom:
+
+```ts
+it('labels each entry with the saved search that matched it', () => {
+  // savedSearchesStore stubbed with { id: 7, term: 'climate' }
+  store.load({ view: 'saved-searches' });
+  ctrl.expectOne((r) => r.url.endsWith('/api/entries/saved-searches')).flush({
+    entries: [{ id: 1, title: 'Climate report' }],
+    nextCursor: null,
+    savedSearchIds: { 1: 7 },
+  });
+
+  expect(store.entries()[0].savedSearchTerm).toBe('climate');
+});
+
+it('leaves entries unlabelled on a list that reports no provenance', () => {
+  store.load({ view: 'all' });
+  ctrl.expectOne((r) => r.url.includes('/api/entries')).flush({
+    entries: [{ id: 1, title: 'Anything' }],
+    nextCursor: null,
+  });
+
+  expect(store.entries()[0].savedSearchTerm).toBeUndefined();
+});
+```
+
+Fill the entry fixtures out to whatever shape the file's existing specs use.
+
+- [ ] **Step 2: Write the failing component specs**
+
+For the kicker line and the list row, one pair each:
+
+```ts
+it('names the saved search the entry came from', () => {
+  fixture.componentRef.setInput('entry', { ...baseEntry, savedSearchTerm: 'climate' });
+  fixture.detectChanges();
+
+  const pill = host.querySelector('.saved-search-pill')!;
+  expect(pill.textContent).toContain('climate');
+  expect(pill.getAttribute('title')).toBe('climate');
+});
+
+it('renders no pill outside the combined saved-search list', () => {
+  fixture.componentRef.setInput('entry', baseEntry);
+  fixture.detectChanges();
+
+  expect(host.querySelector('.saved-search-pill')).toBeNull();
+});
+```
+
+- [ ] **Step 3: Run them and watch them fail**
+
+Run: `docker compose exec -T frontend npm test -- src/app/reader/entries.store.spec.ts src/app/reader/magazine src/app/reader/entry-row`
+Expected: FAIL — no such field, no such element.
+
+- [ ] **Step 4: Widen the wire and the view model**
+
+In `models.ts`, add to `EntriesPage`:
+
+```ts
+  /** Entry id => the saved search that matched it. Only the combined
+   *  saved-search list reports it. */
+  savedSearchIds?: Record<number, number>;
+```
+
+and to `EntryDto`:
+
+```ts
+  /** The saved search this entry came from, for the kicker's pill. Set by the
+   *  store from the combined list's own provenance map, and by nothing else. */
+  savedSearchTerm?: string;
+```
+
+- [ ] **Step 5: Decorate in the store**
+
+In `entries.store.ts`, where a page's entries are set and where a further page is appended, map each entry through a small private helper that looks its id up in the page's `savedSearchIds` and, via `SavedSearchesStore.savedSearches()`, turns the saved-search id into its term. An entry with no id in the map, or a page with no map, is passed through untouched — no field, no pill. Inject `SavedSearchesStore` if the store does not already hold it; if that would be a circular dependency, take the label map as an argument from the shell instead and say so in your report.
+
+Use `visibleSearchTerm()` from `query.ts` for the term's display form, so a whole-word search's trailing space and a phrase's wrapping quotes do not reach the pill.
+
+- [ ] **Step 6: Render the pill**
+
+In `entry-kicker-line.component.html`, after the `.when` span and the dot, before `<ng-content />`:
+
+```html
+  @if (entry().savedSearchTerm; as term) {
+    <span
+      class="saved-search-pill"
+      [attr.title]="term"
+      [attr.aria-label]="'reader.matchedSavedSearch' | transloco: { term }"
+      >{{ term }}</span
+    >
+  }
+```
+
+Add `TranslocoDirective`/pipe to the component's imports the way its siblings do.
+
+In `entry-row.component.html`, put the same element at the end of the meta line at line 20.
+
+- [ ] **Step 7: Style it**
+
+In both components' `.scss`, using ONLY existing tokens — no hex, no raw `px`:
+
+```scss
+.saved-search-pill {
+  min-width: 0;
+  max-inline-size: 12ch;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding-inline: var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill, var(--card-radius));
+  color: var(--text-muted);
+}
+```
+
+Check `docs/design-language.md` and `src/app/theme/` for the real pill token names before you invent one — if the tree already has a pill or chip class, use it rather than adding a second definition. `12ch` is the intent ("about a dozen characters, then ellipsis"); if the design language names a token for this measure, prefer it.
+
+The kicker line's single-line guarantee is load-bearing (#155): the row is `flex-wrap: nowrap`, and the source is its only elastic item. The pill must ellipsise rather than grow, and must not push the time or the dot out of the row. Verify at a narrow viewport, not only in a spec.
+
+- [ ] **Step 8: Add the accessible label**
+
+`en.json`: `"matchedSavedSearch": "Matched the saved search {{term}}"`
+`de.json`: `"matchedSavedSearch": "Passt zur gespeicherten Suche {{term}}"`
+
+- [ ] **Step 9: Run the specs and the gate**
+
+Run: `docker compose exec -T frontend npm test -- src/app/reader`
+Then: `docker compose exec -T frontend npm run check`
+Expected: PASS.
+
+- [ ] **Step 10: Look at the real render**
+
+With the stack up, open the combined view and confirm: the pill sits on the kicker line without wrapping it, a long saved-search term ellipsises instead of pushing the time out, and the list layout's row shows the same pill. Describe what you saw.
+
+- [ ] **Step 11: Commit**
+
+```bash
+git add frontend/src frontend/public/i18n
+git commit -m "feat(#769): name the matching saved search on the kicker line"
+```
+
+---
+
 ### Task 6: The end-to-end smoke
 
 **Files:**
@@ -1412,6 +1798,8 @@ test('the Saved searches row opens one combined list', async ({ page }) => {
   await expect(page).toHaveURL(/view=saved-searches/);
   await expect(page.getByRole('heading', { name: /Saved searches/ })).toBeVisible();
   await expect(page.getByRole('article')).toHaveCount(2);
+  // Each row names the saved search it came from (scope addition, Tasks 5a/5b).
+  await expect(page.locator('.saved-search-pill').first()).toHaveText('climate');
 });
 
 test('the unread switch narrows the combined list', async ({ page }) => {
@@ -1489,6 +1877,6 @@ The PR body must record the two accepted exceptions: the read-state switch again
 
 ## Self-Review
 
-**Spec coverage.** Sidebar link + chevron (Task 5); row hidden with no saved searches (unchanged `@if (savedSearches().length)`, Task 5); badge stays a sum (Task 4, `savedSearchesUnread`); selection and URL (Task 3); flat deduplicated stream (Task 1, `listForSavedSearches` — no join multiplies a row); all saved searches, no flag (Task 2, `findForUser`); excluded feeds not hidden (Task 1, no `includeInAllItems` clause); no term marking (free — the endpoint returns no `matchedWords`, and `EntriesStore` reads `page.matchedWords ?? []`); no pills (free — the pill computeds test `kind === 'search'`); heading count and tab title (Task 4, `titleCount`); no scoped refresh and no "Last refreshed" (free — `canScopedRefresh` and `isSingleStreamView` both stay false); empty states (Task 4); the #710 exception (Task 3, `hasUnreadFilter`); both endpoints (Task 2); i18n pair (Task 4); every test from the spec's list (Tasks 1, 2, 3, 4, 5, 6).
+**Spec coverage.** Sidebar link + chevron (Task 5); row hidden with no saved searches (unchanged `@if (savedSearches().length)`, Task 5); badge stays a sum (Task 4, `savedSearchesUnread`); selection and URL (Task 3); flat deduplicated stream (Task 1, `listForSavedSearches` — no join multiplies a row); all saved searches, no flag (Task 2, `findForUser`); excluded feeds not hidden (Task 1, no `includeInAllItems` clause); no term marking (free — the endpoint returns no `matchedWords`, and `EntriesStore` reads `page.matchedWords ?? []`); no whole-word/phrase pills (free — those computeds test `kind === 'search'`); the saved-search provenance pill (Tasks 5a/5b — a scope addition made after the plan was written: one pill, the FIRST matching search in the sidebar's order); heading count and tab title (Task 4, `titleCount`); no scoped refresh and no "Last refreshed" (free — `canScopedRefresh` and `isSingleStreamView` both stay false); empty states (Task 4); the #710 exception (Task 3, `hasUnreadFilter`); both endpoints (Task 2); i18n pair (Task 4); every test from the spec's list (Tasks 1, 2, 3, 4, 5, 6).
 
 **Type consistency.** `SavedSearchEntryQuery` is constructed in Task 1's test, in the controller and in the mark-read service with the same argument order. `listForSavedSearches` / `unreadMatchIdsForSavedSearches` are named identically everywhere. `savedSearchCount` is the input name in the component, the template, the spec and both shell bindings. `markSavedSearchesRead` is the API method name in the spec, the API and the shell.
