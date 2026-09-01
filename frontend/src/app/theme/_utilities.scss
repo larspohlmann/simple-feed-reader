@@ -93,13 +93,12 @@
    its ellipsis lives on an inner `.name` child, not on `.pill` itself. With
    nothing else inside, `inline-block` lets the ellipsis apply directly.
 
-   `min-inline-size` floors the pill above illegibility so it does not
-   collapse to a stub while a longer neighbour (the kicker's `.source`, which
-   has its own ellipsis) keeps every character. Layout that belongs to the
-   surrounding row or line stays with the component. */
+   `min-inline-size` is six characters of TEXT, so it must carry the padding
+   and border that border-box counts inside it, on top of `6ch`. Layout that
+   belongs to the surrounding row or line stays with the component. */
 .saved-search-pill {
   display: inline-block;
-  min-inline-size: 6ch;
+  min-inline-size: calc(6ch + 2 * var(--space-2) + 2px);
   max-inline-size: 12ch;
   overflow: hidden;
   white-space: nowrap;
