@@ -9,7 +9,8 @@ import { EntryDto, SubscriptionTagDto } from '../models';
  * actions right-aligned against them. One component rather than a row assembled
  * in each block, so the geometry — where the icons sit when the pills wrap, and
  * where they sit when the card has spare height — has exactly one definition
- * for every magazine block that ends on this line, `entry-compact` included.
+ * for every magazine block that ends on this line. A grouped compact entry has
+ * no pills, so it keeps its actions on the kicker line instead.
  */
 @Component({
   selector: 'app-entry-meta',

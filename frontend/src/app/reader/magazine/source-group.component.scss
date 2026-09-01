@@ -83,3 +83,9 @@
 :host-context(.airy) .more {
   margin-inline: var(--space-3);
 }
+
+:host-context(.airy) .ghead,
+:host-context(.airy) .item,
+:host-context(.airy) .more {
+  padding-block: var(--space-3);
+}
