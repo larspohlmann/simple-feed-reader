@@ -70,6 +70,19 @@ const ENTRIES = [
 /** Matched on the pathname so `/api/entries/{id}` still reaches the backend. */
 async function stubEntries(page: Page): Promise<void> {
   await page.route(
+    (url) => url.pathname === '/api/me',
+    async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      const response = await route.fetch();
+      const profile = await response.json();
+      await route.fulfill({
+        response,
+        json: { ...profile, preferences: { ...profile.preferences, magazineStyle: 'airy' } },
+      });
+    },
+  );
+
+  await page.route(
     (url) => url.pathname === '/api/entries',
     async (route) => {
       if (route.request().method() !== 'GET') return route.fallback();
@@ -77,6 +90,37 @@ async function stubEntries(page: Page): Promise<void> {
     },
   );
 }
+
+test('airy grouped-entry rules have space on both sides', async ({ page }) => {
+  const signedIn = await signInAsAdmin(page);
+  test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
+
+  const items = page.locator('app-source-group .item');
+  const more = page.locator('app-source-group .more');
+  await expect(items.first()).toBeVisible();
+  await expect(more).toBeVisible();
+
+  const spaces = await items.evaluateAll((elements) =>
+    elements.slice(0, 2).map((item) => {
+      const compact = item.querySelector('.compact');
+      if (!compact) throw new Error('grouped item has no compact entry');
+      const itemBox = item.getBoundingClientRect();
+      const compactBox = compact.getBoundingClientRect();
+      const borderBottom = Number.parseFloat(getComputedStyle(item).borderBottomWidth);
+      return {
+        above: Math.round(compactBox.top - itemBox.top),
+        below: Math.round(itemBox.bottom - compactBox.bottom - borderBottom),
+      };
+    }),
+  );
+
+  expect(spaces).toEqual([
+    { above: 12, below: 12 },
+    { above: 12, below: 12 },
+  ]);
+  expect(await more.evaluate((el) => getComputedStyle(el).paddingTop)).toBe('12px');
+  expect(await more.evaluate((el) => getComputedStyle(el).paddingBottom)).toBe('12px');
+});
 
 async function signInAsAdmin(page: Page): Promise<boolean> {
   await stubEntries(page);

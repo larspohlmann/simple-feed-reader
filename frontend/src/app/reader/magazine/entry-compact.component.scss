@@ -65,3 +65,7 @@
 .compact.read .dek {
   color: var(--text-muted);
 }
+
+app-entry-kicker-line app-entry-actions {
+  margin-inline-start: auto;
+}

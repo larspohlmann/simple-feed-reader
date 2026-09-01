@@ -8,17 +8,28 @@
   (keydown.space)="$event.preventDefault(); open.emit(entry())"
 >
   <div class="body">
-    <app-entry-kicker-line [entry]="entry()" [showSource]="showSource()" />
+    <app-entry-kicker-line [entry]="entry()" [showSource]="showSource()">
+      @if (!showSource()) {
+        <app-entry-actions
+          [entry]="entry()"
+          (favorite)="favorite.emit($event)"
+          (keep)="keep.emit($event)"
+          (read)="read.emit($event)"
+        />
+      }
+    </app-entry-kicker-line>
     <p class="title">{{ entry().title }}</p>
     @if (snippet()) {
       <p class="dek">{{ snippet() }}</p>
     }
-    <app-entry-meta
-      [entry]="entry()"
-      [tags]="showSource() ? tags() : noTags"
-      (favorite)="favorite.emit($event)"
-      (keep)="keep.emit($event)"
-      (read)="read.emit($event)"
-    />
+    @if (showSource()) {
+      <app-entry-meta
+        [entry]="entry()"
+        [tags]="tags()"
+        (favorite)="favorite.emit($event)"
+        (keep)="keep.emit($event)"
+        (read)="read.emit($event)"
+      />
+    }
   </div>
 </article>
