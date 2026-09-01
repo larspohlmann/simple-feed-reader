@@ -86,9 +86,11 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         $feed = $this->seedSubscribedFeed($user);
         $this->seedEntry($feed, 'Climate report', new \DateTimeImmutable('2026-07-02T00:00:00Z'));
         $this->seedEntry($feed, 'Rocket launch', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->seedEntry($feed, 'Climate rocket', new \DateTimeImmutable('2026-07-03T00:00:00Z'));
         $climateSearch = new SavedSearch($user, 'climate', false);
-        $rocketSearch = new SavedSearch($user, 'rocket', false);
         $this->em()->persist($climateSearch);
+        $this->em()->flush();
+        $rocketSearch = new SavedSearch($user, 'rocket', false);
         $this->em()->persist($rocketSearch);
         $this->em()->flush();
 
@@ -101,6 +103,10 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         $savedSearchIds = $body['savedSearchIds'];
         self::assertSame($climateSearch->getId(), $savedSearchIds[$this->entryIdByTitle($body, 'Climate report')]);
         self::assertSame($rocketSearch->getId(), $savedSearchIds[$this->entryIdByTitle($body, 'Rocket launch')]);
+        // Matches both searches: the pill must name rocketSearch, the search
+        // saved LAST (findForUser orders id DESC — the sidebar's own order),
+        // proving the CASE branch order follows that order and not insertion.
+        self::assertSame($rocketSearch->getId(), $savedSearchIds[$this->entryIdByTitle($body, 'Climate rocket')]);
     }
 
     /** @param array<string, mixed> $body */
@@ -163,6 +169,9 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
         $body = $this->payload($client);
         self::assertSame([], $body['entries']);
+        // Must serialize as a JSON object even when empty: a bare `[]` is not
+        // the {entryId: searchId} map a client decodes.
+        self::assertStringContainsString('"savedSearchIds":{}', (string) $client->getResponse()->getContent());
     }
 
     public function testMarkReadFlipsMatchesUpToTheWatermarkOnly(): void

@@ -172,10 +172,9 @@ final class SavedSearchEntryListTest extends DbTestCase
         $climate = $this->entry('a', 'Climate report', effectiveDate: '2026-07-10T00:00:00Z');
         $rocket = $this->entry('b', 'Rocket launch', effectiveDate: '2026-07-09T00:00:00Z');
 
-        $query = $this->query(['climate', 'rocket']);
         $matched = $this->repo()->matchedSavedSearchIds(
-            $query,
             [(int) $climate->getId(), (int) $rocket->getId()],
+            $this->query(['climate', 'rocket'])->termsPerSearch,
             [10, 20],
         );
 
@@ -187,8 +186,8 @@ final class SavedSearchEntryListTest extends DbTestCase
         $both = $this->entry('a', 'Climate rocket');
 
         $matched = $this->repo()->matchedSavedSearchIds(
-            $this->query(['climate', 'rocket']),
             [(int) $both->getId()],
+            $this->query(['climate', 'rocket'])->termsPerSearch,
             [10, 20],
         );
 
@@ -197,7 +196,10 @@ final class SavedSearchEntryListTest extends DbTestCase
 
     public function testNoEntriesNeedsNoQuery(): void
     {
-        self::assertSame([], $this->repo()->matchedSavedSearchIds($this->query(['climate']), [], [10]));
+        self::assertSame(
+            [],
+            $this->repo()->matchedSavedSearchIds([], $this->query(['climate'])->termsPerSearch, [10]),
+        );
     }
 
     /** @param list<string> $terms */

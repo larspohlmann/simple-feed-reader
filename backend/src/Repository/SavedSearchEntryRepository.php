@@ -88,19 +88,22 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
     /**
      * Entry id => the id of the first saved search that matches it, in the
      * order given. The order is the sidebar's, so the row names the search the
-     * reader would look for first.
+     * reader would look for first. Takes the terms alone, not a
+     * SavedSearchEntryQuery: this read restricts by id, not by owner or
+     * unread state, so its signature must not suggest otherwise.
      *
-     * @param list<int> $entryIds
-     * @param list<int> $savedSearchIds
+     * @param list<int>          $entryIds
+     * @param list<SearchTerms>  $termsPerSearch
+     * @param list<int>          $savedSearchIds
      *
      * @return array<int, int>
      */
     public function matchedSavedSearchIds(
-        SavedSearchEntryQuery $query,
         array $entryIds,
+        array $termsPerSearch,
         array $savedSearchIds,
     ): array {
-        if ($entryIds === [] || $query->termsPerSearch === []) {
+        if ($entryIds === [] || $termsPerSearch === []) {
             return [];
         }
 
@@ -110,12 +113,16 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
 
         /** @var list<array{id: int, matchedId: int}> $rows */
         $rows = $qb
-            ->select('e.id', $this->firstMatchExpression($qb, $query->termsPerSearch, $savedSearchIds))
+            ->select('e.id', $this->firstMatchExpression($qb, $termsPerSearch, $savedSearchIds))
             ->getQuery()
             ->getScalarResult();
 
         $matched = [];
         foreach ($rows as $row) {
+            if ((int) $row['matchedId'] === 0) {
+                continue;
+            }
+
             $matched[(int) $row['id']] = (int) $row['matchedId'];
         }
 

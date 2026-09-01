@@ -33,10 +33,8 @@ final readonly class SavedSearchTerms
     }
 
     /**
-     * The same read as forUser(), plus each search's own id, both in the
-     * sidebar's order and learned from one query — so a caller that needs to
-     * name which search matched can never see the ids and the terms drift out
-     * of step with each other.
+     * As forUser(), plus each search's own id, from one query — so the ids
+     * and the terms can never drift out of step.
      */
     public function forUserWithIds(int $userId): SavedSearchTermsWithIds
     {

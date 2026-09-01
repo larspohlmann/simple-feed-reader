@@ -22,13 +22,16 @@ final readonly class SavedSearchPage
      * @param list<EntryListRow> $rows
      * @param array<int, int>    $savedSearchIds
      *
-     * @return array{entries: list<array<string, mixed>>, nextCursor: string|null, savedSearchIds: array<int, int>}
+     * @return array{entries: list<array<string, mixed>>, nextCursor: string|null, savedSearchIds: \stdClass}
      */
     public static function of(array $rows, int $limit, array $savedSearchIds): array
     {
         return [
             ...EntryPage::of($rows, $limit, EntryListSort::PublishedDate),
-            'savedSearchIds' => $savedSearchIds,
+            // Cast, not a bare array: an empty map must still encode as `{}`,
+            // not `[]` — a client decoding {entryId: searchId} cannot read a
+            // JSON array.
+            'savedSearchIds' => (object) $savedSearchIds,
         ];
     }
 }

@@ -60,7 +60,7 @@ final readonly class SavedSearchEntriesController
         return new JsonResponse(SavedSearchPage::of(
             $rows,
             $query->limit,
-            $this->entries->matchedSavedSearchIds($query, $entryIds, $searches->ids),
+            $this->entries->matchedSavedSearchIds($entryIds, $searches->terms, $searches->ids),
         ));
     }
 
