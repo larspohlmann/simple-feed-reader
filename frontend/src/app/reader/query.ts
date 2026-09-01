@@ -151,13 +151,7 @@ export function visibleSearchTerm(term: string): string {
   return phraseWithin(term) ?? term.trimEnd();
 }
 
-/** Whether the list offers the "All posts / only unread" switch. The saved
- *  views are already a filter on state, and a single search is a filter on
- *  content, so narrowing them by read state would be a second, conflicting
- *  answer to what the list is for. For you is not: it is a ranked view of the
- *  same posts every other browsable list shows (#710). Nor is the combined
- *  saved-search view: it is not a query the reader just typed but a standing
- *  list they keep, so read state is its natural second axis (#769). */
+/** Whether the list offers the "All posts / only unread" switch. */
 export function hasUnreadFilter(s: Selection): boolean {
   return canScopedRefresh(s) || s.kind === 'for-you' || s.kind === 'saved-searches';
 }

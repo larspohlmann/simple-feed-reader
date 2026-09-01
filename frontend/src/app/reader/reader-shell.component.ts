@@ -1004,9 +1004,16 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       });
       return;
     }
-    // Task 4 wires the real saved-searches mark-read call; nothing in this
-    // branch can select that scope yet, so this only satisfies the compiler.
-    if (target.scope === 'saved-searches') return;
+    if (target.scope === 'saved-searches') {
+      this.api.markSavedSearchesRead(until).subscribe({
+        next: () => {
+          this.entries.load(queryFromSelection(this.selection()));
+          this.subs.load();
+          this.savedSearchesStore.load();
+        },
+      });
+      return;
+    }
     this.api
       .markRead(target.scope, until, target.scope === 'all' ? undefined : target.id)
       .subscribe({

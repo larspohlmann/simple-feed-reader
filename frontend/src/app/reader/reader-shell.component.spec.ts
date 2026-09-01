@@ -2777,6 +2777,48 @@ describe('ReaderShellComponent', () => {
     });
   });
 
+  describe('mark all read for the combined saved-searches view (#769)', () => {
+    function bootWithSavedSearchesSelected() {
+      const f = boot();
+      qp.next(convertToParamMap({ view: 'saved-searches' }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/saved-searches')
+        .flush({ entries: [], nextCursor: null });
+      f.detectChanges();
+      return f;
+    }
+
+    it('calls the saved-searches endpoint with only a watermark, then reloads entries, subscriptions and saved searches', () => {
+      const f = bootWithSavedSearchesSelected();
+      const ref = { closed: of(true) };
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
+
+      f.componentInstance.onMarkAllRead();
+
+      const req = ctrl.expectOne('https://api.test/api/entries/saved-searches/mark-read');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ until: expect.any(String) });
+      req.flush(null);
+
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/saved-searches')
+        .flush({ entries: [], nextCursor: null });
+      ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
+      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+    });
+
+    it('does nothing when the dialog is cancelled', () => {
+      const f = bootWithSavedSearchesSelected();
+      const ref = { closed: of(false) };
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
+
+      f.componentInstance.onMarkAllRead();
+
+      ctrl.expectNone('https://api.test/api/entries/saved-searches/mark-read');
+    });
+  });
+
   // The Save/Remove control is a shell command rendered through the list's
   // `headerActions` outlet, so the list emits nothing and the shell owns both
   // the decision and the button. One toggle, not two one-way actions.
