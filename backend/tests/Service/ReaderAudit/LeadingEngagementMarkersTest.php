@@ -57,6 +57,37 @@ final class LeadingEngagementMarkersTest extends TestCase
         self::assertSame([], $this->codesFor($this->clean($html, 'Svenja-Marie Kahl'), 'Svenja-Marie Kahl'));
     }
 
+    public function testReportsWeightSuspectAndTheFirstThreeBlocksWithAnEllipsis(): void
+    {
+        $html = '<div><p><time>31.08.2026 21:15</time></p><p>1.251 Klicks</p><p>0 Reaktionen</p>'
+            . '<p>❤️️</p><p>😂️</p><p>Von Jana Steger</p><p>' . self::PROSE . '</p></div>';
+
+        $markers = $this->markers->detect(ExtractedBody::fromHtml($html), 'Jana Steger');
+
+        self::assertCount(1, $markers);
+        self::assertSame(3, $markers[0]->weight);
+        self::assertSame('LeadingEngagementCleaner', $markers[0]->suspect);
+        self::assertSame(
+            '6 engagement blocks before the article: "31.08.2026 21:15" | "1.251 Klicks" | "0 Reaktionen" | …',
+            $markers[0]->detail,
+        );
+    }
+
+    public function testReportsALeadingTimeOnlyBlockOnItsOwn(): void
+    {
+        $html = '<div><p><time>31.08.2026 21:15</time></p><p>' . self::PROSE . '</p></div>';
+
+        self::assertSame(['leading_engagement_chrome'], $this->codesFor($html, 'Jana Steger'));
+    }
+
+    public function testReportsALeadingBylineOnlyWhenTheEntryHasAnAuthor(): void
+    {
+        $html = '<div><p>Von Jana Steger</p><p>' . self::PROSE . '</p></div>';
+
+        self::assertSame(['leading_engagement_chrome'], $this->codesFor($html, 'Jana Steger'));
+        self::assertSame([], $this->codesFor($html, null));
+    }
+
     /** @return list<string> */
     private function codesFor(string $html, ?string $entryAuthor): array
     {

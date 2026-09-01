@@ -131,6 +131,29 @@ final class LeadingEngagementCleanerTest extends TestCase
         self::assertStringContainsString($paragraph, $clean);
     }
 
+    public function testRemovesAFollowingBylineEvenWhenItsNameIsLinkDominated(): void
+    {
+        $linkedName = '<a href="/a">' . str_repeat('Redaktionsteam ', 5) . '</a>'
+            . '<a href="/b">' . str_repeat('Lokalredaktion ', 5) . '</a>';
+        $html = '<div><p>1.251 Klicks</p><p>' . self::PROSE . '</p><p>Von ' . $linkedName . '</p>'
+            . '<p>Ein weiterer Absatz folgt hier.</p></div>';
+
+        $clean = $this->clean($html, 'Redaktion');
+
+        self::assertStringNotContainsString('Redaktionsteam', $clean);
+        self::assertStringNotContainsString('Lokalredaktion', $clean);
+    }
+
+    public function testKeepsHorizontalRulesThatFollowTheArticle(): void
+    {
+        $html = '<section><p>0 reactions</p><p>' . self::PROSE . '</p><hr><p></p></section>';
+
+        $clean = $this->clean($html, null);
+
+        self::assertStringNotContainsString('reactions', $clean);
+        self::assertStringContainsString('<hr', $clean);
+    }
+
     private function clean(string $html, ?string $entryAuthor): string
     {
         $document = HtmlDocumentParser::parseOrNull($html);
