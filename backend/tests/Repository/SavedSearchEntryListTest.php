@@ -124,6 +124,49 @@ final class SavedSearchEntryListTest extends DbTestCase
         self::assertNotContains($newer->getId(), $ids);
     }
 
+    public function testATwoWordSearchRequiresBothWordsOredAgainstAOneWordSearch(): void
+    {
+        $matchesTwoWordSearch = $this->entry('a', 'Climate report today', effectiveDate: '2026-07-10T00:00:00Z');
+        $matchesOneWordSearch = $this->entry('b', 'Rocket launch', effectiveDate: '2026-07-09T00:00:00Z');
+        $matchesNeither = $this->entry('c', 'Climate only', effectiveDate: '2026-07-08T00:00:00Z');
+
+        $rows = $this->repo()->listForSavedSearches($this->query(['climate report', 'rocket']));
+
+        self::assertSame(
+            [$matchesTwoWordSearch->getId(), $matchesOneWordSearch->getId()],
+            array_map(static fn ($row): ?int => $row->entry->getId(), $rows),
+        );
+    }
+
+    public function testAWholeWordSavedSearchAlongsideASubstringSavedSearch(): void
+    {
+        $wholeWordMatch = $this->entry('a', 'A stray cat appeared', effectiveDate: '2026-07-10T00:00:00Z');
+        $this->entry('b', 'The category changed', effectiveDate: '2026-07-09T00:00:00Z');
+        $substringMatch = $this->entry('c', 'A hotdog stand opened', effectiveDate: '2026-07-08T00:00:00Z');
+
+        $rows = $this->repo()->listForSavedSearches($this->queryWithModes([
+            ['cat', SearchMode::WholeWord],
+            ['dog', SearchMode::Substring],
+        ]));
+
+        self::assertSame(
+            [$wholeWordMatch->getId(), $substringMatch->getId()],
+            array_map(static fn ($row): ?int => $row->entry->getId(), $rows),
+        );
+    }
+
+    public function testUnreadMatchIdsForNoSavedSearchesReturnsNothingRatherThanEveryUnreadId(): void
+    {
+        $this->entry('a', 'Climate report');
+
+        $ids = $this->repo()->unreadMatchIdsForSavedSearches(
+            $this->query([]),
+            new \DateTimeImmutable('2026-07-31T00:00:00Z'),
+        );
+
+        self::assertSame([], $ids);
+    }
+
     /** @param list<string> $terms */
     private function query(
         array $terms,
@@ -143,6 +186,18 @@ final class SavedSearchEntryListTest extends DbTestCase
             $onlyUnread,
             $cursor,
             $limit,
+        );
+    }
+
+    /** @param list<array{0: string, 1: SearchMode}> $termsAndModes */
+    private function queryWithModes(array $termsAndModes): SavedSearchEntryQuery
+    {
+        return new SavedSearchEntryQuery(
+            (int) $this->user->getId(),
+            array_map(
+                static fn (array $termAndMode): SearchTerms => SearchTerms::fromTermAndMode(...$termAndMode),
+                $termsAndModes,
+            ),
         );
     }
 

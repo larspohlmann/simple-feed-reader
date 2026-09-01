@@ -12,15 +12,15 @@ use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * The combined saved-search list (#769): every entry matching ANY of the
- * caller's saved searches, as one paged stream. Split from EntryListRepository
- * — whose row projection and term-matching engine it reuses through
- * AbstractEntryProjectionRepository — because adding these two reads there
- * pushed that class over PHPMD's codesize thresholds.
+ * caller's saved searches, as one paged stream.
  */
-class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
+final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
 {
-    public function __construct(ManagerRegistry $registry)
-    {
+    public function __construct(
+        ManagerRegistry $registry,
+        private readonly EntryListRowHydrator $rowHydrator,
+        private readonly SearchTermsPredicateBuilder $termsPredicateBuilder,
+    ) {
         parent::__construct($registry, Entry::class);
     }
 
@@ -56,7 +56,7 @@ class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $qb->getQuery()->getResult();
 
-        return array_map(fn (array $row): EntryListRow => $this->hydrateRow($row), $rows);
+        return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
     }
 
     /**
@@ -95,7 +95,7 @@ class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
     {
         $predicates = [];
         foreach ($termsPerSearch as $position => $terms) {
-            $predicates[] = $this->termsPredicate($qb, $terms, 'saved' . $position . 'term');
+            $predicates[] = $this->termsPredicateBuilder->build($qb, $terms, 'saved' . $position . 'term');
         }
 
         return '(' . implode(' OR ', $predicates) . ')';

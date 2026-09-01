@@ -22,13 +22,15 @@ use Doctrine\Persistence\ManagerRegistry;
  * readable at — EntryController and the search services depend on this one
  * instead, EntryRepository's other methods never touch it.
  *
- * The row projection and term-matching engine live in
- * AbstractEntryProjectionRepository, shared with SavedSearchEntryRepository.
+ * Shares row hydration and term matching with SavedSearchEntryRepository.
  */
 class EntryListRepository extends AbstractEntryProjectionRepository
 {
-    public function __construct(ManagerRegistry $registry)
-    {
+    public function __construct(
+        ManagerRegistry $registry,
+        private readonly EntryListRowHydrator $rowHydrator,
+        private readonly SearchTermsPredicateBuilder $termsPredicateBuilder,
+    ) {
         parent::__construct($registry, Entry::class);
     }
 
@@ -70,7 +72,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $qb->getQuery()->getResult();
 
-        return array_map(fn (array $row): EntryListRow => $this->hydrateRow($row), $rows);
+        return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
     }
 
     /**
@@ -94,7 +96,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $qb->getQuery()->getResult();
 
-        return array_map(fn (array $row): EntryListRow => $this->hydrateRow($row), $rows);
+        return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
     }
 
     /**
@@ -186,7 +188,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
             ->getQuery()
             ->getResult();
 
-        return array_map(fn (array $row): EntryListRow => $this->hydrateRow($row), $rows);
+        return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
     }
 
     /**
@@ -203,7 +205,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
             ->getQuery()
             ->getOneOrNullResult();
 
-        return $row === null ? null : $this->hydrateRow($row);
+        return $row === null ? null : $this->rowHydrator->hydrate($row);
     }
 
     /**
@@ -259,6 +261,6 @@ class EntryListRepository extends AbstractEntryProjectionRepository
      */
     private function applyTerms(QueryBuilder $qb, SearchTerms $terms): void
     {
-        $qb->andWhere($this->termsPredicate($qb, $terms, 'term'));
+        $qb->andWhere($this->termsPredicateBuilder->build($qb, $terms, 'term'));
     }
 }
