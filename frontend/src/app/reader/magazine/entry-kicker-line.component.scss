@@ -1,3 +1,5 @@
+@use '../../theme/breakpoints' as bp;
+
 /* `width` is not belt-and-braces with `min-width`, it is the load-bearing half.
    A block whose parent sets `align-items: flex-start` (the kicker card) is not
    stretched, so a nowrap row would take its max-content width — 476px inside a
@@ -6,6 +8,11 @@
   display: block;
   width: 100%;
   min-width: 0;
+
+  /* A media query sees the viewport, not the card: the magazine grid caps a
+     card's width well below it, so a wide desktop still has a narrow split
+     card (#769). The kicker's own inline size IS that card's text column. */
+  container-type: inline-size;
 }
 
 /* Never wraps. The source is the only elastic item in the row: it shrinks and
@@ -45,6 +52,24 @@
 .separator,
 .when {
   flex: none;
+}
+
+/* Below the measured width of a split card's own text column (#769), the
+   short form gives way to the narrow one ("15 days ago" -> "15d ago") so
+   `.source` keeps more of the space it actually needs. `display: none`, not
+   a visual clip, so the swapped-out form is not also announced. */
+.when-narrow {
+  display: none;
+}
+
+@container (width < bp.$container-kicker-narrow) {
+  .when-wide {
+    display: none;
+  }
+
+  .when-narrow {
+    display: inline;
+  }
 }
 
 /* The row's `gap` already spaces both sides of the favicon; its own inline

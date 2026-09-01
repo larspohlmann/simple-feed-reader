@@ -8,6 +8,7 @@ import {
   formatLongDate,
   formatTime,
   relativeTime,
+  relativeTimeNarrow,
   trialDaysRemaining,
   trialExpired,
 } from './format';
@@ -32,6 +33,34 @@ describe('relativeTime', () => {
   });
 
   it('handles bad input', () => expect(relativeTime('nope', 'en', now)).toBe(''));
+});
+
+// #769: a narrow card has no room for the full "15 days ago" label.
+describe('relativeTimeNarrow', () => {
+  const now = new Date('2026-07-22T12:00:00Z');
+
+  it('matches relativeTime\'s "now" bucket in both locales', () => {
+    expect(relativeTimeNarrow('2026-07-22T11:59:30Z', 'en', now)).toBe('now');
+    expect(relativeTimeNarrow('2026-07-22T11:59:30Z', 'de', now)).toBe('jetzt');
+  });
+
+  it('is strictly shorter than relativeTime in English, past the "now" bucket', () => {
+    for (const iso of ['2026-07-22T11:30:00Z', '2026-07-22T09:00:00Z', '2026-07-20T12:00:00Z']) {
+      const short = relativeTime(iso, 'en', now);
+      const narrow = relativeTimeNarrow(iso, 'en', now);
+      expect(narrow.length).toBeLessThan(short.length);
+    }
+  });
+
+  it('is never longer than relativeTime in German, past the "now" bucket', () => {
+    for (const iso of ['2026-07-22T11:30:00Z', '2026-07-22T09:00:00Z', '2026-07-20T12:00:00Z']) {
+      const short = relativeTime(iso, 'de', now);
+      const narrow = relativeTimeNarrow(iso, 'de', now);
+      expect(narrow.length).toBeLessThanOrEqual(short.length);
+    }
+  });
+
+  it('handles bad input', () => expect(relativeTimeNarrow('nope', 'en', now)).toBe(''));
 });
 
 describe('formatLongDate', () => {

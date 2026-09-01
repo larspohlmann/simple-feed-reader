@@ -88,4 +88,27 @@ describe('EntryKickerLineComponent', () => {
     expect(withIcon({}).getAttribute('width')).toBe('12');
     expect(withIcon({ faviconSize: 14 }).getAttribute('width')).toBe('14');
   });
+
+  it('names the saved search the entry came from (#769)', () => {
+    const el = mount(entry({ savedSearchTerm: 'climate' }));
+    const pill = el.querySelector('.saved-search-pill')!;
+    expect(pill.textContent).toContain('climate');
+    expect(pill.getAttribute('title')).toBe('climate');
+  });
+
+  it('renders no pill outside the combined saved-search list (#769)', () => {
+    const el = mount(entry());
+    expect(el.querySelector('.saved-search-pill')).toBeNull();
+  });
+
+  // #769: a container query, not JSDOM-visible here, picks between these two
+  // at render time — both are always in the DOM so the swap never refetches.
+  it('renders both the wide and the narrow relative-time forms', () => {
+    const el = mount(entry());
+    const wide = el.querySelector('.when-wide')!;
+    const narrow = el.querySelector('.when-narrow')!;
+    expect(wide.textContent).toContain('5');
+    expect(narrow.textContent).toContain('5');
+    expect(narrow.textContent!.length).toBeLessThan(wide.textContent!.length);
+  });
 });

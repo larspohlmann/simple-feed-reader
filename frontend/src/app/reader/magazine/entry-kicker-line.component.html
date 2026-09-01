@@ -11,7 +11,13 @@
     >
     <span class="separator" aria-hidden="true">·</span>
   }
-  <span class="when">{{ when() }}</span>
+  <span class="when">
+    <span class="when-wide">{{ when() }}</span>
+    <span class="when-narrow">{{ whenNarrow() }}</span>
+  </span>
   <span class="dot" [class.on]="!entry().isHidden" aria-hidden="true"></span>
+  @if (entry().savedSearchTerm; as term) {
+    <span class="saved-search-pill" [attr.title]="term">{{ term }}</span>
+  }
   <ng-content />
 </p>

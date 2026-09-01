@@ -81,3 +81,33 @@
   color: var(--text-secondary);
   white-space: nowrap;
 }
+
+/* The saved search a combined-list entry matched (#769): the kicker line and
+   the list row both show it, a third occurrence of the tag pill's look
+   (`.pill` in source-tags.component.scss), so it moved here rather than
+   being copied again.
+
+   `inline-block`, not `inline-flex` like the tag pill: this pill carries no
+   glyph, and `text-overflow` cannot reach a flex container's own text (it
+   becomes an anonymous flex item first) — the tag pill only works because
+   its ellipsis lives on an inner `.name` child, not on `.pill` itself. With
+   nothing else inside, `inline-block` lets the ellipsis apply directly.
+
+   `min-inline-size` is six characters of TEXT, so it must carry the padding
+   and border that border-box counts inside it, on top of `6ch`. Layout that
+   belongs to the surrounding row or line stays with the component. */
+.saved-search-pill {
+  display: inline-block;
+  min-inline-size: calc(6ch + 2 * var(--space-2) + 2px);
+  max-inline-size: 12ch;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding: var(--space-0) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+}

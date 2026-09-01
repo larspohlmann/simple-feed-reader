@@ -92,6 +92,7 @@ const FIXED_VIEW_ICON: Partial<Record<Selection['kind'], string>> = {
   kept: 'bookmark',
   viewed: 'history',
   'for-you': 'auto_awesome',
+  'saved-searches': 'saved_search',
   search: 'search',
 };
 
@@ -166,6 +167,10 @@ export class EntryListComponent implements OnDestroy {
    *  and keeps `searchCountLabel` above: that count follows the loaded page and
    *  carries its own "+" rule. */
   readonly titleCount = input<TitleCount>({ value: 0, counts: 'items' });
+  /** How many saved searches the account keeps. The combined view's empty state
+   *  distinguishes "you have none" from "yours match nothing", and only the
+   *  shell holds that number. */
+  readonly savedSearchCount = input(0);
   /** The tag the heading names, when the list is scoped to one. It carries the
    *  glyph and the colour the sidebar row already shows, so the same tag reads
    *  the same in both places; null for every other selection. */

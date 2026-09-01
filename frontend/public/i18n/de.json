@@ -737,6 +737,7 @@
     "viewed": "Zuletzt gelesen",
     "forYou": "Für dich",
     "savedSearches": "Gespeicherte Suchen",
+    "savedSearchesEmpty": "Noch keine gespeicherten Suchen. Speichern Sie eine Suche, um sie hier zu sehen.",
     "toggleSavedSearches": "Gespeicherte Suchen ein-/ausklappen",
     "saveSearch": "Suche speichern",
     "saveSearchShort": "Speichern",

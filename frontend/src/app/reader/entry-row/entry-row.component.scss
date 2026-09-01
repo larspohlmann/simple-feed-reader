@@ -27,6 +27,14 @@
   border-color: var(--accent);
 }
 
+/* `.saved-search-pill` itself lives in theme/_utilities.scss (#769); it sits
+   in plain text flow here, not a flex row, so only its own alignment and
+   spacing — not the shared look — belong to this component. */
+.saved-search-pill {
+  vertical-align: middle;
+  margin-left: var(--space-2);
+}
+
 .body {
   flex: 1;
   min-width: 0;

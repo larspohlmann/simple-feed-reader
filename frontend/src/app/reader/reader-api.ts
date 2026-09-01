@@ -64,6 +64,7 @@ export class ReaderApi {
 
   entries(query: EntryQuery, cursor?: string | null): Observable<EntriesPage> {
     if (query.q) return this.searchEntries(query.q, cursor);
+    if (query.view === 'saved-searches') return this.savedSearchEntries(query.unread, cursor);
     let params = new HttpParams().set('view', query.view).set('limit', PAGE_SIZE);
     if (query.subscription != null) params = params.set('subscription', query.subscription);
     if (query.tag != null) params = params.set('tag', query.tag);
@@ -78,6 +79,19 @@ export class ReaderApi {
     let params = new HttpParams().set('q', term).set('limit', PAGE_SIZE);
     if (cursor) params = params.set('cursor', cursor);
     return this.http.get<EntriesPage>(`${this.base}/api/entries/search`, { params });
+  }
+
+  /** The combined saved-search list carries none of the entry list's filters —
+   *  it is its own view over every subscription — so it forwards only the page
+   *  and the unread refinement. */
+  private savedSearchEntries(
+    unread: boolean | undefined,
+    cursor?: string | null,
+  ): Observable<EntriesPage> {
+    let params = new HttpParams().set('limit', PAGE_SIZE);
+    if (unread) params = params.set('unread', '1');
+    if (cursor) params = params.set('cursor', cursor);
+    return this.http.get<EntriesPage>(`${this.base}/api/entries/saved-searches`, { params });
   }
 
   updateState(id: number, patch: EntryStatePatch): Observable<{ state: EntryStateDto }> {
@@ -98,6 +112,12 @@ export class ReaderApi {
    *  backend marks the picks by entry state rather than by watermark (#710). */
   markForYouRead(until: string): Observable<void> {
     return this.http.post<void>(`${this.base}/api/entries/for-you/mark-read`, { until });
+  }
+
+  /** The combined saved-search list names no scope: the backend marks the
+   *  matches by entry state, as the single-search mark-read does (#769). */
+  markSavedSearchesRead(until: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/api/entries/saved-searches/mark-read`, { until });
   }
 
   readerContent(entryId: number): Observable<ReaderContent> {
