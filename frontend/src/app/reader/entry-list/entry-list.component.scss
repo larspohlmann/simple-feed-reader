@@ -483,9 +483,14 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   gap: var(--magazine-gap);
 }
 
-.rows.magazine > * {
+.rows.magazine > *,
+.empty-wrap.magazine > .top-block {
   width: 100%;
   max-width: var(--magazine-measure);
+}
+
+.empty-wrap.magazine > .top-block {
+  margin-inline: auto;
 }
 
 /* The gap grows because it is now the block's only padding AND the bed the rule
@@ -570,9 +575,9 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   }
 }
 
-/* The outlet's own wrapper. Outside the magazine column it is a plain block and
-   costs nothing; inside it, it is what gives whatever was projected the
-   column's measure without the caller having to know there is one. */
+/* The outlet's own wrapper. Outside a magazine layout it is a plain block and
+   costs nothing; inside one, it gives projected content the column's measure
+   without making the caller own that layout rule. */
 .top-block {
   display: block;
 }

@@ -245,13 +245,14 @@
     }
   </div>
 } @else if (visibleEntryCount() === 0) {
-  <div class="empty-wrap" [class.after-banner]="!!error()">
+  <div
+    class="empty-wrap"
+    [class.after-banner]="!!error()"
+    [class.magazine]="effectiveLayout() === 'magazine'"
+  >
     @if (topBlock(); as block) {
-      <!-- Wrapped in an element this component owns, so the column's own
-           `.rows.magazine > *` sizing reaches it. ng-container renders no node,
-           and the projected component is created by the caller's template, so
-           it carries the caller's encapsulation attribute and that rule can
-           never match it. -->
+      <!-- Wrapped in an element this component owns, so it can apply the active
+           layout's measure to projected content. -->
       <div class="top-block">
         <ng-container [ngTemplateOutlet]="block" />
       </div>

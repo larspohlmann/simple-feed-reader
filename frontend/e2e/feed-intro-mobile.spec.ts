@@ -147,3 +147,26 @@ test("a feed's own image keeps the text in its own column on a phone", async ({ 
     .evaluate((element) => element.getBoundingClientRect().width);
   expect(columnWidth).toBeGreaterThan(200);
 });
+
+test('an empty magazine feed keeps its introduction at the populated column width', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await openFeed(page, { faviconUrl: BLANK });
+
+  const widths = await page.locator('.empty-wrap').evaluate((emptyWrap) => {
+    const intro = emptyWrap.querySelector('app-feed-intro') as HTMLElement;
+    const magazineMeasure = Number.parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue('--magazine-measure'),
+    );
+
+    return {
+      empty: Math.round(emptyWrap.getBoundingClientRect().width),
+      intro: Math.round(intro.getBoundingClientRect().width),
+      magazine: Math.round(magazineMeasure),
+    };
+  });
+
+  expect(widths.empty).toBeGreaterThan(widths.magazine);
+  expect(widths.intro).toBe(widths.magazine);
+});
