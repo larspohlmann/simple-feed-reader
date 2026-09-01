@@ -86,6 +86,43 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
     }
 
     /**
+     * Entry id => the id of the first saved search that matches it, in the
+     * order given. The order is the sidebar's, so the row names the search the
+     * reader would look for first.
+     *
+     * @param list<int> $entryIds
+     * @param list<int> $savedSearchIds
+     *
+     * @return array<int, int>
+     */
+    public function matchedSavedSearchIds(
+        SavedSearchEntryQuery $query,
+        array $entryIds,
+        array $savedSearchIds,
+    ): array {
+        if ($entryIds === [] || $query->termsPerSearch === []) {
+            return [];
+        }
+
+        $qb = $this->createQueryBuilder('e')
+            ->andWhere('e.id IN (:ids)')
+            ->setParameter('ids', $entryIds);
+
+        /** @var list<array{id: int, matchedId: int}> $rows */
+        $rows = $qb
+            ->select('e.id', $this->firstMatchExpression($qb, $query->termsPerSearch, $savedSearchIds))
+            ->getQuery()
+            ->getScalarResult();
+
+        $matched = [];
+        foreach ($rows as $row) {
+            $matched[(int) $row['id']] = (int) $row['matchedId'];
+        }
+
+        return $matched;
+    }
+
+    /**
      * One predicate for "matches any of these searches" — each search's own
      * terms still ANDed inside it, the searches ORed between them.
      *
@@ -99,5 +136,30 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
         }
 
         return '(' . implode(' OR ', $predicates) . ')';
+    }
+
+    /**
+     * A CASE that answers the first matching search's id, so "first" is decided
+     * by the same predicates the list itself matched on rather than by a second
+     * implementation of the matching rules.
+     *
+     * @param list<SearchTerms> $termsPerSearch
+     * @param list<int>         $savedSearchIds
+     */
+    private function firstMatchExpression(
+        QueryBuilder $qb,
+        array $termsPerSearch,
+        array $savedSearchIds,
+    ): string {
+        $branches = '';
+        foreach ($termsPerSearch as $position => $terms) {
+            $branches .= \sprintf(
+                ' WHEN %s THEN %d',
+                $this->termsPredicateBuilder->build($qb, $terms, 'match' . $position . 'term'),
+                $savedSearchIds[$position],
+            );
+        }
+
+        return 'CASE' . $branches . ' ELSE 0 END AS matchedId';
     }
 }

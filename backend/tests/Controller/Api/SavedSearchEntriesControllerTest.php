@@ -78,6 +78,47 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         self::assertSame(['Climate report', 'Rocket launch'], $titles);
     }
 
+    public function testTheListSaysWhichSavedSearchMatchedEachEntry(): void
+    {
+        $client = self::createClient();
+        $user = $this->factory()->create('matched-search@example.com');
+        $headers = $this->authHeaderFor($user);
+        $feed = $this->seedSubscribedFeed($user);
+        $this->seedEntry($feed, 'Climate report', new \DateTimeImmutable('2026-07-02T00:00:00Z'));
+        $this->seedEntry($feed, 'Rocket launch', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $climateSearch = new SavedSearch($user, 'climate', false);
+        $rocketSearch = new SavedSearch($user, 'rocket', false);
+        $this->em()->persist($climateSearch);
+        $this->em()->persist($rocketSearch);
+        $this->em()->flush();
+
+        $client->request('GET', '/api/entries/saved-searches', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload($client);
+        self::assertIsArray($body['entries']);
+        self::assertIsArray($body['savedSearchIds']);
+        $savedSearchIds = $body['savedSearchIds'];
+        self::assertSame($climateSearch->getId(), $savedSearchIds[$this->entryIdByTitle($body, 'Climate report')]);
+        self::assertSame($rocketSearch->getId(), $savedSearchIds[$this->entryIdByTitle($body, 'Rocket launch')]);
+    }
+
+    /** @param array<string, mixed> $body */
+    private function entryIdByTitle(array $body, string $title): int
+    {
+        self::assertIsArray($body['entries']);
+        foreach ($body['entries'] as $entry) {
+            self::assertIsArray($entry);
+            if ($entry['title'] === $title) {
+                self::assertIsInt($entry['id']);
+
+                return $entry['id'];
+            }
+        }
+
+        self::fail(\sprintf('No entry titled "%s" in the response.', $title));
+    }
+
     public function testUnreadFlagNarrowsTheList(): void
     {
         $client = self::createClient();

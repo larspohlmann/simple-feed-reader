@@ -7,8 +7,8 @@ namespace App\Controller\Api;
 use App\Dto\Entry\MarkSavedSearchesReadRequest;
 use App\Entity\User;
 use App\Http\EntryCursor;
-use App\Http\EntryPage;
-use App\Repository\EntryListSort;
+use App\Http\SavedSearchPage;
+use App\Repository\EntryListRow;
 use App\Repository\EntryQuery;
 use App\Repository\SavedSearchEntryQuery;
 use App\Repository\SavedSearchEntryRepository;
@@ -45,18 +45,22 @@ final readonly class SavedSearchEntriesController
         #[MapQueryParameter] bool $unread = false,
     ): JsonResponse {
         $userId = (int) $user->getId();
+        $searches = $this->terms->forUserWithIds($userId);
         $query = new SavedSearchEntryQuery(
             userId: $userId,
-            termsPerSearch: $this->terms->forUser($userId),
+            termsPerSearch: $searches->terms,
             onlyUnread: $unread,
             cursor: EntryCursor::fromRequestValue($cursor),
             limit: $limit,
         );
 
-        return new JsonResponse(EntryPage::of(
-            $this->entries->listForSavedSearches($query),
+        $rows = $this->entries->listForSavedSearches($query);
+        $entryIds = array_map(static fn (EntryListRow $row): int => (int) $row->entry->getId(), $rows);
+
+        return new JsonResponse(SavedSearchPage::of(
+            $rows,
             $query->limit,
-            EntryListSort::PublishedDate,
+            $this->entries->matchedSavedSearchIds($query, $entryIds, $searches->ids),
         ));
     }
 

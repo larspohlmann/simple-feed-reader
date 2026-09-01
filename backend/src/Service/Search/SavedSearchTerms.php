@@ -29,6 +29,22 @@ final readonly class SavedSearchTerms
     /** @return list<SearchTerms> */
     public function forUser(int $userId): array
     {
-        return array_map(self::of(...), $this->savedSearches->findForUser($userId));
+        return $this->forUserWithIds($userId)->terms;
+    }
+
+    /**
+     * The same read as forUser(), plus each search's own id, both in the
+     * sidebar's order and learned from one query — so a caller that needs to
+     * name which search matched can never see the ids and the terms drift out
+     * of step with each other.
+     */
+    public function forUserWithIds(int $userId): SavedSearchTermsWithIds
+    {
+        $searches = $this->savedSearches->findForUser($userId);
+
+        return new SavedSearchTermsWithIds(
+            array_map(self::of(...), $searches),
+            array_map(static fn (SavedSearch $search): int => (int) $search->getId(), $searches),
+        );
     }
 }

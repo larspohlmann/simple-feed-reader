@@ -167,6 +167,39 @@ final class SavedSearchEntryListTest extends DbTestCase
         self::assertSame([], $ids);
     }
 
+    public function testReportsWhichSavedSearchMatchedEachEntry(): void
+    {
+        $climate = $this->entry('a', 'Climate report', effectiveDate: '2026-07-10T00:00:00Z');
+        $rocket = $this->entry('b', 'Rocket launch', effectiveDate: '2026-07-09T00:00:00Z');
+
+        $query = $this->query(['climate', 'rocket']);
+        $matched = $this->repo()->matchedSavedSearchIds(
+            $query,
+            [(int) $climate->getId(), (int) $rocket->getId()],
+            [10, 20],
+        );
+
+        self::assertSame([(int) $climate->getId() => 10, (int) $rocket->getId() => 20], $matched);
+    }
+
+    public function testAnEntryMatchingTwoSavedSearchesReportsTheFirst(): void
+    {
+        $both = $this->entry('a', 'Climate rocket');
+
+        $matched = $this->repo()->matchedSavedSearchIds(
+            $this->query(['climate', 'rocket']),
+            [(int) $both->getId()],
+            [10, 20],
+        );
+
+        self::assertSame([(int) $both->getId() => 10], $matched);
+    }
+
+    public function testNoEntriesNeedsNoQuery(): void
+    {
+        self::assertSame([], $this->repo()->matchedSavedSearchIds($this->query(['climate']), [], [10]));
+    }
+
     /** @param list<string> $terms */
     private function query(
         array $terms,
