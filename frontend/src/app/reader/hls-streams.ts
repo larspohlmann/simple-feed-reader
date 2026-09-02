@@ -21,7 +21,7 @@ export function attachHlsStreams(host: HTMLElement): void {
     const src = video.getAttribute('src') ?? '';
     if (!PLAYLIST.test(src) || video.canPlayType(NATIVE_HLS) !== '' || instances.has(video))
       continue;
-    void attach(video, src);
+    void attach(video, src).catch(() => undefined);
   }
 }
 

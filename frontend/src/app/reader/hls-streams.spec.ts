@@ -88,4 +88,14 @@ describe('attachHlsStreams', () => {
 
     expect(destroy).toHaveBeenCalledTimes(1);
   });
+
+  it('does not attach twice to the same still-connected video', async () => {
+    const el = host('<video src="https://x.test/master.m3u8" poster="p.jpg"></video>');
+    attachHlsStreams(el);
+    await flush();
+    attachHlsStreams(el);
+    await flush();
+
+    expect(attachMedia).toHaveBeenCalledTimes(1);
+  });
 });
