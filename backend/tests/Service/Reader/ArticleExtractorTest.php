@@ -119,7 +119,7 @@ final class ArticleExtractorTest extends TestCase
     private function mediaScanner(): PageMediaScanner
     {
         $urlKind = $this->urlKind();
-        $providers = new EmbedProviders([new YouTubeEmbedProvider(), new BrightcoveEmbedProvider()]);
+        $providers = $this->providers();
 
         return new PageMediaScanner([
             new JsonLdMediaSource($urlKind, $providers),
@@ -131,9 +131,12 @@ final class ArticleExtractorTest extends TestCase
 
     private function urlKind(): MediaUrlKind
     {
-        $providers = new EmbedProviders([new YouTubeEmbedProvider(), new BrightcoveEmbedProvider()]);
+        return new MediaUrlKind(new DurableMediaUrl(), $this->providers());
+    }
 
-        return new MediaUrlKind(new DurableMediaUrl(), $providers);
+    private function providers(): EmbedProviders
+    {
+        return new EmbedProviders([new YouTubeEmbedProvider(), new BrightcoveEmbedProvider()]);
     }
 
     public function testExtractsAndAbsolutisesImages(): void

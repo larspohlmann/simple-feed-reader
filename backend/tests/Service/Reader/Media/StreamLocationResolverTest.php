@@ -31,15 +31,21 @@ final class StreamLocationResolverTest extends TestCase
     /** @var list<string> */
     private array $requested = [];
 
+    /** @var array<array-key, mixed> */
+    private array $seenOptions = [];
+
     /** @param list<MockResponse> $responses */
     private function resolver(array $responses): StreamLocationResolver
     {
         $queue = $responses;
-        $client = new MockHttpClient(function (string $method, string $url) use (&$queue): MockResponse {
-            $this->requested[] = $url;
+        $client = new MockHttpClient(
+            function (string $method, string $url, array $options) use (&$queue): MockResponse {
+                $this->requested[] = $url;
+                $this->seenOptions = $options;
 
-            return array_shift($queue) ?? new MockResponse('', ['http_code' => 500]);
-        });
+                return array_shift($queue) ?? new MockResponse('', ['http_code' => 500]);
+            },
+        );
         $dns = new class implements DnsResolverInterface {
             public function resolve(string $hostname): array
             {
@@ -118,36 +124,13 @@ final class StreamLocationResolverTest extends TestCase
 
     public function testSendsTheHlsAcceptHeaderAgentAndTimeBudget(): void
     {
-        /** @var array<string, mixed> $seenOptions */
-        $seenOptions = [];
-        $client = new MockHttpClient(
-            function (string $method, string $url, array $options) use (&$seenOptions): MockResponse {
-                $seenOptions = $options;
-
-                return new MockResponse('#EXTM3U', ['http_code' => 200]);
-            },
-        );
-        $dns = new class implements DnsResolverInterface {
-            public function resolve(string $hostname): array
-            {
-                return ['93.184.216.34'];
-            }
-        };
-        $proxy = $this->createStub(ProxyEgressResolver::class);
-        $proxy->method('resolve')->willReturn(null);
-        $resolver = new StreamLocationResolver(
-            new RedirectFollower(new FailoverRequestSender($client, $proxy), new UrlGuard($dns, new IpValidator())),
-            new MediaUrlKind(new DurableMediaUrl(), new EmbedProviders([new YouTubeEmbedProvider()])),
-            'TestAgent/1.0',
-        );
-
-        $resolver->resolve(self::stream());
+        $this->resolver([new MockResponse('#EXTM3U', ['http_code' => 200])])->resolve(self::stream());
 
         /** @var list<string> $headers */
-        $headers = $seenOptions['headers'];
+        $headers = $this->seenOptions['headers'];
         self::assertContains('Accept: application/vnd.apple.mpegurl,application/x-mpegURL,*/*;q=0.8', $headers);
         self::assertContains('User-Agent: TestAgent/1.0', $headers);
-        self::assertSame(10.0, $seenOptions['max_duration']);
+        self::assertSame(10.0, $this->seenOptions['max_duration']);
     }
 
     public function testMakesNoRequestForAnythingButAStream(): void

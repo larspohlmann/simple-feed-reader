@@ -63,7 +63,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
         $normalized = $this->normalizer->normalize($page->html);
         $pageImages = PageImageInventory::fromDocument($normalized);
         $paywall = PaywallSignals::fromPage($page->html, $normalized);
-        $media = $this->streamLocations->resolve($this->mediaScanner->scan($page->html, $page->finalUrl));
+        $media = $this->mediaScanner->scan($page->html, $page->finalUrl);
 
         $article = $this->richestArticle($normalized, $page);
         if ($article === null) {
@@ -84,7 +84,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
             $article->content,
             [$article->title, $entryTitle],
             $leadImage,
-            $media,
+            $this->streamLocations->resolve($media),
             $entryAuthor,
         );
         $clean = $this->sanitizer->sanitize($body);
