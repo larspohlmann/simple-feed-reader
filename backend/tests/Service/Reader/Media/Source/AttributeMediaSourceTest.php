@@ -16,6 +16,9 @@ use PHPUnit\Framework\TestCase;
 
 final class AttributeMediaSourceTest extends TestCase
 {
+    private const string PROSE =
+        'The paragraph the player followed on the source page, long enough to be prose.';
+
     private AttributeMediaSource $source;
 
     protected function setUp(): void
@@ -118,5 +121,20 @@ final class AttributeMediaSourceTest extends TestCase
         self::assertNotSame([], $found);
         self::assertStringContainsString('.mp4', $found[0]->url);
         self::assertNotNull($found[0]->posterUrl);
+    }
+
+    public function testNamesTheProseBlockTheChosenPlayerFollows(): void
+    {
+        // The first (teaser) player sits earlier; the anchor belongs to the winner.
+        $html = '<body><p>Teaser line, long enough to be a prose block on its own terms.</p>'
+            . '<div data-audio-src="https://x.test/teaser-episode.mp3"></div>'
+            . '<p>' . self::PROSE . '</p>'
+            . '<div data-audio-src="https://x.test/bildung-episode.mp3"></div></body>';
+
+        $found = $this->source->find($html, 'https://x.test/bildung-100.html');
+
+        self::assertCount(1, $found);
+        self::assertSame('https://x.test/bildung-episode.mp3', $found[0]->url);
+        self::assertSame(self::PROSE, $found[0]->precedingText);
     }
 }

@@ -12,13 +12,14 @@ use Dom\HTMLDocument;
  * Places media the source page offers but the extracted body never had.
  *
  * Two phases, run around ReaderLeadImage::restore() (see ReaderBodyCleaner):
- * `plan()` is a read-only classification of each candidate as either
- * reconcilable — its poster is the same asset as a body `<img>`, so the
- * player belongs where that picture already sits — or top-placed, for a
- * candidate the body shows no trace of. `apply()` performs the mutation:
- * swap each reconciled `<img>` for its player in place, then prepend the
- * top-placed remainder, in source order. Splitting the phases lets restore()
- * consult the plan's `hasTopPlaced()` before either mutation happens.
+ * `plan()` is a read-only classification of each candidate as reconcilable —
+ * its poster is the same asset as a body `<img>`, so the player belongs where
+ * that picture already sits — or anchored — the body still holds the prose
+ * block the media followed on the page, so the player goes after it — or
+ * top-placed, for a candidate the body shows no trace of. `apply()` performs
+ * the mutation in that order and prepends the top-placed remainder, in source
+ * order. Splitting the phases lets restore() consult the plan's
+ * `hasTopPlaced()` before either mutation happens.
  */
 final readonly class PageMediaInserter
 {
@@ -30,10 +31,10 @@ final readonly class PageMediaInserter
     {
         $root = $document->body;
         if ($root === null || $media->isEmpty()) {
-            return new MediaInsertionPlan([], []);
+            return new MediaInsertionPlan([], [], []);
         }
 
-        return $this->classify($media, $this->reconcilableImages($root));
+        return $this->classify($media, $this->reconcilableImages($root), PageTextBlocks::fromDocument($document));
     }
 
     public function apply(HTMLDocument $document, MediaInsertionPlan $plan): void
@@ -42,24 +43,36 @@ final readonly class PageMediaInserter
             $pair['image']->parentNode?->replaceChild($this->element($document, $pair['candidate']), $pair['image']);
         }
 
+        // Reversed for the same reason as prependTopPlaced: two players after
+        // one block each go right behind it, so the last inserted ends up first.
+        foreach (array_reverse($plan->anchoredPairs) as $pair) {
+            $this->insertAfter($pair['block'], $this->element($document, $pair['candidate']));
+        }
+
         $this->prependTopPlaced($document, $plan->topPlaced);
     }
 
     /** @param list<Element> $pool candidate body images, in document order */
-    private function classify(ArticleMedia $media, array $pool): MediaInsertionPlan
+    private function classify(ArticleMedia $media, array $pool, PageTextBlocks $bodyBlocks): MediaInsertionPlan
     {
-        $pairs = [];
+        $reconciled = [];
+        $anchored = [];
         $topPlaced = [];
         foreach ($media->candidates as $candidate) {
             $image = $candidate->posterUrl === null ? null : $this->claim($pool, $candidate->posterUrl);
-            if ($image === null) {
-                $topPlaced[] = $candidate;
+            if ($image !== null) {
+                $reconciled[] = ['image' => $image, 'candidate' => $candidate];
                 continue;
             }
-            $pairs[] = ['image' => $image, 'candidate' => $candidate];
+            $block = $candidate->precedingText === null ? null : $bodyBlocks->withText($candidate->precedingText);
+            if ($block !== null) {
+                $anchored[] = ['block' => $block, 'candidate' => $candidate];
+                continue;
+            }
+            $topPlaced[] = $candidate;
         }
 
-        return new MediaInsertionPlan($pairs, $topPlaced);
+        return new MediaInsertionPlan($reconciled, $anchored, $topPlaced);
     }
 
     /**
@@ -97,6 +110,13 @@ final readonly class PageMediaInserter
         }
 
         return $images;
+    }
+
+    /** A player cannot sit between list items, so an item's list stands in for it. */
+    private function insertAfter(Element $block, Element $player): void
+    {
+        $reference = $block->closest('ul, ol') ?? $block;
+        $reference->parentNode?->insertBefore($player, $reference->nextSibling);
     }
 
     /** @param list<MediaCandidate> $topPlaced */

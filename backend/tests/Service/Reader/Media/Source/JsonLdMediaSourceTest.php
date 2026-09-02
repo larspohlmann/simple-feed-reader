@@ -15,6 +15,9 @@ use PHPUnit\Framework\TestCase;
 
 final class JsonLdMediaSourceTest extends TestCase
 {
+    private const string PROSE =
+        'The paragraph the player followed on the source page, long enough to be prose.';
+
     private JsonLdMediaSource $source;
 
     protected function setUp(): void
@@ -106,5 +109,17 @@ final class JsonLdMediaSourceTest extends TestCase
 
         self::assertNotSame([], $found);
         self::assertStringContainsString('M1j_uRqKMKI', $found[0]->url);
+    }
+
+    public function testNamesTheProseBlockAnInBodyDeclarationFollows(): void
+    {
+        $html = '<html><body><p>' . self::PROSE . '</p><div>'
+            . '<script type="application/ld+json">{"@type":"VideoObject",'
+            . '"contentUrl":"https://x.test/v.mp4","thumbnailUrl":"https://x.test/poster.jpg"}</script>'
+            . '</div></body></html>';
+
+        $found = $this->source->find($html, 'https://x.test/a.html');
+
+        self::assertSame(self::PROSE, $found[0]->precedingText);
     }
 }

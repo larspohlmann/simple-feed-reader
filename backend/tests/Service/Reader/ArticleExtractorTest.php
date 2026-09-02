@@ -26,6 +26,7 @@ use App\Service\Reader\Media\PageMediaInserter;
 use App\Service\Reader\Media\PageMediaScanner;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\Source\AttributeMediaSource;
+use App\Service\Reader\Media\Source\JsonLdMediaSource;
 use App\Service\Reader\Media\SubstackPosterLink;
 use App\Service\Reader\NavigationChromeTrimmer;
 use App\Service\Reader\ReaderBodyCleaner;
@@ -108,7 +109,10 @@ final class ArticleExtractorTest extends TestCase
     {
         $urlKind = new MediaUrlKind(new DurableMediaUrl(), new EmbedProviders([]));
 
-        return new PageMediaScanner([new AttributeMediaSource($urlKind, new MediaRelevance())]);
+        return new PageMediaScanner([
+            new JsonLdMediaSource($urlKind, new EmbedProviders([])),
+            new AttributeMediaSource($urlKind, new MediaRelevance()),
+        ]);
     }
 
     public function testExtractsAndAbsolutisesImages(): void
@@ -349,5 +353,25 @@ final class ArticleExtractorTest extends TestCase
 
         self::assertTrue($result->ok);
         self::assertStringContainsString('bildung.mp3', (string) $result->contentHtml);
+    }
+
+    /**
+     * tagesschau 494183: readability drops the inline video block because its
+     * only text is a link, so the body keeps no trace of where the player was.
+     * The paragraph before it survives, and that is where the player belongs.
+     */
+    public function testRestoresAnInlineVideoAfterTheParagraphItFollowed(): void
+    {
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-inline-video.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post', 'Inline video headline');
+
+        $body = (string) $result->contentHtml;
+        self::assertTrue($result->ok);
+        self::assertSame(1, substr_count($body, '<video'));
+        self::assertStringContainsString('TV-20260831-2220-5800.webxxl.h264.mp4', $body);
+        self::assertGreaterThan(strpos($body, 'Der dritte Absatz'), strpos($body, '<video'), 'after its paragraph');
+        self::assertLessThan(strpos($body, 'Der vierte Absatz'), strpos($body, '<video'), 'before the next one');
     }
 }

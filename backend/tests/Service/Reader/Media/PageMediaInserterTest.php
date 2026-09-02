@@ -173,4 +173,89 @@ final class PageMediaInserterTest extends TestCase
         self::assertStringContainsString($video1Poster, $out);
         self::assertLessThan(strpos($out, 'v1.mp4'), strpos($out, 'v2.mp4'), 'the top-placed video leads');
     }
+
+    private const string PROSE = 'The paragraph the player followed on the source page, long enough to be prose.';
+
+    public function testPlacesACandidateAfterTheBlockItFollowedOnThePage(): void
+    {
+        $media = new ArticleMedia([
+            new MediaCandidate(MediaKind::Video, 'https://x.test/v.mp4', 'https://x.test/p.jpg', null, self::PROSE),
+        ]);
+        $html = '<body><p>Intro</p><p>' . self::PROSE . '</p><p>Tail</p></body>';
+
+        $out = $this->insert($html, $media);
+
+        self::assertGreaterThan(strpos($out, self::PROSE), strpos($out, '<video'));
+        self::assertLessThan(strpos($out, 'Tail'), strpos($out, '<video'));
+    }
+
+    public function testMatchesTheBlockOnCollapsedText(): void
+    {
+        $media = new ArticleMedia([
+            new MediaCandidate(MediaKind::Audio, 'https://x.test/a.mp3', null, null, self::PROSE),
+        ]);
+        $html = '<body><p>Intro</p><p>  The paragraph the player followed on the source page,' . "
+"
+            . '   long enough to be prose.  </p><p>Tail</p></body>';
+
+        $out = $this->insert($html, $media);
+
+        self::assertLessThan(strpos($out, 'Tail'), strpos($out, '<audio'));
+        self::assertGreaterThan(strpos($out, 'Intro'), strpos($out, '<audio'));
+    }
+
+    public function testTwoCandidatesAfterTheSameBlockKeepSourceOrder(): void
+    {
+        $media = new ArticleMedia([
+            new MediaCandidate(MediaKind::Audio, 'https://x.test/first.mp3', null, null, self::PROSE),
+            new MediaCandidate(MediaKind::Audio, 'https://x.test/second.mp3', null, null, self::PROSE),
+        ]);
+        $html = '<body><p>' . self::PROSE . '</p><p>Tail</p></body>';
+
+        $out = $this->insert($html, $media);
+
+        self::assertGreaterThan(strpos($out, self::PROSE), strpos($out, 'first.mp3'));
+        self::assertLessThan(strpos($out, 'second.mp3'), strpos($out, 'first.mp3'));
+        self::assertLessThan(strpos($out, 'Tail'), strpos($out, 'second.mp3'));
+    }
+
+    public function testFollowsAListItemBlockWithTheWholeList(): void
+    {
+        $media = new ArticleMedia([
+            new MediaCandidate(MediaKind::Audio, 'https://x.test/a.mp3', null, null, self::PROSE),
+        ]);
+        $html = '<body><ul><li>' . self::PROSE . '</li><li>Second item</li></ul><p>Tail</p></body>';
+
+        $out = $this->insert($html, $media);
+
+        self::assertGreaterThan(strpos($out, '</ul>'), strpos($out, '<audio'));
+        self::assertLessThan(strpos($out, 'Tail'), strpos($out, '<audio'));
+    }
+
+    public function testACandidateWhoseBlockTheBodyLostIsTopPlaced(): void
+    {
+        $media = new ArticleMedia([
+            new MediaCandidate(MediaKind::Audio, 'https://x.test/a.mp3', null, null, 'A block readability removed'),
+        ]);
+
+        $out = $this->insert('<body><p>Intro</p></body>', $media);
+
+        self::assertLessThan(strpos($out, 'Intro'), strpos($out, '<audio'));
+    }
+
+    public function testAMatchingBodyImageBeatsTheTextAnchor(): void
+    {
+        $poster = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/AAAAAA/16x9-1920/p.jpg';
+        $bodyImg = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/BBBBBB/16x9-big/t.jpg';
+        $media = new ArticleMedia([
+            new MediaCandidate(MediaKind::Video, 'https://x.test/v.mp4', $poster, null, self::PROSE),
+        ]);
+        $html = '<body><figure><img src="' . $bodyImg . '" alt=""></figure><p>' . self::PROSE . '</p></body>';
+
+        $out = $this->insert($html, $media);
+
+        self::assertSame(1, substr_count($out, '<video'));
+        self::assertStringNotContainsString('<img', $out);
+        self::assertLessThan(strpos($out, self::PROSE), strpos($out, '<video'));
+    }
 }

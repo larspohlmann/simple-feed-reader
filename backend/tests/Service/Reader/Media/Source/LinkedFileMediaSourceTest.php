@@ -15,6 +15,9 @@ use PHPUnit\Framework\TestCase;
 
 final class LinkedFileMediaSourceTest extends TestCase
 {
+    private const string PROSE =
+        'The paragraph the player followed on the source page, long enough to be prose.';
+
     private LinkedFileMediaSource $source;
 
     protected function setUp(): void
@@ -57,5 +60,14 @@ final class LinkedFileMediaSourceTest extends TestCase
         self::assertStringEndsWith('.mp3', $found[0]->url);
         self::assertStringNotContainsString('?', $found[0]->url);
         self::assertStringContainsString('telescope', $found[0]->url);
+    }
+
+    public function testNamesTheProseBlockTheLinkFollows(): void
+    {
+        $html = '<body><p>' . self::PROSE . '</p><a href="https://x.test/telescope-segment.mp3">Listen</a></body>';
+
+        $found = $this->source->find($html, 'https://x.test/2026/08/30/roman-space-telescope');
+
+        self::assertSame(self::PROSE, $found[0]->precedingText);
     }
 }

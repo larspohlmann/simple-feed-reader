@@ -9,6 +9,8 @@ use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaCandidateSourceInterface;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaUrlKind;
+use App\Service\Reader\Media\PageTextBlocks;
+use Dom\Element;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
@@ -29,9 +31,10 @@ final readonly class SemanticMediaSource implements MediaCandidateSourceInterfac
             return [];
         }
 
+        $blocks = PageTextBlocks::fromDocument($document);
         $found = [];
         foreach ($document->querySelectorAll('audio, video') as $element) {
-            $candidate = $this->candidateFor($element);
+            $candidate = $this->candidateFor($element, $blocks->before($element));
             if ($candidate !== null) {
                 $found[] = $candidate;
             }
@@ -40,7 +43,7 @@ final readonly class SemanticMediaSource implements MediaCandidateSourceInterfac
         return $found;
     }
 
-    private function candidateFor(\Dom\Element $element): ?MediaCandidate
+    private function candidateFor(Element $element, ?string $precedingText): ?MediaCandidate
     {
         $kind = $element->nodeName === 'VIDEO' ? MediaKind::Video : MediaKind::Audio;
         $url = $this->usableUrl($element, $kind);
@@ -49,16 +52,18 @@ final readonly class SemanticMediaSource implements MediaCandidateSourceInterfac
         }
 
         if ($kind !== MediaKind::Video) {
-            return new MediaCandidate($kind, $url);
+            return new MediaCandidate($kind, $url, null, null, $precedingText);
         }
 
         // A video with no poster (absent or empty) rots into a dead frame in a cache with no TTL.
         $poster = $element->getAttribute('poster');
 
-        return $poster === null || $poster === '' ? null : new MediaCandidate($kind, $url, $poster);
+        return $poster === null || $poster === ''
+            ? null
+            : new MediaCandidate($kind, $url, $poster, null, $precedingText);
     }
 
-    private function usableUrl(\Dom\Element $element, MediaKind $expectedKind): ?string
+    private function usableUrl(Element $element, MediaKind $expectedKind): ?string
     {
         $src = $element->getAttribute('src');
         $resolved = $src === null ? null : $this->urlKind->resolve($src);

@@ -10,6 +10,7 @@ use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaCandidateSourceInterface;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaUrlKind;
+use App\Service\Reader\Media\PageTextBlocks;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
@@ -42,12 +43,17 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
             return [];
         }
 
+        $blocks = PageTextBlocks::fromDocument($document);
         $found = [];
         foreach ($document->querySelectorAll('script[type="application/ld+json"]') as $script) {
             foreach ($this->urlsIn($script->textContent ?? '') as $urlWithPoster) {
-                $candidate = $this->toCandidate($urlWithPoster['url'], $urlWithPoster['poster']);
+                $candidate = $this->toCandidate(
+                    $urlWithPoster['url'],
+                    $urlWithPoster['poster'],
+                    $blocks->before($script),
+                );
                 if ($candidate !== null) {
-                    $found[$candidate->url] = $candidate;
+                    $found[$candidate->url] ??= $candidate;
                 }
             }
         }
@@ -100,20 +106,20 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
         return \is_array($thumbnail) && \is_string($thumbnail[0] ?? null) ? $thumbnail[0] : null;
     }
 
-    private function toCandidate(string $url, ?string $poster): ?MediaCandidate
+    private function toCandidate(string $url, ?string $poster, ?string $precedingText): ?MediaCandidate
     {
         $resolved = $this->mediaUrlKind->resolve($url);
         if ($resolved === null) {
             return null;
         }
         if ($resolved->kind === MediaKind::Audio) {
-            return new MediaCandidate(MediaKind::Audio, $resolved->url);
+            return new MediaCandidate(MediaKind::Audio, $resolved->url, null, null, $precedingText);
         }
         if ($resolved->kind === MediaKind::Video) {
             // D5: a poster-less video rots into a dead frame in the reader's TTL-less cache.
             return $poster === null || $poster === ''
                 ? null
-                : new MediaCandidate(MediaKind::Video, $resolved->url, $poster);
+                : new MediaCandidate(MediaKind::Video, $resolved->url, $poster, null, $precedingText);
         }
 
         $target = $this->embedProviders->resolve($url);
@@ -121,6 +127,6 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
             return null;
         }
 
-        return new MediaCandidate(MediaKind::Embed, $target->url, $target->posterUrl, $target->label);
+        return new MediaCandidate(MediaKind::Embed, $target->url, $target->posterUrl, $target->label, $precedingText);
     }
 }

@@ -13,6 +13,9 @@ use PHPUnit\Framework\TestCase;
 
 final class PageEmbedSourceTest extends TestCase
 {
+    private const string PROSE =
+        'The paragraph the player followed on the source page, long enough to be prose.';
+
     private PageEmbedSource $source;
 
     protected function setUp(): void
@@ -93,5 +96,15 @@ final class PageEmbedSourceTest extends TestCase
 
         self::assertCount(1, $youtube);
         self::assertSame('https://www.youtube-nocookie.com/embed/M1j_uRqKMKI', $youtube[0]->url);
+    }
+
+    public function testNamesTheProseBlockTheEmbedFollows(): void
+    {
+        $html = '<body><p>' . self::PROSE . '</p>'
+            . '<iframe src="https://www.youtube.com/embed/aaaaaaaaaaa"></iframe></body>';
+
+        $found = $this->source->find($html, 'https://example.test/x');
+
+        self::assertSame(self::PROSE, $found[0]->precedingText);
     }
 }
