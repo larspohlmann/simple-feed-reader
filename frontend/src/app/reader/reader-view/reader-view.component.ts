@@ -24,6 +24,7 @@ import {
   ToTopButtonComponent,
 } from '../../shared/to-top-button/to-top-button.component';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
+import { PaywallNoticeComponent } from '../paywall-notice/paywall-notice.component';
 import {
   EntryDto,
   ReaderArticle,
@@ -104,6 +105,7 @@ function slugify(text: string): string {
     ToTopButtonComponent,
     RouterLink,
     TranslocoPipe,
+    PaywallNoticeComponent,
   ],
   templateUrl: './reader-view.component.html',
   styleUrl: './reader-view.component.scss',
