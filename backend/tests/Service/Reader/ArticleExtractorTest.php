@@ -16,6 +16,7 @@ use App\Service\Reader\EdgeBoilerplateTrimmer;
 use App\Service\Reader\ExtractionResult;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
+use App\Service\Reader\ImageWrapperClassRemover;
 use App\Service\Reader\LazyImageSources;
 use App\Service\Reader\LeadingEngagementCleaner;
 use App\Service\Reader\LeadingTitleRemover;
@@ -79,6 +80,7 @@ final class ArticleExtractorTest extends TestCase
                 new ShareWidgetRemover(),
                 new ShareIntentLinkRemover(),
                 new SubstackGatedVideoPlaceholder(),
+                new ImageWrapperClassRemover(),
             ),
             $this->bodyCleaner(),
             new EntrySanitizer(),
@@ -223,6 +225,7 @@ final class ArticleExtractorTest extends TestCase
                 new ShareWidgetRemover(),
                 new ShareIntentLinkRemover(),
                 new SubstackGatedVideoPlaceholder(),
+                new ImageWrapperClassRemover(),
             ),
             $this->bodyCleaner(),
             new EntrySanitizer(),

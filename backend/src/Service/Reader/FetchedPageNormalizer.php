@@ -48,6 +48,10 @@ use Dom\XPath;
  *    teaser. SubstackGatedVideoPlaceholder replaces the player with a poster
  *    linking to the source here, where the player class and the <head> og tags
  *    survive — the wrapper-chain collapse strips that class later (#627, #748).
+ *  - Readability scores a wrapper's class and id by word and removes a
+ *    text-less <div> named `…Media…` with its picture. ImageWrapperClassRemover
+ *    strips class and id from text-less single-image wrappers last, after the
+ *    class-reading removals above have run (#789).
  *  - <script> and <style> blocks are stripped from the raw source, bounded by
  *    the real close tag. This keeps their text out of the extraction — the
  *    same content readability's own script removal drops — and does it before
@@ -88,6 +92,7 @@ final readonly class FetchedPageNormalizer
         private ShareWidgetRemover $shareWidgets,
         private ShareIntentLinkRemover $shareIntentLinks,
         private SubstackGatedVideoPlaceholder $substackPlaceholder,
+        private ImageWrapperClassRemover $imageWrapperClasses,
     ) {
     }
 
@@ -137,6 +142,7 @@ final readonly class FetchedPageNormalizer
         $this->substackPlaceholder->replaceIn($document);
         $this->removeScreenReaderOnlyElements($document);
         $this->removeOrphanIconGlyphs($document);
+        $this->imageWrapperClasses->removeFrom($document);
 
         return $document;
     }

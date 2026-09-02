@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\CustomElementUnwrapper;
 use App\Service\Reader\FetchedPageNormalizer;
+use App\Service\Reader\ImageWrapperClassRemover;
 use App\Service\Reader\LazyImageSources;
 use App\Service\Reader\ShareIntentLinkRemover;
 use App\Service\Reader\ShareWidgetRemover;
@@ -24,6 +25,7 @@ final class FetchedPageNormalizerTest extends TestCase
             new ShareWidgetRemover(),
             new ShareIntentLinkRemover(),
             new SubstackGatedVideoPlaceholder(),
+            new ImageWrapperClassRemover(),
         );
     }
 
@@ -296,6 +298,29 @@ final class FetchedPageNormalizerTest extends TestCase
 
         self::assertStringNotContainsString('sh-background-transition', $normalized);
         self::assertStringContainsString('<img src="https://x.test/a.jpg" alt="">', $normalized);
+    }
+
+    public function testStripsTheClassOfATextlessPictureWrapperBeforeReadabilityScoresIt(): void
+    {
+        $normalized = $this->normalized(
+            '<html lang="en"><body><article><div class="Theme-Layer-ResponsiveMedia">'
+            . '<div class="ResponsiveMedia--image__inner"><img src="https://x.test/a.jpg" alt=""></div></div>'
+            . '<p>Caption.</p></article></body></html>'
+        );
+
+        self::assertStringNotContainsString('ResponsiveMedia', $normalized);
+        self::assertStringContainsString('<img src="https://x.test/a.jpg" alt="">', $normalized);
+    }
+
+    /** Order matters: the share-widget fingerprint is read before the picture wrapper's class goes. */
+    public function testAShareWidgetThatHoldsOnlyAnIconIsStillRemoved(): void
+    {
+        $normalized = $this->normalized(
+            '<html lang="en"><body><article><p>Text.</p><div class="sharedaddy">'
+            . '<img src="https://x.test/icon.png" alt=""></div></article></body></html>'
+        );
+
+        self::assertStringNotContainsString('icon.png', $normalized);
     }
 
     /** normalize() then serialize; the fixtures under test always parse. */
