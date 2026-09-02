@@ -8,6 +8,7 @@ use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaCandidateSourceInterface;
 use App\Service\Reader\Media\MediaKind;
+use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\Media\MediaRelevance;
 use App\Service\Reader\Media\MediaUrlKind;
 use Dom\Element;
@@ -55,6 +56,9 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
     {
         $byKind = [];
         foreach ($document->querySelectorAll('*') as $element) {
+            if (PageFurniture::holds($element)) {
+                continue;
+            }
             foreach ($this->urlsOn($element) as $url) {
                 $resolved = $this->kind->resolve($url);
                 if ($resolved !== null && $resolved->kind !== MediaKind::Embed) {

@@ -137,4 +137,18 @@ final class JsonLdMediaSourceTest extends TestCase
         self::assertCount(1, $found);
         self::assertSame(self::PROSE, $found[0]->precedingText);
     }
+
+    public function testSkipsADeclarationInsideANav(): void
+    {
+        $html = '<html lang="de"><body><nav><script type="application/ld+json">'
+            . '{"@type":"VideoObject","contentUrl":"https://x.test/teaser.mp4","thumbnailUrl":"https://x.test/t.jpg"}'
+            . '</script></nav><script type="application/ld+json">'
+            . '{"@type":"VideoObject","contentUrl":"https://x.test/v.mp4","thumbnailUrl":"https://x.test/poster.jpg"}'
+            . '</script></body></html>';
+
+        $found = $this->source->find($html, 'https://x.test/a.html');
+
+        self::assertCount(1, $found);
+        self::assertSame('https://x.test/v.mp4', $found[0]->url);
+    }
 }

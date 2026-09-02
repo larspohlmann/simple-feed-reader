@@ -8,6 +8,7 @@ use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaCandidateSourceInterface;
 use App\Service\Reader\Media\MediaKind;
+use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\Media\MediaRelevance;
 use App\Service\Reader\Media\MediaUrlKind;
 use Dom\Element;
@@ -43,6 +44,9 @@ final readonly class LinkedFileMediaSource implements MediaCandidateSourceInterf
     {
         $byKind = [];
         foreach ($document->querySelectorAll('a[href]') as $anchor) {
+            if (PageFurniture::holds($anchor)) {
+                continue;
+            }
             $href = $anchor->getAttribute('href');
             $resolved = $href === null ? null : $this->kind->resolve($href);
             if ($resolved !== null && $resolved->kind !== MediaKind::Embed) {

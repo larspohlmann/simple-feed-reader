@@ -161,4 +161,15 @@ final class AttributeMediaSourceTest extends TestCase
 
         self::assertCount(2, $found);
     }
+
+    public function testSkipsAPlayerInsideAnAside(): void
+    {
+        $html = '<body><aside><div data-audio-src="https://x.test/teaser-episode.mp3"></div></aside>'
+            . '<div data-audio-src="https://x.test/bildung-episode.mp3"></div></body>';
+
+        $found = $this->source->find($html, 'https://x.test/bildung-100.html');
+
+        self::assertCount(1, $found);
+        self::assertSame('https://x.test/bildung-episode.mp3', $found[0]->url);
+    }
 }

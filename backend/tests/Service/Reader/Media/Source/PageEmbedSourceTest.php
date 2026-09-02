@@ -120,4 +120,15 @@ final class PageEmbedSourceTest extends TestCase
         self::assertCount(1, $found);
         self::assertSame(self::PROSE, $found[0]->precedingText);
     }
+
+    public function testSkipsAnEmbedInsideAnAside(): void
+    {
+        $html = '<body><aside><iframe src="https://www.youtube.com/embed/aaaaaaaaaaa"></iframe></aside>'
+            . '<iframe src="https://www.youtube.com/embed/bbbbbbbbbbb"></iframe></body>';
+
+        $found = $this->source->find($html, 'https://example.test/x');
+
+        self::assertCount(1, $found);
+        self::assertStringContainsString('bbbbbbbbbbb', $found[0]->url);
+    }
 }
