@@ -17,7 +17,7 @@ final readonly class SchemaOrgAccess
     /** True when the page declares a paywall, false when it declares free access, null when it says nothing. */
     public static function paywalledIn(string $html): ?bool
     {
-        $declaresFree = null;
+        $verdict = null;
         preg_match_all(self::JSON_LD_PATTERN, $html, $blocks);
         foreach ($blocks[1] as $json) {
             $decoded = json_decode(trim($json), true);
@@ -28,11 +28,11 @@ final readonly class SchemaOrgAccess
                 if (!$accessibleForFree) {
                     return true;
                 }
-                $declaresFree = false;
+                $verdict = false;
             }
         }
 
-        return $declaresFree;
+        return $verdict;
     }
 
     /**
