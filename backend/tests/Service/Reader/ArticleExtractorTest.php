@@ -32,6 +32,8 @@ use App\Service\Reader\Media\PageMediaInserter;
 use App\Service\Reader\Media\PageMediaScanner;
 use App\Service\Reader\Media\Provider\BrightcoveEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
+use App\Service\Reader\Media\Sibling\SiblingIdRule;
+use App\Service\Reader\Media\Sibling\SiblingMediaExtender;
 use App\Service\Reader\Media\Source\AttributeMediaSource;
 use App\Service\Reader\Media\Source\JsonLdMediaSource;
 use App\Service\Reader\Media\Source\PageEmbedSource;
@@ -76,6 +78,7 @@ final class ArticleExtractorTest extends TestCase
             new FailoverRequestSender(new MockHttpClient($responses), $this->noProxyResolver()),
             new UrlGuard($resolver, new IpValidator()),
         );
+        $landing = new MediaLanding($redirects, 'TestAgent/1.0');
 
         return new ArticleExtractor(
             new HtmlPageFetcher($redirects, 'TestAgent/1.0'),
@@ -90,7 +93,8 @@ final class ArticleExtractorTest extends TestCase
             $this->bodyCleaner(),
             new EntrySanitizer(),
             $this->mediaScanner(),
-            new StreamLocationResolver(new MediaLanding($redirects, 'TestAgent/1.0'), $this->urlKind()),
+            new StreamLocationResolver($landing, $this->urlKind()),
+            new SiblingMediaExtender(new SiblingIdRule(), $landing, $this->urlKind()),
         );
     }
 
@@ -234,6 +238,7 @@ final class ArticleExtractorTest extends TestCase
             new FailoverRequestSender(new MockHttpClient(), $this->noProxyResolver()),
             new UrlGuard($resolver, new IpValidator()),
         );
+        $landing = new MediaLanding($redirects, 'TestAgent/1.0');
         $extractor = new ArticleExtractor(
             new HtmlPageFetcher($redirects, 'TestAgent/1.0'),
             new FetchedPageNormalizer(
@@ -247,7 +252,8 @@ final class ArticleExtractorTest extends TestCase
             $this->bodyCleaner(),
             new EntrySanitizer(),
             $this->mediaScanner(),
-            new StreamLocationResolver(new MediaLanding($redirects, 'TestAgent/1.0'), $this->urlKind()),
+            new StreamLocationResolver($landing, $this->urlKind()),
+            new SiblingMediaExtender(new SiblingIdRule(), $landing, $this->urlKind()),
         );
 
         $result = $extractor->extract('http://169.254.169.254/');
