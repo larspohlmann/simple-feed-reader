@@ -55,12 +55,13 @@ describe('attachHlsStreams', () => {
     expect(startLoad).toHaveBeenCalledTimes(1);
   });
 
-  it('leaves a video alone when the browser plays HLS natively', async () => {
-    HTMLMediaElement.prototype.canPlayType = () => 'probably';
-    attachHlsStreams(host('<video src="https://x.test/master.m3u8"></video>'));
+  it('takes the stream even when the browser claims native HLS, because Chrome claims and never plays', async () => {
+    HTMLMediaElement.prototype.canPlayType = () => 'maybe';
+    const el = host('<video src="https://x.test/master.m3u8"></video>');
+    attachHlsStreams(el);
     await flush();
 
-    expect(attachMedia).not.toHaveBeenCalled();
+    expect(attachMedia).toHaveBeenCalledWith(el.querySelector('video'));
   });
 
   it('leaves a file video alone', async () => {
