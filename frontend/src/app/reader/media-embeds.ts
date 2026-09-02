@@ -16,6 +16,7 @@
 const ALLOWED = [
   /^https:\/\/www\.youtube-nocookie\.com\/embed\/[A-Za-z0-9_-]{11}$/,
   /^https:\/\/w\.soundcloud\.com\/player\/\?url=https%3A%2F%2Fapi\.soundcloud\.com%2Ftracks%2F\d+$/,
+  /^https:\/\/players\.brightcove\.net\/\d+\/[A-Za-z0-9_-]+\/index\.html\?videoId=\d+$/,
 ];
 
 /* `allow-same-origin` beside `allow-scripts` is safe only because every allowed

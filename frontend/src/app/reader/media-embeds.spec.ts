@@ -64,4 +64,25 @@ describe('upgradeMediaEmbeds', () => {
 
     expect(el.querySelectorAll('iframe').length).toBe(1);
   });
+
+  it('replaces a Brightcove player link with a sandboxed iframe', () => {
+    const el = host(
+      '<a href="https://players.brightcove.net/665003303001/6tKQRAx7lu_default/index.html?videoId=6403736850112"><img src="p.jpg"></a>',
+    );
+    const frame = el.querySelector('iframe')!;
+
+    expect(frame).not.toBeNull();
+    expect(frame.getAttribute('src')).toBe(
+      'https://players.brightcove.net/665003303001/6tKQRAx7lu_default/index.html?videoId=6403736850112',
+    );
+    expect(frame.getAttribute('sandbox')).toContain('allow-scripts');
+  });
+
+  it('leaves a Brightcove link that carries more than the video id', () => {
+    const el = host(
+      '<a href="https://players.brightcove.net/665003303001/6tKQRAx7lu_default/index.html?videoId=6403736850112&autoplay=1">x</a>',
+    );
+
+    expect(el.querySelector('iframe')).toBeNull();
+  });
 });
