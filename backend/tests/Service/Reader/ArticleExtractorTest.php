@@ -510,6 +510,22 @@ final class ArticleExtractorTest extends TestCase
         );
     }
 
+    /** Al Jazeera 495829: the node's file plays in place of its thumbnail; the Brightcove page is not a second player. */
+    public function testOneVideoObjectWithFileAndPlayerPageYieldsOnePlayer(): void
+    {
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/media/aljazeera-file-and-brightcove.html');
+        $result = $this->extractor(
+            [new MockResponse($html, ['http_code' => 200])],
+            ['www.aljazeera.com' => ['93.184.216.34']],
+        )->extract('https://www.aljazeera.com/video/newsfeed/2026/9/2/video-chinese-president-xi');
+
+        self::assertTrue($result->ok);
+        $body = (string) $result->contentHtml;
+        self::assertSame(1, substr_count($body, '<video'));
+        self::assertStringContainsString('cb625c3e-c720-462f-8cc6-af9cad40a6c5/main.mp4', $body);
+        self::assertStringNotContainsString('players.brightcove.net', $body);
+    }
+
     /** ZDF 491430: the stream is a <video> at the Akamai master its playlist URL redirects to (#782 follow-up). */
     public function testEmitsAnHlsStreamAsAVideoAtItsLanding(): void
     {

@@ -187,4 +187,34 @@ final class JsonLdMediaSourceTest extends TestCase
         self::assertSame('https://www.zdfheute.de/api/video/istaf-berlin-em-stars-100.m3u8', $found[0]->url);
         self::assertSame('https://www.zdfheute.de/assets/istaf-102~1920x1080?cb=1', $found[0]->posterUrl);
     }
+
+    /** Al Jazeera 495829: one VideoObject declares its file and its player page — one asset, one player. */
+    public function testAFileBeatsThePlayerPageDeclaredOnTheSameNode(): void
+    {
+        $html = '<html><body><script type="application/ld+json">'
+            . '{"@type":"VideoObject","contentUrl":"https://cdn.test/main.mp4",'
+            . '"embedUrl":"https://players.brightcove.net/665003303001/6tKQRAx7lu_default/index.html'
+            . '?videoId=6404485067112","thumbnailUrl":"https://x.test/poster.jpg"}'
+            . '</script></body></html>';
+
+        $found = $this->source->find($html, 'https://x.test/a.html');
+
+        self::assertCount(1, $found);
+        self::assertSame(MediaKind::Video, $found[0]->kind);
+        self::assertSame('https://cdn.test/main.mp4', $found[0]->url);
+    }
+
+    public function testThePlayerPageServesWhenTheNodesFileIsRefused(): void
+    {
+        $html = '<html><body><script type="application/ld+json">'
+            . '{"@type":"VideoObject","contentUrl":"https://cdn.test/main.mp4",'
+            . '"embedUrl":"https://www.youtube.com/watch?v=M1j_uRqKMKI"}'
+            . '</script></body></html>';
+
+        $found = $this->source->find($html, 'https://x.test/a.html');
+
+        self::assertCount(1, $found, 'the poster-less file is refused (D5); the player page is the fallback');
+        self::assertSame(MediaKind::Embed, $found[0]->kind);
+        self::assertSame('https://www.youtube-nocookie.com/embed/M1j_uRqKMKI', $found[0]->url);
+    }
 }
