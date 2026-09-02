@@ -313,6 +313,7 @@ describe('AddFeedDialogComponent', () => {
     expect(subReq.request.body).toEqual({
       url: 'https://wp.example/wp-json/wp/v2/posts',
       format: 'wp-json',
+      title: 'WP',
     });
     subReq.flush({ subscription: { id: 8 } }, { status: 201, statusText: 'Created' });
     expect(close).toHaveBeenCalledWith({ id: 8 });
