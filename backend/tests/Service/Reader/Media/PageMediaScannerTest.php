@@ -29,8 +29,71 @@ final class PageMediaScannerTest extends TestCase
         };
     }
 
-    /** A declared file beats a scanned one: the first layer to yield a kind owns it. */
-    public function testTheFirstSourceToYieldAKindWins(): void
+    /** A declared file and a scanned one at the same URL are one candidate, and the declaration's data stands. */
+    public function testTheSameUrlFromTwoSourcesIsOneCandidateWithTheDeclaredData(): void
+    {
+        $scanner = new PageMediaScanner([
+            $this->source([
+                new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', 'https://x.test/declared.jpg'),
+            ]),
+            $this->source([
+                new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', 'https://x.test/scanned.jpg'),
+            ]),
+        ]);
+
+        $media = $scanner->scan('<html></html>', 'https://x.test/a');
+
+        self::assertCount(1, $media->candidates);
+        self::assertSame('https://x.test/declared.jpg', $media->candidates[0]->posterUrl);
+    }
+
+    /** vice 495401: JSON-LD declares the first video from the <head>, with no prose anchor; the page scan knows where it stands. */
+    public function testALaterSourceFillsTheAnchorTheDeclarationLacks(): void
+    {
+        $url = 'https://www.youtube-nocookie.com/embed/aaaaaaaaaaa';
+        $scanner = new PageMediaScanner([
+            $this->source([
+                new MediaCandidate(MediaKind::Embed, $url, 'https://i.ytimg.com/vi/aaaaaaaaaaa/hqdefault.jpg'),
+            ]),
+            $this->source([
+                new MediaCandidate(MediaKind::Embed, $url, null, null, 'The section the player follows.'),
+            ]),
+        ]);
+
+        $media = $scanner->scan('<html></html>', 'https://x.test/a');
+
+        self::assertCount(1, $media->candidates);
+        self::assertSame('The section the player follows.', $media->candidates[0]->precedingText);
+        self::assertSame('https://i.ytimg.com/vi/aaaaaaaaaaa/hqdefault.jpg', $media->candidates[0]->posterUrl);
+    }
+
+    /** vice 495401: JSON-LD declares one of four videos; the other three exist only as page embeds. */
+    public function testALaterSourceAddsTheUrlsTheEarlierOneNeverNamed(): void
+    {
+        $embed = static fn (string $id): MediaCandidate => new MediaCandidate(
+            MediaKind::Embed,
+            'https://www.youtube-nocookie.com/embed/' . $id,
+        );
+        $scanner = new PageMediaScanner([
+            $this->source([$embed('aaaaaaaaaaa')]),
+            $this->source([$embed('aaaaaaaaaaa'), $embed('bbbbbbbbbbb'), $embed('ccccccccccc'), $embed('ddddddddddd')]),
+        ]);
+
+        $urls = array_map(
+            static fn (MediaCandidate $c): string => $c->url,
+            $scanner->scan('<html></html>', 'https://x.test/a')->candidates,
+        );
+
+        self::assertSame([
+            'https://www.youtube-nocookie.com/embed/aaaaaaaaaaa',
+            'https://www.youtube-nocookie.com/embed/bbbbbbbbbbb',
+            'https://www.youtube-nocookie.com/embed/ccccccccccc',
+            'https://www.youtube-nocookie.com/embed/ddddddddddd',
+        ], $urls);
+    }
+
+    /** A declared file and a differently named scanned one are both unique; the declaration comes first. */
+    public function testAUniqueUrlOfAnAlreadySeenKindStillJoinsAfterTheDeclaredOne(): void
     {
         $scanner = new PageMediaScanner([
             $this->source([new MediaCandidate(MediaKind::Audio, 'https://x.test/declared.mp3')]),
@@ -39,8 +102,23 @@ final class PageMediaScannerTest extends TestCase
 
         $media = $scanner->scan('<html></html>', 'https://x.test/a');
 
-        self::assertCount(1, $media->candidates);
+        self::assertCount(2, $media->candidates);
         self::assertStringContainsString('declared', $media->candidates[0]->url);
+        self::assertStringContainsString('scanned', $media->candidates[1]->url);
+    }
+
+    public function testTheCapAppliesToTheMergedListAcrossSources(): void
+    {
+        $first = [];
+        $second = [];
+        for ($i = 0; $i < 15; $i++) {
+            $first[] = new MediaCandidate(MediaKind::Embed, 'https://x.test/e' . $i);
+            $second[] = new MediaCandidate(MediaKind::Embed, 'https://x.test/f' . $i);
+        }
+
+        $scanner = new PageMediaScanner([$this->source($first), $this->source($second)]);
+
+        self::assertCount(ArticleMedia::MAX_ITEMS, $scanner->scan('<html></html>', 'https://x.test/a')->candidates);
     }
 
     /** Kinds are independent, so NPR keeps both its video embed and its audio. */

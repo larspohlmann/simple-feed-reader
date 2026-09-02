@@ -8,7 +8,11 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
  * Runs every candidate source over the raw page, highest priority first, and
- * lets the first source to yield a MediaKind own it, capped.
+ * merges what they find by URL: the first source to name a URL sets the
+ * candidate and its place, a later source fills the gaps it left (poster,
+ * label, prose anchor), and a URL no earlier source named joins the list. A
+ * declaration establishes precedence without hiding the embeds only a page
+ * scan can see (#788).
  *
  * It reads the raw HTML rather than FetchedPageNormalizer's document on purpose:
  * that pass is tuned for readability scoring and removes elements, so discovery
@@ -26,29 +30,15 @@ final readonly class PageMediaScanner
 
     public function scan(string $pageHtml, string $pageUrl): ArticleMedia
     {
-        $byKind = [];
+        $byUrl = [];
         foreach ($this->sources as $source) {
-            $this->claimUnownedKinds($source->find($pageHtml, $pageUrl), $byKind);
+            foreach ($source->find($pageHtml, $pageUrl) as $candidate) {
+                $byUrl[$candidate->url] = isset($byUrl[$candidate->url])
+                    ? $byUrl[$candidate->url]->completedBy($candidate)
+                    : $candidate;
+            }
         }
 
-        $found = $byKind === [] ? [] : array_merge(...array_values($byKind));
-
-        return new ArticleMedia(\array_slice($found, 0, ArticleMedia::MAX_ITEMS));
-    }
-
-    /**
-     * @param list<MediaCandidate>                 $candidates
-     * @param array<string, list<MediaCandidate>>  $byKind
-     */
-    private function claimUnownedKinds(array $candidates, array &$byKind): void
-    {
-        $bySourceKind = [];
-        foreach ($candidates as $candidate) {
-            $bySourceKind[$candidate->kind->value][] = $candidate;
-        }
-
-        foreach ($bySourceKind as $kind => $candidatesOfKind) {
-            $byKind[$kind] ??= $candidatesOfKind;
-        }
+        return new ArticleMedia(\array_slice(array_values($byUrl), 0, ArticleMedia::MAX_ITEMS));
     }
 }

@@ -21,4 +21,16 @@ final readonly class MediaCandidate
         public ?string $precedingText = null,
     ) {
     }
+
+    /** The same media with the gaps a later, weaker source can fill: poster, label, and the prose anchor. */
+    public function completedBy(self $later): self
+    {
+        return new self(
+            $this->kind,
+            $this->url,
+            $this->posterUrl ?? $later->posterUrl,
+            $this->label ?? $later->label,
+            $this->precedingText ?? $later->precedingText,
+        );
+    }
 }
