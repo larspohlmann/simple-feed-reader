@@ -8,6 +8,7 @@ use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\ProxyEgressResolver;
+use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\ArticleExtractor;
 use App\Service\Reader\BoilerplateVerdict;
@@ -69,8 +70,10 @@ final class ArticleExtractorTest extends TestCase
         };
 
         $fetcher = new HtmlPageFetcher(
-            new FailoverRequestSender(new MockHttpClient($responses), $this->noProxyResolver()),
-            new UrlGuard($resolver, new IpValidator()),
+            new RedirectFollower(
+                new FailoverRequestSender(new MockHttpClient($responses), $this->noProxyResolver()),
+                new UrlGuard($resolver, new IpValidator()),
+            ),
             'TestAgent/1.0',
         );
 
@@ -216,8 +219,10 @@ final class ArticleExtractorTest extends TestCase
             }
         };
         $fetcher = new HtmlPageFetcher(
-            new FailoverRequestSender(new MockHttpClient(), $this->noProxyResolver()),
-            new UrlGuard($resolver, new IpValidator()),
+            new RedirectFollower(
+                new FailoverRequestSender(new MockHttpClient(), $this->noProxyResolver()),
+                new UrlGuard($resolver, new IpValidator()),
+            ),
             'TestAgent/1.0',
         );
         $extractor = new ArticleExtractor(

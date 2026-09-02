@@ -8,6 +8,7 @@ use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\ProxyEgressResolver;
+use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\HtmlPageFetcher;
@@ -38,8 +39,10 @@ final class HtmlPageFetcherTest extends TestCase
         };
 
         return new HtmlPageFetcher(
-            new FailoverRequestSender(new MockHttpClient($responses), $this->noProxyResolver()),
-            new UrlGuard($resolver, new IpValidator()),
+            new RedirectFollower(
+                new FailoverRequestSender(new MockHttpClient($responses), $this->noProxyResolver()),
+                new UrlGuard($resolver, new IpValidator()),
+            ),
             'TestAgent/1.0',
         );
     }
