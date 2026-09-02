@@ -328,6 +328,8 @@ export interface ReaderArticle {
   siteName: string | null;
   contentHtml: string;
   excerpt: string | null;
+  /** True when contentHtml is the free preview of a paywalled article (#785). */
+  paywalled: boolean;
   /** The picture to lead the original-feed view, resolved against the feed's own
    *  body server-side. The reader view needs no field of its own: its lead
    *  picture is restored into contentHtml during extraction (#681). */

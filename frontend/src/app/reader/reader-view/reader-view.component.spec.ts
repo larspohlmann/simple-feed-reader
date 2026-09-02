@@ -52,6 +52,7 @@ const okContent = (over: Partial<ReaderArticle> = {}): ReaderArticle => ({
   excerpt: null,
   originalHero: null,
   extractedAt: '',
+  paywalled: false,
   ...over,
 });
 
@@ -614,6 +615,34 @@ describe('ReaderViewComponent', () => {
     const el = mount(entry()).nativeElement as HTMLElement;
     expect(el.querySelector('.content')!.innerHTML).toContain('Body');
     expect(el.querySelector('.reader-note')).not.toBeNull();
+  });
+
+  it('says under the body that this is the free preview of a paywalled article', () => {
+    loadMock.mockReturnValue(
+      of<ReaderContent>(okContent({ paywalled: true, url: 'https://pub.test/a' })),
+    );
+    const el = mount(entry()).nativeElement as HTMLElement;
+    const note = el.querySelector('.paywall-note');
+    expect(note).not.toBeNull();
+    expect(note!.previousElementSibling).toBe(el.querySelector('.content'));
+    expect(note!.querySelector('a')!.getAttribute('href')).toBe('https://pub.test/a');
+  });
+
+  it('shows no paywall note for a freely readable article', () => {
+    loadMock.mockReturnValue(of<ReaderContent>(okContent({ paywalled: false })));
+    const el = mount(entry()).nativeElement as HTMLElement;
+    expect(el.querySelector('.paywall-note')).toBeNull();
+  });
+
+  it('drops the paywall note in the original view, which shows the feed body', () => {
+    loadMock.mockReturnValue(of<ReaderContent>(okContent({ paywalled: true })));
+    const f = mount(entry());
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('.paywall-note')).not.toBeNull();
+
+    (el.querySelector('.mode') as HTMLButtonElement).click();
+    f.detectChanges();
+    expect(el.querySelector('.paywall-note')).toBeNull();
   });
 
   it('toggles between reader and original', () => {

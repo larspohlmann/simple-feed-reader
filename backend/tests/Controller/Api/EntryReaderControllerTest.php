@@ -106,6 +106,7 @@ final class EntryReaderControllerTest extends WebTestCase
         self::assertSame('A. Writer', $body['byline']);
         self::assertSame('Example', $body['siteName']);
         self::assertSame('An excerpt.', $body['excerpt']);
+        self::assertFalse($body['paywalled']);
         // The reader body now carries its own lead picture inside contentHtml, so
         // the response declares no separate reader hero (#681).
         self::assertArrayNotHasKey('readerHero', $body);
@@ -118,6 +119,31 @@ final class EntryReaderControllerTest extends WebTestCase
         self::assertSame('https://example.com/article', $body['url']);
         self::assertArrayHasKey('extractedAt', $body);
         self::assertSame(['https://example.com/article'], $fake->calls);
+    }
+
+    public function testDeclaresAPaywalledPreviewSoTheClientCanSaySo(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('reader-paywalled@example.com');
+        $fake = $this->installFake();
+        $fake->willReturn(ExtractionResult::ok(
+            url: 'https://example.com/article',
+            title: 'The Title',
+            byline: null,
+            siteName: null,
+            contentHtml: '<p>The free preview.</p>',
+            excerpt: null,
+            paywalled: true,
+        ));
+        $entry = $this->seedEntry($user, 'https://example.com/article');
+
+        $client->request('GET', '/api/entries/' . $entry->getId() . '/reader', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('ok', $body['status']);
+        self::assertTrue($body['paywalled']);
     }
 
     public function testOwnedEntryFetchFailureReturnsFailedStatus(): void

@@ -24,6 +24,7 @@ import {
   ToTopButtonComponent,
 } from '../../shared/to-top-button/to-top-button.component';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
+import { PaywallNoticeComponent } from '../paywall-notice/paywall-notice.component';
 import {
   EntryDto,
   ReaderArticle,
@@ -104,6 +105,7 @@ function slugify(text: string): string {
     ToTopButtonComponent,
     RouterLink,
     TranslocoPipe,
+    PaywallNoticeComponent,
   ],
   templateUrl: './reader-view.component.html',
   styleUrl: './reader-view.component.scss',
@@ -239,6 +241,12 @@ export class ReaderViewComponent {
     const s = this.state();
     return s.status === 'ok' ? s.article : null;
   });
+  /** The reader body is the free preview of a paywalled article (#785). The
+   *  original view shows the feed's own teaser, which needs no such note. */
+  readonly paywalled = computed(
+    () => this.mode() === 'reader' && (this.article()?.paywalled ?? false),
+  );
+  readonly paywallUrl = computed(() => this.article()?.url || this.entry()?.url || null);
   /** Set when the original view's hero image fails to load, so a broken picture
    *  hides rather than leaving a torn placeholder. Reset on every entry change. */
   protected readonly heroFailed = signal(false);

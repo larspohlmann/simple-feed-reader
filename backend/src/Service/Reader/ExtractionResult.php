@@ -12,6 +12,8 @@ namespace App\Service\Reader;
  *   unextractable — readability could not find an article
  *   empty         — extraction produced nothing after sanitization
  *   mismatch      — the extraction did not reflect the article the feed carries (#654)
+ *
+ * `paywalled` marks an ok body that is the free preview of a paywalled article (#785).
  */
 final readonly class ExtractionResult
 {
@@ -24,6 +26,7 @@ final readonly class ExtractionResult
         public ?string $siteName,
         public ?string $contentHtml,
         public ?string $excerpt,
+        public bool $paywalled,
     ) {
     }
 
@@ -34,12 +37,13 @@ final readonly class ExtractionResult
         ?string $siteName,
         string $contentHtml,
         ?string $excerpt,
+        bool $paywalled = false,
     ): self {
-        return new self(true, $url, null, $title, $byline, $siteName, $contentHtml, $excerpt);
+        return new self(true, $url, null, $title, $byline, $siteName, $contentHtml, $excerpt, $paywalled);
     }
 
     public static function failed(?string $url, string $reason): self
     {
-        return new self(false, $url, $reason, null, null, null, null, null);
+        return new self(false, $url, $reason, null, null, null, null, null, false);
     }
 }

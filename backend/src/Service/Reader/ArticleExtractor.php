@@ -6,6 +6,7 @@ namespace App\Service\Reader;
 
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\Media\PageMediaScanner;
+use App\Service\Reader\Paywall\PaywallSignals;
 use App\Service\Sanitize\EntrySanitizer;
 use Dom\HTMLDocument;
 use fivefilters\Readability\Article;
@@ -32,6 +33,8 @@ use fivefilters\Readability\Readability;
  * PageMediaScanner also runs on the raw page before readability, so recovered
  * media can both satisfy the length gate below and be inserted by
  * ReaderBodyCleaner even when readability's own extraction is thin (#748).
+ * PaywallSignals reads the same normalised document and the raw source before
+ * readability consumes them, and decides on the cleaned body (#785).
  */
 final class ArticleExtractor implements ArticleExtractorInterface
 {
@@ -57,6 +60,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
 
         $normalized = $this->normalizer->normalize($page->html);
         $pageImages = PageImageInventory::fromDocument($normalized);
+        $paywall = PaywallSignals::fromPage($page->html, $normalized);
         $media = $this->mediaScanner->scan($page->html, $page->finalUrl);
 
         $article = $this->richestArticle($normalized, $page);
@@ -93,6 +97,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
             siteName: $article->siteName,
             contentHtml: $clean,
             excerpt: $article->excerpt,
+            paywalled: $paywall->isPreview($clean),
         );
     }
 

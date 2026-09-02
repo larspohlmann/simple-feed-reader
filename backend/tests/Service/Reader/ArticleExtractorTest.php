@@ -12,6 +12,7 @@ use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\ArticleExtractor;
 use App\Service\Reader\BoilerplateVerdict;
 use App\Service\Reader\EdgeBoilerplateTrimmer;
+use App\Service\Reader\ExtractionResult;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\LazyImageSources;
@@ -128,6 +129,7 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringContainsString('substantial paragraph', (string) $result->contentHtml);
         self::assertStringContainsString('https://site.test/img/photo.jpg', (string) $result->contentHtml);
         self::assertStringNotContainsString('About', (string) $result->contentHtml);
+        self::assertFalse($result->paywalled);
     }
 
     public function testRestoresLazyLoadedImagesInsteadOfLeavingEmptyFrames(): void
@@ -374,5 +376,62 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringContainsString('TV-20260831-2220-5800.webxxl.h264.mp4', $body);
         self::assertGreaterThan(strpos($body, 'Der dritte Absatz'), strpos($body, '<video'), 'after its paragraph');
         self::assertLessThan(strpos($body, 'Der vierte Absatz'), strpos($body, '<video'), 'before the next one');
+    }
+
+    public function testFlagsAPaywalledArticleDeclaredInJsonLd(): void
+    {
+        $result = $this->extractFixture('article-paywalled-jsonld-boolean.html');
+
+        self::assertTrue($result->ok);
+        self::assertTrue($result->paywalled);
+        self::assertStringContainsString('First substantial paragraph', (string) $result->contentHtml);
+    }
+
+    public function testAcceptsTheStringFormOfTheJsonLdDeclaration(): void
+    {
+        $result = $this->extractFixture('article-paywalled-jsonld-string.html');
+
+        self::assertTrue($result->ok);
+        self::assertTrue($result->paywalled);
+    }
+
+    public function testFlagsAPaywallBlockBelowTheExtractedPreview(): void
+    {
+        $result = $this->extractFixture('article-paywalled-dom-block.html');
+
+        self::assertTrue($result->ok);
+        self::assertTrue($result->paywalled);
+        self::assertStringContainsString('Second substantial paragraph', (string) $result->contentHtml);
+    }
+
+    public function testDoesNotFlagAFreePostWithoutAPaywallBlock(): void
+    {
+        $result = $this->extractFixture('article-free-substack.html');
+
+        self::assertTrue($result->ok);
+        self::assertFalse($result->paywalled);
+    }
+
+    public function testDoesNotFlagAPaywallBannerAboveTheArticle(): void
+    {
+        $result = $this->extractFixture('article-free-paywall-banner.html');
+
+        self::assertTrue($result->ok);
+        self::assertFalse($result->paywalled);
+    }
+
+    public function testTheJsonLdDeclarationDecidesAloneOverAPaywallBlock(): void
+    {
+        $result = $this->extractFixture('article-free-jsonld-true.html');
+
+        self::assertTrue($result->ok);
+        self::assertFalse($result->paywalled);
+    }
+
+    private function extractFixture(string $fixture): ExtractionResult
+    {
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/' . $fixture);
+
+        return $this->extractor([new MockResponse($html, ['http_code' => 200])])->extract('https://site.test/post');
     }
 }

@@ -1,0 +1,28 @@
+:host {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  border-left: 3px solid var(--warning);
+  background: var(--bg-warning);
+  font-size: var(--fs-sm);
+}
+
+.icon {
+  flex: none;
+  color: var(--warning);
+  font-size: var(--fs-base);
+  line-height: 1;
+}
+
+.body {
+  color: var(--text-primary);
+}
+
+a {
+  color: var(--warning);
+  font-weight: 600;
+  text-decoration: underline;
+}

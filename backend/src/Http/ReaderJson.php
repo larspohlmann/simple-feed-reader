@@ -16,7 +16,7 @@ final class ReaderJson
      * extraction has no reader body, but the original view still has its hero.
      *
      * @return array{status: 'ok', url: string, title: string, byline: string|null,
-     *   siteName: string|null, contentHtml: string, excerpt: string|null,
+     *   siteName: string|null, contentHtml: string, excerpt: string|null, paywalled: bool,
      *   originalHero: array{url: string, width: int|null, height: int|null}|null,
      *   extractedAt: string}
      *  |array{status: 'failed', url: string|null, reason: string,
@@ -41,6 +41,7 @@ final class ReaderJson
             'siteName' => $r->siteName,
             'contentHtml' => (string) $r->contentHtml,
             'excerpt' => $r->excerpt,
+            'paywalled' => $r->paywalled,
             'originalHero' => self::hero($originalHero),
             'extractedAt' => $now->format(\DateTimeInterface::ATOM),
         ];

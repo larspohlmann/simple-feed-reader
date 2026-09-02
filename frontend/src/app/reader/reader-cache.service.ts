@@ -30,7 +30,10 @@ export class ReaderCacheService {
   // v9: v8 records were extracted before recovered media was reconciled into
   // the body in place (#755); an already-read article would keep a video's
   // poster duplicated as a header image and its players stranded at the top.
-  private static readonly VERSION = 10;
+  // v10: v9 records hold trailing teaser carousels (#779).
+  // v11: v10 records carry no `paywalled` flag (#785); an already-read
+  // preview would never show the paywall note.
+  private static readonly VERSION = 11;
 
   private db: Promise<IDBDatabase | null> | null = null;
   /** Strictly monotonic clock so puts within the same millisecond keep insertion order. */

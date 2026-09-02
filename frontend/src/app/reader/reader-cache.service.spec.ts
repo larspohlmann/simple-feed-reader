@@ -18,6 +18,7 @@ function article(url: string): ReaderArticle {
     siteName: null,
     contentHtml: '<p>body</p>',
     excerpt: null,
+    paywalled: false,
     originalHero: null,
     extractedAt: '2026-07-23T00:00:00Z',
   };
