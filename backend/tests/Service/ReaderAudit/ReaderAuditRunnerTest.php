@@ -115,6 +115,7 @@ final class ReaderAuditRunnerTest extends TestCase
         self::assertSame(1, $finding->metrics['links']);
         self::assertSame(1, $finding->metrics['images']);
         self::assertSame(1, $finding->metrics['leadingBlocks']);
+        self::assertSame(0, $finding->metrics['paywalled']);
     }
 
     public function testAFailedExtractionReportsZeroesRatherThanNoMeasurements(): void
@@ -127,9 +128,30 @@ final class ReaderAuditRunnerTest extends TestCase
         $finding = $this->auditOne($extractor);
 
         self::assertSame(
-            ['chars' => 0, 'paragraphs' => 0, 'links' => 0, 'images' => 0, 'leadingBlocks' => 0],
+            ['chars' => 0, 'paragraphs' => 0, 'links' => 0, 'images' => 0, 'leadingBlocks' => 0, 'paywalled' => 0],
             $finding->metrics,
         );
+    }
+
+    public function testCountsAPaywalledPreviewAsAMetricNotAMarker(): void
+    {
+        // A paywall is not a cleaner defect: the sweep separates previews from
+        // over-trims by this metric, and the score must not rise for it.
+        $extractor = new FakeArticleExtractor();
+        $extractor->willReturn(ExtractionResult::ok(
+            'https://example.test/a',
+            'Titel',
+            null,
+            null,
+            '<p>Die kostenlose Vorschau eines Artikels hinter der Bezahlschranke.</p>',
+            null,
+            paywalled: true,
+        ));
+
+        $finding = $this->auditOne($extractor);
+
+        self::assertSame(1, $finding->metrics['paywalled']);
+        self::assertNotContains('paywalled', $finding->markerCodes());
     }
 
     public function testTheCoverageGateRunsOverTheExtractionExactlyAsTheEndpointDoes(): void

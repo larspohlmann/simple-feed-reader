@@ -6,6 +6,7 @@ namespace App\Service\ReaderAudit;
 
 use App\Service\Reader\ArticleExtractorInterface;
 use App\Service\Reader\ExtractionCoverageGate;
+use App\Service\Reader\ExtractionResult;
 
 /**
  * Runs the reader pipeline over sampled articles exactly as the reader endpoint
@@ -59,7 +60,7 @@ final readonly class ReaderAuditRunner
             readerLink: $link->to($entry),
             extracted: $result->ok,
             markers: $this->markers->detect($result, $entry, $body),
-            metrics: $this->metrics($body),
+            metrics: $this->metrics($result, $body),
         );
     }
 
@@ -79,10 +80,17 @@ final readonly class ReaderAuditRunner
     }
 
     /** @return array<string, int|float> */
-    private function metrics(?ExtractedBody $body): array
+    private function metrics(ExtractionResult $result, ?ExtractedBody $body): array
     {
         if ($body === null) {
-            return ['chars' => 0, 'paragraphs' => 0, 'links' => 0, 'images' => 0, 'leadingBlocks' => 0];
+            return [
+                'chars' => 0,
+                'paragraphs' => 0,
+                'links' => 0,
+                'images' => 0,
+                'leadingBlocks' => 0,
+                'paywalled' => 0,
+            ];
         }
 
         return [
@@ -91,6 +99,7 @@ final readonly class ReaderAuditRunner
             'links' => \count($body->links),
             'images' => \count($body->imageSources),
             'leadingBlocks' => \count($body->leadingBlocks()),
+            'paywalled' => (int) $result->paywalled,
         ];
     }
 }
