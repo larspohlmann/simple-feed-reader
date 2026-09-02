@@ -484,10 +484,11 @@ final class ArticleExtractorTest extends TestCase
 
         self::assertTrue($result->ok);
         $body = (string) $result->contentHtml;
-        self::assertStringContainsString(
-            '<a href="https://players.brightcove.net/665003303001/6tKQRAx7lu_default/index.html'
-                . '?videoId=6403736850112">',
+        self::assertMatchesRegularExpression(
+            '#<a href="https://players\.brightcove\.net/665003303001/6tKQRAx7lu_default/index\.html'
+            . '\?videoId(?:=|&\#61;)6403736850112"#',
             $body,
+            'the Brightcove player is a link to the canonical videoId URL',
         );
         self::assertSame(
             1,
