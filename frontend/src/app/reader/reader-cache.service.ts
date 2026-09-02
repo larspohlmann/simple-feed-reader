@@ -36,7 +36,10 @@ export class ReaderCacheService {
   // v12: v11 records were extracted while a declared embed hid the page's
   // other embeds (#788); an already-read article would keep one player where
   // the page has several.
-  private static readonly VERSION = 12;
+  // v13: v12 records lost every photo held in a lazy <picture>, a custom
+  // element or a media-classed wrapper (#789); an already-read gallery would
+  // keep its empty figures.
+  private static readonly VERSION = 13;
 
   private db: Promise<IDBDatabase | null> | null = null;
   /** Strictly monotonic clock so puts within the same millisecond keep insertion order. */
