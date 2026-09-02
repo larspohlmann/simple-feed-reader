@@ -134,7 +134,7 @@ final readonly class LazyImageSources
             if ($rendition === null) {
                 continue;
             }
-            if ($widest === null || $this->outmeasures($rendition, $widest)) {
+            if ($widest === null || $rendition->outsizes($widest)) {
                 $widest = $rendition;
             }
         }
@@ -152,16 +152,6 @@ final readonly class LazyImageSources
         }
 
         return new ImageRendition($candidate->url, $candidate->width ?? $this->declaredWidth($candidate->url));
-    }
-
-    /** True when a rendition outsizes the incumbent; an unmeasured one never does. */
-    private function outmeasures(ImageRendition $candidate, ImageRendition $incumbent): bool
-    {
-        if ($candidate->width === null) {
-            return false;
-        }
-
-        return $incumbent->width === null || $candidate->width > $incumbent->width;
     }
 
     /** The pixel width a URL states in a `width=` or `w=` query, or null. */
@@ -270,7 +260,7 @@ final readonly class LazyImageSources
     {
         foreach (self::SRCSET_ATTRIBUTES as $attribute) {
             $srcset = $source->getAttribute($attribute);
-            if ($srcset !== null && trim($srcset) !== '') {
+            if ($srcset !== null) {
                 return $srcset;
             }
         }
