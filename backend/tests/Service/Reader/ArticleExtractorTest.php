@@ -24,6 +24,7 @@ use App\Service\Reader\LeadingTitleRemover;
 use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\InBodyEmbedRewriter;
+use App\Service\Reader\Media\MediaLanding;
 use App\Service\Reader\Media\MediaMarkup;
 use App\Service\Reader\Media\MediaRelevance;
 use App\Service\Reader\Media\MediaUrlKind;
@@ -89,7 +90,7 @@ final class ArticleExtractorTest extends TestCase
             $this->bodyCleaner(),
             new EntrySanitizer(),
             $this->mediaScanner(),
-            new StreamLocationResolver($redirects, $this->urlKind(), 'TestAgent/1.0'),
+            new StreamLocationResolver(new MediaLanding($redirects, 'TestAgent/1.0'), $this->urlKind()),
         );
     }
 
@@ -246,7 +247,7 @@ final class ArticleExtractorTest extends TestCase
             $this->bodyCleaner(),
             new EntrySanitizer(),
             $this->mediaScanner(),
-            new StreamLocationResolver($redirects, $this->urlKind(), 'TestAgent/1.0'),
+            new StreamLocationResolver(new MediaLanding($redirects, 'TestAgent/1.0'), $this->urlKind()),
         );
 
         $result = $extractor->extract('http://169.254.169.254/');
