@@ -33,4 +33,10 @@ final readonly class MediaCandidate
             $this->precedingText ?? $later->precedingText,
         );
     }
+
+    /** The same media served from where its URL finally lands. */
+    public function at(string $url): self
+    {
+        return new self($this->kind, $url, $this->posterUrl, $this->label, $this->precedingText);
+    }
 }

@@ -35,6 +35,7 @@ use App\Service\Reader\Media\Source\AttributeMediaSource;
 use App\Service\Reader\Media\Source\JsonLdMediaSource;
 use App\Service\Reader\Media\Source\PageEmbedSource;
 use App\Service\Reader\Media\Source\SemanticMediaSource;
+use App\Service\Reader\Media\StreamLocationResolver;
 use App\Service\Reader\Media\SubstackPosterLink;
 use App\Service\Reader\NavigationChromeTrimmer;
 use App\Service\Reader\ReaderBodyCleaner;
@@ -69,16 +70,13 @@ final class ArticleExtractorTest extends TestCase
             }
         };
 
-        $fetcher = new HtmlPageFetcher(
-            new RedirectFollower(
-                new FailoverRequestSender(new MockHttpClient($responses), $this->noProxyResolver()),
-                new UrlGuard($resolver, new IpValidator()),
-            ),
-            'TestAgent/1.0',
+        $redirects = new RedirectFollower(
+            new FailoverRequestSender(new MockHttpClient($responses), $this->noProxyResolver()),
+            new UrlGuard($resolver, new IpValidator()),
         );
 
         return new ArticleExtractor(
-            $fetcher,
+            new HtmlPageFetcher($redirects, 'TestAgent/1.0'),
             new FetchedPageNormalizer(
                 new CustomElementUnwrapper(),
                 new LazyImageSources(),
@@ -90,6 +88,7 @@ final class ArticleExtractorTest extends TestCase
             $this->bodyCleaner(),
             new EntrySanitizer(),
             $this->mediaScanner(),
+            new StreamLocationResolver($redirects, $this->urlKind(), 'TestAgent/1.0'),
         );
     }
 
@@ -119,8 +118,8 @@ final class ArticleExtractorTest extends TestCase
 
     private function mediaScanner(): PageMediaScanner
     {
+        $urlKind = $this->urlKind();
         $providers = new EmbedProviders([new YouTubeEmbedProvider(), new BrightcoveEmbedProvider()]);
-        $urlKind = new MediaUrlKind(new DurableMediaUrl(), $providers);
 
         return new PageMediaScanner([
             new JsonLdMediaSource($urlKind, $providers),
@@ -128,6 +127,13 @@ final class ArticleExtractorTest extends TestCase
             new AttributeMediaSource($urlKind, new MediaRelevance()),
             new SemanticMediaSource($urlKind),
         ]);
+    }
+
+    private function urlKind(): MediaUrlKind
+    {
+        $providers = new EmbedProviders([new YouTubeEmbedProvider(), new BrightcoveEmbedProvider()]);
+
+        return new MediaUrlKind(new DurableMediaUrl(), $providers);
     }
 
     public function testExtractsAndAbsolutisesImages(): void
@@ -218,15 +224,12 @@ final class ArticleExtractorTest extends TestCase
                 return [];
             }
         };
-        $fetcher = new HtmlPageFetcher(
-            new RedirectFollower(
-                new FailoverRequestSender(new MockHttpClient(), $this->noProxyResolver()),
-                new UrlGuard($resolver, new IpValidator()),
-            ),
-            'TestAgent/1.0',
+        $redirects = new RedirectFollower(
+            new FailoverRequestSender(new MockHttpClient(), $this->noProxyResolver()),
+            new UrlGuard($resolver, new IpValidator()),
         );
         $extractor = new ArticleExtractor(
-            $fetcher,
+            new HtmlPageFetcher($redirects, 'TestAgent/1.0'),
             new FetchedPageNormalizer(
                 new CustomElementUnwrapper(),
                 new LazyImageSources(),
@@ -238,6 +241,7 @@ final class ArticleExtractorTest extends TestCase
             $this->bodyCleaner(),
             new EntrySanitizer(),
             $this->mediaScanner(),
+            new StreamLocationResolver($redirects, $this->urlKind(), 'TestAgent/1.0'),
         );
 
         $result = $extractor->extract('http://169.254.169.254/');
@@ -506,21 +510,25 @@ final class ArticleExtractorTest extends TestCase
         );
     }
 
-    /** ZDF 491430: the stream is a <video> with its poster, the shape Safari and AVPlayer play natively. */
-    public function testEmitsAnHlsStreamAsAVideoWithItsPoster(): void
+    /** ZDF 491430: the stream is a <video> at the Akamai master its playlist URL redirects to (#782 follow-up). */
+    public function testEmitsAnHlsStreamAsAVideoAtItsLanding(): void
     {
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/media/zdf-hls-video.html');
+        $master = 'https://zdfvod.akamaized.net/i/mp4/none/zdf/26/08/260831_istaf_moma/1/'
+            . '260831_istaf_moma,_508k_p9,_808k_p11,_1628k_p13,_3328k_p15,_6628k_p61,v17.mp4.csmil/master.m3u8';
         $result = $this->extractor(
-            [new MockResponse($html, ['http_code' => 200])],
-            ['www.zdfheute.de' => ['93.184.216.34']],
+            [
+                new MockResponse($html, ['http_code' => 200]),
+                new MockResponse('', ['http_code' => 301, 'response_headers' => ['location' => $master]]),
+                new MockResponse('#EXTM3U', ['http_code' => 200]),
+            ],
+            ['www.zdfheute.de' => ['93.184.216.34'], 'zdfvod.akamaized.net' => ['93.184.216.35']],
         )->extract('https://www.zdfheute.de/video/zdf-morgenmagazin/istaf-berlin-em-stars-100.html');
 
         self::assertTrue($result->ok);
         $body = (string) $result->contentHtml;
-        self::assertStringContainsString(
-            'src="https://www.zdfheute.de/api/video/istaf-berlin-em-stars-100.m3u8"',
-            $body,
-        );
+        self::assertStringContainsString('src="' . $master . '"', $body);
+        self::assertStringNotContainsString('zdfheute.de/api/video', $body);
         self::assertMatchesRegularExpression(
             '#<video[^>]*poster="https://www\.zdfheute\.de/assets/istaf-berlin-em-stars-102~1920x1080[^"]*"#',
             $body,

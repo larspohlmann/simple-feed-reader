@@ -6,6 +6,7 @@ namespace App\Service\Reader;
 
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\Media\PageMediaScanner;
+use App\Service\Reader\Media\StreamLocationResolver;
 use App\Service\Reader\Paywall\PaywallSignals;
 use App\Service\Sanitize\EntrySanitizer;
 use Dom\HTMLDocument;
@@ -47,6 +48,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
         private readonly ReaderBodyCleaner $bodyCleaner,
         private readonly EntrySanitizer $sanitizer,
         private readonly PageMediaScanner $mediaScanner,
+        private readonly StreamLocationResolver $streamLocations,
     ) {
     }
 
@@ -61,7 +63,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
         $normalized = $this->normalizer->normalize($page->html);
         $pageImages = PageImageInventory::fromDocument($normalized);
         $paywall = PaywallSignals::fromPage($page->html, $normalized);
-        $media = $this->mediaScanner->scan($page->html, $page->finalUrl);
+        $media = $this->streamLocations->resolve($this->mediaScanner->scan($page->html, $page->finalUrl));
 
         $article = $this->richestArticle($normalized, $page);
         if ($article === null) {

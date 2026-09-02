@@ -45,4 +45,16 @@ final class MediaCandidateTest extends TestCase
         self::assertSame('A', $completed->label);
         self::assertSame('Prose A.', $completed->precedingText);
     }
+
+    public function testAtMovesOnlyTheUrl(): void
+    {
+        $declared = new MediaCandidate(MediaKind::Stream, 'https://a.test/x.m3u8', 'p.jpg', null, 'prose');
+
+        $landed = $declared->at('https://cdn.test/master.m3u8');
+
+        self::assertSame('https://cdn.test/master.m3u8', $landed->url);
+        self::assertSame(MediaKind::Stream, $landed->kind);
+        self::assertSame('p.jpg', $landed->posterUrl);
+        self::assertSame('prose', $landed->precedingText);
+    }
 }
