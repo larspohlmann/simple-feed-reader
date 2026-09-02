@@ -580,6 +580,32 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringContainsString('earliest known recording of whale song', $body);
     }
 
+    /** tagesschau 496523: both players reach the body; the video carries the still the page drew beside it. */
+    public function testABroadcastPageWithoutOgImageKeepsItsVideoBesideTheAudio(): void
+    {
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/media/ard-broadcast-no-og-image.html');
+        $result = $this->extractor(
+            [new MockResponse($html, ['http_code' => 200])],
+            ['www.tagesschau.de' => ['93.184.216.34']],
+        )->extract('https://www.tagesschau.de/tagesschau_in_einfacher_sprache/tse-1410.html');
+
+        self::assertTrue($result->ok);
+        $body = (string) $result->contentHtml;
+        self::assertMatchesRegularExpression(
+            '#<video[^>]*src="https://tagesschau-progressive\.ard-mcdn\.de/video/2026/0902/'
+                . 'TV-20260902-1804-0100\.[a-z]+\.h264\.mp4"#',
+            $body,
+        );
+        self::assertMatchesRegularExpression(
+            '#<video[^>]*poster="https://images\.tagesschau\.de/[^"]*sendungsbild-1789662[^"]*"#',
+            $body,
+        );
+        $audioTag = '<audio controls preload="none" '
+            . 'src="https://tagesschau-podcast.ard-mcdn.de/audio/2026/0902/TV-20260902-1804-0100.mp3"';
+        self::assertStringContainsString($audioTag, $body);
+        self::assertStringNotContainsString('sendungsbild-other', $body);
+    }
+
     private function extractFixture(string $fixture): ExtractionResult
     {
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/' . $fixture);
