@@ -53,6 +53,24 @@ describe('ReaderApi', () => {
     });
   });
 
+  it('detects ReaderApi dropping a supplied WordPress title from the subscribe body', () => {
+    api
+      .subscribe(
+        'https://wp.example/wp-json/wp/v2/posts',
+        'wp-json',
+        undefined,
+        'WordPress Example',
+      )
+      .subscribe();
+    const req = ctrl.expectOne('https://api.test/api/subscriptions');
+    expect(req.request.body).toEqual({
+      url: 'https://wp.example/wp-json/wp/v2/posts',
+      format: 'wp-json',
+      title: 'WordPress Example',
+    });
+    req.flush({ subscription: {} });
+  });
+
   it('GETs a single entry by id', () => {
     api.entry(514).subscribe();
     const req = ctrl.expectOne('https://api.test/api/entries/514');

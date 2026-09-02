@@ -48,12 +48,18 @@ export class ReaderApi {
     return this.http.get<SubscriptionCountsResponse>(`${this.base}/api/subscriptions/counts`);
   }
 
-  subscribe(url: string, format?: string, tagIds?: number[]): Observable<SubscribeResult> {
-    const body: { url: string; format?: string; tagIds?: number[] } = { url };
+  subscribe(
+    url: string,
+    format?: string,
+    tagIds?: number[],
+    title?: string,
+  ): Observable<SubscribeResult> {
+    const body: { url: string; format?: string; tagIds?: number[]; title?: string } = { url };
     if (format) body.format = format;
     // Omit an empty selection so the body stays byte-compatible with clients
     // (and tests) that never send tags.
     if (tagIds && tagIds.length > 0) body.tagIds = tagIds;
+    if (title) body.title = title;
     return this.http.post<SubscribeResult>(`${this.base}/api/subscriptions`, body);
   }
 

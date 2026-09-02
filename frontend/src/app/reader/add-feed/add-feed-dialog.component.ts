@@ -143,7 +143,11 @@ export class AddFeedDialogComponent implements OnInit {
   }
 
   pick(c: FeedCandidate): void {
-    this.subscribe(c.url, this.storedFormat(c));
+    this.subscribe(
+      c.url,
+      this.storedFormat(c),
+      c.format === 'wp-json' ? (c.title ?? undefined) : undefined,
+    );
   }
 
   /** Expands or collapses a candidate's preview rows; expanding fetches the
@@ -164,7 +168,7 @@ export class AddFeedDialogComponent implements OnInit {
     return c.format === 'scraped' || c.format === 'wp-json' ? c.format : undefined;
   }
 
-  private subscribe(url: string, format?: string): void {
+  private subscribe(url: string, format?: string, title?: string): void {
     this.loading.set(true);
     this.error.set(null);
     this.searched.set(false);
@@ -175,7 +179,7 @@ export class AddFeedDialogComponent implements OnInit {
     // contradict the warning.
     this.candidates.set([]);
     this.previews.set({});
-    this.api.subscribe(url, format, [...this.checked()]).subscribe({
+    this.api.subscribe(url, format, [...this.checked()], title).subscribe({
       next: (res) => {
         this.loading.set(false);
         if ('subscription' in res) this.ref.close(res.subscription);

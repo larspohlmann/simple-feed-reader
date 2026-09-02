@@ -83,7 +83,7 @@ final readonly class SubscriptionController
         $tags = $this->tags->findAllByIdsForUser($request->tagIds, (int) $user->getId());
 
         try {
-            $outcome = $this->subscriptions->subscribe($user, $request->url, $request->format, $tags);
+            $outcome = $this->subscriptions->subscribe($user, $request->url, $request->format, $tags, $request->title);
         } catch (ScrapingDisabledException $e) {
             // Rethrow as an ApiException so the listener renders a problem+json
             // document — a bare RuntimeException would otherwise reach

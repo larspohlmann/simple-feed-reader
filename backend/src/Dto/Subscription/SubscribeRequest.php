@@ -33,14 +33,18 @@ final readonly class SubscribeRequest
     #[Assert\All([new Assert\Type('integer'), new Assert\Positive()])]
     public array $tagIds;
 
+    #[Assert\Length(max: 512)]
+    public ?string $title;
+
     /**
      * @param list<int> $tagIds
      */
-    public function __construct(string $url = '', ?string $format = null, array $tagIds = [])
+    public function __construct(string $url = '', ?string $format = null, array $tagIds = [], ?string $title = null)
     {
         $this->url = self::normalizeUrl($url);
         $this->format = $format;
         $this->tagIds = $tagIds;
+        $this->title = $title;
     }
 
     /**

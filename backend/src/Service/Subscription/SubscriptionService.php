@@ -93,8 +93,13 @@ final readonly class SubscriptionService
      *                        subscription; ignored when the outcome is a
      *                        candidate list rather than a subscription
      */
-    public function subscribe(User $user, string $url, ?string $format = null, array $tags = []): SubscribeOutcome
-    {
+    public function subscribe(
+        User $user,
+        string $url,
+        ?string $format = null,
+        array $tags = [],
+        ?string $initialTitle = null,
+    ): SubscribeOutcome {
         // A 'scraped' or 'wp-json' subscribe re-posts a candidate URL discovery
         // itself just produced: the URL IS the source. Running discovery again
         // would re-fetch for nothing — or fail this time and block a subscribe
@@ -112,7 +117,7 @@ final readonly class SubscriptionService
         if (SourceFormat::WP_JSON === $format) {
             // No permission gate: unlike scraping, a REST endpoint is a real
             // machine source the site publishes, not a synthesized page scrape.
-            return $this->subscribeVerbatim($user, $url, SourceFormat::WP_JSON, $tags);
+            return $this->subscribeVerbatim($user, $url, SourceFormat::WP_JSON, $tags, $initialTitle);
         }
 
         $result = $this->discovery->discover($url, $this->scrapeFallbackPolicy->forUser($user));
@@ -135,8 +140,13 @@ final readonly class SubscriptionService
      * @param 'scraped'|'wp-json' $format
      * @param list<Tag>           $tags
      */
-    private function subscribeVerbatim(User $user, string $url, string $format, array $tags): SubscribeOutcome
-    {
-        return SubscribeOutcome::subscribed($this->creator->create($user, $url, $format, $tags));
+    private function subscribeVerbatim(
+        User $user,
+        string $url,
+        string $format,
+        array $tags,
+        ?string $initialTitle = null,
+    ): SubscribeOutcome {
+        return SubscribeOutcome::subscribed($this->creator->create($user, $url, $format, $tags, $initialTitle));
     }
 }

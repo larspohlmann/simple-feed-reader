@@ -563,6 +563,40 @@ final class SubscriptionControllerTest extends WebTestCase
         self::assertNull($em->getRepository(Feed::class)->findOneBy(['url' => 'https://www.heise.de/']));
     }
 
+    public function testWpJsonFormatSubscribeSeedsTheCandidateTitleWithoutFetching(): void
+    {
+        $client = self::createClient();
+        $headers = $this->authHeader('wpjson-title@example.com');
+        $stub = new StubFeedFetcher();
+        $this->installFetcher($stub);
+        $url = 'https://wp.example/wp-json/wp/v2/posts?per_page=20';
+
+        $client->request(
+            'POST',
+            '/api/subscriptions',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode([
+                'url' => $url,
+                'format' => 'wp-json',
+                'title' => 'WordPress Example',
+            ], \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseStatusCodeSame(201);
+        self::assertSame([], $stub->fetchedUrls);
+        $created = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($created);
+        self::assertIsArray($created['subscription']);
+        self::assertSame('WordPress Example', $created['subscription']['title']);
+        self::assertSame('wp-json', $created['subscription']['sourceFormat']);
+
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $feed = $em->getRepository(Feed::class)->findOneBy(['url' => $url]);
+        self::assertInstanceOf(Feed::class, $feed);
+        self::assertSame('WordPress Example', $feed->getTitle());
+    }
+
     public function testCannotUpdateAnotherUsersSubscription(): void
     {
         $client = self::createClient();
