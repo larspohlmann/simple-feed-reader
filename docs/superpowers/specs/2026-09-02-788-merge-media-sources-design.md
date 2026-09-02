@@ -32,7 +32,12 @@ but precedence over a **URL**, not over a kind:
   anchor, and its place in the list.
 - A later source that names the same URL fills the gaps that candidate left
   (a missing poster, label, or prose anchor). It never overrides what was set.
-- A URL no earlier source named joins the list, after everything named so far.
+- A URL no earlier source named joins the list — but only from a source that
+  **re-confirms** the kind (names at least one URL an earlier source already
+  set for that kind), or when no earlier source claimed the kind at all. A
+  lower source that shares no URL of an already-claimed kind is describing a
+  rendition of the same asset or an unrelated file, not a new player, and its
+  unique URLs are dropped (the re-confirm guard, added after ARD, below).
 - URLs are compared after normalisation (`MediaUrlKind`, `EmbedProviders`),
   which is already what every source emits.
 - The cap of `ArticleMedia::MAX_ITEMS` (20) applies to the merged list; the
@@ -43,17 +48,30 @@ prose block, so a candidate that gains its anchor from the page scan lands
 after its section instead of at the top, and the lead image is restored
 because nothing is top-placed any more.
 
-## Why the corpus permits this
+## Why the corpus permits the merge — and why the guard is needed
 
 The ownership rule existed so "a later, weaker layer must not append a
-scanned file beside a declared one". Measured across every fixture in
+scanned file beside a declared one". Across every fixture in
 `tests/Fixtures/reader/media/` (deutschlandradio, npr, ard, heise,
-soundcloud, unseen-publisher, sidebar-teaser): in every case where two
-sources yield the same kind, they yield the **same normalised URL**. No
-fixture shows the same asset under two URLs. The merge therefore changes no
-corpus result, and the one hypothetical the old unit test encoded
-(`declared.mp3` beside `scanned.mp3`) becomes the behaviour the issue asks
-for: both are unique, both are offered, the declared one first.
+soundcloud, unseen-publisher, sidebar-teaser), where two sources yield the
+same kind they yield the **same normalised URL**, so the plain merge changes
+no corpus result there.
+
+That measurement was incomplete: it did not cover
+`tests/Fixtures/reader/article-inline-video.html`, an ARD page that offers
+**one** video at two renditions — a JSON-LD `VideoObject` (`…webxxl…mp4`) and
+a `data-v` MediaPlayer (`…webs…mp4`). The plain merge keeps both unique URLs
+and renders the same video twice; the ARD/ZDF `data-v` pattern is common, so
+this is a real regression, not a hypothetical. The **re-confirm guard** above
+resolves it: `AttributeMediaSource` re-confirms no URL `JsonLdMediaSource`
+set, so its rendition URL is dropped and one player survives — while vice's
+`PageEmbedSource` re-confirms the declared YouTube id and so is trusted to add
+the other three. The guard overrules the old unit test's `declared.mp3`-beside-
+`scanned.mp3` reading: two disjoint same-kind URLs from two sources are one
+player (the declared one), because a lower source that shares nothing is
+seeing a rendition, not a second asset. No measured page offers two genuinely
+different files of one kind across sources; if one appears, the guard's worst
+case is one player instead of two — the old behaviour, not a new fault.
 
 ## What to build
 

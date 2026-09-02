@@ -143,25 +143,25 @@ In `backend/tests/Service/Reader/Media/PageMediaScannerTest.php`, replace `testT
         ], $urls);
     }
 
-    /** A declared file and a differently named scanned one are both unique; the declaration comes first. */
-    public function testAUniqueUrlOfAnAlreadySeenKindStillJoinsAfterTheDeclaredOne(): void
+    /** ARD: a lower source that re-confirms no URL of a claimed kind is seeing a rendition, not a new player — its unique URL is dropped (#788). */
+    public function testALowerSourceThatConfirmsNothingAddsNoUrlOfAClaimedKind(): void
     {
         $scanner = new PageMediaScanner([
-            $this->source([new MediaCandidate(MediaKind::Audio, 'https://x.test/declared.mp3')]),
-            $this->source([new MediaCandidate(MediaKind::Audio, 'https://x.test/scanned.mp3')]),
+            $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/declared.webxxl.mp4')]),
+            $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/scanned.webs.mp4')]),
         ]);
 
         $media = $scanner->scan('<html></html>', 'https://x.test/a');
 
-        self::assertCount(2, $media->candidates);
+        self::assertCount(1, $media->candidates);
         self::assertStringContainsString('declared', $media->candidates[0]->url);
-        self::assertStringContainsString('scanned', $media->candidates[1]->url);
     }
 
     public function testTheCapAppliesToTheMergedListAcrossSources(): void
     {
+        // The second source re-confirms e0 so the guard trusts the rest of its embeds.
         $first = [];
-        $second = [];
+        $second = [new MediaCandidate(MediaKind::Embed, 'https://x.test/e0')];
         for ($i = 0; $i < 15; $i++) {
             $first[] = new MediaCandidate(MediaKind::Embed, 'https://x.test/e' . $i);
             $second[] = new MediaCandidate(MediaKind::Embed, 'https://x.test/f' . $i);
@@ -202,12 +202,9 @@ Replace the whole class body of `PageMediaScanner` (keep the namespace, imports,
 
 ```php
 /**
- * Runs every candidate source over the raw page, highest priority first, and
- * merges what they find by URL: the first source to name a URL sets the
- * candidate and its place, a later source fills the gaps it left (poster,
- * label, prose anchor), and a URL no earlier source named joins the list. A
- * declaration establishes precedence without hiding the embeds only a page
- * scan can see (#788).
+ * Runs every source over the raw page, highest priority first, and merges by URL: the first to name a URL
+ * sets the candidate and its place; a later source fills its gaps and adds new URLs of a kind only when it
+ * re-confirms one an earlier source set — proof it sees this article's media, not a rendition (#788).
  *
  * It reads the raw HTML rather than FetchedPageNormalizer's document on purpose:
  * that pass is tuned for readability scoring and removes elements, so discovery
@@ -227,14 +224,75 @@ final readonly class PageMediaScanner
     {
         $byUrl = [];
         foreach ($this->sources as $source) {
-            foreach ($source->find($pageHtml, $pageUrl) as $candidate) {
-                $byUrl[$candidate->url] = isset($byUrl[$candidate->url])
-                    ? $byUrl[$candidate->url]->completedBy($candidate)
-                    : $candidate;
-            }
+            $this->mergeSource($source->find($pageHtml, $pageUrl), $byUrl);
         }
 
         return new ArticleMedia(\array_slice(array_values($byUrl), 0, ArticleMedia::MAX_ITEMS));
+    }
+
+    /**
+     * @param list<MediaCandidate>          $candidates
+     * @param array<string, MediaCandidate> $byUrl
+     */
+    private function mergeSource(array $candidates, array &$byUrl): void
+    {
+        $claimedKinds = $this->kinds($byUrl);
+        $reconfirmedKinds = $this->reconfirmedKinds($candidates, $byUrl);
+        foreach ($candidates as $candidate) {
+            if (isset($byUrl[$candidate->url])) {
+                $byUrl[$candidate->url] = $byUrl[$candidate->url]->completedBy($candidate);
+                continue;
+            }
+            if ($this->mayAdd($candidate, $claimedKinds, $reconfirmedKinds)) {
+                $byUrl[$candidate->url] = $candidate;
+            }
+        }
+    }
+
+    /**
+     * A new URL joins when no earlier source claimed its kind, or this source re-confirms that kind — proof
+     * it sees this article's media, not a rendition or an unrelated file of an already-claimed kind (#788).
+     *
+     * @param array<string, true> $claimedKinds
+     * @param array<string, true> $reconfirmedKinds
+     */
+    private function mayAdd(MediaCandidate $candidate, array $claimedKinds, array $reconfirmedKinds): bool
+    {
+        return !isset($claimedKinds[$candidate->kind->value])
+            || isset($reconfirmedKinds[$candidate->kind->value]);
+    }
+
+    /**
+     * @param array<string, MediaCandidate> $byUrl
+     *
+     * @return array<string, true> the kinds an earlier source has already set
+     */
+    private function kinds(array $byUrl): array
+    {
+        $kinds = [];
+        foreach ($byUrl as $candidate) {
+            $kinds[$candidate->kind->value] = true;
+        }
+
+        return $kinds;
+    }
+
+    /**
+     * @param list<MediaCandidate>          $candidates
+     * @param array<string, MediaCandidate> $byUrl
+     *
+     * @return array<string, true> the kinds this source re-confirms by naming an already-set URL
+     */
+    private function reconfirmedKinds(array $candidates, array $byUrl): array
+    {
+        $kinds = [];
+        foreach ($candidates as $candidate) {
+            if (isset($byUrl[$candidate->url])) {
+                $kinds[$candidate->kind->value] = true;
+            }
+        }
+
+        return $kinds;
     }
 }
 ```
