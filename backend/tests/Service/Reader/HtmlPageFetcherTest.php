@@ -81,7 +81,31 @@ final class HtmlPageFetcherTest extends TestCase
         $fetcher = $this->fetcher([new MockResponse('nope', ['http_code' => 404])]);
 
         $this->expectException(PageFetchException::class);
+        $this->expectExceptionMessage('HTTP 404');
         $fetcher->fetch('https://example.com/missing');
+    }
+
+    public function testSendsTheAcceptHeaderAndTimeBudgetForEveryFetch(): void
+    {
+        /** @var array<string, mixed> $seenOptions */
+        $seenOptions = [];
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use (&$seenOptions): MockResponse {
+                $seenOptions = $options;
+
+                return new MockResponse('<html lang="en"><body>ok</body></html>', ['http_code' => 200]);
+            },
+        );
+
+        $fetcher->fetch('https://example.com/post');
+
+        self::assertContains(
+            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            $seenOptions['headers'],
+        );
+        self::assertSame(10.0, $seenOptions['timeout']);
+        self::assertSame(20.0, $seenOptions['max_duration']);
+        self::assertSame(0, $seenOptions['max_redirects']);
     }
 
     public function testDisablesTransparentCompression(): void

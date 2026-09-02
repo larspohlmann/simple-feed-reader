@@ -204,6 +204,20 @@ final class JsonLdMediaSourceTest extends TestCase
         self::assertSame('https://cdn.test/main.mp4', $found[0]->url);
     }
 
+    public function testTwoSeparateVideoObjectsEachYieldTheirOwnCandidate(): void
+    {
+        $html = '<html><body><script type="application/ld+json">[' . '{"@type":"VideoObject",'
+            . '"contentUrl":"https://x.test/first.mp4","thumbnailUrl":"https://x.test/first.jpg"},'
+            . '{"@type":"VideoObject","contentUrl":"https://x.test/second.mp4",'
+            . '"thumbnailUrl":"https://x.test/second.jpg"}]</script></body></html>';
+
+        $found = $this->source->find($html, 'https://x.test/a.html');
+
+        self::assertCount(2, $found);
+        self::assertSame('https://x.test/first.mp4', $found[0]->url);
+        self::assertSame('https://x.test/second.mp4', $found[1]->url);
+    }
+
     public function testThePlayerPageServesWhenTheNodesFileIsRefused(): void
     {
         $html = '<html><body><script type="application/ld+json">'

@@ -116,6 +116,41 @@ final class StreamLocationResolverTest extends TestCase
         self::assertSame(self::DECLARED, $resolved->candidates[0]->url);
     }
 
+    public function testSendsTheHlsAcceptHeaderAgentAndTimeBudget(): void
+    {
+        /** @var array<string, mixed> $seenOptions */
+        $seenOptions = [];
+        $client = new MockHttpClient(
+            function (string $method, string $url, array $options) use (&$seenOptions): MockResponse {
+                $seenOptions = $options;
+
+                return new MockResponse('#EXTM3U', ['http_code' => 200]);
+            },
+        );
+        $dns = new class implements DnsResolverInterface {
+            public function resolve(string $hostname): array
+            {
+                return ['93.184.216.34'];
+            }
+        };
+        $proxy = $this->createStub(ProxyEgressResolver::class);
+        $proxy->method('resolve')->willReturn(null);
+        $resolver = new StreamLocationResolver(
+            new RedirectFollower(new FailoverRequestSender($client, $proxy), new UrlGuard($dns, new IpValidator())),
+            new MediaUrlKind(new DurableMediaUrl(), new EmbedProviders([new YouTubeEmbedProvider()])),
+            'TestAgent/1.0',
+        );
+
+        $resolver->resolve(self::stream());
+
+        self::assertContains(
+            'Accept: application/vnd.apple.mpegurl,application/x-mpegURL,*/*;q=0.8',
+            $seenOptions['headers'],
+        );
+        self::assertContains('User-Agent: TestAgent/1.0', $seenOptions['headers']);
+        self::assertSame(10.0, $seenOptions['max_duration']);
+    }
+
     public function testMakesNoRequestForAnythingButAStream(): void
     {
         $media = new ArticleMedia([

@@ -65,6 +65,15 @@ final class RedirectFollowerTest extends TestCase
         self::assertFalse($landed->isSuccess());
     }
 
+    public function testStatus300IsNotASuccessfulLanding(): void
+    {
+        $landed = $this->follower([new MockResponse('choices', ['http_code' => 300])])
+            ->follow('https://example.com/ambiguous', [], 5);
+
+        self::assertSame(300, $landed->status);
+        self::assertFalse($landed->isSuccess());
+    }
+
     public function testGuardsEveryHopSoARedirectIntoLinkLocalSpaceIsRefused(): void
     {
         $requested = [];
@@ -86,6 +95,29 @@ final class RedirectFollowerTest extends TestCase
     public function testRefusesMoreHopsThanAllowed(): void
     {
         $follower = $this->follower(static fn (): MockResponse => self::redirect('/again'));
+
+        $this->expectException(RedirectChainException::class);
+        $this->expectExceptionMessage('more than 2 redirects');
+        $follower->follow('https://example.com/start', [], 2);
+    }
+
+    public function testLandsWhenTheChainUsesExactlyTheAllowedHops(): void
+    {
+        $follower = $this->follower([self::redirect('/a'), self::redirect('/b'), new MockResponse('ok', ['http_code' => 200])]);
+
+        $landed = $follower->follow('https://example.com/start', [], 2);
+
+        self::assertTrue($landed->isSuccess());
+    }
+
+    public function testThrowsOnlyAfterTheChainExceedsTheAllowedHops(): void
+    {
+        $follower = $this->follower([
+            self::redirect('/a'),
+            self::redirect('/b'),
+            self::redirect('/c'),
+            new MockResponse('ok', ['http_code' => 200]),
+        ]);
 
         $this->expectException(RedirectChainException::class);
         $this->expectExceptionMessage('more than 2 redirects');
