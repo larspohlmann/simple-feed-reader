@@ -33,6 +33,37 @@
         // the cast changes nothing the method can do. Equivalent mutant, ignored
         // by name and method; a real mutant in the same method still fails.
         CastString: { ignore: ['App\\Service\\Discovery\\SubstackProfileFeed::feedUrl'] },
+        // MethodCallRemoval on a landed response's cancel(): it only releases the
+        // underlying connection early once the caller is done with it. Against
+        // MockHttpClient that has no observable effect, and a spy asserting the
+        // call would test the mock, not behaviour. Ignored by name and method in
+        // the three places a landed response is discarded this way.
+        MethodCallRemoval: {
+            ignore: [
+                'App\\Service\\Fetch\\RedirectFollower::redirectTarget',
+                'App\\Service\\Reader\\HtmlPageFetcher::fetch',
+                'App\\Service\\Reader\\Media\\StreamLocationResolver::landingUrlOf',
+            ],
+        },
+        // FalseValue on HtmlPageFetcher::content()'s getContent(false): the
+        // buffer-vs-throw flag only differs on a non-2xx response, but content()
+        // runs only after fetch() has already confirmed isSuccess(), so the flag
+        // has no reachable effect here.
+        FalseValue: { ignore: ['App\\Service\\Reader\\HtmlPageFetcher::content'] },
+        // GreaterThan and Throw_ on HtmlPageFetcher's 3 MB byte cap: the post-read
+        // check in fetch() and the streaming check in options()'s on_progress
+        // closure enforce the same hard limit, the streaming one as
+        // defence-in-depth behind the post-read one. The `>` vs `>=` boundary on
+        // a fixed 3-million-byte constant is not a behaviour worth a 3 MB test
+        // fixture, and Throw_ dropping the streaming throw still leaves the
+        // post-read check to catch an oversized body.
+        GreaterThan: {
+            ignore: [
+                'App\\Service\\Reader\\HtmlPageFetcher::fetch',
+                'App\\Service\\Reader\\HtmlPageFetcher::options',
+            ],
+        },
+        Throw_: { ignore: ['App\\Service\\Reader\\HtmlPageFetcher::options'] },
     },
     phpUnit: {
         configDir: '.',

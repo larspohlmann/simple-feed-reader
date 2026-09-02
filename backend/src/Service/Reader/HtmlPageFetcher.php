@@ -4,126 +4,85 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
-use App\Service\Fetch\Exception\SsrfBlockedException;
-use App\Service\Fetch\FailoverRequestSender;
-use App\Service\Fetch\GuardedUrl;
-use App\Service\Fetch\UrlGuard;
-use App\Service\Fetch\UrlResolver;
+use App\Service\Fetch\Exception\RedirectChainException;
+use App\Service\Fetch\LandedResponse;
+use App\Service\Fetch\RedirectFollower;
 use App\Service\Reader\Exception\PageFetchException;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
-use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * Retrieves an article's source HTML for reader-mode extraction. Structurally a
- * sibling of HttpFeedFetcher — same SSRF-guarded, per-hop-revalidated redirect
- * loop and byte cap — but returns the decoded body plus the final URL (readability
- * needs it to resolve relative image URLs) and negotiates HTML, not feed XML.
+ * Retrieves an article's source HTML for reader-mode extraction: the guarded
+ * redirect chain lives in RedirectFollower; this class negotiates HTML, caps the
+ * body, and returns the decoded body plus the final URL (readability needs it
+ * to resolve relative image URLs).
  */
-final class HtmlPageFetcher
+final readonly class HtmlPageFetcher
 {
     private const int MAX_REDIRECTS = 5;
     private const int MAX_BYTES = 3_000_000;
     private const float TIMEOUT_SECONDS = 10.0;
 
     public function __construct(
-        private readonly FailoverRequestSender $requestSender,
-        private readonly UrlGuard $urlGuard,
-        private readonly string $userAgent,
+        private RedirectFollower $redirects,
+        private string $userAgent,
     ) {
     }
 
     public function fetch(string $url): PageResponse
     {
-        $currentUrl = $url;
+        $landed = $this->land($url);
+        if (!$landed->isSuccess()) {
+            $landed->response->cancel();
 
-        for ($hop = 0; $hop <= self::MAX_REDIRECTS; $hop++) {
-            try {
-                $guarded = $this->urlGuard->assertSafe($currentUrl);
-            } catch (SsrfBlockedException $e) {
-                throw new PageFetchException($e->getMessage(), previous: $e);
-            }
+            throw new PageFetchException(sprintf('%s: HTTP %d', $landed->url, $landed->status));
+        }
 
-            $response = $this->request($currentUrl, $guarded);
-            $status = $this->statusCode($response, $currentUrl);
+        $body = $this->content($landed);
+        if (\strlen($body) > self::MAX_BYTES) {
+            throw new PageFetchException(sprintf('%s: response exceeds %d bytes', $landed->url, self::MAX_BYTES));
+        }
 
-            if (\in_array($status, [301, 302, 303, 307, 308], true)) {
-                $location = $this->header($response, 'location');
-                $response->cancel();
-                if ($location === null) {
-                    throw new PageFetchException(sprintf('%s: redirect without Location', $currentUrl));
+        return new PageResponse($landed->url, $body);
+    }
+
+    private function land(string $url): LandedResponse
+    {
+        try {
+            return $this->redirects->follow($url, $this->options(), self::MAX_REDIRECTS);
+        } catch (RedirectChainException $e) {
+            throw new PageFetchException($e->getMessage(), previous: $e);
+        }
+    }
+
+    /** @return array<string, mixed> */
+    private function options(): array
+    {
+        return [
+            'headers' => [
+                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                // Refuse transparent compression: otherwise curl counts the
+                // COMPRESSED bytes against MAX_BYTES in on_progress but buffers
+                // the DECOMPRESSED body whole before the post-read size check —
+                // a small gzip bomb could inflate to GB and OOM the worker.
+                'Accept-Encoding' => 'identity',
+                'User-Agent' => $this->userAgent,
+            ],
+            'timeout' => self::TIMEOUT_SECONDS,
+            'max_duration' => self::TIMEOUT_SECONDS * 2,
+            'on_progress' => static function (int $downloaded): void {
+                if ($downloaded > self::MAX_BYTES) {
+                    throw new PageFetchException(sprintf('response exceeds %d bytes', self::MAX_BYTES));
                 }
-                $currentUrl = UrlResolver::resolve($currentUrl, $location);
-                continue;
-            }
-
-            if ($status < 200 || $status >= 300) {
-                $response->cancel();
-
-                throw new PageFetchException(sprintf('%s: HTTP %d', $currentUrl, $status));
-            }
-
-            $body = $this->content($response, $currentUrl);
-            if (\strlen($body) > self::MAX_BYTES) {
-                throw new PageFetchException(sprintf('%s: response exceeds %d bytes', $currentUrl, self::MAX_BYTES));
-            }
-
-            return new PageResponse($currentUrl, $body);
-        }
-
-        throw new PageFetchException(sprintf('%s: more than %d redirects', $url, self::MAX_REDIRECTS));
+            },
+        ];
     }
 
-    private function request(string $url, GuardedUrl $guarded): ResponseInterface
+    private function content(LandedResponse $landed): string
     {
         try {
-            return $this->requestSender->send('GET', $url, $guarded, [
-                'headers' => [
-                    'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    // Refuse transparent compression: otherwise curl counts the
-                    // COMPRESSED bytes against MAX_BYTES in on_progress but buffers
-                    // the DECOMPRESSED body whole before the post-read size check —
-                    // a small gzip bomb could inflate to GB and OOM the worker.
-                    'Accept-Encoding' => 'identity',
-                    'User-Agent' => $this->userAgent,
-                ],
-                'max_redirects' => 0,
-                'timeout' => self::TIMEOUT_SECONDS,
-                'max_duration' => self::TIMEOUT_SECONDS * 2,
-                'on_progress' => static function (int $downloaded): void {
-                    if ($downloaded > self::MAX_BYTES) {
-                        throw new PageFetchException(sprintf('response exceeds %d bytes', self::MAX_BYTES));
-                    }
-                },
-            ]);
+            return $landed->response->getContent(false);
         } catch (ExceptionInterface $e) {
-            throw new PageFetchException(sprintf('%s: %s', $url, $e->getMessage()), previous: $e);
-        }
-    }
-
-    private function statusCode(ResponseInterface $response, string $url): int
-    {
-        try {
-            return $response->getStatusCode();
-        } catch (ExceptionInterface $e) {
-            throw new PageFetchException(sprintf('%s: %s', $url, $e->getMessage()), previous: $e);
-        }
-    }
-
-    private function content(ResponseInterface $response, string $url): string
-    {
-        try {
-            return $response->getContent(false);
-        } catch (ExceptionInterface $e) {
-            throw new PageFetchException(sprintf('%s: %s', $url, $e->getMessage()), previous: $e);
-        }
-    }
-
-    private function header(ResponseInterface $response, string $name): ?string
-    {
-        try {
-            return $response->getHeaders(false)[$name][0] ?? null;
-        } catch (ExceptionInterface) {
-            return null;
+            throw new PageFetchException(sprintf('%s: %s', $landed->url, $e->getMessage()), previous: $e);
         }
     }
 }

@@ -24,7 +24,8 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
  * AudioObject, an Article's "video" property, …); rather than model each one,
  * every string value in the decoded tree is inspected under those two keys.
  * MediaUrlKind refuses anything that is not playable, which is what makes the
- * broad search safe — an ImageObject's contentUrl is just discarded.
+ * broad search safe — an ImageObject's contentUrl is just discarded. A node
+ * yields its first playable URL in URL_KEYS order — one asset, one candidate.
  */
 #[AsTaggedItem(priority: 100)]
 final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
@@ -50,12 +51,8 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
             if (PageFurniture::holds($script)) {
                 continue;
             }
-            foreach ($this->urlsIn($script->textContent ?? '') as $urlWithPoster) {
-                $candidate = $this->toCandidate(
-                    $urlWithPoster['url'],
-                    $urlWithPoster['poster'],
-                    $blocks->before($script),
-                );
+            foreach ($this->declarationsIn($script->textContent ?? '') as $declaration) {
+                $candidate = $this->firstPlayable($declaration, $blocks->before($script));
                 if ($candidate !== null) {
                     $found[$candidate->url] ??= $candidate;
                 }
@@ -65,8 +62,8 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
         return array_values($found);
     }
 
-    /** @return list<array{url: string, poster: ?string}> */
-    private function urlsIn(string $jsonLd): array
+    /** @return list<array{urls: list<string>, poster: ?string}> */
+    private function declarationsIn(string $jsonLd): array
     {
         $decoded = json_decode($jsonLd, true);
 
@@ -74,29 +71,29 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
     }
 
     /**
-     * schema.org nests a video's `thumbnailUrl` beside its `contentUrl` on the
-     * same node, so the poster for a media URL is read from the node it was
-     * found on, not searched for independently.
+     * One node is one asset: its URL keys are gathered together, with the poster
+     * schema.org places beside them (`thumbnailUrl` on the same node).
      *
      * @param array<mixed> $node
      *
-     * @return list<array{url: string, poster: ?string}>
+     * @return list<array{urls: list<string>, poster: ?string}>
      */
     private function collect(array $node): array
     {
         $urls = [];
         foreach (self::URL_KEYS as $key) {
             if (isset($node[$key]) && \is_string($node[$key])) {
-                $urls[] = ['url' => $node[$key], 'poster' => $this->thumbnailIn($node)];
+                $urls[] = $node[$key];
             }
         }
+        $declarations = $urls === [] ? [] : [['urls' => $urls, 'poster' => $this->thumbnailIn($node)]];
         foreach ($node as $value) {
             if (\is_array($value)) {
-                array_push($urls, ...$this->collect($value));
+                array_push($declarations, ...$this->collect($value));
             }
         }
 
-        return $urls;
+        return $declarations;
     }
 
     /** @param array<mixed> $node */
@@ -108,6 +105,23 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
         }
 
         return \is_array($thumbnail) && \is_string($thumbnail[0] ?? null) ? $thumbnail[0] : null;
+    }
+
+    /**
+     * The file beats the player page of the same asset; the page is the fallback for a refused file.
+     *
+     * @param array{urls: list<string>, poster: ?string} $declaration
+     */
+    private function firstPlayable(array $declaration, ?string $precedingText): ?MediaCandidate
+    {
+        foreach ($declaration['urls'] as $url) {
+            $candidate = $this->toCandidate($url, $declaration['poster'], $precedingText);
+            if ($candidate !== null) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 
     private function toCandidate(string $url, ?string $poster, ?string $precedingText): ?MediaCandidate

@@ -8,6 +8,7 @@ use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\ProxyEgressResolver;
+use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\HtmlPageFetcher;
@@ -38,8 +39,10 @@ final class HtmlPageFetcherTest extends TestCase
         };
 
         return new HtmlPageFetcher(
-            new FailoverRequestSender(new MockHttpClient($responses), $this->noProxyResolver()),
-            new UrlGuard($resolver, new IpValidator()),
+            new RedirectFollower(
+                new FailoverRequestSender(new MockHttpClient($responses), $this->noProxyResolver()),
+                new UrlGuard($resolver, new IpValidator()),
+            ),
             'TestAgent/1.0',
         );
     }
@@ -78,7 +81,33 @@ final class HtmlPageFetcherTest extends TestCase
         $fetcher = $this->fetcher([new MockResponse('nope', ['http_code' => 404])]);
 
         $this->expectException(PageFetchException::class);
+        $this->expectExceptionMessage('HTTP 404');
         $fetcher->fetch('https://example.com/missing');
+    }
+
+    public function testSendsTheAcceptHeaderAndTimeBudgetForEveryFetch(): void
+    {
+        /** @var array<string, mixed> $seenOptions */
+        $seenOptions = [];
+        $fetcher = $this->fetcher(
+            function (string $method, string $url, array $options) use (&$seenOptions): MockResponse {
+                $seenOptions = $options;
+
+                return new MockResponse('<html lang="en"><body>ok</body></html>', ['http_code' => 200]);
+            },
+        );
+
+        $fetcher->fetch('https://example.com/post');
+
+        /** @var list<string> $headers */
+        $headers = $seenOptions['headers'];
+        self::assertContains(
+            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            $headers,
+        );
+        self::assertSame(10.0, $seenOptions['timeout']);
+        self::assertSame(20.0, $seenOptions['max_duration']);
+        self::assertSame(0, $seenOptions['max_redirects']);
     }
 
     public function testDisablesTransparentCompression(): void
