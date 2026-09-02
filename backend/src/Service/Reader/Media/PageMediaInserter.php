@@ -137,6 +137,7 @@ final readonly class PageMediaInserter
         return match ($candidate->kind) {
             MediaKind::Audio => $this->player($document, 'audio', $candidate),
             MediaKind::Video => $this->player($document, 'video', $candidate),
+            MediaKind::Stream => $this->player($document, 'video', $candidate),
             MediaKind::Embed => $this->markup->embedLink(
                 $document,
                 new EmbedTarget($candidate->url, $candidate->posterUrl, $candidate->label ?? 'Open the media'),
@@ -152,7 +153,7 @@ final readonly class PageMediaInserter
         $player->setAttribute('preload', 'none');
         $player->setAttribute('src', $candidate->url);
         // <audio> has no poster attribute; only a video ever gets one (defect i).
-        if ($candidate->kind === MediaKind::Video && $candidate->posterUrl !== null) {
+        if ($candidate->kind->isVideo() && $candidate->posterUrl !== null) {
             $player->setAttribute('poster', $candidate->posterUrl);
         }
 

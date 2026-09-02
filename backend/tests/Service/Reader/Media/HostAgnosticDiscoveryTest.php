@@ -127,4 +127,68 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
             self::assertNotNull($candidate->precedingText, 'every player knows the section it follows');
         }
     }
+
+    /** Al Jazeera 469835: the VideoObject offers nothing but a Brightcove player page. */
+    public function testAlJazeeraYieldsItsBrightcovePlayerWithTheDeclaredPoster(): void
+    {
+        $media = $this->scanner()->scan(
+            $this->fixture('aljazeera-brightcove.html'),
+            'https://www.aljazeera.com/video/newsfeed/2026/8/20/harry-kane-scores-goal',
+        );
+
+        self::assertCount(1, $media->candidates);
+        self::assertSame(MediaKind::Embed, $media->candidates[0]->kind);
+        self::assertSame(
+            'https://players.brightcove.net/665003303001/6tKQRAx7lu_default/index.html?videoId=6403736850112',
+            $media->candidates[0]->url,
+        );
+        self::assertStringContainsString('image-1787184739.jpg', (string) $media->candidates[0]->posterUrl);
+    }
+
+    /** ZDF 491430: contentUrl is an HLS playlist, embedUrl a first-party miniplayer nobody frames. */
+    public function testZdfYieldsItsStreamWithTheDeclaredPoster(): void
+    {
+        $media = $this->scanner()->scan(
+            $this->fixture('zdf-hls-video.html'),
+            'https://www.zdfheute.de/video/zdf-morgenmagazin/istaf-berlin-em-stars-100.html',
+        );
+
+        self::assertCount(1, $media->candidates);
+        self::assertSame(MediaKind::Stream, $media->candidates[0]->kind);
+        self::assertSame(
+            'https://www.zdfheute.de/api/video/istaf-berlin-em-stars-100.m3u8',
+            $media->candidates[0]->url,
+        );
+        self::assertStringContainsString('1920x1080', (string) $media->candidates[0]->posterUrl);
+    }
+
+    public function testAnUnseenPublisherYieldsItsStreamAndItsBrightcovePlayerWithNoNewCode(): void
+    {
+        $media = $this->scanner()->scan(
+            $this->fixture('unseen-hls-and-brightcove.html'),
+            'https://unseen.test/two-ways',
+        );
+
+        $byKind = [];
+        foreach ($media->candidates as $candidate) {
+            $byKind[$candidate->kind->value] = $candidate->url;
+        }
+        self::assertSame('https://cdn.unseen.test/v/clip-one/master.m3u8', $byKind['stream'] ?? null);
+        self::assertSame(
+            'https://players.brightcove.net/123456789/AbCdEf_default/index.html?videoId=987654321',
+            $byKind['embed'] ?? null,
+        );
+    }
+
+    /** ardmediathek: the HLS master sits beside progressive mp4s; the file is the one player. */
+    public function testAFileBesideAStreamYieldsTheFileOnly(): void
+    {
+        $media = $this->scanner()->scan(
+            $this->fixture('file-beside-stream.html'),
+            'https://www.mediathek.test/video/tv-2031',
+        );
+
+        $kinds = array_map(static fn ($c): MediaKind => $c->kind, $media->candidates);
+        self::assertSame([MediaKind::Video], $kinds);
+    }
 }

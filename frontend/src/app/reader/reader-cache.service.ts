@@ -39,7 +39,9 @@ export class ReaderCacheService {
   // v13: v12 records lost every photo held in a lazy <picture>, a custom
   // element or a media-classed wrapper (#789); an already-read gallery would
   // keep its empty figures.
-  private static readonly VERSION = 13;
+  // v14: v13 records hold no player for a page whose only playable form is
+  // an HLS playlist or a Brightcove player (#782).
+  private static readonly VERSION = 14;
 
   private db: Promise<IDBDatabase | null> | null = null;
   /** Strictly monotonic clock so puts within the same millisecond keep insertion order. */

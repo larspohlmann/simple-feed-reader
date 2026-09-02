@@ -68,9 +68,19 @@ final class MediaUrlKindTest extends TestCase
         self::assertNull($this->kind->resolve('https://x.test/photo.jpg'));
     }
 
-    public function testRejectsAnHlsPlaylist(): void
+    /** ZDF 491430: an HLS playlist is a stream, never a file — VIDEO_EXTENSIONS must not learn it. */
+    public function testRecognisesAnHlsPlaylistAsAStreamNotAFile(): void
     {
-        self::assertNull($this->kind->resolve('https://x.test/master.m3u8'));
+        $resolved = $this->kind->resolve('https://www.zdfheute.de/api/video/istaf-berlin-em-stars-100.m3u8');
+
+        self::assertNotNull($resolved);
+        self::assertSame(MediaKind::Stream, $resolved->kind);
+        self::assertNotSame(MediaKind::Video, $resolved->kind);
+    }
+
+    public function testATokenisedPlaylistIsStillRefused(): void
+    {
+        self::assertNull($this->kind->resolve('https://cdn.test/v/master.m3u8?hdnts=exp=1'));
     }
 
     /** A query is stripped before the extension is read, then re-checked. */

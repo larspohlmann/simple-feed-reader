@@ -80,7 +80,7 @@ final readonly class LinkedFileMediaSource implements MediaCandidateSourceInterf
     {
         // A linked video file has no poster to show alongside it, unlike the
         // attribute layer's og:image fallback, so it is dropped outright.
-        if ($kind === MediaKind::Video) {
+        if ($kind->isVideo()) {
             return null;
         }
 

@@ -47,4 +47,37 @@ final class ArticleMediaTest extends TestCase
     {
         self::assertSame(20, ArticleMedia::MAX_ITEMS);
     }
+
+    public function testStreamsYieldToFiles(): void
+    {
+        $media = new ArticleMedia([
+            new MediaCandidate(MediaKind::Stream, 'https://x.test/master.m3u8', 'https://x.test/p.jpg'),
+            new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', 'https://x.test/p.jpg'),
+            new MediaCandidate(MediaKind::Audio, 'https://x.test/a.mp3'),
+        ]);
+
+        $kinds = array_map(
+            static fn (MediaCandidate $c): MediaKind => $c->kind,
+            $media->withoutRedundantStreams()->candidates,
+        );
+
+        self::assertSame([MediaKind::Video, MediaKind::Audio], $kinds);
+    }
+
+    public function testAStreamStaysWhenNoFileIsOffered(): void
+    {
+        $media = new ArticleMedia([
+            new MediaCandidate(MediaKind::Stream, 'https://x.test/master.m3u8', 'https://x.test/p.jpg'),
+        ]);
+
+        self::assertCount(1, $media->withoutRedundantStreams()->candidates);
+    }
+
+    public function testIsVideoCoversFilesAndStreams(): void
+    {
+        self::assertTrue(MediaKind::Video->isVideo());
+        self::assertTrue(MediaKind::Stream->isVideo());
+        self::assertFalse(MediaKind::Audio->isVideo());
+        self::assertFalse(MediaKind::Embed->isVideo());
+    }
 }

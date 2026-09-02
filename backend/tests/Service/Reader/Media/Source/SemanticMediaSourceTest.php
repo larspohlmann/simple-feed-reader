@@ -54,11 +54,18 @@ final class SemanticMediaSourceTest extends TestCase
         self::assertSame([], $this->source->find($html, 'https://x.test/a'));
     }
 
-    public function testSkipsAnHlsSource(): void
+    /** A page nobody designed for: a <video> whose only source is an HLS master. */
+    public function testAVideoElementWithAnHlsSourceYieldsAStream(): void
     {
-        $html = '<body><video poster="https://x.test/p.jpg"><source src="https://x.test/master.m3u8"></video></body>';
+        $html = '<html><body><video poster="https://cdn.test/p.jpg">'
+            . '<source src="https://cdn.test/v/master.m3u8" type="application/x-mpegURL"></video></body></html>';
 
-        self::assertSame([], $this->source->find($html, 'https://x.test/a'));
+        $found = $this->source->find($html, 'https://site.test/x');
+
+        self::assertCount(1, $found);
+        self::assertSame(MediaKind::Stream, $found[0]->kind);
+        self::assertSame('https://cdn.test/v/master.m3u8', $found[0]->url);
+        self::assertSame('https://cdn.test/p.jpg', $found[0]->posterUrl);
     }
 
     public function testSkipsAVideoWithEmptyPoster(): void

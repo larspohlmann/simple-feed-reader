@@ -32,7 +32,8 @@ final readonly class PageMediaScanner
             $this->mergeSource($source->find($pageHtml, $pageUrl), $byUrl);
         }
 
-        return new ArticleMedia(\array_slice(array_values($byUrl), 0, ArticleMedia::MAX_ITEMS));
+        return (new ArticleMedia(\array_slice(array_values($byUrl), 0, ArticleMedia::MAX_ITEMS)))
+            ->withoutRedundantStreams();
     }
 
     /**

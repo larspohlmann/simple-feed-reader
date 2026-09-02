@@ -28,10 +28,12 @@ use App\Service\Reader\Media\MediaRelevance;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\PageMediaInserter;
 use App\Service\Reader\Media\PageMediaScanner;
+use App\Service\Reader\Media\Provider\BrightcoveEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\Source\AttributeMediaSource;
 use App\Service\Reader\Media\Source\JsonLdMediaSource;
 use App\Service\Reader\Media\Source\PageEmbedSource;
+use App\Service\Reader\Media\Source\SemanticMediaSource;
 use App\Service\Reader\Media\SubstackPosterLink;
 use App\Service\Reader\NavigationChromeTrimmer;
 use App\Service\Reader\ReaderBodyCleaner;
@@ -114,13 +116,14 @@ final class ArticleExtractorTest extends TestCase
 
     private function mediaScanner(): PageMediaScanner
     {
-        $youTube = new EmbedProviders([new YouTubeEmbedProvider()]);
-        $urlKind = new MediaUrlKind(new DurableMediaUrl(), $youTube);
+        $providers = new EmbedProviders([new YouTubeEmbedProvider(), new BrightcoveEmbedProvider()]);
+        $urlKind = new MediaUrlKind(new DurableMediaUrl(), $providers);
 
         return new PageMediaScanner([
-            new JsonLdMediaSource($urlKind, $youTube),
-            new PageEmbedSource($youTube),
+            new JsonLdMediaSource($urlKind, $providers),
+            new PageEmbedSource($providers),
             new AttributeMediaSource($urlKind, new MediaRelevance()),
+            new SemanticMediaSource($urlKind),
         ]);
     }
 
@@ -468,6 +471,56 @@ final class ArticleExtractorTest extends TestCase
         self::assertLessThan((int) strpos($body, 'The Starlink way.'), (int) strpos($body, 'comet/starlink'));
         self::assertGreaterThan((int) strpos($body, 'Hiroshimaite.'), (int) strpos($body, 'rock/alloy'));
         self::assertLessThan((int) strpos($body, 'The nuclear detonation'), (int) strpos($body, 'rock/alloy'));
+    }
+
+    /** Al Jazeera 469835: the Brightcove link takes the place of the thumbnail the body already shows. */
+    public function testPlacesTheBrightcovePlayerWhereTheBodyShowedItsThumbnail(): void
+    {
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/media/aljazeera-brightcove.html');
+        $result = $this->extractor(
+            [new MockResponse($html, ['http_code' => 200])],
+            ['www.aljazeera.com' => ['93.184.216.34']],
+        )->extract('https://www.aljazeera.com/video/newsfeed/2026/8/20/harry-kane');
+
+        self::assertTrue($result->ok);
+        $body = (string) $result->contentHtml;
+        self::assertMatchesRegularExpression(
+            '#<a href="https://players\.brightcove\.net/665003303001/6tKQRAx7lu_default/index\.html'
+            . '\?videoId(?:=|&\#61;)6403736850112"#',
+            $body,
+            'the Brightcove player is a link to the canonical videoId URL',
+        );
+        self::assertSame(
+            1,
+            substr_count($body, 'image-1787184739.jpg'),
+            'the thumbnail is the poster inside the link, not a second picture',
+        );
+        self::assertLessThan(
+            (int) strpos($body, 'English footballer Harry Kane won'),
+            (int) strpos($body, 'players.brightcove.net'),
+        );
+    }
+
+    /** ZDF 491430: the stream is a <video> with its poster, the shape Safari and AVPlayer play natively. */
+    public function testEmitsAnHlsStreamAsAVideoWithItsPoster(): void
+    {
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/media/zdf-hls-video.html');
+        $result = $this->extractor(
+            [new MockResponse($html, ['http_code' => 200])],
+            ['www.zdfheute.de' => ['93.184.216.34']],
+        )->extract('https://www.zdfheute.de/video/zdf-morgenmagazin/istaf-berlin-em-stars-100.html');
+
+        self::assertTrue($result->ok);
+        $body = (string) $result->contentHtml;
+        self::assertStringContainsString(
+            'src="https://www.zdfheute.de/api/video/istaf-berlin-em-stars-100.m3u8"',
+            $body,
+        );
+        self::assertMatchesRegularExpression(
+            '#<video[^>]*poster="https://www\.zdfheute\.de/assets/istaf-berlin-em-stars-102~1920x1080[^"]*"#',
+            $body,
+        );
+        self::assertStringNotContainsString('ngp.zdf.de', $body);
     }
 
     private function extractFixture(string $fixture): ExtractionResult

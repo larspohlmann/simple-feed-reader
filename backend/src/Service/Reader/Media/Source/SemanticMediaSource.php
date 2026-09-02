@@ -11,6 +11,7 @@ use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\PageTextBlocks;
+use App\Service\Reader\Media\ResolvedMediaUrl;
 use Dom\Element;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
@@ -49,14 +50,12 @@ final readonly class SemanticMediaSource implements MediaCandidateSourceInterfac
 
     private function candidateFor(Element $element, ?string $precedingText): ?MediaCandidate
     {
-        $kind = $element->nodeName === 'VIDEO' ? MediaKind::Video : MediaKind::Audio;
-        $url = $this->usableUrl($element, $kind);
-        if ($url === null) {
+        $resolved = $this->resolvedSourceOf($element);
+        if ($resolved === null) {
             return null;
         }
-
-        if ($kind !== MediaKind::Video) {
-            return new MediaCandidate($kind, $url, null, null, $precedingText);
+        if (!$resolved->kind->isVideo()) {
+            return new MediaCandidate($resolved->kind, $resolved->url, null, null, $precedingText);
         }
 
         // A video with no poster (absent or empty) rots into a dead frame in a cache with no TTL.
@@ -64,22 +63,20 @@ final readonly class SemanticMediaSource implements MediaCandidateSourceInterfac
 
         return $poster === null || $poster === ''
             ? null
-            : new MediaCandidate($kind, $url, $poster, null, $precedingText);
+            : new MediaCandidate($resolved->kind, $resolved->url, $poster, null, $precedingText);
     }
 
-    private function usableUrl(Element $element, MediaKind $expectedKind): ?string
+    /** The element's own src or its first <source> whose kind fits the element: a <video> plays files and streams, an <audio> plays audio. */
+    private function resolvedSourceOf(Element $element): ?ResolvedMediaUrl
     {
-        $src = $element->getAttribute('src');
-        $resolved = $src === null ? null : $this->urlKind->resolve($src);
-        if ($resolved !== null && $resolved->kind === $expectedKind) {
-            return $resolved->url;
-        }
-
+        $urls = [$element->getAttribute('src')];
         foreach ($element->querySelectorAll('source') as $source) {
-            $sourceUrl = $source->getAttribute('src');
-            $resolvedSource = $sourceUrl === null ? null : $this->urlKind->resolve($sourceUrl);
-            if ($resolvedSource !== null && $resolvedSource->kind === $expectedKind) {
-                return $resolvedSource->url;
+            $urls[] = $source->getAttribute('src');
+        }
+        foreach ($urls as $url) {
+            $resolved = $url === null ? null : $this->urlKind->resolve($url);
+            if ($resolved !== null && $resolved->kind->isVideo() === ($element->nodeName === 'VIDEO')) {
+                return $resolved;
             }
         }
 
