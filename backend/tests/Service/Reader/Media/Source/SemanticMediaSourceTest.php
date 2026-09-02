@@ -87,8 +87,12 @@ final class SemanticMediaSourceTest extends TestCase
 
     public function testSkipsAPlayerInsideAnAside(): void
     {
-        $html = '<body><aside><audio src="https://x.test/a.mp3"></audio></aside></body>';
+        $html = '<body><aside><audio src="https://x.test/teaser.mp3"></audio></aside>'
+            . '<audio src="https://x.test/a.mp3"></audio></body>';
 
-        self::assertSame([], $this->source->find($html, 'https://x.test/a.html'));
+        $found = $this->source->find($html, 'https://x.test/a.html');
+
+        self::assertCount(1, $found);
+        self::assertSame('https://x.test/a.mp3', $found[0]->url);
     }
 }
