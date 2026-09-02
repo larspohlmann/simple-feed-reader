@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
+use App\Service\Reader\BoilerplateVerdict;
 use App\Service\Reader\EdgeBoilerplateTrimmer;
 use App\Service\Reader\LeadImageCandidate;
 use App\Service\Reader\LeadingEngagementCleaner;
@@ -39,7 +40,7 @@ final class ReaderBodyCleanerTest extends TestCase
             new NavigationChromeTrimmer(),
             new LeadingTitleRemover(),
             new LeadingEngagementCleaner(),
-            new EdgeBoilerplateTrimmer(),
+            new EdgeBoilerplateTrimmer(new BoilerplateVerdict()),
             new ReaderLeadImage(),
             new InBodyEmbedRewriter(new EmbedProviders([new YouTubeEmbedProvider()]), $markup),
             new SubstackPosterLink(),

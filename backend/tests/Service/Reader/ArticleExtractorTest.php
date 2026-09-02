@@ -10,6 +10,7 @@ use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\ArticleExtractor;
+use App\Service\Reader\BoilerplateVerdict;
 use App\Service\Reader\EdgeBoilerplateTrimmer;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
@@ -97,7 +98,7 @@ final class ArticleExtractorTest extends TestCase
             new NavigationChromeTrimmer(),
             new LeadingTitleRemover(),
             new LeadingEngagementCleaner(),
-            new EdgeBoilerplateTrimmer(),
+            new EdgeBoilerplateTrimmer(new BoilerplateVerdict()),
             new ReaderLeadImage(),
             new InBodyEmbedRewriter(new EmbedProviders([new YouTubeEmbedProvider()]), $markup),
             new SubstackPosterLink(),
