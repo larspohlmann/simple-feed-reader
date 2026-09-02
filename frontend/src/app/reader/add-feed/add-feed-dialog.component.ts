@@ -143,7 +143,11 @@ export class AddFeedDialogComponent implements OnInit {
   }
 
   pick(c: FeedCandidate): void {
-    this.subscribe(c.url, this.storedFormat(c), c.format === 'wp-json' ? c.title : undefined);
+    this.subscribe(
+      c.url,
+      this.storedFormat(c),
+      c.format === 'wp-json' ? (c.title ?? undefined) : undefined,
+    );
   }
 
   /** Expands or collapses a candidate's preview rows; expanding fetches the
