@@ -46,7 +46,9 @@ export class ReaderCacheService {
   // a schema.org node that names both its file and its player page (#782).
   // v16: v15 records hold no player for a page that declares its YouTube video
   // only as an id in a data attribute (#795).
-  private static readonly VERSION = 16;
+  // v17: v16 records hold only the audio of a broadcast page whose video had
+  // no og:image poster (#796).
+  private static readonly VERSION = 17;
 
   private db: Promise<IDBDatabase | null> | null = null;
   /** Strictly monotonic clock so puts within the same millisecond keep insertion order. */

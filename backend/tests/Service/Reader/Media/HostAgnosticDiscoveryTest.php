@@ -203,4 +203,23 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
         self::assertSame(MediaKind::Embed, $media->candidates[0]->kind);
         self::assertSame('https://www.youtube-nocookie.com/embed/pz8VRrI0p0U', $media->candidates[0]->url);
     }
+
+    /** tagesschau 496523: a broadcast page has no og:image; the still beside the player is the poster. */
+    public function testABroadcastPageWithoutOgImageYieldsItsVideoWithThePlayersStillAndItsAudio(): void
+    {
+        $media = $this->scanner()->scan(
+            $this->fixture('ard-broadcast-no-og-image.html'),
+            'https://www.tagesschau.de/tagesschau_in_einfacher_sprache/tse-1410.html',
+        );
+
+        $kinds = array_map(static fn ($c) => $c->kind, $media->candidates);
+        self::assertContains(MediaKind::Video, $kinds);
+        self::assertContains(MediaKind::Audio, $kinds);
+        self::assertNotContains(MediaKind::Stream, $kinds, 'the file beside the HLS master wins');
+        $videos = array_values(array_filter(
+            $media->candidates,
+            static fn ($c): bool => $c->kind === MediaKind::Video,
+        ));
+        self::assertStringContainsString('sendungsbild-1789662', (string) $videos[0]->posterUrl);
+    }
 }

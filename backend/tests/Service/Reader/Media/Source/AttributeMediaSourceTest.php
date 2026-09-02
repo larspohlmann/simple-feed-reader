@@ -53,14 +53,38 @@ final class AttributeMediaSourceTest extends TestCase
         self::assertSame('https://x.test/p.jpg', $found[0]->posterUrl);
     }
 
-    /** D5: a video with no og:image poster would rot into a dead frame, so it is dropped. */
-    public function testDropsAVideoWhenThePageHasNoOgImage(): void
+    /** D5: a video with no poster from the page or the player would rot into a dead frame, so it is dropped. */
+    public function testDropsAVideoWhenNeitherOgImageNorAStillBesideThePlayerExists(): void
     {
         $html = '<body><div data-v="https://x.test/clip.mp4"></div></body>';
 
         $found = $this->source->find($html, 'https://x.test/a.html');
 
         self::assertSame([], $found);
+    }
+
+    /** tagesschau's broadcast pages: no og:image, the still sits in the player wrapper beside the URL holder. */
+    public function testTakesTheStillBesideThePlayerWhenThePageHasNoOgImage(): void
+    {
+        $html = '<body><div class="wrapper"><picture><img src="https://x.test/sendungsbild.jpg"></picture>'
+            . '<div data-v="https://x.test/clip.mp4"></div></div></body>';
+
+        $found = $this->source->find($html, 'https://x.test/a.html');
+
+        self::assertCount(1, $found);
+        self::assertSame(MediaKind::Video, $found[0]->kind);
+        self::assertSame('https://x.test/sendungsbild.jpg', $found[0]->posterUrl);
+    }
+
+    public function testPrefersTheOgImageOverTheStillBesideThePlayer(): void
+    {
+        $html = '<html><head><meta property="og:image" content="https://x.test/share.jpg"></head>'
+            . '<body><div><img src="https://x.test/still.jpg"><div data-v="https://x.test/clip.mp4"></div></div>'
+            . '</body></html>';
+
+        $found = $this->source->find($html, 'https://x.test/a.html');
+
+        self::assertSame('https://x.test/share.jpg', $found[0]->posterUrl);
     }
 
     /** The live stream sits beside the episode on the same page; it must lose. */
