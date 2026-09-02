@@ -16,4 +16,24 @@ final readonly class ImageRendition
         public ?int $width,
     ) {
     }
+
+    /** True when this rendition outsizes the other; an unmeasured one never does. */
+    public function outsizes(self $other): bool
+    {
+        if ($this->width === null) {
+            return false;
+        }
+
+        return $other->width === null || $this->width > $other->width;
+    }
+
+    /** The pixel width a URL states in a `width=` or `w=` query, or null. */
+    public static function widthFromUrl(?string $url): ?int
+    {
+        if ($url === null || preg_match('/[?&](?:width|w)=(\d+)/', $url, $matches) !== 1) {
+            return null;
+        }
+
+        return (int) $matches[1];
+    }
 }

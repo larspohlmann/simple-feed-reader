@@ -11,10 +11,12 @@ use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\ArticleExtractor;
 use App\Service\Reader\BoilerplateVerdict;
+use App\Service\Reader\CustomElementUnwrapper;
 use App\Service\Reader\EdgeBoilerplateTrimmer;
 use App\Service\Reader\ExtractionResult;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
+use App\Service\Reader\ImageWrapperClassRemover;
 use App\Service\Reader\LazyImageSources;
 use App\Service\Reader\LeadingEngagementCleaner;
 use App\Service\Reader\LeadingTitleRemover;
@@ -73,10 +75,12 @@ final class ArticleExtractorTest extends TestCase
         return new ArticleExtractor(
             $fetcher,
             new FetchedPageNormalizer(
+                new CustomElementUnwrapper(),
                 new LazyImageSources(),
                 new ShareWidgetRemover(),
                 new ShareIntentLinkRemover(),
                 new SubstackGatedVideoPlaceholder(),
+                new ImageWrapperClassRemover(),
             ),
             $this->bodyCleaner(),
             new EntrySanitizer(),
@@ -216,10 +220,12 @@ final class ArticleExtractorTest extends TestCase
         $extractor = new ArticleExtractor(
             $fetcher,
             new FetchedPageNormalizer(
+                new CustomElementUnwrapper(),
                 new LazyImageSources(),
                 new ShareWidgetRemover(),
                 new ShareIntentLinkRemover(),
                 new SubstackGatedVideoPlaceholder(),
+                new ImageWrapperClassRemover(),
             ),
             $this->bodyCleaner(),
             new EntrySanitizer(),
@@ -442,6 +448,26 @@ final class ArticleExtractorTest extends TestCase
         // Under its own section, not above the lead: the first player follows the first section's prose.
         self::assertGreaterThan((int) strpos($html, 'The first remix took'), (int) strpos($html, 'aaaaaaaaaa1'));
         self::assertLessThan((int) strpos($html, 'The second remix dragged'), (int) strpos($html, 'aaaaaaaaaa1'));
+    }
+
+    /** nature.com 495343: lazy pictures on data-srcset, one in a custom element, one in a media-classed wrapper, one in a captioned figure. */
+    public function testKeepsEveryPhotoOfAnImmersiveGalleryBesideItsCaption(): void
+    {
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-immersive-gallery.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/immersive/story/index.html');
+
+        self::assertTrue($result->ok);
+        $body = (string) $result->contentHtml;
+        foreach (['eclipse/shadows-750x422.webp', 'comet/starlink-750x422.webp', 'rock/alloy-750x751.jpg'] as $photo) {
+            self::assertStringContainsString('https://site.test/immersive/story/assets/' . $photo, $body);
+        }
+        self::assertStringNotContainsString('sh-background-transition', $body);
+        self::assertLessThan((int) strpos($body, 'Eclipse shadows.'), (int) strpos($body, 'eclipse/shadows'));
+        self::assertLessThan((int) strpos($body, 'The Starlink way.'), (int) strpos($body, 'comet/starlink'));
+        self::assertGreaterThan((int) strpos($body, 'Hiroshimaite.'), (int) strpos($body, 'rock/alloy'));
+        self::assertLessThan((int) strpos($body, 'The nuclear detonation'), (int) strpos($body, 'rock/alloy'));
     }
 
     private function extractFixture(string $fixture): ExtractionResult
