@@ -838,6 +838,8 @@
     "refreshArticle": "Reload article",
     "readingTime": "≈ {{minutes}} min",
     "readerFallback": "Couldn't load the full article — showing the feed's summary.",
+    "paywalled": "This is the free preview of a paywalled article. The rest is on the publisher's site.",
+    "paywalledLink": "Continue on the publisher's site",
     "selectArticle": "Select an article to read.",
     "layout": {
       "aria": "Reading layout",

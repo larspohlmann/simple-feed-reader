@@ -197,6 +197,16 @@
           />
         }
         <div #content class="content" [innerHTML]="displayHtml()"></div>
+        @if (paywalled()) {
+          <p class="reader-note paywall-note">
+            {{ 'reader.paywalled' | transloco }}
+            @if (paywallUrl(); as url) {
+              <a [href]="url" target="_blank" rel="noopener noreferrer">{{
+                'reader.paywalledLink' | transloco
+              }}</a>
+            }
+          </p>
+        }
       }
     </article>
     <!-- Laid over the whole pane while an article loads or refetches, in place

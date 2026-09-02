@@ -838,6 +838,8 @@
     "refreshArticle": "Artikel neu laden",
     "readingTime": "≈ {{minutes}} Min.",
     "readerFallback": "Der vollständige Artikel konnte nicht geladen werden – es wird die Zusammenfassung des Feeds angezeigt.",
+    "paywalled": "Das ist die kostenlose Vorschau eines Artikels hinter einer Bezahlschranke. Der Rest steht auf der Seite des Anbieters.",
+    "paywalledLink": "Beim Anbieter weiterlesen",
     "selectArticle": "Wähle einen Artikel zum Lesen aus.",
     "layout": {
       "aria": "Layout",
