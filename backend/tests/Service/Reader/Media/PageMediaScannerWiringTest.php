@@ -21,4 +21,16 @@ final class PageMediaScannerWiringTest extends KernelTestCase
         self::assertFalse($media->isEmpty());
         self::assertSame('https://www.youtube-nocookie.com/embed/M1j_uRqKMKI', $media->candidates[0]->url);
     }
+
+    public function testAnIdDeclaredInDataVideoIdIsCollectedThroughTheTag(): void
+    {
+        self::bootKernel();
+        $scanner = self::getContainer()->get(PageMediaScanner::class);
+        self::assertInstanceOf(PageMediaScanner::class, $scanner);
+
+        $html = '<html><body><div data-component="youtube-atom" data-video-id="M1j_uRqKMKI"></div></body></html>';
+        $media = $scanner->scan($html, 'https://example.test/article');
+
+        self::assertSame('https://www.youtube-nocookie.com/embed/M1j_uRqKMKI', $media->candidates[0]->url);
+    }
 }

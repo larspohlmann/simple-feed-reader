@@ -44,7 +44,9 @@ export class ReaderCacheService {
   // v15: v14 records hold an HLS stream at the URL the page declared, which a
   // cross-origin fetch cannot follow through its redirect, and two players for
   // a schema.org node that names both its file and its player page (#782).
-  private static readonly VERSION = 15;
+  // v16: v15 records hold no player for a page that declares its YouTube video
+  // only as an id in a data attribute (#795).
+  private static readonly VERSION = 16;
 
   private db: Promise<IDBDatabase | null> | null = null;
   /** Strictly monotonic clock so puts within the same millisecond keep insertion order. */

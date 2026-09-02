@@ -191,4 +191,16 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
         $kinds = array_map(static fn ($c): MediaKind => $c->kind, $media->candidates);
         self::assertSame([MediaKind::Video], $kinds);
     }
+
+    public function testTheGuardianYieldsItsYouTubeAtomAndNotTheSidebarOne(): void
+    {
+        $media = $this->scanner()->scan(
+            $this->fixture('guardian-youtube-atom.html'),
+            'https://www.theguardian.com/science/video/2026/sep/01/could-humans-ever-communicate-with-whales-video',
+        );
+
+        self::assertCount(1, $media->candidates);
+        self::assertSame(MediaKind::Embed, $media->candidates[0]->kind);
+        self::assertSame('https://www.youtube-nocookie.com/embed/pz8VRrI0p0U', $media->candidates[0]->url);
+    }
 }
