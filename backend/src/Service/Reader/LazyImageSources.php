@@ -111,7 +111,7 @@ final readonly class LazyImageSources
             return;
         }
 
-        $imageWidth = $this->declaredWidth($imageSource);
+        $imageWidth = ImageRendition::widthFromUrl($imageSource);
         if ($imageWidth !== null && ($widest->width === null || $imageWidth >= $widest->width)) {
             return;
         }
@@ -151,17 +151,7 @@ final readonly class LazyImageSources
             return null;
         }
 
-        return new ImageRendition($candidate->url, $candidate->width ?? $this->declaredWidth($candidate->url));
-    }
-
-    /** The pixel width a URL states in a `width=` or `w=` query, or null. */
-    private function declaredWidth(?string $url): ?int
-    {
-        if ($url === null || preg_match('/[?&](?:width|w)=(\d+)/', $url, $matches) !== 1) {
-            return null;
-        }
-
-        return (int) $matches[1];
+        return new ImageRendition($candidate->url, $candidate->width ?? ImageRendition::widthFromUrl($candidate->url));
     }
 
     /**
@@ -260,7 +250,7 @@ final readonly class LazyImageSources
     {
         foreach (self::SRCSET_ATTRIBUTES as $attribute) {
             $srcset = $source->getAttribute($attribute);
-            if ($srcset !== null) {
+            if ($srcset !== null && trim($srcset) !== '') {
                 return $srcset;
             }
         }

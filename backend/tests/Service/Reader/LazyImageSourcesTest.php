@@ -343,6 +343,16 @@ final class LazyImageSourcesTest extends TestCase
         self::assertStringContainsString('<img alt="A" src="https://images.example.com/photo.jpg">', $html);
     }
 
+    public function testAnEmptyLazyAttributeFallsThroughToTheNextSourceAttribute(): void
+    {
+        $source = $this->resolvedSource(
+            '<picture data-lazy="true"><source data-lazy-srcset="" '
+            . 'data-srcset="https://images.example.com/real.jpg 750w"><img alt="A"></picture>'
+        );
+
+        self::assertSame('https://images.example.com/real.jpg', $source);
+    }
+
     private function resolvedSource(string $bodyHtml): ?string
     {
         $image = $this->resolvedDocument($bodyHtml)->getElementsByTagName('img')->item(0);

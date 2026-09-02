@@ -32,4 +32,12 @@ final class ImageRenditionTest extends TestCase
 
         self::assertTrue($measured->outsizes($unmeasured));
     }
+
+    public function testExtractsWidthFromAUrlQueryParameter(): void
+    {
+        self::assertSame(750, ImageRendition::widthFromUrl('https://example.com/photo.jpg?w=750'));
+        self::assertSame(1024, ImageRendition::widthFromUrl('https://example.com/photo.jpg?width=1024'));
+        self::assertNull(ImageRendition::widthFromUrl('https://example.com/photo.jpg'));
+        self::assertNull(ImageRendition::widthFromUrl(null));
+    }
 }

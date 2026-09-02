@@ -26,4 +26,14 @@ final readonly class ImageRendition
 
         return $other->width === null || $this->width > $other->width;
     }
+
+    /** The pixel width a URL states in a `width=` or `w=` query, or null. */
+    public static function widthFromUrl(?string $url): ?int
+    {
+        if ($url === null || preg_match('/[?&](?:width|w)=(\d+)/', $url, $matches) !== 1) {
+            return null;
+        }
+
+        return (int) $matches[1];
+    }
 }
