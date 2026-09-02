@@ -49,6 +49,12 @@ final readonly class ArticleMedia
         ));
     }
 
+    /** @param list<MediaCandidate> $more */
+    public function with(array $more): self
+    {
+        return new self(\array_slice(array_merge($this->candidates, $more), 0, self::MAX_ITEMS));
+    }
+
     private function offers(MediaKind $kind): bool
     {
         foreach ($this->candidates as $candidate) {

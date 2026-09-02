@@ -73,6 +73,18 @@ final class ArticleMediaTest extends TestCase
         self::assertCount(1, $media->withoutRedundantStreams()->candidates);
     }
 
+    public function testWithAppendsAndKeepsTheCap(): void
+    {
+        $one = static fn (int $n): MediaCandidate
+            => new MediaCandidate(MediaKind::Video, 'https://a.test/' . $n . '.mp4', 'p.jpg');
+        $media = new ArticleMedia(array_map($one, range(1, ArticleMedia::MAX_ITEMS - 1)));
+
+        $extended = $media->with([$one(98), $one(99)]);
+
+        self::assertCount(ArticleMedia::MAX_ITEMS, $extended->candidates);
+        self::assertSame('https://a.test/98.mp4', $extended->candidates[ArticleMedia::MAX_ITEMS - 1]->url);
+    }
+
     public function testIsVideoCoversFilesAndStreams(): void
     {
         self::assertTrue(MediaKind::Video->isVideo());

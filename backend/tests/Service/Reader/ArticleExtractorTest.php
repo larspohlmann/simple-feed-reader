@@ -24,6 +24,7 @@ use App\Service\Reader\LeadingTitleRemover;
 use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\InBodyEmbedRewriter;
+use App\Service\Reader\Media\MediaLanding;
 use App\Service\Reader\Media\MediaMarkup;
 use App\Service\Reader\Media\MediaRelevance;
 use App\Service\Reader\Media\MediaUrlKind;
@@ -31,6 +32,8 @@ use App\Service\Reader\Media\PageMediaInserter;
 use App\Service\Reader\Media\PageMediaScanner;
 use App\Service\Reader\Media\Provider\BrightcoveEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
+use App\Service\Reader\Media\Sibling\SiblingIdRule;
+use App\Service\Reader\Media\Sibling\SiblingMediaExtender;
 use App\Service\Reader\Media\Source\AttributeMediaSource;
 use App\Service\Reader\Media\Source\JsonLdMediaSource;
 use App\Service\Reader\Media\Source\PageEmbedSource;
@@ -75,6 +78,7 @@ final class ArticleExtractorTest extends TestCase
             new FailoverRequestSender(new MockHttpClient($responses), $this->noProxyResolver()),
             new UrlGuard($resolver, new IpValidator()),
         );
+        $landing = new MediaLanding($redirects, 'TestAgent/1.0');
 
         return new ArticleExtractor(
             new HtmlPageFetcher($redirects, 'TestAgent/1.0'),
@@ -89,7 +93,8 @@ final class ArticleExtractorTest extends TestCase
             $this->bodyCleaner(),
             new EntrySanitizer(),
             $this->mediaScanner(),
-            new StreamLocationResolver($redirects, $this->urlKind(), 'TestAgent/1.0'),
+            new StreamLocationResolver($landing, $this->urlKind()),
+            new SiblingMediaExtender(new SiblingIdRule(), $landing, $this->urlKind()),
         );
     }
 
@@ -233,6 +238,7 @@ final class ArticleExtractorTest extends TestCase
             new FailoverRequestSender(new MockHttpClient(), $this->noProxyResolver()),
             new UrlGuard($resolver, new IpValidator()),
         );
+        $landing = new MediaLanding($redirects, 'TestAgent/1.0');
         $extractor = new ArticleExtractor(
             new HtmlPageFetcher($redirects, 'TestAgent/1.0'),
             new FetchedPageNormalizer(
@@ -246,7 +252,8 @@ final class ArticleExtractorTest extends TestCase
             $this->bodyCleaner(),
             new EntrySanitizer(),
             $this->mediaScanner(),
-            new StreamLocationResolver($redirects, $this->urlKind(), 'TestAgent/1.0'),
+            new StreamLocationResolver($landing, $this->urlKind()),
+            new SiblingMediaExtender(new SiblingIdRule(), $landing, $this->urlKind()),
         );
 
         $result = $extractor->extract('http://169.254.169.254/');
@@ -604,6 +611,48 @@ final class ArticleExtractorTest extends TestCase
             . 'src="https://tagesschau-podcast.ard-mcdn.de/audio/2026/0902/TV-20260902-1804-0100.mp3"';
         self::assertStringContainsString($audioTag, $body);
         self::assertStringNotContainsString('sendungsbild-other', $body);
+    }
+
+    /** zdfheute 1374175: three of four videos exist only as ids in the payload; the page's own template recovers them. */
+    public function testRecoversTheVideosThePageNamesOnlyByASiblingId(): void
+    {
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/media/zdf-sibling-video-configs.html');
+        $landing = static fn (string $name): string => 'https://zdfvod.akamaized.net/i/mp4/none/zdf/26/09/'
+            . $name . '/1/' . $name . ',_508k_p9,_6628k_p61,v17.mp4.csmil/master.m3u8';
+        $pair = static fn (string $name): array => [
+            new MockResponse('', ['http_code' => 301, 'response_headers' => ['location' => $landing($name)]]),
+            new MockResponse('#EXTM3U', ['http_code' => 200]),
+        ];
+        $result = $this->extractor(
+            [
+                new MockResponse($html, ['http_code' => 200]),
+                ...$pair('260902_russland_taktik_viu'),
+                ...$pair('260902_leipzig_verdaechtige_interview_hli'),
+                ...$pair('260902_clip_12_mom'),
+                ...$pair('260825_hju_sgs_lange'),
+            ],
+            ['www.zdfheute.de' => ['93.184.216.34'], 'zdfvod.akamaized.net' => ['93.184.216.35']],
+        )->extract('https://www.zdfheute.de/politik/deutschland/leipzig-drohne-sabotage-100.html');
+
+        self::assertTrue($result->ok);
+        $body = (string) $result->contentHtml;
+        self::assertSame(4, substr_count($body, '<video'), 'the declared stream and its three siblings');
+        $names = [
+            '260902_russland_taktik_viu',
+            '260902_leipzig_verdaechtige_interview_hli',
+            '260902_clip_12_mom',
+            '260825_hju_sgs_lange',
+        ];
+        foreach ($names as $name) {
+            self::assertStringContainsString('src="' . $landing($name) . '"', $body);
+        }
+        self::assertSame(0, substr_count($body, '<img'), 'each player replaced its figure image; no picture was added');
+        self::assertStringNotContainsString('zdfheute-politik-100', $body);
+        self::assertLessThan(
+            (int) strpos($body, 'Zwei Verdächtige sollen'),
+            (int) strpos($body, '260902_russland_taktik_viu'),
+            'the first player sits where its figure stood, before the second paragraph',
+        );
     }
 
     private function extractFixture(string $fixture): ExtractionResult

@@ -15,6 +15,7 @@ use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaKind;
+use App\Service\Reader\Media\MediaLanding;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\StreamLocationResolver;
@@ -57,9 +58,11 @@ final class StreamLocationResolverTest extends TestCase
         $providers = new EmbedProviders([new YouTubeEmbedProvider()]);
 
         return new StreamLocationResolver(
-            new RedirectFollower(new FailoverRequestSender($client, $proxy), new UrlGuard($dns, new IpValidator())),
+            new MediaLanding(
+                new RedirectFollower(new FailoverRequestSender($client, $proxy), new UrlGuard($dns, new IpValidator())),
+                'TestAgent/1.0',
+            ),
             new MediaUrlKind(new DurableMediaUrl(), $providers),
-            'TestAgent/1.0',
         );
     }
 

@@ -48,7 +48,9 @@ export class ReaderCacheService {
   // only as an id in a data attribute (#795).
   // v17: v16 records hold only the audio of a broadcast page whose video had
   // no og:image poster (#796).
-  private static readonly VERSION = 17;
+  // v18: v17 records hold one player for a page whose other videos are named
+  // only by a sibling id in a script payload (#800).
+  private static readonly VERSION = 18;
 
   private db: Promise<IDBDatabase | null> | null = null;
   /** Strictly monotonic clock so puts within the same millisecond keep insertion order. */

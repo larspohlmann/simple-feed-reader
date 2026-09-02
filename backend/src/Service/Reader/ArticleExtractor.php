@@ -6,6 +6,7 @@ namespace App\Service\Reader;
 
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\Media\PageMediaScanner;
+use App\Service\Reader\Media\Sibling\SiblingMediaExtender;
 use App\Service\Reader\Media\StreamLocationResolver;
 use App\Service\Reader\Paywall\PaywallSignals;
 use App\Service\Sanitize\EntrySanitizer;
@@ -36,6 +37,10 @@ use fivefilters\Readability\Readability;
  * ReaderBodyCleaner even when readability's own extraction is thin (#748).
  * PaywallSignals reads the same normalised document and the raw source before
  * readability consumes them, and decides on the cleaned body (#785).
+ *
+ * SiblingMediaExtender derives from the declared scan but appends onto the
+ * stream-resolved media, at the point the media is consumed, so a page that
+ * fails extraction never pays for its network verification (#800).
  */
 final class ArticleExtractor implements ArticleExtractorInterface
 {
@@ -49,6 +54,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
         private readonly EntrySanitizer $sanitizer,
         private readonly PageMediaScanner $mediaScanner,
         private readonly StreamLocationResolver $streamLocations,
+        private readonly SiblingMediaExtender $siblings,
     ) {
     }
 
@@ -84,7 +90,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
             $article->content,
             [$article->title, $entryTitle],
             $leadImage,
-            $this->streamLocations->resolve($media),
+            $this->siblings->extend($media, $this->streamLocations->resolve($media), $page->html),
             $entryAuthor,
         );
         $clean = $this->sanitizer->sanitize($body);
