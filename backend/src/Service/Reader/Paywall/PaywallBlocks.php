@@ -10,10 +10,8 @@ use Dom\HTMLDocument;
 use Dom\XPath;
 
 /**
- * The gated region or its call to action, as a publisher names it in the DOM
- * (`paywall-cta`, `duv-paywall-preview`, `subscription-only-block`), by class
- * fragment. Read from the shared normalised document before readability
- * consumes it — the block is exactly what the body cleaners remove.
+ * Gated regions and CTAs matched by class fragment, read from the shared
+ * document before readability consumes it — exactly what body cleaners remove.
  */
 final readonly class PaywallBlocks
 {
