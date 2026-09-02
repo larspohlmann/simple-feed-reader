@@ -53,7 +53,7 @@ describe('ReaderApi', () => {
     });
   });
 
-  it('includes a supplied WordPress title in the subscribe body', () => {
+  it('detects ReaderApi dropping a supplied WordPress title from the subscribe body', () => {
     api
       .subscribe(
         'https://wp.example/wp-json/wp/v2/posts',
