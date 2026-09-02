@@ -107,4 +107,24 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
         $kinds = array_map(static fn ($c): MediaKind => $c->kind, $media->candidates);
         self::assertSame([MediaKind::Video], $kinds);
     }
+
+    /** vice 495401: JSON-LD declares one of four videos; the other three exist only as page embeds inside <noscript>. */
+    public function testAPageThatDeclaresOneOfFourVideosYieldsAllFourInPageOrder(): void
+    {
+        $media = $this->scanner()->scan(
+            $this->fixture('multi-embed-page.html'),
+            'https://www.vice.com/en/article/4-remixes-from-the-2000s/',
+        );
+
+        $urls = array_map(static fn ($c): string => $c->url, $media->candidates);
+        self::assertSame([
+            'https://www.youtube-nocookie.com/embed/aaaaaaaaaa1',
+            'https://www.youtube-nocookie.com/embed/aaaaaaaaaa2',
+            'https://www.youtube-nocookie.com/embed/aaaaaaaaaa3',
+            'https://www.youtube-nocookie.com/embed/aaaaaaaaaa4',
+        ], $urls, 'four unique players in page order, the sidebar teaser excluded');
+        foreach ($media->candidates as $candidate) {
+            self::assertNotNull($candidate->precedingText, 'every player knows the section it follows');
+        }
+    }
 }

@@ -8,9 +8,9 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
  * One host-agnostic way to find the media a page offers. Implementations are
- * collected in AsTaggedItem priority order, highest first, and the first one to
- * yield a given MediaKind owns it — so a publisher's own declaration outranks
- * anything discovered by scanning.
+ * collected in AsTaggedItem priority order, highest first. The first to name a
+ * URL sets that candidate; later ones fill its gaps and add the URLs it never
+ * named — a declaration leads, but hides nothing a scan finds (#788).
  *
  * Reads the RAW page, not FetchedPageNormalizer's document: that pass is tuned
  * for readability scoring, removes elements, and is free to change again.

@@ -29,6 +29,7 @@ use App\Service\Reader\Media\PageMediaScanner;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\Source\AttributeMediaSource;
 use App\Service\Reader\Media\Source\JsonLdMediaSource;
+use App\Service\Reader\Media\Source\PageEmbedSource;
 use App\Service\Reader\Media\SubstackPosterLink;
 use App\Service\Reader\NavigationChromeTrimmer;
 use App\Service\Reader\ReaderBodyCleaner;
@@ -109,10 +110,12 @@ final class ArticleExtractorTest extends TestCase
 
     private function mediaScanner(): PageMediaScanner
     {
-        $urlKind = new MediaUrlKind(new DurableMediaUrl(), new EmbedProviders([]));
+        $youTube = new EmbedProviders([new YouTubeEmbedProvider()]);
+        $urlKind = new MediaUrlKind(new DurableMediaUrl(), $youTube);
 
         return new PageMediaScanner([
-            new JsonLdMediaSource($urlKind, new EmbedProviders([])),
+            new JsonLdMediaSource($urlKind, $youTube),
+            new PageEmbedSource($youTube),
             new AttributeMediaSource($urlKind, new MediaRelevance()),
         ]);
     }
@@ -426,6 +429,19 @@ final class ArticleExtractorTest extends TestCase
 
         self::assertTrue($result->ok);
         self::assertFalse($result->paywalled);
+    }
+
+    public function testRecoversEveryEmbedThePageCarriesEachUnderItsOwnSection(): void
+    {
+        $result = $this->extractFixture('media/multi-embed-page.html');
+
+        self::assertTrue($result->ok);
+        $html = (string) $result->contentHtml;
+        preg_match_all('#youtube-nocookie\.com/embed/(aaaaaaaaaa\d)#', $html, $players);
+        self::assertSame(['aaaaaaaaaa1', 'aaaaaaaaaa2', 'aaaaaaaaaa3', 'aaaaaaaaaa4'], $players[1]);
+        // Under its own section, not above the lead: the first player follows the first section's prose.
+        self::assertGreaterThan((int) strpos($html, 'The first remix took'), (int) strpos($html, 'aaaaaaaaaa1'));
+        self::assertLessThan((int) strpos($html, 'The second remix dragged'), (int) strpos($html, 'aaaaaaaaaa1'));
     }
 
     private function extractFixture(string $fixture): ExtractionResult

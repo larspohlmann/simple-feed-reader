@@ -33,7 +33,10 @@ export class ReaderCacheService {
   // v10: v9 records hold trailing teaser carousels (#779).
   // v11: v10 records carry no `paywalled` flag (#785); an already-read
   // preview would never show the paywall note.
-  private static readonly VERSION = 11;
+  // v12: v11 records were extracted while a declared embed hid the page's
+  // other embeds (#788); an already-read article would keep one player where
+  // the page has several.
+  private static readonly VERSION = 12;
 
   private db: Promise<IDBDatabase | null> | null = null;
   /** Strictly monotonic clock so puts within the same millisecond keep insertion order. */
