@@ -11,6 +11,7 @@ use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\ArticleExtractor;
 use App\Service\Reader\BoilerplateVerdict;
+use App\Service\Reader\CustomElementUnwrapper;
 use App\Service\Reader\EdgeBoilerplateTrimmer;
 use App\Service\Reader\ExtractionResult;
 use App\Service\Reader\FetchedPageNormalizer;
@@ -73,6 +74,7 @@ final class ArticleExtractorTest extends TestCase
         return new ArticleExtractor(
             $fetcher,
             new FetchedPageNormalizer(
+                new CustomElementUnwrapper(),
                 new LazyImageSources(),
                 new ShareWidgetRemover(),
                 new ShareIntentLinkRemover(),
@@ -216,6 +218,7 @@ final class ArticleExtractorTest extends TestCase
         $extractor = new ArticleExtractor(
             $fetcher,
             new FetchedPageNormalizer(
+                new CustomElementUnwrapper(),
                 new LazyImageSources(),
                 new ShareWidgetRemover(),
                 new ShareIntentLinkRemover(),

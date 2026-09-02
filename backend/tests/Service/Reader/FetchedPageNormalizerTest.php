@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
+use App\Service\Reader\CustomElementUnwrapper;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\LazyImageSources;
 use App\Service\Reader\ShareIntentLinkRemover;
@@ -18,6 +19,7 @@ final class FetchedPageNormalizerTest extends TestCase
     protected function setUp(): void
     {
         $this->normalizer = new FetchedPageNormalizer(
+            new CustomElementUnwrapper(),
             new LazyImageSources(),
             new ShareWidgetRemover(),
             new ShareIntentLinkRemover(),
@@ -282,6 +284,18 @@ final class FetchedPageNormalizerTest extends TestCase
         self::assertStringContainsString('<a href="https://x.substack.com/p/a">', $normalized);
         self::assertStringContainsString('src="https://cdn.test/og.jpg"', $normalized);
         self::assertStringContainsString('An ancient intuition', $normalized);
+    }
+
+    public function testUnwrapsACustomElementSoItsPhotoReachesReadability(): void
+    {
+        $normalized = $this->normalized(
+            '<html lang="en"><body><article><sh-background-transition>'
+            . '<div><img src="https://x.test/a.jpg" alt=""></div>'
+            . '</sh-background-transition><p>Caption.</p></article></body></html>',
+        );
+
+        self::assertStringNotContainsString('sh-background-transition', $normalized);
+        self::assertStringContainsString('<img src="https://x.test/a.jpg" alt="">', $normalized);
     }
 
     /** normalize() then serialize; the fixtures under test always parse. */

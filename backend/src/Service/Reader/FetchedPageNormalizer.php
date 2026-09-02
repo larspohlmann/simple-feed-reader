@@ -17,6 +17,9 @@ use Dom\XPath;
  * round-trip. Two defects of block-component sites (BBC News is the canonical
  * case, #235) are repaired:
  *
+ *  - A custom element (nature's <sh-background-transition>) is unknown to the
+ *    sanitizer, which drops it with its children. CustomElementUnwrapper
+ *    replaces it with its children first, so nothing later sees it (#789).
  *  - Screen-reader-only labels ("Image source, …") are styled invisible via
  *    CSS classes. The sanitizer strips classes later, so once extracted the
  *    labels would render as visible text. They are removed here, while the
@@ -80,6 +83,7 @@ final readonly class FetchedPageNormalizer
     ];
 
     public function __construct(
+        private CustomElementUnwrapper $customElements,
         private LazyImageSources $lazyImages,
         private ShareWidgetRemover $shareWidgets,
         private ShareIntentLinkRemover $shareIntentLinks,
@@ -126,6 +130,7 @@ final readonly class FetchedPageNormalizer
             return null;
         }
 
+        $this->customElements->unwrapIn($document);
         $this->lazyImages->resolveIn($document);
         $this->shareWidgets->removeFrom($document);
         $this->shareIntentLinks->removeFrom($document);
