@@ -10,6 +10,8 @@ use Dom\Node;
 
 final readonly class LeadingEngagementCleaner
 {
+    private const array MEDIA_TAGS = ['img', 'audio', 'video', 'iframe', 'svg'];
+
     public function removeFrom(HTMLDocument $document, ?string $entryAuthor): void
     {
         if ($document->body === null) {
@@ -151,14 +153,13 @@ final readonly class LeadingEngagementCleaner
             || (LeadingEngagementRules::collapse($element->textContent) === '' && !$this->hasMedia($element));
     }
 
+    /** The element itself or any descendant: a bare <img> has no text and no children. */
     private function hasMedia(Element $element): bool
     {
-        foreach (['img', 'audio', 'video', 'iframe', 'svg'] as $tag) {
-            if ($element->getElementsByTagName($tag)->length > 0) {
-                return true;
-            }
-        }
-
-        return false;
+        return in_array($element->localName, self::MEDIA_TAGS, true)
+            || array_any(
+                self::MEDIA_TAGS,
+                static fn (string $tag): bool => $element->getElementsByTagName($tag)->length > 0,
+            );
     }
 }
