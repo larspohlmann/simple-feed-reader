@@ -272,4 +272,25 @@ final class ReaderBodyCleanerTest extends TestCase
         self::assertStringContainsString('<img', $out);
         self::assertStringContainsString('<video', $out);
     }
+
+    /**
+     * Substack 481600, the shape readability hands over for a paid video post:
+     * a byline card (date, "Paid"), then #627's poster link, then the teaser.
+     * The poster link is the reader's play overlay hook and must survive.
+     */
+    public function testKeepsTheGatedVideoPosterBelowASubstackBylineCard(): void
+    {
+        $poster = 'https://substackcdn.com/image/fetch/w_1200/https%3A%2F%2Fsubstack-video.s3.amazonaws.com%2Fp.png';
+        $html = '<div><div><p>Sheldrake—Vernon Dialogue 103</p></div>'
+            . '<div><p><time datetime="2026-08-25T10:44:42Z">Aug 25, 2026</time></p><p>∙ Paid</p></div>'
+            . '<div><p><a href="https://x.substack.com/p/plants"><img src="' . $poster . '"'
+            . ' alt="Video — open the original article to watch" width="1280" height="720"></a></p>'
+            . '<p>' . self::PROSE . '</p></div></div>';
+        $lead = new LeadImageCandidate($poster, PageImageInventory::fromDocument(null));
+
+        $out = $this->cleaner->clean($html, [null], $lead, ArticleMedia::none());
+
+        self::assertStringContainsString('alt="Video — open the original article to watch"', $out);
+        self::assertSame(1, substr_count($out, '<img'), 'the poster is the only picture, no restored hero');
+    }
 }

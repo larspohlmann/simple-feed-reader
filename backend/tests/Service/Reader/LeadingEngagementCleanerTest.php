@@ -183,4 +183,38 @@ final class LeadingEngagementCleanerTest extends TestCase
             . '"MJ - Das Michael Jackson Musical" in Hamburg bekommt einen neuen Hauptdarsteller. ' . self::PROSE
             . '</p></section></article></section></div>';
     }
+
+    /**
+     * Substack 481600: the byline card's date is removed as engagement, and the
+     * remainder sweep must not take the #627 poster link with it — an <img>
+     * element is media itself, not an empty remainder.
+     */
+    public function testKeepsALeadingPosterLinkWhenTheSweepRuns(): void
+    {
+        $html = '<div><p><time datetime="2026-08-25">Aug 25, 2026</time></p>'
+            . '<p><a href="https://x.test/post"><img src="https://x.test/poster.jpg" alt="Video"></a></p>'
+            . '<p>' . self::PROSE . '</p></div>';
+
+        $clean = $this->clean($html, null);
+
+        self::assertStringNotContainsString('Aug 25', $clean);
+        self::assertStringContainsString('<img src="https://x.test/poster.jpg"', $clean);
+        self::assertStringContainsString('<a href="https://x.test/post">', $clean);
+    }
+
+    public function testKeepsBareLeadingMediaElementsWhenTheSweepRuns(): void
+    {
+        $html = '<div><p>1.251 Klicks</p>'
+            . '<img src="https://x.test/hero.jpg" alt="">'
+            . '<video controls src="https://x.test/v.mp4"></video>'
+            . '<audio controls src="https://x.test/a.mp3"></audio>'
+            . '<p>' . self::PROSE . '</p></div>';
+
+        $clean = $this->clean($html, null);
+
+        self::assertStringNotContainsString('Klicks', $clean);
+        self::assertStringContainsString('hero.jpg', $clean);
+        self::assertStringContainsString('<video', $clean);
+        self::assertStringContainsString('<audio', $clean);
+    }
 }
