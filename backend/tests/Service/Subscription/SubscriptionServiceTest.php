@@ -362,11 +362,49 @@ final class SubscriptionServiceTest extends DbTestCase
 
         $url = 'https://wp.example/wp-json/wp/v2/posts?per_page=20'
             . '&_fields=id,date_gmt,link,guid,title,content,excerpt,jetpack_featured_media_url';
-        $outcome = $service->subscribe($user, $url, SourceFormat::WP_JSON);
+        $outcome = $service->subscribe($user, $url, SourceFormat::WP_JSON, [], 'WordPress Example');
 
         self::assertNotNull($outcome->subscription);
         self::assertSame($url, $outcome->subscription->getFeed()->getUrl());
         self::assertSame(SourceFormat::WP_JSON, $outcome->subscription->getFeed()->getSourceFormat());
+        self::assertSame('WordPress Example', $outcome->subscription->getFeed()->getTitle());
+    }
+
+    public function testWpJsonSubscribeDoesNotChangeTheTitleOfAnExistingSharedFeed(): void
+    {
+        $shared = new Feed('https://wp.example/wp-json/wp/v2/posts');
+        $this->em->persist($shared);
+        $this->em->flush();
+
+        $service = $this->service($this->discoveryReturning(FeedDiscoveryResult::candidates([])));
+        $outcome = $service->subscribe(
+            $this->factory()->create('second-wpjson@example.com'),
+            'https://wp.example/wp-json/wp/v2/posts',
+            SourceFormat::WP_JSON,
+            [],
+            'WordPress Example',
+        );
+
+        self::assertNotNull($outcome->subscription);
+        self::assertNull($shared->getTitle());
+    }
+
+    public function testScrapedSubscribeDoesNotSeedTheCandidateTitle(): void
+    {
+        $user = $this->factory()->create('scraped-title@example.com');
+        $user->getPreferences()->setScrapeFallbackEnabled(true);
+        $service = $this->service($this->discoveryReturning(FeedDiscoveryResult::candidates([])));
+
+        $outcome = $service->subscribe(
+            $user,
+            'https://example.com/blog',
+            SourceFormat::SCRAPED,
+            [],
+            'Scraped Example',
+        );
+
+        self::assertNotNull($outcome->subscription);
+        self::assertNull($outcome->subscription->getFeed()->getTitle());
     }
 
     public function testWpJsonSubscribeNeedsNoScrapingPermission(): void

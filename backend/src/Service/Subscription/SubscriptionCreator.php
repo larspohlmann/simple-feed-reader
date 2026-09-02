@@ -39,15 +39,19 @@ final readonly class SubscriptionCreator
     }
 
     /**
-     * Both single-feed paths — discovery-confirmed and the scraped shortcut —
-     * come through here, so the cap, the shared-feed lookup and the duplicate
-     * check cannot diverge between them.
+     * Both single-feed paths come through here, so the cap, the shared-feed
+     * lookup and the duplicate check cannot diverge between them.
      *
      * @param 'xml'|'scraped'|'wp-json' $sourceFormat
      * @param list<Tag>                 $tags
      */
-    public function create(User $user, string $feedUrl, string $sourceFormat, array $tags): Subscription
-    {
+    public function create(
+        User $user,
+        string $feedUrl,
+        string $sourceFormat,
+        array $tags,
+        ?string $initialTitle = null,
+    ): Subscription {
         $userId = (int) $user->getId();
         $limit = $this->subscriptionLimits->resolve($user);
         if ($this->subscriptions->countForUser($userId) >= $limit) {
@@ -56,11 +60,11 @@ final readonly class SubscriptionCreator
 
         $feed = $this->feeds->findOneBy(['url' => $feedUrl]);
         if (null === $feed) {
-            // New shared feed: nextFetchAt null => due immediately; the first
-            // refresh fills in title/entries. Metadata is the refresh pipeline's
-            // job, not the subscribe path's.
+            // New shared feed: nextFetchAt null => due immediately. XML and
+            // scraped metadata still wait for the refresh pipeline.
             $feed = new Feed($feedUrl);
             $feed->setSourceFormat($sourceFormat);
+            $feed->setTitle($initialTitle);
             $this->em->persist($feed);
             $this->em->flush(); // assign an id so the duplicate check is meaningful
         } elseif (SourceFormat::XML === $sourceFormat && SourceFormat::SCRAPED === $feed->getSourceFormat()) {

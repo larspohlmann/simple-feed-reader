@@ -76,4 +76,16 @@ final class SubscribeRequestTest extends KernelTestCase
     {
         self::assertGreaterThan(0, $this->validator()->validate(new SubscribeRequest(''))->count());
     }
+
+    public function testTitleAllows512CharactersAndRejects513(): void
+    {
+        self::assertCount(0, $this->validator()->validate(new SubscribeRequest(
+            url: 'https://example.com/feed.xml',
+            title: str_repeat('a', 512),
+        )));
+        self::assertGreaterThan(0, $this->validator()->validate(new SubscribeRequest(
+            url: 'https://example.com/feed.xml',
+            title: str_repeat('a', 513),
+        ))->count());
+    }
 }
