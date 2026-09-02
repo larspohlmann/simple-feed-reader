@@ -49,10 +49,9 @@ final readonly class PageTextBlocks
     {
         $preceding = null;
         foreach ($this->blocks as $block) {
-            if (!$this->precedes($block->element, $element)) {
-                break;
+            if ($this->precedes($block->element, $element)) {
+                $preceding = $block->text;
             }
-            $preceding = $block->text;
         }
 
         return $preceding;

@@ -70,4 +70,15 @@ final class LinkedFileMediaSourceTest extends TestCase
 
         self::assertSame(self::PROSE, $found[0]->precedingText);
     }
+
+    public function testAnchorsARepeatedLinkWhereItFirstAppears(): void
+    {
+        $html = '<body><p>' . self::PROSE . '</p><a href="https://x.test/telescope-segment.mp3">Listen</a>'
+            . '<p>A footer paragraph, long enough to be a prose block of its own accord.</p>'
+            . '<a href="https://x.test/telescope-segment.mp3">Download</a></body>';
+
+        $found = $this->source->find($html, 'https://x.test/2026/08/30/roman-space-telescope');
+
+        self::assertSame(self::PROSE, $found[0]->precedingText);
+    }
 }

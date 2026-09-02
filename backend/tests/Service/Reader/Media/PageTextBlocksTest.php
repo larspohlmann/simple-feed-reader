@@ -77,4 +77,24 @@ final class PageTextBlocksTest extends TestCase
         self::assertNull($this->before($html, '#head'));
         self::assertSame(self::LONG, $this->before($html, '#inline'));
     }
+
+    public function testFortyCharactersIsLongEnough(): void
+    {
+        $exactlyForty = 'Forty characters of text, no more no les';
+        self::assertSame(40, mb_strlen($exactlyForty));
+        $html = '<body><p>' . self::OTHER . '</p><p>' . $exactlyForty . '</p><div id="player"></div></body>';
+
+        self::assertSame($exactlyForty, $this->before($html, '#player'));
+    }
+
+    public function testMeasuresLengthInCharactersNotBytes(): void
+    {
+        // 38 characters, 44 bytes: German prose must not sneak past the bar on umlauts.
+        $umlauts = 'Größe, Straße, Übermaß, Äpfel und Öl d';
+        self::assertSame(38, mb_strlen($umlauts));
+        self::assertGreaterThanOrEqual(40, strlen($umlauts));
+        $html = '<body><p>' . self::OTHER . '</p><p>' . $umlauts . '</p><div id="player"></div></body>';
+
+        self::assertSame(self::OTHER, $this->before($html, '#player'));
+    }
 }

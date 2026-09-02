@@ -122,4 +122,19 @@ final class JsonLdMediaSourceTest extends TestCase
 
         self::assertSame(self::PROSE, $found[0]->precedingText);
     }
+
+    public function testAnchorsARepeatedDeclarationWhereItFirstAppears(): void
+    {
+        $video = '{"@type":"VideoObject","contentUrl":"https://x.test/v.mp4",'
+            . '"thumbnailUrl":"https://x.test/poster.jpg"}';
+        $html = '<html lang="de"><body><p>' . self::PROSE . '</p>'
+            . '<div><script type="application/ld+json">' . $video . '</script></div>'
+            . '<p>A related-videos paragraph, long enough to be a prose block of its own.</p>'
+            . '<div><script type="application/ld+json">' . $video . '</script></div></body></html>';
+
+        $found = $this->source->find($html, 'https://x.test/a.html');
+
+        self::assertCount(1, $found);
+        self::assertSame(self::PROSE, $found[0]->precedingText);
+    }
 }
