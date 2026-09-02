@@ -10,6 +10,8 @@ use App\Service\Reader\Media\MediaCandidateSourceInterface;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaRelevance;
 use App\Service\Reader\Media\MediaUrlKind;
+use Dom\Element;
+use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
@@ -26,8 +28,6 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
 {
     private const string URL_PATTERN = '#https://[^"\'\s\\\\<>]+#i';
 
-    private const string POSTER_PATTERN = '#<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']#i';
-
     public function __construct(
         private MediaUrlKind $kind,
         private MediaRelevance $relevance,
@@ -41,19 +41,37 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
             return [];
         }
 
-        $urlsByKind = $this->urlsByKind($this->urlsInAttributes($document));
+        return $this->candidates($this->originsByKind($document), ScannedPage::from($document, $pageUrl));
+    }
 
-        return $this->candidates($urlsByKind, $pageHtml, $pageUrl);
+    /**
+     * Every media URL any attribute holds, with the element that holds it — the
+     * first element wins when a URL repeats, so the anchor is where the media
+     * first appears.
+     *
+     * @return array<value-of<MediaKind>, array<string, Element>> durable url => element
+     */
+    private function originsByKind(HTMLDocument $document): array
+    {
+        $byKind = [];
+        foreach ($document->querySelectorAll('*') as $element) {
+            foreach ($this->urlsOn($element) as $url) {
+                $resolved = $this->kind->resolve($url);
+                if ($resolved !== null && $resolved->kind !== MediaKind::Embed) {
+                    $byKind[$resolved->kind->value][$resolved->url] ??= $element;
+                }
+            }
+        }
+
+        return $byKind;
     }
 
     /** @return list<string> */
-    private function urlsInAttributes(\Dom\HTMLDocument $document): array
+    private function urlsOn(Element $element): array
     {
         $urls = [];
-        foreach ($document->querySelectorAll('*') as $element) {
-            foreach ($element->attributes as $attribute) {
-                array_push($urls, ...$this->urlsInValue($attribute->value));
-            }
+        foreach ($element->attributes as $attribute) {
+            array_push($urls, ...$this->urlsInValue($attribute->value));
         }
 
         return $urls;
@@ -72,33 +90,15 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
     }
 
     /**
-     * @param list<string> $urls
-     *
-     * @return array<value-of<MediaKind>, list<string>>
-     */
-    private function urlsByKind(array $urls): array
-    {
-        $byKind = [];
-        foreach ($urls as $url) {
-            $resolved = $this->kind->resolve($url);
-            if ($resolved !== null && $resolved->kind !== MediaKind::Embed) {
-                $byKind[$resolved->kind->value][] = $resolved->url;
-            }
-        }
-
-        return $byKind;
-    }
-
-    /**
-     * @param array<value-of<MediaKind>, list<string>> $urlsByKind
+     * @param array<value-of<MediaKind>, array<string, Element>> $originsByKind
      *
      * @return list<MediaCandidate>
      */
-    private function candidates(array $urlsByKind, string $pageHtml, string $pageUrl): array
+    private function candidates(array $originsByKind, ScannedPage $page): array
     {
         $candidates = [];
-        foreach ($urlsByKind as $kindValue => $urls) {
-            $candidate = $this->bestCandidate(MediaKind::from($kindValue), $urls, $pageHtml, $pageUrl);
+        foreach ($originsByKind as $kindValue => $origins) {
+            $candidate = $this->bestCandidate(MediaKind::from($kindValue), $origins, $page);
             if ($candidate !== null) {
                 $candidates[] = $candidate;
             }
@@ -107,28 +107,20 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
         return $candidates;
     }
 
-    /** @param list<string> $urls already resolved to their durable form */
-    private function bestCandidate(MediaKind $kind, array $urls, string $pageHtml, string $pageUrl): ?MediaCandidate
+    /** @param array<string, Element> $origins durable url => the element holding it */
+    private function bestCandidate(MediaKind $kind, array $origins, ScannedPage $page): ?MediaCandidate
     {
-        $best = $this->relevance->rank($urls, $pageUrl)[0];
+        $best = $this->relevance->rank(array_keys($origins), $page->url)[0];
+        $precedingText = $page->blocks->before($origins[$best]);
         if ($kind === MediaKind::Audio) {
-            return new MediaCandidate(MediaKind::Audio, $best);
+            return new MediaCandidate(MediaKind::Audio, $best, null, null, $precedingText);
         }
-
-        $poster = $this->ogImagePoster($pageHtml);
 
         // A publisher depublishes video on a schedule and the reader's cache
         // has no TTL; a poster-less video would rot into a dead frame instead
         // of a still with a failing play control, so it is dropped outright.
-        return $poster === null ? null : new MediaCandidate(MediaKind::Video, $best, $poster);
-    }
-
-    private function ogImagePoster(string $pageHtml): ?string
-    {
-        if (preg_match(self::POSTER_PATTERN, $pageHtml, $matches) !== 1) {
-            return null;
-        }
-
-        return preg_match('#^https://#i', $matches[1]) === 1 ? $matches[1] : null;
+        return $page->posterUrl === null
+            ? null
+            : new MediaCandidate(MediaKind::Video, $best, $page->posterUrl, null, $precedingText);
     }
 }

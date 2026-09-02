@@ -15,6 +15,9 @@ use PHPUnit\Framework\TestCase;
 
 final class SemanticMediaSourceTest extends TestCase
 {
+    private const string PROSE =
+        'The paragraph the player followed on the source page, long enough to be prose.';
+
     private SemanticMediaSource $source;
 
     protected function setUp(): void
@@ -71,5 +74,14 @@ final class SemanticMediaSourceTest extends TestCase
             . '<source src="https://www.youtube.com/embed/aaaaaaaaaaa"></video></body>';
 
         self::assertSame([], $this->source->find($html, 'https://x.test/a'));
+    }
+
+    public function testNamesTheProseBlockThePlayerFollows(): void
+    {
+        $html = '<body><p>' . self::PROSE . '</p><audio src="https://x.test/a.mp3"></audio></body>';
+
+        $found = $this->source->find($html, 'https://x.test/a.html');
+
+        self::assertSame(self::PROSE, $found[0]->precedingText);
     }
 }

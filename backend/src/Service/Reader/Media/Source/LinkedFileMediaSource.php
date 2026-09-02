@@ -10,6 +10,8 @@ use App\Service\Reader\Media\MediaCandidateSourceInterface;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaRelevance;
 use App\Service\Reader\Media\MediaUrlKind;
+use Dom\Element;
+use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
@@ -33,18 +35,18 @@ final readonly class LinkedFileMediaSource implements MediaCandidateSourceInterf
             return [];
         }
 
-        return $this->candidates($this->hrefsByKind($document), $pageUrl);
+        return $this->candidates($this->originsByKind($document), ScannedPage::from($document, $pageUrl));
     }
 
-    /** @return array<value-of<MediaKind>, list<string>> durable urls, keyed by kind */
-    private function hrefsByKind(\Dom\HTMLDocument $document): array
+    /** @return array<value-of<MediaKind>, array<string, Element>> durable url => the first anchor linking it */
+    private function originsByKind(HTMLDocument $document): array
     {
         $byKind = [];
         foreach ($document->querySelectorAll('a[href]') as $anchor) {
             $href = $anchor->getAttribute('href');
             $resolved = $href === null ? null : $this->kind->resolve($href);
             if ($resolved !== null && $resolved->kind !== MediaKind::Embed) {
-                $byKind[$resolved->kind->value][] = $resolved->url;
+                $byKind[$resolved->kind->value][$resolved->url] ??= $anchor;
             }
         }
 
@@ -52,15 +54,15 @@ final readonly class LinkedFileMediaSource implements MediaCandidateSourceInterf
     }
 
     /**
-     * @param array<value-of<MediaKind>, list<string>> $hrefsByKind
+     * @param array<value-of<MediaKind>, array<string, Element>> $originsByKind
      *
      * @return list<MediaCandidate>
      */
-    private function candidates(array $hrefsByKind, string $pageUrl): array
+    private function candidates(array $originsByKind, ScannedPage $page): array
     {
         $candidates = [];
-        foreach ($hrefsByKind as $kindValue => $hrefs) {
-            $candidate = $this->bestCandidate(MediaKind::from($kindValue), $hrefs, $pageUrl);
+        foreach ($originsByKind as $kindValue => $origins) {
+            $candidate = $this->bestCandidate(MediaKind::from($kindValue), $origins, $page);
             if ($candidate !== null) {
                 $candidates[] = $candidate;
             }
@@ -69,8 +71,8 @@ final readonly class LinkedFileMediaSource implements MediaCandidateSourceInterf
         return $candidates;
     }
 
-    /** @param list<string> $hrefs already resolved to their durable form */
-    private function bestCandidate(MediaKind $kind, array $hrefs, string $pageUrl): ?MediaCandidate
+    /** @param array<string, Element> $origins durable url => the anchor linking it */
+    private function bestCandidate(MediaKind $kind, array $origins, ScannedPage $page): ?MediaCandidate
     {
         // A linked video file has no poster to show alongside it, unlike the
         // attribute layer's og:image fallback, so it is dropped outright.
@@ -78,8 +80,8 @@ final readonly class LinkedFileMediaSource implements MediaCandidateSourceInterf
             return null;
         }
 
-        $best = $this->relevance->rank($hrefs, $pageUrl)[0];
+        $best = $this->relevance->rank(array_keys($origins), $page->url)[0];
 
-        return new MediaCandidate($kind, $best);
+        return new MediaCandidate($kind, $best, null, null, $page->blocks->before($origins[$best]));
     }
 }
