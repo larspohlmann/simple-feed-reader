@@ -8,16 +8,18 @@ namespace App\Service\Reader\Media;
  * What a URL is, and the durable form a layer must emit for it.
  *
  * Every layer asks this instead of carrying its own idea of a media URL, which
- * is what keeps a player page, a poster image or an HLS playlist from being
- * emitted as a file. The cache has no TTL, so a signed or analytics-bearing
- * query string can never survive into an emitted candidate: resolve() judges
- * the bare form and hands that same bare form back, so no caller can emit the
- * raw, query-bearing url by mistake.
+ * is what keeps a player page or a poster image from being emitted as a file,
+ * and an HLS playlist from being emitted as anything but a Stream (#782). The
+ * cache has no TTL, so a signed or analytics-bearing query string can never
+ * survive into an emitted candidate: resolve() judges the bare form and hands
+ * that same bare form back, so no caller can emit the raw, query-bearing url
+ * by mistake.
  */
 final readonly class MediaUrlKind
 {
     private const array AUDIO_EXTENSIONS = ['mp3', 'm4a', 'aac', 'oga', 'ogg', 'opus', 'wav', 'flac'];
     private const array VIDEO_EXTENSIONS = ['mp4', 'm4v', 'webm', 'mov'];
+    private const array STREAM_EXTENSIONS = ['m3u8'];
 
     public function __construct(
         private DurableMediaUrl $durable,
@@ -43,6 +45,11 @@ final readonly class MediaUrlKind
         }
 
         $kind = $this->byExtension($bare);
+        // A file's query is disposable tracking; a stream's is often an access
+        // token the bare playlist 403s without, so a tokenised one is refused.
+        if ($kind === MediaKind::Stream && $bare !== $url) {
+            return null;
+        }
 
         return $kind === null ? null : new ResolvedMediaUrl($kind, $bare);
     }
@@ -65,6 +72,7 @@ final readonly class MediaUrlKind
         return match (true) {
             \in_array($extension, self::AUDIO_EXTENSIONS, true) => MediaKind::Audio,
             \in_array($extension, self::VIDEO_EXTENSIONS, true) => MediaKind::Video,
+            \in_array($extension, self::STREAM_EXTENSIONS, true) => MediaKind::Stream,
             default => null,
         };
     }

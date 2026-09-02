@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html lang="en"><head><title>Two ways to play — Unseen Publisher</title></head>
+<body>
+  <article>
+    <h1>Two ways to play</h1>
+    <p>The first clip is served as an adaptive stream straight from our own CDN, the way most broadcasters do it now, with a still frame as the poster so the page does not look empty before the reader presses play.</p>
+    <video controls poster="https://cdn.unseen.test/stills/clip-one.jpg"><source src="https://cdn.unseen.test/v/clip-one/master.m3u8" type="application/x-mpegURL"></video>
+    <p>The second clip is hosted at Brightcove, embedded with the player page the platform hands out, autoplay and all, which the reader must strip before it frames anything.</p>
+    <iframe src="https://players.brightcove.net/123456789/AbCdEf_default/index.html?videoId=987654321&autoplay=1" allow="autoplay"></iframe>
+  </article>
+</body></html>

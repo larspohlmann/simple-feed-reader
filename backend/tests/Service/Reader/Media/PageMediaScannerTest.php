@@ -175,4 +175,22 @@ final class PageMediaScannerTest extends TestCase
 
         self::assertSame(['https://x.test/a'], $urls);
     }
+
+    /** ardmediathek: the HLS master sits beside progressive mp4s; the file plays everywhere without a library. */
+    public function testAStreamNeverDoublesAFileAcrossSources(): void
+    {
+        $scanner = new PageMediaScanner([
+            $this->source([
+                new MediaCandidate(MediaKind::Stream, 'https://x.test/master.m3u8', 'https://x.test/p.jpg'),
+            ]),
+            $this->source([
+                new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', 'https://x.test/p.jpg'),
+            ]),
+        ]);
+
+        $media = $scanner->scan('<html></html>', 'https://x.test/a');
+
+        self::assertCount(1, $media->candidates);
+        self::assertSame(MediaKind::Video, $media->candidates[0]->kind);
+    }
 }

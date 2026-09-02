@@ -125,6 +125,6 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
         // of a still with a failing play control, so it is dropped outright.
         return $page->posterUrl === null
             ? null
-            : new MediaCandidate(MediaKind::Video, $best, $page->posterUrl, null, $precedingText);
+            : new MediaCandidate($kind, $best, $page->posterUrl, null, $precedingText);
     }
 }

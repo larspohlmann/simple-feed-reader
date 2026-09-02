@@ -36,4 +36,27 @@ final readonly class ArticleMedia
             array_filter($this->candidates, static fn (MediaCandidate $c): bool => $c->kind !== MediaKind::Embed)
         ));
     }
+
+    /** A file plays everywhere without a library; a stream is the fallback for a page that offers no file. */
+    public function withoutRedundantStreams(): self
+    {
+        if (!$this->offers(MediaKind::Video)) {
+            return $this;
+        }
+
+        return new self(array_values(
+            array_filter($this->candidates, static fn (MediaCandidate $c): bool => $c->kind !== MediaKind::Stream)
+        ));
+    }
+
+    private function offers(MediaKind $kind): bool
+    {
+        foreach ($this->candidates as $candidate) {
+            if ($candidate->kind === $kind) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

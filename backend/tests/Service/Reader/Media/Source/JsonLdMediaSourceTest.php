@@ -169,4 +169,22 @@ final class JsonLdMediaSourceTest extends TestCase
         self::assertSame(MediaKind::Embed, $found[0]->kind);
         self::assertSame($thumbnail, $found[0]->posterUrl);
     }
+
+    /** ZDF 491430: contentUrl is an HLS playlist, thumbnailUrl a two-entry array. */
+    public function testAnHlsContentUrlYieldsAStreamWithTheFirstThumbnail(): void
+    {
+        $html = '<html><head><script type="application/ld+json">{"@type":"VideoObject",'
+            . '"thumbnailUrl":["https://www.zdfheute.de/assets/istaf-102~1920x1080?cb=1",'
+            . '"https://www.zdfheute.de/assets/istaf-102~314x314?cb=1"],'
+            . '"contentUrl":"https://www.zdfheute.de/api/video/istaf-berlin-em-stars-100.m3u8",'
+            . '"embedUrl":"https://ngp.zdf.de/miniplayer/embed/?mediaID=/zdf/nachrichten/istaf-100"}'
+            . '</script></head><body></body></html>';
+
+        $found = $this->source->find($html, 'https://www.zdfheute.de/video/x.html');
+
+        self::assertCount(1, $found);
+        self::assertSame(MediaKind::Stream, $found[0]->kind);
+        self::assertSame('https://www.zdfheute.de/api/video/istaf-berlin-em-stars-100.m3u8', $found[0]->url);
+        self::assertSame('https://www.zdfheute.de/assets/istaf-102~1920x1080?cb=1', $found[0]->posterUrl);
+    }
 }

@@ -53,6 +53,22 @@ final class PageMediaInserterTest extends TestCase
         self::assertStringContainsString('preload="none"', $out);
     }
 
+    /** A stream is the same <video> a file is — Safari and AVPlayer play it natively; hls.js covers the rest. */
+    public function testAStreamBecomesAVideoElementWithItsPoster(): void
+    {
+        $html = $this->insert(
+            '<html><body><p>Teaser.</p></body></html>',
+            new ArticleMedia([
+                new MediaCandidate(MediaKind::Stream, 'https://x.test/master.m3u8', 'https://x.test/p.jpg'),
+            ]),
+        );
+
+        self::assertStringContainsString(
+            '<video controls="" preload="none" src="https://x.test/master.m3u8" poster="https://x.test/p.jpg">',
+            $html,
+        );
+    }
+
     public function testAudioNeverCarriesAPosterAttribute(): void
     {
         // Defect i: <audio> has no poster attribute, so even a candidate that

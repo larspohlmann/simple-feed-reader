@@ -119,11 +119,11 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
         if ($resolved->kind === MediaKind::Audio) {
             return new MediaCandidate(MediaKind::Audio, $resolved->url, null, null, $precedingText);
         }
-        if ($resolved->kind === MediaKind::Video) {
+        if ($resolved->kind->isVideo()) {
             // D5: a poster-less video rots into a dead frame in the reader's TTL-less cache.
             return $poster === null || $poster === ''
                 ? null
-                : new MediaCandidate(MediaKind::Video, $resolved->url, $poster, null, $precedingText);
+                : new MediaCandidate($resolved->kind, $resolved->url, $poster, null, $precedingText);
         }
 
         $target = $this->embedProviders->resolve($url);
