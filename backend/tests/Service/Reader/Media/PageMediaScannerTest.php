@@ -158,4 +158,21 @@ final class PageMediaScannerTest extends TestCase
 
         self::assertCount(ArticleMedia::MAX_ITEMS, $scanner->scan('<html></html>', 'https://x.test/a')->candidates);
     }
+
+    /** The guard is per-source: a new URL from a source that re-confirms nothing is dropped even when a still-later source re-confirms the kind (#788). */
+    public function testANewUrlFromANonReconfirmingSourceIsDroppedEvenIfALaterSourceReconfirms(): void
+    {
+        $scanner = new PageMediaScanner([
+            $this->source([new MediaCandidate(MediaKind::Embed, 'https://x.test/a')]),
+            $this->source([new MediaCandidate(MediaKind::Embed, 'https://x.test/b')]),
+            $this->source([new MediaCandidate(MediaKind::Embed, 'https://x.test/a')]),
+        ]);
+
+        $urls = array_map(
+            static fn (MediaCandidate $candidate): string => $candidate->url,
+            $scanner->scan('<html></html>', 'https://x.test/a')->candidates,
+        );
+
+        self::assertSame(['https://x.test/a'], $urls);
+    }
 }
