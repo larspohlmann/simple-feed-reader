@@ -10,6 +10,7 @@ use App\Service\Reader\Media\MediaCandidateSourceInterface;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\Media\MediaRelevance;
+use App\Service\Reader\Media\PlayerPoster;
 use App\Service\Reader\Media\MediaUrlKind;
 use Dom\Element;
 use Dom\HTMLDocument;
@@ -22,7 +23,8 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
  * attribute of every element instead of naming either host.
  *
  * An attribute can hold a whole JSON blob, so a value is scanned for
- * URL-shaped substrings rather than trusted as one URL.
+ * URL-shaped substrings rather than trusted as one URL. The poster comes from
+ * `og:image` or, failing that, the still beside the player.
  */
 #[AsTaggedItem(priority: 60)]
 final readonly class AttributeMediaSource implements MediaCandidateSourceInterface
@@ -123,8 +125,8 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
         // A publisher depublishes video on a schedule and the reader's cache
         // has no TTL; a poster-less video would rot into a dead frame instead
         // of a still with a failing play control, so it is dropped outright.
-        return $page->posterUrl === null
-            ? null
-            : new MediaCandidate($kind, $best, $page->posterUrl, null, $precedingText);
+        $poster = $page->posterUrl ?? PlayerPoster::near($origins[$best]);
+
+        return $poster === null ? null : new MediaCandidate($kind, $best, $poster, null, $precedingText);
     }
 }
