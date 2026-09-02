@@ -92,25 +92,25 @@ final class PageMediaScannerTest extends TestCase
         ], $urls);
     }
 
-    /** A declared file and a differently named scanned one are both unique; the declaration comes first. */
-    public function testAUniqueUrlOfAnAlreadySeenKindStillJoinsAfterTheDeclaredOne(): void
+    /** ARD: a lower source that re-confirms no URL of a claimed kind is seeing a rendition, not a new player — its unique URL is dropped (#788). */
+    public function testALowerSourceThatConfirmsNothingAddsNoUrlOfAClaimedKind(): void
     {
         $scanner = new PageMediaScanner([
-            $this->source([new MediaCandidate(MediaKind::Audio, 'https://x.test/declared.mp3')]),
-            $this->source([new MediaCandidate(MediaKind::Audio, 'https://x.test/scanned.mp3')]),
+            $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/declared.webxxl.mp4')]),
+            $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/scanned.webs.mp4')]),
         ]);
 
         $media = $scanner->scan('<html></html>', 'https://x.test/a');
 
-        self::assertCount(2, $media->candidates);
+        self::assertCount(1, $media->candidates);
         self::assertStringContainsString('declared', $media->candidates[0]->url);
-        self::assertStringContainsString('scanned', $media->candidates[1]->url);
     }
 
     public function testTheCapAppliesToTheMergedListAcrossSources(): void
     {
+        // The second source re-confirms e0 so the guard trusts the rest of its embeds.
         $first = [];
-        $second = [];
+        $second = [new MediaCandidate(MediaKind::Embed, 'https://x.test/e0')];
         for ($i = 0; $i < 15; $i++) {
             $first[] = new MediaCandidate(MediaKind::Embed, 'https://x.test/e' . $i);
             $second[] = new MediaCandidate(MediaKind::Embed, 'https://x.test/f' . $i);

@@ -7,9 +7,9 @@ namespace App\Service\Reader\Media;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
- * Runs every candidate source over the raw page, highest priority first, and
- * merges what they find by URL: the first to name a URL sets the candidate
- * and its position; later sources fill its gaps and add unnamed URLs (#788).
+ * Runs every source over the raw page, highest priority first, and merges by URL: the first to name a URL
+ * sets the candidate and its place; a later source fills its gaps and adds new URLs of a kind only when it
+ * re-confirms one an earlier source set — proof it sees this article's media, not a rendition (#788).
  *
  * It reads the raw HTML rather than FetchedPageNormalizer's document on purpose:
  * that pass is tuned for readability scoring and removes elements, so discovery
@@ -29,13 +29,74 @@ final readonly class PageMediaScanner
     {
         $byUrl = [];
         foreach ($this->sources as $source) {
-            foreach ($source->find($pageHtml, $pageUrl) as $candidate) {
-                $byUrl[$candidate->url] = isset($byUrl[$candidate->url])
-                    ? $byUrl[$candidate->url]->completedBy($candidate)
-                    : $candidate;
-            }
+            $this->mergeSource($source->find($pageHtml, $pageUrl), $byUrl);
         }
 
         return new ArticleMedia(\array_slice(array_values($byUrl), 0, ArticleMedia::MAX_ITEMS));
+    }
+
+    /**
+     * @param list<MediaCandidate>          $candidates
+     * @param array<string, MediaCandidate> $byUrl
+     */
+    private function mergeSource(array $candidates, array &$byUrl): void
+    {
+        $claimedKinds = $this->kinds($byUrl);
+        $reconfirmedKinds = $this->reconfirmedKinds($candidates, $byUrl);
+        foreach ($candidates as $candidate) {
+            if (isset($byUrl[$candidate->url])) {
+                $byUrl[$candidate->url] = $byUrl[$candidate->url]->completedBy($candidate);
+                continue;
+            }
+            if ($this->mayAdd($candidate, $claimedKinds, $reconfirmedKinds)) {
+                $byUrl[$candidate->url] = $candidate;
+            }
+        }
+    }
+
+    /**
+     * A new URL joins when no earlier source claimed its kind, or this source re-confirms that kind — proof
+     * it sees this article's media, not a rendition or an unrelated file of an already-claimed kind (#788).
+     *
+     * @param array<string, true> $claimedKinds
+     * @param array<string, true> $reconfirmedKinds
+     */
+    private function mayAdd(MediaCandidate $candidate, array $claimedKinds, array $reconfirmedKinds): bool
+    {
+        return !isset($claimedKinds[$candidate->kind->value])
+            || isset($reconfirmedKinds[$candidate->kind->value]);
+    }
+
+    /**
+     * @param array<string, MediaCandidate> $byUrl
+     *
+     * @return array<string, true> the kinds an earlier source has already set
+     */
+    private function kinds(array $byUrl): array
+    {
+        $kinds = [];
+        foreach ($byUrl as $candidate) {
+            $kinds[$candidate->kind->value] = true;
+        }
+
+        return $kinds;
+    }
+
+    /**
+     * @param list<MediaCandidate>          $candidates
+     * @param array<string, MediaCandidate> $byUrl
+     *
+     * @return array<string, true> the kinds this source re-confirms by naming an already-set URL
+     */
+    private function reconfirmedKinds(array $candidates, array $byUrl): array
+    {
+        $kinds = [];
+        foreach ($candidates as $candidate) {
+            if (isset($byUrl[$candidate->url])) {
+                $kinds[$candidate->kind->value] = true;
+            }
+        }
+
+        return $kinds;
     }
 }
