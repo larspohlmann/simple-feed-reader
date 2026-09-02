@@ -300,6 +300,49 @@ final class LazyImageSourcesTest extends TestCase
         );
     }
 
+    /** nature.com 495343: a lazy <picture> carries its candidates on `data-srcset`, and its <img> has no src at all. */
+    public function testPromotesTheLazySourceOfAPictureWhoseImageIsBare(): void
+    {
+        $source = $this->resolvedSource(
+            '<picture data-lazy="true"><source data-srcset="./assets/a/photo-750x422.webp 750w,'
+            . ' ./assets/a/photo-2560x1440.webp 2560w" type="image/webp"><img alt="A"></picture>'
+        );
+
+        self::assertSame('./assets/a/photo-750x422.webp', $source);
+    }
+
+    public function testPrefersAPictureSourcesLazyListOverItsPlaceholderList(): void
+    {
+        $source = $this->resolvedSource(
+            '<picture><source srcset="https://images.example.com/blank.gif 20w"'
+            . ' data-srcset="https://images.example.com/real.jpg 750w"><img alt="A"></picture>'
+        );
+
+        self::assertSame('https://images.example.com/real.jpg', $source);
+    }
+
+    public function testAdoptsAWiderLazyPictureSourceOverThePlaceholderImage(): void
+    {
+        $source = $this->resolvedSource(
+            '<picture><source data-srcset="https://images.example.com/large.jpg 2000w">'
+            . '<img src="https://images.example.com/small.jpg?w=300" alt="A"></picture>'
+        );
+
+        self::assertSame('https://images.example.com/large.jpg', $source);
+    }
+
+    public function testFlattensALazyPictureOncePromoted(): void
+    {
+        $html = $this->resolvedHtml(
+            '<figure><picture data-lazy="true"><source data-srcset="https://images.example.com/photo.jpg 750w">'
+            . '<img alt="A"></picture></figure>'
+        );
+
+        self::assertStringNotContainsString('<picture', $html);
+        self::assertStringNotContainsString('<source', $html);
+        self::assertStringContainsString('<img alt="A" src="https://images.example.com/photo.jpg">', $html);
+    }
+
     private function resolvedSource(string $bodyHtml): ?string
     {
         $image = $this->resolvedDocument($bodyHtml)->getElementsByTagName('img')->item(0);

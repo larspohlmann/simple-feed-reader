@@ -21,8 +21,9 @@ use Dom\HTMLDocument;
  *
  * A responsive <picture> hides its URL the same way without being lazy at all:
  * the <img> carries no `src` and the candidates sit on sibling <source srcset>
- * elements (#498: ZDFheute). The last resort therefore looks one level out,
- * into the picture the image belongs to.
+ * elements (#498: ZDFheute). A lazy <picture> keeps those candidates on `data-srcset`
+ * (nature.com, #789); the <source> is read by the same lazy attributes as the <img>.
+ * The last resort therefore looks one level out, into the picture the image belongs to.
  *
  * An image with no usable candidate is removed: an <img> the client cannot load
  * is a broken frame, and leaving it also fools HeroImageSelector into thinking
@@ -145,7 +146,7 @@ final readonly class LazyImageSources
      *  srcset omits a descriptor. Null when the source carries nothing loadable. */
     private function renditionOf(Element $source): ?ImageRendition
     {
-        $candidate = Srcset::widest($source->getAttribute('srcset'));
+        $candidate = Srcset::widest($this->srcsetOf($source));
         if ($candidate === null || !$this->isUsable($candidate->url)) {
             return null;
         }
@@ -225,7 +226,7 @@ final readonly class LazyImageSources
         }
 
         foreach ($picture->getElementsByTagName('source') as $source) {
-            $candidate = $this->usableSrcsetHead($source->getAttribute('srcset') ?? '');
+            $candidate = $this->usableSrcsetHead($this->srcsetOf($source) ?? '');
             if ($candidate !== null) {
                 return $candidate;
             }
@@ -262,5 +263,18 @@ final readonly class LazyImageSources
         $candidate = Srcset::firstUrl($srcset);
 
         return $candidate !== null && $this->isUsable($candidate) ? $candidate : null;
+    }
+
+    /** A <source>'s candidate list, from the same lazy attributes an <img> is read by. */
+    private function srcsetOf(Element $source): ?string
+    {
+        foreach (self::SRCSET_ATTRIBUTES as $attribute) {
+            $srcset = $source->getAttribute($attribute);
+            if ($srcset !== null && trim($srcset) !== '') {
+                return $srcset;
+            }
+        }
+
+        return null;
     }
 }
