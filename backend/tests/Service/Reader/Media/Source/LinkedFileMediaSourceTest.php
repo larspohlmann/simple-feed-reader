@@ -81,4 +81,11 @@ final class LinkedFileMediaSourceTest extends TestCase
 
         self::assertSame(self::PROSE, $found[0]->precedingText);
     }
+
+    public function testSkipsALinkInsideAFooter(): void
+    {
+        $html = '<body><footer><a href="https://x.test/telescope-segment.mp3">Listen</a></footer></body>';
+
+        self::assertSame([], $this->source->find($html, 'https://x.test/2026/08/30/roman-space-telescope'));
+    }
 }

@@ -95,4 +95,16 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
         self::assertSame(MediaKind::Audio, $media->candidates[0]->kind);
         self::assertStringEndsWith('.mp3', $media->candidates[0]->url);
     }
+
+    /** tagesschau 494183: the related-content sidebar's podcast is not this article's audio. */
+    public function testASidebarTeaserDoesNotBecomeTheArticlesMedia(): void
+    {
+        $media = $this->scanner()->scan(
+            $this->fixture('sidebar-teaser.html'),
+            'https://www.tagesschau.de/inland/innenpolitik/merz-linke-sachsen-anhalt-100.html',
+        );
+
+        $kinds = array_map(static fn ($c): MediaKind => $c->kind, $media->candidates);
+        self::assertSame([MediaKind::Video], $kinds);
+    }
 }

@@ -9,6 +9,7 @@ use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaCandidateSourceInterface;
 use App\Service\Reader\Media\MediaKind;
+use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\PageTextBlocks;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
@@ -46,6 +47,9 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
         $blocks = PageTextBlocks::fromDocument($document);
         $found = [];
         foreach ($document->querySelectorAll('script[type="application/ld+json"]') as $script) {
+            if (PageFurniture::holds($script)) {
+                continue;
+            }
             foreach ($this->urlsIn($script->textContent ?? '') as $urlWithPoster) {
                 $candidate = $this->toCandidate(
                     $urlWithPoster['url'],

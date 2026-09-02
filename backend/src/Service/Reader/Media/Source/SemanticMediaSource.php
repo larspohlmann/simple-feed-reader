@@ -8,6 +8,7 @@ use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaCandidateSourceInterface;
 use App\Service\Reader\Media\MediaKind;
+use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\PageTextBlocks;
 use Dom\Element;
@@ -34,6 +35,9 @@ final readonly class SemanticMediaSource implements MediaCandidateSourceInterfac
         $blocks = PageTextBlocks::fromDocument($document);
         $found = [];
         foreach ($document->querySelectorAll('audio, video') as $element) {
+            if (PageFurniture::holds($element)) {
+                continue;
+            }
             $candidate = $this->candidateFor($element, $blocks->before($element));
             if ($candidate !== null) {
                 $found[] = $candidate;

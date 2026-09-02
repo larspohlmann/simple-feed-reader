@@ -84,4 +84,11 @@ final class SemanticMediaSourceTest extends TestCase
 
         self::assertSame(self::PROSE, $found[0]->precedingText);
     }
+
+    public function testSkipsAPlayerInsideAnAside(): void
+    {
+        $html = '<body><aside><audio src="https://x.test/a.mp3"></audio></aside></body>';
+
+        self::assertSame([], $this->source->find($html, 'https://x.test/a.html'));
+    }
 }

@@ -9,6 +9,7 @@ use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaCandidateSourceInterface;
 use App\Service\Reader\Media\MediaKind;
+use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\Media\PageTextBlocks;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
@@ -40,6 +41,9 @@ final readonly class PageEmbedSource implements MediaCandidateSourceInterface
         $blocks = PageTextBlocks::fromDocument($document);
         $found = [];
         foreach ($document->querySelectorAll('[src]') as $element) {
+            if (PageFurniture::holds($element)) {
+                continue;
+            }
             $target = $this->providers->resolve($element->getAttribute('src') ?? '');
             if ($target !== null) {
                 $found[$target->url] ??= new MediaCandidate(
