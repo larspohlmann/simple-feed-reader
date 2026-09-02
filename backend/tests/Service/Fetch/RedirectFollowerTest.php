@@ -103,7 +103,9 @@ final class RedirectFollowerTest extends TestCase
 
     public function testLandsWhenTheChainUsesExactlyTheAllowedHops(): void
     {
-        $follower = $this->follower([self::redirect('/a'), self::redirect('/b'), new MockResponse('ok', ['http_code' => 200])]);
+        $follower = $this->follower(
+            [self::redirect('/a'), self::redirect('/b'), new MockResponse('ok', ['http_code' => 200])],
+        );
 
         $landed = $follower->follow('https://example.com/start', [], 2);
 

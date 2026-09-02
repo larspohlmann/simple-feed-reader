@@ -143,11 +143,10 @@ final class StreamLocationResolverTest extends TestCase
 
         $resolver->resolve(self::stream());
 
-        self::assertContains(
-            'Accept: application/vnd.apple.mpegurl,application/x-mpegURL,*/*;q=0.8',
-            $seenOptions['headers'],
-        );
-        self::assertContains('User-Agent: TestAgent/1.0', $seenOptions['headers']);
+        /** @var list<string> $headers */
+        $headers = $seenOptions['headers'];
+        self::assertContains('Accept: application/vnd.apple.mpegurl,application/x-mpegURL,*/*;q=0.8', $headers);
+        self::assertContains('User-Agent: TestAgent/1.0', $headers);
         self::assertSame(10.0, $seenOptions['max_duration']);
     }
 

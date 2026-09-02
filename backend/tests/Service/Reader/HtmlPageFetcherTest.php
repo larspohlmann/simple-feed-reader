@@ -99,9 +99,11 @@ final class HtmlPageFetcherTest extends TestCase
 
         $fetcher->fetch('https://example.com/post');
 
+        /** @var list<string> $headers */
+        $headers = $seenOptions['headers'];
         self::assertContains(
             'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            $seenOptions['headers'],
+            $headers,
         );
         self::assertSame(10.0, $seenOptions['timeout']);
         self::assertSame(20.0, $seenOptions['max_duration']);
