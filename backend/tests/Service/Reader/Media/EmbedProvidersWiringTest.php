@@ -40,4 +40,17 @@ final class EmbedProvidersWiringTest extends KernelTestCase
     {
         self::assertNull($this->providers()->resolve('https://www.googletagmanager.com/ns.html?id=GTM-1'));
     }
+
+    public function testBrightcoveResolvesThroughTheTaggedIterator(): void
+    {
+        $target = $this->providers()->resolve(
+            'https://players.brightcove.net/665003303001/6tKQRAx7lu_default/index.html?videoId=6403736850112&autoplay=1'
+        );
+
+        self::assertNotNull($target);
+        self::assertSame(
+            'https://players.brightcove.net/665003303001/6tKQRAx7lu_default/index.html?videoId=6403736850112',
+            $target->url,
+        );
+    }
 }

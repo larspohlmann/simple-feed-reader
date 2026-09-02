@@ -6,8 +6,9 @@ namespace App\Service\Reader\Media;
 
 /**
  * Recognises one embed host and reduces any of its URL spellings to a single
- * durable embed URL. Implementations drop the entire query: that one rule
- * removes share tokens, autoplay and player chrome together.
+ * durable embed URL. Implementations keep only what identifies the media —
+ * for most hosts nothing of the query, for Brightcove the video id alone — so
+ * share tokens, autoplay and player chrome never survive.
  */
 interface EmbedProviderInterface
 {

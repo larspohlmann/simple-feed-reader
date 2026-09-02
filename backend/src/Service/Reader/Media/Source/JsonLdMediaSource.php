@@ -131,6 +131,12 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
             return null;
         }
 
-        return new MediaCandidate(MediaKind::Embed, $target->url, $target->posterUrl, $target->label, $precedingText);
+        return new MediaCandidate(
+            MediaKind::Embed,
+            $target->url,
+            $target->posterUrl ?? $poster,
+            $target->label,
+            $precedingText,
+        );
     }
 }

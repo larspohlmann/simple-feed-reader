@@ -127,4 +127,21 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
             self::assertNotNull($candidate->precedingText, 'every player knows the section it follows');
         }
     }
+
+    /** Al Jazeera 469835: the VideoObject offers nothing but a Brightcove player page. */
+    public function testAlJazeeraYieldsItsBrightcovePlayerWithTheDeclaredPoster(): void
+    {
+        $media = $this->scanner()->scan(
+            $this->fixture('aljazeera-brightcove.html'),
+            'https://www.aljazeera.com/video/newsfeed/2026/8/20/harry-kane-scores-goal',
+        );
+
+        self::assertCount(1, $media->candidates);
+        self::assertSame(MediaKind::Embed, $media->candidates[0]->kind);
+        self::assertSame(
+            'https://players.brightcove.net/665003303001/6tKQRAx7lu_default/index.html?videoId=6403736850112',
+            $media->candidates[0]->url,
+        );
+        self::assertStringContainsString('image-1787184739.jpg', (string) $media->candidates[0]->posterUrl);
+    }
 }

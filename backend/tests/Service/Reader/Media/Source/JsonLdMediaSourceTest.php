@@ -8,6 +8,7 @@ use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaUrlKind;
+use App\Service\Reader\Media\Provider\BrightcoveEmbedProvider;
 use App\Service\Reader\Media\Provider\SoundCloudEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\Source\JsonLdMediaSource;
@@ -22,12 +23,10 @@ final class JsonLdMediaSourceTest extends TestCase
 
     protected function setUp(): void
     {
+        $providers = [new YouTubeEmbedProvider(), new SoundCloudEmbedProvider(), new BrightcoveEmbedProvider()];
         $this->source = new JsonLdMediaSource(
-            new MediaUrlKind(
-                new DurableMediaUrl(),
-                new EmbedProviders([new YouTubeEmbedProvider(), new SoundCloudEmbedProvider()]),
-            ),
-            new EmbedProviders([new YouTubeEmbedProvider(), new SoundCloudEmbedProvider()]),
+            new MediaUrlKind(new DurableMediaUrl(), new EmbedProviders($providers)),
+            new EmbedProviders($providers),
         );
     }
 
@@ -150,5 +149,24 @@ final class JsonLdMediaSourceTest extends TestCase
 
         self::assertCount(1, $found);
         self::assertSame('https://x.test/v.mp4', $found[0]->url);
+    }
+
+    /**
+     * Al Jazeera: the provider has no poster of its own, so the declared
+     * thumbnail stands in and the body image reconciles.
+     */
+    public function testAnEmbedWithoutAProviderPosterCarriesTheDeclaredThumbnail(): void
+    {
+        $thumbnail = 'https://www.aljazeera.com/wp-content/uploads/2026/08/image-1787184739.jpg?resize=1609%2C1080';
+        $html = '<html><head><script type="application/ld+json">{"@type":"VideoObject",'
+            . '"embedUrl":"https://players.brightcove.net/665003303001/6tKQRAx7lu_default/index.html'
+            . '?videoId=6403736850112","thumbnailUrl":"' . $thumbnail . '"}'
+            . '</script></head><body></body></html>';
+
+        $found = $this->source->find($html, 'https://www.aljazeera.com/video/x');
+
+        self::assertCount(1, $found);
+        self::assertSame(MediaKind::Embed, $found[0]->kind);
+        self::assertSame($thumbnail, $found[0]->posterUrl);
     }
 }
