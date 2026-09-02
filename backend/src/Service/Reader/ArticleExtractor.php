@@ -38,9 +38,9 @@ use fivefilters\Readability\Readability;
  * PaywallSignals reads the same normalised document and the raw source before
  * readability consumes them, and decides on the cleaned body (#785).
  *
- * SiblingMediaExtender runs after stream-location resolution, at the point the
- * media is consumed, so a page that fails extraction never pays for its network
- * verification (#800).
+ * SiblingMediaExtender derives from the declared scan but appends onto the
+ * stream-resolved media, at the point the media is consumed, so a page that
+ * fails extraction never pays for its network verification (#800).
  */
 final class ArticleExtractor implements ArticleExtractorInterface
 {
@@ -90,7 +90,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
             $article->content,
             [$article->title, $entryTitle],
             $leadImage,
-            $this->siblings->extend($this->streamLocations->resolve($media), $page->html),
+            $this->siblings->extend($media, $this->streamLocations->resolve($media), $page->html),
             $entryAuthor,
         );
         $clean = $this->sanitizer->sanitize($body);

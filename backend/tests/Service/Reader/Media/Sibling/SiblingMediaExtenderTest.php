@@ -83,7 +83,7 @@ final class SiblingMediaExtenderTest extends TestCase
     {
         $landing = 'https://cdn.test/v2/reaktion-anschlag-video-100/master.m3u8';
         $extended = $this->extender([self::redirect($landing), new MockResponse('#EXTM3U', ['http_code' => 200])])
-            ->extend(self::found(), self::PAGE);
+            ->extend(self::found(), self::found(), self::PAGE);
 
         self::assertCount(2, $extended->candidates);
         self::assertSame($landing, $extended->candidates[1]->url);
@@ -94,7 +94,8 @@ final class SiblingMediaExtenderTest extends TestCase
 
     public function testDropsADerivedUrlTheNetworkRefuses(): void
     {
-        $extended = $this->extender([new MockResponse('', ['http_code' => 404])])->extend(self::found(), self::PAGE);
+        $extended = $this->extender([new MockResponse('', ['http_code' => 404])])
+            ->extend(self::found(), self::found(), self::PAGE);
 
         self::assertCount(1, $extended->candidates);
     }
@@ -104,14 +105,15 @@ final class SiblingMediaExtenderTest extends TestCase
         $extended = $this->extender([
             self::redirect('https://cdn.test/live/reaktion.mp4'),
             new MockResponse('', ['http_code' => 200]),
-        ])->extend(self::found(), self::PAGE);
+        ])->extend(self::found(), self::found(), self::PAGE);
 
         self::assertCount(1, $extended->candidates);
     }
 
     public function testMakesNoRequestWhenNothingIsDerived(): void
     {
-        $extended = $this->extender([])->extend(self::found(), '<html><body><p>no payload</p></body></html>');
+        $extended = $this->extender([])
+            ->extend(self::found(), self::found(), '<html><body><p>no payload</p></body></html>');
 
         self::assertSame([], $this->requested);
         self::assertCount(1, $extended->candidates);

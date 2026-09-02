@@ -222,4 +222,15 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
         ));
         self::assertStringContainsString('sendungsbild-1789662', (string) $videos[0]->posterUrl);
     }
+
+    public function testTheZdfShapeScansToItsOneDeclaredStream(): void
+    {
+        $media = $this->scanner()->scan(
+            $this->fixture('zdf-sibling-video-configs.html'),
+            'https://www.zdfheute.de/politik/deutschland/leipzig-drohne-sabotage-100.html',
+        );
+
+        self::assertCount(1, $media->candidates);
+        self::assertSame(MediaKind::Stream, $media->candidates[0]->kind);
+    }
 }

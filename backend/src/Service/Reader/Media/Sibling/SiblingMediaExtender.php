@@ -19,17 +19,23 @@ final readonly class SiblingMediaExtender
     ) {
     }
 
-    public function extend(ArticleMedia $media, string $pageHtml): ArticleMedia
+    /**
+     * $declared carries the page's own URLs, the shape SiblingIdRule needs to spot
+     * a sibling id; $resolved is the same media after StreamLocationResolver, the
+     * base the verified siblings are appended onto (#800 — a seed already moved to
+     * its landing no longer names its sibling's id).
+     */
+    public function extend(ArticleMedia $declared, ArticleMedia $resolved, string $pageHtml): ArticleMedia
     {
         $verified = [];
-        foreach ($this->rule->derive($media, $pageHtml) as $candidate) {
+        foreach ($this->rule->derive($declared, $pageHtml) as $candidate) {
             $landed = $this->landed($candidate);
             if ($landed !== null) {
                 $verified[] = $landed;
             }
         }
 
-        return $media->with($verified);
+        return $resolved->with($verified);
     }
 
     private function landed(MediaCandidate $candidate): ?MediaCandidate
