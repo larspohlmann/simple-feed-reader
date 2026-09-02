@@ -8,11 +8,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
  * Runs every candidate source over the raw page, highest priority first, and
- * merges what they find by URL: the first source to name a URL sets the
- * candidate and its place, a later source fills the gaps it left (poster,
- * label, prose anchor), and a URL no earlier source named joins the list. A
- * declaration establishes precedence without hiding the embeds only a page
- * scan can see (#788).
+ * merges what they find by URL: the first to name a URL sets the candidate
+ * and its position; later sources fill its gaps and add unnamed URLs (#788).
  *
  * It reads the raw HTML rather than FetchedPageNormalizer's document on purpose:
  * that pass is tuned for readability scoring and removes elements, so discovery
