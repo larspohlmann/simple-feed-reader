@@ -217,4 +217,18 @@ final class LeadingEngagementCleanerTest extends TestCase
         self::assertStringContainsString('<video', $clean);
         self::assertStringContainsString('<audio', $clean);
     }
+
+    /** The sweep still takes text-less, media-less wrappers; only media itself is exempt. */
+    public function testStillRemovesEmptyWrappersNextToTheKeptMedia(): void
+    {
+        $html = '<div><p>1.251 Klicks</p><div id="empty"><span></span></div><p id="blank"></p>'
+            . '<div id="framed"><iframe src="https://x.test/embed"></iframe></div>'
+            . '<p>' . self::PROSE . '</p></div>';
+
+        $clean = $this->clean($html, null);
+
+        self::assertStringNotContainsString('id="empty"', $clean);
+        self::assertStringNotContainsString('id="blank"', $clean);
+        self::assertStringContainsString('<iframe', $clean);
+    }
 }
