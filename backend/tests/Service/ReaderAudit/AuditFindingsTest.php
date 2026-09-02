@@ -32,6 +32,20 @@ final class AuditFindingsTest extends TestCase
         self::assertSame(2, $findings->feedCount());
     }
 
+    public function testALaterFileReplacesAnEarlierMeasurementOfTheSameEntry(): void
+    {
+        // The shards measure under their own concurrency and a host that answered
+        // 429 is re-measured alone afterwards; the re-measurement is the truth.
+        $findings = AuditFindings::fromJsonlFiles([
+            $this->jsonl([$this->failed(1, 11, 'A'), $this->finding(2, 11, 'A', [])]),
+            $this->jsonl([$this->finding(1, 11, 'A', [$this->marker('duplicate_title', 2)])]),
+        ]);
+
+        self::assertSame(2, $findings->audited());
+        self::assertSame(2, $findings->extracted());
+        self::assertSame([1], array_map(static fn (AuditFinding $f): int => $f->entryId, $findings->ranked()));
+    }
+
     public function testRanksTheFlaggedArticlesWorstFirstAndDropsTheCleanOnes(): void
     {
         $findings = AuditFindings::fromJsonlFiles([$this->jsonl([
@@ -183,6 +197,21 @@ final class AuditFindingsTest extends TestCase
         file_put_contents($path, $lines === [] ? '' : implode("\n", $lines) . "\n");
 
         return $path;
+    }
+
+    private function failed(int $entryId, int $feedId, string $feedTitle): AuditFinding
+    {
+        return new AuditFinding(
+            $entryId,
+            $feedId,
+            $feedTitle,
+            'Titel',
+            'https://example.test/a',
+            'http://localhost:4200/?entry=1',
+            false,
+            [],
+            ['chars' => 0],
+        );
     }
 
     /** @param list<CleanupMarker> $markers */

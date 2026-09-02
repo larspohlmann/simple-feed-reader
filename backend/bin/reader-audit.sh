@@ -64,6 +64,24 @@ if [ "$failed" -ne 0 ]; then
   exit 1
 fi
 
+# The shards fetch under their own concurrency, and a host that rate-limits the
+# burst (Substack answers 429 at eight parallel fetches) reads as a failed
+# extraction. Every failure is measured again alone before it counts; the report
+# reads the files in name order and takes the later measurement, and
+# "remeasured" sorts after the shard digits (#783).
+failed_ids="$(docker compose exec -T php sh -c "cat $OUT_DIR/findings-*.jsonl" \
+  | grep -F '"extracted":false' | sed -E 's/.*"entryId":([0-9]+).*/\1/' | paste -sd, -)"
+if [ -n "$failed_ids" ]; then
+  failed_count="$(printf '%s' "$failed_ids" | tr ',' '\n' | wc -l | tr -d ' ')"
+  echo "Re-measuring $failed_count failed articles one at a time…"
+  docker compose exec -T php bin/console app:reader:audit \
+    ${user_option[@]+"${user_option[@]}"} \
+    --entries "$failed_ids" --base-url "$BASE_URL" \
+    --out "$OUT_DIR/findings-remeasured.jsonl" >"/tmp/reader-audit-remeasured.log" 2>&1
+  recovered="$(docker compose exec -T php cat "$OUT_DIR/findings-remeasured.jsonl" | grep -cF '"extracted":true' || true)"
+  echo "$recovered of $failed_count extracted alone; $((failed_count - recovered)) failures hold."
+fi
+
 docker compose exec -T php bin/console app:reader:audit:report \
   --in "$OUT_DIR/findings*.jsonl" --out "$OUT_DIR/report.html"
 
