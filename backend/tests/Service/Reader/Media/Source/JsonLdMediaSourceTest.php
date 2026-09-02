@@ -113,7 +113,7 @@ final class JsonLdMediaSourceTest extends TestCase
 
     public function testNamesTheProseBlockAnInBodyDeclarationFollows(): void
     {
-        $html = '<html><body><p>' . self::PROSE . '</p><div>'
+        $html = '<html lang="de"><body><p>' . self::PROSE . '</p><div>'
             . '<script type="application/ld+json">{"@type":"VideoObject",'
             . '"contentUrl":"https://x.test/v.mp4","thumbnailUrl":"https://x.test/poster.jpg"}</script>'
             . '</div></body></html>';
