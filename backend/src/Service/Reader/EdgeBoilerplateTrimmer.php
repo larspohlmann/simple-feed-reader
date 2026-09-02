@@ -4,63 +4,31 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
-use App\Service\Html\ClassTokenMatcher;
 use Dom\Element;
 use Dom\HTMLDocument;
+use Dom\Text;
 
 /**
  * Removes boilerplate blocks that survive readability at the head or tail of an
  * extracted article — related-post grids, newsletter prompts, comment blocks
  * (#582). It never touches the middle of the article: the same "related-links"
  * shape in the body is almost always a real subheading, so position is the
- * first gate.
+ * first gate. BoilerplateVerdict judges the blocks the edges expose.
  *
  * Runs on the readability output BEFORE EntrySanitizer, because the sanitizer
- * strips the class attributes and <form> elements this step reads as signals.
+ * strips the class attributes and <form> elements the verdict reads as signals.
  * Mutates the shared document in place (ReaderBodyCleaner parses and serialises
- * once around it).
- *
- * Conservative: a block is removed only when two or more independent objective
- * signals agree (see shouldRemove); an ambiguous block or an undefined edge
- * leaves the document unchanged.
+ * once around it). An undefined edge leaves the document unchanged.
  */
 final readonly class EdgeBoilerplateTrimmer
 {
     /** Characters of text that mark a block as a real, substantial paragraph. */
     private const int SUBSTANTIAL_PROSE_LENGTH = 200;
 
-    /** Whole class tokens that fingerprint an edge-boilerplate block. */
-    private const array BOILERPLATE_CLASS_TOKENS = [
-        // related-post grids
-        'related', 'related-posts', 'related-articles', 'yarpp-related', 'jp-relatedposts',
-        // newsletter / subscribe
-        'newsletter', 'subscribe', 'mc4wp', 'mailchimp',
-        // comments
-        'comments', 'comments-area', 'comment-respond', 'comment-form', 'disqus',
-    ];
-
-    /** A block whose link text dominates its prose by at least this ratio is a link list. */
-    private const float LINK_TEXT_RATIO = 0.6;
-
-    /** A link list carries at least this many links. */
-    private const int MIN_LINKS_FOR_LIST = 3;
-
-    /** Standalone labels that mark a block as ad chrome, no corroboration needed. */
-    private const array AD_LABELS = ['advertisement', 'anzeige', 'werbung', 'sponsored'];
-
-    /**
-     * Lowercase heading fragments that corroborate a boilerplate verdict, German
-     * and English. Corroboration only: a phrase never removes a block on its own.
-     */
-    private const array PHRASE_FRAGMENTS = [
-        // German
-        'ähnliche beiträge', 'das könnte dich auch interessieren', 'mehr zum thema',
-        'auch interessant', 'newsletter', 'jetzt anmelden', 'schreibe einen kommentar',
-        'kommentar hinterlassen', 'kommentare',
-        // English
-        'related posts', 'related articles', 'you might also like', 'read more',
-        'more from', 'sign up', 'subscribe', 'leave a comment', 'comments',
-    ];
+    public function __construct(
+        private BoilerplateVerdict $verdict,
+    ) {
+    }
 
     public function trimIn(HTMLDocument $document): void
     {
@@ -79,7 +47,7 @@ final readonly class EdgeBoilerplateTrimmer
     private function removeBoilerplateBlocks(array $blocks, array $edgeIndexes): void
     {
         foreach ($edgeIndexes as $index) {
-            if ($this->shouldRemove($blocks[$index])) {
+            if ($this->verdict->condemns($blocks[$index])) {
                 $blocks[$index]->remove();
             }
         }
@@ -110,7 +78,7 @@ final readonly class EdgeBoilerplateTrimmer
                     return null;
                 }
                 $onlyElement = $child;
-            } elseif (trim((string) $child->textContent) !== '') {
+            } elseif ($child instanceof Text && trim($child->data) !== '') {
                 return null;
             }
         }
@@ -184,7 +152,7 @@ final readonly class EdgeBoilerplateTrimmer
     {
         $indexes = [];
         foreach ($blocks as $index => $block) {
-            if (mb_strlen(trim((string) $block->textContent)) >= self::SUBSTANTIAL_PROSE_LENGTH) {
+            if ($this->isSubstantialProse($block)) {
                 $indexes[] = $index;
             }
         }
@@ -193,98 +161,12 @@ final readonly class EdgeBoilerplateTrimmer
     }
 
     /**
-     * Two or more independent structural signals condemn a block; a single
-     * structural signal condemns it only when a heading phrase corroborates.
-     * A phrase on its own never removes anything.
+     * Prose long enough to anchor an edge. A link-dominated block of any length
+     * is a list, not prose, so a teaser carousel cannot shield itself (#779).
      */
-    private function shouldRemove(Element $block): bool
+    private function isSubstantialProse(Element $block): bool
     {
-        if ($this->isAdLabel($block)) {
-            return true;
-        }
-
-        $structural = (int) $this->hasFingerprint($block)
-            + (int) $this->isLinkList($block)
-            + (int) $this->hasFormOrEmail($block);
-
-        if ($structural >= 2) {
-            return true;
-        }
-
-        return $structural >= 1 && $this->hasCorroboratingPhrase($block);
-    }
-
-    /**
-     * A block whose entire (separator-collapsed) text is one of AD_LABELS, e.g.
-     * "- Advertisement -" or "Anzeige". A block that merely mentions the word
-     * among other prose does not match.
-     */
-    private function isAdLabel(Element $block): bool
-    {
-        $text = mb_strtolower(trim((string) preg_replace(
-            '/[\s\-–—|:]+/u',
-            ' ',
-            (string) $block->textContent,
-        )));
-
-        return in_array(trim($text), self::AD_LABELS, true);
-    }
-
-    private function hasFingerprint(Element $block): bool
-    {
-        return ClassTokenMatcher::hasAnyToken($block, self::BOILERPLATE_CLASS_TOKENS);
-    }
-
-    private function isLinkList(Element $block): bool
-    {
-        $links = $block->getElementsByTagName('a');
-        if ($links->length < self::MIN_LINKS_FOR_LIST) {
-            return false;
-        }
-
-        $blockTextLength = mb_strlen(trim((string) $block->textContent));
-        if ($blockTextLength === 0) {
-            return false;
-        }
-
-        $linkTextLength = 0;
-        foreach ($links as $link) {
-            $linkTextLength += mb_strlen(trim((string) $link->textContent));
-        }
-
-        return $linkTextLength / $blockTextLength >= self::LINK_TEXT_RATIO;
-    }
-
-    private function hasFormOrEmail(Element $block): bool
-    {
-        if ($block->getElementsByTagName('form')->length > 0) {
-            return true;
-        }
-
-        foreach ($block->getElementsByTagName('input') as $input) {
-            if (strtolower($input->getAttribute('type') ?? '') === 'email') {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function hasCorroboratingPhrase(Element $block): bool
-    {
-        $heading = $block->querySelector('h1, h2, h3, h4');
-        if ($heading === null) {
-            return false;
-        }
-
-        $text = mb_strtolower(trim((string) $heading->textContent));
-        if ($text === '') {
-            return false;
-        }
-
-        return array_any(
-            self::PHRASE_FRAGMENTS,
-            static fn (string $fragment): bool => str_contains($text, $fragment),
-        );
+        return mb_strlen(BlockText::collapsed($block)) >= self::SUBSTANTIAL_PROSE_LENGTH
+            && !BlockText::isLinkDominated($block);
     }
 }

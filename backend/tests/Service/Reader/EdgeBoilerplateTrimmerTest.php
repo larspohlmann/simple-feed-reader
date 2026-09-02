@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader;
 
 use App\Service\Html\HtmlDocumentParser;
+use App\Service\Reader\BoilerplateVerdict;
 use App\Service\Reader\EdgeBoilerplateTrimmer;
 use PHPUnit\Framework\TestCase;
 
@@ -24,7 +25,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->trimmer = new EdgeBoilerplateTrimmer();
+        $this->trimmer = new EdgeBoilerplateTrimmer(new BoilerplateVerdict());
     }
 
     public function testKeepsEverythingWhenThereIsNoSubstantialParagraph(): void
@@ -144,6 +145,32 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         self::assertStringNotContainsString('jp-relatedposts', $this->trimmed($html));
     }
 
+    public function testDescendsThroughAWrapperThatHoldsAnHtmlCommentBesideTheSoleChild(): void
+    {
+        // A page shell leaves ESI comments next to the article container. A
+        // comment is not content: the wrapper still has one sole element child,
+        // so the trimmer descends into it and reaches the trailing grid (#779).
+        $grid = '<div class="jp-relatedposts"><a href="/a">A</a><a href="/b">B</a>'
+            . '<a href="/c">C</a><a href="/d">D</a></div>';
+        $html = '<div><div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+            . $grid . '</div><!--/esi/footer--><!--/esi/player--></div>';
+
+        self::assertStringNotContainsString('jp-relatedposts', $this->trimmed($html));
+    }
+
+    public function testLooseTextBesideTheSoleChildStopsTheDescent(): void
+    {
+        // Real text next to the only element child is content of the wrapper
+        // itself, so the wrapper is the root and its one block, being long
+        // enough, is the anchor: no edge, the grid inside survives.
+        $grid = '<div class="jp-relatedposts"><a href="/a">A</a><a href="/b">B</a>'
+            . '<a href="/c">C</a><a href="/d">D</a></div>';
+        $html = '<div><div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+            . $grid . '</div>Ein loser Satz neben dem Container.</div>';
+
+        self::assertStringContainsString('jp-relatedposts', $this->trimmed($html));
+    }
+
     public function testDoesNotDescendIntoANonContainerSoleWrapper(): void
     {
         // The sole top-level element is a <span>, not one of the recognised
@@ -166,12 +193,10 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
     {
         // The first substantial paragraph sits at index 1, so the leading
         // edge is exactly [0]: index 1 itself — a block that happens to
-        // carry two structural signals (fingerprint + link list) as well as
+        // carry two structural signals (fingerprint + email input) as well as
         // enough prose to count as substantial — is the boundary anchor, not
         // an edge candidate, and must survive untouched.
-        $comboAnchor = '<div class="related">' . self::PROSE
-            . '<a href="/a">' . self::PROSE . '</a><a href="/b">' . self::PROSE . '</a>'
-            . '<a href="/c">' . self::PROSE . '</a></div>';
+        $comboAnchor = '<div class="related"><input type="email">' . self::PROSE . self::PROSE . '</div>';
         $html = '<div><p>Short lead.</p>' . $comboAnchor . '<p>Filler.</p><p>' . self::PROSE . '</p></div>';
 
         self::assertStringContainsString('class="related"', $this->trimmed($html));
@@ -202,9 +227,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // edge is [0] only; using the second substantial index instead of
         // the first would widen it to [0,1] and wrongly catch the combo
         // block at index 1.
-        $comboAnchor = '<div class="related">' . self::PROSE
-            . '<a href="/a">' . self::PROSE . '</a><a href="/b">' . self::PROSE . '</a>'
-            . '<a href="/c">' . self::PROSE . '</a></div>';
+        $comboAnchor = '<div class="related"><input type="email">' . self::PROSE . self::PROSE . '</div>';
         $html = '<div><p>Filler.</p>' . $comboAnchor . '<p>Filler.</p><p>' . self::PROSE . '</p>'
             . '<p>Filler.</p><p>Filler.</p><p>Filler.</p><p>Filler.</p></div>';
 
@@ -386,13 +409,13 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testLinkTextLengthTrimsEachLinksOwnPadding(): void
     {
-        // Each link's text is padded (" A ", " B ", " C "); trimmed per
-        // link, the numerator is 3 characters against a trimmed block
-        // denominator of 7 ("A  B  C"), giving ratio 3/7 ≈ 0.43 — below the
-        // 0.6 threshold, so with only the fingerprint left this trailing
-        // block stays. Without per-link trimming, the padding would inflate
-        // the numerator to 9 and wrongly push the ratio to ≈1.29.
-        $block = '<div class="related"><a href="/a"> A </a><a href="/b"> B </a><a href="/c"> C </a></div>';
+        // Each link's text is padded (" A ", " B ", " C "); collapsed per
+        // link, the numerator is 3 characters against a collapsed block
+        // denominator of 11 ("Hello A B C"), giving ratio 3/11 ≈ 0.27 — below
+        // the 0.6 threshold, so with only the fingerprint left this trailing
+        // block stays. Without per-link collapsing, the padding would inflate
+        // the numerator to 9 and wrongly push the ratio to ≈0.82.
+        $block = '<div class="related">Hello<a href="/a"> A </a><a href="/b"> B </a><a href="/c"> C </a></div>';
         $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $block . '</div>';
 
@@ -523,6 +546,130 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
      * document — mirroring the parse-once/serialise-once window ReaderBodyCleaner
      * owns in the pipeline.
      */
+    public function testRemovesATrailingTeaserCardListWithoutFingerprintOrPhrase(): void
+    {
+        // A publisher's "more on the topic" carousel: no fingerprint class, the
+        // section title in a <span> so no heading phrase can corroborate, but
+        // three links that each wrap a picture and a title. Link-dominated
+        // text plus picture cards are two structural signals (#779).
+        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+            . '<section class="swiper"><span>Mehr dazu</span>' . self::teaserCard('/a', 'Erster Beitrag')
+            . self::teaserCard('/b', 'Zweiter Beitrag') . self::teaserCard('/c', 'Dritter Beitrag')
+            . '</section></div>';
+
+        self::assertStringNotContainsString('swiper', $this->trimmed($html));
+    }
+
+    public function testKeepsATrailingLinkListWhoseLinksCarryNoPicture(): void
+    {
+        // Three text-only links, no fingerprint, no phrase: the link-list shape
+        // is the only signal, so a closing list of sources stays.
+        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+            . '<ul class="sources"><li><a href="/a">Alpha</a></li><li><a href="/b">Beta</a></li>'
+            . '<li><a href="/c">Gamma</a></li></ul></div>';
+
+        self::assertStringContainsString('sources', $this->trimmed($html));
+    }
+
+    public function testTwoPictureCardsBesideATextLinkAreNotACardList(): void
+    {
+        // Three links keep the link-list signal, but only two of them wrap a
+        // picture — one short of a card list, so the block stays.
+        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+            . '<section class="swiper"><span>Mehr dazu</span>' . self::teaserCard('/a', 'Erster Beitrag')
+            . self::teaserCard('/b', 'Zweiter Beitrag') . '<a href="/c">Dritter Beitrag</a></section></div>';
+
+        self::assertStringContainsString('swiper', $this->trimmed($html));
+    }
+
+    public function testAShowAllLinkBesideThreeCardsDoesNotCancelACard(): void
+    {
+        // Carousels end in a text-only "show all" link. It is not a card, but
+        // it must not count against the three cards either: the block is still
+        // a card list and goes.
+        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+            . '<section class="swiper"><span>Mehr dazu</span>' . self::teaserCard('/a', 'Erster Beitrag')
+            . self::teaserCard('/b', 'Zweiter Beitrag') . self::teaserCard('/c', 'Dritter Beitrag')
+            . '<a href="/alle">Alle anzeigen</a></section></div>';
+
+        self::assertStringNotContainsString('swiper', $this->trimmed($html));
+    }
+
+    public function testPictureCardsAloneDoNotRemoveABlockThatIsNotLinkDominated(): void
+    {
+        // A closing gallery: three linked pictures with a caption of prose
+        // outside the links. The cards are one signal, but the text is not
+        // link-dominated, so the gallery stays.
+        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+            . '<div class="gallery"><a href="/a"><img src="/a.jpg" alt=""></a>'
+            . '<a href="/b"><img src="/b.jpg" alt=""></a><a href="/c"><img src="/c.jpg" alt=""></a>'
+            . '<p>Drei Aufnahmen vom Abend, fotografiert von der Autorin.</p></div></div>';
+
+        self::assertStringContainsString('gallery', $this->trimmed($html));
+    }
+
+    public function testALinkDominatedBlockNeverAnchorsAnEdgeHoweverLongItRuns(): void
+    {
+        // Seven teaser cards run past the 200-character prose bar, but their
+        // text is almost all link text: a list, not prose. It must not count
+        // as the article's last paragraph and shield itself from the trailing
+        // edge (#779).
+        $cards = '';
+        foreach (['a', 'b', 'c', 'd', 'e', 'f', 'g'] as $slug) {
+            $cards .= self::teaserCard('/' . $slug, 'Ein Teaser mit einer langen Überschrift, wie Verlage sie setzen');
+        }
+        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+            . '<section class="swiper"><span>Mehr dazu</span>' . $cards . '</section></div>';
+
+        self::assertStringNotContainsString('swiper', $this->trimmed($html));
+    }
+
+    public function testLinkRatioMeasuresCollapsedTextSoIndentationDoesNotDiluteIt(): void
+    {
+        // Pretty-printed markup leaves a run of indentation between each link.
+        // Raw, that whitespace is 33 of 47 characters and drags the ratio to
+        // 0.3; collapsed, the links are 14 of 16 characters. Fingerprint plus
+        // link list: this trailing block must be removed.
+        $indent = "\n          ";
+        $block = '<div class="related">' . $indent . '<a href="/a">Alpha</a>' . $indent
+            . '<a href="/b">Beta</a>' . $indent . '<a href="/c">Gamma</a></div>';
+        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+            . $block . '</div>';
+
+        self::assertStringNotContainsString('class="related"', $this->trimmed($html));
+    }
+
+    public function testSubstantialityMeasuresCollapsedTextSoIndentationDoesNotInflateIt(): void
+    {
+        // 190 letters split by a 60-character whitespace run: raw, the block
+        // reads 250 characters and would anchor the trailing edge; collapsed,
+        // it is 191 and stays below the bar. Fingerprint plus email input:
+        // this trailing block must be removed.
+        $target = '<div class="related"><input type="email">' . str_repeat('x', 100)
+            . str_repeat("\n", 60) . str_repeat('x', 90) . '</div>';
+        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+            . $target . '</div>';
+
+        self::assertStringNotContainsString('class="related"', $this->trimmed($html));
+    }
+
+    public function testThreeEmptyLinksAreNotLinkDominated(): void
+    {
+        // Three links with no text at all give the block no text to measure.
+        // That is not link domination — with only the fingerprint left, this
+        // trailing block stays.
+        $block = '<div class="related"><a href="/a"></a><a href="/b"></a><a href="/c"></a></div>';
+        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+            . $block . '</div>';
+
+        self::assertStringContainsString('class="related"', $this->trimmed($html));
+    }
+
+    private static function teaserCard(string $href, string $title): string
+    {
+        return '<a href="' . $href . '"><img src="' . $href . '.jpg" alt=""><h3>' . $title . '</h3></a>';
+    }
+
     private function trimmed(string $bodyHtml): string
     {
         $document = HtmlDocumentParser::parseOrNull($bodyHtml);
