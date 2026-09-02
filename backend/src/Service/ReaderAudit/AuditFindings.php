@@ -21,19 +21,26 @@ final readonly class AuditFindings
     {
     }
 
-    /** @param list<string> $paths */
+    /**
+     * An entry measured in more than one file keeps its last measurement: the
+     * shards fetch under their own concurrency, and a host that rate-limited them
+     * is re-measured alone afterwards (#783).
+     *
+     * @param list<string> $paths
+     */
     public static function fromJsonlFiles(array $paths): self
     {
-        $findings = [];
+        $byEntry = [];
         foreach ($paths as $path) {
             foreach (file($path, \FILE_IGNORE_NEW_LINES | \FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
                 /** @var array<string, mixed> $row */
                 $row = json_decode($line, true, 512, \JSON_THROW_ON_ERROR);
-                $findings[] = AuditFinding::fromArray($row);
+                $finding = AuditFinding::fromArray($row);
+                $byEntry[$finding->entryId] = $finding;
             }
         }
 
-        return new self($findings);
+        return new self(array_values($byEntry));
     }
 
     /**

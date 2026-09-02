@@ -164,23 +164,30 @@ final class AuditReportHtmlTest extends TestCase
         return (new AuditReportHtml($maxCandidates))->render($findings, '2026-08-31 10:00');
     }
 
+    /** Every fixture is its own entry: a repeated id reads as one re-measured article (#783). */
+    private int $nextEntryId = 1;
+
     private function clean(string $title): AuditFinding
     {
-        return new AuditFinding(9, 11, 'Ein Feed', $title, 'https://example.test/c', 'http://l/?entry=9', true, [], [
+        $id = $this->nextEntryId++;
+
+        return new AuditFinding($id, 11, 'Ein Feed', $title, 'https://example.test/c', 'http://l/?entry=9', true, [], [
             'chars' => 900,
         ]);
     }
 
     private function failed(string $title): AuditFinding
     {
-        return new AuditFinding(10, 11, 'Ein Feed', $title, 'https://example.test/d', 'http://l/?entry=10', false, [
+        $id = $this->nextEntryId++;
+
+        return new AuditFinding($id, 11, 'Ein Feed', $title, 'https://example.test/d', 'http://l/?entry=10', false, [
             new CleanupMarker('no_paragraphs', 4, 'EdgeBoilerplateTrimmer', 'not one <p>'),
         ], ['chars' => 0]);
     }
 
     private function finding(string $title, string $link): AuditFinding
     {
-        return new AuditFinding(7, 11, 'Ein Feed', $title, 'https://example.test/a', $link, true, [
+        return new AuditFinding($this->nextEntryId++, 11, 'Ein Feed', $title, 'https://example.test/a', $link, true, [
             new CleanupMarker('body_short', 2, 'EdgeBoilerplateTrimmer', '384 characters'),
         ], ['chars' => 384]);
     }
