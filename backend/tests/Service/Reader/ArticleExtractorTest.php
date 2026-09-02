@@ -35,6 +35,7 @@ use App\Service\Reader\Media\Source\AttributeMediaSource;
 use App\Service\Reader\Media\Source\JsonLdMediaSource;
 use App\Service\Reader\Media\Source\PageEmbedSource;
 use App\Service\Reader\Media\Source\SemanticMediaSource;
+use App\Service\Reader\Media\Source\YouTubeIdAttributeSource;
 use App\Service\Reader\Media\StreamLocationResolver;
 use App\Service\Reader\Media\SubstackPosterLink;
 use App\Service\Reader\NavigationChromeTrimmer;
@@ -125,6 +126,7 @@ final class ArticleExtractorTest extends TestCase
             new JsonLdMediaSource($urlKind, $providers),
             new PageEmbedSource($providers),
             new AttributeMediaSource($urlKind, new MediaRelevance()),
+            new YouTubeIdAttributeSource($providers),
             new SemanticMediaSource($urlKind),
         ]);
     }
@@ -553,6 +555,29 @@ final class ArticleExtractorTest extends TestCase
             $body,
         );
         self::assertStringNotContainsString('ngp.zdf.de', $body);
+    }
+
+    /** Guardian 493958: the body opens with the player where the page had no URL at all, and no stacked lead. */
+    public function testAYouTubeIdInADataAttributeBecomesTheLeadPlayer(): void
+    {
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/media/guardian-youtube-atom.html');
+        $url = 'https://www.theguardian.com/science/video/2026/sep/01'
+            . '/could-humans-ever-communicate-with-whales-video';
+        $result = $this->extractor(
+            [new MockResponse($html, ['http_code' => 200])],
+            ['www.theguardian.com' => ['93.184.216.34']],
+        )->extract($url);
+
+        self::assertTrue($result->ok);
+        $body = (string) $result->contentHtml;
+        self::assertMatchesRegularExpression(
+            '#^<a [^>]*href="https://www\.youtube-nocookie\.com/embed/pz8VRrI0p0U"#',
+            $body,
+        );
+        self::assertStringContainsString('src="https://i.ytimg.com/vi/pz8VRrI0p0U/hqdefault.jpg"', $body);
+        self::assertSame(1, substr_count($body, '<img'), 'the top-placed player is the lead visual; no hero above it');
+        self::assertStringNotContainsString('U8duwJ2mKWs', $body);
+        self::assertStringContainsString('earliest known recording of whale song', $body);
     }
 
     private function extractFixture(string $fixture): ExtractionResult
