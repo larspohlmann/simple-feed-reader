@@ -15,13 +15,12 @@ use App\Service\Passkey\Exception\LastSignInMethodException;
  * the LAST passkey on an account that has neither a password hash nor a
  * linked OAuth identity to sign in with afterwards.
  *
- * `$passkey` is not inspected by the check below — removing any one
- * credential always reduces the count by exactly one, so the only question
- * is whether more than one exists BEFORE the delete, not which one is
- * named. It stays a parameter because the guard is about removing this
- * specific credential, and PasskeyController's call site should read that
- * way rather than "check whether this user may keep signing in" in the
- * abstract.
+ * `$passkey` is not inspected by the check — removing any one credential
+ * always reduces the count by exactly one, so the only question is whether
+ * more than one exists BEFORE the delete, not which one. It stays a
+ * parameter because the guard is about removing this specific credential,
+ * so PasskeyController's call site reads that way, not as "check whether
+ * this user may keep signing in" in the abstract.
  */
 final readonly class PasskeyRemovalPolicy
 {

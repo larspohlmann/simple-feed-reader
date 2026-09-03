@@ -18,10 +18,9 @@ use Dom\HTMLDocument;
  * climbs from each share link to the outermost ancestor that still holds only
  * share links and no more than a short label's worth of other text, so the
  * whole bar goes with its label. The climb sees through a plain
- * `<ul>`/`<ol>`/`<li>` wrapper — a list is structure, not content — but stops
- * at any other container (a `<div>`, a `<p>`) that is not itself link-only, so
- * a real sibling paragraph is never swept in. It also stops at
- * <main>/<article>/<body>, so it never reaches into real prose.
+ * `<ul>`/`<ol>`/`<li>` wrapper (structure, not content) but stops at any other
+ * container that is not itself link-only, so a real sibling paragraph is never
+ * swept in, and at <main>/<article>/<body>, so it never reaches real prose.
  */
 final readonly class ShareIntentLinkRemover
 {

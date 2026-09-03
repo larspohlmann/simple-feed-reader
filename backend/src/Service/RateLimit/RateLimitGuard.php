@@ -38,18 +38,15 @@ final readonly class RateLimitGuard
     /**
      * Caps an anonymous endpoint per client IP.
      *
-     * Note what the key is, and is not. getClientIp() returns REMOTE_ADDR unless
-     * the request came from a trusted proxy, and nothing configures
-     * trusted_proxies yet. That is the safe default — a spoofed X-Forwarded-For
-     * cannot buy a fresh budget — but it means that the day this app is put
-     * behind a CDN or reverse proxy, every request arrives wearing the proxy's
-     * address and all callers share one bucket. Whoever configures that proxy
-     * must set framework.trusted_proxies at the same time, or this limiter
-     * silently becomes a global cap shared by everyone.
+     * getClientIp() returns REMOTE_ADDR unless the request came from a trusted
+     * proxy, and nothing configures trusted_proxies yet — the safe default,
+     * since a spoofed X-Forwarded-For cannot buy a fresh budget. But the day
+     * this app sits behind a CDN or reverse proxy, every request wears the
+     * proxy's address and all callers share one bucket, unless
+     * framework.trusted_proxies is set at the same time.
      *
-     * A null IP (unusual, but possible for non-HTTP-ish transports) collapses
-     * every such caller into one shared bucket. That fails closed, which is the
-     * direction to fail in.
+     * A null IP (possible for non-HTTP-ish transports) collapses every such
+     * caller into one shared bucket — fails closed, the right direction.
      */
     public function enforceForClient(RateLimiterFactoryInterface $limiter, Request $request): void
     {

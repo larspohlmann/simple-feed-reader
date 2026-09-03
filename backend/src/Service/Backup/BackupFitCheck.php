@@ -9,17 +9,15 @@ use App\Service\Backup\Exception\BackupDoesNotFitException;
 use App\Service\Subscription\SubscriptionLimitResolver;
 
 /**
- * Whether a counted backup fits this account, checked before anything is
- * deleted. Two kinds of refusal: more subscriptions than the account's own
- * limit allows, or more of any other counted line kind than the file format
- * can plausibly hold.
+ * Whether a counted backup fits this account, checked before deletion: too
+ * many subscriptions for the account's limit, or too much of any other
+ * counted line kind for the file format to plausibly hold.
  *
- * Every counted dimension is bounded, not only the two that cost the most to
- * load. The load runs AFTER the wipe and the tag, feed and subscription rows
- * accumulate as managed entities until the entry phase flushes them, so a file
- * with millions of those lines would exhaust memory on an already-emptied
- * account — and a fatal cannot be caught, so the typed BackupLoadFailedException
- * boundary could not report it either.
+ * Every dimension is bounded, not just the costliest two. The load runs after
+ * the wipe, and tag/feed/subscription rows stay managed entities until the
+ * entry phase flushes them — millions of such lines would exhaust memory on
+ * an already-emptied account, a fatal that BackupLoadFailedException cannot
+ * catch or report.
  */
 final readonly class BackupFitCheck
 {

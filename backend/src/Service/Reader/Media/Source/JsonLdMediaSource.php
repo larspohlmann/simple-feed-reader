@@ -16,16 +16,15 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
  * A publisher's own schema.org markup. `Service/Scraper/JsonLdArticles.php`
- * walks the same script blocks but exposes only fully modelled Article cards
- * built from an already-decoded array via an injected PageUrls — nothing this
- * layer could reuse for a bare media URL, so this is its own walker.
+ * walks the same blocks but exposes only modelled Article cards, nothing this
+ * layer could reuse for a bare media URL — so this is its own walker.
  *
  * schema.org nests `contentUrl`/`embedUrl` under many shapes (VideoObject,
- * AudioObject, an Article's "video" property, …); rather than model each one,
- * every string value in the decoded tree is inspected under those two keys.
- * MediaUrlKind refuses anything that is not playable, which is what makes the
- * broad search safe — an ImageObject's contentUrl is just discarded. A node
- * yields its first playable URL in URL_KEYS order — one asset, one candidate.
+ * AudioObject, an Article's "video" property, …), so every string value in
+ * the decoded tree is inspected under those two keys rather than modelling
+ * each shape. MediaUrlKind refuses anything not playable, which makes the
+ * broad search safe — an ImageObject's contentUrl is simply discarded. A node
+ * yields its first playable URL in URL_KEYS order: one asset, one candidate.
  */
 #[AsTaggedItem(priority: 100)]
 final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface

@@ -26,29 +26,23 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
  * Ensures the seeded e2e admin owns a VISIBLE subscription to the fixture feed.
- * With zero subscriptions and a populated catalog the reader shell redirects to
- * the onboarding picker instead of mounting, so every Playwright smoke that waits
- * for reader chrome times out (#222).
+ * With zero subscriptions the reader shell redirects to onboarding instead of
+ * mounting, so every Playwright smoke waiting for reader chrome times out (#222).
  *
- * The subscription points at a reserved fixture feed that never resolves and so is
- * never fetched. The feed is pre-populated with one entry and a long, multi-clause
- * title: the shell mounts on subscription count alone, but the magazine-kicker
- * smokes measure a rendered row and need both an entry and a source title long
- * enough to exercise the one-line clip (#155). The feed is marked already-fetched
- * so the shell skips its post-onboarding refresh sweep over an unanswerable host.
+ * The fixture feed's URL never resolves and so is never fetched; it is marked
+ * already-fetched to skip the post-onboarding refresh sweep. Its one entry and
+ * long, multi-clause title exist because the magazine-kicker smokes measure a
+ * rendered row and need a title long enough to exercise the one-line clip (#155).
  *
- * Every step is checked and repaired independently, rather than inferred from one
- * "does a subscription exist" guard: a feed can outlive its entry, and an entry
- * can survive while becoming invisible in the default unread view (an entry_state
- * read marker, a subscription markedReadUntil watermark past its effective date).
- * Either failure reproduces the exact symptom of no fixture at all — an empty
- * reader with the subscription still in the sidebar — silently disarming the three
- * #155 clip specs while the suite reports green. That is the precise failure mode
- * this workflow exists to catch, so this seed command must not trust a coarse guard
- * to rule it out.
+ * Every step (feed, entry, subscription, visibility) is checked and repaired
+ * independently rather than inferred from one "subscription exists" guard: a feed
+ * can outlive its entry, and an entry can go invisible via an entry_state read
+ * marker or a markedReadUntil watermark. Either failure reproduces an empty
+ * reader with the subscription still in the sidebar, silently disarming the
+ * #155 clip specs while the suite reports green.
  *
- * Runs after app:e2e:seed-admin, which creates the admin this attaches to. Refuses
- * to run under APP_ENV=prod, the same guard as its sibling.
+ * Runs after app:e2e:seed-admin, which creates the admin this attaches to.
+ * Refuses to run under APP_ENV=prod, the same guard as its sibling.
  */
 #[AsCommand(
     name: 'app:e2e:seed-admin-subscription',

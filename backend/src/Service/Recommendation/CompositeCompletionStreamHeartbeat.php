@@ -10,12 +10,12 @@ namespace App\Service\Recommendation;
  * keepalive and a worker's liveness marker both want every beat, neither
  * knowing the other exists.
  *
- * The two members are named, not iterated, because their order is an invariant.
- * Nothing is transactional, so a member that throws skips the rest for that
- * chunk, and the lock keepalive must run first: a missed lock refresh risks a
- * stolen lock and a double-banked run, a missed liveness mark only delays a UI
- * hint by one beat. As a list, re-sorting two YAML lines would silently break
- * that.
+ * The two members are named, not iterated, since their order is an
+ * invariant: nothing is transactional, so a throwing member skips the rest
+ * for that chunk, and the lock keepalive must run first — a missed refresh
+ * risks a stolen lock and a double-banked run, while a missed liveness mark
+ * only delays a UI hint by one beat. As a list, re-sorting two YAML lines
+ * would silently break that.
  */
 final readonly class CompositeCompletionStreamHeartbeat implements CompletionStreamHeartbeat
 {

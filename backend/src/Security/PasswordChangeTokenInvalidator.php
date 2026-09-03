@@ -13,39 +13,35 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 /**
  * Binds a stateless JWT to the password it was issued under.
  *
- * Tokens live 7 days with no refresh flow, so the only revocation channel is the
- * per-request user reload the Doctrine provider performs. That reload catches a
- * STATUS change (App\Security\UserChecker reads status, so a suspension takes
- * effect on the next request) but nothing about the password, since no part of
- * the token derives from the hash. The consequence: password reset, the one
- * action a compromised user takes to evict an attacker, evicted nobody — the
- * attacker's stolen bearer token kept full API access for its whole week.
+ * Tokens live 7 days with no refresh flow; the only revocation channel is the
+ * per-request user reload the Doctrine provider performs. That reload catches
+ * a STATUS change (App\Security\UserChecker) but nothing about the password,
+ * since no part of the token derives from the hash — so password reset, the
+ * one action a compromised user takes to evict an attacker, evicted nobody;
+ * a stolen bearer token kept full access for its whole week.
  *
  * Comparing `iat` against User::getPasswordChangedAt() closes that without
- * server-side token storage, which the deployment target (Strato shared hosting:
- * no Redis, no daemon) could not carry anyway.
+ * server-side token storage, which the deployment target (Strato shared
+ * hosting: no Redis, no daemon) couldn't carry anyway.
  *
- * STRICTLY BEFORE. `<`, never `<=`. A user who resets and immediately signs back
- * in gets a token whose whole-second `iat` routinely lands in the SAME second as
- * passwordChangedAt; under `<=` that brand-new token would be rejected and reset
- * would look broken to the person who just used it. The cost of `<` is that a
- * token minted in the same second survives — an attacker would have to be
- * mid-login within that one-second window, having already lost the password.
+ * STRICTLY BEFORE — `<`, never `<=`. A reset-then-immediate-login often stamps
+ * `iat` in the SAME second as passwordChangedAt; `<=` would reject that
+ * brand-new token and make reset look broken to the person who just used it.
+ * `<` costs a same-second token surviving, which needs an attacker mid-login
+ * in that window, already holding the old password.
  *
- * FAILS CLOSED ON A MISSING `iat`: if the account has a recorded password change
- * and the token cannot prove it postdates it, the token is refused. Lexik always
- * stamps `iat`, so this is unreachable today — it is here so a future encoder
- * change degrades into rejection, not a silently disabled revocation check.
+ * FAILS CLOSED on a missing `iat`: if a password change is recorded and the
+ * token can't prove it postdates it, the token is refused. Lexik always
+ * stamps `iat`, so this is unreachable today — kept so a future encoder
+ * change degrades into rejection, not a silently disabled check.
  *
- * WHY JWT_AUTHENTICATED, not JWT_DECODED: on_jwt_decoded carries only the
- * payload, so the user would be looked up again — a second SELECT on every
- * authenticated request, duplicating the provider's identity resolution. This
- * event fires a few lines later with the user already loaded. Rejection reaches
- * the client identically either way: AuthenticatorManager routes it through
+ * JWT_AUTHENTICATED, not JWT_DECODED: the decoded event carries only the
+ * payload, forcing a duplicate user lookup; this one fires later with the
+ * user already loaded. Either way the client sees the same opaque 401
+ * `unauthorized` problem+json as any other JWT failure (via
  * JWTAuthenticator::onAuthenticationFailure -> JWT_INVALID ->
- * App\EventListener\JwtFailureResponseListener, the same opaque 401 `unauthorized`
- * problem+json as every other JWT failure. The holder is never told the password
- * changed — whoever presents a dead token may be the thief, and needs no hint.
+ * App\EventListener\JwtFailureResponseListener) — the holder is never told
+ * the password changed, since whoever holds a dead token may be the thief.
  */
 #[AsEventListener(event: Events::JWT_AUTHENTICATED, method: 'onJwtAuthenticated')]
 final class PasswordChangeTokenInvalidator

@@ -8,23 +8,23 @@ use App\Entity\User;
 use Symfony\Component\PasswordHasher\Hasher\PasswordHasherFactoryInterface;
 
 /**
- * Spends one password hash's worth of CPU on a code path that did not need to
+ * Spends one password hash's worth of CPU on a code path that didn't need to
  * hash anything, so that path stops being distinguishable from the one that
  * did.
  *
- * Extracted from LoginTimingEqualizer, which is now one caller of two: login
- * needed it because an unknown address fails on a bare SELECT miss, and
- * registration needs it because a duplicate address returns before hashing the
- * password a fresh signup would hash. Same shape of leak, same remedy.
+ * Extracted from LoginTimingEqualizer, now one of two callers: login needs it
+ * because an unknown address fails on a bare SELECT miss, and registration
+ * needs it because a duplicate address returns before hashing the password a
+ * fresh signup would hash. Same shape of leak, same remedy.
  *
- * Measured on the development machine, `algorithm: auto` resolves to argon2id
- * at ~174 ms per hash (bcrypt, the fallback where libsodium is absent, ~58 ms).
- * A gap that size is not a subtle side channel; it is a reliable oracle over
- * the open internet, and it survives responses that are byte-for-byte equal.
+ * Measured locally, `algorithm: auto` resolves to argon2id at ~174ms per hash
+ * (bcrypt, the fallback without libsodium, ~58ms) — a gap large enough to be a
+ * reliable oracle over the open internet, surviving byte-for-byte-equal
+ * responses.
  *
- * This is deliberately NOT constant time — unreachable in PHP, and not the bar.
- * The bar is removing the argon2-shaped cliff that makes enumeration a matter
- * of timing one request instead of many.
+ * Deliberately NOT constant time — unreachable in PHP, and not the bar. The
+ * bar is removing the argon2-shaped cliff that turns enumeration into timing
+ * one request instead of many.
  */
 final readonly class PasswordWorkEqualizer implements PasswordWorkEqualizerInterface
 {

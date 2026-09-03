@@ -10,24 +10,24 @@ namespace App\Service\OAuth\Oidc;
  *
  * ## This type is a precondition, not a wrapper
  *
- * Nothing here parses, checks or looks at the string. The class exists so that
- * "where did this token come from" is expressed in the type system instead of a
- * comment somebody has to remember to read.
+ * Nothing here parses, checks or looks at the string. The class exists so
+ * "where did this token come from" lives in the type system, not a comment
+ * somebody has to remember to read.
  *
  * {@see IdTokenVerifier} does NOT verify the token's signature, and is only
- * entitled to skip that because of where the token came from — see the verifier's
- * docblock. It therefore accepts an IdToken and never a string, so a raw JWT from
- * anywhere else cannot be passed to it by mistake.
+ * entitled to skip that because of where the token came from — see the
+ * verifier's docblock. It accepts an IdToken and never a string, so a raw JWT
+ * from anywhere else cannot be passed to it by mistake.
  *
- * {@see TokenEndpoint::fetch()} is the ONLY place that constructs one, which is
- * what makes the type mean what it says. OidcBoundaryTest fails the build if a
- * second construction site appears.
+ * {@see TokenEndpoint::fetch()} is the ONLY place that constructs one, which
+ * is what makes the type mean what it says. OidcBoundaryTest fails the build
+ * if a second construction site appears.
  *
- * If a future task needs to read an ID token that did NOT come from the token
- * endpoint — Apple's `form_post` callback carries one — that task must verify the
- * signature against the provider's JWKS in its own code. Constructing an IdToken
- * around such a token to reuse the verifier would lie to the type and silently
- * skip the signature check that is the only thing standing behind that channel.
+ * A future ID token that did NOT come from the token endpoint — Apple's
+ * `form_post` callback carries one — must be verified against the provider's
+ * JWKS in its own code. Wrapping it in an IdToken to reuse this verifier
+ * would lie to the type and silently skip the only check standing behind
+ * that channel.
  */
 final readonly class IdToken
 {

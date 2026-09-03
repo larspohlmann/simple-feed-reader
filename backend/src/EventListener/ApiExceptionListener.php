@@ -68,27 +68,19 @@ final readonly class ApiExceptionListener
         }
 
         if ($exception instanceof AuthenticationException) {
-            // The firewall's own exceptions do NOT implement
-            // HttpExceptionInterface, so without this branch they would
-            // fall through to the opaque 500 below — turning "not logged in"
-            // into "server broken". Covers subclasses such as
-            // BadCredentialsException and InsufficientAuthenticationException.
+            // The firewall's own exceptions do NOT implement HttpExceptionInterface,
+            // so without this branch they would fall through to the opaque 500
+            // below — turning "not logged in" into "server broken". Covers
+            // BadCredentialsException, InsufficientAuthenticationException, etc.
             //
-            // Note what this branch does NOT do: it cannot rewrite a response
-            // the firewall has already produced. The firewall's ExceptionListener
-            // runs at priority 1, ahead of this listener's 0, and sets its
-            // response with ExceptionEvent::setResponse(). ExceptionEvent
-            // extends RequestEvent, whose setResponse() calls stopPropagation()
-            // unconditionally, so once the firewall answers, this listener is
-            // never reached. That is why Lexik's {"code":401,"message":"..."}
-            // shape is normalised by App\EventListener\JwtFailureResponseListener,
-            // which hooks Lexik's own events instead — see that class. This
-            // branch still matters for authentication exceptions that reach
-            // kernel.exception with no response set.
-            //
+            // It cannot rewrite a response the firewall already produced: the
+            // firewall's ExceptionListener runs at priority 1 (ahead of this
+            // listener's 0) and its setResponse() calls stopPropagation(), so once
+            // it answers this listener is never reached — Lexik's 401 shape is
+            // normalised by JwtFailureResponseListener instead. This branch matters
+            // for auth exceptions reaching kernel.exception with no response set;
             // ApiExceptionListenerTest::testAnEarlierListenersResponseEndsTheChain
-            // proves through a real dispatcher that this listener never runs once
-            // an earlier listener set a response — so a guard here would be dead code.
+            // proves a guard here would be dead code.
             return new ResolvedProblem(new ApiProblem(
                 'unauthorized',
                 'Unauthorized',

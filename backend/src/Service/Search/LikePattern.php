@@ -25,19 +25,17 @@ final readonly class LikePattern
     }
 
     /**
-     * Matches a term padded with a literal space on each side, for use against
-     * a haystack that CONCAT(' ', …, ' ') has padded the same way. Pairs with
+     * Matches a term padded with a literal space on each side, for use against a
+     * haystack CONCAT(' ', …, ' ') has padded the same way. Pairs with
      * NormalizeWordBoundariesFunction, which turns bordering punctuation into
      * spaces so the padding lines up on a real word boundary.
      *
-     * The term is normalized with the SAME replacement before escaping, so
-     * both sides of the comparison speak one alphabet. Without that, a term
-     * carrying punctuation could never match: "E-Mail" was searched for
-     * verbatim in a haystack whose hyphen had already become a space, so a
-     * whole-word search found nothing where the substring search found
-     * plenty. Normalizing first also disposes of the escape character — "!"
-     * is itself a boundary character, so it is a space by the time escape()
-     * runs and can never arrive doubled.
+     * The term is normalized with the SAME replacement before escaping, so both
+     * sides speak one alphabet. Without that, punctuation-carrying terms could
+     * never match: "E-Mail" was searched verbatim in a haystack whose hyphen had
+     * already become a space, so whole-word found nothing where substring found
+     * plenty. Normalizing first also disposes of "!", itself a boundary
+     * character, so it's a space by the time escape() runs and can't arrive doubled.
      */
     public static function wholeWord(string $term): string
     {

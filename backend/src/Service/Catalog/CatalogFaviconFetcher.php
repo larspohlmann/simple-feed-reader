@@ -17,20 +17,18 @@ use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * Downloads the bytes of one already-resolved icon URL, under the same guards as
- * the feed fetch path (see ConcurrentFeedFetcher::send()): the shared UrlGuard
- * for SSRF — re-run on every redirect hop, never delegated to the HTTP client's
- * own follower — a connection pinned to the guard-validated IP, a bounded
- * redirect chain, a timeout, a wire-level and buffered size cap, transparent
- * compression disabled, and an allow-list of image content types.
+ * Downloads the bytes of one already-resolved icon URL, under the same guards
+ * as the feed fetch path (see ConcurrentFeedFetcher::send()): UrlGuard SSRF
+ * checks re-run on every redirect hop (never the HTTP client's own follower),
+ * a connection pinned to the guard-validated IP, a bounded redirect chain, a
+ * timeout, wire/buffered size caps, compression disabled, and an image
+ * content-type allow-list.
  *
- * Resolution — a site homepage to its best icon URL — is NOT this class's job.
- * The warmer resolves a whole slice at once through the shared, concurrent
- * `FaviconResolver::resolveAll()` (see #116) and hands each URL here to download.
- *
- * Called by the warmer, and by DigestImageEmbedder to fetch thumbnails and
- * favicons for a digest send. Neither caller is a live HTTP request path;
- * the digest runs in the worker/CLI, same as the warmer.
+ * Resolution — homepage to best icon URL — is NOT this class's job; the
+ * warmer resolves a whole slice at once via `FaviconResolver::resolveAll()`
+ * (#116) and hands each URL here. Also called by DigestImageEmbedder for
+ * digest thumbnails/favicons — neither caller is a live HTTP request path,
+ * both run in the worker/CLI.
  */
 final readonly class CatalogFaviconFetcher implements CatalogFaviconFetcherInterface
 {

@@ -16,16 +16,15 @@ final readonly class EntryQuery
      *
      * Every reader of a keyset-paginated list must clamp identically to the
      * serializer that decides whether the page was full — `EntryPage::of()`
-     * compares the row count against the effective size, so a difference of
-     * one between two spellings makes `nextCursor` vanish on a boundary and
-     * the list stop short. It was written five times across the repositories
-     * and the serializer, in two different orderings; this is that rule, once.
+     * compares the row count against the effective size, so a one-off between
+     * two spellings makes `nextCursor` vanish on a boundary and the list stop
+     * short. It was written five times, in two different orderings; this is
+     * that rule, once.
      *
      * `EntryQuery` applies it at construction, so `$query->limit` is ALREADY
-     * the effective size and readers pass it straight on. This stays public
-     * for `ForYouFeedQuery`, which is the same idea for the ranked feed and
-     * clamps the same way at ITS construction — so the for-you pager and
-     * repository no longer clamp anything themselves either.
+     * the effective size. Stays public for `ForYouFeedQuery`, which clamps
+     * the ranked feed the same way at ITS construction, so neither pager
+     * clamps anything itself.
      */
     public static function clampLimit(int $limit): int
     {

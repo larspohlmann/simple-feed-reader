@@ -79,14 +79,11 @@ final class SubscriptionJson
     }
 
     /**
-     * Feed descriptions routinely carry markup. Reducing to plain text at the
-     * boundary keeps the SPA out of any sanitiser decision: what it receives
-     * is text, and it renders it as text.
-     *
-     * A reduction that leaves no letter and no digit is not a description.
-     * Deutschlandfunk's feed describes itself as a single ">", which reached
-     * the reader as a stray character floating above the headlines. Dropping
-     * it here rather than at ingest also repairs the rows already stored.
+     * Reduced to plain text at the boundary so the SPA never has to make a
+     * sanitiser decision. A reduction with no letter and no digit is not a
+     * description — Deutschlandfunk's feed describes itself as a single ">",
+     * which reached the reader as a stray character. Dropping it here rather
+     * than at ingest also repairs rows already stored.
      */
     private static function description(Feed $feed): ?string
     {

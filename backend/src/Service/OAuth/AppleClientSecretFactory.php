@@ -18,23 +18,21 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * signed assertion.
  *
  * Apple issues no static secret: the relying party signs a short JWT with the
- * ES256 private key downloaded once from the developer portal, and that JWT goes
- * in the `client_secret` field of the token request.
+ * ES256 private key downloaded once from the developer portal, and that JWT
+ * goes in the `client_secret` field of the token request.
  *
  * Two claims are the reverse of the generic OIDC `private_key_jwt` profile;
- * getting them the usual way round yields a token Apple rejects with a bare
- * `invalid_client`:
+ * swapping them yields a token Apple rejects with a bare `invalid_client`:
  *
  * - `iss` is the **team** id, not the client id.
  * - `sub` is the **client** id (the Services ID).
  *
- * `kid` goes in the JOSE header, because a team may have several keys and Apple
+ * `kid` goes in the JOSE header, since a team may have several keys and Apple
  * must know which public half checks the signature.
  *
  * Apple caps the lifetime at six months; ours is one hour, minted per request
- * rather than cached: the signing is a single ECDSA over a few hundred bytes,
- * cheaper than the TLS handshake it rides with, so caching would trade nothing
- * for a longer-lived credential sitting in a cache file.
+ * rather than cached — the signing is one cheap ECDSA op, so caching would buy
+ * nothing but a longer-lived credential sitting in a cache file.
  */
 final readonly class AppleClientSecretFactory
 {
@@ -52,13 +50,13 @@ final readonly class AppleClientSecretFactory
 
     /**
      * All four values or none. A deployment with three of them has made a
-     * mistake, and the useful response is to not offer Apple at all rather than
-     * a sign-in button that sends people to Apple's consent screen and fails on
-     * the way back.
+     * mistake, and the useful response is to not offer Apple at all rather
+     * than a sign-in button that sends people to Apple's consent screen and
+     * fails on the way back.
      *
-     * Presence, not validity: whether the key parses cannot be known without the
-     * signing work, so a malformed key stays visible here and fails at the
-     * exchange instead — the later failure, but the only honest one.
+     * Presence, not validity: whether the key parses cannot be known without
+     * signing, so a malformed key passes here and fails at the exchange
+     * instead — later, but the only honest place for it.
      */
     public function isConfigured(): bool
     {
@@ -70,12 +68,11 @@ final readonly class AppleClientSecretFactory
 
     public function create(): string
     {
-        // Restates isConfigured() rather than calling it, for two reasons: it
-        // gives the static analyser the non-empty-string it needs to type the
-        // builder calls, and a caller who reached create() WITHOUT isConfigured()
-        // gets the same generic sign-in failure as every other Apple problem,
-        // not an InvalidArgumentException from deep in the JWT library escaping
-        // as an opaque 500.
+        // Restates isConfigured() rather than calling it: this gives the static
+        // analyser the non-empty-string it needs for the builder calls, and a
+        // caller who skipped isConfigured() gets the same generic sign-in
+        // failure as any other Apple problem, not a JWT-library exception
+        // escaping as an opaque 500.
         if (
             '' === $this->servicesId
             || '' === $this->teamId
@@ -91,15 +88,12 @@ final readonly class AppleClientSecretFactory
             // Outer parens for PDepend 2.16.2 (composer md), which cannot parse
             // the PHP 8.4 "new without parentheses" chain yet — keep them. See #183.
             return (new Builder(new JoseEncoder(), ChainedFormatter::withUnixTimestampDates()))
-                // withUnixTimestampDates(), NOT ChainedFormatter::default().
-                //
-                // The default formatter renders date claims through
-                // MicrosecondBasedDateConversion, which emits a JSON float
-                // (1784030400.123456) when the instant carries microseconds;
-                // Apple wants NumericDate integers. Test clocks are MockClocks on
-                // a whole second, where that formatter emits an int — so the
-                // default spelling passes every test and fails only in
-                // production, where NativeClock never lands on a whole second.
+                // withUnixTimestampDates(), NOT ChainedFormatter::default(): the
+                // default formatter emits a JSON float (1784030400.123456) once
+                // an instant carries microseconds, but Apple wants NumericDate
+                // integers. Test MockClocks sit on a whole second, where the
+                // default also emits an int — so it passes every test and fails
+                // only in production, where NativeClock never lands on one.
                 ->withHeader('kid', $this->keyId)
                 ->issuedBy($this->teamId)
                 ->relatedTo($this->servicesId)
@@ -109,12 +103,11 @@ final readonly class AppleClientSecretFactory
                 ->getToken(new Sha256(), InMemory::plainText($this->privateKey))
                 ->toString();
         } catch (\Throwable $e) {
-            // A malformed .p8, a key of the wrong curve, newlines a dotenv file
-            // or secrets UI flattened — all deployment mistakes, none of which
-            // may reach the user as anything but "sign-in failed".
-            // OAuthFailedException renders identically whatever went wrong, so it
-            // cannot be used to probe how Apple is configured here. The cause
-            // survives in $logDetail and $previous.
+            // A malformed .p8, a wrong-curve key, newlines a dotenv/secrets UI
+            // flattened — all deployment mistakes that must reach the user as
+            // nothing but "sign-in failed". OAuthFailedException renders the
+            // same whatever went wrong, so it cannot be used to probe how Apple
+            // is configured; the cause survives in $logDetail and $previous.
             throw new OAuthFailedException('apple client secret could not be signed', $e);
         }
     }

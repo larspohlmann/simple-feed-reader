@@ -12,12 +12,12 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
  * Self-hosted ALTCHA proof-of-work. The server never stores issued challenges:
- * the HMAC signature is what proves a challenge came from us, so verification
- * is stateless apart from the replay guard.
+ * the HMAC signature proves a challenge came from us, so verification is
+ * stateless apart from the replay guard.
  *
  * Protocol: challenge = sha256(salt . number), signature = hmac_sha256(challenge, key).
- * The client finds `number` by brute force, which costs it measurable CPU time
- * and costs us one hash to check.
+ * The client brute-forces `number`, costing it measurable CPU and costing us
+ * one hash to check.
  */
 final readonly class AltchaService
 {
@@ -29,25 +29,25 @@ final readonly class AltchaService
      *   attacker, native sha256      0.41 us/hash  ->  40 ms min, 63 ms avg
      *   widget, await subtle.digest  16.5 us/hash  ->  2.5 s avg, 3.3 s worst
      *
-     * That is a ~25-40x asymmetry *against* the honest user (25x vs optimised sync
-     * JS, 40x vs native). The widget awaits one promise per candidate and cannot
-     * close that gap, so the window is sized by what the browser can afford. A
-     * wider window is defensible **if** the widget ever moves to auto="onload",
-     * where the solve overlaps form filling instead of blocking submit — a
-     * frontend decision, so do not widen this without confirming the widget mode.
+     * That is a ~25-40x asymmetry *against* the honest user. The widget awaits
+     * one promise per candidate and cannot close that gap, so the window is
+     * sized by what the browser can afford. A wider window is defensible **if**
+     * the widget moves to auto="onload", where the solve overlaps form filling
+     * instead of blocking submit — a frontend decision; do not widen without
+     * confirming the widget mode.
      *
      * The floor is the load-bearing half. Challenges are free and unlimited to
-     * request, and nothing binds a client to one it was issued, so with a floor of
-     * zero an attacker batch-requests, discards the expensive challenges and solves
-     * only the cheapest — making effective cost the minimum of the batch, not its
-     * mean. Pinning the minimum makes the cost floor a property of the protocol,
-     * not the attacker's luck.
+     * request, and nothing binds a client to the one it was issued, so a floor of
+     * zero lets an attacker batch-request, discard the expensive challenges, and
+     * solve only the cheapest — making effective cost the batch minimum, not its
+     * mean. Pinning the minimum makes the cost floor a protocol property, not the
+     * attacker's luck.
      *
-     * Sizing note: this buys resistance to bulk *email* abuse, not account
-     * creation. Registration lands in pending_verification, needs a clicked email
-     * link then a human admin — so a solved challenge only yields a row the purge
-     * command reaps after 48 hours. A PoW sizes the cost of abuse; it does not cap
-     * it. The rate limiter on the guarded endpoints does.
+     * Sizing note: this resists bulk *email* abuse, not account creation.
+     * Registration lands in pending_verification, needing a clicked email link
+     * then a human admin, so a solved challenge only yields a row the purge
+     * command reaps after 48 hours. A PoW sizes the cost of abuse; the rate
+     * limiter on the guarded endpoints caps it.
      *
      * Re-derive with: hash 2e5 candidates and divide.
      */
@@ -55,14 +55,14 @@ final readonly class AltchaService
     private const int MAX_NUMBER = 200_000;
     private const int TTL_SECONDS = 3600;
     /**
-     * The replay entry must outlive the challenge itself. If it expired at the
-     * same moment, a solution issued at T and first spent just before T+TTL
-     * would find its own replay entry already evicted on a second use while the
-     * challenge was still inside its validity window. The margin closes that.
+     * The replay entry must outlive the challenge. Sharing one expiry would let a
+     * solution issued at T and first spent just before T+TTL find its own replay
+     * entry already evicted on a second use, while the challenge was still valid.
+     * The margin closes that gap.
      *
-     * Deliberately untested: the cache adapter derives `expiresAfter` from the
-     * wall clock, which MockClock cannot move, so the boundary this guards is
-     * unreachable from a unit test. Verified by reading, not by assertion.
+     * Deliberately untested: `expiresAfter` derives from the wall clock, which
+     * MockClock cannot move, so this boundary is unreachable from a unit test.
+     * Verified by reading, not by assertion.
      */
     private const int REPLAY_TTL_SECONDS = self::TTL_SECONDS + 600;
 
@@ -119,9 +119,9 @@ final readonly class AltchaService
         }
 
         // `number` is client-supplied. Only values inside the difficulty window
-        // could have come from solving a challenge we issued, so anything below
-        // the floor is refused here rather than hashed — otherwise the floor
-        // would bind only honest clients.
+        // could come from solving a challenge we issued, so anything below the
+        // floor is refused here rather than hashed, or the floor would bind
+        // only honest clients.
         if ($number < self::MIN_NUMBER || $number > self::MAX_NUMBER) {
             return false;
         }

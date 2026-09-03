@@ -5,17 +5,16 @@ declare(strict_types=1);
 namespace App\Service\Text;
 
 /**
- * Reduces a possibly-HTML string to display-ready plain text: strips markup and
- * decodes HTML entities, then collapses runs of whitespace. Returns null when
- * nothing printable remains, so a caller can fall back (e.g. to '(untitled)').
+ * Reduces a possibly-HTML string to display-ready plain text: strips markup,
+ * decodes HTML entities, collapses whitespace runs. Returns null when nothing
+ * printable remains, so a caller can fall back (e.g. to '(untitled)').
  *
- * Feed <title> elements routinely carry entity-escaped HTML — "&lt;em&gt;" for
- * emphasis, "&amp;#8220;" for a curly quote — which the XML reader decodes one
- * level to a literal "<em>" tag or "&#8220;" reference. Rendered as text, that
- * markup leaks into the UI; this collapses it to the words a reader wants.
+ * Feed <title> elements routinely carry entity-escaped HTML — "&lt;em&gt;",
+ * "&amp;#8220;" — which the XML reader decodes one level to a literal "<em>"
+ * tag or "&#8220;" reference; unhandled, that markup leaks into the UI.
  *
- * The result is PLAIN TEXT: it may contain <, > and & as literal characters and
- * has NOT been through EntrySanitizer. Render it as text only, never with |raw.
+ * The result is PLAIN TEXT: it may contain <, > and & as literal characters
+ * and has NOT been through EntrySanitizer. Render as text only, never |raw.
  */
 final class PlainText
 {

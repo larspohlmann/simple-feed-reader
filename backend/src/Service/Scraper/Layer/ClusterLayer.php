@@ -15,12 +15,11 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
  * Last-resort layer for pages without JSON-LD or article markup: clusters
  * anchors by their own class tokens (BEM modifiers stripped), assuming a
  * listing repeats one card component many times. An anchor joins one group
- * per token, so card variants that share a component class (featured vs.
- * plain mntl-card) still land in one cluster even when their wrapper depth
- * differs per page section — an ancestor-path signature fragmented exactly
- * there. Navigation, header, footer, and aside subtrees are excluded so
- * menus and footer link lists can never win. The biggest cluster (mean
- * title length breaks ties) becomes the item list, in document order.
+ * per token, so variants sharing a component class (featured vs. plain
+ * mntl-card) land in one cluster even across wrapper-depth differences that
+ * would fragment an ancestor-path signature. Nav/header/footer/aside
+ * subtrees are excluded so link lists can never win; the biggest cluster
+ * (mean title length breaks ties) becomes the item list, in document order.
  */
 #[AsTaggedItem(priority: 10)]
 final class ClusterLayer implements ScrapeLayerInterface

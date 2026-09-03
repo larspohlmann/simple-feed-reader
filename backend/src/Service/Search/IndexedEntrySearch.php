@@ -13,19 +13,17 @@ use App\Service\Search\Index\SearchIndexReader;
 /**
  * Matching through the search index: ask the engine for entry ids scoped to
  * the caller's own subscribed feeds, then hydrate those ids through the same
- * projection every other list uses. That hydration step is what makes
- * per-user read state and the subscription access check behave identically
- * to the rest of the app — the engine's own filter is never the last word on
- * what a caller may see, EntryListRepository::rowsByIdsForUser is.
+ * projection every other list uses. That hydration is what makes per-user
+ * read state and the subscription access check behave identically to the
+ * rest of the app — the engine's own filter is never the last word on what
+ * a caller may see, EntryListRepository::rowsByIdsForUser is.
  *
- * FeedRepository::idsSubscribedByUser already answers "which feeds may this
- * user see" for AccountDeleter; reusing it here rather than adding an
- * equivalent query to SubscriptionRepository is what keeps that one
- * "subscribed feed ids" query in one place.
+ * Reuses FeedRepository::idsSubscribedByUser (already answering "which feeds
+ * may this user see" for AccountDeleter) rather than adding an equivalent
+ * query to SubscriptionRepository, keeping that query in one place.
  *
- * Does not catch SearchEngineUnavailableException itself: a caller that wants
- * the LIKE fallback on that failure decorates this class rather than this
- * class swallowing it.
+ * Does not catch SearchEngineUnavailableException itself: a caller wanting
+ * the LIKE fallback on that failure decorates this class instead.
  */
 final readonly class IndexedEntrySearch implements EntrySearchInterface
 {

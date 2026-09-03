@@ -7,25 +7,22 @@ namespace App\Service\Passkey\Exception;
 use App\Exception\ApiException;
 
 /**
- * A WebAuthn assertion ("login") response failed verification: an unenrolled
- * credential id, wrong challenge, wrong origin, wrong relying-party id, a
- * signature counter that failed to advance, a corrupt or unparseable
- * response — AssertionVerifier catches every one of these at the
- * WebAuthn/CBOR library boundary, or resolves them itself for an unknown
- * credential id, and rewrites them to this single type.
+ * A WebAuthn assertion ("login") failed verification: unenrolled credential
+ * id, wrong challenge, wrong origin, wrong relying-party id, a stalled
+ * signature counter, or a corrupt/unparseable response. AssertionVerifier
+ * catches all of these at the WebAuthn/CBOR boundary — or resolves an
+ * unknown credential id itself — and rewrites them to this one type.
  *
- * Collapsed into one case on purpose, the same reasoning
- * UnknownChallengeException and AttestationRejectedException give: naming
- * the exact failed check would tell an attacker probing the endpoint more
- * than it tells a legitimate caller, who can only retry the ceremony from
- * scratch regardless of which check failed.
+ * Collapsed into one case on purpose, like UnknownChallengeException and
+ * AttestationRejectedException: naming the exact failed check would help an
+ * attacker probing the endpoint more than a legitimate caller, who can only
+ * retry the ceremony regardless of which check failed.
  *
  * PasskeyAuthenticator always catches this and rethrows it as a plain
- * Symfony AuthenticationException before it can reach this class's own
- * exception listener — see that class's docblock for why — so this type's
- * own $status and $type are never what a client actually receives; every
- * passkey login failure surfaces through App\Security\LoginFailureHandler
- * instead, the same one password login uses.
+ * Symfony AuthenticationException before it reaches this class's own
+ * exception listener (see that class's docblock), so $status and $type here
+ * never reach the client — every passkey login failure surfaces through
+ * App\Security\LoginFailureHandler, the same path password login uses.
  */
 final class AssertionRejectedException extends ApiException
 {

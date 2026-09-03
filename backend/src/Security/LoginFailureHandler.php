@@ -68,27 +68,22 @@ final readonly class LoginFailureHandler implements AuthenticationFailureHandler
     /**
      * The address this request tried to log in as, for the timing equalizer.
      *
-     * Read straight from the request body, not the exception: the exception's
-     * token is not populated for every failure mode (a not-found user arrives
-     * masked, a throttled request never reached an authenticator), and this handler
-     * must behave identically for all of them.
+     * Read from the request body, not the exception: the exception's token isn't
+     * populated for every failure mode (masked not-found user, throttled request
+     * never reaching an authenticator), and this handler must treat them alike.
      *
-     * `email` is the key because security.yaml's json_login block declares
-     * `username_path: email`. The body is still readable here: HttpFoundation
-     * buffers the raw content on first read, and JsonLoginAuthenticator has already
-     * read it for these very fields, so php://input being single-shot cannot bite.
+     * `email` is the key because json_login declares `username_path: email`. The
+     * body is still readable here: JsonLoginAuthenticator already read it for
+     * these fields, so php://input being single-shot cannot bite.
      *
-     * json_decode rather than Request::toArray(), because toArray() THROWS on an
-     * empty or non-array body — a Symfony JsonException, not the \\JsonException one
-     * might catch — and an uncaught throw here would turn a 401 into a 500 on the
-     * endpoint whose contract is that every failure looks the same. In practice
-     * JsonLoginAuthenticator rejects those bodies with a 400 first (verified for an
-     * empty body, a bare scalar and a missing password), so the throw is unreachable
-     * today; a total reader keeps it unreachable if that ordering ever changes.
+     * json_decode, not Request::toArray() — toArray() THROWS on an empty or
+     * non-array body, and an uncaught throw here would turn a 401 into a 500 on
+     * an endpoint whose contract is that every failure looks the same.
+     * JsonLoginAuthenticator rejects such bodies with a 400 first, so the throw
+     * is unreachable today; a total reader keeps it that way if that changes.
      *
-     * Not normalised on the way out. UserRepository::findOneByEmail() does that
-     * itself, the same seam the user provider went through, so the lookup this feeds
-     * cannot disagree with the one that just failed.
+     * Not normalised on the way out: UserRepository::findOneByEmail() does that
+     * itself, so the lookup this feeds cannot disagree with the one that failed.
      */
     private function submittedIdentifier(Request $request): ?string
     {

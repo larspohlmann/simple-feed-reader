@@ -22,17 +22,15 @@ final readonly class SearchTerms
     public const int MAX_TERMS = 6;
 
     /**
-     * What counts as whitespace for the mode check, the trim and the term
-     * split alike — one definition, used everywhere in this class. Plain
-     * `\s` is ASCII-only, but the frontend's own trailing-space detection
-     * (`normalizeSearchInput` in `query.ts`) runs on JavaScript's `\s`,
-     * which also matches a no-break space and the other Unicode "space
-     * separator" characters a paste or an autocorrect can leave behind.
-     * `\p{Z}` (the Unicode separator category) closes that gap: without it,
-     * a trailing no-break space reads as whole-word on the client but as
-     * substring here, and — because neither `trim()` nor a plain `\s+`
-     * split would remove or split on it — the character itself survives
-     * into the last term and the search silently matches nothing.
+     * What counts as whitespace for the mode check, trim, and term split alike —
+     * one definition, used everywhere in this class. Plain `\s` is ASCII-only,
+     * but the frontend's trailing-space detection (`normalizeSearchInput` in
+     * `query.ts`) runs on JavaScript's `\s`, which also matches a no-break space
+     * and other Unicode "space separator" characters a paste or autocorrect can
+     * leave behind. `\p{Z}` closes that gap: without it, a trailing no-break
+     * space reads as whole-word on the client but substring here, and since
+     * neither `trim()` nor a plain `\s+` split touches it, the character
+     * survives into the last term and the search silently matches nothing.
      */
     private const string WHITESPACE = '[\s\p{Z}]';
 

@@ -47,11 +47,11 @@ final class PasskeyCeremony
     /**
      * The wire shape of a set of ceremony options, as the client receives it.
      *
-     * Lives here rather than in each options factory because both of them
-     * already depend on this class for the serializer, and both need the
-     * identical serialize-then-decode pair. Keeping one copy means a change
-     * to the encoding — a JSON flag, say — cannot be applied to the
-     * registration ceremony and forgotten for the login one.
+     * Lives here rather than in each options factory because both already
+     * depend on this class for the serializer and need the identical
+     * serialize-then-decode pair. One copy means a change to the encoding —
+     * a JSON flag, say — can't be applied to registration and forgotten for
+     * login.
      *
      * @return array<string, mixed>
      */
@@ -69,9 +69,9 @@ final class PasskeyCeremony
      * The registrable domain credentials are bound to. Delegates to
      * PasskeyRelyingParty rather than re-parsing PublicBaseUrl: the relying
      * party id already applies the "stored override, else derive from the
-     * public base URL's host" rule (EffectivePasskeyRelyingPartyId), and a
-     * second, independent derivation here could disagree with it whenever an
-     * admin has configured an override.
+     * public base URL's host" rule (EffectivePasskeyRelyingPartyId); a
+     * second, independent derivation here could disagree whenever an admin
+     * has configured an override.
      */
     public function host(): string
     {
@@ -79,10 +79,10 @@ final class PasskeyCeremony
     }
 
     /**
-     * No allowed-origin list on purpose. Given none, the library compares the
-     * browser's origin against the relying-party id itself (CheckOrigin) --
-     * the spec rule, and the only one that works when a proxy rewrites Host so
-     * the server cannot see the origin the browser is really at.
+     * No allowed-origin list on purpose: given none, the library compares the
+     * browser's origin against the relying-party id itself (CheckOrigin) —
+     * the spec rule, and the only one that works when a proxy rewrites Host
+     * so the server can't see the browser's real origin.
      *
      * `localhost` is exempted from the HTTPS requirement so development over
      * http keeps working, matching `settings.instance.passkeyHelp.rule4`.

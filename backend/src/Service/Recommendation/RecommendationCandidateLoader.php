@@ -19,14 +19,12 @@ use Random\Randomizer;
  * Loads the pool of unread candidates the recommendation prompt picks from, and
  * re-resolves a checkpointed batch of entry ids back to prompt lines.
  *
- * Both stay scoped to feeds the reader subscribes to — the same gate
- * EntryRepository::rowQueryBuilder applies, including the per-user customTitle override —
- * because both render lines for the same prompt: a retried batch must name a feed as the
- * first attempt did. linesForIds() drops only the unread predicate, so a resumed run can
- * retry its exact snapshot batch even for an entry since read. It keeps the Subscription
- * join, so an entry whose feed the reader has since unsubscribed from still drops out;
- * only outright deletion of the entry is special-cased (silently dropped rather than
- * failing the batch).
+ * Both share EntryRepository::rowQueryBuilder's subscription gate, including the per-user
+ * customTitle override, so a retried batch names feeds as the first attempt did.
+ * linesForIds() drops only the unread predicate, so a resumed run can retry its exact
+ * snapshot even for an entry since read; it keeps the Subscription join, so an unsubscribed
+ * feed still drops the entry. Only outright deletion is special-cased: silently dropped
+ * rather than failing the batch.
  */
 final readonly class RecommendationCandidateLoader
 {
@@ -47,17 +45,12 @@ final readonly class RecommendationCandidateLoader
     {
         $qb = $this->candidateQueryBuilder($userId)
             ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
-            // The pool applies NO read/unread filter: neither the per-entry
-            // isHidden flag nor the subscription markedReadUntil watermark. A
-            // reader who caught up on a feed may still want its entries
-            // recommended; excluding them emptied the pool and finished the run
-            // with zero picks. Only explicit per-entry history is excluded here:
-            // favorited/kept/viewed entries already fill the prompt's
-            // FAVORITES/KEPT/VIEWED sections, so re-scoring them re-recommends
-            // what the reader acted on. This negates RecommendationHistoryLoader's
-            // FAVORITES/KEPT/VIEWED sections — a change to reader history there
-            // must update both. es is a LEFT JOIN, so an entry with no state row
-            // stays a candidate: hence the null-safe OR on each flag.
+            // No read/unread filter (isHidden flag, markedReadUntil watermark): excluding
+            // caught-up entries emptied the pool and zeroed the run. Only per-entry history
+            // is excluded -- favorited/kept/viewed entries already fill the prompt's
+            // FAVORITES/KEPT/VIEWED sections, so re-scoring them re-recommends what the
+            // reader acted on; a change there must update both. es is a LEFT JOIN, so a
+            // stateless entry stays a candidate, hence the null-safe OR on each flag.
             ->andWhere(
                 '(es.isFavorite = :notInteracted OR es.isFavorite IS NULL)'
                 . ' AND (es.isKept = :notInteracted OR es.isKept IS NULL)'

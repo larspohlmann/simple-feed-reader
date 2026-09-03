@@ -18,12 +18,12 @@ use Symfony\Contracts\Cache\CacheInterface;
 /**
  * The worker container's whole job description (#311): consume this schedule
  * with `messenger:consume scheduler_worker`. Five entries by decision: the
- * recommendation sweep is now two of them -- the ten-second advance sweep and
- * the five-minute start-due sweep (#333) -- plus the feed refresh sweep (the
- * 2026-08-07 decision that brings scheduled refresh to worker-equipped
- * installs; poll-only installs stay manual), the hourly digest sweep (#636,
- * finds every account whose scheduled digest occurrence has passed since it
- * last sent and mails it), and failure-transport housekeeping.
+ * recommendation sweep is two of them — the ten-second advance sweep and the
+ * five-minute start-due sweep (#333) — plus the feed refresh sweep (2026-08-07
+ * decision bringing scheduled refresh to worker-equipped installs; poll-only
+ * installs stay manual), the hourly digest sweep (#636, finds every account
+ * whose scheduled digest occurrence has passed since it last sent and mails
+ * it), and failure-transport housekeeping.
  *
  * The recommendation START sweep (#333) supersedes #308's "manual button
  * only" as an opt-in: it starts a run only for an account that chose a
@@ -41,16 +41,15 @@ final readonly class WorkerSchedule implements ScheduleProviderInterface
     /**
      * `stateful()` is load-bearing, not a tuning knob. Without it every entry
      * anchors its series at PROCESS START, because PeriodicalTrigger takes
-     * its `from` from the checkpoint and an in-process ArrayAdapter starts
-     * every process with a fresh one. Both compose files recycle the consumer
+     * `from` from the checkpoint and an in-process ArrayAdapter starts every
+     * process with a fresh one. Both compose files recycle the consumer
      * hourly with `--time-limit=3600`, so the daily housekeeping entry
-     * re-anchored to "now + 24 h" every hour and could never fire at all --
-     * `messenger_messages` then grew without bound, which is precisely what
-     * that entry exists to prevent (#311 final review, Critical 1). A
-     * persisted checkpoint keeps the original `from`, so the daily entry
-     * comes due 24 h after the FIRST-EVER start no matter how often the
-     * consumer is recycled, and the other three entries stop losing their
-     * cadence at every restart as well.
+     * re-anchored to "now + 24h" every hour and could never fire —
+     * `messenger_messages` then grew without bound, exactly what that entry
+     * exists to prevent (#311 final review, Critical 1). A persisted
+     * checkpoint keeps the original `from`, so the daily entry comes due 24h
+     * after the FIRST-EVER start regardless of how often the consumer is
+     * recycled, and the other three entries stop losing cadence at restart too.
      *
      * The pool is a filesystem one under CACHE_DIRECTORY (var/cache-pools),
      * the same place the rate limiter and ALTCHA replay pools live, so the
@@ -59,8 +58,8 @@ final readonly class WorkerSchedule implements ScheduleProviderInterface
      * `processOnlyLastMissedRun()` is the necessary companion: a persisted
      * checkpoint means a consumer that was down replays every occurrence it
      * missed, and an hour of downtime owes the ten-second entry 360 firings.
-     * All five messages are SWEEPS -- each one does whatever is outstanding
-     * at the moment it runs -- so catching up means running once, now.
+     * All five messages are SWEEPS — each does whatever is outstanding at the
+     * moment it runs — so catching up means running once, now.
      */
     public function getSchedule(): Schedule
     {

@@ -24,16 +24,16 @@ use Random\RandomException;
  *
  * $userHandle rides along with a registration challenge because
  * PasskeyCredentials::userHandleFor() mints a fresh random value for an account's
- * first credential on every call. The value shown to the browser at options time
- * is the one an authenticator remembers and returns at login, so verification must
- * reuse that exact value. It is null for a login ceremony, same as $userId.
+ * first credential on every call — the browser is shown the value at options time,
+ * an authenticator remembers and returns it at login, so verification must reuse it
+ * exactly. Null for a login ceremony, same as $userId.
  *
- * Single use is best-effort under concurrency: PSR-6 has no compare-and-swap, so
- * two simultaneous redemptions of the same handle can both observe isHit() before
- * either deletes. Deleting before validating narrows that window but does not close
- * it — closing it fully would mean a lock on every ceremony completion. See
- * OAuthStateStore's docblock for why the remaining race is not a security hole:
- * both racers present the same challenge, and only one can pass the signature check.
+ * Single use is best-effort under concurrency: PSR-6 has no compare-and-swap, so two
+ * simultaneous redemptions of the same handle can both observe isHit() before either
+ * deletes. Deleting before validating narrows that window but doesn't close it —
+ * closing it fully would need a lock on every ceremony completion. See
+ * OAuthStateStore's docblock for why the remaining race isn't a security hole: both
+ * racers present the same challenge, and only one can pass the signature check.
  */
 final readonly class PasskeyChallengeStore
 {
@@ -92,7 +92,7 @@ final readonly class PasskeyChallengeStore
             throw new UnknownChallengeException();
         }
 
-        // The pool's own TTL should have removed this already. This check
+        // The pool's own TTL should have removed this already; this check
         // exists because that TTL is enforced by the cache backend's clock,
         // while the rest of the application — and every test — runs on the
         // injected one.
@@ -133,8 +133,8 @@ final readonly class PasskeyChallengeStore
     /**
      * The cache key is a digest, not the handle itself, for the reason given
      * in the class docblock. Unsalted SHA-256 is sufficient: the input is 32
-     * bytes from random_bytes(), so there is no guessable preimage to protect
-     * and no reason to pay a work factor on every ceremony completion.
+     * bytes from random_bytes(), so there's no guessable preimage to protect
+     * and no reason to pay a work factor per ceremony completion.
      */
     private static function keyFor(string $handle): string
     {

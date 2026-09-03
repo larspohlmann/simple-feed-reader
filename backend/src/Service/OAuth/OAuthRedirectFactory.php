@@ -11,12 +11,12 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
  * Builds the two redirects back to the SPA from the OAuth callback.
  *
  * Note what does not appear in either URL, on success or failure: a JWT, an
- * authorization code, a state value, or anything else the caller supplied. The
- * only success payload is a one-time login code the server just minted; the only
- * failure payload is a fixed reason literal passed by callback(). The host comes
- * from APP_FRONTEND_URL, a deployment-time value nobody can influence over HTTP —
- * which keeps this from being an open redirect that hands the attacker's page a
- * fresh login code.
+ * authorization code, a state value, or anything else the caller supplied.
+ * The only success payload is a one-time login code the server just minted;
+ * the only failure payload is a fixed reason literal passed by callback().
+ * The host comes from APP_FRONTEND_URL, a deployment-time value nobody can
+ * influence over HTTP — which keeps this from being an open redirect that
+ * hands the attacker's page a fresh login code.
  */
 final readonly class OAuthRedirectFactory
 {

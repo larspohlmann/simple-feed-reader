@@ -23,26 +23,25 @@ use Webauthn\TrustPath\EmptyTrustPath;
 
 /**
  * Verifies a WebAuthn assertion ("login") response and resolves it to the stored
- * UserPasskey it was signed by (#624) — the credential PasskeyAuthenticator takes
- * its user from. This class never mints a JWT and never touches the security token
- * storage: it answers "did an enrolled authenticator sign this challenge?" and
- * hands the caller a persisted entity to build a Passport from.
+ * UserPasskey it was signed by (#624) — the credential PasskeyAuthenticator builds
+ * its user from. This class never mints a JWT and never touches token storage: it
+ * answers "did an enrolled authenticator sign this challenge?" and hands back a
+ * persisted entity to build a Passport from.
  *
  * The steps run in AttestationVerifier's order: the challenge is consumed first,
  * so a replayed or expired handle is rejected before any attacker-controlled
  * bytes are parsed.
  *
  * $userHandle passed to AuthenticatorAssertionResponseValidator::check() is always
- * the stored value read off the resolved UserPasskey, never one the client
- * supplied: an assertion resolves the account from the credential id alone, and
- * must never trust a user handle the caller sent, since discoverable login exists
- * precisely because the server does not know who is asking until the credential
- * says so.
+ * the stored value read off the resolved UserPasskey, never client-supplied: an
+ * assertion resolves the account from the credential id alone, and must never trust
+ * a user handle the caller sent — discoverable login exists precisely because the
+ * server does not know who is asking until the credential says so.
  *
  * The signature-counter comparison lives in the library: PasskeyCeremony::request()
- * wires CheckCounter to ThrowExceptionIfInvalid, which rejects a counter that
- * failed to advance — the standard cloned-authenticator defence. This class only
- * logs the rejection; see logRejectedCounter().
+ * wires CheckCounter to ThrowExceptionIfInvalid, rejecting a counter that failed to
+ * advance — the standard cloned-authenticator defence. This class only logs the
+ * rejection; see logRejectedCounter().
  *
  * The options checked against come from AssertionOptionsFactory::optionsFor() —
  * the same method the options endpoint uses — not a second private copy, so the
@@ -67,16 +66,14 @@ final readonly class AssertionVerifier
     }
 
     /**
-     * $availability->guard() runs first, before the challenge is even
-     * consumed: the login path has no controller action to gate —
-     * PasskeyAuthenticator calls this method from inside a lazily-invoked
-     * UserBadge loader, never through PasskeyController — so this is the one
-     * place that can refuse a disabled instance's login.
-     * PasskeySignInDisabledException extends ApiException, which
-     * PasskeyAuthenticator::verifiedUser() already catches and rewrites into
-     * a plain AuthenticationException, so a disabled instance fails exactly
-     * like a rejected assertion: a clean 401 through LoginFailureHandler,
-     * never a 500.
+     * $availability->guard() runs first, before the challenge is consumed: the
+     * login path has no controller action to gate — PasskeyAuthenticator calls
+     * this method from inside a lazily-invoked UserBadge loader, never through
+     * PasskeyController — so this is the one place that can refuse a disabled
+     * instance's login. PasskeySignInDisabledException extends ApiException,
+     * already caught and rewritten to AuthenticationException by
+     * PasskeyAuthenticator::verifiedUser(), so a disabled instance fails
+     * exactly like a rejected assertion: a clean 401, never a 500.
      *
      * @param array<string, mixed> $credential
      *
@@ -99,13 +96,13 @@ final readonly class AssertionVerifier
     }
 
     /**
-     * Everything in THIS method runs on bytes an attacker fully controls —
-     * the WebAuthn deserializer and the CBOR decoder underneath it — so the
-     * catch is deliberately broad, the same reasoning
-     * AttestationVerifier::checkAgainstLibrary() gives for its own. Returns
-     * the raw credential id alongside the narrowed response, rather than the
-     * whole PublicKeyCredential, so the instanceof guard below is the only
-     * place that needs to know its $response property is not yet narrowed.
+     * Everything here runs on bytes an attacker fully controls — the WebAuthn
+     * deserializer and the CBOR decoder underneath it — so the catch is
+     * deliberately broad, same reasoning as
+     * AttestationVerifier::checkAgainstLibrary(). Returns the raw credential
+     * id alongside the narrowed response, rather than the whole
+     * PublicKeyCredential, so the instanceof guard below is the only place
+     * that needs to know $response is not yet narrowed.
      *
      * @param array<string, mixed> $credential
      *
@@ -135,9 +132,9 @@ final readonly class AssertionVerifier
 
     /**
      * `credential_id` is unique across every account (UserPasskey's own
-     * unique constraint), so this lookup carries no user — the whole point
-     * of a discoverable-credential login is that the server does not know
-     * who is asking until this resolves it.
+     * unique constraint), so this lookup carries no user — the point of
+     * discoverable-credential login is that the server does not know who is
+     * asking until this resolves it.
      */
     private function resolveCredential(string $rawCredentialId): UserPasskey
     {
@@ -180,10 +177,10 @@ final readonly class AssertionVerifier
     }
 
     /**
-     * The one piece of behaviour this class adds around CheckCounter: a
-     * counter that failed to advance means either a cloned authenticator or
-     * a replayed assertion, and that is worth an operator's attention even
-     * though the caller only ever sees a generic login failure.
+     * The one behaviour this class adds around CheckCounter: a counter that
+     * failed to advance means a cloned authenticator or a replayed assertion
+     * — worth an operator's attention even though the caller only ever sees
+     * a generic login failure.
      */
     private function logRejectedCounter(UserPasskey $storedPasskey): void
     {
@@ -210,9 +207,9 @@ final readonly class AssertionVerifier
 
     /**
      * Mirrors AttestationVerifier::aaguidOrNull() in reverse: this column is
-     * nullable in storage for the same "no AAGUID assigned" reason, so a
-     * null stored value is rehydrated back to the spec's all-zero sentinel
-     * the library's own Uuid type expects.
+     * nullable for the same "no AAGUID assigned" reason, so a null stored
+     * value rehydrates to the spec's all-zero sentinel the library's own
+     * Uuid type expects.
      */
     private static function aaguidOrNil(?string $aaguid): Uuid
     {

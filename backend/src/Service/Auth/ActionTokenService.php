@@ -35,10 +35,9 @@ final readonly class ActionTokenService
     {
         $now = $this->clock->now();
 
-        // 32 bytes of CSPRNG output, hex-encoded: 64 chars, URL-safe, and wide
-        // enough that guessing is not a threat model. Generated before anything
-        // is mutated, so a failure here cannot leave the user's outstanding
-        // tokens retired with no replacement issued.
+        // 32 bytes of CSPRNG output, hex-encoded: 64 URL-safe chars, far too wide
+        // to guess. Generated before anything is mutated, so a failure here never
+        // retires the user's tokens without issuing a replacement.
         $plain = bin2hex(random_bytes(32));
 
         // Retire outstanding tokens of the same purpose so a link that leaked

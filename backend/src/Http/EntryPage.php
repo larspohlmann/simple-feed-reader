@@ -41,19 +41,17 @@ final readonly class EntryPage
     /**
      * As of(), but for a caller whose row count can be lower than what the
      * underlying read actually matched: IndexedEntrySearch asks the search
-     * engine for $limit ids and then hydrates them through the caller's
-     * subscription join, which silently drops any id the join's access
-     * check rejects (a ghost id left behind by a failed async index delete,
-     * for example). Deciding "is there another page" from count($rows) in
-     * that case mistakes a full page of engine matches for a short one and
-     * ends pagination early — the row count no longer means what of()
-     * assumes. $matchCount is the read's own count, before any such drop;
-     * search passes it explicitly, and of() above just supplies count($rows)
-     * for every caller where nothing removes rows afterwards.
+     * engine for $limit ids, then hydrates through the caller's subscription
+     * join, which silently drops any id the join's access check rejects (a
+     * ghost id left by a failed async index delete, say). Deciding "is there
+     * another page" from count($rows) then mistakes a full page of engine
+     * matches for a short one and ends pagination early. $matchCount is the
+     * read's own count before any such drop; search passes it explicitly, and
+     * of() above just supplies count($rows) where nothing removes rows after.
      *
-     * The cursor value itself always comes from the last SURVIVING row, not
-     * from $matchCount — the client only ever saw the rows it was handed, so
-     * a cursor has to name one of those, never a dropped id's position.
+     * The cursor itself always comes from the last SURVIVING row, not from
+     * $matchCount — the client only saw the rows it was handed, so a cursor
+     * must name one of those, never a dropped id's position.
      *
      * @param list<EntryListRow> $rows
      *

@@ -16,14 +16,11 @@ final class RecommendationPromptBuilder
     private const int FIXED_OVERHEAD_TOKENS = 1500;
 
     /**
-     * What one score-only pick costs in a batch reply: `{"id":123,"score":843}`, an id and
-     * an integer, no prose. About a fifth of a reason-bearing pick — the point of the
-     * coarse-filter batch: the answer reserve shrinks, so packBatches fits more candidates
-     * per batch and the run makes fewer calls (#493).
-     *
-     * Also lives on RecommendationAnswerBudget: that class prices the reply bound, a
-     * different computation from this packing budget, and coupling the two for one shared
-     * integer would cost more than the duplication (#493).
+     * What one score-only pick costs in a batch reply: `{"id":123,"score":843}`, no prose --
+     * about a fifth of a reason-bearing pick, so packBatches fits more candidates per batch
+     * and the run makes fewer calls (#493). Also lives on RecommendationAnswerBudget, which
+     * prices the reply bound, a different computation; coupling the two for one shared
+     * integer would cost more than the duplication.
      */
     private const int TOKENS_PER_SCORE_PICK = 15;
 
@@ -33,14 +30,12 @@ final class RecommendationPromptBuilder
     private const int ESTIMATED_PROFILE_TOKENS = 700;
 
     /**
-     * The consolidation call re-scores, reasons, and dedups its input in one
-     * pass, so its size is bounded at both ends. The floor is the old fixed
-     * cut -- twice the final list -- so dedup keeps its backfill slack. The
-     * ceiling caps the false-negative recovery the wider cut buys against the
-     * reasoning the call writes for entries it later drops: six times the final
-     * list is generous without letting consolidation quietly become the whole
-     * pipeline. Between them, the connection's context window decides
-     * (consolidationInputSize).
+     * The consolidation call re-scores, reasons, and dedups its input in one pass, so its
+     * size is bounded at both ends. The floor is the old fixed cut -- twice the final list
+     * -- so dedup keeps its backfill slack. The ceiling caps the false-negative recovery
+     * against the reasoning cost of entries later dropped: six times the final list,
+     * generous without letting consolidation become the whole pipeline. Between them, the
+     * connection's context window decides (consolidationInputSize).
      */
     private const int CONSOLIDATION_MIN_INPUT_FACTOR = 2;
     private const int CONSOLIDATION_MAX_INPUT_FACTOR = 6;
@@ -54,15 +49,12 @@ final class RecommendationPromptBuilder
     private const int CANDIDATE_LINE_FRAME_CHARS = 90;
 
     /**
-     * How much room over the estimate the provider is actually given.
-     *
-     * The estimate is a mean; a reply that runs long is not a runaway and must
-     * not be truncated into one that cannot parse. Half again covers the
-     * spread and still leaves the ceiling an order of magnitude below the
-     * 33800 tokens that let a looping model generate for an hour.
-     *
-     * Duplicated on RecommendationAnswerBudget for the same reason as
-     * TOKENS_PER_SCORE_PICK (#493).
+     * How much room over the estimate the provider is actually given. The estimate is a
+     * mean; a reply that runs long is not a runaway and must not be truncated into one that
+     * cannot parse. Half again covers the spread and still leaves the ceiling an order of
+     * magnitude below the 33800 tokens that let a looping model generate for an hour.
+     * Duplicated on RecommendationAnswerBudget for the same reason as TOKENS_PER_SCORE_PICK
+     * (#493).
      */
     private const int ANSWER_BOUND_PERCENT = 150;
 
@@ -81,11 +73,9 @@ final class RecommendationPromptBuilder
     private const int QUOTED_REPLY_LIMIT_CHARS = 2000;
 
     /**
-     * Neutral on purpose. The clip is a general property of quoting a reply
-     * back, and it cannot know why the reply was long: a merely verbose one,
-     * well inside its ceiling, would otherwise be told it "did not stop". That
-     * is false, and it is false inside a prompt, where a wrong statement
-     * changes what the model does next rather than merely reading badly.
+     * Neutral on purpose: the clip cannot know why the reply was long, so a merely verbose
+     * reply well inside its ceiling must not be told it "did not stop" -- a false statement
+     * that, inside a prompt, changes what the model does next rather than just reading badly.
      */
     private const string QUOTED_REPLY_ELLIPSIS = "\n… (this quote is truncated)";
 
@@ -357,14 +347,12 @@ final class RecommendationPromptBuilder
     }
 
     /**
-     * As much of the model's own reply as is worth quoting back to it.
-     *
-     * A reply is normally short enough to quote whole, and the whole of it is
-     * the clearest thing to correct against. A reply that ran away is not: it
-     * repeats one line for tens of kilobytes, and echoing all of that spends
-     * the retry's context on the loop and primes the model to continue it
-     * (#437). The head shows the same mistake at a fraction of the cost, and
-     * the marker tells the model it is seeing a fragment.
+     * As much of the model's own reply as is worth quoting back to it. A reply is normally
+     * short enough to quote whole, the clearest thing to correct against. A reply that ran
+     * away is not: it repeats one line for tens of kilobytes, and echoing it spends the
+     * retry's context on the loop and primes the model to continue it (#437). The head shows
+     * the same mistake at a fraction of the cost, and the marker tells the model it is
+     * seeing a fragment.
      */
     private function quotableReply(string $invalidReply): string
     {
@@ -372,13 +360,11 @@ final class RecommendationPromptBuilder
     }
 
     /**
-     * One clip, in characters rather than bytes.
-     *
-     * `substr` would cut a multi-byte sequence in half, and this text goes
-     * straight into a JSON request body: a German reply clipped mid-umlaut
-     * makes `json_encode` fail and costs the retry the clip exists to enable.
-     * Every other clip in this class was already `mb_`-safe; #437 added a
-     * byte-based fourth, which is what this consolidates.
+     * One clip, in characters rather than bytes. `substr` would cut a multi-byte sequence
+     * in half, and this text goes straight into a JSON request body: a German reply clipped
+     * mid-umlaut makes `json_encode` fail and costs the retry the clip exists to enable.
+     * Every other clip in this class was already `mb_`-safe; #437 added a byte-based
+     * fourth, which is what this consolidates.
      */
     private static function clipped(string $value, int $lengthInCharacters, string $marker): string
     {
@@ -390,17 +376,14 @@ final class RecommendationPromptBuilder
     }
 
     /**
-     * Appends the corrective tail for a retry -- the model's own last invalid
-     * reply and the correction instruction -- when there is one. Every phase
-     * retries the same way; passing the reply in keeps the tail tied to the
-     * call being retried: the batch phase passes each batch's own local last
-     * invalid reply, the distillation and consolidation phases the run's
-     * cross-tick one (#344).
-     *
-     * The correction comes in with it, because each phase rejects a reply for
-     * different reasons and must ask for different things back (#396): only
-     * the consolidation phase's reply carries duplicates, so only its
-     * correction can ask for them to be named correctly.
+     * Appends the corrective tail for a retry -- the model's own last invalid reply and the
+     * correction instruction -- when there is one. Every phase retries the same way; passing
+     * the reply in keeps the tail tied to the call being retried: the batch phase passes each
+     * batch's own local last invalid reply, distillation and consolidation the run's
+     * cross-tick one (#344). The correction comes in with it because each phase rejects a
+     * reply for different reasons and asks for different things back (#396): only the
+     * consolidation reply carries duplicates, so only its correction can ask for them to be
+     * named correctly.
      *
      * @param list<array{role: string, content: string}> $messages
      *

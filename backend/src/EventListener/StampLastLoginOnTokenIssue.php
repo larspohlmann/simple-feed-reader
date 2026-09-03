@@ -20,19 +20,19 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
  * its token directly in OAuthSignIn::redeemLoginCode(). Hooking JWTCreatedEvent
  * covers both without either knowing about this listener.
  *
- * It fires once per genuine sign-in because the app issues no refresh tokens.
- * Should one ever be added, refreshes would start counting as logins and this
+ * Fires once per genuine sign-in because the app issues no refresh tokens; if
+ * one is ever added, refreshes would start counting as logins and this
  * listener must learn to tell them apart.
  *
- * The flush is not defended with a try/catch: reaching this point already
- * required reading the account from the same connection, so a write that fails
- * here means the database is gone and the login is rightly failing anyway.
+ * The flush has no try/catch: reaching this point already required reading the
+ * account from the same connection, so a write failing here means the database
+ * is gone and the login is rightly failing anyway.
  *
  * Registered on Events::JWT_CREATED, the bundle's string constant, and NOT on
  * JWTCreatedEvent::class: JWTManager::generateJwtStringAndDispatchEvents()
- * calls dispatch($event, Events::JWT_CREATED) with that explicit name, and
- * Symfony's dispatcher only falls back to the event's class name when no name
- * is given. Listening on the class name silently never fires.
+ * dispatches with that explicit name, and Symfony's dispatcher only falls back
+ * to the event's class name when none is given — listening on the class name
+ * would silently never fire.
  */
 #[AsEventListener(event: Events::JWT_CREATED, method: '__invoke')]
 final readonly class StampLastLoginOnTokenIssue

@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace App\Service\Url;
 
 /**
- * Reduces an article URL to a stable canonical form so two links that point at
+ * Reduces an article URL to a stable canonical form so two links pointing at
  * the same article dedupe to one identity, even when a feed decorates the URL
  * with per-fetch tracking parameters (BBC's `?at_medium=RSS&at_campaign=rss`)
  * or a fragment.
  *
- * Deliberately conservative: it lowercases only the scheme and host, drops the
- * default port and the fragment, and removes a known set of tracking
- * parameters. The path and every other query parameter are kept verbatim, so
- * two genuinely different articles that share a base URL but differ by a real
- * query parameter (`?id=42` vs `?id=43`) never collapse into one.
+ * Deliberately conservative: lowercases only the scheme and host, drops the
+ * default port, the fragment, and a known set of tracking parameters. Path and
+ * every other query parameter stay verbatim, so two different articles
+ * sharing a base URL but differing by a real parameter (`?id=42` vs
+ * `?id=43`) never collapse into one.
  */
 final class UrlNormalizer
 {

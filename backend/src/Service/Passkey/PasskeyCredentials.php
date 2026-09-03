@@ -16,10 +16,10 @@ use Webauthn\PublicKeyCredentialDescriptor;
  * this account's existing credentials (#624).
  *
  * `UserPasskey::$credentialId` and `$userHandle` are stored base64url-encoded
- * — MySQL-safe text, not raw binary, the same reason `PasskeyChallengeStore`
+ * — MySQL-safe text, not raw binary, same reason `PasskeyChallengeStore`
  * mints its handles that way. Every value this class hands to the WebAuthn
- * library is therefore decoded back to raw bytes first; the library's own
- * serializer re-encodes it once more for the wire, the identical round trip
+ * library is decoded back to raw bytes first; the library's own serializer
+ * re-encodes it for the wire, the identical round trip
  * {@see \Webauthn\Denormalizer\PublicKeyCredentialDescriptorNormalizer} and
  * {@see \Webauthn\Denormalizer\PublicKeyCredentialUserEntityDenormalizer}
  * already perform for every other WebAuthn byte field.

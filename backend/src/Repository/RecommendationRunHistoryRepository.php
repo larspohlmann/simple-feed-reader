@@ -12,15 +12,15 @@ use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * The read side of the run cost history (#409): one calendar month at a time, the
- * whole-account spend timeline behind it, and the all-time total.
+ * The read side of the run cost history (#409): one calendar month, the
+ * whole-account spend timeline, and the all-time total.
  *
- * A previous review rejected a RecommendationRunHistoryRepository that existed only
- * to hold a verbatim copy of findNewestForUser(), its splitting-off justified by a
- * PHPMD count inflated by that duplicate. This one holds three distinct queries —
- * pageForMonth(), spendTimeline() and totalCostNanoCredits() — plus their shared
- * private projection, duplicates nothing, and gives RecommendationRunRepository
- * back the headroom PHPMD's ten-method ceiling had run out of.
+ * A previous review rejected an earlier version of this class for holding
+ * only a verbatim copy of findNewestForUser(), split off to dodge a PHPMD
+ * count inflated by that duplicate. This one holds three distinct queries —
+ * pageForMonth(), spendTimeline(), totalCostNanoCredits() — plus their
+ * shared projection, duplicates nothing, and gives RecommendationRunRepository
+ * back the headroom PHPMD's ceiling had run out of.
  *
  * @extends ServiceEntityRepository<RecommendationRun>
  *
@@ -55,20 +55,18 @@ final class RecommendationRunHistoryRepository extends ServiceEntityRepository
     }
 
     /**
-     * One month's runs, newest first, as the history payload needs them:
-     * scalars, not entities. A RecommendationRun carries the frozen candidate
-     * pool, every batch winner with its free-text reason, the last rejected
-     * provider reply and the error text, and none of that belongs on the path
-     * that formats twelve numbers.
+     * One month's runs, newest first, as scalars rather than entities. A
+     * RecommendationRun carries the frozen candidate pool, every batch winner
+     * with its free-text reason, the last rejected provider reply and the
+     * error text — none of which belongs on a path that formats twelve numbers.
      *
-     * Reads one row more than the limit. The caller keeps the limit's worth
-     * and reads the extra row purely as "there is another page" — a COUNT for
-     * the same answer would be a second query on every page.
+     * Reads one row past the limit purely as "there is another page"; a COUNT
+     * for the same answer would be a second query on every page.
      *
      * $beforeRunId pages backwards within the month. Ids ascend with creation
-     * time, so one integer expresses the whole keyset; the opaque composite
-     * cursor RecommendationCursor encodes exists because the for-you feed
-     * orders by two columns, and this does not.
+     * time, so one integer expresses the whole keyset — unlike the opaque
+     * composite RecommendationCursor, which exists because the for-you feed
+     * orders by two columns and this does not.
      *
      * @return list<HistoryRow>
      */
@@ -94,16 +92,15 @@ final class RecommendationRunHistoryRepository extends ServiceEntityRepository
      * Every run's creation time and price, newest first — the two scalars the
      * month summaries are built from.
      *
-     * Grouped in PHP rather than by the database, and deliberately so: DQL has
-     * no month extraction, and the buckets have to be cut in the viewer's
-     * timezone while the column holds naive UTC, which no portable expression
-     * can shift before grouping. The alternative is platform-branched native
-     * SQL, which this codebase confines to migrations.
+     * Grouped in PHP, deliberately: DQL has no month extraction, and buckets
+     * must be cut in the viewer's timezone while the column holds naive UTC,
+     * which no portable expression can shift before grouping. The alternative
+     * is platform-branched native SQL, which this codebase confines to
+     * migrations.
      *
-     * The cost of that choice is this read: two scalars for every run the
-     * account owns. It is the same shape #409's first pass removed from the
-     * history page and the difference is the point — that one pulled twelve
-     * fields plus the JSON and TEXT columns above.
+     * The cost is this read: two scalars for every run the account owns — the
+     * same shape #409's first pass removed from the history page, which pulled
+     * twelve fields plus the JSON and TEXT columns above.
      *
      * @return list<array{createdAt: \DateTimeImmutable, costNanoCredits: int|string|null}>
      */

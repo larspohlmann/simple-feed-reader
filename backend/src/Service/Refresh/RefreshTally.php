@@ -18,16 +18,12 @@ final class RefreshTally
     public bool $aborted = false;
 
     /**
-     * Feeds phase two may fetch a homepage for, in the order their outcome
-     * landed. Deliberately narrower than "processed": a feed the budget
-     * deferred never started a fetch (so chasing its favicon here would undo
-     * the budget just enforced), and a feed whose fetch FAILED has no new
-     * content to show an icon beside — worse, retrying its homepage on every
-     * sweep would add a permanent guarded HTTP round trip for a feed that may
-     * never recover (a 404 feed whose site also 403s the crawler, say), which
-     * is a real cost on a time-boxed FastCGI budget. "Counted in the report"
-     * and "eligible for a favicon" are different sets on purpose; give them
-     * separate names so a future change can't conflate them again.
+     * Feeds phase two may fetch a homepage for, in outcome order. Narrower than
+     * "processed": a budget-deferred feed never fetched, and a FAILED feed has
+     * nothing new to show an icon beside — retrying its homepage every sweep would
+     * add a permanent round trip for a site that may never recover (a 404 feed
+     * behind a 403 crawler block, say). Keep "counted" and "favicon-eligible" as
+     * separate sets so a future change can't conflate them.
      *
      * @var list<Feed>
      */

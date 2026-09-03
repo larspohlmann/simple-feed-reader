@@ -62,21 +62,19 @@ class ProviderUsage
     private int $cachedTokens = 0;
 
     /**
-     * What this run cost, in nano-credits. Money, so an integer and never a
-     * float. BIGINT because credits × 1e9 outgrows INT at 2.1 credits, and it
-     * hydrates as a PHP int because DBAL 4's BigIntType returns one for every
-     * value inside PHP's integer range — which nano-credits never leave.
+     * What this run cost, in nano-credits. Money, so an integer, never a float.
+     * BIGINT because credits × 1e9 outgrows INT at 2.1 credits, and it hydrates
+     * as a PHP int because DBAL 4's BigIntType returns one for every value
+     * inside PHP's integer range — which nano-credits never leave.
      *
-     * Null means no call of this run reported a price: a local model, or a
-     * run that predates this column. Deliberately not 0, which would claim the
+     * Null means no call of this run reported a price (a local model, or a run
+     * that predates this column) — deliberately not 0, which would claim the
      * run was free.
      *
-     * PHPStan sees only this class's code, so it reads the property as
-     * always null — nothing here ever assigns it an int, by the same design
-     * that gives it no setter (see the class doc). Doctrine's hydration
-     * populates the real value when a row RecordedCall priced is loaded back;
-     * that assignment happens through reflection, invisible to static
-     * analysis.
+     * PHPStan sees only this class's code, so it reads the property as always
+     * null: nothing here ever assigns it an int, by the same no-setter design
+     * as the class doc. Doctrine's hydration populates the real value via
+     * reflection when a priced row loads back, invisible to static analysis.
      */
     #[ORM\Column(type: Types::BIGINT, nullable: true)]
     // @phpstan-ignore property.unusedType

@@ -11,19 +11,14 @@ use Doctrine\DBAL\Connection;
 /**
  * Multi-row INSERTs into `entry`, 500 rows per statement — the measured
  * 0.085 ms/row path (row-by-row through the ORM is 14× slower at restore
- * scale, see the spec appendix). Raw SQL by necessity, which is exactly why
- * guid_hash travels IN the backup file: no Entry constructor runs here, so
- * nothing could recompute it.
+ * scale, see the spec appendix). Raw SQL by necessity.
  *
+ * guid_hash travels IN the file because entryState lines address their entry
+ * by (feedUrl, guidHash) and no Entry constructor runs here to recompute it.
  * url_hash goes the other way: it is a pure function of a field the file
- * already carries, so it is recomputed here rather than stored. Carrying
- * derived data is how a format grows fields it can never drop (#556).
- *
- * The two hashes are not inconsistent — they answer different questions.
- * guid_hash is a reference: entryState lines address their entry by the pair
- * (feedUrl, guidHash), so the file has to carry the exact value the restore
- * will look up by. url_hash is referenced by nothing; it is pure storage, so
- * recomputing it here is free and keeps it from ever going stale.
+ * already carries and is referenced by nothing, so it is recomputed here
+ * rather than stored — carrying it would be derived data a format can never
+ * drop (#556).
  *
  * The column list is spelled out once; values bind positionally per row.
  * Dates are formatted as the naive-UTC wall-clock strings Doctrine's

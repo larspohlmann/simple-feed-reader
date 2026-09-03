@@ -159,13 +159,10 @@ final class RefreshRunner implements RefreshRunnerInterface
 
     /**
      * Resolves favicons, then assembles the completed report. Split out so the
-     * favicon flush's own failure mode is visible next to the code that
-     * handles it: every feed's fetch outcome has already been flushed
-     * individually, so nothing already persisted is at risk here — but the
-     * EntityManager can still close under this flush exactly as it can under
-     * a fetch's, and RefreshController's contract promises the client a JSON
-     * report with a `status` field, never an opaque 500 its poll loop has no
-     * branch for.
+     * favicon flush's failure mode is visible next to the code that handles it:
+     * every fetch outcome is already flushed individually, so nothing persisted
+     * is at risk here, but RefreshController's contract still promises the
+     * client a JSON `status` field, never an opaque 500 its poll loop can't handle.
      *
      * @param list<Feed> $feeds
      *
@@ -292,17 +289,15 @@ final class RefreshRunner implements RefreshRunnerInterface
     /**
      * What this run left undone, which is what the client polls on.
      *
-     * The feeds the run took on are excluded by id rather than trusted to fall
-     * out of the due query on their own. A feed drops out of that query by
-     * having a fetch time written, and a 429 writes none on purpose (#290) — so
-     * without the exclusion a rationed feed stays `remaining` for ever, the
-     * report stays `partial`, and the client re-polls without pause. In
-     * production that sent 89 requests to one Reddit feed (#302).
+     * Feeds the run took on are excluded by id, not trusted to fall out of the
+     * due query alone: a 429 writes no fetch time on purpose (#290), so without
+     * the exclusion a rationed feed would stay `remaining` forever and the client
+     * would re-poll without pause (89 requests to one Reddit feed in production,
+     * #302).
      *
-     * The exclusion also settles the single-feed scope, which used to need a
-     * branch of its own: that scope matches on id alone, so countDue ignored the
-     * schedule and kept answering 1 after a successful refresh. Excluded, the
-     * one feed leaves the count exactly as every other handled feed does.
+     * The exclusion also fixes the single-feed scope: matching on id alone made
+     * countDue ignore the schedule and keep answering 1 after a successful
+     * refresh. Excluded, the feed counts like any other handled feed.
      */
     private function countRemaining(DueFeedCriteria $criteria, BudgetedFeedQueue $queue): int
     {
@@ -378,14 +373,12 @@ final class RefreshRunner implements RefreshRunnerInterface
     }
 
     /**
-     * Resolve and store a favicon for each favicon-eligible feed that still
-     * lacks one, fetching every homepage in one concurrent batch. $feeds is
-     * `RefreshTally::$faviconEligibleFeeds`, not the full due-feed list and
-     * not every processed feed: a feed the budget deferred never started a
-     * fetch (it gets its favicon on the pass that actually fetches it), and a
-     * feed whose own fetch just failed has no new content to show an icon
-     * beside, so it is excluded too rather than paying a homepage round trip
-     * on every sweep for a feed that may never recover.
+     * Resolve and store a favicon for each favicon-eligible feed that still lacks
+     * one, fetching every homepage in one concurrent batch. $feeds is
+     * `RefreshTally::$faviconEligibleFeeds`: not the full due-feed list, since a
+     * budget-deferred feed gets its favicon on the pass that fetches it, and a
+     * feed whose fetch just failed is excluded too rather than paying a homepage
+     * round trip every sweep for a feed that may never recover.
      *
      * @param list<Feed> $feeds
      */

@@ -10,17 +10,15 @@ use App\Repository\RecommendationSettingsRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * The only writer of RecommendationSettings. A blank or whitespace-only
- * guidance prompt normalises to null here (not in the DTO or controller),
- * because null is the domain meaning "use the default" that
- * RecommendationSettingsResolver understands.
+ * The only writer of RecommendationSettings. A blank or whitespace-only guidance prompt
+ * normalises to null here (not in the DTO or controller), because null is the domain
+ * meaning "use the default" that RecommendationSettingsResolver understands.
  *
- * `storeProfile()` is a narrower entry point (#493): the distiller calls it
- * directly, not through the form's full `RecommendationSettingsValues`, so it
- * never carries stale fields. The form is read-only on profileText (#493), so
- * a `save()` caller always supplies `profileText: null`; `save()` ignores that
- * field and re-reads the persisted profile off the row, so a form save can
- * never undo what storeProfile() wrote.
+ * `storeProfile()` is a narrower entry point (#493): the distiller calls it directly, not
+ * through the form's full `RecommendationSettingsValues`, so it never carries stale
+ * fields. The form is read-only on profileText, so a `save()` caller always supplies
+ * `profileText: null`; `save()` ignores that field and re-reads the persisted profile off
+ * the row, so a form save can never undo what storeProfile() wrote.
  */
 final readonly class RecommendationSettingsWriter
 {

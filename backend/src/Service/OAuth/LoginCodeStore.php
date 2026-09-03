@@ -13,66 +13,60 @@ use Random\RandomException;
  * The handover between the provider callback and the SPA.
  *
  * The callback finishes holding an authenticated user but must answer with a
- * redirect — and a JWT in that redirect's query string would be written to
- * browser history, sent onward in `Referer` headers, and logged verbatim by
- * every proxy in between. So the redirect carries a code worthless 30 seconds
- * later and worthless after one use, and the SPA POSTs it back for the real
- * token.
+ * redirect — and a JWT in that query string would land in browser history,
+ * `Referer` headers, and every proxy log in between. So the redirect carries
+ * a code instead: worthless after 30 seconds or after one use, and the SPA
+ * POSTs it back for the real token. 30 seconds is generous for "browser
+ * follows a redirect, SPA boots" and short enough that a code captured from
+ * a log is almost always dead on arrival. The window runs from issue and is
+ * never extended by a read; refreshing on access would let a leaked code
+ * live indefinitely while something kept touching it.
  *
- * 30 seconds is generous for "a browser follows a redirect and the SPA boots"
- * and short enough that a code captured from a log is almost always dead on
- * arrival. The window runs from issue and is never extended by a read; refreshing
- * on access would let a leaked code live indefinitely while something kept
- * touching it, the exact exposure the short window bounds.
- *
- * The stored value is a user id, not a JWT: minting the token at exchange time
- * means its `iat` reflects when the session began, which matters because
- * password changes revoke tokens by comparing `iat` against
+ * The stored value is a user id, not a JWT: minting the token at exchange
+ * time means its `iat` reflects when the session began, which matters
+ * because password changes revoke tokens by comparing `iat` against
  * User::$passwordChangedAt.
  *
  * ## The code is NOT a bearer value, and used to be
  *
- * A short life and single use bound how long a leaked code was worth stealing,
- * not who could spend one — a different property, exactly as `state` proving
- * "this server started a flow" differs from "this browser started it" (see
- * OAuthStateStore).
+ * A short life and single use bound how long a leaked code was worth
+ * stealing, not who could spend one — a different property, exactly as
+ * `state` proving "this server started a flow" differs from "this browser
+ * started it" (see OAuthStateStore).
  *
  * The attack the short window did not close: an attacker completes a genuine
- * sign-in in their own browser — which OAuthStateStore's binding forces — then
- * does not redeem the code. Inside its 30 seconds they point a victim at
- * `<frontend>/auth/callback?code=X`; the SPA exchanges on landing with no user
- * gesture, and the victim's browser holds the ATTACKER's JWT, so every feed and
- * article lands in the attacker's account. Thirty seconds is ample, and it
- * scripts.
+ * sign-in in their own browser — forced by OAuthStateStore's binding — then
+ * withholds the code. Inside its 30 seconds they point a victim at
+ * `<frontend>/auth/callback?code=X`; the SPA exchanges on landing with no
+ * user gesture, and the victim's browser ends up holding the ATTACKER's JWT,
+ * landing every feed and article in the attacker's account. Thirty seconds
+ * is ample, and it scripts.
  *
- * So the code carries the same browser binding the flow does. issue() stores only
- * the digest of the flow token the callback authenticated; consume() requires the
- * matching token back and compares with hash_equals. A missing or wrong binding
- * is null, indistinguishable from unknown, spent or expired — telling them apart
- * would confirm a captured code was live.
+ * So the code carries the same browser binding the flow does. issue() stores
+ * only the digest of the flow token the callback authenticated; consume()
+ * requires the matching token back and compares with hash_equals. A missing
+ * or wrong binding is null, indistinguishable from unknown, spent or
+ * expired — telling them apart would confirm a captured code was live. The
+ * binding is the flow cookie the browser already holds, not a second
+ * secret, so there is one cookie name, one set of attributes, one lifetime
+ * to keep in sync. See OAuthController::FLOW_COOKIE.
  *
- * The binding is the flow cookie the browser already holds, not a second secret:
- * one cookie name, one set of attributes, one lifetime. A second set-cookie site
- * is a second place for those attributes to drift, and mismatched attributes are
- * what make a clear-cookie silently clear nothing. See OAuthController::FLOW_COOKIE.
+ * SINGLE USE IS BEST-EFFORT UNDER CONCURRENCY — same caveat as
+ * OAuthStateStore, same reason. consume() deletes before validating, so an
+ * expired entry cannot be retried, but redemption is not atomic: PSR-6 has
+ * no compare-and-swap, and `deleteItem()` returns true whether or not the
+ * key existed. Two exchanges arriving together can both see `isHit()`, both
+ * delete, and both get the same user id — the ordering narrows the window
+ * between getItem() and deleteItem() but does not close it. Left unclosed
+ * deliberately: the failure mode is one user receiving two JWTs instead of
+ * one, and that user was entitled to a JWT. Nothing crosses a user boundary
+ * — the code is unguessable and both racers already held it, a second token
+ * worth no more than the first, expiring on the same schedule. A lock on
+ * every exchange would buy nothing on shared hosting but a round trip.
  *
- * SINGLE USE IS BEST-EFFORT UNDER CONCURRENCY — the same caveat as
- * OAuthStateStore, for the same reason. consume() deletes before validating, so
- * an expired entry cannot be retried, but redemption is not atomic: PSR-6 offers
- * no compare-and-swap, and `deleteItem()` returns true whether or not the key
- * existed. Two exchanges arriving together can both see `isHit()`, both delete,
- * and both be handed the same user id. The ordering narrows the window between
- * getItem() and deleteItem(); it does not close it.
- *
- * Left unclosed deliberately. The failure mode is one user receiving two JWTs
- * instead of one — and that user was entitled to a JWT. Nothing crosses a user
- * boundary: the code is unguessable and both racers are whoever already held it,
- * a second token worth no more than the first and expiring on the same schedule.
- * A lock on every exchange would buy nothing on shared hosting but a round trip.
- *
- * What this class does guarantee: the code is unguessable, is stored only as a
- * digest, expires 30 seconds after issue regardless of reads, and cannot be
- * redeemed twice in sequence.
+ * Guarantees: the code is unguessable, stored only as a digest, expires 30
+ * seconds after issue regardless of reads, and cannot be redeemed twice in
+ * sequence.
  */
 final readonly class LoginCodeStore
 {
@@ -98,10 +92,9 @@ final readonly class LoginCodeStore
         $code = bin2hex(random_bytes(32));
 
         $item = $this->loginCodeCache->getItem(self::keyFor($code));
-        // Note what is absent: the code itself and the browser token. The code is
-        // the hashed lookup key and nothing more, and the token is stored only as
-        // a digest, so a readable cache file yields neither a usable code nor
-        // binding.
+        // Note what is absent: the code and the browser token. The code is only
+        // the hashed lookup key, and the token is stored only as a digest, so a
+        // readable cache file yields neither a usable code nor a binding.
         $item->set([
             'user_id' => $userId,
             'browser_digest' => self::digest($browserToken),

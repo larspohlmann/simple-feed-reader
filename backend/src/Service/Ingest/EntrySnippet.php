@@ -9,22 +9,21 @@ use App\Service\Text\PlainText;
 /**
  * Produces PLAIN TEXT, not HTML, from an entry body.
  *
- * Images are removed before the text is extracted: now that the image is its
- * own column, an <img> contributes nothing to a snippet, and feeds that wrap a
- * thumbnail in an anchor would otherwise leave the anchor's whitespace behind.
+ * Images are stripped first: the image is its own column now, so an <img>
+ * adds nothing, and a thumbnail wrapped in an anchor would otherwise leave the
+ * anchor's whitespace behind.
  *
- * Block-level boundaries (<p>, <br>, <li>, ...) are turned into whitespace
- * before tags are stripped — see PlainText::fromHtmlBlocks(), which this
- * delegates to — because strip_tags() otherwise concatenates text across them
- * with no separator: "<p>one</p><p>two</p>" would read as the single word
- * "onetwo".
+ * Block boundaries (<p>, <br>, <li>, ...) become whitespace before tags are
+ * stripped (see PlainText::fromHtmlBlocks(), which this delegates to), since
+ * strip_tags() otherwise concatenates across them: "<p>one</p><p>two</p>"
+ * would read as "onetwo".
  *
- * A body that reduces to nothing — or to a single junk token, which is how DIE
- * ZEIT's CMS leaks a Python `None` into content:encoded — yields null rather
- * than a snippet, so the caller can route the entry to a title-led block.
+ * A body that reduces to nothing, or to a single junk token — how DIE ZEIT's
+ * CMS leaks a Python `None` into content:encoded — yields null, so the caller
+ * routes the entry to a title-led block.
  *
  * The result may contain <, > and & as literal characters and has NOT been
- * through EntrySanitizer. Render it as text only; never with |raw or innerHTML.
+ * through EntrySanitizer. Render as text only, never with |raw or innerHTML.
  */
 final class EntrySnippet
 {

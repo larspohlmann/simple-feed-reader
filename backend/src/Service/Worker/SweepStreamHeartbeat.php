@@ -11,23 +11,23 @@ use Symfony\Component\Clock\ClockInterface;
  * Keeps a sweeping worker's liveness fresh while it sits inside a provider
  * call (#433).
  *
- * The sweep marks liveness once before each run, which was enough while a
- * single call could not outlast WorkerPresence::FRESH_SECONDS. A connection on
- * the slow profile can hold one call for an hour, and a worker that only
- * marked at the start of it would read as dead for most of that: the poll
- * driver would stop deferring to it and the settings card would report no
- * worker, both while it was doing exactly what it was asked to do.
+ * The sweep used to mark liveness once before each run, fine while a single
+ * call could not outlast WorkerPresence::FRESH_SECONDS. A connection on the
+ * slow profile can hold one call for an hour, and a worker only marked at the
+ * start would read as dead for most of it — the poll driver stops deferring
+ * and the settings card reports no worker, both while it is doing exactly
+ * what it was asked to do.
  *
- * So the transport pings this as each chunk arrives, and the ping is a write
- * only every MINIMUM_INTERVAL_SECONDS — a streamed answer delivers deltas many
+ * So the transport pings this as each chunk arrives, throttled to a write
+ * every MINIMUM_INTERVAL_SECONDS — a streamed answer delivers deltas many
  * times a second, and each one is a row update.
  *
  * It answers only while a sweep is running, and only a sweep arms it. A
  * browser poll tick's provider call therefore pings a no-op: it advances the
- * run of the account watching it and must never claim to be a worker, which is
- * the whole distinction the poll driver reads. The cron sweep does arm it
- * (#439) -- it runs in a web request too, but it drives every account's run on
- * the install's behalf, which is what a driver kind means here.
+ * watching account's own run and must never claim to be a worker — the whole
+ * distinction the poll driver reads. The cron sweep does arm it (#439): it
+ * runs in a web request too, but drives every account's run on the install's
+ * behalf, which is what a driver kind means here.
  */
 final class SweepStreamHeartbeat implements CompletionStreamHeartbeat
 {

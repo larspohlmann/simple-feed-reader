@@ -10,16 +10,16 @@ use App\Exception\OAuth\OAuthFailedException;
 /**
  * Everything the application needs from an identity provider.
  *
- * Four methods in two groups: `getName()` and `isConfigured()` are static facts
- * the registry reads to route a URL and to decide whether the deployment can
- * offer the provider at all; `getAuthorizationUrl()` and `exchangeCode()` are the
- * two legs of an actual sign-in.
+ * Four methods in two groups: `getName()` and `isConfigured()` are static
+ * facts the registry reads to route a URL and decide whether the deployment
+ * can offer the provider at all; `getAuthorizationUrl()` and `exchangeCode()`
+ * are the two legs of an actual sign-in.
  *
  * Deliberately narrow. Nothing here exposes access tokens, refresh tokens or
- * profile scopes: this application authenticates people and never speaks to the
- * provider again, so holding an unused token would be a liability with no upside.
- * Adding a third provider is one implementation plus an env block — no migration,
- * per the design spec.
+ * profile scopes: this application authenticates people and never speaks to
+ * the provider again, so an unused token would be a liability with no
+ * upside. Adding a third provider is one implementation plus an env block —
+ * no migration, per the design spec.
  */
 interface OAuthProviderInterface
 {

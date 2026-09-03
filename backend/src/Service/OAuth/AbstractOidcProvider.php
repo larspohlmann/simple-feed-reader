@@ -12,7 +12,7 @@ use Psr\Clock\ClockInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * The half of an OpenID Connect provider identical for Google and Apple, as the
+ * The half of an OpenID Connect provider identical for Google and Apple —
  * two legs of the protocol:
  *
  * - **Outbound.** getAuthorizationUrl() assembles the consent request from the
@@ -22,26 +22,25 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  *   endpoint and reads the identity from the ID token that comes back.
  *
  * A subclass supplies configuration only. Both public methods are `final`, so a
- * provider adding an authorization parameter cannot drop a standard one or alter
- * how the token is obtained or checked.
+ * provider cannot drop a standard parameter or alter how the token is obtained
+ * or checked.
  *
  * ## Where the security argument lives
  *
  * The inbound leg does NOT verify the ID token's signature — permitted by
  * OpenID Connect Core §3.1.3.7 item 6, but only for a token fetched straight off
  * the token endpoint over validated TLS, a narrow carve-out with three
- * preconditions, each enforced. This class composes the two collaborators that
- * make the argument:
+ * preconditions, each enforced by one of two collaborators:
  *
- * - {@see TokenEndpoint} fetches and enforces the three preconditions (an
- *   `https` endpoint we hardcode, pinned TLS, no redirects). It is the only
- *   place that can mint an {@see \App\Service\OAuth\Oidc\IdToken}.
+ * - {@see TokenEndpoint} enforces the preconditions (an `https` endpoint we
+ *   hardcode, pinned TLS, no redirects) and is the only place that can mint an
+ *   {@see \App\Service\OAuth\Oidc\IdToken}.
  * - {@see IdTokenVerifier} checks everything TLS says nothing about — `iss`,
  *   `aud`, `azp`, `exp`, `nonce`, `sub` — and accepts only an IdToken, so it
- *   cannot be handed a token from another channel by mistake.
+ *   cannot be handed a token from another channel.
  *
- * Read those two docblocks before changing how a token is fetched or trusted.
- * The boundary is load-bearing and pinned by OidcBoundaryTest.
+ * Read both docblocks before changing how a token is fetched or trusted. The
+ * boundary is load-bearing and pinned by OidcBoundaryTest.
  */
 abstract readonly class AbstractOidcProvider implements OAuthProviderInterface
 {
@@ -93,9 +92,9 @@ abstract readonly class AbstractOidcProvider implements OAuthProviderInterface
      *
      * Merged AFTER the standard parameters, so it can overwrite them: a provider
      * needing a different `response_type` says so in one line rather than fork
-     * the method. It also means a careless override can weaken the request —
-     * dropping `code_challenge_method` back to `plain`, say — so an override that
-     * touches a standard key needs the same justification the parameter had.
+     * the method. That also means a careless override can weaken the request —
+     * e.g. dropping `code_challenge_method` to `plain` — so overriding a
+     * standard key needs the same justification the parameter had.
      *
      * @return array<string, string>
      */
@@ -106,13 +105,12 @@ abstract readonly class AbstractOidcProvider implements OAuthProviderInterface
 
     /**
      * `final`, so a subclass cannot drop a standard parameter. PKCE is not
-     * optional here — `code_challenge_method` is `S256` and the plain method is
-     * offered nowhere in this codebase (see OAuthStateStore::challengeFor).
+     * optional here — `code_challenge_method` is `S256`; plain is offered
+     * nowhere in this codebase (see OAuthStateStore::challengeFor).
      *
      * PHP_QUERY_RFC3986 rather than the default RFC1738, so a space encodes as
-     * `%20` not `+`. Both are accepted in a query string, but `+` goes wrong when
-     * a value is later read out of a path or header, and the scope strings here
-     * contain spaces.
+     * `%20` not `+` — `+` goes wrong once a value is read back out of a path or
+     * header, and the scope strings here contain spaces.
      */
     final public function getAuthorizationUrl(string $state, string $nonce, string $codeChallenge): string
     {
@@ -137,10 +135,10 @@ abstract readonly class AbstractOidcProvider implements OAuthProviderInterface
 
     /**
      * The redirect URI, built from configuration, never from the Host header.
-     * The value is echoed to the token endpoint and must match what is
-     * registered with the provider byte for byte; deriving it from an
-     * attacker-settable header would, on a server that does not pin its host,
-     * redirect the authorization code elsewhere.
+     * It is echoed to the token endpoint and must match what is registered
+     * with the provider byte for byte; deriving it from an attacker-settable
+     * header would, on a server that does not pin its host, redirect the
+     * authorization code elsewhere.
      */
     final public function getRedirectUri(): string
     {
@@ -150,12 +148,11 @@ abstract readonly class AbstractOidcProvider implements OAuthProviderInterface
     final public function exchangeCode(string $code, string $codeVerifier, string $nonce): OAuthIdentity
     {
         if ('' === $nonce) {
-            // A caller bug, and a dangerous one: the verifier's nonce check is
-            // an equality test and '' === '' is true, so an empty expectation
-            // would silently accept a token carrying an empty nonce. Refused
-            // HERE, before the token endpoint is called, so a broken caller does
-            // not spend a single-use authorization code on a doomed exchange.
-            // IdTokenVerifier refuses it again as the backstop.
+            // Dangerous caller bug: '' === '' is true, so an empty expectation
+            // would silently accept a token with an empty nonce. Refused HERE,
+            // before the token endpoint runs, so a broken caller doesn't burn a
+            // single-use code on a doomed exchange. IdTokenVerifier refuses it
+            // again as the backstop.
             throw new OAuthFailedException('no nonce to check the id_token against');
         }
 

@@ -16,11 +16,11 @@ use App\Service\Ai\ProviderConnectionFactory;
  * rounds, then degraded to an empty winner set (#329); a fully-pruned batch
  * resolves free to one.
  *
- * A transport failure in a round is the atomic-wave rule: settle every in-flight
- * call, re-throw the first failure, bank nothing. The caller
- * (RecommendationRunAdvancer) turns that into one ceiling increment and re-runs
- * next tick, so this class never touches persisted progress -- it only reads the
- * plan and provider and settles the debug rows it opened.
+ * A transport failure in a round is the atomic-wave rule: settle every
+ * in-flight call, re-throw the first failure, bank nothing. The caller
+ * (RecommendationRunAdvancer) turns that into one ceiling increment and
+ * re-runs next tick, so this class never touches persisted progress -- it
+ * only reads the plan and provider and settles the debug rows it opened.
  *
  * @SuppressWarnings("PHPMD.ExcessiveParameterList")
  */
@@ -278,8 +278,8 @@ final readonly class RecommendationBatchWave
      * bank nothing. completeMany cancels only the failed call's response; a
      * healthy sibling streams to completion and its answer is discarded, since
      * the wave never banks a partial round. The caller records one ceiling
-     * increment and re-runs next tick; the discarded siblings' re-bill is the
-     * accepted cost of that re-run, not a bug to fix by cancelling them too.
+     * increment and re-runs next tick — the discarded siblings' re-bill is the
+     * accepted cost, not a bug to fix by cancelling them too.
      *
      * @param list<RecordedCall>      $recordedCalls
      * @param list<CompletionOutcome> $outcomes

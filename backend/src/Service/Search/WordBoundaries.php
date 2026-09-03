@@ -7,20 +7,18 @@ namespace App\Service\Search;
 /**
  * The punctuation a whole-word match treats as a word boundary.
  *
- * Both sides of that match must agree character for character. The haystack is
- * normalized in SQL (`NormalizeWordBoundariesFunction` emits the REPLACE
- * chain); the search term is normalized here, in PHP, before it becomes a LIKE
- * pattern. When only the haystack was normalized, a whole-word search for any
- * term carrying punctuation could never match: "E-Mail" was looked for in a
- * haystack where the hyphen had already become a space, so `%%20E-Mail%%20%`
- * found nothing while the plain substring search found plenty. German prose
- * makes that the common case, not an exotic one — E-Mail, Corona-Krise,
+ * Both sides must normalize identically: the haystack in SQL
+ * (`NormalizeWordBoundariesFunction`'s REPLACE chain), the search term here in
+ * PHP before it becomes a LIKE pattern. Normalizing only the haystack broke
+ * whole-word search on any term with punctuation — "E-Mail" became
+ * `%%20E-Mail%%20%` against a haystack whose hyphen was already a space, so
+ * nothing matched. German prose hits this constantly: E-Mail, Corona-Krise,
  * US-Wahl, Baden-Württemberg.
  *
- * The list is a deliberate subset, not an attempt at completeness: sentence
- * punctuation, brackets, straight and typographic quotes, the hyphen and its
- * longer dashes, and the slash — what German and English prose actually puts
- * against a word. Anything left off simply fails to be a word boundary.
+ * A deliberate subset, not completeness: sentence punctuation, brackets,
+ * straight and typographic quotes, hyphen and dashes, the slash — what German
+ * and English prose actually puts against a word. Anything else is not
+ * treated as a boundary.
  */
 final readonly class WordBoundaries
 {

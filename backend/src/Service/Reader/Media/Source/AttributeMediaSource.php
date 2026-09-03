@@ -19,14 +19,12 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 /**
  * Host-agnostic: a publisher's player often hides its file URL in an ad-hoc
  * attribute (Deutschlandradio's `data-audio-src`, ARD's `data-v` rendition
- * list) rather than an `[src]` or JSON-LD block. This layer reads every
- * attribute of every element instead of naming either host. An `href` is an
- * attribute too, so a file hung off a plain link (NPR's "Listen" anchor) is
- * this layer's case as well — a linked-file layer beneath it was dead (#756).
- *
- * An attribute can hold a whole JSON blob, so a value is scanned for
- * URL-shaped substrings rather than trusted as one URL. The poster comes from
- * `og:image` or, failing that, the still beside the player.
+ * list) rather than `[src]` or JSON-LD, so every attribute of every element is
+ * scanned instead of naming a host. `href` counts too, covering a file hung
+ * off a plain link (NPR's "Listen" anchor) — a linked-file layer beneath this
+ * one was dead (#756). A value can hold a whole JSON blob, so it is scanned
+ * for URL-shaped substrings rather than trusted as one URL. The poster comes
+ * from `og:image` or, failing that, the still beside the player.
  */
 #[AsTaggedItem(priority: 60)]
 final readonly class AttributeMediaSource implements MediaCandidateSourceInterface

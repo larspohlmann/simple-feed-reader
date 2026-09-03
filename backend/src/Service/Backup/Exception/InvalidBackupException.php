@@ -8,16 +8,15 @@ use App\Exception\ApiException;
 
 /**
  * The uploaded bytes are not an acceptable backup: not gzip, not readable as
- * gzip, not NDJSON, a missing or misordered line, a schema version this
- * instance cannot read, a repeated tag name, or a reference — a
- * subscription's feed or tag, an entry's or a state's feed — the same file
- * never declares.
+ * gzip, not NDJSON, a missing or misordered line, an unreadable schema
+ * version, a repeated tag name, or a reference — a subscription's feed/tag,
+ * an entry's/state's feed — the file never declares.
  *
- * Every one of those is decided by BackupInspector in pass 1, so this is
- * always raised BEFORE any deletion: a file that cannot be fully accepted
- * must never cost the account anything. The load's own checks for the same
- * conditions are a backstop and raise BackupLoadFailedException instead,
- * because reaching them means the account is already empty.
+ * BackupInspector decides all of this in pass 1, so it is always raised
+ * BEFORE any deletion: a file that cannot be fully accepted must never cost
+ * the account anything. The load's own checks for the same conditions are a
+ * backstop, raising BackupLoadFailedException instead, since reaching them
+ * means the account is already empty.
  */
 final class InvalidBackupException extends ApiException
 {

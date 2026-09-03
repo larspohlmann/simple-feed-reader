@@ -25,29 +25,30 @@ use Symfony\Component\Security\Http\Authenticator\Passport\SelfValidatingPasspor
  * `api` already matches every `^/api` path.
  *
  * A firewall, not a controller, makes "the JWT a passkey login returns is the
- * same JWT password login returns" structural rather than copied. $successHandler
- * is the exact `lexik_jwt_authentication.handler.authentication_success` service
- * `json_login` uses, so both flows call the identical `JWTTokenManager::create()`
- * and pick up every JWT-issuance listener — StampLastLoginOnTokenIssue among
- * them. $failureHandler is the same `App\Security\LoginFailureHandler`.
+ * same JWT password login returns" structural rather than copied.
+ * $successHandler is the exact `lexik_jwt_authentication.handler.
+ * authentication_success` service `json_login` uses, so both flows call the
+ * same `JWTTokenManager::create()` and pick up every JWT-issuance listener —
+ * StampLastLoginOnTokenIssue among them. $failureHandler is the same
+ * `App\Security\LoginFailureHandler`.
  *
  * Reusing LoginFailureHandler means LoginTimingEqualizer runs on every passkey
- * login failure too, with an empty submitted identifier (this flow carries no
- * e-mail), giving every failure the same constant delay regardless of which check
- * in AssertionVerifier rejected it. That leaks nothing: a discoverable-credential
+ * failure too, with an empty submitted identifier (no e-mail in this flow), so
+ * every failure gets the same constant delay regardless of which check in
+ * AssertionVerifier rejected it. Leaks nothing: a discoverable-credential
  * login has no address to enumerate.
  *
  * Verification runs lazily, inside the UserBadge's user loader, not eagerly in
- * authenticate(): Symfony's LoginThrottlingListener::checkPassport runs on the
- * same CheckPassportEvent at higher priority than the listener that resolves the
- * badge, so it can reject an over-budget request with a 429 before
- * AssertionVerifier ever runs. Calling verify() eagerly would skip that.
+ * authenticate(): LoginThrottlingListener::checkPassport runs on the same
+ * CheckPassportEvent at higher priority than the badge-resolving listener, so
+ * it can reject an over-budget request with a 429 before AssertionVerifier
+ * ever runs. Calling verify() eagerly would skip that.
  *
- * UserBadge is given a fixed, non-secret sentinel (THROTTLE_IDENTIFIER) rather
- * than an empty string: a discoverable login carries no identifier to key
+ * UserBadge gets a fixed, non-secret sentinel (THROTTLE_IDENTIFIER) rather
+ * than an empty string: a discoverable login has no identifier to key
  * throttling on, and UserBadge's constructor deprecates an empty one.
- * DefaultLoginRateLimiter keys on `identifier-IP`, so a fixed identifier collapses
- * to one bucket per client IP.
+ * DefaultLoginRateLimiter keys on `identifier-IP`, so the fixed identifier
+ * collapses to one bucket per client IP.
  *
  * `final class`, not `final readonly class`: PHP refuses a readonly class that
  * extends a non-readonly parent, and AbstractAuthenticator is not one.
@@ -96,11 +97,10 @@ final class PasskeyAuthenticator extends AbstractAuthenticator
 
     /**
      * Runs lazily from the UserBadge loader — see the class docblock.
-     * AssertionVerifier's typed rejections are never allowed to reach the
-     * kernel from here: they are always translated into a plain
-     * AuthenticationException so LoginFailureHandler (and, upstream of it,
-     * the login_throttling listener) handle every passkey login failure
-     * exactly like a password one.
+     * AssertionVerifier's typed rejections never reach the kernel from here:
+     * they're always translated into a plain AuthenticationException, so
+     * LoginFailureHandler (and login_throttling upstream of it) handle every
+     * passkey failure exactly like a password one.
      *
      * @param array<string, mixed> $payload
      */

@@ -51,11 +51,10 @@ use Dom\XPath;
  *    class-reading removals above (#789).
  *  - <script> and <style> blocks are stripped from the raw source, bounded by
  *    the real close tag, before the parse — so a JSON-LD block never reaches
- *    readability either. Kept a raw-source strip, not a DOM
- *    `querySelectorAll('script, style')` removal, to keep output byte-identical
- *    to the pipeline this migration replaced; a <script>/<style> element is
- *    raw-text, so the regex matches the same close-tag boundary the tokenizer
- *    would. Moving it into the DOM pass is a reasonable follow-up.
+ *    readability either. Kept as a raw-source strip rather than a DOM
+ *    `querySelectorAll('script, style')` removal to stay byte-identical to
+ *    the pipeline this replaced; script/style content is raw-text, so the
+ *    regex matches the same close-tag boundary the tokenizer would.
  *
  * The wrapper collapse is a separate public method, not a step of normalize():
  * normalize() is the score-neutral pass, and callers decide whether to also
@@ -102,16 +101,17 @@ final readonly class FetchedPageNormalizer
 
     /**
      * The document with single-child <div> wrapper chains collapsed (#235), or
-     * null when there is no chain to collapse — the caller then skips the second
-     * extraction. Kept separate from normalize() because the same collapse can
-     * flip a well-structured page to the wrong block (#476): ArticleExtractor
-     * extracts with and without it and keeps the richer result.
+     * null when there is no chain to collapse — the caller then skips the
+     * second extraction. Kept separate from normalize() because the same
+     * collapse can flip a well-structured page to the wrong block (#476):
+     * ArticleExtractor extracts with and without it and keeps the richer
+     * result.
      *
-     * Parses the raw HTML afresh rather than sharing normalize()'s document: the
-     * conservative and collapsed variants must be independent objects because
-     * readability consumes (mutates) each document it parses. A clone of the
-     * normalized document would save this parse, but the parse is a few ms
-     * against a readability pass of tens of ms, so the plain re-parse is kept.
+     * Parses the raw HTML afresh rather than sharing normalize()'s document:
+     * the two variants must be independent objects since readability consumes
+     * (mutates) each one it parses. A clone would save this parse, but it's a
+     * few ms against a readability pass of tens of ms, so the plain re-parse
+     * stands.
      */
     public function collapseWrapperChains(string $html): ?HTMLDocument
     {

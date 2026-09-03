@@ -15,7 +15,7 @@ use App\Service\Recommendation\HistoryMonth;
  *
  * Fed with the repository's scalar projection, not runs: the entity carries the
  * frozen candidate pool, every pick's reason and the last rejected provider
- * reply, none of which belongs on the path that formats twelve numbers.
+ * reply, none of which belongs on a path that formats twelve numbers.
  *
  * `durationSeconds` is computed here, not left to the client (the rule
  * RecommendationRunStatusJson follows) — the client never subtracts timestamps
@@ -23,9 +23,9 @@ use App\Service\Recommendation\HistoryMonth;
  * the same convention the #309 debug log records.
  *
  * The two named shapes below are exported so RecommendationRunHistoryView can
- * declare return types against them instead of a bare `array`: a key renamed here
- * without a matching update there is a level-max PHPStan error at the view's call
- * site, not a silent wire break the client discovers.
+ * declare return types against them instead of a bare `array`: a key renamed
+ * here without a matching update there is a level-max PHPStan error at the
+ * call site, not a silent wire break the client discovers.
  *
  * @phpstan-import-type HistoryRow from RecommendationRunHistoryRepository
  * @phpstan-type MonthPagePayload array{

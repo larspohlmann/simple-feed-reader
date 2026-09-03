@@ -57,22 +57,19 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?\DateTimeImmutable $lastLoginAt = null;
 
     /**
-     * When the password hash last changed. This is what binds an issued JWT to
-     * a password, and it exists because nothing else did.
+     * When the password hash last changed — what binds an issued JWT to a
+     * password.
      *
-     * JWTs here are stateless bearer tokens with a 7-day TTL and no refresh
-     * flow. The Doctrine provider reloads the user on every request, so a
-     * STATUS change (suspension) revokes immediately — but a password change
-     * touched nothing the token was checked against. A phished user who reset
-     * their password evicted nobody: the attacker's token stayed live for a
-     * week while the victim believed they had recovered. Password reset is the
-     * canonical compromise-recovery action, so that was the one thing it had to
-     * do and did not.
+     * JWTs here are stateless, 7-day TTL, no refresh flow. The Doctrine provider
+     * reloads the user each request, so a STATUS change (suspension) revokes
+     * immediately, but a password change touched nothing the token was checked
+     * against: a phished user who reset their password evicted nobody — the
+     * attacker's token stayed live for a week. Password reset is the canonical
+     * compromise-recovery action, so this closes that gap.
      *
      * App\Security\PasswordChangeTokenInvalidator rejects any token whose `iat`
-     * is strictly older than this. Nullable because it is additive: rows that
-     * predate the column have no recorded change, and a null here means "never
-     * changed since this was introduced", which correctly revokes nothing.
+     * is older than this. Nullable and additive: rows that predate the column
+     * have no recorded change, and null correctly revokes nothing.
      */
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $passwordChangedAt = null;
@@ -104,15 +101,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     /**
      * The one configuration AI features use. A pointer, not a per-row flag, so
-     * the model cannot say two configurations are active at once. There is no
-     * inverse Collection of every configuration an account owns — nothing
-     * needs the whole set through User, and AiProviderSettingsRepository
+     * the model cannot say two configurations are active at once. No inverse
+     * Collection of every configuration an account owns — AiProviderSettingsRepository
      * already answers that (findAllForUser()/countForUser()), so a second,
-     * always-in-sync path was not worth the field. ON DELETE SET NULL is the
-     * database floor for this pointer; AiProviderConfigurator clears it
-     * explicitly before it removes the active row. The rows themselves cascade
-     * on account deletion through user_ai_settings.user_id's own FK ON DELETE
-     * CASCADE — see AccountDeleter.
+     * always-in-sync path wasn't worth the field. ON DELETE SET NULL is the
+     * database floor here; AiProviderConfigurator clears it explicitly before
+     * removing the active row. The rows themselves cascade on account deletion
+     * through user_ai_settings.user_id's own FK ON DELETE CASCADE — see AccountDeleter.
      */
     #[ORM\ManyToOne(targetEntity: AiProviderSettings::class)]
     #[ORM\JoinColumn(name: 'active_ai_config_id', nullable: true, onDelete: 'SET NULL')]
@@ -138,21 +133,19 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * The single definition of what makes two addresses the same account.
      *
-     * This exists because the storage layer does not agree with itself: SQLite
-     * (dev and test) compares VARCHAR case-sensitively, while MySQL production
-     * runs a utf8mb4 _ci collation that does not — and that collation also
-     * governs the uniq_user_email index. Left alone, `Bob@example.com` opens a
-     * second account on SQLite and collides on MySQL, so CI can be green while
-     * production silently refuses a signup.
+     * Exists because the storage layer disagrees with itself: SQLite (dev/test)
+     * compares VARCHAR case-sensitively, while MySQL production runs a utf8mb4
+     * _ci collation (also governing the uniq_user_email index) that does not.
+     * Left alone, `Bob@example.com` opens a second account on SQLite and
+     * collides on MySQL — CI green, production silently refusing a signup.
      *
-     * Normalising to lowercase on the way in makes the two engines agree, and
-     * doing it here — rather than at each call site — is what keeps the entity,
-     * the repository and the security provider from drifting apart. Every
-     * lookup path must run input through this before comparing.
+     * Normalising to lowercase here, not at each call site, keeps the entity,
+     * repository and security provider from drifting apart; every lookup path
+     * must run input through this before comparing.
      *
      * strtolower, not mb_strtolower: Assert\Email in html5 mode already refuses
-     * non-ASCII addresses, and strtolower is locale-independent in PHP 8, so
-     * there is no Turkish-dotless-i hazard to inherit.
+     * non-ASCII addresses, and strtolower is locale-independent in PHP 8 — no
+     * Turkish-dotless-i hazard to inherit.
      */
     public static function normalizeEmail(string $email): string
     {

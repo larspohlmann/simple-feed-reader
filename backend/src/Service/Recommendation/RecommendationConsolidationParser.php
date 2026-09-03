@@ -5,18 +5,16 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 /**
- * Turns one raw consolidation reply into validated picks and duplicate ids --
- * the call answers both in one reply. It salvages the picks through the shared
- * RecommendationPickSalvager the batch parser also uses, then layers on the
- * duplicate-id list and the duplicate-share guard PlausibleDuplicateShare
- * enforces.
+ * Turns one raw consolidation reply into validated picks and duplicate ids -- the call
+ * answers both in one reply. Salvages picks via the shared RecommendationPickSalvager the
+ * batch parser also uses, then layers on the duplicate-id list and the duplicate-share
+ * guard PlausibleDuplicateShare enforces.
  *
- * A reply that parses keeps its valid picks even when some ids are invalid,
- * duplicated, or scoreless -- partial credit is still credit, as for a batch
- * reply. It is unusable when the JSON does not parse, the `recommendations`
- * shape is wrong, zero picks survive, or the duplicate share is implausible;
- * that last case discards the picks too, because a reply untrustworthy about
- * duplicates was not read carefully enough to trust about scores (#396, #493).
+ * A reply that parses keeps its valid picks even with some ids invalid, duplicated, or
+ * scoreless -- partial credit, as for a batch reply. Unusable when the JSON does not parse,
+ * the `recommendations` shape is wrong, zero picks survive, or the duplicate share is
+ * implausible; that last case discards the picks too, since a reply untrustworthy about
+ * duplicates isn't trustworthy about scores either (#396, #493).
  */
 final readonly class RecommendationConsolidationParser
 {

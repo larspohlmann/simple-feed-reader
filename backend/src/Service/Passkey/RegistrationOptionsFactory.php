@@ -17,10 +17,10 @@ use Webauthn\PublicKeyCredentialRpEntity;
 use Webauthn\PublicKeyCredentialUserEntity;
 
 /**
- * Builds the options for a WebAuthn registration ("attestation") ceremony
+ * Builds options for a WebAuthn registration ("attestation") ceremony
  * (#624): resident-key discoverable credentials only, user verification
  * required since the passkey is this account's sole factor, and no
- * attestation conveyance, since nothing here inspects an attestation
+ * attestation conveyance since nothing here inspects an attestation
  * statement.
  *
  * `rp.name` is set on the serialised array after building
@@ -31,10 +31,10 @@ use Webauthn\PublicKeyCredentialUserEntity;
  * `create()` mints the user handle once, via `PasskeyCredentials::
  * userHandleFor()`, and threads it through both the options and
  * `PasskeyChallengeStore::issue()`. `optionsFor()` takes the handle as a
- * parameter rather than deriving it, so `AttestationVerifier` can rebuild the
+ * parameter rather than deriving it, so `AttestationVerifier` rebuilds the
  * same options from the value stored on the consumed challenge instead of
- * minting a new one — `userHandleFor()` returns a fresh random value each
- * time an account has no credential yet.
+ * minting a new one — `userHandleFor()` mints fresh random values while an
+ * account has no credential yet.
  */
 final readonly class RegistrationOptionsFactory
 {
@@ -66,14 +66,14 @@ final readonly class RegistrationOptionsFactory
     }
 
     /**
-     * Rebuilds the exact same options a creation ceremony was started with,
-     * given the same user, challenge and user handle PasskeyChallengeStore
-     * handed back on consume(). Pulled out of create() so AttestationVerifier
-     * can share it: the resident-key and user-verification requirements
-     * below are security-relevant, and a second, independently written copy
-     * of this construction could silently drift from the one the browser was
-     * actually shown — for instance stop enforcing user verification —
-     * without either call site's own tests noticing.
+     * Rebuilds the exact options a creation ceremony started with, given the
+     * same user, challenge and user handle PasskeyChallengeStore returns on
+     * consume(). Pulled out of create() so AttestationVerifier can share it:
+     * the resident-key and user-verification requirements below are
+     * security-relevant, and a second, independently written copy could
+     * silently drift from what the browser was actually shown — for instance
+     * stop enforcing user verification — without either call site's tests
+     * noticing.
      */
     public function optionsFor(User $user, string $challenge, string $userHandle): PublicKeyCredentialCreationOptions
     {

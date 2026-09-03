@@ -17,30 +17,28 @@ use fivefilters\Readability\ParseException;
 use fivefilters\Readability\Readability;
 
 /**
- * Turns an article URL into clean, sanitized, distraction-free HTML:
- * fetch (SSRF-guarded) → page normalization → page-media scan → readability
- * extraction → body cleaning (duplicate-title removal, edge-boilerplate
- * trimming, lead-image restore, media insertion) → EntrySanitizer (the same
- * XSS barrier feed HTML crosses). Never throws for an ordinary failure —
- * returns a `failed` ExtractionResult with a machine reason so the endpoint
- * stays 200 and the client can fall back to feed content.
+ * Turns an article URL into clean, sanitized, distraction-free HTML: fetch
+ * (SSRF-guarded) → normalize → page-media scan → readability extraction →
+ * body cleaning (duplicate-title removal, edge-boilerplate trim, lead-image
+ * restore, media insertion) → EntrySanitizer (feed HTML's own XSS barrier).
+ * Never throws for an ordinary failure — returns a `failed` ExtractionResult
+ * with a machine reason so the endpoint stays 200 and the client falls back
+ * to feed content.
  *
- * Readability strips a page-header image as chrome and reports it apart as the
- * og:image. ReaderBodyCleaner restores that picture into the extracted body via
- * ReaderLeadImage, when the page draws it and the body does not already show it
- * (#681). The "does the page draw it?" answer is a PageImageInventory this class
- * builds once from the normalised page document, before readability consumes it
- * (#684).
+ * Readability strips a page-header image as chrome, reporting it apart as
+ * og:image; ReaderBodyCleaner restores it via ReaderLeadImage when the page
+ * draws it and the body doesn't (#681), using a PageImageInventory built once
+ * from the normalised document before readability consumes it (#684).
  *
  * PageMediaScanner also runs on the raw page before readability, so recovered
- * media can both satisfy the length gate below and be inserted by
- * ReaderBodyCleaner even when readability's own extraction is thin (#748).
- * PaywallSignals reads the same normalised document and the raw source before
- * readability consumes them, and decides on the cleaned body (#785).
+ * media can satisfy the length gate below and still be inserted when
+ * readability's own extraction is thin (#748). PaywallSignals reads the same
+ * normalised document and raw source first, deciding on the cleaned body
+ * (#785).
  *
  * SiblingMediaExtender derives from the declared scan but appends onto the
- * stream-resolved media, at the point the media is consumed, so a page that
- * fails extraction never pays for its network verification (#800).
+ * stream-resolved media only when consumed, so a failed extraction never pays
+ * for network verification (#800).
  */
 final class ArticleExtractor implements ArticleExtractorInterface
 {
@@ -110,15 +108,15 @@ final class ArticleExtractor implements ArticleExtractorInterface
     }
 
     /**
-     * Keep the richer of two extractions of the page: the passed score-neutral
-     * document (repairs only) and the wrapper-chain-collapsed variant (#235). The
-     * collapse rescues block-component pages (#235) and breaks some
-     * well-structured ones (#476); the longer body is the better one in both
-     * directions. collapseWrapperChains() returns null when there is no chain to
-     * collapse, so the second extraction is skipped.
+     * Keep the richer of two extractions: the passed score-neutral document
+     * (repairs only) and the wrapper-chain-collapsed variant (#235), which
+     * rescues block-component pages but breaks some well-structured ones
+     * (#476) — the longer body wins either way. collapseWrapperChains()
+     * returns null when there is no chain to collapse, skipping the second
+     * extraction.
      *
-     * The conservative document is passed in already normalised because the
-     * caller reads its image inventory before readability consumes (mutates) it
+     * The conservative document arrives already normalised because the caller
+     * reads its image inventory before readability consumes (mutates) it
      * (#684).
      */
     private function richestArticle(?HTMLDocument $normalized, PageResponse $page): ?Article
