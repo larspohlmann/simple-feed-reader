@@ -111,7 +111,7 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
 
     public function configure(): void
     {
-        $this->requestBody('PATCH', '/indexes/' . self::INDEX . '/settings', [
+        $this->write('PATCH', '/indexes/' . self::INDEX . '/settings', [
             'json' => self::SETTINGS,
         ]);
     }
@@ -126,7 +126,7 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
         // linked probe): every document below carries both `id` and `feedId`,
         // two field names ending in "id", which is exactly the ambiguity
         // Meilisearch refuses to guess through.
-        $this->requestBody('POST', '/indexes/' . self::INDEX . '/documents?primaryKey=id', [
+        $this->write('POST', '/indexes/' . self::INDEX . '/documents?primaryKey=id', [
             'json' => array_map($this->documentOf(...), $entries),
         ]);
     }
@@ -137,14 +137,14 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
             return;
         }
 
-        $this->requestBody('POST', '/indexes/' . self::INDEX . '/documents/delete-batch', [
+        $this->write('POST', '/indexes/' . self::INDEX . '/documents/delete-batch', [
             'json' => $entryIds,
         ]);
     }
 
     public function clear(): void
     {
-        $this->requestBody('DELETE', '/indexes/' . self::INDEX . '/documents');
+        $this->write('DELETE', '/indexes/' . self::INDEX . '/documents');
     }
 
     /**
@@ -333,6 +333,28 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
             'feedTitle' => $entry->feedTitle,
             'effectiveDate' => $entry->effectiveDate->getTimestamp(),
         ];
+    }
+
+    /**
+     * Search is optional: an install may leave MEILISEARCH_URL empty on
+     * purpose. Every write then does nothing rather than build a relative URL
+     * from an empty base — which the HTTP client refuses before any request
+     * leaves the process, turning each maintenance tick into a logged error
+     * (#816). find() needs no such guard: EntrySearchWithFallback never asks
+     * an unconfigured engine to read. A write discards the body, so this
+     * returns void where requestBody() returns the response.
+     *
+     * @param array<string, mixed> $options
+     *
+     * @throws SearchEngineUnavailableException
+     */
+    private function write(string $method, string $path, array $options = []): void
+    {
+        if (!$this->capability->isConfigured()) {
+            return;
+        }
+
+        $this->requestBody($method, $path, $options);
     }
 
     /**

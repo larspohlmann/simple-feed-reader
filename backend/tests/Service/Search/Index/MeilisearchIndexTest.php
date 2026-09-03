@@ -29,6 +29,18 @@ final class MeilisearchIndexTest extends TestCase
         return new MeilisearchIndex($client, new SearchEngineCapability(self::BASE_URL, self::API_KEY));
     }
 
+    private function unconfiguredIndex(MockHttpClient $client): MeilisearchIndex
+    {
+        return new MeilisearchIndex($client, new SearchEngineCapability('', ''));
+    }
+
+    private function clientThatMustNotBeCalled(): MockHttpClient
+    {
+        return new MockHttpClient(static function (): MockResponse {
+            self::fail('An unconfigured search engine must not perform an HTTP call.');
+        });
+    }
+
     private function search(): IndexSearch
     {
         return new IndexSearch(SearchTerms::fromInput('widgets gizmos'), [1, 2], null, 20);
@@ -423,6 +435,61 @@ final class MeilisearchIndexTest extends TestCase
 
         self::assertSame('DELETE', $this->capturedRequest['method']);
         self::assertSame(self::BASE_URL . '/indexes/entries/documents', $this->capturedRequest['url']);
+    }
+
+    // --- writes are a silent no-op when no engine is configured ----------
+
+    /**
+     * An install may leave MEILISEARCH_URL empty on purpose — search is
+     * optional. Every ingest-time write must then do nothing at all, rather
+     * than build a relative URL from an empty base, have the HTTP client
+     * refuse it, and turn each of hundreds of maintenance ticks into an
+     * error line (#816). The read path already routes around an unconfigured
+     * engine in EntrySearchWithFallback; these pin the same for writes at the
+     * one place that talks to the engine.
+     */
+    public function testConfigureIsANoOpWhenNoEngineIsConfigured(): void
+    {
+        $client = $this->clientThatMustNotBeCalled();
+
+        $this->unconfiguredIndex($client)->configure();
+
+        self::assertSame(0, $client->getRequestsCount());
+    }
+
+    public function testUpsertIsANoOpWhenNoEngineIsConfigured(): void
+    {
+        $client = $this->clientThatMustNotBeCalled();
+
+        $this->unconfiguredIndex($client)->upsert([new IndexedEntry(
+            42,
+            7,
+            'How to receive a package',
+            'A short summary',
+            'The plain-text body',
+            'Example Feed',
+            new \DateTimeImmutable('@1700000000'),
+        )]);
+
+        self::assertSame(0, $client->getRequestsCount());
+    }
+
+    public function testForgetIsANoOpWhenNoEngineIsConfigured(): void
+    {
+        $client = $this->clientThatMustNotBeCalled();
+
+        $this->unconfiguredIndex($client)->forget([11, 12, 13]);
+
+        self::assertSame(0, $client->getRequestsCount());
+    }
+
+    public function testClearIsANoOpWhenNoEngineIsConfigured(): void
+    {
+        $client = $this->clientThatMustNotBeCalled();
+
+        $this->unconfiguredIndex($client)->clear();
+
+        self::assertSame(0, $client->getRequestsCount());
     }
 
     // --- writer failures share the same wrapping as the reader -----------

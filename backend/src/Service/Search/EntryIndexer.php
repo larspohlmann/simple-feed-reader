@@ -17,12 +17,14 @@ use Psr\Log\LoggerInterface;
  * EntryPruner has decided which ids a bulk delete removed.
  *
  * Indexing is a side effect of storing (or discarding) an entry, never a
- * condition of it succeeding. A search engine that is down, slow, or
- * unconfigured must cost a refresh nothing beyond staler search results — so
- * every method here swallows SearchEngineUnavailableException and logs it
- * rather than letting it propagate. `app:search:reindex` is the repair path
- * for whatever a swallowed failure left out of date; do not "fix" this class
- * by making the exception escape again.
+ * condition of it succeeding. A search engine that is down or slow must cost
+ * a refresh nothing beyond staler search results — so every method here
+ * swallows SearchEngineUnavailableException and logs it rather than letting
+ * it propagate. `app:search:reindex` is the repair path for whatever a
+ * swallowed failure left out of date; do not "fix" this class by making the
+ * exception escape again. An engine that is simply not configured raises no
+ * exception at all: MeilisearchIndex makes every write a no-op (#816), so an
+ * install without search stays silent instead of logging a failure per tick.
  *
  * NOT `final readonly class`: $configured is a memoised flag, mutated after
  * construction by design (see index()). RefreshRunner calls index() once per
