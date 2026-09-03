@@ -11,6 +11,7 @@
   </button>
 }
 @if (!organising()) {
+  <app-brightness-control class="brightness" />
   <app-view-controls class="controls" />
   @if (trialDaysLeft(); as days) {
     <p class="trial" [class.soon]="trialEndingSoon()">
