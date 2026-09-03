@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, from, of, switchMap, tap } from 'rxjs';
+import { Observable, from, of, switchMap, tap, timeout } from 'rxjs';
 import { ReaderApi } from './reader-api';
 import { ReaderCacheService } from './reader-cache.service';
 import { ReaderContent } from './models';
@@ -11,11 +11,15 @@ import { ReaderContent } from './models';
  */
 @Injectable({ providedIn: 'root' })
 export class ReaderContentService {
+  /** A cache stuck behind a blocked schema upgrade must not hold the article back (#814). */
+  private static readonly CACHE_WAIT_MS = 2_000;
+
   private readonly api = inject(ReaderApi);
   private readonly cache = inject(ReaderCacheService);
 
   load(entryId: number): Observable<ReaderContent> {
     return from(this.cache.get(entryId)).pipe(
+      timeout({ first: ReaderContentService.CACHE_WAIT_MS, with: () => of(null) }),
       switchMap((cached) => (cached ? of<ReaderContent>(cached) : this.fetchAndCache(entryId))),
     );
   }

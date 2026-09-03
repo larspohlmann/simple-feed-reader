@@ -49,6 +49,18 @@ describe('ReaderContentService', () => {
     expect(apiGet).not.toHaveBeenCalled();
   });
 
+  it('calls the API when the cache does not answer in time', async () => {
+    jest.useFakeTimers();
+    cacheGet.mockReturnValue(new Promise(() => undefined)); // stuck behind a blocked upgrade
+    apiGet.mockReturnValue(of(ARTICLE));
+    const svc = TestBed.inject(ReaderContentService);
+    const loaded = firstValueFrom(svc.load(1));
+    // Well under the 30 s the view allows before it gives up on the article.
+    await jest.advanceTimersByTimeAsync(5_000);
+    await expect(loaded).resolves.toEqual(ARTICLE);
+    jest.useRealTimers();
+  });
+
   it('fetches and caches on a miss', async () => {
     cacheGet.mockResolvedValue(null);
     apiGet.mockReturnValue(of(ARTICLE));
