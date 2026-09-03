@@ -178,6 +178,61 @@ final class ShareIntentLinkRemoverTest extends TestCase
         self::assertStringNotContainsString($label, $this->cleaned($html));
     }
 
+    public function testRemovesALinkBackToThePageItselfThatCarriesAShareAction(): void
+    {
+        // Substack's "Share" button (#786): the post's own URL with `action=share`,
+        // so no share host is involved and the endpoint list never matches it.
+        $html = '<html><head><link rel="canonical" href="https://pub.test/p/post"></head><body>'
+            . '<p>Body.</p><p class="button-wrapper"><a href="https://pub.test/p/post'
+            . '?utm_source=substack&amp;utm_medium=email&amp;utm_content=share&amp;action=share">'
+            . '<span>Share</span></a></p></body></html>';
+
+        $result = $this->cleaned($html);
+
+        self::assertStringNotContainsString('action=share', $result);
+        self::assertStringNotContainsString('button-wrapper', $result);
+        self::assertStringContainsString('Body.', $result);
+    }
+
+    public function testFallsBackToTheOgUrlWhenThePageDeclaresNoCanonical(): void
+    {
+        $html = '<html><head><meta property="og:url" content="https://pub.test/p/post"></head><body>'
+            . '<p>Body.</p><a href="https://pub.test/p/post?action=share">Share</a></body></html>';
+
+        self::assertStringNotContainsString('action=share', $this->cleaned($html));
+    }
+
+    public function testRemovesAWordPressStyleSelfShareLinkNamedByTheShareParameter(): void
+    {
+        $html = '<html><head><link rel="canonical" href="https://www.pub.test/2026/09/post/"></head><body>'
+            . '<p>Body.</p><a href="https://pub.test/2026/09/post?share=mastodon">Share on Mastodon</a></body></html>';
+
+        self::assertStringNotContainsString('share=mastodon', $this->cleaned($html));
+    }
+
+    public function testKeepsASelfLinkWithoutAShareAction(): void
+    {
+        $html = '<html><head><link rel="canonical" href="https://pub.test/p/post"></head><body>'
+            . '<p>Body.</p><a href="https://pub.test/p/post?utm_source=newsletter#comments">Comments</a></body></html>';
+
+        self::assertStringContainsString('#comments', $this->cleaned($html));
+    }
+
+    public function testKeepsAShareActionLinkToAnotherPage(): void
+    {
+        $html = '<html><head><link rel="canonical" href="https://pub.test/p/post"></head><body>'
+            . '<p>Body.</p><a href="https://pub.test/p/other-post?action=share">Read the other post</a></body></html>';
+
+        self::assertStringContainsString('other-post', $this->cleaned($html));
+    }
+
+    public function testKeepsAShareActionSelfLinkWhenThePageDeclaresNoAddress(): void
+    {
+        $html = '<div><p>Body.</p><a href="https://pub.test/p/post?action=share">Share</a></div>';
+
+        self::assertStringContainsString('action=share', $this->cleaned($html));
+    }
+
     private function cleaned(string $html): string
     {
         $document = HtmlDocumentParser::parseOrNull($html);
