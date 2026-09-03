@@ -19,7 +19,16 @@ button {
   height: var(--tap-target);
   border: none;
   border-radius: 50%;
+
+  /* A mild frost, not a full-glass panel. The button keeps its accent identity,
+     so it can only thin so far: a saturated fill washes out over the flat canvas
+     it usually floats over long before it reads as glass over the rows. 65% is
+     the point where the accent still looks like itself over the canvas while the
+     blur below gives a gentle frost where rows sit behind it. The solid accent is
+     the fallback where backdrop-filter is unsupported. */
   background: var(--accent);
+  background: color-mix(in srgb, var(--accent) 65%, transparent);
+  backdrop-filter: blur(12px) saturate(1.4);
   color: var(--on-accent);
   cursor: pointer;
   box-shadow: 0 4px 14px rgb(0 0 0 / 25%);

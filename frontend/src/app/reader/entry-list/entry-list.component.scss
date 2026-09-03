@@ -36,7 +36,7 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
 
   /* The solid colour is the fallback where backdrop-filter is unsupported. */
   background: var(--surface-0);
-  background: color-mix(in srgb, var(--surface-0) 92%, transparent);
+  background: color-mix(in srgb, var(--surface-0) 80%, transparent);
   backdrop-filter: blur(12px) saturate(1.4);
   display: flex;
   align-items: center;
