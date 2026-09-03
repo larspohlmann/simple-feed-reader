@@ -775,6 +775,45 @@ final class AccountRestorerTest extends DbTestCase
         self::assertSame('de', $this->reloadUser($userId)->getLocale());
     }
 
+    public function testStatesResolveAgainstBothTheKeptAndTheRecreatedRowsOfOneFeed(): void
+    {
+        $user = $this->seededUser('mixed-feed@example.com');
+        $userId = (int) $user->getId();
+        $kept = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'guid-b']);
+        self::assertInstanceOf(Entry::class, $kept);
+        $this->em->persist(new EntryState($user, $kept));
+        $this->em->flush();
+        $gzip = $this->backupOf($user);
+        $statesBefore = $this->entryStateRows($userId);
+        $this->em->getConnection()->executeStatement('DELETE FROM entry WHERE guid = ?', ['guid-a']);
+        $this->em->clear();
+
+        $result = $this->restorer()->restore($this->reloadUser($userId), $gzip, 'REPLACE');
+
+        // guid-b and guid-c survive as shared rows; only guid-a is recreated.
+        // Feed ONE's two states land on one new id and one old id.
+        self::assertSame(1, $result->entries);
+        self::assertSame(3, $result->entryStates);
+        self::assertSame(3, $this->scalarInt('SELECT COUNT(*) FROM entry'));
+        self::assertSame($statesBefore, $this->entryStateRows($userId));
+    }
+
+    public function testAFeedWiderThanOneInsertBatchKeepsEveryBatchesIds(): void
+    {
+        $user = $this->seededUser('two-batches@example.com');
+        $userId = (int) $user->getId();
+        $this->seedEntriesBeyondOneBatch($user);
+        $gzip = $this->backupOf($user);
+        $statesBefore = $this->entryStateRows($userId);
+        $this->deleteEveryFeed();
+
+        $result = $this->restorer()->restore($this->reloadUser($userId), $gzip, 'REPLACE');
+
+        self::assertSame(502, $result->entries);
+        self::assertSame(3, $result->entryStates);
+        self::assertSame($statesBefore, $this->entryStateRows($userId));
+    }
+
     // testAFileTheDatabaseRejectsFailsAsATypedBackupError used to live here,
     // staging a duplicate tag (then a duplicate subscription) to reach
     // RestoreLoadPass's flush()-catch(DbalException) branch through content.
@@ -949,6 +988,24 @@ final class AccountRestorerTest extends DbTestCase
         $this->em->persist($subscription);
         $entry = $this->makeEntry($feed, 'guid-capped', 'Capped', '2026-08-07');
         $this->em->persist(new EntryState($user, $entry));
+        $this->em->flush();
+    }
+
+    /**
+     * Feed ONE grows to 501 entries — one more than RestoreEntryLoader::BATCH
+     * — with a state on the last of them, so the restore's second insert
+     * batch has a state to resolve against ids read back after the first.
+     */
+    private function seedEntriesBeyondOneBatch(User $user): void
+    {
+        $one = $this->em->getRepository(Feed::class)->findOneBy(['url' => self::ONE_URL]);
+        self::assertInstanceOf(Feed::class, $one);
+        $last = null;
+        for ($i = 0; $i < 499; ++$i) {
+            $last = $this->makeEntry($one, sprintf('guid-wide-%03d', $i), 'Wide ' . $i, '2026-08-08');
+        }
+        self::assertInstanceOf(Entry::class, $last);
+        $this->em->persist(new EntryState($user, $last));
         $this->em->flush();
     }
 }
