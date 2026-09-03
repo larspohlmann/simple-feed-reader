@@ -90,6 +90,32 @@ final class SavedSearchUnreadMatchIdsTest extends DbTestCase
         self::assertSame([10 => [$revival->getId()], 20 => [$revival->getId(), $gadgets->getId()]], $idsBySearch);
     }
 
+    /**
+     * A full chunk of whole-word searches in one statement. Rendered as nested
+     * REPLACEs the predicate overflowed SQLite 3.45's parser stack from the
+     * second search on (#584); the batch must survive the largest shape it emits.
+     */
+    public function testAFullChunkOfWholeWordSearchesFitsOneStatement(): void
+    {
+        $revival = $this->entry('a', 'A punk revival');
+        $this->entry('b', 'Steampunk gadgets');
+        $searches = array_map(
+            static fn (int $position): SavedSearchTerm => new SavedSearchTerm(
+                ($position + 1) * 10,
+                SearchTerms::fromTermAndMode('punk', SearchMode::WholeWord),
+            ),
+            range(0, SavedSearchEntryRepository::SEARCHES_PER_SCAN - 1),
+        );
+
+        $idsBySearch = $this->repo()->unreadMatchIdsBySavedSearch((int) $this->user->getId(), $searches);
+
+        self::assertCount(SavedSearchEntryRepository::SEARCHES_PER_SCAN, $idsBySearch);
+        self::assertSame(
+            array_fill(0, SavedSearchEntryRepository::SEARCHES_PER_SCAN, [$revival->getId()]),
+            array_values($idsBySearch),
+        );
+    }
+
     public function testNoSavedSearchesNeedsNoQuery(): void
     {
         $this->entry('a', 'Climate report');

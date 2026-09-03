@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Doctrine;
 
 use App\Service\Search\WordBoundaries;
+use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\ORM\Query\AST\Functions\FunctionNode;
 use Doctrine\ORM\Query\AST\Node;
 use Doctrine\ORM\Query\Parser;
@@ -21,10 +22,14 @@ use Doctrine\ORM\Query\TokenType;
  *
  * This is the SQL half of the rule. `WordBoundaries` owns the character list
  * and performs the same replacement in PHP on the search term; the two must
- * stay identical, which is why neither spells the list out itself.
+ * stay identical, which is why neither spells the list out itself. SQLite
+ * runs that PHP directly, as a function SqliteConnectionSetupDriver registers
+ * on every connection; MySQL gets the list as a REPLACE chain.
  */
 final class NormalizeWordBoundariesFunction extends FunctionNode
 {
+    public const string NAME = 'NORMALIZE_WORD_BOUNDARIES';
+
     private Node $stringExpression;
 
     public function parse(Parser $parser): void
@@ -38,6 +43,9 @@ final class NormalizeWordBoundariesFunction extends FunctionNode
     public function getSql(SqlWalker $sqlWalker): string
     {
         $sql = $sqlWalker->walkStringPrimary($this->stringExpression);
+        if ($sqlWalker->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
+            return \sprintf('%s(%s)', self::NAME, $sql);
+        }
 
         foreach (WordBoundaries::CHARACTERS as $character) {
             $sql = \sprintf("REPLACE(%s, '%s', ' ')", $sql, str_replace("'", "''", $character));
