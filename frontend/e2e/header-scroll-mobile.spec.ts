@@ -483,9 +483,12 @@ test.describe('Hide-on-scroll header on a phone', () => {
       el.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [] }));
     });
     await expect(header).not.toHaveClass(/hidden/); // force-shown while the drawer is open
+    // The Saved-searches group defaults collapsed; its own chevron expands it.
+    // The label beside the chevron is now a link to the combined view, not the
+    // expander (#769), so expanding must click the chevron.
     const savedItem = page.locator('.savedsearch-item').first();
     if (!(await savedItem.isVisible())) {
-      await page.locator('.savedsearch-toggle').first().click(); // expand the section
+      await page.locator('.savedsearch-head .chevzone').click(); // expand the section
     }
     await savedItem.click();
 

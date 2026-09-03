@@ -539,16 +539,18 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
      sits a hair off the sheet (--surface-2) and vanishes, so lift it well
      clear of the ground there; light keeps --border. */
   --airy-rule: var(--border);
+
+  /* Boxed's gutter is the list's 12px plus the card's own inline padding; with
+     the card gone the list has to carry the whole inset itself, or the text
+     runs to 12px off the edge (#732). Both themes: the gutter is layout, not a
+     dark-mode concern — nesting it under [data-theme='dark'] dropped it in
+     light and let #732 back in (#775). */
+  padding-inline: var(--space-5);
 }
 
 :host-context([data-theme='dark']) .rows.magazine.airy {
   --airy-rule: color-mix(in srgb, var(--border-strong), var(--text-muted));
   --airy-sheet-fill: var(--surface-read);
-
-  /* Boxed's gutter is the list's 12px plus the card's own inline padding; with
-     the card gone the list has to carry the whole inset itself, or the text
-     runs to 12px off the edge (#732). */
-  padding-inline: var(--space-5);
 }
 
 /* Neither is overflowing content, so `row-leave`'s collapse alone leaves them
