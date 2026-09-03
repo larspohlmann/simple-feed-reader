@@ -78,16 +78,17 @@ async function dragDivider(page: Page, deltaX: number): Promise<void> {
 test.describe('split-pane resize handle (#810)', () => {
   test.use({ viewport: DESKTOP });
 
-  test('drags the divider, persists the width, and restores it on reload', async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
     const signedIn = await signInAsAdmin(page);
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
     );
-
     await stubEntries(page);
     await page.reload();
+  });
 
+  test('drags the divider, persists the width, and restores it on reload', async ({ page }) => {
     const divider = page.locator('.pane-divider');
     await expect(divider).toHaveAttribute('role', 'separator');
     await expect(divider).toHaveAttribute('aria-orientation', 'vertical');
@@ -109,15 +110,6 @@ test.describe('split-pane resize handle (#810)', () => {
   });
 
   test('double-click resets to the default and arrow keys nudge the split', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
-    test.skip(
-      !signedIn,
-      'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
-    );
-
-    await stubEntries(page);
-    await page.reload();
-
     const divider = page.locator('.pane-divider');
     await dragDivider(page, 160);
     await expect.poll(() => listPercent(page)).toBeGreaterThan(42);

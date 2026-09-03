@@ -22,45 +22,34 @@ export class PaneResizeDirective {
   private readonly split = inject(PaneSplitService);
   private readonly zone = inject(NgZone);
 
-  private readonly onMove = (event: PointerEvent): void => this.onPointerMove(event);
-  private readonly onUp = (event: PointerEvent): void => this.onPointerUp(event);
-
   private latestClientX = 0;
   private frame: number | null = null;
+  /** The container's edge and width, measured once at pointerdown: they cannot
+   *  change mid-drag, so re-reading them per frame would only force a layout. */
+  private dragLeft = 0;
+  private dragWidth = 1;
 
-  constructor() {
-    this.setAriaContract();
-    this.host.addEventListener('pointerdown', this.onDown);
-    this.host.addEventListener('dblclick', this.onDblClick);
-    this.host.addEventListener('keydown', this.onKeydown);
-
-    effect(() => this.writeWidth(this.split.width()));
-
-    inject(DestroyRef).onDestroy(() => this.teardown());
-  }
-
-  private readonly onDown = (event: PointerEvent): void => this.onPointerDown(event);
-  private readonly onDblClick = (): void => this.split.reset();
-  private readonly onKeydown = (event: KeyboardEvent): void => this.onKeydownEvent(event);
-
-  private onPointerDown(event: PointerEvent): void {
+  private readonly onPointerDown = (event: PointerEvent): void => {
     if (event.button !== 0) return;
     // No preventDefault: it would suppress the compatibility click/dblclick the
     // browser synthesises from the pointer, silently breaking double-click reset.
     // Text selection during the drag is held off with `user-select` instead.
     this.host.setPointerCapture?.(event.pointerId);
     this.container().style.userSelect = 'none';
+    const rect = this.container().getBoundingClientRect();
+    this.dragLeft = rect.left;
+    this.dragWidth = rect.width;
     // Outside the zone: the move handler writes the CSS var directly and never a
     // signal, so a fast drag must not tick change detection on every frame. Only
     // the released width re-enters the zone, through `commit`.
     this.zone.runOutsideAngular(() => {
-      this.host.addEventListener('pointermove', this.onMove);
-      this.host.addEventListener('pointerup', this.onUp);
-      this.host.addEventListener('pointercancel', this.onUp);
+      this.host.addEventListener('pointermove', this.onPointerMove);
+      this.host.addEventListener('pointerup', this.onPointerUp);
+      this.host.addEventListener('pointercancel', this.onPointerUp);
     });
-  }
+  };
 
-  private onPointerMove(event: PointerEvent): void {
+  private readonly onPointerMove = (event: PointerEvent): void => {
     this.latestClientX = event.clientX;
     if (typeof requestAnimationFrame !== 'function') {
       this.applyLive();
@@ -71,25 +60,38 @@ export class PaneResizeDirective {
       this.frame = null;
       this.applyLive();
     });
-  }
+  };
 
-  private onPointerUp(event: PointerEvent): void {
+  private readonly onPointerUp = (event: PointerEvent): void => {
     this.host.releasePointerCapture?.(event.pointerId);
-    this.host.removeEventListener('pointermove', this.onMove);
-    this.host.removeEventListener('pointerup', this.onUp);
-    this.host.removeEventListener('pointercancel', this.onUp);
+    this.host.removeEventListener('pointermove', this.onPointerMove);
+    this.host.removeEventListener('pointerup', this.onPointerUp);
+    this.host.removeEventListener('pointercancel', this.onPointerUp);
     this.container().style.userSelect = '';
     this.cancelFrame();
     this.commit(this.percentFromClientX(event.clientX));
-  }
+  };
 
-  private onKeydownEvent(event: KeyboardEvent): void {
+  private readonly onDblClick = (): void => this.split.reset();
+
+  private readonly onKeydown = (event: KeyboardEvent): void => {
     const current = this.split.width();
     if (event.key === 'ArrowLeft') this.commit(clampListPercent(current - STEP));
     else if (event.key === 'ArrowRight') this.commit(clampListPercent(current + STEP));
     else if (event.key === 'Home') this.split.reset();
     else return;
     event.preventDefault();
+  };
+
+  constructor() {
+    this.setAriaContract();
+    this.host.addEventListener('pointerdown', this.onPointerDown);
+    this.host.addEventListener('dblclick', this.onDblClick);
+    this.host.addEventListener('keydown', this.onKeydown);
+
+    effect(() => this.writeWidth(this.split.width()));
+
+    inject(DestroyRef).onDestroy(() => this.teardown());
   }
 
   private applyLive(): void {
@@ -105,8 +107,7 @@ export class PaneResizeDirective {
   }
 
   private percentFromClientX(clientX: number): number {
-    const rect = this.container().getBoundingClientRect();
-    return clampListPercent(((clientX - rect.left) / rect.width) * 100);
+    return clampListPercent(((clientX - this.dragLeft) / this.dragWidth) * 100);
   }
 
   private commit(percent: number): void {
@@ -130,12 +131,12 @@ export class PaneResizeDirective {
   }
 
   private teardown(): void {
-    this.host.removeEventListener('pointerdown', this.onDown);
+    this.host.removeEventListener('pointerdown', this.onPointerDown);
     this.host.removeEventListener('dblclick', this.onDblClick);
     this.host.removeEventListener('keydown', this.onKeydown);
-    this.host.removeEventListener('pointermove', this.onMove);
-    this.host.removeEventListener('pointerup', this.onUp);
-    this.host.removeEventListener('pointercancel', this.onUp);
+    this.host.removeEventListener('pointermove', this.onPointerMove);
+    this.host.removeEventListener('pointerup', this.onPointerUp);
+    this.host.removeEventListener('pointercancel', this.onPointerUp);
     this.cancelFrame();
   }
 }
