@@ -855,6 +855,14 @@
       "dark": "Dunkel",
       "system": "System"
     },
+    "brightness": {
+      "aria": "Helligkeit",
+      "brighter": "Heller",
+      "darker": "Dunkler",
+      "reset": "Auf Standard zurücksetzen",
+      "readout": "Helligkeit {{value}}",
+      "readoutDefault": "Helligkeit Standard"
+    },
     "versionLabel": "Version {{version}} — Einstellungen öffnen",
     "updateAvailable": "Update {{version}}",
     "updateAvailableLabel": "Update verfügbar: Version {{version}} — Versionshinweise öffnen",

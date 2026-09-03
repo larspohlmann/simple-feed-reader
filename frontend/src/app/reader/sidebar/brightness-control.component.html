@@ -1,0 +1,45 @@
+<div class="seg" role="group" [attr.aria-label]="'reader.brightness.aria' | transloco">
+  <button
+    type="button"
+    class="darker"
+    [title]="'reader.brightness.darker' | transloco"
+    [attr.aria-label]="'reader.brightness.darker' | transloco"
+    [disabled]="atMin()"
+    (click)="brightness.decrease()"
+  >
+    <app-icon name="brightness_low" size="md" />
+  </button>
+  <button
+    type="button"
+    class="bar"
+    [title]="'reader.brightness.reset' | transloco"
+    [attr.aria-label]="'reader.brightness.reset' | transloco"
+    (click)="brightness.reset()"
+  >
+    @for (cell of cells; track cell) {
+      <span
+        class="cell"
+        [class.filled]="cell <= brightness.step()"
+        [class.unavailable]="cell > brightness.max()"
+        [class.default]="cell === 0"
+      ></span>
+    }
+  </button>
+  <button
+    type="button"
+    class="brighter"
+    [title]="'reader.brightness.brighter' | transloco"
+    [attr.aria-label]="'reader.brightness.brighter' | transloco"
+    [disabled]="atMax()"
+    (click)="brightness.increase()"
+  >
+    <app-icon name="brightness_high" size="md" />
+  </button>
+  <output class="sr-only" aria-live="polite">
+    @if (brightness.step() === 0) {
+      {{ 'reader.brightness.readoutDefault' | transloco }}
+    } @else {
+      {{ 'reader.brightness.readout' | transloco: { value: signedStep() } }}
+    }
+  </output>
+</div>

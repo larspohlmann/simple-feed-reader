@@ -855,6 +855,14 @@
       "dark": "Dark",
       "system": "System"
     },
+    "brightness": {
+      "aria": "Brightness",
+      "brighter": "Brighter",
+      "darker": "Darker",
+      "reset": "Reset to default",
+      "readout": "Brightness {{value}}",
+      "readoutDefault": "Brightness default"
+    },
     "versionLabel": "Version {{version}} — open settings",
     "updateAvailable": "Update {{version}}",
     "updateAvailableLabel": "Update available: version {{version}} — open the release notes",

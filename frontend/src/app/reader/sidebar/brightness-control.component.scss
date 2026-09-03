@@ -1,0 +1,68 @@
+:host {
+  display: flex;
+}
+
+/* Same frame as the view-controls segmented groups, so the three rows in the
+   foot read as one family. */
+.seg {
+  display: inline-flex;
+  flex: 1 1 auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.seg button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-2);
+  background: var(--surface-2);
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.seg button:hover:not(:disabled) {
+  background: var(--surface-0);
+}
+
+.seg button:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.seg .bar {
+  flex: 1 1 auto;
+  gap: var(--space-0);
+  border-inline: 1px solid var(--border);
+}
+
+.cell {
+  position: relative;
+  flex: 1;
+  height: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--border-strong);
+}
+
+.cell.filled {
+  background: var(--text-secondary);
+}
+
+.cell.unavailable {
+  background: var(--border);
+}
+
+/* A notch under the default cell marks where today's look is. */
+.cell.default::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: calc(-1 * var(--space-1));
+  width: var(--space-0);
+  height: var(--space-0);
+  margin-left: calc(var(--space-0) / -2);
+  border-radius: var(--radius-pill);
+  background: var(--text-muted);
+}
