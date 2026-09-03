@@ -7,7 +7,6 @@ namespace App\Service\Reader\Media\Source;
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaCandidateSourceInterface;
-use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\PageTextBlocks;
@@ -16,8 +15,12 @@ use Dom\Element;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
- * `<audio>` and `<video>` elements, read at face value. The case that needs no
- * cleverness at all — no host adapter covers it because none has to.
+ * `<audio>` and `<video>` elements, read at face value. This layer is not here
+ * to FIND the file — AttributeMediaSource reads `src` too and would find every
+ * one of these. It is here for the element's own `poster`, which only element
+ * context can supply: the attribute scan knows the page's og:image alone, so
+ * on a two-video article it would give both videos the same still (#756).
+ * That is why it must stay ABOVE AttributeMediaSource; the wiring test pins it.
  */
 #[AsTaggedItem(priority: 70)]
 final readonly class SemanticMediaSource implements MediaCandidateSourceInterface
