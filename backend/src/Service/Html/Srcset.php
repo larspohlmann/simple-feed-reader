@@ -20,6 +20,9 @@ final class Srcset
     /** The only descriptor that states a pixel width; `2x` states a density. */
     private const string WIDTH_DESCRIPTOR = '/^(\d+)w$/';
 
+    /** A density descriptor; a candidate without one is 1x, as the HTML spec reads it. */
+    private const string DENSITY_DESCRIPTOR = '/^(\d+(?:\.\d+)?)x$/';
+
     /** The first candidate URL of a srcset list, or null when it yields none. */
     public static function firstUrl(?string $srcset): ?string
     {
@@ -28,25 +31,26 @@ final class Srcset
 
     /**
      * The candidate with the greatest declared width, so a reader that shows one
-     * rendition picks the sharpest. A list with no width descriptors falls back
-     * to its first candidate, matching how a browser treats a bare srcset.
+     * rendition picks the sharpest. A list with no width descriptors ranks by
+     * density instead, the densest candidate being the largest file; a bare
+     * list is all 1x and keeps its first candidate, as a browser would.
      */
     public static function widest(?string $srcset): ?ImageRendition
     {
         $widest = null;
         foreach (self::candidates($srcset) as $candidate) {
-            if ($widest === null || self::outmeasures($candidate, $widest)) {
+            if ($widest === null || $candidate->outmeasures($widest)) {
                 $widest = $candidate;
             }
         }
 
-        return $widest;
+        return $widest?->rendition();
     }
 
     /**
-     * The renditions the list declares, in source order.
+     * The candidates the list declares, in source order.
      *
-     * @return list<ImageRendition>
+     * @return list<SrcsetCandidate>
      */
     private static function candidates(?string $srcset): array
     {
@@ -54,7 +58,7 @@ final class Srcset
             return [];
         }
 
-        return array_map(self::renditionFrom(...), self::candidateTokens($srcset));
+        return array_map(self::candidateFrom(...), self::candidateTokens($srcset));
     }
 
     /**
@@ -102,13 +106,15 @@ final class Srcset
     }
 
     /**
-     * A candidate's URL with the width its descriptor declares.
+     * A candidate's URL with the width or density its descriptor declares.
      *
      * @param non-empty-list<string> $tokens
      */
-    private static function renditionFrom(array $tokens): ImageRendition
+    private static function candidateFrom(array $tokens): SrcsetCandidate
     {
-        return new ImageRendition($tokens[0], self::declaredWidth($tokens[1] ?? null));
+        $descriptor = $tokens[1] ?? null;
+
+        return new SrcsetCandidate($tokens[0], self::declaredWidth($descriptor), self::declaredDensity($descriptor));
     }
 
     /** The pixel width a descriptor states, or null when it states none. */
@@ -121,17 +127,13 @@ final class Srcset
         return (int) $matches[1];
     }
 
-    /**
-     * True when the candidate is wider than the incumbent. A candidate that
-     * declares no width never displaces one that does; the first candidate wins
-     * only until a measured one appears.
-     */
-    private static function outmeasures(ImageRendition $candidate, ImageRendition $incumbent): bool
+    /** The density a descriptor states; 1x when it states none. */
+    private static function declaredDensity(?string $descriptor): float
     {
-        if ($candidate->width === null) {
-            return false;
+        if ($descriptor === null || preg_match(self::DENSITY_DESCRIPTOR, $descriptor, $matches) !== 1) {
+            return 1.0;
         }
 
-        return $incumbent->width === null || $candidate->width > $incumbent->width;
+        return (float) $matches[1];
     }
 }
