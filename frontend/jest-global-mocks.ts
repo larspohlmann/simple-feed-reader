@@ -49,3 +49,15 @@ if (typeof Blob !== 'undefined' && typeof Blob.prototype.text !== 'function') {
     return Promise.resolve(impl?._buffer?.toString('utf8') ?? '');
   };
 }
+
+// CDK's focus trap calls it "not focusable" whenever the element reports no
+// geometry, and jsdom computes no layout -- so every genuinely focusable
+// cdkFocusInitial input/button trips this dev-mode warning. Drop that one
+// known-false line; every other warning passes through.
+const warnAboutRealProblems = console.warn.bind(console);
+console.warn = (...args: unknown[]): void => {
+  if (typeof args[0] === 'string' && args[0].includes("'[cdkFocusInitial]' is not focusable")) {
+    return;
+  }
+  warnAboutRealProblems(...args);
+};
