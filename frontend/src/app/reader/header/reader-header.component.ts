@@ -70,6 +70,7 @@ export class ReaderHeaderComponent {
    *  results for `?q=` were on screen — after a reload, or after Back
    *  returned to an earlier search. */
   readonly searchTerm = input('');
+  readonly populateSearchTerm = input(true);
 
   readonly toggleSidebar = output<void>();
   /** The empty middle of the bar was tapped — scroll the list back to the top. */

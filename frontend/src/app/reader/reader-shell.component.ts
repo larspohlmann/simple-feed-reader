@@ -36,6 +36,7 @@ import { LayoutService } from './layout.service';
 import {
   RefreshScope,
   Selection,
+  isDirectSearch,
   isWholeWordTerm,
   isPhraseTerm,
   MarkReadTarget,
@@ -349,7 +350,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     this.selection().kind === 'for-you' ? this.recs.newestRunId() : null,
   );
   readonly paneMode = computed(() => this.layout.mode() === 'pane' && this.screen.isWide());
-  readonly searchPane = computed(() => this.screen.isWide() && this.selection().kind === 'search');
+  readonly searchPane = computed(() => this.screen.isWide() && isDirectSearch(this.selection()));
   readonly splitView = computed(() => this.paneMode() || this.searchPane());
   /** An article filling the whole main area (not the split pane) — the top bar
    *  takes over its back button, reader switch and prev/next. */
@@ -1047,19 +1048,11 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       });
   }
 
-  /** A term layers a search over the current list; an empty term drops only the
-   *  search, so closing it returns to the list it was started from — a feed,
-   *  tag, folder or view — instead of All items (#542). The list params
-   *  (view/tag/subscription and the unread refinement) are left in the URL
-   *  untouched: `selectionFromParams` gives a searchable `q` priority over them,
-   *  so they change nothing while the search is active but are still there to
-   *  return to once it clears. An open article is closed either way — the
-   *  results, or the restored list, are a new thing to look at. Both go through
-   *  the URL, so Back leaves a search the same way it leaves any other list. */
+  // Preserve the underlying list so clearing a direct search returns to it.
   onSearch(term: string): void {
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { q: term || null, entry: null },
+      queryParams: { q: term || null, entry: null, searchOrigin: null },
       queryParamsHandling: 'merge',
     });
   }

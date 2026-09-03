@@ -1,5 +1,6 @@
+import { convertToParamMap } from '@angular/router';
 import { ListScrollMemory, scrollKey } from './list-scroll-memory';
-import { Selection } from './query';
+import { Selection, selectionFromParams } from './query';
 
 const sel = (over: Partial<Selection> = {}): Selection => ({
   kind: 'all',
@@ -48,6 +49,19 @@ describe('ListScrollMemory', () => {
 
   it('reads 0 for a selection it has never seen', () => {
     expect(mem.read(sel({ kind: 'tag', id: 9 }))).toBe(0);
+  });
+
+  it('keeps saved-search and direct-search positions separate through a reload', () => {
+    const saved = selectionFromParams(
+      convertToParamMap({ q: 'climate', searchOrigin: 'saved' }),
+    ).selection;
+    const direct = selectionFromParams(convertToParamMap({ q: 'climate' })).selection;
+    mem.save(saved, 640);
+    mem.save(direct, 120);
+
+    const restored = new ListScrollMemory();
+    expect(restored.read(saved)).toBe(640);
+    expect(restored.read(direct)).toBe(120);
   });
 
   it("does not leak one selection's offset to another", () => {

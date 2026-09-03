@@ -38,6 +38,31 @@ function typeInto(fixture: ReturnType<typeof mount>, value: string): void {
 }
 
 describe('SearchFieldComponent', () => {
+  it.each(['cl', 'clouds'])(
+    'clears draft %s when switching between saved searches without submitting it',
+    fakeAsync((draft: string) => {
+      const fixture = mount();
+      fixture.componentRef.setInput('term', 'climate');
+      fixture.componentRef.setInput('populateTerm', false);
+      fixture.detectChanges();
+      const emitted: string[] = [];
+      fixture.componentInstance.search.subscribe((term) => emitted.push(term));
+
+      typeInto(fixture, draft);
+      tick(100);
+      fixture.componentRef.setInput('term', 'space');
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('input').value).toBe('');
+      tick(300);
+      expect(emitted).toEqual([]);
+
+      typeInto(fixture, 'space');
+      tick(300);
+      expect(emitted).toEqual(['space']);
+    }),
+  );
+
   it(
     'emits nothing before the debounce elapses, and the term after it with leading ' +
       'whitespace stripped but a single trailing space kept (#408 follow-up: the server ' +

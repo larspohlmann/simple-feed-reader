@@ -45,6 +45,7 @@ function isTextEntryTarget(target: EventTarget | null): boolean {
 export class SearchFieldComponent {
   /** The active search term, e.g. restored from the URL on Back navigation. */
   readonly term = input('');
+  readonly populateTerm = input(true);
   /** A search request for this field's own term is in flight. Replaces the
    *  leading search icon with a spinner; the caller is the only one who knows
    *  (the field itself never fetches), so it is always driven from outside. */
@@ -116,14 +117,10 @@ export class SearchFieldComponent {
   private activeTerm = '';
 
   constructor() {
-    // Keep the field in step with a term the caller sets from outside (Back
-    // navigation restoring a prior search, or moving to a different one)
-    // without feeding it back through the debounce as if the user had just
-    // typed it. activeTerm moves with it: the route, not this instance's own
-    // emission history, is the source of truth for what is "already active",
-    // so typing that same term again later is never mistaken for a repeat.
     effect(() => {
-      const external = this.term();
+      // Track saved terms too, so switching saved searches cancels pending input.
+      const term = this.term();
+      const external = this.populateTerm() ? term : '';
       untracked(() => {
         this.text.set(external);
         this.activeTerm = external;

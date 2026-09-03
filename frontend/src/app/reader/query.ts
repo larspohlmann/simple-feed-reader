@@ -19,6 +19,7 @@ export interface Selection {
   /** Only a search carries one. Part of the list's identity, so it belongs to
    *  the selection rather than to a service beside it. */
   term?: string;
+  searchOrigin?: 'saved';
 }
 
 /** The shortest term the backend will accept. A shorter one is not an error
@@ -136,7 +137,17 @@ export interface RefreshScope {
 /** Whether two selections name the same list. Selections are rebuilt from the
  *  route on every navigation, so they are never reference-equal. */
 export function sameSelection(a: Selection, b: Selection): boolean {
-  return a.kind === b.kind && a.id === b.id && a.unread === b.unread && a.term === b.term;
+  return (
+    a.kind === b.kind &&
+    a.id === b.id &&
+    a.unread === b.unread &&
+    a.term === b.term &&
+    a.searchOrigin === b.searchOrigin
+  );
+}
+
+export function isDirectSearch(selection: Selection): boolean {
+  return selection.kind === 'search' && selection.searchOrigin !== 'saved';
 }
 
 /** `Selection.term` with the trailing space — the whole-word-match signal —
@@ -177,18 +188,16 @@ export function isSingleStreamView(s: Selection): boolean {
  *  template happens to mention — `selectionFromParams` gives `q` priority
  *  over `view`/`tag`/`subscription`, so a leftover `q` the caller forgot to
  *  null silently wins and strands the user in search results (#408). */
-const SELECTION_PARAM_NAMES = ['view', 'tag', 'subscription', 'entry', 'q'] as const;
+const SELECTION_PARAM_NAMES = [
+  'view',
+  'tag',
+  'subscription',
+  'entry',
+  'q',
+  'searchOrigin',
+] as const;
 
-/** The vocabulary as a type. `selectionParam` below accepts only these
- *  literals, so `selectionFromParams` cannot read a URL parameter into the
- *  selection without that name already being part of `SELECTION_PARAM_NAMES`
- *  — add a sixth selection parameter, wire it into `Selection` and a
- *  template, but forget it here, and the `selectionParam(p, 'foo')` call
- *  fails to compile instead of silently reading `null` forever (the #408
- *  failure mode this file exists to close). `unread` deliberately reads
- *  through plain `ParamMap.get` instead: it refines the current list, it
- *  does not choose which list is shown, so it is not part of this
- *  vocabulary and a navigation must not clear it. */
+// Unread refines the selected list, so navigation does not clear it.
 type SelectionParamName = (typeof SELECTION_PARAM_NAMES)[number];
 
 /** The only way `selectionFromParams` may pull a selection-identity value
@@ -248,14 +257,15 @@ export function savedSearchTerm(term: string, wholeWord: boolean, phrase: boolea
   return wholeWord ? `${term} ` : term;
 }
 
-/** The query params that open a saved search, reusing the existing `q` search
- *  selection kind. */
 export function savedSearchParams(
   term: string,
   wholeWord: boolean,
   phrase: boolean,
 ): SelectionParams {
-  return selectionQueryParams({ q: savedSearchTerm(term, wholeWord, phrase) });
+  return selectionQueryParams({
+    q: savedSearchTerm(term, wholeWord, phrase),
+    searchOrigin: 'saved',
+  });
 }
 
 export function selectionFromParams(p: ParamMap): {
@@ -281,7 +291,9 @@ export function selectionFromParams(p: ParamMap): {
   if (isSearchableTerm(term)) {
     // A search is its own view over every subscription, so a tag or feed
     // parameter left in the URL by hand is ignored rather than combined.
-    return { selection: { kind: 'search', id: null, unread: false, term }, entryId };
+    const selection: Selection = { kind: 'search', id: null, unread: false, term };
+    if (selectionParam(p, 'searchOrigin') === 'saved') selection.searchOrigin = 'saved';
+    return { selection, entryId };
   }
 
   let selection: Selection;

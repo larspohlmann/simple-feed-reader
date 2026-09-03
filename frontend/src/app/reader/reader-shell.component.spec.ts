@@ -875,6 +875,58 @@ describe('ReaderShellComponent', () => {
   });
 
   describe('wide desktop searches (#607)', () => {
+    it.each(['magazine', 'list', 'pane'] as const)(
+      'uses the selected %s layout for a saved-search link',
+      (layout) => {
+        const f = boot();
+        screen.isWide.set(true);
+        f.componentInstance.layout.set(layout);
+
+        qp.next(convertToParamMap({ q: 'angular', searchOrigin: 'saved' }));
+        f.detectChanges();
+        ctrl
+          .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+          .flush({ entries: [{ ...entry, isHidden: true, isViewed: true }], nextCursor: null });
+        f.detectChanges();
+
+        expect(f.componentInstance.splitView()).toBe(layout === 'pane');
+        expect(f.nativeElement.querySelector('app-sidebar input').value).toBe('');
+        expect(f.nativeElement.querySelector('.rows.magazine') !== null).toBe(
+          layout === 'magazine',
+        );
+
+        qp.next(convertToParamMap({ q: 'angular', searchOrigin: 'saved', entry: '1' }));
+        f.detectChanges();
+        expect(f.componentInstance.articleFullscreen()).toBe(layout !== 'pane');
+        ctrl.verify();
+      },
+    );
+
+    it('switches between saved and direct search with the same term', () => {
+      const f = boot();
+      screen.isWide.set(true);
+      f.componentInstance.layout.set('magazine');
+
+      for (const searchOrigin of ['saved', null, 'saved']) {
+        qp.next(convertToParamMap({ q: 'angular', searchOrigin }));
+        f.detectChanges();
+        ctrl
+          .match((r) => r.url === 'https://api.test/api/entries/search')
+          .forEach((r) => r.flush({ entries: [entry], nextCursor: null }));
+        f.detectChanges();
+
+        expect(f.componentInstance.splitView()).toBe(searchOrigin === null);
+        expect(f.nativeElement.querySelector('app-sidebar input').value).toBe(
+          searchOrigin === null ? 'angular' : '',
+        );
+        expect(f.nativeElement.querySelector('.rows.magazine') !== null).toBe(
+          searchOrigin === 'saved',
+        );
+        expect(f.componentInstance.layout.mode()).toBe('magazine');
+      }
+      ctrl.verify();
+    });
+
     it('uses the split reader and restores the selected magazine layout when search clears', () => {
       const f = boot();
       screen.isWide.set(true);
@@ -1538,7 +1590,14 @@ describe('ReaderShellComponent', () => {
       expect(nav).toHaveBeenCalledWith(
         [],
         expect.objectContaining({
-          queryParams: { view: null, tag: null, subscription: 9, entry: null, q: null },
+          queryParams: {
+            view: null,
+            tag: null,
+            subscription: 9,
+            entry: null,
+            q: null,
+            searchOrigin: null,
+          },
         }),
       );
       ctrl.match(() => true).forEach((r) => r.flush({ entries: [], nextCursor: null }));
@@ -1553,7 +1612,7 @@ describe('ReaderShellComponent', () => {
       expect(nav).toHaveBeenCalledWith(
         [],
         expect.objectContaining({
-          queryParams: { q: 'angular', entry: null },
+          queryParams: { q: 'angular', entry: null, searchOrigin: null },
           queryParamsHandling: 'merge',
         }),
       );
@@ -1568,7 +1627,7 @@ describe('ReaderShellComponent', () => {
       expect(nav).toHaveBeenCalledWith(
         [],
         expect.objectContaining({
-          queryParams: { q: null, entry: null },
+          queryParams: { q: null, entry: null, searchOrigin: null },
           queryParamsHandling: 'merge',
         }),
       );
