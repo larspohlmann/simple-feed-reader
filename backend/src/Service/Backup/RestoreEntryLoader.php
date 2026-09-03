@@ -216,7 +216,6 @@ final class RestoreEntryLoader
      */
     private function recordCreatedIds(RestoreFeedTarget $target, array $inserted): void
     {
-        /** @var list<string> $hashes array_map over a non-empty-list stays a list */
         $hashes = array_map(static fn (EntryLine $line): string => $line->guidHash, $inserted);
         $idsByHash = $this->entries->entryIdsByGuidHash($target->feedId, $hashes);
         if (\count($idsByHash) !== \count($inserted)) {
