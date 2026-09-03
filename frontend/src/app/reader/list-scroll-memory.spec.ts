@@ -1,7 +1,6 @@
-import { ListScrollMemory, scrollKey } from './list-scroll-memory';
-import { Selection } from './query';
 import { convertToParamMap } from '@angular/router';
-import { selectionFromParams } from './query';
+import { ListScrollMemory, scrollKey } from './list-scroll-memory';
+import { Selection, selectionFromParams } from './query';
 
 const sel = (over: Partial<Selection> = {}): Selection => ({
   kind: 'all',

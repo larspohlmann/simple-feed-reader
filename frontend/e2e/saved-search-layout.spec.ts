@@ -1,16 +1,12 @@
 import { expect, Page, test } from '@playwright/test';
 import { stubAuthToken } from './support/auth';
-import { readerFailedJson } from './support/reader';
+import { readerFailedJson, savedSearchesJson, savedSearchWire } from './support/reader';
 
-const SAVED_SEARCH = {
+const SAVED_SEARCH = savedSearchWire({
   id: 501,
   term: 'climate',
-  wholeWord: false,
-  phrase: false,
-  position: 0,
   unreadEntryIds: [],
-  includeInDigest: false,
-};
+});
 
 const ENTRY = {
   id: 1,
@@ -70,7 +66,7 @@ async function stubReader(page: Page): Promise<void> {
       });
     }
     if (path.endsWith('/tags')) return json({ tags: [] });
-    if (path.endsWith('/api/saved-searches')) return json({ savedSearches: [SAVED_SEARCH] });
+    if (path.endsWith('/api/saved-searches')) return json(savedSearchesJson(SAVED_SEARCH));
     if (path.endsWith('/entries/saved-searches')) {
       return json({ entries: [ENTRY], nextCursor: null, savedSearchIds: { '1': 501 } });
     }
