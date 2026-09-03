@@ -1,3 +1,4 @@
+import { isSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ThemeService } from './theme.service';
 
@@ -39,6 +40,7 @@ describe('ThemeService', () => {
 
   it('exposes the resolved theme as a signal', () => {
     const svc = TestBed.inject(ThemeService);
+    expect(isSignal(svc.resolved)).toBe(true);
     expect(svc.resolved()).toBe('light');
 
     svc.setMode('dark');
