@@ -68,6 +68,7 @@ import {
 import { ActionSheet } from '../shared/action-sheet/action-sheet.service';
 import { ManageActions } from './manage/manage-actions.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
+import { PaneResizeDirective } from './pane-resize.directive';
 import { SidebarCountsPoll } from './sidebar-counts-poll.service';
 import { CatalogStore } from '../discover/catalog.store';
 import { OnboardingSkip } from '../discover/onboarding-skip';
@@ -88,6 +89,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
     EntryListComponent,
     ReaderViewComponent,
     DrawerSwipeDirective,
+    PaneResizeDirective,
     IconComponent,
     ListActionDirective,
     ButtonComponent,

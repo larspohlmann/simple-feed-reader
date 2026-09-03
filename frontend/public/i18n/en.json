@@ -782,6 +782,7 @@
     "original": "Original",
     "showOriginal": "Show original feed content",
     "showReader": "Show reader view",
+    "resizeSplit": "Resize the split between the list and the article",
     "toggleTag": "Toggle {{name}}",
     "manage": "Manage {{name}}",
     "editTag": "Edit tag",
