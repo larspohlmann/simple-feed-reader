@@ -7,7 +7,8 @@ import { SavedSearchDto, SavedSearchWire } from './models';
 /** The user's saved searches, newest first, each with a live unread-match
  *  count. load() re-syncs the whole set — the hook the reader shell calls after
  *  every refresh slice — and is the only place a count is learned, because it
- *  costs one LIKE scan per saved search.
+ *  costs a LIKE scan over every subscribed entry (one scan for all searches,
+ *  #584).
  *
  *  A single read used to leave every badge stale until the next such reload
  *  (#581, self-heals on the next tick). Now the API answers each search with

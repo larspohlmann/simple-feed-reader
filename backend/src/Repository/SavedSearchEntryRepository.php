@@ -16,6 +16,13 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
 {
+    /**
+     * Searches per badge scan. Each search binds up to four parameters per
+     * term twice (the WHERE and its CASE), so this keeps one statement well
+     * under the smallest placeholder limit in play, SQLite's historical 999.
+     */
+    public const int SEARCHES_PER_SCAN = 25;
+
     public function __construct(
         ManagerRegistry $registry,
         private readonly EntryListRowHydrator $rowHydrator,
@@ -84,6 +91,28 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
     }
 
     /**
+     * Saved-search id => the ids of every unread entry that search matches, for
+     * all searches in one scan per chunk (#584): the WHERE keeps the rows any
+     * search matches, a CASE per search flags which of them. Both come from the
+     * predicate the list runs on, so a badge tracks exactly what opening the
+     * search lists. Deliberately engine-independent: read state is per-user and
+     * lives only in the database, never in the search index.
+     *
+     * @param list<SavedSearchTerm> $savedSearches
+     *
+     * @return array<int, list<int>>
+     */
+    public function unreadMatchIdsBySavedSearch(int $userId, array $savedSearches): array
+    {
+        $idsBySearch = [];
+        foreach (array_chunk($savedSearches, self::SEARCHES_PER_SCAN) as $chunk) {
+            $idsBySearch += $this->unreadMatchIdsInOneScan($userId, $chunk);
+        }
+
+        return $idsBySearch;
+    }
+
+    /**
      * Entry id => the id of the first saved search matching it, in the order
      * given — the sidebar's, so the row names the search the reader would look
      * for first. Takes the searches alone, not a SavedSearchEntryQuery: this
@@ -120,6 +149,46 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
         }
 
         return $matched;
+    }
+
+    /**
+     * @param list<SavedSearchTerm> $savedSearches
+     *
+     * @return array<int, list<int>>
+     */
+    private function unreadMatchIdsInOneScan(int $userId, array $savedSearches): array
+    {
+        $qb = $this->unreadEntriesQueryBuilder($userId)->select('e.id')->orderBy('e.id');
+        foreach ($savedSearches as $position => $savedSearch) {
+            $qb->addSelect($this->matchFlagExpression($qb, $position, $savedSearch));
+        }
+        $qb->andWhere($this->anySearchMatches($qb, $savedSearches));
+
+        $idsBySearch = array_fill_keys(
+            array_map(static fn (SavedSearchTerm $savedSearch): int => $savedSearch->id, $savedSearches),
+            [],
+        );
+        // Doctrine types the mapped id; a CASE is raw, and MySQL hands it back as a string.
+        /** @var list<array{id: int, ...<string, int|string>}> $rows */
+        $rows = $qb->getQuery()->getScalarResult();
+        foreach ($rows as $row) {
+            foreach ($savedSearches as $position => $savedSearch) {
+                if ((int) $row['match' . $position] === 1) {
+                    $idsBySearch[$savedSearch->id][] = $row['id'];
+                }
+            }
+        }
+
+        return $idsBySearch;
+    }
+
+    private function matchFlagExpression(QueryBuilder $qb, int $position, SavedSearchTerm $savedSearch): string
+    {
+        return \sprintf(
+            'CASE WHEN %s THEN 1 ELSE 0 END AS match%d',
+            $this->termsPredicateBuilder->build($qb, $savedSearch->terms, 'flag' . $position . 'term'),
+            $position,
+        );
     }
 
     /**

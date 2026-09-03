@@ -68,6 +68,7 @@ final class SavedSearchControllerTest extends ApiTestCase
         self::assertIsArray($created['savedSearch']);
         self::assertSame('punk', $created['savedSearch']['term']);
         self::assertTrue($created['savedSearch']['wholeWord']);
+        self::assertSame([$entry->getId()], $created['savedSearch']['unreadEntryIds']);
         $savedId = $created['savedSearch']['id'];
         self::assertIsInt($savedId);
 

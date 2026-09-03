@@ -157,6 +157,27 @@ final class SavedSearchEntryListTest extends DbTestCase
         );
     }
 
+    /**
+     * Two whole-word searches ORed together: the shape that overflowed SQLite
+     * 3.45's parser stack while the boundary rule was a REPLACE chain (#584).
+     */
+    public function testTwoWholeWordSavedSearchesListTogether(): void
+    {
+        $cat = $this->entry('a', 'A stray cat appeared', effectiveDate: '2026-07-10T00:00:00Z');
+        $dog = $this->entry('b', 'The dog barked', effectiveDate: '2026-07-09T00:00:00Z');
+        $this->entry('c', 'The category changed', effectiveDate: '2026-07-08T00:00:00Z');
+
+        $rows = $this->repo()->listForSavedSearches($this->queryWithModes([
+            ['cat', SearchMode::WholeWord],
+            ['dog', SearchMode::WholeWord],
+        ]));
+
+        self::assertSame(
+            [$cat->getId(), $dog->getId()],
+            array_map(static fn ($row): ?int => $row->entry->getId(), $rows),
+        );
+    }
+
     public function testUnreadMatchIdsForNoSavedSearchesReturnsNothingRatherThanEveryUnreadId(): void
     {
         $this->entry('a', 'Climate report');
