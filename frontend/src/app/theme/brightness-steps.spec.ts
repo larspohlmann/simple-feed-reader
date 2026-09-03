@@ -193,8 +193,8 @@ describe.each(['light', 'dark'] as const)('%s brightness steps', (theme) => {
 
   it.each(STEPS[theme])('step %i keeps on-accent legible on the accent', (step) => {
     const palette = { ...base, ...paletteAt(theme, step) };
-    const floor = Math.min(4.5, contrast(base['on-accent'], base.accent)) - TOLERANCE;
-    expect(contrast(palette['on-accent'], palette.accent)).toBeGreaterThanOrEqual(floor);
+    const floor = Math.min(4.5, contrast(base['on-accent'], base['accent'])) - TOLERANCE;
+    expect(contrast(palette['on-accent'], palette['accent'])).toBeGreaterThanOrEqual(floor);
   });
 
   it.each(STEPS[theme])('step %i dims media only below the default', (step) => {
