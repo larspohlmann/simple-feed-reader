@@ -9,41 +9,44 @@ use Dom\HTMLDocument;
 
 /**
  * Restores a page-drawn lead unless the body starts with an image, already
- * contains that asset, or a recovered player is about to be top-placed.
+ * contains that asset, or a recovered player is about to be top-placed. A
+ * share render — a subscribe card, a generated preview — is refused by what
+ * it is: an imageless body takes any lead, so drawn-on-page cannot gate it
+ * (#786).
  */
 final readonly class ReaderLeadImage
 {
     public function restore(HTMLDocument $document, LeadImageCandidate $lead, bool $willTopPlace): void
     {
-        $leadUrl = $lead->url;
-        if ($leadUrl === null || preg_match('#^https?://#i', $leadUrl) !== 1) {
-            return;
-        }
-
         $body = $document->body;
-        if ($body === null) {
+        $leadUrl = $lead->url;
+        if ($body === null || $leadUrl === null || preg_match('#^https?://#i', $leadUrl) !== 1) {
             return;
         }
 
         // A top-placed player becomes the article's lead visual and carries its
         // own poster; adding the hero above it would stack a second picture.
-        if ($willTopPlace) {
+        if ($willTopPlace || !$this->belongsAbove($body, $lead)) {
             return;
         }
 
-        $leadIdentity = ImageIdentity::fromUrl($leadUrl);
-        if ($this->opensWithImage($body) || $this->bodyShowsLead($leadIdentity, $body)) {
-            return;
+        $body->insertBefore($this->figure($document, $leadUrl), $body->firstChild);
+    }
+
+    private function belongsAbove(Element $body, LeadImageCandidate $lead): bool
+    {
+        $leadIdentity = ImageIdentity::fromUrl((string) $lead->url);
+        if ($leadIdentity->isShareRender() || $this->opensWithImage($body)) {
+            return false;
+        }
+        if ($this->bodyShowsLead($leadIdentity, $body)) {
+            return false;
         }
 
         // A body that already carries some picture only takes the lead when the
         // page truly draws it; otherwise a meta-only share-render would double up.
         // A body with no picture has nothing to duplicate, so the lead goes in.
-        if ($this->bodyHasImage($body) && !$lead->pageImages->draws($leadIdentity)) {
-            return;
-        }
-
-        $body->insertBefore($this->figure($document, $leadUrl), $body->firstChild);
+        return !$this->bodyHasImage($body) || $lead->pageImages->draws($leadIdentity);
     }
 
     private function bodyHasImage(Element $body): bool
