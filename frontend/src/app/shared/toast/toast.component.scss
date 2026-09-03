@@ -1,4 +1,3 @@
-// src/app/shared/toast/toast.component.scss
 .toast {
   display: flex;
   gap: var(--space-3);
@@ -6,11 +5,9 @@
   padding: var(--space-3) var(--space-4);
   background: var(--surface-2);
 
-  /* The drop shadow is the whole separation in light mode and none of it in
-     dark, where a near-black shadow over a near-black canvas leaves the toast
-     floating with no edge (#398). The accent carries it instead of `--border`:
-     every toast this app raises belongs to a For-You run, so the edge doubles
-     as the run's signal, and 40% keeps it a hairline rather than a frame. */
+  /* The drop shadow is the whole separation in light mode, none in dark,
+     where a near-black shadow leaves no edge (#398). The accent border
+     doubles as the run's signal, at 40% to stay a hairline, not a frame. */
   border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
   border-radius: var(--radius-lg);
   box-shadow: 0 10px 32px rgb(0 0 0 / 22%);

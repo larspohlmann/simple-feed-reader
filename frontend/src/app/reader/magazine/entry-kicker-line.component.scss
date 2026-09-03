@@ -1,9 +1,8 @@
 @use '../../theme/breakpoints' as bp;
 
-/* `width` is not belt-and-braces with `min-width`, it is the load-bearing half.
-   A block whose parent sets `align-items: flex-start` (the kicker card) is not
-   stretched, so a nowrap row would take its max-content width — 476px inside a
-   351px card — and push the list scroller sideways instead of ellipsising. */
+/* `width` is load-bearing, not belt-and-braces: the kicker card's parent sets
+   `align-items: flex-start`, so an unstretched nowrap row would take its
+   max-content width and push the list scroller sideways instead of ellipsising. */
 :host {
   display: block;
   width: 100%;
@@ -15,10 +14,9 @@
   container-type: inline-size;
 }
 
-/* Never wraps. The source is the only elastic item in the row: it shrinks and
-   ellipsises, while the dot, favicon, separator and time always render whole.
-   A feed whose title runs to five clauses ("NDR.de - Das Beste am Norden -
-   Radio - Fernsehen - Nachrichten") used to push the time onto a third line. */
+/* Never wraps. The source is the row's only elastic item — it shrinks and
+   ellipsises while dot/favicon/separator/time render whole. A five-clause
+   feed title used to push the time onto a third line. */
 .kicker {
   margin: 0;
   display: flex;
@@ -54,10 +52,9 @@
   flex: none;
 }
 
-/* Below the measured width of a split card's own text column (#769), the
-   short form gives way to the narrow one ("15 days ago" -> "15d ago") so
-   `.source` keeps more of the space it actually needs. `display: none`, not
-   a visual clip, so the swapped-out form is not also announced. */
+/* Below the split card's text-column width (#769), the short form swaps to
+   the narrow one ("15 days ago" -> "15d ago") so `.source` keeps more space.
+   `display: none`, not a visual clip, so it isn't also announced. */
 .when-narrow {
   display: none;
 }

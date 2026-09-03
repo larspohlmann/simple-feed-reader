@@ -200,12 +200,9 @@ describe('ManageActions', () => {
         title: `Feed ${index + 1}`,
       }));
 
-    // setup() gives each test its own TestBed (see below), so the outer
-    // suite's `afterEach(() => ctrl.verify())` verifies the wrong, detached
-    // controller for every test in this block. This local `http` plus
-    // afterEach verifies the controller setup() actually injected, so an
-    // unexpected extra request (e.g. a cold Observable subscribed twice)
-    // still fails the test, not just a wrong URL or count.
+    // setup() gives each test its own TestBed, so the outer suite's `ctrl.verify()`
+    // checks the wrong, detached controller here. This local `http` verifies the
+    // controller setup() actually injected, catching e.g. a doubly-subscribed Observable.
     let http: HttpTestingController;
     afterEach(() => http.verify());
 
@@ -226,13 +223,9 @@ describe('ManageActions', () => {
           provideHttpClientTesting(),
           { provide: API_BASE_URL, useValue: BASE },
           { provide: Dialog, useValue: { open: dialogOpen } },
-          // ManageActions and ToastService share the `Dialog` token, and the
-          // stub above answers every caller with the same bare { closed }
-          // object -- enough for ManageActions' own dialogs, but missing the
-          // `overlayRef` ToastService.show() reads. A real ToastService.show()
-          // call inside bulkPatch()/bulkUnsubscribe() would throw against that
-          // stub, so it gets its own stub here rather than exercising the CDK
-          // overlay machinery this suite does not set up.
+          // ManageActions and ToastService share the `Dialog` token; the stub above's
+          // bare { closed } object lacks the `overlayRef` ToastService.show() reads, so
+          // a real call inside bulkPatch()/bulkUnsubscribe() would throw against it.
           { provide: ToastService, useValue: { show: jest.fn() } },
         ],
       });

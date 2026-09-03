@@ -1,4 +1,3 @@
-// src/app/settings/recommendation-run-history-month.component.ts
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { formatCost, formatDayInMonth, formatDuration, formatTime } from '../reader/format';
@@ -9,18 +8,15 @@ import { DisclosureComponent } from '../shared/disclosure/disclosure.component';
 import { IconComponent } from '../shared/icon/icon.component';
 import { runHistoryStatusIcon } from './run-history-status-icon';
 
-/** One month of the run-history card (#409): a header carrying that month's
- *  own run count and spend, and -- once the parent has fetched them -- its
- *  rows, behind a collapsible `app-disclosure appearance="row"`. Purely
- *  presentational: it renders whatever it is given and asks the parent for
- *  more through its two outputs, never fetching anything itself.
+/** One month of the run-history card (#409): a header with that month's run
+ *  count and spend, and -- once fetched -- its rows, behind a collapsible
+ *  `app-disclosure`. Purely presentational: renders what it's given, asks
+ *  the parent for more via its two outputs, fetches nothing itself.
  *
- *  `startOpen` is bound to `runs() !== null`: the newest month arrives with
- *  its rows already loaded and starts open; an older month starts closed and
- *  opening it is the parent's cue to fetch. Angular only writes `[open]`
- *  when that expression's value changes, so a reader who closes a loaded
- *  month is not forced back open by an unrelated re-render (a refetch on
- *  `completedStamp`, say) -- `runs()` stays non-null throughout. */
+ *  `startOpen` is bound to `runs() !== null`: the newest month arrives
+ *  loaded and starts open; an older month starts closed, and opening it is
+ *  the fetch cue. Angular writes `[open]` only on change, so closing a
+ *  loaded month survives an unrelated re-render (`runs()` stays non-null). */
 @Component({
   selector: 'app-recommendation-run-history-month',
   standalone: true,

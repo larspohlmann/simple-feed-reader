@@ -54,10 +54,8 @@ describe('PaneResizeDirective', () => {
   });
 
   it('does not preventDefault on pointerdown, so the browser still fires dblclick', () => {
-    // preventDefault on pointerdown suppresses the compatibility click/dblclick
-    // events, which would silently break double-click-to-reset in a real browser
-    // (an e2e caught it once). Selection is suppressed with `user-select`, not
-    // here.
+    // preventDefault on pointerdown would suppress the compatibility dblclick
+    // event, silently breaking double-click-to-reset (an e2e caught it once).
     const down = new MouseEvent('pointerdown', { clientX: 250, bubbles: true, cancelable: true });
     handle.dispatchEvent(down);
     expect(down.defaultPrevented).toBe(false);

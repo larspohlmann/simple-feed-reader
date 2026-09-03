@@ -1,4 +1,3 @@
-// src/app/reader/passkey-offer-dialog.component.spec.ts
 import { TestBed } from '@angular/core/testing';
 import { DialogRef } from '@angular/cdk/dialog';
 import { Subject } from 'rxjs';
@@ -9,10 +8,9 @@ import { Problem } from '../core/problem';
 import { ToastService } from '../shared/toast/toast.service';
 import { PasskeyOfferDialogComponent } from './passkey-offer-dialog.component';
 
-/** Drains every pending microtask a ceremony's promise chain needs -- mirrors
- *  `passkey.service.spec.ts`'s own helper, needed here for the same reason:
- *  a fixed number of `await Promise.resolve()` calls is fragile against that
- *  chain's depth changing. */
+/** Drains every pending microtask a ceremony's promise chain needs (mirrors
+ *  `passkey.service.spec.ts`'s helper): a fixed count of `await
+ *  Promise.resolve()` is fragile against that chain's depth changing. */
 const flushMicrotasks = async (): Promise<void> => {
   await Promise.resolve();
   await Promise.resolve();
@@ -20,11 +18,9 @@ const flushMicrotasks = async (): Promise<void> => {
 
 describe('PasskeyOfferDialogComponent', () => {
   const close = jest.fn();
-  // A fresh Subject per test (reassigned in beforeEach): DialogRef stays a
-  // module-level `const`, but each mounted component subscribes to whatever
-  // `closed` currently points at, so a shared, never-completing Subject would
-  // let a later test's `closed.next()` also fire every earlier test's
-  // still-subscribed component.
+  // A fresh Subject per test: DialogRef is a module-level `const`, but each
+  // mounted component subscribes to whatever `closed` currently points at, so
+  // reusing one Subject would let a later `closed.next()` fire earlier tests too.
   let closed = new Subject<void>();
   const passkeyService = { enrol: jest.fn() };
   const authService = { answerPasskeyOffer: jest.fn(), markPasskeyOfferAnswered: jest.fn() };
@@ -126,11 +122,9 @@ describe('PasskeyOfferDialogComponent', () => {
   });
 
   it('shows a translated message, not the raw DOMException text, when the authenticator is already enrolled', async () => {
-    // Mirrors PasskeysGroupComponent's own equivalent spec: near-unreachable
-    // here in practice (this dialog only ever offers a passkey to an account
-    // with none yet), but the fix round 1 review flagged that this branch had
-    // silently fallen out of step with Settings' handling -- proving it stays
-    // in step is cheap and the divergence risk is not.
+    // Mirrors PasskeysGroupComponent's equivalent spec. Near-unreachable here in
+    // practice, but review flagged this branch drifting out of step with
+    // Settings' handling — proving it stays in step is cheap.
     const alreadyEnrolled: Problem = {
       type: 'InvalidStateError',
       title:
@@ -153,12 +147,9 @@ describe('PasskeyOfferDialogComponent', () => {
   });
 
   it('shows a translated message, not the raw DOMException text, on any other locally-raised ceremony failure', async () => {
-    // `ceremonyRejected` is `PasskeyService.toProblem()`'s flag for "this
-    // came from the browser, not the server" -- distinct from both the
-    // `status: 500` case above (a real backend Problem, keeps its own title)
-    // and the network-failure spec below (`status: 0` too, but not from a
-    // rejected ceremony -- see that spec for why `status` alone can't tell
-    // the two apart).
+    // `ceremonyRejected` is `PasskeyService.toProblem()`'s flag for "from the
+    // browser, not the server" — distinct from the `status: 500` case above and
+    // the network-failure spec below (`status: 0` too, but not ceremony-rejected).
     const authenticatorError: Problem = {
       type: 'ConstraintError',
       title: 'The authenticator does not meet the requested criteria.',
@@ -178,12 +169,9 @@ describe('PasskeyOfferDialogComponent', () => {
   });
 
   it('shows the server-unreachable message on a genuine network failure during enrolment, not the generic passkey fallback', async () => {
-    // Mirrors PasskeysGroupComponent's own equivalent spec: a dropped
-    // connection during enrol()'s own HTTP calls reaches this component as a
-    // Problem with status: 0 too -- the same status the DOMException branch
-    // above uses. status alone cannot tell the two apart (see
-    // backup-section.component.ts's outcomeIsUnproven(), which reads
-    // status === 0 as "dropped connection" -- the opposite reading).
+    // Mirrors PasskeysGroupComponent's equivalent spec: a dropped connection
+    // during enrol() reaches here as status: 0 too, same as the DOMException
+    // branch above — status alone can't tell the two apart.
     const networkFailure: Problem = {
       type: 'about:blank',
       title: 'Could not reach the server',

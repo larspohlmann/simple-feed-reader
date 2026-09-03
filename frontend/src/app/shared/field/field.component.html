@@ -1,9 +1,6 @@
 <!-- The control is projected, so the association is real but only exists at
-     runtime: the linter sees an ng-content where the input will be and cannot
-     follow it. Wrapping the control in the label is what gives it its
-     accessible name, so no for/id pair is needed either. The tip sits inside
-     that label deliberately — its panel belongs under the label row, and both
-     trigger and panel swallow their clicks, so neither reaches the label. -->
+     runtime: the linter sees an ng-content and cannot follow it. Wrapping the
+     control in the label gives it its accessible name, so no for/id pair is needed. -->
 <!-- eslint-disable-next-line @angular-eslint/template/label-has-associated-control -->
 <label>
   <span class="lbl-row">

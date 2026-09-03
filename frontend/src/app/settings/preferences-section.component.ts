@@ -1,4 +1,3 @@
-// src/app/settings/preferences-section.component.ts
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LANGS } from '../core/language';

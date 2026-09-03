@@ -1,4 +1,3 @@
-// src/app/discover/catalog-api.ts
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
@@ -16,14 +15,10 @@ export class CatalogApi {
       .pipe(map((catalog) => ({ categories: catalog.categories.map(this.withResolvedFavicons) })));
   }
 
-  /**
-   * Favicon URLs arrive from the server as bare API paths, because an `<img>`
-   * cannot go through HttpClient and the server does not know where the app is
-   * mounted. Joining them with the API base is therefore this layer's job, the
-   * same as for every URL it builds itself — and it is not cosmetic: under
-   * `/reader` an unjoined path resolves against the apex domain and 404s, so
-   * the whole picker renders with broken images (#144).
-   */
+  /** Favicon URLs arrive as bare API paths -- an `<img>` can't go through
+   *  HttpClient, and the server doesn't know where the app is mounted. Under
+   *  `/reader`, an unjoined path resolves against the apex domain and 404s,
+   *  breaking every image in the picker (#144). */
   private readonly withResolvedFavicons = (category: CatalogCategoryDto): CatalogCategoryDto => ({
     ...category,
     feeds: category.feeds.map((feed): CatalogFeedDto => ({

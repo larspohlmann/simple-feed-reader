@@ -430,11 +430,9 @@ describe('isPhraseTerm (#702)', () => {
   });
 });
 
-// These pin the two predicates at their edges rather than through a call site.
-// The badge round taught the lesson: a consolidation that replaces four
-// expressions with one helper is only safe if something states what the OLD
-// expressions accepted — otherwise every test is written against the new
-// helper and a narrowed rule passes them all.
+// These pin the two predicates at their edges rather than through a call
+// site. A consolidation that replaces four expressions with one helper is
+// only safe if something states what the OLD expressions accepted.
 describe('isSearchableTerm and isTooShortToSearch (#408 cleanup)', () => {
   it('accepts a term of exactly the minimum length', () => {
     expect(isSearchableTerm('ng2')).toBe(true);
@@ -523,11 +521,9 @@ describe('isWholeWordTerm (#408 follow-up)', () => {
 });
 
 describe('normalizeSearchInput and a trailing NBSP (#408 follow-up)', () => {
-  // A pasted or autocorrected string can end in a no-break space (U+00A0)
-  // rather than a plain one. JS's `\s` already treats it as whitespace, so
-  // it must drive the same whole-word signal a plain trailing space does —
-  // agreeing with the backend's `SearchTerms::WHITESPACE`, which now also
-  // matches it via `\p{Z}`.
+  // A pasted or autocorrected string can end in a no-break space (U+00A0). JS's
+  // `\s` already treats it as whitespace, so it must drive the same whole-word
+  // signal a plain space does — matching the backend's `\p{Z}` class.
   it('reads a trailing NBSP as the whole-word signal, normalized to a plain space', () => {
     expect(normalizeSearchInput('daft punk ')).toBe('daft punk ');
   });

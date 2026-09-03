@@ -1,4 +1,3 @@
-// src/app/reader/reader-api.ts
 import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
@@ -323,10 +322,9 @@ export class ReaderApi {
   }
 
   /** Every month this account has run in, with that month's own run count and
-   *  spend, plus the newest month's first page and the all-time total. One
-   *  call, because the card's first paint needs all of it and each request
-   *  costs a PHP boot. `timeZone` is an IANA identifier; the server buckets
-   *  the months in it and falls back to UTC when it does not know it. */
+   *  spend, plus the newest month's first page and the all-time total -- one
+   *  call, since the card's first paint needs it all and each request costs a
+   *  PHP boot. `timeZone` is IANA; the server buckets months in it, UTC on fallback. */
   runHistory(timeZone: string): Observable<RunHistoryOverview> {
     return this.http.get<RunHistoryOverview>(`${this.base}/api/recommendations/runs/history`, {
       params: { tz: timeZone },

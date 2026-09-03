@@ -1,11 +1,8 @@
 @use '../theme/breakpoints' as bp;
 
-/* The spending record above the debug log: a total line, then one collapsible
-   section per month (#409). The row grid each section renders moved with the
-   markup to `recommendation-run-history-month.component.scss`; this file only
-   owns the total, the list of month sections, and the mobile status legend.
-   Rendered inside the Diagnostics "Run history" drill-in (#541), not a card
-   of its own. */
+/* The spending record: a total line, then one collapsible section per month
+   (#409). The row grid moved to recommendation-run-history-month.component.scss;
+   this file owns the total, the month list, and the mobile status legend. */
 :host {
   display: block;
 }
@@ -64,13 +61,9 @@
     }
   }
 
-  /* Decodes the row's icon-only status column (#409) -- shown at exactly the
-     widths the row itself renders an icon there, `bp.$bp-md` (720px), not
-     `bp.$bp-sm` (560px): the icon/word switch and the column-compression
-     switch are two different boundaries on purpose (see the month
-     component's own stylesheet for why), and this has to track the former.
-     Above `bp.$bp-md` every row spells the word out already, so a legend
-     there would explain a column that needs no explaining. */
+  /* Decodes the row's icon-only status column (#409), shown at the same
+     `bp.$bp-md` boundary the row itself switches to an icon at (a
+     deliberately different boundary than the column-compression switch). */
   &__legend {
     display: none;
 
@@ -97,12 +90,9 @@
     list-style: none;
   }
 
-  /* Same three colours as the row's own `&__status` modifiers, in
-     `recommendation-run-history-month.component.scss` -- kept as a second,
-     short copy rather than a shared mixin because view encapsulation puts the
-     two rules in different stylesheets, and three colour lines are not worth
-     a cross-component dependency between them. The icon-to-status mapping
-     itself has no second copy -- see `run-history-status-icon.ts`. */
+  /* Same three colours as the row's `&__status` modifiers, kept as a second
+     short copy rather than a shared mixin (view encapsulation splits the two
+     stylesheets); see run-history-status-icon.ts for the icon mapping itself. */
   &__legend-item {
     display: inline-flex;
     align-items: center;

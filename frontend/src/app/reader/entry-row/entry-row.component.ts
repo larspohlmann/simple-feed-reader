@@ -1,4 +1,3 @@
-// src/app/reader/entry-row/entry-row.component.ts
 import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { MarkedTextComponent } from '../../shared/marked-text/marked-text.component';

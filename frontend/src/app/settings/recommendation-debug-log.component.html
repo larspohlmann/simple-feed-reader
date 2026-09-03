@@ -4,10 +4,8 @@
        its own heading would nest a card in a card. -->
   <div class="debug-panel">
     <!-- r.status and entry.verdict render the API's own wire vocabulary, not
-         translated copy: this panel is a diagnostic tool whose entire value
-         is matching what the backend and its logs say, so a translated label
-         (e.g. "brauchbar" for "usable") would make a row harder, not easier,
-         to correlate with the server side. Deliberate; not a missed i18n key. -->
+         translated copy: this panel's entire value is matching what the backend
+         and its logs say, so a translated label would only hurt the correlation. -->
     @if (run(); as r) {
       <div class="debug-panel__summary">
         <span class="debug-panel__status debug-panel__status--{{ r.status }}">{{ r.status }}</span>

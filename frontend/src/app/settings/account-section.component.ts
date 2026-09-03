@@ -1,4 +1,3 @@
-// src/app/settings/account-section.component.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { Dialog } from '@angular/cdk/dialog';

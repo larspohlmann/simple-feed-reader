@@ -1,4 +1,3 @@
-// src/app/settings/organise/organise.store.ts
 import { Injectable, Signal, computed, effect, inject, signal, untracked } from '@angular/core';
 import { SubscriptionsStore, untaggedSubs } from '../../reader/subscriptions.store';
 import { TagsStore } from '../../reader/tags.store';
@@ -37,16 +36,13 @@ function readExpanded(): ReadonlySet<GroupKey> {
   }
 }
 
-/**
- * The feeds carrying one tag, in that tag's own order.
+/** The feeds carrying one tag, in that tag's own order.
  *
- * `buildTagTree` in subscriptions.store.ts sorts the same way and also
- * computes unread counts this page has no use for, so it sorts here rather
- * than bending that function to two callers. Both build their tag NODES from
- * the full tag list (every tag shows, empty ones included) — `buildTagTree`
- * drops a tag only in its no-`orderedTags` fallback, which this page's
- * `tags()` signal never hits.
- */
+ *  `buildTagTree` in subscriptions.store.ts sorts the same way but also
+ *  computes unread counts this page doesn't need, so it sorts here instead
+ *  of bending that function to two callers. Both build tag NODES from the
+ *  full tag list; `buildTagTree` drops a tag only in its no-`orderedTags`
+ *  fallback, which this page's `tags()` signal never hits. */
 function feedsInTag(subscriptions: SubscriptionDto[], tagId: number): SubscriptionDto[] {
   const position = (s: SubscriptionDto): number =>
     s.tags.find((t) => t.id === tagId)?.position ?? 0;
@@ -56,16 +52,14 @@ function feedsInTag(subscriptions: SubscriptionDto[], tagId: number): Subscripti
     .sort((a, b) => position(a) - position(b));
 }
 
-/**
- * The page's own state: what is selected, what is open, what is filtered.
+/** The page's own state: what is selected, what is open, what is filtered.
  *
- * It performs no writes and injects no write-capable service. Every change to
- * the data goes through the page's own action layer, which is what keeps this
- * page and the sidebar's Organise mode from drifting apart.
+ *  Performs no writes and injects no write-capable service; every data
+ *  change goes through the page's own action layer, keeping this page and
+ *  the sidebar's Organise mode from drifting apart.
  *
- * Provided by the page component, not in root: leaving the page must drop the
- * selection rather than leave it waiting.
- */
+ *  Provided by the page component, not in root: leaving the page must drop
+ *  the selection rather than leave it waiting. */
 @Injectable()
 export class OrganiseStore {
   private readonly subs = inject(SubscriptionsStore);
@@ -115,10 +109,9 @@ export class OrganiseStore {
   });
 
   /** Each group's total feed count before any filter. Kept out of `groups()`
-   *  itself: it depends only on `subs.subscriptions()` and `tags()`, never on
-   *  `titleFilter`/`tagFilter`, so sharing `groups()`'s computed body would
-   *  re-derive every tag's total on every keystroke in the filter box for
-   *  nothing. */
+   *  itself: it depends only on `subs.subscriptions()`/`tags()`, never on
+   *  the filters, so sharing `groups()`'s body would re-derive every tag's
+   *  total on every filter keystroke for nothing. */
   private readonly totalCounts = computed<ReadonlyMap<GroupKey, number>>(() => {
     const all = this.subs.subscriptions();
     const counts = new Map<GroupKey, number>();

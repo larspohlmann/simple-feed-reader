@@ -1,4 +1,3 @@
-// src/app/reader/query.ts
 import { ParamMap, Params, convertToParamMap } from '@angular/router';
 import { EntryQuery, MarkReadScope } from './models';
 import { entryIdFromParam } from './slug';
@@ -28,43 +27,32 @@ export const MIN_SEARCH_LENGTH = 3;
 
 /** Whether a search term ends in whitespace, which the backend
  *  (`SearchTerms::fromInput`) reads as "match whole words only" rather than
- *  substrings. Exported — not inlined at each call site — because this
- *  exact question already has three answers on this branch that disagreed
- *  (a comparator, a parameter vocabulary, a header-visibility rule, each
- *  duplicated and drifted, #408). `normalizeSearchInput` below and the
- *  whole-word badge in `entry-list.component.ts` both call this one
- *  function so a fourth divergence can't happen.
+ *  substrings. Exported rather than inlined: this exact question already had
+ *  three drifted answers on this branch (#408); `normalizeSearchInput` and the
+ *  whole-word badge both call this one function instead.
  *
  *  The class is `[\s\p{Z}]`, matching the backend's `SearchTerms::WHITESPACE`
- *  exactly — neither half is redundant. PHP's `\s` under `/u` is ASCII-only,
- *  so the backend adds `\p{Z}` to also catch a Unicode separator (e.g.
- *  NBSP). JavaScript's `\s` already covers every `\p{Z}` code point, but it
- *  additionally matches ASCII control whitespace — tab, newline, vertical
- *  tab, form feed, carriage return — that `\p{Z}` alone does not. Using only
- *  `\p{Z}` here (round 1's mistake) silently dropped those characters: a
- *  term pasted or autocompleted with a trailing tab or newline stopped
- *  triggering whole-word mode even though the backend still applies it. The
- *  union is the one set both languages agree on. */
+ *  exactly. PHP's `\s` under `/u` is ASCII-only, so the backend adds `\p{Z}`
+ *  for Unicode separators (e.g. NBSP); JS's `\s` covers `\p{Z}` already but
+ *  also ASCII control whitespace (tab, newline, etc.) that `\p{Z}` alone
+ *  misses. `\p{Z}` alone here (round 1's mistake) silently dropped a pasted
+ *  trailing tab/newline; the union is the one set both languages agree on. */
 export function isWholeWordTerm(term: string): boolean {
   return /[\s\p{Z}]$/u.test(term);
 }
 
-/** Whether a search term is wrapped in double quotes, which the backend
- *  (`SearchTerms::fromInput`) reads as "match this exact phrase" — the words in
- *  order and adjacent — rather than each word anywhere. A phrase overrides
- *  whole-word mode when a query carries both signals, exactly as the server
- *  decides it, so every consumer that asks "is this whole-word?" for a display
- *  or an identity check must set a phrase aside first. */
+/** Whether a search term (`SearchTerms::fromInput`) is wrapped in double quotes,
+ *  read as "match this exact phrase" rather than each word anywhere. A phrase
+ *  overrides whole-word mode when both signals are present, so any "is this
+ *  whole-word?" check must set a phrase aside first. */
 export function isPhraseTerm(term: string): boolean {
   return phraseWithin(term) !== null;
 }
 
-/** The exact phrase inside a quoted query, or null when the query is not a
- *  phrase. Mirrors the server's `SearchTerms::phraseWithin`: the trimmed input
- *  opens and closes with a double quote, inner quotes become boundaries (a
- *  stray one would reopen a phrase) and inner whitespace collapses to single
- *  spaces, so the phrase that is marked and the phrase that is matched are one
- *  string. Null when the wrapping quotes hold nothing but whitespace. */
+/** The exact phrase inside a quoted query, or null when not a phrase (including
+ *  a quoted-but-blank one). Mirrors the server's `SearchTerms::phraseWithin`:
+ *  trimmed input opens/closes with a quote, inner quotes become boundaries,
+ *  inner whitespace collapses to one space. */
 function phraseWithin(term: string): string | null {
   const trimmed = term.trim();
   if (trimmed.length < 2 || !trimmed.startsWith('"') || !trimmed.endsWith('"')) return null;
@@ -76,14 +64,11 @@ function phraseWithin(term: string): string | null {
   return inner.length > 0 ? inner : null;
 }
 
-/** Strips leading whitespace and collapses inner runs to a single space, but
- *  — unlike `String.trim()` — keeps exactly one trailing space when the raw
- *  input ended in whitespace. The server reads a trailing space as "match
- *  whole words only" versus substring matching, one mode for the whole query
- *  (#408 follow-up); a plain `trim()` here would destroy that signal before
- *  it ever reaches the request. Shared by the field's settled-emission path
- *  and by `selectionFromParams`, the two places a raw `q` value is turned
- *  into a term — both must agree on what "the term" is. */
+/** Strips leading whitespace and collapses inner runs to one space, but —
+ *  unlike `String.trim()` — keeps one trailing space when the raw input ended
+ *  in whitespace: the server reads that as "whole words only" (#408 follow-up),
+ *  and a plain `trim()` would destroy the signal. Shared by the field's
+ *  settled-emission path and `selectionFromParams` so both agree on "the term". */
 export function normalizeSearchInput(raw: string): string {
   const hasTrailingSpace = isWholeWordTerm(raw);
   const collapsed = raw.trim().replace(/\s+/g, ' ');
@@ -91,17 +76,12 @@ export function normalizeSearchInput(raw: string): string {
   return hasTrailingSpace ? `${collapsed} ` : collapsed;
 }
 
-/** Whether a term is long enough to search on. Measured on the TRIMMED value,
- *  which is the whole subtlety: 'ab ' is three raw characters but two real
- *  ones, because the trailing space is the whole-word-match signal rather
- *  than a character of the word (see `isWholeWordTerm`).
+/** Whether a term is long enough to search on. Measured on the TRIMMED value:
+ *  'ab ' is three raw characters but two real ones, since the trailing space is
+ *  the whole-word-match signal, not a character of the word (`isWholeWordTerm`).
  *
- *  Exported for the same reason `isWholeWordTerm` is: the rule had three
- *  writers — `selectionFromParams` deciding whether the URL names a search,
- *  and the field deciding both when to show its too-short hint and when to
- *  emit — each with its own phrasing and its own copy of this comment. That
- *  is precisely how the comparator, the parameter vocabulary and the header
- *  rule each drifted on this branch (#408). */
+ *  Exported for the same reason `isWholeWordTerm` is: this rule had three
+ *  writers with their own copy of the comment before, and drifted (#408). */
 export function isSearchableTerm(term: string): boolean {
   return term.trim().length >= MIN_SEARCH_LENGTH;
 }
@@ -113,11 +93,9 @@ export function isTooShortToSearch(term: string): boolean {
   return term.trim().length > 0 && !isSearchableTerm(term);
 }
 
-/** The individual words of a term, for marking them in the result rows. Splits
- *  on the same whitespace class the rest of the vocabulary uses, and drops the
- *  empty piece a trailing space would otherwise leave behind. Lives here beside
- *  `normalizeSearchInput`, `visibleSearchTerm` and `isWholeWordTerm` so that
- *  every answer to "what is a term made of" has one home. */
+/** The individual words of a term, for marking them in result rows. Splits on
+ *  the same whitespace class as the rest of the vocabulary and drops the empty
+ *  piece a trailing space leaves. Lives beside `normalizeSearchInput` et al. */
 export function searchWords(term: string): string[] {
   // A phrase is marked as one contiguous run, not word by word — the same
   // string the server matched — so a quoted `"climate change"` highlights only
@@ -150,11 +128,10 @@ export function isDirectSearch(selection: Selection): boolean {
   return selection.kind === 'search' && selection.searchOrigin !== 'saved';
 }
 
-/** `Selection.term` with the trailing space — the whole-word-match signal —
- *  stripped for display. The space must reach the server (`EntryQuery.q`)
- *  and must stay in `Selection.term` (it is part of the selection's
- *  identity, see `sameSelection`); this is only for the strings a human
- *  reads, e.g. the list title and the empty-state message. */
+/** `Selection.term` with the trailing whole-word-match space stripped for
+ *  display. The space must reach the server (`EntryQuery.q`) and stay in
+ *  `Selection.term` (part of identity, see `sameSelection`) — this is only
+ *  for human-readable strings like the list title. */
 export function visibleSearchTerm(term: string): string {
   // A phrase shows as its bare inner text — the wrapping quotes are the mode
   // signal, surfaced by the "Phrase" pill instead, exactly as the trailing
@@ -175,19 +152,16 @@ export function canScopedRefresh(s: Selection): boolean {
   return s.kind === 'all' || s.kind === 'tag' || s.kind === 'subscription';
 }
 
-/** A view that shows one logical stream rather than an aggregation of feeds: a
- *  single subscription, or the ranked for-you list. Such a view carries a "last
- *  refreshed" label and never collapses same-source runs into a group widget —
- *  that would hide entries and disrupt their order. */
+/** A view that shows one logical stream, not an aggregation of feeds: a single
+ *  subscription, or the ranked for-you list. Carries a "last refreshed" label and
+ *  never collapses same-source runs into a group widget (would hide/reorder entries). */
 export function isSingleStreamView(s: Selection): boolean {
   return s.kind === 'subscription' || s.kind === 'for-you';
 }
 
-/** Every query parameter that names which list is on screen. A navigation
- *  that changes the list must clear all of them, not just the ones a
- *  template happens to mention — `selectionFromParams` gives `q` priority
- *  over `view`/`tag`/`subscription`, so a leftover `q` the caller forgot to
- *  null silently wins and strands the user in search results (#408). */
+/** Every query parameter that names which list is on screen. A navigation that
+ *  changes the list must clear all of them — `selectionFromParams` gives `q`
+ *  priority, so a leftover `q` the caller forgot to null strands the user (#408). */
 const SELECTION_PARAM_NAMES = [
   'view',
   'tag',
@@ -211,26 +185,18 @@ type SelectionParamValue = string | number | null;
 export type SelectionParams = Record<SelectionParamName, SelectionParamValue>;
 
 /** Results handed out by `selectionQueryParams`, keyed by the argument that
- *  produced them.
- *
- *  Most callers are `[queryParams]` bindings in templates — one per sidebar
- *  feed, per tag, per source pill on every row. Angular caches a literal
- *  object in a binding, but NOT the result of a function call, so without
- *  this each of those allocated a fresh object on every change-detection
- *  pass, and `RouterLink` saw a changed input and rebuilt its href each time.
- *  Change detection runs on every scroll frame here, and the arguments are
- *  drawn from a bounded set (the vocabulary's four fixed views plus one entry
- *  per tag and per subscription), so caching on the argument returns a stable
- *  reference and the link work happens once. */
+ *  produced them. Most callers are `[queryParams]` template bindings (one per
+ *  sidebar feed/tag/pill); Angular caches a literal object in a binding but not
+ *  a function call's result, so without this each change-detection pass
+ *  allocated a fresh object and `RouterLink` rebuilt its href every scroll
+ *  frame. Arguments are drawn from a bounded set, so caching on the argument
+ *  returns a stable reference and the link work happens once. */
 const selectionParamsCache = new Map<string, SelectionParams>();
 
 /** Build a `[queryParams]` object that selects exactly one list: the given
- *  params are set, every other name in the selection vocabulary is nulled.
- *  Callers state only what they set — a new vocabulary entry only needs to
- *  be added here, not at every call site.
- *
- *  The returned object is shared between callers that pass equal arguments
- *  and must be treated as read-only; `RouterLink` only reads it. */
+ *  params are set, every other vocabulary name is nulled — a new vocabulary
+ *  entry only needs adding here, not at every call site. The returned object is
+ *  shared between equal-argument callers and must be treated read-only. */
 export function selectionQueryParams(set: Partial<SelectionParams>): SelectionParams {
   const key = JSON.stringify(SELECTION_PARAM_NAMES.map((name) => set[name] ?? null));
   const cached = selectionParamsCache.get(key);
@@ -248,10 +214,9 @@ export function selectionQueryParams(set: Partial<SelectionParams>): SelectionPa
   return params;
 }
 
-/** The raw `q` a saved search navigates to. A saved search stores the bare
- *  term with its mode apart, so the signal the mode rode in on is rebuilt
- *  here: wrapping quotes for a phrase (#702), a trailing space for whole-word
- *  (#408 follow-up). The modes are mutually exclusive, phrase first. */
+/** The raw `q` a saved search navigates to: rebuilds the mode signal the term's
+ *  bare storage form stripped out — wrapping quotes for a phrase (#702), a
+ *  trailing space for whole-word (#408 follow-up). Mutually exclusive, phrase first. */
 export function savedSearchTerm(term: string, wholeWord: boolean, phrase: boolean): string {
   if (phrase) return `"${term}"`;
   return wholeWord ? `${term} ` : term;
@@ -275,18 +240,16 @@ export function selectionFromParams(p: ParamMap): {
   const view = selectionParam(p, 'view');
   const tag = posInt(selectionParam(p, 'tag'));
   const subscription = posInt(selectionParam(p, 'subscription'));
-  // unread refines the current list rather than choosing it, so it is not
-  // part of the selection vocabulary above and is read directly. The default
-  // is "all": only an explicit `unread=1` narrows the list, so a bare URL —
-  // every sidebar link, and the first load — shows everything.
+  // unread refines the current list rather than choosing it, so it is not part
+  // of the selection vocabulary above and is read directly. Default is "all":
+  // only an explicit `unread=1` narrows, so a bare URL shows everything.
   const unread = p.get('unread') === '1';
   // The entry param is an id or an id-prefixed slug ("514-some-title").
   const entryId = entryIdFromParam(selectionParam(p, 'entry'));
 
-  // Not a plain trim(): a trailing space is the whole-word-match signal
-  // (#408 follow-up) and must survive into `Selection.term`, so only the
-  // MEANINGLESS whitespace — leading, and runs collapsed between terms — is
-  // removed here.
+  // Not a plain trim(): a trailing space is the whole-word-match signal (#408
+  // follow-up) and must survive into `Selection.term`, so only MEANINGLESS
+  // whitespace — leading, and collapsed runs between terms — is removed here.
   const term = normalizeSearchInput(selectionParam(p, 'q') ?? '');
   if (isSearchableTerm(term)) {
     // A search is its own view over every subscription, so a tag or feed
@@ -321,10 +284,8 @@ export function selectionFromParams(p: ParamMap): {
 
 /** The list a URL names with any search set aside: the list a search is layered
  *  over, and the one that clearing the search returns to. `selectionFromParams`
- *  gives a searchable `q` priority over `view`/`tag`/`subscription`, so the
- *  covered list is invisible in the resulting selection even though the URL
- *  still carries it (#542). Reading it takes knowing that `q` alone makes a
- *  search, which is this file's knowledge rather than a caller's. */
+ *  gives a searchable `q` priority, so the covered list is invisible in the
+ *  resulting selection even though the URL still carries it (#542). */
 export function listSelectionFrom(params: Params): Selection {
   return selectionFromParams(convertToParamMap({ ...params, q: null })).selection;
 }
@@ -357,9 +318,8 @@ export function queryFromSelection(s: Selection): EntryQuery {
 }
 
 /** What "Mark all read" applies to for a selection, or null where the action
- *  does not apply. A discriminated union rather than one bag with optional
- *  fields: the id and the term never coexist, and a bag would make every
- *  consumer assert its way back to the case it already switched on. */
+ *  doesn't apply. A discriminated union, not a bag with optional fields: id and
+ *  term never coexist, and a bag would make every consumer re-assert the case. */
 export type MarkReadTarget =
   | { scope: Extract<MarkReadScope, 'all'> }
   | { scope: Exclude<MarkReadScope, 'all'>; id: number }

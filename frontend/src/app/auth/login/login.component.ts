@@ -1,4 +1,3 @@
-// src/app/auth/login/login.component.ts
 import { Component, ElementRef, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -56,26 +55,18 @@ export class LoginComponent implements OnInit, OnDestroy {
    *  the same reasoning `PasskeysGroupComponent.isSupported` documents. */
   protected readonly passkeySupported = isPasskeySupported();
 
-  /**
-   * Whether passkey sign-in belongs on this page at all (#624 follow-up):
-   * the browser has to understand WebAuthn AND this instance has to be able
-   * to complete the ceremony -- toggled on, with a valid relying party. The
-   * second half comes from `SetupService.passkeySignInAvailable`, fetched
-   * alongside `mailEnabled` by the same `/api/setup/status` call.
+  /** Whether passkey sign-in belongs on this page (#624): the browser must
+   *  support WebAuthn AND this instance must be able to complete the
+   *  ceremony (toggled on, valid relying party) -- the latter from
+   *  `SetupService.passkeySignInAvailable`, fetched with `mailEnabled` via
+   *  `/api/setup/status`.
    *
-   * `!== false` fails OPEN (fix round 1, sharpened): NOT because "unknown"
-   * is merely rare here, but because `setupRedirectGuard` (`setup.guard.ts`)
-   * always resolves `ensureLoaded()` -- and so this signal -- BEFORE the
-   * login route is allowed to activate. By the time this component exists,
-   * the value is either `true`, `false`, or `null` because the status call
-   * itself already failed (the guard's own `catchError` lets navigation
-   * through regardless). So `null` here is never "still loading" -- it is
-   * specifically "the server didn't answer", the same failure `mailEnabled`
-   * already treats as fail-open just below, for the same reason: showing a
-   * button that then 403s on click is no worse than the network failure the
-   * visitor is already having, and hiding a real feature because one status
-   * call hiccuped would be worse.
-   */
+   *  `!== false` fails OPEN: `setupRedirectGuard` always resolves
+   *  `ensureLoaded()` before the login route activates, so `null` here means
+   *  the status call itself failed (the guard's `catchError` lets navigation
+   *  through anyway), not "still loading". Showing a button that then 403s
+   *  is no worse than the failure already happening; hiding a real feature
+   *  over one hiccup would be worse. */
   protected readonly passkeyOfferedHere = computed(
     () => this.passkeySupported && this.setup.passkeySignInAvailable() !== false,
   );
@@ -106,12 +97,8 @@ export class LoginComponent implements OnInit, OnDestroy {
     // field's autofill; a password submit means the visitor chose the other
     // path, and the browser will not run both at once.
     this.abortConditionalPasskey();
-    // This form already carried a hand-rolled version of this, keyed on the
-    // `name` attribute and querying the whole document. It is now the shared
-    // helper: scoped to this component, and keyed on formControlName, which is
-    // the attribute actually guaranteed to be there. Generalising it is the
-    // point -- the register form had the identical bug and no workaround, which
-    // is how a filled-in form came to refuse to submit with nothing on screen.
+    // Password managers don't always fire an `input` event (see autofill.ts);
+    // read the DOM once before validating so a filled form doesn't refuse to submit.
     adoptAutofilledValues(this.host.nativeElement, this.form);
 
     if (this.form.invalid) {
@@ -159,20 +146,15 @@ export class LoginComponent implements OnInit, OnDestroy {
     return provider.charAt(0).toUpperCase() + provider.slice(1);
   }
 
-  /** Offers the passkey through the e-mail field's autofill the moment the
-   *  browser can (`mediation: 'conditional'`); a no-op wherever it can't,
-   *  per `isConditionalMediationSupported()`'s own contract. Runs for the
-   *  page's whole lifetime, so `submit()` and `ngOnDestroy()` both have to be
-   *  able to cut it short.
+  /** Offers the passkey via the e-mail field's autofill as soon as the browser
+   *  supports it (`mediation: 'conditional'`); a no-op otherwise. Runs for the
+   *  page's whole lifetime, so `submit()` and `ngOnDestroy()` must be able to
+   *  cut it short.
    *
-   *  A failure here is deliberately silent (#624 finding 7), not routed
-   *  through `showPasskeyFailure()`: this ceremony starts on its own the
-   *  moment the page loads, before the visitor has done anything, so any
-   *  rejection -- including a 429 from the shared `passkey_challenge`
-   *  limiter, which a page view alone can trigger for the 31st visitor in its
-   *  window -- must not paint an error banner on a page nobody interacted
-   *  with. Only the explicit "Sign in with a passkey" button may surface a
-   *  failure to the visitor. */
+   *  Failure here is deliberately silent (#624 finding 7): the ceremony starts
+   *  on page load, before the visitor acts, so a rejection -- including a 429
+   *  from the shared `passkey_challenge` limiter -- must not surface an error
+   *  banner. Only the explicit "Sign in with a passkey" button may show one. */
   private async offerConditionalPasskey(): Promise<void> {
     if (!(await isConditionalMediationSupported())) return;
 
@@ -190,11 +172,10 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.conditionalAbort = null;
   }
 
-  /** Shared by password, explicit-passkey and conditional-passkey sign-in --
-   *  wherever the credential came from, the app lands the visitor in exactly
-   *  the same place. `TokenStore` is already populated by this point:
-   *  `AuthService.login()` and `PasskeyService`'s ceremonies both set it
-   *  themselves before resolving. */
+  /** Shared by password, explicit-passkey and conditional-passkey sign-in, all
+   *  landing the visitor in the same place. `TokenStore` is already populated
+   *  by this point -- both `AuthService.login()` and `PasskeyService` set it
+   *  before resolving. */
   private afterSignIn(): void {
     this.auth.loadMe().subscribe({
       next: () => void this.router.navigate(['/']),
@@ -202,11 +183,10 @@ export class LoginComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Only `signInWithPasskey()` -- the explicit button -- calls this; the
-   *  background conditional ceremony never does (#624 finding 7, see
-   *  `offerConditionalPasskey()`'s docblock). A cancelled sheet
-   *  (`NotAllowedError`) is not a failure to report; anything else renders
-   *  through the same `app-form-error` a failed password sign-in does. */
+  /** Only the explicit `signInWithPasskey()` calls this, never the background
+   *  conditional ceremony (#624 finding 7). A cancelled sheet
+   *  (`NotAllowedError`) is not reported; anything else renders through the
+   *  same `app-form-error` a failed password sign-in does. */
   private showPasskeyFailure(problem: Problem): void {
     if (problem.type === 'NotAllowedError') return;
     this.error.set(problem.detail ?? this.i18n.translate('auth.login.passkeyFailed'));

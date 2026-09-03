@@ -1,4 +1,3 @@
-// src/app/settings/ai-settings.service.ts
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable } from 'rxjs';
@@ -44,24 +43,19 @@ export interface AiDraft {
   readonly apiKey: string;
 }
 
-/**
- * The AI section's own state and writes, over an account that may hold
- * several provider configurations with at most one active.
+/** The AI section's own state and writes, over an account that may hold
+ *  several provider configurations with at most one active.
  *
- * Every write answers with the configuration it touched (or, for `add`, the
- * new one plus its model list), so nothing here re-reads the list to find out
- * what happened. `configs` is kept in upsert form rather than replaced
- * wholesale on every write, so a row the account is mid-edit on does not lose
- * its place in the list when a sibling row changes.
+ *  Every write answers with the configuration it touched, so nothing here
+ *  re-reads the list. `configs` is kept in upsert form, not replaced
+ *  wholesale, so a row mid-edit doesn't lose its place when a sibling changes.
  *
- * `AiAvailabilityService` is recomputed after every mutation from whichever
- * configuration is now active, exactly the same way regardless of which
- * write caused it — the alternative would be one bespoke availability update
- * per method, with every new method a fresh chance to forget it.
+ *  `AiAvailabilityService` is recomputed the same way after every mutation,
+ *  from whichever configuration is now active -- one bespoke update per
+ *  method would be a fresh chance to forget it.
  *
- * The typed key is a parameter and never a field: it goes into one request
- * body and is gone. Nothing here writes it to storage, a URL or a log.
- */
+ *  The typed key is a parameter, never a field: it goes into one request
+ *  body and is gone, never written to storage, a URL or a log. */
 @Injectable()
 export class AiSettingsService {
   private readonly http = inject(HttpClient);
@@ -80,11 +74,10 @@ export class AiSettingsService {
   readonly busy = signal(false);
   readonly failure = signal<ScopedAiFailure | null>(null);
 
-  /** Which row's parallel-requests dropdown most recently saved — drives a
-   *  transient "Saved" confirmation on that one row. Scoped to this single
-   *  write (not the shared `run()` helper) because every other field here
-   *  saves silently; only the concurrency dropdown needed feedback, since it
-   *  auto-saves on `change` with no submit button of its own. */
+  /** Which row's parallel-requests dropdown most recently saved -- drives a
+   *  transient "Saved" confirmation there. Scoped outside the shared `run()`
+   *  helper because only this field auto-saves on `change` with no submit
+   *  button, so it alone needs that feedback. */
   readonly savedConcurrencyId = signal<number | null>(null);
   private savedConcurrencyTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -217,14 +210,10 @@ export class AiSettingsService {
     );
   }
 
-  /**
-   * Replaces the row by id when it already exists, so a sibling row's write
-   * never reorders the list; otherwise appends it, which is what `add`
-   * needs. A row reported `active` clears the flag on whichever row held it
-   * before — the rest are already inactive, so there is nothing else to
-   * touch — the same guarantee the server holds server-side (at most one
-   * active configuration per account).
-   */
+  /** Replaces the row by id when it exists, so a sibling row's write never
+   *  reorders the list; otherwise appends (what `add` needs). A row reported
+   *  `active` clears the flag on whichever row held it before -- mirroring the
+   *  server's own guarantee of at most one active configuration per account. */
   private upsert(config: AiConfig): void {
     const current = this.configs();
     const index = current.findIndex((each) => each.id === config.id);

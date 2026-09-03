@@ -11,11 +11,9 @@
     <app-icon name="info" size="text" />
   </button>
   @if (open()) {
-    <!-- The handler suppresses an activation rather than performing one: the
-         panel may sit inside a <label> or a <summary>, where a click reaching
-         the container would toggle the control or collapse the row. There is
-         nothing for a key handler to do — the panel is not operable, and a
-         keyboard user never activates a label by way of its text. -->
+    <!-- The handler suppresses an activation rather than performing one: the panel
+         may sit inside a <label> or <summary>, where a click reaching the
+         container would toggle the control or collapse the row. -->
     <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events -->
     <span
       class="panel"

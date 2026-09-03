@@ -80,10 +80,9 @@ describe('RecommendationRunHistoryComponent', () => {
     return el.querySelectorAll('.run-history__month');
   }
 
-  /** Scoped to `&__list`: the month's header strip carries the same `&__row`
-   *  class its rows do (so its grid can never drift out of alignment with
-   *  them -- see the month component's own spec), and an unscoped query
-   *  would count that strip as an extra row. */
+  /** Scoped to `&__list`: the header strip shares the rows' `&__row` class
+   *  (keeping their grids aligned -- see the month component's spec), so an
+   *  unscoped query would count it as an extra row. */
   function rows(section: Element): NodeListOf<Element> {
     return section.querySelectorAll('.run-history-month__list .run-history-month__row');
   }
@@ -92,10 +91,9 @@ describe('RecommendationRunHistoryComponent', () => {
     return section.querySelector('details') as HTMLDetailsElement;
   }
 
-  /** jsdom's native <details> toggles `.open` on a summary click but does not
-   *  dispatch the `toggle` event (a known jsdom gap), so this drives the
-   *  event directly -- the same workaround the shared disclosure's own spec
-   *  uses -- rather than `summary.click()`. */
+  /** jsdom's <details> toggles `.open` on a click but never dispatches
+   *  `toggle` (a known gap), so this drives the event directly -- same
+   *  workaround as the shared disclosure's own spec. */
   function openMonth(section: Element): void {
     const details = section.querySelector('details') as HTMLDetailsElement;
     details.open = true;
@@ -266,10 +264,9 @@ describe('RecommendationRunHistoryComponent', () => {
     expect(detailsOf(sections[1]).open).toBe(true);
   });
 
-  /** The refetch on completion is exactly the moment a reader is most likely
-   *  to be sitting on this card, and it must not throw away the pages they
-   *  paged into. The fresh `latest` is always the month's FIRST page, so
-   *  everything below it can only come from what was already on screen. */
+  /** Refetch-on-completion must not throw away pages the reader had paged
+   *  into. The fresh `latest` is always the month's FIRST page, so everything
+   *  below it can only come from what was already on screen. */
   it('on completion, the newest month keeps the pages the reader had loaded, and its cursor', () => {
     const overviewWithMore: RunHistoryOverview = {
       ...OVERVIEW,
@@ -331,10 +328,9 @@ describe('RecommendationRunHistoryComponent', () => {
     expect(rows(months(el)[0])).toHaveLength(3);
   });
 
-  /** An overview refetch lands on every completed run, and an older month's
-   *  first page can still be in flight when it does. Clearing that month's
-   *  `loading` there disarms the second half of `onOpened`'s guard, and a
-   *  close/re-open then fires a second identical GET. */
+  /** An older month's first page can still be in flight when an overview
+   *  refetch lands; clearing its `loading` there disarms onOpened's guard,
+   *  so a close/re-open would fire a second identical GET. */
   it('an overview refetch leaves an older month that is still loading alone', () => {
     const inFlight = new Subject<RunHistoryMonthPage>();
     runHistoryMonth.mockReturnValue(inFlight);
@@ -428,10 +424,9 @@ describe('RecommendationRunHistoryComponent', () => {
     expect(el.querySelectorAll('.run-history__legend')).toHaveLength(1);
     const items = el.querySelectorAll('.run-history__legend-item');
     expect(items).toHaveLength(5);
-    // Scoped to the item's own direct-child `<span>`, not the whole `<li>`
-    // (which also holds the icon's own glyph text, e.g. "check_circle") and
-    // not `<app-icon>`'s internal span, which `querySelector('span')` would
-    // find first since it comes before the word in document order.
+    // Scoped to the item's own direct-child span, not the whole <li> (which
+    // also holds the icon glyph) or app-icon's internal span, which
+    // querySelector('span') would find first in document order.
     const words = Array.from(items).map((item) =>
       item.querySelector(':scope > span')?.textContent?.trim(),
     );

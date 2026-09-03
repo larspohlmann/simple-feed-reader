@@ -1,4 +1,3 @@
-// src/app/reader/paging.ts
 // How much of the entry list we fetch at a time, and how early we fetch the next
 // page. Both are tuned for a slow backend (#91): fewer, larger round trips, and
 // enough lead time that the request is already in flight before the user can

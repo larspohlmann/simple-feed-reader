@@ -4,11 +4,9 @@
   overflow: auto;
 }
 
-/* A query container so the back button can react to the reading pane's
-         own width (which differs from the window in split-pane mode).
-         Opaque and at least full-height so, as a full-screen overlay over the
-         still-mounted list, it hides the list until a swipe slides it aside
-         (the host itself is transparent). */
+/* A query container so the back button can react to the reading pane's own
+   width (differs from the window in split-pane mode). Opaque and full-height
+   so this overlay hides the still-mounted list until a swipe slides it aside. */
 .reader {
   position: relative;
   min-height: 100%;
@@ -16,33 +14,14 @@
   container-type: inline-size;
   container-name: reader;
 
-  /* No app-bar reservation here: full-screen, the article rides an overlay
-     ABOVE the shell's bar — the bar is the list's chrome and stays put
-     underneath (#128) — and the article's own toolbar sits in flow (sticky),
-     occupying its own space. Only the split pane, where the shell's bar
-     floats over this panel, reserves it — see .with-bar. */
+  /* No app-bar reservation here: full-screen, the article overlay rides ABOVE
+     the shell's bar, which stays put as the list's chrome (#128). Only the
+     split pane, where the bar floats over this panel, reserves it (.with-bar). */
 }
 
-/* Tail space for an article longer than the pane, so its closing paragraphs can
-   be scrolled up out of the bottom edge. Half the pane is what the reading focus
-   asks for: it fully highlights the block whose centre sits at the *centre* of
-   the viewport, so anything less leaves the last paragraph permanently dimmed
-   at the foot of the fade curve (#107). Only when the article overflows — the
-   component withholds the class otherwise, since half a screen of blank space
-   below a short article is dead scroll and would sit in front of the
-   pull-past-the-bottom return gesture.
-
-   `dvh`, like the shell's own height, so a mobile browser's retracting toolbar
-   doesn't leave the tail short; the `vh` line is the fallback.
-
-   The tail hangs off the ARTICLE rather than off `.reader` itself, which is
-   where it used to sit. `.reader` is the containing block of the sticky progress
-   bar below, and a sticky box may only travel within its containing block's
-   *content* box — padding excluded. Left on `.reader`, the tail therefore ended
-   the bar's travel half a viewport early and it scrolled away over the tail's
-   blank space, exactly where the reader is finishing the last paragraph (#238).
-   Inside the article the same space is in flow, so the bar reaches the true
-   bottom. `.reader`'s total height is unchanged either way. */
+/* Tail padding so a long article's closing paragraph can reach the reading
+   focus's centre (#107), applied only when the article overflows. Lives on
+   `article`, not `.reader`, whose content box bounds the sticky bar's travel (#238). */
 .reader.with-tail article {
   /* stylelint-disable-next-line declaration-property-unit-allowed-list --
      a deliberate share of the viewport, not a spacing value; see above. */
@@ -53,17 +32,9 @@
   padding-bottom: 50dvh;
 }
 
-/* The article's length-and-position cue, and on a phone the only one there is:
-   the shell locks the page at `100dvh` and scrolls an inner container instead
-   (see reader-shell), and a mobile browser paints no persistent scrollbar for a
-   nested scroller — so an article's length was invisible there while desktop
-   showed an ordinary scrollbar (#238).
-
-   Sticky, not fixed: `.reader` carries a transform through the return gestures,
-   which re-anchors a `position: fixed` child to this pane instead of the
-   viewport — the same trap #100 documents for the back-to-top button. Sticky
-   also keeps the bar inside the reading pane on the split layout, where a
-   viewport-fixed bar would run on under the list. */
+/* The article's only length cue on a phone, where no scrollbar shows for a
+   nested scroller (#238). Sticky, not fixed: `.reader`'s return-gesture
+   transform would re-anchor a fixed child to this pane instead (#100). */
 .progress {
   position: sticky;
   bottom: 0;
@@ -84,16 +55,9 @@
   background: var(--accent);
 }
 
-/* The same cue below the split-pane layout, stood up on the right edge and run
-   the full height of the screen — 2px along the bottom of a phone is easy to
-   miss, and there is no scrollbar there to fall back on.
-
-   Sticky for exactly the reason the hairline is: `.reader` carries a transform
-   through the return gestures, which would re-anchor a fixed child to this pane
-   (#100). Pinned to the top of the scrollport, and placed at the HEAD of the
-   article's flow, because a sticky box travels only from where it sits — last
-   in the flow it would stay parked at the bottom until the reader got there.
-   The negative margin cancels the viewport of height it would otherwise add. */
+/* Same cue for split-pane, on the right edge, full height. Sticky for the
+   same reason as the hairline (#100); placed at the HEAD of the article's
+   flow, since a sticky box only travels from where it sits. */
 .progress-rail {
   position: sticky;
   top: 0;
@@ -155,32 +119,16 @@ app-to-top-button {
   z-index: 20;
 }
 
-/* On a narrow layout an active run's pill is a bottom-centred toast that, as an
-   overlay above the article, would bury this button (#641). Lift it clear:
-   `--app-toast-height` is the live toast's measured height, published while one
-   is visible; its fallback cancels the gap so the term is zero and the button
-   keeps its base offset when no toast is up. */
+/* A narrow-layout run pill is a bottom toast that would bury this button
+   (#641). `--app-toast-height` is the live toast's measured height; its
+   fallback is zero so the button keeps its base offset when none is up. */
 :host-context(.is-narrow) app-to-top-button {
   bottom: calc(24px + var(--space-3) + var(--app-toast-height, calc(-1 * var(--space-3))));
 }
 
-/* The full-screen article's standing nameplate. The headline and the meta line
-   scroll away with the body, and the toolbar retracts on top of that, so a
-   scrolled-down article used to carry nothing at all that named it (#270).
-   This strip does, and it never moves. (The split pane keeps its toolbar at all
-   times and carries the same nameplate inside it — see .bar-name.)
-
-   Sticky, never fixed: `.reader` carries a transform through the return
-   gestures, which re-anchors a fixed child to this pane instead of the viewport
-   — the same trap #100 documents for the back-to-top button.
-
-   A layer above the toolbar's own: the toolbar retracts *behind* this strip,
-   which is what keeps the retraction to one moving part instead of two. Hence
-   the opaque background — the toolbar passes directly under it. Being layered
-   at all is required for a second reason, the one .bar documents: reading-focus
-   sets an inline `opacity` on every article block, and an element with
-   opacity < 1 paints as if at z-index 0, so an un-layered strip would end up
-   beneath each dimmed paragraph. */
+/* Standing nameplate: headline and toolbar both scroll/retract away, leaving
+   nothing naming a scrolled-down article (#270). Sticky, not fixed (#100 trap).
+   Above the toolbar (z-index 3) so it isn't buried by dimmed paragraphs' opacity. */
 .mini {
   position: sticky;
   top: 0;
@@ -234,21 +182,15 @@ app-to-top-button {
 .bar {
   position: sticky;
 
-  /* Full-screen the toolbar hangs directly beneath the nameplate above, which
-     is fixed-height by design so this offset can be a token rather than a
-     measurement — and retracts on scroll like the list's app bar does over the
-     list (.hidden below), sliding up behind that strip. The split pane
-     overrides the offset: there the shell's bar floats above, and the reading
-     pane passes *under* it (#87), so a smaller offset would slide this toolbar
-     — back button and all — underneath that bar on the first scroll (#97). */
+  /* Hangs beneath the nameplate above (fixed-height, so a token offset works)
+     and retracts on scroll (.hidden below). Split pane overrides the offset:
+     the shell's bar floats above there (#87), else this toolbar slides under it (#97). */
   top: var(--reader-mini-h);
   transition: transform 0.12s ease;
 
-  /* Sticky alone does not win the paint order here. Reading-focus sets an inline
-     `opacity` on every article block (applyFocus()), and an element with
-     opacity < 1 paints as if it were positioned at z-index 0 — so each dimmed
-     paragraph lands in this bar's layer and, being later in the DOM, on top of
-     it. The toolbar's buttons then look fine and swallow clicks. */
+  /* Sticky alone doesn't win paint order: reading-focus's inline opacity < 1
+     paints a block as z-index 0, so a later, dimmed paragraph would land on
+     top of this bar and swallow its clicks without this z-index. */
   z-index: 2;
   margin-bottom: var(--bar-gap);
   display: flex;
@@ -277,10 +219,9 @@ app-to-top-button {
   }
 }
 
-/* The toolbar's buttons carry different type sizes -- the mode toggle is
-   --fs-sm, the arrows inherit the bar's own size -- so leaving them inline
-   sat them on their own differing baselines and staggered them against each
-   other. A flex row centres them by layout instead of by type metrics. */
+/* The toolbar's buttons carry different type sizes (mode toggle vs arrows),
+   so inline left them staggered on differing baselines. A flex row centres
+   them by layout instead of by type metrics. */
 .nav {
   display: flex;
   gap: var(--space-1);
@@ -347,22 +288,16 @@ article {
   text-decoration: underline;
 }
 
-/* The only icon in the app that sits in a genuine run of text rather than in a
-   flex row, so it is the only place vertical alignment is visible at all. It
-   reads as a superscript mark on the link -- like a footnote marker -- rather
-   than as a glyph sharing the line, so it takes the superscript position
-   instead of the centred one the icon host defaults to. Scoped here because
-   the flex-row icons elsewhere already centre exactly. */
+/* The only icon in a genuine run of text rather than a flex row, so vertical
+   alignment matters. Reads as a superscript footnote mark on the link, not a
+   glyph sharing the line — scoped here since flex-row icons centre exactly. */
 .meta a app-icon {
   vertical-align: super;
 }
 
-/* `vertical-align: middle` centres a box on the x-height, which is right when
-   the box is about the size of the text. This favicon is 16px against 13px
-   text, so centring it there leaves it hanging below the baseline and reading
-   as fallen off the line. Lift it onto the text block's own centre. In `em` so
-   it tracks the type, and scoped to the meta line because every other favicon
-   sits in a flex row that centres it already. */
+/* `vertical-align: middle` centres on x-height, right only when the box is
+   about text-sized. This 16px favicon against 13px text hangs below the
+   baseline; lift it onto the text's centre, in `em` so it tracks the type. */
 .meta app-favicon {
   position: relative;
   bottom: 0.15em;
@@ -455,11 +390,9 @@ article {
   text-decoration: underline;
 }
 
-/* Article typography. The body is [innerHTML]-injected, so its child
-         elements carry no view-encapsulation attribute — the descendant rules
-         must use ::ng-deep (kept scoped under .content). The sanitizer also
-         strips default margins, so h2/p/li/blockquote need an explicit vertical
-         rhythm or the article reads as one dense block. */
+/* Article typography. The body is [innerHTML]-injected, so descendant rules
+   need ::ng-deep (scoped under .content). The sanitizer strips default
+   margins, so h2/p/li/blockquote need an explicit vertical rhythm here. */
 .content {
   color: var(--text-primary);
   font-size: var(--fs-read);
@@ -490,19 +423,16 @@ article {
   margin-bottom: var(--space-4);
 }
 
-/* The first paragraph is the article's lead; a slightly larger size gives the
-   entry point some weight. The class is set by the component's post-render
-   pass — a pure CSS :first-of-type cannot reach it through the wrapper
-   elements feeds and readability emit. */
+/* The article's lead paragraph gets a slightly larger size. The class is set
+   by the component's post-render pass — pure CSS :first-of-type can't reach
+   it through the wrapper elements feeds and readability emit. */
 .content ::ng-deep p.lead {
   font-size: 1.0625em;
 }
 
-/* Article headings are sized in `em`, against `.content`'s own type size, not
-   picked off the UI type scale: that scale has five steps, and h2 and h3 would
-   both land on the same one — a flattened hierarchy in the one place the
-   hierarchy is the content. The ratios are the articles' long-standing sizes
-   over the 16px reading size: 22, 20 and 17px. */
+/* Headings sized in `em` against `.content`'s type, not the UI type scale:
+   that scale has five steps, and h2/h3 would land on the same one, flattening
+   the hierarchy. Ratios are the long-standing sizes at 16px: 22, 20, 17px. */
 .content ::ng-deep h1 {
   font-size: 1.375em;
 }
@@ -547,10 +477,9 @@ article {
   margin-bottom: 0;
 }
 
-/* Publisher inserts — a series teaser, a support appeal, a side note — that the
-   source page boxes off from the running text. Detected in the post-render pass
-   (reader-cards.ts) and given the same quiet-card surface as a blockquote, so an
-   aside reads as an aside and not as the next paragraph. */
+/* Publisher inserts (series teaser, support appeal, side note) boxed off from
+   the running text. Detected in the post-render pass (reader-cards.ts) and
+   given the same quiet-card surface as a blockquote, reading as an aside. */
 .content ::ng-deep .reader-card {
   margin: var(--space-5) 0;
   padding: var(--space-4);
@@ -639,10 +568,9 @@ article {
   width: auto;
 }
 
-/* Substack video placeholders (#627) carry no class -- the shared sanitizer
-   strips class/style/data-*, so the alt text the backend writes is the only
-   stable hook. A centered play badge marks the poster as a video, not a
-   still image, in both themes. */
+/* Substack video placeholders (#627) carry no class — the sanitizer strips
+   class/style/data-*, so alt text is the only stable hook. A play badge
+   marks the poster as video, not a still image. */
 .content ::ng-deep a:has(> img[alt='Video — open the original article to watch']) {
   position: relative;
   display: inline-block;
@@ -695,11 +623,9 @@ article {
   border-top: 1px solid var(--border);
 }
 
-/* Only real links (with an href) get the accent colour. Some feeds wrap their
-         section headings and in-page TOC entries in <a> tags whose href the
-         sanitiser strips; those are not links, so left unscoped this rule painted
-         every heading teal ("all titles turn green", #21). Hrefless anchors now
-         inherit the surrounding text colour, matching the UA :link/:visited rules. */
+/* Only real links (with an href) get the accent colour. Some feeds wrap
+   headings/TOC entries in <a> tags whose href the sanitiser strips; unscoped,
+   this painted every heading teal ("all titles turn green", #21). */
 .content ::ng-deep a[href] {
   color: var(--accent);
 }

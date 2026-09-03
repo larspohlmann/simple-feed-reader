@@ -1,4 +1,3 @@
-// src/app/auth/altcha.ts
 import { sha256Hex } from './sha256';
 
 export interface AltchaChallenge {
@@ -26,27 +25,20 @@ function yieldToEventLoop(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-/** Brute-force the ALTCHA proof-of-work: find the smallest n≥0 whose
- *  sha256hex(salt+n) equals the challenge, then base64-encode the solution the
- *  backend's verify() expects. Costs the honest client measurable CPU; the
- *  backend enforces the difficulty floor.
+/** Brute-forces the ALTCHA proof-of-work: finds the smallest n≥0 whose
+ *  sha256hex(salt+n) equals the challenge, then base64-encodes the solution
+ *  the backend's verify() expects.
  *
- *  Two things here exist because the obvious implementation did not work.
+ *  Hashes synchronously rather than via `crypto.subtle.digest`: that API is
+ *  promise-based, and 200_000 promise round-trips made registration hang for
+ *  minutes on iOS, where per-call overhead dominates (desktop absorbs it at
+ *  ~280k hashes/s). See sha256.ts, checked against crypto.subtle in its spec.
  *
- *  It hashes synchronously rather than with `crypto.subtle.digest`. That API is
- *  promise-based, so grinding up to 200_000 candidates meant 200_000 promise
- *  round-trips. Desktop Chrome absorbs that at ~280k hashes/s and nobody
- *  notices; on iOS the per-call overhead dominates so completely that
- *  registration never finished at all -- minutes of a form that looked broken.
- *  See sha256.ts, which is checked against crypto.subtle in its own spec.
+ *  Time-sliced with a macrotask every `SLICE_MS`, not `await` alone: `await`
+ *  queues a microtask, and microtasks all drain before paint, so an unbroken
+ *  run starved rendering and the spinner never appeared.
  *
- *  And the loop is time-sliced. `await` queues a microtask, and microtasks are
- *  ALL drained before the browser paints, so an unbroken run starves rendering:
- *  the submit button's spinner was set but never appeared. A macrotask every
- *  50ms is what lets a frame through.
- *
- *  `onProgress` receives how many candidates have been tried, so a caller can
- *  show real progress rather than an unmoving spinner.
+ *  `onProgress` reports candidates tried, so a caller can show real progress.
  */
 export async function solveAltcha(
   c: AltchaChallenge,

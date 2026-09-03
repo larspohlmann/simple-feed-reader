@@ -1,4 +1,3 @@
-// src/app/core/token.store.spec.ts
 import { TestBed } from '@angular/core/testing';
 import { TokenStore } from './token.store';
 

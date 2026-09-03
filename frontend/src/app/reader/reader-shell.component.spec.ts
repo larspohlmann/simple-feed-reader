@@ -54,10 +54,8 @@ describe('ReaderShellComponent', () => {
   let ctrl: HttpTestingController;
   const qp = new BehaviorSubject(convertToParamMap({}));
   // passkeyOfferAnswered defaults to true so the #624 passkey-offer suite is
-  // the only place a boot ever sees the flag unanswered -- every other test
-  // in this file is otherwise unaffected either way, since isPasskeySupported()
-  // is false by default in jsdom regardless (see the passkey-offer describe
-  // block below for the one place that stubs it in).
+  // the only place a boot sees the flag unanswered; isPasskeySupported() is
+  // false by default in jsdom regardless (stubbed in only in that describe block).
   const auth = {
     user: signal({ email: 'a@b.c', preferences: { passkeyOfferAnswered: true } }),
     loadMe: () => of({}),
@@ -110,7 +108,7 @@ describe('ReaderShellComponent', () => {
 
   beforeEach(() => {
     sessionStorage.clear(); // OnboardingSkip persists here; don't leak across tests
-    localStorage.clear(); // LanguageService caches the chosen lang here — a de test must not leak into the next
+    localStorage.clear(); // LanguageService caches the lang; a de test must not leak into the next
     auth.isAdmin.mockReturnValue(false); // default non-admin; a test opting in overrides it
     // Reset the #624 offer state too: a test below sets passkeyOfferAnswered
     // to false and calls the two marking methods, and neither must leak into
@@ -120,9 +118,8 @@ describe('ReaderShellComponent', () => {
     auth.markPasskeyOfferAnswered.mockClear();
     qp.next(convertToParamMap({}));
     // Provided rather than left to the real service: jsdom's matchMedia answers
-    // "no" to every query, so the real one is stuck on the wide layout and a
-    // test about a phone-only surface has no way to say so. The defaults below
-    // reproduce exactly what jsdom used to give.
+    // "no" to every query, so the real one is stuck on wide and a phone-only test
+    // has no way to say so. The defaults below reproduce what jsdom used to give.
     screen = { isNarrow: signal(false), isWide: signal(false), isCoarse: signal(false) };
     TestBed.configureTestingModule({
       imports: [ReaderShellComponent, provideTranslocoTesting()],
@@ -134,10 +131,9 @@ describe('ReaderShellComponent', () => {
         { provide: ActivatedRoute, useValue: { queryParamMap: qp.asObservable() } },
         { provide: AuthService, useValue: auth },
         { provide: LayoutService, useValue: screen },
-        // Defaults to "available", matching every test in this file written
-        // before #624 follow-up's instance-wide toggle existed. The
-        // "first-login passkey offer" describe block below overrides this
-        // per test to cover false/null.
+        // Defaults to "available", matching every test in this file written before
+        // #624 follow-up's instance-wide toggle existed. The "first-login passkey
+        // offer" describe block below overrides this per test to cover false/null.
         {
           provide: SetupService,
           useValue: { ensureLoaded: () => of(true), passkeySignInAvailable: signal(true) },
@@ -344,8 +340,7 @@ describe('ReaderShellComponent', () => {
     it('re-minimizes the header when the drawer closes over a scrolled-down list', () => {
       // #121 follow-up: opening forces the header back (so the drawer never hangs
       // below a retracted bar), but closing must not leave it expanded over
-      // scrolled-down content. That top strip overlays the list yet isn't its
-      // scroller, so a swipe starting there scrolls nothing — a dead zone.
+      // scrolled-down content — that strip overlays the list but isn't its scroller.
       const f = boot();
       (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
 
@@ -415,10 +410,9 @@ describe('ReaderShellComponent', () => {
     });
 
     it('stays shown when the search bar closes while the drawer is still open', () => {
-      // Both overlays open, then only search closes: the drawer alone is
-      // still reason enough to keep the header shown. Two independent
-      // force-show/resolve writers (one per overlay) would have each other's
-      // state in the same "resting state" resolution, wrongly overwriting it.
+      // Both overlays open, then only search closes: the drawer alone is still
+      // reason enough to keep the header shown. Two independent force-show/resolve
+      // writers (one per overlay) would overwrite each other's resting-state resolution.
       const f = boot();
       (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
       (f.componentInstance.screen as unknown as { isNarrow: () => boolean }).isNarrow = () => true;
@@ -471,9 +465,8 @@ describe('ReaderShellComponent', () => {
 
     it('shows the bar again when a new list is chosen while scrolled down (#630)', () => {
       // Regression: picking a selection from the drawer auto-closes it while the
-      // OUTGOING list is still rendered and still scrolled down (#254). The bar
-      // used to resolve its state from that stale offset and stay retracted over
-      // the new list, which opens at the top. It must follow the new list.
+      // OUTGOING list is still rendered and scrolled down (#254). The bar used to
+      // resolve state from that stale offset and stay retracted over the new list.
       const f = boot();
       const rows = listScroller(f);
       rows.scrollTo(100);
@@ -498,9 +491,8 @@ describe('ReaderShellComponent', () => {
   });
 
   /** Drive the entry list's real scroll container: assign an offset and fire the
-   *  scroll event `onRowsScroll` handles. That updates the list's `collapsed`
-   *  signal, which the shell's app bar mirrors, so tests must scroll the element
-   *  the component actually consults, not a stand-in. */
+   *  scroll event `onRowsScroll` handles, updating the `collapsed` signal the app
+   *  bar mirrors — tests must scroll the element the component actually consults. */
   function listScroller(f: ReturnType<typeof boot>) {
     const el = (f.nativeElement as HTMLElement).querySelector<HTMLElement>('.rows')!;
     return {
@@ -565,10 +557,9 @@ describe('ReaderShellComponent', () => {
     }
 
     it('leaves the list bar alone across article open and close', () => {
-      // The full-screen article is a layer above the whole list — bar
-      // included — with its own toolbar. Opening and closing it must not
-      // touch the bar's hide-on-scroll state: the list is revealed exactly
-      // as it was left (#128).
+      // The full-screen article is a layer above the whole list, bar included,
+      // with its own toolbar. Opening and closing it must not touch the bar's
+      // hide-on-scroll state — the list is revealed exactly as it was left (#128).
       const { f } = bootNarrowScrolledDown();
       openArticle(f);
       expect(f.componentInstance.headerHidden()).toBe(true);
@@ -578,13 +569,9 @@ describe('ReaderShellComponent', () => {
     });
 
     it('hears no scroller but the list', () => {
-      // The bar used to be driven by a capture-phase listener on the shell,
-      // which heard EVERY scroller underneath: the article overlay's (own
-      // coordinate space — a cross-scroller delta read as a hard scroll-up)
-      // and the header's horizontal tag row (whose re-snap after remount
-      // reports scrollTop 0, satisfying the near-top show rule). It is driven
-      // by the entry list's typed scrolled output now, so foreign scroll
-      // events must change nothing (#128).
+      // A capture-phase listener used to hear EVERY scroller underneath — the
+      // article overlay's own coordinate space and the tag row's re-snap (scrollTop
+      // 0). It's driven by the entry list's typed scrolled output now (#128).
       const { f, rows } = bootNarrowScrolledDown();
       openArticle(f);
 
@@ -806,12 +793,14 @@ describe('ReaderShellComponent', () => {
   });
 
   it('marks the entry viewed when the original-article link is followed', () => {
-    const f = boot({ isHidden: true }); // open fires only the viewed patch…
+    // Open fires only the viewed patch, which fails and rolls back below, so
+    // the link click is the real retry path this test exercises.
+    const f = boot({ isHidden: true });
     qp.next(convertToParamMap({ entry: '1' }));
     f.detectChanges();
     ctrl
       .expectOne('https://api.test/api/entries/1/state')
-      .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' }); // …which fails and rolls back, so the link click is the real retry path.
+      .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
     f.detectChanges();
 
     f.componentInstance.onOpenOriginal({ ...entry, isHidden: true, isViewed: false });
@@ -819,13 +808,9 @@ describe('ReaderShellComponent', () => {
     expect(req.request.body).toEqual({ isViewed: true });
   });
 
-  // The two tests above/below drive onOpenOriginal directly and prove its own
-  // logic (no-op once viewed, retry after rollback). Direct invocation cannot
-  // prove the template actually wires the click to it — reader-shell.component.html
-  // has TWO <app-reader-view> sites (the wide split-pane and the narrow
-  // full-screen overlay), and nothing stops a future edit dropping the
-  // `(openOriginal)` binding from either. These click through the real DOM on
-  // each site so such a regression turns the test red.
+  // Direct invocation above proves onOpenOriginal's own logic, but not that the
+  // template wires the click to it — there are TWO <app-reader-view> sites (wide
+  // pane, narrow overlay), and either could silently drop the `(openOriginal)` binding.
   describe('the original-article link, through the real template wiring', () => {
     function clickOriginalLink(f: ReturnType<typeof boot>): void {
       const link = f.debugElement.query(By.css('app-reader-view a[target="_blank"]'));
@@ -1121,9 +1106,8 @@ describe('ReaderShellComponent', () => {
       f.detectChanges();
 
       // The finishing slice reloads once more (entries + subs + tags). match()
-      // consumes the open queue, so it is called once and the same array is
-      // flushed; an entries request being among them proves the first slice's
-      // reload was not the only one.
+      // consumes the open queue, so calling it once and flushing that array proves
+      // the first slice's reload was not the only one.
       const finishReloads = ctrl.match(() => true);
       expect(finishReloads.some((req) => req.request.url.endsWith('/api/entries'))).toBe(true);
       // Tags reload exactly once, here at the finish — never on the partial slice above.
@@ -1436,12 +1420,9 @@ describe('ReaderShellComponent', () => {
         .flush({ entries: [], nextCursor: null });
     });
 
-    // The regression this section exists to close: typing past the first
-    // search term must reload the list. `selection`'s equality check once
+    // The regression this section closes: `selection`'s equality check once
     // reimplemented `sameSelection` inline and forgot `term`, so two search
-    // selections compared equal, the computed never produced a new
-    // reference, and the reload effect (which depends on `selection()`)
-    // never re-ran for a second search in the same session.
+    // selections compared equal and the reload effect never re-ran for a new term.
     it('reloads the list when the search term changes (#408 follow-up)', () => {
       const f = boot();
       qp.next(convertToParamMap({ q: 'daft' }));
@@ -1458,10 +1439,9 @@ describe('ReaderShellComponent', () => {
       qp.next(convertToParamMap({ q: 'daft punk' }));
       f.detectChanges();
 
-      // A second request for the new term must actually go out — this is
-      // the assertion that catches the bug: with the stale comparator, no
-      // request fires here at all, and the entries array (and the title
-      // built from it) stay frozen on the first search's result.
+      // A second request for the new term must actually go out — this is the
+      // assertion that catches the bug: with the stale comparator, no request
+      // fires and the entries array (and title built from it) stay frozen.
       const secondRequest = ctrl.expectOne(
         (r) => r.url === 'https://api.test/api/entries/search' && r.params.get('q') === 'daft punk',
       );
@@ -1639,20 +1619,17 @@ describe('ReaderShellComponent', () => {
       'holds the PREVIOUS list rows (#254 stale-list regression, fix round 2)',
     () => {
       const f = boot();
-      // Establish the fixture deliberately: boot() has already landed one row
-      // from the 'all' selection's list, and that row is still mounted — this
-      // is exactly the #254 behaviour (load() clears nextCursor synchronously
-      // but leaves the outgoing list rendered until the response lands).
+      // Establish the fixture deliberately: boot() landed one row from the 'all'
+      // list, still mounted — this is #254's behaviour (load() clears nextCursor
+      // synchronously but leaves the outgoing list rendered until it lands).
       expect(f.componentInstance.entries.entries().length).toBe(1);
 
       qp.next(convertToParamMap({ q: 'angular' }));
       f.detectChanges();
 
-      // The search request is now in flight. Prove the trap is live before
-      // asserting the title: the stale row from 'all' is still all
-      // entries() has, and hasMore() reads false because nextCursor was
-      // already cleared — a naive count/hasMore read here would show
-      // "— 1" for a term that has not answered yet.
+      // The search request is now in flight. Prove the trap is live before asserting
+      // the title: entries() still holds the stale 'all' row and hasMore() reads
+      // false (nextCursor already cleared) — a naive read would show "— 1" here.
       expect(f.componentInstance.entries.entries().length).toBe(1);
       expect(f.componentInstance.hasMore()).toBe(false);
       expect(f.componentInstance.searching()).toBe(true);
@@ -1804,18 +1781,16 @@ describe('ReaderShellComponent', () => {
 
     const button = f.nativeElement.querySelector('.list-header .for-you-run') as HTMLButtonElement;
     expect(button).not.toBeNull();
-    // "Refresh", not "Get recommendations" (#710): the action is named after
-    // what it produces, like every other header action beside it. The sparkle
-    // glyph is what keeps it apart from the ordinary feed refresh, and the
-    // accessible name says which refresh this is.
+    // "Refresh", not "Get recommendations" (#710): named after what it produces,
+    // like every other header action. The sparkle glyph sets it apart from the
+    // ordinary feed refresh, and the accessible name says which refresh this is.
     expect(button.textContent).toContain('Refresh');
     expect(button.textContent).not.toContain('Get recommendations');
     expect(button.getAttribute('aria-label')).toBe('Refresh recommendations');
     expect(button.querySelector('app-icon')?.textContent?.trim()).toBe('auto_awesome');
     // The same control the unread switch and Mark all read are, down to the
     // border: three actions in one header must not wear three chromes. It used
-    // to be a filled primary button, which made it the loudest thing in a bar
-    // of quiet ones.
+    // to be a filled primary button, the loudest thing in a quiet bar.
     expect(button.classList.contains('list-action')).toBe(true);
     expect(button.classList.contains('accent-outline')).toBe(false);
     expect(button.classList.contains('primary')).toBe(false);
@@ -1923,11 +1898,9 @@ describe('ReaderShellComponent', () => {
 
     // Exactly one. Two bars for one refresh is #721's first symptom.
     expect(el.querySelectorAll('app-progress-hairline').length).toBe(1);
-    // Inside the bar, so it travels with the bar. Parked in the strip below it,
-    // the bar retracted on scroll and left a 2px band over the content.
-    // The hairline's own template gates the `.bar` on `active()`, so reaching
-    // for the rendered bar (not just the host element, which is always in the
-    // DOM) is what actually exercises the `[active]="refreshSvc.running()"` binding.
+    // Inside the bar, so it travels with it — parked below, it retracted on scroll
+    // and left a 2px band. The hairline gates `.bar` on `active()`, so checking the
+    // rendered bar (not just the always-present host) exercises the binding.
     expect(el.querySelector('app-reader-header app-progress-hairline .bar')).not.toBeNull();
     expect(el.querySelector('.under-header app-progress-hairline')).toBeNull();
   });
@@ -2228,9 +2201,8 @@ describe('ReaderShellComponent', () => {
     });
 
     // The guard for the clause below: mid-run, with motion allowed, the counted
-    // banner must still stay away. The test above only looks after the run has
-    // ended, when `running()` is false anyway — so on its own it would pass even
-    // if the banner were shown to everybody for the whole run.
+    // banner must still stay away. The test above only checks after the run ends
+    // (`running()` false) — it would pass even if the banner showed the whole run.
     it('leaves an ordinary refresh uncounted while it is still going', () => {
       // jsdom answers "no" to every media query, so this is the motion-allowed path.
       const f = bootWith([
@@ -2256,11 +2228,9 @@ describe('ReaderShellComponent', () => {
   });
 
   describe('refresh failures', () => {
-    /** Boot a reader whose feeds have all been fetched before -- so no
-     *  onboarding sweep fires -- then refresh and answer that refresh with
-     *  `respond`. Every test here therefore covers the ORDINARY refresh path:
-     *  the sidebar button, a scoped refresh, add-feed. That path told the user
-     *  nothing at all before #119, whatever went wrong. */
+    /** Boot a reader whose feeds are already fetched (no onboarding sweep), then
+     *  refresh and answer with `respond`. Covers the ORDINARY refresh path — the
+     *  sidebar button, a scoped refresh, add-feed — which told the user nothing before #119. */
     const refreshAnsweredWith = (respond: (request: TestRequest) => void) => {
       const fixture = bootWith([
         { ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' },
@@ -2628,13 +2598,9 @@ describe('ReaderShellComponent', () => {
       return f.nativeElement as HTMLElement;
     }
 
-    // Drives the shell to the given selection kind through the same query
-    // params the URL would carry, draining the entries request the change
-    // triggers. 'all' is boot()'s own starting selection, so it needs none.
-    // Resets `qp` first: this runs inside a loop over several kinds, and
-    // `qp` is the shared BehaviorSubject the whole file mounts against — left
-    // at a previous iteration's params, the NEXT boot() would read a stale
-    // selection (e.g. still 'search') on init and fire the wrong request.
+    // Drives the shell to the given selection kind via the URL's query params,
+    // draining the entries request it triggers. Resets the shared `qp` first: left
+    // at a previous iteration's params, the next boot() would read a stale selection.
     function mountWithSelectionKind(kind: string): HTMLElement {
       qp.next(convertToParamMap({}));
       const f = boot();
@@ -3251,11 +3217,9 @@ describe('ReaderShellComponent', () => {
     });
 
     /**
-     * A fresh testing module, not `TestBed.overrideProvider` -- the outer
-     * `beforeEach` has already called `TestBed.inject(HttpTestingController)`
-     * by the time a test body runs, which Angular refuses to override past.
-     * Mirrors "drawer breakpoint driven by class, not media query" further
-     * down, which hits the identical constraint for `LayoutService`.
+     * A fresh testing module, not `overrideProvider` — the outer `beforeEach`
+     * already injected `HttpTestingController`, which Angular refuses to override
+     * past. Mirrors "drawer breakpoint driven by class" further down.
      */
     function configureAvailability(passkeySignInAvailable: boolean | null): void {
       TestBed.resetTestingModule();
@@ -3316,25 +3280,18 @@ describe('ReaderShellComponent', () => {
         .spyOn(TestBed.inject(Dialog), 'open')
         .mockReturnValue({ closed: new Subject() } as never);
 
-      // Every subscription unfetched -> awaitingFirstFetch()/sweeping() are
-      // true -> the shell itself fires the post-onboarding sweep (see the
-      // "onboarding redirect and first sweep" describe above). A modal on
-      // top of it is exactly what design spec §5.3 rules out.
+      // Every subscription unfetched -> awaitingFirstFetch()/sweeping() are true ->
+      // the shell fires the post-onboarding sweep itself. A modal on top of it is
+      // exactly what design spec §5.3 rules out.
       bootWith([{ ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: null }]);
 
       expect(open).not.toHaveBeenCalledWith(PasskeyOfferDialogComponent, expect.anything());
     });
 
     it('does not show the offer while a zero-subscription account is waiting on the catalog to decide the /discover redirect', () => {
-      // Regression (fix round 1): the catalog request only STARTS inside the
-      // redirect effect, once subscriptions resolve empty -- so there is a
-      // real window, on every brand-new account, where subs.resolved() is
-      // true, the list is empty, and the catalog hasn't answered yet. Before
-      // the fix, onboardingAvailable() read false in that window (catalog not
-      // resolved), so subscriptionOnboardingRunning() was ALSO false, and the
-      // offer opened on top of what becomes the /discover redirect a moment
-      // later. Deliberately does not flush '/api/catalog' -- that pending
-      // window is exactly what this proves.
+      // Regression: the catalog request only STARTS once subscriptions resolve
+      // empty, so there is a real window on every new account where the list is
+      // empty but the catalog hasn't answered — deliberately left unflushed here.
       supportPasskeys();
       const open = jest
         .spyOn(TestBed.inject(Dialog), 'open')
@@ -3360,11 +3317,9 @@ describe('ReaderShellComponent', () => {
     });
 
     describe('any close marks the offer answered', () => {
-      // The real Dialog (not spied) so the real PasskeyOfferDialogComponent
-      // renders into the real overlay -- these three tests are the one place
-      // in this suite proving the actual button/Escape/backdrop paths reach
-      // AuthService, not just that the component *would* call it in
-      // isolation (that is `passkey-offer-dialog.component.spec.ts`'s job).
+      // The real Dialog (not spied) so the real PasskeyOfferDialogComponent renders
+      // into the real overlay — these three tests prove the actual button/Escape/
+      // backdrop paths reach AuthService, not just isolated component behavior.
       function container(): HTMLElement {
         return TestBed.inject(OverlayContainer).getContainerElement();
       }

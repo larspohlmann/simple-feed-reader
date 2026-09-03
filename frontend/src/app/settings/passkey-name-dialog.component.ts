@@ -1,4 +1,3 @@
-// src/app/settings/passkey-name-dialog.component.ts
 import { Component, inject } from '@angular/core';
 import {
   AbstractControl,
@@ -15,26 +14,19 @@ import { ButtonComponent } from '../shared/button/button.component';
 import { FieldComponent } from '../shared/field/field.component';
 import { OverlayPanelComponent } from '../shared/overlay-panel/overlay-panel.component';
 
-/**
- * Names a passkey as part of adding it (#624) -- a fixed label for every
- * enrolment would defeat the point of listing several credentials side by
- * side.
+/** Names a passkey as part of adding it (#624) -- a fixed label for every
+ *  enrolment would defeat the point of listing several credentials side by
+ *  side. Pre-fills a device-derived default (`defaultPasskeyName`), since
+ *  the device it's created on is the one fact the user reliably knows at
+ *  this moment; still editable before confirming.
  *
- * Pre-fills a device-derived default (`defaultPasskeyName`) rather than an
- * empty box -- the name's whole job is to remind the user which device this
- * is, and the device it is being created on is the one fact they reliably
- * know at this moment. The user can still edit it before confirming.
+ *  A small dialog, not an inline row: the header's "Add a passkey" action has
+ *  no row of its own to expand into, and the ceremony it leads to already
+ *  opens the platform's own modal sheet, so this reads as one flow.
  *
- * A small dialog, not an inline row: the header's "Add a passkey" action does
- * not sit beside a row of its own to expand in place, and the enrolment it
- * leads to already opens the platform's own modal sheet, so one more small
- * modal step in front of it reads as one flow rather than a new surface.
- *
- * Returns the trimmed name on confirm, nothing on cancel. Triggering the
- * actual WebAuthn ceremony -- and telling a cancelled one apart from a real
- * failure -- stays `PasskeysGroupComponent.add()`'s job; this dialog only
- * collects a non-blank label.
- */
+ *  Returns the trimmed name on confirm, nothing on cancel. Triggering the
+ *  WebAuthn ceremony stays `PasskeysGroupComponent.add()`'s job; this dialog
+ *  only collects a non-blank label. */
 @Component({
   selector: 'app-passkey-name-dialog',
   imports: [

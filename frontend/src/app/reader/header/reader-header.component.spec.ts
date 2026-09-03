@@ -193,11 +193,9 @@ describe('ReaderHeaderComponent', () => {
       expect(el.querySelector('[aria-label="Search"]')).toBeNull();
     });
 
-    // #408 fix round 1: `searchOpen` used to be plain local state that only the
-    // narrow-gated trigger ever set, so growing past NARROW_QUERY mid-search left
-    // it stuck true — the mobile bar (and its own `app-search-field`, a second
-    // `/` listener) stayed mounted on a layout that no longer has a trigger for
-    // it, right alongside the sidebar's own instance.
+    // #408: `searchOpen` used to be plain local state, so growing past
+    // NARROW_QUERY mid-search left it stuck true — the mobile bar (with its own
+    // `/` listener) stayed mounted alongside the sidebar's instance.
     it('closes the bar when the layout stops being narrow', () => {
       const f = create();
       const el = f.nativeElement as HTMLElement;
@@ -228,10 +226,9 @@ describe('ReaderHeaderComponent', () => {
       expect(f.componentInstance.searchOpen()).toBe(false);
     });
 
-    // The field is mounted twice — here and in the sidebar — and each mount is
-    // wired by hand. The sidebar's carried `[term]`; this one did not, so a
-    // narrow layout showed the results for `?q=` above an empty box after a
-    // reload or a Back navigation.
+    // The field is mounted twice — here and in the sidebar — wired by hand each
+    // time. The sidebar's carried `[term]`; this one did not, so a narrow layout
+    // showed results for `?q=` above an empty box after a reload or Back.
     it('opens the bar showing the term the route already carries', () => {
       const f = create();
       f.componentRef.setInput('searchTerm', 'daft punk');

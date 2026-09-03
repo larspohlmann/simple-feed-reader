@@ -1,4 +1,3 @@
-// src/app/reader/magazine/magazine-planner.ts
 import { EntryDto } from '../models';
 import { entryImage, EntryImage, textSnippet } from '../preview-image';
 import { BLOCK_HEIGHT, DEMOTION, EntryKind, MagazineBlock } from './magazine-block';
@@ -12,26 +11,23 @@ export interface MagazinePlanInput {
   complete: boolean;
 }
 
-/** The fixed leading window sampled for the template-FAMILY choice
- *  (isImageRich/isTextRich). Judged over a fixed prefix, never the whole loaded
- *  set, so the family — and thus the plan — stays a stable prefix as more pages
- *  load. Collapse diversity is judged separately, over ACTIVE_WINDOW_MS. */
+/** The fixed leading window for the template-FAMILY choice (isImageRich/
+ *  isTextRich), judged over a fixed prefix — never the whole loaded set — so the
+ *  plan stays stable as pages load. Collapse diversity uses ACTIVE_WINDOW_MS. */
 const LEADING_WINDOW = 24;
-/** Run-collapse is enabled only when the view is genuinely mixed: at least this
- *  many distinct sources active within ACTIVE_WINDOW_MS. Collapsing one source
- *  must leave enough OTHER recent content to surface — three means at least two
- *  remain besides any one that collapses — and a near-mono view stays flat. */
+/** Run-collapse only fires when the view is genuinely mixed: at least this many
+ *  distinct sources active within ACTIVE_WINDOW_MS. Collapsing one source must
+ *  leave enough OTHER content to surface, so a near-mono view stays flat. */
 const MIN_VIEW_SOURCES = 3;
 /** The text-forward family is chosen only when the leading window is image-poor
  *  AND text-rich (see isImageRich/isTextRich). Both shares are judged over the
  *  same fixed LEADING_WINDOW, for prefix-stability. */
 const IMAGE_RICH_SHARE = 0.35;
 const TEXT_RICH_SHARE = 0.4;
-/** Below this share of entries carrying ANY usable image, the view has so few
- *  pictures that the image family's slots would all collapse to text. Such a feed
- *  is laid out with the text family whatever its copy length — well under the
- *  IMAGE_RICH threshold, so a view with a useful minority of images (a link/dev
- *  blog, ~a quarter) still keeps the image family to surface them. */
+/** Below this share of entries carrying ANY usable image, the image family's
+ *  slots would all collapse to text, so such a view uses the text family
+ *  regardless of copy length. Well under IMAGE_RICH, so a useful minority of
+ *  images (~a quarter, a link/dev blog) still keeps the image family. */
 const IMAGE_POOR_SHARE = 0.15;
 /** A same-source run collapses once it reaches this many entries in a row.
  *  Single foreign posts embedded in the run are bridged — see `detectRun`. */
@@ -41,10 +37,9 @@ const RUN_MIN = 8;
 const FEATURED_LEAD = 3;
 /** How many rows the collapsed widget previews before "Show more". */
 const WIDGET_PREVIEW = 4;
-/** The diversity window. Collapse is judged over the sources ACTIVE in the last
- *  day of the view's content — not a fixed count of leading entries, which two
- *  high-frequency sources bursting back-to-back can monopolize, disabling
- *  collapse on exactly the mixed views it exists for (see #168). */
+/** The diversity window: collapse is judged over sources ACTIVE in the last day
+ *  of content, not a fixed count of leading entries — two high-frequency sources
+ *  bursting back-to-back could monopolize and disable collapse (#168). */
 const ACTIVE_WINDOW_MS = 24 * 60 * 60 * 1000;
 /** The largest slot may reach this far ahead for an entry that fits it. */
 const LOOK_AHEAD = 2;
@@ -87,12 +82,10 @@ export function planMagazine(input: MagazinePlanInput): MagazineBlock[] {
     if (collapseEnabled) {
       const run = detectRun(ordered, index);
       if (run.sourceEntries.length >= RUN_MIN) {
-        // Defer only while the run's OWN membership is still undetermined: a run
-        // reaching the loaded boundary might grow, and a lone trailing foreign
-        // entry might turn out to be a bridged interloper once the next entry
-        // loads. Once it has terminated (a real gap or a foreign entry with a
-        // successor), it collapses — no diversity window to wait for. This keeps
-        // the plan a stable prefix.
+        // Defer only while the run's OWN membership is undetermined — it might
+        // still grow, or a trailing foreign entry might turn out bridged. Once
+        // terminated (a real gap, or a foreign entry with a successor), it
+        // collapses. Keeps the plan a stable prefix.
         if (!complete && run.end >= ordered.length - 1) break;
         // Featured lead comes FIRST, so a group block never opens the list.
         page = emitFeaturedLead(blocks, run.sourceEntries, templates, page);
@@ -108,10 +101,9 @@ export function planMagazine(input: MagazinePlanInput): MagazineBlock[] {
     if (remaining < template.length && !complete) break;
 
     // Stop an ordinary page short of a collapsing run's head. Template pages
-    // advance in whole-template strides, so a run whose start does not line up
-    // with a page boundary would otherwise be straddled — its first entries laid
-    // out flat, the remainder too short to still qualify — and never collapse.
-    // Ending the page at the run start lets the run open its own iteration.
+    // advance in whole strides, so a run not aligned to a boundary would be
+    // straddled — laid out flat, too short to qualify. Ending the page at the
+    // run start avoids this.
     const naturalLength = Math.min(template.length, remaining);
     const take = collapseEnabled
       ? cappedBeforeLongRun(ordered, index, naturalLength)
@@ -125,10 +117,9 @@ export function planMagazine(input: MagazinePlanInput): MagazineBlock[] {
   return blocks;
 }
 
-/** Walk a same-source run from `start`, bridging any single foreign post that
- *  the same source resumes right after (`Dom…X…Dom`). A gap of two or more
- *  foreign posts in a row ends the run. Every entry in `[start, end)` is either
- *  a same-source entry or a bridged interloper. */
+/** Walk a same-source run from `start`, bridging any single foreign post the
+ *  source resumes right after (`Dom…X…Dom`); a gap of two or more ends the run.
+ *  Every entry in `[start, end)` is same-source or a bridged interloper. */
 function detectRun(ordered: EntryDto[], start: number): DetectedRun {
   const source = ordered[start].subscriptionId;
   const sourceEntries: EntryDto[] = [];
@@ -161,11 +152,9 @@ function effectiveTime(entry: EntryDto): number {
   return Date.parse(entry.publishedAt ?? entry.createdAt);
 }
 
-/** Distinct sources whose effective time falls within ACTIVE_WINDOW_MS of the
- *  newest entry in the view. Measured from the newest entry, not the wall clock:
- *  it is deterministic — prefix-stable as older pages load, since an older entry
- *  can only ADD a source, never remove one — and a long-untouched tag still
- *  groups by its last active day. */
+/** Distinct sources active within ACTIVE_WINDOW_MS of the newest entry. Measured
+ *  from the newest entry, not the wall clock, so it's prefix-stable as older
+ *  pages load — an older entry can only ADD a source, never remove one. */
 function activeSourceCount(entries: EntryDto[]): number {
   let newest = -Infinity;
   for (const entry of entries) {
@@ -176,14 +165,10 @@ function activeSourceCount(entries: EntryDto[]): number {
   return distinctSources(entries.filter((entry) => effectiveTime(entry) >= cutoff));
 }
 
-/** Whether a genuinely new same-source run — long enough that the main loop may
- *  collapse or defer it — begins exactly at `start`. An ordinary page stops
- *  short of such a run so it opens its own iteration rather than being straddled.
- *  Deliberately independent of `complete`/trailing-diversity: partial and full
- *  renders must cap at identical points, or the pre-run page reflows between
- *  them. The source-boundary guard keeps this from firing inside a run's own
- *  continuation (which would shred a non-collapsing run into one-entry pages).
- *  Precondition: `start >= 1`, guaranteed by the sole caller's `ahead >= 1`. */
+/** Whether a new, collapsible same-source run begins exactly at `start`, so an
+ *  ordinary page can stop short of it. Independent of `complete`: partial and
+ *  full renders must cap at identical points. The source-boundary guard stops
+ *  this firing inside a run's own continuation. Precondition: `start >= 1`. */
 function startsLongRun(ordered: EntryDto[], start: number): boolean {
   if (ordered[start - 1].subscriptionId === ordered[start].subscriptionId) return false;
   return detectRun(ordered, start).sourceEntries.length >= RUN_MIN;
@@ -199,10 +184,9 @@ function cappedBeforeLongRun(ordered: EntryDto[], index: number, naturalLength: 
   return naturalLength;
 }
 
-/** Whether the view leads with large images. Mirrors `fits('split')`'s trust
- *  rule — a known width of at least 300, or a persisted URL of unknown width —
- *  so the family choice agrees with what the slots can actually hold. An empty
- *  view is treated as image-rich: the default family, nothing to override it. */
+/** Whether the view leads with large images, mirroring `fits('split')`'s trust
+ *  rule so the family choice agrees with what slots can hold. An empty view is
+ *  treated as image-rich (the default family). */
 function isImageRich(entries: EntryDto[]): boolean {
   if (entries.length === 0) return true;
   const withLargeImage = entries.filter((entry) => {
@@ -213,10 +197,9 @@ function isImageRich(entries: EntryDto[]): boolean {
   return withLargeImage / entries.length >= IMAGE_RICH_SHARE;
 }
 
-/** Whether the view leads with substantial copy — enough entries carrying text
- *  long enough to fill a pull-quote (the same QUOTE_MIN_TEXT the `quote` slot
- *  demands). The text family is only worth choosing when its quotes will render
- *  for real rather than demote straight back to headlines. */
+/** Whether the view leads with substantial copy — enough entries with text long
+ *  enough for a pull-quote (QUOTE_MIN_TEXT). The text family is only worth
+ *  choosing when its quotes render for real, not demote to headlines. */
 function isTextRich(entries: EntryDto[]): boolean {
   if (entries.length === 0) return false;
   const withLongText = entries.filter(
@@ -226,11 +209,8 @@ function isTextRich(entries: EntryDto[]): boolean {
 }
 
 /** Whether the view has almost no images at all — even the image family's
- *  adaptive `thumb` fillers would find nothing, so every image slot would settle
- *  to a text block and the page would read as a wall of collapsed slots. Any
- *  usable image counts (`entryImage` covers the persisted field and inline
- *  markup): the question is only whether pictures exist to lay out at all. An
- *  empty view is not image-poor — it keeps the default image family. */
+ *  adaptive `thumb` fillers would find nothing, collapsing every slot to text.
+ *  Any usable image counts (`entryImage`); an empty view is not image-poor. */
 function isImagePoor(entries: EntryDto[]): boolean {
   if (entries.length === 0) return false;
   const withImage = entries.filter((entry) => entryImage(entry) !== null).length;
@@ -238,11 +218,9 @@ function isImagePoor(entries: EntryDto[]): boolean {
 }
 
 /** If the newest entry has no usable image but one sits within LEAD_IMAGE_REACH
- *  behind it, move that entry to the front so the opener leads on a picture. A
- *  single bounded move: the head stops being strictly newest-first, the tail
- *  keeps its order, and a short text run can still follow. `split` is the bar —
- *  the same medium-image trust the opener's first slot needs to render as an
- *  image rather than collapse to a headline. */
+ *  behind it, move it to the front so the opener leads on a picture — a single
+ *  bounded move, tail order kept. `split` is the trust bar the opener's slot
+ *  needs to render as an image rather than a headline. */
 function leadWithImage(entries: EntryDto[]): EntryDto[] {
   if (entries.length === 0 || fits('split', entries[0])) return entries;
   const reach = Math.min(entries.length, LEAD_IMAGE_REACH);
@@ -346,11 +324,10 @@ function withinBudget(kinds: EntryKind[]): EntryKind[] {
 }
 
 /**
- * Entries fill slots IN ORDER — a reader is chronological by contract. The one
- * exception is the page's tallest slot, which may reach up to LOOK_AHEAD
- * positions ahead for an entry that can actually fill it; that generalises what
- * the old `preferredGroupHero` already did, and is bounded so nothing visibly
- * jumps. Any slot whose entry still cannot fill it demotes TRANSITIVELY.
+ * Entries fill slots IN ORDER — chronological by contract. The one exception is
+ * the tallest slot, which may reach up to LOOK_AHEAD ahead for an entry that
+ * fits it (bounded, so nothing visibly jumps). Any slot that still can't fill
+ * demotes TRANSITIVELY.
  */
 function assign(kinds: EntryKind[], slice: EntryDto[]): EntryKind[] {
   const order = [...slice];
@@ -377,12 +354,9 @@ function assign(kinds: EntryKind[], slice: EntryDto[]): EntryKind[] {
 
 function settle(kind: EntryKind, entry: EntryDto): EntryKind {
   const settled = demoteUntilFit(kind, entry);
-  // An image-less entry that still carries a summary must keep its dek: the
-  // image ladder's floor is the dek-less `compact`, so lift it to the text-forward
-  // `kicker`, which renders the summary. This is the single #514/#516 rule —
-  // applied wherever an entry lands, so both template families honour it, and an
-  // authored `compact` slot holding such an entry is corrected too. A bare entry
-  // (no image, no summary) has nothing to show and stays `compact`.
+  // An image-less entry with a summary must keep its dek: lift the dek-less
+  // `compact` floor to `kicker` (#514/#516), applied wherever an entry lands so
+  // both families honour it. A bare entry (no image, no summary) stays `compact`.
   return settled === 'compact' && hasSummaryButNoImage(entry) ? 'kicker' : settled;
 }
 
@@ -415,11 +389,9 @@ function fits(kind: EntryKind, entry: EntryDto): boolean {
   const width = image?.width ?? 0;
   switch (kind) {
     case 'hero':
-      // An unknown width is trusted at hero size only when it is the persisted
-      // field: an inline <img> from an archive row is a 148px thumbnail as often
-      // as not, which is what produced heroes with no picture. A portrait image
-      // is refused so it demotes to `split`, which shows it BESIDE the text — a
-      // tall image above the text would otherwise own most of the screen.
+      // An unknown width is trusted at hero size only for the persisted field —
+      // an inline <img> from an archive row is often a 148px thumbnail, which
+      // produced picture-less heroes. Portraits are refused, demoting to `split`.
       return !!image && !isPortrait(image) && (width >= 500 || (width === 0 && !!entry.imageUrl));
     case 'wide':
       // Same untrusted-inline-thumbnail and portrait guards as hero: a 148px
@@ -456,9 +428,8 @@ function toBlock(kind: EntryKind, entry: EntryDto, page: number, position: numbe
 }
 
 /** A widget owning a run's whole tail; the component previews `previewCount`
- *  rows and expands the rest in place. `tail` is a run's entries past the
- *  featured lead; RUN_MIN (8) > FEATURED_LEAD (3) guarantees it is non-empty, so
- *  `tail[0]` is always defined. */
+ *  rows and expands the rest in place. RUN_MIN (8) > FEATURED_LEAD (3)
+ *  guarantees `tail` is non-empty, so `tail[0]` is defined. */
 function digest(tail: EntryDto[]): MagazineBlock {
   return {
     kind: 'group',

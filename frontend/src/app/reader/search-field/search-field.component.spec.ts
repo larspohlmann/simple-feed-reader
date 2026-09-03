@@ -1,4 +1,3 @@
-// src/app/reader/search-field/search-field.component.spec.ts
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
@@ -350,14 +349,8 @@ describe('SearchFieldComponent', () => {
   });
 
   // No test for the clear button's resting contrast fix (#408 follow-up): jsdom
-  // never compiles or injects this component's styleUrl (jest-preset-angular
-  // does not run the Angular build pipeline that would turn
-  // search-field.component.scss into a loaded stylesheet), so `getComputedStyle`
-  // on the mounted button always reports jsdom's UA default regardless of what
-  // the .scss says. An assertion on `tagName`/`type`/`classList` alone would
-  // pass whether or not the CSS fix is present or later reverted — that is not
-  // coverage, it is a test that cannot fail. The chrome reset is checked by eye
-  // instead; see search-field.component.scss for the reasoning.
+  // never loads this component's .scss, so getComputedStyle always returns the
+  // UA default regardless of the fix. Checked by eye instead; see the .scss.
 
   describe('trailing space as the whole-word signal (#408 follow-up)', () => {
     it('emits a trailing space unchanged when the user typed one', fakeAsync(() => {

@@ -1,4 +1,3 @@
-// src/app/reader/magazine/entry-image-block-base.ts
 import { Directive, computed, effect, signal } from '@angular/core';
 import { EntryBlockBase } from './entry-block-base';
 import { entryImage } from '../preview-image';

@@ -1,4 +1,3 @@
-// src/app/reader/reader-shell.component.ts
 import {
   AfterViewInit,
   Component,
@@ -137,10 +136,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *  reader is the only place that imports it, which is what keeps it out of
    *  the initial bundle. */
   private readonly listScrollReset = inject(ListScrollReset);
-  /** Injected for its timer: it keeps every count on screen — the sidebar
-   *  badges, the list heading and the tab title, which all read the same two
-   *  stores (#709) — moving on its own while the reader is open (#708).
-   *  Holding it is what starts it, and dropping it is what stops it. */
+  /** Injected for its timer: it keeps every count on screen — sidebar badges,
+   *  list heading, tab title, all reading the same two stores (#709) — moving
+   *  on its own while the reader is open (#708). Holding it starts it. */
   private readonly countsPoll = inject(SidebarCountsPoll);
 
   /** Is the picker worth showing at all? Nothing seeds the catalog — it arrives
@@ -171,33 +169,23 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   );
 
   private readonly sweptOnce = signal(false);
-  /** True only for the span of the post-onboarding sweep — set when it fires,
-   *  cleared once it lands without error. `sweptOnce` is a permanent one-way
-   *  latch, so gating the banner on it would re-show the counted banner on every
-   *  later refresh (sidebar button, scoped, add-feed) over an already-populated
-   *  list. This sweep-scoped flag is what keeps the banner to the sweep alone. */
+  /** True only for the span of the post-onboarding sweep, cleared once it
+   *  lands without error. `sweptOnce` is a permanent latch that would re-show
+   *  the banner on every later refresh; this flag keeps it to the sweep alone. */
   private readonly sweeping = signal(false);
 
-  /** The counted banner belongs to the post-onboarding sweep only. Every other
-   *  refresh has the hairline, which is enough context for a user who already
-   *  knows what their reader looks like. A failure takes the strip over, so the
-   *  two never compete for it. */
+  /** The counted banner belongs to the post-onboarding sweep only; every other
+   *  refresh has the hairline, which is context enough for a user who already
+   *  knows their reader. A failure takes the strip over, so the two never compete. */
   readonly showFetchProgress = computed(
     () => this.sweeping() && this.refreshSvc.failure() === null,
   );
 
-  /** An empty subscription list, once resolved, that has not been explicitly
-   *  skipped this session -- the redirect effect further down's own guard
-   *  before it decides whether the catalog makes the picker worth showing.
-   *  Extracted so #624's onboarding guard below can read the identical
-   *  condition instead of re-deriving it (`onboardingAvailable` is already
-   *  its own shared computed; this is the other half of that effect's
-   *  guard).
-   *
-   *  A failed load resolves with an empty list too; that is not "zero
-   *  subscriptions" but "we could not read them", so `!this.subs.error()`
-   *  keeps a retry-able failure from reading as onboarding, on both sides
-   *  that read this (#691). */
+  /** An empty subscription list, once resolved, not explicitly skipped this
+   *  session — the redirect effect's own guard, and what #624's onboarding
+   *  guard below reuses instead of re-deriving. A failed load also resolves
+   *  empty, which means "couldn't read them", not "zero subscriptions" — so
+   *  `!this.subs.error()` keeps a retry-able failure from reading as onboarding (#691). */
   private readonly emptySubscriptionsNeedingOnboarding = computed(
     () =>
       this.subs.resolved() &&
@@ -207,23 +195,16 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   );
 
   /** #624: true while a new account's subscriptions are being introduced --
-   *  about to be redirected to /discover, or, having just come back from
-   *  there, living through the post-onboarding first-fetch sweep above. A
-   *  modal offered on top of either window steps on the onboarding (design
-   *  spec §5.3), so the first-login passkey offer waits for both to clear.
+   *  about to redirect to /discover, or just back from there mid-sweep. A
+   *  modal on top of either window steps on onboarding (spec §5.3), so the
+   *  passkey offer waits for both to clear.
    *
-   *  Fix round 1 (a real defect this shipped with, hitting every brand-new
-   *  account): an empty list alone is not enough to rule the redirect out.
-   *  The redirect effect only starts the catalog request once subscriptions
-   *  resolve empty, so there is a real window where the list is empty and
-   *  `onboardingAvailable()` still reads false purely because the catalog
-   *  hasn't answered YET -- not because there is nothing to onboard from.
-   *  Reading `!catalog.resolved()` as "onboarding running" too closes that
-   *  window: the guard now stays true for an empty list from the moment it
-   *  resolves until the redirect decision has actually been made one way or
-   *  the other (catalog resolved with entries -> the redirect fires and this
-   *  stays true forever while the list is empty; catalog resolved empty ->
-   *  there is nothing to redirect to, and this correctly falls open). */
+   *  Real defect this shipped with: an empty list alone doesn't rule the
+   *  redirect out, because the redirect effect only starts the catalog
+   *  request once subscriptions resolve empty -- there's a window where
+   *  `onboardingAvailable()` reads false only because the catalog hasn't
+   *  answered YET. Reading `!catalog.resolved()` as "running" too closes that
+   *  window until the redirect decision is actually made either way. */
   private readonly subscriptionOnboardingRunning = computed(() => {
     if (this.awaitingFirstFetch() || this.sweeping()) return true;
     if (!this.emptySubscriptionsNeedingOnboarding()) return false;
@@ -232,27 +213,20 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   });
 
   /** #624: the shell has loaded enough real state to judge the passkey offer
-   *  -- the subscriptions resolved, which is what lets `subscriptionOnboardingRunning`
-   *  above give a real answer instead of the "nothing decided yet" default. The
-   *  signed-in user is checked in `passkeyOfferEligible` below, which returns
-   *  before ever reaching this -- rechecking it here would be dead code. */
+   *  -- subscriptions resolved, which lets `subscriptionOnboardingRunning`
+   *  give a real answer. Sign-in is checked in `passkeyOfferEligible` below. */
   private readonly readerSettled = computed(() => this.subs.resolved());
 
-  /** #624 design spec §5.3: all four conditions the first-login passkey
-   *  offer needs before it may show. The fourth (on the reader, not an auth
-   *  route) needs no check here -- this component exists only on the reader
-   *  route (`app.routes.ts`), never on an auth screen. `isPasskeySupported()`
-   *  is checked first because it is the cheapest -- false for nearly every
-   *  test in this suite, since jsdom carries no `PublicKeyCredential` -- so a
-   *  user fixture without `preferences` set never has that field touched.
+  /** #624 design spec §5.3: all conditions the first-login passkey offer
+   *  needs before it may show. The fourth (on the reader, not an auth route)
+   *  needs no check: this component exists only on the reader route.
+   *  `isPasskeySupported()` runs first since it's cheapest -- false for
+   *  nearly every test here, since jsdom has no `PublicKeyCredential`.
    *
-   *  #624 follow-up adds a fifth: `SetupService.passkeySignInAvailable()`
-   *  must be exactly `true`. Offering enrolment while the instance cannot
-   *  complete a passkey sign-in would hand the account a credential it can
-   *  never use -- the same reasoning `PasskeysGroupComponent.visible` gives
-   *  for failing CLOSED rather than open. This route is never behind
-   *  `setupRedirectGuard`, so the constructor below triggers the identical
-   *  `ensureLoaded()` that guard runs. */
+   *  #624 follow-up: `SetupService.passkeySignInAvailable()` must be exactly
+   *  `true` -- offering enrolment when the instance can't complete a passkey
+   *  sign-in would hand the account a credential it can never use, the same
+   *  reasoning `PasskeysGroupComponent.visible` fails CLOSED for. */
   private readonly passkeyOfferEligible = computed(() => {
     if (!isPasskeySupported()) return false;
     if (this.setup.passkeySignInAvailable() !== true) return false;
@@ -261,11 +235,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.readerSettled() && !this.subscriptionOnboardingRunning();
   });
 
-  /** Latches true the moment the offer opens so a later re-render -- the
-   *  eligibility computed re-evaluating true again before the answer has
-   *  round-tripped to the server -- cannot open a second one in the same
-   *  boot (design spec §5.3/§5.4). Never reset: the offer is a once-per-boot
-   *  event, not a once-per-condition one. */
+  /** Latches true the moment the offer opens so a re-render -- the
+   *  eligibility computed going true again before the answer round-trips --
+   *  can't open a second one in the same boot (spec §5.3/§5.4). Never reset. */
   private readonly passkeyOfferShown = signal(false);
 
   /** Opens the first-login passkey offer at most once per boot (#624). The
@@ -292,12 +264,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     initialValue: convertToParamMap({}),
   });
   private readonly parsed = computed(() => selectionFromParams(this.params()));
-  // Structural equality so an entry-only URL change does not produce a new
-  // selection reference — the reload effect must react to selection, not the
-  // open entry. Delegates to `sameSelection` rather than re-listing
-  // `Selection`'s fields here: a hand-rolled copy once fell out of step when
-  // `term` was added, silently freezing the list on every second search
-  // (#408 follow-up) — one comparator, one definition.
+  // Structural equality so an entry-only URL change doesn't produce a new
+  // selection reference -- delegates to `sameSelection` rather than
+  // re-listing fields here, which once fell out of step when `term` was
+  // added, silently freezing the list on every second search (#408 follow-up).
   readonly selection = computed(() => this.parsed().selection, {
     equal: sameSelection,
   });
@@ -329,10 +299,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     return e ? (this.feedTags().get(e.subscriptionId) ?? []) : [];
   });
   readonly hasMore = computed(() => this.entries.nextCursor() !== null);
-  /** A search request is actually in flight — not merely "some list is
-   *  loading": `entries.loading()` is true for every list load, so gating the
-   *  search field's spinner on that alone would show it while an unrelated
-   *  feed list loads. */
+  /** A search request is actually in flight -- not merely "some list is
+   *  loading": `entries.loading()` is true for every list load, so gating on
+   *  that alone would show the spinner while an unrelated feed list loads. */
   readonly searching = computed(() => this.selection().kind === 'search' && this.entries.loading());
   readonly canMarkAllRead = computed(() => markReadTarget(this.selection()) !== null);
   /** What the list header's "Last refreshed" hint shows: a feed's fetch time,
@@ -373,24 +342,18 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *  child rather than owned here, since the bar's open/closed state (trigger,
    *  close button, Escape, outside click) is entirely the header's business. */
   private readonly headerSearchOpen = computed(() => this.header()?.searchOpen() ?? false);
-  /** Either overlay hanging off the header — the drawer or the search bar —
-   *  force-shows it. A single derived signal, read from the single place that
-   *  applies the rule (the header-visibility effect in the constructor), so
-   *  the two overlays can never disagree about the header's state the way two
-   *  independent writers once did. */
+  /** Either overlay hanging off the header -- drawer or search bar -- force-
+   *  shows it. A single derived signal, read from the one place that applies
+   *  the rule, so the two overlays can never disagree the way two writers once did. */
   private readonly headerOverlayOpen = computed(
     () => this.sidebarOpen() || this.headerSearchOpen(),
   );
-  // Mobile hide-on-scroll app bar — the LIST's chrome. It is not a separate
-  // hide-on-scroll state: the list already keeps one (`collapsed`, same scroll
-  // logic, reset on every selection change), so the bar simply mirrors it. An
-  // open overlay (the drawer or the search bar) force-shows the bar, because the
-  // drawer hangs below it and the search bar holds the live term. Reading the
-  // list's own `collapsed` is what keeps the bar reacting to the list scroller
-  // alone — never an article's or the tag row's (#128) — and what lets it follow
-  // a view switch to the top of the new list without a stale-offset recompute
-  // (#630). A full-screen article is a layer above the bar with its own toolbar,
-  // so opening or closing one never touches it (#128).
+  // Mobile hide-on-scroll app bar — the LIST's chrome, not a separate state: it
+  // mirrors the list's own `collapsed` (same scroll logic, reset on selection
+  // change), so the bar reacts to the list scroller alone, never an article's or
+  // the tag row's (#128), and follows a view switch without a stale-offset
+  // recompute (#630). An open overlay (drawer/search bar) force-shows it; a
+  // full-screen article sits above the bar with its own toolbar, untouched (#128).
   readonly headerHidden = computed(() =>
     this.headerOverlayOpen() ? false : (this.list()?.collapsed() ?? false),
   );
@@ -421,17 +384,12 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   /** The selected feed, but only where the intro block belongs: the magazine
    *  layout, and only when the feed has something to introduce itself with.
-   *
-   *  Magazine only because the block is a member of that column — it takes the
-   *  column's measure and its left edge, and reads as the card above the cards.
-   *  The list layout is a dense stack with no such measure, where the same
-   *  block would be a wide slab sitting on top of the rows.
-   *
-   *  A feed with no description, image or site URL renders no block at all
-   *  rather than an empty box above the first row. The check belongs here and
-   *  nowhere else: a component cannot decline to be created, so a self-guard
-   *  inside FeedIntroComponent could never suppress the host element's own
-   *  padding. */
+   *  Magazine only because the block is a column member -- reads as the card
+   *  above the cards; the list layout is a dense stack where it would be a
+   *  wide slab on top of the rows. A feed with nothing to show renders no
+   *  block at all; the check lives here since a component can't decline to be
+   *  created, so a self-guard inside `FeedIntroComponent` couldn't suppress
+   *  the host element's own padding. */
   readonly feedIntroSubscription = computed(() => {
     if (this.layout.mode() !== 'magazine') return null;
     const sub = this.selectedSubscription();
@@ -441,9 +399,8 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   readonly title = computed(() => {
     // Read as a dependency, not used directly: TranslocoService.translate() is
-    // one-shot, so the heading would keep the language it was first computed in
-    // unless a language signal pulls this computed through a re-evaluation on a
-    // switch. Every arm below reads a translation, so every arm needs it (#411).
+    // one-shot, so the heading keeps the language it was first computed in
+    // unless a language signal pulls this through a re-evaluation (#411).
     this.language.lang();
     const s = this.selection();
     // A switch with no default, like `titleCount` and `queryFromSelection`: a
@@ -475,14 +432,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   });
 
   /** How much the named list holds — the same number the sidebar row shows for
-   *  it, so the row, the heading and the tab can never disagree. The unread
-   *  count where the sidebar counts unread, the item count where it counts
-   *  items (#709).
-   *
-   *  Zero means "nothing to say", which covers three cases at once: an empty
-   *  list, which shows no number the way the sidebar drops the badge; a search,
-   *  which already carries its own result count in the heading and the tab and
-   *  must not be given a second; and a list whose count has not loaded yet. */
+   *  it, so row, heading and tab can never disagree (unread where the sidebar
+   *  counts unread, item count where it counts items, #709). Zero means
+   *  "nothing to say": an empty list, a search (which has its own count), or a
+   *  count that hasn't loaded yet. */
   readonly titleCount = computed<TitleCount>(() => {
     const s = this.selection();
     switch (s.kind) {
@@ -507,11 +460,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   });
 
-  /** The search title's small, muted lead ("Results for"). Split out from the
-   *  body below so the entry list can render it at a smaller, muted weight
-   *  while the term and count stay prominent (#581 follow-up) — `title()`
-   *  above still concatenates the two into the one string the tab title and
-   *  the heading's accessible name need. */
+  /** The search title's small, muted lead ("Results for"). Split from the body
+   *  below so the entry list can render it muted while the term/count stay
+   *  prominent (#581 follow-up) — `title()` concatenates the two for the tab. */
   readonly searchTitlePrefix = computed(() => {
     this.language.lang();
     return this.i18n.translate('reader.searchResultsPrefix');
@@ -522,13 +473,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly searchTitleBody = computed(() => {
     this.language.lang();
     const term = visibleSearchTerm(this.selection().term ?? '');
-    // No count while the search is in flight: EntriesStore.load() clears
-    // nextCursor synchronously but deliberately keeps the PREVIOUS list
-    // rendered until the response lands (#254) — so for that whole window
-    // `entries()` still holds the old term's rows and `hasMore()` reads as
-    // false regardless of what the new term will return. Counting them would
-    // flash a stale, or even a false "no matches", number. Gated on the same
-    // condition the spinner uses, so the two can never disagree.
+    // No count while the search is in flight: `load()` clears nextCursor
+    // synchronously but keeps the PREVIOUS list rendered until the response
+    // lands (#254), so `entries()` still holds the old term's rows and
+    // `hasMore()` reads false. Gated on the same condition the spinner uses.
     if (this.searching()) return this.i18n.translate('reader.searchResults', { term });
 
     // The loaded count, not a COUNT(*) total — the list pages 50 at a time, so
@@ -541,21 +489,17 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   });
 
   /** The quoted term alone (#581 follow-up round 2) — what the entry list
-   *  renders as `.results-term`, now that the count moves into its own pill
-   *  beside it instead of trailing the term as "— {{count}}" text. Reuses
-   *  the same body-only `reader.searchResults` key `searchTitleBody` falls
-   *  back to while loading, since that key IS just the quoted term. */
+   *  renders as `.results-term`, now that the count moves to its own pill
+   *  instead of trailing as "— {{count}}". Reuses `searchTitleBody`'s loading-state key. */
   readonly searchTitleTerm = computed(() => {
     this.language.lang();
     const term = visibleSearchTerm(this.selection().term ?? '');
     return this.i18n.translate('reader.searchResults', { term });
   });
 
-  /** The pill's own text — just the number, with a trailing '+' when another
-   *  page is still out there, or null to render no pill at all. Null covers
-   *  two cases the pill must stay silent for: a search still in flight (see
-   *  `searchTitleBody`'s #254 comment — the same trap, the same guard), and
-   *  a reload that hasn't landed a first count yet. */
+  /** The pill's own text — the number, with a trailing '+' when another page
+   *  is out there, or null for no pill: a search in flight (same #254 trap as
+   *  `searchTitleBody`), or a reload that hasn't landed a first count yet. */
   readonly searchCountLabel = computed<string | null>(() => {
     if (this.searching()) return null;
     const count = this.entries.entries().length;
@@ -565,22 +509,18 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly viewedOnOpen = new Set<number>();
 
   /** Ids of entries removed from the saved view on screen. The entry list
-   *  renders these with the leaving class: the row fades, then its slot
-   *  collapses in place. The entry stays in the list data so the magazine plan
-   *  never re-flows around the hole (#478) — a reload drops it for real. */
+   *  renders these with the leaving class (row fades, slot collapses); the
+   *  data stays so the magazine plan never re-flows around the hole (#478). */
   readonly leavingIds = signal<ReadonlySet<number>>(new Set());
 
   constructor() {
     // Loads SetupService.passkeySignInAvailable, gating passkeyOfferEligible
     // above -- this route is never behind setupRedirectGuard, so nothing else
-    // triggers that fetch here. Gated on isPasskeySupported() first: false
-    // for nearly every test in this suite (jsdom carries no
-    // PublicKeyCredential), and a browser that cannot run the ceremony at all
-    // has no use for the answer regardless. catchError mirrors
-    // setupRedirectGuard/requireSetupGuard's own handling of this exact
-    // observable (fix round 1) -- an uncaught failure here would otherwise
-    // throw on reader boot, a hot path, rather than just leaving the offer
-    // unavailable the way a `false`/null availability already does.
+    // triggers the fetch. Gated on isPasskeySupported() first since a browser
+    // that can't run the ceremony has no use for the answer regardless.
+    // catchError mirrors setupRedirectGuard's own handling of this observable:
+    // an uncaught failure would otherwise throw on reader boot rather than
+    // just leaving the offer unavailable.
     if (isPasskeySupported()) {
       this.setup
         .ensureLoaded()
@@ -588,9 +528,8 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
         .subscribe();
     }
     // Reload the list and sidebar counts whenever the selection (not the open
-    // entry) changes. A new list has no removed rows, so clear the collapsed set
-    // with it — otherwise a recycled id would render an incoming row already
-    // collapsed.
+    // entry) changes. A new list has no removed rows, so clear the collapsed
+    // set with it, else a recycled id would render an incoming row already collapsed.
     effect(() => {
       const q = queryFromSelection(this.selection());
       untracked(() => {
@@ -604,10 +543,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       this.selection();
       untracked(() => this.sidebarOpen.set(false));
     });
-    // Mark the opened entry viewed exactly once per session — even if the PATCH
-    // fails and the flag rolls back, we never re-fire. Opening sends the viewed
-    // flag alone; the backend reads it too (ViewedImpliesHiddenListener) and
-    // localStatePatch mirrors that here, so one flag on the wire moves both.
+    // Mark the opened entry viewed exactly once per session, even if the PATCH
+    // fails and rolls back. Opening sends the viewed flag alone; the backend
+    // reads it too (ViewedImpliesHiddenListener), and localStatePatch mirrors that here.
     effect(() => {
       if (this.openEntryId() === null) return;
       untracked(() => {
@@ -655,18 +593,14 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     });
 
     // Nothing to read and nothing skipped: send the user to the picker. Purely
-    // state-driven — no guard, no resolver — and gated on `resolved` so it never
-    // fires against a list the server has not answered on yet. Use `replaceUrl`:
-    // otherwise Back from /discover lands here and redirects again — a dead Back
-    // button.
+    // state-driven -- no guard, no resolver -- gated on `resolved` so it never
+    // fires against an unanswered list. `replaceUrl` avoids a dead Back button.
     effect(() => {
       if (!this.emptySubscriptionsNeedingOnboarding()) return;
 
       // Ask what the catalog holds before deciding. load() is a no-op once
-      // resolved, and the store is shared with /discover, so the redirect path
-      // still fetches the catalog exactly once. Untracked so the effect depends
-      // on the catalog's resolution (onboardingAvailable, below), not on the
-      // synchronous loading flag load() sets.
+      // resolved, shared with /discover. Untracked so the effect depends on
+      // catalog resolution (`onboardingAvailable` below), not the loading flag.
       untracked(() => this.catalog.load());
       if (!this.onboardingAvailable()) return;
 
@@ -674,10 +608,8 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     });
 
     // The post-onboarding sweep, owned BY STATE rather than by being called:
-    // RefreshService.run() early-returns while a refresh is already running, so a
-    // call made from the picker could be silently swallowed by the shell's own
-    // load. Expressing it as "feeds exist that have never been fetched" removes
-    // the ordering question entirely.
+    // RefreshService.run() early-returns while already running, so a call from
+    // the picker could be swallowed. "Feeds never fetched" removes the ordering question.
     effect(() => {
       if (!this.awaitingFirstFetch() || this.sweptOnce()) return;
       this.sweptOnce.set(true);
@@ -685,27 +617,20 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       this.refreshSvc.run();
     });
 
-    // Close the sweep window once the onboarding sweep lands without error. A
-    // failure keeps it open so the banner's retry stays available until a retry
-    // succeeds. Gated on `sweeping` so no later, unrelated refresh reopens it —
-    // and RefreshService.run()'s onDone fires on both success and failure, which
-    // is why the clear is expressed as state here rather than in that callback.
+    // Close the sweep window once it lands without error; a failure keeps it
+    // open so the banner's retry stays available. Gated on `sweeping` so no
+    // unrelated refresh reopens it; expressed as state since onDone fires on both outcomes.
     effect(() => {
       if (this.sweeping() && !this.refreshSvc.running() && this.refreshSvc.failure() === null) {
         untracked(() => this.sweeping.set(false));
       }
     });
 
-    // The single authority that reloads the list after a refresh (#502). Two
-    // intents, one place:
-    //   - the onboarding sweep (sweeping()) fills progressively, so each
-    //     landing slice reloads — a new user must not stare at an empty list
-    //     for the whole sweep (#127);
-    //   - every user-initiated refresh (mobile pull, header/sidebar Refresh,
-    //     add-feed) reloads once, when the run finishes, so a scoped refresh
-    //     never flickers or reorders mid-sweep.
-    // A second reload used to live in each run()'s onDone callback (#61), so one
-    // scoped refresh loaded the list twice. That reload now lives here alone.
+    // The single authority that reloads the list after a refresh (#502): the
+    // onboarding sweep reloads on each landing slice, so a new user isn't
+    // staring at an empty list (#127); a user-initiated refresh reloads once,
+    // on finish, so it never flickers mid-sweep. Used to also live in each
+    // run()'s onDone (#61), doubling the reload on a scoped refresh -- now lives here alone.
     effect(() => {
       const slice = this.refreshSvc.slice();
       const running = this.refreshSvc.running();
@@ -747,23 +672,18 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   ngAfterViewInit(): void {
     const hdrEl = this.hdr()?.nativeElement as HTMLElement | undefined;
     if (hdrEl && typeof ResizeObserver !== 'undefined') {
-      // Floor the *fractional* rendered height, not `offsetHeight`. With the
+      // Floor the *fractional* rendered height, not `offsetHeight`: with the
       // mobile tag row present the bar's real height is fractional, and
-      // `offsetHeight` rounds it — rounding up drops every element anchored at
-      // `--app-bar-h` (the list header, the drawer) a sub-pixel *below* the
-      // bar's true bottom edge, opening a hairline the scrolling list shows
-      // through on iOS Safari (#122). Flooring lands them at or just under that
-      // edge, so the bands overlap instead of gapping.
+      // rounding up drops elements anchored at `--app-bar-h` a sub-pixel
+      // below the bar's true edge, opening a hairline on iOS Safari (#122).
       this.resizeObs = new ResizeObserver(() =>
         this.headerHeight.set(Math.floor(hdrEl.getBoundingClientRect().height)),
       );
       this.resizeObs.observe(hdrEl);
     }
     // This height drives the content area's top padding and the mobile
-    // drawer's offset, not just how far the header slides. The observer's
-    // first callback covers the initial measurement; until it lands the
-    // stylesheet's own 56px (the bare bar, no tag row) holds, which is why
-    // the template binds `headerHeight() || null` rather than a raw 0.
+    // drawer's offset too, not just the header's slide. Until the observer's
+    // first callback lands, the stylesheet's own 56px holds -- hence `headerHeight() || null`.
   }
 
   ngOnDestroy(): void {
@@ -779,13 +699,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *                    bar when it retracts, so nothing is left hanging in the
    *                    gap the bar leaves behind
    *
-   * Both are constants from the panes' point of view — `--app-bar-h` never
-   * changes with the hidden state, which is what keeps their geometry fixed.
-   * The bar itself never changes with an article either: the full-screen
-   * article is a layer above it with its own toolbar, so this height cannot
-   * churn when one opens or closes (#128).
-   * Set imperatively rather than through a `[style.--x]` binding so there is no
-   * doubt about custom-property support in the template compiler.
+   * Both are constants from the panes' point of view: `--app-bar-h` never
+   * changes with hidden state, and the bar never changes with an article
+   * either (a full-screen article sits above it with its own toolbar, #128).
+   * Set imperatively, not via `[style.--x]`, for certain compiler support.
    */
   private readonly _publishBarVars = effect(() => {
     const style = this.hostRef.nativeElement.style;
@@ -796,17 +713,14 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   /**
    * The mobile drawer hangs below the header, so it must never open under a
-   * retracted one — that would leave a strip of backdrop where the bar should
-   * be. On close the header returns to what the *list's* scroll position
-   * implies, UNLESS the search bar is still open — see the constructor's
-   * `headerOverlayOpen` effect, the single place that turns this (and the
-   * search bar's own open/close) into a header-visibility decision. On close
-   * the resting state is asked of the list itself, because the last scroller
-   * to fire may have been an article's, whose offset says nothing about the
-   * list (#128). Leaving the bar expanded over a scrolled-down list
-   * dead-zones touch-scroll in the strip it overlays (it covers the list but
-   * is not its scroller), which reads as the list refusing to scroll until
-   * the swipe starts below the bar.
+   * retracted one -- that would leave a strip of backdrop where the bar
+   * should be. On close, the header returns to what the *list's* scroll
+   * position implies (unless the search bar is still open -- see the
+   * constructor's `headerOverlayOpen` effect), asked of the list itself since
+   * the last scroller to fire may have been an article's (#128). Leaving the
+   * bar expanded over a scrolled-down list dead-zones touch-scroll in the
+   * strip it overlays, reading as the list refusing to scroll until the swipe
+   * starts below the bar.
    */
   setSidebarOpen(open: boolean): void {
     if (!open) this.sidebarOrganising.set(false);
@@ -841,9 +755,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   /** The tick toggles "viewed" (#482). Activating it also reads the entry (the
    *  subset invariant), so an unread entry leaves the unread list and its badge
-   *  drops; deactivating only un-ticks, leaving the entry read, so the unread
-   *  badge is unchanged. The Recently-read badge follows the viewed flag both
-   *  ways, and the row leaves that view through patchInList. */
+   *  drops; deactivating only un-ticks. Recently-read follows both ways. */
   private setViewed(e: EntryDto, viewed: boolean): void {
     const alsoReads = viewed && !e.isHidden;
     this.subs.bumpViewed(viewed ? 1 : -1);
@@ -890,10 +802,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /** Collapse a row out of the list (entry-list `.row-slot.leaving`): the row
-   *  fades, then its slot collapses in place. The entry is kept in the list data
-   *  on purpose — dropping it would re-flow the magazine plan around the gap —
-   *  so a reload is what finally clears it. Returns a revert that un-collapses
-   *  the row if the PATCH fails. */
+   *  fades, then its slot collapses. The entry stays in list data on purpose
+   *  (dropping it would re-flow the magazine plan); a reload finally clears it.
+   *  Returns a revert that un-collapses the row if the PATCH fails. */
   private leaveList(e: EntryDto): () => void {
     this.markLeaving(e.id, true);
     return () => this.markLeaving(e.id, false);
@@ -910,8 +821,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   /** The on-open patch: viewed in one request, which the backend also reads
    *  (#482). Both sidebar badges are kept in sync optimistically and reverted
-   *  together if the PATCH fails — the Recently-read count up for the viewed
-   *  flag, and the unread count down when opening also reads a still-unread entry. */
+   *  together on failure — Recently-read up, unread down when reading a still-unread entry. */
   private applyOpenedPatch(e: EntryDto, patch: EntryStatePatch): void {
     const alsoReads = patch.isViewed === true && !e.isHidden;
     if (alsoReads) {
@@ -1004,9 +914,8 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
     // The ranked feed has no scope to name and no watermark to move: the
-    // backend marks its picks by their own entry state (#710, and #665 for why
-    // a watermark here would be wrong). Its picks belong to feeds and can match
-    // a saved search, so both counts beside the list are reloaded.
+    // backend marks picks by their own entry state (#710, #665 for why a
+    // watermark here would be wrong). Both counts beside the list are reloaded.
     if (target.scope === 'for-you') {
       this.api.markForYouRead(until).subscribe({
         next: () => {
@@ -1058,10 +967,8 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /** The current search decoded into the pair a saved search stores: the
-   *  visible term and the whole-word flag. Null outside a search. The one
-   *  place that reads the trailing-space signal off a live selection — every
-   *  comparison downstream is against the decoded pair, never against a
-   *  re-encoded string (#408). */
+   *  visible term and the whole-word flag. Null outside a search — the one
+   *  place that reads the trailing-space signal, so downstream never re-decodes it (#408). */
   private readonly searchedTermAndMode = computed(() => {
     const s = this.selection();
     if (s.kind !== 'search') return null;
@@ -1111,11 +1018,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     this.currentSavedSearch() ? 'reader.removeSavedSearchShort' : 'reader.saveSearchShort',
   );
 
-  /** Save the search being looked at, or drop it when it is already saved —
-   *  one command, because the header offers one button whose label and icon
-   *  flip on the same state this reads. Saving toasts a confirmation on the
-   *  real HTTP success; removing is a delete and goes through a confirm
-   *  dialog first (#581). */
+  /** Save the search being looked at, or drop it when already saved -- one
+   *  command, because the header offers one button whose label/icon flip on
+   *  this state. Saving toasts on real HTTP success; removing confirms first (#581). */
   onToggleSavedSearch(): void {
     const saved = this.currentSavedSearch();
     if (saved) {
@@ -1214,13 +1119,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /** The header button's start path: a for-you run is long and spends provider
-   *  budget, so it is confirmed every time before it begins. The run itself,
-   *  its poll loop, and its stop live in `RecommendationsService`; this only
-   *  guards the door.
-   *
-   *  A leftover failed run can be resumed at the batch that failed rather than
-   *  redone from scratch, but its candidate snapshot is frozen from when it
-   *  first started -- so the choice is the user's, not a silent resume (#329). */
+   *  budget, so it's confirmed every time before it begins. Run, poll loop and
+   *  stop live in `RecommendationsService`; this only guards the door. A
+   *  leftover failed run can resume at its failed batch, but its candidate
+   *  snapshot is frozen from when it started -- so the choice is the user's (#329). */
   startRecommendations(): void {
     if (this.recs.report()?.status === 'failed') {
       this.chooseResumeOrFreshRun();
@@ -1277,10 +1179,8 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
         queryParamsHandling: 'merge',
       });
       // A feed discovery could read arrives with its entries already stored
-      // (#290), so there is nothing left to fetch — and asking the same host
-      // again a second later is precisely what a rationing site answers with
-      // 429. Only a feed that came in unfetched, the scraped shortcut, still
-      // needs its first fetch; scope it to that one feed so it stays fast.
+      // (#290) -- nothing left to fetch, and asking again a second later is
+      // what a rationing site answers with 429. Scope the fetch to that feed alone.
       if (sub.lastFetchedAt) {
         this.entries.load(queryFromSelection(this.selection()));
         return;
@@ -1306,9 +1206,8 @@ function items(value: number): TitleCount {
 }
 
 /** The entry flag a saved view filters on, or null for a list that shows every
- *  entry regardless of state (All items, a tag, a feed, For you, search). When a
- *  patch sets that flag false, the entry no longer belongs in the view and the
- *  row leaves — one rule for Favorites, Kept and Recently-read alike. */
+ *  entry regardless of state. When a patch sets that flag false, the entry no
+ *  longer belongs in the view and the row leaves — one rule for all three views. */
 function savedViewMembership(kind: Selection['kind']): 'isFavorite' | 'isKept' | 'isViewed' | null {
   switch (kind) {
     case 'favorites':

@@ -187,10 +187,9 @@
   }
 
   @if (tagTree().length) {
-    <!-- The whole "Tags" section collapses (#612): a full-width toggle carrying
-         the standard `.label` title, plus a borderless `.section-chevron` that
-         lines up with the tag chevrons below. The state persists (see
-         `tagsExpanded`), default expanded. -->
+    <!-- The whole "Tags" section collapses (#612): a full-width toggle plus a
+         borderless `.section-chevron` that lines up with the tag chevrons below.
+         State persists (`tagsExpanded`), default expanded. -->
     <div class="section-head tags-head">
       <button
         class="section-toggle"
@@ -211,11 +210,9 @@
       </button>
     </div>
     @if (tagsExpanded()) {
-      <!-- Each tag contributes two TOP-LEVEL drop lists (never nested): a
-             header list that reorders tags and accepts a feed to add the tag,
-             and — when expanded — a feed list that reorders/receives feeds.
-             CDK does not connect drop lists nested inside one another, so a
-             wrapping list here would silently break every cross-list drop. -->
+      <!-- Each tag contributes two TOP-LEVEL drop lists, never nested: a header
+             list that reorders tags/accepts a feed, and an expanded feed list that
+             reorders/receives feeds. CDK breaks cross-list drops if nested. -->
       <div class="tags">
         @for (node of tagTree(); track node.tag.id) {
           <div

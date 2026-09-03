@@ -1,4 +1,3 @@
-// src/app/admin/category-form-dialog.component.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';

@@ -30,10 +30,9 @@
   font-size: var(--fs-sm);
 }
 
-// The header's action slot. `margin-left: auto` pushes it to the trailing edge
-// on a wide header; when the actions do not fit, `.g-head`'s `flex-wrap` drops
-// them onto their own line rather than crushing the title -- the admin user
-// queue projects four status filters in here.
+// The header's action slot. `margin-left: auto` pushes it to the trailing
+// edge; when actions don't fit, `.g-head`'s `flex-wrap` drops them to their
+// own line rather than crushing the title (admin's four status filters).
 .g-actions {
   display: flex;
   flex-wrap: wrap;

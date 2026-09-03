@@ -1,4 +1,3 @@
-// src/app/setup/setup.guard.ts
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { catchError, map, of } from 'rxjs';

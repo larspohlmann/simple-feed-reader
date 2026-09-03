@@ -1,4 +1,3 @@
-// src/app/admin/admin.models.ts
 export type AdminUserStatus =
   'pending_verification' | 'pending_approval' | 'active' | 'rejected' | 'suspended';
 
@@ -10,7 +9,6 @@ export interface AdminUserDto {
   createdAt: string;
   approvedAt: string | null;
   identities: string[];
-  /** How many feeds this account subscribes to. */
   feedsCount: number;
   tagsCount: number;
   /** null means the account has never signed in. */
@@ -21,13 +19,9 @@ export interface AdminUserDto {
   maxSubscriptions: number | null;
 }
 
-/**
- * The account identity fields on the admin detail screen. A narrower sibling
- * of {@link AdminUserDto}, not an extension of it: the detail endpoint's
- * `user` object carries `locale` but not the list row's `feedsCount` /
- * `tagsCount` — those live on {@link AdminUserFootprintDto} instead. Mirrors
- * backend `AdminUserAccount` field-for-field.
- */
+/** Narrower sibling of {@link AdminUserDto}, not an extension: carries
+ *  `locale` but not `feedsCount`/`tagsCount` (see {@link AdminUserFootprintDto}).
+ *  Mirrors backend `AdminUserAccount` field-for-field. */
 export interface AdminUserAccountDto {
   id: number;
   email: string;
@@ -79,10 +73,9 @@ export interface AdminUserSubscriptionDto {
   tags: { id: number; name: string; color: string | null; icon: string | null }[];
 }
 
-/** The account's trial and subscription-cap overrides, as the admin detail
- *  screen's own section — kept off {@link AdminUserAccountDto} because the
- *  backend detail response carries it as a sibling `limits` object, not a
- *  field on `user`. Mirrors backend `AdminUserLimits` field-for-field. */
+/** Kept off {@link AdminUserAccountDto} because the backend detail response
+ *  carries it as a sibling `limits` object, not a field on `user`. Mirrors
+ *  backend `AdminUserLimits` field-for-field. */
 export interface AdminUserLimitsDto {
   /** ISO 8601, or null when the account has no trial. */
   trialEndsAt: string | null;

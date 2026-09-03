@@ -1,11 +1,6 @@
-// Layout glue only. The `.grid` definition list, the `.signout` wrapper and the
-// `.danger-zone` block are gone: those were a card's internal layout, and the
-// row and the second group carry it now.
-// `.who` is not an `app-settings-row`, and rows are what draw the panel's
-// dividers -- so this block draws its own. It mirrors the row's technique
-// exactly (a pseudo-element inset from the left, flush right) rather than a
-// box-model border, because a full-width line stacked above the row's inset
-// one would put two different hairline shapes in the same panel.
+// `.who` is not an `app-settings-row`, and rows draw the panel's dividers, so
+// this block draws its own — mirroring the row's technique (a pseudo-element
+// inset from the left) rather than a border, to avoid two hairline shapes.
 .who {
   position: relative;
   display: flex;

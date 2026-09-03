@@ -1,4 +1,3 @@
-// src/app/reader/add-feed/add-feed-dialog.component.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -173,10 +172,9 @@ export class AddFeedDialogComponent implements OnInit {
     this.error.set(null);
     this.searched.set(false);
     this.failureReason.set(null);
-    // Start every attempt visually clean: a previous search's candidate cards
-    // (and their Subscribe buttons) must not linger above a new result — least
-    // of all above a scrape-failure warning, where offering subscribe would
-    // contradict the warning.
+    // Start every attempt visually clean — a previous search's candidate cards
+    // must not linger above a new result, least of all above a scrape-failure
+    // warning, where offering subscribe would contradict it.
     this.candidates.set([]);
     this.previews.set({});
     this.api.subscribe(url, format, [...this.checked()], title).subscribe({
@@ -191,10 +189,9 @@ export class AddFeedDialogComponent implements OnInit {
           this.searched.set(true);
           this.previews.set({});
           this.expanded.set(null);
-          // Open the first candidate immediately so a preview is always in
-          // view — discovery orders native feeds first, so the leading card is
-          // the recommended one. The rest stay collapsed and fetch lazily when
-          // the user opens them.
+          // Open the first candidate immediately so a preview is always in view
+          // — discovery orders native feeds first, so the leading card is the
+          // recommended one. The rest stay collapsed, fetching lazily.
           if (res.candidates.length > 0) {
             this.toggle(res.candidates[0]);
           }

@@ -20,14 +20,9 @@ h3 {
   margin: 0 0 var(--space-2);
 }
 
-// The group's panel is unpadded by design (its rows pad themselves); each
-// block below the header needs its own spacing and, since it isn't a row,
-// its own inset. `.cards` and `.rows` keep their own rules below (each needs
-// a different padding shape), so they take the inset there instead of
-// through this shared rule. `.state` marks only these panel-level blocks,
-// never the element type.
-// `.state` itself lives in `theme/_utilities.scss`; what is local here is
-// only the gap before the list that follows it.
+// `.state` (base styling in theme/_utilities.scss) marks panel-level blocks
+// needing their own inset; `.cards`/`.rows` take their inset in their own
+// rules below instead, since each needs a different padding shape.
 .state {
   margin-bottom: var(--space-4);
 }
@@ -104,11 +99,9 @@ dd {
   font-size: var(--fs-sm);
 }
 
-// The compact status lines inside a sub-card -- the dormant notice, the trial
-// line. They read as muted text too, but they are not panel-level: the card's
-// own flex `gap` sets their rhythm, and the panel inset would only crowd them.
-// Their own class, rather than a `.cards .muted` override that would have to
-// out-specify `.muted` for every property it sets.
+// Compact status lines inside a sub-card read as muted text too, but are not
+// panel-level -- the card's flex `gap` sets their rhythm, so this is its own
+// class rather than a `.cards .muted` override that would fight `.muted`.
 .note {
   color: var(--text-muted);
   font-size: var(--fs-sm);

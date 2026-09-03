@@ -1,4 +1,3 @@
-// src/app/reader/search-field/search-field.component.ts
 import {
   Component,
   DestroyRef,
@@ -31,10 +30,9 @@ function isTextEntryTarget(target: EventTarget | null): boolean {
 }
 
 /**
- * The entry-search input. It owns the debounce and the minimum-length floor,
- * so no parent repeats either rule — it emits only a settled, trimmed term
- * (or the empty string when the search ends), and the caller's only job is to
- * navigate.
+ * The entry-search input. It owns the debounce and minimum-length floor, so no
+ * parent repeats either rule — it emits only a settled, trimmed term (or '' when
+ * the search ends), and the caller's only job is to navigate.
  */
 @Component({
   selector: 'app-search-field',
@@ -55,22 +53,16 @@ export class SearchFieldComponent {
   // Semantic "settled search term" output, not a DOM element's search event.
   // eslint-disable-next-line @angular-eslint/no-output-native
   readonly search = output<string>();
-  /** Whether this field can be left at all — which is what gives it a second
-   *  step, and so decides both whether the trailing ✕ survives an empty box
-   *  and what emptying that box means. The mobile header bar sets it, because
-   *  there the ✕ is the whole exit: a phone has no Escape key, and the bar
-   *  deliberately carries no close button of its own beside the field's
-   *  (#550 — two ✕ side by side, one clearing and one closing, read as one
-   *  control that behaved differently depending on where it was tapped). The
-   *  sidebar's copy is permanent, has nothing to leave, and so keeps the ✕
-   *  only while there is text to clear. `dismissed` still fires from Escape
-   *  regardless of this flag. */
+  /** Whether this field can be left at all — decides if the trailing ✕
+   *  survives an empty box and what emptying it means. The mobile header sets
+   *  it: there the ✕ is the whole exit (no Escape key, no separate close
+   *  button — #550, two ✕s read as one inconsistent control). The sidebar's
+   *  permanent copy keeps the ✕ only while there's text to clear; `dismissed`
+   *  still fires from Escape regardless. */
   readonly dismissible = input(false);
   /** The user asked to leave the search with nothing left to clear — the
-   *  second step of the two-step contract, reached either by Escape or by the
-   *  trailing ✕ of a dismissible field. The field knows nothing about what
-   *  "leaves" means for its caller; it only reports that there was nothing
-   *  left to clear. */
+   *  second step of the two-step contract (Escape, or the trailing ✕ of a
+   *  dismissible field). The field doesn't know what "leaves" means to its caller. */
   readonly dismissed = output<void>();
 
   /** What the field currently shows — updates on every keystroke, unlike the
@@ -78,42 +70,28 @@ export class SearchFieldComponent {
   readonly text = signal('');
 
   readonly tooShort = computed(() => isTooShortToSearch(this.text()));
-  /** Which step of the two-step exit the field is in. One predicate for all
-   *  three readers — the trailing button's visibility, its label, and what a
-   *  click on it does — so a later change to what counts as "nothing left to
-   *  clear" cannot leave the ✕ announcing one thing and doing the other.
-   *  Deliberately not "is a search running": an emptied box in a field that
-   *  can be left still has results behind it, and that is the whole point of
-   *  the first step. */
+  /** Which step of the two-step exit the field is in — one predicate for the
+   *  trailing button's visibility, label, and click behavior, so they can't
+   *  drift apart. Deliberately not "is a search running": an emptied box in a
+   *  leavable field still has results behind it. */
   readonly hasTextToClear = computed(() => this.text() !== '');
-  /** What emptying the box means here — the one rule the two mounts do not
-   *  share. A field that can be left has a second step to end the search on
-   *  the way out, so emptying its box is only that: the results stay up while
-   *  the user decides whether to retype or to go. A permanent field has no
-   *  second step, so an emptied box is the only thing its ✕ can ever mean, and
-   *  it has to mean it at once. One predicate for both readers — the ✕ and the
-   *  debounced settle path — because the failure mode is the button and the
-   *  keyboard disagreeing about what an empty box means. */
+  /** What emptying the box means — the one rule the two mounts don't share. A
+   *  leavable field has a second step, so emptying is only that (results stay
+   *  up); a permanent field has none, so emptying means it at once. One
+   *  predicate for both the ✕ and the debounce path, so they can't disagree. */
   private readonly emptyingEndsSearch = computed(() => !this.dismissible());
 
   private readonly inputEl = viewChild<ElementRef<HTMLInputElement>>('inputEl');
 
   private readonly typed = new Subject<string>();
   private readonly destroyRef = inject(DestroyRef);
-  /** The app's currently active term — not "what this instance last emitted",
-   *  but the term in effect right now, from either direction: it moves when
-   *  this component emits a settled term, and it moves when the `term` input
-   *  arrives from outside (Back/Forward, or any other route change with the
-   *  sidebar still mounted). That symmetry is what keeps a debounce burst
-   *  that settles on a repeat from being sent twice, while also keeping a
-   *  value re-typed after the route moved on without this component's help
-   *  from being wrongly swallowed as a false repeat. Only `emitSettled()`
-   *  reads this field to dedup; `endSearch()` reports the end regardless of
-   *  its value, so an Escape or a click on the ✕ never goes missing even
-   *  when nothing the user typed had settled into it yet. Kept as a field
-   *  rather than an RxJS `distinctUntilChanged()` because that operator only
-   *  sees values reaching the debounced pipeline, and both `endSearch()` and
-   *  the external-term effect deliberately bypass it. */
+  /** The app's currently active term, updated from either direction — this
+   *  component's own emit, or the `term` input arriving from outside
+   *  (Back/Forward). That symmetry stops a debounce burst settling on a repeat
+   *  from double-sending, without swallowing a value re-typed after an
+   *  external route change. Only `emitSettled()` dedups against it;
+   *  `endSearch()` always reports regardless. Kept as a field, not
+   *  `distinctUntilChanged()`, since both bypass the debounced pipeline. */
   private activeTerm = '';
 
   constructor() {
@@ -132,10 +110,9 @@ export class SearchFieldComponent {
       .subscribe((value) => this.emitSettled(value));
   }
 
-  /** Firefox opens quick-find on a bare `/`; this replaces that, so it only
-   *  claims the key when it actually takes it — never when a modifier turns
-   *  it into someone else's shortcut, and never when it would steal a slash
-   *  mid-sentence from a text field (including this one's own input). */
+  /** Firefox opens quick-find on a bare `/`; this replaces that, claiming the
+   *  key only when it actually takes it — never with a modifier held, and
+   *  never mid-sentence in a text field (including this one). */
   @HostListener('document:keydown', ['$event'])
   onDocumentKeydown(event: KeyboardEvent): void {
     if (event.key !== '/') return;
@@ -171,13 +148,10 @@ export class SearchFieldComponent {
     this.text.set('');
   }
 
-  /** Ends the search: empties the box and tells the caller there is no term
-   *  any more. Leaving a search should not lag, so this bypasses the debounce,
-   *  and it bypasses the settled path's dedup so the end is reported even when
-   *  nothing the user typed had settled into the active term yet (Escape or ✕
-   *  right after typing). Silent when there is nothing to end — an empty box
-   *  over an unsearched list — so closing a bar that never searched does not
-   *  navigate. */
+  /** Ends the search: empties the box and tells the caller there's no term any
+   *  more, bypassing both the debounce (no lag) and the settled path's dedup
+   *  (so Escape/✕ right after typing still reports). Silent when there's
+   *  nothing to end. */
   private endSearch(): void {
     if (!this.hasTextToClear() && this.activeTerm === '') return;
     this.text.set('');
@@ -201,9 +175,8 @@ export class SearchFieldComponent {
     // — and searching for it now would contradict what the field shows.
     if (raw !== this.text()) return;
     // Not a plain trim(): a trailing space tells the server to match whole
-    // words instead of substrings (#408 follow-up), one mode for the whole
-    // query, so it must reach the request unchanged. Only the meaningless
-    // whitespace — leading, and runs collapsed between terms — is removed.
+    // words instead of substrings (#408), so it must reach the request
+    // unchanged — only leading whitespace and collapsed inner runs are removed.
     const normalized = normalizeSearchInput(raw);
     // A half-typed term is not a search yet; an empty one is a real event
     // (it ends the search), so it must fall through.
@@ -212,11 +185,10 @@ export class SearchFieldComponent {
     // not, the same rule has to hold for backspace as for the ✕ — see
     // `emptyingEndsSearch`.
     if (normalized === '' && !this.emptyingEndsSearch()) return;
-    // 'punk' and 'punk ' are different searches now (substring vs. whole
-    // word), so this dedup — which exists to stop a debounce burst that
-    // settles on a genuine repeat — must compare the raw normalized string,
-    // not its trimmed form, or adding the trailing space would be silently
-    // swallowed as "no change".
+    // 'punk' and 'punk ' are different searches (substring vs. whole word), so
+    // this dedup — meant to stop a debounce burst settling on a repeat — must
+    // compare the raw normalized string, not trimmed, or the trailing space
+    // is silently swallowed.
     if (normalized === this.activeTerm) return;
     this.activeTerm = normalized;
     this.search.emit(normalized);

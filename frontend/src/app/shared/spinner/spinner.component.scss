@@ -17,10 +17,9 @@
   color: var(--spin-sig);
 }
 
-/* Animated: each part rests in the non-signal colour and lights up to the
-   signal colour for ~one third of the cycle. Staggering the three parts by a
-   third means exactly one is "lit" at a time and the signal wanders
-   dot → inner → outer, reading as a feed transmitting outward. */
+/* Animated: each part lights up in the signal colour for ~a third of the
+   cycle. Staggered by a third, exactly one is lit at a time, wandering
+   dot → inner → outer — reading as a feed transmitting outward. */
 .animate .p {
   color: var(--spin-dim);
   animation: wander var(--spin-dur) linear infinite;

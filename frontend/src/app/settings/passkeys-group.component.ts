@@ -1,4 +1,3 @@
-// src/app/settings/passkeys-group.component.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Dialog } from '@angular/cdk/dialog';
@@ -24,22 +23,16 @@ import { SettingsGroupComponent } from '../shared/settings/settings-group/settin
 import { SettingsRowComponent } from '../shared/settings/settings-row/settings-row.component';
 import { PasskeyNameDialogComponent } from './passkey-name-dialog.component';
 
-/**
- * The Settings -> Account passkeys group (#624): the credentials enrolled on
- * this account, an "Add a passkey" action and a per-row remove. A sibling of
- * `AccountSectionComponent` rather than more markup inside it, so that file
- * stays small -- see its own docblock.
+/** The Settings -> Account passkeys group (#624): enrolled credentials, an
+ *  "Add a passkey" action, and per-row remove. A sibling of
+ *  `AccountSectionComponent`, not more markup inside it, so that file stays
+ *  small.
  *
- * Absent entirely when `isPasskeySupported()` is false: a browser with no
- * WebAuthn support cannot enrol or use one, so offering the group would be a
- * dead end with no way to act on it. Absent too when
- * `SetupService.passkeySignInAvailable` is not `true`: a user who enrols
- * while the instance has sign-in turned off ends up with a credential they
- * can never use. Fails CLOSED, unlike the login page's
- * `mailEnabled`/`passkeySignInAvailable` convention: showing an *Add a
- * passkey* action that then produces a dead credential is worse here than a
- * moment's extra hiding while the flag loads.
- */
+ *  Absent when `isPasskeySupported()` is false (no WebAuthn, no way to act)
+ *  or when `SetupService.passkeySignInAvailable` isn't `true` (enrolling
+ *  while sign-in is off yields a credential nobody can use). Fails CLOSED,
+ *  unlike the login page's convention: a dead-end "Add a passkey" is worse
+ *  here than a moment's extra hiding while the flag loads. */
 @Component({
   selector: 'app-passkeys-group',
   imports: [
@@ -67,22 +60,18 @@ export class PasskeysGroupComponent {
    *  so there is nothing to react to by making this a signal. */
   protected readonly isSupported = isPasskeySupported();
 
-  /** See the class docblock for why this fails closed. This route is never
-   *  behind `setupRedirectGuard` -- the constructor below triggers the same
-   *  `ensureLoaded()` that guard runs, so a cached load resolves the signal
-   *  synchronously and an uncached one resolves it the moment the response
-   *  arrives. */
+  /** See the class docblock for why this fails closed. Never behind
+   *  `setupRedirectGuard` -- the constructor below triggers the same
+   *  `ensureLoaded()`, so a cached load resolves synchronously and an
+   *  uncached one resolves the moment the response arrives. */
   protected readonly visible = computed(
     () => this.isSupported && this.setup.passkeySignInAvailable() === true,
   );
 
   readonly passkeys = signal<PasskeySummary[]>([]);
-  /**
-   * One slot, because loading, adding and removing are mutually exclusive
-   * user-triggered flows that render their failure in the same place. Each
-   * clears it on entry, so the banner always describes the last thing the
-   * user actually did rather than stacking a stale one above it.
-   */
+  /** One slot: loading, adding and removing are mutually exclusive
+   *  user-triggered flows that render failure in the same place. Each clears
+   *  it on entry, so the banner always describes the last thing done. */
   readonly error = signal<Problem | null>(null);
   readonly adding = signal(false);
 
@@ -116,15 +105,12 @@ export class PasskeysGroupComponent {
     });
   }
 
-  /** Opens the naming dialog, then enrols with whatever name the user
-   *  confirmed. Naming and enrolling are split across two methods because
-   *  they run on two different lifecycles: the dialog closes as soon as a
-   *  name is chosen, well before the ceremony -- and its own success or
-   *  failure -- resolves.
+  /** Opens the naming dialog, then enrols with whatever name was confirmed.
+   *  Split across two methods: the dialog closes as soon as a name is chosen,
+   *  well before the ceremony resolves.
    *
-   *  `adding` flips true for the whole span, dialog included, not just the
-   *  ceremony: guarding only the ceremony half left a fast double-click free
-   *  to stack two naming dialogs before the first one closes. */
+   *  `adding` flips true for the whole span, dialog included -- guarding only
+   *  the ceremony left a fast double-click free to stack two naming dialogs. */
   openAddDialog(): void {
     if (this.adding()) return;
     this.adding.set(true);
@@ -139,12 +125,10 @@ export class PasskeysGroupComponent {
     });
   }
 
-  /** Removing a passkey is irreversible -- the only way back is physically
-   *  re-enrolling that device -- so a stray tap on the row's small icon
-   *  button must not do it. Same two-step shape as
-   *  `AccountSectionComponent.confirmThenDelete()` and
-   *  `ManageActionsService.deleteTag()`: a `ConfirmDialogComponent` naming
-   *  the thing about to go, then the actual call only on confirmation. */
+  /** Removing a passkey is irreversible -- only physically re-enrolling gets
+   *  it back -- so a stray tap on the row's small icon button must not do it.
+   *  Same two-step shape as `AccountSectionComponent.confirmThenDelete()`:
+   *  a `ConfirmDialogComponent` naming the thing, then the call on confirm. */
   confirmThenRemove(passkey: PasskeySummary): void {
     const data: ConfirmData = {
       title: this.i18n.translate('settings.passkeys.removeTitle'),
@@ -170,12 +154,10 @@ export class PasskeysGroupComponent {
     });
   }
 
-  /** A successful enrolment here stamps the offer flag server-side as a side
-   *  effect (`AttestationVerifier::persist()`), the same as it does from the
-   *  first-login offer dialog. Without the local signal update below, a
-   *  stale `passkeyOfferAnswered: false` survives until the next full reload
-   *  -- long enough for `ReaderShellComponent` to reopen the offer for a
-   *  passkey that already exists. */
+  /** A successful enrolment stamps the offer flag server-side as a side effect
+   *  (`AttestationVerifier::persist()`), same as the first-login offer dialog.
+   *  Without the local signal update below, a stale `passkeyOfferAnswered:
+   *  false` survives until reload -- long enough to reopen the offer. */
   private async enrolWith(label: string): Promise<void> {
     this.error.set(null);
     try {

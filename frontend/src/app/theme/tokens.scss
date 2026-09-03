@@ -1,4 +1,3 @@
-// src/app/theme/tokens.scss
 @use './breakpoints' as bp;
 @use './themes/graphite';
 
@@ -10,10 +9,9 @@
 
   @include graphite.light;
 
-  /* Soft elevation for a raised card surface -- the grouped-settings panel
-     (#541) is the first consumer. Mode-specific like the graphite colours it
-     sits with: a light UI needs only a hair of shadow, a dark one needs a
-     deeper cast to lift the surface off its near-black ground. */
+  /* Soft elevation for a raised card surface (#541). Mode-specific: a light
+     UI needs only a hair of shadow, a dark one a deeper cast to lift the
+     surface off its near-black ground. */
   --panel-shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 6px 20px rgb(0 0 0 / 5%);
 }
 
@@ -39,40 +37,32 @@
   --space-6: 32px;
   --space-7: 48px;
 
-  /* The grouped-settings panel's own inset (#547). `.panel` on
-     `app-settings-group` is unpadded by design -- `app-settings-row` pads
-     itself, so a group of rows needs nothing here. Any *other* direct panel
-     child (a banner, a skeleton, a loading state, a bordered sub-block) reads
-     this pair instead of a literal, so the inset has one owner and narrows at
-     the same breakpoint the row does. See "Settings design system" in
-     docs/design-language.md. */
+  /* The grouped-settings panel's own inset (#547): `.panel` is unpadded by
+     design (rows pad themselves), so any other direct panel child reads this
+     pair instead of a literal. See docs/design-language.md "Settings". */
   --panel-inset-y: var(--space-4);
   --panel-inset-x: var(--space-5);
 
-  /* Radii. --radius-sm for elements nested inside an already-rounded
-     container, --radius for controls, --radius-lg for a large surface that
-     carries content (a card, a dialog, a panel), --radius-pill for chips.
-     The lg step is not invented: the magazine hero, the magazine source group,
-     the discover panel and the auth card each arrived at 12px independently. */
+  /* Radii: --radius-sm nested in an already-rounded container, --radius for
+     controls, --radius-lg for a card/dialog/panel, --radius-pill for chips.
+     The lg step (12px) is not invented -- four surfaces arrived at it independently. */
   --radius-sm: 4px;
   --radius: 8px;
   --radius-lg: 12px;
   --radius-pill: 999px;
 
   /* Structural sizing. --bar-h is the *fallback* for the floating app bar,
-     whose real height is measured at runtime by ReaderShellComponent and
-     written to --app-bar-h; read it as `var(--app-bar-h, var(--bar-h))`.
-     --tap-target is the documented minimum touch target. */
+     whose real height is measured at runtime and written to --app-bar-h;
+     read as `var(--app-bar-h, var(--bar-h))`. --tap-target is the min touch target. */
   --control-h: 40px;
   --bar-h: 56px;
   --tap-target: 44px;
   --magazine-measure: 680px;
   --feed-logo-max-h: 28px;
 
-  /* The full-screen article's standing nameplate (favicon + title, #270). Fixed
-     rather than measured, unlike --app-bar-h: the article's toolbar pins at
-     exactly this offset, and a strip of one line and one small icon has no
-     second content state that could disagree with it. */
+  /* The full-screen article's standing nameplate (favicon + title, #270).
+     Fixed, unlike --app-bar-h: a one-line, one-icon strip has no second
+     content state that could disagree with this offset. */
   --reader-mini-h: 28px;
 
   /* Icon sizes. Four steps because the same tag glyph is rendered from a
@@ -82,20 +72,15 @@
   --icon-md: 20px;
   --icon-lg: 24px;
 
-  /* Row density, in two named steps. Every list, rail and picker row derives
-     its padding from one of these pairs, which is what keeps the picker and
-     the reader's lists from drifting apart again (#126).
-
-     Compact: navigation rails, chip strips, row menus, sidebar entries --
-     surfaces where scanning many items at once matters more than breathing
-     room. */
+  /* Row density, two named steps: every list/rail/picker row derives its
+     padding from one, keeping the picker and reader's lists in sync (#126).
+     Compact: rails, chip strips, menus, sidebar -- scanning over breathing room. */
   --row-pad-y: var(--space-2);
   --row-pad-x: var(--space-3);
 
-  /* Comfortable: the primary content lists a reader actually reads, and the
-     settings/admin rows that carry a control per line. The reader's entry list
-     is the standard the picker was measured against in #126, so it is the one
-     that must never get tighter. */
+  /* Comfortable: the primary content lists a reader reads, and settings/admin
+     rows carrying a control per line. The entry list is the #126 standard --
+     it must never get tighter. */
   --row-pad-comfy-y: var(--space-3);
   --row-pad-comfy-x: var(--space-4);
 
@@ -104,16 +89,14 @@
      this one value tunes the gap everywhere (#87). */
   --bar-gap: var(--space-4);
 
-  /* EntryListComponent overwrites this on its host once it has measured its
-     own bar; the default is what the `calc()`s add before that happens. It is
-     declared here rather than written as a var() fallback at each use site so
-     the arithmetic reads as arithmetic. */
+  /* EntryListComponent overwrites this once it measures its own bar; the
+     default is what the `calc()`s add before that. Declared here rather than
+     a var() fallback at each site so the arithmetic reads as arithmetic. */
   --list-bar-h: 0px;
 
-  /* Type scale. --fs-read is the article body size and is deliberately a step
-     above --fs-base: long-form reading wants more than UI chrome does. Article
-     headings size in `em` against it, so changing this one value rescales the
-     whole article. */
+  /* Type scale. --fs-read is a step above --fs-base: long-form reading wants
+     more than UI chrome. Article headings size in `em` against it, so this
+     one value rescales the whole article. */
   --font-sans: system-ui, -apple-system, 'Segoe UI', roboto, sans-serif;
 
   /* --fs-2xs is below the UI chrome scale: for compact glyph badges (the
@@ -129,10 +112,9 @@
   --lh-normal: 1.5;
 }
 
-// Phone: the settings row narrows its own padding to a single --space-4 on
-// every side (see settings-row.component.scss); the panel inset follows so
-// every other panel-level block narrows with it instead of drifting to a
-// different left offset.
+// Phone: the settings row narrows its own padding to --space-4 on every side;
+// the panel inset follows so other panel-level blocks narrow with it instead
+// of drifting to a different left offset.
 @media (width <= bp.$bp-sm) {
   :root {
     --panel-inset-y: var(--space-4);

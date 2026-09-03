@@ -1,4 +1,3 @@
-// src/app/settings/ai-section.component.spec.ts
 import { Dialog } from '@angular/cdk/dialog';
 import { WritableSignal, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -159,9 +158,8 @@ describe('AiSectionComponent', () => {
       (banner.textContent ?? '').trim(),
     );
 
-  // The connection manager is now a set of Grouped regions rather than three
-  // `app-settings-card`s (#541): the add form is its own drill-in, so the add
-  // failure banner scopes to `.add-group`; the list and its load-failure banner
+  // The manager is now Grouped regions, not three app-settings-cards (#541):
+  // the add-failure banner scopes to `.add-group`; list/load-failure banners
   // scope to `.conn-list`.
   const addCard = (fixture: ComponentFixture<AiSectionComponent>): HTMLElement =>
     (fixture.nativeElement as HTMLElement).querySelector('.add-group') as HTMLElement;

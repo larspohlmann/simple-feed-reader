@@ -1,4 +1,3 @@
-// src/app/auth/verify-email/verify-email.component.ts
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';

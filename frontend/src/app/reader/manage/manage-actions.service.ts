@@ -1,4 +1,3 @@
-// src/app/reader/manage/manage-actions.service.ts
 import { Injectable, inject } from '@angular/core';
 import { Observable, map, of, switchMap, tap } from 'rxjs';
 import { Dialog } from '@angular/cdk/dialog';

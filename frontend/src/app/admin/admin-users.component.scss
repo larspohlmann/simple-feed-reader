@@ -1,15 +1,8 @@
 @use '../theme/breakpoints' as bp;
 
-// The group's panel is unpadded by design (its rows pad themselves); this
-// section projects a list, not rows, so the inset lives here. `.users` and
-// `.pad` keep their own rules below (each needs a different padding shape),
-// so they take the inset there instead of through this shared block. The
-// margin-bottom keeps the banner/skeleton clear of whatever list content
-// follows, now that the filters live in the group header rather than as the
-// panel's own first flex child. `.state` marks only these panel-level
-// blocks, never the element type.
-// `.state` itself lives in `theme/_utilities.scss`; what is local here is
-// only the gap before the list that follows it.
+// `.state` (base styling in theme/_utilities.scss) marks panel-level blocks;
+// `.users`/`.pad` take their inset in their own rules below instead, since
+// each needs a different padding shape. This adds only the gap before them.
 .state {
   margin-bottom: var(--space-4);
 }

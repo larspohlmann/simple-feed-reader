@@ -1,18 +1,13 @@
-// src/app/auth/sha256.ts
-//
 // A synchronous SHA-256, used only to grind the ALTCHA proof-of-work.
 //
-// Why not `crypto.subtle.digest`: it is promise-based, so a proof-of-work that
-// tries up to 200_000 candidates pays 200_000 promise round-trips. On desktop
-// Chrome that still manages ~280k hashes/s, but on iOS the per-call overhead
-// dominates so heavily that the challenge never finishes -- a registration form
-// that sits there for minutes and never submits. Hashing synchronously removes
-// the round-trips entirely; the loop that calls this is time-sliced so the page
-// still paints.
+// `crypto.subtle.digest` is promise-based; 200_000 promise round-trips per
+// grind stalls iOS for minutes (desktop absorbs it at ~280k hashes/s), so
+// this hashes synchronously instead -- the caller time-slices the loop so
+// the page still paints.
 //
-// This is NOT a general-purpose crypto primitive and must not be used as one.
-// It hashes a proof-of-work candidate, a public value, and its output is
-// re-verified server-side. `sha256.spec.ts` checks it against crypto.subtle.
+// Not a general-purpose crypto primitive: it hashes a public proof-of-work
+// candidate, re-verified server-side. Checked against crypto.subtle in
+// sha256.spec.ts.
 
 const K = new Uint32Array([
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,

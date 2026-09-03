@@ -1,9 +1,8 @@
 @use '../../theme/breakpoints' as bp;
 
 /* What every scroller/overlay branch below reserves before its own content:
-   the shell's app bar, this list's own sticky header, and the gap between
-   them. Was four independent copies of this calc (.rows, .rows.magazine,
-   the empty state, .banner) — a SCSS variable keeps it to one (#321). */
+   app bar + list header + gap. Was 4 independent copies of this calc
+   (.rows, .rows.magazine, empty state, .banner) — one variable now (#321). */
 $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
 
 :host {
@@ -14,13 +13,9 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   position: relative; /* anchor for the pull-to-refresh indicator */
 }
 
-/* Floats over the scroller instead of sitting above it in the flow. Collapsing
-   it used to shrink the list's own box, which changed the scroller's height
-   mid-gesture and made the rows jump — the same defect as the app header, one
-   level down (#87). The scroller reserves the expanded height as padding and
-   the rows scroll underneath, so a collapsed bar reveals content rather than
-   leaving a gap. A translucent glass for that reason: rows pass behind it,
-   softened by the blur rather than hidden. */
+/* Floats over the scroller rather than sitting in the flow: collapsing it used
+   to shrink the list's box and move the rows mid-gesture (#87). The scroller
+   reserves the expanded height instead, so rows pass translucently behind it. */
 .list-header {
   position: absolute;
   top: var(--app-bar-h, var(--bar-h));
@@ -45,12 +40,9 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border);
 
-  /* Deliberately NOT animated. The scroller reserves this bar's expanded
-     height, so that height is measured; an animating box reports every
-     intermediate value on the way, the reservation follows it, and the rows
-     move again — 16px of the jump this fix is about, reintroduced by the
-     easing. The bar snaps between its two sizes instead, which is hard to
-     notice now that nothing around it moves. */
+  /* Deliberately NOT animated: the scroller measures this bar's height for its
+     reservation, and an animating box reports every intermediate value, which
+     reintroduces the row jump (#87) this fix removes. It snaps instead. */
 }
 
 .heading {
@@ -73,59 +65,38 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   flex-wrap: wrap;
 }
 
-/* …and for those, wrapping is not merely unnecessary, it is wrong. A flex line
-   breaks BEFORE its items shrink, so a long feed name pushed the count pill
-   onto a second line and grew the bar by a whole row — the height the scroller
-   reserves (#87, #419), which moves every row under it. The h2 already carries
-   `min-width: 0` and its own ellipsis, so with the row held to one line it
-   gives up the width instead, which is the trade this header makes everywhere
-   else (#709). The search title keeps the wrap above: it is the one title
-   allowed to run to a second line. */
+/* A flex line breaks BEFORE its items shrink, so a long feed name pushed the
+   count pill to a second line and grew the bar height the scroller reserves
+   (#87, #419). Held to one line, the h2 gives up width to ellipsis instead (#709). */
 .list-header:not(.is-search) .title-row {
   flex-wrap: nowrap;
 }
 
-/* The tag's glyph, inline before its name — the same glyph and colour the
-   sidebar row shows, so the heading and the row that led here read as the same
-   tag. It sits inside the ellipsised h2 on purpose: the clip runs from the end,
-   so the glyph stays put however long the name is. The gap is a margin rather
-   than a flex gap because the h2 must stay a plain text box for
-   `text-overflow: ellipsis` to work at all — and the name is wrapped in a span
-   for the same reason the margin exists: between two elements Angular drops the
-   whitespace, so this margin is the whole gap, at every formatting of the
-   template. */
+/* Tag glyph, inline before its name, matching the sidebar row. It sits inside
+   the ellipsised h2 on purpose — the clip runs from the end, so the glyph
+   stays put. Margin not flex gap: the h2 must stay plain text for ellipsis. */
 .list-header h2 app-tag-glyph {
   /* A step wider than it was: the glyph used to be a small marker in front of
      the name, and at the title's own size it needs room to read as a companion
      to the word rather than as something stuck to it. */
   margin-right: var(--space-2);
 
-  /* `vertical-align: middle` — the glyph component's own default — aligns a box
-     to the baseline plus half the font's X-HEIGHT, which sits well below the
-     visual middle of a line of text. At 0.85em that error was invisible; at the
-     full size this heading now uses it leaves the glyph sitting low against its
-     own title. Measured at 1.73px against this 18px heading, so a tenth of an
-     em corrects it and keeps correcting it when the collapsed bar drops the
-     type to 13px.
-
-     A transform rather than a margin: vertical margins on an atomic inline box
-     count toward the line box, so a margin would move the bar's height — the
-     number the scroller reserves (#87, #419). This moves the paint only. */
+  /* `vertical-align: middle` sits the glyph low against this heading's larger
+     type (measured 1.73px off at 18px); -0.1em corrects it at any size. A
+     transform not a margin: a margin would grow the line box the scroller reserves. */
   transform: translateY(-0.1em);
 }
 
-/* The feed favicon, inline before its name, spaced to match the tag glyph so
-   the two heading leads sit identically. It keeps its own `vertical-align:
-   middle`; an image box centres cleanly there, so it needs none of the glyph's
-   baseline nudge above. */
+/* Feed favicon, spaced to match the tag glyph above. Keeps its own
+   `vertical-align: middle`; an image box centres cleanly there, so it
+   needs none of the glyph's baseline nudge. */
 .list-header h2 app-favicon {
   margin-right: var(--space-2);
 }
 
-/* The fixed-view lead icon (All items, Favorites, …), spaced and baseline-
-   nudged to match the tag glyph above so all three heading leads sit
-   identically. `> app-icon` — a direct child — so it never reaches the
-   app-icon the tag glyph nests, which the host already nudges once (#411). */
+/* Fixed-view lead icon (All items, Favorites, …), nudged to match the tag
+   glyph above. `> app-icon` (direct child) so it never also reaches the
+   app-icon the tag glyph nests, already nudged once (#411). */
 .list-header h2 > app-icon {
   margin-right: var(--space-2);
   transform: translateY(-0.1em);
@@ -147,28 +118,24 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
      the number the scroller reserves. */
 }
 
-/* The search title alone is allowed to wrap (#581 follow-up): its "Results
-   for" lead plus the quoted term and count run long enough on mobile that
-   ellipsising the term lost information a truncated feed/tag name doesn't
-   carry. Every other title keeps the single-line ellipsis above. */
+/* The search title alone wraps (#581 follow-up): its "Results for" lead plus
+   term and count run long enough on mobile that ellipsis lost information.
+   Every other title keeps the single-line ellipsis above. */
 .list-header h2.search-title {
   overflow: visible;
   text-overflow: clip;
   white-space: normal;
 }
 
-/* The prefix and term share one size, a step down from the h2's own
-   `--fs-lg` that every non-search title still renders at — the split reads
-   as one sentence at one scale. The prefix's quiet half comes from its
-   muted COLOR below, not from being smaller than the term beside it. */
+/* Prefix and term share one size, a step down from the h2's `--fs-lg`, so
+   the split reads as one sentence. The prefix's quiet half comes from its
+   muted COLOR, not from being smaller than the term. */
 .results-prefix {
   font-size: var(--fs-sm);
   color: var(--text-muted);
 
-  /* The prefix is itself two words ("Results for"); left to wrap freely it
-     breaks between them on mobile before the row is anywhere near full. Only
-     the term (and the count pill after it) should wrap, onto its own line
-     below. */
+  /* The prefix is two words ("Results for"); left to wrap freely it breaks
+     between them on mobile before the row is full. Only the term should wrap. */
   white-space: nowrap;
 }
 
@@ -186,31 +153,23 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   }
 }
 
-/* The loaded count as its own quiet chip rather than trailing “— {{count}}”
-   text (#581 follow-up round 2). The pill itself is the global `.count-pill`
-   in theme/_utilities.scss, shared with the list count beside it; only its
-   placement in this heading belongs here. Inline after `.results-term`, so it
-   wraps down with it rather than getting stranded on its own line. */
+/* Loaded count as its own quiet chip, not trailing "— {{count}}" text
+   (#581 follow-up). The pill is the global `.count-pill`; only its
+   placement inline after `.results-term`, so it wraps down with it. */
 .results-count {
   margin-left: var(--space-1);
 }
 
-/* Every other list's own count (#709). Beside the h2 rather than inside it:
-   the h2 ellipsises, so a long feed name would clip the number away. `flex:
-   none` keeps the pill at its text width and leaves the truncation to the
-   title — the same arrangement, and the same reason, as the mode badges
-   below. */
+/* Every other list's own count (#709). Beside the h2, not inside it: the h2
+   ellipsises, so a long feed name would clip the number away. `flex: none`
+   keeps the pill at its text width and leaves truncation to the title. */
 .title-count {
   flex: none;
 }
 
-/* Explains why a whole-word search's result set differs from the same text
-   without the trailing space — otherwise the title alone doesn't show the
-   mode, and an accidental trailing space reads as a silently different
-   search (#408 follow-up). Sits beside the title rather than under it: a
-   second row raises the bar, and the scroller reserves the bar's height, so
-   the rows would move (#419). `flex: none` keeps the pill at its text width
-   while the title takes the truncation. */
+/* Shows whole-word/phrase search mode so an accidental trailing space doesn't
+   read as a silently different search (#408). Beside the title, not under it:
+   a second row would raise the bar height the scroller reserves (#419). */
 
 /* The pill itself is the global `.whole-word-badge`/`.phrase-badge` in
    theme/_utilities.scss; only its behaviour inside this header row belongs
@@ -221,9 +180,8 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
 }
 
 /* "Last refreshed …" hint under a single-feed or for-you title. Shown at
-   every width — the phone mock wants it visible too — but dropped in the
-   narrow header's collapsed state below, alongside the other secondary
-   chrome, so a scrolled-down list keeps a slim bar. */
+   every width, but dropped in the narrow header's collapsed state below,
+   so a scrolled-down list keeps a slim bar. */
 .last-refreshed {
   font-size: var(--fs-xs, var(--fs-sm));
   color: var(--text-muted);
@@ -263,13 +221,9 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   flex: none;
 }
 
-/* The read/unread switch, Mark all read and Refresh share their look with the
-   shell's Edit and Save-search through the `app-list-action` component (#617);
-   only what is specific to each control stays here. The switch (#602 follow-up)
-   is a filled circle when filtered to unread, a hollow one when showing all: one
-   `circle` glyph whose FILL axis carries the state through app-icon's `fill`
-   input (the outlined font is FILL 0 by default, which draws it hollow), so the
-   fill — never the colour, which stays accent both ways — marks on from off. */
+/* Switch/Mark-all/Refresh share their look with the shell's Edit and
+   Save-search via `app-list-action` (#617). The switch (#602) is a filled
+   circle when unread-filtered; app-icon's `fill` input carries the state. */
 
 /* The mobile short label beside the icon (Part A, #581 follow-up). Hidden on
    the desktop button, which keeps its full `.txt`; the mobile media query
@@ -282,15 +236,9 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
    it must turn the glyph, not the `app-icon` box that wears the mobile border,
    and only a global rule reaches the projected glyph (#698). */
 
-/* Pull-to-refresh / refresh reveal tray. A full-width row centring a pill
-   (spinner + "Refreshing…" label). Parked one --refresh-reveal above the bars and
-   drawn down by the inline translateY as the content slides — on a mobile pull, and
-   on a header/sidebar Refresh (both drive revealOffset off `refreshing()`). It
-   emerges from *behind* the list header, hence the z-index below that bar's. The
-   offset is measured from the bars, not the host's top edge: since #87 the bars
-   float and the host starts at the viewport top, so a plain negative top would park
-   the tray behind the app bar and clearing it would take more pull than the rubber
-   band allows (#105). */
+/* Pull-to-refresh reveal tray: parked one --refresh-reveal above the bars,
+   drawn down by inline translateY. Offset is measured from the bars, not the
+   host's top edge, since #87 made the bars float above the host (#105). */
 .pull-indicator {
   position: absolute;
   top: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) - var(--refresh-reveal));
@@ -348,10 +296,9 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
     display: none;
   }
 
-  /* Only the search result list keeps a label on mobile — there is no room for
-     one in the other lists' headers, so their Mark all read and Refresh stand
-     on the icon alone, named by their aria-label/title. Refresh never appears
-     in a search list, so it is always icon-only here. */
+  /* Only the search result list keeps a label on mobile — other lists' Mark
+     all read and Refresh stand on the icon alone (aria-label/title). Refresh
+     never appears in a search list, so it's always icon-only here. */
   .list-header.is-search .mark-all .txt-short {
     display: inline-flex;
   }
@@ -366,10 +313,9 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
      removed under .dragging so the content tracks the finger 1:1. */
   transition: transform 0.2s ease;
 
-  /* Reserves both floating bars. Constant: it tracks neither the app bar's
-     hidden state nor this list's collapsed one, so the rows never move (#87).
-     They pass behind the bars instead, which is what makes retracting them
-     actually give the reader more to look at. */
+  /* Reserves both floating bars, constant: tracks neither the app bar's hidden
+     state nor this list's collapsed one, so the rows never move (#87). They
+     pass behind the bars instead, which is the point of retracting them. */
   padding-top: $header-clear;
 }
 
@@ -395,13 +341,9 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   padding-top: 0;
 }
 
-/* One row's slot, in both layouts. In the flow it is transparent — a single-track
-   grid that holds the row. When the row leaves its saved view (un-favourited,
-   un-kept, or marked unread), `.leaving` runs `row-leave`: the content fades,
-   then the track collapses 1fr -> 0fr so the rows below slide up to close the
-   gap. Collapsing the grid track, not a max-height, needs no guess at the row's
-   height. `forwards` holds the collapsed state — the row stays in the data (so
-   the magazine plan keeps its shape), just at zero height, until a reload. */
+/* One row's slot: a single-track grid. When a row leaves its saved view,
+   `.leaving` runs `row-leave`, collapsing the track 1fr -> 0fr (no guess at
+   row height needed). `forwards` holds it collapsed until a reload. */
 .row-slot {
   display: grid;
   grid-template-rows: 1fr;
@@ -434,21 +376,18 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   }
 }
 
-/* The magazine column spaces its rows with a flex `gap`, which a collapsed row
-   cannot shrink — the gaps above and below it would leave a double gap where it
-   was. Pulling the collapsed slot up by one gap closes it, so the neighbours
-   meet at a single normal gap. The list layout has no such gap (its rows carry
-   their own border), so it keeps the plain `row-leave`. */
+/* The magazine column's flex `gap` can't shrink around a collapsed row, which
+   would leave a double gap. Pulling the slot up by one gap closes it. The
+   list layout has no such gap (rows carry their own border), so it's plain. */
 .magazine-slot.leaving {
   animation:
     row-leave 0.26s ease forwards,
     magazine-gap-close 0.26s ease forwards;
 }
 
-/* The magazine variant reuses `row-leave` for the collapse and fade, and only
-   adds the gap close on top — held until the collapse starts (46%), so the two
-   move together. The gap is a variable because airy widens it, and a
-   hardcoded close would leave half a gap behind there. */
+/* Reuses `row-leave` for collapse/fade, adding the gap close on top (held
+   until 46% so they move together). The gap is a variable because airy
+   widens it — a hardcoded close would leave half a gap behind. */
 @keyframes magazine-gap-close {
   0%,
   46% {
@@ -521,10 +460,9 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   --card-hover-decoration: underline;
   --magazine-gap: var(--space-5);
 
-  /* No cards left, so the card colour becomes the sheet the column sits on —
-     the measure plus this block's own inset, centred, not the whole scroller.
+  /* No cards left, so the card colour becomes the sheet the column sits on.
      Painted as a background image because the box IS the scroller: narrowing
-     the box would leave the space beside it dead to the wheel (#723). */
+     it would leave the space beside it dead to the wheel (#723). */
   --airy-sheet: min(100%, calc(var(--magazine-measure) + 2 * var(--space-5)));
 
   /* Dark mode pulls this down to --surface-read so the sheet matches the open
@@ -540,11 +478,9 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
      clear of the ground there; light keeps --border. */
   --airy-rule: var(--border);
 
-  /* Boxed's gutter is the list's 12px plus the card's own inline padding; with
-     the card gone the list has to carry the whole inset itself, or the text
-     runs to 12px off the edge (#732). Both themes: the gutter is layout, not a
-     dark-mode concern — nesting it under [data-theme='dark'] dropped it in
-     light and let #732 back in (#775). */
+  /* Boxed's gutter is list padding + card padding; with the card gone the list
+     carries the whole inset (#732). Both themes: nesting this under
+     [data-theme='dark'] dropped it in light and let #732 back in (#775). */
   padding-inline: var(--space-5);
 }
 
@@ -597,10 +533,9 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   display: block;
 }
 
-/* Wraps the (optional) topBlock and the `.empty` message: the header-clearing
-   top reservation lives here rather than on `.empty` itself, so a projected
-   topBlock sits inside that same reserved space instead of the message text
-   growing an extra header-height gap above it. */
+/* Wraps the optional topBlock and the `.empty` message: the header-clearing
+   reservation lives here, not on `.empty`, so a projected topBlock sits
+   inside it instead of the message growing an extra gap above. */
 .empty-wrap {
   padding-top: calc(#{$header-clear} + var(--space-6));
 }
@@ -673,26 +608,18 @@ app-loading-overlay {
   }
 }
 
-/* Anchored to this component's own box (`:host` is already relative), not to the
-   viewport: in split-pane mode a fixed button would hang over the reader pane
-   instead of the list it scrolls. This component establishes no stacking
-   context, so the number below competes directly in the shell's global scale.
-   The list stays mounted under an open article and `showToTop` isn't cleared
-   when one opens, so the button renders the whole time — it must stay strictly
-   below `.article-overlay`'s z-index: 5 (reader-shell.component.scss) or it
-   would punch through the open article on mobile. */
+/* Anchored to this component's box, not the viewport: in split-pane mode a
+   fixed button would hang over the reader pane. The button renders even under
+   an open article, so it must stay below `.article-overlay`'s z-index: 5. */
 app-to-top-button {
   right: var(--space-5);
   bottom: var(--space-5);
   z-index: 4;
 }
 
-/* On a narrow layout the run pill is a bottom-centred toast that spans nearly
-   the full width and, as an overlay above everything, buries this corner
-   (#641). Lift the button clear of whatever toast is up: `--app-toast-height`
-   is the live toast's measured height, published by ToastService while one is
-   visible; its fallback cancels the gap so the whole added term is zero and the
-   button keeps its base offset when no toast is on screen. */
+/* The narrow-layout run pill is a bottom toast that buries this corner (#641).
+   `--app-toast-height` is the live toast's measured height, published by
+   ToastService; its fallback is zero so the button keeps its base offset. */
 :host-context(.is-narrow) app-to-top-button {
   bottom: calc(
     var(--space-5) + var(--space-3) + var(--app-toast-height, calc(-1 * var(--space-3)))

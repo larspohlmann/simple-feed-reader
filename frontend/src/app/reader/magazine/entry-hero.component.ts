@@ -1,4 +1,3 @@
-// src/app/reader/magazine/entry-hero.component.ts
 import { Component, computed, effect, signal } from '@angular/core';
 import { EntryKickerLineComponent } from './entry-kicker-line.component';
 import { EntryMetaComponent } from '../entry-meta/entry-meta.component';

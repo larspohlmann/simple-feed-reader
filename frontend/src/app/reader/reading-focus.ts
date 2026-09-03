@@ -19,10 +19,9 @@ export interface FocusCurve {
 export const LIST_FOCUS_CURVE: FocusCurve = { plateau: 0, min: 0.2 };
 
 /**
- * The article's curve. A band around the centre holds full opacity, so a
- * paragraph does not start dimming the instant it leaves the exact middle, and
- * the floor is far higher: in a body of running text the effect should point
- * the eye, not push the rest of the page away (#435).
+ * The article's curve. A band around the centre holds full opacity so a
+ * paragraph doesn't start dimming the instant it leaves dead middle; the floor
+ * is higher too — the effect should point the eye, not push the page away (#435).
  */
 export const ARTICLE_FOCUS_CURVE: FocusCurve = { plateau: 0.03, min: 0.28 };
 
@@ -30,10 +29,9 @@ export const ARTICLE_FOCUS_CURVE: FocusCurve = { plateau: 0.03, min: 0.28 };
 const WRAPPER_TAGS = new Set(['DIV', 'SECTION', 'ARTICLE', 'MAIN', 'ASIDE', 'HEADER', 'FOOTER']);
 
 /**
- * Tags that make a wrapper a container of blocks rather than a paragraph in its
- * own right. Lists, quotes, figures and tables are on it because they end a
- * descent — each is one visual unit, and fading an `<li>` or a `<figcaption>`
- * away from what it belongs to reads worse than not fading it at all.
+ * Tags that make a wrapper a container of blocks rather than a paragraph itself.
+ * Lists, quotes, figures and tables end a descent — each is one visual unit; fading
+ * an `<li>` or `<figcaption>` away from its parent reads worse than not fading at all.
  */
 const BLOCK_TAGS = new Set([
   ...WRAPPER_TAGS,
@@ -69,14 +67,10 @@ function groupsBlocks(el: Element): boolean {
 
 /**
  * The block-level elements to fade individually — what a reader sees as one
- * paragraph.
- *
- * Extracted article bodies bury their paragraphs at wildly different depths, and
- * the wrappers around them branch: the level that first holds several children
- * is regularly a pair of *sections*, not the paragraphs (#109). So descend
- * through every generic wrapper that groups block-level children, however deep
- * and however many siblings it has, and take everything else as a block. A
- * wrapper holding only inline content is a paragraph itself, not a container.
+ * paragraph. Extracted bodies bury paragraphs at varying depths, and the level
+ * that first holds several children is regularly a pair of *sections*, not the
+ * paragraphs (#109). Descend through every generic wrapper that groups block-level
+ * children, however deep; a wrapper with only inline content is a paragraph itself.
  */
 export function readingBlocks(root: Element): HTMLElement[] {
   const blocks: HTMLElement[] = [];
@@ -95,35 +89,25 @@ export function readingBlocks(root: Element): HTMLElement[] {
 
 /**
  * Whether an article needs tail space below it so its closing paragraphs can
- * still be scrolled up into the reading-focus centre (#107).
- *
- * `contentBottom` is the article's own bottom edge in the scroller's content
- * coordinates — deliberately not the padded panel's, which already includes any
- * tail and would make the measurement feed back into itself. An article that
- * fits the viewport gets no tail: half a screen of blank space below a short
- * article is dead scroll, and it would sit in front of the pull-to-return
- * gesture that is otherwise available right away.
+ * still scroll up into the reading-focus centre (#107). `contentBottom` is the
+ * article's own bottom edge in scroller-content coordinates, not the padded
+ * panel's (which would feed the tail back into its own measurement). A short
+ * article gets no tail — blank space below it would block the pull-to-return
+ * gesture otherwise available right away.
  */
 export function needsReadingTail(contentBottom: number, viewportHeight: number): boolean {
   return articleOverflowsViewport(contentBottom, viewportHeight);
 }
 
 /**
- * Opacity for a reading block whose top and bottom edges sit `blockTop` and
- * `blockBottom` px from the top of a `viewportHeight`-tall scroll viewport.
- *
- * The fade is measured from the block's nearest edge to the reading centre, not
- * from its geometric centre: a block whose span covers the centre line is fully
- * opaque however tall it is, and a block clear of the centre fades linearly to
- * `curve.min` by the edge that faces it, reaching `curve.min` a half-viewport
- * away. So the block you are reading stands out, and a source group of many
- * entries stays bright while it fills the screen instead of dimming because its
- * off-screen centre is a viewport away (#213). For a short block, top and bottom
- * coincide and this is a plain distance-from-centre fade.
- *
- * `curve.plateau` widens the fully opaque middle and compresses the fade into
- * what is left of the half-viewport; a plateau at or beyond the half-viewport
- * leaves the whole surface opaque.
+ * Opacity for a reading block spanning `blockTop`..`blockBottom` px in a
+ * `viewportHeight`-tall scroll viewport. Fade is measured from the block's
+ * nearest edge, not its centre: a block spanning the centre line stays fully
+ * opaque however tall, and a long source group stays bright while filling the
+ * screen instead of dimming on its off-screen centre (#213). Fades linearly to
+ * `curve.min` a half-viewport from the near edge; a short block collapses to a
+ * plain distance-from-centre fade. `curve.plateau` widens the opaque middle and
+ * compresses the fade into what's left of the half-viewport.
  */
 export function focusOpacityForSpan(
   blockTop: number,

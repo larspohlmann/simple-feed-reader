@@ -1,16 +1,11 @@
-// src/app/settings/admin/proxy/proxy-section.component.scss
-// Layout glue only. The Grouped chrome (card surface, rows, dividers, save
-// bar) comes from the shared primitives; what stays here is the field widths
-// and the failure/error banner inset. The Test row's outcome is the row's own
-// description, so the control slot holds nothing but the button and the button
-// never moves when a result arrives.
+// Layout glue only: Grouped chrome comes from shared primitives. What stays
+// here is field widths and the banner inset. The Test row's outcome is the
+// row's description, so the control slot holds only the button, which never moves.
 @use '../../../theme/breakpoints' as bp;
 
-// The Test row's control slot: an outcome glyph, then the button. The glyph
-// sits in a box that is present whether or not a result is -- an icon that
-// appeared from nothing would widen the slot and shove the button sideways,
-// which is the same jump the outcome text used to cause before it moved into
-// the row description.
+// The Test row's control slot: outcome glyph, then button. The glyph's box is
+// always present — an icon appearing from nothing would widen the slot and
+// shove the button sideways, the same jump the outcome text used to cause.
 .test-control {
   display: flex;
   align-items: center;
@@ -35,18 +30,9 @@
   padding: 0 var(--space-5) var(--space-4);
 }
 
-// Field widths. A bare <input> keeps the user agent's default size of about 20
-// characters, and a real proxy hostname is longer than that:
-// `proxy-nl.privateinternetaccess.com` is 34 characters, so the host field
-// showed about half of what the user typed. Each field is sized to the value it
-// holds instead. `ch`, not `rem`: the unit that means "one character wide" is
-// the one that says why the number is what it is.
-// These rules live here and not in `app-settings-row`, which already carries a
-// narrow-viewport rule for the same controls. That rule cannot reach them: the
-// inputs are projected content, so emulated encapsulation stamps them with this
-// component's scope attribute, not the row's, and a `.row-control > input`
-// selector scoped to the row never matches. The row styles its own box; the
-// component that declares a control styles that control.
+// Field widths in `ch`, sized to the real value: a bare <input>'s default
+// ~20 chars showed half of a 34-char hostname. Live here, not in
+// app-settings-row: projected inputs carry this component's scope, not the row's.
 .host-field {
   width: 34ch;
 }

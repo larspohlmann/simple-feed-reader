@@ -1,9 +1,8 @@
 @use '../theme/breakpoints' as bp;
 
-/* This panel's own layout: a summary strip for the latest run, then the calls
-   grouped by run, each run's calls an aligned grid -- `time | call | duration |
-   verdict | req/resp KB | expander`. Rendered inside the Diagnostics
-   "Debug log" drill-in (#541), not a card of its own. */
+/* This panel's own layout: a summary strip, then calls grouped by run in an
+   aligned grid (time | call | duration | verdict | req/resp KB | expander).
+   Rendered inside the Diagnostics "Debug log" drill-in (#541), not its own card. */
 :host {
   display: block;
 }
@@ -111,10 +110,9 @@
     font-weight: 600;
   }
 
-  /* On a phone the six fixed columns plus the group's 30rem floor are wider
-     than the viewport, so the whole panel overflowed the page (the size and
-     expander columns fell off the right edge). Release the floor and let the
-     row reflow to a wrapping line so every entry fits the card. */
+  /* On a phone the six fixed columns plus the group's 30rem floor overflowed
+     the viewport (size/expander columns fell off the edge). Release the floor
+     and let the row wrap instead. */
   @media (width <= bp.$bp-sm) {
     &__group {
       min-width: 0;

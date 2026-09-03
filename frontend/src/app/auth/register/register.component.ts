@@ -1,4 +1,3 @@
-// src/app/auth/register/register.component.ts
 import { Component, ElementRef, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -50,12 +49,9 @@ export class RegisterComponent {
   async submit(): Promise<void> {
     if (this.loading()) return;
     adoptAutofilledValues(this.host.nativeElement, this.form);
-    // Say why nothing happened. Returning silently here makes the button look
-    // broken rather than refused -- and it is not a theoretical case: a password
-    // manager can fill both fields without dispatching the event Angular binds
-    // to, so the form reads as empty while the user is looking at their own
-    // credentials on screen. Reported from an iPhone as "the button does
-    // nothing, not even a spinner", which is exactly what this produced.
+    // Show why nothing happened instead of returning silently: a password
+    // manager can fill the fields without dispatching the `input` event Angular
+    // binds to, so the form reads as empty though it looks filled (see autofill.ts).
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.error.set(this.i18n.translate('auth.register.invalidInput'));

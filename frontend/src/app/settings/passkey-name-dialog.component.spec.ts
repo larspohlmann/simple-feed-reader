@@ -1,4 +1,3 @@
-// src/app/settings/passkey-name-dialog.component.spec.ts
 import { TestBed } from '@angular/core/testing';
 import { DialogRef } from '@angular/cdk/dialog';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';

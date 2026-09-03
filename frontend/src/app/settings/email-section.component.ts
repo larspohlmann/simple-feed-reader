@@ -1,4 +1,3 @@
-// src/app/settings/email-section.component.ts
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthService } from '../core/auth.service';
@@ -60,14 +59,11 @@ const WEEKDAYS: readonly { value: number; labelKey: string }[] = [
   { value: 7, labelKey: 'settings.email.weekdaySunday' },
 ];
 
-/**
- * The email digest settings section. Its controls are gated behind two
- * account-level preconditions the user cannot fix from a row toggle -- whether
- * this instance can send mail at all, and whether the account's own address is
- * verified -- so the section renders one of three states instead of disabling
- * rows piecemeal. The included-searches list and the test-mail row (#636 task
- * 22) render only in the `ready` state, alongside the digest config controls.
- */
+/** The email digest settings section. Gated behind two account-level
+ *  preconditions the user can't fix from a row toggle -- can this instance
+ *  send mail, and is the address verified -- so it renders one of three
+ *  states instead of disabling rows piecemeal. The included-searches list
+ *  and test-mail row (#636 task 22) render only in the `ready` state. */
 @Component({
   selector: 'app-email-section',
   imports: [

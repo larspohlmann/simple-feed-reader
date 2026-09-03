@@ -1,14 +1,8 @@
 @use '../../theme/breakpoints' as bp;
 
-/* An opaque backing for the whole floating bar — the topmost band stays solid
-   while the chrome below it turns to glass. The header row and the tag row are
-   themselves transparent and share this one fill, which also spans the seam
-   between them: the bar slides on scroll (a composited layer) and the tag row is
-   its own momentum-scroll layer (`-webkit-overflow-scrolling: touch`), so on iOS
-   Safari a hairline can open where their bounds round to device pixels
-   independently (#122) — behind it sits this continuous backing, not the list.
-   The host's box is positioned by the shell (`app-reader-header` in
-   reader-shell.component.scss). */
+/* Opaque backing shared by the transparent header row and tag row, spanning
+   their seam: each is its own compositing layer, and their bounds can round
+   to device pixels independently on iOS Safari, opening a hairline (#122). */
 :host {
   display: block;
   background: var(--surface-1);
@@ -93,12 +87,9 @@ header {
   white-space: nowrap;
 }
 
-/* The empty middle of the bar, made tappable — the mobile convention for "back
-   to top". A dedicated element rather than a click handler on the bar itself,
-   so a tap that lands on the padding beside the menu button or the avatar still
-   does nothing. Mobile only, and never while an article is open: there, the
-   entry list is not the visible scroller, so scrolling it to the top would do
-   nothing observable. */
+/* The bar's empty middle, made tappable — the mobile "back to top" convention.
+   A dedicated element, not a bar-wide click handler, so padding beside the
+   menu/avatar stays inert. Never while an article is open (nothing to scroll). */
 .tap-to-top {
   flex: 1;
   align-self: stretch;
@@ -108,9 +99,8 @@ header {
   cursor: pointer;
 
   /* A ~190×55px target would otherwise flash the default translucent tap
-     highlight across the middle of the bar on iOS Safari / Android Chrome —
-     visible on an element meant to be invisible. No other button in src/ needs
-     this because every other one is icon-sized. */
+     highlight across the bar on iOS Safari / Android Chrome — visible on an
+     element meant to be invisible. No other button in src/ is this large. */
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -140,11 +130,9 @@ header {
   padding: var(--space-1);
 }
 
-/* Replaces .left and .right for the span of an open search: the field wants
-   the whole bar's width, not just the middle spacer the brand and account
-   controls otherwise leave it. The class sits on the field itself — with
-   nothing beside it any more (#550), a flex wrapper around one child had
-   nothing left to arrange. */
+/* Replaces .left and .right for an open search: the field wants the whole
+   bar's width, not just the middle spacer. Sits on the field itself — with
+   nothing beside it (#550), a flex wrapper had nothing left to arrange. */
 .search-bar {
   flex: 1;
   min-width: 0;
@@ -246,11 +234,9 @@ header {
   background: var(--surface-0);
 }
 
-/* Takes the bar's empty middle -- brand left, account right, nothing between
-   them at this width. Capped and centred so it stays a readout rather than a
-   band stretching the whole bar, and so a long status line does not push the
-   account button around. Contributes nothing to the layout while no run is
-   live: the component renders no element at all then. */
+/* Takes the bar's empty middle. Capped and centred so it stays a readout,
+   not a band stretching the whole bar, and a long status line can't push
+   the account button around. Renders nothing while no run is live. */
 .run-progress {
   flex: 1;
   min-width: 0;
@@ -259,9 +245,8 @@ header {
 }
 
 /* The shell positions this component (`app-reader-header` in
-   reader-shell.component.scss), so the host is the containing block and the bar
-   hangs off its bottom edge. Above `header`'s own z-index 2 so it paints over the
-   bottom border rather than under it. */
+   reader-shell.component.scss); the host is the containing block, so the bar
+   hangs off its bottom edge. Above `header`'s z-index 2, painting over the border. */
 app-progress-hairline {
   position: absolute;
   bottom: 0;

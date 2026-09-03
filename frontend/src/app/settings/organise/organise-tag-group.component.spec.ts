@@ -126,13 +126,9 @@ describe('OrganiseTagGroupComponent', () => {
   });
 
   /**
-   * The `label` computed used to call TranslocoService.translate() directly
-   * without reading a language signal — a one-shot read that never
-   * re-evaluates on a switch (the same #411 trap reader-shell.component.ts
-   * documents at line 340). The untagged group's name would then keep
-   * reading "Untagged" in German while every transloco-pipe label in the
-   * same header (e.g. the feed count) switched, visibly mixing languages
-   * (#659 review).
+   * `label` used to call translate() directly (a one-shot read that never
+   * re-evaluates on a switch -- the #411 trap), so the untagged name kept
+   * its old language while sibling transloco-pipe labels switched (#659).
    */
   it('translates the untagged group name on a language switch', async () => {
     await render(UNTAGGED_GROUP);
@@ -232,10 +228,9 @@ describe('OrganiseTagGroupComponent', () => {
   it('moves a feed carrying two tags to a third tag that is neither of them', async () => {
     const { manage, component } = await render(THIRD_GROUP);
 
-    // SUB_WITH_TWO_TAGS carries TECH (2) and OTHER_TAG (4). It is dragged out
-    // of the TECH group (the source container) and dropped on THIRD_GROUP
-    // (6) — a tag it did not previously carry. Only TECH, the source, must
-    // be dropped; OTHER_TAG must survive untouched alongside the new tag.
+    // SUB_WITH_TWO_TAGS carries TECH (2) and OTHER_TAG (4); dragged out of
+    // TECH and dropped on THIRD_GROUP (6). Only TECH, the source, must be
+    // dropped; OTHER_TAG must survive alongside the new tag.
     component.onFeedDropped({
       previousContainer: { data: GROUP },
       container: { data: THIRD_GROUP },
@@ -281,10 +276,9 @@ describe('OrganiseTagGroupComponent', () => {
   it('ignores a dropped tag header instead of mistaking it for a feed', async () => {
     const { manage, component } = await render(THIRD_GROUP);
 
-    // The feed list's own drop handler must never treat a non-feed payload
-    // as a SubscriptionDto — `subscription.tags.map(...)` would throw, since
-    // neither an OrganiseGroup nor a TagDto has a `tags` field. Tag-header
-    // drags are handled by onHeaderDropped instead (see the tests below).
+    // onFeedDropped must never treat a non-feed payload as a SubscriptionDto
+    // -- `subscription.tags.map(...)` would throw, since neither an
+    // OrganiseGroup nor a TagDto has a `tags` field. See onHeaderDropped below.
     component.onFeedDropped({
       previousContainer: { data: GROUP },
       container: { data: THIRD_GROUP },
@@ -299,12 +293,9 @@ describe('OrganiseTagGroupComponent', () => {
   });
 
   /**
-   * The tag header is a `cdkDrag` and its own `cdkDropList` accepts drops, but
-   * nothing used to act on a dropped TAG — only a dropped feed. The design
-   * spec calls for tag reordering by drag, same as feeds; ManageActions.
-   * reorderTags(tagIds) is the write, and the order comes from the full,
-   * unfiltered tags list (store.tags()), not the filtered group() (#659
-   * review).
+   * The header's cdkDropList used to act only on dropped feeds, never a
+   * dropped TAG. reorderTags(tagIds) is the write, ordered from the full,
+   * unfiltered tags() list -- not the filtered group() (#659 review).
    */
   it('reorders tags when a tag header is dropped on another tag header', async () => {
     const { manage, component } = await render(THIRD_GROUP);
@@ -374,16 +365,9 @@ describe('OrganiseTagGroupComponent', () => {
   });
 
   /**
-   * headerDragDisabled() has its own three off-switches (coarse pointer,
-   * active filter, untagged group) plus the all-clear case — none of them
-   * previously had a test of their own, only the write-guards inside
-   * reorderDroppedTag() (#659 review). These assert on the DOM rather than on
-   * headerDragDisabled()'s return value -- partly because the computed is
-   * protected, but mostly because the DOM check is the stronger of the two: it
-   * is what catches the template's `[cdkDragDisabled]="headerDragDisabled()"`
-   * binding coming decoupled from the computed, which a check of the computed
-   * alone sails straight past. CdkDrag reflects its `disabled` input as the
-   * `cdk-drag-disabled` host class.
+   * Asserts on the DOM (`cdk-drag-disabled`, which CdkDrag reflects from its
+   * `disabled` input) rather than the protected headerDragDisabled() value --
+   * that also catches the template binding decoupling from the computed.
    */
   describe('headerDragDisabled', () => {
     it('disables the header drag on a coarse pointer', async () => {

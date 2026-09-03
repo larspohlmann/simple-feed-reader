@@ -1,12 +1,8 @@
-// src/app/reader/slug.ts
-
 /**
- * Builds the value for the `?entry=` deep-link param: the entry id followed by a
- * human-readable slug of the title (e.g. "514-wadephul-afrika-chancenkontinent").
- * The id drives the lookup (parsed back by entryIdFromParam); the slug is purely
- * cosmetic, so a changed or stale title never breaks the link and there is no
- * unique-slug column to maintain. It stays a query param, so no server URL
- * rewrite is needed — works on static hosting (e.g. Strato).
+ * Builds the value for the `?entry=` deep-link param: id + a cosmetic slug
+ * of the title. The id alone drives the lookup (`entryIdFromParam`), so a
+ * changed title never breaks the link. A query param, not a URL rewrite, so
+ * it works on static hosting (e.g. Strato).
  */
 export function entryParam(id: number, title: string): string {
   const slug = title

@@ -1,4 +1,3 @@
-// src/app/theme/theme.service.spec.ts
 import { TestBed } from '@angular/core/testing';
 import { ThemeService } from './theme.service';
 

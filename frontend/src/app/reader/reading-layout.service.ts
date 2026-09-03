@@ -1,4 +1,3 @@
-// src/app/reader/reading-layout.service.ts
 import { Injectable, signal } from '@angular/core';
 
 export type ReadingLayout = 'list' | 'pane' | 'magazine';

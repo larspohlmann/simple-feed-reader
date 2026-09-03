@@ -2,11 +2,9 @@
   display: inline-flex;
   align-items: center;
 
-  /* Inline-level boxes sit on the text baseline by default, which lifts a glyph
-     taller than the text's baseline-to-top distance visibly above its label.
-     Centring it is what the eye expects of an icon beside a word. Flex parents
-     ignore this and use their own align-items, so it only bites where it
-     should: inside a run of text. */
+  /* Inline-level boxes sit on the text baseline by default, lifting a tall
+     glyph above its label. Centring is what the eye expects. Flex parents
+     ignore this and use their own align-items, so it only bites in text runs. */
   vertical-align: middle;
 }
 
@@ -15,13 +13,9 @@ span {
   align-items: center;
   justify-content: center;
 
-  /* The size is set on the host, but `.material-symbols-outlined` (from
-     node_modules/material-symbols/outlined.css) sets `font-size: 24px` on this
-     very element -- and a class rule on the element always beats a value
-     inherited from its parent. Without this line every icon in the app renders
-     at 24px whatever size it was given, silently. Angular's encapsulation
-     attribute makes this selector (0,1,1), which outranks that class at
-     (0,1,0). */
+  /* `.material-symbols-outlined` sets `font-size: 24px` on this element,
+     which beats an inherited value — without this, every icon silently
+     renders at 24px. Angular's encapsulation attribute (0,1,1) outranks it. */
   font-size: inherit;
   width: 1em;
   height: 1em;

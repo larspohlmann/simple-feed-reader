@@ -1,9 +1,8 @@
 @use '../theme/breakpoints' as bp;
 
-/* The host is the sticky element, not .chips — the same reason the rail sticks
-   on its host: the chips now lead the panel body's scroll region, and a sticky
-   child of a content-height host has no room to travel and scrolls away with
-   it. The host, being a block child of the scroller, travels the full body. */
+/* The host is the sticky element, not .chips: a sticky child of a
+   content-height host has no room to travel and scrolls away with it.
+   The host, a block child of the scroller, travels the full body. */
 :host {
   display: none;
   position: sticky;
@@ -11,13 +10,9 @@
   z-index: 2;
 }
 
-/* Wraps, and scrolls DOWN rather than sideways (#561). As one nowrap strip the
-   chips are the only way to reach a category on a phone, and 23 of them run to
-   eight screenfuls of horizontal swiping with nothing on screen to say more
-   exists — the 13th category was simply never found. Wrapped into rows the
-   whole set is scannable, and the cap keeps the strip from eating the picker:
-   roughly two and a half rows are visible, which reads as "there is more" the
-   way a cut-off row does and a cut-off strip does not. */
+/* Wraps and scrolls DOWN rather than sideways (#561): a nowrap strip of 23
+   categories ran to 8 screenfuls of horizontal swiping with no sign more
+   existed. The ~2.5-row cap keeps it scannable while reading as "more below". */
 .chips {
   display: flex;
   flex-wrap: wrap;

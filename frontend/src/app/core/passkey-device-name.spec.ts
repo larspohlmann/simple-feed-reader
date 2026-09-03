@@ -1,4 +1,3 @@
-// src/app/core/passkey-device-name.spec.ts
 import { defaultPasskeyName } from './passkey-device-name';
 
 const CHROME_MACOS =

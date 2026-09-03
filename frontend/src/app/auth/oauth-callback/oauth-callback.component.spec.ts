@@ -1,4 +1,3 @@
-// src/app/auth/oauth-callback/oauth-callback.component.spec.ts
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -17,10 +16,9 @@ function setup(params: Record<string, string | null>) {
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      // A real Router, not a { navigate } stub. The blocked and error branches
-      // both embed <a routerLink="/login">, so rendering them — which is the
-      // only way to assert the message a user actually reads — needs a
-      // configured router. navigate is spied rather than stubbed away.
+      // A real Router, not a { navigate } stub: the blocked/error branches
+      // embed <a routerLink="/login">, so rendering them needs a configured
+      // router. navigate is spied rather than stubbed away.
       provideRouter([]),
       { provide: API_BASE_URL, useValue: 'https://api.test' },
       {
@@ -85,11 +83,9 @@ describe('OAuthCallbackComponent', () => {
   });
 
   /**
-   * The bug in #247. A first-time Google user lands in the approval queue, and
-   * the API says so precisely — 403 account_not_active carrying
-   * accountStatus: pending_approval. The screen used to answer "Sign-in did not
-   * complete. Please try again.", which is wrong twice: nothing is retryable,
-   * and the account was in fact created.
+   * #247: a 403 account_not_active/pending_approval used to render "Sign-in
+   * did not complete. Please try again." -- wrong twice, since nothing is
+   * retryable and the account was in fact created.
    */
   it('tells a new user their account awaits approval instead of showing a retry error', () => {
     const rendered = blockWith('pending_approval');

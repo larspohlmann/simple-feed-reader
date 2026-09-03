@@ -1,4 +1,3 @@
-// src/app/reader/reader-view/reader-view.component.ts
 import {
   Component,
   DestroyRef,
@@ -116,11 +115,9 @@ export class ReaderViewComponent {
 
   readonly entry = input.required<EntryDto | null>();
   readonly tags = input<SubscriptionTagDto[]>([]);
-  /** Full-screen reading (the mobile overlay) as opposed to the split pane.
-   *  The article is its own layer there: the toolbar rides the overlay with
-   *  its own hide-on-scroll, the back button plays the slide-out, and the
-   *  return gestures are armed. The shell's app bar — the LIST's chrome —
-   *  stays beneath the overlay, untouched (#128). */
+  /** Full-screen reading (the mobile overlay) vs. the split pane. The article
+   *  is its own layer: its own hide-on-scroll toolbar, slide-out back button,
+   *  and return gestures. The shell's app bar stays beneath, untouched (#128). */
   readonly fullscreen = input(false);
 
   readonly favorite = output<void>();
@@ -143,10 +140,9 @@ export class ReaderViewComponent {
   private readonly readingFocus = inject(ReadingFocusService);
   private readonly destroyRef = inject(DestroyRef);
 
-  // Article scroll restore: a browser resume-reload reopens the entry from the URL
-  // at the top; re-seat it where the user was reading. `pendingRestore` holds the
-  // target until it lands (re-asserted across the original→reader content swap and
-  // image loads) or the user scrolls, whichever comes first.
+  // Article scroll restore: a resume-reload reopens the entry at the top; re-seat
+  // it where the user was. `pendingRestore` holds the target until it lands
+  // (re-asserted across the content swap/image loads) or the user scrolls.
   private pendingRestore: { id: number; top: number } | null = null;
   private restoreRaf = 0;
 
@@ -182,10 +178,9 @@ export class ReaderViewComponent {
   protected readonly pulling = computed(() => this.pull() > 0);
   protected readonly pullArmed = computed(() => overscrollTriggersBack(this.pull()));
 
-  // The open entry's object reference changes on every optimistic flag update
-  // (favorite/keep/read), but its id does not. Tracking the loaded id lets the
-  // load effect ignore those churns: no redundant re-fetch, and the Reader/
-  // Original toggle survives an in-reader action instead of snapping back.
+  // The open entry's reference changes on every optimistic flag update, but its
+  // id doesn't. Tracking the loaded id lets the load effect ignore those churns
+  // — no re-fetch, and the Reader/Original toggle survives an in-reader action.
   private loadedId: number | null = null;
   private loadSub: Subscription | null = null;
 
@@ -224,10 +219,9 @@ export class ReaderViewComponent {
   readonly hasTail = computed(() => needsReadingTail(this.contentBottom(), this.viewportHeight()));
 
   /**
-   * The article's length-and-position cue. On a phone it is the only one there
-   * is: the shell locks the page and scrolls an inner container, and a mobile
-   * browser paints no persistent scrollbar for a nested scroller, so the reader
-   * had no way to judge how long an article was (#238).
+   * The article's length-and-position cue. On a phone it's the only one there is:
+   * a mobile browser paints no scrollbar for the shell's nested scroller, so the
+   * reader had no way to judge how long an article was (#238).
    */
   readonly showProgress = computed(() =>
     articleOverflowsViewport(this.contentBottom(), this.viewportHeight()),
@@ -297,10 +291,9 @@ export class ReaderViewComponent {
       this.loadedId = id;
       this.readerMode.reset();
       this.cancelRestore();
-      // A new article starts at the top, with a fresh, collapsed contents list
-      // and its toolbar presented — opening another entry reuses this instance,
-      // and a bar the previous article's reading retracted must not open the
-      // next one headless.
+      // A new article starts at the top, with a fresh, collapsed TOC and its
+      // toolbar presented — this instance is reused, and a retracted toolbar
+      // must not carry over to the next article.
       this.toc.set([]);
       this.tocOpen.set(false);
       this.heroFailed.set(false);
@@ -335,12 +328,9 @@ export class ReaderViewComponent {
     // rendered HTML changes (new article, or Reader/Original toggle).
     effect(() => {
       this.displayHtml();
-      // Depend on the container too, not just on the HTML. When extraction fails
-      // the mode flips reader -> original but the feed's own content shows either
-      // way, so displayHtml() recomputes to the same string and never notifies —
-      // the container replacing the loading placeholder is then the only signal
-      // that the article has rendered, and without it the scroll restore below
-      // never fires on that path (#101).
+      // Depend on the container too, not just the HTML: when extraction fails,
+      // displayHtml() recomputes to the same string and never notifies, so the
+      // container replacing the placeholder is the only render signal (#101).
       if (!this.content()) return;
       queueMicrotask(() => {
         const host = this.content()?.nativeElement;
@@ -419,10 +409,9 @@ export class ReaderViewComponent {
     });
   }
 
-  /** Subscribe to a content source (initial load or a cache-busting reload),
-   *  driving the shared loading → ok/failed lifecycle. The reader/original mode
-   *  is not touched here, so a reload keeps the mode the reader chose; only a
-   *  genuine entry change resets it (see the load effect above). */
+  /** Subscribe to a content source (initial load or cache-busting reload),
+   *  driving the loading → ok/failed lifecycle. Reader/original mode is
+   *  untouched here — only a genuine entry change resets it. */
   private runLoad(source: Observable<ReaderContent>): void {
     this.loadSub?.unsubscribe();
     this.state.set({ status: 'loading' });
@@ -498,10 +487,9 @@ export class ReaderViewComponent {
     }
   }
 
-  /** The toolbar's back button. Full-screen it plays the same
-   *  slide-out-to-the-right as a back-swipe (rather than cutting straight to
-   *  the list); in the split pane there is no overlay to slide, so it closes
-   *  directly. */
+  /** The toolbar's back button. Full-screen it plays the same slide-out as a
+   *  back-swipe rather than cutting straight to the list; the split pane has
+   *  no overlay to slide, so it closes directly. */
   onBack(): void {
     if (this.fullscreen()) this.slideBack();
     else this.close.emit();
@@ -551,12 +539,9 @@ export class ReaderViewComponent {
   scrollToTop(): void {
     this.pendingRestore = null; // don't let a restore fight the jump
     this.host.nativeElement.scrollTo({ top: 0, behavior: this.reduceMotion ? 'auto' : 'smooth' });
-    // Land focus on the title, not just wherever the button happened to be: the
-    // button unmounts as soon as showToTop flips false, and an unmounted focused
-    // element drops focus to <body>, stranding a keyboard/screen-reader user.
-    // preventScroll is required — the heading is still off-screen at this instant
-    // (that's why the button was showing), and a plain focus() would yank it into
-    // view and cancel the smooth scroll above.
+    // Land focus on the title, not wherever the button was — an unmounted button
+    // drops focus to <body>. preventScroll is needed since the heading is still
+    // off-screen (why the button showed); a plain focus() would cancel the scroll.
     this.titleHeading()?.nativeElement.focus({ preventScroll: true });
   }
 
@@ -625,11 +610,9 @@ export class ReaderViewComponent {
     });
   }
 
-  /** Dim each article block by its distance from the scroll viewport's centre.
-   *  Only active below the split-pane layout — a desktop reader sits back from
-   *  a stationary column, where dimming the text around the centre reads as
-   *  interference rather than as focus (#435). Any inline opacities a resize
-   *  left behind are cleared there. */
+  /** Dim each article block by its distance from the viewport's centre. Only
+   *  active below the split-pane layout — a desktop reader's stationary column
+   *  reads dimming as interference, not focus (#435). */
   private applyFocus(): void {
     const content = this.content()?.nativeElement;
     if (!content) return;

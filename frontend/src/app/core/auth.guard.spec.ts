@@ -1,4 +1,3 @@
-// src/app/core/auth.guard.spec.ts
 import { TestBed } from '@angular/core/testing';
 import { Router, UrlTree } from '@angular/router';
 import { TokenStore } from './token.store';

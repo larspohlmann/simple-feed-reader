@@ -1,4 +1,3 @@
-// format.spec.ts
 import {
   bytesToKb,
   formatCost,

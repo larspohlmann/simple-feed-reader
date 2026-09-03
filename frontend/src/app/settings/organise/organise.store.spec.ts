@@ -106,13 +106,9 @@ describe('OrganiseStore', () => {
 
     expect(store.selectedIds().has(12)).toBe(true);
     expect(store.selectedCount()).toBe(1);
-    // netzpolitik (12) carries both tags. Group 0 (Nachrichten: taz, netzpolitik)
-    // has one of two selected -> 'some'. Group 1 (Tech: heise, netzpolitik) also
-    // has one of two selected -> 'some' too: heise is untouched, so Tech cannot
-    // be 'all'. (The brief's draft asserted 'all' here; that is inconsistent
-    // with Tech having two members, per the "shows a feed with two tags" test
-    // above and the "narrows by title filter" test below, both of which require
-    // heise to carry tag 2.)
+    // netzpolitik (12) carries both tags: Group 0 (Nachrichten) and Group 1
+    // (Tech) each have one of two members selected -> 'some' in both, not
+    // 'all', since heise/taz in each group stays untouched.
     expect(store.groupState(store.groups()[0])).toBe('some');
     expect(store.groupState(store.groups()[1])).toBe('some');
   });
@@ -162,12 +158,9 @@ describe('OrganiseStore', () => {
   });
 
   /**
-   * expandAll() used to derive its set from groups(), the FILTERED list — so
-   * clicking it while a search filter narrows the visible groups persisted
-   * only the visible subset, silently dropping the expanded state of every
-   * other group (isExpanded() then falls back to "collapsed" for them once
-   * the filter clears). "Expand all" must mean every group, not just the
-   * ones currently on screen (#659 review).
+   * expandAll() used to derive its set from groups(), the FILTERED list, so
+   * a search filter silently dropped other groups' expanded state once it
+   * cleared. "Expand all" must mean every group (#659 review).
    */
   it('expandAll opens every group, not only the ones a filter is currently showing', () => {
     const store = make();
@@ -301,10 +294,9 @@ describe('OrganiseStore', () => {
 
     store.titleFilter.set('heise');
 
-    // Only heise (11) stays visible; taz (10) and netzpolitik (12) are hidden.
-    // Picking 3 selections against 1 visible match keeps hidden (2) and
-    // visible-and-selected (1) from coinciding, so a hiddenSelectedCount that
-    // accidentally counted the wrong side of the filter would be caught here.
+    // Only heise (11) stays visible, so hidden (2) and visible-and-selected
+    // (1) don't coincide -- catches a hiddenSelectedCount that counted the
+    // wrong side of the filter.
     expect(store.selectedCount()).toBe(3);
     expect(store.hiddenSelectedCount()).toBe(2);
   });
@@ -354,12 +346,9 @@ describe('OrganiseStore', () => {
   });
 
   /**
-   * The bulk bar sends every id in `selectedIds`, and the backend 422s the
-   * WHOLE request if any one of them is absent. If a selected feed is
-   * unsubscribed from its own row menu, `subs.load()` drops it from
-   * `subscriptions()` but nothing used to prune the stale id back out of the
-   * selection — every later bulk action then failed for the other, still
-   * valid, selected feeds too (#659 review).
+   * The bulk bar sends every selectedIds entry, and the backend 422s the
+   * WHOLE request if one is stale (e.g. unsubscribed from its own row menu),
+   * so a dropped subscription's id must be pruned from selection too (#659).
    */
   it('prunes a selected id once it disappears from the loaded subscriptions', () => {
     const { store, subsSignal } = makeWithMutableSubs();

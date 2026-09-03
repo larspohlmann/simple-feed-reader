@@ -1,16 +1,8 @@
 @use '../theme/breakpoints' as bp;
 
-/* The host is the flex child of the scrolling body, so the stickiness must
-   live here — a sticky <nav> inside a content-height host has no room to
-   stick and scrolls away with it. Cap the height to the body and let the
-   rail scroll internally when the categories outrun it.
-
-   `cqh`, not `%` (#561). A percentage measures `.cols`, and `.cols` has to
-   stay as tall as the sections or this sticky host would run out of travel
-   and scroll away whenever the categories were few enough to fit. `cqh`
-   measures the panel body instead — the scrollport this host is pinned to —
-   so the cap and the travel stop fighting each other. It needs the body to
-   be a size container: discover opts in with --panel-body-container. */
+/* Sticky lives on the host, not <nav> — a content-height nav can't stick.
+   Height is capped with `cqh`, not `%` (#561): a percentage measures `.cols`,
+   which stays tall as the sections, so `cqh` measures the panel body instead. */
 :host {
   position: sticky;
   top: 0;
@@ -83,12 +75,9 @@ button.active {
   white-space: nowrap;
 }
 
-/* `flex: none` + `nowrap` so the number never breaks (#569). The base
-   `overflow-wrap: anywhere` deliberately lowers min-content width, which let
-   the flex algorithm squeeze this box until "13" wrapped to "1" over "3" on
-   every row whose name was long enough to truncate. `_base.scss` names
-   `white-space: nowrap` as the opt-out for text that must hold one line; this
-   is one of those. */
+/* `flex: none` + `nowrap` so the number never breaks (#569): base
+   `overflow-wrap: anywhere` let the flex algorithm squeeze this box until
+   "13" wrapped to "1" over "3" on long-name rows. */
 .count {
   flex: none;
   margin-left: auto;

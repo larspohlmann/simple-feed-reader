@@ -2,17 +2,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
- * #137: Chrome and Brave showed the Angular scaffold's logo in the tab. Two
- * defects had to line up for that, and each gets an assertion here.
- *
- * The `.ico` was never actually rebranded -- #52 shipped the SVG mark but kept
- * the scaffold's `favicon.ico` "as a fallback", so the fallback pointed at the
- * wrong artwork. And Chromium resolves competing `<link rel="icon">` candidates
- * by taking the *last* one, so that stale `.ico` beat the branded SVG. Firefox
- * and Safari prefer the SVG, which is why it read as a Chrome-only bug.
- *
- * Asserting on the shipped assets rather than a rendered tab keeps this cheap
- * enough for every commit; a real tab icon is not observable from jsdom.
+ * #137: #52 rebranded the SVG but left the scaffold's favicon.ico as a
+ * "fallback"; Chromium picks the LAST competing <link rel="icon">, so the
+ * stale .ico won. Asserts on the shipped assets -- a tab icon isn't jsdom-visible.
  */
 describe('favicon', () => {
   const publicDir = join(__dirname, '..', 'public');

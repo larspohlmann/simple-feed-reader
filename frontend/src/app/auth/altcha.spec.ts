@@ -1,4 +1,3 @@
-// src/app/auth/altcha.spec.ts
 import { AltchaChallenge, solveAltcha } from './altcha';
 
 async function sha256hex(input: string): Promise<string> {
@@ -41,10 +40,9 @@ describe('solveAltcha', () => {
     await expect(solveAltcha(c)).rejects.toThrow();
   });
 
-  // The solver works in batches. A solution that falls beyond the first batch,
-  // or exactly on a boundary, must still be found and must still be the number
-  // the backend expects -- an off-by-one in the batch arithmetic would silently
-  // skip candidates and turn a solvable challenge into a failed registration.
+  // The solver works in batches; a solution beyond the first batch, or exactly
+  // on a boundary, must still be found -- an off-by-one in the batch
+  // arithmetic would silently skip candidates and fail registration.
   it.each([0, 1, 255, 256, 257, 600])('finds the solution at n=%i', async (number) => {
     const salt = 'batch?expires=999';
     const challenge = await sha256hex(salt + number);
@@ -59,17 +57,9 @@ describe('solveAltcha', () => {
     expect(JSON.parse(atob(payload)).number).toBe(number);
   });
 
-  // The reason this function was rewritten: on the main thread a per-candidate
-  // `await` floods the microtask queue, and microtasks are drained before the
-  // browser paints. The spinner never appeared and the page froze -- 0.7s on a
-  // desktop, long enough on an iPhone to look like a dead button.
-  //
-  // The obvious test for that -- set a macrotask, assert it ran -- passes
-  // against the broken implementation too, because Node's webcrypto does not
-  // starve the loop the way a browser's does. So it proves nothing. What can be
-  // pinned down here is the design that fixes it: the solver works through the
-  // candidates in batches and hands control back between them, which is what
-  // gives the browser a chance to paint.
+  // A per-candidate `await` used to flood the microtask queue, which drains
+  // before the browser paints -- froze the page (0.7s desktop, worse on
+  // iPhone). This pins the fix: batching candidates and yielding between them.
   it('checks in periodically rather than once per candidate', async () => {
     const salt = 'slicing?expires=999';
     const number = 9000;

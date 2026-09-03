@@ -1,9 +1,8 @@
 @use '../../theme/breakpoints' as bp;
 
-// The host box would sit between the frame's container -- the CDK's dialog
-// container, or discover's own scrim host -- and .panel, and neither centres a
-// wrapper it does not know about. `display: contents` removes it so .panel is
-// laid out by that container directly.
+// The host box would sit between the frame's container (CDK's dialog
+// container, or discover's scrim host) and .panel, and neither centres a
+// wrapper it doesn't know about. `display: contents` lets .panel lay out directly.
 :host {
   display: contents;
 }
@@ -20,20 +19,15 @@
      for a consumer that never set --panel-w. */
   width: min(var(--panel-w, 460px), 92vw);
 
-  /* Never taller than the viewport -- the body below scrolls instead (#85).
-     Reachable in landscape on a phone, and by every surface whose content grows
-     without bound: the discovered feed candidates, the tag pickers, the inline
-     icon grid. `vh` first as the fallback for browsers without `dvh`.
-     A consumer whose content reads badly at full height caps itself tighter
-     through --panel-max-h (discover does). */
+  /* Never taller than the viewport — the body below scrolls instead (#85),
+     for phone landscape and any unbounded content. `vh` is the `dvh` fallback.
+     A consumer that reads badly at full height caps tighter via --panel-max-h. */
   max-height: 90vh;
   max-height: var(--panel-max-h, 90dvh);
 
-  /* Opt-in DEFINITE height, `auto` for everyone else (#561). A cap alone leaves
-     the panel content-sized, and nothing below a content-sized box can measure
-     itself against it. Set this only together with --panel-body-container
-     below, and only when a descendant must size itself to the body; it costs a
-     panel that is always this tall, empty space included. */
+  /* Opt-in DEFINITE height, `auto` otherwise (#561): a cap alone leaves the
+     panel content-sized, which nothing below can measure against. Set only
+     with --panel-body-container below, when a descendant must size to the body. */
   height: var(--panel-h, auto);
   overflow: hidden;
   border: 1px solid var(--border);
@@ -58,11 +52,9 @@ h2 {
   font-size: var(--fs-lg);
 }
 
-// `flex: 1 1 auto` rather than `flex: 1`: a zero basis would stop the body's
-// content from contributing to the panel's height, collapsing every
-// content-sized dialog to its heading and buttons. Growing only bites when the
-// panel has a height of its own -- full screen on a phone -- where it keeps the
-// footer at the bottom edge.
+// `flex: 1 1 auto`, not `flex: 1`: a zero basis stops content from
+// contributing to the panel's height, collapsing a content-sized dialog to
+// its heading and buttons. Growing bites only when the panel has its own height.
 .body {
   flex: 1 1 auto;
   min-height: 0;
@@ -70,17 +62,9 @@ h2 {
   overflow-y: auto;
   overscroll-behavior: contain;
 
-  /* Opt-in SIZE container, so a descendant can cap itself at the scrollport
-     with `cqh` (#561). `%` cannot do this job: it measures the containing
-     block, and a sticky sidebar needs a tall containing block to travel in
-     while still being capped at one screenful -- two requirements one
-     percentage cannot satisfy at once.
-
-     Size containment makes this box ignore its own content when sizing, which
-     is why it is opt-in and why it is useless without --panel-h: together they
-     say "this panel has a height of its own, and the body fills what is left".
-     Turning it on for a content-sized dialog would collapse it to its heading
-     and buttons, exactly as the flex note above warns. */
+  /* Opt-in SIZE container so a descendant can cap itself with `cqh` (#561):
+     `%` can't satisfy both a tall containing block (for a sticky sidebar to
+     travel in) and a one-screenful cap. Useless without --panel-h (#561). */
   container-type: var(--panel-body-container, normal);
 }
 
@@ -103,24 +87,9 @@ h2 {
   display: none;
 }
 
-// Phone: only a surface that opts in (a route-level picker that IS the page,
-// not a modal over it) becomes the screen. Every ordinary dialog stays a card,
-// so a short confirm no longer opens as a mostly-empty full page. The two axes
-// need different units, because they hit different layout mechanics:
-// -- Width stays `100%`. It resolves against the flex container's cross axis,
-//    which both hosts (discover's route, the CDK's `.cdk-overlay-pane`) size
-//    to their own width regardless of content, so `%` works everywhere; `vw`
-//    would still be correct on a phone (no classic scrollbar) but on a narrow
-//    *desktop* window it overshoots discover's host by a classic
-//    space-reserving scrollbar's width, which `%` does not.
-// -- Height needs `vh`/`dvh`. It resolves against the flex main axis, which a
-//    CDK pane leaves content-sized (shrink-to-fit, no definite height), so
-//    `height: 100%` is a no-op there -- worse, `max-height: 100%` would still
-//    override the 90dvh cap above with an unbounded auto height, letting a
-//    tall dialog overflow the screen. Viewport units bypass that ancestor
-//    chain entirely, so they work for both the route host (discover) and the
-//    CDK pane (add-feed-dialog). `vh` first as the fallback for browsers
-//    without `dvh`, same as the cap above.
+// Phone: only an opt-in surface (a route-level picker that IS the page)
+// becomes the screen; ordinary dialogs stay cards. Width uses `%` (both hosts
+// size to it); height needs `vh`/`dvh`, since a CDK pane is content-sized.
 @media (width <= bp.$bp-sm) {
   .panel.fill-mobile {
     width: 100%;

@@ -1,4 +1,3 @@
-// src/app/core/problem.spec.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { REQUEST_TOO_LARGE, parseProblem, parseProblemAsync } from './problem';
 

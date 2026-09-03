@@ -1,4 +1,3 @@
-// src/app/reader/entry-list/entry-list.component.ts
 import {
   Component,
   DestroyRef,
@@ -74,19 +73,17 @@ const MAX_SETTLE_FRAMES = 30;
 const SETTLE_STABLE_FRAMES = 3;
 // Ceiling the rubber-banded pull-to-refresh indicator approaches but never reaches.
 const MAX_PULL = 100;
-// How far (px) the content slides to reveal the spinner while a refresh runs — the
-// held-open offset shared by the mobile pull and the header/sidebar Refresh buttons.
-// Matches --space-7; published as --refresh-reveal so the stylesheet sizes the tray
-// and its park offset from the same number.
+// How far (px) content slides to reveal the spinner during any refresh trigger
+// (pull, header/sidebar buttons). Matches --space-7; published as --refresh-reveal
+// so the stylesheet sizes the tray and its park offset from the same number.
 export const REFRESH_REVEAL = 48;
 // How long a reload may run before it earns a spinner. A switch that lands
 // sooner would only flash one, which reads as a glitch rather than as progress.
 const RELOAD_SPINNER_DELAY_MS = 150;
 
-/** The heading icon for each fixed view, held to the very glyph its sidebar row
- *  shows so the list a reader lands in reads as the row they clicked (#411). A
- *  tag and a subscription are absent on purpose: their heading already carries a
- *  tag glyph and a favicon, so a fixed icon would double up. */
+/** The heading icon for each fixed view, matching its sidebar row's glyph so the
+ *  list a reader lands in reads as the row they clicked (#411). Tag and
+ *  subscription are absent — their heading already carries a glyph/favicon. */
 const FIXED_VIEW_ICON: Partial<Record<Selection['kind'], string>> = {
   all: 'inbox',
   favorites: 'star',
@@ -108,11 +105,9 @@ interface RunHeaderBlock {
 /** What the magazine branch actually renders: planner blocks plus run dividers. */
 type ListBlock = MagazineBlock | RunHeaderBlock;
 
-/** How much the list on screen holds, and what that number counts. The two
- *  travel together because every surface that shows the count needs both: the
- *  pill renders the value, the heading's accessible name says what it counts.
- *  The shell resolves them once for the tab title and for this heading — two
- *  resolutions of "how much is in this list" would drift apart (#709). */
+/** How much the list holds, and what that number counts — travel together since
+ *  the pill needs the value and the heading's accessible name needs what it
+ *  counts. The shell resolves both once, for tab title and heading (#709). */
 export interface TitleCount {
   readonly value: number;
   readonly counts: 'unread' | 'items';
@@ -148,25 +143,18 @@ export interface TitleCount {
 })
 export class EntryListComponent implements OnDestroy {
   readonly title = input.required<string>();
-  /** The search title's small, muted "Results for" lead, its quoted term, and
-   *  a result-count pill, kept as three separate pieces (#581 follow-up round
-   *  2) so the count can render as a small pill rather than "— {{count}}"
-   *  text. Only meaningful for a search selection; the shell assembles all
-   *  three from the same i18n keys and count logic that `title()` folds into
-   *  one string for the tab/aria name, so the split can never drift from
-   *  `title()`'s own full text. Empty/null for every other selection, which
-   *  renders `title()` unsplit instead (see the template). */
+  /** The search title's lead, quoted term, and count pill, kept as three pieces
+   *  (#581 round 2) so the count renders as a pill instead of inline text. Only
+   *  meaningful for a search; empty/null otherwise, where `title()` is unsplit. */
   readonly searchTitlePrefix = input<string>('');
   readonly searchTitleTerm = input<string>('');
   /** The pill's text (e.g. `"86"` or `"86+"`), or null to render no pill —
    *  null while the search is still in flight, so the count never flashes a
    *  stale or false number (see `ReaderShellComponent.searchCountLabel`). */
   readonly searchCountLabel = input<string | null>(null);
-  /** How much this list holds, shown as a quiet pill beside the name. A value
-   *  of 0 renders nothing — an empty list reads as its name alone, the way the
-   *  sidebar drops its badge rather than showing a zero. A search ignores this
-   *  and keeps `searchCountLabel` above: that count follows the loaded page and
-   *  carries its own "+" rule. */
+  /** How much this list holds, as a quiet pill beside the name; 0 renders
+   *  nothing, matching the sidebar's dropped badge. A search ignores this and
+   *  uses `searchCountLabel` instead, which carries its own "+" rule. */
   readonly titleCount = input<TitleCount>({ value: 0, counts: 'items' });
   /** How many saved searches the account keeps. The combined view's empty state
    *  distinguishes "you have none" from "yours match nothing", and only the
@@ -176,22 +164,19 @@ export class EntryListComponent implements OnDestroy {
    *  glyph and the colour the sidebar row already shows, so the same tag reads
    *  the same in both places; null for every other selection. */
   readonly titleTag = input<TagDto | null>(null);
-  /** The favicon of the feed the heading names, when the list is scoped to one
-   *  subscription. It mirrors the icon the sidebar row shows, so the heading and
-   *  the row that led here read as the same feed; null for every other
-   *  selection, where the favicon is not rendered at all. */
+  /** The favicon of the feed the heading names, when scoped to one subscription
+   *  — mirrors the sidebar row's icon so heading and row read as the same feed.
+   *  Null, and unrendered, for every other selection. */
   readonly titleFaviconUrl = input<string | null>(null);
   readonly entries = input.required<EntryDto[]>();
-  /** Ids of rows collapsed out of the list (un-favourited, un-kept, or marked
-   *  unread in their saved view). A leaving row fades then collapses in place;
-   *  it stays in `entries` so the magazine plan keeps its shape, and a reload
-   *  clears it. Empty in every other case. */
+  /** Ids of rows collapsed out of the list (un-favourited/un-kept/marked-unread
+   *  in their saved view). A leaving row fades then collapses in place, staying
+   *  in `entries` so the magazine plan keeps its shape; a reload clears it. */
   readonly leavingIds = input<ReadonlySet<number>>(new Set());
 
-  /** Rows the user can still see — the loaded set minus the ones collapsed out.
-   *  The empty state keys on this, not `entries().length`: collapsing the last
-   *  row must show "nothing here", even though the collapsed row lingers in the
-   *  data until the next reload. */
+  /** Rows the user can still see — loaded set minus the collapsed ones. The
+   *  empty state keys on this, not `entries().length`, so collapsing the last
+   *  row shows "nothing here" immediately, though it lingers until reload. */
   readonly visibleEntryCount = computed(
     () => this.entries().filter((e) => !this.leavingIds().has(e.id)).length,
   );
@@ -215,26 +200,20 @@ export class EntryListComponent implements OnDestroy {
    *  Null off the for-you view, where entries carry no run id anyway (#348). */
   readonly newestRunId = input<number | null>(null);
   /** Rendered at the top of whichever content branch is live (empty state,
-   *  magazine rows, list rows) so it scrolls away with the list rather than
-   *  occupying a permanently reserved bar above it (#321). Owned by the shell,
-   *  which is the only place that knows what belongs there. */
+   *  magazine or list rows) so it scrolls away with the list instead of
+   *  occupying a fixed bar above it (#321). Owned by the shell. */
   readonly topBlock = input<TemplateRef<unknown> | null>(null);
-  /** Rendered right-aligned in the list header, after the built-in tools. The
-   *  shell passes its per-selection actions here — the For You run/stop button,
-   *  the Save/Remove control for a saved search — without this generic list
-   *  knowing what any of them is or which selection it belongs to; the same
-   *  outlet arrangement as `topBlock`. Every such command goes through here:
-   *  a second route would let the two drift, and would teach this list about
-   *  a domain object (#581) it has no other reason to know. */
+  /** Rendered right-aligned in the list header, after the built-in tools — the
+   *  shell's per-selection actions (For You run/stop, saved-search Save/Remove),
+   *  keeping this generic list unaware of them (#581); same pattern as `topBlock`. */
   readonly headerActions = input<TemplateRef<unknown> | null>(null);
   /** Rendered at the head of the list header's tools, before the built-in
    *  ones. Same arrangement as `headerActions`, at the other end of the row:
    *  what belongs there is the shell's business, where it sits is this list's. */
   readonly leadingActions = input<TemplateRef<unknown> | null>(null);
-  /** The words the search engine actually matched on the current page, from
-   *  `EntriesStore.matchedWords`. Empty outside a search, and also empty
-   *  whenever the database LIKE fallback answered instead of the engine —
-   *  that is the normal, permanent state on any install with no engine. */
+  /** The words the search engine actually matched, from
+   *  `EntriesStore.matchedWords`. Empty outside a search, and also empty when
+   *  the LIKE fallback (no engine installed) answered instead. */
   readonly matchedWords = input<string[]>([]);
 
   readonly loadMore = output<void>();
@@ -260,14 +239,10 @@ export class EntryListComponent implements OnDestroy {
     this.selection().kind === 'search' ? 0 : this.titleCount().value,
   );
 
-  /** The current search's words, passed down to every row for marking. Prefers
-   *  what the engine actually matched: it tolerates typos, so the literal term
-   *  the user typed may appear nowhere in a row that legitimately matched
-   *  (searching "recieve" correctly finds "receive"). Falls back to the words
-   *  split from the typed term when the page carries none — the database LIKE
-   *  fallback's normal, permanent answer on any install with no search engine
-   *  — which reproduces exactly today's literal-term marking. Empty outside a
-   *  search either way. */
+  /** The current search's words, passed to every row for marking. Prefers what
+   *  the engine actually matched, since it tolerates typos ("recieve" finds
+   *  "receive"); falls back to the typed term's words when the page carries
+   *  none (the no-engine LIKE fallback). Empty outside a search either way. */
   readonly searchTerms = computed(() => {
     const matched = this.matchedWords();
     return matched.length > 0 ? matched : searchWords(this.selection().term ?? '');
@@ -278,11 +253,9 @@ export class EntryListComponent implements OnDestroy {
    *  must not appear in text a human reads (#408 follow-up). */
   readonly displayedSearchTerm = computed(() => visibleSearchTerm(this.selection().term ?? ''));
 
-  /** Whether the current selection is a search whose trailing space put it in
-   *  whole-word mode. The badge that surfaces this is the only display of the
-   *  mode — without it, `punk` and `punk ` render the identical title while
-   *  returning very different result sets, with nothing on screen to explain
-   *  why (#408 follow-up). */
+  /** Whether the selection is a search whose trailing space puts it in
+   *  whole-word mode. The badge is the only display of this — `punk` and
+   *  `punk ` otherwise render identical titles for very different results (#408). */
   readonly showWholeWordBadge = computed(() => {
     const s = this.selection();
     const term = s.term ?? '';
@@ -291,10 +264,9 @@ export class EntryListComponent implements OnDestroy {
     return s.kind === 'search' && isWholeWordTerm(term) && !isPhraseTerm(term);
   });
 
-  /** Whether the current selection is a phrase search (a query wrapped in
-   *  double quotes). The pill that surfaces it is the only sign the words were
-   *  matched as one exact run rather than each anywhere — mirroring the
-   *  whole-word badge (#702). */
+  /** Whether the selection is a phrase search (quoted query). The pill is the
+   *  only sign the words matched as one exact run rather than each anywhere —
+   *  mirrors the whole-word badge (#702). */
   readonly showPhraseBadge = computed(() => {
     const s = this.selection();
     return s.kind === 'search' && isPhraseTerm(s.term ?? '');
@@ -322,26 +294,22 @@ export class EntryListComponent implements OnDestroy {
     return relativeTime(iso, this.language.lang());
   });
 
-  // Pull-to-refresh (mobile): pulling down past the top of the list scroller
-  // rubber-bands an indicator; releasing past the threshold fires a scoped
-  // refresh. Disabled on wide screens, in the saved views, and — like the
-  // article's motion affordances — under prefers-reduced-motion.
+  // Pull-to-refresh (mobile): pulling past the top rubber-bands an indicator;
+  // releasing past the threshold fires a scoped refresh. Disabled on wide
+  // screens, saved views, and under prefers-reduced-motion.
   private readonly reduceMotion =
     typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // `pulled` is the finger's raw travel; `pullArmed` and the trigger check below
-  // arm off THIS, never off the rubber-banded revealOffset. Arming off the
-  // damped value made the threshold a function of the indicator's ceiling — and
-  // against a ceiling of 100 it took ~400px of pull to arm, so the gesture never
-  // fired (#105).
+  // `pulled` is the finger's raw travel; `pullArmed` arms off THIS, never off the
+  // rubber-banded revealOffset — arming off the damped value made the threshold
+  // depend on the indicator's ceiling, so pull never reached it (#105).
   private readonly pulled = signal(0);
   /** True only during an active downward drag. Drives the no-transition class so
    *  the content tracks the finger, and gates the pull branch of revealOffset. */
   readonly dragging = signal(false);
   readonly pullArmed = computed(() => pullTriggersRefresh(this.pulled()));
-  /** How far the content and the reveal tray are pushed down, in px. One source
-   *  for three states: the finger during a drag, a fixed reveal while a refresh
-   *  runs (from ANY trigger — pull, header button, or sidebar button, all of
-   *  which set `refreshing()`), and 0 at rest. Suppressed under reduced motion. */
+  /** How far content and the reveal tray push down, in px — one source for
+   *  three states: drag offset, a fixed reveal while any trigger sets
+   *  `refreshing()`, and 0 at rest. Suppressed under reduced motion. */
   readonly revealOffset = computed(() => {
     if (this.reduceMotion) return 0;
     if (this.dragging()) return rubberBand(this.pulled(), MAX_PULL);
@@ -351,10 +319,9 @@ export class EntryListComponent implements OnDestroy {
    *  three bindings can't drift apart. */
   readonly revealTransform = computed(() => `translateY(${this.revealOffset()}px)`);
 
-  /** The reveal only makes sense over the real list scroller. The skeleton and
-   *  empty states have no content to slide, so a refresh started from those (e.g.
-   *  tapping Refresh while the first load still spins, or refreshing an empty
-   *  feed) must not paint the tray over them. */
+  /** The reveal only makes sense over the real list scroller — the skeleton and
+   *  empty states have no content to slide, so a refresh started from those must
+   *  not paint the tray over them. */
   readonly revealVisible = computed(
     () => this.revealOffset() > 0 && !this.loading() && this.entries().length > 0,
   );
@@ -366,10 +333,8 @@ export class EntryListComponent implements OnDestroy {
   readonly runGroups = computed<RunGroup[]>(() => groupByRun(this.entries()));
 
   /** Whether a run group opens with a divider. Suppressed only for the run the
-   *  header already names ("Last refreshed") — the newest completed run, matched
-   *  by id. Every other run gets its divider, including at the very top when the
-   *  newest run left nothing visible. Groups without a run id (every non-for-you
-   *  view) never show one. */
+   *  header already names ("Last refreshed"), matched by id; every other run
+   *  gets one, even at the top. No run id (non-for-you view) means never. */
   showRunHeader(group: RunGroup): boolean {
     return group.runId != null && group.runId !== this.newestRunId();
   }
@@ -438,20 +403,17 @@ export class EntryListComponent implements OnDestroy {
       window.removeEventListener('resize', onResize);
     });
   }
-  // On a narrow layout the list header collapses to a slim tag-name-only bar as
-  // you scroll down the list, expanding again on scroll up. Always expanded on
-  // wide screens. The shell's app bar mirrors this signal for its own
-  // hide-on-scroll — it is the same state, so it is kept once, here, and reset
-  // with the list on every selection change (see `_resetCollapse`), which is why
-  // switching lists returns the app bar to the top of the new list (#630).
+  // On narrow layouts the list header collapses to a slim bar on scroll-down,
+  // expanding on scroll-up (always expanded on wide screens). The shell's app
+  // bar mirrors this same signal; reset by `_resetCollapse` on selection change,
+  // which is why switching lists returns the app bar to the top (#630).
   readonly collapsed = signal(false);
   private lastScrollTop = 0;
   private focusRaf = 0;
 
-  /** Bumped by every imperative event that can move the rows under the reading
-   *  centre without a signal changing — a scroll, a window resize, a row
-   *  collapsing out of a saved view. The reading-focus subscriber reads it
-   *  alongside the reactive sources, so all of them share one recompute. */
+  /** Bumped by every imperative event that can move rows under the reading
+   *  centre without a signal changing (scroll, resize, row collapse). The
+   *  reading-focus subscriber reads it alongside the reactive sources. */
   private readonly focusPulse = signal(0);
   private pulseFocus(): void {
     this.focusPulse.update((n) => n + 1);
@@ -460,19 +422,16 @@ export class EntryListComponent implements OnDestroy {
   readonly showToTop = signal(false);
 
   /**
-   * Whether this list carries the wait cue for its own reload — the dim over
-   * the retained rows and, past the delay, the veil. A search is the one view
-   * that does not: it reloads on every settled keystroke, and the search field
-   * spins its own icon for that same request, so dimming and freezing the
-   * results made typing read as a flicker rather than as progress.
+   * Whether this list carries the wait cue for its own reload (dim, then veil).
+   * A search excludes this: it reloads on every keystroke, and the search field
+   * already spins its own icon — dimming there read as a flicker, not progress.
    */
   readonly reloadCue = computed(() => this.loading() && this.selection().kind !== 'search');
 
   /**
-   * Whether the reload overlay is up. A reload keeps the outgoing rows on
-   * screen (#254), and the dim over them is a quiet cue for a wait that can run
-   * into seconds — so past the delay, say plainly that new content is coming.
-   * Only for a reload: the first load has skeletons and paging has its footer.
+   * Whether the reload overlay is up. A reload keeps outgoing rows on screen
+   * (#254); past a delay, this says plainly that new content is coming. Only
+   * for a reload — the first load has skeletons, paging has its own footer.
    */
   readonly reloadSpinner = signal(false);
   private readonly _armReloadSpinner = effect((onCleanup) => {
@@ -485,11 +444,9 @@ export class EntryListComponent implements OnDestroy {
   });
 
   /**
-   * The header's EXPANDED height, which is the space the scroller reserves for
-   * it. Only measured while expanded: feeding the collapsed height back would
-   * shrink the reservation and reintroduce exactly the jump this replaces
-   * (#87). Rows scroll *under* the bar, so a collapsed bar reveals content
-   * rather than leaving a gap.
+   * The header's EXPANDED height — the space the scroller reserves for it.
+   * Only measured while expanded: feeding back the collapsed height would
+   * shrink the reservation and reintroduce the jump this replaces (#87).
    */
   readonly headerHeight = signal(0);
   private readonly listHdr = viewChild<ElementRef<HTMLElement>>('listHdr');
@@ -499,20 +456,17 @@ export class EntryListComponent implements OnDestroy {
 
   /**
    * Published as `--list-bar-h` for the stylesheet to add to the app bar's own
-   * reservation. A custom property rather than an inline padding binding
-   * because four elements need the same sum, and the shell's half of it
-   * (`--app-bar-h`) already arrives this way.
+   * reservation — a custom property since four elements need the same sum, and
+   * the shell's half (`--app-bar-h`) already arrives this way.
    */
   private readonly _publishBarHeight = effect(() => {
     const h = this.headerHeight();
     if (h > 0) this.host.nativeElement.style.setProperty('--list-bar-h', `${h}px`);
   });
 
-  // A new selection reloads the list from the top, a resize past the wide
-  // breakpoint restores the full-size header, and a layout toggle (list <->
-  // magazine) swaps in a fresh #rows element that starts at 0 — all three make
-  // the collapsed/showToTop state (and its lastScrollTop baseline) stale, so
-  // reset them together.
+  // A new selection, a resize past the wide breakpoint, or a list<->magazine
+  // layout toggle each make the collapsed/showToTop state (and lastScrollTop)
+  // stale, so reset them together.
   private readonly _resetCollapse = effect(() => {
     this.selection();
     this.screen.isWide();
@@ -573,11 +527,9 @@ export class EntryListComponent implements OnDestroy {
     if (this.rowsBelongToSelection()) this.scroll.save(this.selection(), top);
   }
 
-  /** Whether the rows on screen are the ones the current selection asked for.
-   *  They are not between a view switch and the arrival of that view's page —
-   *  the outgoing list stays rendered meanwhile (#254) — and its scroll events
-   *  must not be written to the incoming view's key (#267). Null means the list
-   *  has never reloaded since mount, where the rows are the current view's. */
+  /** Whether the rows on screen match the current selection — false between a
+   *  view switch and the new page's arrival, since the outgoing list stays
+   *  rendered (#254) and must not write scroll to the incoming key (#267). */
   private rowsBelongToSelection(): boolean {
     const rendered = this.renderedSelection;
     return rendered === null || sameSelection(rendered, this.selection());
@@ -594,12 +546,9 @@ export class EntryListComponent implements OnDestroy {
     });
   }
 
-  /** A CSS animation inside the scroller finished. The only one that moves rows
-   *  is a saved-view row collapsing (#478): it slides the rows below it up but
-   *  fires no scroll, so without this the mobile dimming would hold its
-   *  pre-collapse values until the next scroll. Other animations are ignored.
-   *  `includes`, not `startsWith`: view encapsulation rewrites the keyframe name
-   *  to `_ngcontent-xxx_row-leave…`, so the marker sits in the middle. */
+  /** A CSS animation finished inside the scroller. Only a saved-view row
+   *  collapsing (#478) matters — it moves rows without firing a scroll, so this
+   *  re-triggers dimming. `includes`: encapsulation puts the marker mid-string. */
   onContentSettled(event: AnimationEvent): void {
     if (event.animationName.includes('row-leave')) this.pulseFocus();
   }
@@ -644,30 +593,20 @@ export class EntryListComponent implements OnDestroy {
     // user's jump has to win.
     this.cancelSettle();
     el.scrollTo({ top: 0, behavior: this.reduceMotion ? 'auto' : 'smooth' });
-    // Land focus on the title, not just wherever the button happened to be: the
-    // button unmounts as soon as showToTop flips false, and an unmounted focused
-    // element drops focus to <body>, stranding a keyboard/screen-reader user.
-    // preventScroll is required for a different reason here than in the article
-    // view: `.list-header` is a `position: absolute` sibling of `.rows`, not a
-    // descendant of the scroller, so a default focus() couldn't touch the smooth
-    // scroll above anyway — it would instead ask some *outer* ancestor to scroll
-    // the (already fully visible) heading into view, which is equally unwanted.
+    // Land focus on the title, not wherever the button was — an unmounted button
+    // drops focus to <body>. preventScroll avoids an outer-ancestor scroll, since
+    // `.list-header` sits outside `.rows` and default focus() would trigger one.
     this.listTitle()?.nativeElement.focus({ preventScroll: true });
-    // Say the bar is expanded now rather than waiting for a scroll event: this
-    // way the tap expands it immediately instead of ~300ms later once the
-    // animation lands, and a scroll gesture that interrupts the animation
-    // partway (wheel/touch — see cancelSettle above) may never reach 0 at all.
+    // Say the bar is expanded now rather than waiting for a scroll event: the
+    // tap expands it immediately instead of ~300ms later, and an interrupted
+    // scroll gesture (wheel/touch — see cancelSettle) may never reach 0 at all.
     this.collapsed.set(false);
-    // `lastScrollTop` deliberately keeps its pre-jump value. Zeroing it would
-    // make the smooth scroll's own first event (still far down the list) read
-    // as a large scroll *down* and immediately re-collapse the bar.
-    // `showToTop` is likewise left to the scroll events: clearing it here would
-    // only make the button blink out and back in as the animation passes the
-    // threshold, which is how the article view behaves too.
+    // `lastScrollTop` deliberately keeps its pre-jump value — zeroing it would
+    // read the smooth scroll's first event as a large scroll down and re-collapse
+    // the bar. `showToTop` is likewise left to the scroll events (matches article).
     // Best-effort restore point in case a reload lands before the animation
-    // finishes: `onRowsScroll` overwrites this on every frame of the smooth
-    // scroll, so it's a floor for the reduced-motion/interrupted cases, not a
-    // guarantee that 0 is what actually gets remembered.
+    // finishes: `onRowsScroll` overwrites this every frame, so it's a floor for
+    // the reduced-motion/interrupted cases, not a guarantee 0 gets remembered.
     this.scroll.save(this.selection(), 0);
   }
 
@@ -712,11 +651,9 @@ export class EntryListComponent implements OnDestroy {
   private readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
   private observer?: IntersectionObserver;
 
-  // (Re)attach the pull-to-refresh touch listeners whenever the scroll container
-  // appears or is swapped (list <-> magazine, load <-> empty). touchmove is
-  // non-passive so a committed pull can preventDefault the native overscroll.
-  // Measure the bar so the scroller can reserve its height. Guarded by
-  // `collapsed()` so only the expanded size is ever recorded.
+  // (Re)attach pull-to-refresh listeners when the scroll container appears or
+  // swaps; touchmove is non-passive so a pull can preventDefault the overscroll.
+  // Also measures the bar (guarded by `collapsed()`) so the scroller reserves it.
   private readonly _measureHeader = effect(() => {
     const el = this.listHdr()?.nativeElement;
     this.headerObs?.disconnect();
@@ -806,12 +743,9 @@ export class EntryListComponent implements OnDestroy {
     }
   });
 
-  // Restore the remembered scroll offset when a fresh load finishes. Gated on the
+  // Restore the remembered scroll offset when a fresh load finishes, gated on the
   // loading edge (true -> false) so it fires once per genuine reload/selection —
-  // never on "load more" (which toggles loadingMore, not loading) and never on
-  // opening/closing an article (the list stays mounted beneath the overlay, so no
-  // remount and no reload). That gating is what keeps the return-from-article
-  // position exactly native, avoiding the earlier restore-glitch.
+  // never "load more" or an article open/close (list stays mounted, no remount).
   private wasLoading = false;
   private readonly _restoreScroll = effect(() => {
     const loading = this.loading();
@@ -832,10 +766,9 @@ export class EntryListComponent implements OnDestroy {
   /** The selection whose entries are on screen — see rowsBelongToSelection(). */
   private renderedSelection: Selection | null = null;
 
-  // A view switch leaves the previous view's list (and its scroll offset) on
-  // screen until the new page lands. Hand the scroller the incoming view's own
-  // place right away, so the wait shows that view's window rather than the one
-  // the user left. The load-complete restore above then repeats it exactly.
+  // A view switch leaves the previous view's list on screen until the new page
+  // lands. Hand the scroller the incoming view's place right away, so the wait
+  // shows that view's window, not the one left. The restore above repeats it.
   private readonly _scrollOnSelectionChange = effect(() => {
     const selection = this.selection();
     untracked(() => {
@@ -846,10 +779,9 @@ export class EntryListComponent implements OnDestroy {
 
   private applyScroll(el: HTMLElement, top: number): void {
     this.cancelSettle();
-    // Assign even for 0. The scroller outlives a view switch (the outgoing list
-    // stays rendered, #254), so "this view has no remembered offset" has to put
-    // it back at the top rather than leave the previous view's offset in place
-    // (#267).
+    // Assign even for 0 — the scroller outlives a view switch (outgoing list
+    // stays rendered, #254), so "no remembered offset" must put it back at the
+    // top rather than leave the previous view's offset in place (#267).
     el.scrollTop = top; // immediate rough landing so the list never flashes at the top
     // Seed the hide-on-scroll baseline so the very next scroll compares against
     // the restored position, not 0.
@@ -859,12 +791,9 @@ export class EntryListComponent implements OnDestroy {
     if (top > 0) this.settleTo(el, top);
   }
 
-  // A resume-reload re-renders the whole list from scratch, and block heights firm
-  // up over the next few frames (fonts, images, magazine planning). A single early
-  // scrollTop set gets nudged off by the browser's scroll-anchoring as that happens,
-  // so re-assert the target each frame until the content height stops changing —
-  // then the final landing is exact. Aborts the moment the user scrolls (see the
-  // wheel/touch listeners) so it never fights a real gesture.
+  // A resume-reload re-renders the list from scratch; block heights firm up over
+  // the next frames, nudging off a single early scrollTop via scroll-anchoring.
+  // Re-assert each frame until heights stabilize; aborts on a real user scroll.
   private settleRaf = 0;
   private settleAbort = false;
   private settleTo(el: HTMLElement, target: number): void {

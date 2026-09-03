@@ -1,4 +1,3 @@
-// src/app/reader/for-you-runs.ts
 import { EntryDto } from './models';
 
 /** One contiguous block of for-you entries that share a recommendation run. */

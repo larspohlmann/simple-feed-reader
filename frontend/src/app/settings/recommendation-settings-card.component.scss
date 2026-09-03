@@ -1,11 +1,8 @@
 @use '../theme/breakpoints' as bp;
 
-// Layout glue only. The Grouped chrome (card surface, rows, dividers, drill-in
-// row, save bar) comes from the shared primitives; what stays here is the
-// two-column caps grid, the padding for the drill-in body and inset, and the
-// read-only code blocks the primitives do not model. The gap between this
-// component's own two groups comes from the `<app-settings-stack>` its
-// template roots in now, not from a margin here.
+// Layout glue only: Grouped chrome comes from the shared primitives. What
+// stays here is the two-column caps grid, drill-in body padding, and the
+// read-only code blocks the primitives don't model.
 
 // The drill-in's projected summary: heading over description on the left, the
 // disclosure's own chevron trails via `order` (see disclosure.scss).
@@ -28,9 +25,8 @@
 }
 
 // The disclosure only styles its summary; its projected body needs its own
-// inset so the expert fields align to the card content box.
-// The expanded Expert section is boxed so its start and end are unmistakable
-// against the rows above it and the save bar below.
+// inset to align with the card content box. Boxed so the Expert section's
+// start/end are unmistakable against the rows above and save bar below.
 .expert-body {
   display: flex;
   flex-direction: column;

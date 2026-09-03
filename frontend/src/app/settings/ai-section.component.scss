@@ -1,15 +1,10 @@
-/* Layout glue only. The Grouped chrome -- the header chip, the card surface and
-   the drill-in rows -- now lives in `app-settings-group` and `app-disclosure`
-   (appearance="drill-in"). What stays here is the ruled list of connection rows
-   and the internals of one connection row, which are not a primitive's job. */
+/* Layout glue only. Grouped chrome now lives in `app-settings-group` and
+   `app-disclosure` (drill-in). What stays here is the ruled connection-row
+   list and the internals of one row, not a primitive's job. */
 
-/* This component's host is a flex item of `settings-shell`'s `.content`
-   (a `flex-direction: column` container) -- and a flex item's `min-width`
-   defaults to `auto`, which refuses to shrink the item below its content's
-   own intrinsic width. Without this rule a wide descendant (the #409
-   run-history row grid, in particular) can widen this whole host past the
-   viewport instead of clipping and scrolling the way its own `overflow-x:
-   auto` intends (#409). */
+/* This host is a flex item of `settings-shell`'s column, whose `min-width:
+   auto` default refuses to shrink below content width. Without this, a wide
+   descendant (the run-history row grid) widens the host past viewport (#409). */
 :host {
   display: block;
   min-width: 0;
@@ -24,7 +19,6 @@ app-searchable-select {
   display: block;
 }
 
-/* ===== Folded provider summary ===== */
 .conn {
   display: flex;
   align-items: center;
@@ -58,7 +52,6 @@ app-searchable-select {
   flex: none;
 }
 
-/* ===== Connection manager: a ruled list of drill-in rows ===== */
 .configs {
   list-style: none;
   margin: 0;
@@ -89,7 +82,6 @@ app-disclosure {
   padding: var(--space-3) var(--space-5);
 }
 
-/* ===== One connection row's body ===== */
 .summary-line {
   display: flex;
   flex-wrap: wrap;
@@ -164,11 +156,9 @@ app-disclosure {
   gap: var(--space-2);
 }
 
-/* A three-digit ceiling never needs the full row width the other controls
-   claim; a fixed character count keeps it from stretching across the row like a
-   text field would. The count has to pay for the control's own chrome: the box
-   is border-box, so `--space-3` of padding on each side and the number input's
-   stepper come out of it. 6ch buys the three digits plus the stepper. */
+/* A three-digit ceiling doesn't need the full row width. Fixed width, since
+   the box is border-box: `--space-3` padding each side plus the stepper come
+   out of it. 6ch buys the three digits plus the stepper. */
 .batch-cap-input {
   width: calc(6ch + 2 * var(--space-3));
 }
@@ -186,7 +176,6 @@ app-disclosure {
   width: 100%;
 }
 
-/* ===== Add-connection form ===== */
 .add-group {
   display: flex;
   flex-direction: column;
@@ -195,7 +184,6 @@ app-disclosure {
   padding: 0 var(--space-5) var(--space-5);
 }
 
-/* ===== Setup guide ===== */
 .guide {
   padding: 0 var(--space-5) var(--space-5);
   font-size: var(--fs-sm);

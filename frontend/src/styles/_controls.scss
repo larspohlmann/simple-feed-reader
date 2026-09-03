@@ -1,11 +1,6 @@
-// src/styles/_controls.scss
-// Styles for the native controls projected into <app-field>. Global rather
-// than component-scoped because Angular's ViewEncapsulation does not style
-// projected content, and because a bare <input> outside a field should still
-// look like the rest of the app.
-// Checkbox, radio and colour inputs are excluded throughout: the user agent
-// paints those, so a border, a fixed height or a cleared outline only distorts
-// them.
+// Styles for the native controls projected into <app-field>. Global because
+// ViewEncapsulation doesn't style projected content. Checkbox/radio/colour
+// inputs are excluded: the user agent paints those, and a border distorts them.
 input:not([type='checkbox'], [type='radio'], [type='color']),
 select,
 textarea {
@@ -27,32 +22,26 @@ textarea {
   line-height: var(--lh-normal);
 }
 
-// Width is layout, not chrome, so it belongs to the field rather than to the
-// control: inside <app-field> the control fills the row, but a bare control in
-// a dense row (admin-catalog's category and feed grid) has to stay sized by
-// its container's flex rules. Setting it globally stretched those selects to
-// the full row width and pushed them onto a line of their own.
+// Width is layout, not chrome, so it belongs to the field: inside <app-field>
+// the control fills the row, but a bare control in a dense row (admin-catalog's
+// grid) stays sized by its container. Global width pushed selects onto their own line.
 app-field input,
 app-field select,
 app-field textarea {
   width: 100%;
 }
 
-// A password input wrapped in <app-password-input> keeps a reveal button inside
-// its right edge. The input is projected, so — like everything else in this
-// file — its chrome cannot come from the component's own styles: it must fill
-// the wrapper and reserve a control-height gap on the end so the secret never
-// runs under the button.
+// A password input keeps a reveal button inside its right edge. Projected,
+// so its chrome can't come from the component's own styles: it fills the
+// wrapper and reserves a control-height gap so the secret never runs under it.
 app-password-input input {
   width: 100%;
   padding-inline-end: var(--control-h);
 }
 
-// Only the controls that actually carry a border may trade the focus outline
-// for an accent border. Applying `outline: none` to every input outranks the
-// :focus-visible rule in _base.scss (0,1,1 beats 0,1,0) and would leave
-// checkboxes, radios and colour swatches — which have no border to tint — with
-// no visible keyboard focus at all.
+// Only bordered controls may trade the focus outline for an accent border.
+// `outline: none` on every input would outrank :focus-visible in _base.scss
+// and leave checkboxes/radios/swatches with no visible keyboard focus.
 input:not([type='checkbox'], [type='radio'], [type='color']):focus,
 select:focus,
 textarea:focus {

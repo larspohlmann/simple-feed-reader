@@ -1,4 +1,3 @@
-// src/app/reader/list-scroll-memory.ts
 import { Injectable } from '@angular/core';
 import { Selection } from './query';
 
@@ -17,14 +16,10 @@ export function entryScrollKey(entryId: number): string {
 }
 
 /**
- * Remembers each list's scroll offset in sessionStorage so that when the browser
- * discards and reloads the page — iOS Safari / Brave background a tab and reload it
- * on resume — the list lands where the user left off instead of jumping to the top.
- *
- * sessionStorage (not an in-memory Map) is the point: it survives the full page
- * reload the resume triggers, yet is scoped to the tab session so it clears when
- * the tab closes. All access is defensive — a blocked or full store just loses the
- * memory rather than breaking the list.
+ * Remembers each list's scroll offset in sessionStorage, so a background-discard
+ * reload (iOS Safari / Brave resuming a tab) lands where the user left off instead
+ * of jumping to the top. sessionStorage (not a Map) survives that reload yet clears
+ * with the tab; all access is defensive since a blocked/full store is a convenience loss.
  */
 @Injectable({ providedIn: 'root' })
 export class ListScrollMemory {

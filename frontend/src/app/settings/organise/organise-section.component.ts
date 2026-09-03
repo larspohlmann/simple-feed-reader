@@ -1,4 +1,3 @@
-// src/app/settings/organise/organise-section.component.ts
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Dialog } from '@angular/cdk/dialog';

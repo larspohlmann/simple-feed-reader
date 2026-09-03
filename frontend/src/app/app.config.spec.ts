@@ -1,4 +1,3 @@
-// src/app/app.config.spec.ts
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { appConfig } from './app.config';
@@ -7,16 +6,9 @@ import { HttpLocaleWriter } from './core/http-locale-writer';
 import { LOCALE_WRITER } from './core/locale-writer';
 
 /**
- * `LOCALE_WRITER` defaults to a no-op (see `core/locale-writer.ts`) so most
- * of the app never needs `HttpClient` just to construct `LanguageService`.
- * `app.config.ts` is the one place that is supposed to override that default
- * with the real, `HttpClient`-backed writer for the running app -- if that
- * override is ever lost, the app silently keeps the no-op: languages apply
- * locally but never reach the account, with every other test still green.
- * This asserts the real application config, not a hand-built one, resolves
- * `LOCALE_WRITER` to `HttpLocaleWriter` specifically -- not merely to
- * *something* injectable, which the token's own `providedIn: 'root'` default
- * would already satisfy.
+ * LOCALE_WRITER defaults to a no-op, so app.config.ts must override it with
+ * the real HttpClient-backed writer -- otherwise languages apply locally but
+ * never reach the account, with every other test still green.
  */
 describe('appConfig', () => {
   afterEach(() => {
@@ -34,10 +26,9 @@ describe('appConfig', () => {
   });
 
   it('routes a real navigation error through the reporter, not straight to the boot surface', async () => {
-    // A functional test on purpose: calling reporter.report() directly would
-    // assert nothing about whether withNavigationErrorHandler is wired to it.
-    // resetConfig installs a route whose lazy load rejects, which is what a
-    // failed chunk does, and lets the real router raise the real event.
+    // Functional on purpose: calling reporter.report() directly wouldn't
+    // prove withNavigationErrorHandler is wired to it. resetConfig installs a
+    // route whose lazy load rejects (a real failed chunk) to raise a real event.
     const surface = document.createElement('div');
     surface.id = 'boot-error';
     surface.hidden = true;

@@ -6,28 +6,16 @@ let nextId = 0;
 
 /**
  * The one info affordance (#372): a small ⓘ button that toggles an
- * explanation panel. Click-to-toggle, never hover: hover does not exist on
- * touch.
- *
- * The panel floats as a popover (#541), so opening the tip never shifts the
- * sibling layout. This reverses the earlier in-flow arrangement (#433/#372),
- * where host and wrapper were `display: contents` and the panel claimed a
- * full-width line below the row. That choice avoided viewport-collision
- * handling on phones; #541 does the collision handling instead: the panel is
- * `position: fixed`, and on open its top/left are computed from the trigger's
- * rect and clamped to the viewport, so it never clips off either edge no matter
- * where the trigger sits on the line — the case a pure-CSS left/right anchor
- * could not cover on a narrow screen.
- *
- * Only one tip is open at a time: opening one closes any other. A module-level
- * reference to the currently open instance carries this — it is a plain field,
- * not a listener, so nothing leaks; `close` and `ngOnDestroy` null it.
+ * explanation popover, click-to-toggle only since hover does not exist on
+ * touch. The panel is `position: fixed`, positioned off the trigger's rect
+ * and clamped to the viewport on open (#541), so it never clips on a phone
+ * and never shifts sibling layout. Only one tip is open at a time, tracked
+ * by a module-level reference that `close`/`ngOnDestroy` null out.
  *
  * `text` and `label` take already-translated strings, not i18n keys — this
- * component lives in `shared/` and must not hardcode a feature's translation
- * keys. `label` names the trigger for assistive tech; callers pass the label
- * of the control the tip explains, and `aria-expanded` tells it apart from
- * the control itself.
+ * lives in `shared/` and must not hardcode a feature's translation keys.
+ * `label` names the trigger for assistive tech; `aria-expanded` distinguishes
+ * it from the control the tip explains.
  */
 @Component({
   selector: 'app-info-tip',
@@ -80,10 +68,9 @@ export class InfoTipComponent implements OnDestroy {
   }
 
   /**
-   * Places the panel just below the trigger and clamps it to the viewport: the
-   * width is capped to the screen, and the left edge is pulled back from either
-   * margin so the panel never clips — on a phone the trigger can sit anywhere
-   * on the line, which a fixed left- or right-anchor could not handle.
+   * Places the panel just below the trigger and clamps it to the viewport —
+   * width capped to the screen, left edge pulled back from either margin —
+   * so it never clips regardless of where the trigger sits on the line.
    */
   private positionAgainst(trigger: HTMLElement): void {
     const gutter = 8;

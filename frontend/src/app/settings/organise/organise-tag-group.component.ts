@@ -1,4 +1,3 @@
-// src/app/settings/organise/organise-tag-group.component.ts
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { CdkDrag, CdkDragDrop, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -12,18 +11,15 @@ import { LayoutService } from '../../reader/layout.service';
 import { LanguageService } from '../../core/language.service';
 import { SubscriptionDto, TagDto, isSubscriptionDrag, isTagDrag } from '../../reader/models';
 
-/**
- * One tag panel: a header row, and — when open — its feeds.
+/** One tag panel: a header row, and -- when open -- its feeds.
  *
- * Two sibling drop lists, never nested: CDK does not connect a list inside
- * another list, so a wrapping list here would silently break every drop. The
- * sidebar solves the same problem the same way (see sidebar.component.html).
+ *  Two sibling drop lists, never nested: CDK doesn't connect a list inside
+ *  another (see sidebar.component.html for the same fix).
  *
- * A cross-group drop MOVES the feed: the source tag is removed and this group's
- * tag is added. That differs from the sidebar, where a drop only ever adds —
- * on a page that shows the whole arrangement, dragging from one group to
- * another reads as "put it there".
- */
+ *  A cross-group drop MOVES the feed (removes the source tag, adds this
+ *  group's), unlike the sidebar where a drop only ever adds -- on a page
+ *  showing the whole arrangement, dragging between groups reads as "put it
+ *  there". */
 @Component({
   selector: 'app-organise-tag-group',
   imports: [
@@ -53,15 +49,13 @@ export class OrganiseTagGroupComponent {
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);
 
-  /** Drag is pointer-only. On a phone a drag inside a scrolling page fights the
-   *  scroll — the sidebar needed a long-press guard and a whole Organise mode
-   *  to make it work. The arrows do the same job with none of that.
+  /** Drag is pointer-only: on a phone it fights the page scroll (the sidebar
+   *  needed a long-press guard and a whole Organise mode; the arrows do the
+   *  same job without that).
    *
-   *  Also off under an active filter: `group().subscriptions` is the
-   *  FILTERED list, so both a same-group reorder and a cross-group move
-   *  would index or resolve against a subset of the real order — the drop
-   *  would either corrupt the untagged list's positions (no permutation
-   *  check on that endpoint) or 422 silently on a tag's feed order. */
+   *  Also off under an active filter: `group().subscriptions` is the FILTERED
+   *  list, so a reorder or cross-group move would index against a subset of
+   *  the real order and either corrupt positions or 422 silently. */
   protected readonly dragDisabled = computed(
     () => this.screen.isCoarse() || this.store.filterActive(),
   );
@@ -78,11 +72,9 @@ export class OrganiseTagGroupComponent {
   protected readonly state = computed(() => this.store.groupState(this.group()));
 
   protected readonly label = computed(() => {
-    // Read as a dependency, not used directly: TranslocoService.translate() is
-    // one-shot, so the untagged group's name would keep the language it was
-    // first computed in unless a language signal pulls this computed through
-    // a re-evaluation on a switch (the same trap as reader-shell.component.ts's
-    // `title`, #411 / #659).
+    // Read as a dependency, not used directly: translate() is one-shot, so
+    // this would keep its first language unless a language signal forces a
+    // re-evaluation on switch (same trap as reader-shell's `title`, #411/#659).
     this.language.lang();
     return this.group().tag?.name ?? this.i18n.translate('settings.organise.untagged');
   });
@@ -166,13 +158,11 @@ export class OrganiseTagGroupComponent {
     this.persistOrder(ids);
   }
 
-  /** Persists a reordering of this group's feeds. Guarded here, once, rather
-   *  than at each caller: `group().subscriptions` is always the FILTERED
-   *  list, so an order derived from it under an active filter would be an
-   *  order over a subset — the drop would either corrupt the untagged list's
-   *  positions (no permutation check on that endpoint) or 422 silently on a
-   *  tag's feed order. The template also disables the arrows and the drag
-   *  handle under a filter; this is the defense in depth. */
+  /** Persists a reordering of this group's feeds. Guarded here once, not at
+   *  each caller: `group().subscriptions` is always FILTERED, so an order
+   *  derived from it under a filter would corrupt positions or 422 silently.
+   *  The template also disables the arrows/drag handle under a filter; this
+   *  is the defense in depth. */
   private persistOrder(ids: number[]): void {
     if (this.store.filterActive()) return;
     const tag = this.group().tag;
@@ -183,11 +173,10 @@ export class OrganiseTagGroupComponent {
     this.manage.reorderTagFeeds(tag.id, ids);
   }
 
-  /** The feed's tags after a move into this group: the source tag goes, this
-   *  group's tag arrives. A drop on the untagged group removes only the
-   *  SOURCE tag, keeping every other tag the feed carries — the single-tag
-   *  removal this page has that the sidebar has never had (see the design
-   *  spec's "Dropping on 'Untagged' removes the tag it came from"). */
+  /** The feed's tags after a move into this group: source tag goes, this
+   *  group's tag arrives. A drop on untagged removes only the SOURCE tag,
+   *  keeping every other tag -- the single-tag removal the sidebar never had
+   *  (design spec: "Dropping on 'Untagged' removes the tag it came from"). */
   private tagIdsAfterMove(subscription: SubscriptionDto, source: OrganiseGroup): number[] {
     const target = this.group().tag;
     const kept = subscription.tags

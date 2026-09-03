@@ -9,12 +9,9 @@ export const SWIPE_AXIS_RATIO = 1.5;
 /** Minimum rubber-banded pull (px) past the article's end to return to the list. */
 export const OVERSCROLL_BACK_MIN = 50;
 /**
- * Minimum finger travel (px) past the list's top to trigger a refresh.
- *
- * Deliberately measured in real travel, not in the rubber-banded offset the
- * indicator is drawn at: expressed in that damped space this threshold silently
- * depended on the indicator's ceiling, and against a ceiling of 100 it needed
- * ~400px of pull to reach 80 — a gesture nobody makes (#105).
+ * Minimum finger travel (px) past the list's top to trigger a refresh. Measured
+ * in real travel, not the rubber-banded indicator offset: in that damped space,
+ * against a ceiling of 100, this needed ~400px of pull to reach 80 (#105).
  */
 export const PULL_REFRESH_MIN = 120;
 /** Movement (px) before a gesture commits to the horizontal or vertical axis. */

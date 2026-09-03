@@ -103,10 +103,9 @@ describe('ConfirmDialogComponent', () => {
     expect(confirmButton.disabled).toBe(false);
   });
 
-  // The confirm button starts disabled whenever requireText is set, and a
-  // disabled element cannot receive focus -- observed in the running app as
-  // focus falling through to the dialog container. Moving the focus target to
-  // the text input is what keeps the dialog usable from the keyboard.
+  // A disabled confirm button cannot receive focus -- observed in the running
+  // app as focus falling through to the dialog container. Moving the focus
+  // target to the text input keeps the dialog usable from the keyboard.
   it('moves the initial focus target to the text input when text is required', () => {
     const el: HTMLElement = render({
       title: 'Delete account',

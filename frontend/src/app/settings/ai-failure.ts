@@ -1,25 +1,17 @@
-// src/app/settings/ai-failure.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { parseProblem } from '../core/problem';
 
-/**
- * What went wrong, in the terms the section has to answer in.
+/** What went wrong, in terms the section can act on.
  *
- * `provider` is the ordinary refusal — the endpoint did not answer, or it
- * rejected the key — and carries the server's own sentence, which already says
- * which of the two happened. `validation` is the same shape one layer earlier:
- * the body never reached the provider, and the server named the fields.
+ *  `provider` and `validation` carry the server's own sentence -- an ordinary
+ *  refusal, or a validation body that never reached the provider. The other
+ *  kinds get their own message because the next move differs (wait, configure,
+ *  re-enter the key, delete a config) and the server's prose doesn't say
+ *  that -- showing it would be an English downgrade in a translated UI.
  *
- * The other kinds get a message of their own because the account's next move
- * differs: wait, configure first, enter the key again, or delete a
- * configuration to make room for a new one. The server's prose does not say
- * any of that, so showing it there would be a downgrade — and in German, a
- * downgrade into English.
- *
- * Every kind is decided by the problem type alone. The detail is prose the
- * backend is free to reword or a proxy to reflow, so classifying on it would
- * put one rule on both sides of the wire with no test able to see them drift.
- */
+ *  Classified by problem type alone, never by `detail`: that's prose the
+ *  backend or a proxy can reword, which would put one rule on both sides of
+ *  the wire with no test able to see them drift. */
 export type AiFailureKind =
   | 'unreadableKey'
   | 'rateLimited'
@@ -44,21 +36,18 @@ export interface AiFailure {
   readonly fieldErrors: readonly AiFieldError[];
 }
 
-/**
- * The kinds whose banner shows the server's sentence instead of a translated
- * one. Kept as data rather than a chain of `if`s in the component, so the
- * choice is one list a test can read back.
- */
+/** The kinds whose banner shows the server's sentence instead of a translated
+ *  one. Kept as data, not a chain of `if`s, so a test can read the choice
+ *  back as one list. */
 export const SERVER_TEXT_KINDS: ReadonlySet<AiFailureKind> = new Set<AiFailureKind>([
   'provider',
   'validation',
   'unknown',
 ]);
 
-/** Which surface a failure belongs to, so each renders its own banner
- *  instead of one shared line above the wrong card. Assigned by the service,
- *  which knows the call; never by the mapper below, which sees only the
- *  response. */
+/** Which surface a failure belongs to, so each renders its own banner instead
+ *  of one shared line above the wrong card. Assigned by the service, which
+ *  knows the call -- never by the mapper below, which sees only the response. */
 export type AiFailureScope =
   | { readonly action: 'load' }
   | { readonly action: 'add' }

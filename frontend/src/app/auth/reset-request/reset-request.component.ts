@@ -1,4 +1,3 @@
-// src/app/auth/reset-request/reset-request.component.ts
 import { Component, ElementRef, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';

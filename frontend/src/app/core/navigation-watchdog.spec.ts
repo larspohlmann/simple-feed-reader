@@ -1,4 +1,3 @@
-// src/app/core/navigation-watchdog.spec.ts
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { NavigationCancel, NavigationEnd, NavigationError, NavigationStart } from '@angular/router';

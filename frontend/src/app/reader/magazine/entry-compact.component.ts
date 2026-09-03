@@ -1,4 +1,3 @@
-// src/app/reader/magazine/entry-compact.component.ts
 import { Component, input } from '@angular/core';
 import { EntryKickerLineComponent } from './entry-kicker-line.component';
 import { EntryMetaComponent } from '../entry-meta/entry-meta.component';

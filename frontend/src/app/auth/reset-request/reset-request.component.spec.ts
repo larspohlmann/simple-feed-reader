@@ -1,4 +1,3 @@
-// src/app/auth/reset-request/reset-request.component.spec.ts
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';

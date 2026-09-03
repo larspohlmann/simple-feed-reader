@@ -15,13 +15,11 @@ export class PreferencesService {
   /**
    * No "not loaded yet" state: a deep link to /settings renders this at its
    * `false` default before `AuthService.loadMe()` resolves and `adopt()`
-   * overwrites it (settings-shell.component.ts only fetches when
-   * `auth.user()` is null, so that window is real, not hypothetical). Benign
-   * today only because `false` happens to be the safe default for THIS
-   * preference. The next preference added here must not assume that: if its
-   * safe default is `true`, a click during the loading window would apply and
-   * PATCH the wrong value before the real one ever arrived. Give it (or this
-   * one, if that is simpler) a proper loaded/unloaded state rather than
+   * overwrites it — a real window, not hypothetical (settings-shell only
+   * fetches when `auth.user()` is null). Benign only because `false` is the
+   * safe default for THIS preference: the next one added here must not
+   * assume that — a `true` default could PATCH the wrong value during the
+   * loading window. Give it a proper loaded/unloaded state instead of
    * repeating this coincidence.
    */
   readonly scrapeFallbackEnabled = signal(false);

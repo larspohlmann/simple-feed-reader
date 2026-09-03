@@ -29,10 +29,9 @@ describe('HttpTranslocoLoader', () => {
     req.flush({});
   });
 
-  // The dictionaries live at a path that never changes, so a browser that
-  // cached the previous release keeps serving it and renders every key added
-  // since as its raw name (#141). The version turns each release into a URL no
-  // cache can already hold.
+  // The dictionary path never changes, so a browser caching the previous
+  // release renders every key added since as its raw name (#141). The
+  // version makes each release a URL no cache can already hold.
   it('carries the build version, so a new release cannot hit a cached copy', () => {
     loader.getTranslation('de').subscribe();
 
@@ -41,10 +40,9 @@ describe('HttpTranslocoLoader', () => {
     req.flush({});
   });
 
-  // The English dictionary ships inside the bundle. Serving it from the loader
-  // (not setTranslation: Transloco's load() consults only its own cache) means
-  // the fallback chain terminates without the network, so a resume-reload on a
-  // dead radio can no longer blank the app (#280).
+  // The English dictionary ships in the bundle; serving it from the loader
+  // (not setTranslation, since load() consults only its own cache) lets the
+  // fallback chain terminate without the network -- fixes a blank app (#280).
   it('serves the bundled English dictionary without touching the network', (done) => {
     loader.getTranslation('en').subscribe((translation) => {
       // The real dictionary, not an empty object: the loader must not degrade

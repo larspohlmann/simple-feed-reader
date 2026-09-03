@@ -11,11 +11,9 @@
   (scrollTop)="onScrollListTop()"
   (search)="onSearch($event)"
 />
-<!-- Out of flow, dropped into the seam just under the (absolute, opaque) header:
-     an in-flow banner would paint at y=0 behind the header. The hairline used to
-     live here too and now sits inside the bar itself, so that it retracts with it
-     (#721); what is left are the two banners, which are correct to stay put and
-     visible the way the list header does. -->
+<!-- Out of flow, dropped into the seam under the (absolute, opaque) header:
+     an in-flow banner would paint at y=0 behind it. The hairline moved into
+     the bar itself (#721); these two banners are meant to stay visible here. -->
 <div class="under-header">
   <!-- A failed refresh takes the strip whichever refresh it was; the counted
        progress belongs to the onboarding sweep alone. -->
@@ -37,9 +35,8 @@
   }
 </div>
 <!-- No top offset here: the scrolling panes reserve the header's height
-     themselves (via --app-bar-h) and their content passes under it, so
-     retracting the header uncovers content instead of leaving a dead strip
-     (#87). Only the in-flow sidebar takes the offset, in the stylesheet. -->
+     themselves (via --app-bar-h), so retracting the header uncovers content
+     instead of leaving a dead strip (#87). Only the sidebar takes the offset. -->
 <div
   class="body"
   [class.is-narrow]="screen.isNarrow()"
@@ -154,10 +151,9 @@
         />
       </section>
     } @else {
-      <!-- The list stays mounted; a full-screen article overlays it, so swiping
-           the article away reveals the list (and its scroll) underneath. The app
-           bar mirrors this list's own `collapsed` hide-on-scroll state, so the
-           list scroller is the bar's one and only scroll source (#128). -->
+      <!-- The list stays mounted; a full-screen article overlays it, so swiping it
+           away reveals the list underneath. The app bar mirrors this list's own
+           `collapsed` state, so the list scroller is the bar's only scroll source (#128). -->
       <section class="list">
         <app-entry-list
           [layout]="layout.mode()"
@@ -197,10 +193,9 @@
       </section>
       @if (openEntry()) {
         <div class="article-overlay">
-          <!-- Immersive (own toolbar, above the app bar) only below the wide
-               breakpoint. On wide screens the bar is app chrome — brand and
-               account stay visible — so the full-pane article slots beneath it
-               with the same toolbar arrangement the split pane uses. -->
+          <!-- Immersive (own toolbar, above the app bar) only below the wide breakpoint.
+               On wide screens the bar is app chrome, so the full-pane article slots
+               beneath it with the same toolbar arrangement the split pane uses. -->
           <app-reader-view
             [entry]="openEntry()"
             [tags]="openEntryTags()"
@@ -217,22 +212,12 @@
   </main>
 </div>
 
-<!-- Defined once and outlet-rendered right-aligned into the list header of
-     whichever `.list` the current layout mounts, via `app-entry-list`'s
-     `headerActions` input — the split pane and the single pane each build their
-     own list column, so one shared template keeps the two from drifting apart.
-     Idle shows one button (start, behind a confirm); a run in flight shows the
-     Stop button and, whenever the app-wide pill has been closed, a second
-     "show progress" button beside it (#398). The run's progress itself has no
-     in-list signal at all any more — it lives entirely in that pill; the only
-     hairline in `.list` above belongs to the refresh service, not this one.
-     Every other detail lives in Settings → AI (#325). -->
-<!-- The list header's leading slot: an edit affordance for whatever the list is
-     scoped to. Reaching it meant finding the feed's own row in the sidebar and
-     opening its overflow menu, which on a phone is behind the drawer — a long
-     way round from the list that row leads to. Both cases go through the same
-     `ManageActions` the sidebar calls, so the two routes cannot open different
-     dialogs. Every other selection leaves the slot empty. -->
+<!-- Defined once and outlet-rendered into whichever `.list` header via
+     `headerActions`, so split and single-pane share one template. Idle shows
+     Start; a run shows Stop and, if the pill was closed, "show progress" (#398, #325). -->
+<!-- The list header's leading slot: an edit affordance for whatever the list
+     is scoped to, sparing a trip through the sidebar's overflow menu (behind
+     the drawer on phone). Same `ManageActions` as the sidebar calls; empty otherwise. -->
 <ng-template #listEditAction>
   @if (selectedSubscription(); as sub) {
     <button
@@ -280,10 +265,9 @@
 
 <ng-template #headerActions>
   @if (selection().kind === 'search') {
-    <!-- Save/unsave the search being looked at. It lives here, beside the For
-         You control, because both are per-selection commands over a domain
-         object the list itself knows nothing about — the list only owns the
-         slot they render into (#581). -->
+    <!-- Save/unsave the search being looked at. It lives here, beside the For You
+         control, because both are per-selection commands over a domain object
+         the list itself knows nothing about — the list only owns the slot (#581). -->
     <button
       appListAction
       class="save-search"
@@ -301,10 +285,9 @@
     <div class="for-you-action">
       @if (recs.running()) {
         @if (recs.pillHidden()) {
-          <!-- The run's pill is app-wide, so the user can close it from
-               anywhere. This is the way back to it while the run is still
-               going, and it is offered only when the pill is actually gone —
-               the Stop button beside it is untouched (#398). -->
+          <!-- The run's pill is app-wide, so the user can close it from anywhere. This
+               is the way back to it while the run is still going, offered only when
+               the pill is actually gone — the Stop button beside it is untouched (#398). -->
           <app-button
             variant="ghost"
             size="sm"
@@ -331,16 +314,9 @@
           }}</span>
         </app-button>
       } @else {
-        <!-- The same control the unread switch and Mark all read are, down to
-             the border: three actions in one header must not wear three
-             chromes, and the filled weight this used to carry belonged to it
-             only while it was the header's one action (#710). It reads
-             "Refresh" like the feed refresh it stands in for — the sparkle
-             glyph tells the two apart at a glance, and the accessible name
-             spells it out for a reader who hears the button rather than sees
-             it. `mobile-icon-only`, like its neighbours: below the small
-             breakpoint the label goes and the glyph takes the same bordered
-             tap target theirs does. -->
+        <!-- The same control the unread switch and Mark all read are, down to the
+             border (#710). It reads "Refresh" like the feed refresh it stands
+             in for — the sparkle glyph and accessible name tell the two apart. -->
         <button
           appListAction
           class="for-you-run mobile-icon-only"

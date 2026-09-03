@@ -1,4 +1,3 @@
-// src/app/reader/entries.store.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Problem, parseProblem } from '../core/problem';
@@ -7,11 +6,9 @@ import { EntryDto, EntryQuery, EntryStatePatch } from './models';
 import { SavedSearchesStore } from './saved-searches.store';
 import { visibleSearchTerm } from './query';
 
-/** Adds `incoming` to `existing`, deduplicated case-insensitively but keeping
- *  the casing first seen — mirrors how the backend already dedupes matched
- *  words within one page (`MeilisearchIndex::matchedWordsOf`). The marker
- *  (`search-marks.ts`) matches case-insensitively too, so a duplicate
- *  differing only in case would just lengthen its pattern for no benefit. */
+/** Adds `incoming` to `existing`, deduped case-insensitively, keeping first-seen
+ *  casing — mirrors `MeilisearchIndex::matchedWordsOf`. A case-only duplicate
+ *  would just lengthen the marker pattern for no benefit (search-marks.ts). */
 function unionMatchedWords(existing: string[], incoming: string[]): string[] {
   const seen = new Set(existing.map((word) => word.toLowerCase()));
   const union = [...existing];
@@ -68,25 +65,15 @@ export class EntriesStore {
   readonly loadingMore = signal(false);
   readonly error = signal<Problem | null>(null);
   readonly loadedAt = signal<string>('');
-  /** The words the current search's engine has actually matched, or empty
-   *  outside a search (or when the LIKE fallback answered it). `load()`
-   *  REPLACES this — a new query (or a reload of the same one) shows a
-   *  wholly different result set, so an earlier query's words must not leak
-   *  into rows that never matched them. `loadMore()` UNIONS into it instead:
-   *  the result set only grows, the earlier page's rows are still on screen,
-   *  and they DID match the words a replace would discard — a page-1 row
-   *  that matched "receive" must keep that mark even once page 2 arrives
-   *  carrying only "received". */
+  /** Words the current search engine actually matched (empty outside a search, or
+   *  when the LIKE fallback answered it). `load()` REPLACES this (new result set);
+   *  `loadMore()` UNIONS into it (earlier pages' matched words must stay marked). */
   readonly matchedWords = signal<string[]>([]);
 
   private query: EntryQuery | null = null;
-  /** Monotonic token stamped on every load/loadMore request. A response is
-   *  applied only if it still matches, so a slower, older request that lands
-   *  after a newer one can't overwrite the fresher result. A refresh fires
-   *  several overlapping reloads (one per slice, plus the run's onDone), and on
-   *  a slow server their responses arrive out of order — without this guard a
-   *  stale partial reload clobbered the just-fetched items back off the list
-   *  (#158). Mirrors the id-guard the shell uses for deep-link entry fetches. */
+  /** Monotonic token stamped on every load/loadMore request; a stale response is
+   *  dropped so it can't clobber a fresher result — refresh fires overlapping
+   *  reloads that can arrive out of order (#158). Mirrors the shell's id-guard. */
   private loadSeq = 0;
 
   load(query: EntryQuery): void {
@@ -169,13 +156,9 @@ export class EntriesStore {
   }
 }
 
-/** The local view of a state patch, which can differ from what is sent to the
- *  server. The backend couples the two flags (#482): viewing an entry also hides
- *  it (ViewedImpliesHiddenListener), and un-hiding clears "viewed" too
- *  (EntryState::markUnread). The wire only ever carries the flag the user
- *  toggled, so the coupled flag is mirrored here — once, in the one place that
- *  also decides list membership after a patch. Un-ticking (isViewed=false)
- *  leaves the hidden flag: hiding from the unread list is sticky. */
+/** Mirrors the backend's flag coupling (#482): viewing also hides
+ *  (ViewedImpliesHiddenListener), un-hiding clears viewed (EntryState::markUnread).
+ *  Un-ticking isViewed alone leaves hidden set — hiding from the unread list is sticky. */
 export function localStatePatch(patch: EntryStatePatch): EntryStatePatch {
   if (patch.isViewed === true) return { ...patch, isHidden: true };
   if (patch.isHidden === false) return { ...patch, isViewed: false };

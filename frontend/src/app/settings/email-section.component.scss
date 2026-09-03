@@ -1,9 +1,6 @@
-// The callout is the one piece of chrome the settings primitives do not own:
-// an informational block sitting directly in the panel, above the rows, for a
-// state the section's own controls cannot fix (no mail transport on this
-// instance, an unverified address). It reads the panel's own inset tokens
-// rather than a padding literal -- see "app-settings-group" in
-// docs/design-language.md on why a non-row panel child owns its inset that way.
+// The callout is the one piece of chrome the primitives don't own: an
+// informational block above the rows for a state controls can't fix. Reads
+// the panel's own inset tokens (see docs/design-language.md, app-settings-group).
 .callout {
   display: flex;
   align-items: center;

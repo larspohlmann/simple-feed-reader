@@ -1,10 +1,6 @@
-// src/app/theme/_breakpoints.scss
-// Breakpoints must be SCSS variables, not CSS custom properties: `@media`
-// cannot read custom properties, so `@media (width <= var(--bp-md))` silently
-// never matches. Components `@use` this partial and write
-// `@media (width <= bp.$bp-md)`.
-// Three steps only. The seven values that existed before (560/720/800/820/
-// 899/900/960) were drift, not intent.
+// Breakpoints must be SCSS variables, not custom properties: `@media` can't
+// read those, so `@media (width <= var(--bp-md))` silently never matches.
+// Three steps only — the seven values that existed before were drift, not intent.
 
 $bp-sm: 560px; // phone
 $bp-md: 720px; // small tablet, phone landscape

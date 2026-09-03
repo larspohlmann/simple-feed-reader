@@ -1,4 +1,3 @@
-// src/app/reader/magazine/entry-block-base.ts
 import { Directive, computed, inject, input, output } from '@angular/core';
 import { EntryDto, SubscriptionTagDto } from '../models';
 import { relativeTime } from '../format';

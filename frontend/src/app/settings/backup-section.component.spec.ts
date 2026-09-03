@@ -151,11 +151,9 @@ describe('BackupSectionComponent', () => {
   const tooLarge = { status: 413, statusText: 'Request Entity Too Large' };
 
   /**
-   * The reachable path: choosing a file POSTs it to the preview route first,
-   * so an oversized file is refused there and the restore button is never
-   * offered. The web server answers that refusal itself, with an HTML page
-   * rather than problem+json -- which the generic fallback rendered as
-   * "Something went wrong", naming neither the cause nor the remedy (#458).
+   * The web server refuses an oversized file with an HTML page, not
+   * problem+json -- the generic fallback rendered that as "Something went
+   * wrong", naming neither cause nor remedy (#458).
    */
   it('names the size limit when the preview upload is refused as too large', () => {
     const f = mount();

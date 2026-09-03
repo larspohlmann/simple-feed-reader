@@ -6,13 +6,9 @@
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <!--
-      Document-wide no-referrer policy (#497). Article-body images are injected
-      with [innerHTML] and carry no referrerpolicy attribute — both Angular's
-      sanitizer allow-list and the backend EntrySanitizer strip a per-img one —
-      so they fall back to this default. Without it they leak the app origin in
-      a Referer header, and hotlink-protecting CDNs answer that with a 403.
-      Setting it here covers every image at once: app-rendered, feed-supplied,
-      and any surface added later. The backend never reads Referer.
+      Document-wide no-referrer policy (#497): article-body images are injected
+      via [innerHTML] with no referrerpolicy attribute, so without this they leak
+      the app origin in Referer and hotlink-protecting CDNs answer with a 403.
     -->
     <meta name="referrer" content="no-referrer" />
     <!--
@@ -37,22 +33,18 @@
   <body>
     <app-root></app-root>
     <!--
-      Revealed when boot fails: by main.ts when bootstrapApplication rejects,
-      by withNavigationErrorHandler when a lazy chunk fails, and by the
-      watchdog below when nothing renders at all (#280, #282). Static and
-      style-inlined on purpose: at that point no bundle code is trustworthy,
-      so this surface must depend on nothing but the document itself.
-      Both languages, because no dictionary loaded either.
+      Revealed when boot fails (#280, #282): by main.ts, by withNavigationErrorHandler,
+      or by the watchdog below. Static and style-inlined because no bundle code is
+      trustworthy at that point; both languages because no dictionary loaded either.
     -->
     <div id="boot-error" hidden style="padding: 2rem; text-align: center; font-family: system-ui">
       <p>The app could not start. / Die App konnte nicht gestartet werden.</p>
       <button onclick="location.reload()">Reload / Neu laden</button>
     </div>
     <!--
-      Boot watchdog (#282). A lazy chunk that STALLS raises no event — a hung
-      import() never rejects — so no handler in the bundle can ever run. This
-      is symptom-level on purpose: it covers every silent boot stall (chunk,
-      guard, resolver, future initializer) with no app-side hook.
+      Boot watchdog (#282): a lazy chunk that STALLS raises no event (a hung
+      import() never rejects), so no handler in the bundle can ever run.
+      Symptom-level on purpose — covers every silent boot stall with no app-side hook.
     -->
     <script>
       (function () {

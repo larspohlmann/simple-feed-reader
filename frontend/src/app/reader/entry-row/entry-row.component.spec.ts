@@ -34,11 +34,9 @@ function mount(e: EntryDto) {
   return f;
 }
 
-/** Reproduces what a real browser does with a focused `<button>`, which jsdom
- *  does not simulate on its own: Enter fires `click` as part of the keydown's
- *  default action, Space defers it to the keyup's default action — and either
- *  is skipped once its governing keydown (and, for Space, keyup too) had
- *  `preventDefault()` called on it. */
+/** jsdom does not fire `click` for a focused button's Enter/Space itself, so
+ *  this reproduces it: Enter's click follows keydown, Space's follows keyup —
+ *  skipped once that governing event's default was prevented. */
 function pressEnter(target: HTMLElement): void {
   const keydown = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
   target.dispatchEvent(keydown);

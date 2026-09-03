@@ -1,4 +1,3 @@
-// src/app/reader/magazine/entry-kicker-line.component.ts
 import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { EntryDto } from '../models';
@@ -9,10 +8,9 @@ import { selectionQueryParams } from '../query';
 
 /**
  * The one-line attribution every magazine block carries: unread dot, favicon,
- * source name, relative time. Owning it here rather than repeating it per
- * block is what keeps the line's single-line guarantee in one place — it used
- * to be seven copies of the markup and seven of the CSS, which is how the
- * `flex: none` on the dot came to be missing from two of them (#155).
+ * source name, relative time. Owned here, not repeated per block, to keep the
+ * single-line guarantee in one place — seven copies once let `flex: none` on
+ * the dot go missing from two of them (#155).
  */
 @Component({
   selector: 'app-entry-kicker-line',

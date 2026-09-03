@@ -1,10 +1,9 @@
 import { refreshFailureKey } from './refresh-message';
 
 describe('refreshFailureKey', () => {
-  // Four causes the user must be able to tell apart: someone else holds the
-  // lock, the sweep stopped early with feeds still due, the sweep stopped
-  // making progress, or the request failed (#119, #302). One message for all
-  // of them tells the user nothing actionable.
+  // Four causes the user must be able to tell apart: a contended lock, an
+  // early-stopped sweep, a stalled sweep, or a request failure (#119, #302).
+  // One message for all of them tells the user nothing actionable.
   it('names the contended lock', () => {
     expect(refreshFailureKey({ kind: 'busy' })).toBe('reader.refreshBusy');
   });

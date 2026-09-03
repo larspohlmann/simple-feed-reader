@@ -10,12 +10,9 @@
   vertical-align: middle;
 }
 
-/* Half the box it sits in, rather than a fixed 8px at every size. The host is
-   a square of the named size either way, so a fixed dot meant the two branches
-   only agreed at one step: at `xs` the dot overflowed two thirds of its own
-   footprint, and at `md` it left the box mostly empty — which is what an
-   icon-less tag looked like beside a heading sized to match its title (#435).
-   `sm`, which nearly every consumer uses, is unchanged at 8px. */
+/* Half the box, not a fixed 8px: a fixed dot only agreed with the host's
+   square at one size step — overflowing at `xs`, leaving `md` mostly empty
+   (#435). `sm`, which nearly every consumer uses, stays unchanged at 8px. */
 .dot {
   width: 50%;
   height: 50%;

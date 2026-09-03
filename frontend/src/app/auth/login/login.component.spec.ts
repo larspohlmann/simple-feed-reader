@@ -1,4 +1,3 @@
-// src/app/auth/login/login.component.spec.ts
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
@@ -180,10 +179,9 @@ describe('LoginComponent — passkey sign-in availability (#624 follow-up)', () 
     expect(passkeyButton(f)).not.toBeNull();
   });
 
-  /** Fails open while the flag is still in flight, mirroring mailEnabled's
-   *  own `!== false` convention on this same page: setupRedirectGuard has
-   *  normally already resolved it by the time this component renders, so the
-   *  unknown state is transient in practice. */
+  /** Fails open while the flag is in flight, mirroring mailEnabled's `!== false`
+   *  convention here: setupRedirectGuard usually resolves it before render, so
+   *  the unknown state is transient in practice. */
   it('shows the passkey button while availability is still unknown', () => {
     stubPasskeySupport();
     const f = create(null);
@@ -350,10 +348,9 @@ describe('LoginComponent — passkey login', () => {
 
     expect(capturedSignal?.aborted).toBe(true);
 
-    // The abort this component itself triggered surfaces to the caller as an
-    // AbortError, exactly like a real aborted `navigator.credentials.get()`
-    // (PasskeyService.toProblem()'s docblock). It must not flash an error on
-    // every ordinary password sign-in.
+    // The abort this component triggers surfaces as an AbortError, just like
+    // a real aborted navigator.credentials.get() (see toProblem()'s docblock)
+    // -- it must not flash an error on ordinary password sign-in.
     rejectConditional({ type: 'AbortError', title: 'The operation was aborted.', status: 0 });
     await flushMicrotasks();
     f.detectChanges();
@@ -380,12 +377,9 @@ describe('LoginComponent — passkey login', () => {
   });
 
   it('renders no banner for a rate-limit failure from the conditional ceremony (finding 7: a background ceremony must fail silently)', async () => {
-    // The passkey_challenge limiter allows 30 requests / 15 minutes; the 31st
-    // visitor to merely LOAD the login page in that window would otherwise
-    // see a 429 painted on a page they have not interacted with yet. Unlike
-    // the NotAllowedError/AbortError specs above, this is neither of those
-    // two -- it proves the silence is unconditional for the background path,
-    // not keyed to a specific error type.
+    // The passkey_challenge limiter allows 30/15min; the 31st visitor to
+    // merely load the page would see a 429. Unlike the NotAllowedError/
+    // AbortError specs above, this proves the silence isn't error-type-keyed.
     stubPasskeySupport(true);
     passkeyService.signInConditionally.mockRejectedValue({
       type: 'about:blank',

@@ -1,4 +1,3 @@
-// src/app/settings/organise/organise-feed-row.component.ts
 import {
   ChangeDetectionStrategy,
   Component,

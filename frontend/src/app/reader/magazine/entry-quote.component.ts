@@ -1,4 +1,3 @@
-// src/app/reader/magazine/entry-quote.component.ts
 import { Component, computed } from '@angular/core';
 import { textSnippet } from '../preview-image';
 import { EntryKickerLineComponent } from './entry-kicker-line.component';

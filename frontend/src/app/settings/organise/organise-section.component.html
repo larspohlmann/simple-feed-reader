@@ -36,10 +36,9 @@
         </label>
 
         @if (store.view() === 'tree') {
-          <!-- One toggle, not two buttons: its label always states the action
-               it is about to take, driven by the store's own expanded state
-               (#659 -- two bare chevron icons read as unlabelled and, sitting
-               right against "Select all", as part of it). -->
+          <!-- One toggle, not two buttons: its label always states the action it is
+               about to take (#659 -- two bare chevron icons read as unlabelled and,
+               next to "Select all", as part of it). -->
           <app-button size="sm" data-test="expand-toggle" (click)="store.toggleExpandAll()">
             <app-icon [name]="store.allExpanded() ? 'unfold_less' : 'unfold_more'" size="sm" />
             {{
@@ -151,16 +150,12 @@
 </app-settings-stack>
 
 <!-- The tree/list is a plain region, not a second `<app-settings-group>` panel:
-       wrapping it in a group nested this page's own tag cards inside the
-       group's own card, reading as "boxes inside a box" (#659). The repeated
-       unit here -- a tag card, a plain feed row -- is the only box; this
-       region itself carries no border, background or shadow of its own. -->
+       wrapping it would nest this page's own tag cards inside the group's own
+       card, reading as "boxes inside a box" (#659). -->
 <div class="tree-region">
   <!-- Zero-height sticky dock (docs/design-language.md #3 "Sticky and scroll"):
-       the dock itself never reserves flow height, so the bar toggling on and
-       off never shifts the toolbar above it. The tree/list below reserves its
-       own top space (`.has-bulk-bar`) so the floating bar never covers the
-       first row. -->
+       never reserves flow height, so the bar toggling on/off never shifts the
+       toolbar above it. `.has-bulk-bar` below reserves top space so it never covers the first row. -->
   <div class="bulk-dock">
     @if (store.selectedCount() > 0) {
       <div class="bulk" data-test="bulk-bar">

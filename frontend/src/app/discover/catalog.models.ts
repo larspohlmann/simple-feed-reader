@@ -1,4 +1,3 @@
-// src/app/discover/catalog.models.ts
 import { TagDto } from '../reader/models';
 
 export interface CatalogFeedDto {
