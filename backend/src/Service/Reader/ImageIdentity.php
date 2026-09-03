@@ -16,6 +16,15 @@ final readonly class ImageIdentity
         'unsplash', 'pexels', 'adobestock',
     ];
 
+    /**
+     * Pictures rendered for link previews, never drawn for readers: a
+     * subscribe/share card file, a preview directory, an "og image" (#786;
+     * measured on Substack, trance-nexus and stitcher.io).
+     */
+    private const string SHARE_RENDER_PATTERN =
+        '#/(?:og|opengraph|meta)/|(?:subscribe|share|social|twitter|og)[-_]card\.[a-z0-9]{2,5}$'
+        . '|(?:^|/)(?:og|opengraph)[-_]?image\.[a-z0-9]{2,5}$#i';
+
     private const string UUID_PATH_SEGMENT_PATTERN =
         '#/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:/|$)#i';
 
@@ -24,6 +33,7 @@ final readonly class ImageIdentity
      * @param list<string> $tokens the filename stem's distinct, photo-specific words
      */
     private function __construct(
+        private string $sourcePath,
         private string $stem,
         private array $ids,
         private array $tokens,
@@ -46,7 +56,12 @@ final readonly class ImageIdentity
         $words = preg_split('/[^a-z0-9]+/', $stem, -1, \PREG_SPLIT_NO_EMPTY) ?: [];
         $tokens = array_values(array_filter($words, self::isPhotoSpecificToken(...)));
 
-        return new self($stem, $ids, $tokens, self::numericAsset($words), self::pathUuid($path));
+        return new self($path, $stem, $ids, $tokens, self::numericAsset($words), self::pathUuid($path));
+    }
+
+    public function isShareRender(): bool
+    {
+        return preg_match(self::SHARE_RENDER_PATTERN, $this->sourcePath) === 1;
     }
 
     /**
@@ -62,9 +77,12 @@ final readonly class ImageIdentity
             : null;
     }
 
+    /** A `WxH` word is a rendition size, never a photo. */
     private static function isPhotoSpecificToken(string $word): bool
     {
-        return strlen($word) >= 5 && !in_array($word, self::GENERIC_TOKENS, true);
+        return strlen($word) >= 5
+            && !in_array($word, self::GENERIC_TOKENS, true)
+            && preg_match('/^\d+x\d+$/', $word) !== 1;
     }
 
     /**
@@ -129,6 +147,7 @@ final readonly class ImageIdentity
     {
         return self::sourceFromQuery($url)
             ?? self::sourceFromPath($url)
+            ?? self::sourceFromEncodedPath($url)
             ?? $url;
     }
 
@@ -154,6 +173,14 @@ final readonly class ImageIdentity
         $decoded = base64_decode(strtr($candidate, '-_', '+/'), true);
 
         return $decoded !== false && self::isHttpUrl($decoded) ? $decoded : null;
+    }
+
+    /** A percent-encoded source as the final path segment (Substack's `/image/fetch/<transforms>/<source>`). */
+    private static function sourceFromEncodedPath(string $url): ?string
+    {
+        $decoded = rawurldecode(basename((string) (parse_url($url, PHP_URL_PATH) ?? '')));
+
+        return self::isHttpUrl($decoded) ? $decoded : null;
     }
 
     private static function isHttpUrl(string $value): bool

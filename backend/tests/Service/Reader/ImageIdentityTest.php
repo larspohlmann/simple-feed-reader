@@ -422,4 +422,83 @@ final class ImageIdentityTest extends TestCase
             'https://s3.amazonaws.com/bucket/real-photograph-name.jpg',
         ));
     }
+
+    public function testMatchesTheSamePhotoThroughAPercentEncodedPathProxy(): void
+    {
+        // Substack (#786): every rendition is `substackcdn.com/image/fetch/<transforms>/<source>`
+        // with the source URL percent-encoded as the final path segment.
+        $source = 'https://substack-post-media.s3.amazonaws.com/public/images/'
+            . 'f900b552-ad73-4892-a3b7-d300ad0de90e_1280x1280.png';
+        self::assertTrue($this->sameImage(
+            $this->substackFetch('$s_!8qHS!,w_120,h_120,c_fill,f_webp,q_auto:good', $source),
+            $this->substackFetch('$s_!9Uw9!,f_auto,q_auto:best,fl_progressive:steep', $source),
+        ));
+    }
+
+    public function testDoesNotMatchTwoDifferentPhotosBehindAPercentEncodedPathProxy(): void
+    {
+        // Without the unwrap both stems are the whole encoded source, and the
+        // generic words "https"/"substack" in every one of them tie the
+        // publication's subscribe card to any avatar on the page (#786).
+        $card = $this->substackFetch(
+            '$s_!9Uw9!,f_auto,q_auto:best,fl_progressive:steep',
+            'https://charleseisenstein.substack.com/twitter/subscribe-card.jpg?v=538695404&version=9',
+        );
+        $avatar = $this->substackFetch(
+            '$s_!8qHS!,w_120,h_120,c_fill,f_webp,q_auto:good,fl_progressive:steep',
+            'https://substack-post-media.s3.amazonaws.com/public/images/'
+            . 'f900b552-ad73-4892-a3b7-d300ad0de90e_1280x1280.png',
+        );
+
+        self::assertFalse($this->sameImage($card, $avatar));
+        self::assertFalse(ImageIdentity::fromUrl($card)->matches(ImageIdentity::fromUrl($avatar)));
+    }
+
+    public function testNamesAShareRenderByItsCardFilename(): void
+    {
+        // Substack's og:image on a post without pictures is the publication's
+        // subscribe card, wrapped by the fetch proxy (#786).
+        $card = $this->substackFetch(
+            '$s_!9Uw9!,f_auto,q_auto:best,fl_progressive:steep',
+            'https://charleseisenstein.substack.com/twitter/subscribe-card.jpg?v=538695404&version=9',
+        );
+
+        self::assertTrue($this->isShareRender($card));
+    }
+
+    public function testNamesAShareRenderByItsPreviewDirectory(): void
+    {
+        // trance-nexus and stitcher.io: a generated preview under /og/ or /meta/.
+        self::assertTrue($this->isShareRender('https://trance-nexus.test/og/blog/best-tracks-2026.png'));
+        self::assertTrue($this->isShareRender('https://stitcher.test/meta/meta_lg.png'));
+        self::assertTrue($this->isShareRender('https://pub.test/images/og-image.png'));
+    }
+
+    public function testDoesNotNameAPhotoAShareRender(): void
+    {
+        self::assertFalse($this->isShareRender('https://pub.test/uploads/2026/09/260902-WEB-1200x630.jpg'));
+        self::assertFalse($this->isShareRender('https://pub.test/photos/postcard-from-oslo.jpg'));
+        self::assertFalse($this->isShareRender('https://pub.test/omega/meta-analysis-chart.png'));
+    }
+
+    public function testDoesNotMatchTwoImagesThatShareOnlyARenditionSize(): void
+    {
+        // thevale (#786): two square 1080x1080 uploads are different pictures; a
+        // dimension word names a rendition size, never a photo.
+        $uploads = 'https://substack-post-media.s3.amazonaws.com/public/images/';
+        self::assertFalse($this->sameImage(
+            $uploads . 'fb82b0a8-1392-454b-b4b2-ae77a04c9fab_1080x1080.png',
+            $uploads . '13507ae0-f034-4b58-ae2d-d048a0fa290c_1080x1080.png',
+        ));
+    }
+
+    private function isShareRender(string $url): bool
+    {
+        return ImageIdentity::fromUrl($url)->isShareRender();
+    }
+
+    private function substackFetch(string $transforms, string $source): string
+    {
+        return 'https://substackcdn.com/image/fetch/' . $transforms . '/' . rawurlencode($source);
+    }
 }

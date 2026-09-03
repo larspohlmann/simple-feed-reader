@@ -64,7 +64,7 @@ final class MeDigestTestControllerTest extends ApiTestCase
             'https://example.com/' . $email,
             'A rust announcement',
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
-            new \DateTimeImmutable('2026-08-27T00:00:00Z'),
+            new \DateTimeImmutable('-1 day'),
         );
         $em->persist($entry);
 

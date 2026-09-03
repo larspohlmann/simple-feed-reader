@@ -60,6 +60,19 @@ final class ReaderLeadImageTest extends TestCase
         return (string) $document->body?->innerHTML;
     }
 
+    public function testNeverRestoresAShareRenderIntoAnImagelessBody(): void
+    {
+        // Substack (#786): a post without pictures reports the subscribe card as
+        // its og:image; an imageless body takes any lead, so the card must be
+        // refused by what it is, not by where it is drawn.
+        $card = 'https://substackcdn.com/image/fetch/$s_!9Uw9!,f_auto/'
+            . rawurlencode('https://pub.test/twitter/subscribe-card.jpg?v=1');
+
+        $body = $this->restoredBody('<div><p>Text only.</p></div>', $this->pageDrawingNothing(), $card);
+
+        self::assertStringNotContainsString('<img', $body);
+    }
+
     /** The body markup as the parser round-trips it, with no restore applied. */
     private function unchangedBody(string $bodyHtml): string
     {

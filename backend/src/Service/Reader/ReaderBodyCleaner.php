@@ -12,8 +12,8 @@ use App\Service\Reader\Media\SubstackPosterLink;
 
 /**
  * Cleans readability's article HTML for the reader view through one shared
- * \Dom\HTMLDocument: parse once, rewrite in-body media, drop the duplicate
- * leading title, trim edge boilerplate, plan where page-discovered media
+ * \Dom\HTMLDocument: parse once, rewrite in-body media, repair the page's own
+ * players, drop the duplicate leading title, trim edge boilerplate, plan where page-discovered media
  * belongs, restore the lead image against that plan, reconcile the media
  * into the body, serialise once. This mirrors FetchedPageNormalizer's
  * discipline of never serialising and re-parsing between steps — every step
@@ -38,6 +38,7 @@ final readonly class ReaderBodyCleaner
         private ReaderLeadImage $leadImage,
         private InBodyEmbedRewriter $embedRewriter,
         private SubstackPosterLink $substackPoster,
+        private PlayerChromeCleaner $playerChrome,
         private PageMediaInserter $mediaInserter,
     ) {
     }
@@ -60,6 +61,7 @@ final readonly class ReaderBodyCleaner
         // body has gained before it decides whether to add another picture.
         $recoveredInBody = $this->embedRewriter->rewriteIn($document);
         $this->substackPoster->linkIn($document);
+        $this->playerChrome->cleanIn($document);
 
         $this->navigationTrimmer->trimIn($document);
         $this->titleRemover->removeFrom($document, $titleCandidates);

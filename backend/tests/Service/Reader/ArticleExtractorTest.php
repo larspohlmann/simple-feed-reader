@@ -42,6 +42,7 @@ use App\Service\Reader\Media\Source\YouTubeIdAttributeSource;
 use App\Service\Reader\Media\StreamLocationResolver;
 use App\Service\Reader\Media\SubstackPosterLink;
 use App\Service\Reader\NavigationChromeTrimmer;
+use App\Service\Reader\PlayerChromeCleaner;
 use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\ReaderLeadImage;
 use App\Service\Reader\ShareIntentLinkRemover;
@@ -118,6 +119,7 @@ final class ArticleExtractorTest extends TestCase
             new ReaderLeadImage(),
             new InBodyEmbedRewriter(new EmbedProviders([new YouTubeEmbedProvider()]), $markup),
             new SubstackPosterLink(),
+            new PlayerChromeCleaner(),
             new PageMediaInserter($markup),
         );
     }
@@ -653,6 +655,26 @@ final class ArticleExtractorTest extends TestCase
             (int) strpos($body, '260902_russland_taktik_viu'),
             'the first player sits where its figure stood, before the second paragraph',
         );
+    }
+
+    public function testRendersASubstackAudioPostAsItsProseAndPlayer(): void
+    {
+        // #786: a post without pictures reports the subscribe card as og:image,
+        // keeps its player's clock readouts as paragraphs, links to itself with
+        // action=share, and plays through a bare script-driven <audio>.
+        $body = $this->extractFixture('substack-audio-post.html')->contentHtml ?? '';
+
+        self::assertStringNotContainsString('<img', $body, 'the subscribe card is not a lead');
+        self::assertStringNotContainsString('0:00', $body);
+        self::assertStringNotContainsString('13:34', $body);
+        self::assertStringNotContainsString('Share', $body);
+        self::assertMatchesRegularExpression('#<audio [^>]*controls[^>]*>#', $body);
+        self::assertStringContainsString(
+            'src="https://site.test/api/v1/audio/upload/7adcfe96-6a96-49c6-a26e-0192656e3c1a/src"',
+            $body,
+        );
+        self::assertStringContainsString('rubber band collection', $body);
+        self::assertStringContainsString('Thank you for subscribing', $body);
     }
 
     private function extractFixture(string $fixture): ExtractionResult
