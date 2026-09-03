@@ -93,13 +93,16 @@
    its ellipsis lives on an inner `.name` child, not on `.pill` itself. With
    nothing else inside, `inline-block` lets the ellipsis apply directly.
 
-   `min-inline-size` is six characters of TEXT, so it must carry the padding
-   and border that border-box counts inside it, on top of `6ch`. Layout that
-   belongs to the surrounding row or line stays with the component. */
+   No width floor: the pill hugs its term, so a short one (`nepal`) carries no
+   dead space. The cap is the kicker row itself (`max-inline-size: 50%`), not a
+   fixed character count, so a long term grows into the free space instead of
+   clipping early, yet never dominates the row. `min-width: 0` lets it ellipsise
+   when the row is genuinely tight; there it and the elastic `.source` share the
+   space and both truncate, so neither is starved (#821). */
 .saved-search-pill {
   display: inline-block;
-  min-inline-size: calc(6ch + 2 * var(--space-2) + 2px);
-  max-inline-size: 12ch;
+  max-inline-size: 50%;
+  min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
