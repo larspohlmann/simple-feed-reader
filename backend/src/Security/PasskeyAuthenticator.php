@@ -24,40 +24,33 @@ use Symfony\Component\Security\Http\Authenticator\Passport\SelfValidatingPasspor
  * between `login` and `api` because firewalls match in declaration order and
  * `api` already matches every `^/api` path.
  *
- * A firewall, not a controller: "the JWT a passkey login returns is the same
- * JWT password login returns" is then structural rather than copied.
- * $successHandler is the exact
- * `lexik_jwt_authentication.handler.authentication_success` service
- * `json_login` uses, so both flows call the identical
- * `JWTTokenManager::create()` and pick up every listener already wired to
- * JWT issuance — StampLastLoginOnTokenIssue among them. $failureHandler is
- * the same `App\Security\LoginFailureHandler` password login uses.
+ * A firewall, not a controller, makes "the JWT a passkey login returns is the
+ * same JWT password login returns" structural rather than copied. $successHandler
+ * is the exact `lexik_jwt_authentication.handler.authentication_success` service
+ * `json_login` uses, so both flows call the identical `JWTTokenManager::create()`
+ * and pick up every JWT-issuance listener — StampLastLoginOnTokenIssue among
+ * them. $failureHandler is the same `App\Security\LoginFailureHandler`.
  *
- * Reusing LoginFailureHandler means LoginTimingEqualizer runs on every
- * passkey login failure too, with an empty submitted identifier — this
- * flow's request body carries no e-mail for it to read — giving every
- * failure the same constant delay regardless of which check inside
- * AssertionVerifier rejected it. That leaks nothing, since a
- * discoverable-credential login has no address to enumerate in the first
- * place.
+ * Reusing LoginFailureHandler means LoginTimingEqualizer runs on every passkey
+ * login failure too, with an empty submitted identifier (this flow carries no
+ * e-mail), giving every failure the same constant delay regardless of which check
+ * in AssertionVerifier rejected it. That leaks nothing: a discoverable-credential
+ * login has no address to enumerate.
  *
- * Verification runs lazily, inside the UserBadge's user loader, rather than
- * eagerly in authenticate(). Symfony's LoginThrottlingListener::checkPassport
- * runs on the same CheckPassportEvent at a higher priority than the listener
- * that forces the badge to resolve, so it can reject an over-budget request
- * with a 429 before AssertionVerifier ever runs. Calling verify() eagerly in
- * authenticate() would skip that: every rejected assertion would throw
- * before the throttle's own check got a chance to run at all.
+ * Verification runs lazily, inside the UserBadge's user loader, not eagerly in
+ * authenticate(): Symfony's LoginThrottlingListener::checkPassport runs on the
+ * same CheckPassportEvent at higher priority than the listener that resolves the
+ * badge, so it can reject an over-budget request with a 429 before
+ * AssertionVerifier ever runs. Calling verify() eagerly would skip that.
  *
- * UserBadge is given a fixed, non-secret sentinel identifier
- * (THROTTLE_IDENTIFIER) rather than an empty string: a discoverable-credential
- * login carries no e-mail or username to key throttling on, and UserBadge's
- * own constructor deprecates an empty identifier. DefaultLoginRateLimiter
- * keys its local bucket on `identifier-IP`, so a fixed identifier still
- * collapses to exactly one bucket per client IP.
+ * UserBadge is given a fixed, non-secret sentinel (THROTTLE_IDENTIFIER) rather
+ * than an empty string: a discoverable login carries no identifier to key
+ * throttling on, and UserBadge's constructor deprecates an empty one.
+ * DefaultLoginRateLimiter keys on `identifier-IP`, so a fixed identifier collapses
+ * to one bucket per client IP.
  *
- * `final class`, not `final readonly class`: PHP refuses a readonly class
- * that extends a non-readonly parent, and AbstractAuthenticator is not one.
+ * `final class`, not `final readonly class`: PHP refuses a readonly class that
+ * extends a non-readonly parent, and AbstractAuthenticator is not one.
  */
 final class PasskeyAuthenticator extends AbstractAuthenticator
 {

@@ -7,32 +7,28 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Three per-connection knobs a recommendation run consults — not read
- * together, and not by one collaborator: `slowModel` picks the timeout
- * profile (ProviderConnectionFactory::timeoutsFor()), and through it the
- * lock TTL a tick reserves, and nothing else since #445 split the batch
- * ceiling off it; `batchConcurrency` sizes one tick's wave
- * (RecommendationRunAdvancer::effectiveCap()); `maxBatchSize` is what
- * RecommendationSettingsResolver::batchCeilingFor() reads for its
- * per-connection cap, null meaning no claim and the shared default stands
- * (#445). What groups them is not a shared caller but a shared question:
- * how a run should drive this connection, decided once per connection
- * rather than per call.
+ * Three per-connection knobs a recommendation run consults — not read together,
+ * and not by one collaborator: `slowModel` picks the timeout profile
+ * (ProviderConnectionFactory::timeoutsFor()), and through it the lock TTL a tick
+ * reserves, and nothing else since #445 split the batch ceiling off it;
+ * `batchConcurrency` sizes one tick's wave (RecommendationRunAdvancer::effectiveCap());
+ * `maxBatchSize` is what RecommendationSettingsResolver::batchCeilingFor() reads
+ * for its per-connection cap, null meaning no claim and the shared default stands
+ * (#445). What groups them is not a shared caller but a shared question: how a run
+ * should drive this connection, decided once per connection.
  *
- * `suppressReasoning` answers a related but different question — what one
- * call asks the provider to do (RecommendationCompletionRequestFactory) —
- * and stays on AiProviderSettings rather than joining this group: it shapes
- * a request's payload, not the run's pacing or ceilings, and folding it in
- * here would blur that line for a field count this class does not need it
- * to clear.
+ * `suppressReasoning` answers a related but different question — what one call asks
+ * the provider to do (RecommendationCompletionRequestFactory) — and stays on
+ * AiProviderSettings: it shapes a request's payload, not the run's pacing or
+ * ceilings, and folding it in here would blur that line for a field count this
+ * class does not need it to clear.
  *
- * Embedded into AiProviderSettings rather than left as three of its own
- * scalar columns — PHPMD's field-count ceiling on AiProviderSettings is a
- * proxy for a real seam: these three arrived as separate features
- * (#344, #433, #445) but answer the one question above. An embeddable keeps
- * them there without the join or lifecycle a separate entity would add; the
- * column names are unprefixed so the table itself is unchanged (see
- * FetchSchedule for the same move on Feed).
+ * Embedded into AiProviderSettings rather than three of its own scalar columns —
+ * PHPMD's field-count ceiling on AiProviderSettings is a proxy for a real seam:
+ * these three arrived as separate features (#344, #433, #445) but answer the one
+ * question above. An embeddable keeps them there without the join or lifecycle a
+ * separate entity would add; the column names are unprefixed so the table is
+ * unchanged (see FetchSchedule for the same move on Feed).
  */
 #[ORM\Embeddable]
 class RunTuning

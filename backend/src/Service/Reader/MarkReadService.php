@@ -51,11 +51,9 @@ final readonly class MarkReadService
         }
 
         // Atomic: the bulk read-flip and the watermark advance commit together,
-        // so a crash between them can't leave entries half-marked (explicit rows
-        // flipped but the watermark not yet advanced, or vice versa). Inside the
-        // transaction the DQL UPDATE participates rather than auto-committing,
-        // and wrapInTransaction() flushes the managed watermark changes before
-        // committing.
+        // so a crash between them can't leave entries half-marked. Inside the
+        // transaction the DQL UPDATE participates rather than auto-committing, and
+        // wrapInTransaction() flushes the managed watermark changes before commit.
         $this->em->wrapInTransaction(function () use ($user, $feedIds, $until): void {
             $this->em->createQuery(sprintf(
                 'UPDATE %s es SET es.isHidden = :true, es.hiddenAt = :now

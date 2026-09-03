@@ -16,15 +16,14 @@ final class RecommendationPromptBuilder
     private const int FIXED_OVERHEAD_TOKENS = 1500;
 
     /**
-     * What one score-only pick costs in a batch reply: `{"id":123,"score":843}` — an id and an
-     *  integer, no prose. About a fifth of a reason-bearing pick, which is the whole point of the
-     *  coarse-filter batch: the answer reserve shrinks, so packBatches fits more candidates per
-     *  batch and the run makes fewer calls (#493).
+     * What one score-only pick costs in a batch reply: `{"id":123,"score":843}`, an id and
+     * an integer, no prose. About a fifth of a reason-bearing pick — the point of the
+     * coarse-filter batch: the answer reserve shrinks, so packBatches fits more candidates
+     * per batch and the run makes fewer calls (#493).
      *
-     * Also lives on RecommendationAnswerBudget as its own copy: that class
-     * prices the provider's reply bound, a different computation from this
-     * one's packing budget, and coupling the two classes for one shared
-     * integer would cost more than the duplication does (#493).
+     * Also lives on RecommendationAnswerBudget: that class prices the reply bound, a
+     * different computation from this packing budget, and coupling the two for one shared
+     * integer would cost more than the duplication (#493).
      */
     private const int TOKENS_PER_SCORE_PICK = 15;
 
@@ -413,10 +412,9 @@ final class RecommendationPromptBuilder
         string $correction,
     ): array {
         // Empty counts as absent. A blocking-shape runaway is cut before its
-        // body ever parses, so its partial answer is '' — and quoting that back
-        // put an empty assistant turn in the retry beside a correction naming a
-        // reply the model cannot see (#437 review). There is nothing to correct
-        // against; the retry goes out as the plain question.
+        // body parses, so its answer is '' — quoting that back put an empty
+        // assistant turn beside a correction naming a reply the model cannot
+        // see (#437). Nothing to correct against; the retry goes as the plain question.
         if (!$this->hasContent($lastInvalidReply)) {
             return $messages;
         }

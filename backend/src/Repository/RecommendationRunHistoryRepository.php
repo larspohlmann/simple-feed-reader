@@ -12,16 +12,15 @@ use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * The read side of the run cost history (#409): one calendar month at a
- * time, the whole-account spend timeline behind it, and the all-time total.
+ * The read side of the run cost history (#409): one calendar month at a time, the
+ * whole-account spend timeline behind it, and the all-time total.
  *
- * A previous review rejected a RecommendationRunHistoryRepository because it
- * existed only to hold a verbatim copy of findNewestForUser(), and the PHPMD
- * count that justified splitting it off was inflated by that duplicate. This
- * one holds three distinct queries — pageForMonth(), spendTimeline() and
- * totalCostNanoCredits() — plus the private projection they share, duplicates
- * nothing, and moving them here gives RecommendationRunRepository back the
- * headroom PHPMD's ten-method ceiling had run out of.
+ * A previous review rejected a RecommendationRunHistoryRepository that existed only
+ * to hold a verbatim copy of findNewestForUser(), its splitting-off justified by a
+ * PHPMD count inflated by that duplicate. This one holds three distinct queries —
+ * pageForMonth(), spendTimeline() and totalCostNanoCredits() — plus their shared
+ * private projection, duplicates nothing, and gives RecommendationRunRepository
+ * back the headroom PHPMD's ten-method ceiling had run out of.
  *
  * @extends ServiceEntityRepository<RecommendationRun>
  *

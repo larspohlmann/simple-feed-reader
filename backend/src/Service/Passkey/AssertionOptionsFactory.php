@@ -11,36 +11,29 @@ use Webauthn\PublicKeyCredentialRequestOptions;
 /**
  * Builds the options for a WebAuthn login ("assertion") ceremony (#624):
  * discoverable-credential only, so `allowCredentials` is always empty and
- * `create()` takes no e-mail or user id to look one up with — the whole
- * point of this flow is that the server does not know who is asking until
- * the authenticator answers.
+ * `create()` takes no e-mail or user id — the point of this flow is that the
+ * server does not know who is asking until the authenticator answers.
  *
- * `userVerification` is REQUIRED, not preferred: the passkey is this
- * account's sole authentication factor, so an authenticator that could skip
- * verification would be skipping the only check standing between "the
- * device is unlocked" and "this account is logged in".
+ * `userVerification` is REQUIRED, not preferred: the passkey is this account's
+ * sole authentication factor, so skipping verification would skip the only check
+ * between "the device is unlocked" and "this account is logged in".
  *
- * No enumeration: `create()` takes no parameter that could vary with
- * whether an account exists, so the response shape and cost are identical
- * for every caller regardless of what they are probing for. The stored
- * challenge carries a null user id and null user handle for the same
+ * No enumeration: `create()` takes no parameter that could vary with whether an
+ * account exists, so response shape and cost are identical for every caller. The
+ * stored challenge carries a null user id and null user handle for the same
  * reason — see PasskeyChallenge's docblock.
  *
  * Unlike RegistrationOptionsFactory, this class does not touch
- * PasskeyCeremony::request() — that `CeremonyStepManager` verifies an
- * assertion response, which is AssertionVerifier's job, not this one's. It
- * also does not need the `rp.name`-after-serialisation stitch its sibling
- * does: `PublicKeyCredentialRequestOptions::$rpId` is a plain, un-deprecated
- * constructor property, not a value the library's own constructor refuses
- * to accept.
+ * PasskeyCeremony::request() — that verifies an assertion response, which is
+ * AssertionVerifier's job — and needs no `rp.name`-after-serialisation stitch:
+ * `PublicKeyCredentialRequestOptions::$rpId` is a plain, un-deprecated
+ * constructor property.
  *
- * `optionsFor()` is public and reused, unchanged, by AssertionVerifier to
- * rebuild the exact same options a login ceremony was started with, given
- * the challenge PasskeyChallengeStore handed back on consume() — the same
- * reasoning RegistrationOptionsFactory's own optionsFor() gives for
- * AttestationVerifier's sake: a second, independently written copy of the
- * resident-key/user-verification requirements could silently drift from
- * what the browser was shown, without either call site's tests noticing.
+ * `optionsFor()` is public and reused, unchanged, by AssertionVerifier to rebuild
+ * the exact options a login ceremony was started with, given the challenge
+ * PasskeyChallengeStore handed back on consume() — same reasoning as
+ * RegistrationOptionsFactory: a second, independently written copy could silently
+ * drift from what the browser was shown.
  */
 final readonly class AssertionOptionsFactory
 {

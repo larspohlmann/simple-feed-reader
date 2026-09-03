@@ -62,11 +62,10 @@ final class E2ePurgeUsersCommand extends Command
         $fixtures = $this->users->findE2eFixtureAccounts(self::PROTECTED_ADMIN_EMAIL);
 
         foreach ($fixtures as $user) {
-            // remove(), not a DQL bulk DELETE: going through the ORM keeps the
-            // unit of work aware of what left, and each account's subscriptions,
-            // tags and read state follow via their FK ON DELETE CASCADE. A bulk
-            // DELETE would bypass the unit of work entirely — the same reasoning
-            // as PurgeUnverifiedUsersCommand.
+            // remove(), not a DQL bulk DELETE: going through the ORM keeps the unit
+            // of work aware of what left, and each account's subscriptions, tags and
+            // read state follow via FK ON DELETE CASCADE. Same reasoning as
+            // PurgeUnverifiedUsersCommand.
             $this->em->remove($user);
         }
 

@@ -125,21 +125,18 @@ final class RefreshRunner implements RefreshRunnerInterface
 
         $feeds = $this->feedRepository->findDue($criteria, self::BATCH_LIMIT);
 
-        // The deadline gates when a fetch may *start*, not when it must finish —
-        // nothing cancels a fetch already in flight. The real per-response bound
-        // is `max_duration` (20 s) on each request, so a run can overrun this
-        // budget by up to 20 s, or a multiple of it on a pathological redirect
-        // chain. The serial fetcher had the identical per-feed bound, so this is
-        // not a regression; it is easy to mistake `budgetSeconds` for a hard
-        // ceiling, so it is spelled out here rather than left to be rediscovered.
+        // The deadline gates when a fetch may *start*, not finish; nothing cancels
+        // one in flight. The real per-response bound is `max_duration` (20 s) per
+        // request, so a run can overrun this budget by up to 20 s, or a multiple on
+        // a pathological redirect chain. The serial fetcher had the identical
+        // bound, so this is not a regression -- but `budgetSeconds` is no ceiling.
         $queue = new BudgetedFeedQueue($feeds, $this->clock, $now->getTimestamp() + $request->budgetSeconds);
         $tally = $this->processOutcomes($feeds, $queue, $now);
 
-        // The whole point of the poll's static marker: move it only when a real
-        // import stored new content, so a tick that finds it unmoved does no PHP
-        // work at all (#720). An all-NotModified sweep creates nothing and must
-        // leave it. Checked before the abort branch on purpose: entries created
-        // before an abort were flushed and committed, so they are real content.
+        // The point of the poll's static marker: move it only when a real import
+        // stored new content, so a tick that finds it unmoved does no PHP work
+        // (#720). An all-NotModified sweep must leave it. Checked before the abort
+        // branch on purpose: entries created before an abort were already committed.
         if ($tally->entriesCreated > 0) {
             $this->changeMarker->markChanged();
         }
@@ -262,14 +259,12 @@ final class RefreshRunner implements RefreshRunnerInterface
             return $this->persistOutcome($feed, $outcome, $context);
         } catch (UniqueConstraintViolationException | ForeignKeyConstraintViolationException | ORMException $e) {
             // A failed flush rolls back AND closes the EntityManager, so every
-            // later persist/flush would throw "EntityManager is closed".
-            // Stop here instead of cascading the failure across the batch.
-            //
-            // ForeignKeyConstraintViolationException is reachable here since
-            // #246: the feed row backing an in-flight fetch can vanish
-            // mid-run (unsubscribe -> OrphanedFeedReclaimer::reclaim() holds
-            // no lock), and the ensuing UPDATE/INSERT against the gone row
-            // throws this rather than UniqueConstraintViolationException.
+            // later persist/flush throws "EntityManager is closed". Stop here
+            // rather than cascade the failure across the batch.
+            // ForeignKeyConstraintViolationException is reachable since #246: the
+            // feed row behind an in-flight fetch can vanish mid-run (unsubscribe
+            // -> OrphanedFeedReclaimer::reclaim() holds no lock), so the write
+            // throws it, not UniqueConstraintViolationException.
             $this->logger->error(
                 'Refresh aborted: persistence failed for {url}',
                 ['url' => $feed->getUrl(), 'exception' => $e],

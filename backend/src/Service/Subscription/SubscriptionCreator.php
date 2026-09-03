@@ -68,13 +68,12 @@ final readonly class SubscriptionCreator
             $this->em->persist($feed);
             $this->em->flush(); // assign an id so the duplicate check is meaningful
         } elseif (SourceFormat::XML === $sourceFormat && SourceFormat::SCRAPED === $feed->getSourceFormat()) {
-            // One-way heal for a poisoned shared row: 'xml' arrivals come from
-            // discovery PARSING the URL as a real feed document — a stronger
-            // fact than the 'scraped' assertion of whoever created the row
-            // (who may have posted format 'scraped' for an XML feed, leaving
-            // every refresh to run the HTML extractor over RSS and error out).
-            // Never the reverse: a 'scraped' arrival is user-asserted and must
-            // not downgrade a format discovery or the creator established.
+            // One-way heal for a poisoned shared row: an 'xml' arrival comes from
+            // discovery PARSING the URL as a real feed document -- a stronger fact
+            // than the 'scraped' assertion of whoever created the row (who may post
+            // 'scraped' for an XML feed, so every refresh runs the HTML extractor
+            // over RSS and errors out). Never the reverse: a 'scraped' arrival is
+            // user-asserted and must not downgrade what discovery established.
             $feed->setSourceFormat(SourceFormat::XML);
             // Persist the heal in its own step, BEFORE the duplicate check can
             // throw. An existing victim re-adding the feed to fix its format is

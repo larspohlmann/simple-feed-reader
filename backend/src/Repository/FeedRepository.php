@@ -189,10 +189,9 @@ class FeedRepository extends ServiceEntityRepository
         }
 
         // A lastFetchedAt in the future is impossible under a correct clock, so
-        // something wrote it wrong — a worker on a non-UTC timezone did exactly
-        // that in #151, before the kernel pinned UTC. Treat it as stale rather
-        // than let it read as "just fetched" and freeze the feed out of every
-        // refresh in silence, which is a costly failure to notice.
+        // something wrote it wrong -- a non-UTC worker did exactly that in #151,
+        // before the kernel pinned UTC. Treat it as stale rather than let it read
+        // as "just fetched" and freeze the feed out of every refresh in silence.
         $qb->andWhere(
             '(f.fetchSchedule.lastFetchedAt IS NULL'
             . ' OR f.fetchSchedule.lastFetchedAt <= :cooldownCutoff'

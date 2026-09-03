@@ -83,12 +83,11 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalog
             'timeout' => self::TIMEOUT_SECONDS,
             'max_duration' => self::TIMEOUT_SECONDS,
             'max_redirects' => 0,
-            // Capped on the wire, the one size-cap mechanism this codebase has
+            // Capped on the wire, like this codebase's other size caps
             // (ConcurrentFeedFetcher::send(), HtmlPageFetcher, CatalogFaviconFetcher):
             // a provider answering with gigabytes is refused as the bytes arrive,
-            // rather than truncated into a body that can only fail to parse. The
-            // transport re-reports the aborted download as its own failure, which
-            // readBody() translates back into this domain's refusal.
+            // not truncated into an unparseable body. The transport reports the
+            // aborted download as a failure, which readBody() maps to this refusal.
             'on_progress' => static function (int $downloaded): void {
                 if ($downloaded > self::MAXIMUM_RESPONSE_BYTES) {
                     throw new ProviderUnreachableException(sprintf(

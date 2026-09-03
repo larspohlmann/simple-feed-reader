@@ -295,11 +295,10 @@ final class EntryPruner
             return 0;
         }
 
-        // This DQL DELETE bypasses the ORM's lifecycle events entirely, which
-        // is exactly why the index is told explicitly rather than through a
-        // listener that a bulk delete would never fire. Each chunk's ids are
-        // captured here, before its DELETE runs — there is no entity left
-        // afterwards to read an id from.
+        // This DQL DELETE bypasses the ORM's lifecycle events, which is exactly why
+        // the index is told explicitly rather than through a listener a bulk delete
+        // would never fire. Each chunk's ids are captured here, before its DELETE
+        // runs -- there is no entity left afterwards to read an id from.
         foreach (array_chunk($ids, self::DELETE_CHUNK_SIZE) as $chunk) {
             $this->em->createQuery(sprintf('DELETE FROM %s e WHERE e.id IN (:ids)', Entry::class))
                 ->setParameter('ids', $chunk)

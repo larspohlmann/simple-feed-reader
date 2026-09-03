@@ -37,19 +37,17 @@ final readonly class EffectiveRecommendationSettings
         public bool $debugEnabled,
         public ?int $autoGenerateIntervalHours = null,
         /**
-         * The reader's inferred preference profile (#493), resolved
-         * straight from the row with no default of its own — like
-         * guidancePrompt, absence just means "none yet". Defaulted to null
-         * here (unlike guidancePrompt) only so the many callers that predate
-         * #493 keep compiling unchanged.
+         * The reader's inferred preference profile (#493), resolved straight
+         * from the row with no default of its own — absence just means "none
+         * yet". Defaulted to null here only so callers that predate #493 keep
+         * compiling.
          */
         public ?string $profileText = null,
         /**
          * Whether the reader wants each pick explained in the UI — the
          * one-line reason and the score beside it, which travel together
-         * (#541, widened to the score by #576). Defaulted to false here, like
-         * the additive params above it, so the many callers that predate #541
-         * keep compiling unchanged.
+         * (#541, widened to the score by #576). Defaulted to false here so
+         * callers that predate #541 keep compiling.
          */
         public bool $showReasons = false,
     ) {

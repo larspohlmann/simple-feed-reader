@@ -51,21 +51,19 @@ final readonly class SearchTerms
         $trimmed = self::stripSurroundingWhitespace($input);
         self::assertLengthIsUsable($trimmed);
 
-        // A query wrapped in double quotes is one exact phrase — the strongest
-        // signal, so it is read before the trailing-space check and wins when
-        // both are present. An empty phrase (nothing but quotes and whitespace
-        // inside the wrapping pair) is no phrase at all and falls through to
-        // ordinary parsing rather than becoming a search for nothing.
+        // A query wrapped in double quotes is one exact phrase -- the strongest
+        // signal, so it is read before the trailing-space check and wins when both
+        // are present. An empty phrase (only quotes and whitespace inside) is no
+        // phrase at all and falls through to ordinary parsing.
         $phrase = self::phraseWithin($trimmed);
         if ($phrase !== null) {
             return new self([$phrase], isWholeWord: false, isPhrase: true);
         }
 
-        // The mode is a property of the raw input, decided before trimming:
-        // a trailing space is the signal, and trimming would erase it. It is
-        // one flag for the whole query, not a per-term one — a per-term rule
-        // would make every term but the last "whole word" merely by being
-        // followed by a space while typing, which is not what the user meant.
+        // The mode is a property of the raw input, decided before trimming: a
+        // trailing space is the signal, and trimming would erase it. It is one flag
+        // for the whole query, not per-term -- a per-term rule would mark every term
+        // but the last "whole word" just for being followed by a space while typing.
         $isWholeWord = (bool) preg_match('/' . self::WHITESPACE . '\z/u', $input);
 
         return self::split($trimmed, $isWholeWord);

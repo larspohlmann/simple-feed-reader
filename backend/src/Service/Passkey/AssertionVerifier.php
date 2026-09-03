@@ -22,38 +22,35 @@ use Webauthn\PublicKeyCredentialDescriptor;
 use Webauthn\TrustPath\EmptyTrustPath;
 
 /**
- * Verifies a WebAuthn assertion ("login") response and resolves it to the
- * stored UserPasskey it was signed by (#624) — the credential
- * PasskeyAuthenticator takes its user from. This class never mints a JWT and
- * never touches the security token storage: it answers exactly one question,
- * "did an enrolled authenticator sign this challenge?", and hands the caller
- * a persisted entity to build a Passport from.
+ * Verifies a WebAuthn assertion ("login") response and resolves it to the stored
+ * UserPasskey it was signed by (#624) — the credential PasskeyAuthenticator takes
+ * its user from. This class never mints a JWT and never touches the security token
+ * storage: it answers "did an enrolled authenticator sign this challenge?" and
+ * hands the caller a persisted entity to build a Passport from.
  *
- * The steps run in the same order AttestationVerifier's do: the challenge is
- * consumed first, so a replayed or expired handle is rejected before any
- * attacker-controlled bytes are even parsed.
+ * The steps run in AttestationVerifier's order: the challenge is consumed first,
+ * so a replayed or expired handle is rejected before any attacker-controlled
+ * bytes are parsed.
  *
- * $userHandle passed to AuthenticatorAssertionResponseValidator::check() is
- * always the stored value read off the resolved UserPasskey, never one the
- * client supplied. An assertion resolves the account from the credential id
- * alone; it must never trust a user handle the caller sent, since
- * discoverable login exists precisely because the server does not know who
- * is asking until the credential says so.
+ * $userHandle passed to AuthenticatorAssertionResponseValidator::check() is always
+ * the stored value read off the resolved UserPasskey, never one the client
+ * supplied: an assertion resolves the account from the credential id alone, and
+ * must never trust a user handle the caller sent, since discoverable login exists
+ * precisely because the server does not know who is asking until the credential
+ * says so.
  *
- * The signature-counter comparison itself lives in the library:
- * PasskeyCeremony::request() wires CheckCounter to ThrowExceptionIfInvalid,
- * which rejects a counter that failed to advance — the standard defence
- * against a cloned authenticator. This class's only added behaviour around
- * that check is logging the rejection; see logRejectedCounter().
+ * The signature-counter comparison lives in the library: PasskeyCeremony::request()
+ * wires CheckCounter to ThrowExceptionIfInvalid, which rejects a counter that
+ * failed to advance — the standard cloned-authenticator defence. This class only
+ * logs the rejection; see logRejectedCounter().
  *
- * The options AuthenticatorAssertionResponseValidator checks against come
- * from AssertionOptionsFactory::optionsFor() — the same method the options
- * endpoint uses to build what the browser was shown — rather than a second,
- * private copy here, so the two cannot silently drift apart.
+ * The options checked against come from AssertionOptionsFactory::optionsFor() —
+ * the same method the options endpoint uses — not a second private copy, so the
+ * two cannot drift apart.
  *
- * verify() flushes explicitly rather than relying on
- * StampLastLoginOnTokenIssue's incidental flush on JWTCreatedEvent: this
- * class owns the entity it mutates, so it owns persisting the mutation.
+ * verify() flushes explicitly rather than relying on StampLastLoginOnTokenIssue's
+ * incidental flush on JWTCreatedEvent: this class owns the entity it mutates, so
+ * it owns persisting the mutation.
  */
 final readonly class AssertionVerifier
 {

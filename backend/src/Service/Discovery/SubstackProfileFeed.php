@@ -11,33 +11,28 @@ use App\Service\Fetch\FeedFetcherInterface;
  * Maps a Substack profile-share URL onto the feed it stands for.
  *
  * "Copy link to profile" hands the user `https://substack.com/@handle?…utm…`.
- * That page carries no autodiscovery link and is rendered client-side, and the
- * feed lives on a different host entirely — `https://<subdomain>.substack.com/feed`.
- * Same-origin path guessing (WellKnownFeedProbe) can never cross to that host,
- * so discovery dead-ends on a URL whose feed is one hostname away. This finds
- * that host.
+ * That page carries no autodiscovery link, is rendered client-side, and the feed
+ * lives on a different host — `https://<subdomain>.substack.com/feed`. Same-origin
+ * path guessing (WellKnownFeedProbe) can never cross to that host, so discovery
+ * dead-ends. This finds the host.
  *
- * The handle is NOT the subdomain. `@abbeyheffer` publishes at
+ * The handle is NOT the subdomain: `@abbeyheffer` publishes at
  * `theopenbookshelf.substack.com`, and for a meaningful fraction of authors the
  * two differ — so the subdomain is read from Substack's public-profile API
- * (`primaryPublication.subdomain`), not spelled out from the handle. The lookup
- * goes through the same SSRF-guarded fetcher as every other fetch, and the
- * subdomain feed resolves even for custom-domain publications: Substack
- * redirects it to the custom domain and the fetcher follows.
+ * (`primaryPublication.subdomain`), not spelled from the handle. The lookup goes
+ * through the same SSRF-guarded fetcher, and resolves even for custom-domain
+ * publications: Substack redirects the subdomain feed and the fetcher follows.
  *
  * The result is never trusted on its own — discovery fetches and PARSES it, and
  * anything that is not a feed falls through — and the lookup only ever ADDS a
- * subscription: every failure (a profile with no publication, an unreadable or
- * unreachable API, a subdomain that is not a bare label) returns null, and
- * discovery proceeds with the entered URL untouched, exactly as if this had
- * said nothing.
+ * subscription: every failure returns null and discovery proceeds with the entered
+ * URL untouched, as if this said nothing.
  *
- * Planned refactoring: this is deliberately one platform-specific class, wired
- * as a single line at the top of FeedDiscovery::discover(). The moment a SECOND
- * platform needs a host-level URL rewrite before discovery (Medium, Bluesky,
- * …), do not add a second one-off — extract a small keyed rule interface
- * (`feedUrl(string): ?string` per rule) that discovery consults, and move
- * Substack into the first rule. Generalize on the second case, not the third.
+ * Planned refactoring: this is deliberately one platform-specific class, wired as
+ * a single line at the top of FeedDiscovery::discover(). The moment a SECOND
+ * platform needs a host-level URL rewrite (Medium, Bluesky, …), extract a small
+ * keyed rule interface (`feedUrl(string): ?string`) that discovery consults, and
+ * move Substack into the first rule. Generalize on the second case, not the third.
  */
 final readonly class SubstackProfileFeed
 {

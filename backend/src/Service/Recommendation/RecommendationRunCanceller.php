@@ -13,16 +13,13 @@ use Symfony\Component\Clock\ClockInterface;
 /**
  * Stops the account's active run at the user's request.
  *
- * Deliberately takes no lock. A tick may be inside a provider call that runs
- * for minutes, and waiting for it would make the stop button feel broken for
- * exactly as long as the thing the user wants stopped keeps running. So the
- * status flips immediately and the running tick is expected to notice: it
- * re-reads the status after its call and abandons its own result rather than
- * flushing it over this one (RecommendationRunAdvancer).
+ * Deliberately takes no lock: a tick may sit in a provider call for minutes,
+ * and waiting would make the stop button feel broken that whole time. So the
+ * status flips immediately; the running tick re-reads it and abandons its own
+ * result rather than flush over this one (RecommendationRunAdvancer).
  *
- * The consequence to keep in mind is that stopping does not cancel the
- * outbound HTTP request already in flight. That spend is committed; what the
- * stop prevents is every call after it.
+ * Stopping does not cancel the outbound HTTP request already in flight; that
+ * spend is committed. The stop prevents every call after it.
  */
 final readonly class RecommendationRunCanceller
 {

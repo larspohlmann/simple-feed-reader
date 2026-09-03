@@ -14,53 +14,48 @@ use Dom\XPath;
  * Normalizes a fetched page's HTML before readability parses it. The document
  * is parsed once, with the same HTML5 parser readability uses
  * (`\Dom\HTMLDocument`), and handed on as an object — no serialize-and-re-parse
- * round-trip. Two defects of block-component sites (BBC News is the canonical
- * case, #235) are repaired:
+ * round-trip. Defects of block-component sites (BBC News is the canonical case,
+ * #235) are repaired:
  *
  *  - A custom element (nature's <sh-background-transition>) is unknown to the
- *    sanitizer, which drops it with its children. CustomElementUnwrapper
- *    replaces it with its children first, so nothing later sees it (#789).
- *  - Screen-reader-only labels ("Image source, …") are styled invisible via
- *    CSS classes. The sanitizer strips classes later, so once extracted the
- *    labels would render as visible text. They are removed here, while the
- *    class names still identify them.
- *  - Lazy-loaded images carry a blank `data:` placeholder in `src` and the
- *    real URL in a `data-*` attribute. Both are gone by the time the sanitizer
- *    is done, so the reader showed an empty frame (#467). LazyImageSources
- *    restores the source while the data attribute is still there.
- *  - Every paragraph, heading and image sits in its own deep chain of
- *    single-child <div> wrappers. The depth dilutes readability's score
- *    propagation so far that subheadings, figures and even paragraphs fall
- *    under the sibling-join threshold and are dropped. collapseWrapperChains()
- *    collapses the chains so the scores reach the real article container.
+ *    sanitizer, which drops it with its children; CustomElementUnwrapper
+ *    replaces it with its children first (#789).
+ *  - Screen-reader-only labels ("Image source, …") are hidden by CSS class. The
+ *    sanitizer strips classes later, so extracted they would render as visible
+ *    text; removed here while the class still identifies them.
+ *  - Lazy-loaded images carry a blank `data:` placeholder in `src` and the real
+ *    URL in a `data-*` attribute, both gone after sanitizing, so the reader
+ *    showed an empty frame (#467). LazyImageSources restores the source while
+ *    the data attribute is still there.
+ *  - Every paragraph, heading and image sits in a deep chain of single-child
+ *    <div> wrappers whose depth dilutes readability's score propagation until
+ *    subheadings, figures and even paragraphs fall under the sibling-join
+ *    threshold and are dropped. collapseWrapperChains() collapses the chains so
+ *    scores reach the real article container.
  *  - Icon-font glyphs sit in a Private Use Area code point selected by a CSS
  *    class. The sanitizer strips the class, so the glyph loses its font and the
- *    browser paints a tofu box (taz's pull-quote mark is the case, U+E80F).
- *    The dead code points are removed here, along with the now-empty element
- *    that held them.
- *  - Social share-button widgets (Shariff, Sharedaddy, AddToAny, ShareThis)
- *    sit inside the article container as a plain list of links, so readability
- *    keeps them and their "teilen"/"share" labels lead the extracted text.
- *    ShareWidgetRemover strips them here, by class fingerprint, before scoring
- *    (#582). ShareIntentLinkRemover follows it, stripping hand-rolled share
- *    links a plugin fingerprint would not catch (#627).
+ *    browser paints a tofu box (taz's pull-quote mark, U+E80F). The dead code
+ *    points are removed here, with the now-empty element that held them.
+ *  - Social share-button widgets (Shariff, Sharedaddy, AddToAny, ShareThis) sit
+ *    in the article container as a plain list of links, so readability keeps
+ *    them and their "teilen"/"share" labels lead the text. ShareWidgetRemover
+ *    strips them by class fingerprint before scoring (#582); ShareIntentLinkRemover
+ *    follows, stripping hand-rolled share links a fingerprint would miss (#627).
  *  - A paywalled Substack video post extracts to dead player chrome above a
  *    teaser. SubstackGatedVideoPlaceholder replaces the player with a poster
- *    linking to the source here, where the player class and the <head> og tags
- *    survive — the wrapper-chain collapse strips that class later (#627, #748).
- *  - Readability scores a wrapper's class and id by word and removes a
- *    text-less <div> named `…Media…` with its picture. ImageWrapperClassRemover
- *    strips class and id from text-less single-image wrappers last, after the
- *    class-reading removals above have run (#789).
+ *    linking to the source here, where the player class and <head> og tags still
+ *    survive the later wrapper-chain collapse (#627, #748).
+ *  - Readability scores a wrapper's class and id by word and removes a text-less
+ *    <div> named `…Media…` with its picture. ImageWrapperClassRemover strips
+ *    class and id from text-less single-image wrappers last, after the
+ *    class-reading removals above (#789).
  *  - <script> and <style> blocks are stripped from the raw source, bounded by
- *    the real close tag. This keeps their text out of the extraction — the
- *    same content readability's own script removal drops — and does it before
- *    the parse, so a JSON-LD block never reaches readability either. It stays a
- *    raw-source strip, not a DOM `querySelectorAll('script, style')` removal,
- *    to keep the output byte-identical to the pipeline this migration replaced;
- *    a <script>/<style> element is raw-text, so the regex matches the same
- *    close-tag boundary the tokenizer would. Moving it into the DOM pass is a
- *    reasonable follow-up.
+ *    the real close tag, before the parse — so a JSON-LD block never reaches
+ *    readability either. Kept a raw-source strip, not a DOM
+ *    `querySelectorAll('script, style')` removal, to keep output byte-identical
+ *    to the pipeline this migration replaced; a <script>/<style> element is
+ *    raw-text, so the regex matches the same close-tag boundary the tokenizer
+ *    would. Moving it into the DOM pass is a reasonable follow-up.
  *
  * The wrapper collapse is a separate public method, not a step of normalize():
  * normalize() is the score-neutral pass, and callers decide whether to also

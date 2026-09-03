@@ -14,44 +14,36 @@ use Doctrine\ORM\Tools\ToolEvents;
 /**
  * Drops MySQL collation names from generated schemas on every other platform.
  *
- * WHY THIS EXISTS. `UserIdentity::$providerUserId` must compare
- * case-sensitively, which on MySQL means pinning `utf8mb4_bin` in the mapping.
- * But an ORM column option is platform-blind: Doctrine emits it for whatever
- * platform the schema is generated against, and SQLite knows only three
- * collations (BINARY, NOCASE, RTRIM). It does not ignore an unknown name — it
- * fails hard, `SQLSTATE[HY000]: no such collation sequence: utf8mb4_bin`, at
- * CREATE TABLE. Since tests/bootstrap.php builds every test schema from ORM
- * metadata via doctrine:schema:create, an unguarded collation option takes the
- * entire SQLite suite down on the first table, before a single test runs.
+ * WHY THIS EXISTS. `UserIdentity::$providerUserId` must compare case-sensitively,
+ * which on MySQL means pinning `utf8mb4_bin` in the mapping. But an ORM column
+ * option is platform-blind: Doctrine emits it for whatever platform the schema is
+ * generated against, and SQLite knows only BINARY, NOCASE and RTRIM. It does not
+ * ignore an unknown name — it fails hard (`no such collation sequence:
+ * utf8mb4_bin`) at CREATE TABLE. Since tests/bootstrap.php builds every test
+ * schema from ORM metadata via doctrine:schema:create, an unguarded collation
+ * option takes the entire SQLite suite down on the first table.
  *
- * So the collation has to be MySQL-only, and there is no way to say that in a
- * `#[ORM\Column]` attribute. This is the seam Doctrine provides instead:
- * postGenerateSchemaTable fires inside SchemaTool::getSchemaFromMetadata(),
- * the single funnel through which schema:create, schema:update and
- * schema:validate all obtain the mapping's view of a table. Adjusting here
- * therefore keeps all three consistent rather than fixing one and skewing the
- * others.
+ * So the collation must be MySQL-only, and a `#[ORM\Column]` attribute cannot say
+ * that. This is the seam Doctrine provides: postGenerateSchemaTable fires inside
+ * SchemaTool::getSchemaFromMetadata(), the single funnel through which
+ * schema:create, schema:update and schema:validate all obtain the mapping's view
+ * of a table, so adjusting here keeps all three consistent.
  *
- * WHY STRIPPING IS SAFE, and not a silent loss of the guarantee. The collation
- * exists to make MySQL behave the way SQLite already does: SQLite's default
- * BINARY collation is byte-exact and case-sensitive. Removing the option there
- * leaves the column with precisely the semantics the option was added to
- * obtain. The two platforms converge on the same behaviour by opposite routes
- * — MySQL because it is told to, SQLite because it always did. The test
- * App\Tests\Repository\UserIdentityRepositoryTest::testSubjectLookupIsCaseSensitive
- * is what actually holds that convergence honest, and it runs on both legs.
+ * WHY STRIPPING IS SAFE, not a silent loss of the guarantee: the collation exists
+ * to make MySQL behave the way SQLite already does — SQLite's default BINARY
+ * collation is byte-exact and case-sensitive. Removing the option there leaves
+ * exactly the semantics it was added to obtain; the two platforms converge by
+ * opposite routes. App\Tests\Repository\UserIdentityRepositoryTest::testSubjectLookupIsCaseSensitive
+ * holds that convergence honest, on both legs.
  *
- * This is also what lets Version20260721181500's SQLite branch be an honest
- * no-op: with the option stripped, the migrated SQLite schema and the mapping
- * agree, so `doctrine:schema:validate` passes on both legs of the CI matrix.
- * Without this listener it would pass on neither — SQLite could not build a
- * schema at all, and the MySQL leg's validate is the only check that the
- * migration's COLLATE clause matches what the mapping asks for.
+ * This also lets Version20260721181500's SQLite branch be an honest no-op: with
+ * the option stripped, the migrated SQLite schema and the mapping agree, so
+ * `doctrine:schema:validate` passes on both legs of the CI matrix. Without this
+ * listener it would pass on neither.
  *
- * SCOPE. Deliberately keyed on the `utf8mb4_` prefix rather than stripping
- * every collation. A collation SQLite genuinely understands should survive
- * untouched, and a future column that wants NOCASE must not be silently
- * flattened to BINARY by a listener written for a different problem.
+ * SCOPE. Keyed on the `utf8mb4_` prefix rather than stripping every collation: a
+ * collation SQLite genuinely understands should survive, and a future column that
+ * wants NOCASE must not be silently flattened to BINARY.
  */
 #[AsDoctrineListener(event: ToolEvents::postGenerateSchemaTable)]
 final readonly class MySqlCollationSchemaListener

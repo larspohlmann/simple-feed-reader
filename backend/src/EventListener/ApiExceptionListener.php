@@ -86,14 +86,9 @@ final readonly class ApiExceptionListener
             // branch still matters for authentication exceptions that reach
             // kernel.exception with no response set.
             //
-            // Verified rather than assumed: ApiExceptionListenerTest::
-            // testAnEarlierListenersResponseEndsTheChain dispatches through a
-            // real EventDispatcher and asserts this listener never runs. The
-            // test file used to claim the opposite — that we deliberately
-            // overwrite an already-set response — while asserting neither.
-            // A corollary of the real behaviour: an early-return guard here for
-            // an already-set response would be unreachable dead code, not a
-            // behaviour change. There is nothing to guard against.
+            // ApiExceptionListenerTest::testAnEarlierListenersResponseEndsTheChain
+            // proves through a real dispatcher that this listener never runs once
+            // an earlier listener set a response — so a guard here would be dead code.
             return new ResolvedProblem(new ApiProblem(
                 'unauthorized',
                 'Unauthorized',

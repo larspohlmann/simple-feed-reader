@@ -11,36 +11,29 @@ use Symfony\Component\Security\Core\Exception\UserNotFoundException;
 
 /**
  * Closes the timing side-channels between the three ways a password login can
- * fail on credentials: an unknown address, a wrong password, and — since Plan
- * 3b — an address whose account has no password at all.
+ * fail on credentials: unknown address, wrong password, and — since Plan 3b — an
+ * address whose account has no password at all.
  *
- * Symfony performs NO dummy hash of its own: CheckCredentialsListener only
- * reaches the hasher once a user has been loaded, so an unknown address fails
- * on a bare SELECT miss while a known one pays for a full bcrypt/argon2 verify.
- * In production that gap is tens of milliseconds — comfortably measurable over
- * the network, and enough to enumerate the user table with a script, even
- * though the two responses are byte-for-byte identical.
+ * Symfony performs no dummy hash: CheckCredentialsListener reaches the hasher
+ * only once a user is loaded, so an unknown address fails on a bare SELECT miss
+ * while a known one pays for a full argon2 verify — a gap of tens of ms,
+ * measurable over the network and enough to enumerate the user table, though the
+ * two responses are byte-identical.
  *
- * The third case arrived with OAuth. OAuthAccountLinker creates accounts with a
- * null passwordHash, and CheckCredentialsListener returns immediately for those
- * without touching the hasher — so a password attempt against an OAuth-only
- * address was as fast as one against an address that does not exist, and both
- * were an argon2 faster than a wrong password. That does not just leak which
- * addresses are registered; it sorts them into "has a password" and "does not",
- * which tells an attacker exactly which accounts are worth a phishing mail
- * naming the right provider.
+ * The third case arrived with OAuth: OAuthAccountLinker creates accounts with a
+ * null passwordHash, for which CheckCredentialsListener returns without hashing.
+ * So an OAuth-only address was as fast as a nonexistent one and both faster than
+ * a wrong password — sorting addresses into "has a password" and "does not",
+ * which tells an attacker which accounts are worth a provider-named phishing mail.
  *
- * Performing one throwaway hash on the not-found path costs the same order of
- * work as the verify it stands in for. That hash now lives in
- * PasswordWorkEqualizer, which registration shares — this class is only the
- * login-specific decision of *when* to spend it.
+ * The throwaway hash now lives in PasswordWorkEqualizer, shared with
+ * registration; this class only decides *when* to spend it on login.
  *
- * Invoked from LoginFailureHandler rather than a LoginFailureEvent subscriber
- * on purpose: SecurityBundle copies globally registered security listeners onto
- * EVERY firewall dispatcher, so a subscriber would also fire on the api
- * firewall and burn a hash on every unauthenticated JWT request. The failure
- * handler is bound by security.yaml to the login firewall alone, so that
- * mistake is not available here.
+ * Invoked from LoginFailureHandler, not a LoginFailureEvent subscriber:
+ * SecurityBundle copies globally registered listeners onto EVERY firewall, so a
+ * subscriber would also fire on the api firewall and burn a hash on every
+ * unauthenticated JWT request. The failure handler is bound to the login
+ * firewall alone.
  */
 final readonly class LoginTimingEqualizer
 {
@@ -66,21 +59,18 @@ final readonly class LoginTimingEqualizer
 
     private function needsEqualizingWork(AuthenticationException $exception, ?string $submittedIdentifier): bool
     {
-        // The address does not exist: Symfony failed on a bare SELECT miss.
-        // Checked before the BadCredentials gate below, because this is also
-        // the one case that can reach the failure handler unmasked, depending
-        // on how the authenticator was reached.
+        // Unknown address: Symfony failed on a bare SELECT miss. Checked before
+        // the BadCredentials gate because it is also the one case that can reach
+        // the failure handler unmasked.
         if ($this->isUserNotFound($exception)) {
             return true;
         }
 
-        // Anything that is not a credential failure is not this class's
-        // business. A status rejection happens in checkPostAuth, i.e. after the
-        // password has already been verified: that request paid for its hash,
-        // and adding a second would make it the slowest outcome and hand back
-        // an oracle pointing the other way. A throttled request is not a
-        // credential outcome at all, and hashing for one would let an attacker
-        // buy an argon2 of our CPU with a single cheap HTTP request.
+        // Only credential failures are this class's business. A status rejection
+        // happens post-verify, so it already paid for its hash; a second would
+        // make it the slowest outcome and flip the oracle. Hashing a throttled
+        // request would let an attacker buy an argon2 of our CPU with one cheap
+        // request.
         if (!$exception instanceof BadCredentialsException) {
             return false;
         }
@@ -89,16 +79,11 @@ final readonly class LoginTimingEqualizer
             return true;
         }
 
-        // The remaining case, and the reason this method exists at all. Since
-        // Plan 3b a user may have no password hash, and CheckCredentialsListener
-        // bails out immediately for those without touching the hasher.
-        //
-        // One extra indexed SELECT on an already-failing request is a fair
-        // price, and it is spent on BOTH remaining branches — hit and miss
-        // alike — so the lookup cannot become a side channel of its own. It
-        // cannot be abused for load either: LoginFailureHandler is bound to the
-        // login firewall alone, which is already throttled, so this never runs
-        // on the api firewall's unauthenticated traffic.
+        // The remaining case, why this method exists: since Plan 3b a user may
+        // have no password hash, and CheckCredentialsListener skips the hasher
+        // for those. The extra SELECT runs on BOTH branches — hit and miss — so
+        // it is not a side channel itself, and LoginFailureHandler is bound to
+        // the already-throttled login firewall, so it cannot be abused for load.
         $user = $this->users->findOneByEmail($submittedIdentifier);
 
         return null === $user || null === $user->getPassword();

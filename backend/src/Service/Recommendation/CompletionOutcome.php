@@ -7,11 +7,10 @@ namespace App\Service\Recommendation;
 use App\Service\Ai\Exception\ProviderReplyFailure;
 
 /**
- * The result of one call in a concurrent wave: either a decoded answer or the
- * transport failure that call hit. completeMany() returns one per call rather
- * than throwing, so a single failed call never discards a sibling's answer —
- * the atomic-wave rule needs every outcome of a wave in hand to decide whether
- * to bank the wave or re-run it (#344).
+ * The result of one call in a concurrent wave: a decoded answer or the
+ * transport failure it hit. completeMany() returns one per call, not a throw,
+ * so one failed call never discards a sibling's answer — the atomic-wave rule
+ * needs every outcome in hand to bank the wave or re-run it (#344).
  */
 final readonly class CompletionOutcome
 {
@@ -43,13 +42,13 @@ final readonly class CompletionOutcome
 
     /**
      * Whether the *endpoint* failed — the only question the atomic-wave rule
-     * asks. A reply failure is deliberately not one: the address answered, and
-     * a model that answered badly must not abort its siblings or count against
-     * the transport ceiling (#437).
+     * asks. A reply failure is deliberately not one: the address answered, so a
+     * badly answering model must not abort its siblings or count against the
+     * transport ceiling (#437).
      *
-     * This is the one place that distinction is drawn. It used to be drawn by
-     * `instanceof` in three classes, where the wave negated it and two other
-     * sites matched it, and nothing held the three in step.
+     * The one place this distinction is drawn. It used to be `instanceof` in
+     * three classes — the wave negating it, two sites matching it — with
+     * nothing holding them in step.
      */
     public function isFailure(): bool
     {

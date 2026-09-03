@@ -14,14 +14,11 @@ use Doctrine\ORM\QueryBuilder;
 
 /**
  * Loads the reader's weighted history for the recommendation prompt: three
- * capped, newest-first sections, each entry counted in only its highest one
- * (favorites beat kept, kept beats viewed). Only entries whose feed the
- * reader still subscribes to are considered — an unsubscribed feed's history
- * is gone by design.
- *
- * Favorites and kept sections order by the entry's effectiveDate, because
- * EntryState has no favorited-at timestamp to order by instead; the viewed
- * section orders by the state row's own viewedAt.
+ * capped, newest-first sections, each entry counted only in its highest
+ * (favorites beat kept, kept beats viewed). Only feeds the reader still
+ * subscribes to count — an unsubscribed feed's history is gone by design.
+ * Favorites and kept order by effectiveDate (EntryState has no favorited-at
+ * timestamp); viewed orders by the state row's viewedAt.
  */
 final readonly class RecommendationHistoryLoader
 {
@@ -109,11 +106,9 @@ final readonly class RecommendationHistoryLoader
     }
 
     /**
-     * The joined 'e' and 'f' selects exist to eagerly fetch the entry and feed
-     * in the same query rather than lazy-loading them per row; because both
-     * are reachable via a to-one association from the root 'es', Doctrine
-     * folds them into the graph instead of giving them their own row index —
-     * only the EntryState root and the scalar customTitle appear as row keys.
+     * The 'e' and 'f' selects eagerly fetch entry and feed instead of
+     * lazy-loading per row; as to-one associations from the 'es' root Doctrine
+     * folds them into the graph, so only EntryState and customTitle are row keys.
      *
      * @param array<array-key, mixed> $row a mixed DQL result: [0 => EntryState, customTitle: ?string]
      */

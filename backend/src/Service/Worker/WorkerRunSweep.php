@@ -78,23 +78,20 @@ final readonly class WorkerRunSweep
             }
 
             foreach ($activeRuns as $run) {
-                // Before each run, because a sweep's duration is the SUM over
-                // its runs and one run can spend a whole provider timeout.
-                // Marking only once per sweep let the heartbeat go stale
-                // mid-sweep, and the client then took the healthy worker for
-                // a dead one (#311 final review, Critical 2).
+                // Before each run, because a sweep's duration is the SUM over its
+                // runs and one run can spend a whole provider timeout. Marking only
+                // once per sweep let the heartbeat go stale mid-sweep, and the
+                // client took the healthy worker for a dead one (#311).
                 $this->presence->mark($kind);
                 $this->advanceOne($run);
                 ++$attemptedRuns;
             }
         } finally {
-            // A long-running caller accumulates managed entities across
-            // sweeps; the identity map is per-sweep state, not process
-            // state. `finally` rather than a plain trailing call, so this
-            // still runs even if something above ever escapes advanceOne()'s
-            // own floor (#311 fix round 2) -- the identity map must never be
-            // left dirty for the *next* sweep just because this one had a
-            // run go wrong.
+            // The identity map is per-sweep state, not process state: a
+            // long-running caller accumulates managed entities across sweeps.
+            // `finally`, not a trailing call, so this still runs even if
+            // something escapes advanceOne()'s own floor (#311 fix round 2) --
+            // the map must never be left dirty for the *next* sweep.
             $this->entityManager->clear();
             $this->heartbeat->sweepEnded();
         }
@@ -131,11 +128,10 @@ final readonly class WorkerRunSweep
                 'exception' => $e,
             ]);
         } catch (\Throwable $e) {
-            // The floor beneath every case above: nothing that goes wrong
-            // advancing one run may ever abort the sweep for every run
-            // sorted after it. Logged at error level because, unlike the
-            // typed cases above, nothing here already recorded the failure
-            // anywhere else.
+            // The floor beneath every case above: nothing that goes wrong advancing
+            // one run may abort the sweep for the runs sorted after it. Logged at
+            // error level because, unlike the typed cases above, nothing here has
+            // recorded the failure anywhere else.
             $this->logger->error('Recommendation sweep: unexpected failure advancing a run.', [
                 'runId' => $run->getId(),
                 'exception' => $e,

@@ -54,10 +54,9 @@ final readonly class IndexedEntrySearch implements EntrySearchInterface
             rows: $this->entries->rowsByIdsForUser($matches->entryIds, $query->userId),
             matchedWords: $matches->matchedWords,
             // The engine's own count, not count($rows): rowsByIdsForUser's
-            // subscription join can silently drop an id the engine returned
-            // (a ghost left by a failed async index delete, for one), and a
-            // dropped id still means the engine may hold more matches beyond
-            // this page.
+            // subscription join can silently drop an id the engine returned (a ghost
+            // from a failed async index delete), and a dropped id still means the
+            // engine may hold more matches beyond this page.
             matchCount: \count($matches->entryIds),
         );
     }

@@ -38,11 +38,10 @@ final readonly class FeedBodyParser
             return $this->resolve($format)->parse($body, $feed);
         }
 
-        // Defensive fallback for rows whose format has no parser here —
-        // written by a newer deployment, or left behind by a removed strategy.
-        // 'xml' is what every row meant before the seam existed, and its parse
-        // failure lands in the runner's normal error handling instead of a
-        // locator NotFoundException escaping it.
+        // Defensive fallback for rows whose format has no parser here -- written by
+        // a newer deployment, or left by a removed strategy. 'xml' is what every row
+        // meant before the seam existed, and its parse failure lands in the runner's
+        // normal error handling instead of a locator NotFoundException escaping.
         try {
             return $this->resolve(SourceFormat::XML)->parse($body, $feed);
         } catch (FeedParseException $e) {

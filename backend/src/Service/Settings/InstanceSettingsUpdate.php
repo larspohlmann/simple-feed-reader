@@ -19,11 +19,10 @@ final readonly class InstanceSettingsUpdate
         public ?string $publicBaseUrl,
         public ?string $passkeyRpId,
         public ?string $passkeyRpName,
-        // Defaulted, unlike the fields above, so call sites that never
-        // mention passkeys can keep using positional/partial construction.
-        // Matches InstanceSetting::$passkeySignInEnabled's own default. A
-        // test that wants a working passkey configuration must pass
-        // `passkeySignInEnabled: true` explicitly.
+        // Defaulted, unlike the fields above, so call sites that never mention
+        // passkeys can keep positional/partial construction. Matches
+        // InstanceSetting::$passkeySignInEnabled's own default. A test that wants a
+        // working passkey configuration must pass `passkeySignInEnabled: true`.
         public bool $passkeySignInEnabled = false,
     ) {
     }

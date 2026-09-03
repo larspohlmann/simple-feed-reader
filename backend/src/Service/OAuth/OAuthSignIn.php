@@ -19,18 +19,17 @@ use Random\RandomException;
  * Turning a provider-verified identity into a session, in the two legs the
  * sign-in is split across.
  *
- * The split is not an accident of routing, it is the design: the callback NEVER
- * hands the SPA a JWT. It issues a one-time 30-second login code, and the SPA
- * POSTs that code back to be redeemed. A JWT in a redirect's query string would
- * be written to browser history, sent onward in `Referer` headers and logged
- * verbatim by every proxy in between; the code is worthless 30 seconds later and
- * worthless after one use.
+ * The split is the design, not an accident of routing: the callback NEVER hands
+ * the SPA a JWT. It issues a one-time 30-second login code, and the SPA POSTs it
+ * back to be redeemed. A JWT in a redirect's query string would be written to
+ * browser history, sent onward in `Referer` headers and logged verbatim by every
+ * proxy in between; the code is worthless 30 seconds later and after one use.
  *
  * Both legs live here rather than in OAuthController because they are one rule
  * set, not two endpoints: what the code is bound to, which failures are
- * distinguishable, and where the account-status gate sits. The controller is
- * left with the HTTP of it — reading the cookie, building the redirect, setting
- * and clearing the binding.
+ * distinguishable, and where the account-status gate sits. The controller keeps
+ * the HTTP of it — reading the cookie, building the redirect, setting and
+ * clearing the binding.
  */
 final readonly class OAuthSignIn
 {
@@ -48,15 +47,14 @@ final readonly class OAuthSignIn
      * will redeem.
      *
      * Deliberately NOT gated on account status. A pending_approval or suspended
-     * user still receives a login code and still redeems it — and redemption is
-     * where the status check lives, so that the SPA gets a proper problem+json
-     * explaining WHY it cannot sign in, exactly as the password login does.
-     * Refusing here would collapse "you are waiting for approval" into a generic
-     * redirect error.
+     * user still receives a login code and redeems it — redemption is where the
+     * status check lives, so the SPA gets a proper problem+json explaining WHY it
+     * cannot sign in, as the password login does. Refusing here would collapse
+     * "you are waiting for approval" into a generic redirect error.
      *
      * The code is worth nothing on its own: it names a user id, and
-     * redeemLoginCode() re-reads that user and re-runs the status gate before
-     * any token is minted.
+     * redeemLoginCode() re-reads that user and re-runs the status gate before any
+     * token is minted.
      *
      * @param string $browserToken the flow binding this code is tied to, so it
      *                             can only be redeemed by the browser that
@@ -78,12 +76,11 @@ final readonly class OAuthSignIn
 
     /**
      * Leg two: spend the code and mint the JWT.
-     * The first two failures below are ONE answer on purpose. An unknown code,
-     * an already-spent one, an expired one, one presented by a browser that did
-     * not complete the flow, and one naming an account deleted since the
-     * callback are all InvalidTokenException — a caller who could tell them
-     * apart could confirm that a captured code was still live, or probe which
-     * accounts exist.
+     * The first two failures below are ONE answer on purpose. An unknown code, an
+     * already-spent one, an expired one, one presented by a browser that did not
+     * complete the flow, and one naming an account deleted since the callback are
+     * all InvalidTokenException — telling them apart could confirm a captured code
+     * was still live, or probe which accounts exist.
      *
      * @param string|null $browserToken null when the browser sent no binding
      *                                  cookie, which the store treats as a
@@ -120,26 +117,24 @@ final readonly class OAuthSignIn
      * working JWT on this path.
      *
      * OAuthAccountLinker::resolve() deliberately returns suspended and rejected
-     * users unchanged, so nothing earlier in this flow refuses them. Delete this
-     * call and a suspended user signs in through OAuth.
+     * users unchanged, so nothing earlier refuses them. Delete this call and a
+     * suspended user signs in through OAuth.
      *
-     * LoginUserChecker::checkPostAuth() is called rather than the rule being
-     * restated, so a future status change is made in exactly one place and both
-     * login paths follow it. The translation below is the same one
-     * LoginFailureHandler performs for the password login: the security layer's
-     * AccountStatusException is an AuthenticationException, which the API
-     * exception listener renders as a bare 401 "unauthorized" — correct for a
-     * stolen JWT, wrong here, where the user has just proved an identity and is
-     * owed the reason.
+     * LoginUserChecker::checkPostAuth() is called rather than the rule restated,
+     * so a future status change happens in one place and both login paths follow
+     * it. The translation below matches LoginFailureHandler's for the password
+     * login: the security layer's AccountStatusException is an
+     * AuthenticationException, which the API exception listener renders as a bare
+     * 401 "unauthorized" — correct for a stolen JWT, wrong here, where the user has
+     * just proved an identity and is owed the reason.
      *
-     * The plan suggested teaching the listener to map AccountStatusException
-     * globally instead. That was rejected on purpose: the `api` firewall's
-     * UserChecker throws the SAME exception for a suspended holder of a live
-     * token, and JwtAccessTest::testSuspendedTokenDoesNotLeakAccountStatus pins
-     * that path to a 401 disclosing nothing. A global mapping would put a
-     * status-disclosing 403 one listener-priority change away from that path.
-     * Disclosure is decided where an identity was verified, which is here, and
-     * is exactly where LoginFailureHandler decides it too.
+     * The plan suggested mapping AccountStatusException globally in the listener
+     * instead. Rejected on purpose: the `api` firewall's UserChecker throws the
+     * SAME exception for a suspended holder of a live token, and
+     * JwtAccessTest::testSuspendedTokenDoesNotLeakAccountStatus pins that path to a
+     * 401 disclosing nothing. A global mapping would put a status-disclosing 403
+     * one listener-priority change from that path. Disclosure is decided where an
+     * identity was verified — here, exactly where LoginFailureHandler decides it.
      */
     private function assertMayLogIn(User $user): void
     {

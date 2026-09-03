@@ -50,12 +50,11 @@ final readonly class RegistrationService
     public function register(string $email, string $plainPassword, string $locale = 'en'): void
     {
         if (null !== $this->users->findOneByEmail($email)) {
-            // Identical bytes are not enough. A fresh signup pays for an
-            // argon2id hash (~174 ms) that this path would otherwise skip
-            // entirely, and a gap that size is a reliable oracle over the
-            // network no matter how equal the responses look. Spend the same
-            // work before returning. See App\Security\PasswordWorkEqualizer,
-            // which login has used for the same reason since Task 11.
+            // Identical bytes are not enough: a fresh signup pays for an argon2id
+            // hash (~174 ms) this path would otherwise skip, and a gap that size
+            // is a reliable timing oracle over the network. Spend the same work
+            // before returning -- see App\Security\PasswordWorkEqualizer, which
+            // login has used for the same reason since Task 11.
             $this->work->spendOneHash();
 
             return;

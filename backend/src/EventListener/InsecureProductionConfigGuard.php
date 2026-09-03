@@ -12,60 +12,43 @@ use Symfony\Component\HttpKernel\KernelEvents;
 
 /**
  * Refuses to serve production traffic while a fail-open placeholder is still in
- * place.
+ * place. Two committed defaults turn a forgotten override into a silent failure
+ * that looks healthy indefinitely:
  *
- * Two committed defaults turn a forgotten override into a silent failure, and
- * silence is the whole problem — neither one breaks anything visibly, so a
- * deployment that missed them looks healthy indefinitely:
+ *  * ALTCHA_HMAC_KEY ships as a known string in a PUBLIC repository, and the key
+ *    is the ONLY thing making a challenge unforgeable: anyone holding it forges
+ *    a valid solution in one hash instead of ~150k. The proof-of-work on
+ *    /register and /password-reset-request becomes free while the endpoints
+ *    still answer 200.
+ *  * MAILER_DSN=null://null discards every message and reports SUCCESS — no
+ *    error, no warning, no log line. Registration returns 202 with no
+ *    verification mail, the admin queue never fills, password reset does
+ *    nothing, and users conclude the site is broken while the logs stay clean.
  *
- *  * ALTCHA_HMAC_KEY ships as a known string in a PUBLIC repository. The key is
- *    the ONLY thing making a challenge unforgeable: anyone holding it picks a
- *    salt and a number, sets `expires` far out, computes the HMAC, and submits
- *    a valid solution having done one hash instead of ~150k. The proof-of-work
- *    on /register and /password-reset-request becomes free, and the endpoints
- *    still answer 200, so nothing anywhere reports a problem.
+ * null://null is not always that mistake: MAIL_DISABLED=1 (App\Service\Mail\
+ * MailCapability, #230) makes "no mail" a deliberate opt-in state, and this
+ * guard accepts null://null only under that flag. Both defaults fail OPEN; this
+ * guard makes them fail closed, the stance
+ * App\Controller\MaintenanceController::isAuthorized() already takes on an empty
+ * token.
  *
- *  * MAILER_DSN=null://null discards every message and reports SUCCESS. Not an
- *    error, not a warning, not a log line — `null://` sending is a successful
- *    send. Registration returns 202 with no verification mail, the admin queue
- *    never fills because nobody can verify, password reset silently does
- *    nothing, and every user concludes the site is broken while the logs stay
- *    clean.
+ * WHY kernel.request, NOT A COMPILER PASS OR KERNEL BOOT CHECK: a deploy runs
+ * `cache:warmup` in prod before the `current` symlink flips, so those hooks
+ * would abort warmup on a misconfigured — or merely differently-configured —
+ * environment and take the whole deploy down, converting a config mistake into
+ * an outage of the release process itself. kernel.request is safe because
+ * secrets need not exist at BUILD time: a host injecting ALTCHA_HMAC_KEY
+ * per-request (Apache SetEnv, php-fpm pool directive) has only the .env default
+ * visible during warmup, but the true value by the time a request arrives.
+ * Warmup, migrations and every console command are untouched — this listener
+ * runs only on an incoming HTTP request.
  *
- * null://null is not always that mistake. MAIL_DISABLED=1 (App\Service\Mail\
- * MailCapability, issue #230) makes "no mail" a deliberate, opt-in instance
- * state, and this guard accepts null://null only under that flag. A bare
- * null://null with mail still enabled remains the forgotten-config failure
- * described above.
- *
- * Both fail OPEN. This guard makes them fail closed, which is the stance
- * App\Controller\MaintenanceController::isAuthorized() already takes when its
- * token is empty: refuse, rather than accept and hope.
- *
- * WHY kernel.request AND NOT A COMPILER PASS OR A KERNEL BOOT CHECK. A deploy
- * runs `cache:warmup` on the production host, in prod, before the `current`
- * symlink flips. Both of those hooks execute during warmup, so a misconfigured
- * — or merely differently-configured — environment would abort the warmup and
- * take the whole deploy down with it, including deploys that were going to be
- * fine. That failure mode is worse than the one being fixed: it converts a
- * config mistake into an outage of the release process itself.
- *
- * The distinction that makes kernel.request safe is that secrets need not be
- * present at BUILD time. A host that injects ALTCHA_HMAC_KEY per-request (an
- * Apache SetEnv, a php-fpm pool directive) legitimately has only the .env
- * default visible while warmup runs; aborting there would be a false positive.
- * By the time a real request arrives the true value is in the environment, so
- * checking then is both correct and non-blocking. Warmup, migrations and every
- * other console command are untouched — this listener only ever runs on an
- * incoming HTTP request.
- *
- * The throw surfaces as a 500. Deliberately: the operator's message goes to the
+ * The throw surfaces as a 500, deliberately: the operator's message goes to the
  * log (App\EventListener\ApiExceptionListener suppresses exception messages in
- * non-debug responses), so the client learns nothing about the configuration
- * while the log says exactly which variable to set. Refusing every route rather
- * than only the affected ones is intentional too — a half-serving instance with
- * a void CAPTCHA or a black-hole mailer is not a degraded site, it is a site
- * quietly failing at the things it is for.
+ * non-debug responses), so the client learns nothing while the log names the
+ * variable to set. Refusing every route, not only the affected ones, is
+ * intentional too — a half-serving instance with a void CAPTCHA or black-hole
+ * mailer is a site quietly failing at what it is for.
  */
 #[AsEventListener(event: KernelEvents::REQUEST, method: 'onKernelRequest', priority: 4096)]
 final readonly class InsecureProductionConfigGuard

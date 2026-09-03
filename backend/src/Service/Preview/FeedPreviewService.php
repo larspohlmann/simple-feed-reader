@@ -75,11 +75,10 @@ final readonly class FeedPreviewService
                 default => $this->parser->parse($body),
             };
         } catch (FeedParseException $e) {
-            // The generic wording fits a feed-document mismatch; a scraped
-            // preview keeps the extractor's own message ("No article list was
-            // detected on the page.") — it already names the actual problem
-            // in user-appropriate words, so flattening it would only lose
-            // information.
+            // The generic wording fits a feed-document mismatch; a scraped preview
+            // keeps the extractor's own message ("No article list was detected on
+            // the page."), which already names the actual problem in user-
+            // appropriate words. Flattening it would only lose information.
             throw new FeedPreviewException(
                 $format === SourceFormat::SCRAPED ? $e->getMessage() : 'That address is not a readable feed.',
                 0,

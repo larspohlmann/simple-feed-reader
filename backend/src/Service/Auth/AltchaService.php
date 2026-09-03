@@ -29,28 +29,25 @@ final readonly class AltchaService
      *   attacker, native sha256      0.41 us/hash  ->  40 ms min, 63 ms avg
      *   widget, await subtle.digest  16.5 us/hash  ->  2.5 s avg, 3.3 s worst
      *
-     * That is a ~25-40x asymmetry *against* the honest user, depending on the
-     * attacker's runtime (25x vs optimised sync JS, 40x vs native). The widget
-     * awaits one promise per candidate and cannot close that gap, so the window
-     * is sized by what the browser can afford, not by what we would like the
-     * attacker to pay. A wider window is defensible **if** the widget ever moves
-     * to auto="onload", where the solve overlaps form filling instead of
-     * blocking submit — that is a frontend decision, so do not widen this
-     * without confirming the widget mode first.
+     * That is a ~25-40x asymmetry *against* the honest user (25x vs optimised sync
+     * JS, 40x vs native). The widget awaits one promise per candidate and cannot
+     * close that gap, so the window is sized by what the browser can afford. A
+     * wider window is defensible **if** the widget ever moves to auto="onload",
+     * where the solve overlaps form filling instead of blocking submit — a
+     * frontend decision, so do not widen this without confirming the widget mode.
      *
      * The floor is the load-bearing half. Challenges are free and unlimited to
-     * request, and nothing binds a client to one it was issued, so with a floor
-     * of zero an attacker batch-requests, discards the expensive challenges and
-     * solves only the cheapest — making effective cost the minimum of the batch
-     * rather than its mean. Pinning the minimum makes the cost floor a property
-     * of the protocol instead of the attacker's luck.
+     * request, and nothing binds a client to one it was issued, so with a floor of
+     * zero an attacker batch-requests, discards the expensive challenges and solves
+     * only the cheapest — making effective cost the minimum of the batch, not its
+     * mean. Pinning the minimum makes the cost floor a property of the protocol,
+     * not the attacker's luck.
      *
-     * Sizing note: this buys resistance to bulk *email* abuse, not to account
-     * creation. Registration lands in pending_verification, needs a clicked
-     * email link, then a human admin — so a solved challenge only ever yields a
-     * row that the purge command reaps after 48 hours. A PoW sizes the cost of
-     * abuse; it does not cap it. The rate limiter on the guarded endpoints is
-     * what caps it.
+     * Sizing note: this buys resistance to bulk *email* abuse, not account
+     * creation. Registration lands in pending_verification, needs a clicked email
+     * link then a human admin — so a solved challenge only yields a row the purge
+     * command reaps after 48 hours. A PoW sizes the cost of abuse; it does not cap
+     * it. The rate limiter on the guarded endpoints does.
      *
      * Re-derive with: hash 2e5 candidates and divide.
      */

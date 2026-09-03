@@ -30,42 +30,35 @@ use Symfony\Component\Clock\ClockInterface;
 final readonly class WorkerPresence
 {
     /**
-     * Sized against the longest gap between two touches, NOT against the
-     * sweep cadence.
+     * Sized against the longest gap between two touches, NOT the sweep cadence.
      *
      * Until #433 that gap was a whole provider call: the sweep touches the
      * heartbeat once per run it advances, so a call that streamed for its full
      * wall clock produced no touch until it finished. This constant therefore
-     * had to follow the call ceiling and was raised with it every time — 180 s
-     * when #320 took the ceiling to 300 s, 660 s when a slow local model took
-     * it to 600 s. A per-connection profile ends that: an hour-long ceiling
-     * would have meant an hour-long freshness window, and a worker that died
-     * would have been believed for that whole hour.
+     * followed the call ceiling and rose with it every time — 180 s at #320's
+     * 300 s ceiling, 660 s at a slow local model's 600 s. A per-connection profile
+     * ends that: an hour-long ceiling would have meant an hour-long freshness
+     * window, believing a dead worker for that whole hour.
      *
-     * SweepStreamHeartbeat breaks the coupling. The transport pings it as each
-     * chunk arrives, so a streaming call now refreshes liveness roughly every
-     * half minute however long it runs, and the wall clock no longer bounds
-     * anything here.
+     * SweepStreamHeartbeat breaks the coupling: the transport pings it as each
+     * chunk arrives, so a streaming call refreshes liveness roughly every half
+     * minute however long it runs, and the wall clock no longer bounds anything.
      *
-     * What is left is the silence before the first chunk. No chunk arrives
-     * while the provider evaluates the prompt, so nothing pings, and the
-     * longest that may honestly last is the most patient first-byte bound any
-     * connection can be on: ProviderTimeouts' slow profile, 900 s. Add the ten
-     * seconds until the next sweep firing and the surrounding bookkeeping, and
-     * 960 s carries it.
+     * What is left is the silence before the first chunk. Nothing pings while the
+     * provider evaluates the prompt, and the longest that may honestly last is the
+     * most patient first-byte bound any connection can be on: ProviderTimeouts'
+     * slow profile, 900 s. Add ten seconds to the next sweep firing plus
+     * bookkeeping, and 960 s carries it. This constant follows THAT bound now, and
+     * must be raised with it — not with the wall clock.
      *
-     * This constant follows THAT bound now, and must be raised with it — not
-     * with the wall clock.
+     * The earlier 30 s ("three missed ten-second sweeps") was shorter than a
+     * single unit of work, so arbitration flipped to poll mode exactly while the
+     * worker was working: the client then hit the per-user lock, read `busy` as a
+     * failure, and stopped polling a healthy run (#311 final review, Critical 2).
      *
-     * The earlier 30 s -- justified as "three missed ten-second sweeps" --
-     * was shorter than a single unit of work, so the arbitration flipped to
-     * poll mode exactly while the worker was working: the client then hit
-     * the per-user lock, read `busy` as a failure, and stopped polling a
-     * healthy background run (#311 final review, Critical 2).
-     *
-     * The cost of the wider window is that a worker that dies mid-call is
-     * recognised as dead up to 960 s later. That is the right trade: a late
-     * fallback resumes a run, while a premature one aborts it.
+     * The cost of the wider window is that a worker dying mid-call is recognised
+     * as dead up to 960 s later. That is the right trade: a late fallback resumes
+     * a run, while a premature one aborts it.
      */
     public const int FRESH_SECONDS = 960;
 

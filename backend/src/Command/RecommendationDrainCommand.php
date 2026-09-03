@@ -125,14 +125,12 @@ final class RecommendationDrainCommand extends Command
             return Command::SUCCESS;
         }
 
-        // A fatal error skips finally, and this CLI process has no request
-        // timeout watching over it; same belt-and-braces as
-        // RecommendationRunAdvancer::advance() -- the release is
-        // token-scoped, so it can never free a lock this process no longer
-        // owns, and SIGKILL still falls back to the TTL. The flag is what
-        // keeps it a safety net rather than a second cleanup: this closure
-        // runs on EVERY termination, so without it the ordinary path
-        // released the lock and surrendered the key twice.
+        // A fatal error skips finally, and this CLI has no request timeout --
+        // same belt-and-braces as RecommendationRunAdvancer::advance(). The
+        // release is token-scoped (never frees a lock this process lost) and
+        // SIGKILL falls back to the TTL. The flag keeps it a safety net, not a
+        // double cleanup: this closure runs on EVERY termination, so without it
+        // the ordinary path released the lock twice.
         $this->cleanedUp = false;
         register_shutdown_function(function () use ($lock): void {
             if ($this->cleanedUp) {

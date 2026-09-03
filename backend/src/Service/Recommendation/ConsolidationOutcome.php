@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 /**
- * What RecommendationConsolidationResolver settled a consolidation call to,
- * handed back for the advancer to write. A usable reply -- or an all-pruned
- * pool with nothing left to consolidate -- carries the final ranked,
- * deduped, reasoned list to finalize; an unusable one carries the offending
- * reply and the batch-score pool to degrade to, so the advancer can run its
- * cross-tick retry-or-degrade envelope, mirroring ProfileDistillationOutcome.
- * Transport failures never reach here: the resolver throws them, exactly as
- * RecommendationProfileDistiller and RecommendationBatchWave do.
+ * What RecommendationConsolidationResolver settled a consolidation call to, for
+ * the advancer to write. Usable — or an all-pruned pool with nothing left to
+ * consolidate — is the final ranked, deduped, reasoned list to finalize;
+ * unusable holds the offending reply and the batch-score pool to degrade to,
+ * for the advancer's cross-tick retry-or-degrade envelope, mirroring
+ * ProfileDistillationOutcome. Transport failures never reach here: the resolver
+ * throws them, as RecommendationProfileDistiller and RecommendationBatchWave do.
  */
 final readonly class ConsolidationOutcome
 {

@@ -159,11 +159,10 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
             // uses for every other list, so a page hydrated from these ids
             // (IndexedEntrySearch) matches what the caller already expects.
             'sort' => ['effectiveDate:desc', 'id:desc'],
-            // Every term must match somewhere in the document. The default
-            // ("last") silently drops trailing terms until something matches,
-            // which would turn a two-word search that matches nothing into a
-            // one-word search that matches everything — a worse answer than
-            // reporting no results (confirmed by probe).
+            // Every term must match somewhere in the document. The default ("last")
+            // silently drops trailing terms until something matches, which turns a
+            // two-word search that matches nothing into a one-word search that
+            // matches everything -- worse than no results (confirmed by probe).
             'matchingStrategy' => 'all',
             'limit' => $search->limit,
             // title/summary are highlighted without being requested here: the

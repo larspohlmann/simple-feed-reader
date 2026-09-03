@@ -24,11 +24,11 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  *    here as an ordinary verified email.
  *
  * Note what is NOT here: any handling of the `id_token` Apple puts in the
- * callback form body. That token did not come from the token endpoint, so the
- * signature-verification carve-out the parent relies on does not cover it, and
- * reading it would need JWKS verification this codebase does not implement. The
- * callback takes only the `code`; the ID token we trust is the one the token
- * endpoint hands back. See AbstractOidcProvider's class docblock.
+ * callback form body. It did not come from the token endpoint, so the parent's
+ * signature-verification carve-out does not cover it, and reading it would need
+ * JWKS verification this codebase does not implement. The callback takes only
+ * the `code`; the ID token we trust is the one the token endpoint returns. See
+ * AbstractOidcProvider's class docblock.
  */
 final readonly class AppleOAuthProvider extends AbstractOidcProvider
 {
@@ -59,9 +59,8 @@ final readonly class AppleOAuthProvider extends AbstractOidcProvider
 
     /**
      * Delegated in full: Apple's credentials are the secret factory's four
-     * values, and there is no fifth thing this class could separately be
-     * missing. Keeping the answer in one place is what stops a deployment from
-     * being "configured" here and unable to sign there.
+     * values, with no fifth thing this class could be missing. One answer in one
+     * place stops a deployment being "configured" here and unable to sign there.
      */
     public function isConfigured(): bool
     {
@@ -75,9 +74,9 @@ final readonly class AppleOAuthProvider extends AbstractOidcProvider
 
     /**
      * `email` only. Apple's documented scopes are `name` and `email`, and it
-     * returns an ID token from the token endpoint regardless, so unlike Google
-     * there is no `openid` to add. The application shows an email and stores an
-     * email; `name` would widen the consent screen for data nothing reads.
+     * returns an ID token regardless, so unlike Google there is no `openid` to
+     * add. The app shows and stores an email; `name` would widen the consent
+     * screen for data nothing reads.
      */
     protected function getScope(): string
     {
@@ -86,14 +85,13 @@ final readonly class AppleOAuthProvider extends AbstractOidcProvider
 
     /**
      * The one parameter Apple needs that OIDC does not define, and the reason
-     * this hook exists on the parent at all.
+     * this hook exists on the parent.
      *
-     * Requesting any scope at all makes Apple deliver the callback as a POST
-     * with a form body instead of a GET with a query string, and Apple rejects
-     * the authorization request outright if the mode is not declared. This is
-     * why OAuthController's callback route accepts both methods, and why the
-     * flow-binding cookie cannot be `SameSite=Lax`: a cross-site POST does not
-     * carry one.
+     * Requesting any scope makes Apple deliver the callback as a POST with a form
+     * body instead of a GET, and Apple rejects the request if the mode is not
+     * declared. This is why OAuthController's callback route accepts both methods
+     * and why the flow-binding cookie cannot be `SameSite=Lax`: a cross-site POST
+     * does not carry one.
      */
     protected function extraAuthorizationParams(): array
     {

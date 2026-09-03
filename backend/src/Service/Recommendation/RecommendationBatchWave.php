@@ -11,19 +11,16 @@ use App\Service\Ai\ProviderConnectionFactory;
 
 /**
  * The batch phase's concurrent fan-out (#344): one tick resolves a wave of
- * batches instead of a single call. Every not-yet-pruned batch of the wave is
- * fired at once through completeMany; a batch whose reply is unusable is
- * retried -- only it, and only with its own corrective tail built from its own
- * last invalid reply, held in a local map -- for up to MAX_ATTEMPTS rounds,
- * then degraded to an empty winner set (#329). A fully-pruned batch resolves
- * free, as an empty winner set.
+ * batches through completeMany. An unusable batch is retried alone -- with its
+ * own corrective tail from its own last invalid reply -- for up to MAX_ATTEMPTS
+ * rounds, then degraded to an empty winner set (#329); a fully-pruned batch
+ * resolves free to one.
  *
- * A transport failure anywhere in a round is the atomic-wave rule: settle
- * every in-flight call and re-throw the first failure, banking nothing. The
- * caller (RecommendationRunAdvancer) turns that throw into one ceiling
- * increment for the whole wave and re-runs the wave next tick, so this class
- * never touches the run's persisted progress -- it only reads the plan, reads
- * the provider, and settles the debug rows it opened.
+ * A transport failure in a round is the atomic-wave rule: settle every in-flight
+ * call, re-throw the first failure, bank nothing. The caller
+ * (RecommendationRunAdvancer) turns that into one ceiling increment and re-runs
+ * next tick, so this class never touches persisted progress -- it only reads the
+ * plan and provider and settles the debug rows it opened.
  *
  * @SuppressWarnings("PHPMD.ExcessiveParameterList")
  */
@@ -102,12 +99,11 @@ final readonly class RecommendationBatchWave
     }
 
     /**
-     * Resolves the next $waveSize batches of the plan to their entry ids and
-     * the prompt lines those ids still resolve to. Every batch's ids are
-     * resolved through one linesForIds() call over their union, not one call
-     * per batch, then split back out per batch by key -- the wave sends up
-     * to MAX_BATCH_CONCURRENCY batches at once, and this is the difference
-     * between one round trip and one per batch.
+     * Resolves the next $waveSize batches to their entry ids and the prompt
+     * lines those ids still resolve to. All batches' ids go through one
+     * linesForIds() call over their union, then split back by key -- with up to
+     * MAX_BATCH_CONCURRENCY batches per wave, that is one round trip, not one
+     * per batch.
      *
      * @return list<WaveBatch>
      */
@@ -191,12 +187,11 @@ final readonly class RecommendationBatchWave
     }
 
     /**
-     * Fires one round of the wave: a fresh RecordedCall and request per still-
-     * pending batch -- each carrying that batch's own corrective tail -- read
-     * concurrently through completeMany. A transport failure anywhere in the
-     * round is the atomic-wave rule (see guardWaveTransport): the round settles
-     * every call and throws. On success it hands each reply back keyed by its
-     * batch position for the caller to parse and settle.
+     * Fires one round: a fresh RecordedCall and request per still-pending batch
+     * -- each with its own corrective tail -- read concurrently through
+     * completeMany. A transport failure is the atomic-wave rule (see
+     * guardWaveTransport): settle every call and throw. On success it hands each
+     * reply back keyed by batch position for the caller to parse and settle.
      *
      * @param list<WaveBatch>     $waveBatches
      * @param non-empty-list<int> $pending         positions into $waveBatches still awaiting a usable reply
@@ -253,12 +248,11 @@ final readonly class RecommendationBatchWave
     }
 
     /**
-     * Reads the whole round concurrently. completeMany never throws for a
-     * per-call transport failure -- it folds each into that call's outcome --
-     * so the only throw here produced no reply at all for any call (an
-     * unreadable key, say, raised while resolving credentials). That settles
-     * every opened row so none is left reading as "still streaming", then
-     * re-throws unchanged (#344).
+     * Reads the whole round concurrently. completeMany folds a per-call
+     * transport failure into that call's outcome, so a throw here means no reply
+     * for any call (an unreadable key raised while resolving credentials, say).
+     * That settles every opened row so none is left reading as "still
+     * streaming", then re-throws unchanged (#344).
      *
      * @param non-empty-list<ConcurrentCompletion> $calls
      * @param list<RecordedCall>                   $recordedCalls
@@ -279,15 +273,13 @@ final readonly class RecommendationBatchWave
     }
 
     /**
-     * The atomic-wave rule (#344): if any call in the round hit a transport
-     * failure, settle every call this round opened a log row for and re-throw
-     * the first failure, banking nothing. completeMany cancels only the
-     * failed call's response -- a healthy sibling keeps streaming to
-     * completion on its own connection and its answer is simply discarded,
-     * since the wave never banks a partial round. The caller records one
-     * ceiling increment for the whole wave and re-runs it next tick; the
-     * discarded siblings' provider spend is the accepted re-bill cost of that
-     * re-run, not a bug to fix by cancelling them too.
+     * The atomic-wave rule (#344): if any call hit a transport failure, settle
+     * every call this round opened a log row for, re-throw the first failure,
+     * bank nothing. completeMany cancels only the failed call's response; a
+     * healthy sibling streams to completion and its answer is discarded, since
+     * the wave never banks a partial round. The caller records one ceiling
+     * increment and re-runs next tick; the discarded siblings' re-bill is the
+     * accepted cost of that re-run, not a bug to fix by cancelling them too.
      *
      * @param list<RecordedCall>      $recordedCalls
      * @param list<CompletionOutcome> $outcomes
@@ -307,14 +299,13 @@ final readonly class RecommendationBatchWave
     }
 
     /**
-     * Why this particular call's row says it was aborted.
+     * Why this call's row says it was aborted.
      *
-     * Its own cause whenever it has one — including a spoiled reply, which is
-     * not an endpoint failure but did happen to this call. Only a call that
-     * simply lost its round to a sibling borrows the wave's failure. Reading
-     * `isFailure()` here instead stamped a runaway with a sibling's "That
-     * address did not answer", pointing diagnosis at the network for a model
-     * failure — the very misreport #437 set out to remove.
+     * Its own cause when it has one — including a spoiled reply, which is not an
+     * endpoint failure but happened to this call. Only a call that lost its round
+     * to a sibling borrows the wave's failure. Reading `isFailure()` here instead
+     * stamped a runaway with a sibling's "That address did not answer", pointing
+     * diagnosis at the network for a model failure — the misreport #437 removed.
      */
     private static function abortDetailFor(CompletionOutcome $outcome, \Throwable $waveFailure): string
     {

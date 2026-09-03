@@ -159,11 +159,10 @@ final readonly class AttestationVerifier
     {
         $this->em->persist($passkey);
 
-        // Marked before the flush below, not after: markAnswered() only
-        // mutates the already-managed Preferences entity, so one flush
-        // covers both this and the new UserPasskey row. Two flushes would
-        // risk leaving the offer stamped on a request whose credential
-        // insert then failed.
+        // Marked before the flush below, not after: markAnswered() only mutates the
+        // already-managed Preferences entity, so one flush covers both this and the
+        // new UserPasskey row. Two flushes would risk stamping the offer on a
+        // request whose credential insert then failed.
         $this->offer->markAnswered($user);
 
         try {

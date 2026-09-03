@@ -6,35 +6,26 @@ namespace App\Service\Recommendation;
 
 /**
  * The inputs RecommendationPromptBuilder reads to size a batch: the resolved
- * context window, where it came from, the optional expert batchCount override,
- * and the ceiling on how many candidates one batch may carry. Bundled into one
- * value object so adding batchCount (#321) does not push
- * EffectiveRecommendationSettings's constructor past PHPMD's parameter-count
- * ceiling.
+ * context window, its source, the optional expert batchCount override, and the
+ * ceiling on candidates per batch. Bundled into one value object so batchCount
+ * (#321) did not push EffectiveRecommendationSettings past PHPMD's
+ * parameter-count ceiling.
  */
 final readonly class RecommendationPackingSettings
 {
     /**
      * Hard ceiling on candidates per batch, independent of the token budget.
-     *
-     * The token budget alone let a large-context model receive 339 candidates
-     * in a single batch; ranking that many took over 100 seconds and exceeded
-     * the provider request timeout. Ranking time scales with the number of
-     * items the model must order, not just with prompt size, so the token
-     * budget cannot be the only guard. It was 40 → 45 (#321) while a batch
-     * reply carried a prose reason per pick.
-     *
-     * Raised 45 → 100 in #493: the batch phase is now a score-only coarse
-     * filter, so a reply is `{id, score}` per pick — roughly a fifth of the
-     * reason-bearing reply the old cap was measured against, and generated far
-     * faster, which relaxes both the reply-size and the generation-time
-     * pressure that held the cap at 45. 100 packs the default 500-candidate
-     * pool into 5 batch calls (and a 1500 pool into 15) instead of tens of
-     * them. A brief trial at 150 packed a 150-item answer too tight against a
-     * suppressed connection's reduced token budget, so 100 keeps each reply
-     * comfortably clear while still cutting the call count hard. Finite on
-     * purpose and well under the 339 that once timed out: the model must read
-     * and score every line in the batch, so the ceiling stays.
+     * The budget alone let a large-context model receive 339 candidates in
+     * one batch; ranking that many took over 100 seconds and exceeded the
+     * provider timeout. Ranking time scales with item count, not just prompt
+     * size, so the token budget cannot be the only guard. It was 40 → 45
+     * (#321) while a reply carried a prose reason per pick. Raised 45 → 100 in
+     * #493, when the batch phase became a score-only filter: a `{id, score}`
+     * reply is roughly a fifth the size and generated far faster, relaxing
+     * both pressures that held it at 45. 100 packs the 500-candidate pool into
+     * 5 calls (1500 into 15), not tens. A trial at 150 packed the answer too
+     * tight against a suppressed connection's reduced budget. Finite and well
+     * under the 339 that timed out: the model reads and scores every line.
      */
     public const int DEFAULT_MAXIMUM_BATCH_SIZE = 100;
 

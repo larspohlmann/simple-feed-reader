@@ -22,44 +22,33 @@ use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Lock\LockFactory;
 
 /**
- * The driver-agnostic tick: #311's worker will call this exact method with no
- * HTTP request in sight, and the poll endpoint calls it too. One user's tick
- * runs at a time behind a per-user lock, so a slow provider call from one
- * poll can never overlap a second one racing in from another tab or the
- * worker sweep.
+ * The driver-agnostic tick: #311's worker calls this exact method with no HTTP
+ * request, and the poll endpoint calls it too. One user's tick runs at a time
+ * behind a per-user lock, so a slow provider call can never overlap another from
+ * a tab or the worker sweep.
  *
  * The snapshot phase freezes a pending run's candidate pool into fixed-size
- * batches with no provider call made. The batch phase then sends a wave of
- * concurrent provider calls per tick (#344), bounded by the connection's
- * batchConcurrency and the driver's regime: a batch whose entries are all
- * pruned records an empty winner set for free, a usable reply banks the
- * batch's winners, and an unusable one is retried in-tick with a corrective
- * message -- built from that batch's own last invalid reply -- until
- * MAX_ATTEMPTS rounds drop it as an empty winner set (#329). A transport
- * failure anywhere in a wave banks nothing, records one ceiling increment,
- * and re-runs the whole wave next tick from the unmoved cursor. Ranking is
- * code's job, not the model's: the
- * batches score every candidate against a shared rubric, and the ranker
- * orders the pooled scores globally. Before any batch call, the distillation
- * phase spends one provider call turning the reader's weighted history into a
- * short preference profile every later phase reads instead of that history
- * (#493); an unusable reply retries, then degrades to no profile at all
- * rather than failing the run. Once every batch call is done, every run --
- * one batch or many -- enters the consolidation phase: one more provider call
- * receives the score-ordered cut of the pool and re-scores, re-reasons and
- * dedupes it in a single pass. That reply retries with a corrective message
- * too, but a consolidation reply that stays unusable degrades instead of
- * failing — the run completes with the undeduped, unreasoned batch-score
- * list. Every ending funnels through RecommendationRunFinalizer, which
- * re-checks that each winning entry still exists — the pool can be pruned
- * mid-run — and writes the survivors as RecommendationItems at dense positions
- * before marking the run completed.
+ * batches with no provider call. The batch phase then sends a wave of concurrent
+ * calls per tick (#344), bounded by batchConcurrency and the driver's regime: an
+ * all-pruned batch records an empty winner set for free, a usable reply banks its
+ * winners, and an unusable one retries in-tick with a corrective message from that
+ * batch's own last invalid reply until MAX_ATTEMPTS drops it (#329). A transport
+ * failure in a wave banks nothing, records one ceiling increment, and re-runs the
+ * whole wave next tick from the unmoved cursor. Ranking is code's job, not the
+ * model's: batches score every candidate against a shared rubric, and the ranker
+ * orders the pooled scores globally. Before any batch call, the distillation phase
+ * spends one call turning the reader's weighted history into a short preference
+ * profile every later phase reads instead (#493); an unusable reply retries, then
+ * degrades to no profile rather than failing. Once every batch call is done, the
+ * consolidation phase sends one more call that re-scores, re-reasons and dedupes
+ * the score-ordered cut in a single pass; it retries too, but a still-unusable
+ * reply degrades — the run completes with the undeduped batch-score list. Every
+ * ending funnels through RecommendationRunFinalizer, which re-checks each winning
+ * entry still exists (the pool can be pruned mid-run) and writes the survivors as
+ * RecommendationItems at dense positions before marking the run completed.
  *
  * The many constructor collaborators are deliberate: the advancer is the
- * recommendation pipeline's composition root (lock, run persistence, AI
- * configuration, settings resolution, candidate/history loading, prompt
- * packing, the profile distiller, the batch wave, the consolidation resolver
- * and the run finalizer), and each is a seam the tests swap or drive
+ * pipeline's composition root, and each is a seam the tests swap or drive
  * independently — see RefreshRunner for the same shape.
  *
  * @SuppressWarnings("PHPMD.ExcessiveParameterList")
@@ -69,30 +58,23 @@ final class RecommendationRunAdvancer
     private const string LOCK_NAME_PREFIX = 'ai-recommendations-';
 
     /**
-     * Headroom over the longest silence a live holder can produce, for the
-     * stretches of a tick that stream nothing and so beat nothing: candidate
-     * loading and prompt assembly before the first request, and the ranking,
-     * banking and recording between calls and waves.
+     * Headroom over the longest silence a live holder can produce, for the tick
+     * stretches that stream nothing and so beat nothing: candidate loading and
+     * prompt assembly before the first request, and ranking, banking and recording
+     * between calls and waves.
      *
-     * The stretch to watch when re-tuning this is the snapshot tick, which
-     * makes no provider call at all -- it loads candidates and history, packs
-     * the batches and flushes -- so it never beats once and the TTL is its
-     * whole budget. That budget fell from 2100 s to 480 s with #444. It holds
-     * because the work is database- and CPU-bound over a pool the reader's
-     * own candidatePoolSize caps, and because the poll driver that runs it on
-     * Strato is killed at 240 s long before the lock expires. A future
-     * snapshot phase that grows unbounded would break the assumption, not the
-     * arithmetic.
+     * The stretch to re-tune against is the snapshot tick, which makes no provider
+     * call and so never beats — the TTL is its whole budget. That budget fell from
+     * 2100 s to 480 s with #444. It holds because the work is database- and CPU-bound
+     * over a pool candidatePoolSize caps, and because the poll driver on Strato is
+     * killed at 240 s before the lock expires; an unbounded snapshot phase would
+     * break that assumption. The margin also clears Strato's 240 s request cap,
+     * which on the standard profile is the only reason the TTL does: 180 s of
+     * first-byte wait alone would fall short, and a poll tick killed at that cap may
+     * never have beaten, so the TTL is its floor.
      *
-     * The margin also has to clear Strato's 240 s cap on a web request, and
-     * on the standard profile it is the only reason the TTL does: 180 s of
-     * first-byte wait alone would fall short. A poll tick killed at that cap
-     * may have died before its first chunk, so it never beat at all and the
-     * TTL is the whole of its floor.
-     *
-     * Public so RecommendationRunAdvancerTest can pin the exact TTL against
-     * the two inputs it is made of, rather than against a re-derivation of
-     * the formula's shape.
+     * Public so RecommendationRunAdvancerTest can pin the exact TTL against its two
+     * inputs rather than a re-derivation of the formula's shape.
      */
     public const float LOCK_TTL_MARGIN_SECONDS = 300.0;
 
@@ -141,24 +123,19 @@ final class RecommendationRunAdvancer
         $lock = $this->lockFactory->createLock($lockName, $this->lockTtlFor($user));
 
         if (!$lock->acquire()) {
-            // Deliberately silent: a failed acquire is the healthy, frequent
-            // case -- somebody else is advancing this run and the caller is
-            // told so. Only the caller can tell that apart from a stall,
-            // because only it knows whether any driver claims to be alive
+            // Silent: a failed acquire is the healthy, frequent case — somebody
+            // else is advancing this run. Only the caller can tell that apart
+            // from a stall, since only it knows whether a driver claims alive
             // (#439); RecommendationPollDriver logs the warning there.
             return RecommendationRunReport::busy();
         }
 
-        // A hard request-time kill -- Strato caps a web request at 240s, below
-        // the lock TTL -- never reaches the finally below, so without this the
-        // lock would sit held for its full TTL (8 min on the standard profile,
-        // 20 on the slow one) and freeze the run until it expired. A shutdown
-        // hook releases it on that path.
-        // The store's delete is token-scoped, so on the normal path (the
-        // finally has already released) or once another process has re-acquired
-        // the same name, the hook is a harmless no-op -- it can never free a
-        // lock this request no longer owns. A true hard kill (SIGKILL) skips
-        // shutdown hooks too, so the TTL stays as the ultimate backstop.
+        // A hard request-time kill (Strato caps a request at 240s, below the
+        // lock TTL) never reaches the finally below, so without this the lock
+        // sits held its full TTL (8 min standard, 20 slow) and freezes the run.
+        // The store's delete is token-scoped, so on the normal path or once
+        // another process re-acquired the name the hook is a harmless no-op. A
+        // true hard kill (SIGKILL) skips shutdown hooks too, so the TTL backstops.
         register_shutdown_function(static function () use ($lock): void {
             try {
                 $lock->release();
@@ -187,41 +164,33 @@ final class RecommendationRunAdvancer
     /**
      * How long this account's tick may hold its lock.
      *
-     * The lock must outlive every silence a *live* holder can produce, or it
-     * becomes stealable mid-tick: a second process (the worker sweep or
-     * another poll) would start a concurrent tick for the same run, and
-     * RecommendationRun carries no optimistic-version guard, so the two could
+     * The lock must outlive every silence a *live* holder can produce, or it becomes
+     * stealable mid-tick: a second process would start a concurrent tick for the same
+     * run, and RecommendationRun carries no optimistic-version guard, so the two could
      * double-bank winners and double-bill provider spend.
      *
-     * Invariant since #444: a live holder refreshes the lock no more often
-     * than every TickLockKeepalive::MINIMUM_INTERVAL_SECONDS -- that number
-     * is a throttle ceiling, never a promise of a refresh -- and it goes
-     * without one only while its stream is silent. So the TTL has to clear
-     * the longest such silence, not the longest tick. That silence is one
-     * first-byte wait: a beat rides on a streamed chunk, and a provider that
-     * has not started answering yields none until the stream idle timeout
-     * fires. Sizing the TTL from the throttle would be reading the ceiling as
-     * a floor, and would let a live holder's lock lapse while it waits for a
-     * first token it was told to expect.
+     * Invariant since #444: a live holder refreshes the lock no more often than
+     * TickLockKeepalive::MINIMUM_INTERVAL_SECONDS — a throttle ceiling, not a promise
+     * of a refresh — and goes without one only while its stream is silent. So the TTL
+     * must clear the longest silence, not the longest tick, and that silence is one
+     * first-byte wait: a beat rides a streamed chunk, and a provider that has not
+     * started answering yields none until the idle timeout fires. Sizing the TTL from
+     * the throttle would read the ceiling as a floor and let a live holder's lock lapse.
      *
-     * Read from the connection rather than from a constant since #433: a
-     * connection the account marked slow waits a quarter of an hour for a
-     * first byte where the standard profile waits three minutes, and a TTL
-     * sized for the standard profile would expire under one of its calls.
-     * Only that connection pays the longer TTL -- pinning every account to
-     * the slow ceiling would stretch every stall behind a dead holder.
+     * Read from the connection rather than a constant since #433: a slow-marked
+     * connection waits a quarter of an hour for a first byte where the standard profile
+     * waits three minutes, and a TTL sized for standard would expire under one of its
+     * calls. Only that connection pays the longer TTL — pinning every account to the
+     * slow ceiling would stretch every stall behind a dead holder. The read happens
+     * just outside the lock, so an account that flips the setting as a tick starts gets
+     * one tick sized to the previous profile; the window is one statement wide, both
+     * racers read the same row, and the next tick corrects it.
      *
-     * The read happens just outside the lock, so an account that flips the
-     * setting in the same instant a tick starts gets one tick sized to the
-     * previous profile. The window is a single statement wide and the next
-     * tick corrects it; both racers read the same row, so they agree.
-     *
-     * What this replaced was MAX_ATTEMPTS x the wall clock of the longest
-     * call the tick could legally make: 2100 s here, 11 100 s on the slow
-     * profile. Nothing refreshed the lock then, so it had to cover the whole
-     * tick -- and a worker that died mid-tick stranded the run for that full
-     * span while its replacement logged "already acquired" against a holder
-     * that no longer existed, twice in production (#439).
+     * This replaced MAX_ATTEMPTS x the wall clock of the longest legal call (2100 s
+     * here, 11 100 s slow). Nothing refreshed the lock then, so it had to cover the
+     * whole tick — a worker that died mid-tick stranded the run for that full span
+     * while its replacement logged "already acquired" against a holder that no longer
+     * existed, twice in production (#439).
      */
     private function lockTtlFor(User $user): float
     {
@@ -246,28 +215,21 @@ final class RecommendationRunAdvancer
         try {
             return $this->tickActiveRun($run, $user, $driver);
         } catch (RecommendationRunCancelledException | RecommendationTickLockLostException) {
-            // Stopped mid-call, for one of the two reasons a tick may not
-            // keep writing: the user cancelled the run, or another process
-            // took the per-user lock this tick was working under (#444).
-            // refresh() throws away everything this tick computed and
-            // re-reads the row whoever owns the run now wrote, so the caller
-            // is told the run's real state rather than handed the progress of
-            // a run nobody is waiting for -- or of one somebody else is
-            // advancing. Nothing is flushed: the guard fires before any run
-            // mutation, so there is no half-written checkpoint to undo.
+            // Stopped mid-call for one of the two reasons a tick may stop
+            // writing: the user cancelled, or another process took the per-user
+            // lock (#444). refresh() discards what this tick computed and re-reads
+            // the row the current owner wrote, so the caller gets the real state.
+            // Nothing is flushed: the guard fires before any run mutation.
             $this->entityManager->refresh($run);
 
             return RecommendationRunReport::fromRun($run);
         } catch (AiNotConfiguredException | ApiKeyUnreadableException $e) {
             // Shared by both drivers (#311 fix): an account that loses its
-            // provider, model, or a readable key can never advance again on
-            // any driver, so the run is failed right here rather than only
-            // when the worker sweep happens to be the one ticking it. Before
-            // this, a poll-only install left such a run stuck retried
-            // forever, because only AdvanceRecommendationRunsHandler applied
-            // this classification. The exception still propagates: the
-            // controller's HTTP mapping and the worker's own fault-isolation
-            // floor are unchanged.
+            // provider, model, or readable key can never advance again, so the
+            // run is failed here rather than only when the worker sweep ticks it.
+            // Before this, a poll-only install retried such a run forever, since
+            // only AdvanceRecommendationRunsHandler classified it. The exception
+            // still propagates: the HTTP mapping and worker fault floor are unchanged.
             $this->failPermanently($run, self::failureMessageFor($e));
 
             throw $e;
@@ -399,25 +361,21 @@ final class RecommendationRunAdvancer
     }
 
     /**
-     * How many batches this tick sends at once: the connection's configured
-     * concurrency, clamped to the driver's regime and to the batches the plan
-     * has left. A poll tick is a web request, so it never sends more than
-     * POLL_MAX_CONCURRENCY however high the connection is set; the worker owns
-     * its process and sends the full configured cap. The hard
-     * MAX_BATCH_CONCURRENCY ceiling protects both, and a floor of 1 protects
-     * against a stored `batchConcurrency` of 0 or less -- unreachable through
-     * the API's `Range(1..4)` validation, but a direct-DB value that low would
-     * otherwise wedge the run in a zero-progress tick forever (#344).
+     * How many batches this tick sends at once: the configured concurrency,
+     * clamped to the driver's regime and to the batches the plan has left. A poll
+     * tick never sends more than POLL_MAX_CONCURRENCY; the worker sends the full
+     * configured cap. The hard MAX_BATCH_CONCURRENCY ceiling caps both, and a floor
+     * of 1 guards a stored `batchConcurrency` of 0 or less — unreachable through the
+     * API's `Range(1..4)`, but a direct-DB value that low would wedge the run in a
+     * zero-progress tick forever (#344).
      */
     private function waveSize(RecommendationRun $run, AiProviderSettings $settings, TickDriver $driver): int
     {
         // The run's first batch wave goes out as a single call, whatever the
-        // configured concurrency, so that call writes the provider's prompt-
-        // prefix cache before the concurrent fan-out races for it (#495). Every
-        // batch of a run shares a byte-identical prefix -- system role, profile,
-        // favourites, pool frame -- so warming it once turns that prefix nearly
-        // free on cache-capable providers, at the cost of one extra serial call.
-        // A resumed run (cursor already past the first batch) never re-warms.
+        // configured concurrency, so it warms the provider's prompt-prefix cache
+        // before the fan-out races for it (#495). Every batch shares a byte-identical
+        // prefix (system role, profile, favourites, pool frame), so warming it once
+        // is nearly free on cache-capable providers. A resumed run never re-warms.
         if (0 === $run->progress()->nextBatchIndex) {
             return 1;
         }
@@ -428,12 +386,10 @@ final class RecommendationRunAdvancer
     }
 
     /**
-     * Worker is the one driver that owns its own process rather than running
-     * inside a bounded web request, so it is the branch named explicitly here
-     * -- every other driver (Poll, and Sweep's cron-triggered web request)
-     * gets the same POLL_MAX_CONCURRENCY clamp by falling through the `else`,
-     * without this method needing to know about each one by name. See
-     * TickDriver's docblock for why Sweep belongs on this side.
+     * Worker is the one driver that owns its process rather than a bounded web
+     * request, so it is the branch named explicitly here; every other driver (Poll,
+     * and Sweep's cron-triggered web request) takes the POLL_MAX_CONCURRENCY clamp by
+     * falling through the `else`. See TickDriver's docblock for why Sweep belongs here.
      */
     private function effectiveCap(AiProviderSettings $settings, TickDriver $driver): int
     {
@@ -445,11 +401,10 @@ final class RecommendationRunAdvancer
     }
 
     /**
-     * Banks every resolved batch of the wave in plan order -- so batchesDone
-     * advances by the wave size and the winner list stays batch-ordered --
-     * then checkpoints: its next tick either runs the remaining batches, or,
-     * once every batch is done, the consolidation phase that now follows
-     * every plan regardless of batch count (#493).
+     * Banks every resolved batch of the wave in plan order — so batchesDone advances
+     * by the wave size and the winner list stays batch-ordered — then checkpoints: the
+     * next tick runs the remaining batches, or once every batch is done, the
+     * consolidation phase that now follows every plan regardless of batch count (#493).
      *
      * @param list<list<array{id: int, score: int, reason: string}>> $winnersPerBatch
      */
@@ -466,16 +421,13 @@ final class RecommendationRunAdvancer
 
     /**
      * Delegates the distillation phase's single provider call to
-     * RecommendationProfileDistiller and writes what it hands back. A
-     * transport failure throws out of distill() -- exactly as the batch
-     * wave's does -- and is folded into the run's own accounting here (one
-     * ceiling increment, then re-thrown), the same envelope resolveWave()
-     * gives the batch phase. An unusable reply is retried across ticks or
-     * degraded to no profile at all -- the distillation prompt has no pool of
-     * its own to fall back to, unlike the consolidation phase's undeduped
-     * list -- and either ending records the run's profile (possibly null) and
-     * checkpoints, so the very next tick reads distillPending false and moves
-     * on to the batches.
+     * RecommendationProfileDistiller and writes what it returns. A transport failure
+     * throws out of distill(), folded into the run's accounting here (one ceiling
+     * increment, then re-thrown) — the same envelope resolveWave() gives the batch
+     * phase. An unusable reply is retried across ticks or degraded to no profile:
+     * distillation has no pool to fall back to, unlike consolidation's undeduped list.
+     * Either ending records the profile (possibly null) and checkpoints, so the next
+     * tick reads distillPending false and moves on to the batches.
      */
     private function distillTick(
         RecommendationRun $run,
@@ -519,14 +471,12 @@ final class RecommendationRunAdvancer
 
     /**
      * Delegates the consolidation phase's single provider call to
-     * RecommendationConsolidationResolver and writes what it hands back. A
-     * transport failure throws out of resolve() -- exactly as the batch
-     * wave's does -- and is folded into the run's own accounting here (one
-     * ceiling increment, then re-thrown), the same envelope resolveWave()
-     * gives the batch phase. An unusable reply is retried across ticks or
-     * degraded to the undeduped, unreasoned batch-score list; a usable one,
-     * or an all-pruned pool, finalizes. Every plan reaches this phase now,
-     * one batch or many (#493) -- there is no single-batch shortcut left.
+     * RecommendationConsolidationResolver and writes what it returns. A transport
+     * failure throws out of resolve(), folded into the run's accounting here (one
+     * ceiling increment, then re-thrown) — the same envelope resolveWave() gives the
+     * batch phase. An unusable reply is retried across ticks or degraded to the
+     * undeduped, unreasoned batch-score list; a usable one, or an all-pruned pool,
+     * finalizes. Every plan reaches this phase now (#493) — no single-batch shortcut.
      */
     private function consolidateTick(
         RecommendationRun $run,
@@ -563,18 +513,16 @@ final class RecommendationRunAdvancer
     }
 
     /**
-     * Guarded like every banking write, and for the same reason: the counter
-     * and the fail() the ceiling triggers are the run's own state, and a tick
-     * that may no longer write must write none of it (#439). The entity cannot
-     * refuse it -- RecommendationRun::recordTransportFailure() judges the
-     * status this tick read before the call, so a run another process has
-     * since completed is failed straight over the top of it.
+     * Guarded like every banking write, for the same reason: the counter and the
+     * fail() the ceiling triggers are the run's own state, and a tick that may no
+     * longer write must write none of it (#439). The entity cannot refuse it —
+     * RecommendationRun::recordTransportFailure() judges the status this tick read
+     * before the call, so a run another process has since completed is failed over it.
      *
-     * Nothing is swallowed while the lock is held and the run is live, which
-     * is every ordinary transport failure: the guard cannot throw there, and
-     * the caller's re-throw carries the provider's error out as before. When
-     * it does throw, this tick has stopped owning the run, and tick() answers
-     * with the state its real owner wrote.
+     * Nothing is swallowed while the lock is held and the run is live — every ordinary
+     * transport failure: the guard cannot throw there, and the caller's re-throw
+     * carries the provider's error out. When it does throw, this tick has stopped
+     * owning the run, and tick() answers with the state its real owner wrote.
      */
     private function recordTransportFailure(
         RecommendationRun $run,
@@ -587,9 +535,8 @@ final class RecommendationRunAdvancer
         if ($ceilingReached) {
             // The real per-call detail, not a hardcoded "could not be reached":
             // most transport failures are the provider refusing or truncating a
-            // call it plainly received, and flattening them all into one
-            // unreachable message hid a fixable 400 behind a network story
-            // (#329). The base URL stays for context -- which endpoint failed.
+            // call it received, and one flat unreachable message hid a fixable
+            // 400 behind a network story (#329). Base URL stays: which endpoint failed.
             $run->fail(
                 sprintf('The AI provider at %s failed: %s', $settings->getBaseUrl(), $failureDetail),
                 $this->clock->now(),
@@ -599,13 +546,12 @@ final class RecommendationRunAdvancer
     }
 
     /**
-     * The retry envelope the distillation and consolidation phases share:
-     * record the invalid reply, and once attempts are exhausted hand off to
-     * the degraded ending -- no profile, or an undeduped list -- rather than
-     * failing the run; otherwise checkpoint and wait for the corrective retry
-     * on the next tick. The batch phase no longer comes here: its retries
-     * happen in-tick within the wave, so it never writes the run's cross-tick
-     * attempt state (#344).
+     * The retry envelope the distillation and consolidation phases share: record the
+     * invalid reply, and once attempts are exhausted hand off to the degraded ending
+     * (no profile, or an undeduped list) rather than failing the run; otherwise
+     * checkpoint and wait for the corrective retry next tick. The batch phase no longer
+     * comes here: its retries happen in-tick within the wave, so it never writes the
+     * run's cross-tick attempt state (#344).
      *
      * @param callable(): RecommendationRunReport $onAttemptsExhausted
      */

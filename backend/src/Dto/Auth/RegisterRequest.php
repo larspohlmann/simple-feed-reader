@@ -11,29 +11,20 @@ final readonly class RegisterRequest
     public function __construct(
         #[Assert\NotBlank]
         #[Assert\Email]
-        // Not cosmetic: App\Entity\User::$email is VARCHAR(180). SQLite would
-        // store an over-long address silently, MySQL strict mode would throw at
-        // flush time as an unhandled 500. Validation is what keeps the two
-        // backends behaving the same.
+        // App\Entity\User::$email is VARCHAR(180): without this SQLite truncates
+        // silently while MySQL strict mode 500s at flush. Validation keeps the
+        // two backends consistent.
         #[Assert\Length(max: 180)]
-        // Closes the door on the address space this application mints for
-        // itself. OAuthAccountLinker gives an identity that arrives with no
-        // usable address a DETERMINISTIC placeholder,
-        // `<provider>-<sha256 prefix of sub>@oauth.invalid`, so the same
-        // identity reconstructs the same address rather than accumulating one
-        // account per sign-in. Deterministic also means predictable, and
-        // Assert\Email is perfectly happy with such an address — so somebody
-        // holding a victim's provider `sub` could register it here first and
-        // make that victim's very first sign-in die on uniq_user_email.
-        //
-        // Not a general-purpose blocklist. `.invalid` is reserved by RFC 2606
-        // so that it can never resolve; no address under it was ever going to
-        // receive the verification mail this endpoint is about to send.
-        //
-        // It belongs HERE and not on User::$email. The entity is where the
-        // linker writes those placeholders, and a constraint there would refuse
-        // exactly the accounts this rule exists to protect — every Apple user
-        // who re-authorises and arrives with a `sub` and nothing else.
+        // Blocks the address space this app mints for itself: OAuthAccountLinker
+        // gives an identity with no usable address a DETERMINISTIC placeholder,
+        // `<provider>-<sha256 prefix of sub>@oauth.invalid`. Because it is
+        // predictable (and Assert\Email accepts it), an attacker holding a
+        // victim's provider `sub` could register it here first and make the
+        // victim's first sign-in die on uniq_user_email. `.invalid` is RFC 2606
+        // reserved, so no address under it could receive the verification mail
+        // anyway. It lives here, not on User::$email where the linker writes
+        // those placeholders — a constraint there would refuse the very Apple
+        // re-authorisers this protects.
         #[Assert\Regex(
             pattern: '/\.invalid$/i',
             message: 'That address is not a deliverable one.',

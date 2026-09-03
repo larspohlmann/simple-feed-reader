@@ -96,13 +96,11 @@ final readonly class RecommendationRunReport
     }
 
     /**
-     * The #439 marker that the per-user lock is held with nobody's heartbeat
-     * fresh: the poll driver sets this only on a `busy` advance() whose
-     * presence read already came back "nobody driving" -- a lock a live
-     * holder is refreshing would have made that read come back fresh
-     * instead. `inBackground()` alone cannot carry the distinction, because
-     * a busy report is stamped background either way; the client needs both
-     * to tell "a worker owns this" from "this may be stuck".
+     * The #439 marker that the per-user lock is held with no fresh heartbeat:
+     * the poll driver sets it only on a `busy` advance() whose presence read
+     * came back "nobody driving" (a live holder's lock would have read fresh).
+     * A busy report is stamped background either way, so `inBackground()` alone
+     * cannot distinguish "a worker owns this" from "this may be stuck".
      */
     public function waitingForLock(): self
     {

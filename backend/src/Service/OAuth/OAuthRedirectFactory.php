@@ -10,13 +10,13 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 /**
  * Builds the two redirects back to the SPA from the OAuth callback.
  *
- * Note what does not appear in either URL, on the success path or the failure
- * path: a JWT, an authorization code, a state value, or anything else the caller
- * supplied. The only success payload is a one-time login code the server just
- * minted; the only failure payload is a fixed reason literal passed by
- * callback(). The host comes from APP_FRONTEND_URL — a deployment-time value
- * nobody can influence over HTTP. That is what keeps this from being an open
- * redirect that hands the attacker's page a fresh login code.
+ * Note what does not appear in either URL, on success or failure: a JWT, an
+ * authorization code, a state value, or anything else the caller supplied. The
+ * only success payload is a one-time login code the server just minted; the only
+ * failure payload is a fixed reason literal passed by callback(). The host comes
+ * from APP_FRONTEND_URL, a deployment-time value nobody can influence over HTTP —
+ * which keeps this from being an open redirect that hands the attacker's page a
+ * fresh login code.
  */
 final readonly class OAuthRedirectFactory
 {
@@ -45,9 +45,8 @@ final readonly class OAuthRedirectFactory
      * A redirect back to the SPA carrying a reason code instead of a session.
      *
      * Clearing the flow cookie belongs here: it puts the clear on every failure
-     * exit from callback() at once, so a new one added later cannot forget it.
-     * If this stopped clearing the cookie, a new failure exit could silently
-     * leak a durable cookie.
+     * exit from callback() at once, so a new one added later cannot forget it and
+     * silently leak a durable cookie.
      */
     public function failure(string $reason): RedirectResponse
     {

@@ -74,10 +74,9 @@ final readonly class EntryPage
     {
         $last = $rows === [] ? null : $rows[array_key_last($rows)];
         // A full page of matches with every id dropped by hydration leaves no
-        // surviving row to build a cursor from. Ending pagination here rather
-        // than fabricating one is the safe choice: the ghost ids behind it
-        // are cleared by the next app:search:reindex (or a later page whose
-        // matches DO survive hydration reopens the cursor there instead).
+        // surviving row to build a cursor from. Ending pagination here is the safe
+        // choice: the ghost ids are cleared by the next app:search:reindex (or a
+        // later page whose matches DO survive hydration reopens the cursor there).
         if ($last === null) {
             return null;
         }

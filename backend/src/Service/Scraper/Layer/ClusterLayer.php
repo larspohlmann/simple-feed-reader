@@ -30,12 +30,11 @@ final class ClusterLayer implements ScrapeLayerInterface
 
     public function extract(HTMLDocument $doc, string $baseUrl): array
     {
-        // Eligible-anchor counts memoized per element, scoped to this one
-        // pass (never static — documents differ between calls): container()
-        // asks for the parent's count once per anchor, so N anchors sharing
-        // one parent used to rescan that parent's whole subtree N times —
-        // O(N²), about 10s for 2,000 flat sibling links, worse within the
-        // 5MB fetch cap. The memo makes it one scan plus O(1) lookups.
+        // Eligible-anchor counts memoized per element, scoped to this pass (never
+        // static -- documents differ between calls). Without it, N anchors sharing
+        // one parent rescan that parent's whole subtree N times: O(N²), about 10s
+        // for 2,000 flat sibling links, worse within the 5MB fetch cap. The memo
+        // makes it one scan plus O(1) lookups.
         /** @var \SplObjectStorage<Element, int> $counts */
         $counts = new \SplObjectStorage();
 
