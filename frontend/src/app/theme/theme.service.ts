@@ -1,5 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-import { ThemeMode } from './themes/registry';
+import { ResolvedTheme, ThemeMode } from './themes/registry';
 
 const KEY = 'sfr.theme';
 
@@ -7,6 +7,9 @@ const KEY = 'sfr.theme';
 export class ThemeService {
   private readonly media = window.matchMedia('(prefers-color-scheme: dark)');
   readonly mode = signal<ThemeMode>(this.readSaved());
+
+  /** The theme on screen: the mode, or what the OS resolved `system` to. */
+  readonly resolved = signal<ResolvedTheme>(this.resolve());
 
   constructor() {
     // Apply synchronously on construction (not via effect, whose flush is
@@ -28,12 +31,14 @@ export class ThemeService {
     return v === 'light' || v === 'dark' || v === 'system' ? v : 'system';
   }
 
-  private resolved(): 'light' | 'dark' {
+  private resolve(): ResolvedTheme {
     const m = this.mode();
     return m === 'system' ? (this.media.matches ? 'dark' : 'light') : m;
   }
 
   private applyResolved(): void {
-    document.documentElement.setAttribute('data-theme', this.resolved());
+    const theme = this.resolve();
+    this.resolved.set(theme);
+    document.documentElement.setAttribute('data-theme', theme);
   }
 }
