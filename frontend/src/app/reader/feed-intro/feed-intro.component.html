@@ -33,13 +33,17 @@
         <span class="description">{{ text }}</span>
       }
       @if (siteUrl(); as site) {
+        <!-- A non-breaking space, not a plain one: the label now wraps (a long
+             site URL — NPR publishes a full story.php link — must break rather
+             than overrun a narrow phone), and this keeps the open-in-new icon on
+             the URL's last line instead of letting it orphan onto its own. -->
         <a
           class="homepage"
           [href]="site"
           [attr.title]="site"
           target="_blank"
           rel="noopener noreferrer"
-          >{{ homepageLabel() }} <app-icon name="open_in_new" size="text"
+          >{{ homepageLabel() }}&nbsp;<app-icon name="open_in_new" size="text"
         /></a>
       }
     </p>
