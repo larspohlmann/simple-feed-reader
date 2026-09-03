@@ -10,6 +10,29 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+### Highlights
+
+**Manage feeds together.** The new Organise page brings feeds and tags into one
+place. Select several feeds to change tags or unsubscribe in one action. Choose
+which feeds appear in All items and For You, individually or in bulk.
+
+**Improved support for embedded audio and video.** Play more embedded audio and
+video directly in the reader, including streaming video.
+
+**More control over your reading layout.** Choose between boxed cards and the
+new airy magazine style. Resize the desktop split view by dragging the divider.
+Search results now support reading articles alongside the results list.
+
+**Email digests.** Receive new unread articles from selected saved searches in a
+daily or weekly email.
+
+**Passkey sign-in.** Sign in with a passkey on supported devices when your
+administrator enables the feature.
+
+**Better search and saved views.** Use quotation marks to search for an exact
+phrase. Open all saved searches as one combined view, with duplicate matches
+shown only once.
+
 ## [v0.7.0] - 2026-08-25
 
 ### Highlights
