@@ -66,8 +66,6 @@ final class AccountRestorerTest extends DbTestCase
         $this->users = new UserFactory($this->em, $hasher);
     }
 
-    // ---------------------------------------------------------------- fixtures
-
     private function backupOf(User $user): string
     {
         $exporter = self::getContainer()->get(AccountBackupExporter::class);
@@ -223,8 +221,6 @@ final class AccountRestorerTest extends DbTestCase
         return $user;
     }
 
-    // ------------------------------------------------------------- assertions
-
     private function deleteEveryFeed(): void
     {
         // feed cascades to subscription and entry, entry cascades to
@@ -338,8 +334,6 @@ final class AccountRestorerTest extends DbTestCase
 
         return $rows;
     }
-
-    // ------------------------------------------------------------------ tests
 
     public function testRoundTripReproducesTheAccountFieldForField(): void
     {
@@ -835,20 +829,9 @@ final class AccountRestorerTest extends DbTestCase
         self::assertSame($statesBefore, $this->entryStateRows($userId));
     }
 
-    // testAFileTheDatabaseRejectsFailsAsATypedBackupError used to live here,
-    // staging a duplicate tag (then a duplicate subscription) to reach
-    // RestoreLoadPass's flush()-catch(DbalException) branch through content.
-    // #412's final review closed that route for good: the inspector now
-    // refuses a duplicate tag, feed or subscription in pass 1;
-    // RestoreEntryLoader::unknownOf() already dropped a repeated entry line
-    // by design; and a repeated entry_state line collides in Doctrine's own
-    // identity map before it ever reaches SQL. No content this restorer can
-    // be handed reaches that branch any more — corrupting the schema to
-    // force it breaks the MySQL leg's transactional test isolation (DDL
-    // commits implicitly), so the proof cannot live here either.
-    // RestoreLoadPassTest::testADatabaseFailureDuringTheAccountShapeFlushIsAWrappedBackupError
-    // proves the wrap directly, with a fake EntityManager standing in for
-    // the driver failure this test used to stage through content.
+    // No content can reach RestoreLoadPass's flush()-catch(DbalException) branch
+    // any more (#412: pass 1 refuses duplicates), so the wrap is proven directly
+    // in RestoreLoadPassTest::testADatabaseFailureDuringTheAccountShapeFlushIsAWrappedBackupError.
 
     /** @return array<string, int> */
     private function withCountShiftedBy(string $kind, int $delta, mixed $counts): array
@@ -960,8 +943,6 @@ final class AccountRestorerTest extends DbTestCase
         self::assertCount(3, $created);
         self::assertSame($created, $indexed);
     }
-
-    // -------------------------------------------------------------- test seams
 
     /**
      * The search engine is unconfigured in the test environment by design

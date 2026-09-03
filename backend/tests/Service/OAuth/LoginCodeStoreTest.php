@@ -102,8 +102,6 @@ final class LoginCodeStoreTest extends TestCase
         self::assertNotSame($this->store->issue(1, self::TOKEN), $this->store->issue(1, self::TOKEN));
     }
 
-    // -- The browser binding ----------------------------------------------
-
     /**
      * The code is not a bearer value, and this is the assertion that says so.
      *

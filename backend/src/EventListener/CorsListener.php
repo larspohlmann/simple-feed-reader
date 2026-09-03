@@ -15,52 +15,41 @@ use Symfony\Component\HttpKernel\KernelEvents;
 /**
  * Lets the SPA's origin call this API, WITH cookies.
  *
- * The credentialed part is the reason this exists rather than being a
- * convenience. `POST /api/auth/oauth/exchange` needs the `__Host-oauth_flow`
- * cookie to prove the browser exchanging a login code is the one that earned it
- * (see OAuthController and LoginCodeStore). The SPA sends that with
- * `credentials: 'include'`, and a browser only attaches cookies to a
- * cross-origin XHR when the response says `Access-Control-Allow-Credentials:
- * true` — and refuses outright if the allowed origin is `*`.
+ * The credentialed part is why this exists: `POST /api/auth/oauth/exchange` needs
+ * the `__Host-oauth_flow` cookie to prove the browser exchanging a login code is
+ * the one that earned it (see OAuthController, LoginCodeStore). The SPA sends it
+ * with `credentials: 'include'`, and a browser attaches cookies cross-origin only
+ * when the response says `Access-Control-Allow-Credentials: true`, refusing
+ * outright if the allowed origin is `*`.
  *
- * So the allowed origin is a single exact string derived from
- * APP_FRONTEND_URL, and the response echoes THAT string rather than the
- * request's `Origin` header. The two are equal whenever anything is emitted at
- * all, so the distinction looks pedantic; it is not. Reflecting the request's
- * own origin is how a CORS config becomes "allow anybody with credentials", and
- * a config that cannot express the wrong thing is worth more than a comment
- * asking the next reader not to.
+ * So the allowed origin is a single exact string derived from APP_FRONTEND_URL,
+ * and the response echoes THAT string, never the request's `Origin` header. The
+ * two are equal whenever anything is emitted, so the distinction looks pedantic —
+ * it is not: reflecting the request's own origin is how a CORS config becomes
+ * "allow anybody with credentials", and this one can't express that mistake.
  *
  * ## Why a listener and not nelmio/cors-bundle
  *
- * The bundle is the standard answer and would be the right one for an API with
- * several client origins, per-path rules or a wildcard-pattern policy. This one
- * has exactly one allowed origin, known at deploy time from an env var that
- * already exists. Against that, the bundle brings a config surface whose
- * headline options are `allow_origin: ['*']` and regex patterns — both of which
- * are precisely the mistakes that matter here, both a one-line edit away, and
- * neither caught by any test. Forty lines with no wildcard to reach for is the
- * smaller attack surface and the smaller dependency, on a showcase repo where
- * the reader is meant to be able to see the whole policy at once.
- *
- * Revisit this the day a second origin is legitimate. The bundle is a better
- * answer to that problem than a list bolted onto this one.
+ * The bundle suits several client origins, per-path rules or wildcards; this API
+ * has exactly one, known at deploy time. Its headline options —
+ * `allow_origin: ['*']` and regex patterns — are precisely the mistakes that
+ * matter here, each a one-line edit away and caught by no test. Forty lines with
+ * no wildcard to reach for is the smaller surface, on a showcase repo where the
+ * reader should see the whole policy at once. Revisit if a second origin becomes
+ * legitimate.
  *
  * ## Same-origin deployments
  *
- * The likely production shape is the SPA and the API on ONE origin, where the
- * browser applies no CORS at all. Nothing here breaks that: a same-origin GET
- * sends no `Origin` header and gets no headers back, and a same-origin POST
- * does send one, matches, and gets headers the browser then ignores. The policy
- * is inert rather than load-bearing there, which is the correct behaviour — a
- * CORS config that only worked cross-origin would be its own bug.
+ * Production likely runs SPA and API on ONE origin, where the browser applies no
+ * CORS; nothing here breaks that — a same-origin GET sends no `Origin` and gets
+ * no headers back, a same-origin POST sends one, matches, and gets headers the
+ * browser ignores. The policy is inert there, not load-bearing.
  *
- * Note also that cross-ORIGIN is not cross-SITE. Local development runs the SPA
- * on `http://localhost:4200` and the API on `http://localhost:8000`: different
- * origins, so this listener is required, but the same site, because ports play
- * no part in a site. The flow cookie's `SameSite=None` is therefore not what
- * makes local development work — it is there for Apple's cross-site callback
- * POST — and local development would work without it.
+ * Cross-ORIGIN is not cross-SITE: local dev runs the SPA on
+ * `http://localhost:4200` and the API on `http://localhost:8000` — different
+ * origins (this listener is required) but the same site, since ports aren't part
+ * of a site. The flow cookie's `SameSite=None` is for Apple's cross-site callback
+ * POST, not for local dev, which would work without it.
  */
 final class CorsListener
 {
@@ -99,16 +88,15 @@ final class CorsListener
     /**
      * Answers the preflight before routing or the firewall sees it.
      *
-     * Priority 250 puts this above RouterListener (32) and the firewall (8),
-     * which matters: a preflight `OPTIONS` carries no cookie and no
-     * `Authorization` header by specification, so left to run it would draw a
-     * 405 from the router or a 401 from the firewall — and a browser reads
-     * either as "preflight failed" and never sends the real request.
+     * Priority 250 puts this above RouterListener (32) and the firewall (8): a
+     * preflight `OPTIONS` carries no cookie and no `Authorization` header by
+     * specification, so left to run it would draw a 405 from the router or a 401
+     * from the firewall — either reads to the browser as "preflight failed".
      *
-     * A preflight from an origin we do not allow is deliberately NOT
-     * short-circuited. It falls through and gets whatever the router would have
-     * said, so this listener never turns an unknown URL into a 204; the browser
-     * blocks the real request either way, on the absent headers.
+     * A preflight from a disallowed origin is deliberately NOT short-circuited;
+     * it falls through to whatever the router would have said, so this listener
+     * never turns an unknown URL into a 204. The browser blocks the real request
+     * either way, on the absent headers.
      */
     #[AsEventListener(event: KernelEvents::REQUEST, priority: 250)]
     public function onRequest(RequestEvent $event): void

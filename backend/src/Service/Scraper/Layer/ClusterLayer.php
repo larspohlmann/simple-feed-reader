@@ -15,12 +15,11 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
  * Last-resort layer for pages without JSON-LD or article markup: clusters
  * anchors by their own class tokens (BEM modifiers stripped), assuming a
  * listing repeats one card component many times. An anchor joins one group
- * per token, so card variants that share a component class (featured vs.
- * plain mntl-card) still land in one cluster even when their wrapper depth
- * differs per page section — an ancestor-path signature fragmented exactly
- * there. Navigation, header, footer, and aside subtrees are excluded so
- * menus and footer link lists can never win. The biggest cluster (mean
- * title length breaks ties) becomes the item list, in document order.
+ * per token, so variants sharing a component class (featured vs. plain
+ * mntl-card) land in one cluster even across wrapper-depth differences that
+ * would fragment an ancestor-path signature. Nav/header/footer/aside
+ * subtrees are excluded so link lists can never win; the biggest cluster
+ * (mean title length breaks ties) becomes the item list, in document order.
  */
 #[AsTaggedItem(priority: 10)]
 final class ClusterLayer implements ScrapeLayerInterface
@@ -30,12 +29,11 @@ final class ClusterLayer implements ScrapeLayerInterface
 
     public function extract(HTMLDocument $doc, string $baseUrl): array
     {
-        // Eligible-anchor counts memoized per element, scoped to this one
-        // pass (never static — documents differ between calls): container()
-        // asks for the parent's count once per anchor, so N anchors sharing
-        // one parent used to rescan that parent's whole subtree N times —
-        // O(N²), about 10s for 2,000 flat sibling links, worse within the
-        // 5MB fetch cap. The memo makes it one scan plus O(1) lookups.
+        // Eligible-anchor counts memoized per element, scoped to this pass (never
+        // static -- documents differ between calls). Without it, N anchors sharing
+        // one parent rescan that parent's whole subtree N times: O(N²), about 10s
+        // for 2,000 flat sibling links, worse within the 5MB fetch cap. The memo
+        // makes it one scan plus O(1) lookups.
         /** @var \SplObjectStorage<Element, int> $counts */
         $counts = new \SplObjectStorage();
 

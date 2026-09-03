@@ -13,11 +13,10 @@ use App\Repository\RecommendationRunHistoryRepository;
  * on — the all-time total, one summary per calendar month, and the newest
  * month's first page — and the further month page a reader pages into.
  *
- * Owns the limit-plus-one truncation the repository's pageForMonth()
- * deliberately over-reads by. Both public methods end up needing a page, so
- * that logic lives once, in truncate() below, rather than once in the
- * controller and once in the JSON mapper — an earlier attempt at this put it
- * in the controller and was rejected for it.
+ * Owns the limit-plus-one truncation pageForMonth() deliberately over-reads by.
+ * Both public methods need a page, so that logic lives once in truncate() below,
+ * not once in the controller and once in the JSON mapper — an earlier controller
+ * attempt was rejected for it.
  *
  * @phpstan-import-type HistoryRow from RecommendationRunHistoryRepository
  * @phpstan-import-type MonthPagePayload from RecommendationRunHistoryJson
@@ -33,11 +32,10 @@ final readonly class RecommendationRunHistoryView
 
     /**
      * The all-time total is summed by the database over the same rows
-     * spendTimeline() already returns, and that duplication is deliberate:
-     * the timeline is the read most likely to need a cap one day, and the
-     * SUM keeps the total honest for the whole account when it gets one.
-     * Deriving the total from the timeline instead would silently turn it
-     * into "the total of whatever the timeline still covers".
+     * spendTimeline() returns. The duplication is deliberate: the timeline may
+     * gain a cap one day, and the SUM keeps the account total honest when it
+     * does. Deriving the total from the timeline would silently reduce it to
+     * "the total of what the timeline still covers".
      *
      * @return OverviewPayload
      */
@@ -61,11 +59,9 @@ final readonly class RecommendationRunHistoryView
     }
 
     /**
-     * The overview's `latest`: the first page of the newest month that
-     * actually has a run in it, not of the calendar month the server's clock
-     * currently reads — an account whose last run was in June opens on June.
-     * Null for an account that has never run, since there is then no month to
-     * open.
+     * The overview's `latest`: the first page of the newest month that has a
+     * run in it, not the calendar month the server clock reads. Null when the
+     * account has never run, since there is then no month to open.
      *
      * @return ?MonthPagePayload
      */

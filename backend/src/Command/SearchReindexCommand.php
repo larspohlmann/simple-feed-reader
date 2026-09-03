@@ -17,34 +17,26 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
- * Rebuilds the search index from the database. Two jobs in one, both repair:
- * EntryIndexer's ingest-time writes deliberately swallow
- * SearchEngineUnavailableException (a search outage must never break a feed
- * refresh), so this is the path that makes anything they missed durable again;
- * and it is what an operator runs once after pointing an existing install at
- * MEILISEARCH_URL for the first time, since every pre-existing entry is
- * unindexed until this runs.
+ * Rebuilds the search index from the database. Two jobs, both repair:
+ * EntryIndexer's ingest-time writes swallow SearchEngineUnavailableException (an
+ * outage must never break a feed refresh), so this recovers what they missed;
+ * and it is what an operator runs once after pointing an install at
+ * MEILISEARCH_URL, since pre-existing entries stay unindexed until then.
  *
- * Failure handling is the INVERSE of EntrySearchWithFallback's. A search with
- * no engine configured has the database to fall back to, so it is not an
- * error. A reindex with no engine configured has nothing to rebuild and no
- * fallback, so it exits non-zero. Likewise an engine that answers with an
- * error partway through must not be reported as a success — see execute().
+ * Failure handling is the INVERSE of EntrySearchWithFallback's: no engine means a
+ * search falls back to the database (not an error), but a reindex with no engine
+ * has nothing to rebuild and no fallback, so it exits non-zero -- and an engine
+ * erroring partway through must not report success (see execute()).
  *
- * Walks the whole `entry` table in ascending-id batches
- * (EntryRepository::entriesAfterId(), never OFFSET) and clears the entity
- * manager between them, so a table of tens of thousands of rows runs in
- * bounded memory rather than growing the identity map for the whole run.
+ * Walks `entry` in ascending-id batches (EntryRepository::entriesAfterId(), never
+ * OFFSET), clearing the entity manager between them to bound memory over tens of
+ * thousands of rows.
  *
- * Every write Meilisearch accepts is asynchronous — it answers 202 and
- * indexes afterwards (measured against the running engine, see
- * `docs/meilisearch-wire-format.md`) — and SearchIndexWriter's methods return
- * void precisely because MeilisearchIndex does not poll the task queue on
- * anyone's behalf; growing that adapter a reindex-only polling path would
- * duplicate the one class that already knows Meilisearch's wire format
- * behind a second, harder-to-trust code path. This command therefore reports
- * only that every batch was accepted, and says so in its own summary rather
- * than implying the engine has already caught up — see the closing `note()`.
+ * Meilisearch writes are asynchronous -- 202 now, indexed later (measured,
+ * `docs/meilisearch-wire-format.md`) -- so SearchIndexWriter returns void rather
+ * than polling; a reindex-only poll would duplicate the one class that knows the
+ * wire format. This command reports only that every batch was accepted, not that
+ * the engine has caught up (see the closing `note()`).
  */
 #[AsCommand(
     name: 'app:search:reindex',

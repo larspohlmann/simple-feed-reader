@@ -26,32 +26,26 @@ class UserIdentity
      * Deliberately left on the table's default collation, unlike
      * $providerUserId below.
      *
-     * This column's values are a closed vocabulary written by our own code from
-     * a hard-coded OAuthProviderInterface::getName(). They are never
-     * provider-supplied and never user-supplied, so a case-insensitive
-     * comparison here cannot be attacked — the only string that ever reaches it
-     * is one of the literals we ship. Pinning a collation on a column whose
-     * every value we choose would be tidiness dressed up as security, and would
-     * blur the reason the column below genuinely needs one.
+     * Values are a closed vocabulary written by our own code from a hard-coded
+     * OAuthProviderInterface::getName() — never provider- or user-supplied, so
+     * a case-insensitive comparison can't be attacked. Pinning a collation here
+     * would be tidiness dressed up as security, and would blur why the column
+     * below genuinely needs one.
      */
     #[ORM\Column(length: 30)]
     private string $provider;
 
     /**
-     * `_bin` collation, pinned explicitly.
+     * `_bin` collation, pinned explicitly. Without it MySQL inherits the table
+     * default (utf8mb4_0900_ai_ci) and compares case-insensitively while SQLite
+     * compares case-sensitively — observed, not theorised: a lookup for
+     * `sub-abc` returned a row stored as `Sub-ABC` on MySQL 8.4 and nothing on
+     * SQLite before this was pinned.
      *
-     * Without it MySQL inherits the table default (utf8mb4_0900_ai_ci) and
-     * compares this column case-insensitively, while SQLite compares it
-     * case-sensitively — so the same lookup behaved differently in production
-     * and in dev. That was observed, not theorised: before this was pinned, a
-     * lookup for `sub-abc` returned a row stored as `Sub-ABC` on MySQL 8.4 and
-     * returned nothing on SQLite.
-     *
-     * A subject identifier is an opaque token minted by the provider; `a` and
-     * `A` are simply different identifiers, and treating them as equal would
-     * let one provider account resolve to another's local user. $email below is
-     * the deliberate opposite: addresses ARE case-insensitive, which is why
-     * they are normalised on write instead of compared loosely on read.
+     * A subject identifier is an opaque provider-minted token; `a` and `A` are
+     * different identifiers, and treating them as equal would let one provider
+     * account resolve to another's local user. $email below is the deliberate
+     * opposite: addresses ARE case-insensitive, so they're normalised on write.
      */
     #[ORM\Column(length: 191, options: ['collation' => 'utf8mb4_bin'])]
     private string $providerUserId;
@@ -99,17 +93,15 @@ class UserIdentity
      * Normalised through the same seam as User::$email, because Plan 3b's
      * linking rule compares a provider-verified address against existing
      * accounts. If Google hands back `Bob@example.com` for an account stored as
-     * `bob@example.com`, any direct comparison between the two would fail and
-     * OAuth would create a second, orphaned pending account instead of linking
-     * to the rightful owner.
+     * `bob@example.com`, a direct comparison would fail and OAuth would create a
+     * second, orphaned pending account instead of linking to the rightful owner.
      *
-     * Note this is the setter, not the constructor: unlike User, the address
-     * here is not a constructor argument, so the setter is the only write seam.
+     * This is the setter, not the constructor: unlike User, the address here
+     * isn't a constructor argument, so the setter is the only write seam.
      *
      * Deliberately NOT applied to $providerUserId — provider subject
-     * identifiers are opaque tokens that may be case-significant, and the
-     * uniq_identity_provider_uid index covers (provider, provider_user_id)
-     * only. That index is unaffected by this change.
+     * identifiers may be case-significant, and the uniq_identity_provider_uid
+     * index (provider, provider_user_id) is unaffected by this change.
      */
     public function setEmail(?string $email): void
     {

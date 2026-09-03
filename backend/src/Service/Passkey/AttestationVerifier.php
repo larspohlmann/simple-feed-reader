@@ -25,22 +25,21 @@ use Webauthn\PublicKeyCredentialDescriptor;
 
 /**
  * Verifies a WebAuthn attestation ("registration") response and turns it
- * into a stored UserPasskey (#624) — the highest-risk step in the enrolment
- * flow, since everything downstream (login, the credential list, revocation)
- * trusts that a row in `user_passkey` really was produced by a ceremony an
+ * into a stored UserPasskey (#624) — the highest-risk step in enrolment,
+ * since everything downstream (login, the credential list, revocation)
+ * trusts that a `user_passkey` row really was produced by a ceremony an
  * authenticator completed.
  *
- * The steps below are deliberately in this order: the challenge is consumed
- * and its ownership checked BEFORE the credential bytes are even looked at,
- * so a caller who does not own the challenge never learns whether their
- * forged credential would otherwise have parsed.
+ * The steps below are deliberately ordered: the challenge is consumed and
+ * its ownership checked BEFORE the credential bytes are looked at, so a
+ * caller who doesn't own the challenge never learns whether their forged
+ * credential would otherwise have parsed.
  *
  * This class never calls PasskeyCredentials::userHandleFor() — it reads the
- * user handle straight off the consumed PasskeyChallenge instead. See that
- * class's docblock for why re-minting one here would be a real bug:
- * userHandleFor() returns a fresh random value on every call for an
- * account's first credential, and options and verification are two separate
- * HTTP requests.
+ * user handle straight off the consumed PasskeyChallenge. See that class's
+ * docblock for why re-minting one here would be a real bug: userHandleFor()
+ * returns a fresh random value per call for an account's first credential,
+ * and options/verification are two separate HTTP requests.
  */
 final readonly class AttestationVerifier
 {
@@ -88,9 +87,9 @@ final readonly class AttestationVerifier
      * Resolves the user handle and rebuilds the creation options BEFORE the
      * broad catch below, deliberately: optionsFor() reaches the database
      * through PasskeyCredentials::excludeListFor(), and a failure there is a
-     * real fault (a database outage, say), not a credential to reject. Only
-     * the actual parsing of attacker-controlled bytes belongs inside that
-     * catch — see checkAgainstLibrary().
+     * real fault (a database outage), not a credential to reject. Only
+     * parsing of attacker-controlled bytes belongs inside that catch — see
+     * checkAgainstLibrary().
      *
      * @param array<string, mixed> $credential
      */
@@ -105,16 +104,14 @@ final readonly class AttestationVerifier
     }
 
     /**
-     * Everything in THIS method runs on bytes an attacker fully controls —
-     * the WebAuthn deserializer, the CBOR decoder underneath it, and the
-     * ceremony's own checks. Between them they throw a scatter of types that
-     * is impractical to enumerate exhaustively (the library's own
-     * WebauthnException hierarchy, Symfony's serializer exceptions, and
-     * plain SPL RuntimeException/InvalidArgumentException/TypeError from the
-     * CBOR decoder on malformed input), so the catch is deliberately broad.
-     * That is safe specifically because nothing else runs in this scope:
-     * $options is built by the caller, outside the catch, for exactly that
-     * reason.
+     * Everything here runs on bytes an attacker fully controls — the
+     * WebAuthn deserializer, the CBOR decoder, and the ceremony's own
+     * checks — which between them throw too wide a scatter of types to
+     * enumerate (the library's WebauthnException hierarchy, Symfony's
+     * serializer exceptions, plain SPL exceptions from malformed CBOR), so
+     * the catch is deliberately broad. That's safe only because nothing
+     * else runs in this scope: $options is built by the caller, outside the
+     * catch.
      *
      * @param array<string, mixed> $credential
      */
@@ -151,18 +148,17 @@ final readonly class AttestationVerifier
     /**
      * The credential id is unique across every account, and
      * PasskeyCredentials::excludeListFor() already tells an honest
-     * authenticator about every credential this account holds — so reaching
+     * authenticator about every credential this account holds — so hitting
      * the database's own constraint here means a replayed or forged
-     * registration, not a bug, and it must not reach the client as a 500.
+     * registration, not a bug, and must not reach the client as a 500.
      */
     private function persist(User $user, UserPasskey $passkey): void
     {
         $this->em->persist($passkey);
 
-        // Marked before the flush below, not after: markAnswered() only
-        // mutates the already-managed Preferences entity, so one flush
-        // covers both this and the new UserPasskey row. Two flushes would
-        // risk leaving the offer stamped on a request whose credential
+        // Marked before the flush, not after: markAnswered() only mutates the
+        // already-managed Preferences entity, so one flush covers both. Two
+        // flushes would risk stamping the offer on a request whose credential
         // insert then failed.
         $this->offer->markAnswered($user);
 
@@ -192,16 +188,14 @@ final readonly class AttestationVerifier
     }
 
     /**
-     * The library's own CheckCredentialId step only rejects a credential id
-     * over 1023 RAW bytes — the spec's own ceiling, and far more than
-     * UserPasskey::$credentialId's VARCHAR(255) column holds once
-     * base64url-encoded (~191 raw bytes). MySQL enforces that column width
-     * and would otherwise surface a data-too-long DBAL exception at flush
-     * time — a DIFFERENT exception than the UniqueConstraintViolationException
-     * persist() already catches, so it would reach the kernel as an
-     * unhandled 500. SQLite does not enforce VARCHAR width at all, which is
-     * why this can only be caught here, before the write is even attempted,
-     * never at the database.
+     * The library's CheckCredentialId step only rejects an id over 1023 RAW
+     * bytes — the spec's ceiling, far more than
+     * UserPasskey::$credentialId's VARCHAR(255) holds once base64url-encoded
+     * (~191 raw bytes). MySQL would surface a data-too-long DBAL exception
+     * at flush — DIFFERENT from the UniqueConstraintViolationException
+     * persist() catches, so it would reach the kernel as an unhandled 500.
+     * SQLite doesn't enforce VARCHAR width at all, so this must be caught
+     * here, before the write, never at the database.
      */
     private static function guardCredentialIdFitsColumn(string $credentialId): void
     {
@@ -223,12 +217,11 @@ final readonly class AttestationVerifier
 
     /**
      * `response.transports` is client-supplied wire data the WebAuthn
-     * library never validates at all — AuthenticatorAttestationResponseDenormalizer
+     * library never validates — AuthenticatorAttestationResponseDenormalizer
      * assigns it verbatim — and PasskeyCredentials::excludeListFor() later
-     * echoes whatever is stored here straight back to a browser on every
-     * future registration attempt. Filtering to the spec's own enum before
-     * persisting is what keeps that round trip from carrying arbitrary
-     * client-supplied strings.
+     * echoes whatever is stored here back to the browser on every future
+     * registration. Filtering to the spec's enum before persisting keeps
+     * that round trip from carrying arbitrary client strings.
      *
      * @param array<string> $transports
      *

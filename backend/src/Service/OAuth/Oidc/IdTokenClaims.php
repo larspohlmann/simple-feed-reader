@@ -10,21 +10,16 @@ use App\Exception\OAuth\OAuthFailedException;
  * The decoded payload of an ID token, and the one place that knows what shape a
  * claim arrived in.
  *
- * The split from {@see IdTokenVerifier} is between reading and deciding. This
- * class answers "what did the provider actually send"; the verifier answers "do
- * we accept it". So the accessors here return null for a claim of the wrong
- * type rather than throwing — a claim that is absent and a claim that is a
- * number where a string was due are both simply "no usable value", and it is
- * the verifier that turns that into the rejection message belonging to that
- * claim.
+ * The split from {@see IdTokenVerifier} is between reading and deciding: this
+ * class answers "what did the provider send", the verifier answers "do we
+ * accept it". Accessors return null for a claim of the wrong type rather than
+ * throwing — absent and wrong-typed both mean "no usable value", and it is the
+ * verifier that turns that into the rejection message for that claim. Reading
+ * the shape here also keeps the verifier's guards to one decision each,
+ * instead of an `is_string()` at every call site.
  *
- * Reading the shape here rather than at each call site is also what keeps the
- * verifier's guards down to one decision each: without it, every claim read
- * carries its own `is_string()` and the branching adds up fast.
- *
- * Decoding is deliberately NOT signature verification, and nothing in this file
- * should be read as validating the token. See {@see IdToken} for what stands
- * behind these bytes.
+ * Decoding is deliberately NOT signature verification — see {@see IdToken} for
+ * what stands behind these bytes.
  */
 final readonly class IdTokenClaims
 {
@@ -39,9 +34,9 @@ final readonly class IdTokenClaims
      * Splits the JWT and decodes its payload, refusing anything that is not a
      * JSON object.
      *
-     * The header and signature segments are not read at all. Their presence is
-     * checked only because a string with the wrong number of dots is not a JWT
-     * and reading segment 1 of it would be reading something arbitrary.
+     * The header and signature segments are never read; their presence is
+     * checked only so a string with the wrong number of dots isn't mistaken
+     * for a JWT before segment 1 is decoded.
      */
     public static function decode(IdToken $token): self
     {
@@ -62,11 +57,11 @@ final readonly class IdTokenClaims
      * The claim as it arrived, for the two claims whose accepted shapes are
      * themselves a trust decision rather than a matter of type.
      *
-     * `email_verified` is the reason this exists: Google sends a boolean and
-     * Apple sends the string "true", and which spellings count as verified
-     * belongs with the other trust decisions in the verifier, not here. Prefer
-     * the typed readers below for everything else — they exist so a caller
-     * cannot forget that a claim may be of any type at all.
+     * `email_verified` is why this exists: Google sends a boolean, Apple sends
+     * the string "true", and which spellings count as verified is a trust
+     * decision that belongs in the verifier, not here. Prefer the typed
+     * readers below for everything else, so a caller cannot forget a claim
+     * may be of any type.
      */
     public function claim(string $name): mixed
     {
@@ -87,8 +82,8 @@ final readonly class IdTokenClaims
      * The claim if it is a JSON number with no fractional part, null otherwise.
      *
      * Deliberately not `is_numeric`: RFC 7519 defines `exp` as a JSON number,
-     * so a token spelling it "1780000000" was not built by the provider.
-     * Accepting the string would mean accepting a shape only a forger produces.
+     * so a token spelling it as the string "1780000000" was not built by the
+     * provider — accepting it would accept a shape only a forger produces.
      */
     public function int(string $name): ?int
     {
@@ -101,10 +96,9 @@ final readonly class IdTokenClaims
      * The claim as a list of strings, for claims RFC 7519 §4.1.3 allows to be
      * either one string or an array of them — `aud` being the one that matters.
      *
-     * Members that are not strings are dropped rather than stringified, so
-     * there is no shape of `aud` whose members can match a client id by
-     * accident. Anything that is neither a string nor an array reads as an
-     * empty list, which no comparison can match either.
+     * Non-string members are dropped rather than stringified, so no shape of
+     * `aud` can match a client id by accident. Anything neither a string nor
+     * an array reads as an empty list, which matches nothing either.
      *
      * @return list<string>
      */

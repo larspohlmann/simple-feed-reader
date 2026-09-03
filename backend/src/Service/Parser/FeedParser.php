@@ -17,13 +17,11 @@ final readonly class FeedParser
     {
         $feedXml = $this->fromTheDeclaration($xml);
 
-        // loadXML() throws a raw ValueError on an empty string rather than
-        // returning false, so guard it here — mirroring HtmlItemExtractor's
-        // empty-page check. An empty 200 body (misconfigured feed, edge CDN) is
-        // a per-feed parse failure the refresh runner already handles, not an
-        // uncaught error that 500s the whole run and stalls every feed after it.
-        // The guard reads the stripped body: a document of nothing but a BOM
-        // survives trim() but is empty by the time loadXML() sees it.
+        // loadXML() throws a raw ValueError on an empty string, not false, so
+        // guard it here (mirroring HtmlItemExtractor's empty-page check). An empty
+        // 200 body is a per-feed parse failure the refresh runner already handles,
+        // not an error that 500s the whole run. The guard reads the stripped body:
+        // a BOM-only document survives trim() but is empty when loadXML() sees it.
         if ($feedXml === '') {
             throw new FeedParseException('Document is not well-formed XML');
         }
@@ -44,9 +42,8 @@ final readonly class FeedParser
 
         // Feeds never need a DTD, and internal entities ARE expanded by libxml
         // (external ones are not, so XXE is already out). Rejecting doctypes
-        // outright makes entity-expansion DoS impossible here instead of
-        // relying on libxml's built-in amplification limit, which varies by
-        // version.
+        // outright makes entity-expansion DoS impossible here, rather than relying
+        // on libxml's built-in amplification limit, which varies by version.
         if ($document->doctype !== null) {
             throw new FeedParseException('Feed documents must not declare a DTD');
         }

@@ -8,24 +8,21 @@ namespace App\Service\Recommendation;
  * Reads one /chat/completions response as it arrives and keeps only the
  * answer.
  *
- * Incremental rather than "accumulate the transcript, then decode it" (#320):
- * a reasoning model streams its whole thinking phase as SSE events whose
- * deltas carry no `content`, so the transcript runs to megabytes while the
- * answer is still empty. Retaining it put reasoning and per-token framing
- * under the same cap as the answer, and that cap — sized for a ~6 KB envelope
- * — killed calls that were working fine. Dropping every event once decoded
- * bounds memory by the answer, which is what the cap always meant to bound.
+ * Incremental rather than "accumulate then decode" (#320): a reasoning model
+ * streams its whole thinking phase as SSE events with no `content`, so the
+ * transcript runs to megabytes while the answer stays empty. Retaining it put
+ * reasoning and framing under the answer's cap and killed working calls;
+ * dropping each event once decoded bounds memory by the answer, as intended.
  *
  * Deliberately not readonly: one reader is one call's worth of state.
  */
 final class CompletionStreamReader
 {
     /**
-     * A reasoning model's thinking phase can run to megabytes (#320), so only
-     * the tail of the reasoning channel is retained — where LM Studio's models
-     * put the JSON answer right before they stop (#323). This buffer bounds
-     * itself rather than being charged to retainedBytes(): reasoning must never
-     * count against the answer's cap, the whole point of #320.
+     * A reasoning phase can run to megabytes (#320), so only the tail of the
+     * reasoning channel is kept — where LM Studio's models put the JSON answer
+     * before they stop (#323). Self-bounding, not charged to retainedBytes():
+     * reasoning must never count against the answer's cap (#320).
      */
     public const int REASONING_TAIL_LIMIT = 2_097_152;
 
@@ -45,11 +42,10 @@ final class CompletionStreamReader
     private ?CompletionUsage $usage = null;
 
     /**
-     * How many times the buffers have changed. The blocking-envelope readers
-     * below share one decode per generation, and a counter is the exact key
-     * for that: the buffers only ever change inside consume(), and their
-     * combined length is not a reliable stand-in — a CRLF line break leaves
-     * exactly as many bytes behind as it takes away.
+     * How many times the buffers have changed — the key the blocking-envelope
+     * readers share one decode per generation on. Buffers change only inside
+     * consume(); their combined length is no stand-in, since a CRLF break
+     * leaves exactly as many bytes as it removes.
      */
     private int $bufferGeneration = 0;
 
@@ -102,15 +98,12 @@ final class CompletionStreamReader
     /**
      * Whether the provider stopped because `max_tokens` stopped it.
      *
-     * The judgement lives here rather than in the client because this class
-     * and CompletionBodyDecoder are where every other piece of provider
-     * dialect lives — the `reasoning_content` recovery of #323, the sticky
-     * usage message of #409, and the stickiness of `$finishReason` that this
-     * answer quietly depends on. #437 compared the raw `'length'` in the HTTP
-     * client, which is the layer furthest from the wire and the one place in
-     * the tree that gave the string a meaning. An endpoint that spells the
-     * ceiling differently is then a one-line change here, next to the other
-     * dialects, instead of a hunt through a private method of the transport.
+     * The judgement lives here, not in the client, because this class and
+     * CompletionBodyDecoder hold every other provider dialect — #323's
+     * `reasoning_content` recovery, #409's sticky usage, the `$finishReason`
+     * stickiness this depends on. #437 compared the raw `'length'` in the HTTP
+     * client, the layer furthest from the wire; an endpoint that spells the
+     * ceiling differently is then a one-line change here beside the dialects.
      */
     public function hitTokenCeiling(): bool
     {
@@ -118,18 +111,15 @@ final class CompletionStreamReader
     }
 
     /**
-     * What the provider says this call consumed, once it says so. Null until
-     * a message carries it — and for a provider that reports none at all.
+     * What the provider says this call consumed, once it says so. Null until a
+     * message carries it, and for a provider that reports none.
      *
-     * Deliberately no salvage of an unterminated event left in $pendingLine,
-     * the way trailingEventContent() salvages a last delta: that would mean a
-     * JSON decode per chunk on a half-buffered event, which is the parse cost
-     * #327 removed. Real SSE terminates its frames, and the usage message is
-     * followed by `data: [DONE]`, so it is never the unterminated one.
-     *
-     * The blocking shape does re-read its whole buffer, as it always has for
-     * the answer — but it shares that one decode with assistantContent(),
-     * which the client asks for on the very same chunk.
+     * No salvage of an unterminated event in $pendingLine the way
+     * trailingEventContent() salvages a last delta: that is a JSON decode per
+     * chunk, the parse cost #327 removed, and the usage message is followed by
+     * `data: [DONE]`, so it is never the unterminated one. The blocking shape
+     * re-reads its whole buffer but shares that decode with assistantContent(),
+     * which the client asks for on the same chunk.
      */
     public function usage(): ?CompletionUsage
     {
@@ -141,10 +131,9 @@ final class CompletionStreamReader
     }
 
     /**
-     * What this reader is actually holding on to, whatever it turns out to be.
-     * This is the memory bound, and a flat one: on the blocking shape it counts
-     * the buffered body, reasoning and framing included, because that is what
-     * is really in memory.
+     * What this reader is actually holding on to — the flat memory bound. On
+     * the blocking shape it counts the buffered body, reasoning and framing
+     * included, because that is what is really in memory.
      */
     public function retainedBytes(): int
     {
@@ -152,16 +141,13 @@ final class CompletionStreamReader
     }
 
     /**
-     * How much *answer* is held — what a bound derived from `max_tokens` is
-     * entitled to measure.
+     * How much *answer* is held — what a `max_tokens`-derived bound may measure.
      *
-     * Zero on the blocking shape, and deliberately so. Nothing there is an
-     * answer until the whole body parses: the buffer holds the provider's
-     * framing and, for a reasoning model, its entire thinking phase. Charging
-     * that to the answer bound flagged a legitimate 540 KB reasoning reply as a
-     * runaway, well under the 1.9 MB #320 records as normal (#437 review). The
-     * blocking shape is bounded by retainedBytes() instead, which is the flat
-     * memory cap that shape always had.
+     * Zero on the blocking shape, deliberately: nothing is an answer until the
+     * whole body parses, and the buffer holds framing and a reasoning model's
+     * whole thinking phase. Charging that to the answer bound flagged a legit
+     * 540 KB reasoning reply as a runaway, under the 1.9 MB #320 calls normal
+     * (#437 review); the blocking shape is bounded by retainedBytes() instead.
      */
     public function answerBytes(): int
     {
@@ -199,14 +185,13 @@ final class CompletionStreamReader
     }
 
     /**
-     * The blocking envelope's fields, decoded at most once per generation of
-     * the buffers and shared by the three readers above.
+     * The blocking envelope's fields, decoded at most once per buffer
+     * generation and shared by the three readers above.
      *
-     * The client asks for the answer and the usage on every chunk it feeds in,
-     * and on this shape both come out of the same whole-body decode. Without
-     * the memo that shape would pay one decode per field per chunk, which is
-     * the parse cost #327 removed from the streaming shape and #409 must not
-     * quietly reintroduce here.
+     * The client asks for the answer and the usage on every chunk, and here
+     * both come from the same whole-body decode. Without the memo this shape
+     * would pay one decode per field per chunk — the parse cost #327 removed
+     * from the streaming shape and #409 must not reintroduce here.
      *
      * @return array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?CompletionUsage}
      */

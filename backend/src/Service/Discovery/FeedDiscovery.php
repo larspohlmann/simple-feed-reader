@@ -15,16 +15,14 @@ use App\Service\Parser\FeedParser;
 use App\Service\Scraper\HtmlItemExtractor;
 
 /**
- * Turns a user-entered URL into something to subscribe to, trying five sources
- * in decreasing order of certainty: the URL itself parsed as a feed; the feeds
- * the page points at (FeedLinkScanner, exact first and guessed second) followed
- * by a WordPress REST posts endpoint (WordPressRestProbe) as a fallback — the
- * page's own advertised feeds lead, the REST alternative trails; a feed under
- * one of the conventional paths
- * (WellKnownFeedProbe) — which is also the only source left when the page
- * never arrives, as on the sites that refuse every non-browser client; and
- * finally a synthetic 'scraped' candidate built from the page's own article
- * list.
+ * Turns a user-entered URL into something to subscribe to, trying five
+ * sources in decreasing order of certainty: the URL itself parsed as a feed;
+ * the feeds the page points at (FeedLinkScanner, exact first, guessed
+ * second) followed by a WordPress REST posts endpoint (WordPressRestProbe)
+ * as a fallback; a feed under a conventional path (WellKnownFeedProbe) —
+ * also the only source left when the page never arrives, as on sites that
+ * refuse every non-browser client; and finally a synthetic 'scraped'
+ * candidate built from the page's own article list.
  *
  * Discovery never throws for a bad address: failures come back as a
  * scrapeFailureReason so the subscribe endpoint can always answer with a

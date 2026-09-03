@@ -10,18 +10,17 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * Enforces the trial period. There is no scheduler in this app by design, so
- * the trial → suspended transition is lazy: the first request an account makes
- * after its trial ends flips its stored status to Suspended and is refused.
+ * Enforces the trial period. There's no scheduler in this app by design, so
+ * the trial -> suspended transition is lazy: the first request after a
+ * trial ends flips the stored status to Suspended and is refused.
  *
  * The flip is a deliberate, named side effect kept out of the security
  * checkers themselves, which only delegate here. It happens at most once per
- * account (afterwards the status is already Suspended), so a live trial costs
- * only a null check and a date comparison.
+ * account, so a live trial costs only a null check and a date comparison.
  *
- * The date is left in place after expiry: a Suspended account whose
- * trialEndsAt is in the past is how the admin screens tell a trial expiry apart
- * from a manual suspend.
+ * The date stays in place after expiry: a Suspended account with a past
+ * trialEndsAt is how admin screens tell a trial expiry apart from a manual
+ * suspend.
  */
 final readonly class TrialExpiryGuard
 {
@@ -45,9 +44,9 @@ final readonly class TrialExpiryGuard
         }
 
         // Always Suspended, never Pending/Rejected: startTrial() reactivates any
-        // non-active account to Active, and no firewall accepts a token for an
-        // account that isn't Active, so a trial-bearing account reaching this
-        // point can only be Active (handled above) or already Suspended.
+        // account to Active, and no firewall accepts a non-Active token, so a
+        // trial-bearing account here is either Active (handled above) or
+        // already Suspended.
         throw new AccountStatusException(UserStatus::Suspended->value);
     }
 }

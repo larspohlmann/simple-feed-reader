@@ -13,16 +13,16 @@ use App\Service\Fetch\UrlResolver;
  * cannot be used unchecked. Measured against a real 111-feed library: just
  * under half publish no <link> at all; several point it at the feed document
  * the reader already has (Telepolis, Politico); one leaked an internal
- * Kubernetes service name out of its CMS (ZDFheute); one points at a `feeds.`
- * host that serves no site (Nature).
+ * Kubernetes service name (ZDFheute); one points at a `feeds.` host that
+ * serves no site (Nature).
  *
- * So the published link is used only when it names somewhere a person could go,
- * and otherwise the feed's own address supplies the origin — a feed nearly
+ * So the published link is used only when it names somewhere a person could
+ * go; otherwise the feed's own address supplies the origin — a feed nearly
  * always lives on the site it describes.
  *
- * This is a presentation decision, never a persisted one. Feed::$siteUrl keeps
- * exactly what the publisher said: the backup carries that column, and a guess
- * written into it would restore as though the publisher had stated it.
+ * This is a presentation decision, never a persisted one. Feed::$siteUrl
+ * keeps exactly what the publisher said: the backup carries that column, and
+ * a guess written into it would restore as though the publisher had said it.
  */
 final class FeedWebsite
 {

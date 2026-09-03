@@ -8,16 +8,15 @@ use Symfony\Contracts\HttpClient\Exception\TimeoutExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
 /**
- * The one policy both fetch paths consult to decide whether a failed request is
- * worth re-driving over the next address family.
+ * The one policy both fetch paths consult to decide whether a failed request
+ * is worth re-driving over the next address family.
  *
- * Only a transport failure that struck the route itself qualifies — a family
- * that connected and then reset (heise's IPv6 from Strato dies at the TLS
- * handshake). A timeout is excluded on purpose: it means the family answered the
- * connect but is slow, so re-driving every family would only multiply the wait.
- * A client or server error status is judged separately (isRetryableStatus): a
- * 403 or 503 can be tied to the source address (taz.de forbids its IPv6 range
- * from Strato while IPv4 serves the page), so the other family is worth a try.
+ * Only a transport failure that struck the route itself qualifies — e.g. a
+ * family resetting mid-handshake (heise's IPv6 from Strato) — not a timeout,
+ * which just means the family is slow, so re-driving would waste time. A
+ * client/server error status is judged separately (isRetryableStatus): a
+ * 403/503 can be tied to the source address (taz.de blocks IPv6 from Strato,
+ * IPv4 works), so the other family is worth a try.
  */
 final class CrossFamilyFailover
 {

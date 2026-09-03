@@ -14,13 +14,11 @@ use Dom\HTMLDocument;
  * action — Substack's Share button (`action=share`) and WordPress's sharing
  * links (`?share=…`), which no endpoint list could name (#627, #786).
  *
- * A link to a share host that carries no page URL — POLITICO's WhatsApp
- * "message the hosts" contact link is the case that motivated the distinction
- * — is editorial, not a control, and stays. So does a self link without a
- * share action: a permalink, a comments anchor.
- *
- * The page's own address is its canonical link, else its og:url. A page that
- * declares neither has no self links to judge.
+ * A share-host link carrying no page URL — POLITICO's WhatsApp "message the
+ * hosts" contact link motivated the distinction — is editorial, not a
+ * control, and stays; so does a self link without a share action (a
+ * permalink, a comments anchor). The page's own address is its canonical
+ * link, else its og:url; a page declaring neither has no self links to judge.
  */
 final readonly class ShareLinkMatcher
 {

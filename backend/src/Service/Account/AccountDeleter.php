@@ -13,21 +13,20 @@ use App\Service\OrphanedFeedReclaimer;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Hard deletion of an account and everything it owns. Two entry points because
- * the guards differ: an admin must not delete themselves through the admin API,
- * while a user deleting their own account is the whole point of deleteSelf().
- * Both refuse to remove the last administrator.
+ * Hard deletion of an account and everything it owns. Two entry points
+ * because the guards differ: an admin must not delete themselves through the
+ * admin API, while a user deleting their own account is deleteSelf()'s whole
+ * point. Both refuse to remove the last administrator.
  *
- * remove(), not a bulk DQL DELETE: going through the ORM keeps the unit of work
- * aware of what left, the same reasoning recorded on E2ePurgeUsersCommand. The
+ * remove(), not a bulk DQL DELETE: going through the ORM keeps the unit of
+ * work aware of what left (same reasoning as E2ePurgeUsersCommand). The
  * account's subscriptions, tags, read state, preferences, identities, action
- * tokens and AI provider configurations follow through their FK ON DELETE
- * CASCADE.
+ * tokens and AI provider configurations follow via FK ON DELETE CASCADE.
  *
- * Feeds are NOT the user's content — other people read them — so they are not
- * cascaded. Only the feeds this account was the last subscriber of are
- * reclaimed, and that decision belongs to OrphanedFeedReclaimer, which
- * re-checks it inside its DELETE.
+ * Feeds are NOT the user's content — other people read them — so they are
+ * not cascaded. Only feeds this account was the last subscriber of are
+ * reclaimed, a decision OrphanedFeedReclaimer owns and re-checks inside its
+ * DELETE.
  */
 final readonly class AccountDeleter
 {

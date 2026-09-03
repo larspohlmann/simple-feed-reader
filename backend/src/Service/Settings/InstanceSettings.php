@@ -12,17 +12,15 @@ use Doctrine\ORM\EntityManagerInterface;
  * Reads and writes the instance-wide settings row. The rest of the app
  * depends on this, never on the entity or repository directly.
  *
- * `settings()` is where "no row yet" is handled: a fresh, unpersisted
- * InstanceSetting already carries exactly the defaults its properties
- * declare, so every getter below just reads off it instead of each one
- * carrying its own fallback that could drift from the entity.
+ * `settings()` handles "no row yet": a fresh, unpersisted InstanceSetting
+ * already carries its declared defaults, so every getter reads off it instead
+ * of duplicating a fallback that could drift from the entity.
  *
- * `final class`, not `final readonly`: settings() memoises the resolved row
- * so a request reading several settings — a WebAuthn ceremony reads it three
- * or four times — issues one SELECT, not one per getter. The memo is a plain
- * field on purpose: Symfony services are per-request under PHP-FPM, so it is
- * request-scoped and must stay that way — do not promote it to a shared cache.
- * update() clears it so a read after a write returns the new value.
+ * `final class`, not `final readonly`: settings() memoises the resolved row so
+ * a request reading several settings (a WebAuthn ceremony reads it three or
+ * four times) issues one SELECT. The memo is a plain field — request-scoped
+ * under PHP-FPM, never promote it to a shared cache. update() clears it so a
+ * read after a write sees the new value.
  */
 final class InstanceSettings
 {

@@ -14,23 +14,19 @@ use Psr\Clock\ClockInterface;
 /**
  * Fills in missing and stale catalog favicons, a budgeted slice at a time.
  *
- * Each slice resolves its icon URLs in a single concurrent batch through the
- * shared `FaviconResolver::resolveAll()` (see #116) — one burst of guarded
- * homepage fetches rather than 25 sequential ones — then downloads each icon's
- * bytes and commits per row.
+ * Each slice resolves its icon URLs in one concurrent batch via the shared
+ * `FaviconResolver::resolveAll()` (#116) — one burst of guarded homepage
+ * fetches rather than 25 sequential ones — then downloads each icon's bytes
+ * and commits per row.
  *
  * Budgeted because 111 publisher round trips cannot happen inside one HTTP
- * request: the caller gets `remaining` back and comes again, exactly as
- * /api/refresh works. The console command passes a large budget and simply
- * loops itself.
+ * request: the caller gets `remaining` back and comes again, as /api/refresh
+ * does; the console command just passes a large budget and loops itself.
  *
- * Deliberately NOT tied to any deployment mechanism. The admin UI drives it
- * after an import, so a self-hosted install with no deploy script gets icons
- * the same way this project's own server does.
- *
- * No lock: each row commits on its own and the due-query skips anything already
- * fresh, so two concurrent runs merely duplicate a little work rather than
- * corrupting anything.
+ * Not tied to any deployment mechanism — the admin UI drives it after an
+ * import, so a self-hosted install with no deploy script still gets icons.
+ * No lock: each row commits on its own and the due-query skips anything
+ * already fresh, so concurrent runs merely duplicate a little work.
  */
 final readonly class CatalogFaviconWarmer
 {

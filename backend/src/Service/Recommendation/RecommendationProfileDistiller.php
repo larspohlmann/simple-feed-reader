@@ -9,25 +9,21 @@ use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 
 /**
- * The distillation phase's single provider call (#493). Once a run starts,
- * before any batch is scored, one call over the reader's full weighted
- * history -- favorites, kept, viewed -- produces a short preference profile
- * that every later phase reads instead of that history. This class mirrors
- * RecommendationConsolidationResolver: it loads what the call needs, calls
- * the provider, parses the reply and settles the debug row it opened, then
- * hands back a ProfileDistillationOutcome for the advancer's distillTick to
- * write. It never touches the run's persisted progress and never retries on
- * its own.
+ * The distillation phase's single provider call (#493). Once a run starts, before any
+ * batch is scored, one call over the reader's full weighted history -- favorites, kept,
+ * viewed -- produces a short preference profile that every later phase reads instead of
+ * that history. Mirrors RecommendationConsolidationResolver: it loads what the call needs,
+ * calls the provider, parses the reply, settles the debug row it opened, and hands back a
+ * ProfileDistillationOutcome for the advancer's distillTick to write. It never touches the
+ * run's persisted progress and never retries on its own.
  *
- * A usable reply is cached on RecommendationSettings here, not only handed
- * back: storeProfile() is what makes the profile survive past this run, for
- * an account that goes on to skip distillation on a later one (#493). An
- * unusable reply resolves to the offending reply so the advancer can retry
- * the call next tick or degrade once attempts run out -- the profile prompt
- * has no pool to fall back to the way the consolidation phase falls back to
- * the batch-scored pool, so a degraded run simply proceeds without one. A
- * transport failure throws, exactly as the consolidation resolver does, and
- * the advancer folds it into the run's ceiling.
+ * A usable reply is cached on RecommendationSettings via storeProfile(), which is what
+ * makes the profile survive past this run, for an account that skips distillation on a
+ * later one (#493). An unusable reply resolves to the offending reply so the advancer can
+ * retry next tick or degrade once attempts run out -- the profile prompt has no pool to
+ * fall back to the way consolidation falls back to the batch-scored pool, so a degraded
+ * run simply proceeds without one. A transport failure throws, exactly as in the
+ * consolidation resolver, and the advancer folds it into the run's ceiling.
  */
 final readonly class RecommendationProfileDistiller
 {

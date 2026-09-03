@@ -25,12 +25,10 @@ final readonly class OAuthIdentity
     public ?string $email;
 
     /**
-     * $emailVerified is typed `bool`, and this file declares strict_types, so
-     * a provider's `"true"` / `1` / `null` cannot reach it — the conversion is
-     * {@see \App\Service\OAuth\Oidc\IdTokenVerifier}'s job, at the boundary
-     * where the raw claim is read. Keeping the coercion out here means there is
-     * exactly one place that decides what a provider's spelling of "verified"
-     * means.
+     * Typed `bool` under strict_types, so a provider's `"true"` / `1` / `null`
+     * cannot reach it — converting the raw claim is
+     * {@see \App\Service\OAuth\Oidc\IdTokenVerifier}'s job, keeping one single
+     * place that decides what a provider's "verified" means.
      */
     public function __construct(
         public string $provider,
@@ -38,25 +36,25 @@ final readonly class OAuthIdentity
         ?string $email,
         public bool $emailVerified,
     ) {
-        // Normalised at construction, through the same seam as User::$email,
-        // so the linking comparison in OAuthAccountLinker cannot be defeated
-        // by a provider that echoes back the capitalisation a user typed.
+        // Normalised through the same seam as User::$email, so a provider
+        // can't defeat OAuthAccountLinker's linking comparison by echoing
+        // back the capitalisation a user typed.
         //
-        // A blank claim collapses to null rather than to '': "no address" must
-        // have one representation, or isLinkableByEmail()'s null check has a
-        // hole in it. User::__construct() rejects an empty address outright,
-        // so no account can ever hold '' for a blank claim to match anyway.
+        // A blank claim collapses to null, not '': "no address" needs one
+        // representation, or isLinkableByEmail()'s null check has a hole
+        // (User::__construct() rejects '' outright anyway, so no account
+        // could hold it for a blank claim to match).
         $normalized = null === $email ? null : User::normalizeEmail($email);
 
         $this->email = '' === $normalized ? null : $normalized;
     }
 
     /**
-     * Matches the relay domain exactly, anchored on both sides: the '@' rules
-     * out `sub.privaterelay.appleid.com` and `notprivaterelay.appleid.com`,
-     * and the end-of-string rules out a registrable lookalike such as
-     * `privaterelay.appleid.com.evil.test`. The address is already lowercased
-     * by the constructor, so a plain comparison is case-insensitive.
+     * Anchored on both sides: the '@' rules out `sub.privaterelay.appleid.com`
+     * and `notprivaterelay.appleid.com`; the end-of-string rules out a
+     * registrable lookalike such as `privaterelay.appleid.com.evil.test`.
+     * Already lowercased by the constructor, so a plain comparison is
+     * case-insensitive.
      */
     public function isPrivateRelay(): bool
     {
@@ -71,12 +69,12 @@ final readonly class OAuthIdentity
      * Whether this identity's address may be used to claim an existing local
      * account.
      *
-     * The `emailVerified` half is the security-critical one. A provider that
-     * lets a user set an arbitrary unverified address on their profile would
-     * otherwise be an account-takeover machine: sign up there as
-     * admin@ourdomain, sign in here, get handed the real admin's account. We
-     * link on provider-*verified* addresses only, and treat everything else as
-     * a brand new signup.
+     * `emailVerified` is the security-critical half: a provider that lets a
+     * user set an arbitrary unverified profile address would otherwise be an
+     * account-takeover machine (sign up there as admin@ourdomain, sign in
+     * here, get handed the real admin's account). We link on
+     * provider-*verified* addresses only; everything else is a brand new
+     * signup.
      */
     public function isLinkableByEmail(): bool
     {

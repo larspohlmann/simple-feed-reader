@@ -56,8 +56,6 @@ final class OAuthStateStoreTest extends TestCase
         self::assertNull($this->store->consume($started->state, $started->browserToken));
     }
 
-    // -- The browser binding ----------------------------------------------
-
     /**
      * The property this store gained when login CSRF was found: a genuine,
      * unspent state redeemed by a browser that did not start the flow buys

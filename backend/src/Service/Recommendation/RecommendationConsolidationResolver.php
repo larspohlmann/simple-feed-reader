@@ -9,27 +9,20 @@ use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 
 /**
- * The consolidation phase's single provider call (#493). It replaces the
- * earlier two-call rank-then-dedup pipeline's role: instead of one call that
- * only flags duplicates against the batch phases' own scores, one call over
- * the same top-2x-picksLimit pool re-scores every entry against the reader's
- * profile and history, gives each a reason, and flags duplicates -- producing
- * the final ranked, deduped, reasoned list in a single pass. This class
- * mirrors RecommendationProfileDistiller: it loads what the call needs, calls
- * the provider, parses the reply and settles the debug row it opened, then
- * hands back a ConsolidationOutcome for the advancer to write. It never
- * touches the run's persisted progress and never finalizes on its own.
+ * The consolidation phase's single provider call (#493), replacing the earlier two-call
+ * rank-then-dedup pipeline: one call over the top-2x-picksLimit pool re-scores every entry
+ * against the reader's profile and history, gives each a reason, and flags duplicates in
+ * one pass. Like RecommendationProfileDistiller, it loads what it needs, calls the
+ * provider, parses the reply, settles the debug row it opened, and hands back a
+ * ConsolidationOutcome for the advancer to write; it never touches persisted progress or
+ * finalizes on its own.
  *
- * A pool emptied by mid-run pruning has nothing to consolidate, so it
- * resolves free to an empty finalize list with no provider call --
- * mirroring RecommendationBatchWave's own all-pruned short-circuit. A usable
- * reply resolves to the pool's picks re-scored and re-reasoned from the
- * reply, minus the named duplicates, sorted best first; an unusable one
- * resolves to the offending reply and the pool at its batch scores with empty
- * reasons, so the advancer can retry the call next tick or degrade to that
- * pool once attempts run out. A transport failure throws, exactly as the
- * distillation resolver does, and the advancer folds it into the run's
- * ceiling.
+ * A pool emptied by mid-run pruning resolves free to an empty finalize list, no call --
+ * mirrors RecommendationBatchWave's all-pruned short-circuit. A usable reply resolves to
+ * the pool's picks re-scored and re-reasoned, minus the named duplicates, best first; an
+ * unusable one resolves to the offending reply plus the pool at its batch scores with empty
+ * reasons, so the advancer can retry or degrade once attempts run out. A transport failure
+ * throws, as in the distillation resolver, and the advancer folds it into the run's ceiling.
  */
 final readonly class RecommendationConsolidationResolver
 {
@@ -130,12 +123,11 @@ final readonly class RecommendationConsolidationResolver
 
     /**
      * The final list: exactly the entries the reply scored and reasoned, minus
-     * the ones it named as duplicates, best score first. A pool entry the reply
-     * left unmentioned is dropped, not carried at its batch score -- the
-     * consolidation call is the sole authority on the final feed, and every
-     * recommendation it yields therefore has a real score and a real reason.
-     * A wholly unusable reply is handled upstream by the degrade path, which
-     * keeps the batch pool; this shapes only a usable reply's picks.
+     * the ones it named as duplicates, best score first. An unmentioned pool
+     * entry is dropped, not carried at its batch score -- the consolidation call
+     * is the sole authority on the final feed, so every recommendation has a
+     * real score and reason. A wholly unusable reply is handled upstream by the
+     * degrade path, which keeps the batch pool; this shapes only a usable one.
      *
      * @return list<array{id: int, score: int, reason: string}>
      */

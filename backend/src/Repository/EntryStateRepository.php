@@ -50,15 +50,13 @@ class EntryStateRepository extends ServiceEntityRepository
     /**
      * One user's states in ascending entry-id slices — the backup's keyset walk.
      * Entry and feed ride along eagerly: the serialiser needs guidHash and the
-     * feed URL for every row, and a lazy load here would cost two queries per
-     * state.
+     * feed URL per row, and a lazy load would cost two queries per state.
      *
-     * Scoped to feeds the user still subscribes to — the same subscription
-     * gate stateCountsForUser() applies. A state left behind by an
-     * unsubscribe (SubscriptionService::unsubscribe removes the subscription
-     * without touching entry_state) names a feed and entry the export's feed
-     * and entry lines never emit for this account, so including it here would
-     * leave the restore an entryState line it cannot attach to anything and a
+     * Scoped to feeds the user still subscribes to, the same gate
+     * stateCountsForUser() applies. A state an unsubscribe left behind
+     * (SubscriptionService::unsubscribe drops the subscription but not
+     * entry_state) names a feed/entry the export's feed and entry lines never
+     * emit, so including it would leave the restore an orphaned line and a
      * footer count higher than what is restorable.
      *
      * @return list<EntryState>
@@ -141,14 +139,13 @@ class EntryStateRepository extends ServiceEntityRepository
     /**
      * Unread entry counts keyed by subscription id, in one query across all the
      * user's subscriptions. Unread = no explicit state and above the watermark,
-     * OR an explicit isHidden=false row. Subscriptions with zero unread are absent
-     * from the map (the caller defaults them to 0).
+     * OR an explicit isHidden=false row. Subscriptions with zero unread are
+     * absent from the map (the caller defaults them to 0).
      *
-     * Lives here rather than on SubscriptionRepository because its subject is
-     * read state, not the subscription itself — it happens to be rooted on
-     * Subscription with EntryState LEFT JOINed in (the opposite shape from
-     * stateCountsForUser() above, which is why it cannot be built
-     * with $this->createQueryBuilder() the way that method is).
+     * Lives here, not on SubscriptionRepository, because its subject is read
+     * state — it is rooted on Subscription with EntryState LEFT JOINed in,
+     * the opposite shape from stateCountsForUser() above, so it cannot be
+     * built with $this->createQueryBuilder() the way that method is.
      *
      * @return array<int, int>
      */

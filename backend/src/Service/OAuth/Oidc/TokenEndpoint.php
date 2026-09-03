@@ -15,27 +15,27 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * ## Why this is its own class
  *
  * {@see IdTokenVerifier} does not check the ID token's signature, and is only
- * entitled to skip that because of the channel the token arrived on. That makes
- * the channel a security control rather than plumbing — so it gets a class, a
- * name, and tests of its own, instead of being a method whose options someone
- * later tidies away into a shared default.
+ * entitled to skip that because of the channel the token arrived on. That
+ * makes the channel a security control, not plumbing — so it gets a class,
+ * name, and tests of its own, instead of a method whose options someone later
+ * tidies into a shared default.
  *
  * The three properties the exemption needs, all enforced below:
  *
- * 1. **The endpoint is ours, not the token's.** $url is passed in from a
- *    constant in the calling provider. No claim, header or request parameter
- *    picks it, so a token cannot nominate the authority that vouches for it.
+ * 1. **The endpoint is ours, not the token's.** $url comes from a constant in
+ *    the calling provider — no claim, header or request parameter picks it,
+ *    so a token cannot nominate its own vouching authority.
  * 2. **The connection really is validated TLS.** `verify_peer` and
  *    `verify_host` are restated here even though they are Symfony's defaults,
- *    and a non-`https` endpoint is refused before the request is made. A future
- *    `framework.http_client.default_options` edit in another file therefore
- *    cannot withdraw the premise.
- * 3. **The communication is direct.** `max_redirects` is 0. A followed redirect
- *    would mean the bytes arrived from a host other than the one we pinned,
- *    which is precisely the case the spec's carve-out excludes.
+ *    and a non-`https` endpoint is refused before the request is made, so a
+ *    future `framework.http_client.default_options` edit elsewhere cannot
+ *    withdraw the premise.
+ * 3. **The communication is direct.** `max_redirects` is 0 — a followed
+ *    redirect would mean the bytes arrived from a host other than the one we
+ *    pinned, exactly the case the spec's carve-out excludes.
  *
  * This class is therefore the ONLY place that constructs an {@see IdToken}.
- * That is what lets the verifier state its precondition as a parameter type;
+ * That lets the verifier state its precondition as a parameter type;
  * OidcBoundaryTest fails the build if a second construction site appears.
  */
 final readonly class TokenEndpoint

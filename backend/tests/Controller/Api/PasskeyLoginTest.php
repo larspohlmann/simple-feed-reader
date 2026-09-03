@@ -578,8 +578,6 @@ final class PasskeyLoginTest extends ApiTestCase
         ));
     }
 
-    // -- Setup helpers -------------------------------------------------
-
     /**
      * passkey_login has its OWN login_throttling budget, separate from the
      * password `login` firewall's — see PasskeyLoginOptionsTest for the same

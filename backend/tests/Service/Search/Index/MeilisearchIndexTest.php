@@ -90,8 +90,6 @@ final class MeilisearchIndexTest extends TestCase
         return $decoded;
     }
 
-    // --- find(): request shape ---------------------------------------
-
     public function testFindSendsMatchingStrategyAllAndTheTermsJoinedBySpace(): void
     {
         $this->index($this->clientCapturing(new MockResponse('{"hits":[]}')))->find($this->search());
@@ -216,8 +214,6 @@ final class MeilisearchIndexTest extends TestCase
         self::assertSame(self::BASE_URL . '/indexes/entries/search', $this->capturedRequest['url']);
     }
 
-    // --- find(): response shape ---------------------------------------
-
     public function testFindReturnsHitIdsInTheEnginesOrder(): void
     {
         $client = new MockHttpClient(new MockResponse(json_encode([
@@ -269,8 +265,6 @@ final class MeilisearchIndexTest extends TestCase
         self::assertSame([], $matches->matchedWords);
     }
 
-    // --- find(): failures -----------------------------------------------
-
     public function testATransportFailureBecomesSearchEngineUnavailable(): void
     {
         $client = new MockHttpClient(static function (): MockResponse {
@@ -305,16 +299,12 @@ final class MeilisearchIndexTest extends TestCase
         $this->index($client)->find($this->search());
     }
 
-    // --- shared transport shape ------------------------------------------
-
     public function testEveryRequestCarriesTheBearerToken(): void
     {
         $this->index($this->clientCapturing(new MockResponse('{"hits":[]}')))->find($this->search());
 
         self::assertContains('Authorization: Bearer test-master-key', $this->capturedRequest['headers']);
     }
-
-    // --- configure() ----------------------------------------------------
 
     public function testConfigureSendsTheSettingsToThePatchEndpoint(): void
     {
@@ -335,8 +325,6 @@ final class MeilisearchIndexTest extends TestCase
         self::assertSame(['feedId', 'effectiveDate', 'id'], $decoded['filterableAttributes']);
         self::assertSame(['effectiveDate', 'id'], $decoded['sortableAttributes']);
     }
-
-    // --- upsert() ---------------------------------------------------------
 
     public function testUpsertPostsTheDocumentsWithEffectiveDateAsAUnixTimestamp(): void
     {
@@ -400,8 +388,6 @@ final class MeilisearchIndexTest extends TestCase
         self::assertSame(0, $client->getRequestsCount());
     }
 
-    // --- forget() -----------------------------------------------------
-
     public function testForgetPostsTheIdListToTheDeleteBatchEndpoint(): void
     {
         $response = new MockResponse('{"taskUid":2,"status":"enqueued"}', ['http_code' => 202]);
@@ -426,8 +412,6 @@ final class MeilisearchIndexTest extends TestCase
         self::assertSame(0, $client->getRequestsCount());
     }
 
-    // --- clear() --------------------------------------------------------
-
     public function testClearDeletesEveryDocumentButLeavesTheIndexInPlace(): void
     {
         $response = new MockResponse('{"taskUid":3,"status":"enqueued"}', ['http_code' => 202]);
@@ -436,8 +420,6 @@ final class MeilisearchIndexTest extends TestCase
         self::assertSame('DELETE', $this->capturedRequest['method']);
         self::assertSame(self::BASE_URL . '/indexes/entries/documents', $this->capturedRequest['url']);
     }
-
-    // --- writes are a silent no-op when no engine is configured ----------
 
     /**
      * An install may leave MEILISEARCH_URL empty on purpose — search is
@@ -491,8 +473,6 @@ final class MeilisearchIndexTest extends TestCase
 
         self::assertSame(0, $client->getRequestsCount());
     }
-
-    // --- writer failures share the same wrapping as the reader -----------
 
     public function testAWriteTransportFailureBecomesSearchEngineUnavailable(): void
     {

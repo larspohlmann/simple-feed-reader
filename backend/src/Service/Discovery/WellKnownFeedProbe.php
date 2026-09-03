@@ -14,17 +14,16 @@ use App\Service\Parser\FeedParser;
 /**
  * Looks for a feed under the conventional paths of a page that named none.
  *
- * Some sites serve their feed happily while answering their HTML page with 403
- * to anything that is not a browser — reddit.com is the archetype: /r/<name>/
- * is refused, /r/<name>/.rss is not. Discovery reads the page to find the feed,
- * so for those sites it has nothing to read and gives up on a feed that is one
- * request away. This guesses that request.
+ * Some sites serve their feed while answering their HTML page with 403 to
+ * anything that is not a browser — reddit.com is the archetype: /r/<name>/
+ * is refused, /r/<name>/.rss is not. Discovery has nothing to read on those
+ * sites and gives up on a feed one request away; this guesses that request.
  *
  * The guesses go out together over the concurrent fetcher, so the walk costs
- * one round trip rather than six: a host that answers slowly must not hold the
- * subscribe request for six timeouts. They inherit that fetcher's SSRF guard,
- * and a guess that fails is not an error — a 404, a timeout and a body that is
- * not a feed are all just answers of "not here".
+ * one round trip rather than six — a slow host must not hold the subscribe
+ * request for six timeouts. They inherit that fetcher's SSRF guard, and a
+ * failed guess is not an error: a 404, a timeout, and a non-feed body are
+ * all just answers of "not here".
  */
 final readonly class WellKnownFeedProbe
 {

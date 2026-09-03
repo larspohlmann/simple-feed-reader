@@ -19,9 +19,9 @@ use Doctrine\ORM\EntityManagerInterface;
  * Empties an account without deleting it: everything the user owns goes,
  * everything that identifies or entitles the account stays (email, password,
  * roles, status, limits, AI connections, OAuth identities). The restore's
- * wipe half, deliberately its own named service — it is the most destructive
- * code in the repository, and a future admin "reset user" action calls the
- * same method rather than growing a second wipe.
+ * wipe half, deliberately its own named service since it is the most
+ * destructive code in the repository — a future admin "reset user" action
+ * calls the same method rather than growing a second wipe.
  *
  * Bulk DQL, not remove(): entry_state alone can hold tens of thousands of
  * rows. The DELETEs bypass the identity map, so this method ends with a
@@ -30,12 +30,12 @@ use Doctrine\ORM\EntityManagerInterface;
  * No orphaned-feed reclaim here, unlike AccountDeleter: the restore
  * re-subscribes the same feeds moments later, and reclaiming in between
  * would delete entries only to re-insert them from the file. A caller that
- * wipes WITHOUT reloading owns that decision itself.
+ * wipes without reloading owns that decision itself.
  *
  * Not transactional, deliberately: a mid-wipe crash leaves a partially
- * emptied account, and the recovery is re-running the same backup file
- * through the restore, not rolling back (spec §8). A future caller must not
- * assume reset() is all-or-nothing.
+ * emptied account, recovered by re-running the same backup file through the
+ * restore, not by rolling back (spec §8). A future caller must not assume
+ * reset() is all-or-nothing.
  */
 final readonly class AccountReset
 {

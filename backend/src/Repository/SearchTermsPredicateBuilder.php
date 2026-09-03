@@ -54,16 +54,16 @@ final readonly class SearchTermsPredicateBuilder
     /**
      * The plain "LIKE %term%" is ANDed in front of the normalized whole-word
      * check on purpose: it rejects almost every row with a cheap scan before
-     * the expensive REPLACE chain runs, and costs nothing extra on the rows
-     * where it does match.
+     * the expensive REPLACE chain runs, at no extra cost on rows where it
+     * matches.
      *
      * It is sound only while the raw term is a substring of every row the
-     * normalized check would accept — true for a term of letters and digits,
-     * FALSE as soon as the term carries boundary punctuation, because the two
-     * sides then differ in exactly that punctuation. "E-Mail" and "E–Mail"
-     * (en dash) normalize alike and must both match, yet neither is a raw
-     * substring of the other. Such a term skips the prefilter and pays for the
-     * chain; it is the rare shape, and a wrong answer is not worth the scan.
+     * normalized check would accept — true for letters and digits, false once
+     * the term carries boundary punctuation, since the two sides then differ
+     * in exactly that punctuation. "E-Mail" and "E–Mail" (en dash) normalize
+     * alike and must both match, yet neither is a raw substring of the other.
+     * Such a term skips the prefilter and pays for the chain — rare, and a
+     * wrong answer is not worth the scan.
      */
     private function wholeWordPredicate(QueryBuilder $qb, string $parameter, string $term): string
     {

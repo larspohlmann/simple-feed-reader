@@ -207,8 +207,6 @@ final class AuthJourneyTest extends WebTestCase
         return $this->tokenFromLoginResponse();
     }
 
-    // -- HTTP helpers -----------------------------------------------------
-
     private function post(string $path, mixed $body, ?string $token = null): void
     {
         $server = ['CONTENT_TYPE' => 'application/json'];

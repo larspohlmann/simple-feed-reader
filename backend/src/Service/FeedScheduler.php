@@ -36,16 +36,12 @@ final class FeedScheduler
      */
     public function recordSuccess(Feed $feed, int $newEntryCount): void
     {
-        // A source that just delivered is polled at the floor at once, not
-        // eased down by halving: after a quiet spell the interval has grown
-        // toward the ceiling, and a slow walk back lets a burst arrive in
-        // chunks that block the top of All items (#643). Resetting on the first
-        // sign of life picks the rest of the burst up in small increments that
-        // interleave with the other feeds.
-        //
-        // The grow branch keeps the floor guard: without it a stored interval
+        // A source that just delivered resets to the floor at once, not eased
+        // down by halving: after a quiet spell the interval has grown toward the
+        // ceiling, and a slow walk back would let a burst block the top of All
+        // items (#643). The grow branch keeps the floor guard: a stored interval
         // of <= 0 (corruption, manual edit) would survive the *1.5 growth and
-        // set nextFetchAt <= now, refetching the feed on every single run.
+        // set nextFetchAt <= now, refetching the feed every run.
         $interval = $newEntryCount > 0
             ? self::FLOOR_MINUTES
             : max(

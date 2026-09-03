@@ -35,11 +35,10 @@ final readonly class DigestEntryFinder
             return new DigestSearchMatches([], 0);
         }
 
-        // Hydrate only the newest PER_SEARCH rows, not the whole match set: a
-        // wide window (a test digest can look back weeks) matches hundreds, and
-        // building every heavy list row to show ten would dominate the cost and
-        // time the request out (#636). The ids arrive newest-first, so the head
-        // is the newest; totalCount stays the full pre-cap count for "+N more".
+        // Hydrate only the newest PER_SEARCH rows, not the whole match set: a wide
+        // window can match hundreds, and building every heavy list row to show ten
+        // would time the request out (#636). The ids arrive newest-first, so the
+        // head is the newest; totalCount stays the full pre-cap count for "+N more".
         $newestIds = \array_slice($ids, 0, self::PER_SEARCH);
 
         return new DigestSearchMatches($this->entries->rowsByIdsForUser($newestIds, $userId), \count($ids));

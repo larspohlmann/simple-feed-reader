@@ -8,22 +8,20 @@ use App\Service\Html\HtmlDocumentParser;
 
 /**
  * Guards against a confident-but-wrong extraction. Readability sometimes picks
- * page furniture over the article and returns it as a successful result: a shop
- * banner, a "related posts" list of link titles, a repeated promo block. Such a
- * result clears every length check yet shows the reader something that is not
- * the article at all (#654 — an Ankerherz Shopify blog where even vanilla
- * readability never finds the story).
+ * page furniture over the article — a shop banner, a "related posts" list, a
+ * repeated promo block — and returns it as a successful result that clears
+ * every length check yet is not the article at all (#654: an Ankerherz
+ * Shopify blog where even vanilla readability never finds the story).
  *
- * The feed already holds the ground truth for these entries: its own article
- * body. When that body is itself a full article — not a truncated teaser, which
- * is the case the reader exists to improve on — a real extraction of the same
- * page shares its wording. So when a substantial feed body and the extraction
- * have almost no text in common, the extraction grabbed the wrong thing: this
- * gate fails it, and the endpoint falls back to the feed content the client
- * already trusts.
+ * The feed's own article body is the ground truth: when that body is a full
+ * article, not a truncated teaser (the case the reader exists to improve on),
+ * a real extraction of the same page shares its wording. So when a
+ * substantial feed body and the extraction share almost no text, the
+ * extraction grabbed the wrong thing — this gate fails it and the endpoint
+ * falls back to the feed content the client already trusts.
  *
- * The measure is word-shingle coverage, which is blunt on purpose: a correct
- * extraction scores near 1 and a wrong one near 0, so the verdict never rides on
+ * The measure is word-shingle coverage, blunt on purpose: a correct
+ * extraction scores near 1, a wrong one near 0, so the verdict never rides on
  * a finely tuned threshold.
  */
 final readonly class ExtractionCoverageGate

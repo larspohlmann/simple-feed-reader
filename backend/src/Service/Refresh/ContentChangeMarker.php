@@ -8,17 +8,16 @@ use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 
 /**
- * Writes the last-import time into the web root so the browser can revalidate it
- * without touching PHP. A plain `{"lastUpdated": "..."}` JSON document on
- * purpose: anyone who inspects the poll's request sees exactly what it is, and
- * the timestamp changes every import so the tick can tell one from the next. It
- * is global — a per-user marker in a public directory would leak when a named
- * user reads their feeds; this leaks only "the reader last imported at this
- * time" (#720).
+ * Writes the last-import time into the web root so the browser can revalidate it without
+ * touching PHP. A plain `{"lastUpdated": "..."}` JSON document on purpose: anyone who
+ * inspects the poll's request sees exactly what it is, and the timestamp changes every
+ * import so the tick can tell one from the next. It is global -- a per-user marker in a
+ * public directory would leak when a named user reads their feeds; this leaks only "the
+ * reader last imported at this time" (#720).
  *
- * A write failure is logged and swallowed. The marker is an optimisation, never
- * the source of truth — the poll keeps a floor that fetches regardless — so a
- * refresh must never fail because a static file could not be written.
+ * A write failure is logged and swallowed. The marker is an optimisation, never the
+ * source of truth -- the poll keeps a floor that fetches regardless -- so a refresh must
+ * never fail because a static file could not be written.
  */
 final readonly class ContentChangeMarker implements ContentChangeMarkerInterface
 {

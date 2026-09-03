@@ -16,26 +16,23 @@ use Symfony\Component\Clock\ClockInterface;
 /**
  * Retention runs three independent passes:
  *
- *  1. By age — deletes entries **fetched** more than 90 days ago, sparing any
- *     a user marked favorite or kept, and never a feed's newest 20 regardless
- *     of age. Age is measured from the fetch (`createdAt`), not from
- *     `effectiveDate`: `effectiveDate` is the list-sort instant and, for a
- *     backfilled or republished article, can sit far in the past on the very
- *     fetch that stored it — measuring retention from it deleted such an
- *     entry immediately, and the next refresh re-added it, forever (#384).
- *  2. By per-feed count — deletes a feed's oldest entries beyond a cap, same
- *     sparing rule.
- *  3. Empty completed recommendation runs — a run whose entries were all
- *     pruned by (1) or (2) left an empty husk behind (its items die via the
- *     DB FK cascade when their entry goes); this pass removes the husk.
+ *  1. By age — deletes entries **fetched** more than 90 days ago, sparing
+ *     favorited/kept entries and a feed's newest 20 regardless of age.
+ *     Measured from the fetch (`createdAt`), not `effectiveDate`: a
+ *     backfilled article's `effectiveDate` can sit far in the past on the
+ *     fetch that stored it, so measuring from it deleted the entry
+ *     immediately and the next refresh re-added it, forever (#384).
+ *  2. By per-feed count — deletes a feed's oldest entries beyond a cap,
+ *     same sparing rule.
+ *  3. Empty completed recommendation runs — a husk left when (1) or (2)
+ *     pruned every entry in it (items die via the DB FK cascade); this
+ *     pass removes the husk.
  *
- * The count cap bounds a single feed's footprint regardless of age: a feed
- * whose article URLs change every fetch (cache-buster query params on a
- * scraped page being the easy case) mints new GUIDs on every refresh, so the
- * age pass alone lets it accumulate ~100k rows inside the 90-day window. The
- * cap keeps that finite. Ids are selected first, then deleted in chunks —
- * portable across SQLite and MySQL. Read-state rows die with their entry via
- * the DB FK cascade.
+ * The count cap bounds a feed's footprint regardless of age: a feed that
+ * mints new GUIDs every fetch (cache-buster query params, say) would
+ * otherwise accumulate ~100k rows inside the 90-day window. Ids are
+ * selected first, then deleted in chunks — portable across SQLite/MySQL;
+ * read-state rows die with their entry via the DB FK cascade.
  */
 final class EntryPruner
 {
@@ -129,12 +126,10 @@ final class EntryPruner
     }
 
     /**
-     * `maxEntriesPerFeed` is a constructor argument an operator can override
-     * via the service definition; clamping it here, rather than trusting the
-     * configured value, keeps the floor structural instead of
-     * configuration-dependent — a value below it would silently defeat
-     * `MIN_ENTRIES_PER_FEED`, and zero would turn `rankBoundaryBeyond()`'s
-     * `setFirstResult($keep - 1)` negative.
+     * `maxEntriesPerFeed` is operator-overridable via the service definition;
+     * clamping here keeps the floor structural, not configuration-dependent —
+     * a value below it would silently defeat `MIN_ENTRIES_PER_FEED`, and zero
+     * would turn `rankBoundaryBeyond()`'s `setFirstResult($keep - 1)` negative.
      */
     private function clampedMaxEntriesPerFeed(): int
     {
@@ -159,14 +154,13 @@ final class EntryPruner
 
     /**
      * A feed's deletable entries past its `keep`-th newest — the shape both
-     * passes need, differing only in where they put the boundary and whether
-     * they also demand staleness.
+     * passes need, differing only in the boundary and whether staleness is
+     * also required.
      *
      * The cap pass passes no cutoff: everything past the boundary goes. The
-     * age pass passes one, and the two conditions stay independent rather than
-     * collapsing into a single query, so a feed just over the floor holding
-     * entries of mixed age is not all-or-nothing — only the stale ones among
-     * the excess are deleted.
+     * age pass passes one, kept as a separate condition so a feed just over
+     * the floor with mixed-age entries isn't all-or-nothing — only the stale
+     * excess is deleted.
      *
      * @return list<int>
      */
@@ -205,21 +199,19 @@ final class EntryPruner
 
     /**
      * The fetch-order position of a feed's `keep`-th newest entry (later
-     * fetch = newer; id breaks a tie inside one run), or null when the feed
-     * doesn't have that many entries — the floor and the cap share this one
-     * ordering, so the two can never disagree about which entries are old.
+     * fetch = newer; id breaks ties), or null when the feed has fewer — the
+     * floor and the cap share this ordering, so the two can never disagree
+     * about which entries are old.
      *
      * `setFirstResult($keep - 1)` + `setMaxResults(1)` walks exactly `keep`
      * rows of `idx_entry_feed_created (feed_id, created_at, id)` and stops:
-     * cost is O(keep), not O(feed size). A correlated `COUNT` here looked
-     * equivalent on paper but re-scanned the whole feed once per row —
-     * quadratic in feed size and, since the feed over the cap is by
-     * definition the database's largest, dominant regardless of how many
-     * other feeds exist to guard against (#384 round 3).
+     * O(keep), not O(feed size). A correlated `COUNT` looked equivalent on
+     * paper but re-scanned the whole feed per row — quadratic, and dominant
+     * since the feed over the cap is by definition the largest (#384 round 3).
      *
-     * Ranks every entry in the feed, favorites and kept included, so a
-     * handful of protected articles cannot shift the boundary; a protected
-     * entry beyond it still survives via `notProtectedDql()` in the caller.
+     * Ranks every entry including favorites/kept, so protected articles can't
+     * shift the boundary; a protected entry beyond it still survives via
+     * `notProtectedDql()` in the caller.
      */
     private function rankBoundaryBeyond(int $feedId, int $keep): ?EntryRankBoundary
     {
@@ -295,11 +287,10 @@ final class EntryPruner
             return 0;
         }
 
-        // This DQL DELETE bypasses the ORM's lifecycle events entirely, which
-        // is exactly why the index is told explicitly rather than through a
-        // listener that a bulk delete would never fire. Each chunk's ids are
-        // captured here, before its DELETE runs — there is no entity left
-        // afterwards to read an id from.
+        // This DQL DELETE bypasses the ORM's lifecycle events, which is exactly why
+        // the index is told explicitly rather than through a listener a bulk delete
+        // would never fire. Each chunk's ids are captured here, before its DELETE
+        // runs -- there is no entity left afterwards to read an id from.
         foreach (array_chunk($ids, self::DELETE_CHUNK_SIZE) as $chunk) {
             $this->em->createQuery(sprintf('DELETE FROM %s e WHERE e.id IN (:ids)', Entry::class))
                 ->setParameter('ids', $chunk)

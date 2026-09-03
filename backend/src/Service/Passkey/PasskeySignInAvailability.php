@@ -12,7 +12,7 @@ use App\Service\Settings\RelyingPartyIdRule;
 /**
  * Whether passkey sign-in may be offered at all — the question
  * `GET /api/setup/status` answers for an anonymous visitor as
- * `passkeySignInAvailable`, and the one every passkey endpoint enforces
+ * `passkeySignInAvailable`, and what every passkey endpoint enforces
  * server-side rather than trusting the frontend to hide its own buttons.
  *
  * Available when BOTH hold: the admin toggle (`InstanceSetting::
@@ -22,7 +22,7 @@ use App\Service\Settings\RelyingPartyIdRule;
  *
  * Both checks read only instance-wide configuration, so the answer — and its
  * cost — cannot vary with how many accounts exist or how many passkeys are
- * enrolled, the same no-enumeration property AssertionOptionsFactory's own
+ * enrolled, the same no-enumeration property AssertionOptionsFactory's
  * docblock describes for the login-options endpoint.
  */
 final readonly class PasskeySignInAvailability

@@ -7,18 +7,17 @@ namespace App\Service\ReaderAudit;
 /**
  * The whole-body rules: not "the cleaners left something behind" but "this is
  * not the article". A body with no paragraph at all, more headings than
- * paragraphs, or several articles' worth of text is a region readability picked
- * wrongly, and no amount of trimming fixes it.
+ * paragraphs, or several articles' worth of text is a region readability
+ * picked wrongly, and no amount of trimming fixes it.
  *
- * Deliberately blind to what sits after the last paragraph. An audit that scored
- * the tail reported every well-cleaned page on sites that end with a
- * related-articles box, which is most of them (#744).
+ * Deliberately blind to what sits after the last paragraph — scoring the tail
+ * flagged every well-cleaned page ending in a related-articles box, which is
+ * most of them (#744).
  *
- * Length alone says nothing, in either direction. A Volts podcast transcript is
- * 88,000 characters and is one article, and a page whose feed body runs longer
- * than its article is a publisher shipping a fuller press release, not a cleaner
- * cutting prose — the two are indistinguishable by length, and the coverage gate
- * already guards the case where the extraction is the wrong text entirely (#744).
+ * Length alone says nothing, in either direction: a Volts podcast transcript
+ * is 88,000 characters and is one article, while a feed body longer than its
+ * article is often a fuller press release, not cut prose — indistinguishable
+ * by length, a case the coverage gate already guards (#744).
  */
 final readonly class BodyShapeMarkers
 {

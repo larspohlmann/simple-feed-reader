@@ -17,18 +17,16 @@ use Doctrine\ORM\Mapping as ORM;
  * the exact failed batch (#308); history is deliberately NOT frozen — it only
  * shades the prompt.
  *
- * The public surface sits over PHPMD's ten-method ceiling, which the
- * suppression below accepts: every state transition of the run is its own
- * named method (snapshot, recordBatchWinners, recordInvalidReply,
- * recordTransportFailure, recordProfile, complete, fail, cancel, resume), and
- * beside them stand the queries that read the checkpoint back and
- * stampProvider(), which RecommendationRunStarter calls at start and again at
- * resume (#409). None of them is a duplicate a merge could remove, and none
- * can be renamed to match the rule's get/set ignore pattern without lying
- * about what it does. The seven usage columns are already off this class as
- * a ProviderUsage embeddable, and profileText/distilled are a RunProfile
- * embeddable for the same reason (#493) — both are the fix the field-count
- * half of this same finding was pointing at.
+ * The public surface sits over PHPMD's ten-method ceiling, accepted by the
+ * suppression below: every state transition is its own named method
+ * (snapshot, recordBatchWinners, recordInvalidReply, recordTransportFailure,
+ * recordProfile, complete, fail, cancel, resume), plus the checkpoint-reading
+ * queries and stampProvider() (called by RecommendationRunStarter at start
+ * and resume, #409) — none is a duplicate a merge could remove, and none can
+ * be renamed to the rule's get/set ignore pattern without lying about what it
+ * does. The usage columns already moved off as the ProviderUsage embeddable,
+ * and profileText/distilled as RunProfile (#493) — the field-count fix this
+ * same finding was pointing at.
  *
  * @SuppressWarnings("PHPMD.TooManyPublicMethods")
  */
@@ -124,13 +122,12 @@ class RecommendationRun
     private RunProfile $runProfile;
 
     /**
-     * Raw SSE bytes received so far by the provider call currently in
-     * flight, checkpointed every ~2 s by RecordedCall via direct DBAL
-     * updates and reset to 0 when the call ends. Deliberately written
-     * outside the EntityManager — this entity only ever reads it — so the
-     * value is visible to the cheap status poll while the tick request is
-     * still blocked on the provider. Debug-independent: this is the
-     * progress indicator's liveness signal (#309), not debug data.
+     * Raw SSE bytes received so far by the provider call currently in flight,
+     * checkpointed every ~2 s by RecordedCall via direct DBAL updates and reset
+     * to 0 when the call ends. Written outside the EntityManager — this entity
+     * only reads it — so the value is visible to the cheap status poll while
+     * the tick request is still blocked on the provider. This is the progress
+     * indicator's liveness signal (#309), not debug data.
      */
     #[ORM\Column(options: ['default' => 0])]
     private int $streamedChars = 0;

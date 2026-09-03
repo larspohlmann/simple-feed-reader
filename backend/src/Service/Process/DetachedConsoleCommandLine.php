@@ -8,21 +8,19 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
  * Builds the shell line that launches a console command fully detached from
- * the current request: stdin/stdout/stderr point at /dev/null so no shared
- * pipe holds the request open, and the trailing `&` backgrounds the child so
- * exec() returns immediately. This exact recipe survived a live FastCGI
- * teardown on the production host (#371 smoke test, 2026-08-13).
+ * the current request: stdin/stdout/stderr point at /dev/null so no pipe
+ * holds the request open, and a trailing `&` backgrounds the child so exec()
+ * returns immediately. This recipe survived a live FastCGI teardown on the
+ * production host (#371 smoke test, 2026-08-13).
  *
- * The binary is a policy, not a lookup: under a web SAPI the running binary
- * is the SAPI binary (Strato: cgi-fcgi) and must never be used to run
- * bin/console, so it has to be named explicitly via DRAIN_PHP_CLI_BINARY.
- * Only under the cli SAPI is \PHP_BINARY itself already the right answer,
- * which is what lets a CLI process spawn without configuration -- a developer
- * shell, a console command, the Docker worker container. The Docker *web*
- * container runs fpm-fcgi, so a request there builds no line at all unless
- * DRAIN_PHP_CLI_BINARY names one; it needs none, because its worker keeps the
- * heartbeat fresh and the spawn is suppressed anyway. With neither, forCommand()
- * returns null and the caller must treat the launch as unavailable.
+ * The binary is a policy, not a lookup. Under a web SAPI the running binary
+ * is the SAPI binary (Strato: cgi-fcgi) and must never run bin/console, so it
+ * must be named via DRAIN_PHP_CLI_BINARY. Only the cli SAPI can use
+ * \PHP_BINARY as-is, so a dev shell, console command, or Docker worker
+ * container spawns unconfigured. The Docker *web* container (fpm-fcgi) needs
+ * neither: its worker keeps the heartbeat fresh and the spawn is suppressed
+ * anyway. With neither set, forCommand() returns null and the caller must
+ * treat the launch as unavailable.
  */
 final readonly class DetachedConsoleCommandLine
 {

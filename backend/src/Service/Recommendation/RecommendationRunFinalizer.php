@@ -13,13 +13,11 @@ use Symfony\Component\Clock\ClockInterface;
 
 /**
  * Every ending of a recommendation run funnels through here (#338 lifted it out
- * of RecommendationRunAdvancer): cut the ranked list to the reader's picks
- * limit, re-check that each surviving pick's entry still exists -- the candidate
- * pool can be pruned mid-run -- and write the survivors as RecommendationItems
- * at dense positions in pick order before marking the run completed.
- *
- * The cut lives here so a new ending cannot ship an over-long list by forgetting
- * to slice.
+ * of RecommendationRunAdvancer): cut the ranked list to the picks limit,
+ * re-check each surviving pick's entry still exists (the candidate pool can be
+ * pruned mid-run), and write the survivors as RecommendationItems at dense
+ * positions in pick order before completing the run. The cut lives here so a
+ * new ending cannot ship an over-long list by forgetting to slice.
  */
 final readonly class RecommendationRunFinalizer
 {

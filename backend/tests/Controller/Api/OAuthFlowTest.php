@@ -853,8 +853,6 @@ final class OAuthFlowTest extends WebTestCase
         self::assertNotSame('0', $this->client->getResponse()->headers->get('Retry-After'));
     }
 
-    // -- helpers ----------------------------------------------------------
-
     /**
      * Installs a fake provider by replacing the whole registry. MUST be called
      * before the first request of a test — see the class docblock for why, and
@@ -1032,8 +1030,6 @@ final class OAuthFlowTest extends WebTestCase
 
         return $decoded;
     }
-
-    // -- Fixtures ---------------------------------------------------------
 
     private function persistUser(string $email, UserStatus $status): User
     {

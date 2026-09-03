@@ -8,16 +8,14 @@ use App\Entity\RecommendationRunLog;
 
 /**
  * The average wall-clock cost of each recommendation phase, learned from an
- * account's recent completed runs (#638). It is what makes the run's time-left
- * estimate phase-aware: the two tail phases, distill and consolidate, are one
- * heavy provider call each and cost nothing like a batch, so a single blended
- * average — which is what the estimate used before — collapses to zero the
- * moment the batches finish.
+ * account's recent completed runs (#638), making the time-left estimate
+ * phase-aware: distill and consolidate are one heavy provider call each, so a
+ * single blended average collapses to zero once the batches finish.
  *
- * `batchSeconds` is wall time *per batch*, not per batch phase: a run's batch
- * calls fan out concurrently, so the phase's wall span already folds the
- * concurrency in, and dividing it by the batch count gives the marginal cost
- * of one more batch — exactly what {@see predictedTotalSeconds()} multiplies.
+ * `batchSeconds` is wall time per batch, not per batch phase: batch calls fan
+ * out concurrently, so the phase span already folds concurrency in, and
+ * dividing by the batch count gives one more batch's marginal cost — what
+ * {@see predictedTotalSeconds()} multiplies.
  */
 final readonly class PhaseDurations
 {
@@ -29,12 +27,11 @@ final readonly class PhaseDurations
     }
 
     /**
-     * Averages each phase across the runs that carry all three phases. A run
-     * that is missing one — a partial run, or one that predates always-on
-     * logging (#638) — contributes to none of the averages, because a
-     * predicted total built from two of the three phases would understate the
-     * run by the third. Null means no run qualified, and the caller must fall
-     * back to no estimate rather than a fabricated one.
+     * Averages each phase across runs that carry all three phases. A run
+     * missing one — partial, or predating always-on logging (#638) —
+     * contributes to none, because a total from two phases understates by the
+     * third. Null means no run qualified; the caller must then fall back to no
+     * estimate, not a fabricated one.
      *
      * @param list<array{runId: int, phase: string, spanSeconds: float, batchCount: int}> $spans
      */

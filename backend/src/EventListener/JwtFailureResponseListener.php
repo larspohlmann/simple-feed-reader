@@ -15,20 +15,17 @@ use Symfony\Component\HttpFoundation\Response;
  * Makes Lexik's JWT rejections speak problem+json like the rest of the API.
  *
  * ApiExceptionListener cannot do this. Lexik builds its own response — from
- * JWTAuthenticator::start() for a missing token, and from
- * onAuthenticationFailure() for an invalid, expired or non-active one — and
- * whoever sets it does so via ExceptionEvent::setResponse(). ExceptionEvent
- * extends RequestEvent, whose setResponse() calls stopPropagation(), so the
- * kernel.exception chain ends there and ApiExceptionListener never runs. In the
- * onAuthenticationFailure case kernel.exception is not even reached: the
- * authenticator returns a response during kernel.request. Hooking Lexik's own
- * events sidesteps both problems instead of fighting listener priorities.
+ * JWTAuthenticator::start() for a missing token, from onAuthenticationFailure()
+ * for an invalid, expired or non-active one — via ExceptionEvent::setResponse(),
+ * which calls stopPropagation() and ends the kernel.exception chain before
+ * ApiExceptionListener runs. The onAuthenticationFailure case doesn't even
+ * reach kernel.exception: the authenticator responds during kernel.request.
+ * Hooking Lexik's own events sidesteps both instead of fighting priorities.
  *
  * Every branch answers the same opaque 401. In particular a suspended user's
- * otherwise-valid token must NOT report the account status: whoever presents
- * that token may have stolen it, and does not need to be told why it stopped
- * working. The account status is disclosed only at login, where the password
- * has just been verified.
+ * otherwise-valid token must NOT report the account status: whoever presents it
+ * may have stolen it and doesn't need to know why it stopped working. Account
+ * status is disclosed only at login, where the password has just been verified.
  */
 #[AsEventListener(event: Events::JWT_NOT_FOUND, method: 'onJwtFailure')]
 #[AsEventListener(event: Events::JWT_INVALID, method: 'onJwtFailure')]

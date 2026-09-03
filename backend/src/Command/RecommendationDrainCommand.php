@@ -18,18 +18,16 @@ use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\LockInterface;
 
 /**
- * The on-demand drainer (#371): a short-lived worker that drives every
- * active recommendation run to completion at worker concurrency, spawned by
- * a web request on installs that have no persistent worker. Each sweep marks
- * RecommendationDriverKind::OnDemandDrainer's liveness key, so open browsers
- * demote to the read-only /current poll while this runs; on the way out it
- * clears that key again, so the poll and cron paths take over immediately
- * rather than after the freshness window has aged out a worker that no longer
- * exists. Why the drainer has a key of its own is written out on
+ * The on-demand drainer (#371): a short-lived worker, spawned by a web request on
+ * installs with no persistent worker, that drives every active recommendation run
+ * to completion at worker concurrency. Each sweep marks
+ * RecommendationDriverKind::OnDemandDrainer's liveness key so open browsers demote
+ * to the read-only /current poll, then clears it on exit so poll and cron take
+ * over immediately instead of waiting out the freshness window. Own key rationale:
  * {@see WorkerPresence}.
  *
- * It only ever advances existing runs -- starting runs (and their spend
- * budget, #308) stays with the callers that already own it.
+ * Only ever advances existing runs -- starting runs (and their spend budget, #308)
+ * stays with the callers that already own it.
  */
 #[AsCommand(
     name: 'app:recommendations:drain',
@@ -40,28 +38,23 @@ final class RecommendationDrainCommand extends Command
     public const string LOCK_NAME = 'recommendation-drain';
 
     /**
-     * What a SIGKILL costs, and nothing else -- this is the one thing the TTL
-     * still decides. A hard kill skips both the `finally` and the shutdown
-     * hook, so the key sits there until it lapses, and no replacement drainer
-     * can be spawned in the meantime; 900 s bounds that blackout at fifteen
-     * minutes.
+     * What a SIGKILL costs, and nothing else -- the one thing this TTL decides. A
+     * hard kill skips `finally` and the shutdown hook, so the key sits until it
+     * lapses and no replacement drainer can spawn; 900 s bounds that blackout at
+     * fifteen minutes.
      *
-     * It deliberately does NOT bound one sweep's worst case (ten runs x
-     * MAX_ATTEMPTS x the provider timeout, i.e. five hours on the standard
-     * profile and far more on the slow one), even though the key is only
-     * refreshed between sweeps. Since #433 a single call on a slow connection
-     * can outlast this TTL by itself. That is the same lapse, not a new
-     * failure mode: a lapse mid-sweep does not end the drain, because
-     * keepsHoldingTheLock() bids for the key again and carries on when the bid
-     * wins, so the long TTL that would prevent it buys nothing while
-     * multiplying the post-SIGKILL blackout many times over.
+     * It does NOT bound one sweep's worst case (ten runs x MAX_ATTEMPTS x provider
+     * timeout -- five hours standard, more on the slow profile), even though the
+     * key only refreshes between sweeps; since #433 a single call can outlast the
+     * TTL alone. That's the same lapse, not a new failure: keepsHoldingTheLock()
+     * re-bids for the key mid-sweep and carries on when it wins, so a longer TTL
+     * would only multiply the post-SIGKILL blackout for no benefit here.
      *
-     * A lapse can let a second drainer in for the rest of the sweep in
-     * flight, after which the incumbent's re-bid loses and it hands over
-     * cleanly. Overlapping drainers cannot double-advance a run anyway: every
-     * advance takes RecommendationRunAdvancer's per-user lock, which is also
-     * why runs keep progressing under the cron path no matter who holds this
-     * one.
+     * A lapse can let a second drainer in for the rest of the sweep; the incumbent's
+     * re-bid then loses and it hands over cleanly. Overlapping drainers can't
+     * double-advance a run regardless -- every advance takes
+     * RecommendationRunAdvancer's per-user lock, which is also why runs keep
+     * progressing under cron no matter who holds this one.
      */
     public const float LOCK_TTL_SECONDS = 900.0;
 
@@ -125,14 +118,12 @@ final class RecommendationDrainCommand extends Command
             return Command::SUCCESS;
         }
 
-        // A fatal error skips finally, and this CLI process has no request
-        // timeout watching over it; same belt-and-braces as
-        // RecommendationRunAdvancer::advance() -- the release is
-        // token-scoped, so it can never free a lock this process no longer
-        // owns, and SIGKILL still falls back to the TTL. The flag is what
-        // keeps it a safety net rather than a second cleanup: this closure
-        // runs on EVERY termination, so without it the ordinary path
-        // released the lock and surrendered the key twice.
+        // A fatal error skips finally, and this CLI has no request timeout --
+        // same belt-and-braces as RecommendationRunAdvancer::advance(). The
+        // release is token-scoped (never frees a lock this process lost) and
+        // SIGKILL falls back to the TTL. The flag keeps it a safety net, not a
+        // double cleanup: this closure runs on EVERY termination, so without it
+        // the ordinary path released the lock twice.
         $this->cleanedUp = false;
         register_shutdown_function(function () use ($lock): void {
             if ($this->cleanedUp) {
@@ -161,16 +152,13 @@ final class RecommendationDrainCommand extends Command
     }
 
     /**
-     * This process was a worker only for as long as it lived. Leaving its
-     * liveness key fresh behind it makes the poll driver report the run as
-     * running in the background, and stops the cron's respawn net from
-     * bringing a replacement up, for up to WorkerPresence::FRESH_SECONDS --
-     * eleven minutes of a frozen run on a worker-less install. Unconditional,
-     * and safe to be so: it names the drainer's own kind, so it cannot touch a
-     * persistent worker's heartbeat even when both run at once. Best-effort,
-     * because this also runs from the shutdown hook, where a throw would pile
-     * a second fatal on whatever ended the process; a clear that fails simply
-     * leaves the old behavior, a key that ages out.
+     * This process was a worker only as long as it lived. Leaving its liveness key
+     * fresh would make the poll driver report the run as still running and stop
+     * cron's respawn net, for up to WorkerPresence::FRESH_SECONDS -- eleven minutes
+     * of a frozen run on a worker-less install. Unconditional and safe: it names
+     * the drainer's own kind, so it cannot touch a persistent worker's heartbeat.
+     * Best-effort because this also runs from the shutdown hook, where a throw
+     * would pile a second fatal; a failed clear just leaves the key to age out.
      */
     private function surrenderTheDrainerLiveness(): void
     {
@@ -199,13 +187,12 @@ final class RecommendationDrainCommand extends Command
     }
 
     /**
-     * A failed refresh() only proves the key is gone, which is not the same
-     * as another drainer owning it: nothing has been handed over, and walking
-     * away drops healthy in-flight work back to the once-a-minute cron. So
-     * this bids for the key again and carries on when the bid wins. Only a
-     * lost bid proves a second drainer really does hold it, and that handoff
-     * is as benign as never winning acquire() in the first place -- not a
-     * failure worth a non-SUCCESS exit.
+     * A failed refresh() only proves the key is gone, not that another drainer
+     * owns it -- walking away would drop healthy in-flight work back to the
+     * once-a-minute cron. So this re-bids and carries on when it wins. Only a
+     * lost bid proves a second drainer holds it, and that handoff is as benign
+     * as never winning acquire() in the first place -- not a failure worth a
+     * non-SUCCESS exit.
      */
     private function keepsHoldingTheLock(LockInterface $lock): bool
     {

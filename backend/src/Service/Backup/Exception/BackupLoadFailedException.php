@@ -7,23 +7,21 @@ namespace App\Service\Backup\Exception;
 use App\Exception\ApiException;
 
 /**
- * The load failed after the wipe. Unlike InvalidBackupException — which the
- * inspector raises while the account is still whole — everything here is
- * reported from an account that is already empty.
+ * The load failed after the wipe: unlike InvalidBackupException (raised by
+ * the inspector while the account is still whole), everything here reports
+ * from an account already emptied.
  *
- * Two causes reach it. Usually the storage layer refuses a value the grammar
- * accepts: a title longer than the column, an integer wider than its type, a
- * duplicate key. BackupReader checks types, never widths, and deliberately
- * holds no copy of the schema. The second cause is a dangling reference the
- * inspector should already have refused; it survives as a backstop because a
- * silent partial load would be far worse than a loud one.
+ * Two causes: usually the storage layer refuses a value the grammar accepts
+ * (a title too long, an integer too wide, a duplicate key) — BackupReader
+ * checks types, never widths, and holds no copy of the schema. Rarer is a
+ * dangling reference the inspector should already have refused; kept as a
+ * backstop since a silent partial load is worse than a loud one.
  *
- * Reported rather than left to become an opaque 500: the account is empty at
- * this point and the user has to know that, and that spec §8's remedy —
- * running the same file again — applies once the file is fixed. The cause is
- * chained for the log only; ApiExceptionListener never puts a previous
- * exception into the problem document, so nothing about the schema reaches
- * the client.
+ * Reported rather than left as an opaque 500: the user must know the account
+ * is empty, and spec §8's remedy (re-running the fixed file) applies. The
+ * cause is chained for the log only — ApiExceptionListener never puts a
+ * previous exception into the problem document, so nothing about the schema
+ * reaches the client.
  */
 final class BackupLoadFailedException extends ApiException
 {

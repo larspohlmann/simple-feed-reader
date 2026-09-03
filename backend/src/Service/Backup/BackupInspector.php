@@ -5,17 +5,15 @@ declare(strict_types=1);
 namespace App\Service\Backup;
 
 /**
- * Pass 1 of the restore: reads the whole file through BackupReader, counts it
- * and checks that every reference it makes resolves inside the same file — a
- * subscription's feed and tags, an entry's and a state's feed. Doing that here
- * rather than during the load is what makes InvalidBackupException's promise
- * true: a file that cannot be fully accepted never costs the account anything.
+ * Pass 1 of the restore: reads the file through BackupReader, counts it, and
+ * checks that every reference resolves inside the same file (a subscription's
+ * feed/tags, an entry's/state's feed) — the check that makes
+ * InvalidBackupException's promise true: a rejected file never costs the
+ * account anything.
  *
- * Retains nothing but the header, the five tallies and the bounded name sets
- * BackupTally holds — never the stream itself — so a half-million-entry file
- * costs this pass no more memory than a ten-line one. Any grammar or type
- * violation BackupReader raises propagates unchanged: a file that cannot be
- * fully read must never report a count.
+ * Retains only the header, the five tallies, and BackupTally's bounded name
+ * sets, never the stream, so cost stays flat regardless of file size. Grammar
+ * or type violations from BackupReader propagate unchanged.
  */
 final readonly class BackupInspector
 {

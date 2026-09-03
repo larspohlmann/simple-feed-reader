@@ -13,20 +13,19 @@ use App\Service\Reader\Media\SubstackPosterLink;
 /**
  * Cleans readability's article HTML for the reader view through one shared
  * \Dom\HTMLDocument: parse once, rewrite in-body media, repair the page's own
- * players, drop the duplicate leading title, trim edge boilerplate, plan where page-discovered media
- * belongs, restore the lead image against that plan, reconcile the media
- * into the body, serialise once. This mirrors FetchedPageNormalizer's
- * discipline of never serialising and re-parsing between steps — every step
- * mutates the same document, so the body is parsed once instead of many times
- * (#586, #684, #748).
+ * players, drop the duplicate leading title, trim edge boilerplate, plan where
+ * page-discovered media belongs, restore the lead image against that plan,
+ * reconcile the media into the body, serialise once — mirroring
+ * FetchedPageNormalizer's discipline of never serialising and re-parsing
+ * between steps (#586, #684, #748).
  *
- * The result is handed on to EntrySanitizer, the XSS boundary, which stays
- * string-in/string-out because Symfony's HtmlSanitizer operates on strings, not
- * a shared DOM. So the shared-document window ends here, with one serialise.
+ * Handed on to EntrySanitizer, the XSS boundary, which stays string-in/
+ * string-out since Symfony's HtmlSanitizer operates on strings, not a shared
+ * DOM — the shared-document window ends here, with one serialise.
  *
  * A body too broken to parse is returned unchanged: readability output is
- * always parseable in practice, but a degenerate one falls through rather than
- * crashing the pass.
+ * always parseable in practice, but a degenerate one falls through rather
+ * than crashing the pass.
  */
 final readonly class ReaderBodyCleaner
 {

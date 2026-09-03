@@ -8,17 +8,16 @@ use App\Service\Process\DetachedProcessLauncherInterface;
 use App\Service\Worker\WorkerPresence;
 
 /**
- * The one spawn policy for the on-demand drainer (#371): every trigger site
- * goes through this method, so "only when nobody is already driving the
- * runs" is decided in exactly one place. Since #393 the only caller is
- * RecommendationDrainOnTerminateListener, which fires once per HTTP request
- * and on no console exit at all -- that is what keeps a single web request or
- * cron tick from forking more than once, with no memory needed here. Why the
- * console half was dropped is written out on the listener.
+ * The one spawn policy for the on-demand drainer (#371): every trigger site goes through
+ * this method, so "only when nobody is already driving the runs" is decided in one place.
+ * Since #393 the only caller is RecommendationDrainOnTerminateListener, firing once per
+ * HTTP request and never on console exit -- that is what keeps a request or cron tick from
+ * forking more than once, with no memory needed here (why the console half was dropped is
+ * on the listener).
  *
- * A stale read here is harmless -- the drain command's own global lock and
- * the per-user run lock are the real guards against double work; this check
- * only avoids pointlessly forking next to a healthy worker.
+ * A stale read here is harmless: the drain command's own global lock and the per-user run
+ * lock are the real guards against double work; this check only avoids forking next to a
+ * healthy worker.
  */
 final readonly class RecommendationDrainSpawner
 {

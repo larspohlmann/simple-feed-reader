@@ -11,13 +11,13 @@ use Dom\XPath;
 
 /**
  * Removes social share-button widgets from a fetched page before readability
- * parses it. These widgets carry a stable, distinctive class fingerprint per
- * plugin (Shariff by heise is the case that motivated this, #582: its bar leads
- * the hanfjournal body and renders as "teilen … merken"). Readability keeps the
- * bar because it is a list of links inside the article container.
+ * parses it: these widgets carry a stable, distinctive class fingerprint per
+ * plugin (Shariff by heise motivated this, #582 — its bar leads the
+ * hanfjournal body, rendered as "teilen … merken"), and readability keeps it
+ * because it is just a list of links inside the article container.
  *
- * The match is by whole class token, so a widget's own container is removed with
- * its buttons, while an unrelated class that merely contains the fragment
+ * The match is by whole class token, so a widget's container is removed with
+ * its buttons while an unrelated class merely containing the fragment
  * (`sharing-hint`, `myshariff`) is left alone. Removal is position-independent:
  * these plugins print the same bar above and below the article, and both go.
  */

@@ -14,27 +14,27 @@ use Dom\HTMLDocument;
  * Restores the real source of a lazy-loaded <img> before readability sees it.
  *
  * Lazy-loading sites ship a blank `data:` placeholder in `src` and keep the
- * true URL in a `data-*` attribute (#467: WP Rocket's `data-lazy-src`). Neither
- * survives EntrySanitizer — the placeholder is a forbidden scheme, the data
- * attribute is not on the allow-list — so the reader rendered an empty frame.
- * Promoting the candidate here means the sanitizer sees an ordinary image and
- * keeps its scheme guard intact.
+ * true URL in a `data-*` attribute (#467: WP Rocket's `data-lazy-src`).
+ * Neither survives EntrySanitizer — the placeholder is a forbidden scheme,
+ * the data attribute isn't on the allow-list — so the reader rendered an
+ * empty frame. Promoting the candidate here lets the sanitizer see an
+ * ordinary image and keep its scheme guard intact.
  *
- * A responsive <picture> hides its URL the same way without being lazy at all:
- * the <img> carries no `src` and the candidates sit on sibling <source srcset>
- * elements (#498: ZDFheute). A lazy <picture> keeps those candidates on `data-srcset`
- * (nature.com, #789); the <source> is read by the same lazy attributes as the <img>.
- * The last resort therefore looks one level out, into the picture the image belongs to.
+ * A responsive <picture> hides its URL the same way without being lazy: the
+ * <img> carries no `src`, and candidates sit on sibling <source srcset>
+ * elements (#498: ZDFheute). A lazy <picture> keeps those on `data-srcset`
+ * (nature.com, #789), read by the same lazy attributes as the <img>. The last
+ * resort looks one level out, into the picture the image belongs to.
  *
- * An image with no usable candidate is removed: an <img> the client cannot load
- * is a broken frame, and leaving it also fools HeroImageSelector into thinking
- * the body already shows a picture, suppressing the hero.
+ * An image with no usable candidate is removed: an unloadable <img> is a
+ * broken frame, and leaving it fools HeroImageSelector into thinking the body
+ * already shows a picture, suppressing the hero.
  *
- * Once an image inside a <picture> owns a usable src, the picture is flattened
- * to that image so the sibling <source> set cannot override the choice. NDR
- * lists a 20w placeholder first and sets `sizes="1px"`; its own script rewrites
- * the size after layout, but the reader strips the script, so a surviving
- * <source> would leave the browser on the placeholder (entry 480204).
+ * Once an image inside a <picture> owns a usable src, the picture is
+ * flattened to that image so the sibling <source> set cannot override it.
+ * NDR lists a 20w placeholder first with `sizes="1px"`; its script resizes
+ * after layout, but the reader strips the script, so a surviving <source>
+ * would leave the browser on the placeholder (entry 480204).
  */
 final readonly class LazyImageSources
 {
@@ -88,14 +88,14 @@ final readonly class LazyImageSources
     }
 
     /**
-     * A <picture>'s <source> set carries the real renditions; its <img> is only
-     * the fallback for a client without <picture> support, and publishers
-     * routinely make that fallback a tiny LQIP placeholder (taz ships a 14px
-     * webp, entry 486683). So adopt the widest <source> — unless the <img>'s own
-     * src is already at least as wide, the mirror case where the placeholder
-     * hides in a <source> and the real photo is the <img> (NDR, entry 480204).
-     * A <source> scoped by `media` to a narrower viewport is a mobile crop, not
-     * a rendition of the desktop photo, so it is no candidate at all (zeit
+     * A <picture>'s <source> set carries the real renditions; its <img> is
+     * only the fallback for clients without <picture> support, and
+     * publishers often make that fallback a tiny LQIP placeholder (taz ships
+     * a 14px webp, entry 486683). Adopt the widest <source> — unless the
+     * <img>'s own src is already at least as wide, the mirror case where the
+     * placeholder hides in a <source> and the real photo is the <img> (NDR,
+     * entry 480204). A <source> scoped by `media` to a narrower viewport is a
+     * mobile crop, not a desktop rendition, so it's no candidate at all (zeit
      * lists those first and measures nothing, entry 497686).
      */
     private function preferWiderPictureSource(Element $image): void
@@ -166,11 +166,11 @@ final readonly class LazyImageSources
     /**
      * Replaces the enclosing <picture> with the image, dropping the sibling
      * <source> elements. The image now carries an authoritative src, and a
-     * surviving <source> would override it: NDR lists a 20w placeholder first and
-     * sets `sizes="1px"`, so once its own resize script is stripped the browser
-     * picks the placeholder over the real photo (entry 480204). The reader shows
-     * one picture at a single column width, so the responsive candidates that the
-     * <source> set carried have no use here.
+     * surviving <source> would override it: NDR lists a 20w placeholder with
+     * `sizes="1px"`, so once its resize script is stripped the browser picks
+     * the placeholder over the real photo (entry 480204). The reader shows one
+     * picture at a single column width, so the <source> set's responsive
+     * candidates have no use here.
      */
     private function flattenEnclosingPicture(Element $image): void
     {

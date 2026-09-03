@@ -13,18 +13,17 @@ use Doctrine\ORM\EntityManagerInterface;
 /**
  * The single place a lazily created EntryState row comes into existence.
  *
- * The exceptions are the bulk writers — RestoreEntryLoader and
- * SearchMarkReadService — which build rows that are read from birth, so the
- * watermark hazard below cannot apply to them. Any row whose isHidden is NOT
- * decided up front belongs here.
+ * Exceptions: the bulk writers RestoreEntryLoader and SearchMarkReadService
+ * build rows read from birth, so the watermark hazard below doesn't apply.
+ * Any row whose isHidden is NOT decided up front belongs here.
  *
  * Read state is effective, not stored: an entry with no row is read when the
  * subscription's mark-all-read watermark covers it (see
- * EntryRepository::rowIsRead() and EntryStateRepository::unreadCountsForUser()).
- * Materialising such a row with the field default isHidden=false would therefore
- * flip a read entry back to unread and raise the unread badge. Every lazily
- * created row is seeded from the watermark here so that no caller — favorite,
- * keep or viewed — can reintroduce that hazard.
+ * EntryRepository::rowIsRead(), EntryStateRepository::unreadCountsForUser()).
+ * Materialising it with the field default isHidden=false would flip a read
+ * entry back to unread and raise the badge, so every lazily created row is
+ * seeded from the watermark here — no caller (favorite, keep, viewed) can
+ * reintroduce that hazard.
  */
 final readonly class EntryStateResolver
 {

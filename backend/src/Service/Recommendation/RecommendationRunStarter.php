@@ -17,17 +17,13 @@ use Symfony\Component\Clock\ClockInterface;
 
 /**
  * Creates or resumes the run a tick will advance. An account with no ready AI
- * configuration can never start one — there is nothing yet to call. An
- * already-active run is returned as-is, so a second click never opens a
- * duplicate.
+ * configuration cannot start one; an already-active run is returned as-is, so a
+ * second click opens no duplicate.
  *
- * Whether to resume a failed run rather than begin again is the user's call,
- * made in the client (#329): a failed run keeps a frozen candidate snapshot
- * from when it first started, so silently resuming it can rank stale
- * candidates. start() therefore always begins fresh, and resume() is the
- * separate, explicit action — its frozen batch plan and recorded winners are
- * untouched by resume(), so the tick that follows continues exactly where the
- * failure happened.
+ * Resuming a failed run is the user's call in the client (#329): a failed run
+ * holds a frozen candidate snapshot that may now be stale. So start() always
+ * begins fresh, while resume() leaves the frozen batch plan and recorded
+ * winners intact, letting the next tick continue where the failure happened.
  */
 final readonly class RecommendationRunStarter
 {
@@ -66,11 +62,9 @@ final readonly class RecommendationRunStarter
 
     /**
      * Trims the account's run log to the retention window. It runs after the
-     * new run is flushed, so the new run is inside the window it is counted
-     * against and the number of runs holding a log is exactly the constant --
-     * trimming first would keep the window's worth of old runs plus this one.
-     * resume() never comes here: a resumed run appends to the log it already
-     * has (#309).
+     * new run is flushed, so the new run counts inside the window and the runs
+     * holding a log stay exactly the constant. resume() never trims: a resumed
+     * run appends to the log it already has (#309).
      */
     private function trimRunLog(User $user): void
     {
@@ -111,18 +105,15 @@ final readonly class RecommendationRunStarter
     }
 
     /**
-     * Copies the provider this run is about to call onto the run itself
-     * (#409). Copied rather than read back through the account later: the
-     * configuration is editable, and a history that renames last month's runs
-     * when the model changes is not a history.
+     * Copies the provider this run is about to call onto the run itself (#409).
+     * Copied, not read back later, because the configuration is editable: a
+     * history that renames last month's runs when the model changes is no
+     * history.
      *
-     * The host only. A base URL the account saved but that has no host at all
-     * stamps null rather than a fragment of one — a history row is worth less
-     * with a wrong provider in it than with an empty one. `parse_url()`
-     * returns `false` on a malformed URL and `null` when there is no host
-     * component; both collapse to null. A genuine host of `'0'` must not:
-     * it is a valid (if unusual) hostname, and PHP's `?:` treats the string
-     * `'0'` as falsy, so a plain truthiness check would swallow it too.
+     * The host only. A saved base URL with no host stamps null, not a fragment:
+     * `parse_url()` returns `false` on a malformed URL and `null` when there is
+     * no host, both collapsing to null. A genuine host of `'0'` must survive, so
+     * the check is `is_string()`, not truthiness, which `?:` would swallow.
      */
     private function stampProvider(RecommendationRun $run, User $user): void
     {

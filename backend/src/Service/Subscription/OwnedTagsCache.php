@@ -13,22 +13,20 @@ use Symfony\Contracts\Service\ResetInterface;
  *
  * SubscriptionTagSync::sync() re-resolves its requested tag ids on every call,
  * and a bulk write calls sync() once per subscription — a 500-feed tag change
- * would otherwise issue up to 500 near-identical tag queries, even though
- * every id it could possibly ask for was already validated once up front
- * (BulkSubscriptionUpdater::assertOwnedTagIds()). This collaborator holds what
- * has already been resolved so a repeated id costs a map lookup, not a query —
- * without threading a cache through sync()'s own signature (CLAUDE.md: a value
- * with no home gets a collaborator that holds it as a field, not a longer
+ * would otherwise issue up to 500 near-identical queries, even though every id
+ * was already validated up front (BulkSubscriptionUpdater::assertOwnedTagIds()).
+ * This collaborator holds what has already been resolved so a repeated id
+ * costs a map lookup, not a query, without lengthening sync()'s own signature
+ * (CLAUDE.md: a value with no home gets a collaborator field, not a longer
  * parameter list).
  *
- * Keyed by user id so nothing could leak between accounts within one request.
- * That alone does not make the service safe to keep alive PAST one request,
- * though: this app's own functional tests reuse one container across several
- * requests via $client->disableReboot(), and a long-running worker process
- * could do the same. ResetInterface (auto-tagged kernel.reset by
- * FrameworkExtension's autoconfiguration) empties the cache between requests
- * so a stale entry — possibly bound to an EntityManager that has since been
- * reset — can never be served to a later one.
+ * Keyed by user id so nothing leaks between accounts within one request. That
+ * alone does not make it safe to keep alive PAST one request: this app's
+ * functional tests reuse one container across requests via
+ * $client->disableReboot(), and a worker process could do the same.
+ * ResetInterface (auto-tagged kernel.reset) empties the cache between
+ * requests so a stale entry — possibly bound to a since-reset EntityManager —
+ * can never reach a later one.
  */
 final class OwnedTagsCache implements ResetInterface
 {

@@ -125,21 +125,18 @@ final class RefreshRunner implements RefreshRunnerInterface
 
         $feeds = $this->feedRepository->findDue($criteria, self::BATCH_LIMIT);
 
-        // The deadline gates when a fetch may *start*, not when it must finish —
-        // nothing cancels a fetch already in flight. The real per-response bound
-        // is `max_duration` (20 s) on each request, so a run can overrun this
-        // budget by up to 20 s, or a multiple of it on a pathological redirect
-        // chain. The serial fetcher had the identical per-feed bound, so this is
-        // not a regression; it is easy to mistake `budgetSeconds` for a hard
-        // ceiling, so it is spelled out here rather than left to be rediscovered.
+        // The deadline gates when a fetch may *start*, not finish; nothing cancels
+        // one in flight. The real per-response bound is `max_duration` (20 s) per
+        // request, so a run can overrun this budget by up to 20 s, or a multiple on
+        // a pathological redirect chain. The serial fetcher had the identical
+        // bound, so this is not a regression -- but `budgetSeconds` is no ceiling.
         $queue = new BudgetedFeedQueue($feeds, $this->clock, $now->getTimestamp() + $request->budgetSeconds);
         $tally = $this->processOutcomes($feeds, $queue, $now);
 
-        // The whole point of the poll's static marker: move it only when a real
-        // import stored new content, so a tick that finds it unmoved does no PHP
-        // work at all (#720). An all-NotModified sweep creates nothing and must
-        // leave it. Checked before the abort branch on purpose: entries created
-        // before an abort were flushed and committed, so they are real content.
+        // The point of the poll's static marker: move it only when a real import
+        // stored new content, so a tick that finds it unmoved does no PHP work
+        // (#720). An all-NotModified sweep must leave it. Checked before the abort
+        // branch on purpose: entries created before an abort were already committed.
         if ($tally->entriesCreated > 0) {
             $this->changeMarker->markChanged();
         }
@@ -162,13 +159,10 @@ final class RefreshRunner implements RefreshRunnerInterface
 
     /**
      * Resolves favicons, then assembles the completed report. Split out so the
-     * favicon flush's own failure mode is visible next to the code that
-     * handles it: every feed's fetch outcome has already been flushed
-     * individually, so nothing already persisted is at risk here — but the
-     * EntityManager can still close under this flush exactly as it can under
-     * a fetch's, and RefreshController's contract promises the client a JSON
-     * report with a `status` field, never an opaque 500 its poll loop has no
-     * branch for.
+     * favicon flush's failure mode is visible next to the code that handles it:
+     * every fetch outcome is already flushed individually, so nothing persisted
+     * is at risk here, but RefreshController's contract still promises the
+     * client a JSON `status` field, never an opaque 500 its poll loop can't handle.
      *
      * @param list<Feed> $feeds
      *
@@ -262,14 +256,12 @@ final class RefreshRunner implements RefreshRunnerInterface
             return $this->persistOutcome($feed, $outcome, $context);
         } catch (UniqueConstraintViolationException | ForeignKeyConstraintViolationException | ORMException $e) {
             // A failed flush rolls back AND closes the EntityManager, so every
-            // later persist/flush would throw "EntityManager is closed".
-            // Stop here instead of cascading the failure across the batch.
-            //
-            // ForeignKeyConstraintViolationException is reachable here since
-            // #246: the feed row backing an in-flight fetch can vanish
-            // mid-run (unsubscribe -> OrphanedFeedReclaimer::reclaim() holds
-            // no lock), and the ensuing UPDATE/INSERT against the gone row
-            // throws this rather than UniqueConstraintViolationException.
+            // later persist/flush throws "EntityManager is closed". Stop here
+            // rather than cascade the failure across the batch.
+            // ForeignKeyConstraintViolationException is reachable since #246: the
+            // feed row behind an in-flight fetch can vanish mid-run (unsubscribe
+            // -> OrphanedFeedReclaimer::reclaim() holds no lock), so the write
+            // throws it, not UniqueConstraintViolationException.
             $this->logger->error(
                 'Refresh aborted: persistence failed for {url}',
                 ['url' => $feed->getUrl(), 'exception' => $e],
@@ -297,17 +289,15 @@ final class RefreshRunner implements RefreshRunnerInterface
     /**
      * What this run left undone, which is what the client polls on.
      *
-     * The feeds the run took on are excluded by id rather than trusted to fall
-     * out of the due query on their own. A feed drops out of that query by
-     * having a fetch time written, and a 429 writes none on purpose (#290) — so
-     * without the exclusion a rationed feed stays `remaining` for ever, the
-     * report stays `partial`, and the client re-polls without pause. In
-     * production that sent 89 requests to one Reddit feed (#302).
+     * Feeds the run took on are excluded by id, not trusted to fall out of the
+     * due query alone: a 429 writes no fetch time on purpose (#290), so without
+     * the exclusion a rationed feed would stay `remaining` forever and the client
+     * would re-poll without pause (89 requests to one Reddit feed in production,
+     * #302).
      *
-     * The exclusion also settles the single-feed scope, which used to need a
-     * branch of its own: that scope matches on id alone, so countDue ignored the
-     * schedule and kept answering 1 after a successful refresh. Excluded, the
-     * one feed leaves the count exactly as every other handled feed does.
+     * The exclusion also fixes the single-feed scope: matching on id alone made
+     * countDue ignore the schedule and keep answering 1 after a successful
+     * refresh. Excluded, the feed counts like any other handled feed.
      */
     private function countRemaining(DueFeedCriteria $criteria, BudgetedFeedQueue $queue): int
     {
@@ -383,14 +373,12 @@ final class RefreshRunner implements RefreshRunnerInterface
     }
 
     /**
-     * Resolve and store a favicon for each favicon-eligible feed that still
-     * lacks one, fetching every homepage in one concurrent batch. $feeds is
-     * `RefreshTally::$faviconEligibleFeeds`, not the full due-feed list and
-     * not every processed feed: a feed the budget deferred never started a
-     * fetch (it gets its favicon on the pass that actually fetches it), and a
-     * feed whose own fetch just failed has no new content to show an icon
-     * beside, so it is excluded too rather than paying a homepage round trip
-     * on every sweep for a feed that may never recover.
+     * Resolve and store a favicon for each favicon-eligible feed that still lacks
+     * one, fetching every homepage in one concurrent batch. $feeds is
+     * `RefreshTally::$faviconEligibleFeeds`: not the full due-feed list, since a
+     * budget-deferred feed gets its favicon on the pass that fetches it, and a
+     * feed whose fetch just failed is excluded too rather than paying a homepage
+     * round trip every sweep for a feed that may never recover.
      *
      * @param list<Feed> $feeds
      */

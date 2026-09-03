@@ -50,12 +50,10 @@ final readonly class RegistrationService
     public function register(string $email, string $plainPassword, string $locale = 'en'): void
     {
         if (null !== $this->users->findOneByEmail($email)) {
-            // Identical bytes are not enough. A fresh signup pays for an
-            // argon2id hash (~174 ms) that this path would otherwise skip
-            // entirely, and a gap that size is a reliable oracle over the
-            // network no matter how equal the responses look. Spend the same
-            // work before returning. See App\Security\PasswordWorkEqualizer,
-            // which login has used for the same reason since Task 11.
+            // A fresh signup pays for an argon2id hash (~174 ms) this path would
+            // skip, and that gap is a reliable timing oracle over the network.
+            // Spend the same work before returning — see
+            // App\Security\PasswordWorkEqualizer, used by login since Task 11.
             $this->work->spendOneHash();
 
             return;
@@ -78,9 +76,8 @@ final readonly class RegistrationService
             $this->em->flush();
         } catch (UniqueConstraintViolationException) {
             // Lost a race with a concurrent signup for the same address; the
-            // winner has already done the post-flush work. Saying nothing keeps
-            // this path's response identical to the duplicate path above. (See
-            // the original comment for the full reasoning.)
+            // winner already did the post-flush work. Saying nothing keeps this
+            // path's response identical to the duplicate path above.
             return;
         }
 
@@ -106,14 +103,12 @@ final readonly class RegistrationService
     }
 
     /**
-     * Returns the account's status *after* verification, so the caller can
-     * report what is actually true rather than what is usually true.
-     *
-     * The distinction matters: an admin may have approved the account between
-     * the mail being sent and the link being clicked, in which case the user is
-     * already Active. Answering a blanket "pending_approval" there would tell
-     * someone who can sign in right now to sit and wait for an approval that
-     * already happened.
+     * Returns the account's status *after* verification, so the caller reports
+     * what is actually true, not what is usually true: an admin may have
+     * approved the account between the mail being sent and the link being
+     * clicked, in which case the user is already Active. A blanket
+     * "pending_approval" would tell someone who can sign in right now to sit
+     * and wait for an approval that already happened.
      *
      * @return UserStatus|null null when the token is unknown, used, or expired
      */
@@ -151,20 +146,20 @@ final readonly class RegistrationService
     }
 
     /**
-     * Always reports success to the caller. Whether the address exists, and
-     * whether its account is in a state that may reset, stays private.
-     * Deliberately does NOT call PasswordWorkEqualizer, unlike register().
-     * The asymmetry is not an oversight — it is the whole point. Nothing on
-     * this endpoint hashes a password: the eligible path issues a token and
-     * queues mail, and the two short paths return after a SELECT. Adding a
-     * dummy hash to the short paths would make "unknown address" ~174 ms
-     * SLOWER than "account exists and got a mail", manufacturing a far louder
-     * oracle than the one being closed, pointing the other way.
-     * What actually closed the gap here was deferring the SMTP round trip past
-     * the response (see DeferredMailer). What remains between the paths is one
-     * INSERT and one UPDATE for the token — sub-millisecond, and far under
-     * network jitter. Measured rather than assumed; see the timing figures in
-     * the task report.
+     * Always reports success. Whether the address exists, and whether its
+     * account is in a state that may reset, stays private.
+     *
+     * Deliberately does NOT call PasswordWorkEqualizer, unlike register() — on
+     * purpose, not an oversight. Nothing here hashes a password: the eligible
+     * path issues a token and queues mail, the two short paths return after a
+     * SELECT. A dummy hash on the short paths would make "unknown address"
+     * ~174 ms SLOWER than "account exists and got a mail" — a louder oracle
+     * than the one being closed, pointing the other way.
+     *
+     * What actually closed the gap was deferring the SMTP round trip past the
+     * response (see DeferredMailer); what remains is one INSERT and one UPDATE
+     * for the token, sub-millisecond and far under network jitter. Measured,
+     * not assumed — see the timing figures in the task report.
      *
      * @throws TransportExceptionInterface
      * @throws RandomException

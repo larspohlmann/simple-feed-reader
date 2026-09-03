@@ -14,20 +14,18 @@ final class SqliteConnectionSetupDriver extends AbstractDriverMiddleware
     private const array SQLITE_DRIVERS = ['pdo_sqlite', 'sqlite3'];
 
     /**
-     * What every SQLite connection needs before it is used: these pragmas, and
-     * the word-boundary function (see registerWordBoundariesFunction).
+     * What every SQLite connection needs before use: these pragmas, plus the
+     * word-boundary function (see registerWordBoundariesFunction).
      *
-     * foreign_keys: SQLite ignores foreign key constraints unless a connection
-     * asks for them, so without this a cascade never fires and a delete leaves
-     * orphaned rows behind.
+     * foreign_keys: SQLite ignores FK constraints unless asked, so without this
+     * a cascade never fires and deletes leave orphaned rows.
      *
-     * journal_mode: the default (DELETE) locks readers out for the whole of a
-     * write transaction. A refresh sweep writes for as long as it takes to
-     * ingest every feed, and a reader hitting that window waits it out —
-     * SQLite's busy timeout turns the error into a stall, which is worse to
-     * diagnose than a failure. Write-ahead logging lets readers keep reading
-     * during a write. It is a property of the database FILE, not of the
-     * session, so re-applying it on each connect just reports the mode back.
+     * journal_mode: the default (DELETE) locks readers out for a whole write
+     * transaction; a refresh sweep writes for as long as it takes to ingest
+     * every feed, and SQLite's busy timeout turns that wait into a stall
+     * (worse to diagnose than a failure). WAL lets readers read during a
+     * write. It's a property of the file, not the session, so re-applying it
+     * each connect just reports the mode back.
      */
     private const array PRAGMAS = [
         'PRAGMA foreign_keys = ON',

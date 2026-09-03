@@ -23,40 +23,35 @@ use Psr\Clock\ClockInterface;
  * > Tokens according to JWS using the algorithm specified in the JWT `alg`
  * > Header Parameter.
  *
- * Read the carve-out narrowly, because it is narrow. It buys exactly one
- * thing — the assurance that the token came from the issuer — and it buys it
- * only for a token pulled straight off the token endpoint over TLS we
- * validated. It is not a general permission to skip signatures.
+ * Read the carve-out narrowly: it buys only the assurance that the token came
+ * from the issuer, and only for a token pulled straight off the token endpoint
+ * over TLS we validated. It is not a general permission to skip signatures.
  *
  * ## What keeps that precondition true
  *
- * verify() takes an {@see IdToken} and never a string. That type means "fetched
+ * verify() takes an {@see IdToken}, never a string. That type means "fetched
  * from a token endpoint, over validated TLS, with no redirect in between", and
  * {@see TokenEndpoint::fetch()} — which enforces all three — is the only place
- * in this application that constructs one. So a raw JWT from any other channel
- * cannot be handed to this class by mistake: there is no overload that accepts
- * one.
+ * that constructs one, so a raw JWT from another channel cannot reach this
+ * class by mistake.
  *
- * That boundary used to be expressed by keeping these methods `private` on the
- * provider. It is now expressed by the parameter type, which is checked by the
- * type system at every call site rather than by whoever is reading the file —
- * and by OidcBoundaryTest, which fails the build if a second construction site
- * for IdToken appears. What the boundary CANNOT do, in either form, is stop
- * somebody who deliberately writes `new IdToken($jwt)` around a token from
- * somewhere else. If a future task needs to read an ID token that did not come
- * from the token endpoint — Apple's `form_post` callback carries one, for
- * instance — that task must verify the signature against the provider's JWKS in
- * its own code. Wrapping it in an IdToken to reuse this class would skip the
- * only check standing behind a token from that channel.
+ * That boundary used to be `private` methods on the provider; it is now the
+ * parameter type, checked at every call site, plus OidcBoundaryTest, which
+ * fails the build if a second IdToken construction site appears. Neither form
+ * stops someone deliberately writing `new IdToken($jwt)` around a token from
+ * elsewhere. A future ID token that did not come from the token endpoint —
+ * Apple's `form_post` callback carries one — must be verified against the
+ * provider's JWKS in its own code; wrapping it in an IdToken to reuse this
+ * class would skip the only check standing behind that channel.
  *
  * ## What is checked, because TLS says nothing about it
  *
- * `aud` and `azp` (the token was minted for us and issued to us), `iss` (it came
- * from the expected issuer), `exp` (it is current), `nonce` (it belongs to the
- * flow this browser started), and `sub` (it names an identity we can store
- * without collisions). Each is one small guard below, in that order, and every
- * one of them raises the same OAuthFailedException — the caller must not be able
- * to tell "no such client" from "expired token", so only $logDetail differs.
+ * `aud`/`azp` (minted for us, issued to us), `iss` (expected issuer), `exp`
+ * (current), `nonce` (belongs to this browser's flow), and `sub` (names an
+ * identity we can store without collisions) — one small guard each, below, in
+ * that order. Every guard raises the same OAuthFailedException, since the
+ * caller must not be able to tell "no such client" from "expired token"; only
+ * $logDetail differs.
  */
 final readonly class IdTokenVerifier
 {
@@ -85,15 +80,12 @@ final readonly class IdTokenVerifier
     public function verify(IdToken $token, string $expectedNonce): OAuthIdentity
     {
         if ('' === $expectedNonce) {
-            // The nonce check below is an equality test, and '' === '' is true,
-            // so an empty expectation would silently accept a token carrying an
-            // empty nonce. Refused here so that comparison is never asked to
-            // defend a value that cannot defend itself.
-            //
-            // AbstractOidcProvider::exchangeCode() refuses the same thing before
-            // it calls the token endpoint, so an honest caller never spends an
-            // authorization code on a doomed exchange. This one is the backstop
-            // that holds regardless of who constructed this verifier.
+            // The nonce check below is an equality test, and '' === '' is
+            // true, so an empty expectation would silently accept a token
+            // carrying an empty nonce. AbstractOidcProvider::exchangeCode()
+            // already refuses this before calling the token endpoint; this is
+            // the backstop that holds regardless of who constructed this
+            // verifier.
             throw new OAuthFailedException('no nonce to check the id_token against');
         }
 
@@ -118,10 +110,10 @@ final readonly class IdTokenVerifier
     }
 
     /**
-     * hash_equals is not here because a client id is secret — it is not. It is
-     * here so that every identity comparison in this class reads the same way,
-     * and so nobody later has to work out which of them were the sensitive ones.
-     * The cost is a function call.
+     * hash_equals is not here because a client id is secret — it isn't. It
+     * keeps every identity comparison in this class reading the same way, so
+     * nobody later has to work out which ones were the sensitive ones. The
+     * cost is a function call.
      */
     private function assertAudience(IdTokenClaims $claims): void
     {
@@ -136,18 +128,17 @@ final readonly class IdTokenVerifier
     }
 
     /**
-     * OIDC Core §3.1.3.7 item 5: when `azp` is present it names the client the
-     * token was issued to, which may differ from the audience. Google omits it
-     * in the single-client case and Apple never sends it, so in practice this
-     * only ever fires on a token that took a detour.
+     * OIDC Core §3.1.3.7 item 5: when present, `azp` names the client the
+     * token was issued to, which may differ from `aud`. Google omits it for a
+     * single client and Apple never sends it, so in practice this only fires
+     * on a token that took a detour.
      *
-     * Item 4's companion SHOULD — require `azp` to be PRESENT whenever `aud` has
-     * several values — is deliberately not implemented. It exists to tell you
-     * who presented a token when several parties could have, and here only one
-     * party ever can: we fetch the token ourselves, from an endpoint we
-     * hardcode, authenticated with our own client secret. Enforcing it would
-     * reject nothing an attacker can send and would break the day a provider
-     * starts adding a second audience.
+     * Item 4's companion SHOULD — require `azp` when `aud` has several values
+     * — is deliberately not implemented: it tells you who presented a token
+     * when several parties could have, and here only one party ever can (we
+     * fetch the token ourselves, from a hardcoded endpoint, with our own
+     * client secret). Enforcing it would reject nothing an attacker can send,
+     * and would break the day a provider adds a second audience.
      */
     private function assertAuthorizedParty(IdTokenClaims $claims): void
     {
@@ -172,10 +163,10 @@ final readonly class IdTokenVerifier
     }
 
     /**
-     * The one check that ties this token to the browser that started the flow.
-     * Without it, a token obtained anywhere could be replayed into somebody
-     * else's callback. hash_equals rather than === so the comparison cannot be
-     * walked character by character.
+     * The one check that ties this token to the browser that started the
+     * flow: without it, a token obtained anywhere could be replayed into
+     * somebody else's callback. hash_equals rather than === so the
+     * comparison can't be walked character by character.
      */
     private function assertNonce(IdTokenClaims $claims, string $expectedNonce): void
     {
@@ -207,29 +198,26 @@ final readonly class IdTokenVerifier
     /**
      * The subject is the primary key of the identity: `user_identity` is
      * UNIQUE(provider, provider_user_id), so whatever comes back here decides
-     * which account a returning visitor lands on. That makes "is this a usable
-     * identifier" a security question rather than a tidiness one.
+     * which account a returning visitor lands on — a security question, not a
+     * tidiness one.
      *
-     * Empty is refused for the obvious reason — every such user would collapse
-     * onto a single row, and the second one to sign in would be handed the
-     * first one's account. The two less obvious refusals are there because they
-     * collapse the same way:
+     * Empty is refused for the obvious reason: every such user would collapse
+     * onto one row, and the second to sign in would be handed the first one's
+     * account. Two less obvious refusals collapse the same way:
      *
      * - **Surrounding whitespace.** `"123"` and `" 123 "` are two rows for one
-     *   provider account, so the SAME person could arrive at two different local
-     *   accounts depending on which spelling the provider sent. Refused rather
-     *   than trimmed: the stored value has to be what the provider sends, byte
-     *   for byte, and quietly rewriting it here would put a second normalising
-     *   step between the provider and the unique index.
-     * - **C0 control characters, NUL above all.** A NUL is a truncation point
-     *   for a great deal of software that is not PHP — logs, monitoring, the
-     *   occasional database driver. `"1\0a"` and `"1\0b"` are distinct here and
-     *   may not be somewhere downstream, and "distinct here, equal there" is the
-     *   exact shape of an identity collision.
+     *   provider account, so the same person could land on either depending
+     *   on which spelling the provider sent. Refused rather than trimmed: the
+     *   stored value must be what the provider sends, byte for byte, with no
+     *   normalising step between the provider and the unique index.
+     * - **C0 control characters, NUL above all.** A NUL truncates in a lot of
+     *   software that isn't PHP — logs, monitoring, some database drivers.
+     *   `"1\0a"` and `"1\0b"` are distinct here and may not be downstream,
+     *   which is the exact shape of an identity collision.
      *
      * Neither Google (a decimal string) nor Apple (an opaque token) sends
-     * anything this rejects, which is the point: the rule only ever fires on a
-     * token no real provider minted.
+     * anything this rejects — the rule only ever fires on a token no real
+     * provider minted.
      */
     private static function isUsableSubject(string $subject): bool
     {
@@ -239,28 +227,23 @@ final readonly class IdTokenVerifier
     }
 
     /**
-     * Google sends a JSON boolean; Apple sends the string "true".
+     * Google sends a JSON boolean; Apple sends the string "true". Those two
+     * spellings are the entire accepted set — `false`, `"false"`, `1`, `"1"`,
+     * `"TRUE"`, `null`, an absent claim, an array all read as NOT verified.
+     * The two mistakes are not symmetric: reading verified as unverified just
+     * turns an account link into a new signup, but reading unverified as
+     * verified lets whoever typed the address claim the account that already
+     * owns it — an account takeover. So anything not seen from a real
+     * provider is refused rather than guessed at.
      *
-     * Those two spellings are the entire accepted set, and everything else —
-     * `false`, `"false"`, `1`, `"1"`, `"TRUE"`, `null`, an absent claim, an
-     * array — reads as NOT verified. Each of those is a deliberate call, not an
-     * oversight, and the reasoning is the same for all of them: the two mistakes
-     * are not symmetric. Reading a verified address as unverified turns an
-     * account link into an ordinary new signup, which is an inconvenience.
-     * Reading an unverified address as verified lets whoever typed it claim the
-     * local account that already owns it, which is an account takeover. So
-     * anything we have not seen a real provider send is refused rather than
-     * guessed at.
+     * `"TRUE"` is refused rather than case-folded — folding would be a guess
+     * about a provider that doesn't exist, always erring toward more trust. A
+     * cast is refused for the same reason: `(bool) "false"` is true, and that
+     * one character is the difference between "verified" and "typed in by
+     * whoever is signing in".
      *
-     * `"TRUE"` in particular is refused rather than case-folded: folding would
-     * be a guess about a provider that does not exist, and the guess only ever
-     * errs towards trusting more. A cast is refused for the same reason —
-     * `(bool) "false"` is true, and that one character is the difference between
-     * "this address was verified" and "this address was typed in by whoever is
-     * signing in".
-     *
-     * Read from the raw claim rather than through a typed accessor because the
-     * accepted set is a trust decision, not a matter of type — see
+     * Read from the raw claim, not a typed accessor, because the accepted set
+     * is a trust decision, not a matter of type — see
      * {@see IdTokenClaims::claim()}.
      */
     private static function isVerified(mixed $value): bool

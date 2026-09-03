@@ -13,14 +13,14 @@ use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * The reader's per-caller entry access: the "entry list row" projection
- * (entry plus the caller's subscription, feed, and folded per-entry state)
- * shared by the entry list, search and "hydrate these ids" endpoints, plus
- * the plain per-entry subscription gate the reader-extraction endpoint uses.
- * Split out of EntryRepository so that repository's existence/lookup/
- * keyset-walk surface (used by ingestion, dedup and the search reindex/
- * backup batch walks) does not grow past what a single class can stay
- * readable at — EntryController and the search services depend on this one
- * instead, EntryRepository's other methods never touch it.
+ * (entry + caller's subscription, feed, folded per-entry state) shared by
+ * the entry list, search and "hydrate these ids" endpoints, plus the plain
+ * per-entry subscription gate the reader-extraction endpoint uses.
+ *
+ * Split out of EntryRepository so that class's existence/lookup/keyset-walk
+ * surface (ingestion, dedup, search reindex/backup batch walks) stays
+ * readable — EntryController and the search services depend on this one
+ * instead.
  *
  * Shares row hydration and term matching with SavedSearchEntryRepository.
  */
@@ -119,14 +119,12 @@ class EntryListRepository extends AbstractEntryProjectionRepository
     }
 
     /**
-     * The ids of every unread entry that matches this search and is NEWER than
-     * $since, for the user's subscribed feeds — the digest's "new since the last
-     * send" window (#636). The mirror of unreadMatchingEntryIdsForUser's `<=`.
-     *
-     * Ordered newest-first so a caller that only wants the most recent handful
-     * (the digest caps each section) can slice the head without hydrating the
-     * whole set. `effectiveDate` rides in the SELECT because DISTINCT forbids
-     * ordering by a column it does not project.
+     * Unread entries matching this search, newer than $since — the digest's
+     * "new since last send" window (#636); mirrors
+     * unreadMatchingEntryIdsForUser's `<=`. Newest-first so a caller can
+     * slice the most recent handful (the digest's per-section cap) without
+     * hydrating the whole set. `effectiveDate` rides in the SELECT because
+     * DISTINCT forbids ordering by an unprojected column.
      *
      * @return list<int>
      */
@@ -145,13 +143,12 @@ class EntryListRepository extends AbstractEntryProjectionRepository
 
     /**
      * The given entry ids hydrated through the same list-row projection every
-     * other list uses — same per-user read state, same subscription join.
-     * Ordered exactly like the entry list, never in the id order asked for,
-     * because a search engine's own ordering owes nothing to it.
+     * other list uses. Ordered like the entry list, never in the id order
+     * asked for — a search engine's own ordering owes nothing to it.
      *
-     * The subscription join is the actual access gate: an id for a feed the
-     * caller does not subscribe to is dropped here even if it came from a
-     * search index whose own filter was wrong or whose data was stale.
+     * The subscription join is the real access gate: an id for a feed the
+     * caller does not subscribe to is dropped here, even one from a search
+     * index whose filter was wrong or stale.
      *
      * @param list<int> $entryIds
      *
