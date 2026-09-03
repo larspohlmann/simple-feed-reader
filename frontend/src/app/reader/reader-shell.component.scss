@@ -147,18 +147,54 @@ app-reader-header.hidden {
   position: relative;
 }
 
+/* The list pane's width is user-owned now: dragged live on the divider below,
+   persisted per device (PaneSplitService, #810). `--list-width` is a percentage
+   the divider writes onto `.main.split`; the old fixed 42% is only the fallback
+   for the frame before the directive's effect writes the saved value. The seam
+   and its max-width move to the divider — the list no longer draws either. */
 .main.split .list {
-  flex: 0 0 42%;
-
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     tuned list-pane measure, not a spacing value. */
-  max-width: 480px;
-  border-right: 1px solid var(--border);
+  flex: 0 0 var(--list-width, 42%);
+  min-width: 0;
 }
 
 .main.split .reader {
   flex: 1;
   min-width: 0;
+}
+
+/* The drag handle on the seam between the two panes (#810). It straddles the
+   seam with a negative inline margin so its grab area adds no layout width, and
+   it draws the hairline the list used to own — so hover and keyboard focus can
+   light the same line. Pointer events drive the resize (see PaneResizeDirective),
+   so it claims the gesture with `touch-action: none`. */
+.main.split .pane-divider {
+  flex: 0 0 var(--space-2);
+  align-self: stretch;
+  margin-inline: calc(var(--space-2) * -0.5);
+  position: relative;
+  z-index: 1;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.main.split .pane-divider::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 50%;
+  border-inline-start: 1px solid var(--border);
+}
+
+.main.split .pane-divider:hover::before,
+.main.split .pane-divider:focus-visible::before {
+  border-inline-start-width: var(--space-0);
+  border-inline-start-color: var(--accent);
+}
+
+.main.split .pane-divider:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .main:not(.split) > * {

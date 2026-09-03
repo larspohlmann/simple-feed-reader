@@ -782,6 +782,7 @@
     "original": "Original",
     "showOriginal": "Originalinhalt des Feeds anzeigen",
     "showReader": "Leseansicht anzeigen",
+    "resizeSplit": "Teilung zwischen Liste und Artikel anpassen",
     "toggleTag": "{{name}} umschalten",
     "manage": "{{name}} verwalten",
     "editTag": "Tag bearbeiten",

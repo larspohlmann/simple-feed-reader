@@ -916,6 +916,28 @@ describe('ReaderShellComponent', () => {
     });
   });
 
+  describe('the split-pane resize handle (#810)', () => {
+    it('mounts a keyboard-operable separator between the panes in split view', () => {
+      const f = boot();
+      screen.isWide.set(true);
+      f.componentInstance.layout.set('pane');
+      f.detectChanges();
+
+      const handle = f.nativeElement.querySelector('.main.split .pane-divider');
+      expect(handle).not.toBeNull();
+      expect(handle.getAttribute('role')).toBe('separator');
+      expect(handle.getAttribute('aria-orientation')).toBe('vertical');
+      ctrl.verify();
+    });
+
+    it('carries no separator when the main area is not split', () => {
+      const f = boot();
+      expect(f.componentInstance.splitView()).toBe(false);
+      expect(f.nativeElement.querySelector('.pane-divider')).toBeNull();
+      ctrl.verify();
+    });
+  });
+
   it('fetches a deep-linked entry that is not in the loaded list', () => {
     const f = boot(); // initial list holds only entry id 1
     qp.next(convertToParamMap({ entry: '514-deep-linked-story' }));

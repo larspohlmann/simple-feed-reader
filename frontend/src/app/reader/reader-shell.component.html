@@ -94,7 +94,7 @@
       (toggleDigest)="confirmToggleDigest($event)"
     />
   </aside>
-  <main class="main" [class.split]="splitView()">
+  <main class="main" #mainEl [class.split]="splitView()">
     @if (splitView()) {
       <section class="list">
         <app-entry-list
@@ -133,6 +133,14 @@
           (open)="onOpen($event)"
         />
       </section>
+      <!-- The draggable seam between the two panes (#810). It writes `--list-width`
+           onto `#mainEl` live; PaneResizeDirective owns the pointer, keyboard and
+           double-click-reset behaviour and the separator ARIA. -->
+      <div
+        class="pane-divider"
+        [appPaneResize]="mainEl"
+        [attr.aria-label]="'reader.resizeSplit' | transloco"
+      ></div>
       <section class="reader">
         <app-reader-view
           [entry]="openEntry()"
