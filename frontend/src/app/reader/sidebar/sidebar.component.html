@@ -3,6 +3,7 @@
     @if (!screen.isNarrow()) {
       <app-search-field
         [term]="selection().term ?? ''"
+        [populateTerm]="selection().searchOrigin !== 'saved'"
         [loading]="searchLoading()"
         (search)="search.emit($event)"
       />

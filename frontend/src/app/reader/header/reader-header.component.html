@@ -101,6 +101,7 @@
       #searchField
       class="search-bar"
       [term]="searchTerm()"
+      [populateTerm]="populateSearchTerm()"
       [loading]="searchLoading()"
       [dismissible]="true"
       (search)="search.emit($event)"

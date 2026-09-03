@@ -5,6 +5,7 @@
   [allItemsActive]="allItemsActive()"
   [searchLoading]="searching()"
   [searchTerm]="selection().term ?? ''"
+  [populateSearchTerm]="selection().searchOrigin !== 'saved'"
   [class.hidden]="headerHidden()"
   (toggleSidebar)="setSidebarOpen(!sidebarOpen())"
   (scrollTop)="onScrollListTop()"

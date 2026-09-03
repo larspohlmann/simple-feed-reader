@@ -48,6 +48,7 @@ import {
   Selection,
   canScopedRefresh,
   hasUnreadFilter,
+  isDirectSearch,
   isSingleStreamView,
   isWholeWordTerm,
   isPhraseTerm,
@@ -303,10 +304,8 @@ export class EntryListComponent implements OnDestroy {
    *  subscription (their glyph and favicon already lead the heading) (#411). */
   readonly titleIcon = computed(() => FIXED_VIEW_ICON[this.selection().kind] ?? null);
 
-  /** A search never renders as a magazine — its rows carry marked terms, and a
-   *  spread would scatter them across eight block templates. */
   readonly effectiveLayout = computed(() =>
-    this.selection().kind === 'search' ? 'list' : this.layout(),
+    isDirectSearch(this.selection()) ? 'list' : this.layout(),
   );
 
   /** Search rows dim their excerpt a shade — the marked term stays the row's
