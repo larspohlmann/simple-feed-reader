@@ -164,9 +164,21 @@ async function openTagListFromDrawer(page: Page): Promise<void> {
 }
 
 async function scrollListTo(page: Page, top: number): Promise<void> {
-  await listScroller(page).evaluate((el, to) => el.scrollTo({ top: to }), top);
-  // The offset is only remembered from the scroll event, which fires after the
-  // assignment; waiting on the settled value is what makes the rest deterministic.
+  // Block until the scroll EVENT this scroll produces has been dispatched and
+  // handled, not merely until scrollTop settles. `scrollTo` sets scrollTop
+  // synchronously, so polling the offset can pass before the list's own scroll
+  // handler runs — and two such scrolls in a row then coalesce into one event
+  // the header reads as a single downward move, leaving it hidden for good
+  // (#830). Awaiting the event keeps each direction change its own gesture.
+  await listScroller(page).evaluate(
+    (el, to) =>
+      new Promise<void>((resolve) => {
+        if (el.scrollTop === to) return resolve();
+        el.addEventListener('scroll', () => resolve(), { once: true });
+        el.scrollTo({ top: to });
+      }),
+    top,
+  );
   await expect.poll(() => scrollTop(page)).toBe(top);
 }
 
