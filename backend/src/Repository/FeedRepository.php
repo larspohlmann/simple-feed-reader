@@ -75,6 +75,35 @@ class FeedRepository extends ServiceEntityRepository
     }
 
     /**
+     * The feed rows behind a set of urls, indexed by url — one query for the
+     * whole set a restore file declares (#455). A url with no row is absent.
+     *
+     * @param list<string> $urls
+     *
+     * @return array<string, Feed>
+     */
+    public function findByUrlsIndexedByUrl(array $urls): array
+    {
+        if ([] === $urls) {
+            return [];
+        }
+
+        /** @var list<Feed> $feeds */
+        $feeds = $this->createQueryBuilder('f')
+            ->andWhere('f.url IN (:urls)')
+            ->setParameter('urls', $urls)
+            ->getQuery()
+            ->getResult();
+
+        $byUrl = [];
+        foreach ($feeds as $feed) {
+            $byUrl[$feed->getUrl()] = $feed;
+        }
+
+        return $byUrl;
+    }
+
+    /**
      * The ids of the feeds this user subscribes to. Read before deleting the
      * account: once the subscription rows cascade away there is nothing left
      * to ask.

@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Backup;
 
+use App\Entity\Feed;
 use App\Entity\User;
 use App\Repository\EntryRepository;
 use App\Repository\FeedRepository;
+use App\Service\Backup\Dto\FeedLine;
+use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\EntryBatchInserter;
 use App\Service\Backup\Exception\BackupLoadFailedException;
 use App\Service\Backup\RestoreEntryLoader;
@@ -22,8 +25,10 @@ use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 
 /**
- * A narrow unit test for the one branch AccountRestorerTest can no longer
- * reach through content: #412's final review closed every route by which a
+ * Two narrow unit tests. The first pins the one-query feed lookup of #455
+ * (AccountRestorerTest proves the same path end to end). The second covers
+ * the one branch AccountRestorerTest can no longer reach through content:
+ * #412's final review closed every route by which a
  * crafted-but-otherwise-valid backup file could still make the database
  * refuse a value (BackupTally now catches a duplicate tag, feed or
  * subscription in pass 1; RestoreEntryLoader dedupes a repeated entry line by
@@ -38,6 +43,62 @@ use Symfony\Component\Clock\MockClock;
  */
 final class RestoreLoadPassTest extends TestCase
 {
+    public function testTheFeedLookupRunsOnceForTheWholeFileAndCreatesWhatItMisses(): void
+    {
+        $user = new User('one-lookup@example.com', new \DateTimeImmutable('2026-08-01'));
+        $em = $this->createStub(EntityManagerInterface::class);
+        $em->method('getReference')->willReturn($user);
+        $feeds = $this->createMock(FeedRepository::class);
+        $feeds->expects(self::once())
+            ->method('findByUrlsIndexedByUrl')
+            ->with(['https://known.example/feed.xml', 'https://new.example/feed.xml'])
+            ->willReturn(['https://known.example/feed.xml' => new Feed('https://known.example/feed.xml')]);
+        $feeds->expects(self::never())->method('findOneBy');
+        $pass = new RestoreLoadPass(
+            $em,
+            $feeds,
+            $this->createStub(EntryRepository::class),
+            $this->harmlessEntryLoader($em),
+        );
+
+        $result = $pass->run($user, (function () {
+            yield $this->feedLine('https://known.example/feed.xml');
+            yield $this->feedLine('https://new.example/feed.xml');
+            yield $this->subscriptionLine('https://known.example/feed.xml');
+            yield $this->subscriptionLine('https://new.example/feed.xml');
+        })());
+
+        self::assertSame(1, $result->feeds);
+        self::assertSame(2, $result->subscriptions);
+    }
+
+    private function feedLine(string $url): FeedLine
+    {
+        return new FeedLine(
+            url: $url,
+            siteUrl: null,
+            title: null,
+            description: null,
+            faviconUrl: null,
+            imageUrl: null,
+            sourceFormat: 'xml',
+        );
+    }
+
+    private function subscriptionLine(string $feedUrl): SubscriptionLine
+    {
+        return new SubscriptionLine(
+            feedUrl: $feedUrl,
+            customTitle: null,
+            position: 0,
+            markedReadUntil: null,
+            createdAt: new \DateTimeImmutable('2026-07-01 08:00:00'),
+            tags: [],
+            includeInAllItems: true,
+            includeInForYou: true,
+        );
+    }
+
     public function testADatabaseFailureDuringTheAccountShapeFlushIsAWrappedBackupError(): void
     {
         $em = $this->createStub(EntityManagerInterface::class);
@@ -58,9 +119,10 @@ final class RestoreLoadPassTest extends TestCase
 
     /**
      * A real RestoreEntryLoader, wired to test doubles throughout: it is
-     * never actually called in this scenario (the account-shape flush throws
-     * first), but RestoreLoadPass's constructor takes the concrete class, so
-     * it needs a valid instance rather than a mock of a `final` one.
+     * never actually called in the flush-fails scenario (the account-shape
+     * flush throws first), but RestoreLoadPass's constructor takes the
+     * concrete class, so it needs a valid instance rather than a mock of a
+     * `final` one.
      */
     private function harmlessEntryLoader(EntityManagerInterface $em): RestoreEntryLoader
     {

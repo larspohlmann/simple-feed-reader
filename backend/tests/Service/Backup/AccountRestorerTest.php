@@ -704,6 +704,27 @@ final class AccountRestorerTest extends DbTestCase
         self::assertSame('Theirs', $after->getTitle());
     }
 
+    public function testOneLookupReferencesTheKnownFeedAndCreatesTheMissingOne(): void
+    {
+        $user = $this->seededUser('mixed-feeds@example.com');
+        $userId = (int) $user->getId();
+        $gzip = $this->backupOf($user);
+        $before = $this->subscriptionShapes($userId);
+        $this->em->getConnection()->executeStatement('DELETE FROM feed WHERE url = ?', [self::TWO_URL]);
+        $this->em->clear();
+
+        $result = $this->restorer()->restore($this->reloadUser($userId), $gzip, 'REPLACE');
+
+        self::assertSame(1, $result->feeds);
+        self::assertSame(2, $result->subscriptions);
+        self::assertSame(2, $this->scalarInt('SELECT COUNT(*) FROM feed'));
+        self::assertSame($before, $this->subscriptionShapes($userId));
+        $this->em->clear();
+        $one = $this->em->getRepository(Feed::class)->findOneBy(['url' => self::ONE_URL]);
+        self::assertInstanceOf(Feed::class, $one);
+        self::assertSame('W/"seeded-etag"', $one->getEtag());
+    }
+
     public function testRefusalHappensBeforeAnyDeletion(): void
     {
         $source = $this->seededUser('fit-source@example.com');
