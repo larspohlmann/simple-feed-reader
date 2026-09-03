@@ -72,6 +72,35 @@ final class RestoreLoadPassTest extends TestCase
         self::assertSame(2, $result->subscriptions);
     }
 
+    public function testFeedsWithNoSubscriptionAreStillResolvedAtTheEntryPhase(): void
+    {
+        $user = new User('feeds-only@example.com', new \DateTimeImmutable('2026-08-01'));
+        $em = $this->createStub(EntityManagerInterface::class);
+        $em->method('getReference')->willReturn($user);
+        $feeds = $this->createMock(FeedRepository::class);
+        $feeds->expects(self::once())
+            ->method('findByUrlsIndexedByUrl')
+            ->with(['https://orphan-one.example/feed.xml', 'https://orphan-two.example/feed.xml'])
+            ->willReturn([]);
+        $pass = new RestoreLoadPass(
+            $em,
+            $feeds,
+            $this->createStub(EntryRepository::class),
+            $this->harmlessEntryLoader($em),
+        );
+
+        // No subscription line ever runs, so loadSubscription() never gets a
+        // chance to call resolveHeldFeeds() itself — only startEntryPhase()
+        // can still resolve (and create) these feeds (#455).
+        $result = $pass->run($user, (function () {
+            yield $this->feedLine('https://orphan-one.example/feed.xml');
+            yield $this->feedLine('https://orphan-two.example/feed.xml');
+        })());
+
+        self::assertSame(2, $result->feeds);
+        self::assertSame(0, $result->subscriptions);
+    }
+
     private function feedLine(string $url): FeedLine
     {
         return new FeedLine(
