@@ -259,7 +259,7 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
 .tools {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-1);
   flex: none;
 }
 
