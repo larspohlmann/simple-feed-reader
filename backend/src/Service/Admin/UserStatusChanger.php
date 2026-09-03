@@ -14,38 +14,37 @@ use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 /**
  * The admin's three account status transitions: approve, reject, suspend.
  *
- * approve() carries the mail rule — do not "fix" the cases that stay silent,
- * they are deliberate:
- * The "your account has been approved" mail means "you have been granted
- * access for the first time". Classify any new status against that sentence
- * rather than against the list below — and check the claim, since an earlier
- * version of this comment got `rejected` wrong by grouping it with suspended
- * on the strength of the grouping rather than the sentence.
- * MAILS — the user has never had access, and now does:
+ * approve() carries the mail rule — the silent cases are deliberate, do not
+ * "fix" them. The "your account has been approved" mail means "granted
+ * access for the first time"; classify any new status against that
+ * sentence, not the list below (an earlier version of this comment grouped
+ * `rejected` with suspended by list position instead, and got it wrong).
+ *
+ * MAILS — the user never had access, and now does:
  *   - pending_approval: verified their address, waited in the queue.
  *   - pending_verification: never confirmed their address; approving
- *     overrides double opt-in (see below), but the grant is just as real.
- *   - rejected: an admin declined them and has now changed their mind.
- *     Rejection is only reachable FROM pending_approval, so a rejected user
- *     has never once had access — this is a first-time grant, and the one
- *     case where the user is certainly waiting to hear, having applied and
- *     seen nothing happen. Silence here left them holding a working account
- *     they had no reason to try.
+ *     overrides double opt-in, but the grant is just as real. That override
+ *     is a deliberate admin decision — the queue lists every status — and
+ *     the mail itself is harmless.
+ *   - rejected: an admin declined them and changed their mind. Rejection is
+ *     only reachable FROM pending_approval, so a rejected user has never had
+ *     access — a first-time grant, and the case where the user is certainly
+ *     waiting to hear. Silence left them holding a working account they had
+ *     no reason to try.
+ *
  * SILENT — nothing was granted that the user did not already have:
  *   - suspended: a genuine RESTORATION of access they used to have. approve()
- *     is deliberately the only way back, rather than an /unsuspend endpoint
- *     for something an admin does once a year, but telling a returning user
- *     they were "approved" would only confuse.
- *   - active: a no-op, which is what makes a double-click safe.
- * Approving a pending_verification account overrides double opt-in: that
- * address was never confirmed, so the approval mail may go somewhere nobody
- * proved they control. That is a real admin decision, made deliberately — the
- * queue lists every status — and the mail itself is harmless.
+ *     is deliberately the only way back (no /unsuspend endpoint for a
+ *     once-a-year action), but telling a returning user they were "approved"
+ *     would only confuse.
+ *   - active: a no-op, which makes a double-click safe.
+ *
  * approvedAt is stamped on every successful activation, reinstatement
- * included: it is the audit trail for when access was last granted, which is
- * more useful than preserving the date of the first one.
- * approve() intentionally calls no self-guard, unlike reject() and suspend().
- * Activating an account cannot lock anybody out.
+ * included: the audit trail for when access was last granted, more useful
+ * than preserving the first date.
+ *
+ * approve() intentionally calls no self-guard, unlike reject() and
+ * suspend(): activating an account cannot lock anybody out.
  */
 final readonly class UserStatusChanger
 {

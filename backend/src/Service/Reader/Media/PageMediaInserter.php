@@ -11,15 +11,13 @@ use Dom\HTMLDocument;
 /**
  * Places media the source page offers but the extracted body never had.
  *
- * Two phases, run around ReaderLeadImage::restore() (see ReaderBodyCleaner):
- * `plan()` is a read-only classification of each candidate as reconcilable —
- * its poster is the same asset as a body `<img>`, so the player belongs where
- * that picture already sits — or anchored — the body still holds the prose
- * block the media followed on the page, so the player goes after it — or
- * top-placed, for a candidate the body shows no trace of. `apply()` performs
- * the mutation in that order and prepends the top-placed remainder, in source
- * order. Splitting the phases lets restore() consult the plan's
- * `hasTopPlaced()` before either mutation happens.
+ * Two phases run around ReaderLeadImage::restore() (see ReaderBodyCleaner).
+ * `plan()` classifies each candidate: reconcilable (poster matches a body
+ * `<img>`, so the player replaces it), anchored (body still holds the prose
+ * block the media followed, so the player goes after it), or top-placed (no
+ * trace in the body). `apply()` mutates in that order, then prepends
+ * top-placed candidates in source order — split so restore() can check
+ * `hasTopPlaced()` before either mutation runs.
  */
 final readonly class PageMediaInserter
 {

@@ -7,19 +7,19 @@ namespace App\Service\Ai;
 /**
  * How long one chat completion may take, as one value.
  *
- * The two bounds belong together and are chosen together: the wall clock caps
- * the whole call, the first-byte bound caps the silence before it starts, and
- * a first-byte bound at or above the wall clock would never fire. They used to
- * be constants on the client, which meant one pair of numbers for every
- * endpoint an account had configured (#433).
+ * The two bounds are chosen together: the wall clock caps the whole call,
+ * the first-byte bound caps the silence before it starts, and a first-byte
+ * bound at or above the wall clock would never fire. They used to be
+ * constants on the client — one pair of numbers for every endpoint an
+ * account had configured (#433).
  *
- * Hosted and local endpoints want different numbers, and the same numbers
- * cannot serve both. A hosted provider that goes quiet for three minutes is
- * dead, and waiting an hour on it only delays the failure report; a local
- * model on modest hardware is merely thinking, and every earlier raise of the
- * shared constants — 120 s to 300 s (#320), 300 s to 600 s, 30 s to 180 s —
- * was that conflict answered by moving the bound for everybody. So the account
- * marks the connection instead, and the connection carries its own profile.
+ * Hosted and local endpoints need different numbers: a hosted provider quiet
+ * for three minutes is dead, and waiting an hour only delays the failure
+ * report, while a local model on modest hardware is merely thinking. Every
+ * earlier raise of the shared constants — 120s to 300s (#320), 300s to 600s,
+ * 30s to 180s — was that conflict answered by moving the bound for
+ * everybody. So the account marks the connection instead, and the
+ * connection carries its own profile.
  */
 final readonly class ProviderTimeouts
 {
@@ -40,13 +40,13 @@ final readonly class ProviderTimeouts
      * evaluates the prompt, and a local model on a large #308 batch needs the
      * headroom. Raise it before inventing a second "first token" timeout.
      *
-     * Note what this bound really covers: Symfony's idle timeout also bounds
-     * the wait for the response headers, so the clock runs from the request
-     * going out, not from the first body chunk. It is time-to-first-*byte*.
-     * A provider that ignores `stream: true` sends nothing at all — headers
-     * included — until the whole answer is ready, so it has this window rather
-     * than the wall clock to answer end to end. That is the accepted price of
-     * failing a dead connection in 180 s instead of 600 s.
+     * What this bound really covers: Symfony's idle timeout also bounds the
+     * wait for response headers, so the clock runs from the request going
+     * out, not the first body chunk — it is time-to-first-*byte*. A provider
+     * that ignores `stream: true` sends nothing, headers included, until the
+     * whole answer is ready, so it has this window rather than the wall
+     * clock to answer end to end. The accepted price: failing a dead
+     * connection in 180s instead of 600s.
      */
     private const float STANDARD_FIRST_BYTE_SECONDS = 180.0;
 

@@ -5,13 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 /**
- * What RecommendationProfileDistiller settled a distillation call to, handed
- * back for the advancer's distillTick to write (#493). A usable reply
- * carries the profile text the resolver already cached on settings; an
- * unusable one carries the offending reply, so the advancer can run its
- * cross-tick retry-or-degrade envelope exactly as ConsolidationOutcome does.
- * Transport failures never reach here: the resolver throws them, exactly as
- * RecommendationConsolidationResolver does.
+ * What RecommendationProfileDistiller settled a distillation call to, for the
+ * advancer's distillTick to write (#493). Usable carries the profile text the
+ * resolver already cached on settings; unusable carries the offending reply,
+ * for the advancer's cross-tick retry-or-degrade envelope, as
+ * ConsolidationOutcome does. Transport failures never reach here: the resolver
+ * throws them, as RecommendationConsolidationResolver does.
  */
 final readonly class ProfileDistillationOutcome
 {

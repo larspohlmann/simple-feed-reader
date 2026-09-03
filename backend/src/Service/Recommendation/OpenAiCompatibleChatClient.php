@@ -18,9 +18,8 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * Sends `POST {baseUrl}/chat/completions`, the one call a tick makes to turn
  * a prompt into a ranking.
  *
- * The caps are not an SSRF boundary — see ProviderCredentials for why there is
- * none — they keep one hostile or broken endpoint from holding a request open
- * or filling memory.
+ * The caps are not an SSRF boundary (see ProviderCredentials for why there is none);
+ * they keep one hostile or broken endpoint from holding a request open or filling memory.
  */
 final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
 {
@@ -32,15 +31,12 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
     /**
      * How many bytes of retained answer one requested token buys.
      *
-     * The bound this sizes is what stops a provider that ignores `max_tokens`
-     * and generates until something else stops it. It used to be a flat 2 MB,
-     * which could never fire: the largest answer a request may ask for is a
-     * few tens of kilobytes, so `max_tokens` always came first and the guard
-     * was dead on the one path it existed for (#437).
-     *
-     * Eight bytes a token is twice the prompt builder's own estimate, so a
-     * reply the request legitimately asked for cannot trip it — the largest
-     * full batch on record retained 12 KB against a 36 KB bound.
+     * The bound this sizes stops a provider that ignores `max_tokens` and generates
+     * until something else does. It used to be a flat 2 MB, which could never fire: the
+     * largest answer a request may ask for is a few tens of kilobytes, so `max_tokens`
+     * always came first and the guard was dead on its one path (#437). Eight bytes a
+     * token is twice the prompt builder's estimate, so a legitimate reply cannot trip it
+     * — the largest full batch on record retained 12 KB against a 36 KB bound.
      */
     private const int RETAINED_BYTES_PER_REQUESTED_TOKEN = 8;
 
@@ -54,11 +50,10 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
     /**
      * The flat memory bound on everything the reader holds.
      *
-     * The per-request bound above measures the answer, which the blocking
-     * shape does not have until its whole body parses — its buffer holds the
-     * provider's framing and a reasoning model's entire thinking phase. This
-     * is what bounds that shape, and it has to clear reasoning: a single #320
-     * call legitimately buffered 1.9 MB before answering.
+     * The per-request bound above measures the answer, which the blocking shape does not
+     * have until its whole body parses — its buffer holds the provider's framing and a
+     * reasoning model's entire thinking phase. This bounds that shape, and has to clear
+     * reasoning: a single #320 call legitimately buffered 1.9 MB before answering.
      */
     private const int MAXIMUM_RETAINED_BYTES = 2_097_152;
 
@@ -96,13 +91,11 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
 
     public function completeMany(ProviderConnection $connection, array $calls): array
     {
-        // Each response carries its own reader (its parsing state) and its own
-        // observer. SplObjectStorage maps the response object the stream() loop
-        // yields back to those and to the $calls index, so the outcomes stay
-        // aligned however the concurrent streams interleave. fireRequests()
-        // already seeded $outcomes for any call that never made it to a
-        // response at all, so a request-phase failure and a stream-phase one
-        // both end up in the same per-call outcome shape.
+        // SplObjectStorage maps each streamed response to its own reader,
+        // observer, and $calls index, so outcomes stay aligned however the
+        // streams interleave. fireRequests() seeded $outcomes for calls that
+        // never reached a response, so request- and stream-phase failures share
+        // one per-call outcome shape.
         [$context, $outcomes] = $this->fireRequests($connection, $calls);
 
         $responses = $this->httpClient->stream(
@@ -131,16 +124,13 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
     }
 
     /**
-     * Fires every request up front — Symfony starts the transfer on request(),
-     * so this is what makes the reads concurrent — and records the per-response
-     * state the multiplexed loop needs to route each chunk. request() itself is
-     * not part of the multiplexed read that advance() guards, so a transport
-     * failure here (a refused connection, say) is caught right here instead:
-     * wrapped the same way complete() has always wrapped it, and banked
-     * straight into that call's own outcome. That keeps every call independent
-     * even at this earlier stage — one call's connection refusal does not stop
-     * its siblings' requests from going out, matching the rest of this class's
-     * per-call failure story (#344).
+     * Fires every request up front — Symfony starts the transfer on request(), which is
+     * what makes the reads concurrent — and records the per-response state the
+     * multiplexed loop needs to route each chunk. request() is not part of the
+     * multiplexed read advance() guards, so a transport failure here (a refused
+     * connection) is caught here instead, wrapped as complete() always has and banked
+     * into that call's own outcome. That keeps every call independent even at this stage:
+     * one call's connection refusal does not stop its siblings' requests (#344).
      *
      * @param non-empty-list<ConcurrentCompletion> $calls
      *
@@ -219,17 +209,15 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
     }
 
     /**
-     * A call that reached `max_tokens` and was then cut by the wall clock is a
-     * runaway, not an unreachable address. `length` is the provider's own word
-     * for "I stopped because the ceiling stopped me", and a model that spends
-     * the whole ceiling repeating itself takes the wall clock with it — the
-     * call that prompted #437 reported `length`, streamed 8.2 MB, and was
-     * still reported as "That address did not answer".
+     * A call that reached `max_tokens` and was then cut by the wall clock is a runaway,
+     * not an unreachable address. `length` is the provider's word for "the ceiling
+     * stopped me", and a model that spends the whole ceiling repeating itself takes the
+     * wall clock with it — the call that prompted #437 reported `length`, streamed 8.2 MB,
+     * and was still reported as "That address did not answer".
      *
-     * Everything else stays unreachable. A connection reset mid-answer is a
-     * dead connection however many bytes preceded it, and guessing otherwise
-     * from a byte count would relabel the ordinary failure this message is
-     * for.
+     * Everything else stays unreachable: a connection reset mid-answer is a dead
+     * connection however many bytes preceded it, and guessing otherwise from a byte count
+     * would relabel the ordinary failure this message is for.
      */
     private function transportFailureOf(CompletionCallSlot $slot, ExceptionInterface $failure): \RuntimeException
     {
@@ -279,11 +267,10 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
     {
         $reader = $slot->reader;
 
-        // isTimeout() first — on a timeout chunk the other accessors throw;
-        // same ordering hazard ConcurrentFeedFetcher documents. The other
-        // direction matters too: on a non-timeout error chunk isTimeout()
-        // itself throws, and that is how max_duration exhaustion leaves here as
-        // the generic "did not answer".
+        // isTimeout() first: on a timeout chunk the other accessors throw (the
+        // hazard ConcurrentFeedFetcher documents), and on a non-timeout error
+        // chunk isTimeout() itself throws — how max_duration exhaustion leaves
+        // here as the generic "did not answer".
         if ($chunk->isTimeout()) {
             $response->cancel();
 
@@ -303,11 +290,9 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
             $this->guardStatus($response->getStatusCode());
         }
 
-        // Symfony's own stream() protocol includes content-free framing chunks
-        // (the isFirst and isLast markers in particular) alongside the real SSE
-        // data — appending their empty content is harmless, but reporting them
-        // to the observer would mean "the body grew" for a chunk that added
-        // nothing.
+        // Symfony's stream() yields content-free framing chunks (isFirst and
+        // isLast in particular); appending their empty content is harmless, but
+        // reporting them to the observer would falsely mean "the body grew".
         $content = $chunk->getContent();
         if ('' !== $content) {
             $reader->consume($content);
@@ -335,11 +320,10 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
     }
 
     /**
-     * Prefer the answer channel; fall back to the reasoning channel only when
-     * it is empty. LM Studio routes some models' whole answer through
-     * reasoning_content and never fills content (#323), and the answer is
-     * recoverable from there — the parser still validates whatever comes back,
-     * so a reply that is only thinking is rejected downstream.
+     * Prefer the answer channel; fall back to the reasoning channel only when it is
+     * empty. LM Studio routes some models' whole answer through reasoning_content and
+     * never fills content (#323), and it is recoverable from there — the parser still
+     * validates whatever comes back, so a reply that is only thinking is rejected.
      */
     private function contentOf(CompletionStreamReader $reader): string
     {
@@ -353,12 +337,11 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
     }
 
     /**
-     * Two bounds, because there are two things worth bounding and one number
-     * cannot serve both. The answer bound follows what this call asked for and
-     * catches a model that will not stop; the retained bound is flat and
-     * catches a body that will not fit in memory. Charging a blocking shape's
-     * buffered reasoning to the first of them reported a working reasoning
-     * model as a runaway (#437 review).
+     * Two bounds, because two things are worth bounding and one number cannot serve
+     * both. The answer bound follows what this call asked for and catches a model that
+     * will not stop; the retained bound is flat and catches a body that will not fit in
+     * memory. Charging a blocking shape's buffered reasoning to the first reported a
+     * working reasoning model as a runaway (#437).
      */
     private function guardRetainedSize(CompletionCallSlot $slot): void
     {
@@ -382,13 +365,11 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
     /**
      * As much of a spoiled reply as anything downstream has any use for.
      *
-     * Clipped here, at the boundary, rather than where it is quoted back. The
-     * whole retained answer is otherwise parsed in full, held across every
-     * retry round of the wave, and — on the dedup path — written into
-     * `recommendation_run.last_invalid_reply` and re-read on each following
-     * tick, all so that the prompt builder can cut it to a couple of kilobytes
-     * at the end. Downstream never wants more than this; `wireBytes()` is what
-     * the debug row keeps for diagnosis.
+     * Clipped here at the boundary, not where it is quoted back. The whole retained
+     * answer is otherwise parsed in full, held across every retry round of the wave, and
+     * — on the dedup path — written into `recommendation_run.last_invalid_reply` and
+     * re-read each tick, all so the prompt builder can cut it to a couple of kilobytes at
+     * the end. `wireBytes()` is what the debug row keeps for diagnosis.
      */
     private function quotableAnswerOf(CompletionCallSlot $slot): string
     {
@@ -415,12 +396,10 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
             'timeout' => $connection->timeouts->firstByteSeconds,
             'max_duration' => $connection->timeouts->wallClockSeconds,
             'max_redirects' => 0,
-            // Capped on the wire, the one size-cap mechanism this codebase has
-            // (ConcurrentFeedFetcher::send(), HtmlPageFetcher, CatalogFaviconFetcher):
-            // a provider answering with gigabytes is refused as the bytes arrive,
-            // rather than truncated into a body that can only fail to parse. The
-            // transport re-reports the aborted download as its own failure, which
-            // readBody() translates back into this domain's refusal.
+            // The codebase's one size-cap mechanism (ConcurrentFeedFetcher::send(),
+            // HtmlPageFetcher, CatalogFaviconFetcher): a gigabyte answer is refused
+            // as bytes arrive, not truncated into an unparseable body; the transport
+            // reports the abort as a failure readBody() translates into a refusal.
             'on_progress' => static function (int $downloaded): void {
                 if ($downloaded > self::MAXIMUM_WIRE_BYTES) {
                     throw new ProviderUnreachableException(sprintf(
@@ -440,11 +419,10 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
         $payload = [
             'model' => $request->model,
             'messages' => $request->messages,
-            // A strict json_schema, not the older json_object: current LM
-            // Studio rejects json_object with a 400, and grammar-constrained
-            // decoding also keeps a weak local model's answer parseable
-            // (#329). The name and schema ride on the request, set by the
-            // phase that built the prompt.
+            // Strict json_schema, not the older json_object: current LM Studio
+            // rejects json_object with a 400, and grammar-constrained decoding
+            // keeps a weak local model's answer parseable (#329). Name and schema
+            // ride on the request, set by the phase that built the prompt.
             'response_format' => [
                 'type' => 'json_schema',
                 'json_schema' => [
@@ -454,18 +432,15 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
                 ],
             ],
             'stream' => true,
-            // Ask for the usage message the stream would otherwise not carry
-            // (#409). Unconditional because this is OpenAI spec, not a vendor
-            // extension — unlike `reasoning` below, which is per-connection
-            // for exactly that reason. OpenRouter documents it as inert; a
-            // plain OpenAI-compatible endpoint sends no usage without it.
+            // Ask for the usage message the stream would otherwise omit (#409).
+            // Unconditional because it is OpenAI spec, not a vendor extension —
+            // unlike `reasoning` below, which is per-connection. OpenRouter treats
+            // it as inert; a plain OpenAI-compatible endpoint sends no usage without it.
             'stream_options' => ['include_usage' => true],
-            // The only guard here that prevents spend rather than
-            // discarding what was already billed: the byte caps and the
-            // timeouts all fire after the provider has generated the
-            // tokens. Sized by the caller from the same reserve the
-            // prompt left room for, so it can never truncate a reply the
-            // prompt legitimately asked for.
+            // The only guard here that prevents spend rather than discarding what
+            // was already billed: byte caps and timeouts all fire after the tokens
+            // are generated. Sized by the caller from the same reserve the prompt
+            // left room for, so it never truncates a reply the prompt asked for.
             'max_tokens' => $request->maxAnswerTokens,
         ];
 

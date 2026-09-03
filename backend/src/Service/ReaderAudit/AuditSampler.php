@@ -9,19 +9,18 @@ use Doctrine\DBAL\Connection;
 
 /**
  * Draws the audit's article sample from one user's subscriptions, stratified so
- * that every subscribed feed is represented: each feed contributes its own
- * shuffled candidates, and the round-robin hands out one article per feed
- * before it hands any feed a second. A plain "ORDER BY random LIMIT 1000" over
- * 31k entries would spend most of the budget on the few feeds that publish most
- * — exactly the feeds whose cleaners are already known to work.
+ * every subscribed feed is represented: each feed contributes its own shuffled
+ * candidates, and the round-robin hands out one article per feed before any
+ * feed gets a second. A plain "ORDER BY random LIMIT 1000" over 31k entries
+ * would spend most of the budget on the few feeds that publish most — exactly
+ * the feeds whose cleaners already work.
  *
- * The shuffle is seeded in PHP rather than by the database, so the same seed
- * draws the same sample on MySQL and SQLite and parallel shards of one run can
- * each recompute the identical list without a shared file. A seed alone is not
- * enough for that: the refresh worker keeps ingesting during a sweep, and a
- * changed candidate set reshuffles into a different sample. So the caller also
- * fixes a cutoff instant, and every shard draws from the entries that existed
- * when the sweep began.
+ * The shuffle is seeded in PHP, not by the database, so the same seed draws
+ * the same sample on MySQL and SQLite and parallel shards can each recompute
+ * the identical list without a shared file. That alone is not enough: the
+ * refresh worker keeps ingesting during a sweep, so the caller also fixes a
+ * cutoff instant, and every shard draws from the entries that existed when
+ * the sweep began.
  */
 final readonly class AuditSampler
 {

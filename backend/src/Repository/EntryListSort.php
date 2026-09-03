@@ -5,16 +5,14 @@ declare(strict_types=1);
 namespace App\Repository;
 
 /**
- * Which instant a keyset-paginated entry list orders by. Every list but the
- * "viewed" one ranks by the entry's publish instant (effectiveDate); the
- * "viewed" list is a reading history and ranks by when the caller opened each
- * entry (the per-caller EntryState.viewedAt).
+ * Which instant a keyset-paginated list orders by. Every list but "viewed"
+ * ranks by publish instant (effectiveDate); "viewed" is a reading history
+ * ranked by when the caller opened it (EntryState.viewedAt).
  *
- * The choice lives in one place because it drives three things that MUST stay
- * in lockstep or pagination silently desyncs from its own cursor: the ORDER BY
- * column, the keyset "before" predicate, and the instant encoded into the next
- * cursor. Splitting them across the repository and the page serializer is
- * exactly how a cursor and its list drift apart.
+ * Kept in one place because it drives three things that must stay in
+ * lockstep or pagination desyncs from its cursor: the ORDER BY column, the
+ * keyset predicate, and the next cursor's instant. Splitting these across
+ * the repository and serializer is how a cursor and its list drift apart.
  */
 enum EntryListSort
 {
@@ -45,11 +43,10 @@ enum EntryListSort
 
     /**
      * The instant of a row for this sort — the value that becomes the next
-     * cursor. For ViewedAt it is EntryState.viewedAt, which the "viewed" view's
-     * `es.isViewed = true` filter guarantees is set: a row cannot reach this
-     * page unviewed, and markViewed() always stamps viewedAt. A null here would
-     * therefore mean the projection and the filter disagree, so it is a fault,
-     * not a case to paper over.
+     * cursor. For ViewedAt it is EntryState.viewedAt, guaranteed set by the
+     * "viewed" view's `es.isViewed = true` filter and by markViewed() always
+     * stamping it. A null here means the projection and filter disagree — a
+     * fault, not a case to paper over.
      */
     public function instantOf(EntryListRow $row): \DateTimeImmutable
     {

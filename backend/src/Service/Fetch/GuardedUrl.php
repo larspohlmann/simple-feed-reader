@@ -19,11 +19,10 @@ final readonly class GuardedUrl
     }
 
     /**
-     * The address override for the HTTP client's `resolve` option, in curl's
-     * CURLOPT_RESOLVE multi-address form. Pinning every validated address (not
-     * only the first) lets the client's happy-eyeballs fall back across the A
-     * and AAAA records, so a host whose IPv4 route is dead still connects over
-     * IPv6. Each address was validated public, so the rebinding pin is unchanged.
+     * The address override for the HTTP client's `resolve` option, curl's
+     * CURLOPT_RESOLVE multi-address form. Pinning every validated address, not
+     * only the first, lets happy-eyeballs fall back across A/AAAA records, so a
+     * host whose IPv4 route is dead still connects over IPv6.
      */
     public function pinnedAddresses(): string
     {
@@ -32,15 +31,12 @@ final readonly class GuardedUrl
 
     /**
      * The `resolve`-option values to try in turn, most-capable first. The first
-     * pins every address so the client's happy-eyeballs races both families —
-     * which already rescues a family that is dead at the TCP connect. The later
-     * pins narrow to one family each, because happy-eyeballs cannot rescue a
-     * family that connects and only then dies: heise's IPv6 route from Strato
-     * completes the TCP handshake and resets during the TLS handshake, so the
-     * client commits to it and never falls back. Trying each family alone lets
-     * the caller re-drive the request over the family that works. A single-family
-     * host has nothing to fall back to, so it yields the one pin only. Every
-     * address was validated public up front, so the rebinding pin is unchanged.
+     * pins every address so happy-eyeballs races both families, rescuing one
+     * that's dead at TCP connect — but not one that connects and only then dies:
+     * heise's IPv6 route from Strato completes the TCP handshake and resets
+     * during TLS, so the client commits to it and never falls back. The later
+     * pins narrow to one family each so the caller can re-drive over the family
+     * that works. A single-family host yields the one pin only.
      *
      * @return non-empty-list<string>
      */

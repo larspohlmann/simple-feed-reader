@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 /**
- * Decodes one raw assistant reply into a JSON array, tolerating the code
- * fence some models wrap around JSON output, and — when the whole reply does
- * not parse — the thinking prose a reasoning model wraps around its answer
- * (#323). Shared by the pick and duplicate parsers so the tolerance exists
- * exactly once.
+ * Decodes one raw assistant reply into a JSON array, tolerating the code fence
+ * some models wrap around JSON, and — when the whole reply does not parse —
+ * the thinking prose a reasoning model wraps around its answer (#323). Shared
+ * by the pick and duplicate parsers so the tolerance exists once.
  */
 final readonly class ModelReplyJsonDecoder
 {
@@ -28,11 +27,10 @@ final readonly class ModelReplyJsonDecoder
     }
 
     /**
-     * The last complete `{...}` in the reply that decodes to an array. LM
-     * Studio routes a reasoning model's answer through the reasoning channel,
-     * where it can arrive wrapped in thinking prose (#323); the answer is the
-     * object the model settled on last. String literals are skipped so a brace
-     * inside a value cannot end an object early.
+     * The last complete `{...}` in the reply that decodes to an array — the
+     * object the model settled on last. LM Studio can route a reasoning answer
+     * through the reasoning channel, wrapped in thinking prose (#323). String
+     * literals are skipped so a brace inside a value cannot end an object early.
      *
      * @return array<mixed>|null
      */

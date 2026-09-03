@@ -11,19 +11,17 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Reads the feeds an HTML page points at.
+ * Reads the feeds an HTML page points at, in two passes — the first to find
+ * anything wins. The strict pass reads the autodiscovery links a
+ * well-behaved page publishes — `<link rel="alternate"
+ * type="application/rss+xml">` and its Atom twin — and its result is exact:
+ * the type attribute names the dialect.
  *
- * Two passes, and the first one that finds anything wins. The strict pass reads
- * the autodiscovery links a well-behaved page publishes — `<link rel="alternate"
- * type="application/rss+xml">` and its Atom twin — and its result is exact: the
- * type attribute names the dialect.
- *
- * The fuzzy pass exists because a large part of the web never got that memo. It
- * runs only when the strict pass found nothing, and it guesses: an `<link
- * rel="alternate">` carrying a vaguer type, or an ordinary `<a>` whose address
- * or label looks like a feed — the RSS icon in a footer. A guess costs no
- * request here; the dialog previews every candidate it is offered, so a wrong
- * guess shows up as an unavailable preview rather than as a bad subscription.
+ * The fuzzy pass runs only when the strict pass found nothing, guessing from
+ * an `<link rel="alternate">` with a vaguer type or an ordinary `<a>` whose
+ * address or label looks like a feed (the RSS icon in a footer). A guess
+ * costs no request here — the dialog previews every candidate, so a wrong
+ * guess shows an unavailable preview, not a bad subscription.
  */
 final readonly class FeedLinkScanner
 {

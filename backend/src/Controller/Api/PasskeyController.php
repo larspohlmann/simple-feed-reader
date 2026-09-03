@@ -26,44 +26,38 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 /**
- * The passkey enrolment, login-options, listing and removal endpoints
- * (#624). Every route except `loginOptions()` requires a bearer token — see
- * the access_control comment in config/packages/security.yaml for why the
- * others need an explicit rule despite living under the otherwise-public
- * `^/api/auth/` prefix, and for why `loginOptions()` is deliberately left
- * out of that rule: a discoverable-credential login has no account to
- * authenticate as until the assertion comes back.
+ * The passkey enrolment, login-options, listing and removal endpoints (#624).
+ * Every route except `loginOptions()` requires a bearer token — see the
+ * access_control comment in config/packages/security.yaml for why the others
+ * need an explicit rule despite the otherwise-public `^/api/auth/` prefix, and
+ * why `loginOptions()` is left out: a discoverable-credential login has no
+ * account to authenticate as until the assertion comes back.
  *
- * `$availability->guard()` gates every action here EXCEPT `delete()` and the
- * unreachable `login()` stub (#624 follow-up): when the instance-wide
- * passkey-sign-in switch is off, or the configured relying party is not
- * valid for the public base URL, registering, listing and requesting a login
- * challenge all refuse with a 403. DELETE stays reachable on purpose — a
- * user with a credential they can no longer use must still be able to remove
- * it, and doing so carries no sign-in risk. The login path itself has no
- * controller action to guard; see AssertionVerifier::verify() for the
- * equivalent enforcement on that side.
+ * `$availability->guard()` gates every action EXCEPT `delete()` and the
+ * unreachable `login()` stub (#624 follow-up): when the instance-wide switch
+ * is off, or the configured relying party is invalid for the public base URL,
+ * registering, listing and requesting a login challenge all refuse with 403.
+ * DELETE stays reachable on purpose — a user with a credential they can no
+ * longer use must still be able to remove it, at no sign-in risk. The login
+ * path has no controller action to guard; see AssertionVerifier::verify()
+ * for the equivalent enforcement.
  *
- * A narrowing worth knowing (review, fix round 1): DELETE only helps a user
- * with a SECOND sign-in method. Every route here needs a bearer token, and a
- * passkey-only account — no password, no linked OAuth identity — has no way
- * to obtain one while sign-in is disabled, since AssertionVerifier's own
- * guard refuses the login that would mint that token. That account cannot
- * reach `delete()` either, and stays stuck until an admin re-enables the
- * toggle. The exemption still stands — it costs nothing and helps everyone
- * it can reach — it just does not reach everyone who might want it.
+ * A narrowing (review, fix round 1): DELETE only helps a user with a SECOND
+ * sign-in method. Every route here needs a bearer token, and a passkey-only
+ * account — no password, no linked OAuth — has no way to obtain one while
+ * sign-in is disabled, since AssertionVerifier's guard refuses the login that
+ * would mint it. That account is stuck until an admin re-enables the toggle.
+ * The exemption still stands — it costs nothing — it just doesn't reach
+ * everyone who might want it.
  *
- * REVIEWER NOTE, worth reading before adding a seventh passkey endpoint: the
- * guard is written out FIVE separate times across this codebase —
- * `registerOptions()`, `register()`, `list()`, `loginOptions()` here, plus
- * `AssertionVerifier::verify()` for the login path — with `delete()`
- * deliberately left out. That per-call-site repetition is the honest
- * encoding given the one intentional exemption; a single shared "every
- * passkey action" wrapper would either have to special-case DELETE anyway or
- * silently start guarding it. But it also means nothing enforces the list —
- * a new endpoint that forgets to call `$availability->guard()` (or
- * `AssertionVerifier`'s, if it bypasses the controller) fails open, not
- * closed. Check this docblock's own count against the endpoint table in
+ * REVIEWER NOTE, before adding a seventh passkey endpoint: the guard is
+ * written out FIVE times — `registerOptions()`, `register()`, `list()`,
+ * `loginOptions()` here, plus `AssertionVerifier::verify()` — with `delete()`
+ * deliberately left out. A shared "every passkey action" wrapper would either
+ * special-case DELETE or silently start guarding it, so the repetition is
+ * intentional; but nothing enforces the list, so a new endpoint that forgets
+ * `$availability->guard()` (or `AssertionVerifier`'s) fails open, not closed.
+ * Check this docblock's count against the endpoint table in
  * `docs/superpowers/specs/2026-08-29-624-passkey-login-design.md` §4.2 when
  * adding one.
  */
@@ -97,12 +91,11 @@ final readonly class PasskeyController
      * each call writes a cache entry.
      *
      * The limiter runs BEFORE the availability guard, deliberately (fix
-     * round 1): swapping the order would let an anonymous caller hammer this
-     * endpoint — which still touches the database on every call — for free
-     * on a disabled instance, since a 403 would fire before any budget was
-     * ever charged. Charging the limiter first means a disabled instance
-     * still 429s an attacker who exceeds the budget, exactly like an enabled
-     * one does.
+     * round 1): the reverse order would let an anonymous caller hammer this
+     * endpoint — which still touches the database every call — for free on a
+     * disabled instance, since the 403 would fire before any budget was
+     * charged. Charging the limiter first means a disabled instance still
+     * 429s an attacker who exceeds the budget, exactly like an enabled one.
      */
     #[Route('/api/auth/passkey/login/options', name: 'api_auth_passkey_login_options', methods: ['POST'])]
     public function loginOptions(Request $request): JsonResponse
@@ -116,11 +109,11 @@ final readonly class PasskeyController
     /**
      * Never executed: PasskeyAuthenticator's own firewall intercepts the
      * request and its injected success/failure handlers write the response
-     * — see that class's docblock. The route exists purely so the firewall's
+     * — see that class's docblock. The route exists only so the firewall's
      * pattern resolves to a real one: RouterListener runs before the
      * firewall (priority 32 vs 8), so with no route here a POST would 404
-     * before PasskeyAuthenticator ever saw it — the same reasoning
-     * AuthController::login() documents for the password equivalent.
+     * before PasskeyAuthenticator ever saw it — same reasoning as
+     * AuthController::login() for the password equivalent.
      */
     #[Route('/api/auth/passkey/login', name: 'api_auth_passkey_login', methods: ['POST'])]
     public function login(): JsonResponse

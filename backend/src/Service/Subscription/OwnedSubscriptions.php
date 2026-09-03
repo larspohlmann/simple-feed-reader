@@ -11,17 +11,16 @@ use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 /**
  * Resolves a request's subscription ids to the caller's own subscriptions.
  *
- * Every endpoint that takes a list of subscription ids needs the same refusal:
- * an id the caller does not own, an id that does not exist, and a duplicate are
- * all the same answer — 422, and nothing written. Three endpoints needed it
- * (reorder, bulk update, bulk unsubscribe), so the rule lives here rather than
- * three times in the controller.
+ * Every endpoint taking a list of subscription ids needs the same refusal: an
+ * id the caller does not own, an id that does not exist, and a duplicate all
+ * get 422, nothing written. Three endpoints needed it (reorder, bulk update,
+ * bulk unsubscribe), so the rule lives here instead of three times over.
  *
- * The count comparison catches all three cases at once: the repository only
- * returns rows the user owns, so a short result means at least one id was
- * foreign or absent — and a repeated id is short too, because `IN (...)`
- * answers a duplicate once. Comparing against the *unique* ids instead would
- * let `[5, 5]` through, which is the bug this replaces.
+ * The count comparison catches all three at once: the repository only returns
+ * rows the user owns, so a short result means an id was foreign or absent —
+ * and a repeated id is short too, since `IN (...)` answers a duplicate once.
+ * Comparing against the *unique* ids instead would let `[5, 5]` through,
+ * which is the bug this replaces.
  */
 final readonly class OwnedSubscriptions
 {

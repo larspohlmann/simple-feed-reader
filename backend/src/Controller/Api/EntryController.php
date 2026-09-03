@@ -55,11 +55,10 @@ final readonly class EntryController
         #[MapQueryParameter] int $limit = EntryQuery::DEFAULT_LIMIT,
         #[MapQueryParameter] bool $unread = false,
     ): JsonResponse {
-        // Validate `view` in-controller (rather than via a MapQueryParameter
-        // regexp filter) so a bad value reports the SAME `validation_error`
-        // problem type as every other invalid field — the client switches on
-        // that type. The match also narrows the plain string to EntryQuery's
-        // literal-union view type for static analysis.
+        // Validate `view` in-controller (not via a MapQueryParameter regexp) so a
+        // bad value reports the SAME `validation_error` problem type as every other
+        // invalid field, which the client switches on. The match also narrows the
+        // string to EntryQuery's literal-union view type for static analysis.
         $view = match ($view) {
             null, 'all' => 'all',
             'unread' => 'unread',

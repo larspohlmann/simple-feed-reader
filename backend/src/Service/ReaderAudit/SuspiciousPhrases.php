@@ -6,19 +6,18 @@ namespace App\Service\ReaderAudit;
 
 /**
  * The wording that betrays page furniture the reader pipeline kept, in the two
- * languages this installation's feeds publish in. Data, deliberately apart from
- * the rule that applies it: the list grows every time a publisher is added, and
- * a table is cheaper to review than a method full of str_contains calls.
+ * languages this installation's feeds publish in. Data, deliberately apart
+ * from the rule that applies it: the list grows every time a publisher is
+ * added, and a table is cheaper to review than a method full of str_contains
+ * calls. Only wording this codebase could act on — a paywalled source was
+ * dropped for the same reason an unreachable page is not reported: a list
+ * full of work nobody can do is a list nobody reads (#744).
  *
- * Only wording this codebase could act on. A paywalled source is not a cleaner
- * bug and was dropped for the same reason an unreachable page is not reported:
- * a list full of work nobody can do is a list nobody reads (#744).
- *
- * Two kinds, and each is confined to the region where it means anything. A wall
- * — consent, JavaScript, bot — counts only on a body that never reaches
- * a paragraph, because a wall IS the absence of the article; inside a real
- * article the same words are its own newsletter fine print. Chrome counts only
- * above the first paragraph: below it, it is the site's tail (#744).
+ * Two kinds, each confined to the region where it means anything. A wall
+ * (consent, JavaScript, bot) counts only on a body that never reaches a
+ * paragraph, because a wall IS the absence of the article; inside a real
+ * article the same words are its own newsletter fine print. Chrome counts
+ * only above the first paragraph — below it, it is the site's tail (#744).
  */
 final readonly class SuspiciousPhrases
 {

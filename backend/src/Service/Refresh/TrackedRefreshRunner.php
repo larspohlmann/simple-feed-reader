@@ -9,25 +9,21 @@ use Psr\Cache\InvalidArgumentException;
 /**
  * Runs one slice and folds it into the run it belongs to.
  *
- * The ONLY place run-wide accounting happens. RefreshRunner is deliberately left
- * alone: it already carries thirteen collaborators, and the CLI and maintenance
- * sweeps — which nothing polls — must not pay for a feature that exists for the
- * polling client.
+ * The ONLY place run-wide accounting happens. RefreshRunner is left alone: it already
+ * carries thirteen collaborators, and the CLI and maintenance sweeps — which nothing
+ * polls — must not pay for a feature that exists for the polling client.
  *
  * Two quirks on the abort path, neither reachable by anything a user sees:
  *
- * - When {@see RefreshReport::aborted()} reports `remaining = 0` (the batch had
- *   started every feed before persistence failed), `advancedBy()` takes
- *   {@see RefreshRunProgress}'s completion branch and the run reads as full even
- *   though it stopped early. This is invisible: the run is over either way, so
- *   the bar unmounts, and the failure alert replaces the counted banner on the
- *   same strip.
- * - `aborted()`'s `remaining` is a lower bound derived from the current batch, at
- *   most `RefreshRunner::BATCH_LIMIT`, not a run-wide count. A 200-feed sweep
- *   that aborts on its very first slice therefore folds in `3 / 50`, not
- *   `3 / 200`. Every later slice is protected by `advancedBy()`'s `max()`,
- *   because the denominator is already established by then — only a first-slice
- *   abort can understate it.
+ * - When {@see RefreshReport::aborted()} reports `remaining = 0` (every feed had
+ *   started before persistence failed), `advancedBy()` takes {@see RefreshRunProgress}'s
+ *   completion branch and the run reads as full though it stopped early — invisible,
+ *   since the failure alert replaces the counted banner either way.
+ * - `aborted()`'s `remaining` is a lower bound from the current batch, at most
+ *   `RefreshRunner::BATCH_LIMIT`, not run-wide: a 200-feed sweep aborting on its first
+ *   slice folds in `3 / 50`, not `3 / 200`. Later slices are protected by
+ *   `advancedBy()`'s `max()` once the denominator is established — only a
+ *   first-slice abort can understate it.
  */
 final readonly class TrackedRefreshRunner
 {

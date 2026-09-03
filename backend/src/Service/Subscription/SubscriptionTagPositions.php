@@ -14,18 +14,18 @@ use Symfony\Contracts\Service\ResetInterface;
  * position, seeded from the database once per tag/user and advanced in
  * memory from there.
  *
- * SubscriptionTagSync::sync() used to ask the repositories for these directly,
- * a MAX(position) query every time. That is correct for a single sync() call
- * followed by its own flush, but BulkSubscriptionUpdater::apply() calls
- * sync() once per subscription and flushes only ONCE after the whole loop —
- * so a repeated MAX() query never sees the rows the earlier iterations just
- * added and keeps returning the same stale maximum. This collaborator is the
- * counters' home: seed once from the repository, then increment in memory,
- * without lengthening sync()'s own signature (CLAUDE.md).
+ * SubscriptionTagSync::sync() used to ask the repositories directly, a
+ * MAX(position) query every time — correct for one sync() call followed by
+ * its own flush, but BulkSubscriptionUpdater::apply() calls sync() once per
+ * subscription and flushes only ONCE after the loop, so a repeated MAX()
+ * query never sees rows the earlier iterations just added and keeps
+ * returning the same stale maximum. This collaborator is the counters' home:
+ * seed once, then increment in memory, without lengthening sync()'s own
+ * signature (CLAUDE.md).
  *
- * Implements ResetInterface so the counters cannot survive into a later
- * request when a worker reuses the PHP process (see OwnedTagsCache for why
- * that assumption does not hold in this app's own test client).
+ * Implements ResetInterface so counters cannot survive into a later request
+ * when a worker reuses the PHP process (see OwnedTagsCache for why that
+ * assumption does not hold in this app's own test client).
  */
 final class SubscriptionTagPositions implements ResetInterface
 {

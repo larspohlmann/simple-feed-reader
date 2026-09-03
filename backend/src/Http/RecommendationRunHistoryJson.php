@@ -9,27 +9,23 @@ use App\Repository\RecommendationRunHistoryRepository;
 use App\Service\Recommendation\HistoryMonth;
 
 /**
- * The wire shape of the run history (#409): the overview card opens on — the
- * account's all-time cost total, one summary per calendar month, and the
- * newest month's first page — and the further month pages it expands into.
+ * The wire shape of the run history (#409): the overview card (the account's
+ * all-time cost total, one summary per calendar month, and the newest month's
+ * first page) and the further month pages it expands into.
  *
- * Fed with the repository's scalar projection rather than with runs: the
- * entity carries the frozen candidate pool, every pick's reason and the last
- * rejected provider reply, and none of that belongs on the path that formats
- * twelve numbers.
+ * Fed with the repository's scalar projection, not runs: the entity carries the
+ * frozen candidate pool, every pick's reason and the last rejected provider
+ * reply, none of which belongs on a path that formats twelve numbers.
  *
- * `durationSeconds` is computed here rather than left to the client, the rule
- * RecommendationRunStatusJson already follows — the client never subtracts
- * timestamps across machines.
- *
- * `status` goes out as the raw wire vocabulary, untranslated, the same
- * convention the #309 debug log records.
+ * `durationSeconds` is computed here, not left to the client (the rule
+ * RecommendationRunStatusJson follows) — the client never subtracts timestamps
+ * across machines. `status` goes out as the raw wire vocabulary, untranslated,
+ * the same convention the #309 debug log records.
  *
  * The two named shapes below are exported so RecommendationRunHistoryView can
- * declare its own return types against them instead of a bare `array`: a key
- * renamed here without a matching update there is then a level-max PHPStan
- * error at the view's call site, not a silent wire break the client
- * discovers.
+ * declare return types against them instead of a bare `array`: a key renamed
+ * here without a matching update there is a level-max PHPStan error at the
+ * call site, not a silent wire break the client discovers.
  *
  * @phpstan-import-type HistoryRow from RecommendationRunHistoryRepository
  * @phpstan-type MonthPagePayload array{

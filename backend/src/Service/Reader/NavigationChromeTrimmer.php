@@ -17,19 +17,16 @@ use Dom\Node;
  * menu sitting in front of the real article.
  *
  * A navigation landmark (<nav>, <header>, role=navigation/banner) anchors the
- * region. From that anchor the trimmer climbs to the outermost ancestor whose
- * text is still link-dominated — the header container — and removes it whole,
- * so the logo and search widget beside the menu go with it. The climb stops at
- * the article body (<main>/<article>) and at <body>, so it never reaches into
- * real prose.
- *
- * A landmark that already sits inside <main>/<article> is in-content — an
- * article's own table of contents — and is left untouched. Runs on the shared
- * document ReaderBodyCleaner owns, before EntrySanitizer strips the roles this
- * step reads.
+ * region: the trimmer climbs from it to the outermost still-link-dominated
+ * ancestor and removes that whole container, so the logo and search widget
+ * beside the menu go with it. The climb stops at the article body
+ * (<main>/<article>) and at <body>, so it never reaches into real prose, and a
+ * landmark already inside <main>/<article> — an article's own table of
+ * contents — is left untouched. Runs on the shared document ReaderBodyCleaner
+ * owns, before EntrySanitizer strips the roles this step reads.
  *
  * A second anchor covers a masthead menu with no landmark at all: a bare
- * <ul>/<ol> of outbound links sitting before the first substantial paragraph
+ * <ul>/<ol> of outbound links before the first substantial paragraph
  * (Dissent, Democracy Now). The same link-dominated climb and content-body
  * guard apply.
  */

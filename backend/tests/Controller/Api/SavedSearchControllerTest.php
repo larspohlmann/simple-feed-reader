@@ -95,7 +95,6 @@ final class SavedSearchControllerTest extends ApiTestCase
         self::assertSame([$entry->getId()], $list['savedSearches'][0]['unreadEntryIds']);
         self::assertSame(0, $list['savedSearches'][0]['position']);
 
-        // Delete.
         $client->request('DELETE', '/api/saved-searches/' . $savedId, server: $headers);
         self::assertResponseStatusCodeSame(204);
 

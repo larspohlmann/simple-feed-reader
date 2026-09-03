@@ -8,10 +8,10 @@ use Psr\Clock\ClockInterface;
 
 /**
  * Wraps the injected PSR clock to hand back a value Doctrine can persist
- * directly: Doctrine's `datetime` type writes the wall-clock value it is
- * given with no timezone conversion of its own, so any non-UTC clock has to
- * be normalised to UTC *before* it reaches an entity (see CLAUDE.md's
- * "Datetimes are stored as naive UTC" gotcha).
+ * directly: Doctrine's `datetime` type writes the wall-clock value with no
+ * timezone conversion, so any non-UTC clock must be normalised to UTC
+ * *before* it reaches an entity (see CLAUDE.md's "Datetimes are stored as
+ * naive UTC" gotcha).
  *
  * One home for what `AttestationVerifier`, `AssertionVerifier` and
  * `PasskeyOffer` each used to carry as their own identical private

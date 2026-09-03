@@ -15,9 +15,9 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * configured AND no administrator exists yet; it self-disables the instant an
  * admin exists, so the endpoint has no standing attack surface.
  *
- * The secret is sourced from the environment — the one configuration channel
- * every cheap Docker host offers — and compared with hash_equals in constant
- * time. On success the caller is handed a JWT so the operator lands logged-in.
+ * The secret is sourced from the environment — the one config channel every
+ * cheap Docker host offers — and compared with hash_equals in constant time.
+ * On success the caller gets a JWT and lands logged-in.
  */
 final readonly class WebAdminSetup
 {

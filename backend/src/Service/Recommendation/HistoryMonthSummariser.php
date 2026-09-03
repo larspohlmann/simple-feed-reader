@@ -5,15 +5,14 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 /**
- * Folds a repository's spend timeline into one HistoryMonth per calendar
- * month, newest first, for the run-history card's collapsible sections
- * (#409).
+ * Folds a repository's spend timeline into one HistoryMonth per calendar month, newest
+ * first, for the run-history card's collapsible sections (#409).
  *
- * Pure data shaping, no persistence: the timeline is already every run the
- * account owns (RecommendationRunHistoryRepository::spendTimeline()), and
- * grouping it here rather than in the database is the tradeoff recorded on
- * that method — DQL has no portable month extraction, and the buckets must
- * be cut in the viewer's timezone while the column holds naive UTC.
+ * Pure data shaping, no persistence: the timeline is already every run the account owns
+ * (RecommendationRunHistoryRepository::spendTimeline()), and grouping it here rather than
+ * in the database is the tradeoff recorded on that method — DQL has no portable month
+ * extraction, and the buckets must be cut in the viewer's timezone while the column holds
+ * naive UTC.
  */
 final readonly class HistoryMonthSummariser
 {
@@ -27,14 +26,12 @@ final readonly class HistoryMonthSummariser
         $totals = [];
 
         foreach ($spendTimeline as $row) {
-            // setTimezone() converts, it does not reinterpret, so this is
-            // only correct because the hydrated value already carries UTC:
-            // Doctrine builds a datetime_immutable in PHP's default zone and
-            // Kernel::boot() pins that to UTC (guarded by KernelTimezoneTest).
-            // Lose that pin and the rows would still be cut correctly — the
-            // window binds explicit-UTC boundaries — while these headers drift
-            // by the host's offset, which is the header-contradicts-its-rows
-            // failure ViewerTimeZone's docblock warns about, from the other side.
+            // setTimezone() converts, it does not reinterpret, so this is correct
+            // only because the hydrated value carries UTC: Doctrine builds it in
+            // PHP's default zone and Kernel::boot() pins that to UTC (KernelTimezoneTest).
+            // Lose the pin and the rows still cut correctly (the window binds
+            // explicit-UTC boundaries), but these headers drift by the host offset —
+            // the header-contradicts-its-rows failure ViewerTimeZone's docblock warns of.
             $month = $row['createdAt']->setTimezone($viewer->zone)->format('Y-m');
             $totals[$month] = $this->foldRowInto($totals[$month] ?? null, $row['costNanoCredits']);
         }

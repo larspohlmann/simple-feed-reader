@@ -11,23 +11,22 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * Sends a guard-validated request and fails over across address families when a
- * family cannot serve the request.
+ * Sends a guard-validated request and fails over across address families
+ * when one cannot serve the request.
  *
- * When a proxy is resolved, the proxied route is attempted first; the pinned
- * direct families exist only as its fallback, and only once direct fallback is
- * on and the failure is one direct can plausibly fix (§CrossFamilyFailover) --
- * a proxy is opted into to hide the real IP, so a transport failure with direct
- * fallback off is terminal rather than silently leaking that IP.
+ * A resolved proxy is attempted first; the pinned direct families are only
+ * its fallback, used when direct fallback is on and the failure is one
+ * direct can plausibly fix (§CrossFamilyFailover) — a proxy hides the real
+ * IP, so a failure with fallback off is terminal, not a silent leak.
  *
- * The client's own happy-eyeballs races the two families only at the TCP
- * connect; once one connects it is committed, so a family that resets during
- * the TLS handshake (heise's IPv6 from Strato) takes the whole request down with
- * no fallback. This sender pins each family in turn and forces the status line to
- * arrive, so both a post-connect transport reset and a route-specific error
- * status (taz.de forbids its IPv6 range from Strato while IPv4 serves 200) fall
- * over to the family that works. The last family's answer stands as it is, so a
- * genuine 4xx/5xx is still reported.
+ * The client's own happy-eyeballs races families only at the TCP connect;
+ * once connected it is committed, so a family resetting during the TLS
+ * handshake (heise's IPv6 from Strato) takes the request down with no
+ * fallback. This sender pins each family in turn and forces the status
+ * line to arrive, so both a post-connect reset and a route-specific error
+ * status (taz.de blocks IPv6 from Strato, IPv4 serves 200) fail over to
+ * the working family — the last answer stands, so a genuine 4xx/5xx is
+ * still reported.
  */
 final readonly class FailoverRequestSender
 {

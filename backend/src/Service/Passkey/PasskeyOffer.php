@@ -11,9 +11,9 @@ use App\Entity\User;
  * and answered by an account, so the client never presents it a second time.
  *
  * Idempotent by design: the offer is a single yes/no moment. A second call —
- * a retried request, a client that fires the answer twice — must not move an
- * already-set timestamp, or a race between two answers could make the
- * "since" marker drift forward on every retry.
+ * a retried request, a client firing the answer twice — must not move an
+ * already-set timestamp, or a race between two answers could drift the
+ * "since" marker forward on every retry.
  */
 final readonly class PasskeyOffer
 {

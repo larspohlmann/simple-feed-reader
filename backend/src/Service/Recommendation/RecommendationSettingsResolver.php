@@ -57,13 +57,12 @@ final readonly class RecommendationSettingsResolver
     }
 
     /**
-     * How many candidates one batch may carry. Read off the connection rather
-     * than offered as a recommendation setting, because it describes what the
-     * endpoint can be trusted with, not what the account likes (#437). It is
-     * the connection as configured that carries it, not the model behind it:
-     * the column survives a model change untouched. No claim means the default
-     * stands. Split off `slow_model` in #445, which now governs timeouts
-     * alone.
+     * How many candidates one batch may carry. Read off the connection, not
+     * offered as a setting, because it describes what the endpoint can be
+     * trusted with, not what the account likes (#437). The connection as
+     * configured carries it, not the model behind it, so the column survives a
+     * model change. No claim means the default. Split off `slow_model` in #445,
+     * which now governs timeouts alone.
      */
     private static function batchCeilingFor(?AiProviderSettings $provider): int
     {

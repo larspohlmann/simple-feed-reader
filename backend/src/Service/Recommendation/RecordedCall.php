@@ -49,15 +49,14 @@ final class RecordedCall implements CompletionStreamObserver
     private ?CompletionUsage $usage = null;
 
     /**
-     * One provider call is billed once. Every settle path — a verdict, a
-     * transport abort, a wave that aborts a call the round already settled —
-     * runs through bankUsage(), and without this flag a call reachable by two
-     * of them would double its own spend. Per-instance on purpose: a retry and
-     * the discarded sibling of an aborted wave are separate RecordedCalls, and
-     * the provider billed each of them (#344). Only set once bankUsage()
-     * actually writes: a settle that finds no usage yet (a transport failure
-     * before the provider's usage message arrived) leaves this false, so a
-     * later settle path on the same instance still gets to bank it.
+     * One provider call is billed once. Every settle path -- a verdict, a transport
+     * abort, a wave that aborts a call the round already settled -- runs through
+     * bankUsage(), and without this flag a call reachable by two of them would double
+     * its own spend. Per-instance on purpose: a retry and the discarded sibling of an
+     * aborted wave are separate RecordedCalls, each billed by the provider (#344). Only
+     * set once bankUsage() actually writes, so a settle that finds no usage yet (a
+     * transport failure before the provider's usage message arrived) leaves this false
+     * for a later settle path to still bank it.
      */
     private bool $usageBanked = false;
 
@@ -129,14 +128,13 @@ final class RecordedCall implements CompletionStreamObserver
     }
 
     /**
-     * The stream died mid-answer: whatever the checkpoints salvaged stays,
-     * stamped with the transport verdict so the panel can say so. The byte
-     * count is what makes that row readable — a call that streamed megabytes
-     * of reasoning without answering is a different story from a provider
-     * that said nothing, and only this number tells them apart (#320). The
-     * transport exception's message is recorded too, so a stalled or failing
-     * run can be diagnosed from the log alone rather than a live tail of the
-     * server's own error output.
+     * The stream died mid-answer: whatever the checkpoints salvaged stays, stamped with
+     * the transport verdict so the panel can say so. The byte count makes that row
+     * readable -- megabytes of reasoning without answering is a different story from a
+     * provider that said nothing, and only this number tells them apart (#320). The
+     * transport exception's message is recorded too, so a stalled or failing run can be
+     * diagnosed from the log alone rather than a live tail of the server's own error
+     * output.
      */
     public function abortAfterTransportFailure(?string $errorDetail): void
     {
@@ -180,16 +178,15 @@ final class RecordedCall implements CompletionStreamObserver
     }
 
     /**
-     * Adds this call's consumption to the run's own totals — with SQL
-     * arithmetic, not read-modify-write: a #344 wave settles several calls
-     * against one run, and two PHP-side increments would silently lose one of
-     * them. Through DBAL rather than the EntityManager for the reason every
-     * write in this class is: the advancer holds other work dirty mid-tick,
-     * and flushing it here would commit that too.
+     * Adds this call's consumption to the run's own totals -- with SQL arithmetic, not
+     * read-modify-write: a #344 wave settles several calls against one run, and two
+     * PHP-side increments would silently lose one of them. Through DBAL rather than the
+     * EntityManager for the reason every write in this class is: the advancer holds other
+     * work dirty mid-tick, and flushing it here would commit that too.
      *
-     * Runs before the debug guard in both callers on purpose. The RecordedCall
-     * exists whether or not the debug switch is on, and a spending record that
-     * only exists with debug on is the defect #409 was filed about.
+     * Runs before the debug guard in both callers on purpose: the RecordedCall exists
+     * whether or not the debug switch is on, and a spending record that only exists with
+     * debug on is the defect #409 was filed about.
      */
     private function bankUsage(): void
     {

@@ -13,14 +13,14 @@ use App\Service\Recommendation\RecommendationPackingSettings;
  *
  * Hand-built for the same reason MeJson is: the entity holds sealed key
  * material, and a serialiser that learned to walk it would put that on the
- * wire. The API key is absent by construction; `apiKeyHint` is the last four
- * characters, which is what lets the settings page say which key is stored.
+ * wire. The API key is absent by construction; `apiKeyHint` is its last four
+ * characters, letting the settings page say which key is stored.
  *
  * `ready` reports what the last successful save proved — an endpoint, a key
- * and a model the provider accepted together. It is not a live health check:
- * a key revoked since then still reads as ready, and the feature that uses it
- * carries that failure. Polling the provider on every /api/me would be the
- * alternative, and it is not worth a round trip per profile read.
+ * and a model the provider accepted together. Not a live health check: a key
+ * revoked since then still reads as ready, and the feature using it carries
+ * that failure. Polling the provider on every /api/me isn't worth a round
+ * trip per profile read.
  */
 final class AiSettingsJson
 {

@@ -34,17 +34,14 @@ class AiProviderSettings
 
     /**
      * Does not collide with RecommendationPromptBuilder::MINIMUM_BATCH_SIZE
-     * (10), even though a configured value can sit below it. That constant
-     * only floors packBatches()'s token-budget-driven early split — it
-     * requires at least 10 candidates in the current batch before an
-     * over-budget line is allowed to start a new one. This value becomes the
-     * hard per-batch ceiling instead (`atCapacity` in packBatches()), which
-     * closes a batch the moment it holds `maximumBatchSize` candidates
-     * regardless of token budget. A configured cap below 10 always hits that
-     * ceiling first, so the token-budget floor never gets a chance to apply —
-     * confirmed by calling packBatches() directly with caps of 5, 7 and 9
-     * against 40 candidates: batches came back sized exactly to the cap
-     * every time (5,5,5,5,5,5,5,5 / 7×5+5 / 9×4+4).
+     * (10), even though a configured value can sit below it. That constant only
+     * floors packBatches()'s token-budget-driven early split (needs 10+
+     * candidates before an over-budget line starts a new batch); this value is
+     * the hard per-batch ceiling instead (`atCapacity` in packBatches()), closing
+     * a batch the moment it holds `maximumBatchSize` candidates regardless of
+     * token budget. A configured cap below 10 always hits that ceiling first, so
+     * the token-budget floor never applies — verified directly: caps of 5, 7, 9
+     * against 40 candidates came back sized exactly to the cap every time.
      */
     public const int MINIMUM_BATCH_SIZE = 5;
 

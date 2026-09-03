@@ -9,20 +9,19 @@ use Dom\HTMLDocument;
 
 /**
  * The URLs a normalised page draws, scanned once from the FetchedPageNormalizer
- * document. There LazyImageSources has already promoted every lazy source to a
- * plain `src` and flattened each <picture> to its <img>, so the scan is a plain
- * `img@src` + `source@srcset` read — no `data-*` digging, which LazyImageSources
- * owns (#684).
+ * document. LazyImageSources has already promoted every lazy source to a plain
+ * `src` and flattened each <picture> to its <img>, so this is a plain
+ * `img@src` + `source@srcset` read — no `data-*` digging, which stays owned by
+ * LazyImageSources (#684).
  *
- * It answers one question for ReaderLeadImage: does the page actually draw the
- * lead photo, or is the og:image a meta-only share-render? A miss only skips the
- * restore, so a URL the scan does not carry is safe by design.
+ * Answers one question for ReaderLeadImage: does the page actually draw the
+ * lead photo, or is the og:image a meta-only share-render? A miss only skips
+ * the restore, so an unmatched URL is safe by design.
  *
- * The ImageIdentity fingerprint of each URL is computed lazily inside draws(),
- * which stops at the first match: the gate is consulted only on the minority of
- * restores where the body already holds another picture, and an image-heavy page
- * (thumbnail rails, ad units) carries many URLs that would otherwise be
- * fingerprinted on every extraction for nothing.
+ * Each URL's ImageIdentity fingerprint is computed lazily inside draws(),
+ * stopping at the first match: the gate is consulted only on the minority of
+ * restores where the body already holds another picture, and an image-heavy
+ * page (thumbnail rails, ad units) would otherwise be fingerprinted for nothing.
  */
 final readonly class PageImageInventory
 {

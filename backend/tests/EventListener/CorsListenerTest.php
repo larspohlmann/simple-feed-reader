@@ -160,8 +160,6 @@ final class CorsListenerTest extends WebTestCase
         self::assertNull($this->client->getResponse()->headers->get('Access-Control-Allow-Origin'));
     }
 
-    // -- helpers ----------------------------------------------------------
-
     private function preflight(string $uri, string $method, string $origin = self::FRONTEND): void
     {
         $this->client->request('OPTIONS', self::ORIGIN . $uri, server: [

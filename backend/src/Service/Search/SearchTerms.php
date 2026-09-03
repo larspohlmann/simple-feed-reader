@@ -22,17 +22,15 @@ final readonly class SearchTerms
     public const int MAX_TERMS = 6;
 
     /**
-     * What counts as whitespace for the mode check, the trim and the term
-     * split alike — one definition, used everywhere in this class. Plain
-     * `\s` is ASCII-only, but the frontend's own trailing-space detection
-     * (`normalizeSearchInput` in `query.ts`) runs on JavaScript's `\s`,
-     * which also matches a no-break space and the other Unicode "space
-     * separator" characters a paste or an autocorrect can leave behind.
-     * `\p{Z}` (the Unicode separator category) closes that gap: without it,
-     * a trailing no-break space reads as whole-word on the client but as
-     * substring here, and — because neither `trim()` nor a plain `\s+`
-     * split would remove or split on it — the character itself survives
-     * into the last term and the search silently matches nothing.
+     * What counts as whitespace for the mode check, trim, and term split alike —
+     * one definition, used everywhere in this class. Plain `\s` is ASCII-only,
+     * but the frontend's trailing-space detection (`normalizeSearchInput` in
+     * `query.ts`) runs on JavaScript's `\s`, which also matches a no-break space
+     * and other Unicode "space separator" characters a paste or autocorrect can
+     * leave behind. `\p{Z}` closes that gap: without it, a trailing no-break
+     * space reads as whole-word on the client but substring here, and since
+     * neither `trim()` nor a plain `\s+` split touches it, the character
+     * survives into the last term and the search silently matches nothing.
      */
     private const string WHITESPACE = '[\s\p{Z}]';
 
@@ -51,21 +49,19 @@ final readonly class SearchTerms
         $trimmed = self::stripSurroundingWhitespace($input);
         self::assertLengthIsUsable($trimmed);
 
-        // A query wrapped in double quotes is one exact phrase — the strongest
-        // signal, so it is read before the trailing-space check and wins when
-        // both are present. An empty phrase (nothing but quotes and whitespace
-        // inside the wrapping pair) is no phrase at all and falls through to
-        // ordinary parsing rather than becoming a search for nothing.
+        // A query wrapped in double quotes is one exact phrase -- the strongest
+        // signal, so it is read before the trailing-space check and wins when both
+        // are present. An empty phrase (only quotes and whitespace inside) is no
+        // phrase at all and falls through to ordinary parsing.
         $phrase = self::phraseWithin($trimmed);
         if ($phrase !== null) {
             return new self([$phrase], isWholeWord: false, isPhrase: true);
         }
 
-        // The mode is a property of the raw input, decided before trimming:
-        // a trailing space is the signal, and trimming would erase it. It is
-        // one flag for the whole query, not a per-term one — a per-term rule
-        // would make every term but the last "whole word" merely by being
-        // followed by a space while typing, which is not what the user meant.
+        // The mode is a property of the raw input, decided before trimming: a
+        // trailing space is the signal, and trimming would erase it. It is one flag
+        // for the whole query, not per-term -- a per-term rule would mark every term
+        // but the last "whole word" just for being followed by a space while typing.
         $isWholeWord = (bool) preg_match('/' . self::WHITESPACE . '\z/u', $input);
 
         return self::split($trimmed, $isWholeWord);

@@ -10,16 +10,13 @@ use Psr\Cache\InvalidArgumentException;
 /**
  * Remembers one run's progress between two of its slices.
  *
- * A cache pool, not a table. The record is two integers describing a run that lasts a
- * couple of minutes and is worthless the moment it ends: an entity, a migration, a CI
- * migration leg and a sweeper for abandoned runs would all be paid for nothing. The
- * TTL is the reaper. If an entry evaporates — a cleared cache, a moved deploy
- * directory — the next slice re-derives a denominator from itself and the bar jumps
- * once, which is the whole cost of losing it.
+ * A cache pool, not a table: the record is two integers for a run that lasts minutes
+ * and is worthless once it ends, so an entity, a migration, and an abandoned-run
+ * sweeper would all be paid for nothing. TTL is the reaper — if an entry evaporates,
+ * the next slice re-derives a denominator and the bar jumps once.
  *
- * The scope is part of the key on purpose. Refreshing one feed while a whole sweep is
- * in flight is a different run with a different denominator, and a shared key would
- * make each corrupt the other.
+ * The scope is part of the key on purpose: refreshing one feed during a whole sweep is
+ * a different run with a different denominator, and a shared key would corrupt both.
  */
 final readonly class RefreshRunStore
 {

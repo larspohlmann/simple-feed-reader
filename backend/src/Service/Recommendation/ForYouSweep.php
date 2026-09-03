@@ -17,28 +17,20 @@ use Psr\Log\LoggerInterface;
  * The scheduled generation of "For you" (#333), shared by the worker's
  * StartDueRecommendationRuns handler and the maintenance cron endpoint.
  *
- * `startDueRuns()` is the worker's half: on a worker-equipped install the
- * ten-second AdvanceRecommendationRuns sweep drives the started runs to the
- * finish, so the worker only needs to start them. `sweepOnce()` is the cron
- * half: a worker-less install has no advance sweep, so one call both starts
- * due runs and advances every active run once. It advances one tick per run,
- * and each tick now sends a bounded wave of concurrent provider calls rather
- * than a single one (#344) — advanceOne() passes TickDriver::Sweep, which
- * RecommendationRunAdvancer::effectiveCap() clamps exactly like a poll tick
- * (`min(cap, POLL_MAX_CONCURRENCY)`, i.e. `min(cap, 2)`): this call, like a
- * browser poll, runs inside a bounded web request (the maintenance cron hits
- * this over HTTP), not inside a worker's own long-lived process. The advancer
- * flushes once the wave resolves, so a request the gateway kills still leaves
- * committed progress and the next call resumes.
+ * `startDueRuns()` is the worker's half — the ten-second AdvanceRecommendationRuns
+ * sweep drives started runs to the finish there, so the worker only starts them.
+ * `sweepOnce()` is the cron half: a worker-less install has no advance sweep, so
+ * one call starts due runs and advances every active run one tick, each tick
+ * sending a bounded wave of concurrent calls via TickDriver::Sweep, clamped by
+ * effectiveCap() like a poll tick because this runs inside a bounded web request,
+ * not a worker's long-lived process (#344). The advancer flushes once the wave
+ * resolves, so a gateway-killed request still leaves committed progress to resume.
  *
- * A bounded request it may be, but while it advances runs it IS the install's
- * driver, and it says so under its own liveness key (#439). It used to mark
- * none: a browser polling the account the sweep was working on then read a
- * held lock with no driver behind it and was told its healthy run had stalled.
- * The key is surrendered the moment the sweep is over, exactly as the drain
- * command surrenders its own, and on the killed request too -- a poll tick
- * between two cron passes must go on driving the run itself, which is the whole
- * point of a worker-less install.
+ * While advancing runs it IS the install's driver, under its own liveness key
+ * (#439) — unmarked, a browser polling the swept account once read a held lock
+ * with no driver behind it and was told its healthy run had stalled. The key is
+ * surrendered when the sweep ends, and on a killed request too, so a poll tick
+ * between cron passes can still drive the run — the point of a worker-less install.
  */
 final readonly class ForYouSweep
 {
@@ -85,23 +77,19 @@ final readonly class ForYouSweep
     }
 
     /**
-     * One pass over the active runs, under this sweep's liveness key, the way
-     * WorkerRunSweep runs its own: marked before each run, because a sweep's
-     * duration is the SUM over its runs and one of them can spend a whole
-     * provider timeout; beating mid-call as well, because a single streamed
-     * call can outlast WorkerPresence::FRESH_SECONDS on its own (#433).
+     * One pass over the active runs, under this sweep's liveness key — like
+     * WorkerRunSweep, marked before each run (a sweep can span a whole provider
+     * timeout, summed over its runs) and beaten mid-call too, since one streamed
+     * call can outlast WorkerPresence::FRESH_SECONDS (#433).
      *
-     * The key is surrendered twice over, because the pass owns it for exactly
-     * as long as it is driving and there are two ways for it to stop driving.
-     * `finally` covers every ending that unwinds the stack. It does NOT cover
-     * the gateway killing the request, which on this install is a routine
-     * ending rather than an exotic one -- Strato caps a web request at 240 s
-     * and /maintenance/tick is what the cron calls -- so a shutdown hook covers
-     * that one. Both are needed: a kill mid-advanceOne() has already written
-     * the key, and leaving it fresh for the rest of
-     * WorkerPresence::FRESH_SECONDS suppresses the very paths that recover the
-     * run, the poll tick (which demotes to a status read) and the drain
-     * spawner (which declines to fork), for sixteen minutes.
+     * The key is surrendered twice: `finally` covers a normal unwind, but not
+     * the gateway killing the request, which is routine here (Strato caps a web
+     * request at 240s, and /maintenance/tick is what the cron calls) — a
+     * shutdown hook covers that case. Both are needed: a kill mid-advanceOne()
+     * has already written the key, and leaving it fresh for FRESH_SECONDS would
+     * suppress the paths that recover the run — the poll tick (demotes to a
+     * status read) and the drain spawner (declines to fork) — for sixteen
+     * minutes.
      */
     private function advanceEveryActiveRunAsTheDriver(): int
     {
@@ -123,23 +111,21 @@ final readonly class ForYouSweep
     }
 
     /**
-     * Registered before the first mark, so there is no instant in which the key
-     * can exist without something registered to take it back. This is the same
-     * net RecommendationRunAdvancer puts under its per-user lock and
-     * RecommendationDrainCommand under its own liveness key, for the same
-     * ending.
+     * Registered before the first mark, so no instant exists where the key
+     * could exist without something registered to take it back — the same net
+     * RecommendationRunAdvancer puts under its per-user lock and
+     * RecommendationDrainCommand under its own liveness key.
      *
-     * Deliberately unguarded against running twice: on every ordinary pass both
-     * this and the `finally` surrender the key, and forgetting a name that is
-     * already forgotten is a documented no-op
+     * Deliberately unguarded against running twice: both this and the
+     * `finally` surrender the key on an ordinary pass, and forgetting an
+     * already-forgotten name is a documented no-op
      * ({@see \App\Repository\WorkerHeartbeatRepository::forget()}). The flag
-     * RecommendationDrainCommand carries buys nothing here, because its hook
+     * RecommendationDrainCommand carries buys nothing here, since its hook
      * also releases a lock.
      *
-     * What still defeats it: a kill that skips PHP's shutdown handlers -- a
-     * SIGKILL, an OOM kill, a crashing extension. The key then ages out over
-     * FRESH_SECONDS, which is the behaviour this hook exists to stop being the
-     * normal case.
+     * What still defeats it: a kill that skips PHP's shutdown handlers
+     * (SIGKILL, OOM, a crashing extension) — the key then ages out over
+     * FRESH_SECONDS, the behaviour this hook exists to stop being normal.
      */
     private function surrenderTheCronSweepKeyIfTheRequestIsKilled(): void
     {
@@ -149,11 +135,10 @@ final readonly class ForYouSweep
     }
 
     /**
-     * Best-effort, and for a different reason in each caller: thrown from the
-     * `finally` it would REPLACE the failure that ended the pass, and thrown
-     * from the shutdown hook it would pile a second fatal on whatever ended the
-     * request. A surrender that fails simply leaves the old behaviour, a key
-     * that ages out.
+     * Best-effort, for a different reason in each caller: thrown from the `finally` it
+     * would REPLACE the failure that ended the pass; thrown from the shutdown hook it
+     * would pile a second fatal on whatever ended the request. A failed surrender simply
+     * leaves the old behaviour, a key that ages out.
      */
     private function surrenderTheCronSweepKey(): void
     {

@@ -11,23 +11,21 @@ use Doctrine\ORM\EntityManagerInterface;
 /**
  * A feed nobody subscribes to is nobody's content: it costs storage, and the
  * refresh run would keep fetching it forever. This is the only place such a
- * feed is deleted, so the immediate path (the last unsubscribe, a user
- * deletion) and the sweep cannot drift apart.
+ * feed is deleted, so the immediate path (last unsubscribe, user deletion)
+ * and the sweep cannot drift apart.
  *
- * The no-subscriber condition is re-checked INSIDE the DELETE rather than
- * trusted from the preceding SELECT. Between selecting a candidate and
- * deleting it, another user can subscribe; without the guard that subscription
- * row would be silently taken by `subscription.feed_id`'s ON DELETE CASCADE —
- * a lost subscription, which is far worse than a feed that survives one sweep.
- * Correlating against `subscription` (a different table from the DELETE
- * target) is legal on both MySQL and SQLite.
+ * The no-subscriber condition is re-checked INSIDE the DELETE, not trusted
+ * from the preceding SELECT: another user could subscribe in between, and
+ * without the guard that subscription row would be silently taken by
+ * `subscription.feed_id`'s ON DELETE CASCADE — a lost subscription, far worse
+ * than a feed surviving one sweep. Correlating against `subscription` (a
+ * different table from the DELETE target) is legal on both MySQL and SQLite.
  *
  * The feed's entries and their read state follow through the FK cascade on
  * `entry.feed_id` and `entry_state.entry_id`.
  *
  * Bulk DQL bypasses the unit of work, so a Feed the caller still holds is
- * stale once this returns. Callers pass an id and must not touch that entity
- * afterwards.
+ * stale once this returns; pass an id and don't touch the entity afterwards.
  */
 final readonly class OrphanedFeedReclaimer
 {

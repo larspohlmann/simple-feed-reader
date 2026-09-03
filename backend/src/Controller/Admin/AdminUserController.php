@@ -87,10 +87,9 @@ final readonly class AdminUserController
         $user = $this->users->getById($id);
         $userId = (int) $user->getId();
 
-        // Loaded once and threaded through every mapper below, rather than
-        // re-read per section: findForUserWithTags() is this endpoint's heaviest
-        // query (the subscription x tag join set), and this is the one screen
-        // that loads a whole library. See
+        // Loaded once and threaded through every mapper below, not re-read per
+        // section: findForUserWithTags() is this endpoint's heaviest query (the
+        // subscription x tag join) and this screen loads a whole library. See
         // AdminUserControllerTest::testTheDetailListsCostTheSameNumberOfQueriesHoweverManySubscriptionsAndTagsExist.
         $subscriptions = AdminUserJson::positionOrdered($this->subscriptions->findForUserWithTags($userId));
         $tags = $this->tags->findForUser($userId);

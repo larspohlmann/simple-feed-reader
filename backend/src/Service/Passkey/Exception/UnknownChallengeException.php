@@ -8,10 +8,10 @@ use App\Exception\ApiException;
 
 /**
  * The handle presented to PasskeyChallengeStore::consume() is not redeemable:
- * never issued, already redeemed, or past its five-minute lifetime.
- * Collapsed into a single case on purpose — a caller who could tell "expired"
- * from "already used" from "never existed" could use the distinction to probe
- * for live handles, the same reasoning OAuthStateStore applies to `state`.
+ * never issued, already redeemed, or past its five-minute lifetime. Collapsed
+ * into a single case on purpose — telling "expired" from "already used" from
+ * "never existed" apart would let a caller probe for live handles, the same
+ * reasoning OAuthStateStore applies to `state`.
  */
 final class UnknownChallengeException extends ApiException
 {

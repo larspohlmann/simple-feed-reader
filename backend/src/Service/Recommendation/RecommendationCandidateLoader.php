@@ -16,19 +16,15 @@ use Random\Engine\Mt19937;
 use Random\Randomizer;
 
 /**
- * Loads the pool of unread candidates the recommendation prompt picks from,
- * and re-resolves a checkpointed batch of entry ids back to prompt lines.
+ * Loads the pool of unread candidates the recommendation prompt picks from, and
+ * re-resolves a checkpointed batch of entry ids back to prompt lines.
  *
- * Both stay scoped to feeds the reader subscribes to — the same subscription
- * gate EntryRepository::rowQueryBuilder applies, including the per-user
- * customTitle override — because both render lines for the same prompt: a
- * retried batch must name a feed the same way the first attempt did.
- * linesForIds() drops only the unread predicate, so a resumed run can retry
- * its exact snapshot batch even for an entry the reader has since read.
- * It keeps the Subscription join, so an entry whose feed the reader has
- * since unsubscribed from still drops out with it, same as everywhere else
- * in the app; only outright deletion of the entry itself is special-cased
- * (silently dropped from the result rather than failing the batch).
+ * Both share EntryRepository::rowQueryBuilder's subscription gate, including the per-user
+ * customTitle override, so a retried batch names feeds as the first attempt did.
+ * linesForIds() drops only the unread predicate, so a resumed run can retry its exact
+ * snapshot even for an entry since read; it keeps the Subscription join, so an unsubscribed
+ * feed still drops the entry. Only outright deletion is special-cased: silently dropped
+ * rather than failing the batch.
  */
 final readonly class RecommendationCandidateLoader
 {
@@ -37,13 +33,11 @@ final readonly class RecommendationCandidateLoader
     }
 
     /**
-     * Candidates, excluding anything the reader has already favorited,
-     * kept, or viewed, in feeds the reader subscribes to, and no older than
-     * the request's window (#386). Read (hidden) entries stay eligible.
-     * The newest $request->poolSize of those are
-     * selected, then returned in a randomized order seeded by
-     * $request->orderSeed, so batches sample the pool rather than cluster by
-     * recency (#344). The same seed always produces the same order.
+     * Candidates, excluding anything the reader has favorited, kept, or viewed, in feeds
+     * the reader subscribes to, no older than the request's window (#386). Read (hidden)
+     * entries stay eligible. The newest $request->poolSize are returned in a randomized
+     * order seeded by $request->orderSeed, so batches sample the pool rather than cluster
+     * by recency (#344); the same seed always produces the same order.
      *
      * @return list<PromptLine>
      */
@@ -51,23 +45,12 @@ final readonly class RecommendationCandidateLoader
     {
         $qb = $this->candidateQueryBuilder($userId)
             ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
-            // The candidate pool deliberately applies NO read/unread filter:
-            // neither the per-entry isHidden flag nor the subscription's
-            // markedReadUntil watermark. A reader who has read (or bulk
-            // "marked all read") a feed may still want its entries
-            // recommended, and excluding them emptied the pool the moment the
-            // reader caught up — which finished the run with zero picks. Only
-            // the reader's explicit per-entry history is excluded below.
-            // This is the negation of what RecommendationHistoryLoader's
-            // FAVORITES/KEPT/VIEWED sections contain -- a future change to
-            // what counts as reader history there must update both.
-            // Favorited, kept, and viewed entries are the reader's history —
-            // they already appear in the prompt's FAVORITES/KEPT/VIEWED
-            // sections, so scoring them again as fresh candidates would
-            // re-recommend what the reader has already acted on. es is a
-            // LEFT JOIN, so an entry with no state row (never interacted
-            // with) must stay a candidate — hence the null-safe OR on each
-            // flag.
+            // No read/unread filter (isHidden flag, markedReadUntil watermark): excluding
+            // caught-up entries emptied the pool and zeroed the run. Only per-entry history
+            // is excluded -- favorited/kept/viewed entries already fill the prompt's
+            // FAVORITES/KEPT/VIEWED sections, so re-scoring them re-recommends what the
+            // reader acted on; a change there must update both. es is a LEFT JOIN, so a
+            // stateless entry stays a candidate, hence the null-safe OR on each flag.
             ->andWhere(
                 '(es.isFavorite = :notInteracted OR es.isFavorite IS NULL)'
                 . ' AND (es.isKept = :notInteracted OR es.isKept IS NULL)'
@@ -124,11 +107,10 @@ final readonly class RecommendationCandidateLoader
     }
 
     /**
-     * Counts the present entries among $entryIds and the date span they cover,
-     * in one aggregate query scoped through the SAME subscription gate the
-     * candidate lines use — so a pruned or unsubscribed id drops out of the
-     * total and the range alike, consistent with the lines the model sees.
-     * Returns null when the id set resolves to nothing.
+     * Counts the present entries among $entryIds and the date span they cover, in one
+     * aggregate query scoped through the SAME subscription gate the candidate lines use —
+     * so a pruned or unsubscribed id drops out of the total and the range alike. Returns
+     * null when the id set resolves to nothing.
      *
      * @param list<int> $entryIds
      */
@@ -190,11 +172,10 @@ final readonly class RecommendationCandidateLoader
     }
 
     /**
-     * The joined 'f' select exists to eagerly fetch the feed in the same
-     * query rather than lazy-loading it per row; because it is reachable via
-     * a to-one association from the root 'e', Doctrine folds it into the
-     * graph instead of giving it its own row index — only the Entry root and
-     * the optional scalar customTitle appear as row keys.
+     * The joined 'f' select eagerly fetches the feed in the same query rather than
+     * lazy-loading it per row; because it is reachable via a to-one association from the
+     * root 'e', Doctrine folds it into the graph instead of giving it its own row index —
+     * only the Entry root and the optional scalar customTitle appear as row keys.
      *
      * @param array<array-key, mixed> $row a mixed DQL result: [0 => Entry, customTitle: ?string]
      */

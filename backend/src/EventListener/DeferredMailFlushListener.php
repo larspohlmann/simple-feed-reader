@@ -13,19 +13,15 @@ use Symfony\Component\HttpKernel\Event\TerminateEvent;
 /**
  * Flushes DeferredMailer once the work the user is waiting on is finished.
  *
- * kernel.terminate is the HTTP hook. The Runtime component sends the response,
- * calls fastcgi_finish_request() (or falls back to closing output buffers and
- * flushing), and only then calls Kernel::terminate — so by the time this runs
- * the client already has its bytes and the SMTP round trip is outside anything
- * it can time. Crucially, terminate is unconditional: there is no branch in
- * which the response is sent and terminate is skipped, so deferring cannot
- * silently drop a verification mail.
+ * kernel.terminate is the HTTP hook: the Runtime component sends the response,
+ * calls fastcgi_finish_request() (or closes/flushes output buffers), and only
+ * then calls Kernel::terminate — so the client already has its bytes and the
+ * SMTP round trip is outside anything it can time. terminate is unconditional,
+ * so deferring cannot silently drop a verification mail.
  *
- * console.terminate is the other half, and it is not hypothetical: kernel
- * terminate never fires for CLI, so any command that ends up sending account
- * mail — an admin approval command, a maintenance script — would otherwise
- * queue it into a DeferredMailer that nothing ever drains. Covering both exits
- * means the queue is drained on every path that has one.
+ * console.terminate covers the other half: kernel.terminate never fires for CLI,
+ * so a command sending account mail (admin approval, a maintenance script) would
+ * otherwise queue into a DeferredMailer nothing drains.
  */
 #[AsEventListener(event: TerminateEvent::class, method: 'onKernelTerminate')]
 #[AsEventListener(event: ConsoleTerminateEvent::class, method: 'onConsoleTerminate')]

@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 /**
- * One batch of the frozen plan taking part in a provider wave (#344): its
- * position in the plan, its snapshot-order entry ids, and the prompt lines
- * those ids still resolve to. A batch whose every entry was pruned since the
- * snapshot has an empty `linesById`, and resolves as an empty winner set with
- * no provider call — the per-batch form of providerTick's all-pruned
- * short-circuit.
+ * One batch of the frozen plan in a provider wave (#344): its plan position,
+ * its snapshot-order entry ids, and the prompt lines those ids still resolve
+ * to. A batch pruned to nothing since the snapshot has an empty `linesById` and
+ * resolves as an empty winner set with no provider call — the per-batch form of
+ * providerTick's all-pruned short-circuit.
  */
 final readonly class WaveBatch
 {

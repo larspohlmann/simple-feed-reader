@@ -42,15 +42,14 @@ class UserRepository extends ServiceEntityRepository implements UserLoaderInterf
      *
      * The Doctrine `entity` provider's `property: email` option queries the
      * submitted identifier verbatim. Since addresses are stored normalised,
-     * that would mean someone who registered as `bob@` and typed `Bob@` at the
-     * login form got a bare 401 with nothing to explain it — a worse bug than
-     * the duplicate-account one normalisation set out to fix, and one that
-     * would surface only for users whose keyboard or mail client capitalises
-     * for them.
+     * someone who registered as `bob@` and typed `Bob@` would get a bare 401
+     * with no explanation — a worse bug than the duplicate-account one
+     * normalisation set out to fix, and one that would only surface for users
+     * whose keyboard or mail client capitalises for them.
      *
      * Dropping `property` from security.yaml makes EntityUserProvider delegate
-     * here instead, so login, JWT-driven reloads and every other provider
-     * lookup share the entity's normalisation rather than reimplementing it.
+     * here instead, so login, JWT-driven reloads and every other lookup share
+     * the entity's normalisation rather than reimplementing it.
      */
     public function loadUserByIdentifier(string $identifier): ?UserInterface
     {
@@ -105,15 +104,14 @@ class UserRepository extends ServiceEntityRepository implements UserLoaderInterf
     }
 
     /**
-     * The throwaway accounts the e2e suites leave behind. The backend suite
-     * mints `e2e-…@example.com` and the Playwright onboarding journey registers
-     * `onboarding-…@example.com`, and neither removes its own rows — so the dev
-     * database accumulates them run after run (#184). Both patterns end in
-     * `@example.com`, so a real address can never match.
-     *
-     * $protectedAdminEmail is excluded by name: the seeded admin shares the
-     * `e2e-` prefix but the suites log in with it, so it is a fixture to keep,
-     * not litter to collect.
+     * The throwaway accounts the e2e suites leave behind: the backend suite
+     * mints `e2e-…@example.com`, the Playwright onboarding journey
+     * `onboarding-…@example.com`, and neither cleans up its own rows, so the
+     * dev database accumulates them run after run (#184); both patterns end
+     * in `@example.com`, so a real address can never match.
+     * $protectedAdminEmail is excluded by name — the seeded admin shares the
+     * `e2e-` prefix but the suites log in with it, so it is a fixture to
+     * keep, not litter to collect.
      *
      * @return list<User>
      */
@@ -143,16 +141,15 @@ class UserRepository extends ServiceEntityRepository implements UserLoaderInterf
      * recipient, so active status gates the list the same way the firewall
      * gates the admin API.
      *
-     * The role check is done in PHP rather than in the query on purpose. `roles`
-     * is a portable JSON-as-text column on both SQLite (tests) and MySQL (prod),
-     * so a portable role query would be a `LIKE` that STILL needs this same
-     * in-PHP recheck to reject a `ROLE_ADMINISTRATOR` substring. This loads the
-     * whole active userbase to pick out the handful of admins, which is the real
-     * cost — acceptable because a queue-entry is a rare event (a human approves
-     * every account, so there is no growth engine driving the active set; see
-     * findForAdminList) and this runs off the request's critical path. If that
-     * userbase ever outgrows memory, a `LIKE '%ROLE_ADMIN%'` prefilter narrows
-     * the hydration set while keeping the recheck.
+     * The role check runs in PHP, not the query: `roles` is portable
+     * JSON-as-text on both SQLite (tests) and MySQL (prod), so a portable
+     * `LIKE` would still need this same recheck to reject a
+     * `ROLE_ADMINISTRATOR` substring. Loading the whole active userbase to
+     * pick out a handful of admins is the real cost, acceptable since a
+     * queue entry is rare (every account passes through a human; see
+     * findForAdminList) and this runs off the request's critical path. If
+     * the userbase outgrows memory, a `LIKE '%ROLE_ADMIN%'` prefilter
+     * narrows hydration while keeping the recheck.
      *
      * @return list<User>
      */
@@ -209,21 +206,21 @@ class UserRepository extends ServiceEntityRepository implements UserLoaderInterf
     }
 
     /**
-     * How many administrators can actually act right now — the count the
-     * last-admin guard (AccountDeleter::ensureNotTheLastAdmin()) needs.
+     * How many administrators can actually act right now — the count
+     * AccountDeleter::ensureNotTheLastAdmin() needs.
      *
      * Deliberately status-aware, unlike hasAnyAdmin(): that method protects a
-     * different invariant (whether first-run setup must stay closed) and a
-     * suspended admin still satisfies it, by design, so a hijacker cannot
-     * re-open setup by getting the sole admin suspended. This method instead
-     * protects "someone can act", and a suspended admin cannot act — nothing
-     * short of shell access can flip their status back, since `approve` sits
-     * behind ROLE_ADMIN on `^/api/admin/`. Counting all statuses here would
-     * let one admin suspend a co-admin and then delete their own account,
-     * leaving the instance with a suspended admin nobody can reinstate.
+     * different invariant (first-run setup must stay closed), and a suspended
+     * admin still satisfies it by design, so a hijacker cannot re-open setup
+     * by getting the sole admin suspended. This method protects "someone can
+     * act" — a suspended admin cannot, since nothing short of shell access
+     * flips their status back and `approve` sits behind ROLE_ADMIN on
+     * `^/api/admin/`. Counting all statuses would let one admin suspend a
+     * co-admin, then delete their own account, leaving a suspended admin
+     * nobody can reinstate.
      *
      * The LIKE narrows the hydration set but STILL needs the in-PHP recheck to
-     * reject a `ROLE_ADMINISTRATOR` substring match — same reasoning as
+     * reject a `ROLE_ADMINISTRATOR` substring — same reasoning as
      * findActiveAdmins() and hasAnyAdmin().
      */
     public function countActiveAdmins(): int

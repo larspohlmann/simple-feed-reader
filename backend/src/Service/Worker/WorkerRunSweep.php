@@ -20,22 +20,22 @@ use Psr\Log\LoggerInterface;
  * the sweeping worker's liveness, advance each run once at TickDriver::Worker
  * behind the per-run error ladder, and leave the identity map clean. Shared
  * by the worker's ten-second AdvanceRecommendationRuns firing and the
- * on-demand drain command -- both ARE the worker regime, which is why
- * liveness is marked here. ForYouSweep::sweepOnce() is not a third caller of
- * this: the cron sweep advances at TickDriver::Sweep, which is clamped like a
- * poll because it runs inside a bounded web request, so it drives its own pass.
+ * on-demand drain command — both ARE the worker regime, which is why liveness
+ * is marked here. ForYouSweep::sweepOnce() is not a third caller: the cron
+ * sweep advances at TickDriver::Sweep, clamped like a poll because it runs
+ * inside a bounded web request, so it drives its own pass.
  *
- * Since #439 that pass keeps the same liveness bookkeeping this one does --
- * arm the mid-call heartbeat, mark before each run, disarm on the way out --
- * so those four lines now exist twice, and they are meant to: the two classes
- * agree on what a driver is and still disagree on the regime. Twice is not the
- * third occurrence this project extracts on, and the extraction would cost
- * ForYouSweep a ninth collaborator to spare it four lines. What the two do
- * around them is not shared at all: this one marks even with nothing to do and
- * clears the identity map, while the cron pass surrenders its key -- from a
- * shutdown hook as well, because a killed request is its normal ending.
+ * Since #439 that pass keeps the same liveness bookkeeping this one does —
+ * arm the mid-call heartbeat, mark before each run, disarm on the way out —
+ * so those four lines exist twice, deliberately: the two classes agree on
+ * what a driver is and still disagree on the regime. Twice is not the third
+ * occurrence this project extracts on, and extracting would cost ForYouSweep
+ * a ninth collaborator to spare four lines. What the two do around them is
+ * not shared at all: this one marks even with nothing to do and clears the
+ * identity map, while the cron pass surrenders its key — from a shutdown hook
+ * too, since a killed request is its normal ending.
  *
- * Which regime is sweeping is the caller's business, not this class's, so the
+ * Which regime is sweeping is the caller's business, not this class's: the
  * caller names its own RecommendationDriverKind rather than this class
  * picking a heartbeat key.
  */
@@ -78,23 +78,20 @@ final readonly class WorkerRunSweep
             }
 
             foreach ($activeRuns as $run) {
-                // Before each run, because a sweep's duration is the SUM over
-                // its runs and one run can spend a whole provider timeout.
-                // Marking only once per sweep let the heartbeat go stale
-                // mid-sweep, and the client then took the healthy worker for
-                // a dead one (#311 final review, Critical 2).
+                // Before each run, because a sweep's duration is the SUM over its
+                // runs and one run can spend a whole provider timeout. Marking only
+                // once per sweep let the heartbeat go stale mid-sweep, and the
+                // client took the healthy worker for a dead one (#311).
                 $this->presence->mark($kind);
                 $this->advanceOne($run);
                 ++$attemptedRuns;
             }
         } finally {
-            // A long-running caller accumulates managed entities across
-            // sweeps; the identity map is per-sweep state, not process
-            // state. `finally` rather than a plain trailing call, so this
-            // still runs even if something above ever escapes advanceOne()'s
-            // own floor (#311 fix round 2) -- the identity map must never be
-            // left dirty for the *next* sweep just because this one had a
-            // run go wrong.
+            // The identity map is per-sweep state, not process state: a
+            // long-running caller accumulates managed entities across sweeps.
+            // `finally`, not a trailing call, so this still runs even if
+            // something escapes advanceOne()'s own floor (#311 fix round 2) --
+            // the map must never be left dirty for the *next* sweep.
             $this->entityManager->clear();
             $this->heartbeat->sweepEnded();
         }
@@ -103,17 +100,16 @@ final readonly class WorkerRunSweep
     }
 
     /**
-     * The typed AI-provider cases are handled by exception type alone --
-     * neither needs the run passed back out, because each case already
-     * knows everything it needs to do. AiNotConfiguredException and
-     * ApiKeyUnreadableException are no longer classified here at all: the
-     * shared tick both drivers call (RecommendationRunAdvancer::tick(),
-     * #311 fix) already failed and flushed the run before rethrowing, so
-     * there is nothing left to record. That failure recording used to live
-     * here too, split into "which failure to record" (classifyFailure) and
-     * "record it"; duplicating that classification in only one driver is
-     * exactly what left a poll-only install's run stuck forever, so it now
-     * lives in the one place both drivers go through.
+     * The typed AI-provider cases are handled by exception type alone — each
+     * already knows what to do, so neither needs the run passed back out.
+     * AiNotConfiguredException and ApiKeyUnreadableException are no longer
+     * classified here: the shared tick both drivers call
+     * (RecommendationRunAdvancer::tick(), #311 fix) already failed and
+     * flushed the run before rethrowing. That failure recording used to live
+     * here too, split into "which failure" (classifyFailure) and "record it";
+     * duplicating the classification in only one driver is exactly what left
+     * a poll-only install's run stuck forever, so it now lives in the one
+     * place both drivers go through.
      */
     private function advanceOne(RecommendationRun $run): void
     {
@@ -131,11 +127,10 @@ final readonly class WorkerRunSweep
                 'exception' => $e,
             ]);
         } catch (\Throwable $e) {
-            // The floor beneath every case above: nothing that goes wrong
-            // advancing one run may ever abort the sweep for every run
-            // sorted after it. Logged at error level because, unlike the
-            // typed cases above, nothing here already recorded the failure
-            // anywhere else.
+            // The floor beneath every case above: nothing that goes wrong advancing
+            // one run may abort the sweep for the runs sorted after it. Logged at
+            // error level because, unlike the typed cases above, nothing here has
+            // recorded the failure anywhere else.
             $this->logger->error('Recommendation sweep: unexpected failure advancing a run.', [
                 'runId' => $run->getId(),
                 'exception' => $e,

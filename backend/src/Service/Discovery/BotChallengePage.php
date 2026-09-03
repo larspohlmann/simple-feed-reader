@@ -8,16 +8,15 @@ namespace App\Service\Discovery;
  * Recognises the page a bot gate serves in place of the site.
  *
  * Such a gate refuses with a success status — SiteGround answers 202 — so
- * nothing in the response line distinguishes "you may not have this" from "here
- * is your page". Only the body does, and discovery has to tell the two apart:
- * otherwise a user is told that an address holds no feed while it serves one to
+ * nothing in the response line distinguishes "you may not have this" from
+ * "here is your page"; only the body does, and telling them apart matters:
+ * otherwise a user is told an address holds no feed while it serves one to
  * every client the gate trusts (#424).
  *
- * Recognition stays deliberately narrow. A page that merely names the path is
- * still a page, and the cost of a false positive is a subscription refused for
- * a site that would have worked — so a challenge is only a challenge when it
- * also carries the redirect that takes the browser to the captcha. Other
- * vendors get their own case here once one is actually observed; guessing at
+ * Recognition stays narrow: a page merely naming the path is still a page,
+ * and a false positive costs a subscription refused for a site that would
+ * have worked — so a challenge only counts when it also carries the redirect
+ * to the captcha. Other vendors get their own case once observed; guessing
  * their markup would trade this issue for the opposite one.
  */
 final readonly class BotChallengePage

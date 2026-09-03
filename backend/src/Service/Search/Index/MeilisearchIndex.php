@@ -14,25 +14,20 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * The one class in this codebase that knows Meilisearch's wire format. Talks
  * to it as a plain JSON API over HttpClientInterface (see
  * Service/Recommendation/OpenAiCompatibleChatClient for the same pattern
- * against a different engine) rather than the vendor SDK, so the whole surface
- * this class needs — five endpoints — stays inspectable and testable with
- * MockHttpClient instead of pulled in behind a PSR-18 client the SDK would
- * discover on its own.
+ * against a different engine) rather than the vendor SDK, so its whole surface
+ * — five endpoints — stays inspectable and testable with MockHttpClient
+ * instead of pulled in behind a PSR-18 client the SDK would discover on its own.
  *
- * Every write Meilisearch accepts answers 202 with an enqueued task and does
- * the actual indexing afterwards (confirmed by probe, see
- * `docs/meilisearch-wire-format.md`) — this class deliberately does NOT poll
- * `GET /tasks/{taskUid}` for any of them.
- * SearchIndexWriter's methods return void precisely because nothing here
- * reports back whether the write has actually landed: an ingest-time call
- * (EntryIndexer, Task 6) is a side effect of storing an entry that must never
- * turn a refresh into a poll loop over the search engine's queue, and it
- * already has a durable source of truth to repair from —
- * `app:search:reindex` — if the write is ever lost. A caller that genuinely
- * needs to know a rebuild finished (the reindex command itself) is exactly
- * that repair command, which this task does not build; it can poll the task
- * queue directly if it ever needs to, without this adapter's ingest-time
- * callers paying for it.
+ * Every write Meilisearch accepts answers 202 with an enqueued task and indexes
+ * afterwards (confirmed by probe, see `docs/meilisearch-wire-format.md`); this
+ * class deliberately does NOT poll `GET /tasks/{taskUid}`. SearchIndexWriter's
+ * methods return void precisely because nothing here reports back whether a
+ * write landed: an ingest-time call (EntryIndexer) is a side effect of storing
+ * an entry that must never turn a refresh into a poll loop over the queue, and
+ * `app:search:reindex` is the durable repair path if a write is lost. A caller
+ * that genuinely needs to know a rebuild finished would be that repair command
+ * itself, which can poll the task queue directly without ingest-time callers
+ * paying for it.
  */
 final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexWriter
 {
@@ -47,37 +42,31 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
     private const float TIMEOUT_SECONDS = 3.0;
 
     /**
-     * Sentinel highlight delimiters, not `<mark>`/`</mark>`: an article's own
-     * text can legitimately contain a literal "<mark>" (a copy-pasted HTML
-     * snippet in a feed body, for instance), and if it did, highlightedWordsIn()
-     * would either miss a real match or invent one from someone else's markup.
-     * These bracket-and-colon sequences are not producible by anything Meilisearch
-     * indexes as searchable text (title/summary are plain text — see
-     * IndexedEntry) and are cheap to prove absent: PlainText::from() runs
-     * strip_tags() before either field reaches this class, so no upstream
-     * value can carry them in either. Distinct open/close strings (rather than
-     * a single symmetric tag) let the extraction regex require both ends
-     * before it treats anything as a match.
+     * Sentinel highlight delimiters, not `<mark>`/`</mark>`: an article can
+     * legitimately contain a literal "<mark>" (copy-pasted HTML in a feed body),
+     * which would make highlightedWordsIn() miss a real match or invent one from
+     * someone else's markup. These bracket-and-colon sequences can't come from
+     * Meilisearch's indexed text — PlainText::from() strips tags before either
+     * field reaches this class. Distinct open/close strings, not a single
+     * symmetric tag, let the extraction regex require both ends before matching.
      */
     private const string HIGHLIGHT_START = '[[sfr:hl]]';
     private const string HIGHLIGHT_END = '[[/sfr:hl]]';
 
     /**
      * The wire shape measured against the running engine — see
-     * `docs/meilisearch-wire-format.md` for the probed requests and
-     * responses this is built from.
+     * `docs/meilisearch-wire-format.md` for the probed requests this is built from.
      *
      * `searchableAttributes` covers every field #432 asks to be searchable —
-     * title, summary, the plain-text content, and the feed title — which is
-     * the ticket's full-content-matching goal: a word appearing only in an
-     * article body must find something, not nothing.
+     * title, summary, plain-text content, and feed title — the ticket's
+     * full-content-matching goal: a word appearing only in an article body
+     * must find something.
      *
-     * The ORDER of that list is a behavioural contract, not cosmetic:
-     * Meilisearch's attribute ranking rule ranks a hit by which attribute in
-     * this list it matched, in the order declared here. Title before summary
-     * before content before feed title is deliberate — a match in the
-     * headline should outrank the same word buried in the body or riding in
-     * on the feed's own name.
+     * The ORDER of that list is a behavioural contract: Meilisearch's
+     * attribute ranking rule ranks a hit by which attribute matched, in this
+     * declared order. Title before summary before content before feed title
+     * is deliberate — a headline match should outrank the same word buried
+     * in the body or riding in on the feed's own name.
      *
      * filterable/sortable list precisely the fields IndexSearch's cursor and
      * feed scoping use.
@@ -159,11 +148,10 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
             // uses for every other list, so a page hydrated from these ids
             // (IndexedEntrySearch) matches what the caller already expects.
             'sort' => ['effectiveDate:desc', 'id:desc'],
-            // Every term must match somewhere in the document. The default
-            // ("last") silently drops trailing terms until something matches,
-            // which would turn a two-word search that matches nothing into a
-            // one-word search that matches everything — a worse answer than
-            // reporting no results (confirmed by probe).
+            // Every term must match somewhere in the document. The default ("last")
+            // silently drops trailing terms until something matches, which turns a
+            // two-word search that matches nothing into a one-word search that
+            // matches everything -- worse than no results (confirmed by probe).
             'matchingStrategy' => 'all',
             'limit' => $search->limit,
             // title/summary are highlighted without being requested here: the
@@ -179,17 +167,15 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
 
     /**
      * The `q` string for one search. A whole-word search — the trailing space
-     * the user typed, carried here as SearchTerms::$isWholeWord — becomes one
-     * quoted phrase per term: a phrase in Meilisearch's query language matches
-     * the word exactly, where a bare term also matches by prefix and by typo.
-     * That is why a whole-word search for "punk" was answering with
-     * "Pünktlichkeit" until #450; probed against v1.13, which narrowed that
-     * same search from 82 hits to 16.
+     * the user typed, carried as SearchTerms::$isWholeWord — becomes one quoted
+     * phrase per term: a phrase matches the word exactly, where a bare term also
+     * matches by prefix and typo. That's why a whole-word search for "punk" was
+     * answering with "Pünktlichkeit" until #450; probed against v1.13, which
+     * narrowed that search from 82 hits to 16.
      *
-     * A phrase search — the wrapping quotes the user typed, carried here as
+     * A phrase search — the wrapping quotes the user typed, carried as
      * SearchTerms::$isPhrase — becomes one quoted phrase over the whole term,
-     * which is Meilisearch's own way of asking for those words in order and
-     * adjacent (#702).
+     * Meilisearch's own way of asking for those words in order and adjacent (#702).
      */
     private function queryStringFor(SearchTerms $terms): string
     {
@@ -207,12 +193,10 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
     }
 
     /**
-     * A double quote opens or closes a phrase in Meilisearch's query language,
-     * so one arriving inside a term would close a whole-word phrase early and
-     * leave the next one hanging open. It becomes a space — which is what the
-     * LIKE engine's WordBoundaries already does with it, so a quote inside a
-     * term reads as a word boundary on both engines rather than as a character
-     * to match.
+     * A double quote opens/closes a phrase in Meilisearch's query language, so
+     * one inside a term would close a whole-word phrase early. It becomes a
+     * space — matching what the LIKE engine's WordBoundaries already does, so a
+     * quote reads as a word boundary on both engines, not a character to match.
      */
     private static function withoutPhraseDelimiters(string $term): string
     {
@@ -336,13 +320,12 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
     }
 
     /**
-     * Search is optional: an install may leave MEILISEARCH_URL empty on
-     * purpose. Every write then does nothing rather than build a relative URL
-     * from an empty base — which the HTTP client refuses before any request
-     * leaves the process, turning each maintenance tick into a logged error
-     * (#816). find() needs no such guard: EntrySearchWithFallback never asks
-     * an unconfigured engine to read. A write discards the body, so this
-     * returns void where requestBody() returns the response.
+     * Search is optional: an install may leave MEILISEARCH_URL empty. Every
+     * write then does nothing rather than build a relative URL from an empty
+     * base, which the HTTP client refuses, turning each maintenance tick into a
+     * logged error (#816). find() needs no such guard — EntrySearchWithFallback
+     * never asks an unconfigured engine to read. A write discards the body, so
+     * this returns void where requestBody() returns the response.
      *
      * @param array<string, mixed> $options
      *
