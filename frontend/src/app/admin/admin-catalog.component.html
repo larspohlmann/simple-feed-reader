@@ -135,6 +135,22 @@
   </app-settings-group>
 
   <app-settings-group icon="category" [title]="'admin.catalog' | transloco">
+    <!-- The button carries `groupActions`, so it must be the single root of its
+         own block to project into the header slot (NG8011). It stays guarded by
+         the loaded state so it never acts on a list hidden behind a load or an
+         error (#547). -->
+    @if (loaded()) {
+      <app-button
+        groupActions
+        size="sm"
+        variant="primary"
+        data-testid="add-category"
+        (click)="openCategoryDialog(null)"
+      >
+        <app-icon name="add" size="sm" /> {{ 'admin.addCategory' | transloco }}
+      </app-button>
+    }
+
     @if (loading()) {
       <app-skeleton class="state" [label]="'admin.loadingCatalog' | transloco" [rows]="5" />
     } @else if (error()) {
@@ -145,16 +161,6 @@
         (action)="load()"
       />
     } @else {
-      <app-button
-        groupActions
-        size="sm"
-        variant="primary"
-        data-testid="add-category"
-        (click)="openCategoryDialog(null)"
-      >
-        <app-icon name="add" size="sm" /> {{ 'admin.addCategory' | transloco }}
-      </app-button>
-
       <ul class="categories">
         @for (category of categories(); track category.id; let ci = $index) {
           <li class="category" data-testid="admin-category">

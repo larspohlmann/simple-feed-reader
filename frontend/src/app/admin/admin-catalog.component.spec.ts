@@ -370,6 +370,16 @@ describe('AdminCatalogComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('app-settings-group').length).toBe(2);
   });
 
+  // The button carries `groupActions`, so it belongs in the group header slot,
+  // not the panel body. Angular only projects a node into a named slot when it
+  // is the single root of its control-flow block; sharing the loaded `@else`
+  // with the category list strands it in the default slot (NG8011).
+  it('projects the add-category button into the group header, not the panel', () => {
+    const el: HTMLElement = mountLoaded().nativeElement;
+    expect(el.querySelector('.g-actions [data-testid="add-category"]')).not.toBeNull();
+    expect(el.querySelector('.panel [data-testid="add-category"]')).toBeNull();
+  });
+
   // The button acts on a list that is hidden while the catalog is loading or
   // errored, and `openCategoryDialog` has no guard of its own -- so a save made
   // from an error state succeeds into a list the user cannot see. Before #547 the

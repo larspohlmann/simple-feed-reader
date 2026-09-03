@@ -68,6 +68,7 @@ export class AdminCatalogComponent implements OnInit {
   readonly warmError = signal<Problem | null>(null);
 
   readonly hasFeeds = computed(() => this.feeds().length > 0);
+  readonly loaded = computed(() => !this.loading() && this.error() === null);
   readonly importBusy = computed(
     () => this.importing() || this.refreshingCatalog() || this.warming(),
   );
