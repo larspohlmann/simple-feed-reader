@@ -19,10 +19,7 @@ namespace App\Service\Backup;
  */
 final class RestoreFeedTarget
 {
-    /** @var array<string, true> hashes inserted since the last absorb() */
-    private array $insertedGuidHashes = [];
-
-    /** @param array<string, int> $entryIdsByGuidHash the feed's rows as they were before the load */
+    /** @param array<string, int> $entryIdsByGuidHash the feed's rows before the load; every batch insert adds its own */
     public function __construct(
         public readonly int $feedId,
         public readonly bool $acceptsNewEntries,
@@ -32,7 +29,7 @@ final class RestoreFeedTarget
 
     public function knowsEntry(string $guidHash): bool
     {
-        return isset($this->entryIdsByGuidHash[$guidHash]) || isset($this->insertedGuidHashes[$guidHash]);
+        return isset($this->entryIdsByGuidHash[$guidHash]);
     }
 
     public function entryId(string $guidHash): ?int
@@ -41,30 +38,10 @@ final class RestoreFeedTarget
     }
 
     /**
-     * Remembers a hash written by an insert whose id is not read back yet, so
-     * a file that repeats the same guid inside one feed cannot drive a second
-     * insert into the unique (feed_id, guid_hash) index.
+     * @param array<string, int> $entryIdsByGuidHash the ids read back for the rows one batch just inserted
      */
-    public function markInserted(string $guidHash): void
+    public function learn(array $entryIdsByGuidHash): void
     {
-        $this->insertedGuidHashes[$guidHash] = true;
-    }
-
-    /**
-     * Takes the feed's rows as they now stand and reports which ids were not
-     * there before — the entries this restore created, and the only ones it
-     * may hand to the search index.
-     *
-     * @param array<string, int> $entryIdsByGuidHash
-     *
-     * @return list<int>
-     */
-    public function absorb(array $entryIdsByGuidHash): array
-    {
-        $created = array_diff_key($entryIdsByGuidHash, $this->entryIdsByGuidHash);
-        $this->entryIdsByGuidHash = $entryIdsByGuidHash;
-        $this->insertedGuidHashes = [];
-
-        return array_values($created);
+        $this->entryIdsByGuidHash += $entryIdsByGuidHash;
     }
 }
