@@ -6,15 +6,24 @@
 // Brightness steps (#832). Each step moves the shifted tokens by one OKLCH
 // lightness unit and re-solves the solved tokens to hold today's contrast.
 $lightness-per-step: 4%;
-$light-steps: -3, -2, -1, 1;
-$dark-steps: -3, -2, -1, 1, 2, 3;
-$media-brightness: (
-  -3: 0.82,
-  -2: 0.88,
-  -1: 0.94,
-);
+$light-steps:
+  -3,
+  -2,
+  -1,
+  1;
+$dark-steps:
+  -3,
+  -2,
+  -1,
+  1,
+  2,
+  3;
+$media-brightness: (-3: 0.82, -2: 0.88, -1: 0.94);
 $surfaces: surface-0, surface-1, surface-2, surface-read;
-$shifted: list.join($surfaces, (border, border-strong, accent-soft, bg-danger, bg-success, bg-warning));
+$shifted: list.join(
+  $surfaces,
+  (border, border-strong, accent-soft, bg-danger, bg-success, bg-warning)
+);
 $solved: text-primary, text-secondary, text-muted, accent, danger, success, warning;
 
 // Per-token contrast override, e.g. (text-muted: 3). Empty holds each token's
@@ -116,7 +125,8 @@ $rounding-margin: 0.015;
   @for $i from 1 through 16 {
     $mid: math.div($near + $far, 2);
 
-    @if weakest-contrast(with-lightness($base, $mid), $palette) >= $target * (1 + $rounding-margin) {
+    @if weakest-contrast(with-lightness($base, $mid), $palette) >= $target * (1 + $rounding-margin)
+    {
       $far: $mid;
     } @else {
       $near: $mid;
@@ -160,7 +170,11 @@ $rounding-margin: 0.015;
     $base: map.get($base-palette, $name);
     $below: color.channel($base, 'lightness', $space: oklch) < $canvas;
     $candidate: solve($base, $out, target($name, $base-palette), $below);
-    $out: map.set($out, $name, if(keeps-partner($name, $candidate, $base-palette), $candidate, $base));
+    $out: map.set(
+      $out,
+      $name,
+      if(keeps-partner($name, $candidate, $base-palette), $candidate, $base)
+    );
   }
 
   @return map.set($out, media-brightness, map.get($media-brightness, $step) or 1);
