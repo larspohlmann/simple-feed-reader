@@ -24,12 +24,50 @@ function article(url: string): ReaderArticle {
   };
 }
 
+/** A reader tab from before a schema bump, holding the database at an older version. */
+function staleTabConnection(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('sfr-reader', 1);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function within<T>(ms: number, promise: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const expired = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`still pending after ${ms} ms`)), ms);
+  });
+  return Promise.race([promise, expired]).finally(() => clearTimeout(timer));
+}
+
 describe('ReaderCacheService', () => {
   let cache: ReaderCacheService;
 
   beforeEach(async () => {
     (globalThis as unknown as { indexedDB: IDBFactory }).indexedDB = new IDBFactory(); // fresh DB per test
     cache = new ReaderCacheService();
+  });
+
+  it('answers a miss when a stale tab blocks the schema upgrade, instead of waiting for it', async () => {
+    const staleTab = await staleTabConnection();
+    staleTab.onversionchange = () => undefined; // the old code never closes on versionchange
+    await expect(within(500, cache.get(1))).resolves.toBeNull();
+    staleTab.close();
+  });
+
+  it('closes its own connection when a newer schema asks, so the newer tab can upgrade', async () => {
+    await cache.get(1);
+    const newerTabUpgrade = new Promise<number>((resolve, reject) => {
+      const req = indexedDB.open('sfr-reader', 1_000);
+      req.onblocked = () => reject(new Error('blocked by the cache connection'));
+      req.onsuccess = () => {
+        resolve(req.result.version);
+        req.result.close();
+      };
+      req.onerror = () => reject(req.error);
+    });
+    await expect(within(500, newerTabUpgrade)).resolves.toBe(1_000);
   });
 
   it('returns null on a miss and the article on a hit', async () => {

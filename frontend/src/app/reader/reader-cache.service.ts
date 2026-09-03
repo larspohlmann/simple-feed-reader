@@ -129,7 +129,20 @@ export class ReaderCacheService {
         const store = db.createObjectStore(ReaderCacheService.STORE, { keyPath: 'entryId' });
         store.createIndex('cachedAt', 'cachedAt');
       };
-      req.onsuccess = () => resolve(req.result);
+      // A tab from before the bump holds the old schema and never closes: read
+      // without the cache rather than hang every article on it (#814). If it
+      // closes later, onsuccess still fires and restores the cache below.
+      req.onblocked = () => resolve(null);
+      req.onsuccess = () => {
+        const db = req.result;
+        // A newer tab wants to upgrade: let go, or that tab hangs on us (#814).
+        db.onversionchange = () => {
+          db.close();
+          this.db = null;
+        };
+        this.db = Promise.resolve(db);
+        resolve(db);
+      };
       req.onerror = () => resolve(null);
     });
     return this.db;
