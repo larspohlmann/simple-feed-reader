@@ -353,6 +353,36 @@ final class LazyImageSourcesTest extends TestCase
         self::assertSame('https://images.example.com/real.jpg', $source);
     }
 
+    public function testSkipsPictureSourcesScopedToNarrowViewports(): void
+    {
+        // zeit art-directs by viewport and scales by density, with no width
+        // descriptor anywhere (entry 497686). A mobile crop is no candidate for
+        // the reader's desktop column; the desktop source's densest one is.
+        $source = $this->resolvedSource(
+            '<picture>'
+            . '<source media="(max-width: 360px)" srcset="https://img.example.com/wide__360x202__mobile,'
+            . ' https://img.example.com/wide__360x202__mobile__scale_2 2x">'
+            . '<source media="(max-width: 767px)" srcset="https://img.example.com/wide__767x431__mobile,'
+            . ' https://img.example.com/wide__767x431__mobile__scale_2 2x">'
+            . '<source media="(min-width: 767px)" srcset="https://img.example.com/wide__660x371__desktop,'
+            . ' https://img.example.com/wide__660x371__desktop__scale_2 2x">'
+            . '<img src="https://img.example.com/wide__660x371" alt="A">'
+            . '</picture>'
+        );
+
+        self::assertSame('https://img.example.com/wide__660x371__desktop__scale_2', $source);
+    }
+
+    public function testKeepsTheImageWhenEveryPictureSourceIsScopedToANarrowViewport(): void
+    {
+        $source = $this->resolvedSource(
+            '<picture><source media="(max-width: 767px)" srcset="https://img.example.com/mobile.jpg">'
+            . '<img src="https://img.example.com/desktop.jpg" alt="A"></picture>'
+        );
+
+        self::assertSame('https://img.example.com/desktop.jpg', $source);
+    }
+
     private function resolvedSource(string $bodyHtml): ?string
     {
         $image = $this->resolvedDocument($bodyHtml)->getElementsByTagName('img')->item(0);

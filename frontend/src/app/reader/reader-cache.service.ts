@@ -50,7 +50,7 @@ export class ReaderCacheService {
   // no og:image poster (#796).
   // v18: v17 records hold one player for a page whose other videos are named
   // only by a sibling id in a script payload (#800).
-  private static readonly VERSION = 19;
+  private static readonly VERSION = 20;
 
   private db: Promise<IDBDatabase | null> | null = null;
   /** Strictly monotonic clock so puts within the same millisecond keep insertion order. */

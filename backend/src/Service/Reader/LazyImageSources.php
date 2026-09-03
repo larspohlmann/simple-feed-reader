@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Html\DesktopViewport;
 use App\Service\Html\ImageRendition;
 use App\Service\Html\Srcset;
 use Dom\Element;
@@ -93,6 +94,9 @@ final readonly class LazyImageSources
      * webp, entry 486683). So adopt the widest <source> — unless the <img>'s own
      * src is already at least as wide, the mirror case where the placeholder
      * hides in a <source> and the real photo is the <img> (NDR, entry 480204).
+     * A <source> scoped by `media` to a narrower viewport is a mobile crop, not
+     * a rendition of the desktop photo, so it is no candidate at all (zeit
+     * lists those first and measures nothing, entry 497686).
      */
     private function preferWiderPictureSource(Element $image): void
     {
@@ -143,9 +147,14 @@ final readonly class LazyImageSources
     }
 
     /** A source's widest usable candidate, its width filled from the URL when the
-     *  srcset omits a descriptor. Null when the source carries nothing loadable. */
+     *  srcset omits a descriptor. Null when the source is scoped to a viewport
+     *  the reader does not stand in for, or carries nothing loadable. */
     private function renditionOf(Element $source): ?ImageRendition
     {
+        if (!DesktopViewport::admits($source->getAttribute('media'))) {
+            return null;
+        }
+
         $candidate = Srcset::widest($this->srcsetOf($source));
         if ($candidate === null || !$this->isUsable($candidate->url)) {
             return null;

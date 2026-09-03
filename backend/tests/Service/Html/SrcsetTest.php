@@ -127,6 +127,37 @@ final class SrcsetTest extends TestCase
         );
     }
 
+    public function testWidestPrefersTheDensestCandidateWhenNoneDeclareAWidth(): void
+    {
+        // zeit lists "photo, photo__scale_2 2x" per source (entry 497686). The
+        // 2x candidate is the larger file, so a single-rendition reader wants it.
+        $widest = Srcset::widest('a.jpg, b.jpg 2x, c.jpg 1.5x');
+
+        self::assertNotNull($widest);
+        self::assertSame('b.jpg', $widest->url);
+        self::assertNull($widest->width);
+    }
+
+    public function testWidestKeepsAnEarlierDenserCandidateOverALaterSparserOne(): void
+    {
+        self::assertSame('a.jpg', Srcset::widest('a.jpg 3x, b.jpg 2x')?->url);
+    }
+
+    public function testWidestReadsABareCandidateAsOneX(): void
+    {
+        self::assertSame('b.jpg', Srcset::widest('a.jpg 0.5x, b.jpg')?->url);
+    }
+
+    public function testWidestKeepsTheFirstOfTwoEqualWidths(): void
+    {
+        self::assertSame('a.jpg', Srcset::widest('a.jpg 800w, b.jpg 800w')?->url);
+    }
+
+    public function testWidestPrefersAMeasuredCandidateOverADenserBareOne(): void
+    {
+        self::assertSame('b.jpg', Srcset::widest('a.jpg 2x, b.jpg 400w')?->url);
+    }
+
     public function testWidestReturnsNullForNull(): void
     {
         self::assertNull(Srcset::widest(null));
