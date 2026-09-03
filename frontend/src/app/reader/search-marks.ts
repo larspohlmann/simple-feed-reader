@@ -1,5 +1,3 @@
-// src/app/reader/search-marks.ts
-
 export interface TextSegment {
   text: string;
   marked: boolean;
@@ -17,21 +15,18 @@ interface CompiledTerms {
 }
 
 /** The compiled form of the last term list seen, keyed by that list's identity.
- *  Every row of a result page is handed the SAME array — `EntryListComponent`
- *  builds it once in a computed and passes the reference down — so a one-slot
- *  cache hits for every row after the first. Without it a 50-row page compiles
- *  the identical pattern and rebuilds the identical Set 100 times (title and
- *  snippet per row), and again for every "Load more" page. */
+ *  Every row of a result page is handed the SAME array (`EntryListComponent`
+ *  builds it once), so this one-slot cache hits for every row after the first —
+ *  without it a 50-row page recompiles the same pattern 100 times. */
 let lastTerms: string[] | null = null;
 let lastCompiled: CompiledTerms | null = null;
 
 function compile(usable: string[], terms: string[]): CompiledTerms {
   if (terms === lastTerms && lastCompiled !== null) return lastCompiled;
 
-  // split() on a capturing group returns the matches interleaved with the gaps,
-  // and every match is one of the terms — so a set lookup decides a piece
-  // without a second regular expression, and without the lastIndex state a
-  // reused /g pattern would carry between calls.
+  // split() on a capturing group returns matches interleaved with the gaps, and
+  // every match is one of the terms -- so a set lookup decides a piece without a
+  // second regex, and without the lastIndex state a reused /g pattern would carry.
   const compiled: CompiledTerms = {
     pattern: new RegExp(`(${usable.map(escapeForRegExp).join('|')})`, 'gi'),
     lowered: new Set(usable.map((term) => term.toLowerCase())),

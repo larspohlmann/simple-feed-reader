@@ -1,20 +1,14 @@
-// src/app/shared/disclosure/disclosure.component.scss
 // The shared chrome for a native <details>/<summary> pair, consolidated from
-// the two hand-rolled copies (recommendation-settings-card's fixed-prompt
-// panel, recommendation-debug-log's panel shell). Both used identical
-// cursor/color/font-size on the toggle line; the debug log additionally
-// carried panel-level margin, font-size and color for its own list content --
-// that is host-specific layout, not disclosure chrome, so it stays local to
-// `recommendation-debug-log.component.scss`.
+// two hand-rolled copies. The debug log's own panel-level layout (margin,
+// list content) is host-specific, so it stays local to that file.
 :host {
   display: block;
   width: 100%;
 }
 
-// A bordered toggle with the same chrome as the default button beside it, so it
-// reads as a real control rather than muted text with a bare marker. Changing
-// `display` drops the native disclosure triangle (and iOS Safari needs the
-// -webkit marker hidden too), so a CSS chevron stands in and rotates on open.
+// A bordered toggle matching the default button, so it reads as a real
+// control. Changing `display` drops the native triangle (and iOS Safari
+// needs the -webkit marker hidden too), so a CSS chevron stands in instead.
 summary {
   display: inline-flex;
   align-items: center;
@@ -53,12 +47,9 @@ summary:hover {
   border-color: var(--accent);
 }
 
-// Row appearance: a flat, full-width list-row summary for callers that stack
-// many <app-disclosure> instances as list items, where the bordered pill
-// button would compete with the row itself rather than read as part of it.
-// The chevron stays (still rotates via the shared `details[open]` rule above)
-// but moves to the trailing edge with `order`, since it is inserted as the
-// first flex item by `::before`.
+// Row appearance: a flat, full-width summary for stacked list items, where
+// the bordered pill would compete with the row itself. The chevron stays
+// (still rotates via `details[open]` above) but moves trailing via `order`.
 summary.is-row {
   display: flex;
   width: 100%;
@@ -74,12 +65,8 @@ summary.is-row::before {
 }
 
 // Drill-in appearance: a full-width Grouped-list row for an advanced section
-// that expands in place. The projected heading (and optional description) sits
-// on the left and the shared chevron moves to the trailing edge, the same way
-// `is-row` repositions it; the rotation still rides the shared
-// `details[open] > summary::before` rule above. The pill's border, radius and
-// muted text chrome are reset so the projected heading keeps its own weight and
-// the row reads as part of the list rather than as a button.
+// that expands in place. Chevron moves trailing like `is-row`. The pill's
+// border/radius/muted chrome are reset so it reads as a list row, not a button.
 summary.is-drill-in {
   display: flex;
   align-items: center;

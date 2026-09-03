@@ -1,4 +1,3 @@
-// src/app/app.routes.spec.ts
 import { Route } from '@angular/router';
 import { hasTranslation } from '../testing/translation-keys';
 import { routes } from './app.routes';

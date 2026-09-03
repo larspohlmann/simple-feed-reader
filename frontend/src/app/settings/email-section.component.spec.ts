@@ -1,4 +1,3 @@
-// src/app/settings/email-section.component.spec.ts
 import { TestBed } from '@angular/core/testing';
 import { WritableSignal, signal } from '@angular/core';
 import { of, throwError } from 'rxjs';

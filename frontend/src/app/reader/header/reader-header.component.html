@@ -34,19 +34,15 @@
         </button>
       }
     </div>
-    <!-- A live run's progress, in the room this bar has and the phone bar does
-         not. It carries no ✕: with the pill suppressed at this width, this is
-         the run's only surface, and a readout that can be dismissed with no way
-         back is worse than one that simply ends with the run. The component
-         renders nothing unless a run is live. -->
+    <!-- A live run's progress, in the room this bar has and the phone bar does not.
+         It carries no ✕: with the pill suppressed at this width, this is the
+         run's only surface, so it should end with the run, not be dismissable. -->
     @if (!screen.isNarrow()) {
       <app-for-you-progress class="run-progress" />
     }
     <!-- Pointer-only duplicate of the corner back-to-top button (iOS status-bar-tap
-         convention). Kept out of both the accessibility tree and the tab order:
-         keyboard and screen-reader users already have the corner button, which is
-         visible and labelled, so this element would only add a second, identically
-         named, invisible control between the brand link and the account button. -->
+         convention). Kept out of the accessibility tree and tab order: keyboard and
+         screen-reader users already have the visible, labelled corner button. -->
     @if (screen.isNarrow()) {
       <button
         class="tap-to-top"
@@ -91,12 +87,9 @@
       </div>
     </div>
   } @else {
-    <!-- No dismiss-on-outside here: on a phone the results list is "outside", so
-         a scroll touch on it would fire pointerdown and collapse the bar the
-         moment the user scrolls the very results they searched for (#486). The
-         bar closes on `dismissed` — the field's trailing ✕ or Escape, once
-         there is nothing left to clear. It carries no ✕ of its own; see
-         `SearchFieldComponent.dismissible` for why not. -->
+    <!-- No dismiss-on-outside here: on a phone the results list is "outside", so a
+         scroll touch would fire pointerdown and collapse the bar mid-scroll (#486).
+         Closes on `dismissed` — the field's own trailing ✕ or Escape. -->
     <app-search-field
       #searchField
       class="search-bar"
@@ -139,9 +132,7 @@
   </nav>
 }
 
-<!-- The refresh bar belongs to the app bar, so it retracts with it. Parked in a
-     strip below the bar it stayed behind when the bar slid away on scroll, leaving
-     a 2px band over the article (#721). Absolutely positioned on the bar's bottom
-     edge, so it adds nothing to the height the shell's ResizeObserver publishes as
-     --app-bar-h and starting a refresh no longer thickens the chrome. -->
+<!-- The refresh bar belongs to the app bar, so it retracts with it (#721):
+     absolutely positioned on the bar's bottom edge, it adds nothing to the height
+     the shell's ResizeObserver publishes as --app-bar-h. -->
 <app-progress-hairline [active]="refreshSvc.running()" [value]="refreshSvc.fraction()" />

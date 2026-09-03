@@ -110,11 +110,9 @@
 
 .nav .whole-word-badge,
 .nav .phrase-badge {
-  /* The pill is the global `.whole-word-badge`/`.phrase-badge`
-     (theme/_utilities.scss); this row carries the compact "W"/"P" glyph
-     instead of the full word because the sidebar is too narrow for the label.
-     Excluded from the generic `.nav > span` rule above (like `.lead`) so it
-     doesn't pick up `flex: 1` and split the row's width with `.saved-term`. */
+  /* The pill is the global `.whole-word-badge`/`.phrase-badge`; this row uses
+     the compact "W"/"P" glyph since the sidebar is too narrow for the label.
+     Excluded from `.nav > span` above so it doesn't pick up `flex: 1`. */
   flex: none;
 }
 
@@ -127,9 +125,8 @@
 }
 
 /* Collapsible section headers — "Tags" and "Feeds" (#612). The row reproduces
-   the standalone `.label`'s vertical margins, because inside the toggle button
-   the `.label` span is inline and its own block margins no longer apply; its
-   horizontal margin still supplies the title's left indent. */
+   `.label`'s vertical margins, since inside the toggle button `.label` is
+   inline and its block margins no longer apply; the horizontal margin stays. */
 .section-head {
   display: flex;
   align-items: center;
@@ -193,12 +190,9 @@
   padding-left: var(--space-6);
 }
 
-/* The mail button is the row's trailing control, and the row's metrics bend to
-   it: dropping the right text-padding lets the button's column line up with the
-   "Saved searches" chevron above, and dropping the block padding lets the
-   button's own box (not row-pad-y on top of it) drive the height so these rows
-   match the tag rows below. Without the button (mail off, or the account digest
-   off) none of that applies, so the row keeps the plain `.nav` padding (#636). */
+/* The mail button is the row's trailing control: dropping right/block padding
+   lets its column line up with the chevron above and its own box drive the
+   height, matching tag rows. Without it the row keeps plain `.nav` (#636). */
 .savedsearch-item.with-digest {
   padding-right: 0;
   padding-block: 0;
@@ -231,10 +225,9 @@
   font-size: var(--fs-2xs);
 }
 
-/* The unread count sits in its own right-aligned column, left of the mail
-   button, so it lines up with the "Saved searches" header count above rather
-   than drifting with the term width. The term group's flex:1 packs it (and the
-   button) to the right, so it must not also claim the auto margin. */
+/* The unread count sits right-aligned, left of the mail button, lining up
+   with the header count above rather than drifting with term width. The
+   term group's flex:1 already packs it right, so no auto margin here. */
 .savedsearch-item .count {
   flex: none;
   margin-left: 0;
@@ -249,10 +242,9 @@
   margin-right: var(--space-1);
 }
 
-/* The per-search mail button is the row's trailing control, styled to the exact
-   box metrics of the tag/saved-search `.chevzone` chevron -- same margin, and a
-   bordered glyph box on the inner icon -- so it reads as a button and its column
-   lines up with the chevron above it (#636). */
+/* The per-search mail button matches the exact box metrics of the
+   `.chevzone` chevron — same margin, bordered glyph box — so it reads as a
+   button and its column lines up with the chevron above (#636). */
 .savedsearch-item .digest-toggle {
   flex: none;
   display: inline-flex;
@@ -278,12 +270,9 @@
   align-items: center;
 }
 
-/* `min-width: 0` is what lets the name actually truncate. Without it this flex
-         item keeps its automatic minimum size — its min-content width — so it refuses
-         to shrink, the ellipsis rule on the name span never gets squeezed, and a long
-         tag name pushes the unread count and the `⋯` menu out of the 260px column
-         entirely (#131). `.feedrow .nav` below carries the same line for the same
-         reason. */
+/* `min-width: 0` is what lets the name truncate — without it the flex item's
+   automatic min-content width refuses to shrink, pushing the unread count
+   and `⋯` menu out of the 260px column (#131). `.feedrow .nav` mirrors this. */
 .tag .grow {
   flex: 1;
   min-width: 0;
@@ -424,10 +413,9 @@
   position: relative;
 }
 
-/* A tag dragged over another tag header: a straight signal-coloured
-         insertion line spanning the top edge. A pseudo-element (not an inset
-         shadow) keeps the line square — the header's rounded corners must not
-         bend it — and it sits in the gap above the row, so no layout shift. */
+/* A tag dragged over a tag header: a signal-coloured insertion line on the
+   top edge. A pseudo-element, not an inset shadow, keeps it square against
+   the header's rounded corners, sitting in the gap above so nothing shifts. */
 .drop-line::before {
   content: '';
   position: absolute;
@@ -487,12 +475,9 @@
   display: none;
 }
 
-/* A dragged tag transfers between single-item header lists, so its
-         placeholder hops into whichever header is hovered and reads as a second
-         stray line. Hide it — the .drop-line on the target is the only cue.
-         Zero height (not display:none) keeps it in flow with a real position:
-         a display:none placeholder reports a 0,0 rect, and CDK then flies the
-         dropped tag to the top-left of the window on release. */
+/* A dragged tag's placeholder hops between header lists, reading as a second
+   stray line — hidden, since `.drop-line` is the only cue. Zero height, not
+   `display: none`: that reports a 0,0 rect and flies the tag to the corner. */
 .tag.cdk-drag-placeholder {
   height: 0;
   min-height: 0;
@@ -570,10 +555,8 @@
 }
 
 /* Touch density: 44px targets for coarse pointers only (#185). Scoped here
-   deliberately — the compact row tokens are shared by the discover rails and
-   the admin catalog and must not grow (design-language §1). The desktop keeps
-   compact rows; a coarse-pointer tablet gets this even in the column layout,
-   which is the point of keying on pointer, not width. */
+   deliberately — the compact row tokens are shared with discover/admin and
+   must not grow (design-language §1). Keyed on pointer, not width. */
 @media (pointer: coarse) {
   .nav,
   .rowbody,

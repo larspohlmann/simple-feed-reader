@@ -1,7 +1,5 @@
-// The frame is app-overlay-panel's; only the width is this dialog's to
-// choose. `display: contents` on both the host and the form removes the two
-// boxes that would otherwise sit between the CDK's dialog container and the
-// panel, neither of which the CDK knows how to centre or stretch -- mirrors
+// The frame is app-overlay-panel's; `display: contents` on host and form
+// removes the boxes CDK can't centre/stretch. Mirrors
 // tag-form-dialog.component.scss.
 :host {
   display: contents;

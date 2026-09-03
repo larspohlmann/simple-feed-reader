@@ -4,10 +4,9 @@
   display: flex;
   flex-direction: column;
 
-  /* `dvh` tracks mobile Safari's toolbar, which never minimizes here because
-     the page itself does not scroll — an inner container does. Without it the
-     shell's bottom edge, and anything anchored to it, hides behind the toolbar.
-     The `vh` line above is the fallback for browsers without `dvh`. */
+  /* `dvh` tracks mobile Safari's toolbar; without it the shell's bottom edge
+     hides behind it, since the page itself never scrolls (an inner container
+     does). The `vh` line above is the fallback for browsers without `dvh`. */
   height: 100vh;
   height: 100dvh;
 
@@ -17,12 +16,9 @@
   position: relative;
 }
 
-/* The header floats over the content rather than sitting above it in the flow.
-   It used to be hidden by animating a negative `margin-top`, which is a layout
-   change: every frame of the transition re-ran flex layout, the content area
-   grew by the header's height, and the scroller's `clientHeight` changed
-   mid-gesture while its `scrollTop` did not -- so the list visibly jumped under
-   the finger (#87). A transform is composited and touches no layout at all. */
+/* Floats over the content rather than sitting in the flow. A negative
+   `margin-top` used to hide it, re-running flex layout every frame and
+   jumping the list under the finger (#87). A transform touches no layout. */
 app-reader-header {
   position: absolute;
   top: 0;
@@ -30,13 +26,9 @@ app-reader-header {
   right: 0;
   z-index: 10;
 
-  /* iOS WebKit will not animate a transition whose style change lands inside a
-     scroll event unless the element is ALREADY its own composited layer — a
-     transition that must both promote a layer and move it snaps straight to the
-     end there. The list header and under-header slide because their resting
-     transform is an explicit translateY (a live layer); this bar rested at
-     `none` and so snapped on the phone. An explicit base transform plus the hint
-     keeps its layer alive so the retraction actually animates. */
+  /* iOS WebKit won't animate a transition landing inside a scroll event unless
+     the element is ALREADY its own composited layer — this bar rested at
+     `none` and snapped on the phone. An explicit base transform keeps it live. */
   transform: translateY(0);
   will-change: transform;
   transition: transform 0.4s ease;
@@ -46,11 +38,9 @@ app-reader-header.hidden {
   transform: translateY(-100%);
 }
 
-/* Deliberately NOT offset for the header. The scrolling panes reserve the bar's
-   height in their own padding and their content passes underneath it, so
-   retracting the bar reveals content instead of leaving a dead strip — which is
-   the entire point of hiding it. The one child that must not sit under the bar
-   is the in-flow sidebar, which takes the offset itself below. */
+/* Deliberately NOT offset for the header: the scrolling panes reserve the
+   bar's height in their own padding, so retracting it reveals content instead
+   of leaving a gap. The in-flow sidebar takes its own offset below. */
 .body {
   flex: 1;
   display: flex;
@@ -71,10 +61,9 @@ app-reader-header.hidden {
   border-right: 1px solid var(--border);
   background: var(--surface-1);
 
-  /* A column, not a scroller — it cannot pass under the bar, so it starts below
-     it. Between 721px and 899px the sidebar is already a column while the
-     header still hides, which is why this offset belongs here and not on
-     `.body`: keyed to the element that needs it, not to a breakpoint. */
+  /* A column, not a scroller — it can't pass under the bar, so it starts below
+     it. This offset lives here, not on `.body`, because it's keyed to the
+     element that needs it, not to a breakpoint (they diverge 721–899px). */
   padding-top: var(--app-bar-h, var(--bar-h));
 }
 
@@ -85,22 +74,9 @@ app-reader-header.hidden {
   position: relative;
 }
 
-/* The full-screen article sits on top of the still-mounted list — the app bar
-         included: the article is its own layer with its own toolbar, and the
-         bar underneath is the list's chrome, left exactly as the list's
-         scrolling put it (#128). The reader's own host background is
-         transparent, so a swipe-away reveals the list underneath; it enters by
-         sliding in from the right.
-
-         This animation must live on a wrapper, NOT on `app-reader-view` itself:
-         that component's host is the article's own scroller (`overflow: auto`),
-         and a non-`none` transform on a scroll container becomes the containing
-         block for its `position: fixed` descendants — including the corner
-         back-to-top button. For the length of the animation the button would
-         resolve `fixed` against the scroller's own (unscrolled) box instead of
-         the viewport, so it rides up off-screen with whatever the article's
-         scrollTop happens to be (#100). A wrapper that never scrolls keeps that
-         containing-block promotion harmless: its box is always the full pane. */
+/* Full-screen article over the still-mounted list (#128), sliding in from the
+   right. Lives on a wrapper, not `app-reader-view` itself: a transform on that
+   component's own scroller would hijack `position: fixed` descendants (#100). */
 .article-overlay {
   position: absolute;
   inset: 0;
@@ -136,10 +112,9 @@ app-reader-header.hidden {
   }
 }
 
-/* The list column, in both layouts: a flex column so `app-entry-list` fills
-   it. Split mode nests it beside `.reader`; single-pane mode wraps the one
-   `app-entry-list` the same way so both modes share this rule. Positioned so
-   the run hairline below can anchor to it rather than to the viewport. */
+/* The list column in both layouts: a flex column so `app-entry-list` fills it,
+   shared by split and single-pane mode. Positioned so the run hairline below
+   anchors to it, not the viewport. */
 .list {
   display: flex;
   flex-direction: column;
@@ -147,11 +122,9 @@ app-reader-header.hidden {
   position: relative;
 }
 
-/* The list pane's width is user-owned now: dragged live on the divider below,
-   persisted per device (PaneSplitService, #810). `--list-width` is a percentage
-   the divider writes onto `.main.split`; the old fixed 42% is only the fallback
-   for the frame before the directive's effect writes the saved value. The seam
-   and its max-width move to the divider — the list no longer draws either. */
+/* The list pane's width is user-owned: dragged on the divider below, persisted
+   per device (PaneSplitService, #810). `--list-width` is written by the
+   divider; 42% is only the fallback before its effect writes the saved value. */
 .main.split .list {
   flex: 0 0 var(--list-width, 42%);
   min-width: 0;
@@ -162,11 +135,9 @@ app-reader-header.hidden {
   min-width: 0;
 }
 
-/* The drag handle on the seam between the two panes (#810). It straddles the
-   seam with a negative inline margin so its grab area adds no layout width, and
-   it draws the hairline the list used to own — so hover and keyboard focus can
-   light the same line. Pointer events drive the resize (see PaneResizeDirective),
-   so it claims the gesture with `touch-action: none`. */
+/* The drag handle on the seam between panes (#810). Straddles it with a
+   negative inline margin so its grab area adds no layout width, and draws the
+   hairline the list used to own. `touch-action: none` claims the gesture. */
 .main.split .pane-divider {
   flex: 0 0 var(--space-2);
   align-self: stretch;
@@ -210,11 +181,9 @@ app-reader-header.hidden {
   min-height: 0;
 }
 
-/* The header's For-You slot: one row of run controls, right-aligned with the
-   header's other tools. Idle it holds the run button; during a run it holds
-   Stop, preceded by the offer to raise the pill again if the user closed it.
-   The run's count, ETA and bar are not here — they are in the app-wide pill, so
-   they survive the user leaving the reader (#398). */
+/* The header's For-You slot: run controls, right-aligned. Idle holds the run
+   button; during a run, Stop. Count/ETA/bar live in the app-wide pill instead,
+   so they survive the user leaving the reader (#398). */
 .for-you-action {
   display: flex;
   align-items: center;
@@ -222,12 +191,9 @@ app-reader-header.hidden {
   gap: var(--space-2);
 }
 
-/* Save/unsave the search on screen. Its look comes from `app-list-action`, the
-   same component the list header's Edit, unread switch, Mark all read and
-   Refresh use (#617); only the label-visibility rules below are specific to it.
-   It must carry the component here rather than lean on entry-list's copy because
-   it is projected through the list's `headerActions` outlet — the node is
-   created by THIS template and carries this component's encapsulation. */
+/* Save/unsave the search. Its look comes from `app-list-action` (#617); only
+   label-visibility below is specific. Carries its own instance rather than
+   entry-list's, since it's projected through the `headerActions` outlet. */
 
 /* The mobile short label beside the icon (Part A, #581 follow-up). Hidden on
    the desktop button, which keeps its full `.txt`; the mobile media query
@@ -236,11 +202,9 @@ app-reader-header.hidden {
   display: none;
 }
 
-/* Below the small breakpoint the buttons drop their labels and stand on the
-   icon alone — the same rule the header's other tools follow, with the
-   aria-label keeping them named. The save-search button keeps a short label
-   inline beside its icon instead (#581 follow-up); it is still an action, not
-   the read-only toggle beside it. */
+/* Below this breakpoint buttons drop labels and stand on the icon alone
+   (aria-label named), like the header's other tools. Save-search keeps a
+   short inline label instead (#581 follow-up) — it's an action, not a toggle. */
 @media (width <= bp.$bp-sm) {
   .for-you-run .label,
   .save-search .txt {
@@ -252,15 +216,9 @@ app-reader-header.hidden {
   }
 }
 
-/* The header is an absolute, opaque overlay and the scrolling panes reserve its
-   height internally, so nothing in normal flow can sit "below the header". This
-   wrapper is positioned instead: taken out of flow (zero layout shift for the
-   main column) and dropped by the bar's own height into the visible seam just
-   under it. Its contents — the fetch banner, then the catalog warning — flow
-   normally inside it, so they stack rather than fight for the same `top`.
-   z-index sits above the list's sticky header (z-index: 3, same `:host`
-   stacking context) and below the article overlay (5 wide, 12 narrow) and the
-   header (10). */
+/* Nothing in normal flow can sit "below the header" (absolute, opaque). This
+   wrapper is positioned instead, dropped by the bar's height (zero shift for
+   the main column). z-index sits between the list header (3) and article (5/12). */
 .under-header {
   position: absolute;
   top: var(--app-bar-h, var(--bar-h));
@@ -268,11 +226,9 @@ app-reader-header.hidden {
   right: 0;
   z-index: 4;
 
-  /* Travels with the app bar, exactly as `.list-header` does and for the same
-     reason: it hangs directly beneath the bar, so staying put while the bar
-     retracted would leave it floating over a strip of nothing. A banner is an
-     alert and is correct to stay visible at the top — unlike the refresh
-     hairline, which is chrome and now retracts with the bar itself (#721). */
+  /* Travels with the app bar, like `.list-header`: it hangs beneath the bar,
+     so staying put while it retracts would float it over nothing. A banner
+     alert stays visible, unlike the refresh hairline, which retracts (#721). */
   transform: translateY(var(--app-bar-shift, 0));
   transition: transform 0.4s ease;
 }
@@ -329,11 +285,9 @@ app-reader-header.hidden {
   padding: 0;
 }
 
-/* The drawer presentation. Keyed to the `is-narrow` class the shell binds from
-   LayoutService.isNarrow() — NOT to a media query — so the 720px boundary is
-   declared exactly once, in NARROW_QUERY (#185). The comments from the old
-   media block still apply: `top` is the pre-measurement fallback; opening the
-   drawer forces the header visible, so the offset never meets a hidden bar. */
+/* The drawer presentation. Keyed to the `is-narrow` class from
+   LayoutService.isNarrow(), not a media query, so the 720px boundary is
+   declared once (#185). `top` is the pre-measurement fallback for the bar. */
 .body.is-narrow .sidebar {
   position: fixed;
   top: var(--bar-h);
@@ -362,15 +316,13 @@ app-reader-header.hidden {
   background: rgb(0 0 0 / 40%);
 }
 
-/* The list header's leading edit action. Its look comes from `app-list-action`,
-   the same component the rest of the header's tools use (#617) — it belongs to
-   that row of affordances, not the <app-button> family. Only the
-   label-visibility rule below is specific to it. */
+/* The list header's leading edit action. Its look comes from `app-list-action`
+   (#617), the rest of the header's tools, not the <app-button> family. Only
+   the label-visibility rule below is specific to it. */
 
-/* Below this width the label is dropped, exactly as the Mark all read and
-   Refresh labels are in the list header (entry-list.component.scss), so a long
-   feed or tag title keeps the row. The icon, named by aria-label/title, carries
-   the meaning on its own there. Keyed to the same `bp.$bp-sm` those use. */
+/* Below this width the label drops, as Mark all read/Refresh do in the list
+   header, so a long title keeps the row; aria-label/title still names the
+   icon. Keyed to the same `bp.$bp-sm` those use. */
 @media (width <= bp.$bp-sm) {
   .list-edit .txt {
     display: none;

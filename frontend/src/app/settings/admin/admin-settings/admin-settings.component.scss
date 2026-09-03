@@ -1,11 +1,8 @@
-// src/app/settings/admin/admin-settings/admin-settings.component.scss
 @use '../../../theme/breakpoints' as bp;
 
-// A bare <input> is about 20 characters wide, and every value these fields hold
-// is longer: 'green-tara.aardvark-koi.ts.net' alone is 30. Sized in `ch`, the
-// unit that means what the number is for. They live here, not in
-// app-settings-row: projected content carries this component's scope attribute,
-// so a selector scoped to the row never matches.
+// A bare <input> is ~20 characters wide; real values run longer (30+). Sized
+// in `ch`. Live here, not in app-settings-row: projected content carries this
+// component's scope attribute, so a row-scoped selector never matches.
 .url-field {
   width: 40ch;
 }

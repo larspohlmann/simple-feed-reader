@@ -1,4 +1,3 @@
-// src/app/reader/layout.service.ts
 import { Injectable, inject } from '@angular/core';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { toSignal } from '@angular/core/rxjs-interop';

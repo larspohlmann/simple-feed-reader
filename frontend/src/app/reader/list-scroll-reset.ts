@@ -1,4 +1,3 @@
-// src/app/reader/list-scroll-reset.ts
 import { Injectable, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationStart, PRIMARY_OUTLET, Router, convertToParamMap } from '@angular/router';
@@ -10,14 +9,11 @@ import { Selection, listSelectionFrom, sameSelection, selectionFromParams } from
 type NavigationTrigger = NavigationStart['navigationTrigger'];
 
 /**
- * The two things a reader URL says about what the user is looking at: the list
- * itself, and what is shown over it — the same list, or a search.
- *
- * A search is its own view over every subscription, so its `Selection` names no
- * tag, feed or view (`selectionFromParams`). The URL keeps those parameters
- * beside the term all the same, because clearing the search returns to the list
- * it was started from (#542) — and reading them is the only way to tell that
- * return from a click on some other list (#579).
+ * What a reader URL says: the list itself, and what's shown over it (same list,
+ * or a search). A search names no tag/feed/view (`selectionFromParams`); the URL
+ * keeps those params beside the term anyway, because clearing a search returns to
+ * the list it was started from (#542) — reading them is the only way to tell that
+ * return from a click on another list (#579).
  */
 export interface ReaderPlace {
   /** The list underneath, with any search set aside. */
@@ -27,16 +23,11 @@ export interface ReaderPlace {
 }
 
 /**
- * Whether the incoming list must start at the top rather than where it was left.
- *
- * Asking for a list is not the same as returning to one (#286). A click on a tag
- * or on "All items" asks for that list, and the user expects its newest entries;
- * back, forward and a resume-reload return to a list, and there the remembered
- * place is the whole point.
- *
- * A search is both — asked for by typing, returned from by clearing — and it is
- * the same click either way, so the two are told apart from the list underneath
- * rather than from the click (#579).
+ * Whether the incoming list must start at the top vs. where it was left.
+ * A click asking for a list (a tag, "All items") expects its newest entries;
+ * back/forward/resume-reload return to a list and the remembered place is the
+ * point (#286). A search is both — asked for by typing, returned from by
+ * clearing — so it's told apart by the list underneath, not the click (#579).
  */
 export function forgetsPosition(
   previous: ReaderPlace | null,
@@ -52,34 +43,25 @@ export function forgetsPosition(
   // a new or changed one starts at their top. Re-asserting the same term does
   // not — that is an article opening over the results, not a fresh search.
   if (incoming.shown.kind === 'search') return !sameSelection(previous.shown, incoming.shown);
-  // Everything else is judged on the list underneath, so that dropping a search
-  // reads as the return to that list which it is, rather than as a click on a
-  // list the user never chose. A click that does not change it — mark-all-read,
-  // opening or closing an article, a refresh — leaves the user where they are.
+  // Everything else is judged on the list underneath, so dropping a search reads
+  // as returning to that list, not a fresh click. A click that doesn't change it
+  // (mark-all-read, opening/closing an article, a refresh) leaves the user in place.
   return !sameSelection(previous.list, incoming.list);
 }
 
 /**
  * Puts a clicked list back at the top by dropping its remembered offset before
- * the list loads.
+ * the list loads. Erasing the memory is the whole mechanism: the entry list
+ * already restores it on a selection change, and restoring `0` *is* the scroll
+ * to top — keeping the #267 guarantee (the outgoing list stays rendered during
+ * the load, #254) intact.
  *
- * Erasing the memory is the whole mechanism: the entry list already restores the
- * remembered offset on a selection change, and restoring `0` *is* a scroll to the
- * top. That keeps the #267 guarantee intact — the outgoing list stays rendered
- * during the load (#254), so its scroller must be moved deliberately rather than
- * left alone — and needs no second source of truth beside the saved offset.
- *
- * `NavigationStart` is the hook because it alone carries `navigationTrigger`, and
- * because it fires before the route parameters update, so the erase always lands
- * before anything reads the offset.
- *
- * Root-provided, and deliberately not tied to the reader shell's lifetime: the
- * shell is destroyed by a trip to settings, and a listener that died with it
- * would come back not knowing which list the user had left — so the first click
- * after returning would restore instead of resetting. `providedIn: 'root'` does
- * not pull this into the initial bundle, because only the reader's lazy chunk
- * imports it. The bootstrap navigation is never seen either way, which is exactly
- * the "nothing came before" case that makes a resume-reload restore.
+ * `NavigationStart` is the hook: it alone carries `navigationTrigger`, and fires
+ * before route parameters update, so the erase always lands first. Root-provided
+ * and deliberately not shell-scoped — a shell destroyed by a trip to settings
+ * would forget which list the user left, so the next click would restore instead
+ * of reset; `providedIn: 'root'` costs nothing up front since only the reader's
+ * lazy chunk imports it.
  */
 @Injectable({ providedIn: 'root' })
 export class ListScrollReset {

@@ -31,11 +31,9 @@
 }
 
 .img {
-  /* A fixed 88×66 box with BOTH dimensions explicit, not width + aspect-ratio.
-     A flex row stretches an aspect-ratio-only image to the text column's height
-     (and a not-yet-loaded lazy image has no intrinsic size to fall back on), so
-     the ratio alone does not hold the box. Fixing both sides makes the thumbnail
-     the same 4:3 box whether or not its image has loaded; object-fit crops. */
+  /* Fixed 88×66, both dimensions explicit, not width + aspect-ratio: a flex
+     row stretches an aspect-ratio-only image, and a not-yet-loaded lazy image
+     has no intrinsic size to hold the ratio. object-fit crops either way. */
   flex: none;
   /* stylelint-disable declaration-property-unit-allowed-list --
      tuned thumbnail box, not spacing values. */
@@ -47,10 +45,9 @@
   display: block;
   align-self: flex-start;
 
-  /* Drop the image onto the top of the kicker's written text, not its line-box
-     top. `align-self: flex-start` above pins it to the line box, which sits
-     ~0.35em above where the letters actually begin, leaving the image looking
-     too high. */
+  /* Drops the image onto the kicker text's letters, not the line-box top:
+     `align-self: flex-start` pins it ~0.35em above where letters begin,
+     leaving it looking too high without this nudge. */
   margin-top: 0.35em;
 }
 

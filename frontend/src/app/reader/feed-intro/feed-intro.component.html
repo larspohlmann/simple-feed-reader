@@ -16,9 +16,8 @@
     />
   } @else if (faviconUrl(); as icon) {
     <!-- Only 8% of feeds publish an image of their own. The site icon stands in
-         for the rest, through the shared component rather than a bare <img>:
-         it owns --favicon-backdrop, the chip that keeps a dark-ink favicon on a
-         transparent background from vanishing against the dark surface. -->
+         for the rest, through the shared component rather than a bare <img>: it
+         owns --favicon-backdrop, keeping a dark-ink favicon visible on a dark surface. -->
     <app-favicon class="icon" [url]="icon" [size]="24" />
   }
   <div class="body">
@@ -33,10 +32,9 @@
         <span class="description">{{ text }}</span>
       }
       @if (siteUrl(); as site) {
-        <!-- A non-breaking space, not a plain one: the label now wraps (a long
-             site URL — NPR publishes a full story.php link — must break rather
-             than overrun a narrow phone), and this keeps the open-in-new icon on
-             the URL's last line instead of letting it orphan onto its own. -->
+        <!-- A non-breaking space, not a plain one: the label wraps (a long site
+             URL must break rather than overrun a narrow phone), and this keeps
+             the open-in-new icon on the URL's last line instead of orphaning. -->
         <a
           class="homepage"
           [href]="site"

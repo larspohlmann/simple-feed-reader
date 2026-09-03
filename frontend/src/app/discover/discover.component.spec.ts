@@ -235,10 +235,9 @@ describe('DiscoverComponent', () => {
     } as unknown as typeof IntersectionObserver;
 
     try {
-      // Force the genuine first-visit path: an UNRESOLVED store, so categories
-      // (and therefore the sections) are empty when the component mounts and
-      // only fill after the catalog GET resolves. A wiring that ran only in
-      // ngAfterViewInit would observe the empty first frame and never re-observe.
+      // Force the genuine first-visit path: an UNRESOLVED store, so sections
+      // are empty at mount and only fill after the catalog GET resolves --
+      // wiring only in ngAfterViewInit would miss that later fill.
       TestBed.inject(CatalogStore).invalidate();
       const local = TestBed.createComponent(DiscoverComponent);
       local.detectChanges();

@@ -1,8 +1,6 @@
-/* The count+ETA line and its bar stack full-width inside the app-wide pill,
-   which owns its own width (`.app-toast--fixed` in `styles.scss`). The line is
-   allowed to wrap: 22rem holds the longest translation on one line, but the
-   pane's viewport cap is narrower than that on a phone, and wrapping is the
-   only honest answer there. */
+/* Stacks full-width inside the app-wide pill, which owns its own width
+   (`.app-toast--fixed` in styles.scss). The line wraps: 22rem holds the
+   longest translation, but a phone's viewport cap is narrower than that. */
 :host {
   display: flex;
   flex-direction: column;

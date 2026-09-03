@@ -1,4 +1,3 @@
-// src/app/core/navigation-failure.spec.ts
 import { TestBed } from '@angular/core/testing';
 import { NavigationFailureReporter } from './navigation-failure';
 

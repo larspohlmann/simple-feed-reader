@@ -28,12 +28,9 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   ...over,
 });
 
-/** A stand-in for the card: clickable, and it must NOT open when an action is
- *  pressed. Testing that through a real parent is the only way to prove the
- *  click never reaches the card. The two keydown bindings mirror exactly what
- *  every real magazine card binds on its own `<article>` (see
- *  `entry-compact.component.html`), `preventDefault()` on Space included — a
- *  host that does not reproduce that wiring would not exercise the bug. */
+/** Stand-in for the card: proves an action click never reaches it. The keydown
+ *  bindings mirror the real magazine card's `<article>` wiring exactly
+ *  (`entry-compact.component.html`), Space's `preventDefault()` included. */
 @Component({
   imports: [EntryActionsComponent],
   template: `<article
@@ -62,11 +59,9 @@ class HostComponent {
   marked: EntryDto | null = null;
 }
 
-/** Reproduces what a real browser does with a focused `<button>`, which jsdom
- *  does not simulate on its own: Enter fires `click` as part of the keydown's
- *  default action, Space defers it to the keyup's default action — and either
- *  is skipped once its governing keydown (and, for Space, keyup too) had
- *  `preventDefault()` called on it. */
+/** jsdom does not fire `click` for a focused button's Enter/Space itself, so
+ *  this reproduces it: Enter's click follows keydown, Space's follows keyup —
+ *  skipped once that governing event's default was prevented. */
 function pressEnter(target: HTMLElement): void {
   const keydown = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
   target.dispatchEvent(keydown);

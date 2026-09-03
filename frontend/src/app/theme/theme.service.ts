@@ -1,4 +1,3 @@
-// src/app/theme/theme.service.ts
 import { Injectable, signal } from '@angular/core';
 import { ThemeMode } from './themes/registry';
 

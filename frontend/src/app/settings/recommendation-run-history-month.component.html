@@ -9,23 +9,16 @@
 
   @if (runs(); as rows) {
     <div class="run-history-month__wrap">
-      <!-- Names row 1 of the grid below -- there is no header for the
-           provider cell, which sits on its own full-width row 2 and carries
-           its own `&__cell-label` instead (#409). Shares the row grid by
-           carrying the same `&__row` class the rows below use, so the columns
-           cannot drift out of alignment with it. aria-hidden: the per-cell
-           labels below carry the real semantics for assistive tech, so this
-           strip would only double-announce them. -->
+      <!-- Names row 1 of the grid below; the provider cell has its own full-width
+           row 2 with its own `&__cell-label` instead (#409). Shares `&__row` with
+           the rows below so columns stay aligned; aria-hidden to avoid double-announcing. -->
       <div class="run-history-month__row run-history-month__row--header" aria-hidden="true">
         <span class="run-history-month__when">
           {{ 'settings.ai.recommendations.historyColWhen' | transloco }}
         </span>
-        <!-- The header word is what sized this track, not the icon beneath it
-             (#465): `STATUS` needs ~44px, the icon ~20px, and those 24px are
-             what a 390px phone did not have. Same two-span technique as
-             `&__col-full`/`&__col-short` on the token columns below, reusing
-             that same `&__col-full` class so the word's hiding rule is
-             already written -- only the icon half is new. -->
+        <!-- The header word is what sized this track, not the icon beneath it (#465):
+             `STATUS` needs ~44px, the icon only ~20px, a 390px phone did not have
+             the difference. Reuses the token columns' `&__col-full`/`&__col-short` technique. -->
         <span class="run-history-month__status">
           <span class="run-history-month__col-full">
             {{ 'settings.ai.recommendations.historyColStatus' | transloco }}
@@ -35,12 +28,9 @@
         <span class="run-history-month__duration">
           {{ 'settings.ai.recommendations.historyColDuration' | transloco }}
         </span>
-        <!-- `&__col-full`/`&__col-short`: "TOKENS IN"/"TOKENS OUT" is what
-             the desktop track fits; a mobile track sized for the number
-             beneath it fits only "IN"/"OUT" (#409). Both live in the DOM at
-             every width -- this whole strip is `aria-hidden`, so there is no
-             assistive-tech duplication to worry about -- and the stylesheet
-             picks which one is visible. -->
+        <!-- `&__col-full`/`&__col-short`: desktop fits "TOKENS IN"/"TOKENS OUT", a
+             mobile track sized for the number below fits only "IN"/"OUT" (#409).
+             Both live in the DOM at every width; the stylesheet picks which shows. -->
         <span class="run-history-month__tokens-in">
           <span class="run-history-month__col-full">
             {{ 'settings.ai.recommendations.historyColTokensIn' | transloco }}
@@ -107,10 +97,9 @@
               </span>
               {{ cost(run.costNanoCredits) }}
             </span>
-            <!-- Row 2: the full grid width, not one of row 1's six tracks --
-                 see `&__provider` in the stylesheet. Its own label is the
-                 only thing naming this cell, above the breakpoint as well as
-                 below it, since there is no column header for it. -->
+            <!-- Row 2: the full grid width, not one of row 1's six tracks (see
+                 `&__provider` in the stylesheet). Its own label is the only thing
+                 naming this cell, at every width, since there is no column header for it. -->
             <span class="run-history-month__provider">
               <span class="run-history-month__cell-label">
                 {{ 'settings.ai.recommendations.historyColProvider' | transloco }}

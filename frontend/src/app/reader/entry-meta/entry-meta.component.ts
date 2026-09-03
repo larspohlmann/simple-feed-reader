@@ -1,16 +1,13 @@
-// src/app/reader/entry-meta/entry-meta.component.ts
 import { Component, input, output } from '@angular/core';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
 import { EntryActionsComponent } from '../entry-actions/entry-actions.component';
 import { EntryDto, SubscriptionTagDto } from '../models';
 
 /**
- * The line a magazine card ends on: the feed's tag pills, and the entry's own
- * actions right-aligned against them. One component rather than a row assembled
- * in each block, so the geometry — where the icons sit when the pills wrap, and
- * where they sit when the card has spare height — has exactly one definition
- * for every magazine block that ends on this line. A grouped compact entry has
- * no pills, so it keeps its actions on the kicker line instead.
+ * The line a magazine card ends on: the feed's tag pills, with the entry's own
+ * actions right-aligned against them. One component, not a row assembled per
+ * block, so the wrap/spare-height geometry has one definition everywhere. A
+ * grouped compact entry has no pills, so its actions live on the kicker line.
  */
 @Component({
   selector: 'app-entry-meta',

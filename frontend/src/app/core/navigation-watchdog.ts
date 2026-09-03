@@ -21,26 +21,16 @@ import { NavigationFailureReporter } from './navigation-failure';
 export const NAVIGATION_DEADLINE_MS = 8000;
 
 /**
- * Turns a navigation that never terminates into a visible failure.
+ * Turns a navigation that never terminates into a visible failure (#285). A
+ * hung `import()` never rejects, so the router raises no `NavigationError`
+ * and the click stays silently dead with the previous page on screen; the
+ * same holds for a guard or resolver that never settles. Watching the event
+ * stream catches all of these without every route needing its own wrapper.
  *
- * A hung `import()` never rejects, so the router raises no `NavigationError`
- * and `withNavigationErrorHandler` cannot fire: the click is silently dead
- * with the previous page still on screen (#285). The same holds for a guard or
- * resolver that never settles — `authGuard` and `setupRedirectGuard` issue HTTP
- * with no timeout. Watching the event stream covers all of them at once,
- * without every route entry having to remember a wrapper.
- *
- * The bootstrap navigation is deliberately NOT supervised: `provideRouter`'s
- * initial navigation fires its own `NavigationStart` from an
- * `APP_BOOTSTRAP_LISTENER`, strictly after the app initializers, and on a cold
- * start that leg can legitimately take longer than 8 s (a slow chunk, a slow
- * guard HTTP call) without anything being wrong. That window already belongs
- * to the #282 boot watchdog in index.html, which allows a deliberately longer
- * 15 s precisely because a cold connection may still be settling. Arming this
- * watchdog on the bootstrap navigation would race the two deadlines and could
- * flash the full-page "could not start" surface on a page that goes on to
- * render two seconds later. So this watchdog stays disarmed until it has seen
- * a first `NavigationEnd`, and only supervises navigations after that.
+ * The bootstrap navigation is deliberately unsupervised: it can legitimately
+ * take longer than 8 s on a cold, still-settling connection, and that window
+ * already belongs to the #282 boot watchdog's 15 s in index.html. So this
+ * watchdog stays disarmed until it has seen a first `NavigationEnd`.
  */
 export function startNavigationWatchdog(): void {
   const router = inject(Router);

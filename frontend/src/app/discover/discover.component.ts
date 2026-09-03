@@ -1,4 +1,3 @@
-// src/app/discover/discover.component.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
@@ -83,16 +82,10 @@ export class DiscoverComponent implements OnDestroy {
     return counts;
   });
 
-  /**
-   * The footer sentence, as a translation key rather than an assembled string,
-   * so each language keeps its own word order and inflection.
-   *
-   * Only four states are reachable: a feed belongs to exactly one category, so
-   * "1 feed in 2 categories" cannot happen and needs no key. The zero case is
-   * its own sentence because a count there says nothing about the selection —
-   * "0 feeds in 0 categories" sits under a full picker and reads as a claim
-   * that the catalog is empty (#146).
-   */
+  /** A translation key, not an assembled string, so each language keeps its
+   *  own word order. Only four states are reachable (a feed has exactly one
+   *  category); zero is its own key because "0 feeds in 0 categories" would
+   *  read as a claim the catalog is empty (#146). */
   readonly summaryKey = computed(() => {
     const feeds = this.selection.selectedCount();
     if (feeds === 0) return 'discover.summaryNone';
@@ -109,14 +102,10 @@ export class DiscoverComponent implements OnDestroy {
     this.selection.setCategories(this.catalog.categories());
   });
 
-  /**
-   * (Re)wire the scroll-spy whenever the rendered sections change. The catalog
-   * loads async (constructor → load() → HTTP), so `sections()` is empty on the
-   * first frame and fills once the response lands. An `ngAfterViewInit` would
-   * observe that empty first frame and never re-observe; an effect re-runs on
-   * every change to the sections signal. Disconnect the prior observer before
-   * building a new one so we never leak or double-observe.
-   */
+  /** Re-wires the scroll-spy whenever rendered sections change. The catalog
+   *  loads async, so `sections()` is empty on the first frame; `ngAfterViewInit`
+   *  would miss the later fill, but this effect re-runs on every change.
+   *  Disconnects the prior observer first so it never leaks or double-observes. */
   private readonly wireObserver = effect(() => {
     const sections = this.sections();
     this.observer?.disconnect();

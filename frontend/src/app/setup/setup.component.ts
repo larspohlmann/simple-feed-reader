@@ -1,4 +1,3 @@
-// src/app/setup/setup.component.ts
 import { Component, ElementRef, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';

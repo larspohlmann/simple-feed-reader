@@ -1,4 +1,3 @@
-// src/app/settings/recommendation-run-history.component.ts
 import {
   ChangeDetectionStrategy,
   Component,
@@ -29,14 +28,13 @@ import {
 } from './run-history-status-icon';
 
 /** One month section as the card renders it. `runs` stays null until the
- *  month is opened and its first page has arrived -- that null, not a
- *  separate flag, is what `RecommendationRunHistoryMonthComponent` binds its
- *  `startOpen` to, so a month with rows already loaded starts (and, once a
- *  reader closes it, stays) open.
+ *  month is opened and its first page arrives -- that null (not a separate
+ *  flag) is what `RecommendationRunHistoryMonthComponent` binds `startOpen`
+ *  to.
  *
- *  `failed` does need its own flag: a month that has never been opened and a
- *  month whose first page fetch failed are both `runs === null` with nothing
- *  loading, and only the second of the two has something to tell the reader. */
+ *  `failed` needs its own flag: an unopened month and a failed-fetch month
+ *  are both `runs === null` with nothing loading, but only the second has
+ *  something to tell the reader. */
 interface MonthSection {
   month: string;
   runCount: number;
@@ -47,21 +45,16 @@ interface MonthSection {
   failed: boolean;
 }
 
-/** What every for-you run has cost (#409): one collapsible section per month,
- *  each carrying that month's own run count and spend, under the account's
- *  all-time total. The newest month arrives already expanded (its rows come
- *  free with the overview); older months fetch their first page only once
- *  opened, and "show more" pages through the rest.
+/** What every for-you run has cost (#409): one collapsible section per month
+ *  with its own run count and spend, under the account's all-time total. The
+ *  newest month arrives expanded (rows come free with the overview); older
+ *  months fetch their first page once opened, and "show more" pages the rest.
  *
- *  Not gated on the debug switch, and not bounded by the debug log's retention
- *  window: the run totals are banked by every call whether or not its
- *  transcript is being kept, which is the whole point of the issue.
- *
- *  Self-hiding, like the debug log below it: an account that has never run has
- *  nothing to show, so the settings page needs no extra lookup to hide it.
- *
- *  No poll loop. A finished run is the only thing that changes this card, and
- *  `completedStamp` already announces exactly that. */
+ *  Not gated on the debug switch or bounded by the debug log's retention:
+ *  totals are banked by every call whether or not its transcript is kept --
+ *  the whole point of the issue. Self-hiding, like the debug log: an account
+ *  that never ran has nothing to show. No poll loop: a finished run is the
+ *  only thing that changes this card, and `completedStamp` announces it. */
 @Component({
   selector: 'app-recommendation-run-history',
   standalone: true,
@@ -106,13 +99,11 @@ export class RecommendationRunHistoryComponent {
     return runHistoryStatusIcon(status);
   }
 
-  /** A month section was opened. Rows already loaded (the newest month from
-   *  the overview, or an older month opened earlier) means there is nothing
-   *  to fetch: `DisclosureComponent.opened` only fires on a closed-to-open
-   *  transition, so re-opening a month that was never closed cannot reach
-   *  here twice -- but a reader closing and re-opening a month still could,
-   *  and a fast double-open before the first response lands needs the
-   *  `loading` half of the guard too. */
+  /** A month section was opened. Rows already loaded (newest month from the
+   *  overview, or an older month opened earlier) means nothing to fetch:
+   *  `DisclosureComponent.opened` fires only closed-to-open, but a
+   *  close/re-open or a fast double-open before the response lands still
+   *  needs the `loading` half of the guard. */
   onOpened(month: string): void {
     const section = this.findSection(month);
     if (!section || section.runs !== null || section.loading) return;
@@ -123,10 +114,9 @@ export class RecommendationRunHistoryComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (page) => this.replaceRows(month, page.runs, page.nextCursor),
-        // Nothing is standing here to leave standing: the section is open and
-        // its body is empty, so without a message it reads as a month with no
-        // runs. Closing and re-opening retries, which is only discoverable if
-        // the reader is told there is something to retry.
+        // Without a message this reads as a month with no runs, not a failed
+        // fetch -- and closing and re-opening retries, but only if the
+        // reader knows there's something to retry.
         error: () => this.markFailed(month),
       });
   }
@@ -149,11 +139,10 @@ export class RecommendationRunHistoryComponent {
       });
   }
 
-  /** A *tracked* read of `sections()` -- safe here only because `onOpened`
-   *  and `onShowMore` are reached from template event bindings, never from
-   *  inside `refetchOnCompletion`. Calling this from `applyOverview` (or any
-   *  other code path the completion `effect` runs) would reintroduce the
-   *  self-triggering infinite loop `untracked()` exists to prevent there. */
+  /** A *tracked* read of `sections()` -- safe only because `onOpened` and
+   *  `onShowMore` come from template event bindings, never from inside
+   *  `refetchOnCompletion`. Calling it from `applyOverview` would reintroduce
+   *  the self-triggering loop `untracked()` exists to prevent there. */
   private findSection(month: string): MonthSection | undefined {
     return this.sections().find((section) => section.month === month);
   }
@@ -198,25 +187,21 @@ export class RecommendationRunHistoryComponent {
       .subscribe({
         next: (overview) => this.applyOverview(overview),
         error: () => {
-          // The card is a spending record, not a control: a failed fetch
-          // leaves the sections it already has standing rather than blanking
-          // them or claiming an error. Handled at all because the effect
-          // re-fires on every completed run, so an endpoint that stays broken
-          // would otherwise throw once per run for as long as the page is open.
+          // A spending record, not a control: a failed fetch leaves existing
+          // sections standing. Caught here only so a broken endpoint doesn't
+          // throw once per run for as long as the page stays open.
         },
       });
   }
 
   /** Month summaries and the total are replaced wholesale; the newest month's
-   *  rows come from `latest`. Every other month keeps whatever it already
-   *  loaded -- a run that completes can only land in the current month, so an
-   *  older month's rows cannot have changed.
+   *  rows come from `latest`. Every other month keeps what it already loaded --
+   *  a completed run can only land in the current month.
    *
-   *  The prior-state read is wrapped in `untracked()`: this runs inside the
-   *  completion `effect`, and an untracked read of `sections()` keeps that
-   *  effect from re-triggering itself the instant this method calls
-   *  `sections.set()` below (see `recommendation-debug-log.component.ts`'s
-   *  `applyEntries` for the same pattern). */
+   *  `untracked()` wraps the prior-state read because this runs inside the
+   *  completion `effect`; a tracked read of `sections()` would re-trigger it
+   *  the instant this calls `sections.set()` (same pattern as
+   *  recommendation-debug-log.component.ts's `applyEntries`). */
   private applyOverview(overview: RunHistoryOverview): void {
     const priorByMonth = new Map(
       untracked(this.sections).map((section) => [section.month, section]),
@@ -233,11 +218,10 @@ export class RecommendationRunHistoryComponent {
     this.totalCostNanoCredits.set(overview.totalCostNanoCredits);
   }
 
-  /** The newest month's rows are refreshed from `latest`, but a reader who
-   *  pressed "show more" keeps what they paged into: the overview always
-   *  answers with the month's first page, so everything below it is still on
-   *  screen and would otherwise vanish at the one moment the reader is most
-   *  likely to be watching -- a run finishing. */
+  /** The newest month refreshes from `latest`, but a reader who pressed "show
+   *  more" keeps what they paged into: the overview always answers with the
+   *  first page, so rows below it would otherwise vanish at the exact moment
+   *  the reader is watching -- a run finishing. */
   private latestSection(
     month: RunHistoryMonth,
     latest: RunHistoryMonthPage,

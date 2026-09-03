@@ -1,4 +1,3 @@
-// src/app/reader/refresh.service.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Problem, parseProblem } from '../core/problem';
@@ -9,12 +8,9 @@ import { RefreshProgress, RefreshReport } from './models';
 const BUSY_BACKOFF_MS = 1500;
 const MAX_BUSY_RETRIES = 5;
 
-/** Why a refresh ended without fetching what it was asked to fetch.
- *
- *  A union rather than a `Problem` because two of the three are not HTTP
- *  failures at all: the request succeeded and reported that it did nothing.
- *  Forcing them into problem+json would mean inventing a status, a title and a
- *  type for a case where nothing failed over the wire. */
+/** Why a refresh ended without fetching what it was asked to fetch. A union
+ *  rather than a `Problem` because two of the three aren't HTTP failures at all
+ *  -- forcing them into problem+json would mean inventing a status for nothing. */
 export type RefreshFailure =
   | { kind: 'busy' } // another refresh holds the lock, and outlasted our retries
   | { kind: 'aborted' } // the sweep stopped mid-way; feeds are still due
@@ -76,12 +72,10 @@ export class RefreshService {
         this.report.set(r);
         this.slice.update((n) => n + 1);
         if (r.status === 'partial' && r.remaining > 0) {
-          // A slice that leaves as many feeds due as the one before it did no
-          // work the next slice would undo. Asking again is then not a poll but
-          // a hammer: a feed whose outcome writes no fetch time never leaves the
-          // due set, and this loop sent 89 requests to one rationed Reddit feed
-          // in production (#302). The server owes us progress; without it, stop
-          // and say so.
+          // A slice that leaves as many feeds due as before did no work the next
+          // slice would undo -- asking again is a hammer, not a poll: a feed whose
+          // outcome writes no fetch time never leaves the due set (89 requests to
+          // one rationed feed in production, #302). Without server progress, stop.
           if (r.remaining >= this.previousRemaining) {
             this.stopWith({ kind: 'stalled' }, onDone);
             return;

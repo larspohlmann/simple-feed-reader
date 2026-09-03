@@ -1,4 +1,3 @@
-// src/app/settings/recommendation-settings-card.component.ts
 import {
   ChangeDetectionStrategy,
   Component,
@@ -35,24 +34,19 @@ import {
   TypedRecommendationEdits,
 } from './recommendation-settings.service';
 
-/**
- * The "For You" tuning card, rebuilt on the settings primitives (#541). The
- * group's first row is the "show reasons" switch; the auto-generate cadence and
- * the look-back window (#386) are the two ordinary choices below it. All three
- * — plus the debug switch — persist the instant they change through
- * `saveInstant`. Everything the user types (the guidance prompt, the six caps,
- * the context window, the batch count) folds into one "Expert settings"
- * drill-in and is held as a pending draft until the save bar's Save; Reset drops
- * that draft and reseeds the inputs from the last-saved state. The fixed prompt
- * layers ship with the app, not the account, so they stay read-only in a nested
- * disclosure. The purge below is its own always-visible danger zone, copying
- * the confirm-then-act pattern from `account-section.component.ts`.
+/** The "For You" tuning card, rebuilt on the settings primitives (#541). The
+ *  "show reasons" switch, auto-generate cadence, and look-back window (#386)
+ *  persist instantly through `saveInstant`. Everything typed (guidance prompt,
+ *  six caps, context window, batch count) folds into one "Expert settings"
+ *  drill-in, held as a pending draft until the save bar's Save; Reset drops it
+ *  and reseeds from the last-saved state. The fixed prompt layers ship with
+ *  the app, not the account, so they stay read-only. The purge below is its
+ *  own always-visible danger zone, copying the confirm-then-act pattern from
+ *  `account-section.component.ts`.
  *
- * Success is the global toast, fired uniformly off the service's `saved` flag:
- * every persist — instant or explicit — sets `saved`, an `effect` here toasts
- * once and resets the flag. Keying the toast on the actual HTTP success (not on
- * the click) is what keeps a rejected save silent.
- */
+ *  Success is the global toast, fired off the service's `saved` flag: every
+ *  persist sets it, an `effect` here toasts once and resets it. Keying on the
+ *  actual HTTP success, not the click, keeps a rejected save silent. */
 @Component({
   selector: 'app-recommendation-settings-card',
   imports: [

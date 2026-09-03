@@ -1,4 +1,3 @@
-// src/app/settings/organise/bulk-tag-dialog.component.ts
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
@@ -15,14 +14,11 @@ export interface BulkTagDialogData {
   readonly tags: TagDto[];
 }
 
-/**
- * Choose one tag to add to, or remove from, the current selection.
+/** Choose one tag to add to, or remove from, the current selection.
  *
- * Nothing is written here: the dialog closes with the chosen tag and the caller
- * performs the bulk write through ManageActions. That keeps the one-write-path
- * rule intact and makes a wrong click free — until Apply, the user has changed
- * nothing.
- */
+ *  Nothing is written here: the dialog closes with the chosen tag and the
+ *  caller performs the bulk write through ManageActions -- a wrong click is
+ *  free until Apply. */
 @Component({
   selector: 'app-bulk-tag-dialog',
   imports: [A11yModule, TranslocoPipe, OverlayPanelComponent, ButtonComponent, TagGlyphComponent],
@@ -61,11 +57,10 @@ export class BulkTagDialogComponent {
     return this.data.tags.filter((tag) => this.carriedBy(tag) > 0);
   });
 
-  /** How many of the selected feeds carry each tag id, built once from
-   *  `data.subscriptions` rather than rescanned per tag: `carriedBy` is read
-   *  from the template inside a loop over every offered tag, and again by
-   *  `offered()` and `affected()` — at the 500-id cap over 18 tags an
-   *  unmemoised scan would be ~9,000 comparisons per change-detection pass. */
+  /** How many selected feeds carry each tag id, built once rather than
+   *  rescanned per tag: `carriedBy` is read in a template loop over every
+   *  offered tag, and again by `offered()`/`affected()` -- unmemoised, the
+   *  500-id cap over 18 tags would be ~9,000 comparisons per CD pass. */
   private readonly carrierCounts = computed<ReadonlyMap<number, number>>(() => {
     const counts = new Map<number, number>();
     for (const subscription of this.data.subscriptions) {

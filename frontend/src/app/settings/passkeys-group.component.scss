@@ -1,7 +1,6 @@
-// The panel is unpadded -- its rows pad themselves -- so anything that is not
-// an `app-settings-row` (the header action, an error banner, the empty-state
-// line) supplies its own inset. Mirrors `organise-tag-group.component.scss`'s
-// `.empty` and `account-section.component.scss`'s `.actions`.
+// The panel is unpadded — rows pad themselves — so a non-row child (here, the
+// empty-state line) supplies its own inset. Mirrors
+// organise-tag-group.component.scss's `.empty`.
 .notice {
   padding: var(--panel-inset-y) var(--panel-inset-x);
 }

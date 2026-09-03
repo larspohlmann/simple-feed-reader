@@ -1,13 +1,8 @@
 @use '../theme/breakpoints' as bp;
 
-// The group's panel is unpadded by design (its rows pad themselves); this
-// page projects blocks and a list, not rows. Every one of `.notice`, `.hint`,
-// `.import`, `.state` and `.categories` already has its own rule for its own
-// box styling, so the inset is merged into each of those rules below instead
-// of living in one shared block: a shared block would sit earlier in this
-// file and lose to each element's own later, equal-specificity padding rule
-// -- CSS breaks that tie by source order, not by which rule looks more
-// "shared".
+// The group's panel is unpadded by design; each top-level block below adds
+// its own inset instead of using one shared rule, because a shared rule
+// would sit earlier in the file and lose the equal-specificity source-order tie.
 .notice {
   padding: var(--panel-inset-y) var(--panel-inset-x);
   border-radius: var(--radius);
@@ -82,16 +77,9 @@
   font-size: var(--fs-sm);
 }
 
-// The group's own content is no longer wrapped in a flex column with a gap
-// (the `<section>` that carried it was replaced by the shared group), so the
-// panel-level banner and skeleton need their own spacing: `padding` is this
-// element's own panel inset (see the top-of-file comment), `margin-bottom` is
-// the gap before whatever sibling content follows it. `.state` marks only
-// those two panel-level blocks -- never the element type -- so the
-// import-failure banner nested inside `.import` above, which already carries
-// its own inset and gap, is untouched by it.
-// `.state` itself lives in `theme/_utilities.scss`; what is local here is
-// only the gap before the list that follows it.
+// `.state` (base styling in theme/_utilities.scss) marks only the panel-level
+// banner/skeleton, not `.import`'s own nested banner, which already carries
+// its own inset and gap. This adds only the gap before the list that follows.
 .state {
   margin-bottom: var(--space-4);
 }

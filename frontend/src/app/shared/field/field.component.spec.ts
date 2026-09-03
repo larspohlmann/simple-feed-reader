@@ -99,12 +99,9 @@ describe('FieldComponent', () => {
   });
 
   /**
-   * The tip belongs to the label row, and its panel opens on the row's next
-   * line — between the label and the control, under the ⓘ that was clicked.
-   * The tip used to sit after the projected control with only its trigger
-   * lifted into the label row, which opened the explanation below the input
-   * instead (#433). jsdom has no layout, so this pins the document order the
-   * arrangement rests on, not the resulting geometry.
+   * #433: the tip used to sit after the projected control with only its
+   * trigger lifted into the label row, opening the explanation below the
+   * input. jsdom has no layout, so this pins document order, not geometry.
    */
   it('keeps the tip and its panel in the label row, ahead of the control', async () => {
     const fixture = await mountField({ label: 'Endpoint', info: 'What this endpoint is for.' });
@@ -120,10 +117,9 @@ describe('FieldComponent', () => {
   });
 
   /**
-   * The tip lives inside the `<label>` that names the control, so a click that
-   * reached the label would toggle that control. Both of the tip's own
-   * surfaces swallow their clicks; this pins that the field keeps benefiting
-   * from it.
+   * The tip lives inside the <label> that names the control, so a click
+   * reaching it would toggle that control. Both of the tip's surfaces
+   * swallow their clicks; this pins the field keeps benefiting from it.
    */
   it('lets neither the trigger nor the panel activate the label', async () => {
     const fixture = await mountField({ label: 'Endpoint', info: 'What this endpoint is for.' });

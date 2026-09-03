@@ -1,4 +1,3 @@
-// src/app/reader/magazine/magazine-block.ts
 import { EntryDto } from '../models';
 
 /** Every block kind that can carry a single entry. Ordered by height, largest

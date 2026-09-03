@@ -6,11 +6,10 @@ import { SubscriptionTagDto } from '../models';
 import { selectionQueryParams } from '../query';
 
 /**
- * The tag pills shown in front of / below a source name across the reading UI
- * (entry cards, source groups, the article view). Each pill is a link that
- * filters the list to that tag. Clicks stop propagating so a pill inside a
- * clickable entry card filters instead of opening the entry. Renders nothing
- * when the feed carries no tags.
+ * The tag pills shown in front of / below a source name across the reading UI.
+ * Each pill links to filter the list by that tag; clicks stop propagating so a
+ * pill inside a clickable entry card filters instead of opening it. Renders
+ * nothing when the feed carries no tags.
  */
 @Component({
   selector: 'app-source-tags',

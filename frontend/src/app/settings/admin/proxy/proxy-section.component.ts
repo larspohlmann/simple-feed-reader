@@ -1,4 +1,3 @@
-// src/app/settings/admin/proxy/proxy-section.component.ts
 import {
   ChangeDetectionStrategy,
   Component,
@@ -25,19 +24,15 @@ import { ProxySettingsService, ProxyType, TypedProxyEdits } from './proxy-settin
 /** The SOCKS5 well-known port, mirroring the backend's ProxyConnection::DEFAULT_PORT. */
 const DEFAULT_PORT = 1080;
 
-/**
- * The admin "Proxy" settings section (#490), on the grouped design language
- * introduced by #541: one `app-settings-group` holding the enable/type/direct-
- * fallback instant controls above the host/port/credentials fields, which sit
- * behind the shared save bar because they take an explicit Save. A Test
- * connection row probes the last-*saved* config, which is why it disables
- * itself while the draft is dirty -- testing an unsaved edit would silently
- * test the wrong thing.
+/** The admin "Proxy" settings section (#490), on the grouped design language
+ *  from #541: instant enable/type/direct-fallback controls above the typed
+ *  host/port/credentials fields, which sit behind the shared save bar.
  *
- * The enable toggle stays off-limits until a host is on record: turning egress
- * on with nothing to route through is not a valid state, so the toggle is
- * disabled rather than left to fail server-side.
- */
+ *  Test probes the last-*saved* config, so it disables itself while the draft
+ *  is dirty -- testing an unsaved edit would test the wrong thing. The enable
+ *  toggle stays off until a host is on record: egress with nothing to route
+ *  through isn't a valid state, so it's disabled rather than left to fail
+ *  server-side. */
 @Component({
   selector: 'app-proxy-section',
   imports: [
@@ -69,10 +64,9 @@ export class ProxySectionComponent {
   readonly type = linkedSignal<ProxyType>(() => this.svc.state()?.type ?? 'SOCKS5');
   readonly remoteDns = linkedSignal<boolean>(() => this.svc.state()?.remoteDns ?? false);
 
-  // Typed fields: held as a pending draft in the service until the explicit
-  // Save. Each reads the pending edit first and server truth only underneath,
-  // so an instant save -- which replaces `state` while the draft stands -- can
-  // no longer revert an edit the admin has typed but not yet saved.
+  // Typed fields: held as a pending draft until the explicit Save. Each reads
+  // the pending edit first, server truth underneath -- so an instant save,
+  // which replaces `state` while the draft stands, can't revert an unsaved edit.
   readonly host = linkedSignal<string>(() => this.pending('host') ?? this.svc.state()?.host ?? '');
   readonly port = linkedSignal<number>(
     () => this.pending('port') ?? this.svc.state()?.port ?? DEFAULT_PORT,

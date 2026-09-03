@@ -1,4 +1,3 @@
-// src/app/reader/manage/edit-subscription-dialog.component.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';

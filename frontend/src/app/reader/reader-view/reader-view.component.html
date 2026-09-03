@@ -8,23 +8,17 @@
     [style.transition]="readerTransition()"
   >
     @if (showProgress() && !screen.isWide()) {
-      <!-- The same cue as the hairline at the foot of the split pane, stood up
-           on the right edge and run the full height of the screen: 2px along
-           the bottom of a phone is easy to miss, and there is no scrollbar
-           there to fall back on (#238). Decorative for the same reason the
-           hairline is. It leads the article rather than trailing it because a
-           sticky box may only travel inside its containing block from where it
-           sits in the flow; the negative margin below cancels the height it
-           would otherwise contribute there. -->
+      <!-- The same cue as the split pane's hairline, stood up on the right edge and
+           run the full height: 2px along a phone's bottom is easy to miss, with no
+           scrollbar to fall back on (#238). Decorative; leads the article for sticky positioning. -->
       <div class="progress-rail" aria-hidden="true">
         <i [style.height.%]="progressPercent()"></i>
       </div>
     }
     @if (fullscreen()) {
-      <!-- The toolbar below retracts on scroll, so full-screen the nameplate
-           needs a strip of its own. aria-hidden: the h1 carries the same title
-           and the favicon is decorative, so announcing it would read the
-           headline twice. -->
+      <!-- The toolbar below retracts on scroll, so full-screen the nameplate needs
+           a strip of its own. aria-hidden: the h1 carries the same title, so
+           announcing this too would read the headline twice. -->
       <div class="mini" aria-hidden="true">
         <app-favicon [url]="e.faviconUrl" [size]="14" />
         <span class="mini-title">{{ e.title }}</span>
@@ -119,10 +113,9 @@
         }
       </p>
       <app-source-tags class="tags" [tags]="tags()" />
-      <!-- One language for all three: a fixed glyph, muted while off and in the
-           accent while on. The labels are static, so `aria-pressed` is what
-           carries the state to a screen reader -- and it is the only thing that
-           does now that the read button no longer swaps its glyph. -->
+      <!-- One language for all three: a fixed glyph, muted while off and accent
+           while on. Labels are static, so `aria-pressed` alone carries the state
+           now that the read button no longer swaps its glyph. -->
       <div class="actions">
         <button
           type="button"
@@ -179,11 +172,9 @@
           <p class="reader-note">{{ 'reader.readerFallback' | transloco }}</p>
         }
         @if (hero(); as image) {
-          <!-- The original-feed view's lead picture (the reader view carries its
-               own inside contentHtml, #681). Width and height carry the aspect
-               ratio, so the article does not jump when a slow hero lands;
-               `height: auto` in the stylesheet keeps the declared size from
-               overriding the fluid layout. -->
+          <!-- The original-feed view's lead picture (the reader view carries its own
+               inside contentHtml, #681). Width/height carry the aspect ratio so the
+               article doesn't jump; `height: auto` keeps it from overriding the fluid layout. -->
           <img
             class="lead-image"
             [src]="image.url"

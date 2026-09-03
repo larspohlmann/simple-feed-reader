@@ -46,7 +46,6 @@ describe('EditSubscriptionDialogComponent', () => {
     const f = TestBed.createComponent(EditSubscriptionDialogComponent);
     f.detectChanges();
     ctrl = TestBed.inject(HttpTestingController);
-    // ngOnInit loads all tags:
     ctrl.expectOne('https://api.test/api/tags').flush({
       tags: [
         { id: 1, name: 'Tech', color: null, icon: null },

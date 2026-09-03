@@ -1,4 +1,3 @@
-// src/app/settings/account-section.component.spec.ts
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
@@ -143,11 +142,9 @@ describe('AccountSectionComponent', () => {
 
     f.componentInstance.confirmThenDelete();
 
-    // The real document AccountDeleter's guard sends, verbatim from
-    // LastAdminException / ApiProblem::toArray() (backend/src/Exception/
-    // LastAdminException.php): `type` is a bare slug, never a URL -- see
-    // ApiProblem's own docblock -- and `detail` is present, which is the
-    // half of `error.detail || error.title` production actually renders.
+    // Mirrors the real AccountDeleter guard's shape (LastAdminException /
+    // ApiProblem::toArray()): `type` is a bare slug, and `detail` is present
+    // -- the `error.detail` half of the template's fallback expression.
     httpMock.expectOne(`${base}/api/me`).flush(
       {
         type: 'last_admin',

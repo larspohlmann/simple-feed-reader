@@ -1,4 +1,3 @@
-// src/app/settings/organise/organise-feed-row.component.scss
 @use '../../theme/breakpoints' as bp;
 
 :host {
@@ -38,15 +37,9 @@
   overflow: hidden;
 }
 
-// A pill is itself a flex item of `.pills`, and without its own `overflow` a
-// flex item's automatic minimum width floors at its full content size (the
-// glyph plus the whole tag name) -- so when the row runs out of room, `.pills`
-// shrank below that floor while each `.pill` refused to, and the surplus
-// pixels overflowed `.pills`' own clip, cutting the last pill's rounded shape
-// off mid-way instead of truncating it. `overflow: hidden` here lets the pill
-// itself shrink, so `.name` below can ellipsize *inside* a box that actually
-// resizes to match -- the rendering is always a complete, smaller pill, never
-// a sliced one.
+// A pill's automatic min-width otherwise floors at its full content size, so
+// when the row runs out of room `.pills` shrinks below that floor and the
+// last pill's shape gets clipped mid-way instead of truncating cleanly.
 .pill {
   display: inline-flex;
   align-items: center;
@@ -84,13 +77,9 @@
 // `appIconButton` directive's, styled globally in `styles/_icon-button.scss`
 // — see that file's comment for why this cannot be a component style.
 
-// A phone row carries four action controls (▲▼✏⋯) beside a title that
-// already loses half the row to them. The ⋯ action sheet (coarse pointers,
-// which is what a phone-width row means here) already lists Edit as its
-// first action, so the standalone pencil is a second way to reach the same
-// thing at exactly the width that can least afford it. The ▲▼ arrows stay at
-// every width regardless -- drag-and-drop is off on a coarse pointer, so they
-// are the only way to reorder there.
+// A phone row's title already loses half its space to four action controls
+// (▲▼✏⋯), and the ⋯ action sheet already lists Edit first, so the pencil is
+// redundant there. Arrows stay: drag-and-drop is off on a coarse pointer.
 @media (width <= bp.$bp-sm) {
   .edit {
     display: none;

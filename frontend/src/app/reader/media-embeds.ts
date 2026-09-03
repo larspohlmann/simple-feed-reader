@@ -1,17 +1,11 @@
 /**
- * Turns a recovered media link into a real player.
- *
- * The backend cannot ship an `<iframe>`: its sanitizer is shared with feed
- * ingest, so allowing one there would let any feed inject an arbitrary frame,
- * and Angular's own sanitizer drops iframes from `[innerHTML]` regardless. So
- * the body carries a plain link and this pass upgrades it, building the element
- * itself from a URL it re-validates. Angular's sanitizer stays on.
- *
- * Because the link is what gets cached and the upgrade happens at render,
- * dropping a provider takes effect on articles that are already in the cache.
- *
- * Runs in the reader's post-render pass beside markInsetCards. Idempotent: the
- * anchor is gone after the first pass, and a re-render replaces the whole body.
+ * Turns a recovered media link into a real player. The backend can't ship an
+ * `<iframe>` — its sanitizer is shared with feed ingest, and Angular's own
+ * sanitizer drops iframes from `[innerHTML]` regardless — so the body carries a
+ * plain link and this pass builds the element from a re-validated URL, with
+ * Angular's sanitizer left on. The link is what's cached, so dropping a provider
+ * takes effect on already-cached articles. Runs beside `markInsetCards`;
+ * idempotent since the anchor is gone after the first pass.
  */
 const ALLOWED = [
   /^https:\/\/www\.youtube-nocookie\.com\/embed\/[A-Za-z0-9_-]{11}$/,

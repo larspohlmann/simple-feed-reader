@@ -1,4 +1,3 @@
-// src/app/core/passkey.service.spec.ts
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
@@ -9,11 +8,9 @@ import { TokenStore } from './token.store';
 
 const bytesOf = (text: string): ArrayBuffer => new TextEncoder().encode(text).buffer as ArrayBuffer;
 
-/** Drains every pending microtask, however many `await` hops a ceremony's
- *  promise chain needs -- a fixed number of `await Promise.resolve()` calls
- *  is fragile against exactly that count changing. A `setTimeout` callback
- *  only runs once Node's microtask queue is fully empty, so this is a
- *  reliable "let everything settle" barrier regardless of chain depth. */
+/** Drains all pending microtasks regardless of a ceremony's promise-chain
+ *  depth -- more reliable than counting `await Promise.resolve()` calls.
+ *  A setTimeout callback only runs once the microtask queue is empty. */
 const flushMicrotasks = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
 const creationOptions = {
@@ -141,11 +138,9 @@ describe('PasskeyService', () => {
     });
   });
 
-  // Task 15 aborts the conditional-mediation ceremony on every password-form
-  // submit; Task 17's revocation dialog must keep the offer unanswered on a
-  // cancelled sheet. Both need a stable identifier to branch on rather than
-  // string-matching `title`, so each DOMException name a real authenticator
-  // rejects with must survive into `Problem.type` unchanged.
+  // Callers need a stable identifier to branch on rather than string-matching
+  // `title` -- e.g. aborting a ceremony on submit, or a cancelled revocation
+  // dialog -- so each DOMException name must survive into Problem.type unchanged.
   it.each([['NotAllowedError'], ['AbortError'], ['InvalidStateError']])(
     'preserves the DOMException name %s as the Problem type, for callers to branch on',
     async (name) => {
@@ -192,12 +187,9 @@ describe('PasskeyService', () => {
     await expect(enrolment).rejects.toMatchObject({ status: 401, title: 'Unauthorized' });
   });
 
-  // A dropped connection during the options request also produces
-  // status: 0 (through parseProblem() -> fallbackProblem()), the same status
-  // the DOMException branch above uses -- but it must NOT carry
-  // ceremonyRejected, since it never reached the browser's ceremony at all.
-  // A caller that hides the browser's raw title on ceremonyRejected must not
-  // also hide this one's already-app-owned "could not reach the server" text.
+  // A dropped connection also produces status: 0, same as the DOMException
+  // branch, but must NOT carry ceremonyRejected -- it never reached the
+  // browser's ceremony, so its own "could not reach the server" text stays.
   it('does not mark a genuine network failure as a rejected ceremony', async () => {
     const enrolment = svc.enrol('MacBook Touch ID');
     ctrl

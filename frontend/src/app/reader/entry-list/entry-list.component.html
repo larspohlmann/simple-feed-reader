@@ -14,40 +14,27 @@
     <div class="title-row">
       <h2 #listTitle tabindex="-1" [class.search-title]="selection().kind === 'search'">
         @if (titleTag(); as tag) {
-          <!-- A named step rather than `text`, so the glyph carries the weight of
-               the title beside it instead of trailing it. Stepping down when the
-               bar collapses keeps that balance: a fixed px would tower over the
-               13px the heading drops to. -->
+          <!-- A named step rather than `text`, so the glyph carries the weight of the
+               title beside it. Stepping down on collapse keeps that balance: a fixed
+               px would tower over the 13px the heading drops to. -->
           <app-tag-glyph [name]="tag.icon" [color]="tag.color" [size]="collapsed() ? 'xs' : 'md'" />
         }
         @if (selection().kind === 'subscription') {
-          <!-- The feed's own favicon, the same icon the sidebar row shows, so
-               the heading and the row that led here read as the same feed. It
-               sits inside the ellipsised h2 for the same reason the tag glyph
-               does: the clip runs from the end, so the icon stays put however
-               long the name is. -->
+          <!-- The feed's own favicon, the same icon the sidebar row shows, so the
+               heading and the row that led here read as the same feed. It sits
+               inside the ellipsised h2 so the clip (from the end) never touches it. -->
           <app-favicon [url]="titleFaviconUrl()" [size]="collapsed() ? 16 : 20" />
         }
         @if (titleIcon(); as icon) {
-          <!-- The fixed views (All items, Favorites, Kept, Recently read, For
-               you, search) lead with the same glyph their sidebar row shows.
-               Sized like the tag glyph, and stepped down on collapse for the
-               same reason: a fixed px would tower over the 13px heading (#411). -->
+          <!-- The fixed views (All items, Favorites, Kept, Recently read, For you,
+               search) lead with the same glyph their sidebar row shows. Sized like
+               the tag glyph and stepped down on collapse for the same reason (#411). -->
           <app-icon [name]="icon" [size]="collapsed() ? 'xs' : 'md'" />
         }
         @if (selection().kind === 'search') {
-          <!-- Split so the "Results for" lead can sit small and muted while
-               the quoted term stays prominent and the count reads as its own
-               pill rather than trailing "— {{count}}" text (#581 follow-up,
-               round 2). The count logic lives once in the shell, which
-               passes the already-assembled pieces down; this list only
-               renders the split. The `{{ ' ' }}` between the prefix and the
-               term is load-bearing, not decoration: Angular drops a
-               purely-whitespace text node between two elements (the same
-               rule the tag glyph's own margin works around above), so
-               without an actual interpolated character here the prefix runs
-               straight into the term's opening quote with no space at all,
-               at every width. -->
+          <!-- Split so "Results for" stays small/muted while the term stays
+               prominent (#581). The `{{ ' ' }}` between them is load-bearing, not
+               decoration: Angular drops a whitespace-only text node between elements. -->
           <span class="results-prefix">{{ searchTitlePrefix() }}</span
           ><br class="mobile-search-title-break" />{{ ' '
           }}<span class="results-term">{{ searchTitleTerm() }}</span>
@@ -57,12 +44,9 @@
         } @else {
           <span>{{ title() }}</span>
           @if (headingCount(); as count) {
-            <!-- The count's meaning, for the heading's accessible name. The
-                 visible pill outside this h2 is a bare number and is
-                 aria-hidden, so this is where a screen reader hears what the
-                 number counts — the same arrangement the whole-word and phrase
-                 badges use, and for the same reason: it must be heard on
-                 heading navigation, not only on focus (#709). -->
+            <!-- The count's meaning, for the heading's accessible name: the visible
+                 pill outside this h2 is a bare number and aria-hidden, so this is
+                 where a screen reader hears what it counts, on heading nav too (#709). -->
             <span class="sr-only">{{
               (titleCount().counts === 'unread'
                 ? 'reader.titleCountUnread'
@@ -72,12 +56,9 @@
           }
         }
         @if (showWholeWordBadge()) {
-          <!-- Carries the mode into the heading's own accessible name, so a
-               screen-reader user hears it whichever way they reached the
-               heading (focus, or heading navigation) — aria-describedby only
-               fires on focus (#408 follow-up fix round 2). The visible badge
-               beside it renders the same word for sighted users; it is
-               aria-hidden so the two don't announce it twice. -->
+          <!-- Carries the mode into the heading's own accessible name so it is heard
+               on heading navigation too, not just focus (aria-describedby only fires
+               on focus, #408). The visible badge beside it is aria-hidden to avoid a double announce. -->
           <span class="sr-only">{{ 'reader.searchWholeWord' | transloco }}</span>
         }
         @if (showPhraseBadge()) {
@@ -88,10 +69,9 @@
         }
       </h2>
       @if (headingCount(); as count) {
-        <!-- Beside the h2, not inside it: the h2 ellipsises, so a long feed
-             name would clip the very number this pill exists to show — the same
-             trade the mode badges below make. aria-hidden because the h2 above
-             already carries the count in words. -->
+        <!-- Beside the h2, not inside it: the h2 ellipsises, so a long feed name
+             would clip the very number this pill exists to show. aria-hidden
+             because the h2 above already carries the count in words. -->
         <span class="title-count count-pill" aria-hidden="true">{{ count }}</span>
       }
       @if (showWholeWordBadge()) {
@@ -124,18 +104,9 @@
       <ng-container [ngTemplateOutlet]="actions" />
     }
     @if (hasUnreadFilter()) {
-      <!-- One switch, not a two-option toggle. It reads as an "unread" switch:
-           on narrows the list to unread, off shows everything. A filled circle
-           marks the on/unread position, a hollow one the off/all position — the
-           same "filled means unread" convention the rows carry (#602) — so the
-           fill and aria-checked agree. The switch stays accent (green) in both
-           positions; the fill, not the colour, marks on from off. Its accessible
-           name and tooltip stay the constant "only unread" (the switch role
-           carries the on/off state itself); the visible legend below flips
-           "only unread"/"All posts" for sighted users. Turning it on sets
-           `unread=1`; turning it off drops the param, which the reader now reads
-           as the default "all". The keydown.space handler gives the switch the
-           Space-to-toggle a native anchor lacks. -->
+      <!-- One switch, not a two-option toggle: filled circle means unread-only,
+           hollow means all, matching the "filled means unread" row convention
+           (#602). keydown.space gives the anchor the Space-to-toggle a switch needs. -->
       <a
         #unreadSwitch
         appListAction
@@ -149,19 +120,13 @@
         [attr.title]="'reader.unread' | transloco"
         (keydown.space)="$event.preventDefault(); unreadSwitch.click()"
       >
-        <!-- One `circle` glyph for both positions, its FILL axis carrying the
-             state (#602's "filled means unread"): a solid disc while filtered to
-             unread, a hollow ring while showing all. The outlined font is FILL 0
-             by default, which is why the ring needs no second glyph and the disc
-             needs `fill`. Keeping one name keeps the diameter identical across
-             the toggle. -->
+        <!-- One `circle` glyph for both positions, its FILL axis carrying the state
+             (#602): solid while filtered to unread, hollow (FILL 0, the font
+             default) while showing all — one glyph keeps the diameter identical. -->
         <app-icon name="circle" size="sm" [fill]="selection().unread" />
-        <!-- A legend on the wide header only (the narrow header drops it and
-             lets the circle carry the state, the same trade the action buttons
-             beside it make). It names the current view — "only unread" while
-             filtered to unread, "All posts" while showing everything — and is
-             aria-hidden so it never fights the switch's own constant name and
-             on/off state. -->
+        <!-- Wide header only; narrow drops it and lets the circle carry the state,
+             like the action buttons beside it. aria-hidden so it never fights the
+             switch's own constant accessible name and on/off state. -->
         <span class="txt" aria-hidden="true">{{
           (selection().unread ? 'reader.unread' : 'reader.all') | transloco
         }}</span>
@@ -205,11 +170,9 @@
 </header>
 
 @if (selection().kind === 'search') {
-  <!-- Announces the count, not the rows: a live region that spoke every row
-       would drown a screen-reader user in noise on every result set. The
-       count tracks the loaded entries, so tapping Load more re-announces the
-       new total — a deliberate choice: it's a discrete, manual action, not a
-       stream the user needs shielding from. -->
+  <!-- Announces the count, not the rows: speaking every row would drown a
+       screen-reader user in noise. It re-announces on Load more too — a
+       deliberate choice, since that's a discrete manual action, not a stream. -->
   <p class="sr-only" aria-live="polite" role="status">
     {{ 'reader.searchCount' | transloco: { count: entries().length } }}
   </p>
@@ -286,10 +249,8 @@
   >
     @if (topBlock(); as block) {
       <!-- Wrapped in an element this component owns, so the column's own
-           `.rows.magazine > *` sizing reaches it. ng-container renders no node,
-           and the projected component is created by the caller's template, so
-           it carries the caller's encapsulation attribute and that rule can
-           never match it. -->
+           `.rows.magazine > *` sizing reaches it: ng-container renders no node,
+           and the projected component carries the caller's encapsulation attribute. -->
       <div class="top-block">
         <ng-container [ngTemplateOutlet]="block" />
       </div>
@@ -422,10 +383,8 @@
   >
     @if (topBlock(); as block) {
       <!-- Wrapped in an element this component owns, so the column's own
-           `.rows.magazine > *` sizing reaches it. ng-container renders no node,
-           and the projected component is created by the caller's template, so
-           it carries the caller's encapsulation attribute and that rule can
-           never match it. -->
+           `.rows.magazine > *` sizing reaches it: ng-container renders no node,
+           and the projected component carries the caller's encapsulation attribute. -->
       <div class="top-block">
         <ng-container [ngTemplateOutlet]="block" />
       </div>
@@ -474,8 +433,7 @@
 @if (entries().length > 0) {
   <!-- Held in the DOM rather than switched in, so the fade plays on the way out
        too — a structural @if would cut it off the frame the rows arrive.
-       Decorative: the rows already carry aria-busy, and a second announcement
-       of the same wait is noise. -->
+       Decorative: the rows already carry aria-busy. -->
   <app-loading-overlay [shown]="reloadSpinner()" [label]="'common.loading' | transloco" />
 }
 

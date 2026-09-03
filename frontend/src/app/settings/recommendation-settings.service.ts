@@ -1,4 +1,3 @@
-// src/app/settings/recommendation-settings.service.ts
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable } from 'rxjs';
@@ -66,9 +65,8 @@ export interface RecommendationSettingsState {
   /** The persisted, distilled preference profile the pipeline writes; read-only
    *  here, null until a run has generated one. */
   readonly profileText: string | null;
-  /** Whether "For you" shows each pick's one-line reason (#541). */
-  /** Shows each pick's reason AND the score beside it — one switch for the
-   *  whole explanation; debug mode reaches neither (#576). */
+  /** Shows each pick's reason and the score beside it (#541) — one switch for
+   *  the whole explanation; debug mode reaches neither (#576). */
   readonly showReasons: boolean;
 }
 
@@ -143,13 +141,11 @@ export class RecommendationSettingsService {
     });
   }
 
-  /** The instant path for toggles and selects: it composes the override over
-   *  the last-saved state, so it never carries pending typed edits — and it
-   *  leaves any pending typed edits in the draft untouched. `saved` flips true
-   *  on success here too, so the card's one success signal is uniform across
-   *  the instant and the explicit path (#541): the card toasts off `saved`
-   *  rather than guessing which write finished. It does not clear the draft:
-   *  an instant toggle must never discard a pending typed edit. */
+  /** The instant path for toggles and selects: composes the override over the
+   *  last-saved state, leaving any pending typed edits in the draft untouched.
+   *  `saved` flips true here too, so the card's one success signal is uniform
+   *  across both paths (#541) -- it toasts off `saved` rather than guessing
+   *  which write finished. */
   saveInstant(partial: Partial<SaveRecommendationSettings>): void {
     const current = this.state();
     if (!current) return;
@@ -218,12 +214,10 @@ export class RecommendationSettingsService {
     this.draft.set({});
   }
 
-  /** Clears every persisted recommendation. On success, refreshes the
-   *  reader's own status so the sidebar count (Task 9) drops immediately
-   *  rather than waiting for the next run. A 409 while a run is active comes
-   *  back as an ordinary `Problem` -- the caller renders its `detail`
-   *  verbatim, the same real-outcome treatment as any other rejected write,
-   *  rather than a generic failure message. */
+  /** Clears every persisted recommendation. On success, refreshes the reader's
+   *  own status so the sidebar count (Task 9) drops immediately. A 409 while a
+   *  run is active comes back as an ordinary `Problem` -- the caller renders
+   *  its `detail` verbatim, same as any other rejected write. */
   purge(): void {
     this.purging.set(true);
     this.purgeFailure.set(null);

@@ -21,14 +21,11 @@ const BUNDLED_DICTIONARIES: Readonly<Record<string, Translation>> = {
 /** Loads a language's dictionary — bundled ones from the build, the rest from
  *  the statically-served `public/i18n/`.
  *
- *  THE FALLBACK LANGUAGE IS BUNDLED, not fetched. The dictionary preload used
- *  to gate the whole bootstrap on one uncached network request; a mobile
- *  browser that discards the tab and resume-reloads on a still-reconnecting
- *  radio got a permanently blank page (#280). With the fallback language
- *  compiled in, the fallback chain terminates without the network — and it has
- *  to live HERE, in the loader: Transloco's load() consults only its own
- *  request cache, so a setTranslation() call would not prevent the HTTP
- *  request.
+ *  THE FALLBACK LANGUAGE IS BUNDLED, not fetched: the preload used to gate
+ *  boot on one uncached request, and a mobile browser resume-reloading on a
+ *  reconnecting radio got a permanently blank page (#280). It must live HERE
+ *  in the loader — Transloco's `load()` only consults its own request cache,
+ *  so `setTranslation()` would not prevent the HTTP request.
  *
  *  The path is deliberately RELATIVE. The app is served at the domain root by
  *  the Docker setup and under a `/reader` subpath on Strato; a relative URL

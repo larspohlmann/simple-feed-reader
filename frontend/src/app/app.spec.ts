@@ -1,4 +1,3 @@
-// src/app/app.spec.ts
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
@@ -11,10 +10,9 @@ describe('App', () => {
 
   async function render() {
     await TestBed.configureTestingModule({
-      // provideTranslocoTesting() returns a ModuleWithProviders and belongs in
-      // `imports`, as every other component spec in this repo does it. It loads
-      // the real shipped dictionaries, so the assertions below are against the
-      // actual English UI strings.
+      // provideTranslocoTesting() belongs in `imports` (a ModuleWithProviders),
+      // as every other component spec here does. It loads the real shipped
+      // dictionaries, so assertions below check actual English UI strings.
       imports: [App, provideTranslocoTesting()],
       // provideRouter supplies the context <router-outlet> needs to render.
       providers: [
@@ -43,11 +41,9 @@ describe('App', () => {
   it('renders no element besides the outlet while navigation is healthy', async () => {
     const fixture = await render();
 
-    // Load-bearing, not cosmetic: index.html's boot watchdog (#282) cancels
-    // its 15 s timer as soon as <app-root> holds any element that is not
-    // <router-outlet>. Static chrome here would disarm it ~70 ms into
-    // bootstrap and bring back the blank page of #282, so the banner must
-    // stay behind an @if — which renders a comment anchor, not an element.
+    // Load-bearing: index.html's boot watchdog (#282) cancels its timer once
+    // <app-root> holds any non-<router-outlet> element. The banner must stay
+    // behind @if (a comment anchor, not an element) or the blank page returns.
     const host: HTMLElement = fixture.nativeElement;
     expect(host.querySelector(':not(router-outlet)')).toBeNull();
   });

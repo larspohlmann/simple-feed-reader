@@ -1,4 +1,3 @@
-// src/app/discover/catalog-selection.store.ts
 import { Injectable, computed, signal } from '@angular/core';
 import { CatalogCategoryDto } from './catalog.models';
 

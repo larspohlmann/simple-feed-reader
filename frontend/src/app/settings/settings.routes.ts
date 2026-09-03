@@ -1,4 +1,3 @@
-// src/app/settings/settings.routes.ts
 import { Routes } from '@angular/router';
 import { adminGuard } from '../core/admin.guard';
 import { sectionLabelKey } from './settings-sections';

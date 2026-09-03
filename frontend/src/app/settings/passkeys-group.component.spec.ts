@@ -1,4 +1,3 @@
-// src/app/settings/passkeys-group.component.spec.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
@@ -43,21 +42,15 @@ function passkeyServiceStub(passkeys: PasskeySummary[] = []): PasskeyServiceStub
 
 describe('PasskeysGroupComponent', () => {
   let passkeyService: PasskeyServiceStub;
-  // Enrolling goes through the naming dialog (fix round 1, #624), and remove
-  // now goes through a confirm dialog too (fix round 2): "Add a passkey"
-  // opens PasskeyNameDialogComponent, the row's delete button opens
-  // ConfirmDialogComponent, and only a returned name / a `true` confirmation
-  // triggers the real call. Stubbed the same way
-  // `AccountSectionComponent`'s own dialog spec stubs `Dialog`, rather than
-  // rendering the real CDK overlay here -- both dialogs have their own specs.
+  // Enrol opens PasskeyNameDialogComponent, remove opens ConfirmDialogComponent
+  // (#624) -- both stubbed via Dialog, matching AccountSectionComponent's own
+  // dialog spec, rather than rendering the real CDK overlay.
   const dialogStub = { open: jest.fn() };
   const authService = { markPasskeyOfferAnswered: jest.fn() };
 
   /**
-   * $passkeySignInAvailable defaults to `true` so every pre-existing test
-   * below -- written before #624 follow-up's instance-wide toggle existed --
-   * keeps exercising the group without having to know about it. The
-   * dedicated `describe` block further down covers `false` and `null`.
+   * passkeySignInAvailable defaults to true so pre-existing tests need not
+   * know about the toggle; the describe block below covers false and null.
    */
   function mount(passkeySignInAvailable: boolean | null = true) {
     TestBed.configureTestingModule({
@@ -116,12 +109,9 @@ describe('PasskeysGroupComponent', () => {
   });
 
   /**
-   * #624 follow-up: a toggle that only hides the button is cosmetic if the
-   * group underneath still lets a user create a credential they can no
-   * longer sign in with. Fails CLOSED -- `null` (still loading) renders
-   * nothing, unlike the login page's `mailEnabled`/`passkeySignInAvailable`
-   * convention, which fails open: there, the worst case is a stale link; here
-   * it is a credential the user is then stuck with.
+   * #624: fails CLOSED (null renders nothing), unlike the login page's
+   * fail-open convention -- there the worst case is a stale link, here it's
+   * a credential the user is stuck with.
    */
   describe('when the browser supports passkeys but the instance does not offer sign-in', () => {
     beforeEach(() => {
@@ -174,10 +164,9 @@ describe('PasskeysGroupComponent', () => {
     });
 
     it('renders two credentials with different labels as two distinguishable rows', () => {
-      // The regression this proves fixed: before rename-on-create, every
-      // enrolment sent the same fixed default label, so two credentials
-      // rendered as two rows with IDENTICAL titles -- telling them apart
-      // required reading near-identical creation timestamps.
+      // Before rename-on-create every enrolment sent the same default label,
+      // so two credentials rendered with IDENTICAL titles -- telling them
+      // apart required reading near-identical timestamps.
       passkeyService = passkeyServiceStub([TOUCH_ID, NEVER_USED]);
       const f = mount();
 
@@ -222,12 +211,9 @@ describe('PasskeysGroupComponent', () => {
     });
 
     it('marks the first-login offer answered locally after a successful enrolment from Settings', async () => {
-      // Finding 1: the server already stamps the flag as a side effect of a
-      // successful enrol() (AttestationVerifier::persist()), but the local
-      // `auth.user()` signal is not refetched on route change. Without this
-      // call, navigating to `/` straight after adding a passkey here reopens
-      // the first-login offer for a passkey that already exists, and its
-      // ceremony then fails with InvalidStateError.
+      // auth.user() isn't refetched on route change; without this call,
+      // navigating to `/` reopens the first-login offer for a passkey that
+      // already exists, whose ceremony then fails with InvalidStateError.
       passkeyService = passkeyServiceStub([]);
       dialogStub.open.mockReturnValue({ closed: of('MacBook Touch ID') });
       const f = mount();
@@ -291,12 +277,9 @@ describe('PasskeysGroupComponent', () => {
     });
 
     it('shows a translated message, not the raw DOMException text, on any other ceremony failure', async () => {
-      // `ceremonyRejected` is `PasskeyService.toProblem()`'s flag for "this
-      // came from the browser, not the server" -- a `ConstraintError` or a
-      // plain `Error` lands here the same way `InvalidStateError` does, and
-      // must not surface the browser's own untranslated `title` any more
-      // than that branch does. Deliberately not keyed on `status === 0`
-      // alone -- see the network-failure spec below for why.
+      // ceremonyRejected flags "from the browser, not the server"; a
+      // ConstraintError must not surface its own untranslated title, same as
+      // InvalidStateError. Not keyed on status === 0 alone -- see below.
       passkeyService = passkeyServiceStub([]);
       dialogStub.open.mockReturnValue({ closed: of('MacBook Touch ID') });
       const authenticatorError: Problem = {
@@ -318,14 +301,9 @@ describe('PasskeysGroupComponent', () => {
     });
 
     it('shows the server-unreachable message on a genuine network failure during enrolment, not the generic passkey fallback', async () => {
-      // A dropped connection during enrol()'s own HTTP calls reaches this
-      // component as a Problem with status: 0 too -- PasskeyService.toProblem()
-      // routes it through parseProblem() -> fallbackProblem(), which is the
-      // SAME status the DOMException branch uses for a rejected ceremony.
-      // status alone cannot tell these apart (see backup-section.component.ts's
-      // outcomeIsUnproven(), which reads status === 0 as "dropped connection" --
-      // the opposite reading). Overwriting this one's title would discard the
-      // one message that told the user what actually happened.
+      // A dropped connection also reaches this component as status: 0 -- the
+      // SAME status a rejected ceremony uses, so status alone can't tell them
+      // apart. Overwriting this title would hide what actually happened.
       passkeyService = passkeyServiceStub([]);
       dialogStub.open.mockReturnValue({ closed: of('MacBook Touch ID') });
       const networkFailure: Problem = {
@@ -388,10 +366,9 @@ describe('PasskeysGroupComponent', () => {
     it('renders the lock-out message from the problem body on a 409', () => {
       passkeyService = passkeyServiceStub([TOUCH_ID]);
       dialogStub.open.mockReturnValue({ closed: of(true) });
-      // `PasskeyService.remove()` issues a plain `HttpClient.delete()` with no
-      // catch of its own, so a failure reaches this component as the raw
-      // `HttpErrorResponse` -- exactly what `parseProblem()` expects, and what
-      // `AccountSectionComponent`'s own 409 spec exercises the same way.
+      // remove() issues a plain HttpClient.delete() with no catch, so a
+      // failure reaches this component as a raw HttpErrorResponse -- what
+      // parseProblem() expects, matching AccountSectionComponent's 409 spec.
       const conflict: Problem = {
         type: 'last_credential',
         title: 'Last passkey',

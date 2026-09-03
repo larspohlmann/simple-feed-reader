@@ -1,7 +1,6 @@
-/* The host IS the row of buttons — there is deliberately no wrapper element.
-   `entry-compact` projects this component into the kicker's <p>, and the HTML
-   parser closes a paragraph at a block-level child, which would silently drop
-   the buttons onto a line of their own. */
+/* The host IS the row of buttons — no wrapper element. `entry-compact` projects
+   this into the kicker's <p>, and the HTML parser closes a paragraph at a
+   block-level child, which would silently drop the buttons onto their own line. */
 :host {
   display: inline-flex;
   align-items: center;
@@ -34,26 +33,16 @@ button:hover {
   color: var(--text-primary);
 }
 
-/* All three toggles, one language: a fixed glyph, muted while off and in the
-   accent while on. The read button used to swap glyph instead, on the argument
-   that accenting the majority state would leave the accent meaning nothing --
-   but the reader's default view is unread, where read is the exception, and a
-   third grammar for a control sitting beside the other two cost more than the
-   accent it saved (#435). */
+/* All three toggles, one language: muted off, accent on. Read used to swap
+   glyph instead, but the reader's default view is unread (read is the
+   exception), so a third grammar cost more than the accent it saved (#435). */
 button.on {
   color: var(--accent);
 }
 
-/* Touch density is a pointer decision, applied locally.
-   Vertical: full padding to reach --tap-target, fully cancelled by a negative
-   margin, so a card never gets taller on a phone. It derives from --tap-glyph,
-   not a fixed icon token, so both the sm cards and the md list reach exactly
-   --tap-target.
-   Horizontal: --space-2 of padding against a --space-4 gap — exactly twice the
-   padding — so the hit boxes tile edge to edge. This one needs no glyph term:
-   box width and centre-to-centre spacing both grow by the glyph size, so they
-   stay equal at either density. Skew it and, since the later button paints on
-   top, a tap on the star's right half would toggle keep instead. */
+/* Touch density, applied locally: vertical padding reaches --tap-target then
+   is cancelled by a negative margin, so a card never grows taller on a phone.
+   Horizontal padding is half the gap, so hit boxes tile edge to edge without overlap. */
 @media (pointer: coarse) {
   :host {
     gap: var(--space-4);

@@ -1,4 +1,3 @@
-// src/app/reader/header/reader-header.component.ts
 import {
   ChangeDetectorRef,
   Component,
@@ -63,12 +62,10 @@ export class ReaderHeaderComponent {
   /** A search request is in flight; forwarded to the mobile bar's own
    *  `app-search-field`. */
   readonly searchLoading = input(false);
-  /** The term the route currently carries, forwarded to the mobile bar's own
-   *  `app-search-field` exactly as the sidebar forwards it to its copy. The
-   *  field is mounted in two places and each mount has to be wired the same
-   *  way; without this the narrow layout opened its bar empty while the
-   *  results for `?q=` were on screen — after a reload, or after Back
-   *  returned to an earlier search. */
+  /** The term the route carries, forwarded to the mobile bar's `app-search-field`
+   *  exactly as the sidebar forwards to its copy — both mounts need the same
+   *  wiring, or the narrow bar opens empty while `?q=` results are on screen
+   *  (after a reload, or after Back). */
   readonly searchTerm = input('');
   readonly populateSearchTerm = input(true);
 
@@ -86,9 +83,8 @@ export class ReaderHeaderComponent {
   private readonly changeDetector = inject(ChangeDetectorRef);
   readonly menuOpen = signal(false);
   /** Whether the mobile bar covers the header. The shell reads this to force
-   *  the header on-screen (see reader-shell.component.ts) — the bar holds the
-   *  live term and the phone's keyboard, so scrolling it away would hide the
-   *  text the results depend on. */
+   *  the header on-screen — the bar holds the live term and keyboard, so
+   *  scrolling it away would hide the text results depend on. */
   readonly searchOpen = signal(false);
 
   private readonly searchFieldHost = viewChild('searchField', { read: ElementRef });
@@ -97,34 +93,26 @@ export class ReaderHeaderComponent {
    *  otherwise a page load would yank focus onto the (not yet interacted with)
    *  search trigger before the user asked for anything. */
   private isFirstFocusRun = true;
-  /** Set just before the layout effect below force-closes the bar, so the
-   *  focus effect can tell "the window grew out from under the user" apart
-   *  from "the user dismissed the bar" — see the focus effect's own comment
-   *  for why that distinction matters. */
+  /** Set just before the layout effect force-closes the bar, so the focus
+   *  effect can tell "the window grew out from under the user" apart from
+   *  "the user dismissed the bar" (see that effect's own comment). */
   private closedByLayout = false;
 
   constructor() {
-    // `searchOpen` is local state the narrow-only trigger sets true; nothing
-    // else ever moves it. Growing past NARROW_QUERY mid-search (rotate, or
-    // resize a resizable window) leaves it stuck true, so `app-sidebar`'s own
-    // `!isNarrow()` gate mounts a second `app-search-field` — a second `/`
-    // listener, and the mobile bar still covering the header — on a layout
-    // that no longer has a trigger for it. This is the only place that opens
-    // the bar, so it is also the only place responsible for closing it when
-    // the layout it belongs to goes away.
+    // `searchOpen` is local state only the narrow trigger sets true. Growing
+    // past NARROW_QUERY mid-search leaves it stuck, so `app-sidebar`'s
+    // `!isNarrow()` gate mounts a second field/`/` listener on a layout with no
+    // trigger for it — so this is also the only place responsible for closing it.
     effect(() => {
       if (this.screen.isNarrow() || !this.searchOpen()) return;
       this.closedByLayout = true;
       this.searchOpen.set(false);
     });
 
-    // Move focus with the bar: opening it swaps the trigger out for the field
-    // (the trigger unmounts), and closing it swaps the field back out for the
-    // trigger, so leaving focus behind either way would drop it to <body> for
-    // a keyboard or screen-reader user. `afterRenderEffect` (not a plain
-    // `effect`) because the target element must already exist in the DOM —
-    // the `@if` branch that holds it is still applying when a constructor
-    // `effect` would fire.
+    // Move focus with the bar: it swaps trigger for field and back, so leaving
+    // focus behind either way would drop it to <body>. `afterRenderEffect`, not
+    // a plain `effect`, because the target must already exist in the DOM — a
+    // constructor `effect` fires while the `@if` branch is still applying.
     afterRenderEffect(() => {
       const open = this.searchOpen();
       if (this.isFirstFocusRun) {
@@ -135,13 +123,10 @@ export class ReaderHeaderComponent {
         this.searchFieldHost()?.nativeElement.querySelector('input')?.focus();
         return;
       }
-      // A user-initiated close (the field's trailing ✕, or Escape — both
-      // arrive as `dismissed`) always has a trigger button back on screen to
-      // receive focus. A
-      // layout-initiated close does not: the trigger is itself narrow-gated,
-      // so it is absent on exactly the wide layout this close lands on.
-      // Chasing focus onto a nonexistent element would only drop it to
-      // <body> anyway, so it is left wherever the resize/rotate found it.
+      // A user-initiated close (✕ or Escape, both arrive as `dismissed`)
+      // always has a trigger button on screen. A layout-initiated close
+      // doesn't — the trigger is itself narrow-gated and absent on this wide
+      // layout — so focus is left wherever the resize/rotate found it.
       if (this.closedByLayout) {
         this.closedByLayout = false;
         return;
@@ -151,13 +136,10 @@ export class ReaderHeaderComponent {
   }
 
   /**
-   * Opens the mobile search bar and puts the cursor in the field within the tap
-   * itself. The trailing `afterRenderEffect` above also focuses on open, but it
-   * runs a tick later — outside the gesture — and iOS/Android only raise the
-   * soft keyboard for a `focus()` that happens inside the user gesture. So the
-   * field is rendered synchronously here (`detectChanges`, which materialises
-   * the `@else` branch that holds it) and focused in the same call stack, which
-   * is what actually opens the keyboard on a phone (#486).
+   * Opens the mobile search bar and focuses the field within the tap itself —
+   * iOS/Android only raise the soft keyboard for a `focus()` inside the user
+   * gesture, so the field is rendered synchronously (`detectChanges`) and
+   * focused in the same call stack (#486).
    */
   openSearch(): void {
     this.searchOpen.set(true);

@@ -1,4 +1,3 @@
-// src/app/reader/passkey-offer-dialog.component.ts
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef } from '@angular/cdk/dialog';
@@ -17,31 +16,23 @@ type OfferStage = 'offer' | 'declined';
 
 /**
  * The first-login passkey offer (#624): shown once, on the first reader boot
- * where the account has not answered it yet -- `ReaderShellComponent`'s own
- * gating effect is the only place that opens this, and its docblock names
- * the conditions that decide when.
+ * where the account has not answered it yet — see `ReaderShellComponent`'s
+ * gating effect for the conditions that decide when.
  *
  * Two stages, not a route of their own:
+ *  - "offer" — *Set up a passkey* runs `PasskeysGroupComponent`'s ceremony,
+ *    defaulting the label via `defaultPasskeyName` (no disambiguation needed
+ *    for a first passkey). Success already stamped the flag server-side, so
+ *    only the local signal catches up. A cancelled sheet (`NotAllowedError`)
+ *    is not a failure and not an answer, mirroring
+ *    `PasskeysGroupComponent.handleEnrolFailure()`; other failures stay on
+ *    screen with *Not now* still available.
+ *  - "declined" — reached by *Not now*, names the Settings path. One OK button.
  *
- *  - "offer" -- *Set up a passkey* runs the identical ceremony
- *    `PasskeysGroupComponent` runs, defaulting the label the same way its own
- *    naming dialog does (`defaultPasskeyName`) rather than asking for one --
- *    a first-ever passkey needs no disambiguating name yet. On success the
- *    enrol endpoint has already stamped the flag server-side, so only the
- *    local signal needs to catch up, never a second POST. A cancelled sheet
- *    (`NotAllowedError`) is not a failure to report -- mirrors
- *    `PasskeysGroupComponent.handleEnrolFailure()` -- and does not count as
- *    an answer. Any other failure stays on screen with its message, *Not
- *    now* still available.
- *  - "declined" -- reached by *Not now*, names the Settings path. One OK
- *    button.
- *
- * Every way out counts as an answer exactly once: the accept path marks it
- * locally on success, declining marks it the moment this stage opens (not
- * when OK is pressed, so an Escape here still counts), and the
- * constructor's `closed` subscription is the fallback for a close that
- * chose neither -- Escape or the backdrop from the offer stage. `answered`
- * guards all three so they never race each other into a duplicate write.
+ * Every exit counts as an answer exactly once: accept marks it on success,
+ * decline marks it the moment that stage opens (so an Escape there still
+ * counts), and the constructor's `closed` fallback catches Escape/backdrop
+ * from the offer stage. `answered` guards all three against a duplicate write.
  */
 @Component({
   selector: 'app-passkey-offer-dialog',
@@ -107,12 +98,9 @@ export class PasskeyOfferDialogComponent {
     this.authService.answerPasskeyOffer().subscribe({ error: () => undefined });
   }
 
-  /** Shared with `PasskeysGroupComponent` -- this runs the identical
-   *  ceremony, so it faces the identical failure shapes; see
-   *  `toEnrolFailureProblem()`'s own docblock for the branch-by-branch
-   *  reasoning, including why it reuses the Settings copies
-   *  (`settings.passkeys.alreadyEnrolled`, `settings.passkeys.addFailed`)
-   *  rather than second keys with the same words. */
+  /** Shared with `PasskeysGroupComponent` -- same ceremony, same failure shapes;
+   *  see `toEnrolFailureProblem()`'s own docblock for the branch-by-branch
+   *  reasoning, including why it reuses the Settings copy keys rather than duplicates. */
   private handleEnrolFailure(problem: Problem): void {
     const display = toEnrolFailureProblem(problem, this.i18n);
     if (display) this.error.set(display);

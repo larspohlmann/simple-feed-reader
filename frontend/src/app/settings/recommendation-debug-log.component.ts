@@ -1,4 +1,3 @@
-// src/app/settings/recommendation-debug-log.component.ts
 import {
   ChangeDetectionStrategy,
   Component,
@@ -35,14 +34,11 @@ export interface RunGroup {
 
 /** The #309 debug log: what each provider call sent and what streamed
  *  back, ~2 s fresh while a run is in flight. Server-side truth only -- the
- *  panel never talks to the provider; it re-reads the run log the tick is
- *  checkpointing. Self-hiding: no log rows (debug switch off, or no run
- *  yet) means no panel, so the settings page needs no extra lookup to hide
- *  it. Sits under AI settings, directly below the switch that produces it,
- *  rather than in the reader's "For you" list -- so the common case here is
- *  no run in flight: rows live until the next run starts, and the initial
- *  fetch on creation (not gated on `running()`) is what renders that
- *  previous run's log. */
+ *  panel re-reads the run log rather than talking to the provider.
+ *  Self-hiding: no log rows (debug off, or no run yet) means no panel.
+ *  Sits under AI settings, below the switch that produces it -- so the
+ *  common case is no run in flight, and the initial fetch on creation
+ *  (not gated on `running()`) is what renders the previous run's log. */
 @Component({
   selector: 'app-recommendation-debug-log',
   standalone: true,
@@ -58,11 +54,10 @@ export class RecommendationDebugLogComponent implements OnInit {
   private readonly language = inject(LanguageService);
 
   readonly entries = signal<DebugLogEntry[]>([]);
-  /** The entries clustered by run, newest run first. The log can span more
-   *  than one run (a resumed run keeps appending), and a flat list mixes them;
-   *  grouping keeps each run's calls together under one header. Rows arrive
-   *  ordered by id, so a run's rows are already contiguous -- this only marks
-   *  the boundaries and flips the run order so the latest sits on top. */
+  /** The entries clustered by run, newest first. A resumed run keeps
+   *  appending to the log, so a flat list would mix runs; grouping keeps each
+   *  run's calls under one header. Rows arrive ordered by id and are already
+   *  contiguous -- this only marks boundaries and flips the run order. */
   readonly groups = computed<RunGroup[]>(() => {
     const groups: RunGroup[] = [];
     for (const entry of this.entries()) {
@@ -157,7 +152,7 @@ export class RecommendationDebugLogComponent implements OnInit {
   }
 
   /** Date and clock time together, e.g. "21 Aug 22:54": the debug log spans
-     several days of runs, so the day is shown beside every time (#541). */
+   *  several days of runs, so the day is shown beside every time (#541). */
   time(iso: string): string {
     return `${formatDayInMonth(iso, this.language.lang())} ${formatTime(iso)}`;
   }
@@ -249,15 +244,13 @@ export class RecommendationDebugLogComponent implements OnInit {
   }
 
   /** A detail cached while its call was still streaming holds a partial
-   *  response: the poll that later flips `verdict` from null to a real
-   *  value must not leave that partial text on display forever. Evicting
-   *  the stale cache entry and re-fetching (only when the row is actually
-   *  expanded) replaces it with the finished transcript.
+   *  response; the poll that later flips `verdict` to a real value must not
+   *  leave that partial text on display, so this evicts the stale cache
+   *  entry and re-fetches (only when the row is expanded).
    *
-   *  The prior-state read is wrapped in `untracked()`: `fetch()` runs inside
-   *  the completion `effect`, and an untracked read of `entries()` keeps
-   *  that effect from re-triggering itself the instant this method calls
-   *  `entries.set()` below. */
+   *  `untracked()` wraps the prior-state read because `fetch()` runs inside
+   *  the completion `effect`, and a tracked read of `entries()` would
+   *  re-trigger that effect the instant this method calls `entries.set()`. */
   private applyEntries(entries: DebugLogEntry[]): void {
     const priorVerdictById = new Map(
       untracked(this.entries).map((entry) => [entry.id, entry.verdict]),

@@ -1,4 +1,3 @@
-// src/app/shared/settings/settings-row/settings-row.component.scss
 // One settings row, ported from the Grouped mockup's `.row` rules. The row is a
 // flex line: `.row-main` (title + optional description) takes the free space,
 // `.row-control` holds the projected control at its natural size, both centred.
@@ -55,11 +54,9 @@
   gap: var(--space-2);
 }
 
-// The inset hairline divider is drawn between rows, so it belongs to the row
-// that is not the last one in its group. Chosen `:host(:not(:last-child))` over
-// `.row:not(:last-child)`: each row is one host element, so last-of-group is a
-// host-level fact -- a `.row`-level selector could not see its siblings across
-// component boundaries. The line is inset from the left to match the mockup.
+// The hairline divider belongs to every row but the last in its group.
+// `:host(:not(:last-child))`, not `.row:not(:last-child)`: last-of-group is
+// a host-level fact — a `.row`-level selector can't see siblings across components.
 :host(:not(:last-child)) .row::after {
   content: '';
   position: absolute;
@@ -69,14 +66,9 @@
   border-top: 1px solid var(--border);
 }
 
-// Narrow viewport: a stackable row wraps and gives its control slot the full
-// width. Widening the control inside that slot is the caller's job, not this
-// component's: the control is projected content, so emulated encapsulation
-// stamps it with the caller's scope attribute and a selector written here can
-// never reach it. A toggle keeps its natural size regardless. The row's own
-// padding and its divider's inset already narrowed with it -- both read
-// `--panel-inset-y`/`--panel-inset-x`, which step down at this same
-// breakpoint in theme/tokens.scss.
+// Narrow viewport: a stackable row wraps and gives its control slot full
+// width. Widening the control itself is the caller's job — it's projected
+// content, so a selector here can never reach it (view encapsulation).
 @media (width <= bp.$bp-sm) {
   .row.stackable {
     flex-wrap: wrap;

@@ -1,7 +1,6 @@
 // The shared save/reset row for a settings surface, ported from the Grouped
-// mockup's `.savebar`. A leading "unsaved changes" indicator, a right-aligned
-// Reset/Save pair pushed over by the spacer, and a top border that seats the
-// bar against the panel above it.
+// mockup's `.savebar`: a leading "unsaved changes" indicator, a right-aligned
+// Reset/Save pair, and a top border seating it against the panel above.
 :host {
   display: block;
 }

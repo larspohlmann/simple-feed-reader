@@ -1,4 +1,3 @@
-// src/app/settings/run-history-status-icon.ts
 import { RunHistoryRow } from '../reader/models';
 
 /** The wire vocabulary for a run's status, narrowed off `RunHistoryRow` rather

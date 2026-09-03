@@ -1,17 +1,11 @@
 import type Hls from 'hls.js';
 
 /**
- * Plays an HLS stream the backend emitted as a plain `<video src="….m3u8">`.
- *
- * `canPlayType` is no signal: Chrome answers "maybe" and then never plays the
- * playlist. So hls.js — loaded on demand, a lazy chunk outside the initial
- * bundle — takes every stream where Media Source Extensions exist, and only a
- * browser without them (iOS Safari) plays the playlist natively. `autoStartLoad`
- * is off and loading starts on the first play, so `preload="none"` keeps its
- * meaning.
- *
- * Runs in the reader's post-render pass beside upgradeMediaEmbeds. A re-render
- * replaces the whole body, so instances of detached videos are destroyed first.
+ * Plays an HLS stream the backend emitted as `<video src="….m3u8">`. `canPlayType`
+ * lies (Chrome says "maybe", then never plays it), so lazy-loaded hls.js takes
+ * every browser with Media Source Extensions; only iOS Safari plays it natively.
+ * `autoStartLoad` stays off until first play, so `preload="none"` keeps meaning.
+ * Runs beside `upgradeMediaEmbeds`; a re-render destroys detached instances first.
  */
 const PLAYLIST = /\.m3u8$/i;
 const instances = new Map<HTMLVideoElement, Hls>();

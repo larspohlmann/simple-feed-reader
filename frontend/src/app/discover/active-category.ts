@@ -1,4 +1,3 @@
-// src/app/discover/active-category.ts
 import { Injectable, signal } from '@angular/core';
 
 /**

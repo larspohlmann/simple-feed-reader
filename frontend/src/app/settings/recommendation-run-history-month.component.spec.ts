@@ -245,10 +245,9 @@ describe('RecommendationRunHistoryMonthComponent', () => {
     expect(header.querySelector('.run-history-month__provider')).toBeNull();
   });
 
-  /* The defect behind #465: the header word, not the icon in the rows below
-     it, is what sized the status track, and at 390px the six tracks did not
-     fit the card. The glyph has to be in the DOM for the stylesheet to have
-     something to swap the word for. */
+  /* #465: the header WORD, not the icon, sized the status track and didn't
+     fit at 390px. The glyph must exist in the DOM for the stylesheet to
+     swap it in. */
   it('carries a status header glyph for the mobile track, in the DOM at every width', () => {
     const el = mount({ runs: [PRICED_RUN] });
 

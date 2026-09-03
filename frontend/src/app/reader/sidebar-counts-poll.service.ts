@@ -1,4 +1,3 @@
-// src/app/reader/sidebar-counts-poll.service.ts
 import { DestroyRef, Injectable, NgZone, inject } from '@angular/core';
 import { API_BASE_URL } from '../core/api';
 import { onIdentityChange } from '../core/session-identity';
@@ -7,17 +6,14 @@ import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
 import { SubscriptionsStore } from './subscriptions.store';
 
 /** How long a page may sit untouched before the poll gives up on it. The tab
- *  visibility rule already covers a backgrounded tab; this covers the other
- *  abandonment, a reader left open and visible on a screen nobody is at. Two
- *  hours outlasts a meeting or a lunch break and still stops an overnight
- *  machine well before morning. */
+ *  visibility rule already covers a backgrounded tab; this covers a reader left
+ *  open and visible with nobody at the screen. Two hours outlasts a lunch break. */
 export const SIDEBAR_POLL_IDLE_LIMIT_MS = 2 * 60 * 60 * 1000;
 
 /** The floor under the change marker (#720). Every tenth tick fetches counts
- *  even when the marker has not moved — five minutes, the refresh worker's own
- *  period. So a touch site nobody wrote degrades to the old behaviour instead
- *  of freezing a badge, and worst-case staleness is never worse than the
- *  refresh interval. Without it the marker would be a correctness dependency. */
+ *  even when the marker hasn't moved -- five minutes, the refresh worker's own
+ *  period -- so a touch site nobody wrote degrades gracefully instead of
+ *  freezing a badge; worst-case staleness never exceeds the refresh interval. */
 export const SIDEBAR_POLL_MARKER_FLOOR_TICKS = 10;
 
 /** The static change marker the refresh moves on a real import (#720). Served
@@ -26,36 +22,29 @@ export const SIDEBAR_POLL_MARKER_FLOOR_TICKS = 10;
 const CHANGE_MARKER_PATH = '/state/counts.json';
 
 /** What counts as "somebody is still here". `pointerdown` covers mouse, touch
- *  and pen; `wheel` covers the reader who only scrolls; `keydown` covers the
- *  one who only uses the keyboard. Deliberately not `pointermove`: a nudged
- *  desk would keep an abandoned tab polling forever. */
+ *  and pen; `wheel` covers scroll-only; `keydown` covers keyboard-only.
+ *  Deliberately not `pointermove`: a nudged desk would keep an idle tab polling. */
 const ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'wheel'] as const;
 
 /**
  * Keeps the sidebar counts moving on their own while the reader is open (#708),
  * without re-fetching the 137 KB bootstrap to read four numbers (#720).
  *
- * A steady tick reads the static change marker first. Unchanged, and not the
- * floor tick, it stops there — no API call at all. Moved (or the floor), it
- * runs the cheap counts-only reload. Regaining the tab, or waking an abandoned
- * page, does the full reload instead, so a feed added, renamed or retagged in
- * another tab or on another device is picked up at the one moment it is most
+ * A steady tick reads the static change marker first: unchanged (and not the
+ * floor tick), it stops there; moved (or the floor), it runs the cheap
+ * counts-only reload. Regaining the tab or waking an abandoned page does the
+ * full reload instead, so a change made elsewhere is picked up when it's most
  * likely waiting.
  *
- * This owns one timer and nothing else. It reloads the two stores that hold
- * every count; the sidebar badges, the list heading and the tab title all read
- * those stores (#709), so one tick moves every surface at once and none of them
- * can drift from another.
+ * Reloads the two stores that hold every count (badges, list heading, tab
+ * title all read them, #709), so one tick moves every surface at once.
  *
- * Three rules stop it from being a background tax:
- *   - a hidden tab does not poll, and refreshes the moment it is shown again;
- *   - a page nobody has touched for `SIDEBAR_POLL_IDLE_LIMIT_MS` is dropped
- *     until the next touch;
- *   - each store refuses a tick inside its freshness window or on top of a
- *     request it already has out, so a tick costs nothing it need not.
+ * Three rules stop it from being a background tax: a hidden tab doesn't poll
+ * (refreshes when shown again); an untouched page is dropped after
+ * `SIDEBAR_POLL_IDLE_LIMIT_MS` until the next touch; each store refuses a tick
+ * inside its freshness window or on top of one already out.
  *
- * The reader provides it, so it cannot outlive the reader; a logout ends it
- * too, since the next user's counts are not this poll's business.
+ * Reader-provided, so it can't outlive the reader; a logout ends it too.
  */
 @Injectable()
 export class SidebarCountsPoll {
@@ -96,22 +85,20 @@ export class SidebarCountsPoll {
   };
 
   constructor() {
-    // Everything this service schedules stays OUT of the Angular zone. A
-    // `wheel` listener inside it would run change detection on every notch of
-    // every scroll, and an interval inside it never lets the zone go stable —
-    // which hangs anything that waits for the app to settle. The store reloads
-    // step back in for the work that actually changes what is on screen.
+    // Everything this service schedules stays OUT of the Angular zone: a
+    // `wheel` listener inside it would run change detection on every scroll
+    // notch, and an interval would never let the zone go stable. Store
+    // reloads step back in for the work that actually changes the screen.
     this.zone.runOutsideAngular(() => {
       for (const event of ACTIVITY_EVENTS) {
         document.addEventListener(event, this.onActivity, { passive: true });
       }
       document.addEventListener('visibilitychange', this.onVisibilityChange);
     });
-    // No reload here. The reader's own boot load owns the first fetch, and a
+    // No reload here: the reader's own boot load owns the first fetch, and a
     // tick racing it would stamp the freshness clock against it. Record the
-    // marker the boot is loading against, so the first steady tick can already
-    // tell whether anything has moved since — outside the zone, like every
-    // other request this service makes, so it never holds `whenStable()` open.
+    // marker the boot loads against, so the first tick can tell what's moved
+    // (outside the zone, like every request here, so `whenStable()` never hangs).
     this.zone.runOutsideAngular(() => void this.refreshMarkerBaseline());
     this.startTicking();
 
@@ -185,11 +172,9 @@ export class SidebarCountsPoll {
     if (token !== null) this.lastMarkerToken = token;
   }
 
-  /** Read the marker OUTSIDE `HttpClient`: `authInterceptor` would attach the
-   *  bearer token to a same-origin relative URL, and the marker is a public,
-   *  contentless file that needs no auth. `no-cache` makes the browser
-   *  revalidate, so a served `304` costs bytes but no PHP. Any failure reads as
-   *  null and falls back to fetching. */
+  /** Read the marker OUTSIDE `HttpClient`: `authInterceptor` would attach a
+   *  bearer token to this same-origin, no-auth-needed file. `no-cache` forces
+   *  revalidation (a `304` costs bytes, not PHP). Any failure falls back to fetching. */
   private async readMarker(): Promise<string | null> {
     try {
       const response = await fetch(`${this.apiBase}${CHANGE_MARKER_PATH}`, { cache: 'no-cache' });

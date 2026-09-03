@@ -1,4 +1,3 @@
-// src/app/reader/preview-image.ts
 import { EntryDto, HeroImageDto } from './models';
 
 /** Parse HTML inertly and return the first absolute https image src, or null.

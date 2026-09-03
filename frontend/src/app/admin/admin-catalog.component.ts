@@ -1,4 +1,3 @@
-// src/app/admin/admin-catalog.component.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { Dialog } from '@angular/cdk/dialog';
@@ -115,8 +114,6 @@ export class AdminCatalogComponent implements OnInit {
       .sort((left, right) => left.position - right.position);
   }
 
-  // --- Dialog-based editing ---------------------------------------------------
-
   openCategoryDialog(category: AdminCatalogCategoryDto | null): void {
     const ref = this.dialog.open<AdminCatalogCategoryDto>(CategoryFormDialogComponent, {
       data: category,
@@ -172,8 +169,6 @@ export class AdminCatalogComponent implements OnInit {
     });
   }
 
-  // --- Category actions -------------------------------------------------------
-
   deleteCategory(category: AdminCatalogCategoryDto): void {
     this.actionError.set(null);
     this.api.deleteCategory(category.id).subscribe({
@@ -194,8 +189,6 @@ export class AdminCatalogComponent implements OnInit {
       error: (failure: HttpErrorResponse) => this.actionError.set(parseProblem(failure)),
     });
   }
-
-  // --- Feed actions -------------------------------------------------------------
 
   deleteFeed(feed: AdminCatalogFeedDto): void {
     this.actionError.set(null);
@@ -228,8 +221,6 @@ export class AdminCatalogComponent implements OnInit {
       error: (failure: HttpErrorResponse) => this.actionError.set(parseProblem(failure)),
     });
   }
-
-  // --- Import ---------------------------------------------------------------
 
   setMode(event: Event): void {
     this.importMode.set((event.target as HTMLSelectElement).value as ImportMode);
@@ -290,8 +281,6 @@ export class AdminCatalogComponent implements OnInit {
     if (input) input.value = '';
   }
 
-  // --- Icon warming ---------------------------------------------------------
-
   warm(): void {
     this.warming.set(true);
     this.warmReport.set(null);
@@ -318,8 +307,6 @@ export class AdminCatalogComponent implements OnInit {
       },
     });
   }
-
-  // --- Helpers --------------------------------------------------------------
 
   private upsertCategory(category: AdminCatalogCategoryDto): void {
     this.categories.update((list) => {

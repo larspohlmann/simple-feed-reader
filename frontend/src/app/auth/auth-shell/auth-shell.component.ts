@@ -1,4 +1,3 @@
-// src/app/auth/auth-shell/auth-shell.component.ts
 import { Component, Input } from '@angular/core';
 
 @Component({

@@ -5,18 +5,12 @@ import { countsAreStale } from './sidebar-freshness';
 import { SavedSearchDto, SavedSearchWire } from './models';
 
 /** The user's saved searches, newest first, each with a live unread-match
- *  count. load() re-syncs the whole set — the hook the reader shell calls after
- *  every refresh slice — and is the only place a count is learned, because it
- *  costs a LIKE scan over every subscribed entry (one scan for all searches,
- *  #584).
- *
- *  A single read used to leave every badge stale until the next such reload
- *  (#581, self-heals on the next tick). Now the API answers each search with
- *  the ids of its unread matches, so markEntryRead() can drop one the moment
- *  the user reads it — no round-trip. The dropped ids are tracked separately
- *  and cleared on the next load(), which is when the real set is re-learned
- *  (#645). The mutations patch the list from what the API already answered,
- *  because neither can change a set this store does not hold. */
+ *  count. load() re-syncs the whole set -- the hook the shell calls after every
+ *  refresh slice -- and is the only place a count is learned, since it costs a
+ *  LIKE scan over every subscribed entry (one scan for all searches, #584).
+ *  The API answers each search with the ids of its unread matches, so
+ *  markEntryRead() can drop one the moment it's read, no round-trip; the
+ *  dropped ids are tracked separately and cleared on the next load() (#645, #581). */
 @Injectable({ providedIn: 'root' })
 export class SavedSearchesStore {
   private readonly api = inject(ReaderApi);
@@ -55,10 +49,9 @@ export class SavedSearchesStore {
       next: (r) => {
         this.inFlight = null;
         this.loaded.set(r.savedSearches);
-        // The server re-counted, so the reads it has already seen are spent.
-        // The ones that arrived while this request was on the wire are NOT in
-        // its tally, and dropping them would put a badge the user just knocked
-        // down straight back up (#708).
+        // The server re-counted, so reads it already saw are spent. Ones that
+        // arrived while this request was in flight are NOT in its tally, and
+        // dropping them would put a knocked-down badge right back up (#708).
         this.readSinceLoad.update(
           (read) => new Set([...read].filter((id) => !readsWhenSent.has(id))),
         );
@@ -69,23 +62,18 @@ export class SavedSearchesStore {
     this.inFlight = request.closed ? null : request;
   }
 
-  /** The counts poll's reload (#708). `load()` is already silent — this store
-   *  has no loading flag and no banner — so the poll needs no separate quiet
-   *  path, only the two rules that keep a tick from doing harm: never refetch
-   *  inside the freshness window, and never stack on a request already out.
-   *
-   *  The badges the user has already knocked down are the third rule, and it
-   *  lives in `load()`'s response below. */
+  /** The counts poll's reload (#708). `load()` is already silent, so the poll
+   *  needs no separate quiet path — only the freshness-window and no-stacking
+   *  rules below. The "already knocked down" rule lives in `load()`'s response. */
   reloadIfStale(): void {
     if (this.inFlight) return;
     if (!countsAreStale(this.lastLoadedAt)) return;
     this.load();
   }
 
-  /** Drop an entry from every saved-search unread tally, the moment it is read.
-   *  A no-op unless the entry actually matches a saved search, so the tracking
-   *  set stays small and unrelated reads never churn the sidebar. One-way, to
-   *  match read-stickiness; the real set is re-learned on the next load(). */
+  /** Drop an entry from every saved-search unread tally, the moment it's read.
+   *  A no-op unless the entry matches a saved search, so unrelated reads never
+   *  churn the sidebar. One-way, matching read-stickiness; re-learned on load(). */
   markEntryRead(entryId: number): void {
     if (!this.loaded().some((wire) => wire.unreadEntryIds.includes(entryId))) return;
     this.readSinceLoad.update((read) => new Set(read).add(entryId));

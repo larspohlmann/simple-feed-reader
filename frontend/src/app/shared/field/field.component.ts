@@ -24,8 +24,8 @@ export class FieldComponent {
   readonly error = input<string | null>(null);
   readonly hint = input<string | null>(null);
   /** Already-translated explanation; renders an `<app-info-tip>` at the end of
-   *  the label row (#372). Its panel opens on the next line, between the label
-   *  row and the control (#433). */
+   *  the label row (#372), whose panel opens as a fixed popover clamped to the
+   *  viewport (#541), never shifting sibling layout. */
   readonly info = input<string | null>(null);
   readonly required = input(false);
 }

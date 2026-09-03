@@ -13,19 +13,14 @@ export interface Problem {
    *  (RelyingPartyChangeRequiresConfirmationException, #624). */
   invalidatedPasskeyCount?: number;
   /** Set only by `PasskeyService.toProblem()`'s `DOMException`/local-`Error`
-   *  branch (#624) -- never by `parseProblem()`/`fallbackProblem()`. Exists
-   *  because `status: 0` alone does not say why: a rejected WebAuthn ceremony
-   *  never reached the server and also gets `status: 0` there, but so does a
-   *  genuine dropped connection during one of `PasskeyService`'s own HTTP
-   *  calls (`fallbackProblem()` in this file). `title` means something
-   *  different in each case -- the browser's raw, untranslated
-   *  `DOMException.message` in the first, this app's own translated-ish
-   *  "Could not reach the server" in the second -- so a caller that wants to
-   *  hide the first must not also hide the second. See
-   *  `settings/backup-section.component.ts`'s `outcomeIsUnproven()` for a
-   *  second, unrelated reading of plain `status === 0` ("a dropped connection
-   *  leaves the outcome unproven") -- proof that the status alone is
-   *  overloaded across this app and cannot be the discriminator here. */
+   *  branch (#624), never by `parseProblem()`/`fallbackProblem()`. Needed
+   *  because `status: 0` alone is ambiguous: both a rejected ceremony and a
+   *  genuine dropped connection produce it, but `title` differs -- raw
+   *  `DOMException.message` in the first, this app's translated "Could not
+   *  reach the server" in the second -- so a caller hiding one must not hide
+   *  the other. (`backup-section.component.ts`'s `outcomeIsUnproven()` reads
+   *  plain `status === 0` differently, confirming the status alone cannot be
+   *  the discriminator here.) */
   ceremonyRejected?: true;
 }
 

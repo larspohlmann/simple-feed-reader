@@ -1,5 +1,4 @@
 <app-settings-stack>
-  <!-- ============ PROVIDER ============ -->
   <app-settings-group
     icon="smart_toy"
     [title]="'settings.ai.provider.title' | transloco"
@@ -322,15 +321,12 @@
     }
   </app-settings-group>
 
-  <!-- ============ FOR YOU ============ -->
   <!-- The card owns its own "For You" and "Clear recommendations" groups, so it
        is rendered directly here rather than wrapped in a second group -- one
-       group header per concern, no nesting. Readiness and the active model are
-       already shown by the Provider summary above. -->
+       group header per concern, no nesting. -->
   @if (activeReady()) {
     <app-recommendation-settings-card />
 
-    <!-- ============ DIAGNOSTICS ============ -->
     <app-settings-group
       icon="monitoring"
       [title]="'settings.ai.diagnostics.title' | transloco"

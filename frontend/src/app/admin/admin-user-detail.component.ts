@@ -1,4 +1,3 @@
-// src/app/admin/admin-user-detail.component.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -88,11 +87,8 @@ export class AdminUserDetailComponent {
     });
   }
 
-  /** The card's heading: the account's own email once it has loaded, so the
-   *  page title names the account you are looking at, exactly like the list
-   *  page's row already does. Before that — while loading, or after a load
-   *  error — there is no email to show yet, so the card falls back to a
-   *  generic title rather than rendering an empty heading. */
+  /** The account's email once loaded, mirroring the list page's row; falls
+   *  back to a generic title while loading or after a load error. */
   readonly cardHeading = computed(
     () => this.detail()?.user.email ?? this.i18n.translate('admin.detail.title'),
   );
@@ -115,11 +111,9 @@ export class AdminUserDetailComponent {
     return !this.isSelf() && this.detail()?.user.status === 'active';
   }
 
-  /** Whether the heading row has anything to project into `groupActions`.
-   *  Kept as one condition, rather than three separate `@if`s each wrapping
-   *  their own button, so the projected content stays a single block one
-   *  level below `<app-settings-group>` — see docs/design-language.md's
-   *  `<app-settings-group>` entry for why that depth matters. */
+  /** One condition instead of three separate `@if`s, so the projected
+   *  content stays a single block — see docs/design-language.md's
+   *  `<app-settings-group>` entry. */
   readonly hasActions = computed(() => this.canApprove() || this.canReject() || this.canSuspend());
 
   act(action: AdminAction): void {
@@ -130,10 +124,8 @@ export class AdminUserDetailComponent {
     });
   }
 
-  /** Rejecting or suspending cuts off a person's access — that is a
-   *  destructive action and gets the two-step treatment: an initiating
-   *  danger-outline button, then the filled-danger confirm. Mirrors
-   *  AdminUsersComponent.confirmThenAct. */
+  /** Destructive action: two-step treatment (danger-outline initiator, then
+   *  filled-danger confirm). Mirrors AdminUsersComponent.confirmThenAct. */
   confirmThenAct(action: 'reject' | 'suspend'): void {
     const email = this.detail()?.user.email ?? '';
     const data: ConfirmData = {
@@ -240,10 +232,8 @@ export class AdminUserDetailComponent {
     return relativeTime(iso, this.language.lang());
   }
 
-  /** The account's approval date, or an explicit localised "never" when it
-   *  has not yet been approved. Shares {@link formatDateOr} with every other
-   *  "date, or never" field on this page, so the fallback convention cannot
-   *  drift between them. */
+  /** Approval date, or localised "never". Shares {@link formatDateOr} with
+   *  every "date, or never" field on this page so the fallback can't drift. */
   approvedLabel(iso: string | null): string {
     return formatDateOr(
       iso,

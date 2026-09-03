@@ -1,4 +1,3 @@
-// src/app/settings/ai-section.component.ts
 import {
   ChangeDetectionStrategy,
   Component,
@@ -33,17 +32,13 @@ import { RecommendationDebugLogComponent } from './recommendation-debug-log.comp
 import { RecommendationRunHistoryComponent } from './recommendation-run-history.component';
 import { RecommendationSettingsCardComponent } from './recommendation-settings-card.component';
 
-/**
- * The AI provider list: every configuration the account has saved, one row
- * each, plus the add form below. Unlike the earlier single-connection
- * section there is no longer "the" provider — each row carries its own
- * model and readiness, at most one is active, and this component's job is
- * only to reflect that (activation itself is decided server-side).
+/** The AI provider list: every saved configuration, one row each, plus the
+ *  add form below. Each row carries its own model and readiness, at most
+ *  one active; this component only reflects that (activation is decided
+ *  server-side).
  *
- * The model list, like the earlier section, is fetched on demand per row
- * rather than for every row up front: each fetch is an outbound call to
- * that row's provider against a shared rate budget.
- */
+ *  The model list is fetched on demand per row, not up front: each fetch is
+ *  an outbound call to that row's provider against a shared rate budget. */
 @Component({
   selector: 'app-ai-section',
   imports: [
@@ -90,12 +85,11 @@ export class AiSectionComponent {
    *  is no invalid value the handler needs to guard against. */
   readonly concurrencyOptions: readonly number[] = [1, 2, 3, 4, 5, 6, 7, 8];
 
-  /** Shown as the batch-cap field's placeholder when a connection makes no
-   *  claim — the ceiling the backend applies on its behalf, read from the list
-   *  response so `RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE`
-   *  stays its one definition. A string, since `placeholder` is a string
-   *  attribute and strict template checking rejects a number there; empty
-   *  until the list has loaded. */
+  /** The batch-cap field's placeholder when a connection makes no claim -- the
+   *  backend's own ceiling, read from the list response so
+   *  `RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE` stays its one
+   *  definition. A string because `placeholder` rejects a number under strict
+   *  template checking; empty until the list has loaded. */
   readonly defaultMaxBatchSize = computed(() => {
     const value = this.ai.defaultMaxBatchSize();
     return value === null ? '' : String(value);
@@ -114,15 +108,11 @@ export class AiSectionComponent {
   readonly activeReady = computed(() => this.activeConfig()?.ready ?? false);
   readonly activeModel = computed(() => this.activeConfig()?.model ?? null);
 
-  /**
-   * Folds the provider group down to a one-line summary once a ready active
-   * connection exists; the full connection manager is shown otherwise. Starts
-   * `false`, so a ready account opens folded and a first-time account (no ready
-   * active connection) sees the manager expanded for setup. "Manage" sets it
-   * `true`; "Done" sets it back to `false`. A plain signal keeps it OnPush-safe:
-   * the folded summary shows only while `activeReady()` is also true, so the
-   * flag never strands the account with neither view.
-   */
+  /** Folds the provider group to a one-line summary once a ready active
+   *  connection exists; shows the full manager otherwise. Starts `false`, so a
+   *  first-time account (no ready connection) opens expanded for setup.
+   *  "Manage"/"Done" toggle it; the folded view only shows while
+   *  `activeReady()` is also true, so the flag can never strand neither view. */
   readonly managing = signal(false);
 
   /** The list card answers for the initial load; a row's own write answers
@@ -146,15 +136,11 @@ export class AiSectionComponent {
     return this.message(scoped.failure);
   }
 
-  /**
-   * The server's own sentence, for the kinds whose next move really is
-   * "correct the form and retry". The rest keep a translated message, because
-   * the backend's prose does not say "enter the key again" or "wait a few
-   * minutes" — and in German it would not say it in German.
-   *
-   * A production 500 and a dead connection carry no sentence at all, which is
-   * the one case the generic fallback is for.
-   */
+  /** The server's own sentence for kinds whose next move is "correct the form
+   *  and retry"; the rest keep a translated message, since the backend's prose
+   *  doesn't say "enter the key again" -- and in German it wouldn't say it in
+   *  German. A production 500 or dead connection carries no sentence, which is
+   *  what the generic fallback is for. */
   private message(failure: AiFailure): string {
     if (!SERVER_TEXT_KINDS.has(failure.kind)) return this.errorText(failure.kind);
     if (failure.fieldErrors.length) return this.fieldText(failure);

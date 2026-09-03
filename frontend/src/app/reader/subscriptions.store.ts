@@ -1,4 +1,3 @@
-// src/app/reader/subscriptions.store.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, WritableSignal, computed, inject, signal } from '@angular/core';
 import { Observable, Subscription } from 'rxjs';
@@ -21,13 +20,11 @@ export interface TagNode {
 }
 
 /**
- * Build the sidebar tag tree. Tag NODES and their order come from `orderedTags`
- * (the full tag list, already in `tag.position` order) so every tag shows —
- * including empty ones, which you can drop feeds onto and reorder. Each node's
- * feeds come from `subs` that carry the tag, ordered by their per-tag position.
- *
- * With no `orderedTags` (before the tag list has loaded), fall back to the tags
- * embedded on subscriptions, name-ordered — so tagged feeds never briefly vanish.
+ * Build the sidebar tag tree. Tag NODES and their order come from
+ * `orderedTags` (already in `tag.position` order) so every tag shows,
+ * including empty ones; each node's feeds come from `subs` carrying the tag.
+ * Falls back to the tags embedded on subscriptions, name-ordered, before the
+ * tag list has loaded, so tagged feeds never briefly vanish.
  */
 export function buildTagTree(subs: SubscriptionDto[], orderedTags: TagDto[] = []): TagNode[] {
   const tags = orderedTags.length > 0 ? orderedTags : embeddedTagsByName(subs);
@@ -187,10 +184,8 @@ export class SubscriptionsStore {
   }
 
   /** The counts poll's reload (#708): the same request as `load()`, with none
-   *  of its UI. `loading` stays down — it swaps the whole organise tree for a
-   *  skeleton — and `resolved` is never taken back, because it gates the
-   *  onboarding redirect. So a tick can never spin, flicker or move the user.
-   *  A failure is dropped without a word; the next tick tries again. */
+   *  of its UI. `loading` stays down, `resolved` is never taken back (it gates
+   *  the onboarding redirect) — a tick can never spin, flicker, or move the user. */
   reloadQuietlyIfStale(): void {
     this.quietReload(
       () => this.api.subscriptions(),
@@ -198,11 +193,10 @@ export class SubscriptionsStore {
     );
   }
 
-  /** The counts-only tick (#720): the same quiet semantics as
+  /** The counts-only tick (#720): same quiet semantics as
    *  `reloadQuietlyIfStale`, but against the ~5 KB counts endpoint instead of
-   *  the 137 KB bootstrap. It patches `unreadCount` into the list it already
-   *  holds; the full list, with its feeds and tags, is left to `load()` and to
-   *  the visibility-regain reload above. */
+   *  the 137 KB bootstrap. Patches `unreadCount` into the held list; the full
+   *  list with feeds and tags is left to `load()` and the regain reload. */
   reloadCountsIfStale(): void {
     this.quietReload(
       () => this.api.subscriptionCounts(),
@@ -210,15 +204,13 @@ export class SubscriptionsStore {
     );
   }
 
-  /** The shared body of every silent tick: refresh only when it is worth a
-   *  request, drop an answer the user has overtaken, and never touch `loading`
-   *  or `resolved`. The `apply` closure is the only difference between the full
-   *  reload and the counts-only one. */
+  /** The shared body of every silent tick: refresh only when worth a request,
+   *  drop an answer the user has overtaken, never touch `loading`/`resolved`.
+   *  The `apply` closure is the only difference between full and counts-only. */
   private quietReload<T>(fetch: () => Observable<T>, apply: (response: T) => void): void {
     // A tick refreshes counts; it never bootstraps them. Fetching before the
-    // first real load would stamp the freshness clock, silence that load for a
-    // whole window, and leave `resolved` false — so the onboarding redirect
-    // would never get to decide anything.
+    // first real load would stamp the freshness clock, silence that load, and
+    // leave `resolved` false — so the onboarding redirect could never decide.
     if (!this.resolved()) return;
     // A request already on the wire is about to answer this tick's question. It
     // is also the one request a tick may NOT cancel: `load()` has taken
@@ -232,11 +224,9 @@ export class SubscriptionsStore {
       fetch().subscribe({
         next: (r) => {
           if (!this.settle(request)) return;
-          // The user changed a count while this was on the wire — marked an
-          // entry read, favourited one, emptied a feed. The server counted
-          // before that, so adopting the response now would put the badge back
-          // up. Drop it; the next tick reconciles against a server that has
-          // seen the change.
+          // The user changed a count while this was on the wire (marked read,
+          // favourited, emptied a feed). The server counted before that, so
+          // adopting the response now would put the badge back up; drop it.
           if (this.localEdits !== editsWhenSent) return;
           apply(r);
         },
@@ -253,9 +243,8 @@ export class SubscriptionsStore {
   }
 
   /** Patch unread counts into the list already held, replacing the array only
-   *  when a number actually moved. A tick that changes nothing keeps the same
-   *  array identity, so `tagTree`, `untagged` and `totalUnread` do not
-   *  recompute (#720). A feed absent from the payload has no unread entries. */
+   *  when a number actually moved, so an unchanged tick keeps array identity
+   *  and `tagTree`/`untagged`/`totalUnread` don't recompute (#720). */
   private applyCountsOnly(response: SubscriptionCountsResponse): void {
     const unreadById = new Map(response.subscriptions.map((s) => [s.id, s.unreadCount]));
     let moved = false;

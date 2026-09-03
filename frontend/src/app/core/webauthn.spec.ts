@@ -1,4 +1,3 @@
-// src/app/core/webauthn.spec.ts
 import {
   base64UrlToBytes,
   bytesToBase64Url,
@@ -36,12 +35,9 @@ describe('base64UrlToBytes / bytesToBase64Url', () => {
   });
 
   it('encodes using the base64url alphabet, unpadded', () => {
-    // These 3 bytes base64-encode to '+/++' in standard base64 (verified via
-    // Buffer.from(...).toString('base64') above the decode test). Asserting
-    // the exact base64url output -- '-_--' -- rather than merely the absence
-    // of '+', '/' and '=' rules out an encoder that stripped those
-    // characters instead of substituting them, which would corrupt the
-    // value on decode while still passing an absence-only check.
+    // Asserts the exact base64url output '-_--', not merely the absence of
+    // '+', '/' and '=' -- that alone would pass an encoder that stripped
+    // those characters instead of substituting them, corrupting the decode.
     const original = new Uint8Array([0xfb, 0xff, 0xbe]);
     const encoded = bytesToBase64Url(original.buffer);
     expect(encoded).toBe('-_--');

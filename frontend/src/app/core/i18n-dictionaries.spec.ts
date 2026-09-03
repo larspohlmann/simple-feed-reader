@@ -2,10 +2,9 @@ import en from '../../../public/i18n/en.json';
 import de from '../../../public/i18n/de.json';
 
 /**
- * A key present in one dictionary and absent from the other does not fail a
- * build, a lint or any component spec — it renders the raw key on screen, in
- * the one language nobody testing the change is looking at. Comparing the two
- * key sets is the only thing that catches it.
+ * A key missing from one dictionary fails no build or lint -- it renders the
+ * raw key on screen, in the one language nobody testing the change looks at.
+ * Comparing the two key sets is the only thing that catches it.
  */
 const flatten = (node: unknown, prefix = ''): string[] => {
   if (typeof node !== 'object' || node === null) {

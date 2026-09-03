@@ -15,7 +15,7 @@ import { ButtonComponent } from '../../button/button.component';
  * The visible labels arrive as already-translated string inputs, not i18n keys.
  * This component lives in `shared/` and must not reach for a feature's
  * translation keys, so the consumer passes the translated `saveLabel`,
- * `resetLabel` and `unsavedLabel` in (see Task 15).
+ * `resetLabel` and `unsavedLabel` in.
  */
 @Component({
   selector: 'app-settings-save-bar',

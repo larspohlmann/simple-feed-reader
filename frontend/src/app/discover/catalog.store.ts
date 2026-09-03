@@ -1,4 +1,3 @@
-// src/app/discover/catalog.store.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Subscription } from 'rxjs';

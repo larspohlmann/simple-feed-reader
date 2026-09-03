@@ -1,10 +1,6 @@
-/* The tip anchors a floating popover (#541). The host stays `display: contents`
-   so it adds no box to the consumer's row, and `.wrap` is the positioning
-   context: an inline anchor holding the trigger, with the panel absolutely
-   positioned against it. Opening the tip therefore never shifts sibling layout.
-   This reverses the earlier in-flow arrangement (#433/#372); `.wrap` also still
-   answers DismissOnOutsideDirective, which asks it whether a press landed
-   inside. */
+/* Anchors a floating popover (#541). Host stays `display: contents` so it adds
+   no box; `.wrap` is the positioning context, so opening never shifts sibling
+   layout (reverses the earlier in-flow arrangement, #433/#372). */
 :host {
   display: contents;
 }

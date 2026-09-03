@@ -12,18 +12,14 @@ import { Problem } from './problem';
  * out) is not a failure to report -- `PasskeyService`'s own docblock names
  * `NotAllowedError` as exactly that case.
  *
- * `InvalidStateError` -- this authenticator is already enrolled on the
- * account, produced by the server's exclude list -- gets its own translated,
- * actionable message. Any other `problem.ceremonyRejected` failure gets the
- * same treatment: the fallback path renders `error.title`, which for a
- * `DOMException` or a plain `Error` is the browser's own untranslated,
- * locale-dependent text. Keyed on `ceremonyRejected` rather than
- * `problem.status === 0`, because a genuine dropped connection during one of
- * `PasskeyService`'s own HTTP calls produces that same status with an
- * already-app-owned title ("Could not reach the server"), which must reach
- * the user unchanged rather than get overwritten by the generic passkey
- * message. Overwriting `detail` works because every banner in this app reads
- * `error.detail || error.title`.
+ * `InvalidStateError` -- already enrolled on this account, from the server's
+ * exclude list -- gets its own translated, actionable message; any other
+ * `ceremonyRejected` failure gets a generic one, since the fallback would
+ * otherwise render the browser's raw, untranslated `DOMException`/`Error`
+ * text. Keyed on `ceremonyRejected`, not `status === 0`: a genuine dropped
+ * connection produces the same status but an already-app-owned title ("Could
+ * not reach the server") that must reach the user unchanged. Overwriting
+ * `detail` works because every banner reads `error.detail || error.title`.
  */
 export function toEnrolFailureProblem(problem: Problem, i18n: TranslocoService): Problem | null {
   if (problem.type === 'NotAllowedError') return null;

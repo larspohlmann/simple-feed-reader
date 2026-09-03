@@ -1,10 +1,6 @@
-// src/styles/_icon-button.scss
-// The shared look of a small square icon-only action button (the
-// `appIconButton` directive): move up/down, edit, delete, on the Organise
-// page's feed rows and tag panels. Global rather than component-scoped
-// because ViewEncapsulation does not let two SIBLING components share a
-// component-scoped stylesheet — the same reasoning `_list-action.scss` gives
-// for its own, differently-styled, labelled controls.
+// The shared look of a small square icon-only action button (`appIconButton`):
+// move up/down, edit, delete. Global because ViewEncapsulation doesn't let
+// sibling components share a scoped stylesheet (same reasoning as _list-action.scss).
 .ib {
   display: inline-flex;
   align-items: center;

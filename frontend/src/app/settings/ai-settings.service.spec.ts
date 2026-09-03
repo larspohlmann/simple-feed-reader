@@ -1,4 +1,3 @@
-// src/app/settings/ai-settings.service.spec.ts
 import { provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,

@@ -370,20 +370,18 @@ describe('AdminCatalogComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('app-settings-group').length).toBe(2);
   });
 
-  // The button carries `groupActions`, so it belongs in the group header slot,
-  // not the panel body. Angular only projects a node into a named slot when it
-  // is the single root of its control-flow block; sharing the loaded `@else`
-  // with the category list strands it in the default slot (NG8011).
+  // groupActions only projects when it's the single root of its control-flow
+  // block; sharing the loaded @else with the category list would strand it
+  // in the default slot (NG8011).
   it('projects the add-category button into the group header, not the panel', () => {
     const el: HTMLElement = mountLoaded().nativeElement;
     expect(el.querySelector('.g-actions [data-testid="add-category"]')).not.toBeNull();
     expect(el.querySelector('.panel [data-testid="add-category"]')).toBeNull();
   });
 
-  // The button acts on a list that is hidden while the catalog is loading or
-  // errored, and `openCategoryDialog` has no guard of its own -- so a save made
-  // from an error state succeeds into a list the user cannot see. Before #547 the
-  // button lived inside the same `@else` as the list; this pins that.
+  // openCategoryDialog has no loading/error guard of its own, so the button
+  // must stay hidden with the list -- #547 fixed a regression where it lived
+  // inside the same @else as the list.
   it('hides the add-category button while the catalog is loading or errored', () => {
     TestBed.configureTestingModule({
       imports: [AdminCatalogComponent, provideTranslocoTesting()],

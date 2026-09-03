@@ -1,4 +1,3 @@
-// src/app/reader/models.ts
 export interface TagDto {
   id: number;
   name: string;
@@ -86,19 +85,16 @@ export interface SubscriptionDto {
   includeInForYou: boolean;
 }
 
-/** True when a CDK drag's payload is a feed row rather than some other
- *  draggable a shared drop list also accepts (a tag header, a group) —
- *  duck-typed on `feedUrl`, the field only a `SubscriptionDto` carries.
- *  Shared by the sidebar and the Organise page, the two places a drop list
- *  mixes feed and non-feed draggables and must tell them apart. */
+/** True when a CDK drag's payload is a feed row, duck-typed on `feedUrl` (the
+ *  field only `SubscriptionDto` carries) rather than some other draggable a
+ *  shared drop list accepts. Shared by the sidebar and Organise page. */
 export function isSubscriptionDrag(data: unknown): data is SubscriptionDto {
   return !!data && typeof data === 'object' && 'feedUrl' in data;
 }
 
-/** True when a CDK drag's payload is a tag header — duck-typed on `color`,
- *  a field only `TagDto` carries among this app's draggables. Lets a drop
- *  list that also accepts feed rows (Organise's tag header, #659) tell a
- *  tag-reorder drag apart from a retag drag. */
+/** True when a CDK drag's payload is a tag header — duck-typed on `color`, the
+ *  only field `TagDto` carries among this app's draggables. Lets a drop list that
+ *  also accepts feed rows (Organise's tag header, #659) tell the drags apart. */
 export function isTagDrag(data: unknown): data is TagDto {
   return !!data && typeof data === 'object' && 'color' in data && !isSubscriptionDrag(data);
 }
@@ -166,13 +162,10 @@ export interface EntryDto {
 export interface EntriesPage {
   entries: EntryDto[];
   nextCursor: string | null;
-  /** The words the search engine actually matched — present only on a search
-   *  response, and even there empty whenever the database LIKE fallback
-   *  answered (no engine installed, or the engine was momentarily
-   *  unreachable). The typo-tolerant engine can match a row where the
-   *  literal typed term appears nowhere in it, so highlighting must prefer
-   *  this over splitting the typed term. Absent entirely on the plain entry
-   *  list, which carries no search at all. */
+  /** Words the search engine actually matched — present only on a search response,
+   *  empty when the LIKE fallback answered instead (no engine, or it was momentarily
+   *  unreachable). The typo-tolerant engine can match rows the literal term never
+   *  appears in, so highlighting must prefer this over splitting the typed term. */
   matchedWords?: string[];
   /** Entry id => the saved search that matched it. Only the combined
    *  saved-search list reports it; keys arrive as strings on the wire. */
@@ -243,11 +236,9 @@ export interface FeedPreview {
 }
 
 /**
- * Why the scraper fallback could not turn an HTML page into a feed. The known
- * reasons are enumerated for editor support, but the type stays an open string:
- * the backend's reason set is open (see the spec's openness note), so a newer
- * server may send a reason this build hasn't heard of. `failureText()` renders a
- * generic warning for anything outside the known set rather than an empty box.
+ * Why the scraper fallback could not turn an HTML page into a feed. Enumerated for
+ * editor support, but stays an open string since the backend's reason set is open —
+ * `failureText()` renders a generic warning for anything outside the known set.
  */
 export type ScrapeFailureReason =
   'blocked' | 'throttled' | 'unreachable' | 'not_scrapable' | (string & {});
@@ -275,10 +266,9 @@ export interface EntryQuery {
 }
 
 /** The scopes `POST /api/entries/mark-read` accepts, each identified by an
- *  optional id. A search is deliberately NOT one of them: it is identified by
- *  a term, travels its own endpoint, and widening this union would let
- *  `ReaderApi.markRead('search', …)` type-check against a request the backend
- *  rejects. `MarkReadTarget` in query.ts is where the two meet. */
+ *  optional id. A search is deliberately NOT one of them: it has its own
+ *  endpoint, and widening this union would let `markRead('search', …)`
+ *  type-check against a request the backend rejects. See `MarkReadTarget` in query.ts. */
 export type MarkReadScope = 'all' | 'feed' | 'tag';
 
 export interface EntryStatePatch {
@@ -356,10 +346,9 @@ export interface RecommendationRunReport {
   /** True when a live worker owns execution and a tick is a pure status read;
    *  false when the client's own poll loop is doing the work (#308 regime). */
   background: boolean;
-  /** True only when an advance came back busy and the worker-presence read
-   *  was stale: a lock held with nobody beating, rather than a live worker
-   *  doing the work. Optional so a response cached from an older backend
-   *  does not break the type; treat an absent value as false (#439). */
+  /** True only when an advance came back busy and the worker-presence read was
+   *  stale: a lock held with nobody beating. Optional for older-backend
+   *  responses; treat an absent value as false (#439). */
   readonly waitingForLock?: boolean;
   /** Bytes of the in-flight provider answer received so far this call; 0
    *  between calls, since the server resets the counter when a call ends. */
@@ -372,20 +361,15 @@ export interface RecommendationRunReport {
    *  null when there is no run. The client keeps it live between polls with a
    *  local monotonic delta rather than re-subtracting server time. */
   elapsedSeconds: number | null;
-  /** Whole seconds the run is still expected to need, weighted by phase from
-   *  the account's own history and computed on the server (#638). Null when
-   *  there is no run in flight or no completed run to learn from yet; the
-   *  client shows a blank then, never a guessed number. Optional so a response
-   *  cached from an older backend does not break the type — an absent value
-   *  reads the same as null. The client ticks it down between polls with a
-   *  local monotonic delta, the same way it keeps `elapsedSeconds` live. */
+  /** Whole seconds the run is still expected to need, phase-weighted from the
+   *  account's history, computed server-side (#638). Null with no run, or no
+   *  history to learn from yet — the client shows a blank, never a guess.
+   *  Optional for older-backend responses; ticks down locally like `elapsedSeconds`. */
   readonly etaSeconds?: number | null;
-  /** The surviving for-you list's own summary: how many UNREAD entries it holds
-   *  (#724), when it was last generated, and the id of the run that generated
-   *  it. `itemCount` keeps its name for wire compatibility. Describes
-   *  the *list*, not this run — a failed latest run still carries the previous
-   *  list's timestamp and run id. `newestRunId` lets the reader suppress that
-   *  run's boundary divider by identity rather than by timestamp (#348). */
+  /** The surviving for-you list's own summary: unread count (#724), last-generated
+   *  time, and the generating run. `itemCount` keeps its wire name. Describes the
+   *  *list* not this run — a failed run still carries the previous list's data;
+   *  `newestRunId` lets the reader suppress that run's divider by identity (#348). */
   forYou: { itemCount: number; generatedAt: string | null; newestRunId: number | null };
 }
 
@@ -416,9 +400,6 @@ export interface DebugLogEntry {
   finishReason: string | null;
 }
 
-/** The latest for-you run, as the debug log's summary strip shows it: distinct
- *  from the per-row `errorDetail` above, `error` here is the run's own
- *  failure, not any one call's. Null when the user has never run. */
 /** One run the debug panel may switch to. The log keeps the last ten runs,
  *  and the panel reads one at a time -- shipping all ten on every two-second
  *  poll would cost ten times what the panel costs today. */
@@ -430,6 +411,8 @@ export interface DebugLogRunChoice {
 
 export interface DebugLogRunSummary {
   status: 'pending' | 'running' | 'completed' | 'failed';
+  /** The run's own failure, distinct from a per-row `errorDetail` on
+   *  `DebugLogEntry` -- null when the user has never run. */
   error: string | null;
   attempts: number;
   maxAttempts: number;
@@ -461,10 +444,9 @@ export interface DebugLogDetail {
   finishReason: string | null;
 }
 
-/** One finished (or in-flight) for-you run, as the history card shows it. The
- *  provider and model are the ones the run actually called, copied onto the run
- *  when it started -- not the account's current configuration, which is
- *  editable and would otherwise rename last month's runs. */
+/** One finished (or in-flight) for-you run, as the history card shows it.
+ *  Provider/model are what the run actually called, copied on start -- not the
+ *  account's current (editable) config, which would otherwise rename past runs. */
 export interface RunHistoryRow {
   id: number;
   status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
@@ -487,11 +469,10 @@ export interface RunHistoryRow {
   costNanoCredits: number | null;
 }
 
-/** One month of an account's run history, as its section header shows it.
- *  `costNanoCredits` is null when no run of the month reported a price -- the
- *  same distinction a row and the all-time total already make. Counts and
- *  totals are computed over the whole month, not over the rows on screen, so
- *  a capped section never shows a wrong number. */
+/** One month of run history, as its section header shows it. `costNanoCredits`
+ *  null means no run reported a price (same as a row's). Counts/totals are
+ *  computed over the whole month, not the rows on screen, so a capped section
+ *  never shows a wrong number. */
 export interface RunHistoryMonth {
   month: string;
   runCount: number;

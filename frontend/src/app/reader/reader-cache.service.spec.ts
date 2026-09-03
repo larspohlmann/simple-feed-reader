@@ -45,7 +45,8 @@ describe('ReaderCacheService', () => {
   let cache: ReaderCacheService;
 
   beforeEach(async () => {
-    (globalThis as unknown as { indexedDB: IDBFactory }).indexedDB = new IDBFactory(); // fresh DB per test
+    // Fresh DB per test.
+    (globalThis as unknown as { indexedDB: IDBFactory }).indexedDB = new IDBFactory();
     cache = new ReaderCacheService();
   });
 

@@ -8,10 +8,9 @@ interface CacheRecord {
 }
 
 /**
- * Persistent, size-capped cache of extracted articles, keyed by entry id.
- * Only successful extractions are stored (failures should be retryable). Article
- * content is immutable per entry, so there is no staleness logic — the schema
- * version is the only cache-buster.
+ * Persistent, size-capped cache of extracted articles, keyed by entry id. Only
+ * successful extractions are stored (failures should be retryable). Content is
+ * immutable per entry, so there's no staleness logic — VERSION is the only cache-buster.
  */
 @Injectable({ providedIn: 'root' })
 export class ReaderCacheService {

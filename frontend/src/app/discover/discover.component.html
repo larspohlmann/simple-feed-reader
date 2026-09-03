@@ -1,10 +1,8 @@
 <div class="scrim" aria-hidden="true"></div>
 
-<!-- headingLevel 1: discover is a route, not an overlay over a page that already
-     has an h1, so the panel's heading is this page's only top-level heading —
-     without it the category headings below would rank level with the title.
-     fillOnMobile: discover IS the page on a phone, not a dialog floating on one,
-     so it keeps the full-screen layout the ordinary dialogs dropped (#325). -->
+<!-- headingLevel 1: discover is a route, not an overlay, so the panel's heading
+     is this page's only top-level heading. fillOnMobile: discover IS the page
+     on a phone, not a floating dialog, so it keeps the full-screen layout (#325). -->
 <app-overlay-panel [heading]="'discover.title' | transloco" [headingLevel]="1" fillOnMobile>
   <button
     headerActions
@@ -16,15 +14,9 @@
     <app-icon name="close" size="md" />
   </button>
 
-  <!-- The chips do not fit the panel's head, which is one row of heading plus
-       actions. They lead the body instead, and stay pinned because they stick
-       to the body's own scrollport.
-
-       The subtitle sits inside the sections column, NOT here above .cols
-       (#561): anything in flow above .cols pushes the sticky rail down by its
-       height, and the rail then overhangs the scrollport by exactly that much.
-       The chips get away with it only because they and the rail are never
-       displayed at the same width. -->
+  <!-- The chips do not fit the panel's head, so they lead the body and stay
+       pinned to its scrollport. The subtitle sits inside .sections, NOT here
+       above .cols (#561): anything above .cols pushes the sticky rail down. -->
   <app-category-chips
     [categories]="categories()"
     [activeId]="active.activeId()"

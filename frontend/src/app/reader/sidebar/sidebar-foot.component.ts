@@ -1,4 +1,3 @@
-// src/app/reader/sidebar/sidebar-foot.component.ts
 import { Component, computed, inject, model } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
@@ -11,13 +10,10 @@ import { buildVersion } from '../../../environments/version';
 import { trialDaysRemaining } from '../format';
 
 /**
- * The sidebar drawer's foot: the Organise switch (coarse pointers only), the
- * layout/theme view controls, the trial countdown and the version/update and
- * feedback links. Split out of {@see SidebarComponent} so each keeps its own
- * focused stylesheet — none of the foot's styles are shared with the nav rows
- * above, so the seam is clean. `organising` is the only shared state and is a
- * two-way model: the switch here toggles it, the sidebar reads it to hide the
- * nav while organising.
+ * The sidebar drawer's foot: Organise switch (coarse pointers only), view
+ * controls, trial countdown, and version/feedback links. Split out of
+ * {@see SidebarComponent} for its own focused stylesheet. `organising` is the
+ * only shared state, a two-way model the sidebar reads to hide the nav.
  */
 @Component({
   selector: 'app-sidebar-foot',

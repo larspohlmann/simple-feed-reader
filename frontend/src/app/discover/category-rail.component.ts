@@ -1,4 +1,3 @@
-// src/app/discover/category-rail.component.ts
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { TagGlyphComponent } from '../shared/tag-glyph/tag-glyph.component';

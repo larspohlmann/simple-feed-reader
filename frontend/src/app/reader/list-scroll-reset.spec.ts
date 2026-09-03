@@ -1,4 +1,3 @@
-// src/app/reader/list-scroll-reset.spec.ts
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { Location } from '@angular/common';
 import { provideLocationMocks } from '@angular/common/testing';

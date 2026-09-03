@@ -1,4 +1,3 @@
-// src/app/setup/setup.service.ts
 import { Injectable, inject, signal } from '@angular/core';
 import { Observable, map, of, tap } from 'rxjs';
 import { SetupApi } from './setup-api';
@@ -12,13 +11,11 @@ export class SetupService {
   private cached: boolean | null = null;
   readonly needsSetup = signal<boolean | null>(null);
   readonly mailEnabled = signal<boolean | null>(null);
-  /** Whether THIS instance can actually complete a passkey sign-in right now
-   *  -- the toggle AND the relying-party configuration both hold (#624
-   *  follow-up). Distinct from `isPasskeySupported()`, which only asks
-   *  whether the BROWSER understands WebAuthn at all. `null` until loaded;
-   *  every gate below treats that the same as `false` -- see
-   *  AiAvailabilityService's docblock for why staying hidden a moment longer
-   *  is right where showing a control that then fails is not. */
+  /** Whether THIS instance can complete a passkey sign-in right now -- the
+   *  toggle AND the relying-party configuration both hold (#624 follow-up).
+   *  Distinct from `isPasskeySupported()`, which only asks whether the
+   *  BROWSER understands WebAuthn. `null` until loaded; every gate below
+   *  treats that as `false` -- see AiAvailabilityService's docblock for why. */
   readonly passkeySignInAvailable = signal<boolean | null>(null);
 
   ensureLoaded(): Observable<boolean> {

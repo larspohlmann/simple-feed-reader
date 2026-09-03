@@ -1,22 +1,9 @@
-// src/app/theme/_utilities.scss
 // Global utility classes that belong beside the tokens, not any one
 // component's stylesheet.
 
-/* Visually hides an element while keeping it in the accessibility tree.
-   `aria-label` / `title` on a plain, unstyled element are not a reliable
-   substitute: ARIA forbids naming a `role=generic` node (the implicit role of
-   a bare <span> or <div>), so most screen readers announce only the visible
-   text and ignore both attributes. A label that assistive tech must expose
-   belongs in real text, hidden this way, not in an attribute.
-
-   The 1px box (not 0) and `clip-path` (not `display: none` or `visibility:
-   hidden`) are the standard technique, not an oversight: a zero-size or
-   display:none node drops out of the accessibility tree in some browsers,
-   which would defeat the point. `clip-path: inset(50%)` is the modern
-   replacement for the long-standing `clip: rect(0 0 0 0)` recipe, which is
-   deprecated. This is a rendering technique with a fixed, well-known shape,
-   not a spacing value, which is why it sits here in theme/ rather than
-   trying to force it onto the --space-* scale. */
+/* Visually hides an element while keeping it in the accessibility tree:
+   `aria-label`/`title` are unreliable on a `role=generic` node. The 1px box +
+   `clip-path`, not `display: none`, avoids dropping it from that tree. */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -29,32 +16,17 @@
   border: 0;
 }
 
-/* A panel-level loading or error block: an `<app-skeleton>` or an
-   `<app-error-banner>` projected straight into an `<app-settings-group>`'s
-   panel, rather than into one of its rows.
-
-   The panel is unpadded by design because `app-settings-row` pads itself, so
-   content that is not a row has to supply the inset. Six settings and admin
-   sections needed exactly this rule and each hand-wrote it, which is the same
-   copy-paste the `--panel-inset-*` tokens were introduced to end; the class
-   belongs here, once, beside the tokens it reads.
-
-   It is a class and never an element type selector: `app-error-banner` also
-   appears nested inside padded blocks (the catalog's import section, the tag
-   editor), where a second inset would misalign it from its own controls. */
+/* A panel-level loading/error block projected into a group's panel, not a
+   row, so it supplies its own inset. A class, never an element selector:
+   `app-error-banner` also nests in already-padded blocks, misaligned by a second inset. */
 .state {
   display: block;
   padding: var(--panel-inset-y) var(--panel-inset-x);
 }
 
-/* The "whole words only" marker on a search: the results-header badge carries
-   the full phrase, the sidebar row a compact "W" glyph, and both are the same
-   pill. Two components rendered it, byte for byte, from the same six tokens
-   (#581); a palette or radius change then had to be made twice, and Stylelint
-   cannot see the drift. The glyph is the caller's business, the pill is this
-   class's. Layout that belongs to the surrounding row — the sidebar's
-   `flex: none`, the collapsed header's `display: none` — stays with that
-   component. */
+/* The "whole words only" search marker: the header badge and sidebar's
+   compact "W" glyph are the same pill (#581), extracted here so a palette
+   change isn't made twice. Layout belonging to the surrounding row stays local. */
 .whole-word-badge,
 .phrase-badge {
   padding: 0 var(--space-2);
@@ -66,13 +38,9 @@
   white-space: nowrap;
 }
 
-/* A count beside a title: the search header's result count and every other
-   list's own count are the same pill (#709), so it lives here for the same
-   reason the mode badges above do. Border-only, the quietest register in the
-   app — a count is read-only, unlike the `--accent-soft` badges above, which
-   mark something the reader can act on. Placement stays with the component:
-   the search count sits inline after the term, every other list's beside the
-   ellipsised heading. */
+/* A count beside a title: the search header's count and every list's own
+   count are the same pill (#709). Border-only, the quietest register, since
+   a count is read-only unlike the actionable `--accent-soft` badges above. */
 .count-pill {
   padding: 0 var(--space-2);
   border: 1px solid var(--border);
@@ -82,23 +50,9 @@
   white-space: nowrap;
 }
 
-/* The saved search a combined-list entry matched (#769): the kicker line and
-   the list row both show it, a third occurrence of the tag pill's look
-   (`.pill` in source-tags.component.scss), so it moved here rather than
-   being copied again.
-
-   `inline-block`, not `inline-flex` like the tag pill: this pill carries no
-   glyph, and `text-overflow` cannot reach a flex container's own text (it
-   becomes an anonymous flex item first) — the tag pill only works because
-   its ellipsis lives on an inner `.name` child, not on `.pill` itself. With
-   nothing else inside, `inline-block` lets the ellipsis apply directly.
-
-   No width floor: the pill hugs its term, so a short one (`nepal`) carries no
-   dead space. The cap is the kicker row itself (`max-inline-size: 50%`), not a
-   fixed character count, so a long term grows into the free space instead of
-   clipping early, yet never dominates the row. `min-width: 0` lets it ellipsise
-   when the row is genuinely tight; there it and the elastic `.source` share the
-   space and both truncate, so neither is starved (#821). */
+/* The saved-search pill a combined-list entry matched (#769). `inline-block`,
+   not `inline-flex` like the tag pill: with no glyph inside, `text-overflow`
+   applies directly. Capped by the kicker row's `max-inline-size: 50%` (#821). */
 .saved-search-pill {
   display: inline-block;
   max-inline-size: 50%;

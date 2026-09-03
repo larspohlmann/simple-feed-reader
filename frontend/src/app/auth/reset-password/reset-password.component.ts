@@ -1,4 +1,3 @@
-// src/app/auth/reset-password/reset-password.component.ts
 import { Component, ElementRef, OnInit, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';

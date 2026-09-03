@@ -33,20 +33,15 @@
         (keydown)="onKeydown($event)"
       />
 
-      <!-- Always rendered while open, matches or not: aria-controls on the
-           search input names this element's id unconditionally, and a
-           listbox that vanishes in the empty state would leave that
-           reference dangling at nothing (#305 review). The "no match" state
-           is a role="presentation" row inside it, not a second element,
-           precisely so aria-controls never has to choose between two ids. -->
+      <!-- Always rendered while open, matches or not: aria-controls on the search
+           input names this id unconditionally, so a listbox that vanished in the
+           empty state would leave that reference dangling (#305 review). -->
       <ul class="list" role="listbox" [id]="listboxId()">
         @if (matches().length) {
           @for (option of matches(); track option.value; let i = $index) {
-            <!-- No click-handling keyboard event on the <li> itself: keyboard
-                 selection is the ARIA combobox pattern above (role="combobox"
-                 plus aria-activedescendant on the .search input tracks the
-                 highlighted option), so these options are a mouse shortcut onto
-                 the same choose(), not a second focusable stop. -->
+            <!-- No click-handling keyboard event on the <li> itself: keyboard selection
+                 is the ARIA combobox pattern above (aria-activedescendant on the
+                 .search input), so this is a mouse shortcut onto the same choose(). -->
             <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
             <li
               class="option"

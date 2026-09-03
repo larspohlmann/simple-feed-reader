@@ -99,10 +99,9 @@ describe('CatalogStore', () => {
     expect(store.error()).not.toBeNull();
   });
 
-  // #263. The `subscribed` flag is per-user, and this store outlives a logout:
-  // nothing reloads the page, so the root injector survives into the next
-  // user's session and the resolved() guard would serve them the previous
-  // user's subscription state.
+  // #263: `subscribed` is per-user and this store outlives a logout (nothing
+  // reloads the page), so the resolved() guard would otherwise serve the next
+  // signed-in user the previous user's subscription state.
   describe('when the signed-in identity changes', () => {
     it('drops the cached catalog', () => {
       store.load();

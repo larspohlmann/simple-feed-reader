@@ -138,11 +138,9 @@ describe('OrganiseSectionComponent', () => {
     store.titleFilter.set('heise');
     fixture.detectChanges();
 
-    // Only heise (11) stays visible; taz (10) and netzpolitik (12) are
-    // hidden. Selecting 3 against 1 visible keeps hidden (2) and
-    // visible-and-selected (1) from coinciding, so a hiddenSelectedCount
-    // that accidentally counted the wrong side of the filter would be
-    // caught here (mirrors organise.store.spec.ts's own fixture).
+    // Only heise (11) stays visible, so hidden (2) and visible-and-selected
+    // (1) don't coincide -- catches a hiddenSelectedCount that counted the
+    // wrong side of the filter (mirrors organise.store.spec.ts's fixture).
     expect(
       fixture.debugElement.query(By.css('[data-test="bulk-hidden"]')).nativeElement.textContent,
     ).toContain('2');
@@ -316,11 +314,9 @@ describe('OrganiseSectionComponent', () => {
     expect(manage.reorderTags).toHaveBeenCalledWith([3, 2]);
   });
 
-  // canMoveTagUp/Down index store.groups() — the FILTERED list — while
-  // moveTag() swaps within the full, unfiltered tags() list. Under a filter
-  // that mismatch can silently swap a tag's position with one the user
-  // cannot even see, so both the arrow and moveTag() itself must refuse
-  // while a filter is active, even when two tag groups stay adjacent.
+  // canMoveTagUp/Down indexes the FILTERED groups() while moveTag() swaps
+  // within the full tags() list -- that mismatch could silently swap with a
+  // tag the user can't see, so both must refuse while a filter is active.
   it('disables tag reordering under an active filter, and writes nothing', async () => {
     const NEWS: TagDto = { id: 3, name: 'News', color: null, icon: null, position: 1 };
     const subsWithNews = [...SUBS.slice(0, 1), feed(11, 'heise', [NEWS.id]), SUBS[2]];

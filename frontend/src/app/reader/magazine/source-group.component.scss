@@ -37,9 +37,8 @@
 }
 
 /* An inline run, not a flex row, so the favicon aligns by type metrics:
-   `vertical-align: middle` centres it on the x-height, which against 18px
-   heading type leaves it sitting below the letters' optical centre. Lift it
-   onto that centre. In `em`, so it stays right if the heading size changes. */
+   `vertical-align: middle` centres it on the x-height, leaving it below the
+   letters' optical centre; lift it back. In `em`, so it tracks heading size. */
 .gname app-favicon {
   position: relative;
   bottom: 0.1em;

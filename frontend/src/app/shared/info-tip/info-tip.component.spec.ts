@@ -57,11 +57,9 @@ describe('InfoTipComponent', () => {
   });
 
   /**
-   * The panel floats as a popover (#541): it is `position: fixed`, placed from
-   * the trigger's rect on open, so it never shifts sibling layout. It stays a
-   * child of `.wrap`, beside the trigger. jsdom resolves no stylesheet, so this
-   * pins only that structure; the out-of-flow geometry and viewport clamping
-   * are verified in a real browser.
+   * The panel floats as a `position: fixed` popover (#541), staying a child
+   * of `.wrap` beside the trigger. jsdom resolves no stylesheet, so this pins
+   * only structure -- geometry and viewport clamping are verified in a real browser.
    */
   it('keeps the panel a sibling of the trigger, inside the positioning wrapper', () => {
     const fixture = mount();
@@ -75,10 +73,9 @@ describe('InfoTipComponent', () => {
   });
 
   /**
-   * The panel now sits inside the row it explains, and `app-field` puts one
-   * inside a wrapping `<label>`. A click that reached the label would activate
-   * the control the tip is explaining, so the panel swallows it — the same
-   * guard the trigger has always had, for the same reason.
+   * app-field wraps the row in a <label>; a click reaching it would activate
+   * the control the tip explains, so the panel swallows it -- the same guard
+   * the trigger has always had.
    */
   it('swallows a click on the panel, so a wrapping label cannot toggle its control', () => {
     const fixture = TestBed.createComponent(LabelRowHostComponent);

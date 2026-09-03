@@ -1,4 +1,3 @@
-// src/app/reader/magazine/source-group.component.ts
 import { Component, computed, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';

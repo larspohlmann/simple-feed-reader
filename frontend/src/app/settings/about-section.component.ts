@@ -1,4 +1,3 @@
-// src/app/settings/about-section.component.ts
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ReleaseVersion, VersionService } from '../core/version.service';
@@ -50,11 +49,9 @@ export class AboutSectionComponent implements OnInit {
     { labelKey: 'settings.about.api', release: this.versions.apiVersion() },
   ]);
 
-  /**
-   * Both halves ship together, so a difference means the browser is holding a
-   * bundle from an earlier release. Only compares real releases: a development
-   * build on either side is not evidence of a stale cache.
-   */
+  /** Both halves ship together, so a difference means a stale browser bundle.
+   *  Only compares real releases: a development build on either side is not
+   *  evidence of staleness. */
   readonly staleBundle = computed(() => {
     const api = this.versions.apiVersion();
     if (api === null) {

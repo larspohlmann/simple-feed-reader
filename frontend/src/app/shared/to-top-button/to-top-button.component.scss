@@ -1,11 +1,6 @@
-/* Out of flow by default so it can hang in a corner; the consumer supplies the
-   offsets, the stacking order, and whether it pins to the viewport instead.
-
-   That override has to come from the consumer's own component stylesheet, where
-   it compiles to `app-to-top-button[_ngcontent-x]` and outranks this `:host`
-   (`[_nghost-x]`) on specificity. The same selector in a global stylesheet is a
-   bare type selector, loses to this rule, and would silently leave the button
-   absolutely positioned against whatever ancestor happens to be relative. */
+/* Out of flow by default so it can hang in a corner; the consumer supplies
+   offsets, stacking order, and whether it pins to the viewport. That override
+   must come from the consumer's own stylesheet, which outranks this `:host`. */
 :host {
   position: absolute;
   display: inline-flex;
@@ -20,12 +15,9 @@ button {
   border: none;
   border-radius: 50%;
 
-  /* A mild frost, not a full-glass panel. The button keeps its accent identity,
-     so it can only thin so far: a saturated fill washes out over the flat canvas
-     it usually floats over long before it reads as glass over the rows. 65% is
-     the point where the accent still looks like itself over the canvas while the
-     blur below gives a gentle frost where rows sit behind it. The solid accent is
-     the fallback where backdrop-filter is unsupported. */
+  /* A mild frost, not a full-glass panel: the button keeps its accent
+     identity, so it can only thin so far. 65% is where the accent still
+     looks like itself while the blur gives a gentle frost behind rows. */
   background: var(--accent);
   background: color-mix(in srgb, var(--accent) 65%, transparent);
   backdrop-filter: blur(12px) saturate(1.4);

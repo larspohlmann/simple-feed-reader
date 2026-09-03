@@ -1,4 +1,3 @@
-// src/app/admin/admin-user-detail.component.spec.ts
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';

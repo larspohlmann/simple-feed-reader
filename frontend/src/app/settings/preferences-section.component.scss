@@ -1,7 +1,6 @@
-// Layout glue only: `.row`, `.setting`, `.setting-label` and `.setting-hint`
-// are gone -- `app-settings-row` draws the line, the title and the description.
-// The two save-error banners are panel-level blocks and take their inset from
-// the shared `.state` utility, so nothing about them lives here either.
+// Layout glue only: `app-settings-row` draws the line/title/description now.
+// The save-error banners are panel-level blocks taking their inset from the
+// shared `.state` utility, so nothing about them lives here either.
 
 // The badge is the one piece of chrome the primitives do not own; it rides the
 // row's `[rowTitleTip]` slot.

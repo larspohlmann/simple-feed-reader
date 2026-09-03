@@ -1,10 +1,6 @@
-// The frame is app-overlay-panel's; only the width is this dialog's to choose.
-// `display: contents` on both the host and the form removes the two boxes that
-// would otherwise sit between the CDK's dialog container and the panel, neither
-// of which the CDK knows how to centre or stretch.
-// The panel caps itself at 90dvh and scrolls its body (#85), which is what
-// keeps this dialog on screen in landscape on a phone, where 220px of tags plus
-// the field and the buttons no longer fit.
+// The frame is app-overlay-panel's; `display: contents` on host and form
+// removes the boxes CDK can't centre/stretch. The panel caps at 90dvh and
+// scrolls its body (#85), keeping it on screen in phone landscape.
 :host {
   display: contents;
 
@@ -82,9 +78,8 @@ form {
   overflow: auto;
 
   /* Chaining stays ON, deliberately (#561): the dialog body behind this list
-     still needs a few pixels of its own scroll, and containment swallowed
-     exactly that remainder, stranding the last tag. Stopping the gesture at
-     the dialog is the panel body's job, and it still does it. */
+     still needs its own scroll remainder; containment swallowed exactly that
+     and stranded the last tag. Stopping the gesture is the panel body's job. */
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
@@ -113,11 +108,9 @@ form {
   color: var(--on-accent);
 }
 
-// The two exclusion switches, laid out label-left/control-right like the rest
-// of the app's toggle rows (see settings' digest toggle), but without
-// settings-row's own panel-inset padding: this dialog already carries that
-// padding on `.body` (overlay-panel), so re-adding it here would indent the
-// switches past the tag pills and the URL fields above them.
+// Label-left/control-right like other toggle rows, but without settings-row's
+// panel-inset padding: this dialog's `.body` (overlay-panel) already carries
+// it, so re-adding it would indent the switches past the fields above.
 .switch-row {
   display: flex;
   align-items: center;

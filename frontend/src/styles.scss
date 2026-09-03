@@ -1,10 +1,6 @@
-// src/styles.scss
-// Structural styles for every CDK overlay (dialogs). Without this the classes
-// the CDK puts on the DOM carry no rules at all: the container is not fixed,
-// centres nothing and blocks no scrolling, so a dialog renders as a plain block
-// appended after the 100vh reader shell -- i.e. a full viewport below the fold
-// (#85). Loaded here rather than in angular.json so every build configuration
-// gets it.
+// Structural styles for every CDK overlay (dialogs). Without this, the CDK's
+// DOM classes carry no rules: a dialog renders as a plain block below the
+// fold (#85). Loaded here, not angular.json, so every build gets it.
 @use '@angular/cdk/overlay-prebuilt.css';
 @use './app/theme/tokens';
 @use './app/theme/utilities';
@@ -14,38 +10,27 @@
 @use './styles/list-action';
 @use './styles/icon-button';
 
-// Every dialog.open() passes `panelClass: 'app-dialog'`, which lands on the
-// CDK's .cdk-overlay-pane. The frame itself is app-overlay-panel's -- the pane
-// only has to stay out of its way, and the prebuilt CSS already does at every
-// width: the pane is `position: absolute; display: flex` with no size of its
-// own, so it shrink-wraps the panel and the global position strategy centres
-// it. A dialog is a centred card on a phone too now, so there is nothing to add
-// here -- the pane stays shrink-to-fit and the panel sizes itself. (The only
-// full-screen phone surface, discover, is a route with its own host, not a
-// .cdk-overlay-pane, so it never depended on a rule here.)
+// Every dialog.open() lands on the CDK's .cdk-overlay-pane; the frame is
+// app-overlay-panel's, and the prebuilt CSS already shrink-wraps and centres
+// it (discover, the one full-screen phone surface, is a route, not a pane).
 
 // The toast's global position strategy centres the pane but leaves it
-// shrink-to-fit, so a long message would run edge to edge on a phone with no
-// side margin. Capped against the viewport rather than a percentage: the pane
-// has no size of its own for a percentage to resolve against.
+// shrink-to-fit, so a long message would run edge to edge on a phone. Capped
+// against the viewport, not a percentage: the pane has no size to resolve against.
 .cdk-overlay-pane.app-toast {
   max-width: min(100% - 2 * var(--space-4), 30rem);
 }
 
-// A surface whose content changes mid-life -- the For-You run pill, which turns
-// into the ready message when the run ends -- holds one box width for its whole
-// life. The pane is content-sized and centre-anchored, so without this the pill
-// would shrink from both edges at the moment of completion (#398). 22rem holds
-// the longest progress line on one line in both languages; the viewport cap
-// still wins on a phone.
+// The For-You run pill's content changes mid-life (progress -> ready), so it
+// holds one box width for its whole life; otherwise the content-sized,
+// centre-anchored pane would shrink from both edges at completion (#398).
 .cdk-overlay-pane.app-toast--fixed {
   width: min(100% - 2 * var(--space-4), 22rem);
 }
 
-// A readout that reports on work while the reader carries on reading sits over
-// the list rather than replacing part of it, so it lets a little of that list
-// through. The blur keeps the text legible over whatever passes underneath;
-// without it, translucency alone would put rows behind the numbers.
+// A readout over the list, not replacing part of it, lets a little of the
+// list through. The blur keeps the text legible over whatever passes
+// underneath — without it, translucency alone would put rows behind the numbers.
 .cdk-overlay-pane.app-toast--translucent .toast {
   background: color-mix(in srgb, var(--surface-2) 88%, transparent);
   backdrop-filter: blur(8px);

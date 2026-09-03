@@ -1,9 +1,8 @@
 <ng-content />
 @if (entry(); as e) {
-  <!-- One switch sends both (#576), but either part can still be blank on its
-       own: a pre-#403 row has a null score, and a pick whose reason came back
-       blank is stored as ''. So the strip renders when EITHER has something to
-       show, and each part keeps its own condition. -->
+  <!-- One switch sends both (#576), but either part can be blank on its own:
+       a pre-#403 row has a null score, a blank reason is stored as ''. The strip
+       renders when EITHER has something to show; each part keeps its own condition. -->
   @if (
     e.recommendationReason ||
     (e.recommendationScore !== null && e.recommendationScore !== undefined)

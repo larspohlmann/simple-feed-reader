@@ -1,4 +1,3 @@
-// src/app/settings/backup-section.component.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -28,12 +27,11 @@ const FALLBACK_BACKUP_FILENAME = 'account-backup.json.gz';
  *  large -- is refused before a single row is deleted. */
 const POST_WIPE_PROBLEM = 'backup_load_failed';
 
-/** A request whose outcome is not provable from the response: a dropped
- *  connection (status 0) leaves the wipe's fate unknown, and a 5xx --
- *  gateway timeout, an OOM-killed worker, any throwable that is not the
- *  typed BackupLoadFailedException -- can just as well be a post-wipe crash
- *  that never reached the typed exception. Only here is "the account may be
- *  partly loaded" the honest report. */
+/** A request whose outcome the response can't prove: a dropped connection
+ *  (status 0) leaves the wipe's fate unknown, and a 5xx -- gateway timeout,
+ *  OOM-killed worker, anything but the typed BackupLoadFailedException --
+ *  can just as well be a post-wipe crash. Only here is "may be partly
+ *  loaded" the honest report. */
 function outcomeIsUnproven(problem: Problem): boolean {
   return problem.status === 0 || problem.status >= 500;
 }
@@ -64,23 +62,20 @@ export class BackupSectionComponent {
   readonly restoring = signal(false);
   readonly result = signal<RestoreResult | null>(null);
   readonly error = signal<Problem | null>(null);
-  /** Set once a restore fails AFTER the wipe, and never cleared -- the rows
-   *  are already gone, so the recovery banner has to stay up even after the
-   *  user picks a fresh file for the retry. A refusal that cost the account
-   *  nothing must never set this: telling a user their account may be
-   *  half-wiped when it was not touched is the worst false alarm this
-   *  feature can raise. */
+  /** Set once a restore fails AFTER the wipe, never cleared -- the rows are
+   *  already gone, so the recovery banner stays up even through a retry. A
+   *  refusal that cost the account nothing must never set this: a false "may
+   *  be half-wiped" alarm is the worst this feature can raise. */
   readonly failedOnce = signal(false);
 
   readonly canRestore = computed(
     () => this.typed() === CONFIRM_PHRASE && !!this.file() && !this.restoring(),
   );
 
-  /** Banner texts, memoised the way the other settings cards do it
-   *  (ai-section's `listFailure`, recommendation-settings-card's
-   *  `failureMessage`) -- this component is not OnPush, so a method called
-   *  straight from the template would re-translate on every change-detection
-   *  tick for as long as a banner is up. */
+  /** Banner texts, memoised like ai-section's `listFailure` and
+   *  recommendation-settings-card's `failureMessage`: this component is not
+   *  OnPush, so a template-called method would re-translate on every
+   *  change-detection tick while a banner is up. */
   readonly exportErrorMessage = computed(() => this.messageFor(this.exportError()));
   readonly safetyNetErrorMessage = computed(() => this.messageFor(this.safetyNetError()));
   readonly errorMessage = computed(() => this.messageFor(this.error()));

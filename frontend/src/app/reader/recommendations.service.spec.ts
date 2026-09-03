@@ -1,4 +1,3 @@
-// src/app/reader/recommendations.service.spec.ts
 import { TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
 import { WritableSignal, signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
@@ -31,8 +30,7 @@ describe('RecommendationsService', () => {
   let toast: { show: jest.Mock; dismiss: jest.Mock; visible: WritableSignal<boolean> };
   // The pill is the narrow layout's surface; above the drawer breakpoint the
   // reader header carries the run instead. Default to narrow so every test
-  // below reads as it always did, and cross it explicitly where that is the
-  // point.
+  // below reads as it always did, and cross it explicitly where that matters.
   let isNarrow: WritableSignal<boolean>;
   let navigate: jest.Mock;
   let nowMs = 0;
@@ -65,10 +63,9 @@ describe('RecommendationsService', () => {
 
   afterEach(() => ctrl.verify());
 
-  /** A `running` flush with `background: false` re-polls immediately (the
-   *  existing poll-loop contract), leaving one open tick request. The creep
-   *  tests below drive to a milestone and then need to settle that request;
-   *  answering it with a `completed` report ends the run cleanly. */
+  /** A `running` flush with `background: false` re-polls immediately, leaving
+   *  one open tick request. The creep tests below drive to a milestone and then
+   *  settle that request with a `completed` report to end the run cleanly. */
   const drainTrailingTick = (): void => {
     ctrl
       .expectOne('https://api.test/api/recommendations/runs/tick')
@@ -484,10 +481,9 @@ describe('RecommendationsService', () => {
         expect(svc.running()).toBe(true);
         expect(svc.failure()).toBeNull();
 
-        // Two more genuine failures (four in total) are what actually spends
-        // the full, un-shortened MAX_TRANSPORT_RETRIES (3) budget -- matching
-        // 'stops and records the problem once the tick retry budget is spent'
-        // above, which needs the same four calls starting from a clean slate.
+        // Two more genuine failures (four in total) spend the full, un-shortened
+        // MAX_TRANSPORT_RETRIES (3) budget — matching the spec above, which needs
+        // the same four calls starting from a clean slate.
         fail500Tick();
         jest.advanceTimersByTime(1500);
         fail500Tick();
@@ -639,11 +635,9 @@ describe('RecommendationsService', () => {
       }
     });
 
-    /** The reload case: the run is already stalled when the page comes up, so
-     *  `resume()` applies the report -- freezing the bar -- and only then
-     *  marks the run live. Marking it live used to start the ticker outright,
-     *  which undid that freeze: the bar advanced while the label read
-     *  "waiting for lock", until the next poll landed (#439). */
+    /** The reload case: the run is already stalled when the page loads, so
+     *  `resume()` applies the report (freezing the bar) before marking it live.
+     *  Marking it live used to start the ticker outright, undoing that freeze (#439). */
     it('leaves the bar frozen when resume() picks up a run already waiting for its lock', fakeAsync(() => {
       jest.useFakeTimers();
       nowMs = 0;
@@ -1008,9 +1002,8 @@ describe('RecommendationsService', () => {
     );
     expect(svc.etaState()).toBe('lockHeld');
     // The incoming report is itself a signal write, so it invalidates the
-    // computed regardless of the ticker; read it once here, still at the
-    // same instant the lock report arrived, so this settles to the frozen
-    // value rather than to whatever `now()` is at the *next* read.
+    // computed regardless of the ticker; read it once here, at the same instant
+    // the lock report arrived, so it settles to the frozen value, not a later one.
     expect(svc.progress()).toBeCloseTo(beforeLock);
 
     nowMs = 90000; // time marches on, but the bar must not move

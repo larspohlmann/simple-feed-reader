@@ -1,15 +1,6 @@
-// src/styles/_list-action.scss
-// The shared look of a list-header action (the `appListAction` directive, #617):
-// Edit, the unread switch, Mark all read, Refresh, Save search. Global rather
-// than component-scoped because several of these are projected through the list
-// header's action outlets, and ViewEncapsulation does not style projected
-// content — the same reason _controls.scss is global.
-// `padding: 0`, `background`/`border: none` and `font: inherit` double as the
-// button reset the app has no global one for: a <button> here would otherwise
-// render as a grey user-agent button in a user-agent font, out of step with the
-// <a> beside it. Icon size and label visibility stay with each consumer. The
-// shared `mobile-icon-only` modifier below owns the target and border only after
-// that consumer has hidden its label.
+// The shared look of a list-header action (`appListAction`, #617): Edit, the
+// unread switch, Mark all read, Refresh, Save search. Global because several
+// are projected through the list header's outlets (view encapsulation).
 @use '../app/theme/breakpoints' as bp;
 
 .list-action {
@@ -33,12 +24,9 @@
   color: var(--text-muted);
 }
 
-// Refresh spins its icon while a run is in flight (the button is also disabled).
-// The spin turns the glyph itself, NOT the `app-icon` box: on a phone that box
-// wears the `mobile-icon-only` border below, and rotating the box would spin the
-// border square with it (#698). Reaching the glyph needs this global sheet — the
-// border lives here too, and the button's own encapsulated styles cannot cross
-// into app-icon's projected span.
+// Refresh spins its icon while a run is in flight. Spins the glyph, NOT the
+// `app-icon` box: on a phone that box wears the `mobile-icon-only` border,
+// which would spin the square with it (#698). Needs this global sheet to reach it.
 .list-action.spinning app-icon .material-symbols-outlined {
   animation: list-action-spin 0.9s linear infinite;
 }
@@ -49,11 +37,9 @@
   }
 }
 
-// On a phone, the list header's Edit, unread switch, Mark all read and Refresh
-// controls lose their text so the title still fits. Give the now-icon-only
-// controls the sidebar chevron treatment: a full tap target around a smaller
-// bordered glyph box. The modifier is explicit because some phone actions keep
-// a short label and must stay as links without this chrome (#679).
+// On a phone the list header's controls lose their text, so give them the
+// sidebar chevron treatment: a full tap target around a smaller bordered
+// glyph box. Explicit modifier, since some actions keep a short label (#679).
 @media (width <= bp.$bp-sm) {
   .list-action.mobile-icon-only {
     justify-content: center;

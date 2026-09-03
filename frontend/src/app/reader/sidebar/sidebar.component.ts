@@ -1,4 +1,3 @@
-// src/app/reader/sidebar/sidebar.component.ts
 import {
   Component,
   DestroyRef,
@@ -75,26 +74,22 @@ export class SidebarComponent {
   readonly viewedCount = input(0);
   readonly savedSearches = input<SavedSearchDto[]>([]);
   /** The saved search the list is currently showing, by id, or null. The shell
-   *  decides it: a saved search's identity is its decoded (term, whole-word)
-   *  pair, and having the sidebar re-encode a term to string-compare it
-   *  against the selection made a second, subtly different rule (a trailing
-   *  tab or no-break space reads as whole-word to the decoder but not to a
-   *  string match). An id compares one way only. */
+   *  decides it — re-encoding the term to string-compare made a subtly
+   *  different rule (a trailing tab/nbsp reads whole-word to the decoder, not
+   *  to a string match). An id compares one way only. */
   readonly activeSavedSearchId = input<number | null>(null);
   /** Whether the account has mail sending enabled. The per-search digest
    *  toggle only renders when this is true — with mail off there is nowhere
    *  for the flag to send to. */
   readonly mailEnabled = input<boolean>(false);
-  /** Whether the account's own digest is switched on ("Send a digest email").
-   *  The per-search toggle renders only when this is true as well: with the
-   *  digest off, per-search inclusion has no digest to appear in, so the
-   *  envelope button would control nothing (#636). */
+  /** Whether the account's own digest is on. The per-search toggle needs this
+   *  too: with the digest off, per-search inclusion has no digest to appear
+   *  in, so the envelope button would control nothing (#636). */
   readonly digestEnabled = input<boolean>(false);
 
   /** The trailing envelope button shows only when mail can send AND the account
-   *  digest is on. The saved-search row also styles itself around whether this
-   *  button is present — it is the row's trailing control, so its absence
-   *  restores the plain nav-row height and right padding (#636). */
+   *  digest is on. The saved-search row styles itself around its presence,
+   *  restoring plain nav-row height/padding when absent (#636). */
   protected readonly showDigestToggles = computed(() => this.mailEnabled() && this.digestEnabled());
   readonly selection = input.required<Selection>();
   readonly loading = input(false);
@@ -142,10 +137,10 @@ export class SidebarComponent {
   readonly screen = inject(LayoutService);
   readonly organising = model(false);
 
-  /** A convertible losing its coarse pointer (docked keyboard, DevTools touch
-   *  emulation off) must not strand Organise mode: the switch that exits it
-   *  only renders on coarse pointers, so a stuck `true` would render the
-   *  organise row DOM with no way out. Reset instead. */
+  /** A convertible losing its coarse pointer (docked keyboard, DevTools
+   *  emulation off) must not strand Organise mode — its exit switch only
+   *  renders on coarse pointers, so a stuck `true` leaves no way out. Reset
+   *  instead. */
   private readonly exitOrganiseOnFinePointer = effect(() => {
     if (!this.screen.isCoarse()) untracked(() => this.organising.set(false));
   });

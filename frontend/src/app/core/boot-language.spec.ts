@@ -1,4 +1,3 @@
-// src/app/core/boot-language.spec.ts
 import { NEVER, Observable, of, throwError } from 'rxjs';
 import { TranslocoService } from '@jsverse/transloco';
 import { DICTIONARY_WAIT_MS, preloadInitialLanguage } from './boot-language';

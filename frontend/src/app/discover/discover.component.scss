@@ -1,10 +1,8 @@
 @use '../theme/breakpoints' as bp;
 
-// The picker floats over the reader as a modal, but it is a route rather than a
-// CDK dialog, so nothing else supplies the scrim: this host is it. The frame
-// inside the scrim is app-overlay-panel's, the same one the four reader dialogs
-// render in; only the width is discover's to choose. On phones the panel fills
-// the screen (its own view), so the scrim is invisible but harmless.
+// The picker is a route, not a CDK dialog, so nothing else supplies the scrim
+// — this host is it. The frame inside is app-overlay-panel's; only the width
+// is discover's to choose. On phones the panel fills the screen, so no scrim shows.
 :host {
   position: fixed;
   inset: 0;
@@ -16,16 +14,9 @@
 
   --panel-w: 1040px;
 
-  /* The picker is a grid of cards, not prose: past 860px it stops reading as a
-     dialog and the rail's categories drift far from the cards they label. The
-     panel's own 90dvh is the right cap for the dialogs, not for this. `100%`
-     is the scrim host's content box (this host is `position: fixed; inset: 0`,
-     so it is definite), which keeps the panel on screen when the window is
-     shorter than the cap.
-
-     The same figure serves as a DEFINITE height, and the body becomes a size
-     container, so the rail can cap itself with `cqh` (#561). Written once
-     because the three must agree. */
+  /* Capped at 860px, not the dialogs' 90dvh: past that a card grid stops
+     reading as a dialog. `--panel-h`, `--panel-max-h` and `--panel-body-container`
+     share one definite value so the rail can cap itself with `cqh` (#561). */
   --panel-h: min(860px, 100%);
   --panel-max-h: var(--panel-h);
   --panel-body-container: size;
@@ -62,13 +53,9 @@
   }
 }
 
-// The rail and the sections, bled back past the panel body's padding so the
-// rail's edge sits flush against the panel and the sections keep their own.
-// Deliberately CONTENT height, not `height: 100%` (#561). A sticky child cannot
-// leave its containing block, so a one-screen `.cols` would let the rail scroll
-// away with the sections as soon as the categories were few enough for it to
-// fit. The rail caps itself against the body with `cqh` instead, which is the
-// one measure that does not also shorten its travel.
+// Bled past the panel body's padding so the rail sits flush against the panel.
+// Deliberately CONTENT height, not `height: 100%` (#561): a sticky child can't
+// leave its containing block, so the rail caps itself against the body with `cqh`.
 .cols {
   display: flex;
   align-items: flex-start;

@@ -1,4 +1,3 @@
-// src/app/reader/magazine/entry-split.component.ts
 import { Component, computed, input } from '@angular/core';
 import { EntryKickerLineComponent } from './entry-kicker-line.component';
 import { EntryMetaComponent } from '../entry-meta/entry-meta.component';
@@ -13,11 +12,9 @@ import { EntryImageBlockBase } from './entry-image-block-base';
 export class EntrySplitComponent extends EntryImageBlockBase {
   readonly imageSide = input<'left' | 'right'>('right');
 
-  /** The side box adapts to the image but stays bounded — a landscape crops to
-   *  3:2, a portrait to 3:4. A portrait routed here from `hero`/`wide` (the
-   *  planner refuses to stack a tall image above the text) therefore shows AS a
-   *  portrait beside the text, not as a thin cropped sliver. Unknown dimensions
-   *  keep the 3:2 default. */
+  /** The side box adapts to the image but stays bounded — landscape crops to
+   *  3:2, portrait to 3:4. A portrait routed here from `hero`/`wide` shows AS a
+   *  portrait, not a thin cropped sliver. Unknown dimensions keep the 3:2 default. */
   readonly aspect = computed(() => {
     const img = this.image();
     if (!img?.width || !img?.height) {

@@ -35,11 +35,8 @@
 }
 
 // Resting contrast + chrome reset (#408 follow-up) is checked by eye, not by
-// test: jest-preset-angular never compiles or injects this file under Jest,
-// so a jsdom assertion on the button's computed style or classes would pass
-// whether the fix below is present, wrong, or later reverted — see
-// search-field.component.spec.ts for where that test used to live and why it
-// was removed instead of kept as a check that could not fail.
+// test: jest-preset-angular never compiles or injects SCSS under Jest, so a
+// jsdom style assertion here would pass regardless of the actual CSS.
 .clear-or-dismiss {
   display: flex;
   align-items: center;
@@ -59,11 +56,8 @@
 }
 
 // On a phone this button is the only way out of the search bar (#550), so it
-// has to be a real touch target rather than a 16px glyph. The icon stays its
-// size; only the hit box grows, and the negative right margin gives it back
-// the row's own padding, so the box reaches the field edge without moving the
-// text inside it. Keyed on the pointer, not the viewport, per the design
-// language.
+// needs a real touch target, not a 16px glyph. The icon stays its size; only
+// the hit box grows, with a negative margin so it reaches the field edge.
 @media (pointer: coarse) {
   .clear-or-dismiss {
     align-self: stretch;
