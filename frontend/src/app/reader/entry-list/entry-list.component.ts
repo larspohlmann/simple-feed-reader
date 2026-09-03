@@ -538,6 +538,9 @@ export class EntryListComponent implements OnDestroy {
    *     list <-> magazine).
    *  - `selection()` — a view switch, whose retained outgoing list (#254) can
    *     otherwise keep its stale fade until the new page lands (#462).
+   *  - `magazineStyle.style()` — boxed <-> airy only toggles a class on the same
+   *     `#rows` element (so `rows()` does not fire), yet airy resizes every row;
+   *     without this the fade stays computed against the old geometry.
    *  - `focusPulse()` — the imperative events: scroll, resize, row collapse.
    */
   private readonly _readingFocus = effect(() => {
@@ -551,6 +554,7 @@ export class EntryListComponent implements OnDestroy {
     this.entries();
     this.rows();
     this.selection();
+    this.magazineStyle.style();
     this.focusPulse();
     this.scheduleFocus();
   });

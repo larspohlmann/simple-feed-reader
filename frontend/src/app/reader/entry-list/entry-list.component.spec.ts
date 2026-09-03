@@ -1622,5 +1622,19 @@ describe('EntryListComponent', () => {
       await frames();
       expect(rowOpacities(f)).not.toContain('');
     });
+
+    // A density switch (boxed <-> airy) keeps the same #rows element and only
+    // toggles a class on it, so nothing the pass tracks fires — yet airy changes
+    // every row's height and position. Without the style as a source the rows
+    // keep the stale opacities the old geometry earned.
+    it('recomputes focus when the magazine density switches boxed <-> airy', async () => {
+      const f = mount({ entries: loaded, layout: 'magazine' });
+      await frames();
+      blankOpacities(f);
+      TestBed.inject(MagazineStyleService).set('airy');
+      f.detectChanges();
+      await frames();
+      expect(rowOpacities(f)).not.toContain('');
+    });
   });
 });
