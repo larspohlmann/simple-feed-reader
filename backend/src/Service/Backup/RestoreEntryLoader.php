@@ -42,8 +42,6 @@ final class RestoreEntryLoader
     /** @var list<EntryLine> */
     private array $bufferedLines = [];
 
-    private bool $bufferedFeedGotInserts = false;
-
     /** @var array<int, true> ids this restore created, as a set */
     private array $createdEntryIds = [];
 
@@ -159,11 +157,7 @@ final class RestoreEntryLoader
         }
 
         $this->insertBufferedEntries();
-        if ($this->bufferedFeedGotInserts) {
-            $this->recordCreatedIds($this->target($this->bufferedFeedUrl));
-        }
         $this->bufferedFeedUrl = '';
-        $this->bufferedFeedGotInserts = false;
     }
 
     private function insertBufferedEntries(): void
@@ -191,7 +185,7 @@ final class RestoreEntryLoader
         }
 
         $this->entriesCreated += \count($fresh);
-        $this->bufferedFeedGotInserts = true;
+        $this->recordCreatedIds($target, $fresh);
     }
 
     /**
@@ -204,21 +198,31 @@ final class RestoreEntryLoader
      */
     private function unknownOf(array $lines, RestoreFeedTarget $target): array
     {
-        $fresh = [];
+        $freshByHash = [];
         foreach ($lines as $line) {
-            if ($target->knowsEntry($line->guidHash)) {
-                continue;
+            if (!$target->knowsEntry($line->guidHash)) {
+                $freshByHash[$line->guidHash] = $line;
             }
-            $target->markInserted($line->guidHash);
-            $fresh[] = $line;
         }
 
-        return $fresh;
+        return array_values($freshByHash);
     }
 
-    private function recordCreatedIds(RestoreFeedTarget $target): void
+    /**
+     * The multi-row INSERT yields no per-row lastInsertId, so the ids are read
+     * back by the hashes just written — at most one batch of them (#456).
+     *
+     * @param non-empty-list<EntryLine> $inserted
+     */
+    private function recordCreatedIds(RestoreFeedTarget $target, array $inserted): void
     {
-        foreach ($target->absorb($this->entries->guidHashToIdMapForFeed($target->feedId)) as $entryId) {
+        $idsByHash = $this->entries->entryIdsByGuidHash($target->feedId, array_column($inserted, 'guidHash'));
+        if (\count($idsByHash) !== \count($inserted)) {
+            throw new \LogicException('An entry this restore just wrote cannot be read back.');
+        }
+
+        $target->learn($idsByHash);
+        foreach ($idsByHash as $entryId) {
             $this->createdEntryIds[$entryId] = true;
         }
     }

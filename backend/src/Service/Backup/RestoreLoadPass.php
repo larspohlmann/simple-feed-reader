@@ -41,6 +41,9 @@ final class RestoreLoadPass
     /** @var array<string, Feed> */
     private array $feedsByUrl = [];
 
+    /** @var list<FeedLine> held back until one lookup resolves them all (#455) */
+    private array $heldFeedLines = [];
+
     /** @var array<string, Feed> the subset this restore actually subscribed to */
     private array $subscribedFeedsByUrl = [];
 
@@ -91,7 +94,7 @@ final class RestoreLoadPass
             $line instanceof AccountLine => $this->loadAccount($line),
             $line instanceof TagLine => $this->loadTag($line),
             $line instanceof SavedSearchLine => $this->loadSavedSearch($line),
-            $line instanceof FeedLine => $this->loadFeed($line),
+            $line instanceof FeedLine => $this->holdFeed($line),
             $line instanceof SubscriptionLine => $this->loadSubscription($line),
             $line instanceof EntryLine => $this->acceptEntry($line),
             $line instanceof EntryStateLine => $this->acceptEntryState($line),
@@ -133,22 +136,39 @@ final class RestoreLoadPass
         ++$this->counts['savedSearches'];
     }
 
+    private function holdFeed(FeedLine $line): void
+    {
+        $this->heldFeedLines[] = $line;
+    }
+
     /**
+     * BackupReader puts every feed line before the first subscription, so by
+     * the time anything needs a Feed the file's whole set is known and one
+     * query resolves it (#455).
+     *
      * A feed row is shared between accounts, so a known one is referenced and
      * never touched — not even to improve a null title. sourceFormat is
      * therefore written only on a row this restore creates, which is
      * SubscriptionCreator's trust rule at its strictest: a value asserted by
      * an uploaded file may not overwrite what the instance already learned.
      */
-    private function loadFeed(FeedLine $line): void
+    private function resolveHeldFeeds(): void
     {
-        $known = $this->feeds->findOneBy(['url' => $line->url]);
-        if ($known instanceof Feed) {
-            $this->feedsByUrl[$line->url] = $known;
-
+        $lines = $this->heldFeedLines;
+        $this->heldFeedLines = [];
+        if ([] === $lines) {
             return;
         }
 
+        $urls = array_map(static fn (FeedLine $line): string => $line->url, $lines);
+        $this->feedsByUrl += $this->feeds->findByUrlsIndexedByUrl($urls);
+        foreach ($lines as $line) {
+            $this->feedsByUrl[$line->url] ??= $this->createFeed($line);
+        }
+    }
+
+    private function createFeed(FeedLine $line): Feed
+    {
         $feed = new Feed($line->url);
         $feed->setSiteUrl($line->siteUrl);
         $feed->setTitle($line->title);
@@ -157,12 +177,14 @@ final class RestoreLoadPass
         $feed->setImageUrl($line->imageUrl);
         $feed->setSourceFormat($line->sourceFormat);
         $this->em->persist($feed);
-        $this->feedsByUrl[$line->url] = $feed;
         ++$this->counts['feeds'];
+
+        return $feed;
     }
 
     private function loadSubscription(SubscriptionLine $line): void
     {
+        $this->resolveHeldFeeds();
         $feed = $this->feedsByUrl[$line->feedUrl] ?? throw BackupLoadFailedException::danglingReference(sprintf(
             'Subscription to "%s" has no matching feed line.',
             $line->feedUrl,
@@ -221,6 +243,7 @@ final class RestoreLoadPass
             return;
         }
         $this->entryPhaseStarted = true;
+        $this->resolveHeldFeeds();
 
         try {
             $this->em->flush();
