@@ -259,7 +259,7 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
 .tools {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-3);
   flex: none;
 }
 
@@ -336,6 +336,12 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
          tag title (worse with German strings) stays readable. The icons, backed
          by aria-label/title tooltips, carry the meaning on one row. */
 @media (width <= bp.$bp-sm) {
+  /* The actions collapse to bordered icon buttons here, so they sit tighter
+     than the text links do on the wide header. */
+  .tools {
+    gap: var(--space-1);
+  }
+
   .unread-switch .txt,
   .mark-all .txt,
   .refresh .txt {
