@@ -183,15 +183,7 @@ class EntryRepository extends ServiceEntityRepository
      */
     public function guidHashToIdMapForFeed(int $feedId): array
     {
-        /** @var list<array{guidHash: string, id: int}> $rows */
-        $rows = $this->createQueryBuilder('e')
-            ->select('e.guidHash AS guidHash', 'e.id AS id')
-            ->andWhere('e.feed = :feed')
-            ->setParameter('feed', $feedId)
-            ->getQuery()
-            ->getResult();
-
-        return $this->idsByHash($rows);
+        return $this->idsByHash($this->scalarGuidHashRows($feedId, null));
     }
 
     /**
@@ -208,17 +200,28 @@ class EntryRepository extends ServiceEntityRepository
             return [];
         }
 
-        /** @var list<array{guidHash: string, id: int}> $rows */
-        $rows = $this->createQueryBuilder('e')
+        return $this->idsByHash($this->scalarGuidHashRows($feedId, $guidHashes));
+    }
+
+    /**
+     * @param list<string>|null $guidHashes null asks for the whole feed
+     *
+     * @return list<array{guidHash: string, id: int}>
+     */
+    private function scalarGuidHashRows(int $feedId, ?array $guidHashes): array
+    {
+        $builder = $this->createQueryBuilder('e')
             ->select('e.guidHash AS guidHash', 'e.id AS id')
             ->andWhere('e.feed = :feed')
-            ->andWhere('e.guidHash IN (:hashes)')
-            ->setParameter('feed', $feedId)
-            ->setParameter('hashes', $guidHashes)
-            ->getQuery()
-            ->getResult();
+            ->setParameter('feed', $feedId);
+        if (null !== $guidHashes) {
+            $builder->andWhere('e.guidHash IN (:hashes)')->setParameter('hashes', $guidHashes);
+        }
 
-        return $this->idsByHash($rows);
+        /** @var list<array{guidHash: string, id: int}> $rows */
+        $rows = $builder->getQuery()->getResult();
+
+        return $rows;
     }
 
     /**

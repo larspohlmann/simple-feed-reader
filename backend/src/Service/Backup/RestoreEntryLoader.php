@@ -216,8 +216,7 @@ final class RestoreEntryLoader
      */
     private function recordCreatedIds(RestoreFeedTarget $target, array $inserted): void
     {
-        $hashes = array_map(static fn (EntryLine $line): string => $line->guidHash, $inserted);
-        $idsByHash = $this->entries->entryIdsByGuidHash($target->feedId, $hashes);
+        $idsByHash = $this->entries->entryIdsByGuidHash($target->feedId, array_column($inserted, 'guidHash'));
         if (\count($idsByHash) !== \count($inserted)) {
             throw new \LogicException('An entry this restore just wrote cannot be read back.');
         }
