@@ -209,6 +209,19 @@ any one component's stylesheet.
 |---|---|
 | `.sr-only` | Visually hides an element while keeping it in the accessibility tree — for a label assistive tech must expose that has no visible slot of its own (e.g. the freshness label on the admin user-detail feed rows: `<span class="sr-only">Last refresh:</span>` before the visible date). `aria-label`/`title` on a plain element are not a substitute: ARIA forbids naming a `role=generic` node, so most screen readers ignore both attributes on a bare `<span>`/`<div>`. |
 
+### Brightness steps (#832)
+
+`<html>` carries `data-brightness` (`-3`…`3`) next to `data-theme`. Step 0 is
+the palette in `themes/_graphite.scss` verbatim; every other step is derived
+at build time by `theme/_brightness.scss` and emitted as its own
+`:root[data-theme][data-brightness]` block. Surfaces, borders and the soft
+status backgrounds shift 4 OKLCH lightness points per step; text and the
+saturated hues are re-solved to hold their step-0 contrast against the
+weakest surface. `--media-brightness` (1, or 0.94/0.88/0.82 below 0) drives
+one global `filter` on `img`, `video` and `iframe`. Light stops at +1 because
+its panels are already white. To change a contrast target, edit
+`$contrast-targets` in `_brightness.scss`; never hand-tune a step block.
+
 ---
 
 ## 2. Component catalog
@@ -525,6 +538,7 @@ These deliberately stay out and own their markup and styles:
 - the sidebar's `.dots` row-menu triggers
 - the entry row's read toggle
 - the view-controls segmented control
+- the sidebar's brightness stepper (`<app-brightness-control>`)
 - `<app-to-top-button>`
 - `<app-icon-picker>`'s trigger
 
@@ -1183,6 +1197,16 @@ reuse:
   exclusion marker's tooltip (`exclusionTitle()`) says which surface(s) the
   feed is hidden from, so a reader never has to guess what an icon-only glyph
   means.
+
+### Brightness control
+
+`<app-brightness-control>` (local to the sidebar, #832) is a small sun, a
+seven-cell bar and a big sun in the view-controls `.seg` frame. Cells fill
+from the left up to the current step (four at the default); the fourth cell's
+notch marks today's look; clicking the bar resets to it. In light mode the
+two cells above +1 render as unavailable and the big sun disables at +1. A
+visually hidden `<output aria-live="polite">` reads the value. Steps are per
+device and per theme (`sfr.brightness.light` / `.dark`), never per account.
 
 ### Sticky and scroll
 
