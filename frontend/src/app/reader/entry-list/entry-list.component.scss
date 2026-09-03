@@ -495,6 +495,13 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   max-width: var(--magazine-measure);
 }
 
+/* Mirror `.rows.magazine`'s inline padding: below the measure the top-block is
+   already 100% wide, so its `margin-inline: auto` cannot hold it off the edges —
+   the wrapper has to carry the gutter itself. */
+.empty-wrap.magazine {
+  padding-inline: var(--space-3);
+}
+
 .empty-wrap.magazine > .top-block {
   margin-inline: auto;
 }
