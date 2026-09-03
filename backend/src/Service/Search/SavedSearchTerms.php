@@ -26,15 +26,14 @@ final readonly class SavedSearchTerms
         );
     }
 
+    public static function termOf(SavedSearch $savedSearch): SavedSearchTerm
+    {
+        return new SavedSearchTerm((int) $savedSearch->getId(), self::of($savedSearch));
+    }
+
     /** @return list<SavedSearchTerm> the user's saved searches, in sidebar order */
     public function forUser(int $userId): array
     {
-        return array_map(
-            static fn (SavedSearch $search): SavedSearchTerm => new SavedSearchTerm(
-                (int) $search->getId(),
-                self::of($search),
-            ),
-            $this->savedSearches->findForUser($userId),
-        );
+        return array_map(self::termOf(...), $this->savedSearches->findForUser($userId));
     }
 }

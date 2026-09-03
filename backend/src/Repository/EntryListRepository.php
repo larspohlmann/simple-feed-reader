@@ -100,22 +100,6 @@ class EntryListRepository extends AbstractEntryProjectionRepository
     }
 
     /**
-     * The ids of every unread entry that matches this saved search, across all
-     * the user's subscribed feeds. Reuses searchForUser's term matching so the
-     * badge tracks the LIKE result set, plus the shared "unread" predicate.
-     * Returns the ids rather than a bare count so the client can drop one the
-     * moment the user reads it, without a fresh scan. Deliberately
-     * engine-independent: read state is per-user and lives only in the
-     * database, never in the search index.
-     *
-     * @return list<int>
-     */
-    public function unreadMatchIdsForUser(EntrySearchQuery $query): array
-    {
-        return $this->scalarIds($this->unreadMatchQueryBuilder($query)->select('e.id')->distinct());
-    }
-
-    /**
      * The ids of every unread entry that matches this search and is no newer
      * than $until, for the user's subscribed feeds. The set a search-scoped
      * mark-read must flip; reuses the search's own term matching so it marks
