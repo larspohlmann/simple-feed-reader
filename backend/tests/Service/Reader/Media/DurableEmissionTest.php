@@ -13,7 +13,6 @@ use App\Service\Reader\Media\Provider\SoundCloudEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\Source\AttributeMediaSource;
 use App\Service\Reader\Media\Source\JsonLdMediaSource;
-use App\Service\Reader\Media\Source\LinkedFileMediaSource;
 use App\Service\Reader\Media\Source\MetaMediaSource;
 use App\Service\Reader\Media\Source\SemanticMediaSource;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -42,7 +41,7 @@ final class DurableEmissionTest extends TestCase
 
         yield 'JsonLd' => [
             'jsonLd',
-            '<html><body><script type="application/ld+json">'
+            '<html lang="en"><body><script type="application/ld+json">'
                 . '{"@type":"AudioObject","contentUrl":"' . $signedUrl . '"}'
                 . '</script></body></html>',
             $pageUrl,
@@ -50,7 +49,7 @@ final class DurableEmissionTest extends TestCase
 
         yield 'Meta' => [
             'meta',
-            '<html><head><meta property="og:audio" content="' . $signedUrl . '"></head></html>',
+            '<html lang="en"><head><meta property="og:audio" content="' . $signedUrl . '"></head></html>',
             $pageUrl,
         ];
 
@@ -63,12 +62,6 @@ final class DurableEmissionTest extends TestCase
         yield 'Attribute' => [
             'attribute',
             '<body><div data-audio-src="' . $signedUrl . '"></div></body>',
-            $pageUrl,
-        ];
-
-        yield 'Linked' => [
-            'linked',
-            '<body><a href="' . $signedUrl . '">Listen</a></body>',
             $pageUrl,
         ];
     }
@@ -93,8 +86,7 @@ final class DurableEmissionTest extends TestCase
             'jsonLd' => new JsonLdMediaSource($urlKind, $providers),
             'meta' => new MetaMediaSource($urlKind),
             'semantic' => new SemanticMediaSource($urlKind),
-            'attribute' => new AttributeMediaSource($urlKind, new MediaRelevance()),
-            default => new LinkedFileMediaSource($urlKind, new MediaRelevance()),
+            default => new AttributeMediaSource($urlKind, new MediaRelevance()),
         };
     }
 }

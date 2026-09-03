@@ -20,7 +20,9 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
  * Host-agnostic: a publisher's player often hides its file URL in an ad-hoc
  * attribute (Deutschlandradio's `data-audio-src`, ARD's `data-v` rendition
  * list) rather than an `[src]` or JSON-LD block. This layer reads every
- * attribute of every element instead of naming either host.
+ * attribute of every element instead of naming either host. An `href` is an
+ * attribute too, so a file hung off a plain link (NPR's "Listen" anchor) is
+ * this layer's case as well — a linked-file layer beneath it was dead (#756).
  *
  * An attribute can hold a whole JSON blob, so a value is scanned for
  * URL-shaped substrings rather than trusted as one URL. The poster comes from
