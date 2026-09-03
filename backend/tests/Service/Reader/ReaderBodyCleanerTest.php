@@ -20,6 +20,7 @@ use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\SubstackPosterLink;
 use App\Service\Reader\NavigationChromeTrimmer;
 use App\Service\Reader\PageImageInventory;
+use App\Service\Reader\PlayerChromeCleaner;
 use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\ReaderLeadImage;
 use PHPUnit\Framework\TestCase;
@@ -44,6 +45,7 @@ final class ReaderBodyCleanerTest extends TestCase
             new ReaderLeadImage(),
             new InBodyEmbedRewriter(new EmbedProviders([new YouTubeEmbedProvider()]), $markup),
             new SubstackPosterLink(),
+            new PlayerChromeCleaner(),
             new PageMediaInserter($markup),
         );
     }
