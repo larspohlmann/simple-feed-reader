@@ -5,6 +5,11 @@ import { test, expect, Page } from '@playwright/test';
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
 
+/** The sticky list header is frosted glass: the page surface (--surface-0) at
+ *  80%, over a blur (#758). It must stay the PAGE colour — never take a card
+ *  fill — so both magazine styles assert this exact translucent value. */
+const HEADER_GLASS = 'color(srgb 0.960784 0.960784 0.956863 / 0.8)';
+
 /** Inline, so no external host can 404 and cost this file its radius check. */
 const IMG =
   'data:image/svg+xml;base64,' +
@@ -230,9 +235,7 @@ test('the airy magazine drops the card border and rules the slots instead', asyn
   expect(colors.sheetWidth, 'the airy sheet should be narrower than its scroller').toBeLessThan(
     colors.rowsWidth,
   );
-  expect(colors.headerColor, 'the sticky header should keep the page colour').toBe(
-    'rgb(245, 245, 244)',
-  );
+  expect(colors.headerColor, 'the sticky header should keep the page colour').toBe(HEADER_GLASS);
 });
 
 test('the boxed magazine keeps the card border and rules nothing', async ({ page }) => {
@@ -252,7 +255,7 @@ test('the boxed magazine keeps the card border and rules nothing', async ({ page
   expect(colors.rowsColor, 'a boxed canvas has no card colour of its own').toBe('rgba(0, 0, 0, 0)');
   expect(colors.rowsImage, 'a boxed canvas should draw no column sheet').toBe('none');
   expect(colors.headerColor, 'the sticky header should keep the boxed page colour').toBe(
-    'rgb(245, 245, 244)',
+    HEADER_GLASS,
   );
 });
 
