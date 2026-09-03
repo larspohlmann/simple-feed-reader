@@ -173,11 +173,11 @@ class EntryRepository extends ServiceEntityRepository
     }
 
     /**
-     * The feed's whole guid hash ⇒ entry id map, as scalars. The restore uses
-     * it twice: to drop the file's entries the feed already holds, and to
-     * attach the file's entry states to rows whose ids the source instance
-     * never knew. Ids and hashes only — hydrating the entities would put a
-     * feed's entire back catalogue in memory for a two-column lookup.
+     * The feed's whole guid hash ⇒ entry id map, as scalars — the restore's
+     * pre-load snapshot, which both drops the file's entries the feed already
+     * holds and attaches the file's entry states to rows whose ids the source
+     * instance never knew. Ids and hashes only — hydrating the entities would
+     * put a feed's entire back catalogue in memory for a two-column lookup.
      *
      * @return array<string, int>
      */
@@ -191,6 +191,43 @@ class EntryRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
 
+        return $this->idsByHash($rows);
+    }
+
+    /**
+     * The ids of the rows a restore batch just inserted, found by the hashes
+     * it wrote (#456). Bounded by the batch, never by the feed.
+     *
+     * @param list<string> $guidHashes
+     *
+     * @return array<string, int>
+     */
+    public function entryIdsByGuidHash(int $feedId, array $guidHashes): array
+    {
+        if ([] === $guidHashes) {
+            return [];
+        }
+
+        /** @var list<array{guidHash: string, id: int}> $rows */
+        $rows = $this->createQueryBuilder('e')
+            ->select('e.guidHash AS guidHash', 'e.id AS id')
+            ->andWhere('e.feed = :feed')
+            ->andWhere('e.guidHash IN (:hashes)')
+            ->setParameter('feed', $feedId)
+            ->setParameter('hashes', $guidHashes)
+            ->getQuery()
+            ->getResult();
+
+        return $this->idsByHash($rows);
+    }
+
+    /**
+     * @param list<array{guidHash: string, id: int}> $rows
+     *
+     * @return array<string, int>
+     */
+    private function idsByHash(array $rows): array
+    {
         $idsByHash = [];
         foreach ($rows as $row) {
             $idsByHash[$row['guidHash']] = $row['id'];
