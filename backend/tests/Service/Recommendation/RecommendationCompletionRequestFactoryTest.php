@@ -6,7 +6,7 @@ namespace App\Tests\Service\Recommendation;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
-use App\Service\Ai\Crypto\SealedApiKey;
+use App\Service\Crypto\SealedSecret;
 use App\Service\Recommendation\RecommendationAnswerBudget;
 use App\Service\Recommendation\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\RecommendationResponseSchema;
@@ -84,7 +84,7 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
             new User('reader@example.test', new \DateTimeImmutable('2026-08-16 09:00:00')),
             'shiva.local',
             'http://shiva.local:1234/v1',
-            new SealedApiKey('Y2lwaGVy', 'bm9uY2U=', 'c2FsdA==', 1),
+            new SealedSecret('Y2lwaGVy', 'bm9uY2U=', 'c2FsdA==', 1),
             'cdef',
             new \DateTimeImmutable('2026-08-16 09:30:00'),
         );

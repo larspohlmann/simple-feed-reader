@@ -8,7 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Repository\UserRepository;
 use App\Service\Ai\AiProviderConfigurator;
-use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
+use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
 use App\Service\Ai\Exception\ModelRequiredForActivationException;
@@ -60,7 +60,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
 
         $added = $configurator->addConfiguration($user, null, 'https://api.example.test/v1', 'sk-abcdef1234');
 
-        $ciphertext = base64_decode($added->configuration->getSealedApiKey()->ciphertext, true);
+        $ciphertext = base64_decode($added->configuration->getSealedSecret()->ciphertext, true);
         self::assertIsString($ciphertext);
         self::assertStringNotContainsString('sk-abcdef1234', $ciphertext);
     }
@@ -166,7 +166,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
         // the thief's id — which is not the id the key was bound to.
         $thiefSettings = $configurator->requireConfiguration($this->reload('cfg-thief@example.test'));
 
-        $this->expectException(ApiKeyUnreadableException::class);
+        $this->expectException(SecretUnreadableException::class);
         $configurator->listModels($thiefSettings);
     }
 

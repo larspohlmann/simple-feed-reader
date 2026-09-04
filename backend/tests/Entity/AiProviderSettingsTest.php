@@ -6,14 +6,14 @@ namespace App\Tests\Entity;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
-use App\Service\Ai\Crypto\SealedApiKey;
+use App\Service\Crypto\SealedSecret;
 use PHPUnit\Framework\TestCase;
 
 final class AiProviderSettingsTest extends TestCase
 {
-    private function sealed(string $ciphertext = 'Y2lwaGVy'): SealedApiKey
+    private function sealed(string $ciphertext = 'Y2lwaGVy'): SealedSecret
     {
-        return new SealedApiKey($ciphertext, 'bm9uY2U=', 'c2FsdA==', 1);
+        return new SealedSecret($ciphertext, 'bm9uY2U=', 'c2FsdA==', 1);
     }
 
     private function settings(?string $name = null): AiProviderSettings
@@ -118,7 +118,7 @@ final class AiProviderSettingsTest extends TestCase
         self::assertNull($settings->getModelContextWindow());
         self::assertSame('https://other.example.test/v1', $settings->getBaseUrl());
         self::assertSame('wxyz', $settings->getApiKeyHint());
-        self::assertSame('b3RoZXI=', $settings->getSealedApiKey()->ciphertext);
+        self::assertSame('b3RoZXI=', $settings->getSealedSecret()->ciphertext);
     }
 
     public function testANewRowSuppressesReasoningByDefault(): void

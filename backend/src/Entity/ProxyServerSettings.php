@@ -6,7 +6,7 @@ namespace App\Entity;
 
 use App\Enum\ProxyType;
 use App\Repository\ProxyServerSettingsRepository;
-use App\Service\Proxy\Crypto\SealedProxyPassword;
+use App\Service\Crypto\SealedSecret;
 use App\Service\Proxy\ProxyConnection;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -110,9 +110,9 @@ class ProxyServerSettings
         return '' !== $this->passwordCiphertext;
     }
 
-    public function getSealedPassword(): SealedProxyPassword
+    public function getSealedPassword(): SealedSecret
     {
-        return new SealedProxyPassword(
+        return new SealedSecret(
             $this->passwordCiphertext,
             $this->passwordNonce,
             $this->passwordSalt,
@@ -120,7 +120,7 @@ class ProxyServerSettings
         );
     }
 
-    public function apply(ProxyConnection $connection, SealedProxyPassword $sealed, string $passwordHint): void
+    public function apply(ProxyConnection $connection, SealedSecret $sealed, string $passwordHint): void
     {
         $this->applyWithoutPassword($connection);
         $this->passwordCiphertext = $sealed->ciphertext;

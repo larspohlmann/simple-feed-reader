@@ -8,7 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Repository\AiProviderSettingsRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
+use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
@@ -117,7 +117,7 @@ final readonly class AiProviderConfigurator
      * The model is deliberately left unset — choosing a different one is the
      * whole point — and the copy is not activated.
      *
-     * @throws ApiKeyUnreadableException      the source key cannot be opened
+     * @throws SecretUnreadableException      the source key cannot be opened
      * @throws TooManyConfigurationsException the account is at the cap
      */
     public function duplicateConfiguration(AiProviderSettings $source): AiProviderSettings
@@ -172,7 +172,7 @@ final readonly class AiProviderConfigurator
     }
 
     /**
-     * @throws ApiKeyUnreadableException
+     * @throws SecretUnreadableException
      * @throws CredentialsRejectedException
      * @throws ModelNotOfferedException
      * @throws ModelRequiredForActivationException
@@ -206,13 +206,13 @@ final readonly class AiProviderConfigurator
      * runner, say — can reuse the one place that opens the sealed key, rather
      * than duplicating the cipher call.
      *
-     * @throws ApiKeyUnreadableException
+     * @throws SecretUnreadableException
      */
     public function credentials(AiProviderSettings $settings): ProviderCredentials
     {
         return ProviderCredentials::fromStoredConfiguration(
             $settings->getBaseUrl(),
-            $this->cipher->open($this->identify($settings->getUser()), $settings->getSealedApiKey()),
+            $this->cipher->open($this->identify($settings->getUser()), $settings->getSealedSecret()),
         );
     }
 
@@ -232,7 +232,7 @@ final readonly class AiProviderConfigurator
      * Returns the descriptor rather than stashing it on a field, so the two
      * callers stay free of shared mutable state between the call and its use.
      *
-     * @throws ApiKeyUnreadableException
+     * @throws SecretUnreadableException
      * @throws CredentialsRejectedException
      * @throws ModelNotOfferedException
      * @throws ProviderUnreachableException

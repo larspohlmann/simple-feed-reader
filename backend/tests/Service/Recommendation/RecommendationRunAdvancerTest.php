@@ -16,7 +16,7 @@ use App\Entity\User;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
+use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRunawayException;
@@ -2581,8 +2581,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         try {
             $this->advancer()->advance($this->user);
-            self::fail('Expected an ApiKeyUnreadableException.');
-        } catch (ApiKeyUnreadableException) {
+            self::fail('Expected an SecretUnreadableException.');
+        } catch (SecretUnreadableException) {
         }
 
         $rows = $this->batchLogRowsOfLatestRun();

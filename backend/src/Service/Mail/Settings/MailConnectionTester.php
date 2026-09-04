@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Mail\Settings;
 
 use App\Entity\User;
-use App\Service\Mail\Settings\Crypto\Exception\MailPasswordUnreadableException;
+use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Mail\Transport\EsmtpTransportBuilder;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -34,7 +34,7 @@ final readonly class MailConnectionTester
     {
         try {
             $resolved = $this->settings->configuredTransport();
-        } catch (MailPasswordUnreadableException $e) {
+        } catch (SecretUnreadableException $e) {
             return MailTestResult::failed($e->getMessage());
         }
 

@@ -6,7 +6,7 @@ namespace App\Tests\Support;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
-use App\Service\Ai\Crypto\SealedApiKey;
+use App\Service\Crypto\SealedSecret;
 
 /**
  * Builds an AiProviderSettings with the dummy sealed key and hint that every
@@ -34,7 +34,7 @@ final class AiProviderSettingsFactory
             $user,
             $name,
             $baseUrl,
-            new SealedApiKey('c', 'n', 's', 1),
+            new SealedSecret('c', 'n', 's', 1),
             'ab12',
             $verifiedAt ?? new \DateTimeImmutable('2026-08-09T09:00:00Z'),
         );
