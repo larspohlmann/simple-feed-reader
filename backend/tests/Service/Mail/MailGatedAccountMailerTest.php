@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Service\Mail\AccountMailerInterface;
 use App\Service\Mail\MailCapability;
 use App\Service\Mail\MailGatedAccountMailer;
+use App\Service\Mail\Settings\MailSettings;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 
@@ -18,7 +19,7 @@ final class MailGatedAccountMailerTest extends TestCase
         $inner = $this->createMock(AccountMailerInterface::class);
         $inner->expects(self::once())->method('sendApproved');
 
-        $gated = new MailGatedAccountMailer($inner, new MailCapability(''), new NullLogger());
+        $gated = new MailGatedAccountMailer($inner, $this->mailCapability(true), new NullLogger());
         $gated->sendApproved(new User('a@b.test', new \DateTimeImmutable()));
     }
 
@@ -30,7 +31,15 @@ final class MailGatedAccountMailerTest extends TestCase
         $inner->expects(self::never())->method('sendPendingApprovalNotice');
         $inner->expects(self::never())->method('sendVerification');
 
-        $gated = new MailGatedAccountMailer($inner, new MailCapability('1'), new NullLogger());
+        $gated = new MailGatedAccountMailer($inner, $this->mailCapability(false), new NullLogger());
         $gated->sendApproved(new User('a@b.test', new \DateTimeImmutable()));
+    }
+
+    private function mailCapability(bool $enabled): MailCapability
+    {
+        $settings = $this->createMock(MailSettings::class);
+        $settings->method('isSendingEnabled')->willReturn($enabled);
+
+        return new MailCapability($settings);
     }
 }
