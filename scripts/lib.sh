@@ -805,9 +805,14 @@ prod_base_url() {
 }
 
 # The prod php entrypoint writes var/.ready after the cache warmup; console
-# commands (migrations, key generation) must not race it.
+# commands (migrations, key generation) should wait for it so they do not race
+# the warmup. A timeout WARNS and returns non-zero -- it never dies. A slow but
+# healthy container that the probe simply missed must not abort the deploy and
+# strand new code against an un-migrated schema (#842): the caller continues to
+# the migration, which fails loudly on its own if the container is truly down.
+# SFR_PHP_READY_TIMEOUT overrides the deadline for a slow host or a test.
 wait_for_php_ready() {
-  local deadline=$(( SECONDS + 180 ))
+  local deadline=$(( SECONDS + ${SFR_PHP_READY_TIMEOUT:-180} ))
   say 'Waiting for the PHP runtime ...'
   while [ "${SECONDS}" -lt "${deadline}" ]; do
     if prod_compose exec -T php test -f var/.ready 2>/dev/null; then
@@ -816,7 +821,8 @@ wait_for_php_ready() {
     fi
     sleep 2
   done
-  die 'The PHP container did not become ready. Check:  docker compose -p simple-feed-reader-prod logs php'
+  warn 'The PHP runtime did not report ready in time; continuing to the migration, which will fail loudly if the container is truly down. Check:  docker compose -p simple-feed-reader-prod logs php'
+  return 1
 }
 
 # Fill the onboarding catalog of a NEW instance, and fetch the icons that go
