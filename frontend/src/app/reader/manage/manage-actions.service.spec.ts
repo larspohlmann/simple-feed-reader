@@ -8,7 +8,7 @@ import { API_BASE_URL } from '../../core/api';
 import { ManageActions } from './manage-actions.service';
 import { SubscriptionsStore } from '../subscriptions.store';
 import { TagsStore } from '../tags.store';
-import { SubscriptionDto, TagDto } from '../models';
+import { RefreshReport, SubscriptionDto, TagDto } from '../models';
 import { ToastService } from '../../shared/toast/toast.service';
 
 const BASE = 'https://api.test';
@@ -362,6 +362,89 @@ describe('ManageActions', () => {
       req.flush({ removed: 2 });
 
       expect(subLoad).toHaveBeenCalled();
+    });
+  });
+
+  describe('retryFeed', () => {
+    const refreshReport = (over: Partial<RefreshReport>): RefreshReport => ({
+      status: 'completed',
+      progress: { done: 1, total: 1 },
+      fetched: 0,
+      notModified: 0,
+      failed: 0,
+      throttled: 0,
+      skippedForBudget: 0,
+      remaining: 0,
+      pruned: 0,
+      ...over,
+    });
+    const flushReload = (http: HttpTestingController): void => {
+      http
+        .expectOne(`${BASE}/api/subscriptions`)
+        .flush({ subscriptions: [], favoritesCount: 0, keptCount: 0, viewedCount: 0 });
+    };
+
+    let http: HttpTestingController;
+    afterEach(() => http.verify());
+
+    // Own TestBed, same reason as the bulk-action setup(): ManageActions and
+    // ToastService share the Dialog token, so a real ToastService.show() call
+    // here needs the stub replaced rather than left to the outer `open` mock.
+    function setup() {
+      TestBed.resetTestingModule();
+      const toast = { show: jest.fn() };
+      TestBed.configureTestingModule({
+        imports: [provideTranslocoTesting()],
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: API_BASE_URL, useValue: BASE },
+          { provide: Dialog, useValue: { open } },
+          { provide: ToastService, useValue: toast },
+        ],
+      });
+      const actions = TestBed.inject(ManageActions);
+      http = TestBed.inject(HttpTestingController);
+      return { actions, http, toast };
+    }
+
+    it('POSTs a single-feed refresh scoped by feedId', () => {
+      const { actions, http } = setup();
+
+      actions.retryFeed(sub);
+
+      const req = http.expectOne(`${BASE}/api/refresh?feedId=${sub.feedId}`);
+      expect(req.request.method).toBe('POST');
+      req.flush(refreshReport({ failed: 0, fetched: 1 }));
+      flushReload(http);
+    });
+
+    it('shows the recovered toast and reloads when the report has no failures', () => {
+      const { actions, http, toast } = setup();
+
+      actions.retryFeed(sub);
+      http
+        .expectOne(`${BASE}/api/refresh?feedId=${sub.feedId}`)
+        .flush(refreshReport({ failed: 0, fetched: 1, notModified: 0 }));
+
+      expect(toast.show).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'settings.health.retry.recovered' }),
+      );
+      flushReload(http);
+    });
+
+    it('shows the still-failing toast and reloads when the report carries a failure', () => {
+      const { actions, http, toast } = setup();
+
+      actions.retryFeed(sub);
+      http
+        .expectOne(`${BASE}/api/refresh?feedId=${sub.feedId}`)
+        .flush(refreshReport({ failed: 1, fetched: 0, notModified: 0 }));
+
+      expect(toast.show).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'settings.health.retry.stillFailing' }),
+      );
+      flushReload(http);
     });
   });
 });

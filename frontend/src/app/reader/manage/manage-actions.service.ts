@@ -5,7 +5,13 @@ import { TranslocoService } from '@jsverse/transloco';
 import { ReaderApi } from '../reader-api';
 import { SubscriptionsStore } from '../subscriptions.store';
 import { TagsStore } from '../tags.store';
-import { BulkSubscriptionUpdate, SubscriptionDto, SubscriptionFlags, TagDto } from '../models';
+import {
+  BulkSubscriptionUpdate,
+  RefreshReport,
+  SubscriptionDto,
+  SubscriptionFlags,
+  TagDto,
+} from '../models';
 import {
   ConfirmDialogComponent,
   ConfirmData,
@@ -304,6 +310,31 @@ export class ManageActions {
         if (subscription) this.subs.load();
       }),
     );
+  }
+
+  /** Manually re-fetch one feed (the health list's Retry). Reaches gone feeds
+   *  too; a success resurrects the feed server-side. Awaits the report so the
+   *  toast tells the truth, then reloads so a recovered feed leaves the list. */
+  retryFeed(sub: SubscriptionDto): void {
+    this.api.refresh({ feedId: sub.feedId }).subscribe({
+      next: (report: RefreshReport) => {
+        const recovered = report.failed === 0 && report.fetched + report.notModified >= 1;
+        this.toast.show({
+          message: this.i18n.translate(
+            recovered ? 'settings.health.retry.recovered' : 'settings.health.retry.stillFailing',
+            { title: sub.title },
+          ),
+          durationMs: CONFIRMATION_DURATION_MS,
+        });
+        this.subs.load();
+      },
+      error: () => {
+        this.toast.show({
+          message: this.i18n.translate('settings.health.retry.error', { title: sub.title }),
+          durationMs: CONFIRMATION_DURATION_MS,
+        });
+      },
+    });
   }
 
   private bulkPatch(body: BulkSubscriptionUpdate, confirmation: string): Observable<void> {
