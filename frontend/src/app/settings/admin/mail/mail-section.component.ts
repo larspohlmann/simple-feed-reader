@@ -97,13 +97,17 @@ export class MailSectionComponent {
   readonly dismissedServerErrors = signal<Partial<Record<MailField, true>>>({});
 
   readonly configured = computed(() => (this.svc.state()?.host ?? '') !== '');
-  /** A staged enable/encryption (see `onEnabled`) counts as dirty too, or the
-   *  save bar never appears for the first, row-creating Save. */
+  /** A staged enable/encryption/use-proxy (see `onEnabled`/`onUseProxy`) counts
+   *  as dirty too, or the save bar never appears for the first, row-creating
+   *  Save -- and a proxy-only edit before the row exists could never be saved. */
   readonly dirty = computed(() => {
     const state = this.svc.state();
     if (!state || state.hasSavedConfig) return this.svc.dirty();
 
-    const toggleStaged = this.enabled() !== state.enabled || this.encryption() !== state.encryption;
+    const toggleStaged =
+      this.enabled() !== state.enabled ||
+      this.encryption() !== state.encryption ||
+      this.useProxy() !== state.useProxy;
 
     return this.svc.dirty() || toggleStaged;
   });

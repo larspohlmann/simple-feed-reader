@@ -643,6 +643,10 @@ describe('MailSectionComponent', () => {
       fixture.detectChanges();
       http.expectNone(ENDPOINT);
 
+      // A proxy-only edit on a not-yet-saved row must mark the form dirty, or
+      // the save bar would disable Save and the change could never be persisted.
+      expect(fixture.componentInstance.dirty()).toBe(true);
+
       fixture.componentInstance.onSave();
       fixture.detectChanges();
 
