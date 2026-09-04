@@ -1,2 +1,35 @@
 @use '../../../shared/settings/probe-section';
 @include probe-section.probe-section;
+
+// A provider-specific help callout for the Gmail App Password case (#841):
+// info-toned, full-bleed inside the panel like the settings groups' other
+// callouts (see docs/design-language.md, app-settings-group).
+.gmail-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+  background: var(--accent-soft);
+  color: var(--text-primary);
+}
+
+.gmail-hint app-icon {
+  flex: none;
+  color: var(--accent);
+}
+
+.gmail-hint-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.gmail-hint-body p {
+  margin: 0;
+}
+
+.gmail-hint-body a {
+  color: var(--accent);
+  font-weight: 600;
+}
