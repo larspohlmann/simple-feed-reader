@@ -11,10 +11,9 @@ use App\Service\Mail\Settings\MailConnection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * The instance-wide outgoing-mail settings, held in a single row (see
- * InstanceSetting for the singleton rationale). Absence of the row means "not
- * configured": enablement then derives from the env fallback. The password is
- * never readable here; only whether one is stored crosses to the admin page.
+ * Instance-wide outgoing-mail settings in one row (singleton, see InstanceSetting).
+ * No row means "not configured", so enablement derives from the env fallback.
+ * The password never leaves here; only whether one is stored crosses to the admin page.
  */
 #[ORM\Entity(repositoryClass: MailServerSettingsRepository::class)]
 #[ORM\Table(name: 'mail_server_settings')]

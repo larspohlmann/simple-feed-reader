@@ -119,18 +119,8 @@ final class Version20260904130000 extends AbstractMigration
 
     public function down(Schema $schema): void
     {
-        $platform = $this->connection->getDatabasePlatform();
-        if ($platform instanceof AbstractMySQLPlatform) {
-            $this->addSql("ALTER TABLE mail_server_settings ADD password_hint VARCHAR(8) DEFAULT '' NOT NULL");
-
-            return;
-        }
-        if ($platform instanceof SQLitePlatform) {
-            $this->addSql("ALTER TABLE mail_server_settings ADD password_hint VARCHAR(8) DEFAULT '' NOT NULL");
-
-            return;
-        }
-        throw new \RuntimeException('Unsupported database platform for mail_server_settings migration.');
+        $this->assertSupportedPlatform();
+        $this->addSql("ALTER TABLE mail_server_settings ADD password_hint VARCHAR(8) DEFAULT '' NOT NULL");
     }
 
     private function assertSupportedPlatform(): void

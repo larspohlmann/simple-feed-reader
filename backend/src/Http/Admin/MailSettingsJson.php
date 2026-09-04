@@ -8,10 +8,9 @@ use App\Entity\MailServerSettings;
 use App\Service\Mail\Settings\MailConnection;
 
 /**
- * The admin mail payload. The password is absent by construction: only a
- * hasPassword flag crosses the wire, never the secret. With no row yet, the
- * non-secret fields are seeded from the env fallback so the form shows what
- * is currently active; the password is never seeded from the env.
+ * The admin mail payload. The password never crosses the wire — only a
+ * hasPassword flag does. With no row yet, non-secret fields seed from the env
+ * fallback (never the password) so the form shows what is currently active.
  *
  * @phpstan-type MailSettingsPayload array{
  *     enabled: bool, host: string, port: int, username: string|null,
