@@ -225,4 +225,33 @@ final class SubscriptionJsonTest extends TestCase
         // A never-fetched feed reports a null last-refreshed time.
         self::assertNull($shape['lastFetchedAt']);
     }
+
+    public function testSerialisesTheHealthFields(): void
+    {
+        $now = new \DateTimeImmutable('2026-02-03T04:05:06Z');
+        $user = new User('u@example.com', $now);
+        $feed = new Feed('https://example.com/feed.xml');
+        $feed->setStatus(\App\Enum\FeedStatus::Erroring);
+        $feed->setLastSuccessfulFetchAt(new \DateTimeImmutable('2026-01-28T09:00:00Z'));
+        $feed->setConsecutiveFailures(4);
+        $feed->setLastErrorMessage('https://example.com/feed.xml: HTTP 500');
+        $sub = new Subscription($user, $feed, $now);
+
+        $shape = SubscriptionJson::one($sub);
+
+        self::assertSame('erroring', $shape['status']);
+        self::assertSame('2026-01-28T09:00:00+00:00', $shape['lastSuccessfulFetchAt']);
+        self::assertSame(4, $shape['consecutiveFailures']);
+        self::assertSame('https://example.com/feed.xml: HTTP 500', $shape['lastErrorMessage']);
+    }
+
+    public function testHealthFieldsDefaultForANewFeed(): void
+    {
+        $feed = new Feed('https://example.com/feed.xml');
+        $shape = SubscriptionJson::one($this->subscriptionTo($feed));
+
+        self::assertNull($shape['lastSuccessfulFetchAt']);
+        self::assertSame(0, $shape['consecutiveFailures']);
+        self::assertNull($shape['lastErrorMessage']);
+    }
 }
