@@ -106,9 +106,9 @@ export class MailSectionComponent {
   /** The probe runs against the SAVED row, so a pending edit would test
    *  something other than what is on screen. */
   readonly canTest = computed(() => this.configured() && !this.dirty());
-  /** Empty exactly when no password is stored, so it doubles as the "is one on
-   *  record?" test the password field's placeholder needs. */
-  readonly passwordHint = computed(() => this.svc.state()?.passwordHint ?? '');
+  /** Whether a password is on record -- never any part of it, the API does not
+   *  return the secret. */
+  readonly passwordSaved = computed(() => this.svc.state()?.hasPassword ?? false);
   /** Reset discards the saved override, including the stored password -- only
    *  offer it when there is something to discard and an env fallback to fall
    *  back to. Otherwise it would double as a disguised "disable mail" control
@@ -229,6 +229,10 @@ export class MailSectionComponent {
 
   test(): void {
     this.svc.testConnection();
+  }
+
+  removePassword(): void {
+    this.svc.removePassword();
   }
 
   /** Rejects an unsendable draft before it reaches the server: an enabled row

@@ -114,6 +114,7 @@
       <app-settings-row
         [stackable]="true"
         [title]="'settings.mail.password' | transloco"
+        [description]="passwordSaved() ? ('settings.mail.passwordSaved' | transloco) : ''"
         [error]="fieldError('password')"
       >
         <app-password-input class="credential-field">
@@ -121,12 +122,23 @@
             type="password"
             autocomplete="off"
             data-testid="mail-password"
-            [placeholder]="passwordHint()"
+            [placeholder]="'settings.mail.passwordKeepHint' | transloco"
             [value]="password()"
             [attr.aria-invalid]="isFieldInvalid('password')"
             (input)="onPassword($event)"
           />
         </app-password-input>
+        @if (passwordSaved()) {
+          <app-button
+            variant="default"
+            size="sm"
+            data-testid="mail-remove-password"
+            [disabled]="dirty()"
+            (click)="removePassword()"
+          >
+            {{ 'settings.mail.removePassword' | transloco }}
+          </app-button>
+        }
       </app-settings-row>
 
       @let probeResult = probe();

@@ -25,9 +25,11 @@ function state(over: Partial<MailSettingsState> = {}): MailSettingsState {
     fromAddress: '',
     fromName: '',
     hasPassword: false,
-    passwordHint: '',
     hasSavedConfig: false,
     envFallbackConfigured: false,
+    useProxy: false,
+    proxyConfigured: false,
+    proxyLabel: '',
     ...over,
   };
 }
@@ -79,6 +81,11 @@ describe('MailSectionComponent', () => {
     fixture: ComponentFixture<MailSectionComponent>,
   ): HTMLButtonElement | null =>
     fixture.nativeElement.querySelector('[data-testid="mail-reset-to-env"] button');
+
+  const removePasswordButton = (
+    fixture: ComponentFixture<MailSectionComponent>,
+  ): HTMLButtonElement | null =>
+    fixture.nativeElement.querySelector('[data-testid="mail-remove-password"] button');
 
   beforeEach(() => {
     toastStub.show.mockReset();
@@ -322,14 +329,54 @@ describe('MailSectionComponent', () => {
     expect(gmailHint(fixture)).toBeNull();
   });
 
-  it('renders the stored password hint as a placeholder, never the secret itself', () => {
-    const fixture = mount(
-      state({ host: 'smtp.example.com', hasPassword: true, passwordHint: '••••ab12' }),
-    );
+  it('renders a static keep-hint placeholder, never a saved-password hint', () => {
+    const fixture = mount(state({ host: 'smtp.example.com', hasPassword: true }));
+    const i18n = TestBed.inject(TranslocoService);
 
-    expect(passwordInput(fixture).placeholder).toBe('••••ab12');
+    expect(passwordInput(fixture).placeholder).toBe(
+      i18n.translate('settings.mail.passwordKeepHint'),
+    );
     expect(passwordInput(fixture).value).toBe('');
     expect(passwordInput(fixture).type).toBe('password');
+  });
+
+  it('shows that a password is saved, but never any part of it', () => {
+    const fixture = mount(state({ host: 'smtp.example.com', hasPassword: true }));
+    const i18n = TestBed.inject(TranslocoService);
+
+    expect(fixture.nativeElement.textContent).toContain(
+      i18n.translate('settings.mail.passwordSaved'),
+    );
+  });
+
+  it('hides the saved-password line and Remove button when no password is stored', () => {
+    const fixture = mount(state({ host: 'smtp.example.com', hasPassword: false }));
+
+    expect(removePasswordButton(fixture)).toBeNull();
+  });
+
+  it('removes the stored password via svc.removePassword() when Remove is clicked', () => {
+    const fixture = mount(state({ host: 'smtp.example.com', hasPassword: true }));
+    const removeSpy = jest.spyOn(fixture.componentInstance.svc, 'removePassword');
+
+    removePasswordButton(fixture)?.click();
+    fixture.detectChanges();
+
+    expect(removeSpy).toHaveBeenCalled();
+
+    const put = http.expectOne(ENDPOINT);
+    expect(put.request.body.removePassword).toBe(true);
+    put.flush(state({ host: 'smtp.example.com', hasPassword: false }));
+  });
+
+  it('disables the Remove-password button while the draft is dirty', () => {
+    const fixture = mount(state({ host: 'smtp.example.com', hasPassword: true }));
+
+    hostInput(fixture).value = 'other.example.com';
+    hostInput(fixture).dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(removePasswordButton(fixture)?.disabled).toBe(true);
   });
 
   it('maps a blank password to null on the service', () => {
