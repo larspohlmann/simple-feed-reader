@@ -9,6 +9,7 @@ use App\Dto\Admin\ProxySettingsRequest;
 use App\Entity\MailServerSettings;
 use App\Enum\MailEncryption;
 use App\Service\Crypto\SealedSecret;
+use App\Service\Mail\Settings\Crypto\MailPasswordCipher;
 use App\Service\Mail\Settings\MailConnection;
 use App\Service\Mail\Settings\MailSettings;
 use App\Service\Mail\Transport\CurlSmtpTransport;
@@ -104,6 +105,27 @@ final class DynamicMailTransportTest extends KernelTestCase
         $transport = self::getContainer()->get(DynamicMailTransport::class);
 
         self::assertInstanceOf(CurlSmtpTransport::class, $transport->activeTransport());
+    }
+
+    public function testAProxiedRowWhoseProxyIsGoneSurfacesAsATransportFailure(): void
+    {
+        // A row saved with use_proxy set while a proxy existed, then the proxy
+        // config removed -- persisted directly because update() would refuse it.
+        $cipher = self::getContainer()->get(MailPasswordCipher::class);
+        $row = new MailServerSettings();
+        $row->apply(
+            new MailConnection(true, 'smtp.gmail.com', 587, 'alice', MailEncryption::Starttls, '', '', true),
+            $cipher->seal('app-pw'),
+        );
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        $em->persist($row);
+        $em->flush();
+
+        $this->expectException(TransportException::class);
+        $this->expectExceptionMessage(
+            'The mail configuration is incomplete: Mail is set to use the egress proxy, but no proxy is configured.',
+        );
+        self::getContainer()->get(DynamicMailTransport::class)->activeTransport();
     }
 
     public function testActiveTransportUsesEsmtpForADirectRow(): void

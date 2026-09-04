@@ -67,10 +67,12 @@ export class MailSettingsService extends DraftSettingsService<
     });
   }
 
+  /** Carries any pending typed edits along, like `save` -- committing clears the
+   *  draft, so leaving them out would silently discard an in-progress edit. */
   removePassword(): void {
     const current = this.state();
     if (!current) return;
-    this.put({ ...this.bodyFromState(current), removePassword: true }, (state) => {
+    this.put({ ...this.bodyFromState(current), ...this.draft(), removePassword: true }, (state) => {
       this.commit(state);
       this.saved.set(true);
     });

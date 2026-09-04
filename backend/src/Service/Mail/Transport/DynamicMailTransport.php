@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Mail\Transport;
 
 use App\Service\Crypto\Exception\SecretUnreadableException;
+use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
 use App\Service\Mail\Settings\MailSettings;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -58,9 +59,16 @@ final class DynamicMailTransport implements TransportInterface
             return $this->cached;
         }
 
-        $this->cached = null !== $resolved
-            ? $this->transportFactory->forResolved($resolved, $this->dispatcher, $this->logger)
-            : $this->buildFallback();
+        try {
+            $this->cached = null !== $resolved
+                ? $this->transportFactory->forResolved($resolved, $this->dispatcher, $this->logger)
+                : $this->buildFallback();
+        } catch (IncompleteMailConfigurationException $e) {
+            // A row that routes through the egress proxy after that proxy's config
+            // was removed. Surfaced as a transport failure so the send path degrades
+            // the way a dead relay already does, not as an HTTP 422 in a worker.
+            throw new TransportException('The mail configuration is incomplete: ' . $e->getMessage(), 0, $e);
+        }
         $this->cachedSignature = $signature;
 
         return $this->cached;
