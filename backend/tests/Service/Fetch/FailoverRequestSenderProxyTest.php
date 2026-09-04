@@ -9,7 +9,7 @@ use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\GuardedUrl;
 use App\Service\Fetch\ProxyConfig;
 use App\Service\Fetch\ProxyEgressResolver;
-use App\Service\Proxy\Crypto\Exception\ProxyPasswordUnreadableException;
+use App\Service\Crypto\Exception\SecretUnreadableException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -139,7 +139,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
         });
         $resolver = $this->createStub(ProxyEgressResolver::class);
         $resolver->method('resolve')->willThrowException(
-            new ProxyPasswordUnreadableException('The stored proxy password failed its integrity check.'),
+            new SecretUnreadableException('The stored secret failed its integrity check.'),
         );
         $sender = new FailoverRequestSender($client, $resolver);
 

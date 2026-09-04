@@ -6,7 +6,7 @@ namespace App\Entity;
 
 use App\Enum\MailEncryption;
 use App\Repository\MailServerSettingsRepository;
-use App\Service\Mail\Settings\Crypto\SealedMailPassword;
+use App\Service\Crypto\SealedSecret;
 use App\Service\Mail\Settings\MailConnection;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -120,9 +120,9 @@ class MailServerSettings
         return '' !== $this->passwordCiphertext;
     }
 
-    public function getSealedPassword(): SealedMailPassword
+    public function getSealedPassword(): SealedSecret
     {
-        return new SealedMailPassword(
+        return new SealedSecret(
             $this->passwordCiphertext,
             $this->passwordNonce,
             $this->passwordSalt,
@@ -130,7 +130,7 @@ class MailServerSettings
         );
     }
 
-    public function apply(MailConnection $connection, SealedMailPassword $sealed, string $passwordHint): void
+    public function apply(MailConnection $connection, SealedSecret $sealed, string $passwordHint): void
     {
         $this->applyWithoutPassword($connection);
         $this->passwordCiphertext = $sealed->ciphertext;

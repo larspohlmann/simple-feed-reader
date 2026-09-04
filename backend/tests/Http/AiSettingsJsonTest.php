@@ -7,7 +7,7 @@ namespace App\Tests\Http;
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Http\AiSettingsJson;
-use App\Service\Ai\Crypto\SealedApiKey;
+use App\Service\Crypto\SealedSecret;
 use App\Service\Recommendation\RecommendationPackingSettings;
 use PHPUnit\Framework\TestCase;
 
@@ -19,7 +19,7 @@ final class AiSettingsJsonTest extends TestCase
             new User('mapper@example.test', new \DateTimeImmutable('2026-08-06 09:00:00')),
             $name,
             'https://api.example.test/v1',
-            new SealedApiKey('Y2lwaGVy', 'bm9uY2U=', 'c2FsdA==', 1),
+            new SealedSecret('Y2lwaGVy', 'bm9uY2U=', 'c2FsdA==', 1),
             'abcd',
             new \DateTimeImmutable('2026-08-06 09:30:00'),
         );

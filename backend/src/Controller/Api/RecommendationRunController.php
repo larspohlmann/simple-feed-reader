@@ -11,7 +11,7 @@ use App\Exception\AiProviderApiException;
 use App\Exception\NoActiveRecommendationRunApiException;
 use App\Exception\NoResumableRecommendationRunApiException;
 use App\Exception\RecommendationRunActiveApiException;
-use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
+use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
@@ -100,7 +100,7 @@ final readonly class RecommendationRunController
             $report = $this->pollDriver->poll($user);
         } catch (AiNotConfiguredException $e) {
             throw new AiNotConfiguredApiException($e);
-        } catch (ApiKeyUnreadableException $e) {
+        } catch (SecretUnreadableException $e) {
             throw new AiKeyUnreadableApiException($e);
         } catch (ProviderUnreachableException | CredentialsRejectedException | ModelNotOfferedException $e) {
             throw new AiProviderApiException($e->getMessage(), $e);

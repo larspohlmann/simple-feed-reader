@@ -6,7 +6,7 @@ namespace App\Service\Worker;
 
 use App\Entity\RecommendationRun;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
+use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
@@ -102,7 +102,7 @@ final readonly class WorkerRunSweep
     /**
      * The typed AI-provider cases are handled by exception type alone — each
      * already knows what to do, so neither needs the run passed back out.
-     * AiNotConfiguredException and ApiKeyUnreadableException are no longer
+     * AiNotConfiguredException and SecretUnreadableException are no longer
      * classified here: the shared tick both drivers call
      * (RecommendationRunAdvancer::tick(), #311 fix) already failed and
      * flushed the run before rethrowing. That failure recording used to live
@@ -115,7 +115,7 @@ final readonly class WorkerRunSweep
     {
         try {
             $this->advancer->advance($run->getUser(), TickDriver::Worker);
-        } catch (AiNotConfiguredException | ApiKeyUnreadableException) {
+        } catch (AiNotConfiguredException | SecretUnreadableException) {
             // Already failed and flushed by the shared tick; nothing to do.
         } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
             // The advancer already counted this against the run's own

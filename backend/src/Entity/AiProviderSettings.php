@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Repository\AiProviderSettingsRepository;
-use App\Service\Ai\Crypto\SealedApiKey;
+use App\Service\Crypto\SealedSecret;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -121,7 +121,7 @@ class AiProviderSettings
         User $user,
         ?string $name,
         string $baseUrl,
-        SealedApiKey $sealed,
+        SealedSecret $sealed,
         string $apiKeyHint,
         \DateTimeImmutable $verifiedAt,
     ) {
@@ -161,9 +161,9 @@ class AiProviderSettings
         return $this->apiKeyHint;
     }
 
-    public function getSealedApiKey(): SealedApiKey
+    public function getSealedSecret(): SealedSecret
     {
-        return new SealedApiKey(
+        return new SealedSecret(
             $this->apiKeyCiphertext,
             $this->apiKeyNonce,
             $this->apiKeySalt,
@@ -248,7 +248,7 @@ class AiProviderSettings
      */
     public function replaceConnection(
         string $baseUrl,
-        SealedApiKey $sealed,
+        SealedSecret $sealed,
         string $apiKeyHint,
         \DateTimeImmutable $verifiedAt,
     ): void {
@@ -267,7 +267,7 @@ class AiProviderSettings
         $this->verifiedAt = $verifiedAt;
     }
 
-    private function applySealedKey(SealedApiKey $sealed): void
+    private function applySealedKey(SealedSecret $sealed): void
     {
         $this->apiKeyCiphertext = $sealed->ciphertext;
         $this->apiKeyNonce = $sealed->nonce;

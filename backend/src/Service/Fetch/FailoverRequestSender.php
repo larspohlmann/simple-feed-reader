@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Fetch;
 
-use App\Service\Proxy\Crypto\Exception\ProxyPasswordUnreadableException;
+use App\Service\Crypto\Exception\SecretUnreadableException;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -74,7 +74,7 @@ final readonly class FailoverRequestSender
     {
         try {
             return $this->proxyEgressResolver->resolve();
-        } catch (ProxyPasswordUnreadableException $e) {
+        } catch (SecretUnreadableException $e) {
             throw new TransportException(
                 sprintf('The instance egress proxy is unusable: %s', $e->getMessage()),
                 previous: $e,

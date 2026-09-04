@@ -20,7 +20,7 @@ use App\Http\AiSettingsJson;
 use App\Service\Ai\AiConfigurationEditor;
 use App\Service\Ai\AiConfigurationForUser;
 use App\Service\Ai\AiProviderConfigurator;
-use App\Service\Ai\Crypto\Exception\ApiKeyUnreadableException;
+use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Ai\Exception\ConfigurationNotFoundException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
@@ -96,7 +96,7 @@ final readonly class AiSettingsController
             throw new AiConfigurationNotFoundApiException($e);
         } catch (TooManyConfigurationsException $e) {
             throw new TooManyAiConfigurationsApiException($e);
-        } catch (ApiKeyUnreadableException $e) {
+        } catch (SecretUnreadableException $e) {
             throw new AiKeyUnreadableApiException($e);
         }
 
@@ -115,7 +115,7 @@ final readonly class AiSettingsController
             $models = $this->configurator->listModels($configuration);
         } catch (ConfigurationNotFoundException $e) {
             throw new AiConfigurationNotFoundApiException($e);
-        } catch (ApiKeyUnreadableException $e) {
+        } catch (SecretUnreadableException $e) {
             throw new AiKeyUnreadableApiException($e);
         } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
             throw new AiProviderApiException($e->getMessage(), $e);
@@ -136,7 +136,7 @@ final readonly class AiSettingsController
             $this->configurator->chooseModel($configuration, $request->model);
         } catch (ConfigurationNotFoundException $e) {
             throw new AiConfigurationNotFoundApiException($e);
-        } catch (ApiKeyUnreadableException $e) {
+        } catch (SecretUnreadableException $e) {
             throw new AiKeyUnreadableApiException($e);
         } catch (ModelNotOfferedException | ProviderUnreachableException | CredentialsRejectedException $e) {
             throw new AiProviderApiException($e->getMessage(), $e);
@@ -282,7 +282,7 @@ final readonly class AiSettingsController
             $this->configurator->activate($configuration);
         } catch (ConfigurationNotFoundException $e) {
             throw new AiConfigurationNotFoundApiException($e);
-        } catch (ApiKeyUnreadableException $e) {
+        } catch (SecretUnreadableException $e) {
             throw new AiKeyUnreadableApiException($e);
         } catch (
             ModelRequiredForActivationException

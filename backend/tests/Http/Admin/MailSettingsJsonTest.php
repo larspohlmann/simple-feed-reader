@@ -7,7 +7,7 @@ namespace App\Tests\Http\Admin;
 use App\Entity\MailServerSettings;
 use App\Enum\MailEncryption;
 use App\Http\Admin\MailSettingsJson;
-use App\Service\Mail\Settings\Crypto\SealedMailPassword;
+use App\Service\Crypto\SealedSecret;
 use App\Service\Mail\Settings\MailConnection;
 use PHPUnit\Framework\TestCase;
 
@@ -37,7 +37,7 @@ final class MailSettingsJsonTest extends TestCase
         $settings = new MailServerSettings();
         $settings->apply(
             new MailConnection(false, 'smtp.row.test', 465, null, MailEncryption::None, 'a@row', 'Row'),
-            new SealedMailPassword('Y2lwaGVy', 'bm9uY2U=', 'c2FsdA==', 1),
+            new SealedSecret('Y2lwaGVy', 'bm9uY2U=', 'c2FsdA==', 1),
             'fish',
         );
         $fallback = new MailConnection(false, '', 587, null, MailEncryption::Starttls, '', '');

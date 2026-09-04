@@ -8,6 +8,7 @@ use App\Dto\Admin\ProxySettingsRequest;
 use App\Entity\ProxyServerSettings;
 use App\Enum\ProxyType;
 use App\Repository\ProxyServerSettingsRepository;
+use App\Service\Crypto\InstanceSecretCipher;
 use App\Service\Proxy\Crypto\ProxyPasswordCipher;
 use App\Service\Proxy\ProxySettings;
 use Doctrine\ORM\EntityManagerInterface;
@@ -172,7 +173,8 @@ final class ProxySettingsTest extends TestCase
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects(self::once())->method('flush');
 
-        $settings = new ProxySettings($repository, $em, new ProxyPasswordCipher(self::SECRET));
+        $cipher = new ProxyPasswordCipher(new InstanceSecretCipher(self::SECRET));
+        $settings = new ProxySettings($repository, $em, $cipher);
 
         $settings->update(new ProxySettingsRequest(
             enabled: true,
@@ -219,6 +221,6 @@ final class ProxySettingsTest extends TestCase
             }
         });
 
-        return new ProxySettings($repository, $em, new ProxyPasswordCipher(self::SECRET));
+        return new ProxySettings($repository, $em, new ProxyPasswordCipher(new InstanceSecretCipher(self::SECRET)));
     }
 }

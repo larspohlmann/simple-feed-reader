@@ -7,7 +7,7 @@ namespace App\Tests\Service\Mail\Transport;
 use App\Dto\Admin\MailSettingsRequest;
 use App\Entity\MailServerSettings;
 use App\Enum\MailEncryption;
-use App\Service\Mail\Settings\Crypto\SealedMailPassword;
+use App\Service\Crypto\SealedSecret;
 use App\Service\Mail\Settings\MailConnection;
 use App\Service\Mail\Settings\MailSettings;
 use App\Service\Mail\Transport\DynamicMailTransport;
@@ -63,7 +63,7 @@ final class DynamicMailTransportTest extends KernelTestCase
         $row = new MailServerSettings();
         $row->apply(
             new MailConnection(true, 'smtp.relay.test', 587, 'alice', MailEncryption::Starttls, '', ''),
-            new SealedMailPassword('not base64!', 'bm9uY2U=', 'c2FsdA==', 1),
+            new SealedSecret('not base64!', 'bm9uY2U=', 'c2FsdA==', 1),
             'hint',
         );
         $em = self::getContainer()->get(EntityManagerInterface::class);
@@ -72,7 +72,7 @@ final class DynamicMailTransportTest extends KernelTestCase
 
         $this->expectException(TransportException::class);
         $this->expectExceptionMessage(
-            'The stored mail password is unreadable: Stored mail secret is not valid base64.',
+            'The stored mail password is unreadable: Stored secret material is not valid base64.',
         );
         self::getContainer()->get(DynamicMailTransport::class)->activeTransport();
     }

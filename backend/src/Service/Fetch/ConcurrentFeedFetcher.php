@@ -7,7 +7,7 @@ namespace App\Service\Fetch;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Proxy\Crypto\Exception\ProxyPasswordUnreadableException;
+use App\Service\Crypto\Exception\SecretUnreadableException;
 use Symfony\Contracts\HttpClient\ChunkInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -53,7 +53,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
     {
         try {
             $batchProxy = $this->proxyEgressResolver->resolve();
-        } catch (ProxyPasswordUnreadableException $e) {
+        } catch (SecretUnreadableException $e) {
             // The proxy is enabled but its stored password cannot be opened, so
             // no feed in this batch can be reached. Report that per feed instead
             // of letting it escape: the sweep's `remaining` only decrements on a

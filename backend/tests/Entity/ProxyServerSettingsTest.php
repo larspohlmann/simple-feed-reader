@@ -6,7 +6,7 @@ namespace App\Tests\Entity;
 
 use App\Entity\ProxyServerSettings;
 use App\Enum\ProxyType;
-use App\Service\Proxy\Crypto\SealedProxyPassword;
+use App\Service\Crypto\SealedSecret;
 use App\Service\Proxy\ProxyConnection;
 use PHPUnit\Framework\TestCase;
 
@@ -15,7 +15,7 @@ final class ProxyServerSettingsTest extends TestCase
     public function testApplyStoresConnectionAndSealedPassword(): void
     {
         $settings = new ProxyServerSettings();
-        $sealed = new SealedProxyPassword('cipher', 'nonce', 'salt', 1);
+        $sealed = new SealedSecret('cipher', 'nonce', 'salt', 1);
 
         $settings->apply(
             new ProxyConnection(true, true, ProxyType::Socks5, 'proxy.example', 1080, 'user'),
@@ -37,7 +37,7 @@ final class ProxyServerSettingsTest extends TestCase
     public function testApplyWithoutPasswordKeepsTheStoredSecret(): void
     {
         $settings = new ProxyServerSettings();
-        $sealed = new SealedProxyPassword('cipher', 'nonce', 'salt', 1);
+        $sealed = new SealedSecret('cipher', 'nonce', 'salt', 1);
         $settings->apply(new ProxyConnection(true, true, ProxyType::Http, 'a', 1, 'u'), $sealed, 'word');
 
         $settings->applyWithoutPassword(new ProxyConnection(false, false, ProxyType::Socks5, 'b', 2, null));

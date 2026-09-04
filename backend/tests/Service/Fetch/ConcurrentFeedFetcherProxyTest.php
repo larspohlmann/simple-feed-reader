@@ -14,7 +14,7 @@ use App\Service\Fetch\ProxyConfig;
 use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
-use App\Service\Proxy\Crypto\Exception\ProxyPasswordUnreadableException;
+use App\Service\Crypto\Exception\SecretUnreadableException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -95,7 +95,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
         });
         $proxyEgressResolver = $this->createMock(ProxyEgressResolver::class);
         $proxyEgressResolver->method('resolve')->willThrowException(
-            new ProxyPasswordUnreadableException('The stored proxy password failed its integrity check.'),
+            new SecretUnreadableException('The stored secret failed its integrity check.'),
         );
         $urlGuard = new UrlGuard($this->dns(), new IpValidator());
         $fetcher = new ConcurrentFeedFetcher(

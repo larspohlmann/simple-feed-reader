@@ -7,6 +7,7 @@ namespace App\Tests\Service\Proxy;
 use App\Dto\Admin\ProxySettingsRequest;
 use App\Entity\ProxyServerSettings;
 use App\Repository\ProxyServerSettingsRepository;
+use App\Service\Crypto\InstanceSecretCipher;
 use App\Service\Proxy\Crypto\ProxyPasswordCipher;
 use App\Service\Proxy\ProxyConnectionTester;
 use App\Service\Proxy\ProxySettings;
@@ -161,7 +162,7 @@ final class ProxyConnectionTesterTest extends TestCase
             }
         });
 
-        (new ProxySettings($repository, $em, new ProxyPasswordCipher(self::SECRET)))->update(
+        (new ProxySettings($repository, $em, new ProxyPasswordCipher(new InstanceSecretCipher(self::SECRET))))->update(
             new ProxySettingsRequest(
                 enabled: true,
                 directFallback: true,
@@ -173,7 +174,8 @@ final class ProxyConnectionTesterTest extends TestCase
             ),
         );
 
-        $afterRotation = new ProxySettings($repository, $em, new ProxyPasswordCipher(self::ROTATED_SECRET));
+        $rotatedCipher = new ProxyPasswordCipher(new InstanceSecretCipher(self::ROTATED_SECRET));
+        $afterRotation = new ProxySettings($repository, $em, $rotatedCipher);
         $result = (new ProxyConnectionTester($afterRotation, new MockHttpClient()))->test();
 
         self::assertFalse($result->ok);
@@ -237,6 +239,6 @@ final class ProxyConnectionTesterTest extends TestCase
             }
         });
 
-        return new ProxySettings($repository, $em, new ProxyPasswordCipher(self::SECRET));
+        return new ProxySettings($repository, $em, new ProxyPasswordCipher(new InstanceSecretCipher(self::SECRET)));
     }
 }

@@ -6,7 +6,7 @@ namespace App\Service\Proxy;
 
 use App\Service\Fetch\EgressOptions;
 use App\Service\Fetch\ProxyHandshakeFailure;
-use App\Service\Proxy\Crypto\Exception\ProxyPasswordUnreadableException;
+use App\Service\Crypto\Exception\SecretUnreadableException;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -33,7 +33,7 @@ final readonly class ProxyConnectionTester
     {
         try {
             $proxy = $this->settings->configuredProxy();
-        } catch (ProxyPasswordUnreadableException $e) {
+        } catch (SecretUnreadableException $e) {
             // Diagnosing exactly this is what the Test button is for, so it
             // reports the unreadable secret rather than crashing on it.
             return ProxyTestResult::failed($e->getMessage());
