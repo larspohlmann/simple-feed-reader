@@ -4,7 +4,7 @@
     class="darker"
     [title]="'reader.brightness.darker' | transloco"
     [attr.aria-label]="'reader.brightness.darker' | transloco"
-    [disabled]="atMin()"
+    [disabled]="brightness.step() === brightness.min()"
     (click)="brightness.decrease()"
   >
     <app-icon name="dark_mode" size="md" />
@@ -23,7 +23,7 @@
     class="brighter"
     [title]="'reader.brightness.brighter' | transloco"
     [attr.aria-label]="'reader.brightness.brighter' | transloco"
-    [disabled]="atMax()"
+    [disabled]="brightness.step() === brightness.max()"
     (click)="brightness.increase()"
   >
     <app-icon name="light_mode" size="md" />

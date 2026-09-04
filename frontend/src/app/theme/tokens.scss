@@ -8,9 +8,7 @@
 :root[data-theme='light'] {
   color-scheme: light;
 
-  @include graphite.light;
-
-  --media-brightness: 1;
+  @include graphite.emit(graphite.$light);
 
   /* Soft elevation for a raised card surface (#541). Mode-specific: a light
      UI needs only a hair of shadow, a dark one a deeper cast to lift the
@@ -21,26 +19,13 @@
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  @include graphite.dark;
+  @include graphite.emit(graphite.$dark);
 
-  --media-brightness: 1;
   --panel-shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 30%);
 }
 
-// Brightness steps (#832): one block per theme and step, keyed by the
-// data-brightness attribute the no-flash script and BrightnessService write.
-// Step 0 has no block; the base blocks above are today's palette verbatim.
-@each $step in brightness.$light-steps {
-  :root[data-theme='light'][data-brightness='#{$step}'] {
-    @include brightness.step(graphite.$light, $step, brightness.$light-text-dim);
-  }
-}
-
-@each $step in brightness.$dark-steps {
-  :root[data-theme='dark'][data-brightness='#{$step}'] {
-    @include brightness.step(graphite.$dark, $step, brightness.$dark-text-dim);
-  }
-}
+@include brightness.theme-steps('light', graphite.$light);
+@include brightness.theme-steps('dark', graphite.$dark);
 
 // Mode-invariant tokens (same in every theme).
 :root {

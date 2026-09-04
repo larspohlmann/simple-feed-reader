@@ -13,9 +13,6 @@ import { BrightnessService } from '../../theme/brightness.service';
 export class BrightnessControlComponent {
   readonly brightness = inject(BrightnessService);
 
-  readonly atMin = computed(() => this.brightness.step() <= this.brightness.min());
-  readonly atMax = computed(() => this.brightness.step() >= this.brightness.max());
-
   /** How full the bar is: emptiest at the darkest step, full at the brightest. */
   readonly fillPercent = computed(() => {
     const min = this.brightness.min();

@@ -43,6 +43,5 @@ export class BrightnessService {
 }
 
 function readSaved(theme: ResolvedTheme): number {
-  const saved = localStorage.getItem(brightnessKey(theme));
-  return saved === null ? 0 : clampBrightness(theme, Number(saved));
+  return clampBrightness(theme, Number(localStorage.getItem(brightnessKey(theme))));
 }

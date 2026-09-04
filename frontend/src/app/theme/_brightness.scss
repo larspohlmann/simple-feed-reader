@@ -2,43 +2,32 @@
 @use 'sass:map';
 @use 'sass:math';
 
-// Brightness steps (#832): a brightness dial for the whole palette. A step moves
-// each token in OKLCH lightness, keeping hue and chroma, across three planes:
-//   - surfaces scale multiplicatively: dimming sinks the page fast (a dark room
-//     gets a near-black panel), brightening lifts it gently (a bright room does
-//     not need a glaring one);
-//   - colours scale multiplicatively at a gentler rate, so accent and status
-//     hues stay themselves and only soften;
-//   - text moves toward an extreme -- black when dimming, white when
-//     brightening -- reaching it exactly at the range end. Dark keeps its text
-//     well short of black so it holds up as the surface sinks; light drives its
-//     text to true black by the floor, and both reach white at the dark top.
-// Contrast eases as you dim, instead of the old model's pinned-bright text, and
-// a colour pair (accent button, status box) is preserved without a solver.
+// Brightness steps (#832): a lightness dial over three planes (surfaces, colours,
+// text), each at its own rate. The model is described in docs/design-language.md
+// "Brightness steps"; the numbers here are the tuning.
 $surface-dim: 1.11;
 $surface-brighten: 1.05;
 $colour-dim: 1.055;
 $colour-brighten: 1.09;
-$text-brighten: math.div(1, 3); // reaches white at the top dark step (+3)
+$media-dim: 0.08;
 
-$light-steps:
-  -6,
-  -5,
-  -4,
-  -3,
-  -2,
-  -1;
-$dark-steps:
-  -3,
-  -2,
-  -1,
-  1,
-  2,
-  3;
-$light-text-dim: math.div(1, 6); // reaches black at the floor light step (-6)
-$dark-text-dim: 0.13; // gentle: dark text holds up as the surface sinks
-
-$media-brightness: (-1: 0.92, -2: 0.84, -3: 0.76, -4: 0.68, -5: 0.6, -6: 0.52);
+// The Sass mirror of BRIGHTNESS_MIN/MAX in brightness.ts. Light drives its text
+// to true black exactly at its floor; dark stays short of black (0.13 < 1/3) so
+// text holds up as the surface sinks, and reaches white exactly at its top.
+$ranges: (
+  light: (
+    min: -6,
+    max: 0,
+    text-dim: math.div(1, 6),
+    text-brighten: 0,
+  ),
+  dark: (
+    min: -3,
+    max: 3,
+    text-dim: 0.13,
+    text-brighten: math.div(1, 3),
+  ),
+);
 $surfaces:
   surface-0, surface-1, surface-2, surface-read, border, border-strong, accent-soft, bg-danger,
   bg-success, bg-warning;
@@ -46,7 +35,7 @@ $colours: accent, on-accent, danger, success, warning;
 $text: text-primary, text-secondary, text-muted;
 
 // Returned through rgb() on purpose: Sass then prints every derived colour as
-// `rgb(r g b)`, never a colour name, which keeps the test parser trivial.
+// `rgb(r, g, b)`, never a colour name, which keeps the test parser trivial.
 @function rounded($color) {
   $c: color.to-gamut($color, $space: rgb, $method: clip);
   $red: math.round(color.channel($c, 'red', $space: rgb));
@@ -66,8 +55,9 @@ $text: text-primary, text-secondary, text-muted;
   @return rounded(color.change($color, $lightness: $scaled, $space: oklch));
 }
 
-@function toward-extreme($color, $step, $dim-rate, $brighten-rate) {
-  $progress: math.min(1, math.abs($step) * if($step < 0, $dim-rate, $brighten-rate));
+@function toward-extreme($color, $step, $range) {
+  $rate: map.get($range, if($step < 0, text-dim, text-brighten));
+  $progress: math.min(1, math.abs($step) * $rate);
   $anchor: if($step < 0, 0%, 100%);
 
   // At the extreme a near-neutral token becomes pure black or white only if its
@@ -83,18 +73,36 @@ $text: text-primary, text-secondary, text-muted;
   );
 }
 
-@mixin step($base-palette, $step, $text-dim) {
+@mixin step($palette, $step, $range) {
   @each $name in $surfaces {
-    --#{$name}: #{scale(map.get($base-palette, $name), $step, $surface-dim, $surface-brighten)};
+    --#{$name}: #{scale(map.get($palette, $name), $step, $surface-dim, $surface-brighten)};
   }
 
   @each $name in $colours {
-    --#{$name}: #{scale(map.get($base-palette, $name), $step, $colour-dim, $colour-brighten)};
+    --#{$name}: #{scale(map.get($palette, $name), $step, $colour-dim, $colour-brighten)};
   }
 
   @each $name in $text {
-    --#{$name}: #{toward-extreme(map.get($base-palette, $name), $step, $text-dim, $text-brighten)};
+    --#{$name}: #{toward-extreme(map.get($palette, $name), $step, $range)};
   }
 
-  --media-brightness: #{map.get($media-brightness, $step) or 1};
+  // Only dimming steps carry a media factor; every consumer is guarded to them.
+  @if $step < 0 {
+    --media-brightness: #{1 - $media-dim * math.abs($step)};
+  }
+}
+
+// One block per step of the theme's range, keyed by the data-brightness
+// attribute the no-flash script and BrightnessService write. Step 0 has no
+// block: the base block in tokens.scss is today's palette verbatim.
+@mixin theme-steps($theme, $palette) {
+  $range: map.get($ranges, $theme);
+
+  @for $step from map.get($range, min) through map.get($range, max) {
+    @if $step != 0 {
+      :root[data-theme='#{$theme}'][data-brightness='#{$step}'] {
+        @include step($palette, $step, $range);
+      }
+    }
+  }
 }

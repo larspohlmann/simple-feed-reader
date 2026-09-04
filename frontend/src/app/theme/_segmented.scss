@@ -1,0 +1,26 @@
+// The sidebar's segmented-control frame: the view-controls groups and the
+// brightness stepper share it so the foot reads as one family. Each consumer
+// adds its own button sizing and active/disabled states.
+@mixin frame {
+  .seg {
+    display: inline-flex;
+    flex: 1 1 auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .seg button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-2);
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  .seg button:hover:not(:disabled) {
+    background: var(--surface-0);
+  }
+}

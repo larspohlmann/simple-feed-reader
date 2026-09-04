@@ -1,35 +1,17 @@
+@use '../../theme/segmented';
+@include segmented.frame;
+
 :host {
   display: flex;
 }
 
-/* Same frame as the view-controls segmented groups, so the three rows in the
-   foot read as one family. */
 .seg {
-  display: inline-flex;
-  flex: 1 1 auto;
   align-items: stretch;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-
-.seg button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--surface-2);
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
 }
 
 .seg .darker,
 .seg .brighter {
   padding: var(--space-2);
-}
-
-.seg button:hover:not(:disabled) {
-  background: var(--surface-0);
 }
 
 .seg button:disabled {

@@ -22,15 +22,16 @@ h3 {
   outline-offset: 2px;
 }
 
-/* Negative brightness steps dim media with the surfaces (#832). The attribute
-   guard keeps `filter` off the default render, where the token is 1. */
-:root[data-brightness^='-'] :is(img, video, iframe) {
+/* Dimming brightness steps dim pixel media and, via `.user-colour`, inline
+   colours the palette cannot reach (#832). The attribute guard keeps `filter`
+   off the default render, which carries no media factor at all. */
+:root[data-brightness^='-'] :is(img, video, iframe, .user-colour) {
   filter: brightness(var(--media-brightness));
 }
 
 /* Audio is chrome, not a photo: a light native player must recede into a dimmed
    page, so it dims by the square of the media factor -- far harder than an image
-   wants -- staying a no-op at and above the default where the factor is 1. */
+   wants. */
 :root[data-brightness^='-'] audio {
   filter: brightness(calc(var(--media-brightness) * var(--media-brightness)));
 }

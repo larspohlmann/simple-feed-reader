@@ -58,11 +58,3 @@ $dark: (
     --#{$name}: #{$value};
   }
 }
-
-@mixin light {
-  @include emit($light);
-}
-
-@mixin dark {
-  @include emit($dark);
-}

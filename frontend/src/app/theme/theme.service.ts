@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { computed, Injectable, signal } from '@angular/core';
 import { ResolvedTheme, ThemeMode } from './themes/registry';
 
 const KEY = 'sfr.theme';
@@ -6,17 +6,22 @@ const KEY = 'sfr.theme';
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
   private readonly media = window.matchMedia('(prefers-color-scheme: dark)');
+  private readonly osDark = signal(this.media.matches);
   readonly mode = signal<ThemeMode>(this.readSaved());
 
   /** The theme on screen: the mode, or what the OS resolved `system` to. */
-  readonly resolved = signal<ResolvedTheme>(this.resolve());
+  readonly resolved = computed<ResolvedTheme>(() => {
+    const m = this.mode();
+    return m === 'system' ? (this.osDark() ? 'dark' : 'light') : m;
+  });
 
   constructor() {
     // Apply synchronously on construction (not via effect, whose flush is
     // async) so the theme is correct before the first render and assertions.
     this.applyResolved();
     this.media.addEventListener('change', () => {
-      if (this.mode() === 'system') this.applyResolved();
+      this.osDark.set(this.media.matches);
+      this.applyResolved();
     });
   }
 
@@ -31,14 +36,7 @@ export class ThemeService {
     return v === 'light' || v === 'dark' || v === 'system' ? v : 'system';
   }
 
-  private resolve(): ResolvedTheme {
-    const m = this.mode();
-    return m === 'system' ? (this.media.matches ? 'dark' : 'light') : m;
-  }
-
   private applyResolved(): void {
-    const theme = this.resolve();
-    this.resolved.set(theme);
-    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-theme', this.resolved());
   }
 }

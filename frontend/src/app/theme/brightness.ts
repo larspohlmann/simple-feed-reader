@@ -1,9 +1,7 @@
 import { ResolvedTheme } from './themes/registry';
 
-// Light starts at full brightness and only dims, so its default sits at the top
-// of a longer downward range; dark brightens and dims around today (#832). Both
-// ranges span seven steps, so the stepper reads as one bar in either theme. The
-// no-flash script in index.html mirrors these bounds; keep them in step.
+// Light panels start white, so light only dims and its default is its top (#832).
+// The no-flash script in index.html and $ranges in _brightness.scss mirror these.
 export const BRIGHTNESS_MIN: Record<ResolvedTheme, number> = { light: -6, dark: -3 };
 export const BRIGHTNESS_MAX: Record<ResolvedTheme, number> = { light: 0, dark: 3 };
 

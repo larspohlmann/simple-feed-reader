@@ -18,10 +18,3 @@
   height: 50%;
   border-radius: var(--radius-pill);
 }
-
-/* A user-assigned tag colour is an inline value the brightness palette cannot
-   reach, so it dims with the page here instead (#832). --media-brightness is 1
-   at and above the default, so this is a no-op except on a dimmed step. */
-.tinted {
-  filter: brightness(var(--media-brightness));
-}

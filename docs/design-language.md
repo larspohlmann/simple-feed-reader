@@ -216,18 +216,22 @@ any one component's stylesheet.
 brightness, so light only dims). Step 0 is the palette in
 `themes/_graphite.scss` verbatim; every other step is derived at build time by
 `theme/_brightness.scss` and emitted as its own `:root[data-theme][data-brightness]`
-block. A step is a brightness dial for the whole palette: it scales each token's
-OKLCH lightness toward black (down) or white (up), keeping hue and chroma, so
-colours stay themselves and only soften. The surface plane
-(`$surface-per-step`) scales faster than the foreground (`$foreground-per-step`):
-dimming sinks the background deeper than the text, so a dark room gets a
-near-black page while the text holds up and stays readable, and contrast eases
-instead of the old model's pinned-bright text. A colour pair (the accent button,
-a status box) scales both partners at the foreground rate, so its contrast is
-preserved without a solver. `--media-brightness` (1, or 0.94…0.64 below 0)
-drives one global `filter` on `img`, `video`, `iframe` and `audio`, so pixel
-media and native player chrome dim with the page. To retune, edit the two
-`$…-per-step` factors; never hand-tune a step block.
+block. A step is a lightness dial over three planes, each moving in OKLCH with
+hue and chroma kept: **surfaces** (canvas, panels, borders, soft status
+backgrounds) scale multiplicatively, fast when dimming and gently when
+brightening; **colours** (accent, status hues, on-accent) scale at a gentler
+rate so they stay themselves and only soften; **text** interpolates toward an
+extreme, black when dimming and white when brightening, reaching it exactly at
+the range end (light reaches black at `-6`; dark stays short of black so text
+holds up as the surface sinks, and reaches white at `+3`). Contrast eases as you
+dim instead of being pinned. Dimming steps also emit `--media-brightness`
+(`0.92…0.52`, 8 % per step; absent at and above the default), which one guarded
+rule in `styles/_base.scss` applies as a `filter` to `img`, `video`, `iframe`
+and any element carrying `.user-colour` (an inline colour the palette cannot
+reach, e.g. a tag glyph), and squared to `audio`, whose light native chrome must
+recede harder than a photo. To retune, edit the rate constants and `$ranges`
+(the Sass mirror of `brightness.ts`) in `_brightness.scss`; never hand-tune a
+step block.
 
 ---
 
@@ -1209,7 +1213,8 @@ reuse:
 
 `<app-brightness-control>` (local to the sidebar, #832) is a moon
 (`dark_mode`), a solid progress bar and a sun (`light_mode`) in the
-view-controls `.seg` frame. The bar is one full-height fill over a track the
+segmented frame it shares with the view-controls groups
+(`theme/_segmented.scss`). The bar is one full-height fill over a track the
 same surface as the glyph buttons; the soft accent tint is the indicator. It
 fills with brightness — empty at the darkest step, full at the brightest — so
 the light default sits at the full end and the dark default at the middle.

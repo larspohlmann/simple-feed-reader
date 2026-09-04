@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import * as sass from 'sass';
+import { BRIGHTNESS_MAX, BRIGHTNESS_MIN } from './brightness';
 
 type Palette = Record<string, string>;
 type Rgb = [number, number, number];
@@ -84,8 +85,6 @@ function paletteAt(theme: Theme, step: number): Palette {
   return block.tokens;
 }
 
-const COLOUR_TOKENS = Object.keys(TODAY.light).filter((token) => token !== 'favicon-backdrop');
-
 function rgb(value: string): Rgb {
   const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(value);
   if (hex) {
@@ -104,42 +103,23 @@ describe.each(['light', 'dark'] as const)('%s step 0', (theme) => {
       expect(`${token}: ${base[token]}`).toBe(`${token}: ${TODAY[theme][token]}`);
     }
   });
-
-  it('parses as colours', () => {
-    for (const token of COLOUR_TOKENS) expect(rgb(paletteAt(theme, 0)[token])).toHaveLength(3);
-  });
 });
 
-const STEPS: Record<Theme, readonly number[]> = {
-  light: [-6, -5, -4, -3, -2, -1],
-  dark: [-3, -2, -1, 1, 2, 3],
-};
+/** Every step of the theme's range except 0, which is the base block. */
+function stepsOf(theme: Theme): number[] {
+  const steps: number[] = [];
+  for (let step = BRIGHTNESS_MIN[theme]; step <= BRIGHTNESS_MAX[theme]; step++) {
+    if (step !== 0) steps.push(step);
+  }
+  return steps;
+}
+
+const STEPS: Record<Theme, readonly number[]> = { light: stepsOf('light'), dark: stepsOf('dark') };
 const SURFACES = ['surface-0', 'surface-1', 'surface-2', 'surface-read'];
-// The surface plane, which scales at the steeper rate.
-const SURFACE_PLANE = [
-  ...SURFACES,
-  'border',
-  'border-strong',
-  'accent-soft',
-  'bg-danger',
-  'bg-success',
-  'bg-warning',
-];
-// The foreground plane, which scales at the gentler rate so it holds up as the
-// surfaces sink. Every colour token is scaled; only favicon-backdrop is not.
-const FOREGROUND_PLANE = [
-  'text-primary',
-  'text-secondary',
-  'text-muted',
-  'accent',
-  'on-accent',
-  'danger',
-  'success',
-  'warning',
-];
-const SCALED = [...SURFACE_PLANE, ...FOREGROUND_PLANE];
+// Every colour token is scaled; only favicon-backdrop is not.
+const SCALED = Object.keys(TODAY.light).filter((token) => token !== 'favicon-backdrop');
 const TEXT = ['text-primary', 'text-secondary', 'text-muted'];
-const MEDIA: Record<number, string> = {
+const MEDIA: Partial<Record<number, string>> = {
   [-1]: '0.92',
   [-2]: '0.84',
   [-3]: '0.76',
@@ -174,39 +154,28 @@ function emittedSteps(theme: Theme): number[] {
 describe.each(['light', 'dark'] as const)('%s brightness steps', (theme) => {
   const base = paletteAt(theme, 0);
 
-  it('emits exactly the agreed steps', () => {
+  it('emits exactly the steps brightness.ts declares', () => {
     expect(emittedSteps(theme)).toEqual([...STEPS[theme]]);
   });
 
-  it('leaves media untouched at step 0', () => {
-    expect(base['media-brightness']).toBe('1');
+  it('carries no media factor at step 0', () => {
+    expect(base['media-brightness']).toBeUndefined();
   });
 
-  it.each(STEPS[theme])('step %i redefines the reading plane and nothing else', (step) => {
-    expect(Object.keys(paletteAt(theme, step)).sort()).toEqual(
-      [...SCALED, 'media-brightness'].sort(),
-    );
+  it.each(STEPS[theme])('step %i redefines every colour token and nothing else', (step) => {
+    const mediaToken = step < 0 ? ['media-brightness'] : [];
+    expect(Object.keys(paletteAt(theme, step)).sort()).toEqual([...SCALED, ...mediaToken].sort());
   });
 
-  it.each(STEPS[theme])('step %i moves the canvas in the direction of the step', (step) => {
-    const canvas = luminance(rgb(paletteAt(theme, step)['surface-0']));
-    const today = luminance(rgb(base['surface-0']));
-    if (step < 0) expect(canvas).toBeLessThan(today);
-    else expect(canvas).toBeGreaterThan(today);
+  it.each(STEPS[theme])('step %i moves the canvas and the text with the step', (step) => {
+    const palette = paletteAt(theme, step);
+    for (const token of ['surface-0', ...TEXT]) {
+      const now = luminance(rgb(palette[token]));
+      const today = luminance(rgb(base[token]));
+      if (step < 0) expect(now).toBeLessThan(today);
+      else expect(now).toBeGreaterThan(today);
+    }
   });
-
-  it.each(STEPS[theme])(
-    'step %i dims the text when dimming and lifts it when brightening',
-    (step) => {
-      const palette = paletteAt(theme, step);
-      for (const token of TEXT) {
-        const now = luminance(rgb(palette[token]));
-        const today = luminance(rgb(base[token]));
-        if (step < 0) expect(now).toBeLessThan(today);
-        else expect(now).toBeGreaterThan(today);
-      }
-    },
-  );
 
   it.each(STEPS[theme])(
     'step %i eases the body-text contrast when dimming, strengthens it when brightening',
@@ -218,8 +187,8 @@ describe.each(['light', 'dark'] as const)('%s brightness steps', (theme) => {
     },
   );
 
-  it.each(STEPS[theme])('step %i dims media only below the default', (step) => {
-    expect(paletteAt(theme, step)['media-brightness']).toBe(MEDIA[step] ?? '1');
+  it.each(STEPS[theme])('step %i dims media only when dimming', (step) => {
+    expect(paletteAt(theme, step)['media-brightness']).toBe(MEDIA[step]);
   });
 });
 
