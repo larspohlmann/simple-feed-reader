@@ -20,7 +20,11 @@ final class MailFallbackTest extends TestCase
 
     public function testAnSmtpDsnFillsTheFormDefaults(): void
     {
-        $context = (new MailFallback('smtp://alice%40relay:pw@smtp.relay.test:2525', 'noreply@example.com', 'Reader'))->context();
+        $context = (new MailFallback(
+            'smtp://alice%40relay:pw@smtp.relay.test:2525',
+            'noreply@example.com',
+            'Reader',
+        ))->context();
 
         self::assertTrue($context->isReal);
         self::assertSame('smtp.relay.test', $context->host);
@@ -39,7 +43,11 @@ final class MailFallbackTest extends TestCase
 
     public function testASendmailDsnIsRealButNotSmtpParseable(): void
     {
-        $context = (new MailFallback('sendmail://default?command=%2Fusr%2Fsbin%2Fsendmail%20-t%20-i', 'from@x.test', 'X'))->context();
+        $context = (new MailFallback(
+            'sendmail://default?command=%2Fusr%2Fsbin%2Fsendmail%20-t%20-i',
+            'from@x.test',
+            'X',
+        ))->context();
 
         self::assertTrue($context->isReal);
         self::assertSame('', $context->host);
