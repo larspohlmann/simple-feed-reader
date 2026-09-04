@@ -42,7 +42,7 @@
         [title]="'settings.proxy.type' | transloco"
         [description]="'settings.proxy.typeDesc' | transloco"
       >
-        <select class="type-field" data-testid="proxy-type" (change)="onType($event)">
+        <select class="select-field" data-testid="proxy-type" (change)="onType($event)">
           @for (option of typeOptions; track option) {
             <option [value]="option" [selected]="type() === option">{{ option }}</option>
           }

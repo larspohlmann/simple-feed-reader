@@ -1562,6 +1562,15 @@ Compose the `shared/settings/` primitives; do not restyle the look (see
    grouping that expands in place inside the group.
 4. **`<app-settings-save-bar>`** for the typed fields (text, number). Toggles
    and selects save on change instead — confirm those with the global toast.
+5. **Extend `DraftSettingsService`** (`shared/settings/draft-settings.service.ts`)
+   for the section's service: it owns `state`/`busy`/`failure`/`saved`, the
+   typed-field `draft` with `dirty` and `pending()`, `load()`, `saveInstant()`
+   for the on-change controls and `save()` for the bar. A subclass names its
+   `endpoint` and maps server truth to the writable body in `bodyFromState()`.
+   Confirm success with `toastOnSaved(svc, key)` (`shared/toast/saved-toast.ts`)
+   from the component's constructor. A section with a Test row and typed
+   connection fields (proxy, mail) includes the `probe-section` mixin from
+   `shared/settings/_probe-section.scss` as its whole stylesheet.
 
 ```html
 <app-settings-group

@@ -1,0 +1,60 @@
+// Layout glue for an admin section with a Test row and typed connection
+// fields: the proxy and mail sections. Grouped chrome comes from the shared
+// primitives; what lives here is field widths and the banner inset.
+@use '../../theme/breakpoints' as bp;
+
+@mixin probe-section {
+  // The Test row's control slot: outcome glyph, then button. The glyph's box is
+  // always present — an icon appearing from nothing would widen the slot and
+  // shove the button sideways, the same jump the outcome text used to cause.
+  .test-control {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .probe-status {
+    display: inline-flex;
+    justify-content: center;
+    width: var(--icon-sm);
+  }
+
+  .probe-status .ok {
+    color: var(--success);
+  }
+
+  .probe-status .failed {
+    color: var(--danger);
+  }
+
+  .panel-banner {
+    padding: 0 var(--space-5) var(--space-4);
+  }
+
+  // Field widths in `ch`, sized to the real value: a bare <input>'s default
+  // ~20 chars showed half of a 34-char hostname. Live here, not in
+  // app-settings-row: projected inputs carry the section's scope, not the row's.
+  .host-field {
+    width: 34ch;
+  }
+
+  .port-field {
+    width: 10ch;
+  }
+
+  .credential-field {
+    width: 24ch;
+  }
+
+  // Narrow viewport: the row stacks, so every field takes the full line rather
+  // than sitting at a width the phone cannot spare. The select is included
+  // here for the same reason -- it had no width of its own either.
+  @media (width <= bp.$bp-sm) {
+    .host-field,
+    .port-field,
+    .credential-field,
+    .select-field {
+      width: 100%;
+    }
+  }
+}

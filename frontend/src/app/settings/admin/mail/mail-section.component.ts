@@ -2,7 +2,6 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  effect,
   inject,
   linkedSignal,
   signal,
@@ -22,8 +21,8 @@ import { SettingsRowComponent } from '../../../shared/settings/settings-row/sett
 import { SettingsSaveBarComponent } from '../../../shared/settings/save-bar/save-bar.component';
 import { SettingsStackComponent } from '../../../shared/settings/stack/settings-stack.component';
 import { ToggleComponent } from '../../../shared/toggle/toggle.component';
-import { CONFIRMATION_DURATION_MS, ToastService } from '../../../shared/toast/toast.service';
-import { MailEncryption, MailSettingsService, TypedMailEdits } from './mail-settings.service';
+import { toastOnSaved } from '../../../shared/toast/saved-toast';
+import { MailEncryption, MailSettingsService } from './mail-settings.service';
 
 /** The default submission port, mirroring the backend's MailConnection::DEFAULT_PORT. */
 const DEFAULT_PORT = 587;
@@ -53,7 +52,6 @@ const DEFAULT_PORT = 587;
 export class MailSectionComponent {
   readonly svc = inject(MailSettingsService);
   private readonly i18n = inject(TranslocoService);
-  private readonly toast = inject(ToastService);
   private readonly dialog = inject(Dialog);
 
   // Instant fields: persisted the moment they change, never held in the draft.
@@ -65,18 +63,20 @@ export class MailSectionComponent {
   // Typed fields: held as a pending draft until the explicit Save. Each reads
   // the pending edit first, server truth underneath -- so an instant save,
   // which replaces `state` while the draft stands, can't revert an unsaved edit.
-  readonly host = linkedSignal<string>(() => this.pending('host') ?? this.svc.state()?.host ?? '');
+  readonly host = linkedSignal<string>(
+    () => this.svc.pending('host') ?? this.svc.state()?.host ?? '',
+  );
   readonly port = linkedSignal<number>(
-    () => this.pending('port') ?? this.svc.state()?.port ?? DEFAULT_PORT,
+    () => this.svc.pending('port') ?? this.svc.state()?.port ?? DEFAULT_PORT,
   );
   readonly username = linkedSignal<string>(
-    () => this.pending('username') ?? this.svc.state()?.username ?? '',
+    () => this.svc.pending('username') ?? this.svc.state()?.username ?? '',
   );
   readonly fromAddress = linkedSignal<string>(
-    () => this.pending('fromAddress') ?? this.svc.state()?.fromAddress ?? '',
+    () => this.svc.pending('fromAddress') ?? this.svc.state()?.fromAddress ?? '',
   );
   readonly fromName = linkedSignal<string>(
-    () => this.pending('fromName') ?? this.svc.state()?.fromName ?? '',
+    () => this.svc.pending('fromName') ?? this.svc.state()?.fromName ?? '',
   );
   /** Never seeded from server truth -- the API never returns the secret. */
   readonly password = signal('');
@@ -114,31 +114,9 @@ export class MailSectionComponent {
 
   readonly encryptionOptions: readonly MailEncryption[] = ['none', 'starttls', 'tls'];
 
-  /**
-   * The pending value for one typed field, or undefined when the admin has not
-   * edited it. Key presence is the test, not nullishness -- a cleared field is
-   * a real edit and must win over server truth like any other.
-   */
-  private pending<F extends keyof TypedMailEdits>(field: F): TypedMailEdits[F] | undefined {
-    const draft = this.svc.draft();
-
-    return field in draft ? draft[field] : undefined;
-  }
-
   constructor() {
     this.svc.load();
-    // One success signal, fired on the actual HTTP success rather than the
-    // click: every persist sets `saved`, so this toasts once and resets the
-    // flag. A rejected save never sets `saved`, so it stays silent.
-    effect(() => {
-      if (this.svc.saved() && !this.svc.failure()) {
-        this.toast.show({
-          message: this.i18n.translate('settings.mail.saved'),
-          durationMs: CONFIRMATION_DURATION_MS,
-        });
-        this.svc.saved.set(false);
-      }
-    });
+    toastOnSaved(this.svc, 'settings.mail.saved');
   }
 
   /** The enable toggle and the encryption select instant-save only once a DB

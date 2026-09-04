@@ -1,8 +1,7 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Injectable, computed, inject, signal } from '@angular/core';
-import { Observable } from 'rxjs';
-import { API_BASE_URL } from '../../../core/api';
-import { Problem, parseProblem } from '../../../core/problem';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Injectable, signal } from '@angular/core';
+import { parseProblem } from '../../../core/problem';
+import { DraftSettingsService } from '../../../shared/settings/draft-settings.service';
 
 export type ProxyType = 'SOCKS5' | 'HTTP';
 
@@ -50,54 +49,18 @@ interface ProxyTestResponse {
 }
 
 @Injectable()
-export class ProxySettingsService {
-  private readonly http = inject(HttpClient);
-  private readonly base = inject(API_BASE_URL);
+export class ProxySettingsService extends DraftSettingsService<
+  ProxySettingsState,
+  SaveProxySettings,
+  TypedProxyEdits
+> {
+  protected readonly endpoint = `${this.base}/api/admin/proxy`;
 
-  readonly state = signal<ProxySettingsState | null>(null);
-  readonly busy = signal(false);
-  readonly failure = signal<Problem | null>(null);
-  readonly saved = signal(false);
   readonly probe = signal<ProxyProbe>({ status: 'idle' });
-
-  readonly draft = signal<TypedProxyEdits>({});
-  readonly dirty = computed(() => Object.keys(this.draft()).length > 0);
-
-  load(): void {
-    this.run(this.http.get<ProxySettingsState>(`${this.base}/api/admin/proxy`), (state) =>
-      this.commit(state),
-    );
-  }
-
-  saveInstant(partial: Partial<SaveProxySettings>): void {
-    const current = this.state();
-    if (!current) return;
-    this.put({ ...this.bodyFromState(current), ...partial }, (state) => {
-      this.state.set(state);
-      this.saved.set(true);
-    });
-  }
-
-  setTypedField<F extends keyof TypedProxyEdits>(field: F, value: TypedProxyEdits[F]): void {
-    this.draft.update((draft) => ({ ...draft, [field]: value }));
-  }
-
-  save(): void {
-    const current = this.state();
-    if (!current) return;
-    this.put({ ...this.bodyFromState(current), ...this.draft() }, (state) => {
-      this.commit(state);
-      this.saved.set(true);
-    });
-  }
-
-  discardDraft(): void {
-    this.draft.set({});
-  }
 
   testConnection(): void {
     this.probe.set({ status: 'loading' });
-    this.http.post<ProxyTestResponse>(`${this.base}/api/admin/proxy/test`, {}).subscribe({
+    this.http.post<ProxyTestResponse>(`${this.endpoint}/test`, {}).subscribe({
       next: (result) =>
         this.probe.set(
           result.ok && result.egressIp
@@ -109,8 +72,7 @@ export class ProxySettingsService {
     });
   }
 
-  /** password defaults to null (keep stored) unless a typed edit sets it. */
-  private bodyFromState(state: ProxySettingsState): SaveProxySettings {
+  protected bodyFromState(state: ProxySettingsState): SaveProxySettings {
     return {
       enabled: state.enabled,
       directFallback: state.directFallback,
@@ -121,30 +83,5 @@ export class ProxySettingsService {
       remoteDns: state.remoteDns,
       password: null,
     };
-  }
-
-  private put(body: SaveProxySettings, onSuccess: (state: ProxySettingsState) => void): void {
-    this.run(this.http.put<ProxySettingsState>(`${this.base}/api/admin/proxy`, body), onSuccess);
-  }
-
-  private commit(state: ProxySettingsState): void {
-    this.state.set(state);
-    this.draft.set({});
-  }
-
-  private run<T>(request: Observable<T>, onSuccess: (value: T) => void): void {
-    this.busy.set(true);
-    this.failure.set(null);
-    this.saved.set(false);
-    request.subscribe({
-      next: (value) => {
-        this.busy.set(false);
-        onSuccess(value);
-      },
-      error: (error: HttpErrorResponse) => {
-        this.busy.set(false);
-        this.failure.set(parseProblem(error));
-      },
-    });
   }
 }

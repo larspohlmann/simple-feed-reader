@@ -3,7 +3,6 @@ import {
   Component,
   WritableSignal,
   computed,
-  effect,
   inject,
   linkedSignal,
   signal,
@@ -24,7 +23,7 @@ import { SettingsRowComponent } from '../shared/settings/settings-row/settings-r
 import { SettingsSaveBarComponent } from '../shared/settings/save-bar/save-bar.component';
 import { SettingsStackComponent } from '../shared/settings/stack/settings-stack.component';
 import { ToggleComponent } from '../shared/toggle/toggle.component';
-import { CONFIRMATION_DURATION_MS, ToastService } from '../shared/toast/toast.service';
+import { toastOnSaved } from '../shared/toast/saved-toast';
 import { LanguageService } from '../core/language.service';
 import { formatInteger } from '../reader/format';
 import {
@@ -72,7 +71,6 @@ export class RecommendationSettingsCardComponent {
   private readonly dialog = inject(Dialog);
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);
-  private readonly toast = inject(ToastService);
 
   // Typed fields: displayed here, held as a pending draft in the service until
   // the explicit Save. Each seeds from server truth and recomputes when the
@@ -169,19 +167,7 @@ export class RecommendationSettingsCardComponent {
 
   constructor() {
     this.svc.load();
-    // One success signal, fired on the actual HTTP success rather than the
-    // click: every persist sets `saved`, so this toasts once and resets the
-    // flag. A rejected save never sets `saved`, so it stays silent — the
-    // `failure()` guard only hardens that.
-    effect(() => {
-      if (this.svc.saved() && !this.svc.failure()) {
-        this.toast.show({
-          message: this.i18n.translate('settings.ai.recommendations.saved'),
-          durationMs: CONFIRMATION_DURATION_MS,
-        });
-        this.svc.saved.set(false);
-      }
-    });
+    toastOnSaved(this.svc, 'settings.ai.recommendations.saved');
   }
 
   /** Blank input is not zero: `+'' === 0` would silently coerce a cleared
