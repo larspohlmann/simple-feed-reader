@@ -11,9 +11,9 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Transport\TransportInterface;
 
-/** Builds the transport a resolved mail row asks for: the plain EsmtpTransport,
- *  or the curl proxy transport when the row routes through the egress proxy.
- *  The single place that decision lives, shared by real sends and the tester. */
+/** Builds the transport a resolved mail row asks for: the plain EsmtpTransport, or
+ *  the curl proxy transport when the row routes mail through the configured proxy
+ *  (independent of the feed-egress switch). One place, shared by sends and the tester. */
 final readonly class ActiveMailTransportFactory
 {
     public function __construct(private ProxySettings $proxySettings)
