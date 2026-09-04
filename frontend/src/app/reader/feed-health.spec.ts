@@ -1,5 +1,25 @@
+import { RefreshReport } from './models';
 import { makeSubscription as make } from './testing/subscription.factory';
-import { feedHealthReason, isUnhealthy, unhealthyFeeds } from './feed-health';
+import {
+  feedHealthReason,
+  isFeedRecovered,
+  isGone,
+  isUnhealthy,
+  unhealthyFeeds,
+} from './feed-health';
+
+const report = (over: Partial<RefreshReport>): RefreshReport => ({
+  status: 'completed',
+  progress: { done: 1, total: 1 },
+  fetched: 0,
+  notModified: 0,
+  failed: 0,
+  throttled: 0,
+  skippedForBudget: 0,
+  remaining: 0,
+  pruned: 0,
+  ...over,
+});
 
 describe('feed health', () => {
   const now = new Date('2026-02-10T00:00:00Z');
@@ -8,6 +28,19 @@ describe('feed health', () => {
     expect(isUnhealthy(make({ status: 'active' }))).toBe(false);
     expect(isUnhealthy(make({ status: 'erroring' }))).toBe(true);
     expect(isUnhealthy(make({ status: 'gone' }))).toBe(true);
+  });
+
+  it('reports only a gone feed as gone', () => {
+    expect(isGone(make({ status: 'gone' }))).toBe(true);
+    expect(isGone(make({ status: 'erroring' }))).toBe(false);
+    expect(isGone(make({ status: 'active' }))).toBe(false);
+  });
+
+  it('counts a refresh as recovered only when nothing failed and something landed', () => {
+    expect(isFeedRecovered(report({ fetched: 1 }))).toBe(true);
+    expect(isFeedRecovered(report({ notModified: 1 }))).toBe(true);
+    expect(isFeedRecovered(report({ fetched: 1, failed: 1 }))).toBe(false);
+    expect(isFeedRecovered(report({ fetched: 0, notModified: 0 }))).toBe(false);
   });
 
   it('lists gone before erroring, then by title', () => {

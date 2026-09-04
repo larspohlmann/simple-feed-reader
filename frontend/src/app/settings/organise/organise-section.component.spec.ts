@@ -23,11 +23,13 @@ import { makeSubscription } from '../../reader/testing/subscription.factory';
  *  the tests set. */
 function makeSubscriptionsStoreMock(subs: SubscriptionDto[]) {
   const subscriptions: WritableSignal<SubscriptionDto[]> = signal(subs);
+  const unhealthy = computed(() => unhealthyFeeds(subscriptions()));
   return {
     subscriptions,
     loading: signal(false),
     load: jest.fn(),
-    unhealthy: computed(() => unhealthyFeeds(subscriptions())),
+    unhealthy,
+    unhealthyCount: computed(() => unhealthy().length),
   };
 }
 

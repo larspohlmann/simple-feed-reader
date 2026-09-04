@@ -3,6 +3,7 @@ import { Observable, map, of, switchMap, tap } from 'rxjs';
 import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoService } from '@jsverse/transloco';
 import { ReaderApi } from '../reader-api';
+import { isFeedRecovered } from '../feed-health';
 import { SubscriptionsStore } from '../subscriptions.store';
 import { TagsStore } from '../tags.store';
 import {
@@ -318,22 +319,20 @@ export class ManageActions {
   retryFeed(sub: SubscriptionDto): void {
     this.api.refresh({ feedId: sub.feedId }).subscribe({
       next: (report: RefreshReport) => {
-        const recovered = report.failed === 0 && report.fetched + report.notModified >= 1;
-        this.toast.show({
-          message: this.i18n.translate(
-            recovered ? 'settings.health.retry.recovered' : 'settings.health.retry.stillFailing',
-            { title: sub.title },
-          ),
-          durationMs: CONFIRMATION_DURATION_MS,
-        });
+        this.notifyRetryOutcome(sub, isFeedRecovered(report) ? 'recovered' : 'stillFailing');
         this.subs.load();
       },
-      error: () => {
-        this.toast.show({
-          message: this.i18n.translate('settings.health.retry.error', { title: sub.title }),
-          durationMs: CONFIRMATION_DURATION_MS,
-        });
-      },
+      error: () => this.notifyRetryOutcome(sub, 'error'),
+    });
+  }
+
+  private notifyRetryOutcome(
+    sub: SubscriptionDto,
+    outcome: 'recovered' | 'stillFailing' | 'error',
+  ): void {
+    this.toast.show({
+      message: this.i18n.translate(`settings.health.retry.${outcome}`, { title: sub.title }),
+      durationMs: CONFIRMATION_DURATION_MS,
     });
   }
 

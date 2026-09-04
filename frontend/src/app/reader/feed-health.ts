@@ -1,5 +1,5 @@
 import { pluralKey } from '../core/plural-key';
-import { SubscriptionDto } from './models';
+import { RefreshReport, SubscriptionDto } from './models';
 
 export interface HealthReason {
   key: string;
@@ -12,9 +12,20 @@ export function isUnhealthy(sub: SubscriptionDto): boolean {
   return sub.status !== 'active';
 }
 
+/** A dead feed: the server has given up refreshing it, not merely erroring. */
+export function isGone(sub: SubscriptionDto): boolean {
+  return sub.status === 'gone';
+}
+
+/** A manual refresh recovered the feed when nothing failed and at least one
+ *  fetch landed — a 304 Not-Modified counts, since it resurrects the feed. */
+export function isFeedRecovered(report: RefreshReport): boolean {
+  return report.failed === 0 && report.fetched + report.notModified >= 1;
+}
+
 /** Gone feeds first (dead, act now), then erroring; each alphabetical by title. */
 export function unhealthyFeeds(subs: SubscriptionDto[]): SubscriptionDto[] {
-  const rank = (s: SubscriptionDto): number => (s.status === 'gone' ? 0 : 1);
+  const rank = (s: SubscriptionDto): number => (isGone(s) ? 0 : 1);
   return subs
     .filter(isUnhealthy)
     .sort((a, b) => rank(a) - rank(b) || a.title.localeCompare(b.title));
@@ -26,7 +37,7 @@ export function daysSince(iso: string, now: Date): number {
 }
 
 export function feedHealthReason(sub: SubscriptionDto, now: Date): HealthReason {
-  if (sub.status === 'gone') return { key: 'settings.health.reason.gone' };
+  if (isGone(sub)) return { key: 'settings.health.reason.gone' };
   if (sub.lastSuccessfulFetchAt !== null) {
     const days = daysSince(sub.lastSuccessfulFetchAt, now);
     if (days === 0) return { key: 'settings.health.reason.noUpdateToday' };

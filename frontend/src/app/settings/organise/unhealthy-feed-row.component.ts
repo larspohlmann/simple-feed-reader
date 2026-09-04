@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output } f
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LanguageService } from '../../core/language.service';
 import { formatLongDate } from '../../reader/format';
-import { feedHealthReason } from '../../reader/feed-health';
+import { feedHealthReason, isGone } from '../../reader/feed-health';
 import { SubscriptionDto } from '../../reader/models';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { DisclosureComponent } from '../../shared/disclosure/disclosure.component';
@@ -26,7 +26,7 @@ export class UnhealthyFeedRowComponent {
   private readonly language = inject(LanguageService);
 
   protected readonly reason = computed(() => feedHealthReason(this.subscription(), new Date()));
-  protected readonly isGone = computed(() => this.subscription().status === 'gone');
+  protected readonly isGone = computed(() => isGone(this.subscription()));
 
   /** A row-scoped absolute-date formatter, not a pipe: these are technical
    *  facts inside a details disclosure, not reading-flow copy, so an exact

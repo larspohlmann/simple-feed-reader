@@ -1,12 +1,9 @@
 <app-settings-stack>
-  @if (subs.unhealthy().length) {
+  @if (subs.unhealthyCount(); as count) {
     <app-settings-group
       icon="warning"
       [title]="'settings.health.title' | transloco"
-      [caption]="
-        pluralKey('settings.health.summary', subs.unhealthy().length)
-          | transloco: { count: subs.unhealthy().length }
-      "
+      [caption]="pluralKey('settings.health.summary', count) | transloco: { count }"
     >
       @for (feed of subs.unhealthy(); track feed.id) {
         <app-unhealthy-feed-row
