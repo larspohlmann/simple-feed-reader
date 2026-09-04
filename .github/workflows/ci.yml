@@ -301,6 +301,13 @@ jobs:
       - name: previous-prod-install
         run: scripts/test/previous-prod-install.test.sh
 
+      # The readiness probe a prod update waits on before migrating (#842). It
+      # must warn and return on timeout, never `die` -- a `die` aborted the
+      # deploy before the migration and stranded new code against the old
+      # schema. This proves a timed-out probe returns rather than exits.
+      - name: wait-for-php-ready
+        run: scripts/test/wait-for-php-ready.test.sh
+
       # What the installers put on the screen, and the options they accept
       # (#430). The default port each topology offers becomes a published
       # container port and the port in every account-mail link; --ref is parsed

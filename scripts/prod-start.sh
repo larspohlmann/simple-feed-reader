@@ -105,13 +105,27 @@ stop_disabled_search_engine_container
 # file promises.
 prod_compose restart web >/dev/null
 
-wait_for_php_ready
+# A not-ready result here is a warning, not a stop (#842): the migration below
+# must run even when the readiness probe missed a slow-but-healthy container,
+# or the new code that is already live serves 500s against the old schema.
+wait_for_php_ready || true
 
 run_step 'Ensuring JWT signing keys exist' \
   prod_compose exec -T -u www-data php bin/console lexik:jwt:generate-keypair --skip-if-exists
 
 run_step 'Applying database migrations' \
   prod_compose exec -T -u www-data php bin/console doctrine:migrations:migrate --no-interaction
+
+# The invariant a deploy must keep: never leave newer code running against an
+# un-migrated schema (#842). If the migration above did not converge the schema
+# -- a partial run, a readiness race -- this names the pending migration and
+# stops loudly, instead of letting the stack look healthy at /api/health while
+# every schema-dependent route 500s. Re-running this script is the fix; it is
+# idempotent and forward-only.
+run_step 'Verifying the database schema is up to date' \
+  prod_compose exec -T -u www-data php bin/console doctrine:migrations:up-to-date \
+  || die 'The database schema is behind the running code -- a migration did not apply. Re-run ./scripts/prod-start.sh (safe, idempotent). If it recurs, check:  docker compose -p simple-feed-reader-prod logs php'
+
 # It may have started before the schema existed (first install).
 prod_compose restart worker >/dev/null
 
