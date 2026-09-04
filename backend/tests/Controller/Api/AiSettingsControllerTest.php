@@ -636,7 +636,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     }
 
     /**
-     * A stored key that no longer decrypts — a rotated AI_KEY_SECRET, an edited
+     * A stored key that no longer decrypts — a rotated INSTANCE_SECRET_KEY, an edited
      * row, a row moved between accounts. Without the mapping this is an
      * uncaught throw, so the account gets an opaque 500 on every read and no
      * hint that entering the key again is the way out.

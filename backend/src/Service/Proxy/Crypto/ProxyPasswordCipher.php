@@ -11,7 +11,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * Seals the instance-wide proxy password. Same construction as ApiKeyCipher but
  * bound to a fixed instance identity instead of a user id: there is exactly one
  * proxy row. The distinct binding string keeps this secret cryptographically
- * separate from the AI keys even though both derive from AI_KEY_SECRET.
+ * separate from the AI keys even though both derive from INSTANCE_SECRET_KEY.
  */
 final readonly class ProxyPasswordCipher
 {
@@ -21,12 +21,12 @@ final readonly class ProxyPasswordCipher
     private const int MINIMUM_SECRET_LENGTH = 32;
 
     public function __construct(
-        #[Autowire('%env(AI_KEY_SECRET)%')]
+        #[Autowire('%env(INSTANCE_SECRET_KEY)%')]
         private string $masterSecret,
     ) {
         if (\strlen($masterSecret) < self::MINIMUM_SECRET_LENGTH) {
             throw new \InvalidArgumentException(sprintf(
-                'AI_KEY_SECRET must be at least %d characters; got %d.',
+                'INSTANCE_SECRET_KEY must be at least %d characters; got %d.',
                 self::MINIMUM_SECRET_LENGTH,
                 \strlen($masterSecret),
             ));

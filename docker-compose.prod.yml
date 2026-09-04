@@ -54,7 +54,7 @@ x-app-environment: &app-environment
   # from before #305 has no such variable yet at this point. A `:?` guard
   # would fail compose right here on that instance -- exactly the outage
   # ensure_ai_key_secret exists to prevent.
-  AI_KEY_SECRET: ${AI_KEY_SECRET:-}
+  INSTANCE_SECRET_KEY: ${INSTANCE_SECRET_KEY:-}
   MAINTENANCE_TOKEN: ${MAINTENANCE_TOKEN:-}
   # Empty means no engine: MeilisearchIndex autowires cleanly with an empty
   # URL/key and EntrySearchWithFallback answers every search from the database

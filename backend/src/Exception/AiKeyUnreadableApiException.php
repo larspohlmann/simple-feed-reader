@@ -7,7 +7,7 @@ namespace App\Exception;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * The stored key cannot be decrypted — a rotated AI_KEY_SECRET, an edited row,
+ * The stored key cannot be decrypted — a rotated INSTANCE_SECRET_KEY, an edited row,
  * a row moved between accounts.
  *
  * A 422 rather than the opaque 500 an uncaught throw would produce: the account

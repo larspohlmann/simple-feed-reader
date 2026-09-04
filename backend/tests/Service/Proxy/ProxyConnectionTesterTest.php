@@ -144,7 +144,7 @@ final class ProxyConnectionTesterTest extends TestCase
     /**
      * Diagnosing exactly this is what the Test button is for: the row was sealed
      * under one master secret and is being read under another (a rotated
-     * AI_KEY_SECRET, or a dump restored onto a fresh instance), so it reports
+     * INSTANCE_SECRET_KEY, or a dump restored onto a fresh instance), so it reports
      * the unreadable secret rather than crashing the endpoint.
      */
     public function testAnUnreadableStoredPasswordIsReportedRatherThanThrown(): void

@@ -602,7 +602,7 @@ env_prod_set() {
 # The .env.prod values docker-compose.prod.yml refuses to start without.
 # Keep in step with the ${VAR:?} interpolations there.
 ENV_PROD_REQUIRED='PUBLIC_URL MAILER_DSN MAIL_FROM MYSQL_ROOT_PASSWORD MYSQL_PASSWORD APP_SECRET ALTCHA_HMAC_KEY JWT_PASSPHRASE'
-# AI_KEY_SECRET is deliberately NOT in this list, same as ADMIN_SETUP_SECRET:
+# INSTANCE_SECRET_KEY is deliberately NOT in this list, same as ADMIN_SETUP_SECRET:
 # it is machine-generated, never operator-supplied, so there is nothing for a
 # human to "fill in". Listing it here would make env_prod_missing/die below
 # abort an upgrading instance before ensure_ai_key_secret ever runs -- the
@@ -642,21 +642,21 @@ ensure_admin_setup_secret() {
   fi
 }
 
-# Generate AI_KEY_SECRET when it is still empty. An instance installed before
-# #305 has no such variable, and %env(AI_KEY_SECRET)% that cannot resolve fails
-# the container build -- every route, not just the AI ones. Generating here
-# keeps the upgrade uneventful. Never regenerate a value that exists: that
-# would silently make every stored API key unreadable.
+# Generate INSTANCE_SECRET_KEY when it is still empty. An instance installed
+# before #305 has no such variable, and %env(INSTANCE_SECRET_KEY)% that cannot
+# resolve fails the container build -- every route, not just the AI ones.
+# Generating here keeps the upgrade uneventful. Never regenerate a value that
+# exists: that would silently make every stored API key unreadable.
 ensure_ai_key_secret() {
-  if [ -z "$(env_prod_get AI_KEY_SECRET)" ]; then
-    env_prod_set AI_KEY_SECRET "$(generate_secret)"
+  if [ -z "$(env_prod_get INSTANCE_SECRET_KEY)" ]; then
+    env_prod_set INSTANCE_SECRET_KEY "$(generate_secret)"
   fi
 }
 
 # Generate MEILISEARCH_KEY when it is still empty, never regenerate one that
 # exists -- the same rule as ensure_ai_key_secret above, for the same reason
 # (rotating it would make Meilisearch reject the app's own requests). Unlike
-# AI_KEY_SECRET this is not called unconditionally from prod-start.sh: an
+# INSTANCE_SECRET_KEY this is not called unconditionally from prod-start.sh: an
 # empty MEILISEARCH_URL/KEY is the "no engine, database answers searches"
 # state by design (see MeilisearchIndex and its services.yaml wiring), so an
 # instance upgrading from before #432 needs nothing generated for it. This is
