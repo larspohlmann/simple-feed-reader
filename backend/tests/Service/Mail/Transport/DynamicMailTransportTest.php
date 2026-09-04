@@ -71,6 +71,7 @@ final class DynamicMailTransportTest extends KernelTestCase
         $em->flush();
 
         $this->expectException(TransportException::class);
+        $this->expectExceptionMessage('The stored mail password is unreadable: Stored mail secret is not valid base64.');
         self::getContainer()->get(DynamicMailTransport::class)->activeTransport();
     }
 
