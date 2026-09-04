@@ -492,6 +492,8 @@
       "clear": "Zurücksetzen"
     },
     "health": {
+      "title": "Fehlerhafte Feeds",
+      "summary": "{{count}} Feeds brauchen deine Aufmerksamkeit",
       "pill": {
         "dead": "Tot",
         "failing": "Fehlerhaft"

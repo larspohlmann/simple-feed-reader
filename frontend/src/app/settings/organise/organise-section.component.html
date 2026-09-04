@@ -1,4 +1,20 @@
 <app-settings-stack>
+  @if (subs.unhealthy().length) {
+    <app-settings-group
+      icon="warning"
+      [title]="'settings.health.title' | transloco"
+      [caption]="'settings.health.summary' | transloco: { count: subs.unhealthy().length }"
+    >
+      @for (feed of subs.unhealthy(); track feed.id) {
+        <app-unhealthy-feed-row
+          [subscription]="feed"
+          (retry)="manage.retryFeed(feed)"
+          (unsubscribe)="manage.unsubscribe(feed)"
+        />
+      }
+    </app-settings-group>
+  }
+
   <app-settings-group
     icon="rss_feed"
     [title]="'settings.organise.title' | transloco"

@@ -14,6 +14,7 @@ import { SettingsGroupComponent } from '../../shared/settings/settings-group/set
 import { OrganiseStore, OrganiseGroup, GroupKey } from './organise.store';
 import { OrganiseTagGroupComponent } from './organise-tag-group.component';
 import { OrganiseFeedRowComponent } from './organise-feed-row.component';
+import { UnhealthyFeedRowComponent } from './unhealthy-feed-row.component';
 import { BulkTagDialogComponent, BulkTagDialogData } from './bulk-tag-dialog.component';
 import { ManageActions } from '../../reader/manage/manage-actions.service';
 import { SubscriptionsStore } from '../../reader/subscriptions.store';
@@ -51,6 +52,7 @@ interface VisibilityMenuItem {
     SettingsGroupComponent,
     OrganiseTagGroupComponent,
     OrganiseFeedRowComponent,
+    UnhealthyFeedRowComponent,
     DismissOnOutsideDirective,
     CdkDropListGroup,
   ],

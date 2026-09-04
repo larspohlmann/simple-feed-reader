@@ -492,6 +492,8 @@
       "clear": "Clear"
     },
     "health": {
+      "title": "Unhealthy feeds",
+      "summary": "{{count}} feeds need your attention",
       "pill": {
         "dead": "Dead",
         "failing": "Failing"

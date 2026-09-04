@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { computed, signal, WritableSignal } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Dialog } from '@angular/cdk/dialog';
@@ -8,13 +8,28 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { OrganiseSectionComponent } from './organise-section.component';
 import { OrganiseStore } from './organise.store';
 import { OrganiseTagGroupComponent } from './organise-tag-group.component';
+import { UnhealthyFeedRowComponent } from './unhealthy-feed-row.component';
 import { SubscriptionsStore } from '../../reader/subscriptions.store';
+import { unhealthyFeeds } from '../../reader/feed-health';
 import { TagsStore } from '../../reader/tags.store';
 import { ManageActions } from '../../reader/manage/manage-actions.service';
 import { LayoutService } from '../../reader/layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
+
+/** The real store derives `unhealthy`/`unhealthyCount` from `subscriptions`;
+ *  the mock reproduces that so the health group renders off the same signal
+ *  the tests set. */
+function makeSubscriptionsStoreMock(subs: SubscriptionDto[]) {
+  const subscriptions: WritableSignal<SubscriptionDto[]> = signal(subs);
+  return {
+    subscriptions,
+    loading: signal(false),
+    load: jest.fn(),
+    unhealthy: computed(() => unhealthyFeeds(subscriptions())),
+  };
+}
 
 const TECH: TagDto = { id: 2, name: 'Tech', color: null, icon: null, position: 0 };
 
@@ -56,13 +71,14 @@ describe('OrganiseSectionComponent', () => {
     setIncludeInAllItems: jest.fn(),
     setIncludeInForYou: jest.fn(),
     unsubscribe: jest.fn(),
+    retryFeed: jest.fn(),
     retag: jest.fn(),
     reorderTags: jest.fn(),
     reorderTagFeeds: jest.fn(),
     reorderUntagged: jest.fn(),
   };
 
-  async function renderWithMocks() {
+  async function renderWithMocks(subs: SubscriptionDto[] = SUBS) {
     localStorage.clear();
     for (const spy of Object.values(manage)) spy.mockReset();
     manage.bulkAddTag.mockReturnValue(of(undefined));
@@ -79,10 +95,7 @@ describe('OrganiseSectionComponent', () => {
           { provide: Dialog, useValue: { open: jest.fn(() => ({ closed: of(undefined) })) } },
           { provide: LayoutService, useValue: { isCoarse: signal(false) } },
           { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
-          {
-            provide: SubscriptionsStore,
-            useValue: { subscriptions: signal(SUBS), loading: signal(false), load: jest.fn() },
-          },
+          { provide: SubscriptionsStore, useValue: makeSubscriptionsStoreMock(subs) },
           { provide: TagsStore, useValue: { tags: signal([TECH]), load: jest.fn() } },
         ],
       })
@@ -283,10 +296,7 @@ describe('OrganiseSectionComponent', () => {
           { provide: Dialog, useValue: { open: jest.fn(() => ({ closed: of(undefined) })) } },
           { provide: LayoutService, useValue: { isCoarse: signal(false) } },
           { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
-          {
-            provide: SubscriptionsStore,
-            useValue: { subscriptions: signal(SUBS), loading: signal(false), load: jest.fn() },
-          },
+          { provide: SubscriptionsStore, useValue: makeSubscriptionsStoreMock(SUBS) },
           { provide: TagsStore, useValue: { tags: signal([TECH, NEWS]), load: jest.fn() } },
         ],
       })
@@ -321,14 +331,7 @@ describe('OrganiseSectionComponent', () => {
           { provide: Dialog, useValue: { open: jest.fn(() => ({ closed: of(undefined) })) } },
           { provide: LayoutService, useValue: { isCoarse: signal(false) } },
           { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
-          {
-            provide: SubscriptionsStore,
-            useValue: {
-              subscriptions: signal(subsWithNews),
-              loading: signal(false),
-              load: jest.fn(),
-            },
-          },
+          { provide: SubscriptionsStore, useValue: makeSubscriptionsStoreMock(subsWithNews) },
           { provide: TagsStore, useValue: { tags: signal([TECH, NEWS]), load: jest.fn() } },
         ],
       })
@@ -350,5 +353,34 @@ describe('OrganiseSectionComponent', () => {
     (groups[0].componentInstance as OrganiseTagGroupComponent).moveTagDown.emit();
 
     expect(manage.reorderTags).not.toHaveBeenCalled();
+  });
+
+  describe('unhealthy-feeds group', () => {
+    it('renders a row per unhealthy feed above the main list, and wires retry/unsubscribe', async () => {
+      const dead = makeSubscription({
+        id: 20,
+        feedId: 20,
+        title: 'zombie-blog',
+        feedUrl: 'https://feed-20.example/rss',
+        status: 'gone',
+      });
+      const { manage } = await renderWithMocks([...SUBS, dead]);
+
+      const rows = fixture.debugElement.queryAll(By.directive(UnhealthyFeedRowComponent));
+      expect(rows.length).toBe(1);
+
+      const row = rows[0].componentInstance as UnhealthyFeedRowComponent;
+      row.retry.emit();
+      row.unsubscribe.emit();
+
+      expect(manage.retryFeed).toHaveBeenCalledWith(dead);
+      expect(manage.unsubscribe).toHaveBeenCalledWith(dead);
+    });
+
+    it('shows nothing when every feed is active', async () => {
+      await renderWithMocks(SUBS);
+
+      expect(fixture.debugElement.query(By.directive(UnhealthyFeedRowComponent))).toBeNull();
+    });
   });
 });
