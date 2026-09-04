@@ -25,11 +25,20 @@ final class CurlSmtpOptionsTest extends TestCase
         return new ProxyConfig(ProxyType::Socks5, 'proxy.example', 1080, null, null, true, true);
     }
 
-    public function testImplicitTlsUsesSmtpsScheme(): void
+    public function testImplicitTlsUsesSmtpsSchemeAndRequiresSsl(): void
     {
         $resolved = new ResolvedMailTransport('smtp.gmail.com', 465, 'u', 'p', MailEncryption::Tls, true);
         $options = CurlSmtpOptions::for($resolved, $this->proxy(), $this->envelope());
         self::assertSame('smtps://smtp.gmail.com:465', $options[\CURLOPT_URL]);
+        self::assertSame(\CURLUSESSL_ALL, $options[\CURLOPT_USE_SSL]);
+    }
+
+    public function testNoEncryptionDisablesTheSslUpgrade(): void
+    {
+        $resolved = new ResolvedMailTransport('smtp.example.test', 25, null, null, MailEncryption::None, true);
+        $options = CurlSmtpOptions::for($resolved, $this->proxy(), $this->envelope());
+        self::assertSame('smtp://smtp.example.test:25', $options[\CURLOPT_URL]);
+        self::assertSame(\CURLUSESSL_NONE, $options[\CURLOPT_USE_SSL]);
     }
 
     public function testStarttlsRequiresTlsUpgradeOverPlainScheme(): void
@@ -60,5 +69,14 @@ final class CurlSmtpOptionsTest extends TestCase
         $resolved = new ResolvedMailTransport('h', 587, null, null, MailEncryption::Starttls, true);
         $options = CurlSmtpOptions::for($resolved, $this->proxy(), $this->envelope());
         self::assertArrayNotHasKey(\CURLOPT_USERNAME, $options);
+        self::assertArrayNotHasKey(\CURLOPT_PASSWORD, $options);
+    }
+
+    public function testCredentialsArePassedThroughWhenSet(): void
+    {
+        $resolved = new ResolvedMailTransport('h', 587, 'alice', 'topsecret', MailEncryption::Starttls, true);
+        $options = CurlSmtpOptions::for($resolved, $this->proxy(), $this->envelope());
+        self::assertSame('alice', $options[\CURLOPT_USERNAME]);
+        self::assertSame('topsecret', $options[\CURLOPT_PASSWORD]);
     }
 }
