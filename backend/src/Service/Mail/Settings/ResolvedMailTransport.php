@@ -15,6 +15,7 @@ final readonly class ResolvedMailTransport
         public ?string $username,
         public ?string $password,
         public MailEncryption $encryption,
+        public bool $useProxy = false,
     ) {
     }
 
@@ -29,6 +30,7 @@ final readonly class ResolvedMailTransport
             $this->username ?? '',
             $this->encryption->value,
             null === $this->password ? 'no-pass' : hash('sha256', $this->password),
+            $this->useProxy ? 'proxy' : 'direct',
         ]);
     }
 }

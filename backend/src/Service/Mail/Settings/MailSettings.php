@@ -94,6 +94,7 @@ readonly class MailSettings
             $settings->getUsername(),
             $settings->hasPassword() ? $this->cipher->open($settings->getSealedPassword()) : null,
             $settings->getEncryption(),
+            $settings->usesProxy(),
         );
     }
 

@@ -242,5 +242,6 @@ final class MailSettingsTest extends KernelTestCase
         ));
 
         self::assertTrue($this->repository()->findSingleton()?->usesProxy());
+        self::assertTrue($this->settings()->configuredTransport()?->useProxy);
     }
 }
