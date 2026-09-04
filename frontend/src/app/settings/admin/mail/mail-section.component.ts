@@ -29,13 +29,8 @@ import { MailEncryption, MailSettingsService, TypedMailEdits } from './mail-sett
 const DEFAULT_PORT = 587;
 
 /** The admin "Mail" settings section (#834), a structural twin of the Proxy
- *  section (#490/#541): instant enable/encryption controls above the typed
- *  host/port/credentials fields, which sit behind the shared save bar.
- *
- *  Test probes the last-*saved* config, so it disables itself while the draft
- *  is dirty. The enable toggle stays off until a host is on record: mail
- *  with nothing to route through isn't a valid state, so it's disabled
- *  rather than left to fail server-side. */
+ *  section: instant enable/encryption controls above the typed fields behind
+ *  the shared save bar. The enable toggle stays off until a host is on record. */
 @Component({
   selector: 'app-mail-section',
   imports: [
@@ -187,9 +182,11 @@ export class MailSectionComponent {
     this.svc.setTypedField('password', value === '' ? null : value);
   }
 
-  /** Carries the staged enable/encryption (see `onEnabled`). */
+  /** Carries the staged enable/encryption (see `onEnabled`). A cleared host
+   *  never saves as enabled: the toggle is disabled without a host, so a row
+   *  stuck on could not be turned off again from the form. */
   onSave(): void {
-    this.svc.save({ enabled: this.enabled(), encryption: this.encryption() });
+    this.svc.save({ enabled: this.enabled() && this.host() !== '', encryption: this.encryption() });
   }
 
   /** Dropping the draft is enough for the typed inputs: they read it as their

@@ -45,6 +45,15 @@ final class MailSettingsRequestTest extends TestCase
         self::assertGreaterThan(0, \count($this->validator->validate(new MailSettingsRequest(port: 65536))));
     }
 
+    public function testAMalformedFromAddressIsInvalidButABlankOneIsNot(): void
+    {
+        $malformed = new MailSettingsRequest(fromAddress: 'not-an-address');
+        $blank = new MailSettingsRequest(fromAddress: '');
+
+        self::assertGreaterThan(0, \count($this->validator->validate($malformed)));
+        self::assertCount(0, $this->validator->validate($blank));
+    }
+
     public function testAnUnknownEncryptionIsInvalid(): void
     {
         self::assertGreaterThan(0, \count($this->validator->validate(new MailSettingsRequest(encryption: 'ssl'))));
@@ -55,7 +64,10 @@ final class MailSettingsRequestTest extends TestCase
     {
         yield 'host' => [fn (string $value) => new MailSettingsRequest(host: $value), 255];
         yield 'username' => [fn (string $value) => new MailSettingsRequest(username: $value), 255];
-        yield 'fromAddress' => [fn (string $value) => new MailSettingsRequest(fromAddress: $value), 255];
+        yield 'fromAddress' => [
+            fn (string $value) => new MailSettingsRequest(fromAddress: substr($value, 0, -12) . '@example.com'),
+            255,
+        ];
         yield 'fromName' => [fn (string $value) => new MailSettingsRequest(fromName: $value), 255];
         yield 'password' => [fn (string $value) => new MailSettingsRequest(password: $value), 512];
     }

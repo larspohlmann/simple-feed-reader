@@ -183,6 +183,22 @@ describe('MailSectionComponent', () => {
     );
   });
 
+  it('never saves a cleared host as enabled, so the row cannot get stuck on', () => {
+    const fixture = mount(state({ host: 'smtp.example.com', enabled: true, hasSavedConfig: true }));
+
+    hostInput(fixture).value = '';
+    hostInput(fixture).dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    fixture.componentInstance.onSave();
+    fixture.detectChanges();
+
+    const put = http.expectOne(ENDPOINT);
+    expect(put.request.body.host).toBe('');
+    expect(put.request.body.enabled).toBe(false);
+    put.flush(state({ host: '', enabled: false, hasSavedConfig: true }));
+  });
+
   it('marks the save bar dirty when the host is edited', () => {
     const fixture = mount(state({ host: 'smtp.example.com' }));
 

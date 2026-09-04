@@ -232,14 +232,7 @@ final class MeDigestTestControllerTest extends ApiTestCase
         self::assertGreaterThan(0, (int) $retryAfter);
     }
 
-    /**
-     * MailCapability now derives from MailSettings, which reports disabled
-     * when no mail_server_settings row exists and the fallback DSN is not
-     * real (see MailSettings::isSendingEnabled()). This test drives the
-     * instance-off case through that mechanism, deliberately seeding
-     * nothing: the null fallback is disabled by default in the test
-     * environment.
-     */
+    /** Seeds no mail row on purpose: with the null fallback, mail derives to off. */
     public function testMailDisabledInstanceIsForbidden(): void
     {
         $client = static::createClient();

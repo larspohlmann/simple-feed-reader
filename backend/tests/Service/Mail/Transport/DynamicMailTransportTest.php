@@ -5,9 +5,15 @@ declare(strict_types=1);
 namespace App\Tests\Service\Mail\Transport;
 
 use App\Dto\Admin\MailSettingsRequest;
+use App\Entity\MailServerSettings;
+use App\Enum\MailEncryption;
+use App\Service\Mail\Settings\Crypto\SealedMailPassword;
+use App\Service\Mail\Settings\MailConnection;
 use App\Service\Mail\Settings\MailSettings;
 use App\Service\Mail\Transport\DynamicMailTransport;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Component\Mailer\Exception\TransportException;
 use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
 
 final class DynamicMailTransportTest extends KernelTestCase
@@ -50,6 +56,22 @@ final class DynamicMailTransportTest extends KernelTestCase
         self::assertNotSame($fallback, $first);
         self::assertNotSame($first, $second);
         self::assertSame($second, $transport->activeTransport());
+    }
+
+    public function testAnUnreadableStoredPasswordSurfacesAsATransportFailure(): void
+    {
+        $row = new MailServerSettings();
+        $row->apply(
+            new MailConnection(true, 'smtp.relay.test', 587, 'alice', MailEncryption::Starttls, '', ''),
+            new SealedMailPassword('not base64!', 'bm9uY2U=', 'c2FsdA==', 1),
+            'hint',
+        );
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        $em->persist($row);
+        $em->flush();
+
+        $this->expectException(TransportException::class);
+        self::getContainer()->get(DynamicMailTransport::class)->activeTransport();
     }
 
     public function testItNamesItselfAsTheDynamicDsn(): void

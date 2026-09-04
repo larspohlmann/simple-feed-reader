@@ -13,6 +13,7 @@ use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\Mailer;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
+use Symfony\Component\Mime\Exception\RfcComplianceException;
 
 /**
  * Sends a real message through the SAVED SMTP config (independent of the enable
@@ -62,7 +63,7 @@ final readonly class MailConnectionTester
                     ->subject('Simple Feed Reader test message')
                     ->text('This confirms the outgoing mail configuration works.'),
             );
-        } catch (TransportExceptionInterface $e) {
+        } catch (TransportExceptionInterface | RfcComplianceException $e) {
             return MailTestResult::failed($e->getMessage());
         }
 

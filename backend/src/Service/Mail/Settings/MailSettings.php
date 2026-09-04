@@ -52,6 +52,7 @@ readonly class MailSettings
     {
         $existing = $this->repository->findSingleton();
         $connection = $this->connectionFrom($request);
+        $this->guardAgainstEnablingWithoutATransport($connection);
         $this->guardAgainstIncompleteAuthenticatedRow($request, $connection, $existing);
 
         $settings = $existing;
@@ -126,7 +127,14 @@ readonly class MailSettings
             && null !== $connection->username;
 
         if ($isAuthenticatedTransport && !$willHavePassword) {
-            throw new IncompleteMailConfigurationException();
+            throw IncompleteMailConfigurationException::passwordMissing();
+        }
+    }
+
+    private function guardAgainstEnablingWithoutATransport(MailConnection $connection): void
+    {
+        if ($connection->enabled && '' === $connection->host && !$this->fallback->connection()->enabled) {
+            throw IncompleteMailConfigurationException::transportMissing();
         }
     }
 

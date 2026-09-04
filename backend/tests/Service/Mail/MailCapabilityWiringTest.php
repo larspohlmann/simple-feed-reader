@@ -19,8 +19,7 @@ final class MailCapabilityWiringTest extends KernelTestCase
         self::bootKernel();
         $capability = self::getContainer()->get(MailCapability::class);
 
-        self::assertInstanceOf(MailCapability::class, $capability);
-        $capability->isEnabled();
-        $this->addToAssertionCount(1);
+        // The test env fallback is null://null and no row exists: derived off.
+        self::assertFalse($capability->isEnabled());
     }
 }

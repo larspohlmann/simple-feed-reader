@@ -66,7 +66,8 @@ final readonly class MailFallback
     }
 
     /** Symfony's own DSN parser, so the form prefill agrees with what the
-     *  transport will actually dial. Null for an empty or malformed DSN. */
+     *  transport will dial. Null when it refuses the DSN: not a failure here,
+     *  the caller reports that as a non-SMTP transport and the send fails loudly. */
     private function parsedDsn(): ?Dsn
     {
         try {

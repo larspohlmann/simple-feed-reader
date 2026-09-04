@@ -9,11 +9,7 @@ use App\Tests\Support\ApiTestCase;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
-/**
- * `/api/admin/mail` is covered by the existing `^/api/admin/` ROLE_ADMIN
- * prefix rule in security.yaml — no new access_control entry needed, confirmed
- * by reading it before writing this test (see AdminProxyControllerTest).
- */
+/** `/api/admin/mail` is covered by the `^/api/admin/` ROLE_ADMIN prefix rule in security.yaml. */
 final class AdminMailControllerTest extends ApiTestCase
 {
     private const string MAIL = '/api/admin/mail';

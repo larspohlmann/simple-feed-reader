@@ -653,6 +653,29 @@ ensure_ai_key_secret() {
   fi
 }
 
+# Carry a value written under a variable's OLD name over to its new name, once,
+# for an instance whose .env.prod predates the rename. INSTANCE_SECRET_KEY was
+# AI_KEY_SECRET (#834): without this, ensure_ai_key_secret would see an empty
+# new name and generate a fresh secret, making every stored AI key and the
+# proxy password unreadable. MAILER_FALLBACK_DSN was MAILER_DSN, which compose
+# now pins to dynamic://default: without this, a working SMTP relay would
+# silently become null://null. A value already under the new name always wins.
+carry_over_renamed_env() {
+  local old=$1 new=$2 value
+  if [ -n "$(env_prod_get "${new}")" ]; then
+    return 0
+  fi
+  value=$(env_prod_get "${old}")
+  if [ -n "${value}" ]; then
+    env_prod_set "${new}" "${value}"
+  fi
+}
+
+carry_over_renamed_env_vars() {
+  carry_over_renamed_env AI_KEY_SECRET INSTANCE_SECRET_KEY
+  carry_over_renamed_env MAILER_DSN MAILER_FALLBACK_DSN
+}
+
 # Generate MEILISEARCH_KEY when it is still empty, never regenerate one that
 # exists -- the same rule as ensure_ai_key_secret above, for the same reason
 # (rotating it would make Meilisearch reject the app's own requests). Unlike

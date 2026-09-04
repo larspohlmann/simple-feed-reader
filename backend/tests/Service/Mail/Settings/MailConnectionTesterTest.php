@@ -82,6 +82,23 @@ final class MailConnectionTesterTest extends KernelTestCase
         self::assertSame('no_from_address', $result->reason);
     }
 
+    public function testItReportsAMalformedEnvFromAddressInsteadOfThrowing(): void
+    {
+        putenv('MAIL_FROM=not-an-address');
+        $_ENV['MAIL_FROM'] = 'not-an-address';
+        $_SERVER['MAIL_FROM'] = 'not-an-address';
+
+        $this->authenticateAsAdmin();
+        $this->settings()->update(
+            new MailSettingsRequest(enabled: true, host: 'smtp.relay.test', fromAddress: '', password: 'p'),
+        );
+
+        $result = $this->tester()->test();
+
+        self::assertFalse($result->ok);
+        self::assertStringContainsString('not-an-address', (string) $result->reason);
+    }
+
     protected function tearDown(): void
     {
         putenv('MAIL_FROM=noreply@example.com');

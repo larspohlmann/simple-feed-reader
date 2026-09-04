@@ -18,7 +18,9 @@ final readonly class ResolvedMailTransport
     ) {
     }
 
-    /** Stable across sends with the same settings, so the transport is built once. */
+    /** Stable across sends with the same settings, so the transport is built once.
+     *  The password enters as a digest: a rotated password must rebuild the
+     *  transport, but the plaintext must not leave this object. */
     public function signature(): string
     {
         return implode('|', [
@@ -26,7 +28,7 @@ final readonly class ResolvedMailTransport
             (string) $this->port,
             $this->username ?? '',
             $this->encryption->value,
-            null === $this->password ? 'no-pass' : 'has-pass',
+            null === $this->password ? 'no-pass' : hash('sha256', $this->password),
         ]);
     }
 }

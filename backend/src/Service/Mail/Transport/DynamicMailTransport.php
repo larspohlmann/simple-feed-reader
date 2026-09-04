@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Transport;
 
+use App\Service\Mail\Settings\Crypto\Exception\MailPasswordUnreadableException;
 use App\Service\Mail\Settings\MailSettings;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Envelope;
+use Symfony\Component\Mailer\Exception\TransportException;
 use Symfony\Component\Mailer\SentMessage;
 use Symfony\Component\Mailer\Transport;
 use Symfony\Component\Mailer\Transport\TransportInterface;
@@ -43,7 +45,13 @@ final class DynamicMailTransport implements TransportInterface
 
     public function activeTransport(): TransportInterface
     {
-        $resolved = $this->settings->configuredTransport();
+        try {
+            $resolved = $this->settings->configuredTransport();
+        } catch (MailPasswordUnreadableException $e) {
+            // A rotated INSTANCE_SECRET_KEY. Surfaced as a transport failure so
+            // every send path degrades the way a dead relay already does.
+            throw new TransportException('The stored mail password is unreadable: ' . $e->getMessage(), 0, $e);
+        }
         $signature = null !== $resolved
             ? 'db:' . $resolved->signature()
             : 'fallback:' . $this->settings->activeTransportDsnFallback();

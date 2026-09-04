@@ -84,6 +84,17 @@ grep -Eq "^CACHE_DIRECTORY=['\"]?/" "${SHARED}/.env.local" \
 # undecryptable, and each account is told only to enter its key again. Docker
 # has no such hole, because prod-start.sh generates the secret; nothing on this
 # host does, so the check is here.
+# Two settings were renamed in #834. A .env.local written before that still
+# carries the old names; the app reads only the new ones. Refusing here beats
+# the alternatives: a fresh INSTANCE_SECRET_KEY makes every stored AI key and
+# the proxy password unreadable, and a stale MAILER_DSN pins the transport past
+# the admin-configured one while MAILER_FALLBACK_DSN falls to null://null.
+if grep -Eq "^AI_KEY_SECRET=" "${SHARED}/.env.local" && ! grep -Eq "^INSTANCE_SECRET_KEY=" "${SHARED}/.env.local"; then
+    die "${SHARED}/.env.local still names AI_KEY_SECRET, which is now INSTANCE_SECRET_KEY. Rename the line and KEEP ITS VALUE -- a new secret would make every stored AI provider API key and the proxy password unreadable -- then deploy again."
+fi
+if grep -Eq "^MAILER_DSN=" "${SHARED}/.env.local"; then
+    die "${SHARED}/.env.local sets MAILER_DSN, which backend/.env now pins to dynamic://default (the transport saved in the admin UI, else the fallback). Rename the line to MAILER_FALLBACK_DSN, keeping its value, and deploy again."
+fi
 INSTANCE_SECRET_KEY_PLACEHOLDER='test-ai-key-secret-not-for-production-0123456789'
 grep -Eq "^INSTANCE_SECRET_KEY=['\"]?[^'\"[:space:]]" "${SHARED}/.env.local" \
     || die "${SHARED}/.env.local does not set INSTANCE_SECRET_KEY -- every stored AI provider API key would be sealed with the placeholder that backend/.env ships in the public repository. Generate one (openssl rand -hex 32), add it as INSTANCE_SECRET_KEY= to ${SHARED}/.env.local, and deploy again. Keep it: changing it later makes every stored key unreadable."

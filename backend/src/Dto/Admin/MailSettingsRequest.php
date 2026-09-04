@@ -31,6 +31,7 @@ final readonly class MailSettingsRequest
         ])]
         public string $encryption = MailEncryption::Starttls->value,
         #[Assert\Length(max: 255)]
+        #[Assert\Email]
         public string $fromAddress = '',
         #[Assert\Length(max: 255)]
         public string $fromName = '',

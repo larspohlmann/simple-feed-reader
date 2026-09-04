@@ -74,7 +74,7 @@ final class MailSettingsTest extends KernelTestCase
 
     public function testUpdateRejectsAnEnabledAuthenticatedRowWithNoPassword(): void
     {
-        $this->expectException(IncompleteMailConfigurationException::class);
+        $this->expectExceptionObject(IncompleteMailConfigurationException::passwordMissing());
 
         $this->settings()->update(new MailSettingsRequest(
             enabled: true,
@@ -82,6 +82,13 @@ final class MailSettingsTest extends KernelTestCase
             username: 'postbox',
             password: null,
         ));
+    }
+
+    public function testUpdateRejectsEnablingWithNoHostWhileTheEnvFallbackIsNull(): void
+    {
+        $this->expectExceptionObject(IncompleteMailConfigurationException::transportMissing());
+
+        $this->settings()->update(new MailSettingsRequest(enabled: true, host: ''));
     }
 
     public function testUpdateAcceptsAnEnabledAuthenticatedRowThatKeepsAStoredPassword(): void
@@ -159,15 +166,15 @@ final class MailSettingsTest extends KernelTestCase
         self::assertTrue($this->settings()->view()['hasSavedConfig']);
     }
 
-    public function testAnEnabledAuthenticatedRowWithNoHostMayBeSavedWithoutAPassword(): void
+    public function testAnEnabledRowWithNoHostAndAUsernameIsRefusedForTheMissingTransportNotThePassword(): void
     {
+        $this->expectExceptionObject(IncompleteMailConfigurationException::transportMissing());
+
         $this->settings()->update(new MailSettingsRequest(
             enabled: true,
             host: '',
             username: 'postbox',
             password: null,
         ));
-
-        self::assertTrue($this->settings()->view()['hasSavedConfig']);
     }
 }

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Mail\Digest;
 
 use App\Entity\User;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use App\Service\Mail\Settings\MailSettings;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 
@@ -23,10 +23,7 @@ final readonly class DigestMailBuilder
         private DigestHtmlRenderer $htmlRenderer,
         private DigestLinkBuilder $links,
         private DigestBrandLogo $brandLogo,
-        #[Autowire('%env(MAIL_FROM)%')]
-        private string $fromAddress,
-        #[Autowire('%env(MAIL_FROM_NAME)%')]
-        private string $fromName,
+        private MailSettings $mailSettings,
     ) {
     }
 
@@ -35,8 +32,9 @@ final readonly class DigestMailBuilder
         $locale = $user->getLocale();
         $text = $this->textRenderer->render($model, $locale);
 
+        $identity = $this->mailSettings->identity();
         $email = (new Email())
-            ->from(new Address($this->fromAddress, $this->fromName))
+            ->from(new Address($identity->address, $identity->name))
             ->to($user->getEmail())
             ->subject($text->subject)
             ->text($text->body);
