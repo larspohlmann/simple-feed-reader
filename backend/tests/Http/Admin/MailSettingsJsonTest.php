@@ -26,22 +26,24 @@ final class MailSettingsJsonTest extends TestCase
             'fromAddress' => 'a@env',
             'fromName' => 'Env',
             'hasPassword' => false,
-            'passwordHint' => '',
             'hasSavedConfig' => false,
             'envFallbackConfigured' => true,
         ], MailSettingsJson::from(null, $fallback));
     }
 
-    public function testWithARowThePayloadIsTheRowPlusTheHintAndTheFallbackFlag(): void
+    public function testWithARowThePayloadIsTheRowPlusTheFallbackFlag(): void
     {
         $settings = new MailServerSettings();
         $settings->apply(
             new MailConnection(false, 'smtp.row.test', 465, null, MailEncryption::None, 'a@row', 'Row'),
             new SealedSecret('Y2lwaGVy', 'bm9uY2U=', 'c2FsdA==', 1),
-            'fish',
         );
         $fallback = new MailConnection(false, '', 587, null, MailEncryption::Starttls, '', '');
 
+        $payload = MailSettingsJson::from($settings, $fallback);
+
+        self::assertArrayNotHasKey('passwordHint', $payload);
+        self::assertTrue($payload['hasPassword']);
         self::assertSame([
             'enabled' => false,
             'host' => 'smtp.row.test',
@@ -51,9 +53,8 @@ final class MailSettingsJsonTest extends TestCase
             'fromAddress' => 'a@row',
             'fromName' => 'Row',
             'hasPassword' => true,
-            'passwordHint' => 'fish',
             'hasSavedConfig' => true,
             'envFallbackConfigured' => false,
-        ], MailSettingsJson::from($settings, $fallback));
+        ], $payload);
     }
 }

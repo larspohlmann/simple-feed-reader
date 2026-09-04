@@ -23,8 +23,6 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 readonly class MailSettings
 {
-    private const int HINT_LENGTH = 4;
-
     public function __construct(
         private MailServerSettingsRepository $repository,
         private EntityManagerInterface $em,
@@ -64,11 +62,7 @@ readonly class MailSettings
         if (null === $request->password) {
             $settings->applyWithoutPassword($connection);
         } else {
-            $settings->apply(
-                $connection,
-                $this->cipher->seal($request->password),
-                mb_substr($request->password, -self::HINT_LENGTH),
-            );
+            $settings->apply($connection, $this->cipher->seal($request->password));
         }
 
         $this->em->flush();

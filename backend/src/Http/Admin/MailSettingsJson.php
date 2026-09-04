@@ -8,15 +8,15 @@ use App\Entity\MailServerSettings;
 use App\Service\Mail\Settings\MailConnection;
 
 /**
- * The admin mail payload. The password is absent by construction: only the
- * 4-char hint and a hasPassword flag cross the wire, never the secret. With no
- * row yet, the non-secret fields are seeded from the env fallback so the form
- * shows what is currently active; the password is never seeded from the env.
+ * The admin mail payload. The password is absent by construction: only a
+ * hasPassword flag crosses the wire, never the secret. With no row yet, the
+ * non-secret fields are seeded from the env fallback so the form shows what
+ * is currently active; the password is never seeded from the env.
  *
  * @phpstan-type MailSettingsPayload array{
  *     enabled: bool, host: string, port: int, username: string|null,
  *     encryption: string, fromAddress: string, fromName: string,
- *     hasPassword: bool, passwordHint: string,
+ *     hasPassword: bool,
  *     hasSavedConfig: bool, envFallbackConfigured: bool,
  * }
  */
@@ -36,7 +36,6 @@ final readonly class MailSettingsJson
             'fromAddress' => $connection->fromAddress,
             'fromName' => $connection->fromName,
             'hasPassword' => $settings?->hasPassword() ?? false,
-            'passwordHint' => $settings?->getPasswordHint() ?? '',
             'hasSavedConfig' => null !== $settings,
             'envFallbackConfigured' => $fallback->enabled,
         ];

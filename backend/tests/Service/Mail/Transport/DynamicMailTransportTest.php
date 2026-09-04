@@ -64,7 +64,6 @@ final class DynamicMailTransportTest extends KernelTestCase
         $row->apply(
             new MailConnection(true, 'smtp.relay.test', 587, 'alice', MailEncryption::Starttls, '', ''),
             new SealedSecret('not base64!', 'bm9uY2U=', 'c2FsdA==', 1),
-            'hint',
         );
         $em = self::getContainer()->get(EntityManagerInterface::class);
         $em->persist($row);

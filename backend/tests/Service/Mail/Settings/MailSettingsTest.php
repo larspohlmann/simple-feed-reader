@@ -42,7 +42,6 @@ final class MailSettingsTest extends KernelTestCase
         self::assertTrue($view['enabled']);
         self::assertSame('smtp.relay.test', $view['host']);
         self::assertTrue($view['hasPassword']);
-        self::assertSame('cret', $view['passwordHint']);
         self::assertArrayNotHasKey('password', $view);
 
         $resolved = $this->settings()->configuredTransport();
@@ -121,13 +120,6 @@ final class MailSettingsTest extends KernelTestCase
         ));
 
         self::assertTrue($this->settings()->view()['enabled']);
-    }
-
-    public function testTheHintIsTheLastFourCharactersEvenWhenTheyAreMultibyte(): void
-    {
-        $this->settings()->update(new MailSettingsRequest(host: 'h', password: 'pässwört'));
-
-        self::assertSame('wört', $this->settings()->view()['passwordHint']);
     }
 
     public function testASavedFromAddressWinsOverTheEnvIdentity(): void

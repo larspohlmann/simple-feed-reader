@@ -106,7 +106,6 @@ final class AdminMailControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
         $body = $this->payload($this->client);
         self::assertTrue($body['hasPassword']);
-        self::assertSame('fish', $body['passwordHint']);
         self::assertArrayNotHasKey('password', $body);
     }
 
