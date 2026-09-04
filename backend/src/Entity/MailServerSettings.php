@@ -102,6 +102,19 @@ class MailServerSettings
         return $this->passwordHint;
     }
 
+    public function connection(): MailConnection
+    {
+        return new MailConnection(
+            $this->enabled,
+            $this->host,
+            $this->port,
+            $this->username,
+            $this->encryption,
+            $this->fromAddress,
+            $this->fromName,
+        );
+    }
+
     public function hasPassword(): bool
     {
         return '' !== $this->passwordCiphertext;

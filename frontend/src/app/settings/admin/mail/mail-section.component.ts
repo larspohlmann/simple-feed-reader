@@ -87,12 +87,8 @@ export class MailSectionComponent {
   readonly password = signal('');
 
   readonly configured = computed(() => (this.svc.state()?.host ?? '') !== '');
-  /** Until a DB row exists, the enable toggle and encryption select are
-   *  staged locally only (see `onEnabled`/`onEncryption`) rather than
-   *  instant-saved, so they must count as dirty too -- otherwise the save
-   *  bar never appears for the first, row-creating Save. Once a row exists,
-   *  those controls instant-save and always mirror `state`, so only the
-   *  typed draft matters. */
+  /** A staged enable/encryption (see `onEnabled`) counts as dirty too, or the
+   *  save bar never appears for the first, row-creating Save. */
   readonly dirty = computed(() => {
     const state = this.svc.state();
     if (!state || state.hasSavedConfig) return this.svc.dirty();
@@ -150,12 +146,12 @@ export class MailSectionComponent {
     });
   }
 
-  /** Instant-saves only once a DB row exists. Before that, `svc.state()` is
-   *  the env prefill, never a saved row -- instant-saving here would PUT a
-   *  host+username row with no password (the password is never prefilled),
-   *  persisting a broken authenticated transport that overrides a working
-   *  env fallback. Staging locally instead, the value rides along on the
-   *  first explicit Save (see `onSave`), which also carries the password. */
+  /** The enable toggle and the encryption select instant-save only once a DB
+   *  row exists. Before that, `svc.state()` is the env prefill, and an instant
+   *  PUT would persist a host+username row with no password (the password is
+   *  never prefilled): a broken authenticated transport overriding a working
+   *  env fallback. Until then the value is staged locally and rides along on
+   *  the first explicit Save, which also carries the password. */
   onEnabled(value: boolean): void {
     this.enabled.set(value);
     if (this.svc.state()?.hasSavedConfig) {
@@ -171,34 +167,16 @@ export class MailSectionComponent {
     }
   }
 
-  onHost(event: Event): void {
+  onTyped(field: 'host' | 'username' | 'fromAddress' | 'fromName', event: Event): void {
     const value = (event.target as HTMLInputElement).value;
-    this.host.set(value);
-    this.svc.setTypedField('host', value);
+    this[field].set(value);
+    this.svc.setTypedField(field, value);
   }
 
   onPort(event: Event): void {
     const value = +(event.target as HTMLInputElement).value;
     this.port.set(value);
     this.svc.setTypedField('port', value);
-  }
-
-  onUsername(event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
-    this.username.set(value);
-    this.svc.setTypedField('username', value);
-  }
-
-  onFromAddress(event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
-    this.fromAddress.set(value);
-    this.svc.setTypedField('fromAddress', value);
-  }
-
-  onFromName(event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
-    this.fromName.set(value);
-    this.svc.setTypedField('fromName', value);
   }
 
   /** An empty field means "keep the stored secret", not "clear it" -- the
@@ -209,10 +187,7 @@ export class MailSectionComponent {
     this.svc.setTypedField('password', value === '' ? null : value);
   }
 
-  /** Passes the displayed enable/encryption along explicitly: they never
-   *  enter the draft, so on the first, row-creating save `svc.save()` would
-   *  otherwise fall back to the env-prefilled `state` and drop a staged
-   *  toggle/select edit (see `onEnabled`/`onEncryption`). */
+  /** Carries the staged enable/encryption (see `onEnabled`). */
   onSave(): void {
     this.svc.save({ enabled: this.enabled(), encryption: this.encryption() });
   }

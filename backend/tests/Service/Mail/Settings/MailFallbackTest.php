@@ -12,44 +12,44 @@ final class MailFallbackTest extends TestCase
 {
     public function testNullTransportIsNotReal(): void
     {
-        $context = (new MailFallback('null://null', 'noreply@example.com', 'Reader'))->context();
+        $connection = (new MailFallback('null://null', 'noreply@example.com', 'Reader'))->connection();
 
-        self::assertFalse($context->isReal);
-        self::assertSame('', $context->host);
+        self::assertFalse($connection->enabled);
+        self::assertSame('', $connection->host);
     }
 
     public function testAnSmtpDsnFillsTheFormDefaults(): void
     {
-        $context = (new MailFallback(
+        $connection = (new MailFallback(
             'smtp://alice%40relay:pw@smtp.relay.test:2525',
             'noreply@example.com',
             'Reader',
-        ))->context();
+        ))->connection();
 
-        self::assertTrue($context->isReal);
-        self::assertSame('smtp.relay.test', $context->host);
-        self::assertSame(2525, $context->port);
-        self::assertSame('alice@relay', $context->username);
-        self::assertSame(MailEncryption::Starttls, $context->encryption);
-        self::assertSame('noreply@example.com', $context->fromAddress);
+        self::assertTrue($connection->enabled);
+        self::assertSame('smtp.relay.test', $connection->host);
+        self::assertSame(2525, $connection->port);
+        self::assertSame('alice@relay', $connection->username);
+        self::assertSame(MailEncryption::Starttls, $connection->encryption);
+        self::assertSame('noreply@example.com', $connection->fromAddress);
     }
 
     public function testAnSmtpsDsnResolvesToImplicitTls(): void
     {
-        $context = (new MailFallback('smtps://smtp.relay.test', 'from@x.test', 'X'))->context();
+        $connection = (new MailFallback('smtps://smtp.relay.test', 'from@x.test', 'X'))->connection();
 
-        self::assertSame(MailEncryption::Tls, $context->encryption);
+        self::assertSame(MailEncryption::Tls, $connection->encryption);
     }
 
     public function testASendmailDsnIsRealButNotSmtpParseable(): void
     {
-        $context = (new MailFallback(
+        $connection = (new MailFallback(
             'sendmail://default?command=%2Fusr%2Fsbin%2Fsendmail%20-t%20-i',
             'from@x.test',
             'X',
-        ))->context();
+        ))->connection();
 
-        self::assertTrue($context->isReal);
-        self::assertSame('', $context->host);
+        self::assertTrue($connection->enabled);
+        self::assertSame('', $connection->host);
     }
 }

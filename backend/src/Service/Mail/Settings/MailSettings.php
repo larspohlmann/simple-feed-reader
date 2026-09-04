@@ -18,6 +18,8 @@ use Doctrine\ORM\EntityManagerInterface;
  * when no row exists. The rest of the app depends on this, never on the entity
  * directly, so "no row yet", the sealing, and the DB-or-env resolution all live
  * in one place.
+ *
+ * @phpstan-import-type MailSettingsPayload from MailSettingsJson
  */
 readonly class MailSettings
 {
@@ -31,17 +33,10 @@ readonly class MailSettings
     ) {
     }
 
-    /**
-     * @return array{
-     *     enabled: bool, host: string, port: int, username: string|null,
-     *     encryption: string, fromAddress: string, fromName: string,
-     *     hasPassword: bool, passwordHint: string,
-     *     hasSavedConfig: bool, envFallbackConfigured: bool,
-     * }
-     */
+    /** @return MailSettingsPayload */
     public function view(): array
     {
-        return MailSettingsJson::from($this->repository->findSingleton(), $this->fallback->context());
+        return MailSettingsJson::from($this->repository->findSingleton(), $this->fallback->connection());
     }
 
     public function resetToEnvironment(): void
@@ -117,12 +112,9 @@ readonly class MailSettings
     {
         $settings = $this->repository->findSingleton();
 
-        return null !== $settings ? $settings->isEnabled() : $this->fallback->context()->isReal;
+        return null !== $settings ? $settings->isEnabled() : $this->fallback->connection()->enabled;
     }
 
-    /** Refuses to persist an enabled, authenticated row with no password on
-     *  record: it would resolve to a live, host-bearing transport that fails
-     *  every send, silently overriding a working env fallback. */
     private function guardAgainstIncompleteAuthenticatedRow(
         MailSettingsRequest $request,
         MailConnection $connection,

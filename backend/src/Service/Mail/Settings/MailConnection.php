@@ -9,7 +9,8 @@ use App\Enum\MailEncryption;
 /**
  * The non-secret mail connection fields, carried as one value so the entity
  * mutators and the service take a single argument. The sealed password travels
- * separately (it may be absent on an update).
+ * separately (it may be absent on an update). The env fallback is expressed in
+ * the same shape: host is '' when it is not an SMTP DSN (sendmail/null).
  */
 final readonly class MailConnection
 {

@@ -1,21 +1,10 @@
 services:
-    # MailSettingsTest fetches this to drive view()/update()/configuredTransport()
-    # through the real repository/cipher/fallback graph. Its only production
-    # caller (the admin mail settings endpoint) arrives in a later task, so
-    # until then the compiler would inline it away and the test container
-    # could not fetch it. Same `autowire` caveat as the entries below: naming
-    # a class here replaces the definition rather than amending it, and this
-    # file has no `_defaults`.
-    App\Service\Mail\Settings\MailSettings:
-        autowire: true
-        public: true
-
     # MailConnectionTesterTest fetches this to drive test() through the real
-    # settings/security graph. Its only production caller (the admin mail
-    # test-send endpoint) arrives in a later task, so until then the compiler
-    # would inline it away and the test container could not fetch it. Same
-    # `autowire` caveat as the entries below: naming a class here replaces the
-    # definition rather than amending it, and this file has no `_defaults`.
+    # settings/security graph. Its only production caller is a controller
+    # action argument, so the compiler would inline it away and the test
+    # container could not fetch it. Same `autowire` caveat as the entries
+    # below: naming a class here replaces the definition rather than amending
+    # it, and this file has no `_defaults`.
     App\Service\Mail\Settings\MailConnectionTester:
         autowire: true
         public: true

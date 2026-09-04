@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Mail\Transport;
 
 use App\Service\Mail\Settings\MailSettings;
-use App\Service\Mail\Settings\ResolvedMailTransport;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Envelope;
@@ -53,23 +52,22 @@ final class DynamicMailTransport implements TransportInterface
             return $this->cached;
         }
 
-        $this->cached = null !== $resolved ? $this->buildSmtp($resolved) : $this->buildFallback();
+        $this->cached = null !== $resolved
+            ? EsmtpTransportBuilder::from($resolved, $this->dispatcher, $this->logger)
+            : $this->buildFallback();
         $this->cachedSignature = $signature;
 
         return $this->cached;
     }
 
-    private function buildSmtp(ResolvedMailTransport $resolved): TransportInterface
-    {
-        return EsmtpTransportBuilder::from($resolved, $this->dispatcher, $this->logger);
-    }
-
     private function buildFallback(): TransportInterface
     {
-        $factories = Transport::getDefaultFactories($this->dispatcher, $this->httpClient, $this->logger);
-
-        return (new Transport(iterator_to_array($factories)))
-            ->fromString($this->settings->activeTransportDsnFallback());
+        return Transport::fromDsn(
+            $this->settings->activeTransportDsnFallback(),
+            $this->dispatcher,
+            $this->httpClient,
+            $this->logger,
+        );
     }
 
     public function __toString(): string

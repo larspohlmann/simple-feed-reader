@@ -6,11 +6,13 @@ namespace App\Service\Mail\Settings;
 
 use App\Enum\MailEncryption;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\Mailer\Exception\InvalidArgumentException;
+use Symfony\Component\Mailer\Transport\Dsn;
 
 /**
  * The env transport DSN and MAIL_FROM(_NAME), read as the fallback used when no
  * DB row exists. Parses only SMTP DSNs into form defaults; a sendmail or null
- * transport is reported as real-but-blank so the SMTP form starts empty while
+ * transport is reported as enabled-but-blank so the SMTP form starts empty while
  * the env transport keeps sending until the admin saves a DB config.
  */
 final readonly class MailFallback
@@ -35,42 +37,42 @@ final readonly class MailFallback
         return new MailIdentity($this->fromAddress, $this->fromName);
     }
 
-    public function context(): MailFallbackContext
+    public function connection(): MailConnection
     {
-        $parts = parse_url($this->dsn);
-        $scheme = \is_array($parts) ? ($parts['scheme'] ?? '') : '';
+        $dsn = $this->parsedDsn();
+        $scheme = $dsn?->getScheme();
 
-        if ('' === trim($this->dsn) || 'null' === $scheme) {
-            return $this->blank(false);
+        if (null === $dsn || ('smtp' !== $scheme && 'smtps' !== $scheme)) {
+            return new MailConnection(
+                '' !== trim($this->dsn) && 'null' !== $scheme,
+                '',
+                MailConnection::DEFAULT_PORT,
+                null,
+                MailEncryption::Starttls,
+                $this->fromAddress,
+                $this->fromName,
+            );
         }
 
-        if ('smtp' !== $scheme && 'smtps' !== $scheme) {
-            return $this->blank(true);
-        }
-
-        $encryption = 'smtps' === $scheme ? MailEncryption::Tls : MailEncryption::Starttls;
-
-        return new MailFallbackContext(
+        return new MailConnection(
             true,
-            $parts['host'] ?? '',
-            $parts['port'] ?? MailConnection::DEFAULT_PORT,
-            isset($parts['user']) ? rawurldecode($parts['user']) : null,
-            $encryption,
+            $dsn->getHost(),
+            $dsn->getPort() ?? MailConnection::DEFAULT_PORT,
+            $dsn->getUser(),
+            'smtps' === $scheme ? MailEncryption::Tls : MailEncryption::Starttls,
             $this->fromAddress,
             $this->fromName,
         );
     }
 
-    private function blank(bool $isReal): MailFallbackContext
+    /** Symfony's own DSN parser, so the form prefill agrees with what the
+     *  transport will actually dial. Null for an empty or malformed DSN. */
+    private function parsedDsn(): ?Dsn
     {
-        return new MailFallbackContext(
-            $isReal,
-            '',
-            MailConnection::DEFAULT_PORT,
-            null,
-            MailEncryption::Starttls,
-            $this->fromAddress,
-            $this->fromName,
-        );
+        try {
+            return Dsn::fromString($this->dsn);
+        } catch (InvalidArgumentException) {
+            return null;
+        }
     }
 }

@@ -18,6 +18,17 @@ final class AdminMailControllerTest extends ApiTestCase
 {
     private const string MAIL = '/api/admin/mail';
 
+    private const array SAVED_SMTP_ROW = [
+        'enabled' => true,
+        'host' => 'smtp.example',
+        'port' => 587,
+        'username' => 'user',
+        'encryption' => 'starttls',
+        'fromAddress' => 'noreply@example.com',
+        'fromName' => 'Example',
+        'password' => 'sw0rdfish',
+    ];
+
     private KernelBrowser $client;
 
     protected function setUp(): void
@@ -38,6 +49,15 @@ final class AdminMailControllerTest extends ApiTestCase
     private function admin(string $email = 'boss@example.com'): User
     {
         return $this->factory()->create($email, roles: ['ROLE_ADMIN']);
+    }
+
+    private function requestAs(User $user, string $method, string $path = self::MAIL): void
+    {
+        $this->client->request(
+            $method,
+            $path,
+            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($user)],
+        );
     }
 
     /** @param array<string, mixed> $body */
@@ -65,11 +85,7 @@ final class AdminMailControllerTest extends ApiTestCase
     {
         $plain = $this->factory()->create('plain@example.com');
 
-        $this->client->request(
-            'GET',
-            self::MAIL,
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($plain)],
-        );
+        $this->requestAs($plain, 'GET');
 
         self::assertResponseStatusCodeSame(403);
     }
@@ -78,11 +94,7 @@ final class AdminMailControllerTest extends ApiTestCase
     {
         $admin = $this->admin();
 
-        $this->client->request(
-            'GET',
-            self::MAIL,
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin)],
-        );
+        $this->requestAs($admin, 'GET');
 
         self::assertResponseIsSuccessful();
         $body = $this->payload($this->client);
@@ -93,16 +105,7 @@ final class AdminMailControllerTest extends ApiTestCase
     {
         $admin = $this->admin();
 
-        $this->requestWithJsonBody('PUT', $admin, [
-            'enabled' => true,
-            'host' => 'smtp.example',
-            'port' => 587,
-            'username' => 'user',
-            'encryption' => 'starttls',
-            'fromAddress' => 'noreply@example.com',
-            'fromName' => 'Example',
-            'password' => 'sw0rdfish',
-        ]);
+        $this->requestWithJsonBody('PUT', $admin, self::SAVED_SMTP_ROW);
 
         self::assertResponseIsSuccessful();
         $body = $this->payload($this->client);
@@ -115,11 +118,7 @@ final class AdminMailControllerTest extends ApiTestCase
     {
         $admin = $this->admin();
 
-        $this->client->request(
-            'POST',
-            self::MAIL . '/test',
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin)],
-        );
+        $this->requestAs($admin, 'POST', self::MAIL . '/test');
 
         self::assertResponseIsSuccessful();
         $body = $this->payload($this->client);
@@ -148,11 +147,7 @@ final class AdminMailControllerTest extends ApiTestCase
         ]);
         self::assertResponseIsSuccessful();
 
-        $this->client->request(
-            'POST',
-            self::MAIL . '/test',
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin)],
-        );
+        $this->requestAs($admin, 'POST', self::MAIL . '/test');
 
         self::assertResponseIsSuccessful();
         $body = $this->payload($this->client);
@@ -164,24 +159,11 @@ final class AdminMailControllerTest extends ApiTestCase
     {
         $admin = $this->admin();
 
-        $this->requestWithJsonBody('PUT', $admin, [
-            'enabled' => true,
-            'host' => 'smtp.example',
-            'port' => 587,
-            'username' => 'user',
-            'encryption' => 'starttls',
-            'fromAddress' => 'noreply@example.com',
-            'fromName' => 'Example',
-            'password' => 'sw0rdfish',
-        ]);
+        $this->requestWithJsonBody('PUT', $admin, self::SAVED_SMTP_ROW);
         self::assertResponseIsSuccessful();
         self::assertTrue($this->payload($this->client)['hasSavedConfig']);
 
-        $this->client->request(
-            'POST',
-            self::MAIL . '/reset',
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin)],
-        );
+        $this->requestAs($admin, 'POST', self::MAIL . '/reset');
 
         self::assertResponseIsSuccessful();
         $body = $this->payload($this->client);
@@ -203,26 +185,8 @@ final class AdminMailControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(422);
         self::assertSame('application/problem+json', $this->client->getResponse()->headers->get('Content-Type'));
 
-        $this->client->request(
-            'GET',
-            self::MAIL,
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin)],
-        );
+        $this->requestAs($admin, 'GET');
         self::assertFalse($this->payload($this->client)['hasSavedConfig']);
-    }
-
-    public function testUpdateAcceptsAnAuthenticatedRowWithAPassword(): void
-    {
-        $admin = $this->admin();
-
-        $this->requestWithJsonBody('PUT', $admin, [
-            'enabled' => true,
-            'host' => 'smtp.example',
-            'username' => 'user',
-            'password' => 'sw0rdfish',
-        ]);
-
-        self::assertResponseIsSuccessful();
     }
 
     public function testUpdateAcceptsKeepingAStoredPasswordOnAnAlreadyAuthedRow(): void
@@ -251,11 +215,7 @@ final class AdminMailControllerTest extends ApiTestCase
     {
         $plain = $this->factory()->create('plain@example.com');
 
-        $this->client->request(
-            'POST',
-            self::MAIL . '/reset',
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($plain)],
-        );
+        $this->requestAs($plain, 'POST', self::MAIL . '/reset');
 
         self::assertResponseStatusCodeSame(403);
     }

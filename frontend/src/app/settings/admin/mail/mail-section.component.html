@@ -41,7 +41,7 @@
           class="host-field"
           data-testid="mail-host"
           [value]="host()"
-          (input)="onHost($event)"
+          (input)="onTyped('host', $event)"
         />
       </app-settings-row>
 
@@ -64,7 +64,7 @@
           autocomplete="off"
           data-testid="mail-username"
           [value]="username()"
-          (input)="onUsername($event)"
+          (input)="onTyped('username', $event)"
         />
       </app-settings-row>
 
@@ -75,7 +75,7 @@
           autocomplete="off"
           data-testid="mail-from-address"
           [value]="fromAddress()"
-          (input)="onFromAddress($event)"
+          (input)="onTyped('fromAddress', $event)"
         />
       </app-settings-row>
 
@@ -86,7 +86,7 @@
           autocomplete="off"
           data-testid="mail-from-name"
           [value]="fromName()"
-          (input)="onFromName($event)"
+          (input)="onTyped('fromName', $event)"
         />
       </app-settings-row>
 
