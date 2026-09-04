@@ -9,6 +9,15 @@
           <a [routerLink]="'/settings/' + s.path" routerLinkActive="active">
             <app-icon [name]="s.icon" size="sm" />
             <span class="label">{{ s.labelKey | transloco }}</span>
+            @if (s.path === 'organise' && unhealthyCount()) {
+              <span
+                class="badge"
+                [attr.aria-label]="
+                  'settings.health.badgeLabel' | transloco: { count: unhealthyCount() }
+                "
+                >{{ unhealthyCount() }}</span
+              >
+            }
             <app-icon class="chev" name="chevron_right" size="sm" />
           </a>
         </li>

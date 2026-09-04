@@ -21,6 +21,19 @@ a {
   white-space: nowrap;
 }
 
+/* Unhealthy-feed count on the Organise entry: same accent-soft pill as the
+   global .whole-word-badge/.phrase-badge (#581), scoped here since it applies
+   to one nav row rather than a whole feature's search chrome. */
+.badge {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-tight);
+  white-space: nowrap;
+}
+
 .group {
   margin: var(--space-4) 0 var(--space-1);
   padding: 0 var(--row-pad-x);

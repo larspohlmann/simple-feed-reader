@@ -28,7 +28,9 @@ final class SubscriptionJson
      *   id: int|null, feedId: int|null, title: string, customTitle: string|null, feedUrl: string,
      *   siteUrl: string|null, faviconUrl: string|null, description: string|null, imageUrl: string|null,
      *   status: string, sourceFormat: string,
-     *   createdAt: string, lastFetchedAt: string|null, position: int,
+     *   createdAt: string, lastFetchedAt: string|null,
+     *   lastSuccessfulFetchAt: string|null, consecutiveFailures: int, lastErrorMessage: string|null,
+     *   position: int,
      *   tags: list<array{id: int|null, name: string, color: string|null, icon: string|null, position: int}>,
      *   unreadCount: int, includeInAllItems: bool, includeInForYou: bool
      * }
@@ -61,6 +63,9 @@ final class SubscriptionJson
             'sourceFormat' => $feed->getSourceFormat(),
             'createdAt' => $sub->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'lastFetchedAt' => $feed->getLastFetchedAt()?->format(\DateTimeInterface::ATOM),
+            'lastSuccessfulFetchAt' => $feed->getLastSuccessfulFetchAt()?->format(\DateTimeInterface::ATOM),
+            'consecutiveFailures' => $feed->getConsecutiveFailures(),
+            'lastErrorMessage' => $feed->getLastErrorMessage(),
             'position' => $sub->getPosition(),
             'tags' => $tags,
             'unreadCount' => $unreadCount,

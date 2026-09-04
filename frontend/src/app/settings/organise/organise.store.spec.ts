@@ -4,6 +4,7 @@ import { OrganiseStore } from './organise.store';
 import { SubscriptionsStore } from '../../reader/subscriptions.store';
 import { TagsStore } from '../../reader/tags.store';
 import { SubscriptionDto, TagDto } from '../../reader/models';
+import { makeSubscription } from '../../reader/testing/subscription.factory';
 
 const tag = (id: number, name: string, position: number): TagDto => ({
   id,
@@ -14,20 +15,11 @@ const tag = (id: number, name: string, position: number): TagDto => ({
 });
 
 const sub = (id: number, title: string, tagIds: number[] = [], position = 0): SubscriptionDto =>
-  ({
+  makeSubscription({
     id,
     feedId: id,
     title,
-    faviconUrl: null,
-    customTitle: null,
     feedUrl: `https://feed-${id}.example/rss`,
-    siteUrl: null,
-    description: null,
-    imageUrl: null,
-    status: 'active',
-    sourceFormat: 'xml',
-    createdAt: '2026-01-01T00:00:00Z',
-    lastFetchedAt: null,
     position,
     tags: tagIds.map((tagId, index) => ({
       id: tagId,
@@ -36,10 +28,7 @@ const sub = (id: number, title: string, tagIds: number[] = [], position = 0): Su
       icon: null,
       position: index,
     })),
-    unreadCount: 0,
-    includeInAllItems: true,
-    includeInForYou: true,
-  }) as SubscriptionDto;
+  });
 
 describe('OrganiseStore', () => {
   const TAGS = [tag(1, 'Nachrichten', 0), tag(2, 'Tech', 1)];

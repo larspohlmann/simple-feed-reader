@@ -491,6 +491,39 @@
       "hideFromForYou": "Aus Für dich ausblenden",
       "clear": "Zurücksetzen"
     },
+    "health": {
+      "title": "Fehlerhafte Feeds",
+      "summaryOne": "{{count}} Feed braucht deine Aufmerksamkeit",
+      "summaryOther": "{{count}} Feeds brauchen deine Aufmerksamkeit",
+      "badgeLabel": "{{count}} fehlerhafte Feeds",
+      "pill": {
+        "dead": "Tot",
+        "failing": "Fehlerhaft"
+      },
+      "reason": {
+        "gone": "Nicht mehr verfügbar",
+        "noUpdateToday": "Seit heute keine Aktualisierung",
+        "noUpdateOne": "Seit {{days}} Tag keine Aktualisierung",
+        "noUpdateOther": "Seit {{days}} Tagen keine Aktualisierung",
+        "failedAttemptsOne": "{{count}} fehlgeschlagener Versuch",
+        "failedAttemptsOther": "{{count}} fehlgeschlagene Versuche"
+      },
+      "details": {
+        "lastSuccess": "Letzte erfolgreiche Aktualisierung",
+        "lastAttempt": "Letzter Versuch",
+        "failures": "Fehlversuche in Folge",
+        "technical": "Technische Details"
+      },
+      "action": {
+        "retry": "Erneut versuchen",
+        "unsubscribe": "Abbestellen"
+      },
+      "retry": {
+        "recovered": "{{title}} ist wieder erreichbar",
+        "stillFailing": "{{title}} schlägt weiterhin fehl",
+        "error": "{{title}} konnte nicht erneut abgerufen werden"
+      }
+    },
     "passkeys": {
       "title": "Passkeys",
       "caption": "Melde dich ohne Passwort an, mit dem Fingerabdruck, Gesicht oder der Bildschirmsperre deines Geräts.",

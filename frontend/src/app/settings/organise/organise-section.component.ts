@@ -14,11 +14,13 @@ import { SettingsGroupComponent } from '../../shared/settings/settings-group/set
 import { OrganiseStore, OrganiseGroup, GroupKey } from './organise.store';
 import { OrganiseTagGroupComponent } from './organise-tag-group.component';
 import { OrganiseFeedRowComponent } from './organise-feed-row.component';
+import { UnhealthyFeedRowComponent } from './unhealthy-feed-row.component';
 import { BulkTagDialogComponent, BulkTagDialogData } from './bulk-tag-dialog.component';
 import { ManageActions } from '../../reader/manage/manage-actions.service';
 import { SubscriptionsStore } from '../../reader/subscriptions.store';
 import { TagsStore } from '../../reader/tags.store';
 import { Problem, parseProblem } from '../../core/problem';
+import { pluralKey } from '../../core/plural-key';
 import { SubscriptionFlags, TagDto } from '../../reader/models';
 
 /** One item of the bulk bar's "Visibility" menu: which flag it sets, to what
@@ -51,6 +53,7 @@ interface VisibilityMenuItem {
     SettingsGroupComponent,
     OrganiseTagGroupComponent,
     OrganiseFeedRowComponent,
+    UnhealthyFeedRowComponent,
     DismissOnOutsideDirective,
     CdkDropListGroup,
   ],
@@ -60,6 +63,8 @@ interface VisibilityMenuItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OrganiseSectionComponent implements OnInit {
+  protected readonly pluralKey = pluralKey;
+
   readonly store = inject(OrganiseStore);
   protected readonly manage = inject(ManageActions);
   protected readonly subs = inject(SubscriptionsStore);

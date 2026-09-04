@@ -6,28 +6,15 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { OrganiseFeedRowComponent } from './organise-feed-row.component';
 import { LayoutService } from '../../reader/layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
-import { SubscriptionDto } from '../../reader/models';
+import { makeSubscription } from '../../reader/testing/subscription.factory';
 
-const SUBSCRIPTION = {
+const SUBSCRIPTION = makeSubscription({
   id: 7,
   feedId: 7,
   title: 'heise online',
-  faviconUrl: null,
-  customTitle: null,
   feedUrl: 'https://heise.example/rss',
-  siteUrl: null,
-  description: null,
-  imageUrl: null,
-  status: 'active',
-  sourceFormat: 'xml',
-  createdAt: '2026-01-01T00:00:00Z',
-  lastFetchedAt: null,
-  position: 0,
   tags: [{ id: 2, name: 'Tech', color: null, icon: null, position: 0 }],
-  unreadCount: 0,
-  includeInAllItems: true,
-  includeInForYou: true,
-} as SubscriptionDto;
+});
 
 describe('OrganiseFeedRowComponent', () => {
   let fixture: ComponentFixture<OrganiseFeedRowComponent>;

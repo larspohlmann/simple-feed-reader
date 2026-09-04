@@ -1,0 +1,98 @@
+:host {
+  display: block;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: var(--space-2);
+}
+
+.title {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Mirrors the `.pill` chip in `organise-feed-row.component.scss`, but the
+// dead/failing colour comes from the status itself rather than staying
+// neutral — this pill IS the at-a-glance signal the list exists for.
+.pill {
+  flex: 0 0 auto;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-normal);
+  white-space: nowrap;
+}
+
+.pill.dead {
+  background: var(--bg-danger);
+  color: var(--danger);
+}
+
+.pill.failing {
+  background: var(--bg-warning);
+  color: var(--warning);
+}
+
+.reason {
+  flex: 1 1 auto;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.acts {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+}
+
+.fact {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+}
+
+.fact .label,
+.technical .label {
+  color: var(--text-muted);
+}
+
+.fact .value {
+  color: var(--text-primary);
+}
+
+.technical {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--fs-sm);
+}
+
+.technical pre {
+  margin: 0;
+  padding: var(--space-2);
+  overflow-x: auto;
+  border-radius: var(--radius-sm);
+  background: var(--surface-0);
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

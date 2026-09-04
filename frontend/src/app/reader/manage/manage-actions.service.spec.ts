@@ -8,31 +8,20 @@ import { API_BASE_URL } from '../../core/api';
 import { ManageActions } from './manage-actions.service';
 import { SubscriptionsStore } from '../subscriptions.store';
 import { TagsStore } from '../tags.store';
-import { SubscriptionDto, TagDto } from '../models';
-import { ToastService } from '../../shared/toast/toast.service';
+import { RefreshReport, SubscriptionDto, TagDto } from '../models';
+import { makeSubscription } from '../testing/subscription.factory';
+import { ToastService, CONFIRMATION_DURATION_MS } from '../../shared/toast/toast.service';
+import { TranslocoService } from '@jsverse/transloco';
 
 const BASE = 'https://api.test';
 
-const sub: SubscriptionDto = {
+const sub: SubscriptionDto = makeSubscription({
   id: 5,
   feedId: 50,
   title: 'Heise',
-  faviconUrl: null,
-  customTitle: null,
   feedUrl: 'u',
-  siteUrl: null,
-  description: null,
-  imageUrl: null,
-  status: 'active',
-  sourceFormat: 'xml',
   createdAt: 'x',
-  lastFetchedAt: null,
-  position: 0,
-  tags: [],
-  unreadCount: 0,
-  includeInAllItems: true,
-  includeInForYou: true,
-};
+});
 const tag: TagDto = { id: 3, name: 'Tech', color: null, icon: null, position: 0 };
 const TAG = tag;
 const SUBSCRIPTION = sub;
@@ -359,6 +348,132 @@ describe('ManageActions', () => {
       req.flush({ removed: 2 });
 
       expect(subLoad).toHaveBeenCalled();
+    });
+  });
+
+  describe('retryFeed', () => {
+    const refreshReport = (over: Partial<RefreshReport>): RefreshReport => ({
+      status: 'completed',
+      progress: { done: 1, total: 1 },
+      fetched: 0,
+      notModified: 0,
+      failed: 0,
+      throttled: 0,
+      skippedForBudget: 0,
+      remaining: 0,
+      pruned: 0,
+      ...over,
+    });
+    const flushReload = (http: HttpTestingController): void => {
+      http
+        .expectOne(`${BASE}/api/subscriptions`)
+        .flush({ subscriptions: [], favoritesCount: 0, keptCount: 0, viewedCount: 0 });
+    };
+
+    let http: HttpTestingController;
+    afterEach(() => http.verify());
+
+    // Own TestBed, same reason as the bulk-action setup(): ManageActions and
+    // ToastService share the Dialog token, so a real ToastService.show() call
+    // here needs the stub replaced rather than left to the outer `open` mock.
+    function setup() {
+      TestBed.resetTestingModule();
+      const toast = { show: jest.fn() };
+      TestBed.configureTestingModule({
+        imports: [provideTranslocoTesting()],
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: API_BASE_URL, useValue: BASE },
+          { provide: Dialog, useValue: { open } },
+          { provide: ToastService, useValue: toast },
+        ],
+      });
+      const actions = TestBed.inject(ManageActions);
+      http = TestBed.inject(HttpTestingController);
+      // Spy without a mock implementation: translate() still runs for real
+      // (the shipped en/de dictionaries), so a missing `settings.health.retry.*`
+      // key still resolves the same way production would — the spy only lets
+      // the tests see exactly which key and params retryFeed passed in, which
+      // the rendered (key-echoing) string alone cannot distinguish.
+      const translate = jest.spyOn(TestBed.inject(TranslocoService), 'translate');
+      return { actions, http, toast, translate };
+    }
+
+    it('POSTs a single-feed refresh scoped by feedId', () => {
+      const { actions, http } = setup();
+
+      actions.retryFeed(sub);
+
+      const req = http.expectOne(`${BASE}/api/refresh?feedId=${sub.feedId}`);
+      expect(req.request.method).toBe('POST');
+      req.flush(refreshReport({ failed: 0, fetched: 1 }));
+      flushReload(http);
+    });
+
+    it('shows the recovered toast and reloads when the report has no failures', () => {
+      const { actions, http, toast, translate } = setup();
+
+      actions.retryFeed(sub);
+      http
+        .expectOne(`${BASE}/api/refresh?feedId=${sub.feedId}`)
+        .flush(refreshReport({ failed: 0, fetched: 1, notModified: 0 }));
+
+      expect(translate).toHaveBeenCalledWith('settings.health.retry.recovered', {
+        title: sub.title,
+      });
+      expect(toast.show).toHaveBeenCalledWith(
+        expect.objectContaining({ durationMs: CONFIRMATION_DURATION_MS }),
+      );
+      flushReload(http);
+    });
+
+    it('treats a pure 304 (no fetch, no failure) as recovered', () => {
+      const { actions, http, translate } = setup();
+
+      actions.retryFeed(sub);
+      http
+        .expectOne(`${BASE}/api/refresh?feedId=${sub.feedId}`)
+        .flush(refreshReport({ failed: 0, fetched: 0, notModified: 1 }));
+
+      expect(translate).toHaveBeenCalledWith('settings.health.retry.recovered', {
+        title: sub.title,
+      });
+      flushReload(http);
+    });
+
+    it('shows the still-failing toast and reloads when the report carries a failure', () => {
+      const { actions, http, toast, translate } = setup();
+
+      actions.retryFeed(sub);
+      http
+        .expectOne(`${BASE}/api/refresh?feedId=${sub.feedId}`)
+        .flush(refreshReport({ failed: 1, fetched: 0, notModified: 0 }));
+
+      expect(translate).toHaveBeenCalledWith('settings.health.retry.stillFailing', {
+        title: sub.title,
+      });
+      expect(toast.show).toHaveBeenCalledWith(
+        expect.objectContaining({ durationMs: CONFIRMATION_DURATION_MS }),
+      );
+      flushReload(http);
+    });
+
+    it('shows the error toast and does not reload when the refresh request fails', () => {
+      const { actions, http, toast, translate } = setup();
+
+      actions.retryFeed(sub);
+      http
+        .expectOne(`${BASE}/api/refresh?feedId=${sub.feedId}`)
+        .flush('fail', { status: 500, statusText: 'Server Error' });
+
+      expect(translate).toHaveBeenCalledWith('settings.health.retry.error', {
+        title: sub.title,
+      });
+      expect(toast.show).toHaveBeenCalledWith(
+        expect.objectContaining({ durationMs: CONFIRMATION_DURATION_MS }),
+      );
+      http.expectNone(`${BASE}/api/subscriptions`);
     });
   });
 });

@@ -29,6 +29,9 @@ const sub = (
   sourceFormat: 'xml',
   createdAt: 'x',
   lastFetchedAt: null,
+  lastSuccessfulFetchAt: null,
+  consecutiveFailures: 0,
+  lastErrorMessage: null,
   position: 0,
   tags,
   unreadCount: unread,
@@ -300,6 +303,16 @@ describe('SubscriptionsStore', () => {
     expect(store.subscriptions().find((s) => s.id === 2)!.includeInAllItems).toBe(true);
     store.patchLocal(1, { includeInForYou: false });
     expect(store.subscriptions().find((s) => s.id === 1)!.includeInForYou).toBe(false);
+  });
+
+  it('exposes unhealthy feeds and their count', () => {
+    store.subscriptions.set([
+      { ...sub(1, 0), title: 'Bravo', status: 'erroring' },
+      { ...sub(2, 0), title: 'Alpha', status: 'gone' },
+      { ...sub(3, 0), status: 'active' },
+    ]);
+    expect(store.unhealthy().map((s) => s.id)).toEqual([2, 1]);
+    expect(store.unhealthyCount()).toBe(2);
   });
 
   it('captures a problem on error', () => {

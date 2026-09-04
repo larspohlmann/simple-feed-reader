@@ -491,6 +491,39 @@
       "hideFromForYou": "Hide from For you",
       "clear": "Clear"
     },
+    "health": {
+      "title": "Unhealthy feeds",
+      "summaryOne": "{{count}} feed needs your attention",
+      "summaryOther": "{{count}} feeds need your attention",
+      "badgeLabel": "{{count}} unhealthy feeds",
+      "pill": {
+        "dead": "Dead",
+        "failing": "Failing"
+      },
+      "reason": {
+        "gone": "No longer available",
+        "noUpdateToday": "No update since today",
+        "noUpdateOne": "No update in {{days}} day",
+        "noUpdateOther": "No update in {{days}} days",
+        "failedAttemptsOne": "{{count}} failed attempt",
+        "failedAttemptsOther": "{{count}} failed attempts"
+      },
+      "details": {
+        "lastSuccess": "Last successful update",
+        "lastAttempt": "Last attempt",
+        "failures": "Failure streak",
+        "technical": "Technical details"
+      },
+      "action": {
+        "retry": "Retry",
+        "unsubscribe": "Unsubscribe"
+      },
+      "retry": {
+        "recovered": "{{title}} is back",
+        "stillFailing": "{{title}} is still failing",
+        "error": "Could not retry {{title}}"
+      }
+    },
     "passkeys": {
       "title": "Passkeys",
       "caption": "Sign in without a password, using your device's fingerprint, face or screen lock.",

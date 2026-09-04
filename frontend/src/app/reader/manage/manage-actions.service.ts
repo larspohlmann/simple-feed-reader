@@ -3,9 +3,16 @@ import { Observable, map, of, switchMap, tap } from 'rxjs';
 import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoService } from '@jsverse/transloco';
 import { ReaderApi } from '../reader-api';
+import { isFeedRecovered } from '../feed-health';
 import { SubscriptionsStore } from '../subscriptions.store';
 import { TagsStore } from '../tags.store';
-import { BulkSubscriptionUpdate, SubscriptionDto, SubscriptionFlags, TagDto } from '../models';
+import {
+  BulkSubscriptionUpdate,
+  RefreshReport,
+  SubscriptionDto,
+  SubscriptionFlags,
+  TagDto,
+} from '../models';
 import {
   ConfirmDialogComponent,
   ConfirmData,
@@ -304,6 +311,29 @@ export class ManageActions {
         if (subscription) this.subs.load();
       }),
     );
+  }
+
+  /** Manually re-fetch one feed (the health list's Retry). Reaches gone feeds
+   *  too; a success resurrects the feed server-side. Awaits the report so the
+   *  toast tells the truth, then reloads so a recovered feed leaves the list. */
+  retryFeed(sub: SubscriptionDto): void {
+    this.api.refresh({ feedId: sub.feedId }).subscribe({
+      next: (report: RefreshReport) => {
+        this.notifyRetryOutcome(sub, isFeedRecovered(report) ? 'recovered' : 'stillFailing');
+        this.subs.load();
+      },
+      error: () => this.notifyRetryOutcome(sub, 'error'),
+    });
+  }
+
+  private notifyRetryOutcome(
+    sub: SubscriptionDto,
+    outcome: 'recovered' | 'stillFailing' | 'error',
+  ): void {
+    this.toast.show({
+      message: this.i18n.translate(`settings.health.retry.${outcome}`, { title: sub.title }),
+      durationMs: CONFIRMATION_DURATION_MS,
+    });
   }
 
   private bulkPatch(body: BulkSubscriptionUpdate, confirmation: string): Observable<void> {
