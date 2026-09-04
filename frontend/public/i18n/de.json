@@ -363,8 +363,10 @@
     "proxy": {
       "title": "Ausgehender Proxy",
       "caption": "Feeds und Artikelseiten über einen SOCKS5- oder HTTP-Proxy abrufen.",
-      "enabled": "Datenverkehr über den Proxy leiten",
+      "enabled": "Proxy für den Feed-Abruf verwenden",
       "enabledDisabledHint": "Speichere zuerst Host und Port, dann kannst du den Proxy aktivieren.",
+      "usedByMailNote": "Ausgehende E-Mail kann diesen Proxy ebenfalls nutzen — aktiviere das in den",
+      "usedByMailLink": "Mail-Einstellungen",
       "directFallback": "Bei Fehler direkt verbinden",
       "directFallbackDesc": "Standardmäßig aktiviert — bei einem Proxy-Fehler wird der Abruf direkt wiederholt.",
       "type": "Proxy-Typ",

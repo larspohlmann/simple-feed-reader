@@ -363,8 +363,10 @@
     "proxy": {
       "title": "Egress proxy",
       "caption": "Fetch feeds and article pages through a SOCKS5 or HTTP proxy.",
-      "enabled": "Route traffic through the proxy",
+      "enabled": "Use the proxy for feed fetching",
       "enabledDisabledHint": "Save a host and port first, then you can turn the proxy on.",
+      "usedByMailNote": "Outgoing mail can also use this proxy — turn that on in",
+      "usedByMailLink": "Mail settings",
       "directFallback": "Fall back to a direct connection",
       "directFallbackDesc": "On by default — a proxy failure retries the fetch directly.",
       "type": "Proxy type",

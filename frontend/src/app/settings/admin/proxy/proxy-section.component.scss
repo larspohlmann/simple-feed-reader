@@ -1,2 +1,17 @@
 @use '../../../shared/settings/probe-section';
 @include probe-section.probe-section;
+
+// The proxy has two consumers (#845): feed fetching and, optionally, outgoing
+// mail. This note trails the enable row rather than sitting inside it, since
+// it names the other consumer rather than describing this row's own control.
+.consumers-note {
+  margin: 0;
+  padding: 0 var(--panel-inset-x) var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.consumers-note a {
+  color: var(--accent);
+  font-weight: 600;
+}

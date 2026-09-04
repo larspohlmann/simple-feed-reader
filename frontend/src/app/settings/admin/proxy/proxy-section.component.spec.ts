@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { API_BASE_URL } from '../../../core/api';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../../shared/toast/toast.service';
@@ -37,6 +38,7 @@ describe('ProxySectionComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideRouter([]),
         { provide: API_BASE_URL, useValue: BASE },
         { provide: ToastService, useValue: toastStub },
       ],
@@ -64,6 +66,11 @@ describe('ProxySectionComponent', () => {
   const errorBanner = (fixture: ComponentFixture<ProxySectionComponent>): HTMLElement | null =>
     fixture.nativeElement.querySelector('app-error-banner');
 
+  const mailSettingsLink = (
+    fixture: ComponentFixture<ProxySectionComponent>,
+  ): HTMLAnchorElement | null =>
+    fixture.nativeElement.querySelector('[data-testid="proxy-used-by-mail-link"]');
+
   beforeEach(() => {
     toastStub.show.mockReset();
   });
@@ -80,6 +87,21 @@ describe('ProxySectionComponent', () => {
     const fixture = mount(state({ host: 'proxy.example.com' }));
 
     expect(enableToggleInput(fixture).disabled).toBe(false);
+  });
+
+  it('scopes the enable toggle label to feed fetching', () => {
+    const fixture = mount(state({ host: 'proxy.example.com' }));
+
+    const row = enableToggleInput(fixture).closest('app-settings-row');
+    expect(row?.textContent).toContain('Use the proxy for feed fetching');
+  });
+
+  it('names outgoing mail as another consumer and links to Mail settings', () => {
+    const fixture = mount(state({ host: 'proxy.example.com' }));
+
+    const link = mailSettingsLink(fixture);
+    expect(fixture.nativeElement.textContent).toContain('Outgoing mail can also use this proxy');
+    expect(link?.getAttribute('href')).toBe('/settings/admin/mail');
   });
 
   it('saves instantly when the enable toggle is flipped', () => {

@@ -6,6 +6,7 @@ import {
   linkedSignal,
   signal,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ButtonComponent } from '../../../shared/button/button.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
@@ -40,6 +41,7 @@ const DEFAULT_PORT = 1080;
     IconComponent,
     InfoTipComponent,
     PasswordInputComponent,
+    RouterLink,
     SettingsGroupComponent,
     SettingsRowComponent,
     SettingsSaveBarComponent,
