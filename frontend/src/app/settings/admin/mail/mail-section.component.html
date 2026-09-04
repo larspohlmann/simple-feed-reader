@@ -167,7 +167,7 @@
             class="host-field"
             data-testid="mail-host"
             [value]="host()"
-            [attr.aria-invalid]="isFieldInvalid('host')"
+            [attr.aria-invalid]="!!fieldError('host')"
             (input)="onTyped('host', $event)"
           />
         </app-settings-row>
@@ -184,7 +184,7 @@
             max="65535"
             data-testid="mail-port"
             [value]="port()"
-            [attr.aria-invalid]="isFieldInvalid('port')"
+            [attr.aria-invalid]="!!fieldError('port')"
             (input)="onPort($event)"
           />
         </app-settings-row>
@@ -200,7 +200,7 @@
             autocomplete="off"
             data-testid="mail-username"
             [value]="username()"
-            [attr.aria-invalid]="isFieldInvalid('username')"
+            [attr.aria-invalid]="!!fieldError('username')"
             (input)="onTyped('username', $event)"
           />
         </app-settings-row>
@@ -216,7 +216,7 @@
             autocomplete="off"
             data-testid="mail-from-address"
             [value]="fromAddress()"
-            [attr.aria-invalid]="isFieldInvalid('fromAddress')"
+            [attr.aria-invalid]="!!fieldError('fromAddress')"
             (input)="onTyped('fromAddress', $event)"
           />
         </app-settings-row>
@@ -232,7 +232,7 @@
             autocomplete="off"
             data-testid="mail-from-name"
             [value]="fromName()"
-            [attr.aria-invalid]="isFieldInvalid('fromName')"
+            [attr.aria-invalid]="!!fieldError('fromName')"
             (input)="onTyped('fromName', $event)"
           />
         </app-settings-row>
@@ -250,7 +250,7 @@
               data-testid="mail-password"
               [placeholder]="'settings.mail.passwordKeepHint' | transloco"
               [value]="password()"
-              [attr.aria-invalid]="isFieldInvalid('password')"
+              [attr.aria-invalid]="!!fieldError('password')"
               (input)="onPassword($event)"
             />
           </app-password-input>

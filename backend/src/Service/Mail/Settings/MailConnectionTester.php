@@ -11,12 +11,10 @@ use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\Mailer;
-use Symfony\Component\Mailer\Transport;
 use Symfony\Component\Mailer\Transport\TransportInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\Mime\Exception\RfcComplianceException;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
  * Sends a real message synchronously through the transport that would actually
@@ -30,7 +28,6 @@ final readonly class MailConnectionTester
         private Security $security,
         private LoggerInterface $logger,
         private ActiveMailTransportFactory $transportFactory,
-        private HttpClientInterface $httpClient,
     ) {
     }
 
@@ -82,10 +79,9 @@ final readonly class MailConnectionTester
         }
 
         if ($this->settings->hasEnvFallback()) {
-            return Transport::fromDsn(
+            return $this->transportFactory->forFallbackDsn(
                 $this->settings->activeTransportDsnFallback(),
                 null,
-                $this->httpClient,
                 $this->logger,
             );
         }

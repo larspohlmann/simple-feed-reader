@@ -11,10 +11,8 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Envelope;
 use Symfony\Component\Mailer\Exception\TransportException;
 use Symfony\Component\Mailer\SentMessage;
-use Symfony\Component\Mailer\Transport;
 use Symfony\Component\Mailer\Transport\TransportInterface;
 use Symfony\Component\Mime\RawMessage;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
  * The one mailer transport. It resolves the active transport at SEND time, never
@@ -34,7 +32,6 @@ final class DynamicMailTransport implements TransportInterface
         private readonly MailSettings $settings,
         private readonly ActiveMailTransportFactory $transportFactory,
         private readonly EventDispatcherInterface $dispatcher,
-        private readonly HttpClientInterface $httpClient,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -71,10 +68,9 @@ final class DynamicMailTransport implements TransportInterface
 
     private function buildFallback(): TransportInterface
     {
-        return Transport::fromDsn(
+        return $this->transportFactory->forFallbackDsn(
             $this->settings->activeTransportDsnFallback(),
             $this->dispatcher,
-            $this->httpClient,
             $this->logger,
         );
     }

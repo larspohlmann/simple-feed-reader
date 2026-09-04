@@ -263,10 +263,6 @@ export class MailSectionComponent {
     return this.svc.failure()?.errors?.[field]?.join(' ') ?? null;
   }
 
-  isFieldInvalid(field: MailField): boolean {
-    return this.fieldError(field) !== null;
-  }
-
   /** Dropping the draft is enough for the typed inputs: they read it as their
    *  source, so clearing it reseeds them from the last-saved state. The
    *  password and the staged enable/encryption/use-proxy have no draft-backed
