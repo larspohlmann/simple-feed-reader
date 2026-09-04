@@ -11,8 +11,8 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
  * The admin settings payload. mailEnabled is read-only here — it reflects the
- * deploy-time MAIL_DISABLED flag, not a toggle the admin can flip — but the UI
- * needs it to explain why the email-confirmation switch is disabled.
+ * derived mail-sending state (MailSettings), not a toggle on this endpoint —
+ * but the UI needs it to explain why the email-confirmation switch is disabled.
  *
  * passkeyRpIdEffective is likewise read-only: it is always what the server
  * would actually use right now — the stored override, or the derived host —

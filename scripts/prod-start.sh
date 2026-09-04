@@ -55,6 +55,7 @@ fi
 # generate one when it is still empty so a fresh install can be finished
 # without a shell round-trip. The summary prints it while no admin exists.
 ensure_admin_setup_secret
+carry_over_renamed_env_vars
 ensure_ai_key_secret
 
 mode=$(prod_web_mode)

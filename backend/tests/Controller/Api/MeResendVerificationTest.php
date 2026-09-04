@@ -6,6 +6,7 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\EnablesMailInTests;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -25,6 +26,8 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
  */
 final class MeResendVerificationTest extends ApiTestCase
 {
+    use EnablesMailInTests;
+
     protected function setUp(): void
     {
         // Same reasoning as MeDigestTestControllerTest: the resend_verification
@@ -54,6 +57,7 @@ final class MeResendVerificationTest extends ApiTestCase
     public function testAnUnverifiedAccountGetsAFreshVerificationMail(): void
     {
         $client = static::createClient();
+        $this->seedEnabledMailInstance();
         $user = $this->factory()->create('unverified@example.test');
         $this->authenticate($client, $user);
 

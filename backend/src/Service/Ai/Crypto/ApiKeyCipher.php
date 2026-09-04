@@ -28,14 +28,14 @@ final readonly class ApiKeyCipher
     private const int MINIMUM_SECRET_LENGTH = 32;
 
     public function __construct(
-        #[Autowire('%env(AI_KEY_SECRET)%')]
+        #[Autowire('%env(INSTANCE_SECRET_KEY)%')]
         private string $masterSecret,
     ) {
         // A short or empty secret would still derive a key and still encrypt,
         // so nothing downstream could notice. Fail at construction instead.
         if (\strlen($masterSecret) < self::MINIMUM_SECRET_LENGTH) {
             throw new \InvalidArgumentException(sprintf(
-                'AI_KEY_SECRET must be at least %d characters; got %d.',
+                'INSTANCE_SECRET_KEY must be at least %d characters; got %d.',
                 self::MINIMUM_SECRET_LENGTH,
                 \strlen($masterSecret),
             ));

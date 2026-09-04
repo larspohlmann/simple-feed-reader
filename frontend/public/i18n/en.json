@@ -391,6 +391,32 @@
         "piaCredentials": "Private Internet Access needs a separately generated proxy username and password — not your account login."
       }
     },
+    "mail": {
+      "title": "Outgoing mail",
+      "caption": "Send verification, reset, and notification email through your own SMTP server.",
+      "enabled": "Send mail through this server",
+      "enabledDisabledHint": "Save a host first, then you can turn this on.",
+      "encryption": "Encryption",
+      "encryptionDesc": "None, STARTTLS, or implicit TLS.",
+      "host": "Host",
+      "port": "Port",
+      "username": "Username",
+      "fromAddress": "From address",
+      "fromName": "From name",
+      "password": "Password",
+      "test": "Test connection",
+      "testDesc": "Checks the server with the last-saved settings.",
+      "testing": "Testing…",
+      "testOk": "Connected.",
+      "testFailed": "Could not connect to the mail server: {{reason}}",
+      "resetToEnv": "Reset to environment default",
+      "resetToEnvDesc": "Discards this saved configuration, password included, and falls back to the server's environment mail settings.",
+      "resetConfirm": "This discards the saved host, credentials, and password, and falls back to the environment mail settings. This cannot be undone.",
+      "saved": "Mail settings saved",
+      "save": "Save",
+      "reset": "Reset",
+      "unsaved": "Unsaved changes"
+    },
     "organise": {
       "title": "Organise",
       "summary": "{{feeds}} feeds in {{tags}} tags",

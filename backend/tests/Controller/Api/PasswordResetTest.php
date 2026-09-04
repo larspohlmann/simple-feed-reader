@@ -10,6 +10,7 @@ use App\Enum\UserStatus;
 use App\Service\Auth\ActionTokenService;
 use App\Service\Auth\AltchaService;
 use App\Tests\Support\AltchaSolver;
+use App\Tests\Support\EnablesMailInTests;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -25,6 +26,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 final class PasswordResetTest extends WebTestCase
 {
+    use EnablesMailInTests;
+
     private const NEW_PASSWORD = 'a-brand-new-passphrase';
 
     private KernelBrowser $client;
@@ -34,6 +37,7 @@ final class PasswordResetTest extends WebTestCase
         parent::setUp();
 
         $this->client = self::createClient();
+        $this->seedEnabledMailInstance();
 
         // Both the per-IP limiter on /password-reset-request and the firewall's
         // login_throttling live in a FILESYSTEM pool that outlives the run. See

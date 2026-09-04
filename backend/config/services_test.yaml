@@ -1,4 +1,14 @@
 services:
+    # MailConnectionTesterTest fetches this to drive test() through the real
+    # settings/security graph. Its only production caller is a controller
+    # action argument, so the compiler would inline it away and the test
+    # container could not fetch it. Same `autowire` caveat as the entries
+    # below: naming a class here replaces the definition rather than amending
+    # it, and this file has no `_defaults`.
+    App\Service\Mail\Settings\MailConnectionTester:
+        autowire: true
+        public: true
+
     # WorkerPresenceTest constructs a second instance by hand with a MockClock
     # to pin the freshness boundary exactly, but also drives the
     # container-built instance to prove the real wiring resolves. Its only
@@ -313,14 +323,12 @@ services:
         public: true
 
     # MailCapabilityWiringTest fetches this to prove the service actually
-    # resolves through the real container: %env(string:default::MAIL_DISABLED)%
-    # must build a non-null string even when the var is unset, or every future
-    # caller (guards, the mail-disabled DTO flag, etc.) breaks with a TypeError
-    # on first request in the default "mail on" configuration. A test that
-    # constructs MailCapability by hand cannot catch that — it bypasses env
-    # resolution entirely. No production caller exists yet, so the compiler
-    # would otherwise inline it away and the test container could not fetch
-    # it. Same `autowire` caveat as above.
+    # resolves through the real container, including its MailSettings
+    # collaborator. A test that constructs MailCapability by hand cannot catch
+    # a wiring regression — it bypasses container resolution entirely. No
+    # production caller exists yet, so the compiler would otherwise inline it
+    # away and the test container could not fetch it. Same `autowire` caveat
+    # as above.
     App\Service\Mail\MailCapability:
         autowire: true
         public: true

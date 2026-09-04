@@ -43,6 +43,7 @@ export const SETTINGS_SECTIONS = [
     group: 'admin',
   },
   { path: 'admin/proxy', icon: 'vpn_lock', labelKey: 'settings.proxy.title', group: 'admin' },
+  { path: 'admin/mail', icon: 'outgoing_mail', labelKey: 'settings.mail.title', group: 'admin' },
 ] as const satisfies readonly SettingsSection[];
 
 /** The path of a section that exists. A typo in a caller is a compile error,

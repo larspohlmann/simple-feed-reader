@@ -9,22 +9,17 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
  * MailCapabilityTest constructs the service by hand, so it can never catch a
- * container-wiring regression: %env(default::MAIL_DISABLED)% resolves an
- * unset/empty var to PHP null (see EnvVarProcessor::getEnv(), the 'default'
- * branch), which the constructor's non-nullable `string $disabledFlag` would
- * reject with a TypeError on first fetch — in the default "mail on"
- * configuration, before any later task even reads the flag. The `string:`
- * cast in the env expression is what makes null become ''. This test drives
- * the REAL container to prove the service still constructs.
+ * container-wiring regression. This test drives the REAL container to prove
+ * the service still constructs and resolves its MailSettings collaborator.
  */
 final class MailCapabilityWiringTest extends KernelTestCase
 {
-    public function testResolvesFromTheContainerWithMailEnabledByDefault(): void
+    public function testResolvesFromTheContainer(): void
     {
         self::bootKernel();
         $capability = self::getContainer()->get(MailCapability::class);
 
-        self::assertInstanceOf(MailCapability::class, $capability);
-        self::assertTrue($capability->isEnabled());
+        // The test env fallback is null://null and no row exists: derived off.
+        self::assertFalse($capability->isEnabled());
     }
 }

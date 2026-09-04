@@ -13,6 +13,7 @@ use App\Service\Settings\InstanceSettings;
 use App\Service\Settings\InstanceSettingsUpdate;
 use App\Tests\Support\AltchaSolver;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\EnablesMailInTests;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\Mime\Email;
@@ -23,6 +24,8 @@ use Symfony\Component\Mime\Email;
  */
 final class RegistrationTest extends ApiTestCase
 {
+    use EnablesMailInTests;
+
     private KernelBrowser $client;
 
     protected function setUp(): void
@@ -30,6 +33,7 @@ final class RegistrationTest extends ApiTestCase
         parent::setUp();
 
         $this->client = self::createClient();
+        $this->seedEnabledMailInstance();
 
         // The per-IP limiters on /register and /password-reset-request store
         // their state in a FILESYSTEM pool, which survives the kernel reboot

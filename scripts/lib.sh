@@ -601,8 +601,8 @@ env_prod_set() {
 
 # The .env.prod values docker-compose.prod.yml refuses to start without.
 # Keep in step with the ${VAR:?} interpolations there.
-ENV_PROD_REQUIRED='PUBLIC_URL MAILER_DSN MAIL_FROM MYSQL_ROOT_PASSWORD MYSQL_PASSWORD APP_SECRET ALTCHA_HMAC_KEY JWT_PASSPHRASE'
-# AI_KEY_SECRET is deliberately NOT in this list, same as ADMIN_SETUP_SECRET:
+ENV_PROD_REQUIRED='PUBLIC_URL MAIL_FROM MYSQL_ROOT_PASSWORD MYSQL_PASSWORD APP_SECRET ALTCHA_HMAC_KEY JWT_PASSPHRASE'
+# INSTANCE_SECRET_KEY is deliberately NOT in this list, same as ADMIN_SETUP_SECRET:
 # it is machine-generated, never operator-supplied, so there is nothing for a
 # human to "fill in". Listing it here would make env_prod_missing/die below
 # abort an upgrading instance before ensure_ai_key_secret ever runs -- the
@@ -642,21 +642,44 @@ ensure_admin_setup_secret() {
   fi
 }
 
-# Generate AI_KEY_SECRET when it is still empty. An instance installed before
-# #305 has no such variable, and %env(AI_KEY_SECRET)% that cannot resolve fails
-# the container build -- every route, not just the AI ones. Generating here
-# keeps the upgrade uneventful. Never regenerate a value that exists: that
-# would silently make every stored API key unreadable.
+# Generate INSTANCE_SECRET_KEY when it is still empty. An instance installed
+# before #305 has no such variable, and %env(INSTANCE_SECRET_KEY)% that cannot
+# resolve fails the container build -- every route, not just the AI ones.
+# Generating here keeps the upgrade uneventful. Never regenerate a value that
+# exists: that would silently make every stored API key unreadable.
 ensure_ai_key_secret() {
-  if [ -z "$(env_prod_get AI_KEY_SECRET)" ]; then
-    env_prod_set AI_KEY_SECRET "$(generate_secret)"
+  if [ -z "$(env_prod_get INSTANCE_SECRET_KEY)" ]; then
+    env_prod_set INSTANCE_SECRET_KEY "$(generate_secret)"
   fi
+}
+
+# Carry a value written under a variable's OLD name over to its new name, once,
+# for an instance whose .env.prod predates the rename. INSTANCE_SECRET_KEY was
+# AI_KEY_SECRET (#834): without this, ensure_ai_key_secret would see an empty
+# new name and generate a fresh secret, making every stored AI key and the
+# proxy password unreadable. MAILER_FALLBACK_DSN was MAILER_DSN, which compose
+# now pins to dynamic://default: without this, a working SMTP relay would
+# silently become null://null. A value already under the new name always wins.
+carry_over_renamed_env() {
+  local old=$1 new=$2 value
+  if [ -n "$(env_prod_get "${new}")" ]; then
+    return 0
+  fi
+  value=$(env_prod_get "${old}")
+  if [ -n "${value}" ]; then
+    env_prod_set "${new}" "${value}"
+  fi
+}
+
+carry_over_renamed_env_vars() {
+  carry_over_renamed_env AI_KEY_SECRET INSTANCE_SECRET_KEY
+  carry_over_renamed_env MAILER_DSN MAILER_FALLBACK_DSN
 }
 
 # Generate MEILISEARCH_KEY when it is still empty, never regenerate one that
 # exists -- the same rule as ensure_ai_key_secret above, for the same reason
 # (rotating it would make Meilisearch reject the app's own requests). Unlike
-# AI_KEY_SECRET this is not called unconditionally from prod-start.sh: an
+# INSTANCE_SECRET_KEY this is not called unconditionally from prod-start.sh: an
 # empty MEILISEARCH_URL/KEY is the "no engine, database answers searches"
 # state by design (see MeilisearchIndex and its services.yaml wiring), so an
 # instance upgrading from before #432 needs nothing generated for it. This is
@@ -1601,8 +1624,7 @@ mail_host_from_public_url() {
 # complete instance, not one more thing to fill in.
 use_no_mail() {
   local mail_host
-  env_prod_set MAIL_DISABLED 1
-  env_prod_set MAILER_DSN 'null://null'
+  env_prod_set MAILER_FALLBACK_DSN 'null://null'
   if [ -z "$(env_prod_get MAIL_FROM)" ]; then
     mail_host=$(mail_host_from_public_url)
     env_prod_set MAIL_FROM "simple-feed-reader@${mail_host}"
@@ -1623,8 +1645,10 @@ configure_mail() {
   if ! can_prompt; then
     return 0
   fi
-  current_dsn=$(env_prod_get MAILER_DSN)
+  current_dsn=$(env_prod_get MAILER_FALLBACK_DSN)
   say 'How should the app send mail? Registration and password reset depend on it.'
+  say 'This sets the fallback transport, used only until an admin configures'
+  say 'mail in the admin UI.'
   if [ -n "${current_dsn}" ]; then
     say "Currently: $(mask_dsn_password "${current_dsn}")"
   fi
@@ -1639,21 +1663,19 @@ configure_mail() {
   choice=$(prompt_with_default 'Choice' '4')
   case "${choice}" in
     1)
-      env_prod_set MAIL_DISABLED ''
       smtp_host=$(prompt_value 'SMTP host (e.g. smtp.example.org)')
       smtp_port=$(prompt_with_default 'SMTP port' '587')
       smtp_user=$(prompt_value 'SMTP username')
       smtp_password=$(prompt_secret_value 'SMTP password (not echoed)')
       if [ -n "${smtp_host}" ] && [ -n "${smtp_user}" ] && [ -n "${smtp_password}" ]; then
-        env_prod_set MAILER_DSN "smtp://$(url_encode "${smtp_user}"):$(url_encode "${smtp_password}")@${smtp_host}:${smtp_port}"
+        env_prod_set MAILER_FALLBACK_DSN "smtp://$(url_encode "${smtp_user}"):$(url_encode "${smtp_password}")@${smtp_host}:${smtp_port}"
         CONFIGURED_MAIL_CHOICE=1
       else
-        warn 'Incomplete SMTP details -- leaving MAILER_DSN unchanged.'
+        warn 'Incomplete SMTP details -- leaving MAILER_FALLBACK_DSN unchanged.'
       fi
       ;;
     2)
-      env_prod_set MAIL_DISABLED ''
-      env_prod_set MAILER_DSN 'smtp://host.docker.internal:25'
+      env_prod_set MAILER_FALLBACK_DSN 'smtp://host.docker.internal:25'
       CONFIGURED_MAIL_CHOICE=2
       say 'Using the MTA on this machine. Delivery is only as good as its setup'
       say '(SPF, DKIM, reverse DNS) -- watch the first real mail.'

@@ -4,28 +4,20 @@ declare(strict_types=1);
 
 namespace App\Service\Mail;
 
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use App\Service\Mail\Settings\MailSettings;
 
 /**
- * Whether this instance may send mail at all.
- *
- * A DEPLOY-TIME fact, not a runtime setting: docker-compose.prod.yml and
- * InsecureProductionConfigGuard both act before the database is reachable, so
- * the switch has to be an environment variable rather than a stored row.
- * MAIL_DISABLED=1 is the deliberate, opt-in "no mail" mode (issue #230); a
- * MAILER_DSN left at null://null WITHOUT this flag stays a forgotten-config
- * failure, not a mailless instance.
+ * Whether this instance may send mail at all. A saved admin toggle governs;
+ * with no row, enablement derives from the env fallback (a real transport = on).
  */
 final readonly class MailCapability
 {
-    public function __construct(
-        #[Autowire('%env(string:default::MAIL_DISABLED)%')]
-        private string $disabledFlag,
-    ) {
+    public function __construct(private MailSettings $settings)
+    {
     }
 
     public function isEnabled(): bool
     {
-        return !\in_array(strtolower(trim($this->disabledFlag)), ['1', 'true', 'yes', 'on'], true);
+        return $this->settings->isSendingEnabled();
     }
 }

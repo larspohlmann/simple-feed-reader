@@ -274,6 +274,12 @@ jobs:
       - name: configure_database
         run: scripts/test/configure-database.test.sh
 
+      # An upgrading .env.prod still names AI_KEY_SECRET and MAILER_DSN (#834).
+      # Without the carry-over, prod-start.sh would generate a fresh secret over
+      # the old one and every stored AI key would become unreadable.
+      - name: carry-over-renamed-env
+        run: scripts/test/carry-over-renamed-env.test.sh
+
       # The search engine question (#432). Its answer decides which compose
       # profile the stack runs with, alongside the database's own, so the
       # combined profile list has to come out right in every combination -- a

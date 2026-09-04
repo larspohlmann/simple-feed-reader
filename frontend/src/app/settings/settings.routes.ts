@@ -94,6 +94,13 @@ export const SETTINGS_ROUTES: Routes = [
         loadComponent: () =>
           import('./admin/proxy/proxy-section.component').then((m) => m.ProxySectionComponent),
       },
+      {
+        path: 'admin/mail',
+        title: sectionLabelKey('admin/mail'),
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./admin/mail/mail-section.component').then((m) => m.MailSectionComponent),
+      },
     ],
   },
 ];

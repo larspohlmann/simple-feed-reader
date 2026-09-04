@@ -7,6 +7,7 @@ namespace App\Tests\Controller\Api;
 use App\Repository\UserRepository;
 use App\Service\Settings\InstanceSettings;
 use App\Service\Settings\InstanceSettingsUpdate;
+use App\Tests\Support\EnablesMailInTests;
 use App\Tests\Support\TogglesPasskeySignIn;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -17,6 +18,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class SetupControllerTest extends WebTestCase
 {
+    use EnablesMailInTests;
     use TogglesPasskeySignIn;
 
     private const string SECRET = 'test-setup-secret-abcdef0123456789';
@@ -120,6 +122,7 @@ final class SetupControllerTest extends WebTestCase
     public function testStatusReportsMailEnabled(): void
     {
         $client = self::createClient();
+        $this->seedEnabledMailInstance();
         $client->request('GET', '/api/setup/status');
 
         self::assertResponseIsSuccessful();

@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Entity\UserPasskey;
 use App\Repository\UserPasskeyRepository;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\EnablesMailInTests;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
@@ -20,6 +21,8 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
  */
 final class AdminSettingsControllerTest extends ApiTestCase
 {
+    use EnablesMailInTests;
+
     private const string SETTINGS = '/api/admin/settings';
 
     private KernelBrowser $client;
@@ -35,6 +38,7 @@ final class AdminSettingsControllerTest extends ApiTestCase
         parent::setUp();
 
         $this->client = self::createClient();
+        $this->seedEnabledMailInstance();
     }
 
     private function tokenFor(User $user): string

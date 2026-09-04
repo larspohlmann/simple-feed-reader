@@ -30,6 +30,8 @@ use App\Service\Mail\Digest\DigestTextRenderer;
 use App\Service\Mail\Digest\SendTestDigest;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
+use App\Service\Mail\Settings\MailIdentity;
+use App\Service\Mail\Settings\MailSettings;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Mailer\MailerInterface;
@@ -165,8 +167,7 @@ final class SendTestDigestTest extends TestCase
             new DigestHtmlRenderer($translator, $links),
             $links,
             new DigestBrandLogo(\dirname(__DIR__, 4)),
-            'noreply@feeds.example.com',
-            'Simple Feed Reader',
+            $this->mailIdentity('noreply@feeds.example.com', 'Simple Feed Reader'),
         );
 
         return new DigestMailer($transport, $builder);
@@ -232,5 +233,13 @@ final class SendTestDigestTest extends TestCase
             viewedAt: null,
             markedReadUntil: null,
         );
+    }
+
+    private function mailIdentity(string $address, string $name): MailSettings
+    {
+        $settings = $this->createMock(MailSettings::class);
+        $settings->method('identity')->willReturn(new MailIdentity($address, $name));
+
+        return $settings;
     }
 }

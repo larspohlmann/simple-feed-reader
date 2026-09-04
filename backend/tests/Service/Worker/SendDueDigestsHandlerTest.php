@@ -23,6 +23,7 @@ use App\Service\Mail\Digest\DigestModel;
 use App\Service\Mail\Digest\DigestSchedule;
 use App\Service\Mail\Digest\SendDueDigests as SendDueDigestsService;
 use App\Service\Mail\MailCapability;
+use App\Service\Mail\Settings\MailSettings;
 use App\Service\Worker\Handler\SendDueDigestsHandler;
 use App\Service\Worker\Message\SendDueDigests;
 use Doctrine\ORM\EntityManagerInterface;
@@ -91,13 +92,21 @@ final class SendDueDigestsHandlerTest extends TestCase
                 new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example')),
             ),
             $mailer,
-            new MailCapability(''),
+            $this->mailCapabilityEnabled(),
             new MockClock(self::NOW),
             $this->createStub(EntityManagerInterface::class),
             new NullLogger(),
         );
 
         return new SendDueDigestsHandler($service, new NullLogger());
+    }
+
+    private function mailCapabilityEnabled(): MailCapability
+    {
+        $settings = $this->createMock(MailSettings::class);
+        $settings->method('isSendingEnabled')->willReturn(true);
+
+        return new MailCapability($settings);
     }
 
     private function user(): User

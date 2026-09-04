@@ -19,6 +19,8 @@ use App\Service\Mail\Digest\DigestMailer;
 use App\Service\Mail\Digest\DigestModel;
 use App\Service\Mail\Digest\DigestPageBuilder;
 use App\Service\Mail\Digest\DigestTextRenderer;
+use App\Service\Mail\Settings\MailIdentity;
+use App\Service\Mail\Settings\MailSettings;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
@@ -62,8 +64,7 @@ final class DigestMailerTest extends TestCase
             new DigestHtmlRenderer($translator, $links),
             $links,
             new DigestBrandLogo(\dirname(__DIR__, 4)),
-            'noreply@feeds.example.com',
-            'Simple Feed Reader',
+            $this->mailIdentity('noreply@feeds.example.com', 'Simple Feed Reader'),
         );
 
         $this->mailer = new DigestMailer($transport, $builder);
@@ -146,5 +147,13 @@ final class DigestMailerTest extends TestCase
         $email = $this->sent[0];
         self::assertNull($email->getHtmlBody());
         self::assertNotNull($email->getTextBody());
+    }
+
+    private function mailIdentity(string $address, string $name): MailSettings
+    {
+        $settings = $this->createMock(MailSettings::class);
+        $settings->method('identity')->willReturn(new MailIdentity($address, $name));
+
+        return $settings;
     }
 }

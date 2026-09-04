@@ -391,6 +391,32 @@
         "piaCredentials": "Private Internet Access benötigt einen separat erzeugten Proxy-Benutzernamen und ein Proxy-Passwort — nicht deine Kontoanmeldedaten."
       }
     },
+    "mail": {
+      "title": "Ausgehende E-Mail",
+      "caption": "Verifizierungs-, Reset- und Benachrichtigungsmails über einen eigenen SMTP-Server versenden.",
+      "enabled": "Mail über diesen Server versenden",
+      "enabledDisabledHint": "Speichere zuerst einen Host, dann kannst du dies aktivieren.",
+      "encryption": "Verschlüsselung",
+      "encryptionDesc": "Keine, STARTTLS oder implizites TLS.",
+      "host": "Host",
+      "port": "Port",
+      "username": "Benutzername",
+      "fromAddress": "Absenderadresse",
+      "fromName": "Absendername",
+      "password": "Passwort",
+      "test": "Verbindung testen",
+      "testDesc": "Prüft den Server mit den zuletzt gespeicherten Einstellungen.",
+      "testing": "Wird getestet…",
+      "testOk": "Verbunden.",
+      "testFailed": "Verbindung zum Mailserver fehlgeschlagen: {{reason}}",
+      "resetToEnv": "Auf Umgebungsstandard zurücksetzen",
+      "resetToEnvDesc": "Verwirft diese gespeicherte Konfiguration einschließlich des Passworts und fällt auf die Mail-Einstellungen aus der Server-Umgebung zurück.",
+      "resetConfirm": "Dies verwirft den gespeicherten Host, die Zugangsdaten und das Passwort und fällt auf die Mail-Einstellungen aus der Umgebung zurück. Das kann nicht rückgängig gemacht werden.",
+      "saved": "Mail-Einstellungen gespeichert",
+      "save": "Speichern",
+      "reset": "Zurücksetzen",
+      "unsaved": "Nicht gespeicherte Änderungen"
+    },
     "organise": {
       "title": "Organisieren",
       "summary": "{{feeds}} Feeds in {{tags}} Tags",
