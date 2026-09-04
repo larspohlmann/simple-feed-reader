@@ -5,12 +5,19 @@
 A web-based RSS/Atom feed reader you run yourself — for you alone or for
 several users. Free and open source (MIT).
 
-![The reader: entry list and reader pane side by side](docs/screenshots/desktop-reader.png)
+![The magazine-style card grid](docs/screenshots/screen_01.png)
 
 <p>
-  <img src="docs/screenshots/desktop-cards.png" alt="Card view on desktop" width="66%">
-  <img src="docs/screenshots/mobile.png" alt="Mobile view" width="29%">
+  <img src="docs/screenshots/screen_02.png" alt="Two-pane view with the reader pane" width="66%">
+  <img src="docs/screenshots/screen_04.png" alt="Card view on mobile" width="29%">
 </p>
+
+<p>
+  <img src="docs/screenshots/screen_08.png" alt="Guided feed discovery" width="49%">
+  <img src="docs/screenshots/screen_10.png" alt="Organise your feeds" width="49%">
+</p>
+
+More in the [screenshot gallery](docs/screenshots.md).
 
 ## Features
 
