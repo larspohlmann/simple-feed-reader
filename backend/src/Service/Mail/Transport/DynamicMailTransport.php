@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Transport;
 
-use App\Enum\MailEncryption;
 use App\Service\Mail\Settings\MailSettings;
 use App\Service\Mail\Settings\ResolvedMailTransport;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -12,7 +11,6 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Envelope;
 use Symfony\Component\Mailer\SentMessage;
 use Symfony\Component\Mailer\Transport;
-use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
 use Symfony\Component\Mailer\Transport\TransportInterface;
 use Symfony\Component\Mime\RawMessage;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -63,26 +61,7 @@ final class DynamicMailTransport implements TransportInterface
 
     private function buildSmtp(ResolvedMailTransport $resolved): TransportInterface
     {
-        $implicitTls = MailEncryption::Tls === $resolved->encryption ? true : null;
-        $transport = new EsmtpTransport(
-            $resolved->host,
-            $resolved->port,
-            $implicitTls,
-            $this->dispatcher,
-            $this->logger,
-        );
-
-        if (MailEncryption::None === $resolved->encryption) {
-            $transport->setAutoTls(false);
-        }
-        if (null !== $resolved->username) {
-            $transport->setUsername($resolved->username);
-        }
-        if (null !== $resolved->password) {
-            $transport->setPassword($resolved->password);
-        }
-
-        return $transport;
+        return EsmtpTransportBuilder::from($resolved, $this->dispatcher, $this->logger);
     }
 
     private function buildFallback(): TransportInterface
