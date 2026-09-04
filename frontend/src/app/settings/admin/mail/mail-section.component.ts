@@ -112,6 +112,23 @@ export class MailSectionComponent {
     return failure ? (failure.detail ?? failure.title) : null;
   });
 
+  /** Google rejects a normal account password once 2-Step Verification is on
+   *  and asks for an App Password instead; the raw SMTP reply says so only in
+   *  codes (#841). Matching the reason string keeps the actionable hint
+   *  frontend-only -- no backend classification of the cause. */
+  readonly gmailAppPasswordFailure = computed(() => {
+    const current = this.probe();
+    if (current.status !== 'error') return false;
+    const reason = current.message.toLowerCase();
+    return (
+      reason.includes('application-specific password') ||
+      reason.includes('invalidsecondfactor') ||
+      (reason.includes('534') && reason.includes('5.7.9'))
+    );
+  });
+
+  readonly gmailAppPasswordUrl = 'https://myaccount.google.com/apppasswords';
+
   readonly encryptionOptions: readonly MailEncryption[] = ['none', 'starttls', 'tls'];
 
   constructor() {

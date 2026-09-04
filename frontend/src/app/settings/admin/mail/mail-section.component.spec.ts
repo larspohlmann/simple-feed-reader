@@ -259,6 +259,40 @@ describe('MailSectionComponent', () => {
     expect(banner?.textContent).toContain(expectedMessage);
   });
 
+  const gmailHint = (fixture: ComponentFixture<MailSectionComponent>): HTMLElement | null =>
+    fixture.nativeElement.querySelector('.gmail-hint');
+
+  function failProbe(fixture: ComponentFixture<MailSectionComponent>, reason: string): void {
+    testButton(fixture).click();
+    fixture.detectChanges();
+    http.expectOne(TEST_ENDPOINT).flush({ ok: false, reason });
+    fixture.detectChanges();
+  }
+
+  it('shows the Gmail App Password hint when the failure carries the app-password signature', () => {
+    const fixture = mount(state({ host: 'smtp.gmail.com' }));
+
+    failProbe(
+      fixture,
+      'Expected response code 235 but got code 534, with message "534-5.7.9 ' +
+        'Application-specific password required. …InvalidSecondFactor"',
+    );
+
+    const hint = gmailHint(fixture);
+    expect(hint).not.toBeNull();
+    const link = hint?.querySelector('a');
+    expect(link?.getAttribute('href')).toBe('https://myaccount.google.com/apppasswords');
+    expect(hint?.textContent).toContain('Send mail as');
+  });
+
+  it('hides the Gmail hint for a failure that lacks the app-password signature', () => {
+    const fixture = mount(state({ host: 'smtp.example.com' }));
+
+    failProbe(fixture, 'connection refused');
+
+    expect(gmailHint(fixture)).toBeNull();
+  });
+
   it('renders the stored password hint as a placeholder, never the secret itself', () => {
     const fixture = mount(
       state({ host: 'smtp.example.com', hasPassword: true, passwordHint: '••••ab12' }),

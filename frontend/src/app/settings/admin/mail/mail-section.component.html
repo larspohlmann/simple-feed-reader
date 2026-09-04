@@ -140,6 +140,21 @@
         </div>
       }
 
+      @if (gmailAppPasswordFailure()) {
+        <div class="gmail-hint">
+          <app-icon name="info" size="sm" />
+          <div class="gmail-hint-body">
+            <p>{{ 'settings.mail.gmailAppPassword' | transloco }}</p>
+            <p>
+              <a [href]="gmailAppPasswordUrl" target="_blank" rel="noopener noreferrer">{{
+                'settings.mail.gmailAppPasswordLink' | transloco
+              }}</a>
+            </p>
+            <p>{{ 'settings.mail.gmailFromCaveat' | transloco }}</p>
+          </div>
+        </div>
+      }
+
       @if (failureMessage(); as message) {
         <div class="panel-banner">
           <app-error-banner [message]="message" />
