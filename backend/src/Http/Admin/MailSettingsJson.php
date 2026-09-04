@@ -20,6 +20,7 @@ final readonly class MailSettingsJson
      *     enabled: bool, host: string, port: int, username: string|null,
      *     encryption: string, fromAddress: string, fromName: string,
      *     hasPassword: bool, passwordHint: string,
+     *     hasSavedConfig: bool, envFallbackConfigured: bool,
      * }
      */
     public static function from(?MailServerSettings $settings, MailFallbackContext $fallback): array
@@ -35,6 +36,8 @@ final readonly class MailSettingsJson
                 'fromName' => $fallback->fromName,
                 'hasPassword' => false,
                 'passwordHint' => '',
+                'hasSavedConfig' => false,
+                'envFallbackConfigured' => $fallback->isReal,
             ];
         }
 
@@ -48,6 +51,8 @@ final readonly class MailSettingsJson
             'fromName' => $settings->getFromName(),
             'hasPassword' => $settings->hasPassword(),
             'passwordHint' => $settings->getPasswordHint(),
+            'hasSavedConfig' => true,
+            'envFallbackConfigured' => $fallback->isReal,
         ];
     }
 }

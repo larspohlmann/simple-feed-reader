@@ -35,11 +35,21 @@ readonly class MailSettings
      *     enabled: bool, host: string, port: int, username: string|null,
      *     encryption: string, fromAddress: string, fromName: string,
      *     hasPassword: bool, passwordHint: string,
+     *     hasSavedConfig: bool, envFallbackConfigured: bool,
      * }
      */
     public function view(): array
     {
         return MailSettingsJson::from($this->repository->findSingleton(), $this->fallback->context());
+    }
+
+    public function resetToEnvironment(): void
+    {
+        $settings = $this->repository->findSingleton();
+        if (null !== $settings) {
+            $this->em->remove($settings);
+            $this->em->flush();
+        }
     }
 
     public function update(MailSettingsRequest $request): void

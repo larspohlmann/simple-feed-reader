@@ -41,4 +41,12 @@ final readonly class AdminMailController
     {
         return new JsonResponse($tester->test()->toArray());
     }
+
+    #[Route('/reset', name: 'api_admin_mail_reset', methods: ['POST'])]
+    public function reset(): JsonResponse
+    {
+        $this->settings->resetToEnvironment();
+
+        return new JsonResponse($this->settings->view());
+    }
 }

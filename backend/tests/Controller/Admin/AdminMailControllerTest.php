@@ -159,4 +159,46 @@ final class AdminMailControllerTest extends ApiTestCase
         self::assertFalse($body['ok']);
         self::assertNotSame('not_configured', $body['reason']);
     }
+
+    public function testAdminCanResetToTheEnvironmentConfiguration(): void
+    {
+        $admin = $this->admin();
+
+        $this->requestWithJsonBody('PUT', $admin, [
+            'enabled' => true,
+            'host' => 'smtp.example',
+            'port' => 587,
+            'username' => 'user',
+            'encryption' => 'starttls',
+            'fromAddress' => 'noreply@example.com',
+            'fromName' => 'Example',
+            'password' => 'sw0rdfish',
+        ]);
+        self::assertResponseIsSuccessful();
+        self::assertTrue($this->payload($this->client)['hasSavedConfig']);
+
+        $this->client->request(
+            'POST',
+            self::MAIL . '/reset',
+            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin)],
+        );
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload($this->client);
+        self::assertFalse($body['hasSavedConfig']);
+        self::assertArrayNotHasKey('password', $body);
+    }
+
+    public function testResetAsNonAdminIsForbidden(): void
+    {
+        $plain = $this->factory()->create('plain@example.com');
+
+        $this->client->request(
+            'POST',
+            self::MAIL . '/reset',
+            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($plain)],
+        );
+
+        self::assertResponseStatusCodeSame(403);
+    }
 }

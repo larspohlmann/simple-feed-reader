@@ -55,4 +55,18 @@ final class MailSettingsTest extends KernelTestCase
 
         self::assertSame('keep-me', $this->settings()->configuredTransport()?->password);
     }
+
+    public function testResetToEnvironmentDeletesTheSavedRow(): void
+    {
+        $this->settings()->update(new MailSettingsRequest(host: 'smtp.relay.test', password: 'top-secret'));
+        self::assertTrue($this->settings()->view()['hasSavedConfig']);
+
+        $this->settings()->resetToEnvironment();
+
+        $view = $this->settings()->view();
+        self::assertFalse($view['hasSavedConfig']);
+        self::assertFalse($view['envFallbackConfigured']);
+        self::assertNull($this->settings()->configuredTransport());
+        self::assertFalse($this->settings()->isSendingEnabled());
+    }
 }
