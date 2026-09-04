@@ -63,7 +63,7 @@ final class DynamicMailTransport implements TransportInterface
 
     private function buildSmtp(ResolvedMailTransport $resolved): TransportInterface
     {
-        $implicitTls = MailEncryption::Tls === $resolved->encryption ?: null;
+        $implicitTls = MailEncryption::Tls === $resolved->encryption ? true : null;
         $transport = new EsmtpTransport(
             $resolved->host,
             $resolved->port,

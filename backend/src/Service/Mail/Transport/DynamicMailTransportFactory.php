@@ -9,9 +9,9 @@ use Symfony\Component\Mailer\Transport\TransportFactoryInterface;
 use Symfony\Component\Mailer\Transport\TransportInterface;
 
 /**
- * Registers the `dynamic://` scheme. FrameworkBundle autoconfigures any
- * TransportFactoryInterface with the mailer.transport_factory tag, so this joins
- * the transport chain and MAILER_DSN=dynamic://default resolves to it.
+ * Registers the `dynamic://` scheme. Wired into the transport chain via the
+ * `_instanceof` tag in config/services.yaml; FrameworkBundle does not auto-tag
+ * a plain TransportFactoryInterface implementation.
  */
 final readonly class DynamicMailTransportFactory implements TransportFactoryInterface
 {
