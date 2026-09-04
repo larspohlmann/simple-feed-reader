@@ -12,6 +12,7 @@ use App\Entity\UserIdentity;
 use App\Enum\UserStatus;
 use App\Repository\UserRepository;
 use App\Service\Subscription\SubscriptionService;
+use App\Tests\Support\EnablesMailInTests;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -28,6 +29,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 final class AdminUserControllerTest extends WebTestCase
 {
+    use EnablesMailInTests;
+
     private const LIST = '/api/admin/users';
 
     private KernelBrowser $client;
@@ -37,6 +40,7 @@ final class AdminUserControllerTest extends WebTestCase
         parent::setUp();
 
         $this->client = self::createClient();
+        $this->seedEnabledMailInstance();
     }
 
     private function factory(): UserFactory

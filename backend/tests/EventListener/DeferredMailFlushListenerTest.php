@@ -9,6 +9,7 @@ use App\Kernel;
 use App\Service\Auth\AltchaService;
 use App\Service\Mail\DeferredMailer;
 use App\Tests\Support\AltchaSolver;
+use App\Tests\Support\EnablesMailInTests;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\NullLogger;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -30,6 +31,8 @@ use Symfony\Component\Mime\RawMessage;
  */
 final class DeferredMailFlushListenerTest extends KernelTestCase
 {
+    use EnablesMailInTests;
+
     private function registerRequest(): Request
     {
         /** @var AltchaService $altcha */
@@ -51,6 +54,7 @@ final class DeferredMailFlushListenerTest extends KernelTestCase
     {
         $kernel = self::bootKernel();
         self::assertInstanceOf(Kernel::class, $kernel);
+        $this->seedEnabledMailInstance();
 
         /** @var CacheItemPoolInterface $rateLimiterCache */
         $rateLimiterCache = self::getContainer()->get('test.cache.rate_limiter');

@@ -9,6 +9,7 @@ use App\Enum\UserStatus;
 use App\Repository\UserRepository;
 use App\Service\Auth\AltchaService;
 use App\Tests\Support\AltchaSolver;
+use App\Tests\Support\EnablesMailInTests;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -43,6 +44,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 final class AuthJourneyTest extends WebTestCase
 {
+    use EnablesMailInTests;
+
     private const EMAIL = 'journey@example.com';
     private const PASSWORD = 'a-perfectly-fine-passphrase';
 
@@ -53,6 +56,7 @@ final class AuthJourneyTest extends WebTestCase
         parent::setUp();
 
         $this->client = self::createClient();
+        $this->seedEnabledMailInstance();
 
         // Both the /register limiter and the firewall's login_throttling keep
         // their counters in a FILESYSTEM pool, which outlives the kernel reboot
