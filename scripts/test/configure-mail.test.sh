@@ -8,8 +8,10 @@ set -euo pipefail
 # notices: a wrong relay password is accepted at configure time and only
 # surfaces at the first registration nobody receives. The default is
 # therefore "no mail" -- a private instance that works, with account mail
-# switched off in the open (MAIL_DISABLED=1 and MAILER_DSN=null://null belong
-# together, and InsecureProductionConfigGuard 500s if only one is set).
+# switched off in the open (MAILER_FALLBACK_DSN=null://null, the fallback
+# transport used only until an admin configures mail in the admin UI;
+# MAILER_DSN itself is fixed by docker-compose.prod.yml and never written
+# here).
 #
 # The real prompts read /dev/tty. They are replaced here with a canned answer
 # queue, where an empty answer means "press return".
@@ -59,8 +61,7 @@ can_prompt() { return 0; }
 seed_env() {
   cat > "${ENV_PROD_FILE}" <<'SEED'
 PUBLIC_URL=https://reader.example.org
-MAILER_DSN=
-MAIL_DISABLED=
+MAILER_FALLBACK_DSN=
 MAIL_FROM=
 SEED
 }
@@ -80,12 +81,10 @@ configure_with() {
 }
 
 # --- 1. pressing return runs the instance without mail -----------------------
-# Both values are required together, and MAIL_FROM must be filled too: it is
-# required by the compose file, so an empty one stops the stack at start over
-# an address that is never used.
+# MAIL_FROM must be filled too: it is required by the compose file, so an
+# empty one stops the stack at start over an address that is never used.
 configure_with '' ''
-assert_env MAIL_DISABLED 1
-assert_env MAILER_DSN 'null://null'
+assert_env MAILER_FALLBACK_DSN 'null://null'
 assert_env MAIL_FROM 'simple-feed-reader@reader.example.org'
 # No transport was configured, so there is nothing to send a test mail with.
 [ -z "${CONFIGURED_MAIL_CHOICE}" ] \
@@ -96,8 +95,7 @@ grep -q 'reset-password' "${told}" \
 # --- 2. an SMTP relay still assembles its DSN --------------------------------
 # The password is percent-encoded: a raw '@' or '#' truncates a DSN silently.
 configure_with 1 'smtp.example.org' '' 'postmaster@example.org' 'p@ss#word' ''
-assert_env MAILER_DSN 'smtp://postmaster%40example.org:p%40ss%23word@smtp.example.org:587'
-assert_env MAIL_DISABLED ''
+assert_env MAILER_FALLBACK_DSN 'smtp://postmaster%40example.org:p%40ss%23word@smtp.example.org:587'
 assert_env MAIL_FROM 'simple-feed-reader@reader.example.org'
 [ "${CONFIGURED_MAIL_CHOICE}" = 1 ] \
   || fail 'a configured relay must be offered a delivery check'
@@ -106,13 +104,12 @@ assert_env MAIL_FROM 'simple-feed-reader@reader.example.org'
 # Half a relay is worse than none: it would pass the required-value check and
 # fail at the first real mail.
 configure_with 1 'smtp.example.org' '' '' ''
-assert_env MAILER_DSN ''
+assert_env MAILER_FALLBACK_DSN ''
 [ -z "${CONFIGURED_MAIL_CHOICE}" ] || fail 'an incomplete relay is not a transport'
 
 # --- 4. "later" leaves the file exactly as it was ----------------------------
 configure_with 3
-assert_env MAILER_DSN ''
-assert_env MAIL_DISABLED ''
+assert_env MAILER_FALLBACK_DSN ''
 assert_env MAIL_FROM ''
 
 printf 'ok: configure_mail\n'

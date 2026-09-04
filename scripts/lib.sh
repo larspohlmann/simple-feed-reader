@@ -601,7 +601,7 @@ env_prod_set() {
 
 # The .env.prod values docker-compose.prod.yml refuses to start without.
 # Keep in step with the ${VAR:?} interpolations there.
-ENV_PROD_REQUIRED='PUBLIC_URL MAILER_DSN MAIL_FROM MYSQL_ROOT_PASSWORD MYSQL_PASSWORD APP_SECRET ALTCHA_HMAC_KEY JWT_PASSPHRASE'
+ENV_PROD_REQUIRED='PUBLIC_URL MAIL_FROM MYSQL_ROOT_PASSWORD MYSQL_PASSWORD APP_SECRET ALTCHA_HMAC_KEY JWT_PASSPHRASE'
 # INSTANCE_SECRET_KEY is deliberately NOT in this list, same as ADMIN_SETUP_SECRET:
 # it is machine-generated, never operator-supplied, so there is nothing for a
 # human to "fill in". Listing it here would make env_prod_missing/die below
@@ -1601,8 +1601,7 @@ mail_host_from_public_url() {
 # complete instance, not one more thing to fill in.
 use_no_mail() {
   local mail_host
-  env_prod_set MAIL_DISABLED 1
-  env_prod_set MAILER_DSN 'null://null'
+  env_prod_set MAILER_FALLBACK_DSN 'null://null'
   if [ -z "$(env_prod_get MAIL_FROM)" ]; then
     mail_host=$(mail_host_from_public_url)
     env_prod_set MAIL_FROM "simple-feed-reader@${mail_host}"
@@ -1623,8 +1622,10 @@ configure_mail() {
   if ! can_prompt; then
     return 0
   fi
-  current_dsn=$(env_prod_get MAILER_DSN)
+  current_dsn=$(env_prod_get MAILER_FALLBACK_DSN)
   say 'How should the app send mail? Registration and password reset depend on it.'
+  say 'This sets the fallback transport, used only until an admin configures'
+  say 'mail in the admin UI.'
   if [ -n "${current_dsn}" ]; then
     say "Currently: $(mask_dsn_password "${current_dsn}")"
   fi
@@ -1639,21 +1640,19 @@ configure_mail() {
   choice=$(prompt_with_default 'Choice' '4')
   case "${choice}" in
     1)
-      env_prod_set MAIL_DISABLED ''
       smtp_host=$(prompt_value 'SMTP host (e.g. smtp.example.org)')
       smtp_port=$(prompt_with_default 'SMTP port' '587')
       smtp_user=$(prompt_value 'SMTP username')
       smtp_password=$(prompt_secret_value 'SMTP password (not echoed)')
       if [ -n "${smtp_host}" ] && [ -n "${smtp_user}" ] && [ -n "${smtp_password}" ]; then
-        env_prod_set MAILER_DSN "smtp://$(url_encode "${smtp_user}"):$(url_encode "${smtp_password}")@${smtp_host}:${smtp_port}"
+        env_prod_set MAILER_FALLBACK_DSN "smtp://$(url_encode "${smtp_user}"):$(url_encode "${smtp_password}")@${smtp_host}:${smtp_port}"
         CONFIGURED_MAIL_CHOICE=1
       else
-        warn 'Incomplete SMTP details -- leaving MAILER_DSN unchanged.'
+        warn 'Incomplete SMTP details -- leaving MAILER_FALLBACK_DSN unchanged.'
       fi
       ;;
     2)
-      env_prod_set MAIL_DISABLED ''
-      env_prod_set MAILER_DSN 'smtp://host.docker.internal:25'
+      env_prod_set MAILER_FALLBACK_DSN 'smtp://host.docker.internal:25'
       CONFIGURED_MAIL_CHOICE=2
       say 'Using the MTA on this machine. Delivery is only as good as its setup'
       say '(SPF, DKIM, reverse DNS) -- watch the first real mail.'

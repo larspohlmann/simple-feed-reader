@@ -166,7 +166,7 @@ use_no_mail
 missing=$(env_prod_missing)
 [ -z "${missing}" ] || fail "a quick install must leave nothing to fill in, but: ${missing}"
 assert_env PUBLIC_URL 'http://localhost:3333'
-assert_env MAIL_DISABLED '1'
+assert_env MAILER_FALLBACK_DSN 'null://null'
 
 # --- 5. an empty answer selects Q -------------------------------------------
 # Pressing return installs the quick package: S's stack, and no further

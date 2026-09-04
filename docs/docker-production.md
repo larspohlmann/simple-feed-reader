@@ -13,12 +13,11 @@ its own project name (`simple-feed-reader-prod`), its own volumes. Both can
 run on the same machine.
 
 **Why the separation is strict:** the dev stack injects
-`MAILER_DSN=smtp://mailpit:1025` — every mail lands in a local inbox
+`MAILER_FALLBACK_DSN=smtp://mailpit:1025` — every mail lands in a local inbox
 (Mailpit) and never reaches a real mailbox. That is perfect for development
 and catastrophic in production, where registration, admin approval, and
-password reset all depend on real delivery (issue #65). The production stack
-therefore *requires* a real mail transport before it starts, and Mailpit is
-unreachable from it by construction.
+password reset all depend on real delivery (issue #65). Mailpit is
+unreachable from the production stack by construction.
 
 **Contents:**
 [1 Install](#1-install) ·
@@ -123,13 +122,14 @@ values only you know:
     exec -u www-data php bin/console app:search:reindex
   ```
 - **How to send mail** — an SMTP relay (your mail provider's host, port,
-  username, password), or the machine's own MTA if it runs one. **The default
-  is "no mail"** (§5): it is the answer that always works, and a private
-  instance needs no relay. Account mail is then off in the open —
-  `MAIL_DISABLED=1` — instead of silently lost behind a wrong relay password.
-  Answer 1 or 2 for an instance that registers users by email; answer 3 to
-  finish it by hand later. `./scripts/prod-configure.sh` asks again at any
-  time.
+  username, password), or the machine's own MTA if it runs one. This sets
+  `MAILER_FALLBACK_DSN`, the transport used only until an admin configures
+  mail in the admin UI — nothing stops you from installing with no env mail
+  at all and doing that configuration entirely there. **The default is "no
+  mail"** (§5): it is the answer that always works, and a private instance
+  needs no relay. Answer 1 or 2 for an instance that registers users by email
+  before an admin has configured mail; answer 3 to finish it by hand later.
+  `./scripts/prod-configure.sh` asks again at any time.
 
 Once the stack is up, the installer fills the **onboarding catalog** from the
 document this release ships and fetches an icon for every feed in it — a few
@@ -234,9 +234,11 @@ docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file 
   exec -u www-data php bin/console mailer:test you@example.com
 ```
 
-The mail must arrive in that inbox (check spam on the first try). Common
-`MAILER_DSN` shapes — set in `.env.prod`, URL-encode the username and
-password if you write one by hand:
+The mail must arrive in that inbox (check spam on the first try). `MAILER_DSN`
+itself is fixed by `docker-compose.prod.yml` — it is never set in
+`.env.prod`. What you set there is `MAILER_FALLBACK_DSN`, the transport used
+only until an admin configures mail in the admin UI. Common shapes —
+URL-encode the username and password if you write one by hand:
 
 | Setup | DSN |
 |---|---|
@@ -255,20 +257,17 @@ should ever point at it.
 ## 5. Running without mail
 
 A private or single-operator instance may not want a mail transport at all.
-Set `MAIL_DISABLED=1` together with `MAILER_DSN=null://null` in `.env.prod`
-to opt in — both are required. The installer's mail question offers this as
-choice **"4) No mail"**, and that is the answer pressing return gives (at
-install, or later via `./scripts/prod-configure.sh` — see §7). It sets both
-automatically, along
-with a placeholder `MAIL_FROM` derived from `PUBLIC_URL` if none is set yet
-(it is never actually sent).
-
-A merely *forgotten* mailer still fails loud, on purpose:
-`docker-compose.prod.yml` keeps `MAILER_DSN` a required variable (empty
-refuses to start), and the runtime guard answers every request with 500 if
-it sees the null transport (`null://null`) without `MAIL_DISABLED=1` set
-alongside it. Mailless is a deliberate opt-in, never something an instance
-falls into by leaving a field blank.
+Leave `MAILER_FALLBACK_DSN` at its default, `null://null`, and never
+configure mail in the admin UI — mail then stays off until one of the two
+changes. `MAILER_DSN` itself is fixed by `docker-compose.prod.yml`
+(`dynamic://default`), so there is nothing to set there: the admin-configured
+transport, or the fallback, or nothing at all, decides what actually happens
+at send time. The installer's mail question offers the fallback's "no mail"
+state as choice **"4) No mail"**, and that is the answer pressing return
+gives (at install, or later via `./scripts/prod-configure.sh` — see §7). It
+sets `MAILER_FALLBACK_DSN=null://null` automatically, along with a
+placeholder `MAIL_FROM` derived from `PUBLIC_URL` if none is set yet (it is
+never actually sent).
 
 Consequences, once mailless is on:
 
@@ -367,8 +366,8 @@ but it signs every user out.
 - **Compose refuses to start and names a variable** — that value is empty in
   `.env.prod`. The comments in `.env.prod.example` explain each one.
 - **Every request answers 500** — the runtime guard refuses to serve while a
-  committed placeholder is in use (`ALTCHA_HMAC_KEY`, `MAILER_DSN`). The log
-  names the variable:
+  committed placeholder is in use (`ALTCHA_HMAC_KEY`). The log names the
+  variable:
   `docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod exec php sh -c 'tail -n 50 var/log/prod-*.log'`
 - **Mail says sent but never arrives** — run the `mailer:test` check above;
   then check the spam folder, then the transport's own logs. With the
