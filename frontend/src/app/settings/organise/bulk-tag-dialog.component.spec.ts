@@ -4,25 +4,17 @@ import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { BulkTagDialogComponent, BulkTagDialogData } from './bulk-tag-dialog.component';
 import { SubscriptionDto, TagDto } from '../../reader/models';
+import { makeSubscription } from '../../reader/testing/subscription.factory';
 
 const TECH: TagDto = { id: 2, name: 'Tech', color: null, icon: null, position: 0 };
 const NEWS: TagDto = { id: 3, name: 'Nachrichten', color: null, icon: null, position: 1 };
 
 const feed = (id: number, tagIds: number[]): SubscriptionDto =>
-  ({
+  makeSubscription({
     id,
     feedId: id,
     title: `Feed ${id}`,
-    faviconUrl: null,
-    customTitle: null,
     feedUrl: `https://feed-${id}.example/rss`,
-    siteUrl: null,
-    description: null,
-    imageUrl: null,
-    status: 'active',
-    sourceFormat: 'xml',
-    createdAt: '2026-01-01T00:00:00Z',
-    lastFetchedAt: null,
     position: id,
     tags: tagIds.map((tagId, index) => ({
       id: tagId,
@@ -31,10 +23,7 @@ const feed = (id: number, tagIds: number[]): SubscriptionDto =>
       icon: null,
       position: index,
     })),
-    unreadCount: 0,
-    includeInAllItems: true,
-    includeInForYou: true,
-  }) as SubscriptionDto;
+  });
 
 const SUB_WITH_TECH = feed(10, [TECH.id]);
 const SUB_WITHOUT = feed(11, []);

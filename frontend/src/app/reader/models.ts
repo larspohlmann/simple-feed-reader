@@ -75,6 +75,14 @@ export interface SubscriptionDto {
   /** When the feed was last successfully fetched (ISO), or null if never. Powers
    *  the list header's "Last refreshed" hint for a single-feed selection. */
   lastFetchedAt: string | null;
+  /** When the feed last delivered content (ISO), or null if it never has.
+   *  With `status` and `consecutiveFailures`, powers the unhealthy-feeds list. */
+  lastSuccessfulFetchAt: string | null;
+  /** The feed's current failure streak; 0 when healthy. */
+  consecutiveFailures: number;
+  /** The raw fetcher error for the last failed attempt, or null. Untranslated,
+   *  capped at 1000 chars by the API — shown only in the health-details panel. */
+  lastErrorMessage: string | null;
   /** The feed's order in the untagged "Feeds" list (ascending). */
   position: number;
   tags: SubscriptionTagDto[];

@@ -12,26 +12,18 @@ import { LayoutService } from '../../reader/layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { LanguageService } from '../../core/language.service';
 import { SubscriptionDto, TagDto } from '../../reader/models';
+import { makeSubscription } from '../../reader/testing/subscription.factory';
 
 const TECH: TagDto = { id: 2, name: 'Tech', color: null, icon: null, position: 0 };
 const OTHER_TAG: TagDto = { id: 4, name: 'Nachrichten', color: null, icon: null, position: 1 };
 const THIRD_TAG: TagDto = { id: 6, name: 'Kultur', color: null, icon: null, position: 2 };
 
 const feed = (id: number, title: string, tagIds: number[]): SubscriptionDto =>
-  ({
+  makeSubscription({
     id,
     feedId: id,
     title,
-    faviconUrl: null,
-    customTitle: null,
     feedUrl: `https://feed-${id}.example/rss`,
-    siteUrl: null,
-    description: null,
-    imageUrl: null,
-    status: 'active',
-    sourceFormat: 'xml',
-    createdAt: '2026-01-01T00:00:00Z',
-    lastFetchedAt: null,
     position: id,
     tags: tagIds.map((tagId, index) => ({
       id: tagId,
@@ -40,10 +32,7 @@ const feed = (id: number, title: string, tagIds: number[]): SubscriptionDto =>
       icon: null,
       position: index,
     })),
-    unreadCount: 0,
-    includeInAllItems: true,
-    includeInForYou: true,
-  }) as SubscriptionDto;
+  });
 
 const SUB_A = feed(10, 'taz', [TECH.id]);
 const SUB_B = feed(11, 'heise', [TECH.id]);
