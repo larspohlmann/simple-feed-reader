@@ -1,3 +1,4 @@
+import { isSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ThemeService } from './theme.service';
 
@@ -34,6 +35,27 @@ describe('ThemeService', () => {
   it('a saved choice wins over system on construction', () => {
     localStorage.setItem('sfr.theme', 'dark');
     TestBed.inject(ThemeService);
+    expect(attr()).toBe('dark');
+  });
+
+  it('exposes the resolved theme as a signal', () => {
+    const svc = TestBed.inject(ThemeService);
+    expect(isSignal(svc.resolved)).toBe(true);
+    expect(svc.resolved()).toBe('light');
+
+    svc.setMode('dark');
+
+    expect(svc.resolved()).toBe('dark');
+  });
+
+  it('re-resolves when the OS scheme flips under system mode', () => {
+    const svc = TestBed.inject(ThemeService);
+    mql.matches = true;
+    const onChange = mql.addEventListener.mock.calls[0][1] as () => void;
+
+    onChange();
+
+    expect(svc.resolved()).toBe('dark');
     expect(attr()).toBe('dark');
   });
 });

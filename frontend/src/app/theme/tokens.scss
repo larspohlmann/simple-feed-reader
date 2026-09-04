@@ -1,4 +1,5 @@
 @use './breakpoints' as bp;
+@use './brightness';
 @use './themes/graphite';
 
 // Light is the fallback when no attribute is set yet (before the no-flash
@@ -7,7 +8,7 @@
 :root[data-theme='light'] {
   color-scheme: light;
 
-  @include graphite.light;
+  @include graphite.emit(graphite.$light);
 
   /* Soft elevation for a raised card surface (#541). Mode-specific: a light
      UI needs only a hair of shadow, a dark one a deeper cast to lift the
@@ -18,10 +19,13 @@
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  @include graphite.dark;
+  @include graphite.emit(graphite.$dark);
 
   --panel-shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 30%);
 }
+
+@include brightness.theme-steps('light', graphite.$light);
+@include brightness.theme-steps('dark', graphite.$dark);
 
 // Mode-invariant tokens (same in every theme).
 :root {

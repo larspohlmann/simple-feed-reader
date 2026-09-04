@@ -1,0 +1,43 @@
+@use '../../theme/segmented';
+@include segmented.frame;
+
+:host {
+  display: flex;
+}
+
+.seg {
+  align-items: stretch;
+}
+
+.seg .darker,
+.seg .brighter {
+  padding: var(--space-2);
+}
+
+.seg button:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+/* The bar is one solid progress fill, full height: emptiest at the darkest
+   step, full at the brightest. The track is the same surface as the glyph
+   buttons; the soft accent tint is the indicator. Clicking it resets. */
+.seg .bar {
+  flex: 1 1 auto;
+  padding: 0;
+  border-inline: 1px solid var(--border);
+}
+
+.track {
+  display: block;
+  block-size: 100%;
+  inline-size: 100%;
+  background: var(--surface-2);
+}
+
+.fill {
+  display: block;
+  block-size: 100%;
+  background: var(--accent-soft);
+  transition: inline-size 0.12s ease;
+}

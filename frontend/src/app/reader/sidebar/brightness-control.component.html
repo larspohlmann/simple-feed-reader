@@ -1,0 +1,38 @@
+<div class="seg" role="group" [attr.aria-label]="'reader.brightness.aria' | transloco">
+  <button
+    type="button"
+    class="darker"
+    [title]="'reader.brightness.darker' | transloco"
+    [attr.aria-label]="'reader.brightness.darker' | transloco"
+    [disabled]="brightness.step() === brightness.min()"
+    (click)="brightness.decrease()"
+  >
+    <app-icon name="dark_mode" size="md" />
+  </button>
+  <button
+    type="button"
+    class="bar"
+    [title]="'reader.brightness.reset' | transloco"
+    [attr.aria-label]="'reader.brightness.reset' | transloco"
+    (click)="brightness.reset()"
+  >
+    <span class="track"><span class="fill" [style.inline-size.%]="fillPercent()"></span></span>
+  </button>
+  <button
+    type="button"
+    class="brighter"
+    [title]="'reader.brightness.brighter' | transloco"
+    [attr.aria-label]="'reader.brightness.brighter' | transloco"
+    [disabled]="brightness.step() === brightness.max()"
+    (click)="brightness.increase()"
+  >
+    <app-icon name="light_mode" size="md" />
+  </button>
+  <output class="sr-only" aria-live="polite">
+    @if (brightness.step() === 0) {
+      {{ 'reader.brightness.readoutDefault' | transloco }}
+    } @else {
+      {{ 'reader.brightness.readout' | transloco: { value: signedStep() } }}
+    }
+  </output>
+</div>

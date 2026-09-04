@@ -134,19 +134,25 @@ describe('SidebarFootComponent', () => {
     expect(organiseSwitch.getAttribute('aria-checked')).toBe('true');
   });
 
-  it('hides the view controls and trial line while organising', () => {
+  it('hides the brightness control, view controls and trial line while organising', () => {
     const el = mount({ coarse: true, organising: true, user: account(inDays(5)) })
       .nativeElement as HTMLElement;
+    expect(el.querySelector('app-brightness-control')).toBeNull();
     expect(el.querySelector('app-view-controls')).toBeNull();
     expect(el.querySelector('.trial')).toBeNull();
     // The version link stays visible even while organising.
     expect(el.querySelector('.version')).not.toBeNull();
   });
 
-  it('keeps the foot order: organise, view controls, trial, meta', () => {
+  it('keeps the foot order: organise, brightness, view controls, trial, meta', () => {
     const el = mount({ coarse: true, user: account(inDays(5)) }).nativeElement as HTMLElement;
     const order = Array.from(el.children).map((child) => child.classList[0]);
-    expect(order).toEqual(['organise', 'controls', 'trial', 'meta']);
+    expect(order).toEqual(['organise', 'brightness', 'controls', 'trial', 'meta']);
+  });
+
+  it('shows the brightness control on fine pointers too', () => {
+    const el = mount({ coarse: false }).nativeElement as HTMLElement;
+    expect(el.querySelector('app-brightness-control')).not.toBeNull();
   });
 
   it('links Feedback to the public issue tracker in a new tab', () => {

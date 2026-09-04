@@ -209,6 +209,30 @@ any one component's stylesheet.
 |---|---|
 | `.sr-only` | Visually hides an element while keeping it in the accessibility tree — for a label assistive tech must expose that has no visible slot of its own (e.g. the freshness label on the admin user-detail feed rows: `<span class="sr-only">Last refresh:</span>` before the visible date). `aria-label`/`title` on a plain element are not a substitute: ARIA forbids naming a `role=generic` node, so most screen readers ignore both attributes on a bare `<span>`/`<div>`. |
 
+### Brightness steps (#832)
+
+`<html>` carries `data-brightness` next to `data-theme`: dark spans `-3`…`3`
+(0 today), light spans `-6`…`0` (0 the brightest — light panels start at full
+brightness, so light only dims). Step 0 is the palette in
+`themes/_graphite.scss` verbatim; every other step is derived at build time by
+`theme/_brightness.scss` and emitted as its own `:root[data-theme][data-brightness]`
+block. A step is a lightness dial over three planes, each moving in OKLCH with
+hue and chroma kept: **surfaces** (canvas, panels, borders, soft status
+backgrounds) scale multiplicatively, fast when dimming and gently when
+brightening; **colours** (accent, status hues, on-accent) scale at a gentler
+rate so they stay themselves and only soften; **text** interpolates toward an
+extreme, black when dimming and white when brightening, reaching it exactly at
+the range end (light reaches black at `-6`; dark stays short of black so text
+holds up as the surface sinks, and reaches white at `+3`). Contrast eases as you
+dim instead of being pinned. Dimming steps also emit `--media-brightness`
+(`0.92…0.52`, 8 % per step; absent at and above the default), which one guarded
+rule in `styles/_base.scss` applies as a `filter` to `img`, `video`, `iframe`
+and any element carrying `.user-colour` (an inline colour the palette cannot
+reach, e.g. a tag glyph), and squared to `audio`, whose light native chrome must
+recede harder than a photo. To retune, edit the rate constants and `$ranges`
+(the Sass mirror of `brightness.ts`) in `_brightness.scss`; never hand-tune a
+step block.
+
 ---
 
 ## 2. Component catalog
@@ -525,6 +549,7 @@ These deliberately stay out and own their markup and styles:
 - the sidebar's `.dots` row-menu triggers
 - the entry row's read toggle
 - the view-controls segmented control
+- the sidebar's brightness stepper (`<app-brightness-control>`)
 - `<app-to-top-button>`
 - `<app-icon-picker>`'s trigger
 
@@ -1183,6 +1208,20 @@ reuse:
   exclusion marker's tooltip (`exclusionTitle()`) says which surface(s) the
   feed is hidden from, so a reader never has to guess what an icon-only glyph
   means.
+
+### Brightness control
+
+`<app-brightness-control>` (local to the sidebar, #832) is a moon
+(`dark_mode`), a solid progress bar and a sun (`light_mode`) in the
+segmented frame it shares with the view-controls groups
+(`theme/_segmented.scss`). The bar is one full-height fill over a track the
+same surface as the glyph buttons; the soft accent tint is the indicator. It
+fills with brightness — empty at the darkest step, full at the brightest — so
+the light default sits at the full end and the dark default at the middle.
+Clicking the bar resets to the default; the moon disables at the floor and the
+sun at the top. A visually hidden `<output aria-live="polite">` reads the value.
+Steps are per device and per theme (`sfr.brightness.light` / `.dark`), never per
+account.
 
 ### Sticky and scroll
 

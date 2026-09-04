@@ -1,5 +1,5 @@
 @if (name(); as glyph) {
-  <app-icon [name]="glyph" [size]="size()" [style.color]="tint()" />
+  <app-icon [name]="glyph" [size]="size()" [style.color]="tint()" [class.user-colour]="color()" />
 } @else {
-  <span class="dot" [style.background]="tint()"></span>
+  <span class="dot" [class.user-colour]="color()" [style.background]="tint()"></span>
 }
