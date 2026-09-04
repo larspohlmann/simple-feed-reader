@@ -93,8 +93,10 @@ describe('MailSectionComponent', () => {
     expect(enableToggleInput(fixture).disabled).toBe(false);
   });
 
-  it('saves instantly when the enable toggle is flipped', () => {
-    const fixture = mount(state({ host: 'smtp.example.com', enabled: false }));
+  it('saves instantly when the enable toggle is flipped on a saved row', () => {
+    const fixture = mount(
+      state({ host: 'smtp.example.com', enabled: false, hasSavedConfig: true }),
+    );
 
     enableToggleInput(fixture).click();
     fixture.detectChanges();
@@ -102,22 +104,83 @@ describe('MailSectionComponent', () => {
     const put = http.expectOne(ENDPOINT);
     expect(put.request.method).toBe('PUT');
     expect(put.request.body.enabled).toBe(true);
-    put.flush(state({ host: 'smtp.example.com', enabled: true }));
+    put.flush(state({ host: 'smtp.example.com', enabled: true, hasSavedConfig: true }));
   });
 
   it('confirms a save with a toast that dismisses itself', () => {
-    const fixture = mount(state({ host: 'smtp.example.com', enabled: false }));
+    const fixture = mount(
+      state({ host: 'smtp.example.com', enabled: false, hasSavedConfig: true }),
+    );
     const i18n = TestBed.inject(TranslocoService);
 
     enableToggleInput(fixture).click();
     fixture.detectChanges();
-    http.expectOne(ENDPOINT).flush(state({ host: 'smtp.example.com', enabled: true }));
+    http
+      .expectOne(ENDPOINT)
+      .flush(state({ host: 'smtp.example.com', enabled: true, hasSavedConfig: true }));
     fixture.detectChanges();
 
     expect(toastStub.show).toHaveBeenCalledWith({
       message: i18n.translate('settings.mail.saved'),
       durationMs: CONFIRMATION_DURATION_MS,
     });
+  });
+
+  it('does not instant-save the enable toggle or encryption before a row exists', () => {
+    const fixture = mount(
+      state({
+        host: 'smtp.example.com',
+        username: 'sam',
+        enabled: true,
+        hasSavedConfig: false,
+      }),
+    );
+
+    enableToggleInput(fixture).click();
+    fixture.detectChanges();
+    http.expectNone(ENDPOINT);
+
+    const encryptionSelect: HTMLSelectElement = fixture.nativeElement.querySelector(
+      '[data-testid="mail-encryption"]',
+    );
+    encryptionSelect.value = 'tls';
+    encryptionSelect.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    http.expectNone(ENDPOINT);
+  });
+
+  it('an explicit Save on a no-row install carries the staged toggle/encryption and password', () => {
+    const fixture = mount(
+      state({
+        host: 'smtp.example.com',
+        username: 'sam',
+        enabled: true,
+        encryption: 'starttls',
+        hasSavedConfig: false,
+      }),
+    );
+
+    const encryptionSelect: HTMLSelectElement = fixture.nativeElement.querySelector(
+      '[data-testid="mail-encryption"]',
+    );
+    encryptionSelect.value = 'tls';
+    encryptionSelect.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    passwordInput(fixture).value = 'secret';
+    passwordInput(fixture).dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    fixture.componentInstance.onSave();
+    fixture.detectChanges();
+
+    const put = http.expectOne(ENDPOINT);
+    expect(put.request.body.enabled).toBe(true);
+    expect(put.request.body.encryption).toBe('tls');
+    expect(put.request.body.password).toBe('secret');
+    put.flush(
+      state({ host: 'smtp.example.com', username: 'sam', enabled: true, hasSavedConfig: true }),
+    );
   });
 
   it('marks the save bar dirty when the host is edited', () => {

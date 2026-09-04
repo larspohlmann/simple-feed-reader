@@ -189,6 +189,64 @@ final class AdminMailControllerTest extends ApiTestCase
         self::assertArrayNotHasKey('password', $body);
     }
 
+    public function testUpdateRejectsAHalfConfiguredAuthenticatedRowOnAFreshDatabase(): void
+    {
+        $admin = $this->admin();
+
+        $this->requestWithJsonBody('PUT', $admin, [
+            'enabled' => true,
+            'host' => 'smtp.example',
+            'username' => 'user',
+            'password' => null,
+        ]);
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame('application/problem+json', $this->client->getResponse()->headers->get('Content-Type'));
+
+        $this->client->request(
+            'GET',
+            self::MAIL,
+            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin)],
+        );
+        self::assertFalse($this->payload($this->client)['hasSavedConfig']);
+    }
+
+    public function testUpdateAcceptsAnAuthenticatedRowWithAPassword(): void
+    {
+        $admin = $this->admin();
+
+        $this->requestWithJsonBody('PUT', $admin, [
+            'enabled' => true,
+            'host' => 'smtp.example',
+            'username' => 'user',
+            'password' => 'sw0rdfish',
+        ]);
+
+        self::assertResponseIsSuccessful();
+    }
+
+    public function testUpdateAcceptsKeepingAStoredPasswordOnAnAlreadyAuthedRow(): void
+    {
+        $admin = $this->admin();
+
+        $this->requestWithJsonBody('PUT', $admin, [
+            'enabled' => true,
+            'host' => 'smtp.example',
+            'username' => 'user',
+            'password' => 'sw0rdfish',
+        ]);
+        self::assertResponseIsSuccessful();
+
+        $this->requestWithJsonBody('PUT', $admin, [
+            'enabled' => true,
+            'host' => 'smtp.example',
+            'username' => 'user',
+            'password' => null,
+        ]);
+
+        self::assertResponseIsSuccessful();
+    }
+
     public function testResetAsNonAdminIsForbidden(): void
     {
         $plain = $this->factory()->create('plain@example.com');

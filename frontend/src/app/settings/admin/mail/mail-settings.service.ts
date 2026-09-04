@@ -80,10 +80,16 @@ export class MailSettingsService {
     this.draft.update((draft) => ({ ...draft, [field]: value }));
   }
 
-  save(): void {
+  /** `overrides` carries the enable/encryption the component currently
+   *  displays. Those two never enter the draft (see `TypedMailEdits`), so
+   *  without this they would fall back to `bodyFromState`'s last-saved
+   *  values -- correct once a row exists (instant-save already synced
+   *  `state`), but wrong for the row-creating first Save, where `state` is
+   *  only the env prefill and never reflects an unsaved toggle/select edit. */
+  save(overrides: Partial<Pick<SaveMailSettings, 'enabled' | 'encryption'>> = {}): void {
     const current = this.state();
     if (!current) return;
-    this.put({ ...this.bodyFromState(current), ...this.draft() }, (state) => {
+    this.put({ ...this.bodyFromState(current), ...overrides, ...this.draft() }, (state) => {
       this.commit(state);
       this.saved.set(true);
     });

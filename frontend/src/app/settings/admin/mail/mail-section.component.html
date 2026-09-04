@@ -166,7 +166,7 @@
       }
 
       <app-settings-save-bar
-        [dirty]="svc.dirty()"
+        [dirty]="dirty()"
         [saving]="svc.busy()"
         [saveLabel]="'settings.mail.save' | transloco"
         [resetLabel]="'settings.mail.reset' | transloco"

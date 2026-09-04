@@ -45,6 +45,14 @@ final readonly class MailConnectionTester
 
         $identity = $this->settings->identity();
 
+        if ('' === $identity->address) {
+            // Address() throws RfcComplianceException on a blank address --
+            // catching that would be exception-driven control flow for a
+            // state we can name upfront: a saved row with no from-address
+            // and no MAIL_FROM fallback.
+            return MailTestResult::failed('no_from_address');
+        }
+
         try {
             $mailer = new Mailer(EsmtpTransportBuilder::from($resolved, null, $this->logger));
             $mailer->send(

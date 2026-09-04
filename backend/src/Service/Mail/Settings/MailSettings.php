@@ -10,6 +10,7 @@ use App\Enum\MailEncryption;
 use App\Http\Admin\MailSettingsJson;
 use App\Repository\MailServerSettingsRepository;
 use App\Service\Mail\Settings\Crypto\MailPasswordCipher;
+use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -54,14 +55,15 @@ readonly class MailSettings
 
     public function update(MailSettingsRequest $request): void
     {
-        $settings = $this->repository->findSingleton();
+        $existing = $this->repository->findSingleton();
+        $connection = $this->connectionFrom($request);
+        $this->guardAgainstIncompleteAuthenticatedRow($request, $connection, $existing);
 
+        $settings = $existing;
         if (null === $settings) {
             $settings = new MailServerSettings();
             $this->em->persist($settings);
         }
-
-        $connection = $this->connectionFrom($request);
 
         if (null === $request->password) {
             $settings->applyWithoutPassword($connection);
@@ -116,6 +118,24 @@ readonly class MailSettings
         $settings = $this->repository->findSingleton();
 
         return null !== $settings ? $settings->isEnabled() : $this->fallback->context()->isReal;
+    }
+
+    /** Refuses to persist an enabled, authenticated row with no password on
+     *  record: it would resolve to a live, host-bearing transport that fails
+     *  every send, silently overriding a working env fallback. */
+    private function guardAgainstIncompleteAuthenticatedRow(
+        MailSettingsRequest $request,
+        MailConnection $connection,
+        ?MailServerSettings $existing,
+    ): void {
+        $willHavePassword = null !== $request->password || ($existing?->hasPassword() ?? false);
+        $isAuthenticatedTransport = $connection->enabled
+            && '' !== $connection->host
+            && null !== $connection->username;
+
+        if ($isAuthenticatedTransport && !$willHavePassword) {
+            throw new IncompleteMailConfigurationException();
+        }
     }
 
     private function connectionFrom(MailSettingsRequest $request): MailConnection

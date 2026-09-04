@@ -6,6 +6,7 @@ namespace App\Tests\Service\Mail\Settings;
 
 use App\Dto\Admin\MailSettingsRequest;
 use App\Enum\MailEncryption;
+use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
 use App\Service\Mail\Settings\MailSettings;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -68,5 +69,49 @@ final class MailSettingsTest extends KernelTestCase
         self::assertFalse($view['envFallbackConfigured']);
         self::assertNull($this->settings()->configuredTransport());
         self::assertFalse($this->settings()->isSendingEnabled());
+    }
+
+    public function testUpdateRejectsAnEnabledAuthenticatedRowWithNoPassword(): void
+    {
+        $this->expectException(IncompleteMailConfigurationException::class);
+
+        $this->settings()->update(new MailSettingsRequest(
+            enabled: true,
+            host: 'smtp.relay.test',
+            username: 'postbox',
+            password: null,
+        ));
+    }
+
+    public function testUpdateAcceptsAnEnabledAuthenticatedRowThatKeepsAStoredPassword(): void
+    {
+        $this->settings()->update(new MailSettingsRequest(
+            enabled: false,
+            host: 'smtp.relay.test',
+            username: 'postbox',
+            password: 'top-secret',
+        ));
+
+        $this->settings()->update(new MailSettingsRequest(
+            enabled: true,
+            host: 'smtp.relay.test',
+            username: 'postbox',
+            password: null,
+        ));
+
+        self::assertTrue($this->settings()->view()['enabled']);
+        self::assertTrue($this->settings()->view()['hasPassword']);
+    }
+
+    public function testUpdateAcceptsAnEnabledUnauthenticatedRelayWithNoUsername(): void
+    {
+        $this->settings()->update(new MailSettingsRequest(
+            enabled: true,
+            host: 'smtp.relay.test',
+            username: null,
+            password: null,
+        ));
+
+        self::assertTrue($this->settings()->view()['enabled']);
     }
 }
