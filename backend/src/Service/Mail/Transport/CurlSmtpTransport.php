@@ -33,35 +33,38 @@ final class CurlSmtpTransport extends AbstractTransport
 
     protected function doSend(SentMessage $message): void
     {
-        $body = $message->toString();
-        $stream = fopen('php://temp', 'r+');
-        if (false === $stream) {
-            throw new TransportException('Unable to buffer the message for the proxied SMTP send.');
-        }
-        fwrite($stream, $body);
-        rewind($stream);
-
         $handle = curl_init();
         if (false === $handle) {
             throw new TransportException('Unable to initialise curl for the proxied SMTP send.');
         }
 
-        curl_setopt_array($handle, CurlSmtpOptions::for($this->resolved, $this->proxy, $message->getEnvelope()) + [
-            \CURLOPT_UPLOAD => true,
-            \CURLOPT_INFILE => $stream,
-            \CURLOPT_INFILESIZE => \strlen($body),
-            \CURLOPT_TIMEOUT => self::TIMEOUT_SECONDS,
-            \CURLOPT_CONNECTTIMEOUT => self::TIMEOUT_SECONDS,
-            \CURLOPT_RETURNTRANSFER => true,
-        ]);
+        $body = $message->toString();
+        $stream = fopen('php://temp', 'r+');
+        if (false === $stream) {
+            curl_close($handle);
+            throw new TransportException('Unable to buffer the message for the proxied SMTP send.');
+        }
+        fwrite($stream, $body);
+        rewind($stream);
 
-        $ok = curl_exec($handle);
-        $error = curl_error($handle);
-        curl_close($handle);
-        fclose($stream);
-
-        if (false === $ok) {
-            throw new TransportException(\sprintf('Proxied SMTP send failed: %s', $error));
+        try {
+            $configured = curl_setopt_array($handle, CurlSmtpOptions::for($this->resolved, $this->proxy, $message->getEnvelope()) + [
+                \CURLOPT_UPLOAD => true,
+                \CURLOPT_INFILE => $stream,
+                \CURLOPT_INFILESIZE => \strlen($body),
+                \CURLOPT_TIMEOUT => self::TIMEOUT_SECONDS,
+                \CURLOPT_CONNECTTIMEOUT => self::TIMEOUT_SECONDS,
+                \CURLOPT_RETURNTRANSFER => true,
+            ]);
+            if (!$configured) {
+                throw new TransportException('Unable to configure curl for the proxied SMTP send.');
+            }
+            if (false === curl_exec($handle)) {
+                throw new TransportException(\sprintf('Proxied SMTP send failed: %s', curl_error($handle)));
+            }
+        } finally {
+            curl_close($handle);
+            fclose($stream);
         }
     }
 
