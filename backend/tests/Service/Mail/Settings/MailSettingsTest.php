@@ -196,13 +196,16 @@ final class MailSettingsTest extends KernelTestCase
         ));
         self::assertTrue($this->settings()->view()['hasPassword']);
 
+        // A different host proves the remove-password update still applies the
+        // connection edits carried in the same request, not only clears the secret.
         $this->settings()->update(new MailSettingsRequest(
-            host: 'smtp.example.test',
+            host: 'smtp.moved.test',
             username: null,
             removePassword: true,
         ));
 
         self::assertFalse($this->settings()->view()['hasPassword']);
+        self::assertSame('smtp.moved.test', $this->settings()->view()['host']);
     }
 
     public function testRemovingThePasswordOfAnEnabledAuthenticatedRowIsRejected(): void
