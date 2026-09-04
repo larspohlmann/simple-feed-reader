@@ -3,6 +3,7 @@ import { Injectable, WritableSignal, computed, inject, signal } from '@angular/c
 import { Observable, Subscription } from 'rxjs';
 import { Problem, parseProblem } from '../core/problem';
 import { onIdentityChange } from '../core/session-identity';
+import { unhealthyFeeds } from './feed-health';
 import { ReaderApi } from './reader-api';
 import { countsAreStale } from './sidebar-freshness';
 import { TagsStore } from './tags.store';
@@ -101,6 +102,8 @@ export class SubscriptionsStore {
   readonly tagTree = computed(() => buildTagTree(this.subscriptions(), this.tags.tags()));
   readonly untagged = computed(() => untaggedSubs(this.subscriptions()));
   readonly totalUnread = computed(() => sumUnread(this.subscriptions()));
+  readonly unhealthy = computed(() => unhealthyFeeds(this.subscriptions()));
+  readonly unhealthyCount = computed(() => this.unhealthy().length);
 
   private latestLoad = 0;
   private lastLoadedAt = 0;
