@@ -1,0 +1,100 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Mail\Transport;
+
+use App\Enum\MailEncryption;
+use App\Service\Mail\Settings\MailSettings;
+use App\Service\Mail\Settings\ResolvedMailTransport;
+use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\Mailer\Envelope;
+use Symfony\Component\Mailer\SentMessage;
+use Symfony\Component\Mailer\Transport;
+use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
+use Symfony\Component\Mailer\Transport\TransportInterface;
+use Symfony\Component\Mime\RawMessage;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
+
+/**
+ * The one mailer transport. It resolves the active transport at SEND time, never
+ * at construction: the DB is not reachable during cache:warmup. A saved SMTP row
+ * wins; otherwise the env fallback DSN is used. The built transport is memoised
+ * per signature so a digest batch does not reconnect per message. The fallback is
+ * built with the app's dispatcher/logger/client so the message-logger listener
+ * still collects sent messages, and from the DEFAULT factory set — which does not
+ * include `dynamic` — so there is no recursion.
+ */
+final class DynamicMailTransport implements TransportInterface
+{
+    private ?TransportInterface $cached = null;
+    private ?string $cachedSignature = null;
+
+    public function __construct(
+        private readonly MailSettings $settings,
+        private readonly EventDispatcherInterface $dispatcher,
+        private readonly HttpClientInterface $httpClient,
+        private readonly LoggerInterface $logger,
+    ) {
+    }
+
+    public function send(RawMessage $message, ?Envelope $envelope = null): ?SentMessage
+    {
+        return $this->activeTransport()->send($message, $envelope);
+    }
+
+    public function activeTransport(): TransportInterface
+    {
+        $resolved = $this->settings->configuredTransport();
+        $signature = null !== $resolved
+            ? 'db:' . $resolved->signature()
+            : 'fallback:' . $this->settings->activeTransportDsnFallback();
+
+        if ($signature === $this->cachedSignature && null !== $this->cached) {
+            return $this->cached;
+        }
+
+        $this->cached = null !== $resolved ? $this->buildSmtp($resolved) : $this->buildFallback();
+        $this->cachedSignature = $signature;
+
+        return $this->cached;
+    }
+
+    private function buildSmtp(ResolvedMailTransport $resolved): TransportInterface
+    {
+        $implicitTls = MailEncryption::Tls === $resolved->encryption ?: null;
+        $transport = new EsmtpTransport(
+            $resolved->host,
+            $resolved->port,
+            $implicitTls,
+            $this->dispatcher,
+            $this->logger,
+        );
+
+        if (MailEncryption::None === $resolved->encryption) {
+            $transport->setAutoTls(false);
+        }
+        if (null !== $resolved->username) {
+            $transport->setUsername($resolved->username);
+        }
+        if (null !== $resolved->password) {
+            $transport->setPassword($resolved->password);
+        }
+
+        return $transport;
+    }
+
+    private function buildFallback(): TransportInterface
+    {
+        $factories = Transport::getDefaultFactories($this->dispatcher, $this->httpClient, $this->logger);
+
+        return (new Transport(iterator_to_array($factories)))
+            ->fromString($this->settings->activeTransportDsnFallback());
+    }
+
+    public function __toString(): string
+    {
+        return 'dynamic://default';
+    }
+}

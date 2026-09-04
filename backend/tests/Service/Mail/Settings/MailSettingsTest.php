@@ -13,13 +13,7 @@ final class MailSettingsTest extends KernelTestCase
 {
     private function settings(): MailSettings
     {
-        $settings = self::getContainer()->get(MailSettings::class);
-
-        if (!$settings instanceof MailSettings) {
-            throw new \LogicException('MailSettings service is misconfigured.');
-        }
-
-        return $settings;
+        return self::getContainer()->get(MailSettings::class);
     }
 
     public function testNoRowReportsDerivedEnabledFromTheFallback(): void

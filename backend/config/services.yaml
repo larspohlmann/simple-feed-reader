@@ -82,6 +82,13 @@ services:
         # collect nothing. EmbedProvidersWiringTest guards it.
         App\Service\Reader\Media\EmbedProviderInterface:
             tags: ['app.embed_provider']
+        # Same reason as the blocks above: Symfony's mailer wires its transport
+        # chain from a `mailer.transport_factory`-tagged iterator, and it only
+        # auto-tags the bridge factories it ships — never a plain implementation
+        # of its own interface. Without this, `dynamic://` resolves to nothing
+        # and MAILER_DSN=dynamic://default throws UnsupportedSchemeException.
+        Symfony\Component\Mailer\Transport\TransportFactoryInterface:
+            tags: ['mailer.transport_factory']
 
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name

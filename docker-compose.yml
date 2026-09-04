@@ -47,7 +47,8 @@ services:
       # unaffected. In the test env Doctrine's dbname_suffix appends '_test',
       # so this one URL also points phpunit at feedreader_test.
       DATABASE_URL: "mysql://feedreader:feedreader@mysql:3306/feedreader?serverVersion=8.4&charset=utf8mb4"
-      MAILER_DSN: "smtp://mailpit:1025"
+      MAILER_DSN: "dynamic://default"
+      MAILER_FALLBACK_DSN: "smtp://mailpit:1025"
       MEILISEARCH_URL: "http://meilisearch:7700"
       MEILISEARCH_KEY: "dev-master-key-not-a-secret"
     extra_hosts:
@@ -118,7 +119,8 @@ services:
       - ./docker/php/worker-healthcheck.php:/usr/local/bin/worker-healthcheck.php:ro
     environment:
       DATABASE_URL: "mysql://feedreader:feedreader@mysql:3306/feedreader?serverVersion=8.4&charset=utf8mb4"
-      MAILER_DSN: "smtp://mailpit:1025"
+      MAILER_DSN: "dynamic://default"
+      MAILER_FALLBACK_DSN: "smtp://mailpit:1025"
       MEILISEARCH_URL: "http://meilisearch:7700"
       MEILISEARCH_KEY: "dev-master-key-not-a-secret"
     extra_hosts:
