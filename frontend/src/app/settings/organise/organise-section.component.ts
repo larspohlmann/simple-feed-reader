@@ -20,6 +20,7 @@ import { ManageActions } from '../../reader/manage/manage-actions.service';
 import { SubscriptionsStore } from '../../reader/subscriptions.store';
 import { TagsStore } from '../../reader/tags.store';
 import { Problem, parseProblem } from '../../core/problem';
+import { pluralKey } from '../../core/plural-key';
 import { SubscriptionFlags, TagDto } from '../../reader/models';
 
 /** One item of the bulk bar's "Visibility" menu: which flag it sets, to what
@@ -62,6 +63,8 @@ interface VisibilityMenuItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OrganiseSectionComponent implements OnInit {
+  protected readonly pluralKey = pluralKey;
+
   readonly store = inject(OrganiseStore);
   protected readonly manage = inject(ManageActions);
   protected readonly subs = inject(SubscriptionsStore);

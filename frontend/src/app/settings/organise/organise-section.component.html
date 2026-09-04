@@ -3,7 +3,10 @@
     <app-settings-group
       icon="warning"
       [title]="'settings.health.title' | transloco"
-      [caption]="'settings.health.summary' | transloco: { count: subs.unhealthy().length }"
+      [caption]="
+        pluralKey('settings.health.summary', subs.unhealthy().length)
+          | transloco: { count: subs.unhealthy().length }
+      "
     >
       @for (feed of subs.unhealthy(); track feed.id) {
         <app-unhealthy-feed-row

@@ -9,34 +9,19 @@ import { ManageActions } from './manage-actions.service';
 import { SubscriptionsStore } from '../subscriptions.store';
 import { TagsStore } from '../tags.store';
 import { RefreshReport, SubscriptionDto, TagDto } from '../models';
+import { makeSubscription } from '../testing/subscription.factory';
 import { ToastService, CONFIRMATION_DURATION_MS } from '../../shared/toast/toast.service';
 import { TranslocoService } from '@jsverse/transloco';
 
 const BASE = 'https://api.test';
 
-const sub: SubscriptionDto = {
+const sub: SubscriptionDto = makeSubscription({
   id: 5,
   feedId: 50,
   title: 'Heise',
-  faviconUrl: null,
-  customTitle: null,
   feedUrl: 'u',
-  siteUrl: null,
-  description: null,
-  imageUrl: null,
-  status: 'active',
-  sourceFormat: 'xml',
   createdAt: 'x',
-  lastFetchedAt: null,
-  lastSuccessfulFetchAt: null,
-  consecutiveFailures: 0,
-  lastErrorMessage: null,
-  position: 0,
-  tags: [],
-  unreadCount: 0,
-  includeInAllItems: true,
-  includeInForYou: true,
-};
+});
 const tag: TagDto = { id: 3, name: 'Tech', color: null, icon: null, position: 0 };
 const TAG = tag;
 const SUBSCRIPTION = sub;

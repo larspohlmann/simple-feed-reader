@@ -1,3 +1,4 @@
+import { pluralKey } from '../core/plural-key';
 import { SubscriptionDto } from './models';
 
 export interface HealthReason {
@@ -27,13 +28,12 @@ export function daysSince(iso: string, now: Date): number {
 export function feedHealthReason(sub: SubscriptionDto, now: Date): HealthReason {
   if (sub.status === 'gone') return { key: 'settings.health.reason.gone' };
   if (sub.lastSuccessfulFetchAt !== null) {
-    return {
-      key: 'settings.health.reason.noUpdate',
-      params: { days: daysSince(sub.lastSuccessfulFetchAt, now) },
-    };
+    const days = daysSince(sub.lastSuccessfulFetchAt, now);
+    if (days === 0) return { key: 'settings.health.reason.noUpdateToday' };
+    return { key: pluralKey('settings.health.reason.noUpdate', days), params: { days } };
   }
   return {
-    key: 'settings.health.reason.failedAttempts',
+    key: pluralKey('settings.health.reason.failedAttempts', sub.consecutiveFailures),
     params: { count: sub.consecutiveFailures },
   };
 }

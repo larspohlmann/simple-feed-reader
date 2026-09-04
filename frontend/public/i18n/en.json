@@ -493,7 +493,8 @@
     },
     "health": {
       "title": "Unhealthy feeds",
-      "summary": "{{count}} feeds need your attention",
+      "summaryOne": "{{count}} feed needs your attention",
+      "summaryOther": "{{count}} feeds need your attention",
       "badgeLabel": "{{count}} unhealthy feeds",
       "pill": {
         "dead": "Dead",
@@ -501,8 +502,11 @@
       },
       "reason": {
         "gone": "No longer available",
-        "noUpdate": "No update in {{days}} days",
-        "failedAttempts": "{{count}} failed attempts"
+        "noUpdateToday": "No update since today",
+        "noUpdateOne": "No update in {{days}} day",
+        "noUpdateOther": "No update in {{days}} days",
+        "failedAttemptsOne": "{{count}} failed attempt",
+        "failedAttemptsOther": "{{count}} failed attempts"
       },
       "details": {
         "lastSuccess": "Last successful update",

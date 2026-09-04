@@ -7,14 +7,13 @@ import { SubscriptionDto } from '../../reader/models';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { DisclosureComponent } from '../../shared/disclosure/disclosure.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
-import { IconComponent } from '../../shared/icon/icon.component';
 
 /** One row in the unhealthy-feeds list: favicon, title, a status pill, a
  *  friendly reason line, Retry and Unsubscribe, and an inline details
  *  disclosure. Presentational — it emits and never writes. */
 @Component({
   selector: 'app-unhealthy-feed-row',
-  imports: [TranslocoPipe, IconComponent, FaviconComponent, ButtonComponent, DisclosureComponent],
+  imports: [TranslocoPipe, FaviconComponent, ButtonComponent, DisclosureComponent],
   templateUrl: './unhealthy-feed-row.component.html',
   styleUrl: './unhealthy-feed-row.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

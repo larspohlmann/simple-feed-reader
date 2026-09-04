@@ -493,7 +493,8 @@
     },
     "health": {
       "title": "Fehlerhafte Feeds",
-      "summary": "{{count}} Feeds brauchen deine Aufmerksamkeit",
+      "summaryOne": "{{count}} Feed braucht deine Aufmerksamkeit",
+      "summaryOther": "{{count}} Feeds brauchen deine Aufmerksamkeit",
       "badgeLabel": "{{count}} fehlerhafte Feeds",
       "pill": {
         "dead": "Tot",
@@ -501,8 +502,11 @@
       },
       "reason": {
         "gone": "Nicht mehr verfügbar",
-        "noUpdate": "Seit {{days}} Tagen keine Aktualisierung",
-        "failedAttempts": "{{count}} fehlgeschlagene Versuche"
+        "noUpdateToday": "Seit heute keine Aktualisierung",
+        "noUpdateOne": "Seit {{days}} Tag keine Aktualisierung",
+        "noUpdateOther": "Seit {{days}} Tagen keine Aktualisierung",
+        "failedAttemptsOne": "{{count}} fehlgeschlagener Versuch",
+        "failedAttemptsOther": "{{count}} fehlgeschlagene Versuche"
       },
       "details": {
         "lastSuccess": "Letzte erfolgreiche Aktualisierung",
