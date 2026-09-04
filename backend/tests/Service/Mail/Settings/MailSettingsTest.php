@@ -7,6 +7,7 @@ namespace App\Tests\Service\Mail\Settings;
 use App\Dto\Admin\MailSettingsRequest;
 use App\Enum\MailEncryption;
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
+use App\Service\Mail\Settings\MailFallback;
 use App\Service\Mail\Settings\MailSettings;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -113,5 +114,60 @@ final class MailSettingsTest extends KernelTestCase
         ));
 
         self::assertTrue($this->settings()->view()['enabled']);
+    }
+
+    public function testTheHintIsTheLastFourCharactersEvenWhenTheyAreMultibyte(): void
+    {
+        $this->settings()->update(new MailSettingsRequest(host: 'h', password: 'pässwört'));
+
+        self::assertSame('wört', $this->settings()->view()['passwordHint']);
+    }
+
+    public function testASavedFromAddressWinsOverTheEnvIdentity(): void
+    {
+        $this->settings()->update(new MailSettingsRequest(
+            host: 'h',
+            fromAddress: 'saved@reader.test',
+            fromName: 'Saved',
+            password: 'p',
+        ));
+
+        $identity = $this->settings()->identity();
+        self::assertSame('saved@reader.test', $identity->address);
+        self::assertSame('Saved', $identity->name);
+    }
+
+    public function testARowWithABlankFromAddressFallsBackToTheEnvIdentity(): void
+    {
+        $this->settings()->update(new MailSettingsRequest(host: 'h', fromAddress: '', password: 'p'));
+
+        self::assertSame(
+            self::getContainer()->get(MailFallback::class)->identity()->address,
+            $this->settings()->identity()->address,
+        );
+    }
+
+    public function testADisabledAuthenticatedRowMayBeSavedWithoutAPassword(): void
+    {
+        $this->settings()->update(new MailSettingsRequest(
+            enabled: false,
+            host: 'smtp.relay.test',
+            username: 'postbox',
+            password: null,
+        ));
+
+        self::assertTrue($this->settings()->view()['hasSavedConfig']);
+    }
+
+    public function testAnEnabledAuthenticatedRowWithNoHostMayBeSavedWithoutAPassword(): void
+    {
+        $this->settings()->update(new MailSettingsRequest(
+            enabled: true,
+            host: '',
+            username: 'postbox',
+            password: null,
+        ));
+
+        self::assertTrue($this->settings()->view()['hasSavedConfig']);
     }
 }

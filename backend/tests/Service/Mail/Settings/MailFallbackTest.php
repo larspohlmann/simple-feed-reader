@@ -52,4 +52,26 @@ final class MailFallbackTest extends TestCase
         self::assertTrue($connection->enabled);
         self::assertSame('', $connection->host);
     }
+
+    public function testABlankDsnIsNotEnabled(): void
+    {
+        self::assertFalse((new MailFallback('   ', 'from@x.test', 'X'))->connection()->enabled);
+    }
+
+    public function testAMalformedDsnIsEnabledButNotSmtpParseable(): void
+    {
+        $connection = (new MailFallback('smtp://', 'from@x.test', 'X'))->connection();
+
+        self::assertTrue($connection->enabled);
+        self::assertSame('', $connection->host);
+        self::assertSame(587, $connection->port);
+    }
+
+    public function testAnSmtpDsnWithoutAPortFallsBackToTheSubmissionPort(): void
+    {
+        $connection = (new MailFallback('smtp://smtp.relay.test', 'from@x.test', 'X'))->connection();
+
+        self::assertSame(587, $connection->port);
+        self::assertNull($connection->username);
+    }
 }

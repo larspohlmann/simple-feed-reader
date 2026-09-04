@@ -43,6 +43,13 @@ final class MailPasswordCipherTest extends TestCase
         $cipher->open($tampered);
     }
 
+    public function testASecretOfExactlyTheMinimumLengthIsAccepted(): void
+    {
+        self::assertSame('x', (new MailPasswordCipher(str_repeat('k', 32)))->open(
+            (new MailPasswordCipher(str_repeat('k', 32)))->seal('x'),
+        ));
+    }
+
     public function testTooShortASecretIsRejected(): void
     {
         $this->expectException(\InvalidArgumentException::class);
