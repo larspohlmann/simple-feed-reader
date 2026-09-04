@@ -33,4 +33,9 @@ final class IncompleteMailConfigurationException extends ApiException
     {
         return new self('Enabling mail needs an SMTP host, because the environment has no fallback transport.');
     }
+
+    public static function proxyMissing(): self
+    {
+        return new self('Mail is set to use the egress proxy, but no proxy is configured.');
+    }
 }

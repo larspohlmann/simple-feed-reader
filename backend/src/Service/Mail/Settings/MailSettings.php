@@ -11,6 +11,7 @@ use App\Http\Admin\MailSettingsJson;
 use App\Repository\MailServerSettingsRepository;
 use App\Service\Mail\Settings\Crypto\MailPasswordCipher;
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
+use App\Service\Proxy\ProxySettings;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -28,13 +29,18 @@ readonly class MailSettings
         private EntityManagerInterface $em,
         private MailPasswordCipher $cipher,
         private MailFallback $fallback,
+        private ProxySettings $proxySettings,
     ) {
     }
 
     /** @return MailSettingsPayload */
     public function view(): array
     {
-        return MailSettingsJson::from($this->repository->findSingleton(), $this->fallback->connection());
+        return MailSettingsJson::from(
+            $this->repository->findSingleton(),
+            $this->fallback->connection(),
+            $this->proxySettings->configuredProxy(),
+        );
     }
 
     public function resetToEnvironment(): void
@@ -52,6 +58,7 @@ readonly class MailSettings
         $connection = $this->connectionFrom($request);
         $this->guardAgainstEnablingWithoutATransport($connection);
         $this->guardAgainstIncompleteAuthenticatedRow($request, $connection, $existing);
+        $this->guardAgainstProxyRoutingWithoutAProxy($request);
 
         $settings = $existing;
         if (null === $settings) {
@@ -136,6 +143,13 @@ readonly class MailSettings
         }
     }
 
+    private function guardAgainstProxyRoutingWithoutAProxy(MailSettingsRequest $request): void
+    {
+        if ($request->useProxy && null === $this->proxySettings->configuredProxy()) {
+            throw IncompleteMailConfigurationException::proxyMissing();
+        }
+    }
+
     private function connectionFrom(MailSettingsRequest $request): MailConnection
     {
         return new MailConnection(
@@ -146,6 +160,7 @@ readonly class MailSettings
             MailEncryption::from($request->encryption),
             $request->fromAddress,
             $request->fromName,
+            $request->useProxy,
         );
     }
 }

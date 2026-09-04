@@ -26,6 +26,7 @@ final readonly class MailConnection
         public MailEncryption $encryption,
         public string $fromAddress,
         public string $fromName,
+        public bool $useProxy = false,
     ) {
     }
 }

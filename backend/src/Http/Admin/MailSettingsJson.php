@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Admin;
 
 use App\Entity\MailServerSettings;
+use App\Service\Fetch\ProxyConfig;
 use App\Service\Mail\Settings\MailConnection;
 
 /**
@@ -17,12 +18,13 @@ use App\Service\Mail\Settings\MailConnection;
  *     encryption: string, fromAddress: string, fromName: string,
  *     hasPassword: bool,
  *     hasSavedConfig: bool, envFallbackConfigured: bool,
+ *     useProxy: bool, proxyConfigured: bool, proxyLabel: string,
  * }
  */
 final readonly class MailSettingsJson
 {
     /** @return MailSettingsPayload */
-    public static function from(?MailServerSettings $settings, MailConnection $fallback): array
+    public static function from(?MailServerSettings $settings, MailConnection $fallback, ?ProxyConfig $proxy): array
     {
         $connection = $settings?->connection() ?? $fallback;
 
@@ -37,6 +39,11 @@ final readonly class MailSettingsJson
             'hasPassword' => $settings?->hasPassword() ?? false,
             'hasSavedConfig' => null !== $settings,
             'envFallbackConfigured' => $fallback->enabled,
+            'useProxy' => $settings?->usesProxy() ?? false,
+            'proxyConfigured' => null !== $proxy,
+            'proxyLabel' => null !== $proxy
+                ? \sprintf('%s · %s:%d', $proxy->type->value, $proxy->host, $proxy->port)
+                : '',
         ];
     }
 }

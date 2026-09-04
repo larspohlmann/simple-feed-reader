@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Service\Mail\Settings;
 
 use App\Dto\Admin\MailSettingsRequest;
+use App\Dto\Admin\ProxySettingsRequest;
 use App\Enum\MailEncryption;
+use App\Repository\MailServerSettingsRepository;
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
 use App\Service\Mail\Settings\MailFallback;
 use App\Service\Mail\Settings\MailSettings;
+use App\Service\Proxy\ProxySettings;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class MailSettingsTest extends KernelTestCase
@@ -16,6 +19,20 @@ final class MailSettingsTest extends KernelTestCase
     private function settings(): MailSettings
     {
         return self::getContainer()->get(MailSettings::class);
+    }
+
+    private function repository(): MailServerSettingsRepository
+    {
+        return self::getContainer()->get(MailServerSettingsRepository::class);
+    }
+
+    private function configureAProxy(): void
+    {
+        self::getContainer()->get(ProxySettings::class)->update(new ProxySettingsRequest(
+            type: 'SOCKS5',
+            host: 'proxy.example',
+            port: 1080,
+        ));
     }
 
     public function testNoRowReportsDerivedEnabledFromTheFallback(): void
@@ -205,5 +222,25 @@ final class MailSettingsTest extends KernelTestCase
             username: 'alice',
             removePassword: true,
         ));
+    }
+
+    public function testUseProxyIsRejectedWhenNoEgressProxyIsConfigured(): void
+    {
+        $this->expectException(IncompleteMailConfigurationException::class);
+
+        $this->settings()->update(new MailSettingsRequest(host: 'smtp.gmail.com', useProxy: true));
+    }
+
+    public function testUseProxyIsPersistedWhenAProxyIsConfigured(): void
+    {
+        $this->configureAProxy();
+
+        $this->settings()->update(new MailSettingsRequest(
+            host: 'smtp.gmail.com',
+            useProxy: true,
+            password: 'app-pw',
+        ));
+
+        self::assertTrue($this->repository()->findSingleton()?->usesProxy());
     }
 }

@@ -12,6 +12,9 @@ use Symfony\Component\Validator\Constraints as Assert;
  * Full-replace payload for the mail settings. The password is a three-state
  * intent: null keeps the stored secret, a string replaces it, and
  * `removePassword` clears it. Both are inbound-only, never echoed back.
+ *
+ * @SuppressWarnings("PHPMD.ExcessiveParameterList") pure data carrier that
+ * mirrors the admin mail form field-for-field, not a behavioural method.
  */
 final readonly class MailSettingsRequest
 {
@@ -39,6 +42,8 @@ final readonly class MailSettingsRequest
         public ?string $password = null,
         #[Assert\Type('bool')]
         public bool $removePassword = false,
+        #[Assert\Type('bool')]
+        public bool $useProxy = false,
     ) {
     }
 }

@@ -57,9 +57,17 @@ class MailServerSettings
     #[ORM\Column(options: ['default' => 1])]
     private int $keyVersion = 1;
 
+    #[ORM\Column(options: ['default' => 0])]
+    private bool $useProxy = false;
+
     public function isEnabled(): bool
     {
         return $this->enabled;
+    }
+
+    public function usesProxy(): bool
+    {
+        return $this->useProxy;
     }
 
     public function getHost(): string
@@ -102,6 +110,7 @@ class MailServerSettings
             $this->encryption,
             $this->fromAddress,
             $this->fromName,
+            $this->useProxy,
         );
     }
 
@@ -138,6 +147,7 @@ class MailServerSettings
         $this->encryption = $connection->encryption;
         $this->fromAddress = $connection->fromAddress;
         $this->fromName = $connection->fromName;
+        $this->useProxy = $connection->useProxy;
     }
 
     public function clearStoredPassword(): void
