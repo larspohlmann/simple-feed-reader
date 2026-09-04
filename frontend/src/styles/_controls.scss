@@ -49,20 +49,13 @@ textarea:focus {
   outline: none;
 }
 
-// A field in error keeps its danger border even while focused -- the accent
-// border above would otherwise mask the invalid state the moment a user
-// clicks into the control to fix it.
+// A field in error keeps its danger border even while focused, or the accent
+// :focus border above would mask the invalid state. Same specificity, declared
+// after, so it wins by source order; :focus above still drops the outline.
 input:not([type='checkbox'], [type='radio'], [type='color'])[aria-invalid='true'],
 select[aria-invalid='true'],
 textarea[aria-invalid='true'] {
   border-color: var(--danger);
-}
-
-input:not([type='checkbox'], [type='radio'], [type='color'])[aria-invalid='true']:focus,
-select[aria-invalid='true']:focus,
-textarea[aria-invalid='true']:focus {
-  border-color: var(--danger);
-  outline: none;
 }
 
 input:disabled,
