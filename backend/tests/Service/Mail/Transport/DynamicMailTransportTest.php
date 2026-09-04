@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Tests\Service\Mail\Transport;
 
 use App\Dto\Admin\MailSettingsRequest;
+use App\Dto\Admin\ProxySettingsRequest;
 use App\Entity\MailServerSettings;
 use App\Enum\MailEncryption;
 use App\Service\Crypto\SealedSecret;
 use App\Service\Mail\Settings\MailConnection;
 use App\Service\Mail\Settings\MailSettings;
+use App\Service\Mail\Transport\CurlSmtpTransport;
 use App\Service\Mail\Transport\DynamicMailTransport;
+use App\Service\Proxy\ProxySettings;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Mailer\Exception\TransportException;
@@ -82,5 +85,37 @@ final class DynamicMailTransportTest extends KernelTestCase
             'dynamic://default',
             (string) self::getContainer()->get(DynamicMailTransport::class),
         );
+    }
+
+    public function testActiveTransportUsesTheCurlTransportForAProxiedRow(): void
+    {
+        self::getContainer()->get(ProxySettings::class)->update(new ProxySettingsRequest(
+            type: 'SOCKS5',
+            host: 'proxy.example',
+            port: 1080,
+        ));
+        self::getContainer()->get(MailSettings::class)->update(new MailSettingsRequest(
+            host: 'smtp.gmail.com',
+            username: 'alice',
+            password: 'app-pw',
+            useProxy: true,
+        ));
+
+        $transport = self::getContainer()->get(DynamicMailTransport::class);
+
+        self::assertInstanceOf(CurlSmtpTransport::class, $transport->activeTransport());
+    }
+
+    public function testActiveTransportUsesEsmtpForADirectRow(): void
+    {
+        self::getContainer()->get(MailSettings::class)->update(new MailSettingsRequest(
+            host: 'smtp.relay.test',
+            password: 'p',
+            useProxy: false,
+        ));
+
+        $transport = self::getContainer()->get(DynamicMailTransport::class);
+
+        self::assertInstanceOf(EsmtpTransport::class, $transport->activeTransport());
     }
 }

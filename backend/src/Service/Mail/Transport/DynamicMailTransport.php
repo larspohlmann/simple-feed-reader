@@ -32,6 +32,7 @@ final class DynamicMailTransport implements TransportInterface
 
     public function __construct(
         private readonly MailSettings $settings,
+        private readonly ActiveMailTransportFactory $transportFactory,
         private readonly EventDispatcherInterface $dispatcher,
         private readonly HttpClientInterface $httpClient,
         private readonly LoggerInterface $logger,
@@ -61,7 +62,7 @@ final class DynamicMailTransport implements TransportInterface
         }
 
         $this->cached = null !== $resolved
-            ? EsmtpTransportBuilder::from($resolved, $this->dispatcher, $this->logger)
+            ? $this->transportFactory->forResolved($resolved, $this->dispatcher, $this->logger)
             : $this->buildFallback();
         $this->cachedSignature = $signature;
 
