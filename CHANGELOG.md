@@ -10,6 +10,18 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.0.2] - 2026-09-04
+
+## What's Changed
+* docs: refresh screenshots and add a gallery page by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/835
+* feat(#834): admin-configurable outgoing mail by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/836
+* refactor(#837): one instance-secret cipher behind the three domain ciphers by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/839
+* refactor(#838): share the settings draft service, saved toast and probe styles by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/840
+* feat(#841): guide Gmail users to an App Password on a failed mail test by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/843
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.0.1...v1.0.2
+
 ## [v1.0.1] - 2026-09-04
 
 ## What's Changed
