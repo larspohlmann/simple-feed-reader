@@ -2247,6 +2247,43 @@ git add backend/.env docker-compose.prod.yml .env.prod.example deploy/strato && 
 
 ---
 
+### Task 17: Reset to the env configuration (addendum, 2026-09-04)
+
+A user request added mid-implementation: from the admin panel, revert to the
+`.env` mail configuration. Semantics: delete the saved DB row so resolution
+falls back to the env transport + identity (see the spec's "Reset to
+environment" addendum). Backend lands here; the frontend button is folded into
+Tasks 13–15.
+
+**Files:**
+- Modify: `backend/src/Service/Mail/Settings/MailSettings.php` (add
+  `resetToEnvironment(): void`; add `hasSavedConfig`/`envFallbackConfigured` to
+  `view()`).
+- Modify: `backend/src/Http/Admin/MailSettingsJson.php` (add the two booleans to
+  the shape: `hasSavedConfig = null !== $settings`,
+  `envFallbackConfigured = $fallback->isReal`).
+- Modify: `backend/src/Controller/Admin/AdminMailController.php` (add
+  `POST /api/admin/mail/reset`).
+- Test: extend `MailSettingsTest` (reset deletes the row → env fallback,
+  `hasSavedConfig` false) and `AdminMailControllerTest` (row present → reset →
+  200, env-seeded, `hasSavedConfig` false; non-admin 403).
+
+**Interfaces:**
+- `MailSettings::resetToEnvironment()` removes the singleton row and flushes;
+  a no-op when no row exists.
+- JSON shape gains `hasSavedConfig: bool`, `envFallbackConfigured: bool`.
+
+- [ ] **Step 1: failing tests** for `resetToEnvironment()` and the endpoint.
+- [ ] **Step 2:** implement the service method, the JSON fields, the endpoint.
+- [ ] **Step 3:** `composer check` + the mail/controller suites green.
+- [ ] **Step 4:** commit `feat(#834): reset mail settings back to the env config`.
+
+Frontend addendum (Tasks 13–15): `MailSettingsService.reset()` POSTs the
+endpoint and commits the response; `MailSettingsState` gains the two booleans;
+`MailSectionComponent` shows a confirm-guarded "Reset to environment" button
+when `hasSavedConfig && envFallbackConfigured`; i18n `settings.mail.resetToEnv`
+(+ confirm text, toast) in every locale.
+
 ## Self-Review
 
 **Spec coverage:**

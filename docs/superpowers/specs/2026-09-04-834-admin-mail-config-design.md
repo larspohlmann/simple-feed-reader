@@ -154,6 +154,31 @@ half-configured secret. A `sendmail://` / `null://` fallback (Strato, Docker)
 leaves the SMTP fields blank; an `smtp(s)://` fallback (dev Mailpit, an SMTP
 relay) pre-fills them.
 
+## Reset to environment (addendum, 2026-09-04)
+
+An admin who has saved a DB config can revert the instance to the `.env`
+configuration from the admin panel, without an `.env` edit.
+
+- **Semantics:** reset **deletes the saved singleton row**. Resolution is
+  "DB-when-present, else env fallback", so with the row gone the instance sends
+  through `MAILER_FALLBACK_DSN` + `MAIL_FROM(_NAME)` again — the env DSN carries
+  its own credentials, so this is a working transport, not a half-configured one.
+  Reset is deliberately not "load the env values into the form": the password
+  never crosses the wire, so re-saving env values would persist a passwordless
+  SMTP row — the exact half-configured-secret state the form already guards
+  against.
+- **API:** `POST /api/admin/mail/reset` (ROLE_ADMIN via the `^/api/admin/`
+  rule). It calls `MailSettings::resetToEnvironment()` and returns the same
+  payload as `GET`, now env-seeded.
+- **Payload additions:** the mail JSON gains `hasSavedConfig` (a DB row exists)
+  and `envFallbackConfigured` (the env fallback is a real transport). These are
+  additive to the existing shape.
+- **Frontend:** a "Reset to environment" button in the mail section, shown only
+  when `hasSavedConfig && envFallbackConfigured` — so it never appears as a
+  disguised "disable mail" control on an install whose env has no real transport
+  (a fresh Strato/Docker `null://` fallback). It confirms before firing (it
+  discards the saved override), then reloads and toasts.
+
 ## Files
 
 New (backend):
