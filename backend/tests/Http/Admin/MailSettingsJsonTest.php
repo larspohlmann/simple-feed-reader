@@ -6,8 +6,10 @@ namespace App\Tests\Http\Admin;
 
 use App\Entity\MailServerSettings;
 use App\Enum\MailEncryption;
+use App\Enum\ProxyType;
 use App\Http\Admin\MailSettingsJson;
 use App\Service\Crypto\SealedSecret;
+use App\Service\Fetch\ProxyConfig;
 use App\Service\Mail\Settings\MailConnection;
 use PHPUnit\Framework\TestCase;
 
@@ -26,22 +28,39 @@ final class MailSettingsJsonTest extends TestCase
             'fromAddress' => 'a@env',
             'fromName' => 'Env',
             'hasPassword' => false,
-            'passwordHint' => '',
             'hasSavedConfig' => false,
             'envFallbackConfigured' => true,
-        ], MailSettingsJson::from(null, $fallback));
+            'useProxy' => false,
+            'proxyConfigured' => false,
+            'proxyLabel' => '',
+        ], MailSettingsJson::from(null, $fallback, null));
     }
 
-    public function testWithARowThePayloadIsTheRowPlusTheHintAndTheFallbackFlag(): void
+    public function testProxyAvailabilityIsExposedWhenAProxyIsConfigured(): void
+    {
+        $fallback = new MailConnection(false, '', 587, null, MailEncryption::Starttls, '', '');
+        $proxy = new ProxyConfig(ProxyType::Socks5, 'proxy.example', 1080, null, null, true, true);
+
+        $payload = MailSettingsJson::from(null, $fallback, $proxy);
+
+        self::assertTrue($payload['proxyConfigured']);
+        self::assertSame('SOCKS5 · proxy.example:1080', $payload['proxyLabel']);
+        self::assertFalse($payload['useProxy']);
+    }
+
+    public function testWithARowThePayloadIsTheRowPlusTheFallbackFlag(): void
     {
         $settings = new MailServerSettings();
         $settings->apply(
             new MailConnection(false, 'smtp.row.test', 465, null, MailEncryption::None, 'a@row', 'Row'),
             new SealedSecret('Y2lwaGVy', 'bm9uY2U=', 'c2FsdA==', 1),
-            'fish',
         );
         $fallback = new MailConnection(false, '', 587, null, MailEncryption::Starttls, '', '');
 
+        $payload = MailSettingsJson::from($settings, $fallback, null);
+
+        self::assertArrayNotHasKey('passwordHint', $payload);
+        self::assertTrue($payload['hasPassword']);
         self::assertSame([
             'enabled' => false,
             'host' => 'smtp.row.test',
@@ -51,9 +70,11 @@ final class MailSettingsJsonTest extends TestCase
             'fromAddress' => 'a@row',
             'fromName' => 'Row',
             'hasPassword' => true,
-            'passwordHint' => 'fish',
             'hasSavedConfig' => true,
             'envFallbackConfigured' => false,
-        ], MailSettingsJson::from($settings, $fallback));
+            'useProxy' => false,
+            'proxyConfigured' => false,
+            'proxyLabel' => '',
+        ], $payload);
     }
 }

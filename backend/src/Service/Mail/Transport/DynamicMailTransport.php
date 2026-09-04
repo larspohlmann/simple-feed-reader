@@ -5,16 +5,15 @@ declare(strict_types=1);
 namespace App\Service\Mail\Transport;
 
 use App\Service\Crypto\Exception\SecretUnreadableException;
+use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
 use App\Service\Mail\Settings\MailSettings;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Envelope;
 use Symfony\Component\Mailer\Exception\TransportException;
 use Symfony\Component\Mailer\SentMessage;
-use Symfony\Component\Mailer\Transport;
 use Symfony\Component\Mailer\Transport\TransportInterface;
 use Symfony\Component\Mime\RawMessage;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
  * The one mailer transport. It resolves the active transport at SEND time, never
@@ -32,8 +31,8 @@ final class DynamicMailTransport implements TransportInterface
 
     public function __construct(
         private readonly MailSettings $settings,
+        private readonly ActiveMailTransportFactory $transportFactory,
         private readonly EventDispatcherInterface $dispatcher,
-        private readonly HttpClientInterface $httpClient,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -60,9 +59,16 @@ final class DynamicMailTransport implements TransportInterface
             return $this->cached;
         }
 
-        $this->cached = null !== $resolved
-            ? EsmtpTransportBuilder::from($resolved, $this->dispatcher, $this->logger)
-            : $this->buildFallback();
+        try {
+            $this->cached = null !== $resolved
+                ? $this->transportFactory->forResolved($resolved, $this->dispatcher, $this->logger)
+                : $this->buildFallback();
+        } catch (IncompleteMailConfigurationException $e) {
+            // A row that routes through the egress proxy after that proxy's config
+            // was removed. Surfaced as a transport failure so the send path degrades
+            // the way a dead relay already does, not as an HTTP 422 in a worker.
+            throw new TransportException('The mail configuration is incomplete: ' . $e->getMessage(), 0, $e);
+        }
         $this->cachedSignature = $signature;
 
         return $this->cached;
@@ -70,10 +76,9 @@ final class DynamicMailTransport implements TransportInterface
 
     private function buildFallback(): TransportInterface
     {
-        return Transport::fromDsn(
+        return $this->transportFactory->forFallbackDsn(
             $this->settings->activeTransportDsnFallback(),
             $this->dispatcher,
-            $this->httpClient,
             $this->logger,
         );
     }

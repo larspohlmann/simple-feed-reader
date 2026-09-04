@@ -14,9 +14,11 @@ export interface MailSettingsState {
   readonly fromAddress: string;
   readonly fromName: string;
   readonly hasPassword: boolean;
-  readonly passwordHint: string;
   readonly hasSavedConfig: boolean;
   readonly envFallbackConfigured: boolean;
+  readonly useProxy: boolean;
+  readonly proxyConfigured: boolean;
+  readonly proxyLabel: string;
 }
 
 export interface SaveMailSettings {
@@ -29,6 +31,8 @@ export interface SaveMailSettings {
   readonly fromName: string;
   /** null keeps the stored secret; a string replaces it. */
   readonly password: string | null;
+  readonly removePassword: boolean;
+  readonly useProxy: boolean;
 }
 
 /** The typed fields behind the explicit Save. The enable toggle and the
@@ -63,6 +67,17 @@ export class MailSettingsService extends DraftSettingsService<
     });
   }
 
+  /** Carries any pending typed edits along, like `save` -- committing clears the
+   *  draft, so leaving them out would silently discard an in-progress edit. */
+  removePassword(): void {
+    const current = this.state();
+    if (!current) return;
+    this.put({ ...this.bodyFromState(current), ...this.draft(), removePassword: true }, (state) => {
+      this.commit(state);
+      this.saved.set(true);
+    });
+  }
+
   testConnection(): void {
     this.probe.set({ status: 'loading' });
     this.http.post<MailTestResponse>(`${this.endpoint}/test`, {}).subscribe({
@@ -85,6 +100,8 @@ export class MailSettingsService extends DraftSettingsService<
       fromAddress: state.fromAddress,
       fromName: state.fromName,
       password: null,
+      removePassword: false,
+      useProxy: state.useProxy,
     };
   }
 }

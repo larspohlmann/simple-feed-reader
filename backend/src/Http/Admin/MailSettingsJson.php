@@ -5,25 +5,26 @@ declare(strict_types=1);
 namespace App\Http\Admin;
 
 use App\Entity\MailServerSettings;
+use App\Service\Fetch\ProxyConfig;
 use App\Service\Mail\Settings\MailConnection;
 
 /**
- * The admin mail payload. The password is absent by construction: only the
- * 4-char hint and a hasPassword flag cross the wire, never the secret. With no
- * row yet, the non-secret fields are seeded from the env fallback so the form
- * shows what is currently active; the password is never seeded from the env.
+ * The admin mail payload. The password never crosses the wire — only a
+ * hasPassword flag does. With no row yet, non-secret fields seed from the env
+ * fallback (never the password) so the form shows what is currently active.
  *
  * @phpstan-type MailSettingsPayload array{
  *     enabled: bool, host: string, port: int, username: string|null,
  *     encryption: string, fromAddress: string, fromName: string,
- *     hasPassword: bool, passwordHint: string,
+ *     hasPassword: bool,
  *     hasSavedConfig: bool, envFallbackConfigured: bool,
+ *     useProxy: bool, proxyConfigured: bool, proxyLabel: string,
  * }
  */
 final readonly class MailSettingsJson
 {
     /** @return MailSettingsPayload */
-    public static function from(?MailServerSettings $settings, MailConnection $fallback): array
+    public static function from(?MailServerSettings $settings, MailConnection $fallback, ?ProxyConfig $proxy): array
     {
         $connection = $settings?->connection() ?? $fallback;
 
@@ -36,9 +37,13 @@ final readonly class MailSettingsJson
             'fromAddress' => $connection->fromAddress,
             'fromName' => $connection->fromName,
             'hasPassword' => $settings?->hasPassword() ?? false,
-            'passwordHint' => $settings?->getPasswordHint() ?? '',
             'hasSavedConfig' => null !== $settings,
             'envFallbackConfigured' => $fallback->enabled,
+            'useProxy' => $settings?->usesProxy() ?? false,
+            'proxyConfigured' => null !== $proxy,
+            'proxyLabel' => null !== $proxy
+                ? \sprintf('%s · %s:%d', $proxy->type->value, $proxy->host, $proxy->port)
+                : '',
         ];
     }
 }

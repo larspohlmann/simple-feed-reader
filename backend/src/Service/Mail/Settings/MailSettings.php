@@ -11,6 +11,7 @@ use App\Http\Admin\MailSettingsJson;
 use App\Repository\MailServerSettingsRepository;
 use App\Service\Mail\Settings\Crypto\MailPasswordCipher;
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
+use App\Service\Proxy\ProxySettings;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -23,20 +24,23 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 readonly class MailSettings
 {
-    private const int HINT_LENGTH = 4;
-
     public function __construct(
         private MailServerSettingsRepository $repository,
         private EntityManagerInterface $em,
         private MailPasswordCipher $cipher,
         private MailFallback $fallback,
+        private ProxySettings $proxySettings,
     ) {
     }
 
     /** @return MailSettingsPayload */
     public function view(): array
     {
-        return MailSettingsJson::from($this->repository->findSingleton(), $this->fallback->connection());
+        return MailSettingsJson::from(
+            $this->repository->findSingleton(),
+            $this->fallback->connection(),
+            $this->proxySettings->configuredProxy(),
+        );
     }
 
     public function resetToEnvironment(): void
@@ -54,6 +58,7 @@ readonly class MailSettings
         $connection = $this->connectionFrom($request);
         $this->guardAgainstEnablingWithoutATransport($connection);
         $this->guardAgainstIncompleteAuthenticatedRow($request, $connection, $existing);
+        $this->guardAgainstProxyRoutingWithoutAProxy($request);
 
         $settings = $existing;
         if (null === $settings) {
@@ -61,14 +66,13 @@ readonly class MailSettings
             $this->em->persist($settings);
         }
 
-        if (null === $request->password) {
+        if ($request->removePassword) {
+            $settings->applyWithoutPassword($connection);
+            $settings->clearStoredPassword();
+        } elseif (null === $request->password) {
             $settings->applyWithoutPassword($connection);
         } else {
-            $settings->apply(
-                $connection,
-                $this->cipher->seal($request->password),
-                mb_substr($request->password, -self::HINT_LENGTH),
-            );
+            $settings->apply($connection, $this->cipher->seal($request->password));
         }
 
         $this->em->flush();
@@ -90,12 +94,18 @@ readonly class MailSettings
             $settings->getUsername(),
             $settings->hasPassword() ? $this->cipher->open($settings->getSealedPassword()) : null,
             $settings->getEncryption(),
+            $settings->usesProxy(),
         );
     }
 
     public function activeTransportDsnFallback(): string
     {
         return $this->fallback->transportDsn();
+    }
+
+    public function hasEnvFallback(): bool
+    {
+        return $this->fallback->connection()->enabled;
     }
 
     public function identity(): MailIdentity
@@ -121,7 +131,8 @@ readonly class MailSettings
         MailConnection $connection,
         ?MailServerSettings $existing,
     ): void {
-        $willHavePassword = null !== $request->password || ($existing?->hasPassword() ?? false);
+        $willHavePassword = !$request->removePassword
+            && (null !== $request->password || ($existing?->hasPassword() ?? false));
         $isAuthenticatedTransport = $connection->enabled
             && '' !== $connection->host
             && null !== $connection->username;
@@ -138,6 +149,13 @@ readonly class MailSettings
         }
     }
 
+    private function guardAgainstProxyRoutingWithoutAProxy(MailSettingsRequest $request): void
+    {
+        if ($request->useProxy && null === $this->proxySettings->configuredProxy()) {
+            throw IncompleteMailConfigurationException::proxyMissing();
+        }
+    }
+
     private function connectionFrom(MailSettingsRequest $request): MailConnection
     {
         return new MailConnection(
@@ -148,6 +166,7 @@ readonly class MailSettings
             MailEncryption::from($request->encryption),
             $request->fromAddress,
             $request->fromName,
+            $request->useProxy,
         );
     }
 }

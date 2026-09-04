@@ -15,8 +15,9 @@ final class ResolvedMailTransportTest extends TestCase
         $withPassword = new ResolvedMailTransport('smtp.test', 2525, 'alice', 'hunter2', MailEncryption::Tls);
         $withoutPassword = new ResolvedMailTransport('smtp.test', 2525, null, null, MailEncryption::Starttls);
 
-        self::assertSame('smtp.test|2525|alice|tls|' . hash('sha256', 'hunter2'), $withPassword->signature());
-        self::assertSame('smtp.test|2525||starttls|no-pass', $withoutPassword->signature());
+        $expectedWithPassword = 'smtp.test|2525|alice|tls|' . hash('sha256', 'hunter2') . '|direct';
+        self::assertSame($expectedWithPassword, $withPassword->signature());
+        self::assertSame('smtp.test|2525||starttls|no-pass|direct', $withoutPassword->signature());
     }
 
     public function testARotatedPasswordChangesTheSignatureWithoutExposingIt(): void
@@ -26,5 +27,12 @@ final class ResolvedMailTransportTest extends TestCase
 
         self::assertNotSame($before->signature(), $after->signature());
         self::assertStringNotContainsString('hunter3', $after->signature());
+    }
+
+    public function testSignatureDiffersWhenProxyRoutingDiffers(): void
+    {
+        $direct = new ResolvedMailTransport('h', 587, 'u', 'p', MailEncryption::Starttls, false);
+        $proxied = new ResolvedMailTransport('h', 587, 'u', 'p', MailEncryption::Starttls, true);
+        self::assertNotSame($direct->signature(), $proxied->signature());
     }
 }

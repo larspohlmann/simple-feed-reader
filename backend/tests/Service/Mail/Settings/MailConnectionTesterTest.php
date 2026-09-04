@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Service\Mail\Settings;
 
 use App\Dto\Admin\MailSettingsRequest;
+use App\Dto\Admin\ProxySettingsRequest;
 use App\Service\Mail\Settings\MailConnectionTester;
 use App\Service\Mail\Settings\MailSettings;
+use App\Service\Proxy\ProxySettings;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -99,11 +101,58 @@ final class MailConnectionTesterTest extends KernelTestCase
         self::assertStringContainsString('not-an-address', (string) $result->reason);
     }
 
+    /** No saved row, but an env fallback DSN configured: the tester must dial
+     *  that transport rather than short-circuiting to not_configured. */
+    public function testItTestsTheEnvFallbackWhenNoRowIsSaved(): void
+    {
+        putenv('MAILER_FALLBACK_DSN=smtp://smtp.invalid.test:2525');
+        $_ENV['MAILER_FALLBACK_DSN'] = 'smtp://smtp.invalid.test:2525';
+        $_SERVER['MAILER_FALLBACK_DSN'] = 'smtp://smtp.invalid.test:2525';
+
+        $this->authenticateAsAdmin();
+
+        $result = $this->tester()->test();
+
+        self::assertFalse($result->ok);
+        self::assertNotSame('not_configured', $result->reason);
+    }
+
+    /** A saved row with useProxy=true must be tested through the proxy
+     *  transport, not the plain EsmtpTransport — proven by dialing an
+     *  unreachable proxy and getting a transport error, not not_configured. */
+    public function testItTestsAProxiedSavedRowThroughTheFactory(): void
+    {
+        $this->authenticateAsAdmin();
+
+        self::getContainer()->get(ProxySettings::class)->update(new ProxySettingsRequest(
+            type: 'SOCKS5',
+            host: '127.0.0.1',
+            port: 1,
+        ));
+        $this->settings()->update(new MailSettingsRequest(
+            enabled: true,
+            host: 'smtp.gmail.com',
+            username: 'u',
+            password: 'p',
+            fromAddress: 'from@x.test',
+            useProxy: true,
+        ));
+
+        $result = $this->tester()->test();
+
+        self::assertFalse($result->ok);
+        self::assertNotSame('not_configured', $result->reason);
+    }
+
     protected function tearDown(): void
     {
         putenv('MAIL_FROM=noreply@example.com');
         $_ENV['MAIL_FROM'] = 'noreply@example.com';
         $_SERVER['MAIL_FROM'] = 'noreply@example.com';
+
+        putenv('MAILER_FALLBACK_DSN=null://null');
+        $_ENV['MAILER_FALLBACK_DSN'] = 'null://null';
+        $_SERVER['MAILER_FALLBACK_DSN'] = 'null://null';
 
         parent::tearDown();
     }

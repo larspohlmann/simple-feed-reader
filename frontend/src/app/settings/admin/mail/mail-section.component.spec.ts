@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Dialog } from '@angular/cdk/dialog';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
 import { of } from 'rxjs';
 import { API_BASE_URL } from '../../../core/api';
@@ -25,9 +26,11 @@ function state(over: Partial<MailSettingsState> = {}): MailSettingsState {
     fromAddress: '',
     fromName: '',
     hasPassword: false,
-    passwordHint: '',
     hasSavedConfig: false,
     envFallbackConfigured: false,
+    useProxy: false,
+    proxyConfigured: false,
+    proxyLabel: '',
     ...over,
   };
 }
@@ -44,6 +47,7 @@ describe('MailSectionComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideRouter([]),
         { provide: API_BASE_URL, useValue: BASE },
         { provide: ToastService, useValue: toastStub },
         { provide: Dialog, useValue: dialogStub },
@@ -66,6 +70,12 @@ describe('MailSectionComponent', () => {
   const passwordInput = (fixture: ComponentFixture<MailSectionComponent>): HTMLInputElement =>
     fixture.nativeElement.querySelector('[data-testid="mail-password"]');
 
+  const portInput = (fixture: ComponentFixture<MailSectionComponent>): HTMLInputElement =>
+    fixture.nativeElement.querySelector('[data-testid="mail-port"]');
+
+  const fromAddressInput = (fixture: ComponentFixture<MailSectionComponent>): HTMLInputElement =>
+    fixture.nativeElement.querySelector('[data-testid="mail-from-address"]');
+
   const testButton = (fixture: ComponentFixture<MailSectionComponent>): HTMLButtonElement =>
     fixture.nativeElement.querySelector('[data-testid="mail-test-button"] button');
 
@@ -73,6 +83,26 @@ describe('MailSectionComponent', () => {
     fixture: ComponentFixture<MailSectionComponent>,
   ): HTMLButtonElement | null =>
     fixture.nativeElement.querySelector('[data-testid="mail-reset-to-env"] button');
+
+  const removePasswordButton = (
+    fixture: ComponentFixture<MailSectionComponent>,
+  ): HTMLButtonElement | null =>
+    fixture.nativeElement.querySelector('[data-testid="mail-remove-password"] button');
+
+  const overrideButton = (
+    fixture: ComponentFixture<MailSectionComponent>,
+  ): HTMLButtonElement | null =>
+    fixture.nativeElement.querySelector('[data-testid="mail-override"] button');
+
+  const useProxyToggleInput = (
+    fixture: ComponentFixture<MailSectionComponent>,
+  ): HTMLInputElement | null =>
+    fixture.nativeElement.querySelector('[data-testid="mail-use-proxy"] input');
+
+  const proxyConfigureLink = (
+    fixture: ComponentFixture<MailSectionComponent>,
+  ): HTMLAnchorElement | null =>
+    fixture.nativeElement.querySelector('[data-testid="mail-proxy-configure-link"]');
 
   beforeEach(() => {
     toastStub.show.mockReset();
@@ -183,13 +213,36 @@ describe('MailSectionComponent', () => {
     );
   });
 
-  it('never saves a cleared host as enabled, so the row cannot get stuck on', () => {
+  it('blocks a save with an empty host while enabled, guiding the user to fix it or turn mail off', () => {
     const fixture = mount(state({ host: 'smtp.example.com', enabled: true, hasSavedConfig: true }));
 
     hostInput(fixture).value = '';
     hostInput(fixture).dispatchEvent(new Event('input'));
     fixture.detectChanges();
 
+    fixture.componentInstance.onSave();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.fieldError('host')).not.toBeNull();
+    expect(hostInput(fixture).getAttribute('aria-invalid')).toBe('true');
+    http.expectNone(ENDPOINT);
+  });
+
+  it('still turns mail off from the form once the toggle itself is switched off, so the row cannot get stuck on', () => {
+    const fixture = mount(state({ host: 'smtp.example.com', enabled: true, hasSavedConfig: true }));
+
+    // Switch the real toggle off: on a saved row that instant-saves enabled=false.
+    enableToggleInput(fixture).click();
+    fixture.detectChanges();
+    http
+      .expectOne(ENDPOINT)
+      .flush(state({ host: 'smtp.example.com', enabled: false, hasSavedConfig: true }));
+
+    // Now clear the host and save explicitly. With the toggle already off, the
+    // host-required guard does not block, so the row can be persisted off.
+    hostInput(fixture).value = '';
+    hostInput(fixture).dispatchEvent(new Event('input'));
+    fixture.detectChanges();
     fixture.componentInstance.onSave();
     fixture.detectChanges();
 
@@ -293,14 +346,54 @@ describe('MailSectionComponent', () => {
     expect(gmailHint(fixture)).toBeNull();
   });
 
-  it('renders the stored password hint as a placeholder, never the secret itself', () => {
-    const fixture = mount(
-      state({ host: 'smtp.example.com', hasPassword: true, passwordHint: '••••ab12' }),
-    );
+  it('renders a static keep-hint placeholder, never a saved-password hint', () => {
+    const fixture = mount(state({ host: 'smtp.example.com', hasPassword: true }));
+    const i18n = TestBed.inject(TranslocoService);
 
-    expect(passwordInput(fixture).placeholder).toBe('••••ab12');
+    expect(passwordInput(fixture).placeholder).toBe(
+      i18n.translate('settings.mail.passwordKeepHint'),
+    );
     expect(passwordInput(fixture).value).toBe('');
     expect(passwordInput(fixture).type).toBe('password');
+  });
+
+  it('shows that a password is saved, but never any part of it', () => {
+    const fixture = mount(state({ host: 'smtp.example.com', hasPassword: true }));
+    const i18n = TestBed.inject(TranslocoService);
+
+    expect(fixture.nativeElement.textContent).toContain(
+      i18n.translate('settings.mail.passwordSaved'),
+    );
+  });
+
+  it('hides the saved-password line and Remove button when no password is stored', () => {
+    const fixture = mount(state({ host: 'smtp.example.com', hasPassword: false }));
+
+    expect(removePasswordButton(fixture)).toBeNull();
+  });
+
+  it('removes the stored password via svc.removePassword() when Remove is clicked', () => {
+    const fixture = mount(state({ host: 'smtp.example.com', hasPassword: true }));
+    const removeSpy = jest.spyOn(fixture.componentInstance.svc, 'removePassword');
+
+    removePasswordButton(fixture)?.click();
+    fixture.detectChanges();
+
+    expect(removeSpy).toHaveBeenCalled();
+
+    const put = http.expectOne(ENDPOINT);
+    expect(put.request.body.removePassword).toBe(true);
+    put.flush(state({ host: 'smtp.example.com', hasPassword: false }));
+  });
+
+  it('disables the Remove-password button while the draft is dirty', () => {
+    const fixture = mount(state({ host: 'smtp.example.com', hasPassword: true }));
+
+    hostInput(fixture).value = 'other.example.com';
+    hostInput(fixture).dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(removePasswordButton(fixture)?.disabled).toBe(true);
   });
 
   it('maps a blank password to null on the service', () => {
@@ -327,6 +420,28 @@ describe('MailSectionComponent', () => {
 
     expect(hostInput(fixture).value).toBe('old.example.com');
     expect(fixture.componentInstance.svc.dirty()).toBe(false);
+  });
+
+  it('clears a staged use-proxy toggle on Reset for a not-yet-saved row', () => {
+    const fixture = mount(
+      state({
+        host: 'smtp.example.com',
+        hasSavedConfig: false,
+        proxyConfigured: true,
+        useProxy: false,
+      }),
+    );
+
+    useProxyToggleInput(fixture)?.click();
+    fixture.detectChanges();
+    http.expectNone(ENDPOINT);
+    expect(fixture.componentInstance.dirty()).toBe(true);
+
+    fixture.componentInstance.onReset();
+    fixture.detectChanges();
+
+    expect(useProxyToggleInput(fixture)?.checked).toBe(false);
+    expect(fixture.componentInstance.dirty()).toBe(false);
   });
 
   it('hides the reset-to-environment control when there is no saved config', () => {
@@ -377,5 +492,189 @@ describe('MailSectionComponent', () => {
 
     expect(resetSpy).not.toHaveBeenCalled();
     http.expectNone(RESET_ENDPOINT);
+  });
+
+  it('marks fromAddress invalid and shows a message for a bad email on save', () => {
+    const fixture = mount(state({ host: 'smtp.example.com' }));
+
+    fromAddressInput(fixture).value = 'not-an-email';
+    fromAddressInput(fixture).dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    fixture.componentInstance.onSave();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.fieldError('fromAddress')).not.toBeNull();
+    expect(fromAddressInput(fixture).getAttribute('aria-invalid')).toBe('true');
+    http.expectNone(ENDPOINT);
+  });
+
+  it('maps a 422 errors map onto the offending field', () => {
+    const fixture = mount(state({ host: 'smtp.example.com' }));
+
+    fixture.componentInstance.onSave();
+    fixture.detectChanges();
+
+    http.expectOne(ENDPOINT).flush(
+      {
+        type: 'validation_error',
+        title: 'Validation failed',
+        status: 422,
+        errors: { port: ['This value should be between 1 and 65535.'] },
+      },
+      { status: 422, statusText: 'Unprocessable Content' },
+    );
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.fieldError('port')).toContain(
+      'This value should be between 1 and 65535.',
+    );
+    expect(portInput(fixture).getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('clears a field error when the user edits that field', () => {
+    const fixture = mount(state({ host: 'smtp.example.com' }));
+
+    fixture.componentInstance.onSave();
+    fixture.detectChanges();
+
+    http.expectOne(ENDPOINT).flush(
+      {
+        type: 'validation_error',
+        title: 'Validation failed',
+        status: 422,
+        errors: { host: ['Host looks wrong.'] },
+      },
+      { status: 422, statusText: 'Unprocessable Content' },
+    );
+    fixture.detectChanges();
+    expect(fixture.componentInstance.fieldError('host')).not.toBeNull();
+
+    hostInput(fixture).value = 'other.example.com';
+    hostInput(fixture).dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.fieldError('host')).toBeNull();
+    expect(hostInput(fixture).getAttribute('aria-invalid')).toBe('false');
+  });
+
+  describe('read-only environment view (#845)', () => {
+    it('renders the read-only env panel for sendmail, with no enable toggle and Test enabled', () => {
+      const fixture = mount(
+        state({ host: '', hasSavedConfig: false, envFallbackConfigured: true }),
+      );
+      const i18n = TestBed.inject(TranslocoService);
+
+      expect(fixture.nativeElement.textContent).toContain(
+        i18n.translate('settings.mail.env.status'),
+      );
+      expect(fixture.nativeElement.textContent).toContain(
+        i18n.translate('settings.mail.env.systemMail'),
+      );
+      expect(enableToggleInput(fixture)).toBeNull();
+      expect(testButton(fixture).disabled).toBe(false);
+    });
+
+    it('shows the host:port summary for an env-configured SMTP transport', () => {
+      const fixture = mount(
+        state({
+          host: 'smtp.x',
+          port: 2525,
+          hasSavedConfig: false,
+          envFallbackConfigured: true,
+        }),
+      );
+
+      expect(fixture.nativeElement.textContent).toContain('smtp.x:2525');
+    });
+
+    it('reveals the editable form once Override is clicked', () => {
+      const fixture = mount(
+        state({ host: '', hasSavedConfig: false, envFallbackConfigured: true }),
+      );
+
+      expect(enableToggleInput(fixture)).toBeNull();
+
+      overrideButton(fixture)?.click();
+      fixture.detectChanges();
+
+      expect(enableToggleInput(fixture)).not.toBeNull();
+    });
+  });
+
+  describe('proxy routing toggle (#845)', () => {
+    it('reflects useProxy and shows the proxy label when a proxy is configured', () => {
+      const fixture = mount(
+        state({
+          host: 'smtp.example.com',
+          useProxy: true,
+          proxyConfigured: true,
+          proxyLabel: 'SOCKS5 · proxy.example:1080',
+        }),
+      );
+
+      expect(useProxyToggleInput(fixture)?.disabled).toBe(false);
+      expect(useProxyToggleInput(fixture)?.checked).toBe(true);
+      expect(fixture.nativeElement.textContent).toContain('SOCKS5 · proxy.example:1080');
+      expect(proxyConfigureLink(fixture)).toBeNull();
+    });
+
+    it('disables the toggle and links to the proxy settings page when none is configured', () => {
+      const fixture = mount(state({ host: 'smtp.example.com', proxyConfigured: false }));
+
+      expect(useProxyToggleInput(fixture)?.disabled).toBe(true);
+      expect(proxyConfigureLink(fixture)?.getAttribute('href')).toBe('/settings/admin/proxy');
+    });
+
+    it('instant-saves useProxy on a saved row', () => {
+      const fixture = mount(
+        state({
+          host: 'smtp.example.com',
+          hasSavedConfig: true,
+          useProxy: false,
+          proxyConfigured: true,
+        }),
+      );
+
+      useProxyToggleInput(fixture)?.click();
+      fixture.detectChanges();
+
+      const put = http.expectOne(ENDPOINT);
+      expect(put.request.body.useProxy).toBe(true);
+      put.flush(
+        state({
+          host: 'smtp.example.com',
+          hasSavedConfig: true,
+          useProxy: true,
+          proxyConfigured: true,
+        }),
+      );
+    });
+
+    it('carries the staged useProxy value on an explicit Save for a no-row install', () => {
+      const fixture = mount(
+        state({
+          host: 'smtp.example.com',
+          hasSavedConfig: false,
+          proxyConfigured: true,
+          useProxy: false,
+        }),
+      );
+
+      useProxyToggleInput(fixture)?.click();
+      fixture.detectChanges();
+      http.expectNone(ENDPOINT);
+
+      // A proxy-only edit on a not-yet-saved row must mark the form dirty, or
+      // the save bar would disable Save and the change could never be persisted.
+      expect(fixture.componentInstance.dirty()).toBe(true);
+
+      fixture.componentInstance.onSave();
+      fixture.detectChanges();
+
+      const put = http.expectOne(ENDPOINT);
+      expect(put.request.body.useProxy).toBe(true);
+      put.flush(state({ host: 'smtp.example.com', hasSavedConfig: true, useProxy: true }));
+    });
   });
 });

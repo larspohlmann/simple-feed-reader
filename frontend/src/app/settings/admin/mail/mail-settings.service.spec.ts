@@ -19,9 +19,11 @@ function state(over: Partial<MailSettingsState> = {}): MailSettingsState {
     fromAddress: 'reader@example.com',
     fromName: 'Reader',
     hasPassword: false,
-    passwordHint: '',
     hasSavedConfig: false,
     envFallbackConfigured: false,
+    useProxy: false,
+    proxyConfigured: false,
+    proxyLabel: '',
     ...over,
   };
 }
@@ -76,6 +78,8 @@ describe('MailSettingsService', () => {
       fromAddress: 'reader@example.com',
       fromName: 'Reader',
       password: null,
+      removePassword: false,
+      useProxy: false,
     });
 
     put.flush(state({ enabled: true }));
@@ -176,5 +180,31 @@ describe('MailSettingsService', () => {
     expect(service.saved()).toBe(true);
     expect(service.dirty()).toBe(false);
     expect(service.state()).toEqual(state({ envFallbackConfigured: true }));
+  });
+
+  it('removePassword() PUTs removePassword:true and commits the returned state', () => {
+    loadState({ hasPassword: true });
+
+    service.removePassword();
+
+    const put = http.expectOne(ENDPOINT);
+    expect(put.request.method).toBe('PUT');
+    expect(put.request.body.removePassword).toBe(true);
+
+    put.flush(state({ hasPassword: false }));
+
+    expect(service.saved()).toBe(true);
+    expect(service.state()).toEqual(state({ hasPassword: false }));
+  });
+
+  it('removePassword() carries a pending typed edit rather than discarding it', () => {
+    loadState({ hasPassword: true, host: 'old.example' });
+
+    service.setTypedField('host', 'new.example');
+    service.removePassword();
+
+    const put = http.expectOne(ENDPOINT);
+    expect(put.request.body.removePassword).toBe(true);
+    expect(put.request.body.host).toBe('new.example');
   });
 });

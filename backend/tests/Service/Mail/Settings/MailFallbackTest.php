@@ -32,6 +32,7 @@ final class MailFallbackTest extends TestCase
         self::assertSame('alice@relay', $connection->username);
         self::assertSame(MailEncryption::Starttls, $connection->encryption);
         self::assertSame('noreply@example.com', $connection->fromAddress);
+        self::assertFalse($connection->useProxy);
     }
 
     public function testAnSmtpsDsnResolvesToImplicitTls(): void

@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace App\Tests\Service\Mail\Transport;
 
 use App\Dto\Admin\MailSettingsRequest;
+use App\Dto\Admin\ProxySettingsRequest;
 use App\Entity\MailServerSettings;
 use App\Enum\MailEncryption;
 use App\Service\Crypto\SealedSecret;
+use App\Service\Mail\Settings\Crypto\MailPasswordCipher;
 use App\Service\Mail\Settings\MailConnection;
 use App\Service\Mail\Settings\MailSettings;
+use App\Service\Mail\Transport\CurlSmtpTransport;
 use App\Service\Mail\Transport\DynamicMailTransport;
+use App\Service\Proxy\ProxySettings;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Mailer\Exception\TransportException;
@@ -64,7 +68,6 @@ final class DynamicMailTransportTest extends KernelTestCase
         $row->apply(
             new MailConnection(true, 'smtp.relay.test', 587, 'alice', MailEncryption::Starttls, '', ''),
             new SealedSecret('not base64!', 'bm9uY2U=', 'c2FsdA==', 1),
-            'hint',
         );
         $em = self::getContainer()->get(EntityManagerInterface::class);
         $em->persist($row);
@@ -83,5 +86,58 @@ final class DynamicMailTransportTest extends KernelTestCase
             'dynamic://default',
             (string) self::getContainer()->get(DynamicMailTransport::class),
         );
+    }
+
+    public function testActiveTransportUsesTheCurlTransportForAProxiedRow(): void
+    {
+        self::getContainer()->get(ProxySettings::class)->update(new ProxySettingsRequest(
+            type: 'SOCKS5',
+            host: 'proxy.example',
+            port: 1080,
+        ));
+        self::getContainer()->get(MailSettings::class)->update(new MailSettingsRequest(
+            host: 'smtp.gmail.com',
+            username: 'alice',
+            password: 'app-pw',
+            useProxy: true,
+        ));
+
+        $transport = self::getContainer()->get(DynamicMailTransport::class);
+
+        self::assertInstanceOf(CurlSmtpTransport::class, $transport->activeTransport());
+    }
+
+    public function testAProxiedRowWhoseProxyIsGoneSurfacesAsATransportFailure(): void
+    {
+        // A row saved with use_proxy set while a proxy existed, then the proxy
+        // config removed -- persisted directly because update() would refuse it.
+        $cipher = self::getContainer()->get(MailPasswordCipher::class);
+        $row = new MailServerSettings();
+        $row->apply(
+            new MailConnection(true, 'smtp.gmail.com', 587, 'alice', MailEncryption::Starttls, '', '', true),
+            $cipher->seal('app-pw'),
+        );
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        $em->persist($row);
+        $em->flush();
+
+        $this->expectException(TransportException::class);
+        $this->expectExceptionMessage(
+            'The mail configuration is incomplete: Mail is set to use the egress proxy, but no proxy is configured.',
+        );
+        self::getContainer()->get(DynamicMailTransport::class)->activeTransport();
+    }
+
+    public function testActiveTransportUsesEsmtpForADirectRow(): void
+    {
+        self::getContainer()->get(MailSettings::class)->update(new MailSettingsRequest(
+            host: 'smtp.relay.test',
+            password: 'p',
+            useProxy: false,
+        ));
+
+        $transport = self::getContainer()->get(DynamicMailTransport::class);
+
+        self::assertInstanceOf(EsmtpTransport::class, $transport->activeTransport());
     }
 }

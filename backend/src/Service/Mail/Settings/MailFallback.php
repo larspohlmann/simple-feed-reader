@@ -51,6 +51,7 @@ final readonly class MailFallback
                 MailEncryption::Starttls,
                 $this->fromAddress,
                 $this->fromName,
+                useProxy: false,
             );
         }
 
@@ -62,6 +63,7 @@ final readonly class MailFallback
             'smtps' === $scheme ? MailEncryption::Tls : MailEncryption::Starttls,
             $this->fromAddress,
             $this->fromName,
+            useProxy: false,
         );
     }
 

@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Service\Mail\Settings;
 
 use App\Dto\Admin\MailSettingsRequest;
+use App\Dto\Admin\ProxySettingsRequest;
 use App\Enum\MailEncryption;
+use App\Repository\MailServerSettingsRepository;
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
 use App\Service\Mail\Settings\MailFallback;
 use App\Service\Mail\Settings\MailSettings;
+use App\Service\Proxy\ProxySettings;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class MailSettingsTest extends KernelTestCase
@@ -16,6 +19,20 @@ final class MailSettingsTest extends KernelTestCase
     private function settings(): MailSettings
     {
         return self::getContainer()->get(MailSettings::class);
+    }
+
+    private function repository(): MailServerSettingsRepository
+    {
+        return self::getContainer()->get(MailServerSettingsRepository::class);
+    }
+
+    private function configureAProxy(): void
+    {
+        self::getContainer()->get(ProxySettings::class)->update(new ProxySettingsRequest(
+            type: 'SOCKS5',
+            host: 'proxy.example',
+            port: 1080,
+        ));
     }
 
     public function testNoRowReportsDerivedEnabledFromTheFallback(): void
@@ -42,7 +59,6 @@ final class MailSettingsTest extends KernelTestCase
         self::assertTrue($view['enabled']);
         self::assertSame('smtp.relay.test', $view['host']);
         self::assertTrue($view['hasPassword']);
-        self::assertSame('cret', $view['passwordHint']);
         self::assertArrayNotHasKey('password', $view);
 
         $resolved = $this->settings()->configuredTransport();
@@ -123,13 +139,6 @@ final class MailSettingsTest extends KernelTestCase
         self::assertTrue($this->settings()->view()['enabled']);
     }
 
-    public function testTheHintIsTheLastFourCharactersEvenWhenTheyAreMultibyte(): void
-    {
-        $this->settings()->update(new MailSettingsRequest(host: 'h', password: 'pässwört'));
-
-        self::assertSame('wört', $this->settings()->view()['passwordHint']);
-    }
-
     public function testASavedFromAddressWinsOverTheEnvIdentity(): void
     {
         $this->settings()->update(new MailSettingsRequest(
@@ -176,5 +185,66 @@ final class MailSettingsTest extends KernelTestCase
             username: 'postbox',
             password: null,
         ));
+    }
+
+    public function testRemovePasswordClearsTheStoredSecret(): void
+    {
+        $this->settings()->update(new MailSettingsRequest(
+            host: 'smtp.example.test',
+            username: null,
+            password: 'topsecret',
+        ));
+        self::assertTrue($this->settings()->view()['hasPassword']);
+
+        // A different host proves the remove-password update still applies the
+        // connection edits carried in the same request, not only clears the secret.
+        $this->settings()->update(new MailSettingsRequest(
+            host: 'smtp.moved.test',
+            username: null,
+            removePassword: true,
+        ));
+
+        self::assertFalse($this->settings()->view()['hasPassword']);
+        self::assertSame('smtp.moved.test', $this->settings()->view()['host']);
+    }
+
+    public function testRemovingThePasswordOfAnEnabledAuthenticatedRowIsRejected(): void
+    {
+        $this->settings()->update(new MailSettingsRequest(
+            enabled: true,
+            host: 'smtp.example.test',
+            username: 'alice',
+            password: 'topsecret',
+        ));
+
+        $this->expectException(IncompleteMailConfigurationException::class);
+
+        $this->settings()->update(new MailSettingsRequest(
+            enabled: true,
+            host: 'smtp.example.test',
+            username: 'alice',
+            removePassword: true,
+        ));
+    }
+
+    public function testUseProxyIsRejectedWhenNoEgressProxyIsConfigured(): void
+    {
+        $this->expectException(IncompleteMailConfigurationException::class);
+
+        $this->settings()->update(new MailSettingsRequest(host: 'smtp.gmail.com', useProxy: true));
+    }
+
+    public function testUseProxyIsPersistedWhenAProxyIsConfigured(): void
+    {
+        $this->configureAProxy();
+
+        $this->settings()->update(new MailSettingsRequest(
+            host: 'smtp.gmail.com',
+            useProxy: true,
+            password: 'app-pw',
+        ));
+
+        self::assertTrue($this->repository()->findSingleton()?->usesProxy());
+        self::assertTrue($this->settings()->configuredTransport()?->useProxy);
     }
 }

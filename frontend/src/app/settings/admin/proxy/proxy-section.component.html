@@ -19,6 +19,14 @@
         />
       </app-settings-row>
 
+      <p class="consumers-note">
+        {{ 'settings.proxy.usedByMailNote' | transloco }}
+        <a routerLink="/settings/admin/mail" data-testid="proxy-used-by-mail-link">{{
+          'settings.proxy.usedByMailLink' | transloco
+        }}</a
+        >.
+      </p>
+
       <app-settings-row
         [title]="'settings.proxy.directFallback' | transloco"
         [description]="'settings.proxy.directFallbackDesc' | transloco"

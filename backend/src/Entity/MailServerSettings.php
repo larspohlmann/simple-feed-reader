@@ -11,11 +11,9 @@ use App\Service\Mail\Settings\MailConnection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * The instance-wide outgoing-mail settings, held in a single row (see
- * InstanceSetting for the singleton rationale). Absence of the row means "not
- * configured": enablement then derives from the env fallback. The password is
- * never readable here; passwordHint is the last four characters in clear text so
- * the admin page can name the stored secret.
+ * Instance-wide outgoing-mail settings in one row (singleton, see InstanceSetting).
+ * No row means "not configured", so enablement derives from the env fallback.
+ * The password never leaves here; only whether one is stored crosses to the admin page.
  */
 #[ORM\Entity(repositoryClass: MailServerSettingsRepository::class)]
 #[ORM\Table(name: 'mail_server_settings')]
@@ -56,15 +54,20 @@ class MailServerSettings
     #[ORM\Column(length: 64)]
     private string $passwordSalt = '';
 
-    #[ORM\Column(length: 8)]
-    private string $passwordHint = '';
-
     #[ORM\Column(options: ['default' => 1])]
     private int $keyVersion = 1;
+
+    #[ORM\Column(options: ['default' => 0])]
+    private bool $useProxy = false;
 
     public function isEnabled(): bool
     {
         return $this->enabled;
+    }
+
+    public function usesProxy(): bool
+    {
+        return $this->useProxy;
     }
 
     public function getHost(): string
@@ -97,11 +100,6 @@ class MailServerSettings
         return $this->fromName;
     }
 
-    public function getPasswordHint(): string
-    {
-        return $this->passwordHint;
-    }
-
     public function connection(): MailConnection
     {
         return new MailConnection(
@@ -112,6 +110,7 @@ class MailServerSettings
             $this->encryption,
             $this->fromAddress,
             $this->fromName,
+            $this->useProxy,
         );
     }
 
@@ -130,14 +129,13 @@ class MailServerSettings
         );
     }
 
-    public function apply(MailConnection $connection, SealedSecret $sealed, string $passwordHint): void
+    public function apply(MailConnection $connection, SealedSecret $sealed): void
     {
         $this->applyWithoutPassword($connection);
         $this->passwordCiphertext = $sealed->ciphertext;
         $this->passwordNonce = $sealed->nonce;
         $this->passwordSalt = $sealed->salt;
         $this->keyVersion = $sealed->version;
-        $this->passwordHint = $passwordHint;
     }
 
     public function applyWithoutPassword(MailConnection $connection): void
@@ -149,5 +147,14 @@ class MailServerSettings
         $this->encryption = $connection->encryption;
         $this->fromAddress = $connection->fromAddress;
         $this->fromName = $connection->fromName;
+        $this->useProxy = $connection->useProxy;
+    }
+
+    public function clearStoredPassword(): void
+    {
+        $this->passwordCiphertext = '';
+        $this->passwordNonce = '';
+        $this->passwordSalt = '';
+        $this->keyVersion = 1;
     }
 }

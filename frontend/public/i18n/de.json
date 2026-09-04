@@ -363,8 +363,10 @@
     "proxy": {
       "title": "Ausgehender Proxy",
       "caption": "Feeds und Artikelseiten über einen SOCKS5- oder HTTP-Proxy abrufen.",
-      "enabled": "Datenverkehr über den Proxy leiten",
+      "enabled": "Proxy für den Feed-Abruf verwenden",
       "enabledDisabledHint": "Speichere zuerst Host und Port, dann kannst du den Proxy aktivieren.",
+      "usedByMailNote": "Ausgehende E-Mail kann diesen Proxy ebenfalls nutzen — aktiviere das in den",
+      "usedByMailLink": "Mail-Einstellungen",
       "directFallback": "Bei Fehler direkt verbinden",
       "directFallbackDesc": "Standardmäßig aktiviert — bei einem Proxy-Fehler wird der Abruf direkt wiederholt.",
       "type": "Proxy-Typ",
@@ -404,6 +406,9 @@
       "fromAddress": "Absenderadresse",
       "fromName": "Absendername",
       "password": "Passwort",
+      "passwordKeepHint": "Leer lassen, um das gespeicherte Passwort zu behalten",
+      "passwordSaved": "Ein Passwort ist gespeichert.",
+      "removePassword": "Passwort entfernen",
       "test": "Verbindung testen",
       "testDesc": "Prüft den Server mit den zuletzt gespeicherten Einstellungen.",
       "testing": "Wird getestet…",
@@ -418,7 +423,24 @@
       "saved": "Mail-Einstellungen gespeichert",
       "save": "Speichern",
       "reset": "Zurücksetzen",
-      "unsaved": "Nicht gespeicherte Änderungen"
+      "unsaved": "Nicht gespeicherte Änderungen",
+      "errors": {
+        "hostRequired": "Gib einen Host ein, oder schalte dies aus.",
+        "emailInvalid": "Gib eine gültige E-Mail-Adresse ein.",
+        "portRange": "Gib einen Port zwischen 1 und 65535 ein."
+      },
+      "env": {
+        "status": "Versand: an — über die Umgebung",
+        "transport": "Mailserver",
+        "systemMail": "Systemmail",
+        "override": "Mit eigenen Einstellungen überschreiben",
+        "overrideDesc": "Richte einen eigenen SMTP-Server ein, statt den Umgebungsstandard zu verwenden."
+      },
+      "proxy": {
+        "label": "Mail über den Proxy versenden",
+        "noneHint": "Kein Proxy ist konfiguriert.",
+        "configureLink": "Proxy konfigurieren"
+      }
     },
     "organise": {
       "title": "Organisieren",

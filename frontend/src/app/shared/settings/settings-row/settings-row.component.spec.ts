@@ -54,6 +54,16 @@ class BadgeHostComponent {}
 })
 class LabelledHostComponent {}
 
+@Component({
+  imports: [SettingsRowComponent],
+  template: `
+    <app-settings-row title="t" [error]="'Bad value'">
+      <button class="ctl">x</button>
+    </app-settings-row>
+  `,
+})
+class ErrorHostComponent {}
+
 describe('SettingsRowComponent', () => {
   async function render() {
     await TestBed.configureTestingModule({ imports: [HostComponent] }).compileComponents();
@@ -142,5 +152,20 @@ describe('SettingsRowComponent', () => {
   it('leaves the title as plain text when labelFor is unset', async () => {
     const { el } = await render();
     expect(el.querySelector('.row-title label')).toBeNull();
+  });
+
+  it('renders a field error with role=alert when [error] is set', async () => {
+    await TestBed.configureTestingModule({ imports: [ErrorHostComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(ErrorHostComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    const alert = el.querySelector('p.error[role="alert"]');
+    expect(alert?.textContent).toContain('Bad value');
+  });
+
+  it('renders no error element when [error] is null', async () => {
+    const { el } = await render();
+    expect(el.querySelector('p.error')).toBeNull();
   });
 });
