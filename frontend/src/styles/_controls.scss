@@ -49,6 +49,22 @@ textarea:focus {
   outline: none;
 }
 
+// A field in error keeps its danger border even while focused -- the accent
+// border above would otherwise mask the invalid state the moment a user
+// clicks into the control to fix it.
+input:not([type='checkbox'], [type='radio'], [type='color'])[aria-invalid='true'],
+select[aria-invalid='true'],
+textarea[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+input:not([type='checkbox'], [type='radio'], [type='color'])[aria-invalid='true']:focus,
+select[aria-invalid='true']:focus,
+textarea[aria-invalid='true']:focus {
+  border-color: var(--danger);
+  outline: none;
+}
+
 input:disabled,
 select:disabled,
 textarea:disabled {

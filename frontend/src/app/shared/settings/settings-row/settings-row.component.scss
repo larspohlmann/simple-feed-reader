@@ -54,6 +54,12 @@
   gap: var(--space-2);
 }
 
+.error {
+  color: var(--danger);
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-sm);
+}
+
 // The hairline divider belongs to every row but the last in its group.
 // `:host(:not(:last-child))`, not `.row:not(:last-child)`: last-of-group is
 // a host-level fact — a `.row`-level selector can't see siblings across components.

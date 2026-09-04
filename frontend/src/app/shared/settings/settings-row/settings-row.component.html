@@ -16,3 +16,6 @@
     <ng-content />
   </div>
 </div>
+@if (error(); as text) {
+  <p class="error" role="alert">{{ text }}</p>
+}

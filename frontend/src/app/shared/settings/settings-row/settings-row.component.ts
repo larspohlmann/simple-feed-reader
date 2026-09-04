@@ -22,6 +22,9 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
  * title text inside `.row-title` -- an `<app-info-tip>`, which was its first
  * consumer, or a small badge such as the preferences page's "Experimental"
  * chip. The slot is positional, not typed.
+ *
+ * `error` mirrors `app-field`'s error slot: set, it renders a
+ * `role="alert"` message below the row.
  */
 @Component({
   selector: 'app-settings-row',
@@ -39,4 +42,6 @@ export class SettingsRowComponent {
    *  row's title is a click target the same way the switch is. Left unset, the
    *  title is inert text. */
   readonly labelFor = input<string>('');
+
+  readonly error = input<string | null>(null);
 }
