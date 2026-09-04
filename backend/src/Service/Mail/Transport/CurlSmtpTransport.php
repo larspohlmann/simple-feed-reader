@@ -47,16 +47,17 @@ final class CurlSmtpTransport extends AbstractTransport
         fwrite($stream, $body);
         rewind($stream);
 
+        $options = CurlSmtpOptions::for($this->resolved, $this->proxy, $message->getEnvelope()) + [
+            \CURLOPT_UPLOAD => true,
+            \CURLOPT_INFILE => $stream,
+            \CURLOPT_INFILESIZE => \strlen($body),
+            \CURLOPT_TIMEOUT => self::TIMEOUT_SECONDS,
+            \CURLOPT_CONNECTTIMEOUT => self::TIMEOUT_SECONDS,
+            \CURLOPT_RETURNTRANSFER => true,
+        ];
+
         try {
-            $configured = curl_setopt_array($handle, CurlSmtpOptions::for($this->resolved, $this->proxy, $message->getEnvelope()) + [
-                \CURLOPT_UPLOAD => true,
-                \CURLOPT_INFILE => $stream,
-                \CURLOPT_INFILESIZE => \strlen($body),
-                \CURLOPT_TIMEOUT => self::TIMEOUT_SECONDS,
-                \CURLOPT_CONNECTTIMEOUT => self::TIMEOUT_SECONDS,
-                \CURLOPT_RETURNTRANSFER => true,
-            ]);
-            if (!$configured) {
+            if (!curl_setopt_array($handle, $options)) {
                 throw new TransportException('Unable to configure curl for the proxied SMTP send.');
             }
             if (false === curl_exec($handle)) {
