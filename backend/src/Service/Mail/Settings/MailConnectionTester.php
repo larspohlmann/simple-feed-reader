@@ -6,14 +6,17 @@ namespace App\Service\Mail\Settings;
 
 use App\Entity\User;
 use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Mail\Transport\EsmtpTransportBuilder;
+use App\Service\Mail\Transport\ActiveMailTransportFactory;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\Mailer;
+use Symfony\Component\Mailer\Transport;
+use Symfony\Component\Mailer\Transport\TransportInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\Mime\Exception\RfcComplianceException;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
  * Sends a real message through the SAVED SMTP config (independent of the enable
@@ -27,6 +30,8 @@ final readonly class MailConnectionTester
         private MailSettings $settings,
         private Security $security,
         private LoggerInterface $logger,
+        private ActiveMailTransportFactory $transportFactory,
+        private HttpClientInterface $httpClient,
     ) {
     }
 
@@ -38,9 +43,10 @@ final readonly class MailConnectionTester
             return MailTestResult::failed($e->getMessage());
         }
 
+        $transport = $this->effectiveTransport($resolved);
         $recipient = $this->actingAdminEmail();
 
-        if (null === $resolved || null === $recipient) {
+        if (null === $transport || null === $recipient) {
             return MailTestResult::failed('not_configured');
         }
 
@@ -55,7 +61,7 @@ final readonly class MailConnectionTester
         }
 
         try {
-            $mailer = new Mailer(EsmtpTransportBuilder::from($resolved, null, $this->logger));
+            $mailer = new Mailer($transport);
             $mailer->send(
                 (new Email())
                     ->from(new Address($identity->address, $identity->name))
@@ -68,6 +74,24 @@ final readonly class MailConnectionTester
         }
 
         return MailTestResult::ok();
+    }
+
+    private function effectiveTransport(?ResolvedMailTransport $resolved): ?TransportInterface
+    {
+        if (null !== $resolved) {
+            return $this->transportFactory->forResolved($resolved, null, $this->logger);
+        }
+
+        if ($this->settings->hasEnvFallback()) {
+            return Transport::fromDsn(
+                $this->settings->activeTransportDsnFallback(),
+                null,
+                $this->httpClient,
+                $this->logger,
+            );
+        }
+
+        return null;
     }
 
     private function actingAdminEmail(): ?string

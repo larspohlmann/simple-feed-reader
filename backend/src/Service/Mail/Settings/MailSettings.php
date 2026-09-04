@@ -103,6 +103,11 @@ readonly class MailSettings
         return $this->fallback->transportDsn();
     }
 
+    public function hasEnvFallback(): bool
+    {
+        return $this->fallback->connection()->enabled;
+    }
+
     public function identity(): MailIdentity
     {
         $settings = $this->repository->findSingleton();
