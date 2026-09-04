@@ -19,10 +19,9 @@ use Symfony\Component\Mime\Exception\RfcComplianceException;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * Sends a real message through the SAVED SMTP config (independent of the enable
- * switch), synchronously, so the admin can verify before turning mail on. The
- * recipient is the acting admin's own address: the instance cannot be driven to
- * mail an arbitrary target.
+ * Sends a real message synchronously through the transport that would actually
+ * send -- the saved row, else the env fallback when none is saved -- so the admin
+ * can verify before enabling. The recipient is the acting admin's own address.
  */
 final readonly class MailConnectionTester
 {
