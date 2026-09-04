@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Dialog } from '@angular/cdk/dialog';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
 import { of } from 'rxjs';
 import { API_BASE_URL } from '../../../core/api';
@@ -46,6 +47,7 @@ describe('MailSectionComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideRouter([]),
         { provide: API_BASE_URL, useValue: BASE },
         { provide: ToastService, useValue: toastStub },
         { provide: Dialog, useValue: dialogStub },
@@ -86,6 +88,21 @@ describe('MailSectionComponent', () => {
     fixture: ComponentFixture<MailSectionComponent>,
   ): HTMLButtonElement | null =>
     fixture.nativeElement.querySelector('[data-testid="mail-remove-password"] button');
+
+  const overrideButton = (
+    fixture: ComponentFixture<MailSectionComponent>,
+  ): HTMLButtonElement | null =>
+    fixture.nativeElement.querySelector('[data-testid="mail-override"] button');
+
+  const useProxyToggleInput = (
+    fixture: ComponentFixture<MailSectionComponent>,
+  ): HTMLInputElement | null =>
+    fixture.nativeElement.querySelector('[data-testid="mail-use-proxy"] input');
+
+  const proxyConfigureLink = (
+    fixture: ComponentFixture<MailSectionComponent>,
+  ): HTMLAnchorElement | null =>
+    fixture.nativeElement.querySelector('[data-testid="mail-proxy-configure-link"]');
 
   beforeEach(() => {
     toastStub.show.mockReset();
@@ -517,5 +534,121 @@ describe('MailSectionComponent', () => {
 
     expect(fixture.componentInstance.fieldError('host')).toBeNull();
     expect(hostInput(fixture).getAttribute('aria-invalid')).toBe('false');
+  });
+
+  describe('read-only environment view (#845)', () => {
+    it('renders the read-only env panel for sendmail, with no enable toggle and Test enabled', () => {
+      const fixture = mount(
+        state({ host: '', hasSavedConfig: false, envFallbackConfigured: true }),
+      );
+      const i18n = TestBed.inject(TranslocoService);
+
+      expect(fixture.nativeElement.textContent).toContain(
+        i18n.translate('settings.mail.env.status'),
+      );
+      expect(fixture.nativeElement.textContent).toContain(
+        i18n.translate('settings.mail.env.systemMail'),
+      );
+      expect(enableToggleInput(fixture)).toBeNull();
+      expect(testButton(fixture).disabled).toBe(false);
+    });
+
+    it('shows the host:port summary for an env-configured SMTP transport', () => {
+      const fixture = mount(
+        state({
+          host: 'smtp.x',
+          port: 2525,
+          hasSavedConfig: false,
+          envFallbackConfigured: true,
+        }),
+      );
+
+      expect(fixture.nativeElement.textContent).toContain('smtp.x:2525');
+    });
+
+    it('reveals the editable form once Override is clicked', () => {
+      const fixture = mount(
+        state({ host: '', hasSavedConfig: false, envFallbackConfigured: true }),
+      );
+
+      expect(enableToggleInput(fixture)).toBeNull();
+
+      overrideButton(fixture)?.click();
+      fixture.detectChanges();
+
+      expect(enableToggleInput(fixture)).not.toBeNull();
+    });
+  });
+
+  describe('proxy routing toggle (#845)', () => {
+    it('reflects useProxy and shows the proxy label when a proxy is configured', () => {
+      const fixture = mount(
+        state({
+          host: 'smtp.example.com',
+          useProxy: true,
+          proxyConfigured: true,
+          proxyLabel: 'SOCKS5 · proxy.example:1080',
+        }),
+      );
+
+      expect(useProxyToggleInput(fixture)?.disabled).toBe(false);
+      expect(useProxyToggleInput(fixture)?.checked).toBe(true);
+      expect(fixture.nativeElement.textContent).toContain('SOCKS5 · proxy.example:1080');
+      expect(proxyConfigureLink(fixture)).toBeNull();
+    });
+
+    it('disables the toggle and links to the proxy settings page when none is configured', () => {
+      const fixture = mount(state({ host: 'smtp.example.com', proxyConfigured: false }));
+
+      expect(useProxyToggleInput(fixture)?.disabled).toBe(true);
+      expect(proxyConfigureLink(fixture)?.getAttribute('href')).toBe('/settings/admin/proxy');
+    });
+
+    it('instant-saves useProxy on a saved row', () => {
+      const fixture = mount(
+        state({
+          host: 'smtp.example.com',
+          hasSavedConfig: true,
+          useProxy: false,
+          proxyConfigured: true,
+        }),
+      );
+
+      useProxyToggleInput(fixture)?.click();
+      fixture.detectChanges();
+
+      const put = http.expectOne(ENDPOINT);
+      expect(put.request.body.useProxy).toBe(true);
+      put.flush(
+        state({
+          host: 'smtp.example.com',
+          hasSavedConfig: true,
+          useProxy: true,
+          proxyConfigured: true,
+        }),
+      );
+    });
+
+    it('carries the staged useProxy value on an explicit Save for a no-row install', () => {
+      const fixture = mount(
+        state({
+          host: 'smtp.example.com',
+          hasSavedConfig: false,
+          proxyConfigured: true,
+          useProxy: false,
+        }),
+      );
+
+      useProxyToggleInput(fixture)?.click();
+      fixture.detectChanges();
+      http.expectNone(ENDPOINT);
+
+      fixture.componentInstance.onSave();
+      fixture.detectChanges();
+
+      const put = http.expectOne(ENDPOINT);
+      expect(put.request.body.useProxy).toBe(true);
+      put.flush(state({ host: 'smtp.example.com', hasSavedConfig: true, useProxy: true }));
+    });
   });
 });

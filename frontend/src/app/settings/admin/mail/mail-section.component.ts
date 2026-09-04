@@ -7,6 +7,8 @@ import {
   signal,
 } from '@angular/core';
 import { Dialog } from '@angular/cdk/dialog';
+import { NgTemplateOutlet } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { ButtonComponent } from '../../../shared/button/button.component';
 import {
@@ -40,7 +42,9 @@ type MailField = 'host' | 'port' | 'username' | 'fromAddress' | 'fromName' | 'pa
     ButtonComponent,
     ErrorBannerComponent,
     IconComponent,
+    NgTemplateOutlet,
     PasswordInputComponent,
+    RouterLink,
     SettingsGroupComponent,
     SettingsRowComponent,
     SettingsSaveBarComponent,
@@ -104,8 +108,13 @@ export class MailSectionComponent {
     return this.svc.dirty() || toggleStaged;
   });
   /** The probe runs against the SAVED row, so a pending edit would test
-   *  something other than what is on screen. */
-  readonly canTest = computed(() => this.configured() && !this.dirty());
+   *  something other than what is on screen -- and it must also work
+   *  against an unsaved env fallback, since there is nothing else to test
+   *  until the user overrides it. */
+  readonly canTest = computed(
+    () =>
+      (this.configured() || (this.svc.state()?.envFallbackConfigured ?? false)) && !this.dirty(),
+  );
   /** Whether a password is on record -- never any part of it, the API does not
    *  return the secret. */
   readonly passwordSaved = computed(() => this.svc.state()?.hasPassword ?? false);
@@ -117,6 +126,30 @@ export class MailSectionComponent {
     () => !!this.svc.state()?.hasSavedConfig && !!this.svc.state()?.envFallbackConfigured,
   );
   readonly probe = this.svc.probe;
+
+  /** Set once the user chooses to configure their own transport instead of
+   *  the env fallback (see `envManaged`). Irrelevant once a row is saved --
+   *  from then on there is always something to edit. */
+  readonly overriding = signal(false);
+  /** The read-only view: no saved row, an env fallback stands in for it, and
+   *  the user has not asked to override it. */
+  readonly envManaged = computed(() => {
+    const state = this.svc.state();
+    return !!state && !state.hasSavedConfig && state.envFallbackConfigured && !this.overriding();
+  });
+  /** What the env fallback actually sends through, for the read-only panel:
+   *  sendmail carries no host, so it names itself instead of an empty line. */
+  readonly envTransportSummary = computed(() => {
+    const state = this.svc.state();
+    if (!state) return '';
+    return state.host === ''
+      ? this.i18n.translate('settings.mail.env.systemMail')
+      : `${state.host}:${state.port} (${state.encryption})`;
+  });
+
+  readonly useProxy = linkedSignal<boolean>(() => this.svc.state()?.useProxy ?? false);
+  readonly proxyConfigured = computed(() => this.svc.state()?.proxyConfigured ?? false);
+  readonly proxyLabel = computed(() => this.svc.state()?.proxyLabel ?? '');
 
   readonly failureMessage = computed(() => {
     const failure = this.svc.failure();
@@ -196,7 +229,24 @@ export class MailSectionComponent {
    *  stuck on could not be turned off again from the form. */
   onSave(): void {
     if (!this.validateBeforeSave()) return;
-    this.svc.save({ enabled: this.enabled() && this.host() !== '', encryption: this.encryption() });
+    this.svc.save({
+      enabled: this.enabled() && this.host() !== '',
+      encryption: this.encryption(),
+      useProxy: this.useProxy(),
+    });
+  }
+
+  /** Leaves the read-only env view for the editable form, e.g. so the user
+   *  can set up their own transport instead of the one the env provides. */
+  startOverride(): void {
+    this.overriding.set(true);
+  }
+
+  onUseProxy(value: boolean): void {
+    this.useProxy.set(value);
+    if (this.svc.state()?.hasSavedConfig) {
+      this.svc.saveInstant({ useProxy: value });
+    }
   }
 
   /** The client error for a field, or -- once no client error stands and the

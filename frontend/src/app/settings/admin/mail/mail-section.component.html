@@ -5,228 +5,301 @@
       [title]="'settings.mail.title' | transloco"
       [caption]="'settings.mail.caption' | transloco"
     >
-      <app-settings-row
-        [title]="'settings.mail.enabled' | transloco"
-        [description]="configured() ? '' : ('settings.mail.enabledDisabledHint' | transloco)"
-        labelFor="mail-enabled-toggle"
-      >
-        <app-toggle
-          inputId="mail-enabled-toggle"
-          [label]="'settings.mail.enabled' | transloco"
-          [checked]="enabled()"
-          [disabled]="!configured()"
-          (toggled)="onEnabled($event)"
-        />
-      </app-settings-row>
-
-      <app-settings-row
-        [stackable]="true"
-        [title]="'settings.mail.encryption' | transloco"
-        [description]="'settings.mail.encryptionDesc' | transloco"
-      >
-        <select class="select-field" data-testid="mail-encryption" (change)="onEncryption($event)">
-          @for (option of encryptionOptions; track option) {
-            <option [value]="option" [selected]="encryption() === option">{{ option }}</option>
-          }
-        </select>
-      </app-settings-row>
-
-      <app-settings-row
-        [stackable]="true"
-        [title]="'settings.mail.host' | transloco"
-        [error]="fieldError('host')"
-      >
-        <input
-          type="text"
-          class="host-field"
-          data-testid="mail-host"
-          [value]="host()"
-          [attr.aria-invalid]="isFieldInvalid('host')"
-          (input)="onTyped('host', $event)"
-        />
-      </app-settings-row>
-
-      <app-settings-row
-        [stackable]="true"
-        [title]="'settings.mail.port' | transloco"
-        [error]="fieldError('port')"
-      >
-        <input
-          type="number"
-          class="port-field"
-          min="1"
-          max="65535"
-          data-testid="mail-port"
-          [value]="port()"
-          [attr.aria-invalid]="isFieldInvalid('port')"
-          (input)="onPort($event)"
-        />
-      </app-settings-row>
-
-      <app-settings-row
-        [stackable]="true"
-        [title]="'settings.mail.username' | transloco"
-        [error]="fieldError('username')"
-      >
-        <input
-          type="text"
-          class="credential-field"
-          autocomplete="off"
-          data-testid="mail-username"
-          [value]="username()"
-          [attr.aria-invalid]="isFieldInvalid('username')"
-          (input)="onTyped('username', $event)"
-        />
-      </app-settings-row>
-
-      <app-settings-row
-        [stackable]="true"
-        [title]="'settings.mail.fromAddress' | transloco"
-        [error]="fieldError('fromAddress')"
-      >
-        <input
-          type="text"
-          class="credential-field"
-          autocomplete="off"
-          data-testid="mail-from-address"
-          [value]="fromAddress()"
-          [attr.aria-invalid]="isFieldInvalid('fromAddress')"
-          (input)="onTyped('fromAddress', $event)"
-        />
-      </app-settings-row>
-
-      <app-settings-row
-        [stackable]="true"
-        [title]="'settings.mail.fromName' | transloco"
-        [error]="fieldError('fromName')"
-      >
-        <input
-          type="text"
-          class="credential-field"
-          autocomplete="off"
-          data-testid="mail-from-name"
-          [value]="fromName()"
-          [attr.aria-invalid]="isFieldInvalid('fromName')"
-          (input)="onTyped('fromName', $event)"
-        />
-      </app-settings-row>
-
-      <app-settings-row
-        [stackable]="true"
-        [title]="'settings.mail.password' | transloco"
-        [description]="passwordSaved() ? ('settings.mail.passwordSaved' | transloco) : ''"
-        [error]="fieldError('password')"
-      >
-        <app-password-input class="credential-field">
-          <input
-            type="password"
-            autocomplete="off"
-            data-testid="mail-password"
-            [placeholder]="'settings.mail.passwordKeepHint' | transloco"
-            [value]="password()"
-            [attr.aria-invalid]="isFieldInvalid('password')"
-            (input)="onPassword($event)"
-          />
-        </app-password-input>
-        @if (passwordSaved()) {
-          <app-button
-            variant="default"
-            size="sm"
-            data-testid="mail-remove-password"
-            [disabled]="dirty()"
-            (click)="removePassword()"
-          >
-            {{ 'settings.mail.removePassword' | transloco }}
-          </app-button>
-        }
-      </app-settings-row>
-
-      @let probeResult = probe();
-      <app-settings-row
-        [title]="'settings.mail.test' | transloco"
-        [description]="
-          probeResult.status === 'ok'
-            ? ('settings.mail.testOk' | transloco)
-            : ('settings.mail.testDesc' | transloco)
-        "
-      >
-        <div class="test-control" data-testid="mail-test-button">
-          <span class="probe-status">
-            @if (probeResult.status === 'ok') {
-              <app-icon class="ok" name="check" size="sm" />
-            } @else if (probeResult.status === 'error') {
-              <app-icon class="failed" name="close" size="sm" />
-            }
-          </span>
-          <app-button
-            [variant]="canTest() ? 'accent-outline' : 'default'"
-            [loading]="probeResult.status === 'loading'"
-            [disabled]="!canTest()"
-            [ariaLabel]="
-              probeResult.status === 'loading'
-                ? ('settings.mail.testing' | transloco)
-                : ('settings.mail.test' | transloco)
-            "
-            (click)="test()"
-          >
-            {{ 'settings.mail.test' | transloco }}
-          </app-button>
-        </div>
-      </app-settings-row>
-
-      @if (probeResult.status === 'error') {
-        <div class="panel-banner">
-          <app-error-banner
-            [message]="'settings.mail.testFailed' | transloco: { reason: probeResult.message }"
-          />
-        </div>
-      }
-
-      @if (gmailAppPasswordFailure()) {
-        <div class="gmail-hint">
-          <app-icon name="info" size="sm" />
-          <div class="gmail-hint-body">
-            <p>{{ 'settings.mail.gmailAppPassword' | transloco }}</p>
-            <p>
-              <a [href]="gmailAppPasswordUrl" target="_blank" rel="noopener noreferrer">{{
-                'settings.mail.gmailAppPasswordLink' | transloco
-              }}</a>
-            </p>
-            <p>{{ 'settings.mail.gmailFromCaveat' | transloco }}</p>
-          </div>
-        </div>
-      }
-
-      @if (failureMessage(); as message) {
-        <div class="panel-banner">
-          <app-error-banner [message]="message" />
-        </div>
-      }
-
-      @if (canReset()) {
+      <ng-template #testRow>
+        @let probeResult = probe();
         <app-settings-row
-          [title]="'settings.mail.resetToEnv' | transloco"
-          [description]="'settings.mail.resetToEnvDesc' | transloco"
+          [title]="'settings.mail.test' | transloco"
+          [description]="
+            probeResult.status === 'ok'
+              ? ('settings.mail.testOk' | transloco)
+              : ('settings.mail.testDesc' | transloco)
+          "
         >
-          <app-button
-            variant="default"
-            data-testid="mail-reset-to-env"
-            (click)="confirmThenResetToEnv()"
-          >
-            {{ 'settings.mail.resetToEnv' | transloco }}
-          </app-button>
+          <div class="test-control" data-testid="mail-test-button">
+            <span class="probe-status">
+              @if (probeResult.status === 'ok') {
+                <app-icon class="ok" name="check" size="sm" />
+              } @else if (probeResult.status === 'error') {
+                <app-icon class="failed" name="close" size="sm" />
+              }
+            </span>
+            <app-button
+              [variant]="canTest() ? 'accent-outline' : 'default'"
+              [loading]="probeResult.status === 'loading'"
+              [disabled]="!canTest()"
+              [ariaLabel]="
+                probeResult.status === 'loading'
+                  ? ('settings.mail.testing' | transloco)
+                  : ('settings.mail.test' | transloco)
+              "
+              (click)="test()"
+            >
+              {{ 'settings.mail.test' | transloco }}
+            </app-button>
+          </div>
         </app-settings-row>
-      }
 
-      <app-settings-save-bar
-        [dirty]="dirty()"
-        [saving]="svc.busy()"
-        [saveLabel]="'settings.mail.save' | transloco"
-        [resetLabel]="'settings.mail.reset' | transloco"
-        [unsavedLabel]="'settings.mail.unsaved' | transloco"
-        (save)="onSave()"
-        (reset)="onReset()"
-      />
+        @if (probeResult.status === 'error') {
+          <div class="panel-banner">
+            <app-error-banner
+              [message]="'settings.mail.testFailed' | transloco: { reason: probeResult.message }"
+            />
+          </div>
+        }
+
+        @if (gmailAppPasswordFailure()) {
+          <div class="gmail-hint">
+            <app-icon name="info" size="sm" />
+            <div class="gmail-hint-body">
+              <p>{{ 'settings.mail.gmailAppPassword' | transloco }}</p>
+              <p>
+                <a [href]="gmailAppPasswordUrl" target="_blank" rel="noopener noreferrer">{{
+                  'settings.mail.gmailAppPasswordLink' | transloco
+                }}</a>
+              </p>
+              <p>{{ 'settings.mail.gmailFromCaveat' | transloco }}</p>
+            </div>
+          </div>
+        }
+      </ng-template>
+
+      @if (envManaged()) {
+        @if (svc.state(); as envState) {
+          <app-settings-row [title]="'settings.mail.env.status' | transloco" />
+
+          <app-settings-row
+            [title]="'settings.mail.fromAddress' | transloco"
+            [description]="envState.fromAddress"
+          />
+
+          <app-settings-row
+            [title]="'settings.mail.fromName' | transloco"
+            [description]="envState.fromName"
+          />
+
+          <app-settings-row
+            [title]="'settings.mail.env.transport' | transloco"
+            [description]="envTransportSummary()"
+          />
+
+          <ng-container *ngTemplateOutlet="testRow" />
+
+          @if (failureMessage(); as message) {
+            <div class="panel-banner">
+              <app-error-banner [message]="message" />
+            </div>
+          }
+
+          <app-settings-row
+            [title]="'settings.mail.env.override' | transloco"
+            [description]="'settings.mail.env.overrideDesc' | transloco"
+          >
+            <app-button variant="default" data-testid="mail-override" (click)="startOverride()">
+              {{ 'settings.mail.env.override' | transloco }}
+            </app-button>
+          </app-settings-row>
+        }
+      } @else {
+        <app-settings-row
+          [title]="'settings.mail.enabled' | transloco"
+          [description]="configured() ? '' : ('settings.mail.enabledDisabledHint' | transloco)"
+          labelFor="mail-enabled-toggle"
+        >
+          <app-toggle
+            inputId="mail-enabled-toggle"
+            [label]="'settings.mail.enabled' | transloco"
+            [checked]="enabled()"
+            [disabled]="!configured()"
+            (toggled)="onEnabled($event)"
+          />
+        </app-settings-row>
+
+        <app-settings-row
+          [stackable]="true"
+          [title]="'settings.mail.encryption' | transloco"
+          [description]="'settings.mail.encryptionDesc' | transloco"
+        >
+          <select
+            class="select-field"
+            data-testid="mail-encryption"
+            (change)="onEncryption($event)"
+          >
+            @for (option of encryptionOptions; track option) {
+              <option [value]="option" [selected]="encryption() === option">{{ option }}</option>
+            }
+          </select>
+        </app-settings-row>
+
+        <app-settings-row
+          [stackable]="true"
+          [title]="'settings.mail.proxy.label' | transloco"
+          [description]="
+            proxyConfigured() ? proxyLabel() : ('settings.mail.proxy.noneHint' | transloco)
+          "
+          labelFor="mail-use-proxy-toggle"
+        >
+          <app-toggle
+            inputId="mail-use-proxy-toggle"
+            [label]="'settings.mail.proxy.label' | transloco"
+            [checked]="useProxy()"
+            [disabled]="!proxyConfigured()"
+            data-testid="mail-use-proxy"
+            (toggled)="onUseProxy($event)"
+          />
+          @if (!proxyConfigured()) {
+            <a
+              class="proxy-configure-link"
+              routerLink="/settings/admin/proxy"
+              data-testid="mail-proxy-configure-link"
+            >
+              {{ 'settings.mail.proxy.configureLink' | transloco }}
+            </a>
+          }
+        </app-settings-row>
+
+        <app-settings-row
+          [stackable]="true"
+          [title]="'settings.mail.host' | transloco"
+          [error]="fieldError('host')"
+        >
+          <input
+            type="text"
+            class="host-field"
+            data-testid="mail-host"
+            [value]="host()"
+            [attr.aria-invalid]="isFieldInvalid('host')"
+            (input)="onTyped('host', $event)"
+          />
+        </app-settings-row>
+
+        <app-settings-row
+          [stackable]="true"
+          [title]="'settings.mail.port' | transloco"
+          [error]="fieldError('port')"
+        >
+          <input
+            type="number"
+            class="port-field"
+            min="1"
+            max="65535"
+            data-testid="mail-port"
+            [value]="port()"
+            [attr.aria-invalid]="isFieldInvalid('port')"
+            (input)="onPort($event)"
+          />
+        </app-settings-row>
+
+        <app-settings-row
+          [stackable]="true"
+          [title]="'settings.mail.username' | transloco"
+          [error]="fieldError('username')"
+        >
+          <input
+            type="text"
+            class="credential-field"
+            autocomplete="off"
+            data-testid="mail-username"
+            [value]="username()"
+            [attr.aria-invalid]="isFieldInvalid('username')"
+            (input)="onTyped('username', $event)"
+          />
+        </app-settings-row>
+
+        <app-settings-row
+          [stackable]="true"
+          [title]="'settings.mail.fromAddress' | transloco"
+          [error]="fieldError('fromAddress')"
+        >
+          <input
+            type="text"
+            class="credential-field"
+            autocomplete="off"
+            data-testid="mail-from-address"
+            [value]="fromAddress()"
+            [attr.aria-invalid]="isFieldInvalid('fromAddress')"
+            (input)="onTyped('fromAddress', $event)"
+          />
+        </app-settings-row>
+
+        <app-settings-row
+          [stackable]="true"
+          [title]="'settings.mail.fromName' | transloco"
+          [error]="fieldError('fromName')"
+        >
+          <input
+            type="text"
+            class="credential-field"
+            autocomplete="off"
+            data-testid="mail-from-name"
+            [value]="fromName()"
+            [attr.aria-invalid]="isFieldInvalid('fromName')"
+            (input)="onTyped('fromName', $event)"
+          />
+        </app-settings-row>
+
+        <app-settings-row
+          [stackable]="true"
+          [title]="'settings.mail.password' | transloco"
+          [description]="passwordSaved() ? ('settings.mail.passwordSaved' | transloco) : ''"
+          [error]="fieldError('password')"
+        >
+          <app-password-input class="credential-field">
+            <input
+              type="password"
+              autocomplete="off"
+              data-testid="mail-password"
+              [placeholder]="'settings.mail.passwordKeepHint' | transloco"
+              [value]="password()"
+              [attr.aria-invalid]="isFieldInvalid('password')"
+              (input)="onPassword($event)"
+            />
+          </app-password-input>
+          @if (passwordSaved()) {
+            <app-button
+              variant="default"
+              size="sm"
+              data-testid="mail-remove-password"
+              [disabled]="dirty()"
+              (click)="removePassword()"
+            >
+              {{ 'settings.mail.removePassword' | transloco }}
+            </app-button>
+          }
+        </app-settings-row>
+
+        <ng-container *ngTemplateOutlet="testRow" />
+
+        @if (failureMessage(); as message) {
+          <div class="panel-banner">
+            <app-error-banner [message]="message" />
+          </div>
+        }
+
+        @if (canReset()) {
+          <app-settings-row
+            [title]="'settings.mail.resetToEnv' | transloco"
+            [description]="'settings.mail.resetToEnvDesc' | transloco"
+          >
+            <app-button
+              variant="default"
+              data-testid="mail-reset-to-env"
+              (click)="confirmThenResetToEnv()"
+            >
+              {{ 'settings.mail.resetToEnv' | transloco }}
+            </app-button>
+          </app-settings-row>
+        }
+
+        <app-settings-save-bar
+          [dirty]="dirty()"
+          [saving]="svc.busy()"
+          [saveLabel]="'settings.mail.save' | transloco"
+          [resetLabel]="'settings.mail.reset' | transloco"
+          [unsavedLabel]="'settings.mail.unsaved' | transloco"
+          (save)="onSave()"
+          (reset)="onReset()"
+        />
+      }
     </app-settings-group>
   }
 </app-settings-stack>

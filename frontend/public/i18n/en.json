@@ -426,6 +426,18 @@
         "hostRequired": "Enter a host, or turn this off.",
         "emailInvalid": "Enter a valid email address.",
         "portRange": "Enter a port between 1 and 65535."
+      },
+      "env": {
+        "status": "Sending: on — via the environment",
+        "transport": "Mail server",
+        "systemMail": "System mail",
+        "override": "Override with in-app settings",
+        "overrideDesc": "Set up your own SMTP server instead of the environment default."
+      },
+      "proxy": {
+        "label": "Send mail through the proxy",
+        "noneHint": "No proxy is configured.",
+        "configureLink": "Configure a proxy"
       }
     },
     "organise": {

@@ -33,3 +33,11 @@
   color: var(--accent);
   font-weight: 600;
 }
+
+// The "configure a proxy" link beside the disabled proxy toggle (#845): the
+// same accent-link treatment as the Gmail hint, projected into the row's
+// control slot rather than a banner.
+.proxy-configure-link {
+  color: var(--accent);
+  font-weight: 600;
+}

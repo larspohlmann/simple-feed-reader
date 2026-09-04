@@ -426,6 +426,18 @@
         "hostRequired": "Gib einen Host ein, oder schalte dies aus.",
         "emailInvalid": "Gib eine gültige E-Mail-Adresse ein.",
         "portRange": "Gib einen Port zwischen 1 und 65535 ein."
+      },
+      "env": {
+        "status": "Versand: an — über die Umgebung",
+        "transport": "Mailserver",
+        "systemMail": "Systemmail",
+        "override": "Mit eigenen Einstellungen überschreiben",
+        "overrideDesc": "Richte einen eigenen SMTP-Server ein, statt den Umgebungsstandard zu verwenden."
+      },
+      "proxy": {
+        "label": "Mail über den Proxy versenden",
+        "noneHint": "Kein Proxy ist konfiguriert.",
+        "configureLink": "Proxy konfigurieren"
       }
     },
     "organise": {
