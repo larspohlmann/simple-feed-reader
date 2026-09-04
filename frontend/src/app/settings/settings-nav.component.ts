@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input } from '@an
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthService } from '../core/auth.service';
+import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { IconComponent } from '../shared/icon/icon.component';
 import { SETTINGS_SECTIONS, SettingsSection } from './settings-sections';
 
@@ -25,6 +26,7 @@ interface NavGroup {
 export class SettingsNavComponent {
   readonly variant = input.required<'rail' | 'hub'>();
   private readonly auth = inject(AuthService);
+  readonly unhealthyCount = inject(SubscriptionsStore).unhealthyCount;
 
   readonly groups = computed<readonly NavGroup[]>(() => {
     const groups: NavGroup[] = [

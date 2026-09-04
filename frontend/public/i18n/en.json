@@ -494,6 +494,7 @@
     "health": {
       "title": "Unhealthy feeds",
       "summary": "{{count}} feeds need your attention",
+      "badgeLabel": "{{count}} unhealthy feeds",
       "pill": {
         "dead": "Dead",
         "failing": "Failing"

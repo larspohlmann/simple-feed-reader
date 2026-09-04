@@ -494,6 +494,7 @@
     "health": {
       "title": "Fehlerhafte Feeds",
       "summary": "{{count}} Feeds brauchen deine Aufmerksamkeit",
+      "badgeLabel": "{{count}} fehlerhafte Feeds",
       "pill": {
         "dead": "Tot",
         "failing": "Fehlerhaft"
