@@ -1,7 +1,7 @@
 # The PRODUCTION stack. Deliberately a standalone file, not an overlay on
 # docker-compose.yml: an overlay would inherit the dev file's
-# MAILER_DSN=smtp://mailpit:1025 -- the exact silent mail black hole issue #65
-# exists to kill. Nothing here defaults to a dev service.
+# MAILER_FALLBACK_DSN=smtp://mailpit:1025 -- the exact silent mail black hole
+# issue #65 exists to kill. Nothing here defaults to a dev service.
 #
 # Run it through the helper scripts (scripts/prod-start.sh reads .env.prod):
 #   docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod ...
@@ -25,15 +25,12 @@ x-app-environment: &app-environment
   # container. The default is only expanded when DATABASE_URL is empty, so
   # MYSQL_PASSWORD is not required in that case.
   DATABASE_URL: "${DATABASE_URL:-mysql://${MYSQL_USER:-feedreader}:${MYSQL_PASSWORD:?set it in .env.prod}@mysql:3306/${MYSQL_DATABASE:-feedreader}?serverVersion=8.4&charset=utf8mb4}"
-  # No default and no fallback: null:// discards mail and reports success,
-  # and InsecureProductionConfigGuard 500s every request while it is set.
-  MAILER_DSN: ${MAILER_DSN:?set a real mail transport in .env.prod}
-  # Deliberate "no mail" mode (#230). When 1, InsecureProductionConfigGuard
-  # accepts MAILER_DSN=null://null instead of 500ing. MAILER_DSN stays
-  # required above, so a FORGOTTEN mailer still fails compose at start; the
-  # installer's "No mail" choice writes both MAIL_DISABLED=1 and
-  # MAILER_DSN=null://null together.
-  MAIL_DISABLED: ${MAIL_DISABLED:-}
+  # Fixed: the admin-configured transport (or none, the natural "no mail"
+  # state) always wins over this env fallback. Set MAILER_FALLBACK_DSN to give
+  # the instance a real transport before an admin ever visits the mail
+  # settings page; leave it null://null to configure mail in the admin UI only.
+  MAILER_DSN: dynamic://default
+  MAILER_FALLBACK_DSN: ${MAILER_FALLBACK_DSN:-null://null}
   MAIL_FROM: ${MAIL_FROM:?set it in .env.prod}
   MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Simple Feed Reader}
   APP_SECRET: ${APP_SECRET:?set it in .env.prod}
@@ -141,9 +138,9 @@ services:
     restart: unless-stopped
     environment: *app-environment
     extra_hosts:
-      # Lets MAILER_DSN=smtp://host.docker.internal:25 reach an MTA on the
-      # host; harmless when unused. Works on Docker Engine variants where
-      # host.docker.internal is not built in.
+      # Lets MAILER_FALLBACK_DSN=smtp://host.docker.internal:25 reach an MTA
+      # on the host; harmless when unused. Works on Docker Engine variants
+      # where host.docker.internal is not built in.
       - "host.docker.internal:host-gateway"
     volumes:
       # Logs and cache pools outlive the container; JWT keys outlive rebuilds.

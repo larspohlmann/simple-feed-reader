@@ -35,7 +35,7 @@ final class MailGatedDigestMailerTest extends TestCase
 
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::once())->method('info')->with(
-            'Mail disabled (MAIL_DISABLED); skipped digest mail to {email}.',
+            'Mail disabled; skipped digest mail to {email}.',
             ['email' => 'a@b.test'],
         );
 

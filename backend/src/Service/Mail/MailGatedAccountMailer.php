@@ -53,7 +53,7 @@ final readonly class MailGatedAccountMailer implements AccountMailerInterface
     private function send(string $kind, User $recipient, callable $deliver): void
     {
         if (!$this->mail->isEnabled()) {
-            $this->logger->info('Mail disabled (MAIL_DISABLED); skipped {kind} mail to {email}.', [
+            $this->logger->info('Mail disabled; skipped {kind} mail to {email}.', [
                 'kind' => $kind,
                 'email' => $recipient->getEmail(),
             ]);

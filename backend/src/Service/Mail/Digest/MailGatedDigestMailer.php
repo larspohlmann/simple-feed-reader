@@ -29,7 +29,7 @@ final readonly class MailGatedDigestMailer implements DigestMailerInterface
     public function send(User $user, DigestModel $model): void
     {
         if (!$this->mail->isEnabled()) {
-            $this->logger->info('Mail disabled (MAIL_DISABLED); skipped digest mail to {email}.', [
+            $this->logger->info('Mail disabled; skipped digest mail to {email}.', [
                 'email' => $user->getEmail(),
             ]);
 

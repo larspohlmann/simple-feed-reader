@@ -70,7 +70,7 @@ while the URL 404s. Verification step 1 is what catches that.
    unexpectedly` in `shared/var/log/`. Spell the pipe mode out:
 
    ```dotenv
-   MAILER_DSN="sendmail://default?command=%2Fusr%2Fsbin%2Fsendmail%20-t%20-i"
+   MAILER_FALLBACK_DSN="sendmail://default?command=%2Fusr%2Fsbin%2Fsendmail%20-t%20-i"
    ```
 
    This was found the expensive way — a registration that answered 202 and sent nothing.
@@ -246,12 +246,13 @@ the same script wipes on the next deploy. That silently resets the rate-limit co
 the record of spent ALTCHA solutions on every single deploy, re-opening the replay window
 each time. Absolute is what rules the default out; pointing it into `shared/` is your job.
 
-Two other placeholders fail at runtime rather than at deploy time, because secrets may
+One other placeholder fails at runtime rather than at deploy time, because the secret may
 legitimately be absent while the cache is warmed: if `ALTCHA_HMAC_KEY` still holds the value
-committed to this public repository, or `MAILER_DSN` is still `null://null`,
-`InsecureProductionConfigGuard` refuses **every** request with a 500 and logs which variable
-to set. That is deliberate — a site with a void CAPTCHA and a black-hole mailer is not
-degraded, it is quietly failing at the things it exists for.
+committed to this public repository, `InsecureProductionConfigGuard` refuses **every**
+request with a 500 and logs which variable to set. That is deliberate — a site with a void
+CAPTCHA is not degraded, it is quietly failing at the thing it exists for. Mail has no such
+guard: `MAILER_FALLBACK_DSN` left at `null://null` with no admin-configured transport is the
+natural "no mail" state, not a misconfiguration — see the mail section above.
 
 ## Deploying
 
