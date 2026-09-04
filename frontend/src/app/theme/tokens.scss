@@ -32,13 +32,13 @@
 // Step 0 has no block; the base blocks above are today's palette verbatim.
 @each $step in brightness.$light-steps {
   :root[data-theme='light'][data-brightness='#{$step}'] {
-    @include brightness.step(graphite.$light, $step);
+    @include brightness.step(graphite.$light, $step, brightness.$light-text-dim);
   }
 }
 
 @each $step in brightness.$dark-steps {
   :root[data-theme='dark'][data-brightness='#{$step}'] {
-    @include brightness.step(graphite.$dark, $step);
+    @include brightness.step(graphite.$dark, $step, brightness.$dark-text-dim);
   }
 }
 

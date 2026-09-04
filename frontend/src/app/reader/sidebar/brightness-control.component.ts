@@ -1,10 +1,9 @@
 import { Component, computed, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
-import { BRIGHTNESS_CELLS } from '../../theme/brightness';
 import { BrightnessService } from '../../theme/brightness.service';
 
-/** Small sun, a seven-cell bar, big sun: the sidebar's brightness stepper (#832). */
+/** Moon, a solid accent progress bar, sun: the sidebar's brightness stepper (#832). */
 @Component({
   selector: 'app-brightness-control',
   imports: [IconComponent, TranslocoPipe],
@@ -13,10 +12,15 @@ import { BrightnessService } from '../../theme/brightness.service';
 })
 export class BrightnessControlComponent {
   readonly brightness = inject(BrightnessService);
-  readonly cells = BRIGHTNESS_CELLS;
 
-  readonly atMin = computed(() => this.brightness.step() <= this.brightness.min);
+  readonly atMin = computed(() => this.brightness.step() <= this.brightness.min());
   readonly atMax = computed(() => this.brightness.step() >= this.brightness.max());
+
+  /** How full the bar is: emptiest at the darkest step, full at the brightest. */
+  readonly fillPercent = computed(() => {
+    const min = this.brightness.min();
+    return ((this.brightness.step() - min) / (this.brightness.max() - min)) * 100;
+  });
 
   readonly signedStep = computed(() => {
     const step = this.brightness.step();

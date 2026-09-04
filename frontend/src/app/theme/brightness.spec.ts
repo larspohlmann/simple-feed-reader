@@ -1,4 +1,4 @@
-import { BRIGHTNESS_CELLS, brightnessKey, clampBrightness } from './brightness';
+import { brightnessKey, clampBrightness } from './brightness';
 
 describe('clampBrightness', () => {
   it('keeps a value inside the dark range', () => {
@@ -6,13 +6,13 @@ describe('clampBrightness', () => {
     expect(clampBrightness('dark', -3)).toBe(-3);
   });
 
-  it('caps dark at +3 and light at +1', () => {
+  it('caps dark at +3 and light at 0', () => {
     expect(clampBrightness('dark', 9)).toBe(3);
-    expect(clampBrightness('light', 2)).toBe(1);
+    expect(clampBrightness('light', 2)).toBe(0);
   });
 
-  it('floors both themes at -3', () => {
-    expect(clampBrightness('light', -7)).toBe(-3);
+  it('floors dark at -3 and light at -6', () => {
+    expect(clampBrightness('light', -9)).toBe(-6);
     expect(clampBrightness('dark', -7)).toBe(-3);
   });
 
@@ -30,11 +30,5 @@ describe('brightnessKey', () => {
   it('names one key per theme', () => {
     expect(brightnessKey('light')).toBe('sfr.brightness.light');
     expect(brightnessKey('dark')).toBe('sfr.brightness.dark');
-  });
-});
-
-describe('BRIGHTNESS_CELLS', () => {
-  it('spans the dark range with the default in the middle', () => {
-    expect(BRIGHTNESS_CELLS).toEqual([-3, -2, -1, 0, 1, 2, 3]);
   });
 });

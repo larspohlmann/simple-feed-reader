@@ -13,7 +13,7 @@ export class BrightnessService {
 
   /** The step of the theme on screen; under `system` that is whatever the OS resolved. */
   readonly step = computed(() => this.saved()[this.theme.resolved()]);
-  readonly min = BRIGHTNESS_MIN;
+  readonly min = computed(() => BRIGHTNESS_MIN[this.theme.resolved()]);
   readonly max = computed(() => BRIGHTNESS_MAX[this.theme.resolved()]);
 
   constructor() {

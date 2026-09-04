@@ -68,22 +68,26 @@ describe('BrightnessService', () => {
   });
 
   it("switches to the other theme's step and range when the theme changes", () => {
-    localStorage.setItem('sfr.brightness.light', '1');
+    localStorage.setItem('sfr.brightness.light', '-2');
     const svc = create();
     expect(svc.max()).toBe(3);
+    expect(svc.min()).toBe(-3);
 
     TestBed.inject(ThemeService).setMode('light');
     TestBed.tick();
 
-    expect(svc.step()).toBe(1);
-    expect(svc.max()).toBe(1);
-    expect(attr()).toBe('1');
+    expect(svc.step()).toBe(-2);
+    expect(svc.max()).toBe(0);
+    expect(svc.min()).toBe(-6);
+    expect(attr()).toBe('-2');
   });
 
-  it('caps light mode at +1', () => {
+  it('caps light mode at the default and floors it at -6', () => {
     localStorage.setItem('sfr.theme', 'light');
     const svc = create();
     svc.set(3);
-    expect(svc.step()).toBe(1);
+    expect(svc.step()).toBe(0);
+    svc.set(-9);
+    expect(svc.step()).toBe(-6);
   });
 });

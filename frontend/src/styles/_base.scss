@@ -27,3 +27,10 @@ h3 {
 :root[data-brightness^='-'] :is(img, video, iframe) {
   filter: brightness(var(--media-brightness));
 }
+
+/* Audio is chrome, not a photo: a light native player must recede into a dimmed
+   page, so it dims by the square of the media factor -- far harder than an image
+   wants -- staying a no-op at and above the default where the factor is 1. */
+:root[data-brightness^='-'] audio {
+  filter: brightness(calc(var(--media-brightness) * var(--media-brightness)));
+}

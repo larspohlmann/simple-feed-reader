@@ -7,6 +7,7 @@
 .seg {
   display: inline-flex;
   flex: 1 1 auto;
+  align-items: stretch;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
@@ -16,11 +17,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-2) var(--space-2);
   background: var(--surface-2);
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
+}
+
+.seg .darker,
+.seg .brighter {
+  padding: var(--space-2);
 }
 
 .seg button:hover:not(:disabled) {
@@ -32,37 +37,25 @@
   cursor: default;
 }
 
+/* The bar is one solid progress fill, full height: emptiest at the darkest
+   step, full at the brightest. The track is the same surface as the glyph
+   buttons; the soft accent tint is the indicator. Clicking it resets. */
 .seg .bar {
   flex: 1 1 auto;
-  gap: var(--space-0);
+  padding: 0;
   border-inline: 1px solid var(--border);
 }
 
-.cell {
-  position: relative;
-  flex: 1;
-  height: var(--space-2);
-  border-radius: var(--radius-sm);
-  background: var(--border-strong);
+.track {
+  display: block;
+  block-size: 100%;
+  inline-size: 100%;
+  background: var(--surface-2);
 }
 
-.cell.filled {
-  background: var(--text-secondary);
-}
-
-.cell.unavailable {
-  background: var(--border);
-}
-
-/* A notch under the default cell marks where today's look is. */
-.cell.default::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: calc(-1 * var(--space-1));
-  width: var(--space-0);
-  height: var(--space-0);
-  margin-left: calc(var(--space-0) / -2);
-  border-radius: var(--radius-pill);
-  background: var(--text-muted);
+.fill {
+  display: block;
+  block-size: 100%;
+  background: var(--accent-soft);
+  transition: inline-size 0.12s ease;
 }

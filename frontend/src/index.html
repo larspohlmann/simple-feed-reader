@@ -29,7 +29,7 @@
           document.documentElement.setAttribute('data-theme', theme);
           // Brightness (#832): bounds mirror BRIGHTNESS_MAX in app/theme/brightness.ts.
           var step = parseInt(localStorage.getItem('sfr.brightness.' + theme), 10);
-          var clamped = Math.max(-3, Math.min(dark ? 3 : 1, isNaN(step) ? 0 : step));
+          var clamped = Math.max(dark ? -3 : -6, Math.min(dark ? 3 : 0, isNaN(step) ? 0 : step));
           document.documentElement.setAttribute('data-brightness', String(clamped));
         } catch (e) {}
       })();

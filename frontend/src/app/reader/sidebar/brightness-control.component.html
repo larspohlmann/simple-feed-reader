@@ -7,7 +7,7 @@
     [disabled]="atMin()"
     (click)="brightness.decrease()"
   >
-    <app-icon name="brightness_low" size="md" />
+    <app-icon name="dark_mode" size="md" />
   </button>
   <button
     type="button"
@@ -16,14 +16,7 @@
     [attr.aria-label]="'reader.brightness.reset' | transloco"
     (click)="brightness.reset()"
   >
-    @for (cell of cells; track cell) {
-      <span
-        class="cell"
-        [class.filled]="cell <= brightness.step()"
-        [class.unavailable]="cell > brightness.max()"
-        [class.default]="cell === 0"
-      ></span>
-    }
+    <span class="track"><span class="fill" [style.inline-size.%]="fillPercent()"></span></span>
   </button>
   <button
     type="button"
@@ -33,7 +26,7 @@
     [disabled]="atMax()"
     (click)="brightness.increase()"
   >
-    <app-icon name="brightness_high" size="md" />
+    <app-icon name="light_mode" size="md" />
   </button>
   <output class="sr-only" aria-live="polite">
     @if (brightness.step() === 0) {

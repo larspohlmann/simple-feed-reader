@@ -111,11 +111,12 @@ describe.each(['light', 'dark'] as const)('%s step 0', (theme) => {
 });
 
 const STEPS: Record<Theme, readonly number[]> = {
-  light: [-3, -2, -1, 1],
+  light: [-6, -5, -4, -3, -2, -1],
   dark: [-3, -2, -1, 1, 2, 3],
 };
 const SURFACES = ['surface-0', 'surface-1', 'surface-2', 'surface-read'];
-const SHIFTED = [
+// The surface plane, which scales at the steeper rate.
+const SURFACE_PLANE = [
   ...SURFACES,
   'border',
   'border-strong',
@@ -124,16 +125,28 @@ const SHIFTED = [
   'bg-success',
   'bg-warning',
 ];
-const SOLVED = [
+// The foreground plane, which scales at the gentler rate so it holds up as the
+// surfaces sink. Every colour token is scaled; only favicon-backdrop is not.
+const FOREGROUND_PLANE = [
   'text-primary',
   'text-secondary',
   'text-muted',
   'accent',
+  'on-accent',
   'danger',
   'success',
   'warning',
 ];
-const MEDIA: Record<number, string> = { [-3]: '0.82', [-2]: '0.88', [-1]: '0.94' };
+const SCALED = [...SURFACE_PLANE, ...FOREGROUND_PLANE];
+const TEXT = ['text-primary', 'text-secondary', 'text-muted'];
+const MEDIA: Record<number, string> = {
+  [-1]: '0.92',
+  [-2]: '0.84',
+  [-3]: '0.76',
+  [-4]: '0.68',
+  [-5]: '0.6',
+  [-6]: '0.52',
+};
 const TOLERANCE = 0.02;
 
 const linear = (channel: number): number => {
@@ -169,19 +182,10 @@ describe.each(['light', 'dark'] as const)('%s brightness steps', (theme) => {
     expect(base['media-brightness']).toBe('1');
   });
 
-  it.each(STEPS[theme])('step %i redefines every shifted and solved token', (step) => {
+  it.each(STEPS[theme])('step %i redefines the reading plane and nothing else', (step) => {
     expect(Object.keys(paletteAt(theme, step)).sort()).toEqual(
-      [...SHIFTED, ...SOLVED, 'media-brightness'].sort(),
+      [...SCALED, 'media-brightness'].sort(),
     );
-  });
-
-  it.each(STEPS[theme])('step %i holds every solved token at its step-0 contrast', (step) => {
-    const palette = paletteAt(theme, step);
-    for (const token of SOLVED) {
-      expect(`${token} ${weakest(token, palette).toFixed(2)}`).toBe(
-        `${token} ${Math.max(weakest(token, palette), weakest(token, base) - TOLERANCE).toFixed(2)}`,
-      );
-    }
   });
 
   it.each(STEPS[theme])('step %i moves the canvas in the direction of the step', (step) => {
@@ -191,13 +195,38 @@ describe.each(['light', 'dark'] as const)('%s brightness steps', (theme) => {
     else expect(canvas).toBeGreaterThan(today);
   });
 
-  it.each(STEPS[theme])('step %i keeps on-accent legible on the accent', (step) => {
-    const palette = { ...base, ...paletteAt(theme, step) };
-    const floor = Math.min(4.5, contrast(base['on-accent'], base['accent'])) - TOLERANCE;
-    expect(contrast(palette['on-accent'], palette['accent'])).toBeGreaterThanOrEqual(floor);
-  });
+  it.each(STEPS[theme])(
+    'step %i dims the text when dimming and lifts it when brightening',
+    (step) => {
+      const palette = paletteAt(theme, step);
+      for (const token of TEXT) {
+        const now = luminance(rgb(palette[token]));
+        const today = luminance(rgb(base[token]));
+        if (step < 0) expect(now).toBeLessThan(today);
+        else expect(now).toBeGreaterThan(today);
+      }
+    },
+  );
+
+  it.each(STEPS[theme])(
+    'step %i eases the body-text contrast when dimming, strengthens it when brightening',
+    (step) => {
+      const now = weakest('text-primary', paletteAt(theme, step));
+      const today = weakest('text-primary', base);
+      if (step < 0) expect(now).toBeLessThanOrEqual(today + TOLERANCE);
+      else expect(now).toBeGreaterThanOrEqual(today - TOLERANCE);
+    },
+  );
 
   it.each(STEPS[theme])('step %i dims media only below the default', (step) => {
     expect(paletteAt(theme, step)['media-brightness']).toBe(MEDIA[step] ?? '1');
   });
+});
+
+it('turns the body text pure white at the brightest dark step', () => {
+  expect(rgb(paletteAt('dark', 3)['text-primary'])).toEqual([255, 255, 255]);
+});
+
+it('turns the body text pure black at the darkest light step', () => {
+  expect(rgb(paletteAt('light', -6)['text-primary'])).toEqual([0, 0, 0]);
 });

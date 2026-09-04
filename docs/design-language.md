@@ -211,16 +211,23 @@ any one component's stylesheet.
 
 ### Brightness steps (#832)
 
-`<html>` carries `data-brightness` (`-3`…`3`) next to `data-theme`. Step 0 is
-the palette in `themes/_graphite.scss` verbatim; every other step is derived
-at build time by `theme/_brightness.scss` and emitted as its own
-`:root[data-theme][data-brightness]` block. Surfaces, borders and the soft
-status backgrounds shift 4 OKLCH lightness points per step; text and the
-saturated hues are re-solved to hold their step-0 contrast against the
-weakest surface. `--media-brightness` (1, or 0.94/0.88/0.82 below 0) drives
-one global `filter` on `img`, `video` and `iframe`. Light stops at +1 because
-its panels are already white. To change a contrast target, edit
-`$contrast-targets` in `_brightness.scss`; never hand-tune a step block.
+`<html>` carries `data-brightness` next to `data-theme`: dark spans `-3`…`3`
+(0 today), light spans `-6`…`0` (0 the brightest — light panels start at full
+brightness, so light only dims). Step 0 is the palette in
+`themes/_graphite.scss` verbatim; every other step is derived at build time by
+`theme/_brightness.scss` and emitted as its own `:root[data-theme][data-brightness]`
+block. A step is a brightness dial for the whole palette: it scales each token's
+OKLCH lightness toward black (down) or white (up), keeping hue and chroma, so
+colours stay themselves and only soften. The surface plane
+(`$surface-per-step`) scales faster than the foreground (`$foreground-per-step`):
+dimming sinks the background deeper than the text, so a dark room gets a
+near-black page while the text holds up and stays readable, and contrast eases
+instead of the old model's pinned-bright text. A colour pair (the accent button,
+a status box) scales both partners at the foreground rate, so its contrast is
+preserved without a solver. `--media-brightness` (1, or 0.94…0.64 below 0)
+drives one global `filter` on `img`, `video`, `iframe` and `audio`, so pixel
+media and native player chrome dim with the page. To retune, edit the two
+`$…-per-step` factors; never hand-tune a step block.
 
 ---
 
@@ -1200,13 +1207,16 @@ reuse:
 
 ### Brightness control
 
-`<app-brightness-control>` (local to the sidebar, #832) is a small sun, a
-seven-cell bar and a big sun in the view-controls `.seg` frame. Cells fill
-from the left up to the current step (four at the default); the fourth cell's
-notch marks today's look; clicking the bar resets to it. In light mode the
-two cells above +1 render as unavailable and the big sun disables at +1. A
-visually hidden `<output aria-live="polite">` reads the value. Steps are per
-device and per theme (`sfr.brightness.light` / `.dark`), never per account.
+`<app-brightness-control>` (local to the sidebar, #832) is a moon
+(`dark_mode`), a solid progress bar and a sun (`light_mode`) in the
+view-controls `.seg` frame. The bar is one full-height fill over a track the
+same surface as the glyph buttons; the soft accent tint is the indicator. It
+fills with brightness — empty at the darkest step, full at the brightest — so
+the light default sits at the full end and the dark default at the middle.
+Clicking the bar resets to the default; the moon disables at the floor and the
+sun at the top. A visually hidden `<output aria-live="polite">` reads the value.
+Steps are per device and per theme (`sfr.brightness.light` / `.dark`), never per
+account.
 
 ### Sticky and scroll
 

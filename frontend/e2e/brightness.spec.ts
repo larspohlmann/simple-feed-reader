@@ -18,17 +18,17 @@ test('a saved dark brightness step paints from the first frame and dims media', 
     document.body.append(image);
     return getComputedStyle(image).filter;
   });
-  expect(filter).toBe('brightness(0.82)');
+  expect(filter).toBe('brightness(0.76)');
 });
 
-test('a light step above +1 is clamped before the app boots', async ({ page }) => {
+test('a light step above the default is clamped before the app boots', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('sfr.theme', 'light');
     localStorage.setItem('sfr.brightness.light', '3');
   });
   await page.goto('/login');
 
-  await expect(page.locator('html')).toHaveAttribute('data-brightness', '1');
+  await expect(page.locator('html')).toHaveAttribute('data-brightness', '0');
 });
 
 test('no saved step leaves the default render without a media filter', async ({ page }) => {
