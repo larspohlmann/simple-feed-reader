@@ -853,6 +853,7 @@ stacks.
 | `description` | `string` | `''` — omits the `.row-desc` element when empty |
 | `stackable` | `boolean` | `false` |
 | `labelFor` | `string` | `''` |
+| `error` | `string \| null` | `null` — mirrors `app-field`'s error slot; renders a `role="alert"` message below the row |
 
 ```html
 <app-settings-row
@@ -1359,6 +1360,17 @@ settings section composes `<app-settings-group>` + `<app-settings-row>` +
 `<app-info-tip>`. It does not re-implement the look in its own `.scss`, which
 holds only layout glue. If a section needs a new visual pattern, that pattern
 becomes (or extends) a `shared/settings/` primitive first.
+
+**Per-field validation (#845).** A settings row surfaces its own error via
+`<app-settings-row [error]="…">`, an already-translated string, mirroring
+`<app-field>`'s error slot. The control carries
+`[attr.aria-invalid]="isFieldInvalid(field)"`, which picks up the shared danger
+border from `styles/_controls.scss`. One `fieldError(field)` method merges
+client-side checks with the backend 422 `errors` map — keyed by the DTO
+property name — into a single code path per field; an edit to that field
+clears its error. See `frontend/src/app/settings/admin/mail/mail-section.component.ts`
+for the reference implementation. Adopt it when a form is next touched, not as
+a sweep.
 
 ---
 
