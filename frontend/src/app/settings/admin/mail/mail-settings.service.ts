@@ -1,8 +1,7 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Injectable, computed, inject, signal } from '@angular/core';
-import { Observable } from 'rxjs';
-import { API_BASE_URL } from '../../../core/api';
-import { Problem, parseProblem } from '../../../core/problem';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Injectable, signal } from '@angular/core';
+import { parseProblem } from '../../../core/problem';
+import { DraftSettingsService } from '../../../shared/settings/draft-settings.service';
 
 export type MailEncryption = 'none' | 'starttls' | 'tls';
 
@@ -48,66 +47,25 @@ interface MailTestResponse {
 }
 
 @Injectable()
-export class MailSettingsService {
-  private readonly http = inject(HttpClient);
-  private readonly base = inject(API_BASE_URL);
+export class MailSettingsService extends DraftSettingsService<
+  MailSettingsState,
+  SaveMailSettings,
+  TypedMailEdits
+> {
+  protected readonly endpoint = `${this.base}/api/admin/mail`;
 
-  readonly state = signal<MailSettingsState | null>(null);
-  readonly busy = signal(false);
-  readonly failure = signal<Problem | null>(null);
-  readonly saved = signal(false);
   readonly probe = signal<MailProbe>({ status: 'idle' });
 
-  readonly draft = signal<TypedMailEdits>({});
-  readonly dirty = computed(() => Object.keys(this.draft()).length > 0);
-
-  load(): void {
-    this.run(this.http.get<MailSettingsState>(`${this.base}/api/admin/mail`), (state) =>
-      this.commit(state),
-    );
-  }
-
-  saveInstant(partial: Partial<SaveMailSettings>): void {
-    const current = this.state();
-    if (!current) return;
-    this.put({ ...this.bodyFromState(current), ...partial }, (state) => {
-      this.state.set(state);
-      this.saved.set(true);
-    });
-  }
-
-  setTypedField<F extends keyof TypedMailEdits>(field: F, value: TypedMailEdits[F]): void {
-    this.draft.update((draft) => ({ ...draft, [field]: value }));
-  }
-
-  /** `overrides` carries a staged enable/encryption: those never enter the
-   *  draft, and on the row-creating first Save `state` is only the env prefill. */
-  save(overrides: Partial<Pick<SaveMailSettings, 'enabled' | 'encryption'>> = {}): void {
-    const current = this.state();
-    if (!current) return;
-    this.put({ ...this.bodyFromState(current), ...overrides, ...this.draft() }, (state) => {
+  reset(): void {
+    this.run(this.http.post<MailSettingsState>(`${this.endpoint}/reset`, {}), (state) => {
       this.commit(state);
       this.saved.set(true);
     });
   }
 
-  discardDraft(): void {
-    this.draft.set({});
-  }
-
-  reset(): void {
-    this.run(
-      this.http.post<MailSettingsState>(`${this.base}/api/admin/mail/reset`, {}),
-      (state) => {
-        this.commit(state);
-        this.saved.set(true);
-      },
-    );
-  }
-
   testConnection(): void {
     this.probe.set({ status: 'loading' });
-    this.http.post<MailTestResponse>(`${this.base}/api/admin/mail/test`, {}).subscribe({
+    this.http.post<MailTestResponse>(`${this.endpoint}/test`, {}).subscribe({
       next: (result) =>
         this.probe.set(
           result.ok ? { status: 'ok' } : { status: 'error', message: result.reason ?? 'failed' },
@@ -117,8 +75,7 @@ export class MailSettingsService {
     });
   }
 
-  /** password defaults to null (keep stored) unless a typed edit sets it. */
-  private bodyFromState(state: MailSettingsState): SaveMailSettings {
+  protected bodyFromState(state: MailSettingsState): SaveMailSettings {
     return {
       enabled: state.enabled,
       host: state.host,
@@ -129,30 +86,5 @@ export class MailSettingsService {
       fromName: state.fromName,
       password: null,
     };
-  }
-
-  private put(body: SaveMailSettings, onSuccess: (state: MailSettingsState) => void): void {
-    this.run(this.http.put<MailSettingsState>(`${this.base}/api/admin/mail`, body), onSuccess);
-  }
-
-  private commit(state: MailSettingsState): void {
-    this.state.set(state);
-    this.draft.set({});
-  }
-
-  private run<T>(request: Observable<T>, onSuccess: (value: T) => void): void {
-    this.busy.set(true);
-    this.failure.set(null);
-    this.saved.set(false);
-    request.subscribe({
-      next: (value) => {
-        this.busy.set(false);
-        onSuccess(value);
-      },
-      error: (error: HttpErrorResponse) => {
-        this.busy.set(false);
-        this.failure.set(parseProblem(error));
-      },
-    });
   }
 }

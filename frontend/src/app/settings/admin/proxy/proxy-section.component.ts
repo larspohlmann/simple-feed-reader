@@ -2,12 +2,11 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  effect,
   inject,
   linkedSignal,
   signal,
 } from '@angular/core';
-import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { ButtonComponent } from '../../../shared/button/button.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
@@ -18,8 +17,8 @@ import { SettingsRowComponent } from '../../../shared/settings/settings-row/sett
 import { SettingsSaveBarComponent } from '../../../shared/settings/save-bar/save-bar.component';
 import { SettingsStackComponent } from '../../../shared/settings/stack/settings-stack.component';
 import { ToggleComponent } from '../../../shared/toggle/toggle.component';
-import { CONFIRMATION_DURATION_MS, ToastService } from '../../../shared/toast/toast.service';
-import { ProxySettingsService, ProxyType, TypedProxyEdits } from './proxy-settings.service';
+import { toastOnSaved } from '../../../shared/toast/saved-toast';
+import { ProxySettingsService, ProxyType } from './proxy-settings.service';
 
 /** The SOCKS5 well-known port, mirroring the backend's ProxyConnection::DEFAULT_PORT. */
 const DEFAULT_PORT = 1080;
@@ -55,8 +54,6 @@ const DEFAULT_PORT = 1080;
 })
 export class ProxySectionComponent {
   readonly svc = inject(ProxySettingsService);
-  private readonly i18n = inject(TranslocoService);
-  private readonly toast = inject(ToastService);
 
   // Instant fields: persisted the moment they change, never held in the draft.
   readonly enabled = linkedSignal<boolean>(() => this.svc.state()?.enabled ?? false);
@@ -67,12 +64,14 @@ export class ProxySectionComponent {
   // Typed fields: held as a pending draft until the explicit Save. Each reads
   // the pending edit first, server truth underneath -- so an instant save,
   // which replaces `state` while the draft stands, can't revert an unsaved edit.
-  readonly host = linkedSignal<string>(() => this.pending('host') ?? this.svc.state()?.host ?? '');
+  readonly host = linkedSignal<string>(
+    () => this.svc.pending('host') ?? this.svc.state()?.host ?? '',
+  );
   readonly port = linkedSignal<number>(
-    () => this.pending('port') ?? this.svc.state()?.port ?? DEFAULT_PORT,
+    () => this.svc.pending('port') ?? this.svc.state()?.port ?? DEFAULT_PORT,
   );
   readonly username = linkedSignal<string>(
-    () => this.pending('username') ?? this.svc.state()?.username ?? '',
+    () => this.svc.pending('username') ?? this.svc.state()?.username ?? '',
   );
   /** Never seeded from server truth -- the API never returns the secret. */
   readonly password = signal('');
@@ -96,31 +95,9 @@ export class ProxySectionComponent {
 
   readonly typeOptions: readonly ProxyType[] = ['SOCKS5', 'HTTP'];
 
-  /**
-   * The pending value for one typed field, or undefined when the admin has not
-   * edited it. Key presence is the test, not nullishness -- a cleared field is
-   * a real edit and must win over server truth like any other.
-   */
-  private pending<F extends keyof TypedProxyEdits>(field: F): TypedProxyEdits[F] | undefined {
-    const draft = this.svc.draft();
-
-    return field in draft ? draft[field] : undefined;
-  }
-
   constructor() {
     this.svc.load();
-    // One success signal, fired on the actual HTTP success rather than the
-    // click: every persist sets `saved`, so this toasts once and resets the
-    // flag. A rejected save never sets `saved`, so it stays silent.
-    effect(() => {
-      if (this.svc.saved() && !this.svc.failure()) {
-        this.toast.show({
-          message: this.i18n.translate('settings.proxy.saved'),
-          durationMs: CONFIRMATION_DURATION_MS,
-        });
-        this.svc.saved.set(false);
-      }
-    });
+    toastOnSaved(this.svc, 'settings.proxy.saved');
   }
 
   onEnabled(value: boolean): void {

@@ -24,11 +24,7 @@
         [title]="'settings.mail.encryption' | transloco"
         [description]="'settings.mail.encryptionDesc' | transloco"
       >
-        <select
-          class="encryption-field"
-          data-testid="mail-encryption"
-          (change)="onEncryption($event)"
-        >
+        <select class="select-field" data-testid="mail-encryption" (change)="onEncryption($event)">
           @for (option of encryptionOptions; track option) {
             <option [value]="option" [selected]="encryption() === option">{{ option }}</option>
           }
