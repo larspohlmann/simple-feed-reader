@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\EventListener;
 
 use App\EventListener\InsecureProductionConfigGuard;
-use App\Service\Mail\MailCapability;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
@@ -16,11 +15,10 @@ use Symfony\Component\HttpKernel\KernelInterface;
 final class InsecureProductionConfigGuardTest extends TestCase
 {
     private const SAFE_KEY = 'a-real-long-random-production-secret';
-    private const SAFE_DSN = 'smtp://user:pass@smtp.example.com:587';
 
-    private function guard(string $environment, string $altchaKey, string $mailerDsn): InsecureProductionConfigGuard
+    private function guard(string $environment, string $altchaKey): InsecureProductionConfigGuard
     {
-        return new InsecureProductionConfigGuard($environment, $altchaKey, $mailerDsn, new MailCapability(''));
+        return new InsecureProductionConfigGuard($environment, $altchaKey);
     }
 
     private function request(InsecureProductionConfigGuard $guard, int $type = HttpKernelInterface::MAIN_REQUEST): void
@@ -37,74 +35,21 @@ final class InsecureProductionConfigGuardTest extends TestCase
         $problems = $this->guard(
             'prod',
             InsecureProductionConfigGuard::PLACEHOLDER_ALTCHA_HMAC_KEY,
-            self::SAFE_DSN,
         )->problems();
 
         self::assertCount(1, $problems);
         self::assertStringContainsString('ALTCHA_HMAC_KEY', $problems[0]);
     }
 
-    public function testProdWithTheNullMailerIsRefused(): void
-    {
-        $problems = $this->guard(
-            'prod',
-            self::SAFE_KEY,
-            InsecureProductionConfigGuard::NULL_MAILER_DSN,
-        )->problems();
-
-        self::assertCount(1, $problems);
-        self::assertStringContainsString('MAILER_DSN', $problems[0]);
-    }
-
-    public function testNullMailerIsAllowedWhenMailIsDeliberatelyDisabled(): void
-    {
-        $guard = new InsecureProductionConfigGuard(
-            'prod',
-            self::SAFE_KEY,
-            InsecureProductionConfigGuard::NULL_MAILER_DSN,
-            new MailCapability('1'),
-        );
-
-        self::assertSame([], $guard->problems());
-    }
-
-    public function testNullMailerStillFailsWhenMailIsNotDisabled(): void
-    {
-        $guard = new InsecureProductionConfigGuard(
-            'prod',
-            self::SAFE_KEY,
-            InsecureProductionConfigGuard::NULL_MAILER_DSN,
-            new MailCapability(''),
-        );
-
-        self::assertCount(1, $guard->problems());
-    }
-
-    /**
-     * Both wrong at once must report BOTH. Reporting only the first would send
-     * an operator round the deploy loop twice for one mistake.
-     */
-    public function testBothPlaceholdersAreReportedTogether(): void
-    {
-        $problems = $this->guard(
-            'prod',
-            InsecureProductionConfigGuard::PLACEHOLDER_ALTCHA_HMAC_KEY,
-            InsecureProductionConfigGuard::NULL_MAILER_DSN,
-        )->problems();
-
-        self::assertCount(2, $problems);
-    }
-
     public function testProdWithRealValuesIsAccepted(): void
     {
-        self::assertSame([], $this->guard('prod', self::SAFE_KEY, self::SAFE_DSN)->problems());
+        self::assertSame([], $this->guard('prod', self::SAFE_KEY)->problems());
     }
 
     /**
-     * dev and test depend on exactly these defaults — the suite solves real
-     * ALTCHA challenges with the committed key, and null:// is what stops a
-     * local run from mailing strangers. A guard that fired here would make the
-     * project unusable rather than safer.
+     * dev and test depend on exactly this default — the suite solves real
+     * ALTCHA challenges with the committed key. A guard that fired here would
+     * make the project unusable rather than safer.
      *
      * @return iterable<string, array{string}>
      */
@@ -120,7 +65,6 @@ final class InsecureProductionConfigGuardTest extends TestCase
         $guard = $this->guard(
             $environment,
             InsecureProductionConfigGuard::PLACEHOLDER_ALTCHA_HMAC_KEY,
-            InsecureProductionConfigGuard::NULL_MAILER_DSN,
         );
 
         self::assertSame([], $guard->problems());
@@ -134,11 +78,10 @@ final class InsecureProductionConfigGuardTest extends TestCase
         $guard = $this->guard(
             'prod',
             InsecureProductionConfigGuard::PLACEHOLDER_ALTCHA_HMAC_KEY,
-            InsecureProductionConfigGuard::NULL_MAILER_DSN,
         );
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessageMatches('/ALTCHA_HMAC_KEY.*MAILER_DSN/s');
+        $this->expectExceptionMessageMatches('/ALTCHA_HMAC_KEY/');
 
         $this->request($guard);
     }
@@ -147,7 +90,7 @@ final class InsecureProductionConfigGuardTest extends TestCase
     {
         $this->expectNotToPerformAssertions();
 
-        $this->request($this->guard('prod', self::SAFE_KEY, self::SAFE_DSN));
+        $this->request($this->guard('prod', self::SAFE_KEY));
     }
 
     /**
@@ -163,14 +106,13 @@ final class InsecureProductionConfigGuardTest extends TestCase
             $this->guard(
                 'prod',
                 InsecureProductionConfigGuard::PLACEHOLDER_ALTCHA_HMAC_KEY,
-                InsecureProductionConfigGuard::NULL_MAILER_DSN,
             ),
             HttpKernelInterface::SUB_REQUEST,
         );
     }
 
     /**
-     * The values this guards against must be the ones actually committed to
+     * The value this guards against must be the one actually committed to
      * .env. If someone edits .env without editing the guard, the guard silently
      * stops matching and prod fails open again — the exact bug, reintroduced
      * invisibly. This is the only assertion here that reads the real file.
@@ -184,11 +126,6 @@ final class InsecureProductionConfigGuardTest extends TestCase
             'ALTCHA_HMAC_KEY=' . InsecureProductionConfigGuard::PLACEHOLDER_ALTCHA_HMAC_KEY,
             $dotEnv,
             'the guarded ALTCHA placeholder no longer matches .env',
-        );
-        self::assertStringContainsString(
-            'MAILER_DSN=' . InsecureProductionConfigGuard::NULL_MAILER_DSN,
-            $dotEnv,
-            'the guarded mailer DSN no longer matches .env',
         );
     }
 }
