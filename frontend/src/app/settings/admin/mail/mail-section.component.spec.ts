@@ -207,11 +207,18 @@ describe('MailSectionComponent', () => {
   it('still turns mail off from the form once the toggle itself is switched off, so the row cannot get stuck on', () => {
     const fixture = mount(state({ host: 'smtp.example.com', enabled: true, hasSavedConfig: true }));
 
+    // Switch the real toggle off: on a saved row that instant-saves enabled=false.
+    enableToggleInput(fixture).click();
+    fixture.detectChanges();
+    http
+      .expectOne(ENDPOINT)
+      .flush(state({ host: 'smtp.example.com', enabled: false, hasSavedConfig: true }));
+
+    // Now clear the host and save explicitly. With the toggle already off, the
+    // host-required guard does not block, so the row can be persisted off.
     hostInput(fixture).value = '';
     hostInput(fixture).dispatchEvent(new Event('input'));
     fixture.detectChanges();
-
-    fixture.componentInstance.enabled.set(false);
     fixture.componentInstance.onSave();
     fixture.detectChanges();
 
