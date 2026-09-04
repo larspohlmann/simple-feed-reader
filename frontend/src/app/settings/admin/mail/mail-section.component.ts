@@ -269,8 +269,8 @@ export class MailSectionComponent {
 
   /** Dropping the draft is enough for the typed inputs: they read it as their
    *  source, so clearing it reseeds them from the last-saved state. The
-   *  password and the staged enable/encryption have no draft-backed source,
-   *  so they are reset here explicitly. */
+   *  password and the staged enable/encryption/use-proxy have no draft-backed
+   *  source, so they are reset here explicitly. */
   onReset(): void {
     this.svc.discardDraft();
     this.password.set('');
@@ -278,6 +278,7 @@ export class MailSectionComponent {
     if (state) {
       this.enabled.set(state.enabled);
       this.encryption.set(state.encryption);
+      this.useProxy.set(state.useProxy);
     }
   }
 
@@ -327,7 +328,10 @@ export class MailSectionComponent {
       panelClass: 'app-dialog',
     });
     ref.closed.subscribe((confirmed) => {
-      if (confirmed) this.svc.reset();
+      if (!confirmed) return;
+      // Fall back to the read-only env view once the override is gone.
+      this.overriding.set(false);
+      this.svc.reset();
     });
   }
 }

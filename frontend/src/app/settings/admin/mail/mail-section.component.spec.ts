@@ -422,6 +422,28 @@ describe('MailSectionComponent', () => {
     expect(fixture.componentInstance.svc.dirty()).toBe(false);
   });
 
+  it('clears a staged use-proxy toggle on Reset for a not-yet-saved row', () => {
+    const fixture = mount(
+      state({
+        host: 'smtp.example.com',
+        hasSavedConfig: false,
+        proxyConfigured: true,
+        useProxy: false,
+      }),
+    );
+
+    useProxyToggleInput(fixture)?.click();
+    fixture.detectChanges();
+    http.expectNone(ENDPOINT);
+    expect(fixture.componentInstance.dirty()).toBe(true);
+
+    fixture.componentInstance.onReset();
+    fixture.detectChanges();
+
+    expect(useProxyToggleInput(fixture)?.checked).toBe(false);
+    expect(fixture.componentInstance.dirty()).toBe(false);
+  });
+
   it('hides the reset-to-environment control when there is no saved config', () => {
     const fixture = mount(
       state({ host: 'smtp.example.com', hasSavedConfig: false, envFallbackConfigured: true }),
