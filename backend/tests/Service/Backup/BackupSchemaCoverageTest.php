@@ -12,6 +12,7 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\InstanceSetting;
+use App\Entity\MailServerSettings;
 use App\Entity\Preferences;
 use App\Entity\ProxyServerSettings;
 use App\Entity\RecommendationItem;
@@ -100,6 +101,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
     private const array INSTANCE_SCOPED = [
         InstanceSetting::class => 'Instance-wide configuration, identical for every account.',
         ProxyServerSettings::class => 'The instance\'s egress configuration (#490); an operator setting.',
+        MailServerSettings::class => 'The instance\'s outgoing-mail transport and identity (#834); an operator '
+            . 'setting.',
         CatalogCategory::class => 'The shared discovery catalog, seeded per instance.',
         CatalogFeed::class => 'The shared discovery catalog, seeded per instance.',
         WorkerHeartbeat::class => 'Liveness telemetry for the refresh worker.',

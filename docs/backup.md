@@ -159,6 +159,7 @@ writes none of them.
 |---|---|
 | `InstanceSetting` | Instance-wide configuration. It is the same for every account on the instance. |
 | `ProxyServerSettings` | The network egress configuration of the instance. An operator sets it. |
+| `MailServerSettings` | The instance's outgoing-mail transport and identity. An operator sets it. |
 | `CatalogCategory` | The shared discovery catalog. Each instance holds its own copy. |
 | `CatalogFeed` | The shared discovery catalog. Each instance holds its own copy. |
 | `WorkerHeartbeat` | The liveness record of the refresh worker. It is a machine record, not your data. |
