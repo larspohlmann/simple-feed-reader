@@ -7,8 +7,8 @@ namespace App\Service\Mail;
 use App\Dto\Mail\PendingApprovalNotice;
 use App\Entity\User;
 use App\Enum\RegistrationMethod;
+use App\Service\Mail\Settings\MailSettings;
 use App\Service\Settings\PublicBaseUrl;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
@@ -25,10 +25,7 @@ final readonly class AccountMailer implements AccountMailerInterface
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
-        #[Autowire('%env(MAIL_FROM)%')]
-        private string $fromAddress,
-        #[Autowire('%env(MAIL_FROM_NAME)%')]
-        private string $fromName,
+        private MailSettings $mailSettings,
         private PublicBaseUrl $publicBaseUrl,
     ) {
     }
@@ -95,13 +92,14 @@ final readonly class AccountMailer implements AccountMailerInterface
         $locale = $user->getLocale();
         $subject = $this->translator->trans("$key.subject", [], 'emails', $locale);
         $body = $this->translator->trans("$key.body", $params, 'emails', $locale);
+        $identity = $this->mailSettings->identity();
 
         $this->mailer->send(
             // Parenthesised for PDepend 2.16.2 (composer md), which cannot parse
             // the PHP 8.4 "new without parentheses" chain yet — keep the parens.
             // See #183.
             (new Email())
-                ->from(new Address($this->fromAddress, $this->fromName))
+                ->from(new Address($identity->address, $identity->name))
                 ->to($user->getEmail())
                 ->subject($subject)
                 ->text($body),
