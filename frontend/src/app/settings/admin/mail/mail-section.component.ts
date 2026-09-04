@@ -27,6 +27,10 @@ import { MailEncryption, MailSettingsService } from './mail-settings.service';
 /** The default submission port, mirroring the backend's MailConnection::DEFAULT_PORT. */
 const DEFAULT_PORT = 587;
 
+/** Matches the backend DTO property names exactly -- both the client
+ *  validation below and the 422 `errors` map key on these names. */
+type MailField = 'host' | 'port' | 'username' | 'fromAddress' | 'fromName' | 'password';
+
 /** The admin "Mail" settings section (#834), a structural twin of the Proxy
  *  section: instant enable/encryption controls above the typed fields behind
  *  the shared save bar. The enable toggle stays off until a host is on record. */
@@ -80,6 +84,13 @@ export class MailSectionComponent {
   );
   /** Never seeded from server truth -- the API never returns the secret. */
   readonly password = signal('');
+
+  /** Client-side validation, keyed the same as the server's 422 `errors` map
+   *  (see `fieldError`) so both sources render through one code path. */
+  readonly clientErrors = signal<Partial<Record<MailField, string>>>({});
+  /** A server error the user has since edited past -- `svc.failure()` outlives
+   *  the field it named, so a per-field dismissal is needed to stop showing it. */
+  readonly dismissedServerErrors = signal<Partial<Record<MailField, true>>>({});
 
   readonly configured = computed(() => (this.svc.state()?.host ?? '') !== '');
   /** A staged enable/encryption (see `onEnabled`) counts as dirty too, or the
@@ -161,12 +172,14 @@ export class MailSectionComponent {
     const value = (event.target as HTMLInputElement).value;
     this[field].set(value);
     this.svc.setTypedField(field, value);
+    this.clearFieldError(field);
   }
 
   onPort(event: Event): void {
     const value = +(event.target as HTMLInputElement).value;
     this.port.set(value);
     this.svc.setTypedField('port', value);
+    this.clearFieldError('port');
   }
 
   /** An empty field means "keep the stored secret", not "clear it" -- the
@@ -175,13 +188,29 @@ export class MailSectionComponent {
     const value = (event.target as HTMLInputElement).value;
     this.password.set(value);
     this.svc.setTypedField('password', value === '' ? null : value);
+    this.clearFieldError('password');
   }
 
   /** Carries the staged enable/encryption (see `onEnabled`). A cleared host
    *  never saves as enabled: the toggle is disabled without a host, so a row
    *  stuck on could not be turned off again from the form. */
   onSave(): void {
+    if (!this.validateBeforeSave()) return;
     this.svc.save({ enabled: this.enabled() && this.host() !== '', encryption: this.encryption() });
+  }
+
+  /** The client error for a field, or -- once no client error stands and the
+   *  field has not since been edited past a server rejection -- the matching
+   *  entry from the last 422's `errors` map. */
+  fieldError(field: MailField): string | null {
+    const clientError = this.clientErrors()[field];
+    if (clientError) return clientError;
+    if (this.dismissedServerErrors()[field]) return null;
+    return this.svc.failure()?.errors?.[field]?.join(' ') ?? null;
+  }
+
+  isFieldInvalid(field: MailField): boolean {
+    return this.fieldError(field) !== null;
   }
 
   /** Dropping the draft is enough for the typed inputs: they read it as their
@@ -200,6 +229,29 @@ export class MailSectionComponent {
 
   test(): void {
     this.svc.testConnection();
+  }
+
+  /** Rejects an unsendable draft before it reaches the server: an enabled row
+   *  with no host, a from-address that is not an email, or a port outside the
+   *  valid range. */
+  private validateBeforeSave(): boolean {
+    const errors: Partial<Record<MailField, string>> = {};
+    if (this.enabled() && this.host() === '') {
+      errors.host = this.i18n.translate('settings.mail.errors.hostRequired');
+    }
+    if (this.fromAddress() !== '' && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(this.fromAddress())) {
+      errors.fromAddress = this.i18n.translate('settings.mail.errors.emailInvalid');
+    }
+    if (this.port() < 1 || this.port() > 65535) {
+      errors.port = this.i18n.translate('settings.mail.errors.portRange');
+    }
+    this.clientErrors.set(errors);
+    return Object.keys(errors).length === 0;
+  }
+
+  private clearFieldError(field: MailField): void {
+    this.clientErrors.update((errors) => ({ ...errors, [field]: undefined }));
+    this.dismissedServerErrors.update((errors) => ({ ...errors, [field]: true }));
   }
 
   /** Discards the saved SMTP override, password included -- confirm first so

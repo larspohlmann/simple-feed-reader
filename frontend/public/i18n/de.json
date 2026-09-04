@@ -418,7 +418,12 @@
       "saved": "Mail-Einstellungen gespeichert",
       "save": "Speichern",
       "reset": "Zurücksetzen",
-      "unsaved": "Nicht gespeicherte Änderungen"
+      "unsaved": "Nicht gespeicherte Änderungen",
+      "errors": {
+        "hostRequired": "Gib einen Host ein, oder schalte dies aus.",
+        "emailInvalid": "Gib eine gültige E-Mail-Adresse ein.",
+        "portRange": "Gib einen Port zwischen 1 und 65535 ein."
+      }
     },
     "organise": {
       "title": "Organisieren",

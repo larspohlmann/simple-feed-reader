@@ -66,6 +66,12 @@ describe('MailSectionComponent', () => {
   const passwordInput = (fixture: ComponentFixture<MailSectionComponent>): HTMLInputElement =>
     fixture.nativeElement.querySelector('[data-testid="mail-password"]');
 
+  const portInput = (fixture: ComponentFixture<MailSectionComponent>): HTMLInputElement =>
+    fixture.nativeElement.querySelector('[data-testid="mail-port"]');
+
+  const fromAddressInput = (fixture: ComponentFixture<MailSectionComponent>): HTMLInputElement =>
+    fixture.nativeElement.querySelector('[data-testid="mail-from-address"]');
+
   const testButton = (fixture: ComponentFixture<MailSectionComponent>): HTMLButtonElement =>
     fixture.nativeElement.querySelector('[data-testid="mail-test-button"] button');
 
@@ -183,13 +189,29 @@ describe('MailSectionComponent', () => {
     );
   });
 
-  it('never saves a cleared host as enabled, so the row cannot get stuck on', () => {
+  it('blocks a save with an empty host while enabled, guiding the user to fix it or turn mail off', () => {
     const fixture = mount(state({ host: 'smtp.example.com', enabled: true, hasSavedConfig: true }));
 
     hostInput(fixture).value = '';
     hostInput(fixture).dispatchEvent(new Event('input'));
     fixture.detectChanges();
 
+    fixture.componentInstance.onSave();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.fieldError('host')).not.toBeNull();
+    expect(hostInput(fixture).getAttribute('aria-invalid')).toBe('true');
+    http.expectNone(ENDPOINT);
+  });
+
+  it('still turns mail off from the form once the toggle itself is switched off, so the row cannot get stuck on', () => {
+    const fixture = mount(state({ host: 'smtp.example.com', enabled: true, hasSavedConfig: true }));
+
+    hostInput(fixture).value = '';
+    hostInput(fixture).dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    fixture.componentInstance.enabled.set(false);
     fixture.componentInstance.onSave();
     fixture.detectChanges();
 
@@ -377,5 +399,69 @@ describe('MailSectionComponent', () => {
 
     expect(resetSpy).not.toHaveBeenCalled();
     http.expectNone(RESET_ENDPOINT);
+  });
+
+  it('marks fromAddress invalid and shows a message for a bad email on save', () => {
+    const fixture = mount(state({ host: 'smtp.example.com' }));
+
+    fromAddressInput(fixture).value = 'not-an-email';
+    fromAddressInput(fixture).dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    fixture.componentInstance.onSave();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.fieldError('fromAddress')).not.toBeNull();
+    expect(fromAddressInput(fixture).getAttribute('aria-invalid')).toBe('true');
+    http.expectNone(ENDPOINT);
+  });
+
+  it('maps a 422 errors map onto the offending field', () => {
+    const fixture = mount(state({ host: 'smtp.example.com' }));
+
+    fixture.componentInstance.onSave();
+    fixture.detectChanges();
+
+    http.expectOne(ENDPOINT).flush(
+      {
+        type: 'validation_error',
+        title: 'Validation failed',
+        status: 422,
+        errors: { port: ['This value should be between 1 and 65535.'] },
+      },
+      { status: 422, statusText: 'Unprocessable Content' },
+    );
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.fieldError('port')).toContain(
+      'This value should be between 1 and 65535.',
+    );
+    expect(portInput(fixture).getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('clears a field error when the user edits that field', () => {
+    const fixture = mount(state({ host: 'smtp.example.com' }));
+
+    fixture.componentInstance.onSave();
+    fixture.detectChanges();
+
+    http.expectOne(ENDPOINT).flush(
+      {
+        type: 'validation_error',
+        title: 'Validation failed',
+        status: 422,
+        errors: { host: ['Host looks wrong.'] },
+      },
+      { status: 422, statusText: 'Unprocessable Content' },
+    );
+    fixture.detectChanges();
+    expect(fixture.componentInstance.fieldError('host')).not.toBeNull();
+
+    hostInput(fixture).value = 'other.example.com';
+    hostInput(fixture).dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.fieldError('host')).toBeNull();
+    expect(hostInput(fixture).getAttribute('aria-invalid')).toBe('false');
   });
 });

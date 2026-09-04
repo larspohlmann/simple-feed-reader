@@ -418,7 +418,12 @@
       "saved": "Mail settings saved",
       "save": "Save",
       "reset": "Reset",
-      "unsaved": "Unsaved changes"
+      "unsaved": "Unsaved changes",
+      "errors": {
+        "hostRequired": "Enter a host, or turn this off.",
+        "emailInvalid": "Enter a valid email address.",
+        "portRange": "Enter a port between 1 and 65535."
+      }
     },
     "organise": {
       "title": "Organise",

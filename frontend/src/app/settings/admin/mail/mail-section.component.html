@@ -31,17 +31,26 @@
         </select>
       </app-settings-row>
 
-      <app-settings-row [stackable]="true" [title]="'settings.mail.host' | transloco">
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.mail.host' | transloco"
+        [error]="fieldError('host')"
+      >
         <input
           type="text"
           class="host-field"
           data-testid="mail-host"
           [value]="host()"
+          [attr.aria-invalid]="isFieldInvalid('host')"
           (input)="onTyped('host', $event)"
         />
       </app-settings-row>
 
-      <app-settings-row [stackable]="true" [title]="'settings.mail.port' | transloco">
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.mail.port' | transloco"
+        [error]="fieldError('port')"
+      >
         <input
           type="number"
           class="port-field"
@@ -49,44 +58,64 @@
           max="65535"
           data-testid="mail-port"
           [value]="port()"
+          [attr.aria-invalid]="isFieldInvalid('port')"
           (input)="onPort($event)"
         />
       </app-settings-row>
 
-      <app-settings-row [stackable]="true" [title]="'settings.mail.username' | transloco">
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.mail.username' | transloco"
+        [error]="fieldError('username')"
+      >
         <input
           type="text"
           class="credential-field"
           autocomplete="off"
           data-testid="mail-username"
           [value]="username()"
+          [attr.aria-invalid]="isFieldInvalid('username')"
           (input)="onTyped('username', $event)"
         />
       </app-settings-row>
 
-      <app-settings-row [stackable]="true" [title]="'settings.mail.fromAddress' | transloco">
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.mail.fromAddress' | transloco"
+        [error]="fieldError('fromAddress')"
+      >
         <input
           type="text"
           class="credential-field"
           autocomplete="off"
           data-testid="mail-from-address"
           [value]="fromAddress()"
+          [attr.aria-invalid]="isFieldInvalid('fromAddress')"
           (input)="onTyped('fromAddress', $event)"
         />
       </app-settings-row>
 
-      <app-settings-row [stackable]="true" [title]="'settings.mail.fromName' | transloco">
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.mail.fromName' | transloco"
+        [error]="fieldError('fromName')"
+      >
         <input
           type="text"
           class="credential-field"
           autocomplete="off"
           data-testid="mail-from-name"
           [value]="fromName()"
+          [attr.aria-invalid]="isFieldInvalid('fromName')"
           (input)="onTyped('fromName', $event)"
         />
       </app-settings-row>
 
-      <app-settings-row [stackable]="true" [title]="'settings.mail.password' | transloco">
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.mail.password' | transloco"
+        [error]="fieldError('password')"
+      >
         <app-password-input class="credential-field">
           <input
             type="password"
@@ -94,6 +123,7 @@
             data-testid="mail-password"
             [placeholder]="passwordHint()"
             [value]="password()"
+            [attr.aria-invalid]="isFieldInvalid('password')"
             (input)="onPassword($event)"
           />
         </app-password-input>
