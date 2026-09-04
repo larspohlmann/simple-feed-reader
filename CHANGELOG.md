@@ -10,6 +10,23 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.0.1] - 2026-09-04
+
+## What's Changed
+* fix(#814): never let a blocked cache upgrade hold the reader hostage by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/815
+* perf(#456, #455): batch the restore's feed lookup and post-insert id read-back by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/817
+* fix(#816): quiet the search indexer when no engine is configured by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/818
+* fix(#819): read media and density when picking a <picture> source by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/820
+* fix(#821): size the saved-search pill to its term, not to fixed bounds by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/822
+* fix(#823): use the selected layout for saved searches by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/824
+* refactor(#826): trim verbose comments and compress docblock prose (backend) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/829
+* refactor(#827): trim verbose comments and docblock prose (frontend) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/828
+* fix(#830): stop the mobile search-scroll spec from racing its own scroll events by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/831
+* feat(#832): sidebar brightness control with automatic contrast by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/833
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.0.0...v1.0.1
+
 ## [v1.0.0] - 2026-09-03
 
 ### Highlights
