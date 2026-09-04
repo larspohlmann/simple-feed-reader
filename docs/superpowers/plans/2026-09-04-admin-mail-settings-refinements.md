@@ -394,18 +394,13 @@ Create `backend/migrations/Version20260904140000.php`. `up()` is platform-aware 
 ```php
 public function up(Schema $schema): void
 {
-    $platform = $this->connection->getDatabasePlatform();
-    if ($platform instanceof AbstractMySQLPlatform) {
+    $this->assertSupportedPlatform();
+    if ($this->connection->getDatabasePlatform() instanceof AbstractMySQLPlatform) {
         $this->addSql('ALTER TABLE mail_server_settings ADD use_proxy TINYINT(1) DEFAULT 0 NOT NULL');
 
         return;
     }
-    if ($platform instanceof SQLitePlatform) {
-        $this->addSql('ALTER TABLE mail_server_settings ADD use_proxy BOOLEAN DEFAULT 0 NOT NULL');
-
-        return;
-    }
-    throw new \RuntimeException('Unsupported database platform for mail_server_settings migration.');
+    $this->addSql('ALTER TABLE mail_server_settings ADD use_proxy BOOLEAN DEFAULT 0 NOT NULL');
 }
 
 public function down(Schema $schema): void
