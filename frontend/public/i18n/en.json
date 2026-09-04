@@ -491,6 +491,32 @@
       "hideFromForYou": "Hide from For you",
       "clear": "Clear"
     },
+    "health": {
+      "pill": {
+        "dead": "Dead",
+        "failing": "Failing"
+      },
+      "reason": {
+        "gone": "No longer available",
+        "noUpdate": "No update in {{days}} days",
+        "failedAttempts": "{{count}} failed attempts"
+      },
+      "details": {
+        "lastSuccess": "Last successful update",
+        "lastAttempt": "Last attempt",
+        "failures": "Failure streak",
+        "technical": "Technical details"
+      },
+      "action": {
+        "retry": "Retry",
+        "unsubscribe": "Unsubscribe"
+      },
+      "retry": {
+        "recovered": "{{title}} is back",
+        "stillFailing": "{{title}} is still failing",
+        "error": "Could not retry {{title}}"
+      }
+    },
     "passkeys": {
       "title": "Passkeys",
       "caption": "Sign in without a password, using your device's fingerprint, face or screen lock.",

@@ -1,0 +1,57 @@
+<app-disclosure appearance="row">
+  <div summary class="summary">
+    <app-favicon [url]="subscription().faviconUrl" />
+    <span class="title">{{ subscription().title }}</span>
+
+    <span class="pill" [class.dead]="isGone()" [class.failing]="!isGone()">
+      {{ (isGone() ? 'settings.health.pill.dead' : 'settings.health.pill.failing') | transloco }}
+    </span>
+
+    <span class="reason">{{ reason().key | transloco: reason().params }}</span>
+
+    <span class="acts">
+      <app-button
+        size="sm"
+        data-test="retry"
+        (click)="$event.preventDefault(); $event.stopPropagation(); retry.emit()"
+      >
+        {{ 'settings.health.action.retry' | transloco }}
+      </app-button>
+      <app-button
+        variant="danger-outline"
+        size="sm"
+        data-test="unsubscribe"
+        (click)="$event.preventDefault(); $event.stopPropagation(); unsubscribe.emit()"
+      >
+        {{ 'settings.health.action.unsubscribe' | transloco }}
+      </app-button>
+    </span>
+  </div>
+
+  <div class="details">
+    @if (subscription().lastSuccessfulFetchAt; as lastSuccess) {
+      <div class="fact">
+        <span class="label">{{ 'settings.health.details.lastSuccess' | transloco }}</span>
+        <span class="value">{{ formatDate(lastSuccess) }}</span>
+      </div>
+    }
+    @if (subscription().lastFetchedAt; as lastAttempt) {
+      <div class="fact">
+        <span class="label">{{ 'settings.health.details.lastAttempt' | transloco }}</span>
+        <span class="value">{{ formatDate(lastAttempt) }}</span>
+      </div>
+    }
+    @if (subscription().consecutiveFailures) {
+      <div class="fact">
+        <span class="label">{{ 'settings.health.details.failures' | transloco }}</span>
+        <span class="value">{{ subscription().consecutiveFailures }}</span>
+      </div>
+    }
+    @if (subscription().lastErrorMessage; as technical) {
+      <div class="technical">
+        <span class="label">{{ 'settings.health.details.technical' | transloco }}</span>
+        <pre><code>{{ technical }}</code></pre>
+      </div>
+    }
+  </div>
+</app-disclosure>
