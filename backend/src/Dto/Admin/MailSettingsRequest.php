@@ -9,9 +9,9 @@ use App\Service\Mail\Settings\MailConnection;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * Full-replace payload for the mail settings. `password` is the one exception:
- * null means "keep the stored secret", a non-null string replaces it. It is
- * inbound-only and is never echoed back.
+ * Full-replace payload for the mail settings. The password is a three-state
+ * intent: null keeps the stored secret, a string replaces it, and
+ * `removePassword` clears it. Both are inbound-only, never echoed back.
  */
 final readonly class MailSettingsRequest
 {
@@ -37,6 +37,8 @@ final readonly class MailSettingsRequest
         public string $fromName = '',
         #[Assert\Length(max: 512)]
         public ?string $password = null,
+        #[Assert\Type('bool')]
+        public bool $removePassword = false,
     ) {
     }
 }

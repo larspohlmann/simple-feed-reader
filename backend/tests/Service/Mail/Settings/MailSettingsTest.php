@@ -169,4 +169,41 @@ final class MailSettingsTest extends KernelTestCase
             password: null,
         ));
     }
+
+    public function testRemovePasswordClearsTheStoredSecret(): void
+    {
+        $this->settings()->update(new MailSettingsRequest(
+            host: 'smtp.example.test',
+            username: null,
+            password: 'topsecret',
+        ));
+        self::assertTrue($this->settings()->view()['hasPassword']);
+
+        $this->settings()->update(new MailSettingsRequest(
+            host: 'smtp.example.test',
+            username: null,
+            removePassword: true,
+        ));
+
+        self::assertFalse($this->settings()->view()['hasPassword']);
+    }
+
+    public function testRemovingThePasswordOfAnEnabledAuthenticatedRowIsRejected(): void
+    {
+        $this->settings()->update(new MailSettingsRequest(
+            enabled: true,
+            host: 'smtp.example.test',
+            username: 'alice',
+            password: 'topsecret',
+        ));
+
+        $this->expectException(IncompleteMailConfigurationException::class);
+
+        $this->settings()->update(new MailSettingsRequest(
+            enabled: true,
+            host: 'smtp.example.test',
+            username: 'alice',
+            removePassword: true,
+        ));
+    }
 }

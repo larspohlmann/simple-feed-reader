@@ -206,6 +206,24 @@ final class AdminMailControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
     }
 
+    public function testUpdateRemovesTheStoredPasswordWhenRemovePasswordIsSet(): void
+    {
+        $admin = $this->admin();
+
+        $this->requestWithJsonBody('PUT', $admin, self::SAVED_SMTP_ROW);
+        self::assertResponseIsSuccessful();
+
+        $this->requestWithJsonBody('PUT', $admin, [
+            'enabled' => false,
+            'host' => 'smtp.example',
+            'username' => 'user',
+            'removePassword' => true,
+        ]);
+
+        self::assertResponseIsSuccessful();
+        self::assertFalse($this->payload($this->client)['hasPassword']);
+    }
+
     public function testResetAsNonAdminIsForbidden(): void
     {
         $plain = $this->factory()->create('plain@example.com');

@@ -59,7 +59,10 @@ readonly class MailSettings
             $this->em->persist($settings);
         }
 
-        if (null === $request->password) {
+        if ($request->removePassword) {
+            $settings->applyWithoutPassword($connection);
+            $settings->clearStoredPassword();
+        } elseif (null === $request->password) {
             $settings->applyWithoutPassword($connection);
         } else {
             $settings->apply($connection, $this->cipher->seal($request->password));
@@ -115,7 +118,8 @@ readonly class MailSettings
         MailConnection $connection,
         ?MailServerSettings $existing,
     ): void {
-        $willHavePassword = null !== $request->password || ($existing?->hasPassword() ?? false);
+        $willHavePassword = !$request->removePassword
+            && (null !== $request->password || ($existing?->hasPassword() ?? false));
         $isAuthenticatedTransport = $connection->enabled
             && '' !== $connection->host
             && null !== $connection->username;
