@@ -365,8 +365,9 @@ export class SidebarComponent {
    *  feed keeps its other tags. Emits nothing when the set would not change. */
   private moveBetweenTags(sub: SubscriptionDto, source: DropData, target: DropData): void {
     const current = sub.tags.map((t) => t.id);
-    const tagIds = current.filter((id) => id !== tagIdOf(source));
+    const removed = tagIdOf(source);
     const added = tagIdOf(target);
+    const tagIds = current.filter((id) => id !== removed);
     if (added !== null && !tagIds.includes(added)) tagIds.push(added);
     if (sameTagSet(current, tagIds)) return;
     this.retag.emit({ sub, tagIds });
