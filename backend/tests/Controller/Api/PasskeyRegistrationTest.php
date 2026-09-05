@@ -191,6 +191,10 @@ final class PasskeyRegistrationTest extends ApiTestCase
         /** @var UserPasskeyRepository $repository */
         $repository = self::getContainer()->get(UserPasskeyRepository::class);
         self::assertSame(1, $repository->countForUser($user));
+        $body = $this->payload($client);
+        self::assertSame('example.test', $body['rpId']);
+        self::assertSame($this->onlyStoredPasskeyFor($user)->getUserHandle(), $body['userHandle']);
+        self::assertSame([$this->onlyStoredPasskeyFor($user)->getCredentialId()], $body['acceptedCredentialIds']);
     }
 
     /** Spec §5.2: a user who enrols from Settings is never shown the one-time offer again. */

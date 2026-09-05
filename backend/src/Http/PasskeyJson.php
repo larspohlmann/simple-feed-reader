@@ -7,30 +7,49 @@ namespace App\Http;
 use App\Entity\UserPasskey;
 
 /**
- * The passkey credential-listing response body (#624).
+ * The passkey listing body (#624), widened in #727 with the three values the
+ * WebAuthn Signal API needs: the relying party id, the account's user handle,
+ * and every accepted credential id as ONE flat authoritative list the client
+ * hands to the browser unchanged — a rebuilt or shortened list makes the
+ * browser delete valid credentials. `register/options` already discloses all
+ * three to the same authenticated user, so this exposes nothing new.
  *
  * The two options factories already return their body in its final wire
  * shape — the identical `{options, handle}` for both ceremonies — so they
  * need no mapper here and their controller actions hand the array straight
  * to the response.
+ *
+ * @phpstan-type PasskeyRow array{id: ?int, label: string, createdAt: string, lastUsedAt: ?string}
+ * @phpstan-type PasskeyListingBody array{
+ *     rpId: string, userHandle: ?string, acceptedCredentialIds: list<string>, passkeys: list<PasskeyRow>,
+ * }
  */
 final readonly class PasskeyJson
 {
     /**
-     * Never the public key or the credential id: both are opaque,
-     * verification-only material a client has no use for.
+     * `userHandle` is read off the rows, never minted: the browser ignores a
+     * handle that matches nothing, so a fresh one would make the signal a
+     * silent no-op. Null with no rows.
      *
      * @param list<UserPasskey> $passkeys
      *
-     * @return array{passkeys: list<array{id: ?int, label: string, createdAt: string, lastUsedAt: ?string}>}
+     * @return PasskeyListingBody
      */
-    public static function passkeys(array $passkeys): array
+    public static function listing(string $relyingPartyId, array $passkeys): array
     {
-        return ['passkeys' => array_map(self::passkey(...), $passkeys)];
+        return [
+            'rpId' => $relyingPartyId,
+            'userHandle' => ($passkeys[0] ?? null)?->getUserHandle(),
+            'acceptedCredentialIds' => array_map(
+                static fn (UserPasskey $passkey): string => $passkey->getCredentialId(),
+                $passkeys,
+            ),
+            'passkeys' => array_map(self::passkey(...), $passkeys),
+        ];
     }
 
     /**
-     * @return array{id: ?int, label: string, createdAt: string, lastUsedAt: ?string}
+     * @return PasskeyRow
      */
     private static function passkey(UserPasskey $passkey): array
     {

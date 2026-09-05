@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Entity\UserPasskey;
 use App\Repository\UserPasskeyRepository;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\PinsPasskeyRelyingParty;
 use App\Tests\Support\TogglesPasskeySignIn;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -22,29 +23,77 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 final class PasskeyListTest extends ApiTestCase
 {
     use TogglesPasskeySignIn;
+    use PinsPasskeyRelyingParty;
 
     /**
-     * Pinned as its own test so a future addition to PasskeyJson::passkey()
-     * cannot silently widen the payload — the public key, the credential id
-     * and the user handle must never reach the client.
+     * Pinned so a future addition cannot silently widen the payload. Since
+     * #727 the body carries exactly the three values the WebAuthn Signal API
+     * needs beside the rows: the relying party id, the account's user handle,
+     * and every accepted credential id as one flat list. The public key stays
+     * out; the rows themselves are unchanged.
      */
-    public function testListingExposesOnlyIdLabelCreatedAtAndLastUsedAt(): void
+    public function testListingCarriesTheSignalValuesBesideTheUnchangedRows(): void
     {
         $client = static::createClient();
         $user = $this->factory()->create('lister@example.test');
-        $this->givenAPasskeyFor($user, credentialId: 'Y3JlZC1hYmM', label: 'My phone');
+        $this->givenAPasskeyFor($user, credentialId: 'Y3JlZC1hYmM', userHandle: 'aGFuZGxl', label: 'My phone');
         $this->authenticate($client, 'lister@example.test');
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
+        $this->serveFrom($client, 'https://example.test');
+
+        $client->request('GET', '/api/auth/passkeys');
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload($client);
+        $topLevelKeys = array_keys($body);
+        sort($topLevelKeys);
+        self::assertSame(['acceptedCredentialIds', 'passkeys', 'rpId', 'userHandle'], $topLevelKeys);
+        self::assertSame('example.test', $body['rpId']);
+        self::assertSame('aGFuZGxl', $body['userHandle']);
+        self::assertSame(['Y3JlZC1hYmM'], $body['acceptedCredentialIds']);
+        $passkeys = $this->passkeysFromResponse($client);
+        self::assertCount(1, $passkeys);
+        $rowKeys = array_keys($passkeys[0]);
+        sort($rowKeys);
+        self::assertSame(['createdAt', 'id', 'label', 'lastUsedAt'], $rowKeys);
+        self::assertSame('My phone', $passkeys[0]['label']);
+    }
+
+    /**
+     * The handle is read off the rows, never minted: a minted handle matches
+     * nothing in the browser and turns the signal into a silent no-op. With
+     * no rows there is no handle, and the client falls back to the one it
+     * remembered from before the delete.
+     */
+    public function testListingReportsNoUserHandleAndNoAcceptedIdsForAnAccountWithoutPasskeys(): void
+    {
+        $client = static::createClient();
+        $this->factory()->create('empty@example.test');
+        $this->authenticate($client, 'empty@example.test');
         $this->enablePasskeySignIn();
 
         $client->request('GET', '/api/auth/passkeys');
 
         self::assertResponseIsSuccessful();
-        $passkeys = $this->passkeysFromResponse($client);
-        self::assertCount(1, $passkeys);
-        $keys = array_keys($passkeys[0]);
-        sort($keys);
-        self::assertSame(['createdAt', 'id', 'label', 'lastUsedAt'], $keys);
-        self::assertSame('My phone', $passkeys[0]['label']);
+        $body = $this->payload($client);
+        self::assertNull($body['userHandle']);
+        self::assertSame([], $body['acceptedCredentialIds']);
+        self::assertSame([], $body['passkeys']);
+    }
+
+    public function testAcceptedCredentialIdsListEveryStoredCredentialInCreationOrder(): void
+    {
+        $client = static::createClient();
+        $user = $this->factory()->create('two@example.test');
+        $this->givenAPasskeyFor($user, credentialId: 'Zmlyc3Q', label: 'First');
+        $this->givenAPasskeyFor($user, credentialId: 'c2Vjb25k', label: 'Second');
+        $this->authenticate($client, 'two@example.test');
+        $this->enablePasskeySignIn();
+
+        $client->request('GET', '/api/auth/passkeys');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['Zmlyc3Q', 'c2Vjb25k'], $this->payload($client)['acceptedCredentialIds']);
     }
 
     public function testAUserCannotSeeAnotherUsersCredentialInTheList(): void
