@@ -91,7 +91,9 @@ describe('isConditionalMediationSupported', () => {
   });
 });
 
-type WindowWithCredential = { PublicKeyCredential?: unknown };
+interface WindowWithCredential {
+  PublicKeyCredential?: unknown;
+}
 
 describe('signalUnknownCredential', () => {
   afterEach(() => {
