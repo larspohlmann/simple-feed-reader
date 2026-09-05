@@ -78,6 +78,11 @@
   color: var(--text-primary);
 }
 
+.fact .feed-url {
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
 .technical {
   display: flex;
   flex-direction: column;

@@ -29,16 +29,22 @@
   </div>
 
   <div class="details">
+    <div class="fact">
+      <span class="label">{{ 'settings.health.details.feedUrl' | transloco }}</span>
+      <a class="feed-url" [href]="subscription().feedUrl" target="_blank" rel="noopener noreferrer">
+        {{ subscription().feedUrl }}
+      </a>
+    </div>
     @if (subscription().lastSuccessfulFetchAt; as lastSuccess) {
       <div class="fact">
         <span class="label">{{ 'settings.health.details.lastSuccess' | transloco }}</span>
-        <span class="value">{{ formatDate(lastSuccess) }}</span>
+        <span class="value">{{ formatDateTime(lastSuccess) }}</span>
       </div>
     }
     @if (subscription().lastFetchedAt; as lastAttempt) {
       <div class="fact">
         <span class="label">{{ 'settings.health.details.lastAttempt' | transloco }}</span>
-        <span class="value">{{ formatDate(lastAttempt) }}</span>
+        <span class="value">{{ formatDateTime(lastAttempt) }}</span>
       </div>
     }
     @if (subscription().consecutiveFailures) {

@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LanguageService } from '../../core/language.service';
-import { formatLongDate } from '../../reader/format';
+import { formatLongDateTime } from '../../reader/format';
 import { feedHealthReason, isGone as feedIsGone } from '../../reader/feed-health';
 import { SubscriptionDto } from '../../reader/models';
 import { ButtonComponent } from '../../shared/button/button.component';
@@ -28,10 +28,10 @@ export class UnhealthyFeedRowComponent {
   protected readonly reason = computed(() => feedHealthReason(this.subscription(), new Date()));
   protected readonly isGone = computed(() => feedIsGone(this.subscription()));
 
-  /** A row-scoped absolute-date formatter, not a pipe: these are technical
-   *  facts inside a details disclosure, not reading-flow copy, so an exact
-   *  date beats a relative "3 days ago". */
-  protected formatDate(iso: string): string {
-    return formatLongDate(iso, this.language.lang());
+  /** A row-scoped absolute date-and-time formatter, not a pipe: these are
+   *  technical facts inside a details disclosure, not reading-flow copy, so an
+   *  exact timestamp beats a relative "3 days ago". */
+  protected formatDateTime(iso: string): string {
+    return formatLongDateTime(iso, this.language.lang());
   }
 }

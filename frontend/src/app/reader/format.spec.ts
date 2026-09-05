@@ -5,6 +5,7 @@ import {
   formatDayInMonth,
   formatDuration,
   formatLongDate,
+  formatLongDateTime,
   formatTime,
   relativeTime,
   relativeTimeNarrow,
@@ -67,6 +68,18 @@ describe('formatLongDate', () => {
     expect(formatLongDate('2026-07-22T12:00:00Z', 'en')).toContain('2026');
     expect(formatLongDate('2026-07-22T12:00:00Z', 'de')).toContain('2026');
     expect(formatLongDate('nope', 'en')).toBe('');
+  });
+});
+
+describe('formatLongDateTime', () => {
+  // Renders in the runner's timezone, so this asserts the date and a HH:MM
+  // shape rather than an exact clock value, to stay green wherever it runs.
+  it('renders a localised long date with a clock time and empties on bad input', () => {
+    const en = formatLongDateTime('2026-07-22T09:05:00Z', 'en');
+    expect(en).toContain('2026');
+    expect(en).toMatch(/\d{1,2}:\d{2}/);
+    expect(formatLongDateTime('2026-07-22T09:05:00Z', 'de')).toMatch(/\d{1,2}:\d{2}/);
+    expect(formatLongDateTime('nope', 'en')).toBe('');
   });
 });
 

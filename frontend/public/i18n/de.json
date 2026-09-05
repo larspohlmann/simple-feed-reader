@@ -509,6 +509,7 @@
         "failedAttemptsOther": "{{count}} fehlgeschlagene Versuche"
       },
       "details": {
+        "feedUrl": "Feed-URL",
         "lastSuccess": "Letzte erfolgreiche Aktualisierung",
         "lastAttempt": "Letzter Versuch",
         "failures": "Fehlversuche in Folge",

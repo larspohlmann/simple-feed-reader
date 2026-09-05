@@ -59,6 +59,14 @@ export function formatLongDate(iso: string, locale = 'en'): string {
   return new Intl.DateTimeFormat(locale, { dateStyle: 'long' }).format(d);
 }
 
+/** A localised long date with a HH:MM clock time, browser timezone — for a
+ *  diagnostic timestamp where the exact minute of a fetch attempt matters. */
+export function formatLongDateTime(iso: string, locale = 'en'): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'long', timeStyle: 'short' }).format(d);
+}
+
 /**
  * A localised long date, or an explicit fallback for "no date" fields (login,
  * refresh, approval). `fallback` is an already-translated string, not a key —
