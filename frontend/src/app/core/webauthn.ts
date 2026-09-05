@@ -65,3 +65,50 @@ export async function isConditionalMediationSupported(): Promise<boolean> {
     return false;
   }
 }
+
+/** The two WebAuthn L3 Signal API statics (#727). TypeScript 5.9's lib.dom
+ *  does not declare them. Every id here is already a base64url string --
+ *  the encoding the backend stores -- so nothing is converted. */
+interface SignalMethods {
+  signalUnknownCredential?: (options: { rpId: string; credentialId: string }) => Promise<void>;
+  signalAllAcceptedCredentials?: (options: {
+    rpId: string;
+    userId: string;
+    allAcceptedCredentialIds: string[];
+  }) => Promise<void>;
+}
+
+function signalMethods(): SignalMethods {
+  return isPasskeySupported() ? (window.PublicKeyCredential as unknown as SignalMethods) : {};
+}
+
+/** Tells the browser a credential id the server does not know, so the
+ *  password manager can drop it. Best-effort by design: resolves without
+ *  effect when the API is absent or the browser throws, so it can never gate
+ *  a sign-in or an enrolment. */
+export async function signalUnknownCredential(rpId: string, credentialId: string): Promise<void> {
+  const methods = signalMethods();
+  if (typeof methods.signalUnknownCredential !== 'function') return;
+  try {
+    await methods.signalUnknownCredential({ rpId, credentialId });
+  } catch {
+    // Best-effort by design -- see the docblock.
+  }
+}
+
+/** Hands the browser one account's authoritative credential set so anything
+ *  stale disappears. The list must be complete and unfiltered: a short or
+ *  empty list makes the browser delete valid credentials for that user. */
+export async function signalAllAcceptedCredentials(
+  rpId: string,
+  userId: string,
+  allAcceptedCredentialIds: string[],
+): Promise<void> {
+  const methods = signalMethods();
+  if (typeof methods.signalAllAcceptedCredentials !== 'function') return;
+  try {
+    await methods.signalAllAcceptedCredentials({ rpId, userId, allAcceptedCredentialIds });
+  } catch {
+    // Best-effort by design -- see the docblock.
+  }
+}

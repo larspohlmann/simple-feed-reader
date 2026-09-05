@@ -3,6 +3,8 @@ import {
   bytesToBase64Url,
   isConditionalMediationSupported,
   isPasskeySupported,
+  signalAllAcceptedCredentials,
+  signalUnknownCredential,
 } from './webauthn';
 
 describe('base64UrlToBytes / bytesToBase64Url', () => {
@@ -86,5 +88,94 @@ describe('isConditionalMediationSupported', () => {
       isConditionalMediationAvailable: jest.fn().mockResolvedValue(true),
     };
     await expect(isConditionalMediationSupported()).resolves.toBe(true);
+  });
+});
+
+type WindowWithCredential = { PublicKeyCredential?: unknown };
+
+describe('signalUnknownCredential', () => {
+  afterEach(() => {
+    delete (window as unknown as WindowWithCredential).PublicKeyCredential;
+  });
+
+  it('resolves when PublicKeyCredential is absent', async () => {
+    await expect(signalUnknownCredential('test', 'Y3JlZA')).resolves.toBeUndefined();
+  });
+
+  it('resolves when the browser has no signalUnknownCredential method', async () => {
+    (window as unknown as WindowWithCredential).PublicKeyCredential = {};
+    await expect(signalUnknownCredential('test', 'Y3JlZA')).resolves.toBeUndefined();
+  });
+
+  it('resolves when the browser call rejects', async () => {
+    (window as unknown as WindowWithCredential).PublicKeyCredential = {
+      signalUnknownCredential: jest.fn().mockRejectedValue(new Error('boom')),
+    };
+    await expect(signalUnknownCredential('test', 'Y3JlZA')).resolves.toBeUndefined();
+  });
+
+  it('hands the browser the rp id and the credential id exactly as given', async () => {
+    const signal = jest.fn().mockResolvedValue(undefined);
+    (window as unknown as WindowWithCredential).PublicKeyCredential = {
+      signalUnknownCredential: signal,
+    };
+
+    await signalUnknownCredential('test', 'Y3JlZA');
+
+    expect(signal).toHaveBeenCalledWith({ rpId: 'test', credentialId: 'Y3JlZA' });
+  });
+});
+
+describe('signalAllAcceptedCredentials', () => {
+  afterEach(() => {
+    delete (window as unknown as WindowWithCredential).PublicKeyCredential;
+  });
+
+  it('resolves when PublicKeyCredential is absent', async () => {
+    await expect(signalAllAcceptedCredentials('test', 'aGFuZGxl', ['a'])).resolves.toBeUndefined();
+  });
+
+  it('resolves when the browser has no signalAllAcceptedCredentials method', async () => {
+    (window as unknown as WindowWithCredential).PublicKeyCredential = {};
+    await expect(signalAllAcceptedCredentials('test', 'aGFuZGxl', ['a'])).resolves.toBeUndefined();
+  });
+
+  it('resolves when the browser call rejects', async () => {
+    (window as unknown as WindowWithCredential).PublicKeyCredential = {
+      signalAllAcceptedCredentials: jest.fn().mockRejectedValue(new Error('boom')),
+    };
+    await expect(signalAllAcceptedCredentials('test', 'aGFuZGxl', ['a'])).resolves.toBeUndefined();
+  });
+
+  it('hands the browser the handle and the list exactly as given', async () => {
+    const signal = jest.fn().mockResolvedValue(undefined);
+    (window as unknown as WindowWithCredential).PublicKeyCredential = {
+      signalAllAcceptedCredentials: signal,
+    };
+
+    await signalAllAcceptedCredentials('test', 'aGFuZGxl', ['Zmlyc3Q', 'c2Vjb25k']);
+
+    expect(signal).toHaveBeenCalledWith({
+      rpId: 'test',
+      userId: 'aGFuZGxl',
+      allAcceptedCredentialIds: ['Zmlyc3Q', 'c2Vjb25k'],
+    });
+  });
+
+  // An empty list is how the last passkey's deletion reaches the browser; it
+  // must go through unchanged, never be treated as "nothing to send".
+  it('passes an empty list through unchanged', async () => {
+    const signal = jest.fn().mockResolvedValue(undefined);
+    (window as unknown as WindowWithCredential).PublicKeyCredential = {
+      signalAllAcceptedCredentials: signal,
+    };
+
+    await signalAllAcceptedCredentials('test', 'aGFuZGxl', []);
+
+    expect(signal).toHaveBeenCalledWith({
+      rpId: 'test',
+      userId: 'aGFuZGxl',
+      allAcceptedCredentialIds: [],
+    });
   });
 });
