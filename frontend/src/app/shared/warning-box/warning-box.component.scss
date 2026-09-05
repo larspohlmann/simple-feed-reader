@@ -1,0 +1,11 @@
+// A row so a leading marker (the paywall glyph) sits in a gutter and the body
+// hangs indented beside it; a lone child (the mono error) just fills the box.
+:host {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  border: 1px solid var(--border-warning);
+  background: var(--surface-1);
+}

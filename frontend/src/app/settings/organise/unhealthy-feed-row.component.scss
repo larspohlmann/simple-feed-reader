@@ -75,17 +75,11 @@
   padding-bottom: var(--space-4);
 }
 
-// The raw fetcher error, shown under the facts when the feed carries one: a
-// near-neutral box lifted a step off the content, ringed in amber (the amber is
-// the border and the code, not a filled amber ground). The dialog leads with
-// the same error instead.
+// The raw fetcher error, shown under the facts when the feed carries one, in
+// the shared amber warning box; the mono code carries the amber, the box the
+// ring. The dialog leads with the same error instead.
 .error {
   margin-top: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  overflow-x: auto;
-  border: 1px solid var(--border-warning);
-  border-radius: var(--radius);
-  background: var(--surface-1);
 }
 
 .error code {

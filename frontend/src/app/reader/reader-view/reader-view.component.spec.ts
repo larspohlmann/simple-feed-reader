@@ -617,14 +617,15 @@ describe('ReaderViewComponent', () => {
     expect(el.querySelector('.reader-note')).not.toBeNull();
   });
 
-  it('says under the body that this is the free preview of a paywalled article', () => {
+  it('says above the body that this is the free preview of a paywalled article', () => {
     loadMock.mockReturnValue(
       of<ReaderContent>(okContent({ paywalled: true, url: 'https://pub.test/a' })),
     );
     const el = mount(entry()).nativeElement as HTMLElement;
     const note = el.querySelector('.paywall-note');
+    const content = el.querySelector('.content')!;
     expect(note).not.toBeNull();
-    expect(note!.previousElementSibling).toBe(el.querySelector('.content'));
+    expect(note!.compareDocumentPosition(content) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(note!.querySelector('a')!.getAttribute('href')).toBe('https://pub.test/a');
   });
 
