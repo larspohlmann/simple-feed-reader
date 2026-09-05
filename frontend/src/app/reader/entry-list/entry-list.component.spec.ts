@@ -1173,6 +1173,24 @@ describe('EntryListComponent', () => {
 
       expect(f.componentInstance.showToTop()).toBe(true);
     });
+
+    it('request the reading-focus frame outside the Angular zone', () => {
+      const requestedInZone: boolean[] = [];
+      const raf = jest.spyOn(window, 'requestAnimationFrame').mockImplementation(() => {
+        requestedInZone.push(NgZone.isInAngularZone());
+        return 1;
+      });
+      try {
+        // The focus effect schedules the first pass during the initial render. It is
+        // the only frame requested at mount: the scroll-restore loop (`settleTo`)
+        // needs a remembered offset, and `memory.read` returns 0 here.
+        mount();
+        expect(requestedInZone.length).toBeGreaterThan(0);
+        expect(requestedInZone).not.toContain(true);
+      } finally {
+        raf.mockRestore();
+      }
+    });
   });
 
   it('restores the saved offset once a fresh load completes (return after a resume-reload)', () => {

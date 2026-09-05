@@ -2,6 +2,7 @@ import {
   Component,
   DestroyRef,
   ElementRef,
+  NgZone,
   OnDestroy,
   TemplateRef,
   computed,
@@ -369,6 +370,7 @@ export class EntryListComponent implements OnDestroy {
 
   private readonly screen = inject(LayoutService);
   private readonly readingFocus = inject(ReadingFocusService);
+  private readonly zone = inject(NgZone);
   private readonly scroll = inject(ListScrollMemory);
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly catalog = inject(CatalogStore);
@@ -413,9 +415,9 @@ export class EntryListComponent implements OnDestroy {
   private lastScrollTop = 0;
   private focusRaf = 0;
 
-  /** Bumped by every imperative event that can move rows under the reading
-   *  centre without a signal changing (scroll, resize, row collapse). The
-   *  reading-focus subscriber reads it alongside the reactive sources. */
+  /** Bumped by the rare imperative events that move rows under the reading centre
+   *  without a signal changing: resize and the row-collapse animation. Scroll goes
+   *  straight to `scheduleFocus()` — a signal per scroll event is a tick per frame. */
   private readonly focusPulse = signal(0);
   private pulseFocus(): void {
     this.focusPulse.update((n) => n + 1);
@@ -496,7 +498,7 @@ export class EntryListComponent implements OnDestroy {
    *  - `magazineStyle.style()` — boxed <-> airy only toggles a class on the same
    *     `#rows` element (so `rows()` does not fire), yet airy resizes every row;
    *     without this the fade stays computed against the old geometry.
-   *  - `focusPulse()` — the imperative events: scroll, resize, row collapse.
+   *  - `focusPulse()` — the imperative events: resize, row collapse.
    */
   private readonly _readingFocus = effect(() => {
     if (!this.readingFocus.enabled()) {
@@ -523,7 +525,7 @@ export class EntryListComponent implements OnDestroy {
     );
     this.lastScrollTop = top;
     this.showToTop.set(top > BACK_TO_TOP_AFTER_PX);
-    this.pulseFocus();
+    this.scheduleFocus();
     // Remember where the user is so a browser resume-reload (iOS/Brave discard the
     // tab and reload it) can drop them back here rather than at the top.
     if (this.rowsBelongToSelection()) this.scroll.save(this.selection(), top);
@@ -538,13 +540,16 @@ export class EntryListComponent implements OnDestroy {
   }
 
   /** The reading-focus recompute, coalesced to one pass per animation frame.
-   *  Called only by the `_readingFocus` subscriber — every source funnels
-   *  through that effect, so this stays the single place the work happens. */
+   *  Called by the `_readingFocus` subscriber and straight from the scroll handler. */
   private scheduleFocus(): void {
     if (this.reduceMotion || !this.readingFocus.enabled() || this.focusRaf) return;
-    this.focusRaf = requestAnimationFrame(() => {
-      this.focusRaf = 0;
-      this.applyFocus();
+    // Outside the zone: the pass writes inline styles and no signal, so its frame
+    // must not end in a tick over every loaded block (#501).
+    this.zone.runOutsideAngular(() => {
+      this.focusRaf = requestAnimationFrame(() => {
+        this.focusRaf = 0;
+        this.applyFocus();
+      });
     });
   }
 
