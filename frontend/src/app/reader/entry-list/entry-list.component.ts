@@ -401,8 +401,10 @@ export class EntryListComponent implements OnDestroy {
     host.addEventListener('touchmove', this.onUserScrollIntent, { passive: true, capture: true });
     host.style.setProperty('--refresh-reveal', `${REFRESH_REVEAL}px`);
 
-    const onResize = () => this.pulseFocus();
-    window.addEventListener('resize', onResize, { passive: true });
+    const onResize = (): void => this.scheduleFocus();
+    this.zone.runOutsideAngular(() =>
+      window.addEventListener('resize', onResize, { passive: true }),
+    );
     this.destroyRef.onDestroy(() => {
       window.removeEventListener('resize', onResize);
     });
@@ -415,13 +417,6 @@ export class EntryListComponent implements OnDestroy {
   private lastScrollTop = 0;
   private focusRaf = 0;
 
-  /** Bumped by the rare imperative events that move rows under the reading centre
-   *  without a signal changing: resize and the row-collapse animation. Scroll goes
-   *  straight to `scheduleFocus()` — a signal per scroll event is a tick per frame. */
-  private readonly focusPulse = signal(0);
-  private pulseFocus(): void {
-    this.focusPulse.update((n) => n + 1);
-  }
   /** Drives the corner back-to-top button; set from the scroll handler. */
   readonly showToTop = signal(false);
 
@@ -498,7 +493,7 @@ export class EntryListComponent implements OnDestroy {
    *  - `magazineStyle.style()` — boxed <-> airy only toggles a class on the same
    *     `#rows` element (so `rows()` does not fire), yet airy resizes every row;
    *     without this the fade stays computed against the old geometry.
-   *  - `focusPulse()` — the imperative events: resize, row collapse.
+   *  Imperative events (scroll, resize, row collapse) call `scheduleFocus()` directly.
    */
   private readonly _readingFocus = effect(() => {
     if (!this.readingFocus.enabled()) {
@@ -512,7 +507,6 @@ export class EntryListComponent implements OnDestroy {
     this.rows();
     this.selection();
     this.magazineStyle.style();
-    this.focusPulse();
     this.scheduleFocus();
   });
 
@@ -539,25 +533,24 @@ export class EntryListComponent implements OnDestroy {
     return rendered === null || sameSelection(rendered, this.selection());
   }
 
-  /** The reading-focus recompute, coalesced to one pass per animation frame.
-   *  Called by the `_readingFocus` subscriber and straight from the scroll handler. */
+  /** The reading-focus recompute, coalesced to one pass per animation frame. */
   private scheduleFocus(): void {
     if (this.reduceMotion || !this.readingFocus.enabled() || this.focusRaf) return;
     // Outside the zone: the pass writes inline styles and no signal, so its frame
     // must not end in a tick over every loaded block (#501).
-    this.zone.runOutsideAngular(() => {
-      this.focusRaf = requestAnimationFrame(() => {
+    this.focusRaf = this.zone.runOutsideAngular(() =>
+      requestAnimationFrame(() => {
         this.focusRaf = 0;
         this.applyFocus();
-      });
-    });
+      }),
+    );
   }
 
   /** A CSS animation finished inside the scroller. Only a saved-view row
    *  collapsing (#478) matters — it moves rows without firing a scroll, so this
    *  re-triggers dimming. `includes`: encapsulation puts the marker mid-string. */
   onContentSettled(event: AnimationEvent): void {
-    if (event.animationName.includes('row-leave')) this.pulseFocus();
+    if (event.animationName.includes('row-leave')) this.scheduleFocus();
   }
 
   /** Dim each list entry by its distance from the scroll viewport's centre.

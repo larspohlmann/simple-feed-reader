@@ -103,10 +103,13 @@ tick. Record the numbers in the PR.
   blocks. It needs an audit that each component drives its template from
   signals or inputs only. Worth its own issue; this fix removes the ticks that
   scroll causes, which is what #501 is about.
-- **`reader-view.component.ts`** has the same in-zone `@HostListener('scroll') onScroll()` →
-  `scheduleFocus()` → `requestAnimationFrame` chain for the article pane
-  (`reader-view.component.ts:515,605`). An article is one page, so the cost
-  is bounded; migrate it to the directive when it is next touched.
+- **`reader-view.component.ts`** keeps its in-zone `@HostListener('scroll')`
+  (`reader-view.component.ts:515`). Moving it onto the directive would change
+  nothing on its own: `onScroll` writes `this.scrollTop.set(...)` on every event
+  and the reading-progress bar reads it, so the hybrid scheduler ticks per event
+  whichever zone the listener runs in. A real fix coalesces that write to a
+  frame (or drives the progress bar without a signal) first; only then does the
+  directive help. An article is one page, so the cost is bounded meanwhile.
 - Trimming `applyFocus()` (skip rows whose opacity does not change, early exit
   once rows are a viewport below the fold). Second-order after the ticks.
 

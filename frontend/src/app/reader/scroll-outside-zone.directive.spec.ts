@@ -30,8 +30,6 @@ describe('ScrollOutsideZoneDirective', () => {
 
     expect(host.seen).toHaveLength(1);
     expect(host.seen[0].event).toBe(event);
-    // A template `(scroll)` listener would report true here: that tick per
-    // scroll event is the whole reason the directive exists (#501).
     expect(host.seen[0].inAngularZone).toBe(false);
   });
 
