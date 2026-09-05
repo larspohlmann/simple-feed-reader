@@ -15,7 +15,7 @@ final readonly class FeedParser
 
     public function parse(string $xml): ParsedFeed
     {
-        $feedXml = $this->fromTheDeclaration($xml);
+        $feedXml = $this->fromTheDeclaration($this->withoutIllegalControlCharacters($xml));
 
         // loadXML() throws a raw ValueError on an empty string, not false, so
         // guard it here (mirroring HtmlItemExtractor's empty-page check). An empty
@@ -63,5 +63,17 @@ final readonly class FeedParser
     private function fromTheDeclaration(string $xml): string
     {
         return ltrim($xml, " \t\n\r\0\x0B\u{FEFF}");
+    }
+
+    /**
+     * XML 1.0 forbids the C0 control characters (all but tab, newline and
+     * carriage return) anywhere in a document, so one stray byte makes libxml
+     * refuse the whole feed. WordPress plugins inject them into item content
+     * (#857); the byte carries no meaning, and a UTF-8 continuation byte never
+     * falls in this range, so dropping it at byte level is lossless.
+     */
+    private function withoutIllegalControlCharacters(string $xml): string
+    {
+        return (string) preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', '', $xml);
     }
 }

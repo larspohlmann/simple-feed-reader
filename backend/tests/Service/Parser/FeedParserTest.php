@@ -147,6 +147,27 @@ final class FeedParserTest extends TestCase
     }
 
     /**
+     * XML 1.0 forbids the C0 control characters (except tab, LF and CR) anywhere
+     * in a document, so a single stray byte makes libxml refuse the whole feed.
+     * WordPress plugins inject them into item content — konkret-magazin.de ships a
+     * 0x1D (group separator) inside a CDATA block and was unsubscribable over that
+     * one byte (#857). The byte carries no content, so the strip is lossless.
+     */
+    public function testStripsIllegalControlCharactersBeforeParsing(): void
+    {
+        $feed = $this->parser()->parse(
+            "<?xml version=\"1.0\"?><rss version=\"2.0\"><channel>"
+            . "<title>Konkret\x1DFeed</title><link>https://konkret.example.com/</link>"
+            . "<item><title>First\x1DItem</title><link>https://konkret.example.com/1</link>"
+            . '<guid>https://konkret.example.com/1</guid></item></channel></rss>',
+        );
+
+        self::assertSame('KonkretFeed', $feed->title);
+        self::assertCount(1, $feed->entries);
+        self::assertSame('FirstItem', $feed->entries[0]->title);
+    }
+
+    /**
      * A feed must never make the parser open a connection of the feed's choosing.
      * Three things hold that line: external DTD loading is off (no
      * LIBXML_DTDLOAD), entity substitution is off (no LIBXML_NOENT), and
