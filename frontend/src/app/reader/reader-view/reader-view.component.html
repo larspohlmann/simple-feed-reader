@@ -168,6 +168,9 @@
         </nav>
       }
       @if (!loading()) {
+        @if (paywalled()) {
+          <app-paywall-notice class="paywall-note" [url]="paywallUrl()" />
+        }
         @if (failed() && mode() === 'original') {
           <p class="reader-note">{{ 'reader.readerFallback' | transloco }}</p>
         }
@@ -188,9 +191,6 @@
           />
         }
         <div #content class="content" [innerHTML]="displayHtml()"></div>
-        @if (paywalled()) {
-          <app-paywall-notice class="paywall-note" [url]="paywallUrl()" />
-        }
       }
     </article>
     <!-- Laid over the whole pane while an article loads or refetches, in place

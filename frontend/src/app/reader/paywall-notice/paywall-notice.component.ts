@@ -2,9 +2,9 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 
 /**
- * The amber notice under a paywalled reader body: the text is only the free
- * preview, with a link to the publisher (#785). Its own component so the box
- * styling stays out of reader-view.component.scss, which is at its style budget.
+ * The amber-ringed warning box above a paywalled reader body: the text is only
+ * the free preview, with a link to the publisher (#785, #855). Its own component
+ * so the box styling stays out of reader-view.component.scss, at its style budget.
  */
 @Component({
   selector: 'app-paywall-notice',

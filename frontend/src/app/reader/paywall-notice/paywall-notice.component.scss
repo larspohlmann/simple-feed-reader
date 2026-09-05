@@ -2,11 +2,11 @@
   display: flex;
   gap: var(--space-2);
   align-items: baseline;
-  margin: 0 0 var(--space-3);
+  margin: 0 0 var(--space-4);
   padding: var(--space-3);
   border-radius: var(--radius);
-  border-left: 3px solid var(--warning);
-  background: var(--bg-warning);
+  border: 1px solid var(--border-warning);
+  background: var(--surface-1);
   font-size: var(--fs-sm);
 }
 
