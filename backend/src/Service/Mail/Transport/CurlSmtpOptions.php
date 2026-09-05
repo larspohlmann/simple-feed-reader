@@ -29,6 +29,12 @@ final class CurlSmtpOptions
             \CURLOPT_USE_SSL => MailEncryption::None === $resolved->encryption ? \CURLUSESSL_NONE : \CURLUSESSL_ALL,
         ];
 
+        if ($proxy->resolvesLocally()) {
+            // Hand the proxy an IPv4 address, the one type RFC 1928 makes every
+            // SOCKS5 proxy support; a locally resolved IPv6 draws a "not
+            // supported" reply from proxies that implement IPv4 only (#861).
+            $options[\CURLOPT_IPRESOLVE] = \CURL_IPRESOLVE_V4;
+        }
         if (null !== $resolved->username) {
             $options[\CURLOPT_USERNAME] = $resolved->username;
         }

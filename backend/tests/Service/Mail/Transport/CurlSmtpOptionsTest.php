@@ -25,6 +25,11 @@ final class CurlSmtpOptionsTest extends TestCase
         return new ProxyConfig(ProxyType::Socks5, 'proxy.example', 1080, null, null, true, true);
     }
 
+    private function localDnsProxy(): ProxyConfig
+    {
+        return new ProxyConfig(ProxyType::Socks5, 'proxy.example', 1080, null, null);
+    }
+
     public function testImplicitTlsUsesSmtpsSchemeAndRequiresSsl(): void
     {
         $resolved = new ResolvedMailTransport('smtp.gmail.com', 465, 'u', 'p', MailEncryption::Tls, true);
@@ -78,5 +83,19 @@ final class CurlSmtpOptionsTest extends TestCase
         $options = CurlSmtpOptions::for($resolved, $this->proxy(), $this->envelope());
         self::assertSame('alice', $options[\CURLOPT_USERNAME]);
         self::assertSame('topsecret', $options[\CURLOPT_PASSWORD]);
+    }
+
+    public function testLocalResolutionIsPinnedToIpv4ForTheProxy(): void
+    {
+        $resolved = new ResolvedMailTransport('smtp.gmail.com', 465, 'u', 'p', MailEncryption::Tls, true);
+        $options = CurlSmtpOptions::for($resolved, $this->localDnsProxy(), $this->envelope());
+        self::assertSame(\CURL_IPRESOLVE_V4, $options[\CURLOPT_IPRESOLVE]);
+    }
+
+    public function testProxyResolutionLeavesTheAddressFamilyOpen(): void
+    {
+        $resolved = new ResolvedMailTransport('smtp.gmail.com', 465, 'u', 'p', MailEncryption::Tls, true);
+        $options = CurlSmtpOptions::for($resolved, $this->proxy(), $this->envelope());
+        self::assertArrayNotHasKey(\CURLOPT_IPRESOLVE, $options);
     }
 }

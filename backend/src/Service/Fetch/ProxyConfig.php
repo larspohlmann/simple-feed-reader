@@ -38,6 +38,13 @@ final readonly class ProxyConfig
         return sprintf('%s://%s%s:%d', $scheme, $this->credentials(), $this->host, $this->port);
     }
 
+    /** Whether curl resolves the destination name on this host, rather than the
+     *  proxy doing it. Only a plain-`socks5` proxy does. */
+    public function resolvesLocally(): bool
+    {
+        return ProxyType::Socks5 === $this->type && !$this->remoteDns;
+    }
+
     private function socksScheme(): string
     {
         return $this->remoteDns ? 'socks5h' : 'socks5';

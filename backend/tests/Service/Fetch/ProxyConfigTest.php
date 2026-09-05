@@ -57,4 +57,25 @@ final class ProxyConfigTest extends TestCase
 
         self::assertSame('http://user:@proxy.example:8080', $config->dsn());
     }
+
+    public function testPlainSocks5ResolvesTheNameLocally(): void
+    {
+        $config = new ProxyConfig(ProxyType::Socks5, 'proxy.example', 1080, null, null);
+
+        self::assertTrue($config->resolvesLocally());
+    }
+
+    public function testRemoteDnsSocks5LeavesResolutionToTheProxy(): void
+    {
+        $config = new ProxyConfig(ProxyType::Socks5, 'proxy.example', 1080, null, null, remoteDns: true);
+
+        self::assertFalse($config->resolvesLocally());
+    }
+
+    public function testHttpProxyLeavesResolutionToTheProxy(): void
+    {
+        $config = new ProxyConfig(ProxyType::Http, 'proxy.example', 8080, null, null);
+
+        self::assertFalse($config->resolvesLocally());
+    }
 }
