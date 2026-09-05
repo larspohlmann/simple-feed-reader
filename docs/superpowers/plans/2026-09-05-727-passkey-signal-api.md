@@ -16,7 +16,7 @@
 - **Commits:** `type(#727): summary`, no attribution lines. Commit after every task.
 - **PHP style (CLAUDE.md):** `declare(strict_types=1)`, `final readonly class` with constructor promotion, guard clauses, no boolean flags, typed exceptions under `Service/Passkey/Exception/`. Comments: one line, three at the absolute most; only the *why*. Delete a comment the change makes stale.
 - **Gates every touched PHP file must pass:** `composer cs`, `composer stan` (warm the cache first with `bin/console cache:warmup`), `composer md` (every touched `src` file PHPMD-clean, not merely free of new findings), `composer tramp`. Run from `backend/`.
-- **PHPMD parameter limit:** `ExcessiveParameterList` fires at 10 constructor parameters. `PasskeyController` has 9 today. Task 3 must land before Task 4; the count goes 9 → 7 → 8.
+- **PHPMD parameter limit:** `ExcessiveParameterList` fires at 10 constructor parameters. `PasskeyController` has 9 today. Task 3 must land before Task 4; the count goes 9 → 8 → 8 (Task 3 removes two collaborators and adds one; Task 4 swaps one for one).
 - **Backend tests:** `php bin/phpunit tests/Path/ToTest.php` from `backend/` for one file. Both legs before the PR: native `php bin/phpunit` and `docker compose exec php vendor/bin/phpunit` from the repo root. Never run the native and Docker suites at the same time.
 - **Frontend tests run inside Docker:** `docker compose exec -T frontend npx jest src/app/core/webauthn.spec.ts` for one spec, `docker compose exec -T frontend npm run check` for the gate. Native `npx jest` skips the type check and passes code the gate rejects.
 - **TypeScript:** `strict`, `noPropertyAccessFromIndexSignature`. Prettier at 100 columns. `lib.dom` (TS 5.9) does not declare the two Signal API statics; Task 5 declares a local structural type.
@@ -290,7 +290,7 @@ git commit -m "feat(#727): answer an unknown passkey credential with its own pro
 
 **Interfaces:**
 - Consumes: `UserPasskeyRepository::findOneForUser(User, int): ?UserPasskey`, `PasskeyRemovalPolicy::guardRemoval(User, UserPasskey): void` (throws `LastSignInMethodException`, 409).
-- Produces: `App\Service\Passkey\PasskeyRemoval::remove(User $user, int $id): void`; `App\Service\Passkey\Exception\PasskeyNotFoundException` (404, `type = 'passkey_not_found'`, `title = 'No such passkey'`). After this task `PasskeyController` has 7 constructor parameters: `RegistrationOptionsFactory`, `AssertionOptionsFactory`, `AttestationVerifier`, `UserPasskeyRepository`, `RateLimitGuard`, `RateLimiterFactoryInterface`, `PasskeySignInAvailability`, plus `PasskeyRemoval` = 8. (Task 4 swaps the repository for `PasskeyListing`, staying at 8.)
+- Produces: `App\Service\Passkey\PasskeyRemoval::remove(User $user, int $id): void`; `App\Service\Passkey\Exception\PasskeyNotFoundException` (404, `type = 'passkey_not_found'`, `title = 'No such passkey'`). After this task `PasskeyController` has 8 constructor parameters: `RegistrationOptionsFactory`, `AssertionOptionsFactory`, `AttestationVerifier`, `UserPasskeyRepository`, `PasskeyRemoval`, `RateLimitGuard`, `RateLimiterFactoryInterface`, `PasskeySignInAvailability`. Task 4 swaps the repository for `PasskeyListing`, staying at 8.
 
 - [ ] **Step 1: Write the failing exception test** at `backend/tests/Service/Passkey/Exception/PasskeyNotFoundExceptionTest.php`:
 
@@ -489,6 +489,7 @@ git commit -m "refactor(#727): move passkey removal out of the controller into P
         $this->givenAPasskeyFor($user, credentialId: 'Y3JlZC1hYmM', userHandle: 'aGFuZGxl', label: 'My phone');
         $this->authenticate($client, 'lister@example.test');
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
+        $this->serveFrom($client, 'https://example.test');
 
         $client->request('GET', '/api/auth/passkeys');
 
