@@ -65,3 +65,51 @@ export async function isConditionalMediationSupported(): Promise<boolean> {
     return false;
   }
 }
+
+/** The two WebAuthn L3 Signal API statics (#727). TypeScript 5.9's lib.dom
+ *  does not declare them. Every id here is already a base64url string --
+ *  the encoding the backend stores -- so nothing is converted. */
+interface SignalMethods {
+  signalUnknownCredential?: (options: { rpId: string; credentialId: string }) => Promise<void>;
+  signalAllAcceptedCredentials?: (options: {
+    rpId: string;
+    userId: string;
+    allAcceptedCredentialIds: string[];
+  }) => Promise<void>;
+}
+
+function signalMethods(): SignalMethods {
+  return isPasskeySupported() ? (window.PublicKeyCredential as unknown as SignalMethods) : {};
+}
+
+/** Every signal is best-effort: it resolves without effect when the API or
+ *  the method is absent and when the browser throws, so it can never gate a
+ *  sign-in, an enrolment or a listing. The optional call keeps `this` bound. */
+async function bestEffort(
+  signal: (methods: SignalMethods) => Promise<void> | undefined,
+): Promise<void> {
+  try {
+    await signal(signalMethods());
+  } catch {
+    // Best-effort by design -- see the docblock.
+  }
+}
+
+/** Tells the browser a credential id the server does not know, so the
+ *  password manager can drop it. */
+export function signalUnknownCredential(rpId: string, credentialId: string): Promise<void> {
+  return bestEffort((methods) => methods.signalUnknownCredential?.({ rpId, credentialId }));
+}
+
+/** Hands the browser one account's authoritative credential set so anything
+ *  stale disappears. The list must be complete: a short or empty list makes
+ *  the browser delete valid credentials for that user. */
+export function signalAllAcceptedCredentials(
+  rpId: string,
+  userId: string,
+  allAcceptedCredentialIds: string[],
+): Promise<void> {
+  return bestEffort((methods) =>
+    methods.signalAllAcceptedCredentials?.({ rpId, userId, allAcceptedCredentialIds }),
+  );
+}

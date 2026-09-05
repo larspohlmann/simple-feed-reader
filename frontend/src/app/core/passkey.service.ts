@@ -1,17 +1,31 @@
 // src/app/core/passkey.service.ts
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, firstValueFrom, map } from 'rxjs';
+import { Observable, defer, firstValueFrom, map, tap } from 'rxjs';
 import { API_BASE_URL } from './api';
-import { Problem, parseProblem } from './problem';
+import { Problem, outcomeIsUnproven, parseProblem } from './problem';
+import { onIdentityChange } from './session-identity';
 import { TokenStore } from './token.store';
-import { base64UrlToBytes, bytesToBase64Url } from './webauthn';
+import {
+  base64UrlToBytes,
+  bytesToBase64Url,
+  signalAllAcceptedCredentials,
+  signalUnknownCredential,
+} from './webauthn';
 
 export interface PasskeySummary {
   id: number;
   label: string;
   createdAt: string;
   lastUsedAt: string | null;
+}
+
+/** The listing body -- see `PasskeyJson::listing()`. */
+export interface PasskeyListingJson {
+  rpId: string;
+  userHandle: string | null;
+  acceptedCredentialIds: string[];
+  passkeys: PasskeySummary[];
 }
 
 /** Mediation and abort control for a login ceremony -- the only difference
@@ -54,11 +68,26 @@ interface AssertionCredentialJson {
   };
 }
 
+/** The `register` request body -- see `RegisterPasskeyRequest`. */
+interface RegistrationBody {
+  handle: string;
+  credential: RegistrationCredentialJson;
+  label: string;
+}
+
+/** The `login` request body PasskeyAuthenticator reads. */
+interface AssertionBody {
+  handle: string;
+  credential: AssertionCredentialJson;
+}
+
 /**
  * Drives the two WebAuthn ceremonies against the passkey endpoints (#624)
  * and is the only place that converts between the backend's base64url wire
  * contract and the `ArrayBuffer`s `navigator.credentials` deals in -- see
- * `core/webauthn.ts`'s docblock for why that boundary matters.
+ * `core/webauthn.ts`'s docblock for why that boundary matters. It is also
+ * the only caller of that file's Signal API helpers, which prune stale
+ * entries from the browser's password manager (#727).
  *
  * A rejected ceremony (the user cancels the platform prompt, an
  * authenticator errors) throws a `Problem`, the same shape every other API
@@ -71,6 +100,21 @@ export class PasskeyService {
   private readonly base = inject(API_BASE_URL);
   private readonly tokens = inject(TokenStore);
 
+  /** The listing after the LAST passkey's deletion carries no handle, and the
+   *  sweep needs one exactly then -- the key those credentials were created
+   *  under. Per-account, so it must not outlive the session (see constructor). */
+  private lastUserHandle: string | null = null;
+
+  /** Only the newest listing may sweep: a slow, older response carries a
+   *  shorter list and would delete the passkey enrolled in between. */
+  private listingSequence = 0;
+
+  constructor() {
+    // A handle left over from another account's session would sweep THAT
+    // account's passkeys with the next user's empty list (#263 pattern).
+    onIdentityChange(() => (this.lastUserHandle = null));
+  }
+
   async enrol(label: string): Promise<void> {
     try {
       const { options, handle } = await firstValueFrom(
@@ -80,22 +124,22 @@ export class PasskeyService {
         ),
       );
       const credential = await this.createCredential(options);
-      await firstValueFrom(
-        this.http.post<void>(`${this.base}/api/auth/passkey/register`, {
-          handle,
-          credential,
-          label,
-        }),
-      );
+      await this.register(relyingPartyIdFor(options.rp.id), { handle, credential, label });
     } catch (error) {
       throw this.toProblem(error);
     }
   }
 
   list(): Observable<PasskeySummary[]> {
-    return this.http
-      .get<{ passkeys: PasskeySummary[] }>(`${this.base}/api/auth/passkeys`)
-      .pipe(map((response) => response.passkeys));
+    return defer(() => {
+      const sequence = ++this.listingSequence;
+      return this.http.get<PasskeyListingJson>(`${this.base}/api/auth/passkeys`).pipe(
+        tap((listing) => {
+          if (sequence === this.listingSequence) this.pruneStaleCredentials(listing);
+        }),
+        map((listing) => listing.passkeys),
+      );
+    });
   }
 
   remove(id: number): Observable<void> {
@@ -119,12 +163,10 @@ export class PasskeyService {
         ),
       );
       const credential = await this.getCredential(options, ceremonyOptions);
-      const { token } = await firstValueFrom(
-        this.http.post<{ token: string }>(`${this.base}/api/auth/passkey/login`, {
-          handle,
-          credential,
-        }),
-      );
+      const token = await this.exchangeAssertion(relyingPartyIdFor(options.rpId), {
+        handle,
+        credential,
+      });
       this.tokens.set(token);
       return token;
     } catch (error) {
@@ -141,6 +183,33 @@ export class PasskeyService {
     return encodeRegistrationCredential(credential);
   }
 
+  /** The authenticator already holds the credential when the server refuses
+   *  it (#727), so a refusal tells the browser to drop it. Not when the row
+   *  may exist: an unproven outcome, or a 409 that says it is already stored. */
+  private async register(rpId: string, body: RegistrationBody): Promise<void> {
+    try {
+      await firstValueFrom(this.http.post<void>(`${this.base}/api/auth/passkey/register`, body));
+    } catch (error) {
+      if (isRefusalWithoutRow(error)) void signalUnknownCredential(rpId, body.credential.id);
+      throw error;
+    }
+  }
+
+  /** Signals on the ONE type that means "no account holds this id" (#727).
+   *  Any other 401 -- an expired challenge above all -- names a working
+   *  passkey, and the signal is irreversible. */
+  private async exchangeAssertion(rpId: string, body: AssertionBody): Promise<string> {
+    try {
+      const { token } = await firstValueFrom(
+        this.http.post<{ token: string }>(`${this.base}/api/auth/passkey/login`, body),
+      );
+      return token;
+    } catch (error) {
+      if (isUnknownCredential(error)) void signalUnknownCredential(rpId, body.credential.id);
+      throw error;
+    }
+  }
+
   private async getCredential(
     options: PublicKeyCredentialRequestOptionsJSON,
     ceremonyOptions: LoginCeremonyOptions,
@@ -151,6 +220,18 @@ export class PasskeyService {
       signal: ceremonyOptions.signal,
     })) as PublicKeyCredential;
     return encodeAssertionCredential(credential);
+  }
+
+  /** Fire-and-forget (#727): the browser drops every entry outside the
+   *  server's list, which is passed through exactly as received. */
+  private pruneStaleCredentials(listing: PasskeyListingJson): void {
+    this.lastUserHandle = listing.userHandle ?? this.lastUserHandle;
+    if (this.lastUserHandle === null) return;
+    void signalAllAcceptedCredentials(
+      listing.rpId,
+      this.lastUserHandle,
+      listing.acceptedCredentialIds,
+    );
   }
 
   /** Every failure this service can throw -- a rejected HTTP call or a
@@ -193,6 +274,28 @@ type WithHints<TOptions> = TOptions & { hints: PasskeyHint[] };
 /** Without this Chrome puts the QR flow first, so enrolling from a desktop
  *  saved the passkey on a phone. A preference, not a restriction. */
 const LOCAL_DEVICE_FIRST: PasskeyHint[] = ['client-device'];
+
+/** WebAuthn defaults an absent rp id to the page's own host; a signal must
+ *  name the relying party the ceremony actually ran under. */
+function relyingPartyIdFor(declared: string | undefined): string {
+  return declared ?? location.hostname;
+}
+
+/** `DuplicatePasskeyException::$type` and `UnknownPasskeyCredentialException::$type`. */
+const PASSKEY_ALREADY_REGISTERED = 'passkey_already_registered';
+const UNKNOWN_PASSKEY_CREDENTIAL = 'unknown_passkey_credential';
+
+function isRefusalWithoutRow(error: unknown): boolean {
+  if (!(error instanceof HttpErrorResponse)) return false;
+  const problem = parseProblem(error);
+  return !outcomeIsUnproven(problem) && problem.type !== PASSKEY_ALREADY_REGISTERED;
+}
+
+function isUnknownCredential(error: unknown): boolean {
+  return (
+    error instanceof HttpErrorResponse && parseProblem(error).type === UNKNOWN_PASSKEY_CREDENTIAL
+  );
+}
 
 function decodeCreationOptions(
   json: PublicKeyCredentialCreationOptionsJSON,

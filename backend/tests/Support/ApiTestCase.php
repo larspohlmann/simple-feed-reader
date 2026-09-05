@@ -50,6 +50,14 @@ abstract class ApiTestCase extends WebTestCase
         return $repository;
     }
 
+    /** Every deliberate API failure answers problem+json — the contract this pins beside the status. */
+    protected function assertRejected(KernelBrowser $client, int $status): void
+    {
+        $response = $client->getResponse();
+        self::assertSame($status, $response->getStatusCode());
+        self::assertSame('application/problem+json', $response->headers->get('Content-Type'));
+    }
+
     /** @return array<string, mixed> */
     protected function payload(KernelBrowser $client): array
     {

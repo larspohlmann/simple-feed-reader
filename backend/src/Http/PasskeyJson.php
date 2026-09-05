@@ -7,30 +7,46 @@ namespace App\Http;
 use App\Entity\UserPasskey;
 
 /**
- * The passkey credential-listing response body (#624).
+ * The passkey listing body (#624): the rows plus the three values the WebAuthn
+ * Signal API needs (#727), which `register/options` already discloses to the
+ * same authenticated user.
  *
  * The two options factories already return their body in its final wire
  * shape — the identical `{options, handle}` for both ceremonies — so they
  * need no mapper here and their controller actions hand the array straight
  * to the response.
+ *
+ * @phpstan-type PasskeyRow array{id: ?int, label: string, createdAt: string, lastUsedAt: ?string}
+ * @phpstan-type PasskeyListingBody array{
+ *     rpId: string, userHandle: ?string, acceptedCredentialIds: list<string>, passkeys: list<PasskeyRow>,
+ * }
  */
 final readonly class PasskeyJson
 {
     /**
-     * Never the public key or the credential id: both are opaque,
-     * verification-only material a client has no use for.
+     * `acceptedCredentialIds` is ONE flat authoritative list the client hands
+     * to the browser unchanged: a rebuilt or shortened list deletes valid
+     * credentials. The handle comes from PasskeyCredentials::sharedHandle().
      *
      * @param list<UserPasskey> $passkeys
      *
-     * @return array{passkeys: list<array{id: ?int, label: string, createdAt: string, lastUsedAt: ?string}>}
+     * @return PasskeyListingBody
      */
-    public static function passkeys(array $passkeys): array
+    public static function listing(string $relyingPartyId, ?string $userHandle, array $passkeys): array
     {
-        return ['passkeys' => array_map(self::passkey(...), $passkeys)];
+        return [
+            'rpId' => $relyingPartyId,
+            'userHandle' => $userHandle,
+            'acceptedCredentialIds' => array_map(
+                static fn (UserPasskey $passkey): string => $passkey->getCredentialId(),
+                $passkeys,
+            ),
+            'passkeys' => array_map(self::passkey(...), $passkeys),
+        ];
     }
 
     /**
-     * @return array{id: ?int, label: string, createdAt: string, lastUsedAt: ?string}
+     * @return PasskeyRow
      */
     private static function passkey(UserPasskey $passkey): array
     {

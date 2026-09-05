@@ -1,10 +1,18 @@
 import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+  TestRequest,
+} from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { API_BASE_URL } from './api';
-import { PasskeyService, PasskeySummary } from './passkey.service';
+import { PasskeyListingJson, PasskeyService, PasskeySummary } from './passkey.service';
 import { bytesToBase64Url } from './webauthn';
 import { TokenStore } from './token.store';
+import {
+  removePublicKeyCredential,
+  stubPublicKeyCredential,
+} from '../../testing/public-key-credential';
 
 const bytesOf = (text: string): ArrayBuffer => new TextEncoder().encode(text).buffer as ArrayBuffer;
 
@@ -56,6 +64,33 @@ function fixtureAssertionCredential(withUserHandle = true): Credential {
   } as unknown as Credential;
 }
 
+function listingBody(overrides: Partial<PasskeyListingJson> = {}): PasskeyListingJson {
+  return {
+    rpId: 'test',
+    userHandle: 'aGFuZGxl',
+    acceptedCredentialIds: ['Y3JlZC1hYmM'],
+    passkeys: [],
+    ...overrides,
+  };
+}
+
+/** Installs a fake Signal API and returns its spies. jsdom has none, so the
+ *  absent-API case is what every test gets without this. */
+function installSignalApi(): { unknown: jest.Mock; allAccepted: jest.Mock } {
+  const unknown = jest.fn().mockResolvedValue(undefined);
+  const allAccepted = jest.fn().mockResolvedValue(undefined);
+  stubPublicKeyCredential({
+    signalUnknownCredential: unknown,
+    signalAllAcceptedCredentials: allAccepted,
+  });
+  return { unknown, allAccepted };
+}
+
+/** Answers a pending request with the problem+json body the backend sends. */
+function flushProblem(request: TestRequest, type: string, status: number): void {
+  request.flush({ type, title: type, status }, { status, statusText: type });
+}
+
 describe('PasskeyService', () => {
   let svc: PasskeyService;
   let ctrl: HttpTestingController;
@@ -84,6 +119,7 @@ describe('PasskeyService', () => {
   afterEach(() => {
     ctrl.verify();
     delete (navigator as unknown as { credentials?: unknown }).credentials;
+    removePublicKeyCredential();
   });
 
   it('enrol posts to register/options then register, in order, base64url-encoding the credential', async () => {
@@ -200,19 +236,198 @@ describe('PasskeyService', () => {
     await expect(enrolment).rejects.not.toHaveProperty('ceremonyRejected');
   });
 
-  it('list unwraps the {passkeys} envelope', () => {
-    let result: PasskeySummary[] | undefined;
-    svc.list().subscribe((passkeys) => (result = passkeys));
+  describe('a credential the server refused', () => {
+    /** Runs the options + ceremony half of `enrol()` and returns the pending
+     *  register request, so each test decides only how the server answers. */
+    async function enrolUpToRegister(): Promise<{
+      enrolment: Promise<void>;
+      register: TestRequest;
+    }> {
+      create.mockResolvedValue(fixtureAttestationCredential());
+      const enrolment = svc.enrol('MacBook Touch ID');
+      ctrl
+        .expectOne('https://api.test/api/auth/passkey/register/options')
+        .flush({ options: creationOptions, handle: 'register-handle' });
+      await flushMicrotasks();
+      return { enrolment, register: ctrl.expectOne('https://api.test/api/auth/passkey/register') };
+    }
 
-    ctrl.expectOne('https://api.test/api/auth/passkeys').flush({
-      passkeys: [
-        { id: 1, label: 'Phone', createdAt: '2026-08-01T00:00:00+00:00', lastUsedAt: null },
-      ],
+    // The authenticator already holds the credential the server just refused
+    // (#727); without the signal the sign-in sheet offers it forever.
+    it('tells the browser to drop it on a 4xx from register', async () => {
+      const { unknown } = installSignalApi();
+      const { enrolment, register } = await enrolUpToRegister();
+
+      flushProblem(register, 'passkey_attestation_rejected', 400);
+
+      await expect(enrolment).rejects.toMatchObject({ status: 400 });
+      expect(unknown).toHaveBeenCalledWith({ rpId: 'test', credentialId: 'credential-id' });
     });
 
-    expect(result).toEqual([
-      { id: 1, label: 'Phone', createdAt: '2026-08-01T00:00:00+00:00', lastUsedAt: null },
-    ]);
+    // A 409 says the server already holds this exact id, so the browser's
+    // entry is not an orphan.
+    it('leaves the browser alone on a 409 already-registered answer', async () => {
+      const { unknown } = installSignalApi();
+      const { enrolment, register } = await enrolUpToRegister();
+
+      flushProblem(register, 'passkey_already_registered', 409);
+
+      await expect(enrolment).rejects.toMatchObject({ status: 409 });
+      expect(unknown).not.toHaveBeenCalled();
+    });
+
+    // A lost response is not a refusal: the row may exist, and the signal is
+    // irreversible.
+    it('leaves the browser alone on a network failure during register', async () => {
+      const { unknown } = installSignalApi();
+      const { enrolment, register } = await enrolUpToRegister();
+
+      register.error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
+
+      await expect(enrolment).rejects.toMatchObject({ status: 0 });
+      expect(unknown).not.toHaveBeenCalled();
+    });
+
+    it('leaves the browser alone on a 5xx from register', async () => {
+      const { unknown } = installSignalApi();
+      const { enrolment, register } = await enrolUpToRegister();
+
+      flushProblem(register, 'about:blank', 500);
+
+      await expect(enrolment).rejects.toMatchObject({ status: 500 });
+      expect(unknown).not.toHaveBeenCalled();
+    });
+
+    // A rejected ceremony created no credential, so there is nothing to prune.
+    it('signals nothing when the ceremony itself was rejected', async () => {
+      const { unknown } = installSignalApi();
+      create.mockRejectedValue(new DOMException('User cancelled.', 'NotAllowedError'));
+
+      const enrolment = svc.enrol('MacBook Touch ID');
+      ctrl
+        .expectOne('https://api.test/api/auth/passkey/register/options')
+        .flush({ options: creationOptions, handle: 'register-handle' });
+
+      await expect(enrolment).rejects.toMatchObject({ type: 'NotAllowedError' });
+      expect(unknown).not.toHaveBeenCalled();
+    });
+  });
+
+  it('list unwraps the {passkeys} envelope', () => {
+    const passkeys: PasskeySummary[] = [
+      { id: 1, label: 'Phone', createdAt: '2026-08-01T00:00:00Z', lastUsedAt: null },
+    ];
+    let received: PasskeySummary[] | undefined;
+
+    svc.list().subscribe((list) => (received = list));
+    ctrl.expectOne('https://api.test/api/auth/passkeys').flush(listingBody({ passkeys }));
+
+    expect(received).toEqual(passkeys);
+  });
+
+  describe('pruning stale passkeys from the browser on every listing', () => {
+    it('hands the browser the authoritative set exactly as the server sent it', async () => {
+      const { allAccepted } = installSignalApi();
+
+      svc.list().subscribe();
+      ctrl
+        .expectOne('https://api.test/api/auth/passkeys')
+        .flush(listingBody({ acceptedCredentialIds: ['Zmlyc3Q', 'c2Vjb25k'] }));
+      await flushMicrotasks();
+
+      expect(allAccepted).toHaveBeenCalledWith({
+        rpId: 'test',
+        userId: 'aGFuZGxl',
+        allAcceptedCredentialIds: ['Zmlyc3Q', 'c2Vjb25k'],
+      });
+    });
+
+    // After the LAST passkey is deleted the server has no handle to send, and
+    // the sweep needs one exactly then. The handle from the listing before
+    // the delete is the key those credentials were created under.
+    it('uses the remembered handle when the account has no passkeys left', async () => {
+      const { allAccepted } = installSignalApi();
+
+      svc.list().subscribe();
+      ctrl.expectOne('https://api.test/api/auth/passkeys').flush(listingBody());
+      svc.list().subscribe();
+      ctrl
+        .expectOne('https://api.test/api/auth/passkeys')
+        .flush(listingBody({ userHandle: null, acceptedCredentialIds: [] }));
+      await flushMicrotasks();
+
+      expect(allAccepted).toHaveBeenLastCalledWith({
+        rpId: 'test',
+        userId: 'aGFuZGxl',
+        allAcceptedCredentialIds: [],
+      });
+    });
+
+    // The service is a root singleton that outlives a logout. A handle left
+    // over from account A would sweep A's passkeys with account B's empty list.
+    it('forgets the handle once another identity signs in', async () => {
+      const { allAccepted } = installSignalApi();
+      svc.list().subscribe();
+      ctrl.expectOne('https://api.test/api/auth/passkeys').flush(listingBody());
+      tokens.set('another-accounts-jwt');
+      TestBed.tick();
+
+      svc.list().subscribe();
+      ctrl
+        .expectOne('https://api.test/api/auth/passkeys')
+        .flush(listingBody({ userHandle: null, acceptedCredentialIds: [] }));
+      await flushMicrotasks();
+
+      expect(allAccepted).toHaveBeenCalledTimes(1);
+      expect(allAccepted).not.toHaveBeenCalledWith(
+        expect.objectContaining({ allAcceptedCredentialIds: [] }),
+      );
+    });
+
+    // Two listings in flight: the older one answers last with a shorter
+    // list and would delete the passkey enrolled in between.
+    it('lets only the newest listing sweep', async () => {
+      const { allAccepted } = installSignalApi();
+      svc.list().subscribe();
+      svc.list().subscribe();
+      const [older, newer] = ctrl.match('https://api.test/api/auth/passkeys');
+
+      newer.flush(listingBody({ acceptedCredentialIds: ['a', 'new'] }));
+      older.flush(listingBody({ acceptedCredentialIds: ['a'] }));
+      await flushMicrotasks();
+
+      expect(allAccepted).toHaveBeenCalledTimes(1);
+      expect(allAccepted).toHaveBeenCalledWith(
+        expect.objectContaining({ allAcceptedCredentialIds: ['a', 'new'] }),
+      );
+    });
+
+    it('signals nothing when no handle was ever seen', async () => {
+      const { allAccepted } = installSignalApi();
+
+      svc.list().subscribe();
+      ctrl
+        .expectOne('https://api.test/api/auth/passkeys')
+        .flush(listingBody({ userHandle: null, acceptedCredentialIds: [] }));
+      await flushMicrotasks();
+
+      expect(allAccepted).not.toHaveBeenCalled();
+    });
+
+    it('still delivers the rows when the browser rejects the signal', async () => {
+      const { allAccepted } = installSignalApi();
+      allAccepted.mockRejectedValue(new Error('boom'));
+      const passkeys: PasskeySummary[] = [
+        { id: 1, label: 'Phone', createdAt: '2026-08-01T00:00:00Z', lastUsedAt: null },
+      ];
+      let received: PasskeySummary[] | undefined;
+
+      svc.list().subscribe((list) => (received = list));
+      ctrl.expectOne('https://api.test/api/auth/passkeys').flush(listingBody({ passkeys }));
+      await flushMicrotasks();
+
+      expect(received).toEqual(passkeys);
+    });
   });
 
   it('remove deletes by id', () => {
@@ -324,6 +539,60 @@ describe('PasskeyService', () => {
       type: expect.any(String),
       title: expect.any(String),
       status: expect.any(Number),
+    });
+  });
+
+  describe('a login with a credential id the server does not know', () => {
+    /** Runs the options + ceremony half of a login and returns the pending
+     *  login request, so each test decides only how the server answers. */
+    async function signInUpToLogin(
+      start: () => Promise<string> = () => svc.signIn(),
+    ): Promise<{ signIn: Promise<string>; login: TestRequest }> {
+      get.mockResolvedValue(fixtureAssertionCredential());
+      const signIn = start();
+      ctrl
+        .expectOne('https://api.test/api/auth/passkey/login/options')
+        .flush({ options: requestOptions, handle: 'login-handle' });
+      await flushMicrotasks();
+      return { signIn, login: ctrl.expectOne('https://api.test/api/auth/passkey/login') };
+    }
+
+    it('tells the browser to drop it on the unknown_passkey_credential type', async () => {
+      const { unknown } = installSignalApi();
+      const { signIn, login } = await signInUpToLogin();
+
+      flushProblem(login, 'unknown_passkey_credential', 401);
+
+      await expect(signIn).rejects.toMatchObject({ type: 'unknown_passkey_credential' });
+      expect(unknown).toHaveBeenCalledWith({ rpId: 'test', credentialId: 'credential-id' });
+    });
+
+    // Every other 401 -- an expired challenge above all, likely under
+    // conditional mediation -- names a WORKING passkey. Pruning it would be
+    // worse than the orphan #727 exists for.
+    it('leaves the browser alone on any other 401', async () => {
+      const { unknown } = installSignalApi();
+      const { signIn, login } = await signInUpToLogin();
+
+      flushProblem(login, 'invalid_credentials', 401);
+
+      await expect(signIn).rejects.toMatchObject({ type: 'invalid_credentials' });
+      expect(unknown).not.toHaveBeenCalled();
+    });
+
+    // Conditional mediation is the path that keeps re-offering a dead entry,
+    // so it matters most that it signals too.
+    it('signals from the conditional ceremony as well', async () => {
+      const { unknown } = installSignalApi();
+      const { signIn, login } = await signInUpToLogin(() =>
+        svc.signInConditionally(new AbortController().signal),
+      );
+
+      flushProblem(login, 'unknown_passkey_credential', 401);
+
+      await expect(signIn).rejects.toMatchObject({ type: 'unknown_passkey_credential' });
+      expect(unknown).toHaveBeenCalledWith({ rpId: 'test', credentialId: 'credential-id' });
+      expect(tokens.token()).toBeNull();
     });
   });
 });

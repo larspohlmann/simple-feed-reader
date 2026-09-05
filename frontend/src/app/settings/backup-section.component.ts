@@ -1,7 +1,13 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { Problem, REQUEST_TOO_LARGE, parseProblem, parseProblemAsync } from '../core/problem';
+import {
+  Problem,
+  REQUEST_TOO_LARGE,
+  parseProblem,
+  parseProblemAsync,
+  outcomeIsUnproven,
+} from '../core/problem';
 import { filenameFromContentDisposition, saveAs } from '../core/save-as';
 import { downloadOpmlExport } from '../core/opml-export';
 import { LanguageService } from '../core/language.service';
@@ -26,15 +32,6 @@ const FALLBACK_BACKUP_FILENAME = 'account-backup.json.gz';
  *  not fit, the file is invalid, the confirmation is missing, the body is too
  *  large -- is refused before a single row is deleted. */
 const POST_WIPE_PROBLEM = 'backup_load_failed';
-
-/** A request whose outcome the response can't prove: a dropped connection
- *  (status 0) leaves the wipe's fate unknown, and a 5xx -- gateway timeout,
- *  OOM-killed worker, anything but the typed BackupLoadFailedException --
- *  can just as well be a post-wipe crash. Only here is "may be partly
- *  loaded" the honest report. */
-function outcomeIsUnproven(problem: Problem): boolean {
-  return problem.status === 0 || problem.status >= 500;
-}
 
 @Component({
   selector: 'app-backup-section',

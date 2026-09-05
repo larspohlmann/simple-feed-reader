@@ -179,6 +179,9 @@ final class PasskeyLoginTest extends ApiTestCase
         ));
 
         $this->assertRejected($client, 401);
+        // The safety argument for #727: an expired challenge must NOT look
+        // like an unknown credential, or the browser would prune a working key.
+        self::assertSame('invalid_credentials', $this->payload($client)['type']);
     }
 
     public function testACredentialIdThatWasNeverEnrolledIsRejected(): void
@@ -203,6 +206,7 @@ final class PasskeyLoginTest extends ApiTestCase
         ));
 
         $this->assertRejected($client, 401);
+        self::assertSame('unknown_passkey_credential', $this->payload($client)['type']);
     }
 
     /**
@@ -342,6 +346,7 @@ final class PasskeyLoginTest extends ApiTestCase
         $this->login($client, $handle, $this->withTamperedSignature($credential));
 
         $this->assertRejected($client, 401);
+        self::assertSame('invalid_credentials', $this->payload($client)['type']);
     }
 
     /**
@@ -527,8 +532,8 @@ final class PasskeyLoginTest extends ApiTestCase
      * which derives the relying party as `localhost` — a mismatch against
      * `self::RELYING_PARTY_ID`/`self::ORIGIN` on its own, so the assertion
      * would be rejected on origin/RP-id grounds regardless of the toggle.
-     * `LoginFailureHandler` collapses every passkey login failure to the
-     * same generic `invalid_credentials` body by design (no-enumeration), so
+     * `LoginFailureHandler` collapses every passkey login failure except an
+     * unknown credential id (#727) to the same `invalid_credentials` body, so
      * asserting the problem `type` cannot discriminate either — only a
      * request that would otherwise SUCCEED, with the toggle as the one
      * variable, proves the guard is what rejected it. Verified: removing
@@ -803,11 +808,5 @@ final class PasskeyLoginTest extends ApiTestCase
         unset($claims['iat'], $claims['exp']);
 
         return $claims;
-    }
-
-    private function assertRejected(KernelBrowser $client, int $status): void
-    {
-        self::assertResponseStatusCodeSame($status);
-        self::assertSame('application/problem+json', $client->getResponse()->headers->get('Content-Type'));
     }
 }

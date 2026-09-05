@@ -3,7 +3,13 @@ import {
   bytesToBase64Url,
   isConditionalMediationSupported,
   isPasskeySupported,
+  signalAllAcceptedCredentials,
+  signalUnknownCredential,
 } from './webauthn';
+import {
+  removePublicKeyCredential,
+  stubPublicKeyCredential,
+} from '../../testing/public-key-credential';
 
 describe('base64UrlToBytes / bytesToBase64Url', () => {
   it('round-trips arbitrary bytes, including ones that need padding', () => {
@@ -45,9 +51,7 @@ describe('base64UrlToBytes / bytesToBase64Url', () => {
 });
 
 describe('isPasskeySupported', () => {
-  afterEach(() => {
-    delete (window as unknown as { PublicKeyCredential?: unknown }).PublicKeyCredential;
-  });
+  afterEach(removePublicKeyCredential);
 
   it('is false when window.PublicKeyCredential is absent', () => {
     expect('PublicKeyCredential' in window).toBe(false);
@@ -55,36 +59,104 @@ describe('isPasskeySupported', () => {
   });
 
   it('is true when the browser exposes PublicKeyCredential', () => {
-    (window as unknown as { PublicKeyCredential: unknown }).PublicKeyCredential = {};
+    stubPublicKeyCredential({});
     expect(isPasskeySupported()).toBe(true);
   });
 });
 
 describe('isConditionalMediationSupported', () => {
-  afterEach(() => {
-    delete (window as unknown as { PublicKeyCredential?: unknown }).PublicKeyCredential;
-  });
+  afterEach(removePublicKeyCredential);
 
   it('resolves false when PublicKeyCredential is absent', async () => {
     await expect(isConditionalMediationSupported()).resolves.toBe(false);
   });
 
   it('resolves false when the browser has no isConditionalMediationAvailable method', async () => {
-    (window as unknown as { PublicKeyCredential: unknown }).PublicKeyCredential = {};
+    stubPublicKeyCredential({});
     await expect(isConditionalMediationSupported()).resolves.toBe(false);
   });
 
   it('resolves false when the browser check rejects', async () => {
-    (window as unknown as { PublicKeyCredential: unknown }).PublicKeyCredential = {
+    stubPublicKeyCredential({
       isConditionalMediationAvailable: jest.fn().mockRejectedValue(new Error('boom')),
-    };
+    });
     await expect(isConditionalMediationSupported()).resolves.toBe(false);
   });
 
   it('resolves to whatever the browser check reports', async () => {
-    (window as unknown as { PublicKeyCredential: unknown }).PublicKeyCredential = {
+    stubPublicKeyCredential({
       isConditionalMediationAvailable: jest.fn().mockResolvedValue(true),
-    };
+    });
     await expect(isConditionalMediationSupported()).resolves.toBe(true);
+  });
+});
+
+const signalHelpers = [
+  ['signalUnknownCredential', () => signalUnknownCredential('test', 'Y3JlZA')],
+  ['signalAllAcceptedCredentials', () => signalAllAcceptedCredentials('test', 'aGFuZGxl', ['a'])],
+] as const;
+
+// Both helpers are best-effort by contract: whatever the browser lacks or
+// throws, the caller's sign-in, enrolment or listing goes on unchanged.
+describe.each(signalHelpers)('%s', (name, call) => {
+  afterEach(removePublicKeyCredential);
+
+  it('resolves when PublicKeyCredential is absent', async () => {
+    await expect(call()).resolves.toBeUndefined();
+  });
+
+  it('resolves when the browser lacks the method', async () => {
+    stubPublicKeyCredential({});
+    await expect(call()).resolves.toBeUndefined();
+  });
+
+  it('resolves when the browser call rejects', async () => {
+    stubPublicKeyCredential({ [name]: jest.fn().mockRejectedValue(new Error('boom')) });
+    await expect(call()).resolves.toBeUndefined();
+  });
+});
+
+describe('signalUnknownCredential', () => {
+  afterEach(removePublicKeyCredential);
+
+  it('hands the browser the rp id and the credential id exactly as given', async () => {
+    const signal = jest.fn().mockResolvedValue(undefined);
+    stubPublicKeyCredential({ signalUnknownCredential: signal });
+
+    await signalUnknownCredential('test', 'Y3JlZA');
+
+    expect(signal).toHaveBeenCalledWith({ rpId: 'test', credentialId: 'Y3JlZA' });
+  });
+});
+
+describe('signalAllAcceptedCredentials', () => {
+  afterEach(removePublicKeyCredential);
+
+  it('hands the browser the handle and the list exactly as given', async () => {
+    const signal = jest.fn().mockResolvedValue(undefined);
+    stubPublicKeyCredential({ signalAllAcceptedCredentials: signal });
+
+    await signalAllAcceptedCredentials('test', 'aGFuZGxl', ['Zmlyc3Q', 'c2Vjb25k']);
+
+    expect(signal).toHaveBeenCalledWith({
+      rpId: 'test',
+      userId: 'aGFuZGxl',
+      allAcceptedCredentialIds: ['Zmlyc3Q', 'c2Vjb25k'],
+    });
+  });
+
+  // An empty list is how the last passkey's deletion reaches the browser; it
+  // must go through unchanged, never be treated as "nothing to send".
+  it('passes an empty list through unchanged', async () => {
+    const signal = jest.fn().mockResolvedValue(undefined);
+    stubPublicKeyCredential({ signalAllAcceptedCredentials: signal });
+
+    await signalAllAcceptedCredentials('test', 'aGFuZGxl', []);
+
+    expect(signal).toHaveBeenCalledWith({
+      rpId: 'test',
+      userId: 'aGFuZGxl',
+      allAcceptedCredentialIds: [],
+    });
   });
 });

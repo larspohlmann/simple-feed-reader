@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Entity\UserPasskey;
 use App\Repository\UserPasskeyRepository;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\PinsPasskeyRelyingParty;
 use App\Tests\Support\TogglesPasskeySignIn;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -22,29 +23,67 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 final class PasskeyListTest extends ApiTestCase
 {
     use TogglesPasskeySignIn;
+    use PinsPasskeyRelyingParty;
 
     /**
-     * Pinned as its own test so a future addition to PasskeyJson::passkey()
-     * cannot silently widen the payload — the public key, the credential id
-     * and the user handle must never reach the client.
+     * Pinned so a future addition cannot silently widen the payload: beside
+     * the unchanged rows, exactly the three values the Signal API needs (#727).
      */
-    public function testListingExposesOnlyIdLabelCreatedAtAndLastUsedAt(): void
+    public function testListingCarriesTheSignalValuesBesideTheUnchangedRows(): void
     {
         $client = static::createClient();
         $user = $this->factory()->create('lister@example.test');
-        $this->givenAPasskeyFor($user, credentialId: 'Y3JlZC1hYmM', label: 'My phone');
+        $this->givenAPasskeyFor(
+            $user,
+            credentialId: 'Y3JlZC1hYmM',
+            userHandle: 'aGFuZGxl',
+            label: 'My phone',
+            createdAt: new \DateTimeImmutable('2026-01-01 10:00:00'),
+        );
+        $this->givenAPasskeyFor(
+            $user,
+            credentialId: 'c2Vjb25k',
+            userHandle: 'aGFuZGxl',
+            label: 'YubiKey',
+            createdAt: new \DateTimeImmutable('2026-01-02 10:00:00'),
+        );
         $this->authenticate($client, 'lister@example.test');
+        $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
+        $this->serveFrom($client, 'https://example.test');
+
+        $client->request('GET', '/api/auth/passkeys');
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload($client);
+        $topLevelKeys = array_keys($body);
+        sort($topLevelKeys);
+        self::assertSame(['acceptedCredentialIds', 'passkeys', 'rpId', 'userHandle'], $topLevelKeys);
+        self::assertSame('example.test', $body['rpId']);
+        self::assertSame('aGFuZGxl', $body['userHandle']);
+        self::assertSame(['Y3JlZC1hYmM', 'c2Vjb25k'], $body['acceptedCredentialIds']);
+        $passkeys = $this->passkeysFromResponse($client);
+        self::assertCount(2, $passkeys);
+        $rowKeys = array_keys($passkeys[0]);
+        sort($rowKeys);
+        self::assertSame(['createdAt', 'id', 'label', 'lastUsedAt'], $rowKeys);
+        self::assertSame('My phone', $passkeys[0]['label']);
+    }
+
+    /** No rows, no handle — never a minted one (see PasskeyJson::listing()). */
+    public function testListingReportsNoUserHandleAndNoAcceptedIdsForAnAccountWithoutPasskeys(): void
+    {
+        $client = static::createClient();
+        $this->factory()->create('empty@example.test');
+        $this->authenticate($client, 'empty@example.test');
         $this->enablePasskeySignIn();
 
         $client->request('GET', '/api/auth/passkeys');
 
         self::assertResponseIsSuccessful();
-        $passkeys = $this->passkeysFromResponse($client);
-        self::assertCount(1, $passkeys);
-        $keys = array_keys($passkeys[0]);
-        sort($keys);
-        self::assertSame(['createdAt', 'id', 'label', 'lastUsedAt'], $keys);
-        self::assertSame('My phone', $passkeys[0]['label']);
+        $body = $this->payload($client);
+        self::assertNull($body['userHandle']);
+        self::assertSame([], $body['acceptedCredentialIds']);
+        self::assertSame([], $body['passkeys']);
     }
 
     public function testAUserCannotSeeAnotherUsersCredentialInTheList(): void
@@ -86,12 +125,7 @@ final class PasskeyListTest extends ApiTestCase
         self::assertNull($repository->find($deletedId));
     }
 
-    /**
-     * A 403 here would confirm the id belongs to SOME account; 404 makes a
-     * foreign credential indistinguishable from one that was never
-     * registered. See PasskeyController::delete()'s docblock for the query
-     * shape (`(id, user)` in one call) that this behaviour depends on.
-     */
+    /** A 403 would confirm the id belongs to SOME account — see PasskeyRemoval. */
     public function testDeletingAnotherUsersCredentialReturns404NotFound(): void
     {
         $client = static::createClient();
@@ -102,7 +136,8 @@ final class PasskeyListTest extends ApiTestCase
 
         $client->request('DELETE', \sprintf('/api/auth/passkeys/%d', (int) $foreignPasskey->getId()));
 
-        self::assertResponseStatusCodeSame(404);
+        $this->assertRejected($client, 404);
+        self::assertSame('passkey_not_found', $this->payload($client)['type']);
         /** @var UserPasskeyRepository $repository */
         $repository = self::getContainer()->get(UserPasskeyRepository::class);
         self::assertNotNull($repository->find($foreignPasskey->getId()));
@@ -124,8 +159,7 @@ final class PasskeyListTest extends ApiTestCase
 
         $client->request('DELETE', \sprintf('/api/auth/passkeys/%d', (int) $onlyPasskey->getId()));
 
-        self::assertResponseStatusCodeSame(409);
-        self::assertSame('application/problem+json', $client->getResponse()->headers->get('Content-Type'));
+        $this->assertRejected($client, 409);
         /** @var UserPasskeyRepository $repository */
         $repository = self::getContainer()->get(UserPasskeyRepository::class);
         self::assertNotNull($repository->find($onlyPasskey->getId()));
@@ -146,8 +180,7 @@ final class PasskeyListTest extends ApiTestCase
 
         $client->request('GET', '/api/auth/passkeys');
 
-        self::assertResponseStatusCodeSame(403);
-        self::assertSame('application/problem+json', $client->getResponse()->headers->get('Content-Type'));
+        $this->assertRejected($client, 403);
     }
 
     /**
@@ -192,6 +225,7 @@ final class PasskeyListTest extends ApiTestCase
         string $credentialId,
         string $userHandle = 'aGFuZGxl',
         string $label = 'Test key',
+        ?\DateTimeImmutable $createdAt = null,
     ): UserPasskey {
         $passkey = new UserPasskey(
             $user,
@@ -202,7 +236,7 @@ final class PasskeyListTest extends ApiTestCase
             null,
             [],
             $label,
-            new \DateTimeImmutable(),
+            $createdAt ?? new \DateTimeImmutable(),
         );
         $this->em()->persist($passkey);
         $this->em()->flush();

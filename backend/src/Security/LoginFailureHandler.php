@@ -8,6 +8,7 @@ use App\Exception\AccountNotActiveException;
 use App\Exception\InvalidCredentialsException;
 use App\Exception\RateLimitedException;
 use App\Http\ApiProblem;
+use App\Service\Passkey\Exception\UnknownPasskeyCredentialException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -20,6 +21,10 @@ use Symfony\Component\Security\Http\Authentication\AuthenticationFailureHandlerI
  * their own translation into the problem+json contract. Bad password and
  * unknown email deliberately produce the identical response - distinguishing
  * them would turn the endpoint into an account-enumeration oracle.
+ *
+ * One deliberate exception: an unknown passkey credential id keeps its own
+ * type so the browser can prune the dead entry (#727) — see
+ * UnknownPasskeyCredentialException. The timing equalizer still runs first.
  */
 final readonly class LoginFailureHandler implements AuthenticationFailureHandlerInterface
 {
@@ -36,7 +41,9 @@ final readonly class LoginFailureHandler implements AuthenticationFailureHandler
         // handler has returned, so the delay lands inside the measured window.
         $this->timingEqualizer->equalize($exception, $this->submittedIdentifier($request));
 
+        $previous = $exception->getPrevious();
         $apiException = match (true) {
+            $previous instanceof UnknownPasskeyCredentialException => $previous,
             $exception instanceof AccountStatusException
                 => new AccountNotActiveException($exception->accountStatus),
             $exception instanceof TooManyLoginAttemptsAuthenticationException
