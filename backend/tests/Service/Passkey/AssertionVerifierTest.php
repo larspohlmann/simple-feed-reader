@@ -12,6 +12,7 @@ use App\Service\Passkey\AssertionOptionsFactory;
 use App\Service\Passkey\AssertionVerifier;
 use App\Service\Passkey\AttestationVerifier;
 use App\Service\Passkey\Exception\AssertionRejectedException;
+use App\Service\Passkey\Exception\UnknownPasskeyCredentialException;
 use App\Service\Passkey\NaiveUtcClock;
 use App\Service\Passkey\PasskeyCeremony;
 use App\Service\Passkey\PasskeyChallengeStore;
@@ -109,7 +110,7 @@ final class AssertionVerifierTest extends KernelTestCase
             $neverEnrolled,
         );
 
-        $this->expectException(AssertionRejectedException::class);
+        $this->expectException(UnknownPasskeyCredentialException::class);
 
         $this->verifier()->verify($handle, $credential);
     }

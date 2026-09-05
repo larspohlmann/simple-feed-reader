@@ -7,11 +7,12 @@ namespace App\Service\Passkey\Exception;
 use App\Exception\ApiException;
 
 /**
- * A WebAuthn assertion ("login") failed verification: unenrolled credential
- * id, wrong challenge, wrong origin, wrong relying-party id, a stalled
- * signature counter, or a corrupt/unparseable response. AssertionVerifier
- * catches all of these at the WebAuthn/CBOR boundary — or resolves an
- * unknown credential id itself — and rewrites them to this one type.
+ * A WebAuthn assertion ("login") failed verification: wrong challenge, wrong
+ * origin, wrong relying-party id, a stalled signature counter, or a
+ * corrupt/unparseable response. AssertionVerifier catches all of these at the
+ * WebAuthn/CBOR boundary and rewrites them to this one type. The one case
+ * with its own type is a credential id no account holds —
+ * UnknownPasskeyCredentialException (#727).
  *
  * Collapsed into one case on purpose, like UnknownChallengeException and
  * AttestationRejectedException: naming the exact failed check would help an

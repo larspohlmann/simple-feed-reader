@@ -7,6 +7,7 @@ namespace App\Service\Passkey;
 use App\Entity\UserPasskey;
 use App\Repository\UserPasskeyRepository;
 use App\Service\Passkey\Exception\AssertionRejectedException;
+use App\Service\Passkey\Exception\UnknownPasskeyCredentialException;
 use Doctrine\ORM\EntityManagerInterface;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use Psr\Cache\InvalidArgumentException;
@@ -132,15 +133,16 @@ final readonly class AssertionVerifier
 
     /**
      * `credential_id` is unique across every account (UserPasskey's own
-     * unique constraint), so this lookup carries no user — the point of
-     * discoverable-credential login is that the server does not know who is
-     * asking until this resolves it.
+     * unique constraint), so this lookup carries no user. Its own exception
+     * type, not AssertionRejectedException: the client prunes the dead
+     * browser entry on this case alone (#727).
      */
     private function resolveCredential(string $rawCredentialId): UserPasskey
     {
         $credentialId = Base64UrlSafe::encodeUnpadded($rawCredentialId);
 
-        return $this->passkeys->findOneByCredentialId($credentialId) ?? throw new AssertionRejectedException();
+        return $this->passkeys->findOneByCredentialId($credentialId)
+            ?? throw new UnknownPasskeyCredentialException();
     }
 
     /**
