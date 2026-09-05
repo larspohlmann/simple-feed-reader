@@ -1,16 +1,22 @@
-<app-disclosure appearance="row">
+<app-disclosure appearance="row-lead">
   <div summary class="summary">
-    <app-favicon [url]="subscription().faviconUrl" />
-    <span class="title">{{ subscription().title }}</span>
-
-    <span class="pill" [class.dead]="isGone()" [class.failing]="!isGone()">
+    <app-icon
+      class="status"
+      [class.dead]="isGone()"
+      [class.failing]="!isGone()"
+      [name]="statusIcon()"
+      size="sm"
+    />
+    <span class="sr-only">
       {{ (isGone() ? 'settings.health.pill.dead' : 'settings.health.pill.failing') | transloco }}
     </span>
+    <span class="title">{{ subscription().title }}</span>
 
     <span class="reason">{{ reason().key | transloco: reason().params }}</span>
 
     <span class="acts">
       <app-button
+        variant="outline"
         size="sm"
         data-test="retry"
         (click)="$event.preventDefault(); $event.stopPropagation(); retry.emit()"
@@ -18,39 +24,23 @@
         {{ 'settings.health.action.retry' | transloco }}
       </app-button>
       <app-button
-        variant="danger-outline"
+        variant="outline"
         size="sm"
         data-test="unsubscribe"
+        [ariaLabel]="'settings.health.action.unsubscribe' | transloco"
         (click)="$event.preventDefault(); $event.stopPropagation(); unsubscribe.emit()"
       >
-        {{ 'settings.health.action.unsubscribe' | transloco }}
+        <app-icon class="trash-icon" name="delete" size="sm" />
       </app-button>
     </span>
   </div>
 
-  <div class="details">
-    @if (subscription().lastSuccessfulFetchAt; as lastSuccess) {
-      <div class="fact">
-        <span class="label">{{ 'settings.health.details.lastSuccess' | transloco }}</span>
-        <span class="value">{{ formatDate(lastSuccess) }}</span>
-      </div>
-    }
-    @if (subscription().lastFetchedAt; as lastAttempt) {
-      <div class="fact">
-        <span class="label">{{ 'settings.health.details.lastAttempt' | transloco }}</span>
-        <span class="value">{{ formatDate(lastAttempt) }}</span>
-      </div>
-    }
-    @if (subscription().consecutiveFailures) {
-      <div class="fact">
-        <span class="label">{{ 'settings.health.details.failures' | transloco }}</span>
-        <span class="value">{{ subscription().consecutiveFailures }}</span>
-      </div>
-    }
+  <div class="detail-indent">
+    <app-feed-health-facts [subscription]="subscription()" />
+
     @if (subscription().lastErrorMessage; as technical) {
-      <div class="technical">
-        <span class="label">{{ 'settings.health.details.technical' | transloco }}</span>
-        <pre><code>{{ technical }}</code></pre>
+      <div class="error">
+        <code>{{ technical }}</code>
       </div>
     }
   </div>

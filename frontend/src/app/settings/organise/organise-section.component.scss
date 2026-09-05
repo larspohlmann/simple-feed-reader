@@ -271,3 +271,54 @@
     padding-top: calc((var(--control-h) + var(--space-3) * 2) * 2 + var(--bar-gap));
   }
 }
+
+// The feed-health area is its own card whose header (icon, title, dead/failing
+// counts) is the collapse toggle — one bar, not a group title above a separate
+// "N need attention" row. The header sits a step lighter than the content below
+// it (surface-1 over surface-0), so the rows read as the recessed body.
+.health-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+  box-shadow: var(--panel-shadow);
+  overflow: hidden;
+}
+
+.health-head {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.health-head-icon {
+  color: var(--warning);
+}
+
+.health-head-title {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.health-head-counts {
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+// The disclosure body is an unpadded <ng-content>, so the rows and their
+// expanded facts would sit flush against the card edge; inset them to the same
+// side gutter the drill-in summary uses, and stack them like a grouped list.
+// A step darker than the header above (surface-0 under the surface-1 header),
+// divided by a hairline. Feeds are separated by their own dividers (below),
+// not a gap, so each boundary reads as a line.
+.health-list {
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--panel-inset-x) var(--space-2);
+  border-top: 1px solid var(--border);
+  background: var(--surface-0);
+}
+
+.health-list app-unhealthy-feed-row + app-unhealthy-feed-row {
+  border-top: 1px solid var(--border);
+}

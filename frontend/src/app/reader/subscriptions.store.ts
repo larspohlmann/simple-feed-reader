@@ -207,6 +207,18 @@ export class SubscriptionsStore {
     );
   }
 
+  /** Refresh the held list after a deliberate action that changed server state
+   *  — a manual feed retry — WITHOUT the loading skeleton, so the surface stays
+   *  put and only the row that recovered drops out. No staleness gate: unlike a
+   *  poll tick, the caller knows the list moved. */
+  reloadQuietly(): void {
+    if (!this.resolved() || this.inFlight) return;
+    this.quietFetch(
+      () => this.api.subscriptions(),
+      (r) => this.applyCounts(r),
+    );
+  }
+
   /** The shared body of every silent tick: refresh only when worth a request,
    *  drop an answer the user has overtaken, never touch `loading`/`resolved`.
    *  The `apply` closure is the only difference between full and counts-only. */
@@ -221,6 +233,14 @@ export class SubscriptionsStore {
     if (this.inFlight) return;
     if (!countsAreStale(this.lastLoadedAt)) return;
 
+    this.quietFetch(fetch, apply);
+  }
+
+  /** Fire a reload that leaves `loading`/`resolved` untouched and drops its
+   *  answer if the user has overtaken it, so a silent refresh never flickers
+   *  the surface or fights an optimistic edit. The gates that decide WHEN to
+   *  fire belong to each caller. */
+  private quietFetch<T>(fetch: () => Observable<T>, apply: (response: T) => void): void {
     const request = this.beginRequest();
     const editsWhenSent = this.localEdits;
     this.inFlight = this.trackWhileOpen(

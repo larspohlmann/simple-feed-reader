@@ -59,6 +59,24 @@ export function formatLongDate(iso: string, locale = 'en'): string {
   return new Intl.DateTimeFormat(locale, { dateStyle: 'long' }).format(d);
 }
 
+/** One formatter per locale, not one per call: an `Intl.DateTimeFormat`
+ *  resolves locale data, and this label renders from a template (re-read on
+ *  every change-detection pass). Mirrors `relativeFormatters` above. */
+const longDateTimeFormatters = new Map<string, Intl.DateTimeFormat>();
+
+/** A localised long date with a HH:MM clock time, browser timezone — for a
+ *  diagnostic timestamp where the exact minute of a fetch attempt matters. */
+export function formatLongDateTime(iso: string, locale = 'en'): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  let formatter = longDateTimeFormatters.get(locale);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, { dateStyle: 'long', timeStyle: 'short' });
+    longDateTimeFormatters.set(locale, formatter);
+  }
+  return formatter.format(d);
+}
+
 /**
  * A localised long date, or an explicit fallback for "no date" fields (login,
  * refresh, approval). `fallback` is an already-translated string, not a key —

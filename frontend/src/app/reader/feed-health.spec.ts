@@ -24,10 +24,30 @@ const report = (over: Partial<RefreshReport>): RefreshReport => ({
 describe('feed health', () => {
   const now = new Date('2026-02-10T00:00:00Z');
 
-  it('treats erroring and gone as unhealthy, active as healthy', () => {
-    expect(isUnhealthy(make({ status: 'active' }))).toBe(false);
-    expect(isUnhealthy(make({ status: 'erroring' }))).toBe(true);
-    expect(isUnhealthy(make({ status: 'gone' }))).toBe(true);
+  it('flags gone feeds always, and erroring feeds only after a day without success', () => {
+    const recent = '2026-02-09T12:00:00Z'; // < 24h before `now`
+    const stale = '2026-02-08T23:00:00Z'; // > 24h before `now`
+    expect(isUnhealthy(make({ status: 'active' }), now)).toBe(false);
+    expect(isUnhealthy(make({ status: 'gone' }), now)).toBe(true);
+    expect(isUnhealthy(make({ status: 'erroring', lastSuccessfulFetchAt: recent }), now)).toBe(
+      false,
+    );
+    expect(isUnhealthy(make({ status: 'erroring', lastSuccessfulFetchAt: stale }), now)).toBe(true);
+  });
+
+  it('measures a never-succeeded erroring feed from when it was subscribed', () => {
+    const justAdded = make({
+      status: 'erroring',
+      lastSuccessfulFetchAt: null,
+      createdAt: '2026-02-09T18:00:00Z',
+    });
+    const longBroken = make({
+      status: 'erroring',
+      lastSuccessfulFetchAt: null,
+      createdAt: '2026-02-01T00:00:00Z',
+    });
+    expect(isUnhealthy(justAdded, now)).toBe(false);
+    expect(isUnhealthy(longBroken, now)).toBe(true);
   });
 
   it('reports only a gone feed as gone', () => {

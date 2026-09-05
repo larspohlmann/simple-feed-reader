@@ -50,8 +50,10 @@ summary:hover {
 // Row appearance: a flat, full-width summary for stacked list items, where
 // the bordered pill would compete with the row itself. The chevron stays
 // (still rotates via `details[open]` above) but moves trailing via `order`.
-summary.is-row {
+summary.is-row,
+summary.is-row-lead {
   display: flex;
+  align-items: center;
   width: 100%;
   padding: var(--row-pad-comfy-y) var(--row-pad-comfy-x);
   border: none;
@@ -62,6 +64,14 @@ summary.is-row {
 summary.is-row::before {
   order: 1;
   margin-left: auto;
+}
+
+// Row-lead: the chevron leads the row instead of trailing it, so it reads as
+// an expand affordance in front of the row's own content and trailing actions.
+// It keeps the default source order (before the projected content) — no `order`
+// or `margin-left` override — and rotates on open via the shared rule above.
+summary.is-row-lead::before {
+  flex: 0 0 auto;
 }
 
 // Drill-in appearance: a full-width Grouped-list row for an advanced section

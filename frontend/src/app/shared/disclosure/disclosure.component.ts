@@ -14,9 +14,11 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
  *
  * `appearance` picks the summary chrome: `'pill'` (default) is the bordered
  * toggle button this component always rendered; `'row'` is a flat, full-width
- * list row for callers that render one `<app-disclosure>` per item in a list;
- * `'drill-in'` is a full-width Grouped-list row with the heading
- * (and optional description) on the left and a trailing chevron, for an
+ * list row (trailing chevron) for callers that render one `<app-disclosure>`
+ * per item in a list; `'row-lead'` is the same flat row with the chevron
+ * *leading*, so it reads as an expand affordance in front of the row's own
+ * content and actions; `'drill-in'` is a full-width Grouped-list row with the
+ * heading (and optional description) on the left and a trailing chevron, for an
  * advanced section that expands in place (see the Expert-settings panel).
  */
 @Component({
@@ -27,7 +29,7 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 })
 export class DisclosureComponent {
   readonly label = input<string>('');
-  readonly appearance = input<'pill' | 'row' | 'drill-in'>('pill');
+  readonly appearance = input<'pill' | 'row' | 'row-lead' | 'drill-in'>('pill');
 
   /**
    * One-way: the caller's own state decides whether `<details>` starts open,

@@ -364,10 +364,14 @@ describe('ManageActions', () => {
       pruned: 0,
       ...over,
     });
+    const emptyResponse = () => ({
+      subscriptions: [],
+      favoritesCount: 0,
+      keptCount: 0,
+      viewedCount: 0,
+    });
     const flushReload = (http: HttpTestingController): void => {
-      http
-        .expectOne(`${BASE}/api/subscriptions`)
-        .flush({ subscriptions: [], favoritesCount: 0, keptCount: 0, viewedCount: 0 });
+      http.expectOne(`${BASE}/api/subscriptions`).flush(emptyResponse());
     };
 
     let http: HttpTestingController;
@@ -391,6 +395,11 @@ describe('ManageActions', () => {
       });
       const actions = TestBed.inject(ManageActions);
       http = TestBed.inject(HttpTestingController);
+      // Resolve the store, else the post-retry quiet reload no-ops — exactly as
+      // it does before a page has loaded its subscriptions.
+      const store = TestBed.inject(SubscriptionsStore);
+      store.load();
+      http.expectOne(`${BASE}/api/subscriptions`).flush(emptyResponse());
       // Spy without a mock implementation: translate() still runs for real
       // (the shipped en/de dictionaries), so a missing `settings.health.retry.*`
       // key still resolves the same way production would — the spy only lets
@@ -403,7 +412,7 @@ describe('ManageActions', () => {
     it('POSTs a single-feed refresh scoped by feedId', () => {
       const { actions, http } = setup();
 
-      actions.retryFeed(sub);
+      actions.retryFeed(sub).subscribe();
 
       const req = http.expectOne(`${BASE}/api/refresh?feedId=${sub.feedId}`);
       expect(req.request.method).toBe('POST');
@@ -411,14 +420,16 @@ describe('ManageActions', () => {
       flushReload(http);
     });
 
-    it('shows the recovered toast and reloads when the report has no failures', () => {
+    it('emits false, toasts recovery and quietly reloads when nothing failed', () => {
       const { actions, http, toast, translate } = setup();
 
-      actions.retryFeed(sub);
+      let stillFailing: boolean | undefined;
+      actions.retryFeed(sub).subscribe((v) => (stillFailing = v));
       http
         .expectOne(`${BASE}/api/refresh?feedId=${sub.feedId}`)
         .flush(refreshReport({ failed: 0, fetched: 1, notModified: 0 }));
 
+      expect(stillFailing).toBe(false);
       expect(translate).toHaveBeenCalledWith('settings.health.retry.recovered', {
         title: sub.title,
       });
@@ -431,48 +442,44 @@ describe('ManageActions', () => {
     it('treats a pure 304 (no fetch, no failure) as recovered', () => {
       const { actions, http, translate } = setup();
 
-      actions.retryFeed(sub);
+      let stillFailing: boolean | undefined;
+      actions.retryFeed(sub).subscribe((v) => (stillFailing = v));
       http
         .expectOne(`${BASE}/api/refresh?feedId=${sub.feedId}`)
         .flush(refreshReport({ failed: 0, fetched: 0, notModified: 1 }));
 
+      expect(stillFailing).toBe(false);
       expect(translate).toHaveBeenCalledWith('settings.health.retry.recovered', {
         title: sub.title,
       });
       flushReload(http);
     });
 
-    it('shows the still-failing toast and reloads when the report carries a failure', () => {
-      const { actions, http, toast, translate } = setup();
+    it('emits true and shows no toast when the feed is still failing', () => {
+      const { actions, http, toast } = setup();
 
-      actions.retryFeed(sub);
+      let stillFailing: boolean | undefined;
+      actions.retryFeed(sub).subscribe((v) => (stillFailing = v));
       http
         .expectOne(`${BASE}/api/refresh?feedId=${sub.feedId}`)
         .flush(refreshReport({ failed: 1, fetched: 0, notModified: 0 }));
 
-      expect(translate).toHaveBeenCalledWith('settings.health.retry.stillFailing', {
-        title: sub.title,
-      });
-      expect(toast.show).toHaveBeenCalledWith(
-        expect.objectContaining({ durationMs: CONFIRMATION_DURATION_MS }),
-      );
+      expect(stillFailing).toBe(true);
+      expect(toast.show).not.toHaveBeenCalled();
       flushReload(http);
     });
 
-    it('shows the error toast and does not reload when the refresh request fails', () => {
-      const { actions, http, toast, translate } = setup();
+    it('emits true and does not reload when the refresh request fails', () => {
+      const { actions, http, toast } = setup();
 
-      actions.retryFeed(sub);
+      let stillFailing: boolean | undefined;
+      actions.retryFeed(sub).subscribe((v) => (stillFailing = v));
       http
         .expectOne(`${BASE}/api/refresh?feedId=${sub.feedId}`)
         .flush('fail', { status: 500, statusText: 'Server Error' });
 
-      expect(translate).toHaveBeenCalledWith('settings.health.retry.error', {
-        title: sub.title,
-      });
-      expect(toast.show).toHaveBeenCalledWith(
-        expect.objectContaining({ durationMs: CONFIRMATION_DURATION_MS }),
-      );
+      expect(stillFailing).toBe(true);
+      expect(toast.show).not.toHaveBeenCalled();
       http.expectNone(`${BASE}/api/subscriptions`);
     });
   });

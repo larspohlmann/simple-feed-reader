@@ -1,0 +1,68 @@
+<app-overlay-panel [heading]="heading()" cdkTrapFocus>
+  <span headerActions class="pill" [class.dead]="isGone()" [class.failing]="!isGone()">
+    {{ (isGone() ? 'settings.health.pill.dead' : 'settings.health.pill.failing') | transloco }}
+    @if (!isGone()) {
+      · {{ pluralKey('settings.health.days', daysStale()) | transloco: { count: daysStale() } }}
+    }
+  </span>
+
+  @if (feed(); as feed) {
+    <div class="hero">
+      <app-icon
+        class="hero-icon"
+        [class.dead]="isGone()"
+        [class.failing]="!isGone()"
+        [name]="statusIcon()"
+        size="md"
+      />
+      <div class="hero-body">
+        @if (feed.lastErrorMessage; as technical) {
+          <code class="hero-code">{{ technical }}</code>
+        }
+        <p class="gloss">{{ gloss() | transloco }}</p>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <span class="stat-value">{{ feed.consecutiveFailures }}</span>
+        <span class="stat-label">{{ 'settings.health.stats.failedAttempts' | transloco }}</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value warning">{{ daysStale() }}d</span>
+        <span class="stat-label">{{ 'settings.health.stats.sinceUpdate' | transloco }}</span>
+      </div>
+    </div>
+
+    <dl class="facts">
+      @if (feed.lastSuccessfulFetchAt; as lastSuccess) {
+        <dt>{{ 'settings.health.details.lastSuccess' | transloco }}</dt>
+        <dd>{{ formatDateTime(lastSuccess) }}</dd>
+      }
+      @if (feed.lastFetchedAt; as lastAttempt) {
+        <dt>{{ 'settings.health.details.lastAttempt' | transloco }}</dt>
+        <dd>{{ formatDateTime(lastAttempt) }}</dd>
+      }
+      <dt>{{ 'settings.health.details.feedUrl' | transloco }}</dt>
+      <dd>
+        <a class="feed-url" [href]="feed.feedUrl" target="_blank" rel="noopener noreferrer">
+          {{ feed.feedUrl }}
+        </a>
+      </dd>
+    </dl>
+  }
+
+  <div footer class="modal-actions">
+    <app-button block variant="primary" focusInitial data-test="dialog-retry" (click)="retry()">
+      {{ 'settings.health.action.retryNow' | transloco }}
+    </app-button>
+    <app-button
+      block
+      variant="danger-outline"
+      data-test="dialog-unsubscribe"
+      (click)="unsubscribe()"
+    >
+      {{ 'settings.health.action.unsubscribe' | transloco }}
+    </app-button>
+  </div>
+</app-overlay-panel>

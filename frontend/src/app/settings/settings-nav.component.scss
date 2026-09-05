@@ -21,14 +21,14 @@ a {
   white-space: nowrap;
 }
 
-/* Unhealthy-feed count on the Organise entry: same accent-soft pill as the
-   global .whole-word-badge/.phrase-badge (#581), scoped here since it applies
-   to one nav row rather than a whole feature's search chrome. */
+/* Unhealthy-feed count on the Organise entry: amber, matching the "Failing"
+   status pill, because the badge flags feeds that need attention rather than a
+   neutral count. */
 .badge {
   padding: 0 var(--space-2);
   border-radius: var(--radius-pill);
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--bg-warning);
+  color: var(--warning);
   font-size: var(--fs-xs);
   line-height: var(--lh-tight);
   white-space: nowrap;

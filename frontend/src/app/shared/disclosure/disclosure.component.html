@@ -1,6 +1,7 @@
 <details #details [open]="startOpen()" (toggle)="onToggle(details)">
   <summary
     [class.is-row]="appearance() === 'row'"
+    [class.is-row-lead]="appearance() === 'row-lead'"
     [class.is-drill-in]="appearance() === 'drill-in'"
   >
     <ng-content select="[summary]">{{ label() }}</ng-content>
