@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Component, TemplateRef, ViewChild, signal } from '@angular/core';
+import { Component, NgZone, TemplateRef, ViewChild, signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
@@ -104,6 +104,21 @@ function rowOpacities(f: ComponentFixture<EntryListComponent>): string[] {
   return (Array.from(rows.children) as HTMLElement[])
     .filter((child) => !child.classList.contains('foot'))
     .map((child) => child.style.opacity);
+}
+
+/** jsdom has no layout, so its scrollTop is permanently 0. Give the scroller a
+ *  real one, starting at `top`. */
+function fakeScroller(f: ComponentFixture<EntryListComponent>, top: number): HTMLElement {
+  const rows = (f.nativeElement as HTMLElement).querySelector('.rows') as HTMLElement;
+  let offset = top;
+  Object.defineProperty(rows, 'scrollTop', {
+    configurable: true,
+    get: () => offset,
+    set: (v: number) => {
+      offset = v;
+    },
+  });
+  return rows;
 }
 
 describe('EntryListComponent', () => {
@@ -1145,6 +1160,43 @@ describe('EntryListComponent', () => {
     expect(memory.save).toHaveBeenCalledWith({ kind: 'all', id: null, unread: true }, 480);
   });
 
+  // #501: driven through the real element, not the handler — the wiring is the fix.
+  describe('scroll events from the rows element', () => {
+    it('reach the handler outside the Angular zone', () => {
+      const f = mount();
+      const zones: boolean[] = [];
+      memory.save.mockImplementationOnce(() => zones.push(NgZone.isInAngularZone()));
+
+      fakeScroller(f, 480).dispatchEvent(new Event('scroll'));
+
+      expect(zones).toEqual([false]);
+    });
+
+    it('still drive the back-to-top state the template reads', () => {
+      const f = mount();
+
+      fakeScroller(f, 900).dispatchEvent(new Event('scroll'));
+
+      expect(f.componentInstance.showToTop()).toBe(true);
+    });
+
+    it('request the reading-focus frame outside the Angular zone', () => {
+      const requestedInZone: boolean[] = [];
+      const raf = jest.spyOn(window, 'requestAnimationFrame').mockImplementation(() => {
+        requestedInZone.push(NgZone.isInAngularZone());
+        return 1;
+      });
+      try {
+        // The focus effect schedules the first pass during the initial render.
+        mount();
+        expect(requestedInZone.length).toBeGreaterThan(0);
+        expect(requestedInZone).not.toContain(true);
+      } finally {
+        raf.mockRestore();
+      }
+    });
+  });
+
   it('restores the saved offset once a fresh load completes (return after a resume-reload)', () => {
     // Mount mid-load (skeletons, no scroll container yet) as on a fresh page boot.
     const f = mount({ loading: true, entries: [] });
@@ -1179,21 +1231,6 @@ describe('EntryListComponent', () => {
   // offset with it. Every case below is about handing the incoming view its own
   // place instead of inheriting that one.
   describe('scroll position across a view switch', () => {
-    /** jsdom has no layout, so its scrollTop is permanently 0. Give the scroller
-     *  a real one that starts where the previous view left it. */
-    function fakeScroller(f: ReturnType<typeof mount>, top: number): HTMLElement {
-      const rows = (f.nativeElement as HTMLElement).querySelector('.rows') as HTMLElement;
-      let offset = top;
-      Object.defineProperty(rows, 'scrollTop', {
-        configurable: true,
-        get: () => offset,
-        set: (v: number) => {
-          offset = v;
-        },
-      });
-      return rows;
-    }
-
     /** Play a load through to completion, which is what marks the rendered rows
      *  as belonging to the current selection. */
     function completeLoad(f: ReturnType<typeof mount>): void {
