@@ -5,7 +5,12 @@ import { Observable, firstValueFrom, map, tap } from 'rxjs';
 import { API_BASE_URL } from './api';
 import { Problem, parseProblem } from './problem';
 import { TokenStore } from './token.store';
-import { base64UrlToBytes, bytesToBase64Url, signalAllAcceptedCredentials } from './webauthn';
+import {
+  base64UrlToBytes,
+  bytesToBase64Url,
+  signalAllAcceptedCredentials,
+  signalUnknownCredential,
+} from './webauthn';
 
 export interface PasskeySummary {
   id: number;
@@ -68,6 +73,13 @@ interface AssertionCredentialJson {
   };
 }
 
+/** The `register` request body -- see `RegisterPasskeyRequest`. */
+interface RegistrationBody {
+  handle: string;
+  credential: RegistrationCredentialJson;
+  label: string;
+}
+
 /**
  * Drives the two WebAuthn ceremonies against the passkey endpoints (#624)
  * and is the only place that converts between the backend's base64url wire
@@ -99,13 +111,7 @@ export class PasskeyService {
         ),
       );
       const credential = await this.createCredential(options);
-      await firstValueFrom(
-        this.http.post<void>(`${this.base}/api/auth/passkey/register`, {
-          handle,
-          credential,
-          label,
-        }),
-      );
+      await this.register(options.rp.id, { handle, credential, label });
     } catch (error) {
       throw this.toProblem(error);
     }
@@ -159,6 +165,20 @@ export class PasskeyService {
       publicKey: decodeCreationOptions(options),
     })) as PublicKeyCredential;
     return encodeRegistrationCredential(credential);
+  }
+
+  /** The authenticator already holds the credential when the server refuses
+   *  it (#727), so a 4xx tells the browser to drop it. Not on status 0 or a
+   *  5xx: the row may exist and only the response was lost. */
+  private async register(rpId: string | undefined, body: RegistrationBody): Promise<void> {
+    try {
+      await firstValueFrom(this.http.post<void>(`${this.base}/api/auth/passkey/register`, body));
+    } catch (error) {
+      if (rpId && isClientRejection(error)) {
+        await signalUnknownCredential(rpId, body.credential.id);
+      }
+      throw error;
+    }
   }
 
   private async getCredential(
@@ -228,6 +248,10 @@ type WithHints<TOptions> = TOptions & { hints: PasskeyHint[] };
 /** Without this Chrome puts the QR flow first, so enrolling from a desktop
  *  saved the passkey on a phone. A preference, not a restriction. */
 const LOCAL_DEVICE_FIRST: PasskeyHint[] = ['client-device'];
+
+function isClientRejection(error: unknown): boolean {
+  return error instanceof HttpErrorResponse && error.status >= 400 && error.status < 500;
+}
 
 function decodeCreationOptions(
   json: PublicKeyCredentialCreationOptionsJSON,

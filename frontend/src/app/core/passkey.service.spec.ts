@@ -1,5 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+  TestRequest,
+} from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { API_BASE_URL } from './api';
 import { PasskeyService, PasskeySummary } from './passkey.service';
@@ -232,6 +236,87 @@ describe('PasskeyService', () => {
 
     await expect(enrolment).rejects.toMatchObject({ status: 0 });
     await expect(enrolment).rejects.not.toHaveProperty('ceremonyRejected');
+  });
+
+  describe('a credential the server refused', () => {
+    /** Runs the options + ceremony half of `enrol()` and returns the pending
+     *  register request, so each test decides only how the server answers. */
+    async function enrolUpToRegister(): Promise<{ enrolment: Promise<void>; register: TestRequest }> {
+      create.mockResolvedValue(fixtureAttestationCredential());
+      const enrolment = svc.enrol('MacBook Touch ID');
+      ctrl
+        .expectOne('https://api.test/api/auth/passkey/register/options')
+        .flush({ options: creationOptions, handle: 'register-handle' });
+      await flushMicrotasks();
+      return { enrolment, register: ctrl.expectOne('https://api.test/api/auth/passkey/register') };
+    }
+
+    // The authenticator already holds the credential the server just refused
+    // (#727); without the signal the sign-in sheet offers it forever.
+    it('tells the browser to drop it on a 4xx from register', async () => {
+      const { unknown } = installSignalApi();
+      const { enrolment, register } = await enrolUpToRegister();
+
+      register.flush(
+        { type: 'passkey_attestation_rejected', title: 'Rejected', status: 400 },
+        { status: 400, statusText: 'Bad Request' },
+      );
+
+      await expect(enrolment).rejects.toMatchObject({ status: 400 });
+      expect(unknown).toHaveBeenCalledWith({ rpId: 'test', credentialId: 'credential-id' });
+    });
+
+    // A lost response is not a refusal: the row may exist, and the signal is
+    // irreversible.
+    it('leaves the browser alone on a network failure during register', async () => {
+      const { unknown } = installSignalApi();
+      const { enrolment, register } = await enrolUpToRegister();
+
+      register.error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
+
+      await expect(enrolment).rejects.toMatchObject({ status: 0 });
+      expect(unknown).not.toHaveBeenCalled();
+    });
+
+    it('leaves the browser alone on a 5xx from register', async () => {
+      const { unknown } = installSignalApi();
+      const { enrolment, register } = await enrolUpToRegister();
+
+      register.flush(
+        { type: 'about:blank', title: 'Server error', status: 500 },
+        { status: 500, statusText: 'Internal Server Error' },
+      );
+
+      await expect(enrolment).rejects.toMatchObject({ status: 500 });
+      expect(unknown).not.toHaveBeenCalled();
+    });
+
+    // A rejected ceremony created no credential, so there is nothing to prune.
+    it('signals nothing when the ceremony itself was rejected', async () => {
+      const { unknown } = installSignalApi();
+      create.mockRejectedValue(new DOMException('User cancelled.', 'NotAllowedError'));
+
+      const enrolment = svc.enrol('MacBook Touch ID');
+      ctrl
+        .expectOne('https://api.test/api/auth/passkey/register/options')
+        .flush({ options: creationOptions, handle: 'register-handle' });
+
+      await expect(enrolment).rejects.toMatchObject({ type: 'NotAllowedError' });
+      expect(unknown).not.toHaveBeenCalled();
+    });
+
+    it('still surfaces the Problem when the browser rejects the signal', async () => {
+      const { unknown } = installSignalApi();
+      unknown.mockRejectedValue(new Error('boom'));
+      const { enrolment, register } = await enrolUpToRegister();
+
+      register.flush(
+        { type: 'passkey_attestation_rejected', title: 'Rejected', status: 400 },
+        { status: 400, statusText: 'Bad Request' },
+      );
+
+      await expect(enrolment).rejects.toMatchObject({ status: 400, title: 'Rejected' });
+    });
   });
 
   it('list unwraps the {passkeys} envelope', () => {
