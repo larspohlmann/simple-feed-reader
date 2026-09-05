@@ -103,6 +103,8 @@ final class PasskeyListTest extends ApiTestCase
         $client->request('DELETE', \sprintf('/api/auth/passkeys/%d', (int) $foreignPasskey->getId()));
 
         self::assertResponseStatusCodeSame(404);
+        self::assertSame('application/problem+json', $client->getResponse()->headers->get('Content-Type'));
+        self::assertSame('passkey_not_found', $this->payload($client)['type']);
         /** @var UserPasskeyRepository $repository */
         $repository = self::getContainer()->get(UserPasskeyRepository::class);
         self::assertNotNull($repository->find($foreignPasskey->getId()));

@@ -10,17 +10,15 @@ use App\Http\PasskeyJson;
 use App\Repository\UserPasskeyRepository;
 use App\Service\Passkey\AssertionOptionsFactory;
 use App\Service\Passkey\AttestationVerifier;
-use App\Service\Passkey\PasskeyRemovalPolicy;
+use App\Service\Passkey\PasskeyRemoval;
 use App\Service\Passkey\PasskeySignInAvailability;
 use App\Service\Passkey\RegistrationOptionsFactory;
 use App\Service\RateLimit\RateLimitGuard;
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Cache\InvalidArgumentException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -68,8 +66,7 @@ final readonly class PasskeyController
         private AssertionOptionsFactory $assertionOptionsFactory,
         private AttestationVerifier $attestationVerifier,
         private UserPasskeyRepository $passkeys,
-        private PasskeyRemovalPolicy $removalPolicy,
-        private EntityManagerInterface $em,
+        private PasskeyRemoval $removal,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $passkeyChallengeLimiter,
         private PasskeySignInAvailability $availability,
@@ -146,13 +143,7 @@ final readonly class PasskeyController
         return new JsonResponse(PasskeyJson::passkeys($this->passkeys->findForUser($user)));
     }
 
-    /**
-     * Looks the credential up by `(id, user)` in one query — never a
-     * fetch-by-id followed by an owner comparison, which is exactly the shape
-     * that would let a 403 confirm another account's credential id exists. A
-     * foreign id therefore comes back 404, indistinguishable from one that was
-     * never registered at all.
-     */
+    /** Own credential 204; a foreign or unknown id 404 — see PasskeyRemoval. */
     #[Route(
         '/api/auth/passkeys/{id}',
         name: 'api_auth_passkeys_delete',
@@ -161,12 +152,7 @@ final readonly class PasskeyController
     )]
     public function delete(int $id, #[CurrentUser] User $user): JsonResponse
     {
-        $passkey = $this->passkeys->findOneForUser($user, $id) ?? throw new NotFoundHttpException('No such passkey.');
-
-        $this->removalPolicy->guardRemoval($user, $passkey);
-
-        $this->em->remove($passkey);
-        $this->em->flush();
+        $this->removal->remove($user, $id);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
