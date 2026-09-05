@@ -31,8 +31,39 @@ describe('highlightCodeBlocks', () => {
     expect(code?.querySelector('[class^="hljs-"]')).not.toBeNull();
   });
 
-  it('leaves a one-line snippet unstyled', async () => {
-    const el = host(block('const distance = Math.hypot(deltaX, deltaY);'));
+  it('highlights a bare <pre> block that has no <code> child', async () => {
+    const el = host(
+      '<pre><span>final class</span> CreateBooksTable {\n    public function up(): void {\n        return;\n    }\n}</pre>',
+    );
+
+    await highlightCodeBlocks(el);
+
+    const pre = el.querySelector('pre');
+    expect(pre?.classList.contains('hljs')).toBe(true);
+    expect(pre?.querySelector('[class^="hljs-"]')).not.toBeNull();
+  });
+
+  it('highlights a short multi-line block', async () => {
+    const el = host(block('if (a < b) {\n  swap();\n}'));
+
+    await highlightCodeBlocks(el);
+
+    const code = el.querySelector('pre > code');
+    expect(code?.classList.contains('hljs')).toBe(true);
+    expect(code?.querySelector('[class^="hljs-"]')).not.toBeNull();
+  });
+
+  it('highlights a substantial one-liner', async () => {
+    const el = host(block("const slug = str_replace(' ', '-', title);"));
+
+    await highlightCodeBlocks(el);
+
+    const code = el.querySelector('pre > code');
+    expect(code?.classList.contains('hljs')).toBe(true);
+  });
+
+  it('leaves a trivial one-line snippet unstyled', async () => {
+    const el = host(block('const _ = 1;'));
 
     await highlightCodeBlocks(el);
 

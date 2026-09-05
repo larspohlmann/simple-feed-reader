@@ -618,8 +618,9 @@ article {
 }
 
 /* Syntax highlighting (#473). highlight.js emits `.hljs-*` token spans; map them
-   onto the mode-aware --code-* tokens so both themes stay lint-clean (no hex). */
-.content ::ng-deep code.hljs {
+   onto the mode-aware --code-* tokens so both themes stay lint-clean (no hex). The
+   highlighted container is a `<code>` or, for code-less `<pre>`, the `<pre>`. */
+.content ::ng-deep .hljs {
   color: var(--code-fg);
 }
 

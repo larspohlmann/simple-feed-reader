@@ -4,12 +4,20 @@ import type { HLJSApi, LanguageFn } from 'highlight.js';
  * Syntax-highlights reader code blocks (issue #473). `EntrySanitizer` strips the
  * publisher's `class="language-*"` hint, so the language is detected from the code
  * itself with `highlightAuto`. highlight.js and a curated language set load lazily,
- * only once an article actually carries a `<pre><code>`; the `hljs` class hljs adds
+ * only once an article actually carries a code block; the `hljs` class hljs adds
  * doubles as the idempotency marker across re-renders and the Reader/Original toggle.
+ *
+ * The block is a `<pre>`. Some feeds wrap the code in a `<code>` child, others (e.g.
+ * publisher-pretokenised markup whose classes the sanitiser stripped) put the tokens
+ * straight in the `<pre>`; either way the `<pre>` is the unit, so highlight its
+ * `<code>` child when present and the `<pre>` itself otherwise.
  */
 const HIGHLIGHTED = 'hljs';
-const MIN_LINES = 2;
-const MIN_CHARS = 40;
+
+// A multi-line block gives the detector enough shape to trust. A lone line only
+// earns highlighting once it is long enough that the guess is not a coin flip;
+// below this a trivial fragment (`const _ = 1;`) is left as plain text (#473).
+const MIN_ONE_LINER_CHARS = 25;
 
 // A small set sharpens detection and keeps the lazy chunk lean: a one- or two-token
 // snippet has fewer wrong languages to be mistaken for.
@@ -28,9 +36,9 @@ const LANGUAGE_LOADERS: Record<string, () => Promise<{ default: LanguageFn }>> =
 let enginePromise: Promise<HLJSApi> | null = null;
 
 export async function highlightCodeBlocks(host: HTMLElement): Promise<void> {
-  const pending = Array.from(host.querySelectorAll<HTMLElement>('pre > code')).filter(
-    worthHighlighting,
-  );
+  const pending = Array.from(host.querySelectorAll<HTMLElement>('pre'))
+    .map(codeContainer)
+    .filter(worthHighlighting);
   if (pending.length === 0) return;
   const hljs = await loadEngine();
   for (const block of pending) {
@@ -40,11 +48,16 @@ export async function highlightCodeBlocks(host: HTMLElement): Promise<void> {
   }
 }
 
+function codeContainer(pre: HTMLElement): HTMLElement {
+  return pre.querySelector(':scope > code') ?? pre;
+}
+
 function worthHighlighting(block: HTMLElement): boolean {
   if (block.classList.contains(HIGHLIGHTED)) return false;
   const code = (block.textContent ?? '').trim();
-  if (code.length < MIN_CHARS) return false;
-  return code.split('\n').filter((line) => line.trim().length > 0).length >= MIN_LINES;
+  const lines = code.split('\n').filter((line) => line.trim().length > 0).length;
+  if (lines >= 2) return true;
+  return code.length >= MIN_ONE_LINER_CHARS;
 }
 
 function loadEngine(): Promise<HLJSApi> {
