@@ -26,17 +26,15 @@ final class PasskeyListTest extends ApiTestCase
     use PinsPasskeyRelyingParty;
 
     /**
-     * Pinned so a future addition cannot silently widen the payload. Since
-     * #727 the body carries exactly the three values the WebAuthn Signal API
-     * needs beside the rows: the relying party id, the account's user handle,
-     * and every accepted credential id as one flat list. The public key stays
-     * out; the rows themselves are unchanged.
+     * Pinned so a future addition cannot silently widen the payload: beside
+     * the unchanged rows, exactly the three values the Signal API needs (#727).
      */
     public function testListingCarriesTheSignalValuesBesideTheUnchangedRows(): void
     {
         $client = static::createClient();
         $user = $this->factory()->create('lister@example.test');
         $this->givenAPasskeyFor($user, credentialId: 'Y3JlZC1hYmM', userHandle: 'aGFuZGxl', label: 'My phone');
+        $this->givenAPasskeyFor($user, credentialId: 'c2Vjb25k', userHandle: 'aGFuZGxl', label: 'YubiKey');
         $this->authenticate($client, 'lister@example.test');
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->serveFrom($client, 'https://example.test');
@@ -50,21 +48,16 @@ final class PasskeyListTest extends ApiTestCase
         self::assertSame(['acceptedCredentialIds', 'passkeys', 'rpId', 'userHandle'], $topLevelKeys);
         self::assertSame('example.test', $body['rpId']);
         self::assertSame('aGFuZGxl', $body['userHandle']);
-        self::assertSame(['Y3JlZC1hYmM'], $body['acceptedCredentialIds']);
+        self::assertSame(['Y3JlZC1hYmM', 'c2Vjb25k'], $body['acceptedCredentialIds']);
         $passkeys = $this->passkeysFromResponse($client);
-        self::assertCount(1, $passkeys);
+        self::assertCount(2, $passkeys);
         $rowKeys = array_keys($passkeys[0]);
         sort($rowKeys);
         self::assertSame(['createdAt', 'id', 'label', 'lastUsedAt'], $rowKeys);
         self::assertSame('My phone', $passkeys[0]['label']);
     }
 
-    /**
-     * The handle is read off the rows, never minted: a minted handle matches
-     * nothing in the browser and turns the signal into a silent no-op. With
-     * no rows there is no handle, and the client falls back to the one it
-     * remembered from before the delete.
-     */
+    /** No rows, no handle — never a minted one (see PasskeyJson::listing()). */
     public function testListingReportsNoUserHandleAndNoAcceptedIdsForAnAccountWithoutPasskeys(): void
     {
         $client = static::createClient();
@@ -79,21 +72,6 @@ final class PasskeyListTest extends ApiTestCase
         self::assertNull($body['userHandle']);
         self::assertSame([], $body['acceptedCredentialIds']);
         self::assertSame([], $body['passkeys']);
-    }
-
-    public function testAcceptedCredentialIdsListEveryStoredCredentialInCreationOrder(): void
-    {
-        $client = static::createClient();
-        $user = $this->factory()->create('two@example.test');
-        $this->givenAPasskeyFor($user, credentialId: 'Zmlyc3Q', label: 'First');
-        $this->givenAPasskeyFor($user, credentialId: 'c2Vjb25k', label: 'Second');
-        $this->authenticate($client, 'two@example.test');
-        $this->enablePasskeySignIn();
-
-        $client->request('GET', '/api/auth/passkeys');
-
-        self::assertResponseIsSuccessful();
-        self::assertSame(['Zmlyc3Q', 'c2Vjb25k'], $this->payload($client)['acceptedCredentialIds']);
     }
 
     public function testAUserCannotSeeAnotherUsersCredentialInTheList(): void
@@ -135,12 +113,7 @@ final class PasskeyListTest extends ApiTestCase
         self::assertNull($repository->find($deletedId));
     }
 
-    /**
-     * A 403 here would confirm the id belongs to SOME account; 404 makes a
-     * foreign credential indistinguishable from one that was never
-     * registered. See PasskeyController::delete()'s docblock for the query
-     * shape (`(id, user)` in one call) that this behaviour depends on.
-     */
+    /** A 403 would confirm the id belongs to SOME account — see PasskeyRemoval. */
     public function testDeletingAnotherUsersCredentialReturns404NotFound(): void
     {
         $client = static::createClient();
@@ -151,8 +124,7 @@ final class PasskeyListTest extends ApiTestCase
 
         $client->request('DELETE', \sprintf('/api/auth/passkeys/%d', (int) $foreignPasskey->getId()));
 
-        self::assertResponseStatusCodeSame(404);
-        self::assertSame('application/problem+json', $client->getResponse()->headers->get('Content-Type'));
+        $this->assertRejected($client, 404);
         self::assertSame('passkey_not_found', $this->payload($client)['type']);
         /** @var UserPasskeyRepository $repository */
         $repository = self::getContainer()->get(UserPasskeyRepository::class);
@@ -175,8 +147,7 @@ final class PasskeyListTest extends ApiTestCase
 
         $client->request('DELETE', \sprintf('/api/auth/passkeys/%d', (int) $onlyPasskey->getId()));
 
-        self::assertResponseStatusCodeSame(409);
-        self::assertSame('application/problem+json', $client->getResponse()->headers->get('Content-Type'));
+        $this->assertRejected($client, 409);
         /** @var UserPasskeyRepository $repository */
         $repository = self::getContainer()->get(UserPasskeyRepository::class);
         self::assertNotNull($repository->find($onlyPasskey->getId()));
@@ -197,8 +168,7 @@ final class PasskeyListTest extends ApiTestCase
 
         $client->request('GET', '/api/auth/passkeys');
 
-        self::assertResponseStatusCodeSame(403);
-        self::assertSame('application/problem+json', $client->getResponse()->headers->get('Content-Type'));
+        $this->assertRejected($client, 403);
     }
 
     /**

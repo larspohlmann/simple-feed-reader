@@ -97,8 +97,8 @@ export async function signalUnknownCredential(rpId: string, credentialId: string
 }
 
 /** Hands the browser one account's authoritative credential set so anything
- *  stale disappears. The list must be complete and unfiltered: a short or
- *  empty list makes the browser delete valid credentials for that user. */
+ *  stale disappears. The list must be complete: a short or empty list makes
+ *  the browser delete valid credentials for that user. */
 export async function signalAllAcceptedCredentials(
   rpId: string,
   userId: string,

@@ -22,10 +22,9 @@ use Symfony\Component\Security\Http\Authentication\AuthenticationFailureHandlerI
  * unknown email deliberately produce the identical response - distinguishing
  * them would turn the endpoint into an account-enumeration oracle.
  *
- * One deliberate exception since #727: a passkey assertion naming a
- * credential id no account holds keeps its own type, so the browser can
- * prune the dead entry. The oracle that accepts is stated on
- * UnknownPasskeyCredentialException; the timing equalizer still runs first.
+ * One deliberate exception since #727: an unknown passkey credential id keeps
+ * its own type so the browser can prune the dead entry — see
+ * UnknownPasskeyCredentialException. The timing equalizer still runs first.
  */
 final readonly class LoginFailureHandler implements AuthenticationFailureHandlerInterface
 {

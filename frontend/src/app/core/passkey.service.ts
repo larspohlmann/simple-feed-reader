@@ -19,18 +19,12 @@ export interface PasskeySummary {
   lastUsedAt: string | null;
 }
 
-/** The listing body since #727 -- see `PasskeyJson::listing()`. The id list
- *  is authoritative and goes to the browser unchanged. */
-interface PasskeyListingJson {
+/** The listing body since #727 -- see `PasskeyJson::listing()`. */
+export interface PasskeyListingJson {
   rpId: string;
   userHandle: string | null;
   acceptedCredentialIds: string[];
   passkeys: PasskeySummary[];
-}
-
-interface SignalSubject {
-  rpId: string;
-  userHandle: string;
 }
 
 /** Mediation and abort control for a login ceremony -- the only difference
@@ -105,10 +99,9 @@ export class PasskeyService {
   private readonly base = inject(API_BASE_URL);
   private readonly tokens = inject(TokenStore);
 
-  /** The last handle seen, so the sweep after deleting the LAST passkey still
-   *  has the key those credentials were created under: that response carries
-   *  `userHandle: null` and an empty list. */
-  private signalSubject: SignalSubject | null = null;
+  /** The listing after the LAST passkey's deletion carries no handle, and
+   *  the sweep needs one exactly then -- the key those credentials were created under. */
+  private lastUserHandle: string | null = null;
 
   async enrol(label: string): Promise<void> {
     try {
@@ -119,7 +112,7 @@ export class PasskeyService {
         ),
       );
       const credential = await this.createCredential(options);
-      await this.register(options.rp.id, { handle, credential, label });
+      await this.register(relyingPartyIdFor(options.rp.id), { handle, credential, label });
     } catch (error) {
       throw this.toProblem(error);
     }
@@ -153,7 +146,10 @@ export class PasskeyService {
         ),
       );
       const credential = await this.getCredential(options, ceremonyOptions);
-      const token = await this.exchangeAssertion(options.rpId, { handle, credential });
+      const token = await this.exchangeAssertion(relyingPartyIdFor(options.rpId), {
+        handle,
+        credential,
+      });
       this.tokens.set(token);
       return token;
     } catch (error) {
@@ -173,13 +169,11 @@ export class PasskeyService {
   /** The authenticator already holds the credential when the server refuses
    *  it (#727), so a 4xx tells the browser to drop it. Not on status 0 or a
    *  5xx: the row may exist and only the response was lost. */
-  private async register(rpId: string | undefined, body: RegistrationBody): Promise<void> {
+  private async register(rpId: string, body: RegistrationBody): Promise<void> {
     try {
       await firstValueFrom(this.http.post<void>(`${this.base}/api/auth/passkey/register`, body));
     } catch (error) {
-      if (rpId && isClientRejection(error)) {
-        await signalUnknownCredential(rpId, body.credential.id);
-      }
+      if (isClientRejection(error)) void signalUnknownCredential(rpId, body.credential.id);
       throw error;
     }
   }
@@ -187,16 +181,14 @@ export class PasskeyService {
   /** Signals on the ONE type that means "no account holds this id" (#727).
    *  Any other 401 -- an expired challenge above all -- names a working
    *  passkey, and the signal is irreversible. */
-  private async exchangeAssertion(rpId: string | undefined, body: AssertionBody): Promise<string> {
+  private async exchangeAssertion(rpId: string, body: AssertionBody): Promise<string> {
     try {
       const { token } = await firstValueFrom(
         this.http.post<{ token: string }>(`${this.base}/api/auth/passkey/login`, body),
       );
       return token;
     } catch (error) {
-      if (rpId && isUnknownCredential(error)) {
-        await signalUnknownCredential(rpId, body.credential.id);
-      }
+      if (isUnknownCredential(error)) void signalUnknownCredential(rpId, body.credential.id);
       throw error;
     }
   }
@@ -214,16 +206,13 @@ export class PasskeyService {
   }
 
   /** Fire-and-forget (#727): the browser drops every entry outside the
-   *  server's list. The list is passed through exactly as received -- a
-   *  rebuilt or shortened one would delete valid credentials. */
+   *  server's list, which is passed through exactly as received. */
   private pruneStaleCredentials(listing: PasskeyListingJson): void {
-    if (listing.userHandle !== null) {
-      this.signalSubject = { rpId: listing.rpId, userHandle: listing.userHandle };
-    }
-    if (!this.signalSubject) return;
+    this.lastUserHandle = listing.userHandle ?? this.lastUserHandle;
+    if (this.lastUserHandle === null) return;
     void signalAllAcceptedCredentials(
-      this.signalSubject.rpId,
-      this.signalSubject.userHandle,
+      listing.rpId,
+      this.lastUserHandle,
       listing.acceptedCredentialIds,
     );
   }
@@ -268,6 +257,12 @@ type WithHints<TOptions> = TOptions & { hints: PasskeyHint[] };
 /** Without this Chrome puts the QR flow first, so enrolling from a desktop
  *  saved the passkey on a phone. A preference, not a restriction. */
 const LOCAL_DEVICE_FIRST: PasskeyHint[] = ['client-device'];
+
+/** WebAuthn defaults an absent rp id to the page's own host; a signal must
+ *  name the relying party the ceremony actually ran under. */
+function relyingPartyIdFor(declared: string | undefined): string {
+  return declared ?? location.hostname;
+}
 
 function isClientRejection(error: unknown): boolean {
   return error instanceof HttpErrorResponse && error.status >= 400 && error.status < 500;

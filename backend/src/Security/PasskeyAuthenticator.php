@@ -100,7 +100,8 @@ final class PasskeyAuthenticator extends AbstractAuthenticator
      * AssertionVerifier's typed rejections never reach the kernel from here:
      * they're always translated into a plain AuthenticationException, so
      * LoginFailureHandler (and login_throttling upstream of it) handle every
-     * passkey failure exactly like a password one.
+     * passkey failure like a password one — save the unknown-credential type
+     * LoginFailureHandler reads off `previous` (#727).
      *
      * @param array<string, mixed> $payload
      */

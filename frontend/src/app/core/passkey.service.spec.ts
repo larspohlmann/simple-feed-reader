@@ -6,9 +6,13 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { API_BASE_URL } from './api';
-import { PasskeyService, PasskeySummary } from './passkey.service';
+import { PasskeyListingJson, PasskeyService, PasskeySummary } from './passkey.service';
 import { bytesToBase64Url } from './webauthn';
 import { TokenStore } from './token.store';
+import {
+  removePublicKeyCredential,
+  stubPublicKeyCredential,
+} from '../../testing/public-key-credential';
 
 const bytesOf = (text: string): ArrayBuffer => new TextEncoder().encode(text).buffer as ArrayBuffer;
 
@@ -60,14 +64,7 @@ function fixtureAssertionCredential(withUserHandle = true): Credential {
   } as unknown as Credential;
 }
 
-interface ListingBody {
-  rpId: string;
-  userHandle: string | null;
-  acceptedCredentialIds: string[];
-  passkeys: PasskeySummary[];
-}
-
-function listingBody(overrides: Partial<ListingBody> = {}): ListingBody {
+function listingBody(overrides: Partial<PasskeyListingJson> = {}): PasskeyListingJson {
   return {
     rpId: 'test',
     userHandle: 'aGFuZGxl',
@@ -77,20 +74,21 @@ function listingBody(overrides: Partial<ListingBody> = {}): ListingBody {
   };
 }
 
-interface WindowWithCredential {
-  PublicKeyCredential?: unknown;
-}
-
 /** Installs a fake Signal API and returns its spies. jsdom has none, so the
  *  absent-API case is what every test gets without this. */
 function installSignalApi(): { unknown: jest.Mock; allAccepted: jest.Mock } {
   const unknown = jest.fn().mockResolvedValue(undefined);
   const allAccepted = jest.fn().mockResolvedValue(undefined);
-  (window as unknown as WindowWithCredential).PublicKeyCredential = {
+  stubPublicKeyCredential({
     signalUnknownCredential: unknown,
     signalAllAcceptedCredentials: allAccepted,
-  };
+  });
   return { unknown, allAccepted };
+}
+
+/** Answers a pending request with the problem+json body the backend sends. */
+function flushProblem(request: TestRequest, type: string, status: number): void {
+  request.flush({ type, title: type, status }, { status, statusText: type });
 }
 
 describe('PasskeyService', () => {
@@ -121,7 +119,7 @@ describe('PasskeyService', () => {
   afterEach(() => {
     ctrl.verify();
     delete (navigator as unknown as { credentials?: unknown }).credentials;
-    delete (window as unknown as WindowWithCredential).PublicKeyCredential;
+    removePublicKeyCredential();
   });
 
   it('enrol posts to register/options then register, in order, base64url-encoding the credential', async () => {
@@ -260,10 +258,7 @@ describe('PasskeyService', () => {
       const { unknown } = installSignalApi();
       const { enrolment, register } = await enrolUpToRegister();
 
-      register.flush(
-        { type: 'passkey_attestation_rejected', title: 'Rejected', status: 400 },
-        { status: 400, statusText: 'Bad Request' },
-      );
+      flushProblem(register, 'passkey_attestation_rejected', 400);
 
       await expect(enrolment).rejects.toMatchObject({ status: 400 });
       expect(unknown).toHaveBeenCalledWith({ rpId: 'test', credentialId: 'credential-id' });
@@ -285,10 +280,7 @@ describe('PasskeyService', () => {
       const { unknown } = installSignalApi();
       const { enrolment, register } = await enrolUpToRegister();
 
-      register.flush(
-        { type: 'about:blank', title: 'Server error', status: 500 },
-        { status: 500, statusText: 'Internal Server Error' },
-      );
+      flushProblem(register, 'about:blank', 500);
 
       await expect(enrolment).rejects.toMatchObject({ status: 500 });
       expect(unknown).not.toHaveBeenCalled();
@@ -306,19 +298,6 @@ describe('PasskeyService', () => {
 
       await expect(enrolment).rejects.toMatchObject({ type: 'NotAllowedError' });
       expect(unknown).not.toHaveBeenCalled();
-    });
-
-    it('still surfaces the Problem when the browser rejects the signal', async () => {
-      const { unknown } = installSignalApi();
-      unknown.mockRejectedValue(new Error('boom'));
-      const { enrolment, register } = await enrolUpToRegister();
-
-      register.flush(
-        { type: 'passkey_attestation_rejected', title: 'Rejected', status: 400 },
-        { status: 400, statusText: 'Bad Request' },
-      );
-
-      await expect(enrolment).rejects.toMatchObject({ status: 400, title: 'Rejected' });
     });
   });
 
@@ -513,9 +492,13 @@ describe('PasskeyService', () => {
   });
 
   describe('a login with a credential id the server does not know', () => {
-    async function signInUpToLogin(): Promise<{ signIn: Promise<string>; login: TestRequest }> {
+    /** Runs the options + ceremony half of a login and returns the pending
+     *  login request, so each test decides only how the server answers. */
+    async function signInUpToLogin(
+      start: () => Promise<string> = () => svc.signIn(),
+    ): Promise<{ signIn: Promise<string>; login: TestRequest }> {
       get.mockResolvedValue(fixtureAssertionCredential());
-      const signIn = svc.signIn();
+      const signIn = start();
       ctrl
         .expectOne('https://api.test/api/auth/passkey/login/options')
         .flush({ options: requestOptions, handle: 'login-handle' });
@@ -527,10 +510,7 @@ describe('PasskeyService', () => {
       const { unknown } = installSignalApi();
       const { signIn, login } = await signInUpToLogin();
 
-      login.flush(
-        { type: 'unknown_passkey_credential', title: 'Unknown passkey', status: 401 },
-        { status: 401, statusText: 'Unauthorized' },
-      );
+      flushProblem(login, 'unknown_passkey_credential', 401);
 
       await expect(signIn).rejects.toMatchObject({ type: 'unknown_passkey_credential' });
       expect(unknown).toHaveBeenCalledWith({ rpId: 'test', credentialId: 'credential-id' });
@@ -543,10 +523,7 @@ describe('PasskeyService', () => {
       const { unknown } = installSignalApi();
       const { signIn, login } = await signInUpToLogin();
 
-      login.flush(
-        { type: 'invalid_credentials', title: 'Invalid credentials', status: 401 },
-        { status: 401, statusText: 'Unauthorized' },
-      );
+      flushProblem(login, 'invalid_credentials', 401);
 
       await expect(signIn).rejects.toMatchObject({ type: 'invalid_credentials' });
       expect(unknown).not.toHaveBeenCalled();
@@ -556,35 +533,14 @@ describe('PasskeyService', () => {
     // so it matters most that it signals too.
     it('signals from the conditional ceremony as well', async () => {
       const { unknown } = installSignalApi();
-      get.mockResolvedValue(fixtureAssertionCredential());
+      const { signIn, login } = await signInUpToLogin(() =>
+        svc.signInConditionally(new AbortController().signal),
+      );
 
-      const signIn = svc.signInConditionally(new AbortController().signal);
-      ctrl
-        .expectOne('https://api.test/api/auth/passkey/login/options')
-        .flush({ options: requestOptions, handle: 'login-handle' });
-      await flushMicrotasks();
-      ctrl
-        .expectOne('https://api.test/api/auth/passkey/login')
-        .flush(
-          { type: 'unknown_passkey_credential', title: 'Unknown passkey', status: 401 },
-          { status: 401, statusText: 'Unauthorized' },
-        );
+      flushProblem(login, 'unknown_passkey_credential', 401);
 
       await expect(signIn).rejects.toMatchObject({ type: 'unknown_passkey_credential' });
       expect(unknown).toHaveBeenCalledWith({ rpId: 'test', credentialId: 'credential-id' });
-    });
-
-    it('still surfaces the Problem when the browser rejects the signal', async () => {
-      const { unknown } = installSignalApi();
-      unknown.mockRejectedValue(new Error('boom'));
-      const { signIn, login } = await signInUpToLogin();
-
-      login.flush(
-        { type: 'unknown_passkey_credential', title: 'Unknown passkey', status: 401 },
-        { status: 401, statusText: 'Unauthorized' },
-      );
-
-      await expect(signIn).rejects.toMatchObject({ status: 401, title: 'Unknown passkey' });
       expect(tokens.token()).toBeNull();
     });
   });

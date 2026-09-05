@@ -133,9 +133,8 @@ final readonly class AssertionVerifier
 
     /**
      * `credential_id` is unique across every account (UserPasskey's own
-     * unique constraint), so this lookup carries no user. Its own exception
-     * type, not AssertionRejectedException: the client prunes the dead
-     * browser entry on this case alone (#727).
+     * unique constraint), so this lookup carries no user. A miss keeps its
+     * own type (#727) — see UnknownPasskeyCredentialException.
      */
     private function resolveCredential(string $rawCredentialId): UserPasskey
     {

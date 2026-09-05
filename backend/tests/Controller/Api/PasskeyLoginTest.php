@@ -809,10 +809,4 @@ final class PasskeyLoginTest extends ApiTestCase
 
         return $claims;
     }
-
-    private function assertRejected(KernelBrowser $client, int $status): void
-    {
-        self::assertResponseStatusCodeSame($status);
-        self::assertSame('application/problem+json', $client->getResponse()->headers->get('Content-Type'));
-    }
 }

@@ -193,8 +193,9 @@ final class PasskeyRegistrationTest extends ApiTestCase
         self::assertSame(1, $repository->countForUser($user));
         $body = $this->payload($client);
         self::assertSame('example.test', $body['rpId']);
-        self::assertSame($this->onlyStoredPasskeyFor($user)->getUserHandle(), $body['userHandle']);
-        self::assertSame([$this->onlyStoredPasskeyFor($user)->getCredentialId()], $body['acceptedCredentialIds']);
+        $stored = $this->onlyStoredPasskeyFor($user);
+        self::assertSame($stored->getUserHandle(), $body['userHandle']);
+        self::assertSame([$stored->getCredentialId()], $body['acceptedCredentialIds']);
     }
 
     /** Spec §5.2: a user who enrols from Settings is never shown the one-time offer again. */
@@ -884,11 +885,5 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $passkeys = $body['passkeys'];
 
         return $passkeys;
-    }
-
-    private function assertRejected(KernelBrowser $client, int $status): void
-    {
-        self::assertResponseStatusCodeSame($status);
-        self::assertSame('application/problem+json', $client->getResponse()->headers->get('Content-Type'));
     }
 }

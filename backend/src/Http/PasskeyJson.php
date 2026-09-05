@@ -8,11 +8,8 @@ use App\Entity\UserPasskey;
 
 /**
  * The passkey listing body (#624), widened in #727 with the three values the
- * WebAuthn Signal API needs: the relying party id, the account's user handle,
- * and every accepted credential id as ONE flat authoritative list the client
- * hands to the browser unchanged — a rebuilt or shortened list makes the
- * browser delete valid credentials. `register/options` already discloses all
- * three to the same authenticated user, so this exposes nothing new.
+ * WebAuthn Signal API needs. `register/options` already discloses all three
+ * to the same authenticated user, so this exposes nothing new.
  *
  * The two options factories already return their body in its final wire
  * shape — the identical `{options, handle}` for both ceremonies — so they
@@ -27,9 +24,11 @@ use App\Entity\UserPasskey;
 final readonly class PasskeyJson
 {
     /**
-     * `userHandle` is read off the rows, never minted: the browser ignores a
-     * handle that matches nothing, so a fresh one would make the signal a
-     * silent no-op. Null with no rows.
+     * `acceptedCredentialIds` is ONE flat authoritative list the client hands
+     * to the browser unchanged: a rebuilt or shortened list deletes valid
+     * credentials. `userHandle` is read off the rows, never minted — a handle
+     * that matches nothing makes the signal a silent no-op — so it is null
+     * with no rows.
      *
      * @param list<UserPasskey> $passkeys
      *
