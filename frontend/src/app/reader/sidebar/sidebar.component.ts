@@ -36,8 +36,13 @@ import { AiAvailabilityService } from '../../core/ai-availability.service';
 import { LayoutService } from '../layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 
-/** What a sidebar drop target represents: a tag to add, or the untagged bucket. */
+/** What a sidebar drop source or target represents: a tag, or the untagged bucket. */
 export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
+
+const tagIdOf = (data: DropData): number | null => (data.kind === 'tag' ? data.tag.id : null);
+
+const sameTagSet = (a: readonly number[], b: readonly number[]): boolean =>
+  a.length === b.length && a.every((id) => b.includes(id));
 
 /** localStorage keys holding whether each sidebar section is collapsed.
  *  Namespaced under `sfr.*` like the other persisted UI preferences. */
@@ -114,7 +119,8 @@ export class SidebarComponent {
   // Semantic "settled search term" output, not a DOM element's search event.
   // eslint-disable-next-line @angular-eslint/no-output-native
   readonly search = output<string>();
-  /** A feed was dropped onto a tag (add) or onto Feeds (clear). */
+  /** A feed was dragged between tags; the payload carries its new complete tag
+   *  set (the source tag removed, the target tag added). */
   readonly retag = output<{ sub: SubscriptionDto; tagIds: number[] }>();
   /** Tags were reordered — the full tag id list in its new order. */
   readonly reorderTags = output<number[]>();
@@ -305,15 +311,15 @@ export class SidebarComponent {
     this.dropHover.set(null);
   }
 
-  /** A drop on a tag's header: reorder the tags (tag drag) or add the tag to a
-   *  feed (feed drag). Header lists are single-item, so a tag reorder is a
+  /** A drop on a tag's header: reorder the tags (tag drag) or move a feed onto
+   *  the tag (feed drag). Header lists are single-item, so a tag reorder is a
    *  transfer between two header lists rather than an in-list sort. */
   onTagHeadDrop(event: CdkDragDrop<DropData>): void {
     this.dropHover.set(null);
     const target = event.container.data;
 
     if (isSubscriptionDrag(event.item.data)) {
-      this.assignOrClear(event.item.data, target);
+      this.moveBetweenTags(event.item.data, event.previousContainer.data, target);
       return;
     }
     if (target.kind !== 'tag') return;
@@ -350,21 +356,19 @@ export class SidebarComponent {
     }
 
     if (isSubscriptionDrag(event.item.data)) {
-      this.assignOrClear(event.item.data, target);
+      this.moveBetweenTags(event.item.data, event.previousContainer.data, target);
     }
   }
 
-  /** Add the target tag to a feed, or clear all its tags when dropped on Feeds. */
-  private assignOrClear(sub: SubscriptionDto, target: DropData): void {
+  /** Move a feed between tags: drop the tag it was dragged from, add the tag it
+   *  lands on. A drop on the untagged bucket only removes the source tag, so a
+   *  feed keeps its other tags. Emits nothing when the set would not change. */
+  private moveBetweenTags(sub: SubscriptionDto, source: DropData, target: DropData): void {
     const current = sub.tags.map((t) => t.id);
-    let tagIds: number[];
-    if (target.kind === 'tag') {
-      if (current.includes(target.tag.id)) return;
-      tagIds = [...current, target.tag.id];
-    } else {
-      if (current.length === 0) return;
-      tagIds = [];
-    }
+    const tagIds = current.filter((id) => id !== tagIdOf(source));
+    const added = tagIdOf(target);
+    if (added !== null && !tagIds.includes(added)) tagIds.push(added);
+    if (sameTagSet(current, tagIds)) return;
     this.retag.emit({ sub, tagIds });
   }
 
