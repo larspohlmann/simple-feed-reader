@@ -20,10 +20,12 @@ $light: (
   on-accent: #fff,
   danger: #b3403a,
   bg-danger: #f7e9e8,
+  border-danger: #cf7a75,
   success: #3f7a52,
   bg-success: #e9f1ec,
   warning: #8a5a00,
   bg-warning: #fbf0d9,
+  border-warning: #c99a3a,
   // Favicons already sit on a light surface here, so no chip is needed.
   favicon-backdrop: transparent,
 );
@@ -44,10 +46,12 @@ $dark: (
   on-accent: #0f1a17,
   danger: #d98a86,
   bg-danger: #2a1e1d,
+  border-danger: #6b3a36,
   success: #7faf8c,
   bg-success: #1c2620,
   warning: #e6b768,
   bg-warning: #302611,
+  border-warning: #5a4a22,
   // A soft near-white chip behind favicons so dark-ink logos on a transparent
   // background (e.g. Die Zeit) stay legible against the dark surface.
   favicon-backdrop: #e8e8e6,
