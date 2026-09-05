@@ -422,12 +422,15 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringContainsString('First substantial paragraph', (string) $result->contentHtml);
     }
 
-    public function testAcceptsTheStringFormOfTheJsonLdDeclaration(): void
+    public function testAPremiumDeclarationWithoutAGatedBlockDoesNotFlag(): void
     {
+        // The fixture declares the article premium (string "False") but serves
+        // the full body with no gated block below it, as mopo.de does for its
+        // MOPO+ articles. The declaration alone must not mark a preview.
         $result = $this->extractFixture('article-paywalled-jsonld-string.html');
 
         self::assertTrue($result->ok);
-        self::assertTrue($result->paywalled);
+        self::assertFalse($result->paywalled);
     }
 
     public function testFlagsAPaywallBlockBelowTheExtractedPreview(): void

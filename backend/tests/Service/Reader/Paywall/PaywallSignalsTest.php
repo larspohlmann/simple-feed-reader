@@ -17,14 +17,39 @@ final class PaywallSignalsTest extends TestCase
         . '<button>Claim my free post</button></div>';
     private const string PREVIEW_BODY = self::FIRST . self::SECOND;
 
-    public function testTheJsonLdDeclarationAloneFlagsAPaywall(): void
+    public function testAPremiumDeclarationWithoutATruncatedBodyDoesNotFlag(): void
     {
+        // The publisher marks the article premium, but the reader extracted the
+        // whole body and no gated block stands below it. mopo.de serves its
+        // MOPO+ articles in full server-side; the banner would be wrong.
         $signals = $this->signals($this->page(self::PREVIEW_BODY, '{"@type":"Article","isAccessibleForFree":false}'));
+
+        self::assertFalse($signals->isPreview(self::PREVIEW_BODY));
+    }
+
+    public function testAPremiumDeclarationWithAGatedBlockBelowFlagsAPreview(): void
+    {
+        $signals = $this->signals(
+            $this->page(self::PREVIEW_BODY . self::CTA, '{"@type":"Article","isAccessibleForFree":false}'),
+        );
 
         self::assertTrue($signals->isPreview(self::PREVIEW_BODY));
     }
 
-    public function testAJsonLdFreeDeclarationDecidesAloneOverAPaywallBlock(): void
+    public function testAMopoStylePremiumTemplateWithTheFullBodyIsNotAPreview(): void
+    {
+        // NewsArticle isAccessibleForFree:false with a free hasPart, the full
+        // article served server-side, and `has-paywall` only on <body>.
+        $jsonLd = '{"@type":"NewsArticle","isAccessibleForFree":false,'
+            . '"hasPart":{"@type":"WebPageElement","isAccessibleForFree":true,"cssSelector":".teaser"}}';
+        $page = '<html><head><script type="application/ld+json">' . $jsonLd . '</script></head>'
+            . '<body class="article has-paywall"><nav><a href="/">Home</a></nav>'
+            . '<article><h1>Headline</h1>' . self::PREVIEW_BODY . '</article></body></html>';
+
+        self::assertFalse($this->signals($page)->isPreview(self::PREVIEW_BODY));
+    }
+
+    public function testAFreeDeclarationIsTrustedOverAPaywallBlock(): void
     {
         $signals = $this->signals(
             $this->page(self::PREVIEW_BODY . self::CTA, '{"@type":"Article","isAccessibleForFree":true}'),
@@ -85,10 +110,11 @@ final class PaywallSignalsTest extends TestCase
         self::assertFalse($signals->isPreview($html));
     }
 
-    public function testAPageWithoutADocumentCanOnlyBeDeclaredPaywalled(): void
+    public function testAPageWithoutADocumentIsNeverAPreview(): void
     {
+        // No parsed document leaves no content to corroborate a declaration.
         self::assertFalse(PaywallSignals::fromPage('', null)->isPreview(self::PREVIEW_BODY));
-        self::assertTrue(
+        self::assertFalse(
             PaywallSignals::fromPage(
                 '<script type="application/ld+json">{"isAccessibleForFree":"False"}</script>',
                 null,
