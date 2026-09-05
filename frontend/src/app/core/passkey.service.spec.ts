@@ -241,7 +241,10 @@ describe('PasskeyService', () => {
   describe('a credential the server refused', () => {
     /** Runs the options + ceremony half of `enrol()` and returns the pending
      *  register request, so each test decides only how the server answers. */
-    async function enrolUpToRegister(): Promise<{ enrolment: Promise<void>; register: TestRequest }> {
+    async function enrolUpToRegister(): Promise<{
+      enrolment: Promise<void>;
+      register: TestRequest;
+    }> {
       create.mockResolvedValue(fixtureAttestationCredential());
       const enrolment = svc.enrol('MacBook Touch ID');
       ctrl
@@ -506,6 +509,83 @@ describe('PasskeyService', () => {
       type: expect.any(String),
       title: expect.any(String),
       status: expect.any(Number),
+    });
+  });
+
+  describe('a login with a credential id the server does not know', () => {
+    async function signInUpToLogin(): Promise<{ signIn: Promise<string>; login: TestRequest }> {
+      get.mockResolvedValue(fixtureAssertionCredential());
+      const signIn = svc.signIn();
+      ctrl
+        .expectOne('https://api.test/api/auth/passkey/login/options')
+        .flush({ options: requestOptions, handle: 'login-handle' });
+      await flushMicrotasks();
+      return { signIn, login: ctrl.expectOne('https://api.test/api/auth/passkey/login') };
+    }
+
+    it('tells the browser to drop it on the unknown_passkey_credential type', async () => {
+      const { unknown } = installSignalApi();
+      const { signIn, login } = await signInUpToLogin();
+
+      login.flush(
+        { type: 'unknown_passkey_credential', title: 'Unknown passkey', status: 401 },
+        { status: 401, statusText: 'Unauthorized' },
+      );
+
+      await expect(signIn).rejects.toMatchObject({ type: 'unknown_passkey_credential' });
+      expect(unknown).toHaveBeenCalledWith({ rpId: 'test', credentialId: 'credential-id' });
+    });
+
+    // Every other 401 -- an expired challenge above all, likely under
+    // conditional mediation -- names a WORKING passkey. Pruning it would be
+    // worse than the orphan #727 exists for.
+    it('leaves the browser alone on any other 401', async () => {
+      const { unknown } = installSignalApi();
+      const { signIn, login } = await signInUpToLogin();
+
+      login.flush(
+        { type: 'invalid_credentials', title: 'Invalid credentials', status: 401 },
+        { status: 401, statusText: 'Unauthorized' },
+      );
+
+      await expect(signIn).rejects.toMatchObject({ type: 'invalid_credentials' });
+      expect(unknown).not.toHaveBeenCalled();
+    });
+
+    // Conditional mediation is the path that keeps re-offering a dead entry,
+    // so it matters most that it signals too.
+    it('signals from the conditional ceremony as well', async () => {
+      const { unknown } = installSignalApi();
+      get.mockResolvedValue(fixtureAssertionCredential());
+
+      const signIn = svc.signInConditionally(new AbortController().signal);
+      ctrl
+        .expectOne('https://api.test/api/auth/passkey/login/options')
+        .flush({ options: requestOptions, handle: 'login-handle' });
+      await flushMicrotasks();
+      ctrl
+        .expectOne('https://api.test/api/auth/passkey/login')
+        .flush(
+          { type: 'unknown_passkey_credential', title: 'Unknown passkey', status: 401 },
+          { status: 401, statusText: 'Unauthorized' },
+        );
+
+      await expect(signIn).rejects.toMatchObject({ type: 'unknown_passkey_credential' });
+      expect(unknown).toHaveBeenCalledWith({ rpId: 'test', credentialId: 'credential-id' });
+    });
+
+    it('still surfaces the Problem when the browser rejects the signal', async () => {
+      const { unknown } = installSignalApi();
+      unknown.mockRejectedValue(new Error('boom'));
+      const { signIn, login } = await signInUpToLogin();
+
+      login.flush(
+        { type: 'unknown_passkey_credential', title: 'Unknown passkey', status: 401 },
+        { status: 401, statusText: 'Unauthorized' },
+      );
+
+      await expect(signIn).rejects.toMatchObject({ status: 401, title: 'Unknown passkey' });
+      expect(tokens.token()).toBeNull();
     });
   });
 });

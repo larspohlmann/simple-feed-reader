@@ -80,11 +80,19 @@ interface RegistrationBody {
   label: string;
 }
 
+/** The `login` request body PasskeyAuthenticator reads. */
+interface AssertionBody {
+  handle: string;
+  credential: AssertionCredentialJson;
+}
+
 /**
  * Drives the two WebAuthn ceremonies against the passkey endpoints (#624)
  * and is the only place that converts between the backend's base64url wire
  * contract and the `ArrayBuffer`s `navigator.credentials` deals in -- see
- * `core/webauthn.ts`'s docblock for why that boundary matters.
+ * `core/webauthn.ts`'s docblock for why that boundary matters. Since #727 it
+ * is also the only caller of the Signal API helpers in core/webauthn.ts,
+ * which prune stale entries from the browser's password manager.
  *
  * A rejected ceremony (the user cancels the platform prompt, an
  * authenticator errors) throws a `Problem`, the same shape every other API
@@ -145,12 +153,7 @@ export class PasskeyService {
         ),
       );
       const credential = await this.getCredential(options, ceremonyOptions);
-      const { token } = await firstValueFrom(
-        this.http.post<{ token: string }>(`${this.base}/api/auth/passkey/login`, {
-          handle,
-          credential,
-        }),
-      );
+      const token = await this.exchangeAssertion(options.rpId, { handle, credential });
       this.tokens.set(token);
       return token;
     } catch (error) {
@@ -175,6 +178,23 @@ export class PasskeyService {
       await firstValueFrom(this.http.post<void>(`${this.base}/api/auth/passkey/register`, body));
     } catch (error) {
       if (rpId && isClientRejection(error)) {
+        await signalUnknownCredential(rpId, body.credential.id);
+      }
+      throw error;
+    }
+  }
+
+  /** Signals on the ONE type that means "no account holds this id" (#727).
+   *  Any other 401 -- an expired challenge above all -- names a working
+   *  passkey, and the signal is irreversible. */
+  private async exchangeAssertion(rpId: string | undefined, body: AssertionBody): Promise<string> {
+    try {
+      const { token } = await firstValueFrom(
+        this.http.post<{ token: string }>(`${this.base}/api/auth/passkey/login`, body),
+      );
+      return token;
+    } catch (error) {
+      if (rpId && isUnknownCredential(error)) {
         await signalUnknownCredential(rpId, body.credential.id);
       }
       throw error;
@@ -251,6 +271,15 @@ const LOCAL_DEVICE_FIRST: PasskeyHint[] = ['client-device'];
 
 function isClientRejection(error: unknown): boolean {
   return error instanceof HttpErrorResponse && error.status >= 400 && error.status < 500;
+}
+
+/** `UnknownPasskeyCredentialException::$type` on the backend. */
+const UNKNOWN_PASSKEY_CREDENTIAL = 'unknown_passkey_credential';
+
+function isUnknownCredential(error: unknown): boolean {
+  return (
+    error instanceof HttpErrorResponse && parseProblem(error).type === UNKNOWN_PASSKEY_CREDENTIAL
+  );
 }
 
 function decodeCreationOptions(
