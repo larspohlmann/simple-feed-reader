@@ -56,6 +56,39 @@ function fixtureAssertionCredential(withUserHandle = true): Credential {
   } as unknown as Credential;
 }
 
+interface ListingBody {
+  rpId: string;
+  userHandle: string | null;
+  acceptedCredentialIds: string[];
+  passkeys: PasskeySummary[];
+}
+
+function listingBody(overrides: Partial<ListingBody> = {}): ListingBody {
+  return {
+    rpId: 'test',
+    userHandle: 'aGFuZGxl',
+    acceptedCredentialIds: ['Y3JlZC1hYmM'],
+    passkeys: [],
+    ...overrides,
+  };
+}
+
+interface WindowWithCredential {
+  PublicKeyCredential?: unknown;
+}
+
+/** Installs a fake Signal API and returns its spies. jsdom has none, so the
+ *  absent-API case is what every test gets without this. */
+function installSignalApi(): { unknown: jest.Mock; allAccepted: jest.Mock } {
+  const unknown = jest.fn().mockResolvedValue(undefined);
+  const allAccepted = jest.fn().mockResolvedValue(undefined);
+  (window as unknown as WindowWithCredential).PublicKeyCredential = {
+    signalUnknownCredential: unknown,
+    signalAllAcceptedCredentials: allAccepted,
+  };
+  return { unknown, allAccepted };
+}
+
 describe('PasskeyService', () => {
   let svc: PasskeyService;
   let ctrl: HttpTestingController;
@@ -84,6 +117,7 @@ describe('PasskeyService', () => {
   afterEach(() => {
     ctrl.verify();
     delete (navigator as unknown as { credentials?: unknown }).credentials;
+    delete (window as unknown as WindowWithCredential).PublicKeyCredential;
   });
 
   it('enrol posts to register/options then register, in order, base64url-encoding the credential', async () => {
@@ -201,18 +235,81 @@ describe('PasskeyService', () => {
   });
 
   it('list unwraps the {passkeys} envelope', () => {
-    let result: PasskeySummary[] | undefined;
-    svc.list().subscribe((passkeys) => (result = passkeys));
+    const passkeys: PasskeySummary[] = [
+      { id: 1, label: 'Phone', createdAt: '2026-08-01T00:00:00Z', lastUsedAt: null },
+    ];
+    let received: PasskeySummary[] | undefined;
 
-    ctrl.expectOne('https://api.test/api/auth/passkeys').flush({
-      passkeys: [
-        { id: 1, label: 'Phone', createdAt: '2026-08-01T00:00:00+00:00', lastUsedAt: null },
-      ],
+    svc.list().subscribe((list) => (received = list));
+    ctrl.expectOne('https://api.test/api/auth/passkeys').flush(listingBody({ passkeys }));
+
+    expect(received).toEqual(passkeys);
+  });
+
+  describe('pruning stale passkeys from the browser on every listing', () => {
+    it('hands the browser the authoritative set exactly as the server sent it', async () => {
+      const { allAccepted } = installSignalApi();
+
+      svc.list().subscribe();
+      ctrl
+        .expectOne('https://api.test/api/auth/passkeys')
+        .flush(listingBody({ acceptedCredentialIds: ['Zmlyc3Q', 'c2Vjb25k'] }));
+      await flushMicrotasks();
+
+      expect(allAccepted).toHaveBeenCalledWith({
+        rpId: 'test',
+        userId: 'aGFuZGxl',
+        allAcceptedCredentialIds: ['Zmlyc3Q', 'c2Vjb25k'],
+      });
     });
 
-    expect(result).toEqual([
-      { id: 1, label: 'Phone', createdAt: '2026-08-01T00:00:00+00:00', lastUsedAt: null },
-    ]);
+    // After the LAST passkey is deleted the server has no handle to send, and
+    // the sweep needs one exactly then. The handle from the listing before
+    // the delete is the key those credentials were created under.
+    it('uses the remembered handle when the account has no passkeys left', async () => {
+      const { allAccepted } = installSignalApi();
+
+      svc.list().subscribe();
+      ctrl.expectOne('https://api.test/api/auth/passkeys').flush(listingBody());
+      svc.list().subscribe();
+      ctrl
+        .expectOne('https://api.test/api/auth/passkeys')
+        .flush(listingBody({ userHandle: null, acceptedCredentialIds: [] }));
+      await flushMicrotasks();
+
+      expect(allAccepted).toHaveBeenLastCalledWith({
+        rpId: 'test',
+        userId: 'aGFuZGxl',
+        allAcceptedCredentialIds: [],
+      });
+    });
+
+    it('signals nothing when no handle was ever seen', async () => {
+      const { allAccepted } = installSignalApi();
+
+      svc.list().subscribe();
+      ctrl
+        .expectOne('https://api.test/api/auth/passkeys')
+        .flush(listingBody({ userHandle: null, acceptedCredentialIds: [] }));
+      await flushMicrotasks();
+
+      expect(allAccepted).not.toHaveBeenCalled();
+    });
+
+    it('still delivers the rows when the browser rejects the signal', async () => {
+      const { allAccepted } = installSignalApi();
+      allAccepted.mockRejectedValue(new Error('boom'));
+      const passkeys: PasskeySummary[] = [
+        { id: 1, label: 'Phone', createdAt: '2026-08-01T00:00:00Z', lastUsedAt: null },
+      ];
+      let received: PasskeySummary[] | undefined;
+
+      svc.list().subscribe((list) => (received = list));
+      ctrl.expectOne('https://api.test/api/auth/passkeys').flush(listingBody({ passkeys }));
+      await flushMicrotasks();
+
+      expect(received).toEqual(passkeys);
+    });
   });
 
   it('remove deletes by id', () => {

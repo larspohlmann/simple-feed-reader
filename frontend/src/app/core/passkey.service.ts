@@ -1,17 +1,31 @@
 // src/app/core/passkey.service.ts
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, firstValueFrom, map } from 'rxjs';
+import { Observable, firstValueFrom, map, tap } from 'rxjs';
 import { API_BASE_URL } from './api';
 import { Problem, parseProblem } from './problem';
 import { TokenStore } from './token.store';
-import { base64UrlToBytes, bytesToBase64Url } from './webauthn';
+import { base64UrlToBytes, bytesToBase64Url, signalAllAcceptedCredentials } from './webauthn';
 
 export interface PasskeySummary {
   id: number;
   label: string;
   createdAt: string;
   lastUsedAt: string | null;
+}
+
+/** The listing body since #727 -- see `PasskeyJson::listing()`. The id list
+ *  is authoritative and goes to the browser unchanged. */
+interface PasskeyListingJson {
+  rpId: string;
+  userHandle: string | null;
+  acceptedCredentialIds: string[];
+  passkeys: PasskeySummary[];
+}
+
+interface SignalSubject {
+  rpId: string;
+  userHandle: string;
 }
 
 /** Mediation and abort control for a login ceremony -- the only difference
@@ -71,6 +85,11 @@ export class PasskeyService {
   private readonly base = inject(API_BASE_URL);
   private readonly tokens = inject(TokenStore);
 
+  /** The last handle seen, so the sweep after deleting the LAST passkey still
+   *  has the key those credentials were created under: that response carries
+   *  `userHandle: null` and an empty list. */
+  private signalSubject: SignalSubject | null = null;
+
   async enrol(label: string): Promise<void> {
     try {
       const { options, handle } = await firstValueFrom(
@@ -93,9 +112,10 @@ export class PasskeyService {
   }
 
   list(): Observable<PasskeySummary[]> {
-    return this.http
-      .get<{ passkeys: PasskeySummary[] }>(`${this.base}/api/auth/passkeys`)
-      .pipe(map((response) => response.passkeys));
+    return this.http.get<PasskeyListingJson>(`${this.base}/api/auth/passkeys`).pipe(
+      tap((listing) => this.pruneStaleCredentials(listing)),
+      map((listing) => listing.passkeys),
+    );
   }
 
   remove(id: number): Observable<void> {
@@ -151,6 +171,21 @@ export class PasskeyService {
       signal: ceremonyOptions.signal,
     })) as PublicKeyCredential;
     return encodeAssertionCredential(credential);
+  }
+
+  /** Fire-and-forget (#727): the browser drops every entry outside the
+   *  server's list. The list is passed through exactly as received -- a
+   *  rebuilt or shortened one would delete valid credentials. */
+  private pruneStaleCredentials(listing: PasskeyListingJson): void {
+    if (listing.userHandle !== null) {
+      this.signalSubject = { rpId: listing.rpId, userHandle: listing.userHandle };
+    }
+    if (!this.signalSubject) return;
+    void signalAllAcceptedCredentials(
+      this.signalSubject.rpId,
+      this.signalSubject.userHandle,
+      listing.acceptedCredentialIds,
+    );
   }
 
   /** Every failure this service can throw -- a rejected HTTP call or a
