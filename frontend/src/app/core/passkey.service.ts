@@ -1,9 +1,10 @@
 // src/app/core/passkey.service.ts
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, firstValueFrom, map, tap } from 'rxjs';
+import { Observable, defer, firstValueFrom, map, tap } from 'rxjs';
 import { API_BASE_URL } from './api';
-import { Problem, parseProblem } from './problem';
+import { Problem, outcomeIsUnproven, parseProblem } from './problem';
+import { onIdentityChange } from './session-identity';
 import { TokenStore } from './token.store';
 import {
   base64UrlToBytes,
@@ -19,7 +20,7 @@ export interface PasskeySummary {
   lastUsedAt: string | null;
 }
 
-/** The listing body since #727 -- see `PasskeyJson::listing()`. */
+/** The listing body -- see `PasskeyJson::listing()`. */
 export interface PasskeyListingJson {
   rpId: string;
   userHandle: string | null;
@@ -84,9 +85,9 @@ interface AssertionBody {
  * Drives the two WebAuthn ceremonies against the passkey endpoints (#624)
  * and is the only place that converts between the backend's base64url wire
  * contract and the `ArrayBuffer`s `navigator.credentials` deals in -- see
- * `core/webauthn.ts`'s docblock for why that boundary matters. Since #727 it
- * is also the only caller of the Signal API helpers in core/webauthn.ts,
- * which prune stale entries from the browser's password manager.
+ * `core/webauthn.ts`'s docblock for why that boundary matters. It is also
+ * the only caller of that file's Signal API helpers, which prune stale
+ * entries from the browser's password manager (#727).
  *
  * A rejected ceremony (the user cancels the platform prompt, an
  * authenticator errors) throws a `Problem`, the same shape every other API
@@ -99,9 +100,20 @@ export class PasskeyService {
   private readonly base = inject(API_BASE_URL);
   private readonly tokens = inject(TokenStore);
 
-  /** The listing after the LAST passkey's deletion carries no handle, and
-   *  the sweep needs one exactly then -- the key those credentials were created under. */
+  /** The listing after the LAST passkey's deletion carries no handle, and the
+   *  sweep needs one exactly then -- the key those credentials were created
+   *  under. Per-account, so it must not outlive the session (see constructor). */
   private lastUserHandle: string | null = null;
+
+  /** Only the newest listing may sweep: a slow, older response carries a
+   *  shorter list and would delete the passkey enrolled in between. */
+  private listingSequence = 0;
+
+  constructor() {
+    // A handle left over from another account's session would sweep THAT
+    // account's passkeys with the next user's empty list (#263 pattern).
+    onIdentityChange(() => (this.lastUserHandle = null));
+  }
 
   async enrol(label: string): Promise<void> {
     try {
@@ -119,10 +131,15 @@ export class PasskeyService {
   }
 
   list(): Observable<PasskeySummary[]> {
-    return this.http.get<PasskeyListingJson>(`${this.base}/api/auth/passkeys`).pipe(
-      tap((listing) => this.pruneStaleCredentials(listing)),
-      map((listing) => listing.passkeys),
-    );
+    return defer(() => {
+      const sequence = ++this.listingSequence;
+      return this.http.get<PasskeyListingJson>(`${this.base}/api/auth/passkeys`).pipe(
+        tap((listing) => {
+          if (sequence === this.listingSequence) this.pruneStaleCredentials(listing);
+        }),
+        map((listing) => listing.passkeys),
+      );
+    });
   }
 
   remove(id: number): Observable<void> {
@@ -167,13 +184,13 @@ export class PasskeyService {
   }
 
   /** The authenticator already holds the credential when the server refuses
-   *  it (#727), so a 4xx tells the browser to drop it. Not on status 0 or a
-   *  5xx: the row may exist and only the response was lost. */
+   *  it (#727), so a refusal tells the browser to drop it. Not when the row
+   *  may exist: an unproven outcome, or a 409 that says it is already stored. */
   private async register(rpId: string, body: RegistrationBody): Promise<void> {
     try {
       await firstValueFrom(this.http.post<void>(`${this.base}/api/auth/passkey/register`, body));
     } catch (error) {
-      if (isClientRejection(error)) void signalUnknownCredential(rpId, body.credential.id);
+      if (isRefusalWithoutRow(error)) void signalUnknownCredential(rpId, body.credential.id);
       throw error;
     }
   }
@@ -264,12 +281,15 @@ function relyingPartyIdFor(declared: string | undefined): string {
   return declared ?? location.hostname;
 }
 
-function isClientRejection(error: unknown): boolean {
-  return error instanceof HttpErrorResponse && error.status >= 400 && error.status < 500;
-}
-
-/** `UnknownPasskeyCredentialException::$type` on the backend. */
+/** `DuplicatePasskeyException::$type` and `UnknownPasskeyCredentialException::$type`. */
+const PASSKEY_ALREADY_REGISTERED = 'passkey_already_registered';
 const UNKNOWN_PASSKEY_CREDENTIAL = 'unknown_passkey_credential';
+
+function isRefusalWithoutRow(error: unknown): boolean {
+  if (!(error instanceof HttpErrorResponse)) return false;
+  const problem = parseProblem(error);
+  return !outcomeIsUnproven(problem) && problem.type !== PASSKEY_ALREADY_REGISTERED;
+}
 
 function isUnknownCredential(error: unknown): boolean {
   return (

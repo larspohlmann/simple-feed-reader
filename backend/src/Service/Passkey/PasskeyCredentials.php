@@ -41,13 +41,18 @@ final readonly class PasskeyCredentials
      */
     public function userHandleFor(User $user): string
     {
-        $credentials = $this->repository->findForUser($user);
+        return $this->sharedHandle($this->repository->findForUser($user)) ?? self::randomHandle();
+    }
 
-        if ([] !== $credentials) {
-            return $credentials[0]->getUserHandle();
-        }
-
-        return self::randomHandle();
+    /**
+     * The one handle every row of an account carries, or null with no rows —
+     * never minted: the browser ignores a handle that matches nothing (#727).
+     *
+     * @param list<UserPasskey> $credentials
+     */
+    public function sharedHandle(array $credentials): ?string
+    {
+        return ($credentials[0] ?? null)?->getUserHandle();
     }
 
     /**

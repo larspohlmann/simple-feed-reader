@@ -264,6 +264,18 @@ describe('PasskeyService', () => {
       expect(unknown).toHaveBeenCalledWith({ rpId: 'test', credentialId: 'credential-id' });
     });
 
+    // A 409 says the server already holds this exact id, so the browser's
+    // entry is not an orphan.
+    it('leaves the browser alone on a 409 already-registered answer', async () => {
+      const { unknown } = installSignalApi();
+      const { enrolment, register } = await enrolUpToRegister();
+
+      flushProblem(register, 'passkey_already_registered', 409);
+
+      await expect(enrolment).rejects.toMatchObject({ status: 409 });
+      expect(unknown).not.toHaveBeenCalled();
+    });
+
     // A lost response is not a refusal: the row may exist, and the signal is
     // irreversible.
     it('leaves the browser alone on a network failure during register', async () => {
@@ -349,6 +361,45 @@ describe('PasskeyService', () => {
         userId: 'aGFuZGxl',
         allAcceptedCredentialIds: [],
       });
+    });
+
+    // The service is a root singleton that outlives a logout. A handle left
+    // over from account A would sweep A's passkeys with account B's empty list.
+    it('forgets the handle once another identity signs in', async () => {
+      const { allAccepted } = installSignalApi();
+      svc.list().subscribe();
+      ctrl.expectOne('https://api.test/api/auth/passkeys').flush(listingBody());
+      tokens.set('another-accounts-jwt');
+      TestBed.tick();
+
+      svc.list().subscribe();
+      ctrl
+        .expectOne('https://api.test/api/auth/passkeys')
+        .flush(listingBody({ userHandle: null, acceptedCredentialIds: [] }));
+      await flushMicrotasks();
+
+      expect(allAccepted).toHaveBeenCalledTimes(1);
+      expect(allAccepted).not.toHaveBeenCalledWith(
+        expect.objectContaining({ allAcceptedCredentialIds: [] }),
+      );
+    });
+
+    // Two listings in flight: the older one answers last with a shorter
+    // list and would delete the passkey enrolled in between.
+    it('lets only the newest listing sweep', async () => {
+      const { allAccepted } = installSignalApi();
+      svc.list().subscribe();
+      svc.list().subscribe();
+      const [older, newer] = ctrl.match('https://api.test/api/auth/passkeys');
+
+      newer.flush(listingBody({ acceptedCredentialIds: ['a', 'new'] }));
+      older.flush(listingBody({ acceptedCredentialIds: ['a'] }));
+      await flushMicrotasks();
+
+      expect(allAccepted).toHaveBeenCalledTimes(1);
+      expect(allAccepted).toHaveBeenCalledWith(
+        expect.objectContaining({ allAcceptedCredentialIds: ['a', 'new'] }),
+      );
     });
 
     it('signals nothing when no handle was ever seen', async () => {

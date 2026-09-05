@@ -11,10 +11,9 @@ use App\Service\Passkey\Exception\PasskeyNotFoundException;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Removes one of $user's own passkeys (#624; extracted from PasskeyController
- * in #727). The lookup is `(id, user)` in one query, never fetch-by-id then
- * compare owner: a foreign id answers 404, indistinguishable from an id that
- * was never registered, so no 403 can confirm another account's credential.
+ * Removes one of $user's own passkeys. The lookup is `(id, user)` in one
+ * query, never fetch-by-id then compare owner: a foreign id answers 404 like
+ * an unregistered one, so no 403 can confirm another account's credential.
  */
 final readonly class PasskeyRemoval
 {

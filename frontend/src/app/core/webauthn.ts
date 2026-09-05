@@ -82,33 +82,34 @@ function signalMethods(): SignalMethods {
   return isPasskeySupported() ? (window.PublicKeyCredential as unknown as SignalMethods) : {};
 }
 
-/** Tells the browser a credential id the server does not know, so the
- *  password manager can drop it. Best-effort by design: resolves without
- *  effect when the API is absent or the browser throws, so it can never gate
- *  a sign-in or an enrolment. */
-export async function signalUnknownCredential(rpId: string, credentialId: string): Promise<void> {
-  const methods = signalMethods();
-  if (typeof methods.signalUnknownCredential !== 'function') return;
+/** Every signal is best-effort: it resolves without effect when the API or
+ *  the method is absent and when the browser throws, so it can never gate a
+ *  sign-in, an enrolment or a listing. The optional call keeps `this` bound. */
+async function bestEffort(
+  signal: (methods: SignalMethods) => Promise<void> | undefined,
+): Promise<void> {
   try {
-    await methods.signalUnknownCredential({ rpId, credentialId });
+    await signal(signalMethods());
   } catch {
     // Best-effort by design -- see the docblock.
   }
 }
 
+/** Tells the browser a credential id the server does not know, so the
+ *  password manager can drop it. */
+export function signalUnknownCredential(rpId: string, credentialId: string): Promise<void> {
+  return bestEffort((methods) => methods.signalUnknownCredential?.({ rpId, credentialId }));
+}
+
 /** Hands the browser one account's authoritative credential set so anything
  *  stale disappears. The list must be complete: a short or empty list makes
  *  the browser delete valid credentials for that user. */
-export async function signalAllAcceptedCredentials(
+export function signalAllAcceptedCredentials(
   rpId: string,
   userId: string,
   allAcceptedCredentialIds: string[],
 ): Promise<void> {
-  const methods = signalMethods();
-  if (typeof methods.signalAllAcceptedCredentials !== 'function') return;
-  try {
-    await methods.signalAllAcceptedCredentials({ rpId, userId, allAcceptedCredentialIds });
-  } catch {
-    // Best-effort by design -- see the docblock.
-  }
+  return bestEffort((methods) =>
+    methods.signalAllAcceptedCredentials?.({ rpId, userId, allAcceptedCredentialIds }),
+  );
 }

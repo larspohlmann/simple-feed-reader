@@ -19,6 +19,7 @@ final readonly class PasskeyListing
 {
     public function __construct(
         private UserPasskeyRepository $passkeys,
+        private PasskeyCredentials $credentials,
         private PasskeyRelyingParty $relyingParty,
     ) {
     }
@@ -28,6 +29,8 @@ final readonly class PasskeyListing
      */
     public function forUser(User $user): array
     {
-        return PasskeyJson::listing($this->relyingParty->id(), $this->passkeys->findForUser($user));
+        $rows = $this->passkeys->findForUser($user);
+
+        return PasskeyJson::listing($this->relyingParty->id(), $this->credentials->sharedHandle($rows), $rows);
     }
 }

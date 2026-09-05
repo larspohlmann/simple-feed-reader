@@ -33,8 +33,20 @@ final class PasskeyListTest extends ApiTestCase
     {
         $client = static::createClient();
         $user = $this->factory()->create('lister@example.test');
-        $this->givenAPasskeyFor($user, credentialId: 'Y3JlZC1hYmM', userHandle: 'aGFuZGxl', label: 'My phone');
-        $this->givenAPasskeyFor($user, credentialId: 'c2Vjb25k', userHandle: 'aGFuZGxl', label: 'YubiKey');
+        $this->givenAPasskeyFor(
+            $user,
+            credentialId: 'Y3JlZC1hYmM',
+            userHandle: 'aGFuZGxl',
+            label: 'My phone',
+            createdAt: new \DateTimeImmutable('2026-01-01 10:00:00'),
+        );
+        $this->givenAPasskeyFor(
+            $user,
+            credentialId: 'c2Vjb25k',
+            userHandle: 'aGFuZGxl',
+            label: 'YubiKey',
+            createdAt: new \DateTimeImmutable('2026-01-02 10:00:00'),
+        );
         $this->authenticate($client, 'lister@example.test');
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://example.test');
         $this->serveFrom($client, 'https://example.test');
@@ -213,6 +225,7 @@ final class PasskeyListTest extends ApiTestCase
         string $credentialId,
         string $userHandle = 'aGFuZGxl',
         string $label = 'Test key',
+        ?\DateTimeImmutable $createdAt = null,
     ): UserPasskey {
         $passkey = new UserPasskey(
             $user,
@@ -223,7 +236,7 @@ final class PasskeyListTest extends ApiTestCase
             null,
             [],
             $label,
-            new \DateTimeImmutable(),
+            $createdAt ?? new \DateTimeImmutable(),
         );
         $this->em()->persist($passkey);
         $this->em()->flush();

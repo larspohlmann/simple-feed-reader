@@ -7,11 +7,9 @@ namespace App\Service\Passkey\Exception;
 use App\Exception\ApiException;
 
 /**
- * The assertion named a credential id no account holds (#727). Kept apart
- * from AssertionRejectedException because the browser can only prune the
- * dead entry (Signal API) if the client learns this exact case; a caller who
- * already holds the id learns only whether this instance knows it, the same
- * oracle DuplicatePasskeyException accepts.
+ * The assertion named a credential id no account holds — its own type, not
+ * AssertionRejectedException, so the client can prune the dead browser entry
+ * (#727). The oracle it accepts is the one DuplicatePasskeyException accepts.
  */
 final class UnknownPasskeyCredentialException extends ApiException
 {

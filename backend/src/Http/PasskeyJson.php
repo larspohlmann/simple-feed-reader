@@ -7,9 +7,9 @@ namespace App\Http;
 use App\Entity\UserPasskey;
 
 /**
- * The passkey listing body (#624), widened in #727 with the three values the
- * WebAuthn Signal API needs. `register/options` already discloses all three
- * to the same authenticated user, so this exposes nothing new.
+ * The passkey listing body (#624): the rows plus the three values the WebAuthn
+ * Signal API needs (#727), which `register/options` already discloses to the
+ * same authenticated user.
  *
  * The two options factories already return their body in its final wire
  * shape — the identical `{options, handle}` for both ceremonies — so they
@@ -26,19 +26,17 @@ final readonly class PasskeyJson
     /**
      * `acceptedCredentialIds` is ONE flat authoritative list the client hands
      * to the browser unchanged: a rebuilt or shortened list deletes valid
-     * credentials. `userHandle` is read off the rows, never minted — a handle
-     * that matches nothing makes the signal a silent no-op — so it is null
-     * with no rows.
+     * credentials. The handle comes from PasskeyCredentials::sharedHandle().
      *
      * @param list<UserPasskey> $passkeys
      *
      * @return PasskeyListingBody
      */
-    public static function listing(string $relyingPartyId, array $passkeys): array
+    public static function listing(string $relyingPartyId, ?string $userHandle, array $passkeys): array
     {
         return [
             'rpId' => $relyingPartyId,
-            'userHandle' => ($passkeys[0] ?? null)?->getUserHandle(),
+            'userHandle' => $userHandle,
             'acceptedCredentialIds' => array_map(
                 static fn (UserPasskey $passkey): string => $passkey->getCredentialId(),
                 $passkeys,

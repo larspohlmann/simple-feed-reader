@@ -18,10 +18,18 @@ export interface Problem {
    *  genuine dropped connection produce it, but `title` differs -- raw
    *  `DOMException.message` in the first, this app's translated "Could not
    *  reach the server" in the second -- so a caller hiding one must not hide
-   *  the other. (`backup-section.component.ts`'s `outcomeIsUnproven()` reads
+   *  the other. (`outcomeIsUnproven()` below reads
    *  plain `status === 0` differently, confirming the status alone cannot be
    *  the discriminator here.) */
   ceremonyRejected?: true;
+}
+
+/** A request whose outcome the response cannot prove: a dropped connection
+ *  (status 0) or a 5xx -- gateway timeout, OOM-killed worker -- may have run
+ *  server-side before it failed. Callers that must not act as if the server
+ *  refused (a wipe, an irreversible browser signal) branch on this. */
+export function outcomeIsUnproven(problem: Problem): boolean {
+  return problem.status === 0 || problem.status >= 500;
 }
 
 /** An oversized request body, refused by the web server before the app ran.
