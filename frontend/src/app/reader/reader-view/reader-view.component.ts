@@ -54,6 +54,7 @@ import {
 import { relativeTime } from '../format';
 import { markLeadParagraph } from '../lead-paragraph';
 import { markInsetCards } from '../reader-cards';
+import { highlightCodeBlocks } from '../code-highlight';
 import { attachHlsStreams } from '../hls-streams';
 import { upgradeMediaEmbeds } from '../media-embeds';
 import { estimateReadingMinutes } from '../reading-time';
@@ -345,6 +346,7 @@ export class ReaderViewComponent {
         }
         markLeadParagraph(host);
         markInsetCards(host);
+        void highlightCodeBlocks(host);
         upgradeMediaEmbeds(host);
         attachHlsStreams(host);
         this.buildToc(host);
