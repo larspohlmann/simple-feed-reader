@@ -24,12 +24,19 @@ More in the [screenshot gallery](docs/screenshots.md).
 **Reading**
 
 - Three layouts: a magazine-style card grid, a compact list, and a two-pane
-  view with the article next to the entry list.
-- Reader view shows the extracted full article text; you can switch to the
-  feed's own version at any time, or open the original page.
+  view — with a draggable split — that shows the article next to the entry list.
+- Reader view shows the extracted full article text, with images, audio, and
+  video (including streaming video) played inline; you can switch to the feed's
+  own version at any time, or open the original page. If the text is only the
+  free preview of a paywalled article, the reader tells you.
 - Read/unread tracking with "mark all read", favorites, and a separate
-  "keep" list — plus full-text search across your articles.
-- Reading-time estimates and a progress bar while you read.
+  "keep" list.
+- Full-text search across your articles, including exact phrases in quotes.
+  Save a search as a named view in the sidebar, each with its own unread
+  count — open one, open all as a combined list, or receive it as a daily or
+  weekly email digest.
+- Reading-time estimates, a progress bar, and an optional reading focus that
+  dims everything but the passage in front of you.
 
 **Feeds**
 
@@ -67,18 +74,21 @@ More in the [screenshot gallery](docs/screenshots.md).
 
 **Accounts**
 
-- Sign in with email and password, or with Google or Apple.
+- Sign in with email and password, with Google or Apple, or with a passkey.
 - Email verification and admin approval for new accounts are optional — you
   decide per instance.
 - Registration is protected by an invisible proof-of-work challenge; there is
   no CAPTCHA to solve.
-- Users can delete their own account, including all their data.
+- Users can export the whole account to a backup file and restore it later, or
+  delete the account entirely, including all its data.
 
 **Administration**
 
 - Most instances are self-hosted, so you are the admin: approve, suspend, or
   delete users from the settings.
 - Optional trial periods and per-user feed limits.
+- Configure outgoing mail (SMTP) from the admin settings, with a built-in
+  connection test, and set an outbound HTTP proxy for the server's own fetches.
 - A feed catalog suggests feeds to new users; edit it or import the bundled
   one.
 
