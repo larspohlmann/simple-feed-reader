@@ -1,0 +1,149 @@
+// A step darker than the default panel, so the raised stat tiles below read
+// against it (surface-2 tiles over a surface-1 body). A rule under the header
+// sets it apart as a diagnostic title bar.
+:host {
+  --panel-bg: var(--surface-1);
+  --panel-head-divider: 1px solid var(--border);
+}
+
+// The status chip sits beside the heading in the panel header. The colour is
+// the status signal, the same dead/failing pairing the list row uses; a failing
+// feed also carries how long it has been stale.
+.pill {
+  flex: 0 0 auto;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-normal);
+  white-space: nowrap;
+}
+
+.pill.dead {
+  background: var(--bg-danger);
+  color: var(--danger);
+}
+
+.pill.failing {
+  background: var(--bg-warning);
+  color: var(--warning);
+}
+
+// The lead of the dialog: the raw error and its plain-language gloss, so "what
+// is wrong" is the first thing read, not a footnote. Borderless — the glyph and
+// the mono error carry it without a boxed callout.
+.hero {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.hero-icon {
+  flex: 0 0 auto;
+  margin-top: var(--space-0);
+}
+
+.hero-icon.dead {
+  color: var(--danger);
+}
+
+.hero-icon.failing {
+  color: var(--warning);
+}
+
+.hero-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.hero-code {
+  color: var(--text-primary);
+  font-family: ui-monospace, monospace;
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+}
+
+.gloss {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+// Two figures that answer "how bad": the failure streak and the days since the
+// last good fetch. Metric tiles, not another labelled row.
+// The two figures read as one unit: touching, split by a hairline, with only
+// the outer corners of the pair rounded (overflow clips the square inner ones).
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: var(--space-4);
+  overflow: hidden;
+  border-radius: var(--radius);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0);
+  padding: var(--space-3);
+  background: var(--surface-2);
+}
+
+.stat + .stat {
+  border-left: 1px solid var(--border);
+}
+
+.stat-value {
+  color: var(--text-primary);
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+}
+
+.stat-value.warning {
+  color: var(--warning);
+}
+
+.stat-label {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+// The remaining facts, values aligned to the right so the timestamps and the
+// URL read as a column against their labels.
+.facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+
+.facts dt {
+  color: var(--text-muted);
+}
+
+.facts dd {
+  margin: 0;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.feed-url {
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+// The two primary actions span the footer width, split evenly.
+.modal-actions {
+  display: flex;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.modal-actions app-button {
+  flex: 1;
+}

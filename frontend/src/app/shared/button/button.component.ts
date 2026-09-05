@@ -15,7 +15,7 @@ import { SpinnerComponent } from '../spinner/spinner.component';
  * can still show that a secondary action is ready to be used.
  */
 export type ButtonVariant =
-  'default' | 'primary' | 'accent-outline' | 'danger' | 'danger-outline' | 'ghost';
+  'default' | 'primary' | 'outline' | 'accent-outline' | 'danger' | 'danger-outline' | 'ghost';
 export type ButtonSize = 'sm' | 'md';
 
 /**

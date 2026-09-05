@@ -517,12 +517,26 @@
       },
       "action": {
         "retry": "Retry",
-        "unsubscribe": "Unsubscribe"
+        "unsubscribe": "Unsubscribe",
+        "retryNow": "Retry now"
       },
       "retry": {
         "recovered": "{{title}} is back",
         "stillFailing": "{{title}} is still failing",
         "error": "Could not retry {{title}}"
+      },
+      "error": {
+        "glossGone": "This feed is no longer available. The server stopped refreshing it after repeated failures.",
+        "glossFailing": "The feed is sending content this reader can’t use. This is usually a problem on the publisher’s side."
+      },
+      "heading": "Feed health",
+      "daysOne": "{{count}} day",
+      "daysOther": "{{count}} days",
+      "deadCount": "{{count}} dead",
+      "failingCount": "{{count}} failing",
+      "stats": {
+        "failedAttempts": "failed attempts",
+        "sinceUpdate": "since last update"
       }
     },
     "passkeys": {
@@ -547,6 +561,7 @@
   },
   "dialog": {
     "cancel": "Cancel",
+    "close": "Close",
     "typeToConfirm": "Type {{text}} to confirm",
     "addFeed": {
       "title": "Add a feed",

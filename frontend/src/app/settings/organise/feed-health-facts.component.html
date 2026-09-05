@@ -1,0 +1,20 @@
+<dl class="facts">
+  <dt>{{ 'settings.health.details.feedUrl' | transloco }}</dt>
+  <dd>
+    <a class="feed-url" [href]="subscription().feedUrl" target="_blank" rel="noopener noreferrer">
+      {{ subscription().feedUrl }}
+    </a>
+  </dd>
+  @if (subscription().lastSuccessfulFetchAt; as lastSuccess) {
+    <dt>{{ 'settings.health.details.lastSuccess' | transloco }}</dt>
+    <dd>{{ formatDateTime(lastSuccess) }}</dd>
+  }
+  @if (subscription().lastFetchedAt; as lastAttempt) {
+    <dt>{{ 'settings.health.details.lastAttempt' | transloco }}</dt>
+    <dd>{{ formatDateTime(lastAttempt) }}</dd>
+  }
+  @if (subscription().consecutiveFailures) {
+    <dt>{{ 'settings.health.details.failures' | transloco }}</dt>
+    <dd>{{ subscription().consecutiveFailures }}</dd>
+  }
+</dl>

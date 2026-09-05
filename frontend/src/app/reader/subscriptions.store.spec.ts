@@ -307,7 +307,12 @@ describe('SubscriptionsStore', () => {
 
   it('exposes unhealthy feeds and their count', () => {
     store.subscriptions.set([
-      { ...sub(1, 0), title: 'Bravo', status: 'erroring' },
+      {
+        ...sub(1, 0),
+        title: 'Bravo',
+        status: 'erroring',
+        lastSuccessfulFetchAt: '2020-01-01T00:00:00Z',
+      },
       { ...sub(2, 0), title: 'Alpha', status: 'gone' },
       { ...sub(3, 0), status: 'active' },
     ]);

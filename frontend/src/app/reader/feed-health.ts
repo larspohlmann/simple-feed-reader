@@ -8,8 +8,20 @@ export interface HealthReason {
 
 const MS_PER_DAY = 86_400_000;
 
-export function isUnhealthy(sub: SubscriptionDto): boolean {
-  return sub.status !== 'active';
+/** An erroring feed is worth flagging only once it has gone without a
+ *  successful fetch for longer than this. A feed goes "erroring" on its very
+ *  first failed fetch, so a blip that clears within a day is transient noise,
+ *  not a feed the user needs to act on. */
+const STALE_AFTER_MS = MS_PER_DAY;
+
+/** A feed the user should act on: a gone feed always (the server has given up
+ *  on it), or an erroring feed that has not delivered content in over a day.
+ *  A feed that has never succeeded is measured from when it was subscribed. */
+export function isUnhealthy(sub: SubscriptionDto, now: Date = new Date()): boolean {
+  if (isGone(sub)) return true;
+  if (sub.status !== 'erroring') return false;
+  const lastSuccess = sub.lastSuccessfulFetchAt ?? sub.createdAt;
+  return now.getTime() - new Date(lastSuccess).getTime() > STALE_AFTER_MS;
 }
 
 /** A dead feed: the server has given up refreshing it, not merely erroring. */
@@ -24,10 +36,10 @@ export function isFeedRecovered(report: RefreshReport): boolean {
 }
 
 /** Gone feeds first (dead, act now), then erroring; each alphabetical by title. */
-export function unhealthyFeeds(subs: SubscriptionDto[]): SubscriptionDto[] {
+export function unhealthyFeeds(subs: SubscriptionDto[], now: Date = new Date()): SubscriptionDto[] {
   const rank = (s: SubscriptionDto): number => (isGone(s) ? 0 : 1);
   return subs
-    .filter(isUnhealthy)
+    .filter((sub) => isUnhealthy(sub, now))
     .sort((a, b) => rank(a) - rank(b) || a.title.localeCompare(b.title));
 }
 

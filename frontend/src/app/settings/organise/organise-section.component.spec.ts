@@ -88,6 +88,7 @@ describe('OrganiseSectionComponent', () => {
     manage.bulkSetFlags.mockReturnValue(of(undefined));
     manage.bulkUnsubscribe.mockReturnValue(of(true));
     manage.addFeed.mockReturnValue(of(undefined));
+    manage.retryFeed.mockReturnValue(of(false));
 
     await TestBed.resetTestingModule()
       .configureTestingModule({

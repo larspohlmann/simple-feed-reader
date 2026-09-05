@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Dialog } from '@angular/cdk/dialog';
 import { CdkDropListGroup } from '@angular/cdk/drag-drop';
@@ -8,6 +15,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { SkeletonComponent } from '../../shared/skeleton/skeleton.component';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
+import { DisclosureComponent } from '../../shared/disclosure/disclosure.component';
 import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
@@ -16,12 +24,13 @@ import { OrganiseTagGroupComponent } from './organise-tag-group.component';
 import { OrganiseFeedRowComponent } from './organise-feed-row.component';
 import { UnhealthyFeedRowComponent } from './unhealthy-feed-row.component';
 import { BulkTagDialogComponent, BulkTagDialogData } from './bulk-tag-dialog.component';
+import { HealthErrorDialogComponent, HealthErrorData } from './health-error-dialog.component';
 import { ManageActions } from '../../reader/manage/manage-actions.service';
 import { SubscriptionsStore } from '../../reader/subscriptions.store';
 import { TagsStore } from '../../reader/tags.store';
 import { Problem, parseProblem } from '../../core/problem';
-import { pluralKey } from '../../core/plural-key';
-import { SubscriptionFlags, TagDto } from '../../reader/models';
+import { isGone } from '../../reader/feed-health';
+import { SubscriptionDto, SubscriptionFlags, TagDto } from '../../reader/models';
 
 /** One item of the bulk bar's "Visibility" menu: which flag it sets, to what
  *  value, and the i18n key for its label. A readonly literal array so the
@@ -54,6 +63,7 @@ interface VisibilityMenuItem {
     OrganiseTagGroupComponent,
     OrganiseFeedRowComponent,
     UnhealthyFeedRowComponent,
+    DisclosureComponent,
     DismissOnOutsideDirective,
     CdkDropListGroup,
   ],
@@ -63,8 +73,6 @@ interface VisibilityMenuItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OrganiseSectionComponent implements OnInit {
-  protected readonly pluralKey = pluralKey;
-
   readonly store = inject(OrganiseStore);
   protected readonly manage = inject(ManageActions);
   protected readonly subs = inject(SubscriptionsStore);
@@ -73,6 +81,13 @@ export class OrganiseSectionComponent implements OnInit {
 
   /** The last refused bulk write, shown as a banner above the list. */
   readonly error = signal<Problem | null>(null);
+
+  /** The health header's breakdown: dead feeds (the server gave up) versus
+   *  merely failing ones, each shown only when non-zero. */
+  protected readonly deadCount = computed(
+    () => this.subs.unhealthy().filter((feed) => isGone(feed)).length,
+  );
+  protected readonly failingCount = computed(() => this.subs.unhealthy().length - this.deadCount());
   protected readonly tagFilterOpen = signal(false);
   protected readonly visibilityOpen = signal(false);
 
@@ -99,6 +114,21 @@ export class OrganiseSectionComponent implements OnInit {
   ngOnInit(): void {
     this.tags.load();
     this.subs.load();
+  }
+
+  /** Retry one unhealthy feed. `ManageActions` does the refresh, the quiet
+   *  reload and the recovery toast; when the feed is still unhealthy it emits
+   *  true and we open the error dialog (a settings-owned modal, so the reader
+   *  layer never depends on it). */
+  protected retryFeed(feed: SubscriptionDto): void {
+    this.manage.retryFeed(feed).subscribe((stillFailing) => {
+      if (!stillFailing) return;
+      const data: HealthErrorData = { feedId: feed.feedId, title: feed.title };
+      this.dialog.open<void, HealthErrorData>(HealthErrorDialogComponent, {
+        data,
+        panelClass: 'app-dialog',
+      });
+    });
   }
 
   protected openTagDialog(mode: 'add' | 'remove'): void {

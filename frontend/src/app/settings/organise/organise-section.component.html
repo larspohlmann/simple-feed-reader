@@ -1,18 +1,36 @@
 <app-settings-stack>
-  @if (subs.unhealthyCount(); as count) {
-    <app-settings-group
-      icon="warning"
-      [title]="'settings.health.title' | transloco"
-      [caption]="pluralKey('settings.health.summary', count) | transloco: { count }"
-    >
-      @for (feed of subs.unhealthy(); track feed.id) {
-        <app-unhealthy-feed-row
-          [subscription]="feed"
-          (retry)="manage.retryFeed(feed)"
-          (unsubscribe)="manage.unsubscribe(feed)"
-        />
-      }
-    </app-settings-group>
+  @if (subs.unhealthyCount()) {
+    <section class="health-card">
+      <app-disclosure appearance="drill-in">
+        <div summary class="health-head">
+          <app-icon class="health-head-icon" name="heart_broken" size="sm" />
+          <span class="health-head-title">{{ 'settings.health.heading' | transloco }}</span>
+          <span class="health-head-counts">
+            @if (deadCount()) {
+              <span>{{ 'settings.health.deadCount' | transloco: { count: deadCount() } }}</span>
+            }
+            @if (deadCount() && failingCount()) {
+              <span aria-hidden="true"> · </span>
+            }
+            @if (failingCount()) {
+              <span>{{
+                'settings.health.failingCount' | transloco: { count: failingCount() }
+              }}</span>
+            }
+          </span>
+        </div>
+
+        <div class="health-list">
+          @for (feed of subs.unhealthy(); track feed.id) {
+            <app-unhealthy-feed-row
+              [subscription]="feed"
+              (retry)="retryFeed(feed)"
+              (unsubscribe)="manage.unsubscribe(feed)"
+            />
+          }
+        </div>
+      </app-disclosure>
+    </section>
   }
 
   <app-settings-group

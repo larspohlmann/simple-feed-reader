@@ -517,12 +517,26 @@
       },
       "action": {
         "retry": "Erneut versuchen",
-        "unsubscribe": "Abbestellen"
+        "unsubscribe": "Abbestellen",
+        "retryNow": "Erneut versuchen"
       },
       "retry": {
         "recovered": "{{title}} ist wieder erreichbar",
         "stillFailing": "{{title}} schlägt weiterhin fehl",
         "error": "{{title}} konnte nicht erneut abgerufen werden"
+      },
+      "error": {
+        "glossGone": "Dieser Feed ist nicht mehr verfügbar. Der Server hat die Aktualisierung nach wiederholten Fehlern eingestellt.",
+        "glossFailing": "Der Feed sendet Inhalte, die dieser Reader nicht verarbeiten kann. Das liegt meist beim Anbieter."
+      },
+      "heading": "Feed-Zustand",
+      "daysOne": "{{count}} Tag",
+      "daysOther": "{{count}} Tage",
+      "deadCount": "{{count}} tot",
+      "failingCount": "{{count}} fehlerhaft",
+      "stats": {
+        "failedAttempts": "Fehlversuche",
+        "sinceUpdate": "seit letzter Aktualisierung"
       }
     },
     "passkeys": {
@@ -547,6 +561,7 @@
   },
   "dialog": {
     "cancel": "Abbrechen",
+    "close": "Schließen",
     "typeToConfirm": "Tippe {{text}}, um zu bestätigen",
     "addFeed": {
       "title": "Feed hinzufügen",

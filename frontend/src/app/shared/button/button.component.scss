@@ -44,6 +44,15 @@ button.primary {
   border-color: var(--accent);
 }
 
+// A true outline button: no fill, so it blends into whatever surface it sits
+// on and reads as its border alone. The other "-outline" variants keep the
+// surface-1 fill; this is the transparent one.
+button.outline {
+  background: transparent;
+  border-color: var(--border-strong);
+  color: var(--text-secondary);
+}
+
 // The accent counterpart to danger-outline: live, but not the surface's one
 // action. Used where a primary fill is already spoken for elsewhere on the card.
 button.accent-outline {
@@ -77,7 +86,8 @@ button.ghost {
 // Scoped per variant rather than a blanket `button:hover`: a blanket rule
 // outranks the variant blocks above (`:not()` carries its argument's weight)
 // and would repaint the danger border in the accent colour on hover.
-button.default:hover:not(:disabled) {
+button.default:hover:not(:disabled),
+button.outline:hover:not(:disabled) {
   border-color: var(--accent);
 }
 

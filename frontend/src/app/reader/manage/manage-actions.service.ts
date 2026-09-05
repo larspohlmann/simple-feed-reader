@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, map, of, switchMap, tap } from 'rxjs';
+import { Observable, catchError, map, of, switchMap, tap } from 'rxjs';
 import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoService } from '@jsverse/transloco';
 import { ReaderApi } from '../reader-api';
@@ -314,26 +314,25 @@ export class ManageActions {
   }
 
   /** Manually re-fetch one feed (the health list's Retry). Reaches gone feeds
-   *  too; a success resurrects the feed server-side. Awaits the report so the
-   *  toast tells the truth, then reloads so a recovered feed leaves the list. */
-  retryFeed(sub: SubscriptionDto): void {
-    this.api.refresh({ feedId: sub.feedId }).subscribe({
-      next: (report: RefreshReport) => {
-        this.notifyRetryOutcome(sub, isFeedRecovered(report) ? 'recovered' : 'stillFailing');
-        this.subs.load();
-      },
-      error: () => this.notifyRetryOutcome(sub, 'error'),
-    });
-  }
-
-  private notifyRetryOutcome(
-    sub: SubscriptionDto,
-    outcome: 'recovered' | 'stillFailing' | 'error',
-  ): void {
-    this.toast.show({
-      message: this.i18n.translate(`settings.health.retry.${outcome}`, { title: sub.title }),
-      durationMs: CONFIRMATION_DURATION_MS,
-    });
+   *  too; a success resurrects the feed server-side. Awaits the report, then
+   *  quietly reloads the list (no loading skeleton) so a recovered feed drops
+   *  out in place. Emits `true` while the feed is STILL unhealthy — the caller
+   *  shows the error — and `false` on recovery, which a toast confirms here. */
+  retryFeed(sub: SubscriptionDto): Observable<boolean> {
+    return this.api.refresh({ feedId: sub.feedId }).pipe(
+      tap(() => this.subs.reloadQuietly()),
+      map((report: RefreshReport) => {
+        if (!isFeedRecovered(report)) return true;
+        this.toast.show({
+          message: this.i18n.translate('settings.health.retry.recovered', { title: sub.title }),
+          durationMs: CONFIRMATION_DURATION_MS,
+        });
+        return false;
+      }),
+      // A request that never landed is as unresolved as a still-failing feed:
+      // show the error either way.
+      catchError(() => of(true)),
+    );
   }
 
   private bulkPatch(body: BulkSubscriptionUpdate, confirmation: string): Observable<void> {

@@ -28,7 +28,7 @@ describe('UnhealthyFeedRowComponent', () => {
     fixture.detectChanges();
   }
 
-  it('shows the Dead pill and the "no longer available" reason for a gone feed', async () => {
+  it('announces the dead status and shows the "no longer available" reason for a gone feed', async () => {
     await render();
 
     const text = fixture.nativeElement.textContent as string;
@@ -36,7 +36,7 @@ describe('UnhealthyFeedRowComponent', () => {
     expect(text).toContain('No longer available');
   });
 
-  it('shows the Failing pill for an erroring feed', async () => {
+  it('announces the failing status for an erroring feed', async () => {
     await render(makeSubscription({ status: 'erroring', consecutiveFailures: 3 }));
 
     const text = fixture.nativeElement.textContent as string;
@@ -85,23 +85,18 @@ describe('UnhealthyFeedRowComponent', () => {
     expect(details.open).toBe(true);
   });
 
-  it('shows the raw technical error inside the details body', async () => {
+  it('renders the shared health facts (its feed URL) in the details body', async () => {
     await render();
 
-    const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('HTTP 410 Gone');
+    // The detail rows themselves are covered by feed-health-facts.component.spec;
+    // here we only assert the row wires the facts component into its disclosure.
+    expect(fixture.debugElement.query(By.css('app-feed-health-facts'))).not.toBeNull();
   });
 
-  it('hides a details row whose value is null', async () => {
-    await render(
-      makeSubscription({
-        status: 'gone',
-        lastFetchedAt: null,
-        lastSuccessfulFetchAt: null,
-        lastErrorMessage: null,
-      }),
-    );
+  it('shows the raw error under the facts in the details body', async () => {
+    await render();
 
-    expect(fixture.debugElement.query(By.css('.technical'))).toBeNull();
+    expect(fixture.debugElement.query(By.css('.error'))).not.toBeNull();
+    expect(fixture.nativeElement.textContent as string).toContain('HTTP 410 Gone');
   });
 });

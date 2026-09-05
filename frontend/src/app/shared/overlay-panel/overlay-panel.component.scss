@@ -32,7 +32,10 @@
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  background: var(--surface-2);
+
+  /* surface-2 by default; a dialog that wants its own body a step darker (so
+     raised tiles read against it) sets --panel-bg. */
+  background: var(--panel-bg, var(--surface-2));
   box-shadow: 0 24px 60px rgb(0 0 0 / 28%);
 }
 
@@ -42,6 +45,10 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--space-5) var(--space-5) var(--space-3);
+
+  /* No rule between head and body by default; a dialog that wants one (a
+     diagnostic panel whose header is a distinct bar) sets --panel-head-divider. */
+  border-bottom: var(--panel-head-divider, none);
 }
 
 // One size whichever level the consumer asked for: the heading's rank is an
