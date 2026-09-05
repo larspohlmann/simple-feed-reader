@@ -41,6 +41,7 @@ import { EntryQuoteComponent } from '../magazine/entry-quote.component';
 import { EntryKickerComponent } from '../magazine/entry-kicker.component';
 import { MagazineBlock } from '../magazine/magazine-block';
 import { planMagazine } from '../magazine/magazine-planner';
+import { ScrollOutsideZoneDirective } from '../scroll-outside-zone.directive';
 import { ReadingLayout } from '../reading-layout.service';
 import { EntryDto, SubscriptionTagDto, TagDto } from '../models';
 import {
@@ -137,6 +138,7 @@ export interface TitleCount {
     EntryQuoteComponent,
     EntryKickerComponent,
     ToTopButtonComponent,
+    ScrollOutsideZoneDirective,
   ],
   templateUrl: './entry-list.component.html',
   styleUrl: './entry-list.component.scss',
@@ -512,7 +514,7 @@ export class EntryListComponent implements OnDestroy {
     this.scheduleFocus();
   });
 
-  onRowsScroll(e: Event): void {
+  readonly onRowsScroll = (e: Event): void => {
     const el = e.target as HTMLElement | null;
     if (!el || typeof el.scrollTop !== 'number') return;
     const top = el.scrollTop;
@@ -525,7 +527,7 @@ export class EntryListComponent implements OnDestroy {
     // Remember where the user is so a browser resume-reload (iOS/Brave discard the
     // tab and reload it) can drop them back here rather than at the top.
     if (this.rowsBelongToSelection()) this.scroll.save(this.selection(), top);
-  }
+  };
 
   /** Whether the rows on screen match the current selection — false between a
    *  view switch and the new page's arrival, since the outgoing list stays
