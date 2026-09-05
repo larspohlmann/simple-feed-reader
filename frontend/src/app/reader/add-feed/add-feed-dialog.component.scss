@@ -55,14 +55,10 @@ form {
   margin: 0 0 var(--space-4);
   padding: 0;
 
-  /* Cap the picker and let it scroll on its own so a long tag list never
-     squeezes out the URL field or the candidate list below it. */
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     tuned picker cap, not a spacing value. */
-  max-height: 160px;
-  min-height: 0;
-  overflow: auto;
-  overscroll-behavior: contain;
+  /* No own scroller: the panel body is the single scroller (like .candidates
+     below), so the tag list runs on and the panel's viewport cap stops it. A
+     nested 160px scroll box was a mobile touch trap — hard to hit, and the
+     outer body stole the gesture. */
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
