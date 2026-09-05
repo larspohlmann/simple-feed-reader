@@ -14,6 +14,19 @@
      UI needs only a hair of shadow, a dark one a deeper cast to lift the
      surface off its near-black ground. */
   --panel-shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 6px 20px rgb(0 0 0 / 5%);
+
+  /* Reader code syntax palette (#473): GitHub light. Deliberately outside the
+     graphite map and the #832 brightness lists — syntax colours are fixed and
+     must not ride the lightness dial. */
+  --code-fg: #24292e;
+  --code-comment: #6a737d;
+  --code-keyword: #d73a49;
+  --code-string: #032f62;
+  --code-value: #005cc5;
+  --code-title: #6f42c1;
+  --code-built-in: #e36209;
+  --code-tag: #22863a;
+  --code-meta: #005cc5;
 }
 
 :root[data-theme='dark'] {
@@ -22,6 +35,17 @@
   @include graphite.emit(graphite.$dark);
 
   --panel-shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 30%);
+
+  /* Reader code syntax palette (#473): Nord dark. */
+  --code-fg: #e5e9f0;
+  --code-comment: #4c566a;
+  --code-keyword: #b48ead;
+  --code-string: #a3be8c;
+  --code-value: #d08770;
+  --code-title: #ebcb8b;
+  --code-built-in: #88c0d0;
+  --code-tag: #bf616a;
+  --code-meta: #5e81ac;
 }
 
 @include brightness.theme-steps('light', graphite.$light);

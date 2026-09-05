@@ -617,6 +617,70 @@ article {
   background: none;
 }
 
+/* Syntax highlighting (#473). highlight.js emits `.hljs-*` token spans; map them
+   onto the mode-aware --code-* tokens so both themes stay lint-clean (no hex). The
+   highlighted container is a `<code>` or, for code-less `<pre>`, the `<pre>`. */
+.content ::ng-deep .hljs {
+  color: var(--code-fg);
+}
+
+.content ::ng-deep {
+  .hljs-comment,
+  .hljs-quote {
+    color: var(--code-comment);
+    font-style: italic;
+  }
+
+  .hljs-keyword,
+  .hljs-type,
+  .hljs-doctag,
+  .hljs-template-tag,
+  .hljs-variable.language_ {
+    color: var(--code-keyword);
+  }
+
+  .hljs-string,
+  .hljs-regexp,
+  .hljs-char.escape_ {
+    color: var(--code-string);
+  }
+
+  .hljs-number,
+  .hljs-literal,
+  .hljs-attr,
+  .hljs-attribute,
+  .hljs-property,
+  .hljs-selector-attr,
+  .hljs-selector-class,
+  .hljs-selector-id,
+  .hljs-selector-pseudo,
+  .hljs-symbol {
+    color: var(--code-value);
+  }
+
+  .hljs-title,
+  .hljs-title.function_,
+  .hljs-title.class_,
+  .hljs-section {
+    color: var(--code-title);
+  }
+
+  .hljs-built_in {
+    color: var(--code-built-in);
+  }
+
+  .hljs-name,
+  .hljs-selector-tag,
+  .hljs-tag {
+    color: var(--code-tag);
+  }
+
+  .hljs-meta,
+  .hljs-meta-keyword {
+    color: var(--code-meta);
+  }
+}
+
 .content ::ng-deep hr {
   margin: var(--space-5) 0;
   border: 0;
