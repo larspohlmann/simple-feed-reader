@@ -10,8 +10,11 @@ use Dom\HTMLDocument;
 
 /**
  * Captured before readability consumes the shared document, judged when the
- * cleaned body exists (#785). Declaration decides alone; a DOM block counts
- * only at or after the last extracted paragraph.
+ * cleaned body exists (#785). A schema.org free declaration is trusted and
+ * ends it; otherwise the content must prove the preview — a gated DOM block
+ * has to stand at or after the last extracted paragraph. Publishers such as
+ * mopo.de declare their premium articles paywalled yet serve the whole body
+ * server-side, so the declaration alone cannot mark a preview.
  */
 final readonly class PaywallSignals
 {
@@ -35,8 +38,8 @@ final readonly class PaywallSignals
     /** True when the cleaned body is the free preview of a paywalled article. */
     public function isPreview(string $cleanedBodyHtml): bool
     {
-        if ($this->declared !== null) {
-            return $this->declared;
+        if ($this->declared === false) {
+            return false;
         }
         $body = HtmlDocumentParser::parseOrNull($cleanedBodyHtml)?->body;
         if ($this->blockTexts === [] || $body === null) {

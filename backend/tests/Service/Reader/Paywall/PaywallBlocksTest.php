@@ -83,6 +83,19 @@ final class PaywallBlocksTest extends TestCase
         self::assertSame([], PaywallBlocks::textsIn($this->document('<p class="lead">No wall here.</p>')));
     }
 
+    public function testAStateClassOnTheDocumentRootIsNotAGatedBlock(): void
+    {
+        // mopo.de tags every MOPO+ article template with `has-paywall` on
+        // <body>; the whole page is not a gated region.
+        $document = HtmlDocumentParser::parseOrNull(
+            '<html class="has-paywall"><body class="article has-paywall">'
+            . '<article><p>The full article, served in one piece.</p></article></body></html>',
+        );
+        self::assertNotNull($document);
+
+        self::assertSame([], PaywallBlocks::textsIn($document));
+    }
+
     private function document(string $body): HTMLDocument
     {
         $document = HtmlDocumentParser::parseOrNull('<html><body>' . $body . '</body></html>');

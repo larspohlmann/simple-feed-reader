@@ -18,13 +18,15 @@ final readonly class PaywallBlocks
     /** The words publishers use for a gated region; `subscribe` alone is a newsletter form, not a wall. */
     private const array CLASS_FRAGMENTS = ['paywall', 'subscription-only', 'subscriber-only', 'subscribers-only'];
     private const string LOWER_CLASS = 'translate(@class, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")';
+    /** State markers like `has-paywall` sit here; the document root is the page, never a region within it. */
+    private const array DOCUMENT_ROOTS = ['html', 'body'];
 
     /** @return list<string> the squeezed text of every paywall block outside page furniture, in document order */
     public static function textsIn(HTMLDocument $document): array
     {
         $texts = [];
         foreach ((new XPath($document))->query(self::paywallClassQuery()) as $element) {
-            if (!$element instanceof Element || PageFurniture::holds($element)) {
+            if (!$element instanceof Element || self::isDocumentRoot($element) || PageFurniture::holds($element)) {
                 continue;
             }
             $text = SqueezedText::of((string) $element->textContent);
@@ -34,6 +36,11 @@ final readonly class PaywallBlocks
         }
 
         return $texts;
+    }
+
+    private static function isDocumentRoot(Element $element): bool
+    {
+        return \in_array(strtolower($element->localName), self::DOCUMENT_ROOTS, true);
     }
 
     private static function paywallClassQuery(): string
