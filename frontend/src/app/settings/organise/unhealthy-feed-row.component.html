@@ -39,9 +39,9 @@
     <app-feed-health-facts [subscription]="subscription()" />
 
     @if (subscription().lastErrorMessage; as technical) {
-      <div class="error">
+      <app-warning-box class="error">
         <code>{{ technical }}</code>
-      </div>
+      </app-warning-box>
     }
   </div>
 </app-disclosure>

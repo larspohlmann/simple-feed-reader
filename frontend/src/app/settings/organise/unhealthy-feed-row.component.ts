@@ -5,6 +5,7 @@ import { SubscriptionDto } from '../../reader/models';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { DisclosureComponent } from '../../shared/disclosure/disclosure.component';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { WarningBoxComponent } from '../../shared/warning-box/warning-box.component';
 import { FeedHealthFactsComponent } from './feed-health-facts.component';
 
 /** One row in the unhealthy-feeds list: a status glyph whose colour is the
@@ -19,6 +20,7 @@ import { FeedHealthFactsComponent } from './feed-health-facts.component';
     ButtonComponent,
     DisclosureComponent,
     FeedHealthFactsComponent,
+    WarningBoxComponent,
   ],
   templateUrl: './unhealthy-feed-row.component.html',
   styleUrl: './unhealthy-feed-row.component.scss',

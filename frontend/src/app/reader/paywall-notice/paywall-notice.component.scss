@@ -1,12 +1,8 @@
+// The card chrome lives in app-warning-box; this owns only the notice's place
+// in the reader (spacing below, before the hero) and the glyph/link colour.
 :host {
-  display: flex;
-  gap: var(--space-2);
-  align-items: baseline;
+  display: block;
   margin: 0 0 var(--space-4);
-  padding: var(--space-3);
-  border-radius: var(--radius);
-  border: 1px solid var(--border-warning);
-  background: var(--surface-1);
   font-size: var(--fs-sm);
 }
 

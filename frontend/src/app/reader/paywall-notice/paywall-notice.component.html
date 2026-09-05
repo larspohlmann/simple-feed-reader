@@ -1,9 +1,11 @@
-<span class="icon" aria-hidden="true">⚠</span>
-<span class="body">
-  {{ 'reader.paywalled' | transloco }}
-  @if (url(); as href) {
-    <a [href]="href" target="_blank" rel="noopener noreferrer">{{
-      'reader.paywalledLink' | transloco
-    }}</a>
-  }
-</span>
+<app-warning-box>
+  <span class="icon" aria-hidden="true">⚠</span>
+  <span class="body">
+    {{ 'reader.paywalled' | transloco }}
+    @if (url(); as href) {
+      <a [href]="href" target="_blank" rel="noopener noreferrer">{{
+        'reader.paywalledLink' | transloco
+      }}</a>
+    }
+  </span>
+</app-warning-box>

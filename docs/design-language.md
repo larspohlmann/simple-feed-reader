@@ -597,6 +597,33 @@ that occupies layout where it renders, not an overlay.
 
 ---
 
+### `<app-warning-box>`
+
+The app's one warning callout: a neutral card on `--surface-1` ringed in amber
+(`--border-warning`, #854). The sibling of `error-banner` — an error is a filled
+danger banner, a warning is a ring. It projects its content, so each surface
+keeps its own body; it owns only the ring, surface, radius and padding, never
+the layout or wording inside.
+
+```html
+<app-warning-box class="paywall-note">
+  <span class="icon" aria-hidden="true">⚠</span>
+  <span class="body">…</span>
+</app-warning-box>
+```
+
+The host is a `display: flex` row: a leading marker (the paywall glyph) sits in
+a gutter with the body hanging indented beside it, while a lone child (the
+unhealthy-feed row's mono error) just fills the box. Spacing to its neighbours,
+the accent colour of the projected glyph and any text, and the wording all
+belong to the consumer — the box holds no i18n. Used by `app-paywall-notice`
+(#785, #855) and the unhealthy-feed error box (#847).
+
+**Not for:** a danger message with an action — that is `error-banner`. The
+amber ring reads as "heads up", not "this failed".
+
+---
+
 ### `<app-toast>` (via the `ToastService`)
 
 The app's one toast: a surface pinned to the bottom of the viewport, with an
