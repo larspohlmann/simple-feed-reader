@@ -10,6 +10,23 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.0.3] - 2026-09-05
+
+## What's Changed
+* fix(#842): don't strand new code against an un-migrated schema on prod update by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/844
+* Admin mail settings refinements (#845) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/846
+* Unhealthy feeds list in user settings (#847) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/848
+* feat(#849): expand-in-place health rows and error-first retry modal by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/852
+* feat(#853): add warning/danger border role tokens by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/854
+* feat(#855): paywall notice at the top, in a shared warning box by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/856
+* fix(#857): strip illegal XML control characters before parsing by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/858
+* fix(#859): corroborate paywall declaration with the extracted content by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/860
+* fix(#861): pin proxied SMTP send to IPv4 for local resolution by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/862
+* fix(#501): keep list scroll handling out of the Angular zone by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/863
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.0.2...v1.0.3
+
 ## [v1.0.2] - 2026-09-04
 
 ## What's Changed
