@@ -10,6 +10,16 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.0.4] - 2026-09-05
+
+## What's Changed
+* fix(favicon): match the header mark, theme-aware in dark mode by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/865
+* fix(#866): make the mobile drawer and settings menu mutually exclusive by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/867
+* fix(#868): drop the add-feed tag picker's nested scroller by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/869
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.0.3...v1.0.4
+
 ## [v1.0.3] - 2026-09-05
 
 ## What's Changed
