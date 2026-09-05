@@ -69,7 +69,16 @@ export class ReaderHeaderComponent {
   readonly searchTerm = input('');
   readonly populateSearchTerm = input(true);
 
+  /** Whether the shell's mobile drawer is open. The account menu and the drawer
+   *  are both full-attention overlays on a narrow layout; only one may show, so
+   *  the header closes its menu whenever the drawer opens (from the hamburger or
+   *  a swipe). */
+  readonly drawerOpen = input(false);
+
   readonly toggleSidebar = output<void>();
+  /** The account menu is opening, so the shell must close the drawer — the
+   *  other half of the one-overlay-at-a-time rule the `drawerOpen` input keeps. */
+  readonly closeDrawer = output<void>();
   /** The empty middle of the bar was tapped — scroll the list back to the top. */
   readonly scrollTop = output<void>();
   /** The settled search term from the field, or '' when it is cleared. */
@@ -107,6 +116,14 @@ export class ReaderHeaderComponent {
       if (this.screen.isNarrow() || !this.searchOpen()) return;
       this.closedByLayout = true;
       this.searchOpen.set(false);
+    });
+
+    // One overlay at a time on a narrow layout: an opening drawer dismisses the
+    // account menu, which would otherwise sit trapped behind the drawer backdrop
+    // in the header's own stacking context. The reverse — an opening menu closing
+    // the drawer — is `toggleMenu`'s `closeDrawer` emit.
+    effect(() => {
+      if (this.drawerOpen() && this.screen.isNarrow()) this.menuOpen.set(false);
     });
 
     // Move focus with the bar: it swaps trigger for field and back, so leaving
@@ -152,5 +169,13 @@ export class ReaderHeaderComponent {
 
   closeSearch(): void {
     this.searchOpen.set(false);
+  }
+
+  /** Toggles the account menu, and on opening asks the shell to close the drawer
+   *  so the two overlays never show at once (see the `drawerOpen` effect). */
+  toggleMenu(): void {
+    const opening = !this.menuOpen();
+    this.menuOpen.set(opening);
+    if (opening) this.closeDrawer.emit();
   }
 }

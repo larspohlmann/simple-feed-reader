@@ -6,8 +6,10 @@
   [searchLoading]="searching()"
   [searchTerm]="selection().term ?? ''"
   [populateSearchTerm]="selection().searchOrigin !== 'saved'"
+  [drawerOpen]="sidebarOpen()"
   [class.hidden]="headerHidden()"
   (toggleSidebar)="setSidebarOpen(!sidebarOpen())"
+  (closeDrawer)="setSidebarOpen(false)"
   (scrollTop)="onScrollListTop()"
   (search)="onSearch($event)"
 />

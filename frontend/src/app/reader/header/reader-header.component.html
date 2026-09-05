@@ -58,7 +58,7 @@
           aria-haspopup="menu"
           [attr.aria-label]="'reader.account' | transloco"
           [attr.aria-expanded]="menuOpen()"
-          (click)="menuOpen.set(!menuOpen())"
+          (click)="toggleMenu()"
         >
           <app-user-avatar [email]="auth.user()?.email ?? null" [size]="26" />
           <app-icon name="expand_more" size="md" />

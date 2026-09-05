@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Dialog } from '@angular/cdk/dialog';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
@@ -2481,6 +2481,75 @@ describe('ReaderShellComponent', () => {
       f.componentInstance.sidebarOrganising.set(true);
       f.componentInstance.setSidebarOpen(false);
       expect(f.componentInstance.sidebarOrganising()).toBe(false);
+    });
+  });
+
+  describe('the mobile drawer and the settings menu never overlap', () => {
+    beforeEach(() => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [ReaderShellComponent, provideTranslocoTesting()],
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          provideRouter([]),
+          { provide: API_BASE_URL, useValue: 'https://api.test' },
+          { provide: ActivatedRoute, useValue: { queryParamMap: qp.asObservable() } },
+          { provide: AuthService, useValue: auth },
+        ],
+      });
+      TestBed.overrideProvider(LayoutService, {
+        useValue: { isNarrow: signal(true), isWide: signal(false), isCoarse: signal(true) },
+      });
+    });
+
+    function bootNarrow() {
+      const c = TestBed.inject(HttpTestingController);
+      const f = TestBed.createComponent(ReaderShellComponent);
+      f.detectChanges();
+      c.match(() => true).forEach((req) =>
+        req.flush({
+          subscriptions: [],
+          tags: [],
+          entries: [],
+          savedSearches: [],
+          favoritesCount: 0,
+          keptCount: 0,
+          nextCursor: null,
+        }),
+      );
+      f.detectChanges();
+      return f;
+    }
+
+    function avatarButton(f: ComponentFixture<ReaderShellComponent>) {
+      return (f.nativeElement as HTMLElement).querySelector(
+        '[aria-haspopup="menu"]',
+      ) as HTMLButtonElement;
+    }
+
+    it('closes the drawer when the settings menu opens', () => {
+      const f = bootNarrow();
+      f.componentInstance.setSidebarOpen(true);
+      f.detectChanges();
+
+      avatarButton(f).click();
+      f.detectChanges();
+
+      expect((f.nativeElement as HTMLElement).querySelector('.menu')).not.toBeNull();
+      expect(f.componentInstance.sidebarOpen()).toBe(false);
+    });
+
+    it('closes the settings menu when the drawer opens', () => {
+      const f = bootNarrow();
+      avatarButton(f).click();
+      f.detectChanges();
+      expect((f.nativeElement as HTMLElement).querySelector('.menu')).not.toBeNull();
+
+      f.componentInstance.setSidebarOpen(true);
+      f.detectChanges();
+
+      expect((f.nativeElement as HTMLElement).querySelector('.menu')).toBeNull();
     });
   });
 
