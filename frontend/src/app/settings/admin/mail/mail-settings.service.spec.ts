@@ -157,7 +157,7 @@ describe('MailSettingsService', () => {
     service.loadFailures();
 
     http.expectOne(ERRORS_ENDPOINT).flush({
-      count: 2,
+      count: 5,
       failures: [
         {
           kind: 'digest',
@@ -174,7 +174,8 @@ describe('MailSettingsService', () => {
       ],
     });
 
-    expect(service.failureCount()).toBe(2);
+    expect(service.failureCount()).toBe(5);
+    expect(service.failures().length).toBe(2);
     expect(service.failures()[0].kind).toBe('digest');
   });
 
