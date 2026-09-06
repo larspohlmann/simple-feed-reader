@@ -85,9 +85,9 @@ export class ProxySectionComponent {
   /** The probe runs against the SAVED row, so a pending edit would test
    *  something other than what is on screen. */
   readonly canTest = computed(() => this.configured() && !this.svc.dirty());
-  /** Empty exactly when no password is stored, so it doubles as the "is one on
-   *  record?" test the password field's placeholder needs. */
-  readonly passwordHint = computed(() => this.svc.state()?.passwordHint ?? '');
+  /** Whether a password is on record -- never any part of it, the API does not
+   *  return the secret. */
+  readonly passwordSaved = computed(() => this.svc.state()?.hasPassword ?? false);
   readonly probe = this.svc.probe;
 
   readonly failureMessage = computed(() => {
@@ -159,6 +159,10 @@ export class ProxySectionComponent {
   onReset(): void {
     this.svc.discardDraft();
     this.password.set('');
+  }
+
+  removePassword(): void {
+    this.svc.removePassword();
   }
 
   test(): void {

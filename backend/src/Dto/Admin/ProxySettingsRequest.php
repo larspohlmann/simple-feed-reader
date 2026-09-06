@@ -11,9 +11,9 @@ use Symfony\Component\Validator\Constraints as Assert;
 /**
  * Full-replace payload for the egress proxy. `#[MapRequestPayload]` fills a
  * missing field with the constructor default, so clients always send the whole
- * connection. `password` is the one exception to full-replace: null means "keep
- * the stored secret", a non-null string replaces it. It is inbound-only and is
- * never echoed back.
+ * connection. The password is a three-state intent: null keeps the stored
+ * secret, a string replaces it, and `removePassword` clears it. Both are
+ * inbound-only, never echoed back.
  */
 final readonly class ProxySettingsRequest
 {
@@ -35,6 +35,8 @@ final readonly class ProxySettingsRequest
         public bool $remoteDns = false,
         #[Assert\Length(max: 512)]
         public ?string $password = null,
+        #[Assert\Type('bool')]
+        public bool $removePassword = false,
     ) {
     }
 }

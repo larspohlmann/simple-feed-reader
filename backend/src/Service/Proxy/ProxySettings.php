@@ -20,8 +20,6 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 readonly class ProxySettings
 {
-    private const int HINT_LENGTH = 4;
-
     public function __construct(
         private ProxyServerSettingsRepository $repository,
         private EntityManagerInterface $em,
@@ -39,7 +37,6 @@ readonly class ProxySettings
      *     username: string|null,
      *     remoteDns: bool,
      *     hasPassword: bool,
-     *     passwordHint: string,
      * }
      */
     public function view(): array
@@ -58,17 +55,13 @@ readonly class ProxySettings
 
         $connection = $this->connectionFrom($request);
 
-        if (null === $request->password) {
+        if ($request->removePassword) {
+            $settings->applyWithoutPassword($connection);
+            $settings->clearStoredPassword();
+        } elseif (null === $request->password) {
             $settings->applyWithoutPassword($connection);
         } else {
-            $settings->apply(
-                $connection,
-                $this->cipher->seal($request->password),
-                // Cut on characters, not bytes: substr() would split a
-                // multibyte password mid-codepoint and store a hint that no
-                // JSON response can encode.
-                mb_substr($request->password, -self::HINT_LENGTH),
-            );
+            $settings->apply($connection, $this->cipher->seal($request->password));
         }
 
         $this->em->flush();

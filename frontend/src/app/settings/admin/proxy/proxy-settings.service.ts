@@ -14,7 +14,6 @@ export interface ProxySettingsState {
   readonly username: string | null;
   readonly remoteDns: boolean;
   readonly hasPassword: boolean;
-  readonly passwordHint: string;
 }
 
 export interface SaveProxySettings {
@@ -27,6 +26,7 @@ export interface SaveProxySettings {
   readonly remoteDns: boolean;
   /** null keeps the stored secret; a string replaces it. */
   readonly password: string | null;
+  readonly removePassword: boolean;
 }
 
 /** The typed text/number fields behind the explicit Save. The toggles and the
@@ -58,6 +58,15 @@ export class ProxySettingsService extends DraftSettingsService<
 
   readonly probe = signal<ProxyProbe>({ status: 'idle' });
 
+  removePassword(): void {
+    const current = this.state();
+    if (!current) return;
+    this.put({ ...this.bodyFromState(current), removePassword: true }, (state) => {
+      this.commit(state);
+      this.saved.set(true);
+    });
+  }
+
   testConnection(): void {
     this.probe.set({ status: 'loading' });
     this.http.post<ProxyTestResponse>(`${this.endpoint}/test`, {}).subscribe({
@@ -82,6 +91,7 @@ export class ProxySettingsService extends DraftSettingsService<
       username: state.username,
       remoteDns: state.remoteDns,
       password: null,
+      removePassword: false,
     };
   }
 }

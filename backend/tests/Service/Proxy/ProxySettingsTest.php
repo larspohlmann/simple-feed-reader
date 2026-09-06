@@ -18,7 +18,7 @@ final class ProxySettingsTest extends TestCase
 {
     private const SECRET = 'test-master-secret-at-least-32-chars-long!!';
 
-    public function testUpdateThenViewHidesSecretAndKeepsHint(): void
+    public function testUpdateThenViewHidesSecretButFlagsThatOneIsStored(): void
     {
         $settings = $this->service($stored);
 
@@ -40,35 +40,39 @@ final class ProxySettingsTest extends TestCase
         self::assertSame(1080, $view['port']);
         self::assertSame('user', $view['username']);
         self::assertTrue($view['hasPassword']);
-        self::assertSame('fish', $view['passwordHint']);
+        self::assertArrayNotHasKey('passwordHint', $view);
         self::assertArrayNotHasKey('password', $view);
     }
 
-    /**
-     * A byte-wise substr() would cut a multibyte password mid-codepoint, and the
-     * malformed hint that produced could not be JSON-encoded — so the row saved
-     * but every later GET of the admin payload threw on it.
-     */
-    public function testAMultibytePasswordYieldsAHintThatSurvivesJsonEncoding(): void
+    public function testRemovePasswordClearsTheStoredSecret(): void
     {
         $settings = $this->service($stored);
-
         $settings->update(new ProxySettingsRequest(
-            enabled: true,
+            enabled: false,
             directFallback: true,
             type: 'SOCKS5',
             host: 'proxy.example',
             port: 1080,
-            username: null,
-            password: 'a😀b',
+            username: 'user',
+            password: 'sw0rdfish',
+        ));
+        self::assertTrue($settings->view()['hasPassword']);
+
+        $settings->update(new ProxySettingsRequest(
+            enabled: false,
+            directFallback: true,
+            type: 'SOCKS5',
+            host: 'other.example',
+            port: 1080,
+            username: 'user',
+            removePassword: true,
         ));
 
         $view = $settings->view();
-        self::assertSame('a😀b', $view['passwordHint']);
-        self::assertTrue(mb_check_encoding($view['passwordHint'], 'UTF-8'));
-        // The original defect: json_encode() returned false on the malformed
-        // hint, so JsonResponse threw and the admin payload could not be sent.
-        self::assertNotFalse(json_encode($view));
+        self::assertFalse($view['hasPassword']);
+        // The connection is applied alongside the clear: removing the password
+        // is still a full-replace of the rest of the row.
+        self::assertSame('other.example', $view['host']);
     }
 
     /**

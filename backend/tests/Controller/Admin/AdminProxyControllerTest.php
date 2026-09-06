@@ -98,7 +98,7 @@ final class AdminProxyControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
         $body = $this->payload($this->client);
         self::assertTrue($body['hasPassword']);
-        self::assertSame('fish', $body['passwordHint']);
+        self::assertArrayNotHasKey('passwordHint', $body);
         self::assertArrayNotHasKey('password', $body);
     }
 
@@ -167,7 +167,33 @@ final class AdminProxyControllerTest extends ApiTestCase
 
         $body = $this->payload($this->client);
         self::assertTrue($body['hasPassword']);
-        self::assertSame('fish', $body['passwordHint']);
+    }
+
+    public function testUpdateRemovesTheStoredPasswordWhenRemovePasswordIsSet(): void
+    {
+        $admin = $this->admin();
+
+        $this->requestWithJsonBody('PUT', $admin, [
+            'enabled' => true,
+            'type' => 'SOCKS5',
+            'host' => 'proxy.example',
+            'port' => 1080,
+            'username' => 'user',
+            'password' => 'sw0rdfish',
+        ]);
+        self::assertResponseIsSuccessful();
+
+        $this->requestWithJsonBody('PUT', $admin, [
+            'enabled' => true,
+            'type' => 'SOCKS5',
+            'host' => 'proxy.example',
+            'port' => 1080,
+            'username' => 'user',
+            'removePassword' => true,
+        ]);
+
+        self::assertResponseIsSuccessful();
+        self::assertFalse($this->payload($this->client)['hasPassword']);
     }
 
     public function testTestConnectionReportsNotConfiguredWhenNoProxyIsStored(): void

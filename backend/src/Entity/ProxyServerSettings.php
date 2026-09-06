@@ -13,8 +13,8 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * The instance-wide egress proxy, held in a single row (see InstanceSetting for
  * the singleton rationale). Absence of the row means "no proxy configured".
- * The password is never readable here: passwordHint is the last four characters
- * in clear text, on purpose, so the admin page can name the stored secret.
+ * The password is never readable here; only whether one is stored crosses to
+ * the admin page.
  */
 #[ORM\Entity(repositoryClass: ProxyServerSettingsRepository::class)]
 #[ORM\Table(name: 'proxy_server_settings')]
@@ -59,9 +59,6 @@ class ProxyServerSettings
     #[ORM\Column(length: 64)]
     private string $passwordSalt = '';
 
-    #[ORM\Column(length: 8)]
-    private string $passwordHint = '';
-
     #[ORM\Column(options: ['default' => 1])]
     private int $keyVersion = 1;
 
@@ -100,11 +97,6 @@ class ProxyServerSettings
         return $this->remoteDns;
     }
 
-    public function getPasswordHint(): string
-    {
-        return $this->passwordHint;
-    }
-
     public function hasPassword(): bool
     {
         return '' !== $this->passwordCiphertext;
@@ -120,14 +112,13 @@ class ProxyServerSettings
         );
     }
 
-    public function apply(ProxyConnection $connection, SealedSecret $sealed, string $passwordHint): void
+    public function apply(ProxyConnection $connection, SealedSecret $sealed): void
     {
         $this->applyWithoutPassword($connection);
         $this->passwordCiphertext = $sealed->ciphertext;
         $this->passwordNonce = $sealed->nonce;
         $this->passwordSalt = $sealed->salt;
         $this->keyVersion = $sealed->version;
-        $this->passwordHint = $passwordHint;
     }
 
     public function applyWithoutPassword(ProxyConnection $connection): void
@@ -139,5 +130,13 @@ class ProxyServerSettings
         $this->port = $connection->port;
         $this->username = $connection->username;
         $this->remoteDns = $connection->remoteDns;
+    }
+
+    public function clearStoredPassword(): void
+    {
+        $this->passwordCiphertext = '';
+        $this->passwordNonce = '';
+        $this->passwordSalt = '';
+        $this->keyVersion = 1;
     }
 }

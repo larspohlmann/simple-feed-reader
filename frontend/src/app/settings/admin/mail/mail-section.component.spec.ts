@@ -346,18 +346,15 @@ describe('MailSectionComponent', () => {
     expect(gmailHint(fixture)).toBeNull();
   });
 
-  it('renders a static keep-hint placeholder, never a saved-password hint', () => {
+  it('never seeds the password field, and carries no truncatable placeholder hint', () => {
     const fixture = mount(state({ host: 'smtp.example.com', hasPassword: true }));
-    const i18n = TestBed.inject(TranslocoService);
 
-    expect(passwordInput(fixture).placeholder).toBe(
-      i18n.translate('settings.mail.passwordKeepHint'),
-    );
     expect(passwordInput(fixture).value).toBe('');
+    expect(passwordInput(fixture).placeholder).toBe('');
     expect(passwordInput(fixture).type).toBe('password');
   });
 
-  it('shows that a password is saved, but never any part of it', () => {
+  it('shows that a password is saved with the keep hint, but never any part of it', () => {
     const fixture = mount(state({ host: 'smtp.example.com', hasPassword: true }));
     const i18n = TestBed.inject(TranslocoService);
 
