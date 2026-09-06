@@ -7,6 +7,7 @@ namespace App\Service\Passkey;
 use App\Dto\Passkey\RegisterPasskeyRequest;
 use App\Entity\User;
 use App\Entity\UserPasskey;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Passkey\Exception\AttestationRejectedException;
 use App\Service\Passkey\Exception\DuplicatePasskeyException;
 use App\Service\Passkey\Exception\PasskeyChallengeOwnershipException;

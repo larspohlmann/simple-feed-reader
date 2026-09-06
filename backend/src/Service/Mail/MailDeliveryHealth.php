@@ -8,7 +8,7 @@ use App\Entity\MailKind;
 use App\Entity\MailSendFailure;
 use App\Http\MailDeliveryHealthJson;
 use App\Repository\MailSendFailureRepository;
-use Psr\Clock\ClockInterface;
+use App\Service\Clock\NaiveUtcClock;
 
 /**
  * The in-app signal that automated mail is failing (#882). Every send path
@@ -19,14 +19,13 @@ final readonly class MailDeliveryHealth
 {
     public function __construct(
         private MailSendFailureRepository $failures,
-        private ClockInterface $clock,
+        private NaiveUtcClock $clock,
     ) {
     }
 
     public function recordFailure(MailKind $kind, string $recipient, string $error): void
     {
-        // Naive UTC: the Strato workers run Europe/Berlin, so normalise before persisting.
-        $occurredAt = $this->clock->now()->setTimezone(new \DateTimeZone('UTC'));
+        $occurredAt = $this->clock->now();
 
         $this->failures->add(new MailSendFailure($kind, $recipient, $error, $occurredAt));
     }
