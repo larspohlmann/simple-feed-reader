@@ -10,6 +10,21 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.0.6] - 2026-09-06
+
+## What's Changed
+* fix(#880): actionable proxy failures, egress IPv4 forcing, in-form pitfalls note by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/881
+* feat(#882): automated-email failure pill + recent-error log in admin Mail by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/883
+* fix(#882): reset stale test result, timestamp failure rows, nav badge for outgoing mail by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/884
+* fix(#886): make the digest email fluid and readable on iPhone Mail by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/887
+* refactor(#886): digest email from Twig templates + tighter padding by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/888
+* fix(#886): full-bleed digest card (drop the outer side frame) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/889
+* fix(#886): digest sheet full-width on Apple Mail (restore width:100%) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/890
+* fix(#886): body padding 0 so iPhone Mail drops its reading inset by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/891
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.0.5...v1.0.6
+
 ## [v1.0.5] - 2026-09-06
 
 ## What's Changed
