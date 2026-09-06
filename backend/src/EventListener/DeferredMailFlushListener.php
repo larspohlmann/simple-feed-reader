@@ -13,6 +13,8 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\Event\TerminateEvent;
 use Symfony\Component\Mailer\Envelope;
 use Symfony\Component\Mime\Address;
+use Symfony\Component\Mime\Email;
+use Symfony\Component\Mime\RawMessage;
 
 /**
  * Flushes DeferredMailer once the work the user is waiting on is finished.
@@ -66,7 +68,7 @@ final readonly class DeferredMailFlushListener
                 ]);
                 $this->health->recordFailure(
                     MailKind::Account,
-                    $this->recipientOf($envelope),
+                    $this->recipientOf($message, $envelope),
                     $exception->getMessage(),
                 );
 
@@ -77,17 +79,19 @@ final readonly class DeferredMailFlushListener
         }
     }
 
-    private function recipientOf(?Envelope $envelope): string
+    private function recipientOf(RawMessage $message, ?Envelope $envelope): string
     {
-        if (null === $envelope) {
+        $addresses = null !== $envelope
+            ? $envelope->getRecipients()
+            : ($message instanceof Email ? $message->getTo() : []);
+
+        if ([] === $addresses) {
             return 'unknown';
         }
 
-        $addresses = array_map(
+        return implode(', ', array_map(
             static fn (Address $address): string => $address->getAddress(),
-            $envelope->getRecipients(),
-        );
-
-        return [] === $addresses ? 'unknown' : implode(', ', $addresses);
+            $addresses,
+        ));
     }
 }
