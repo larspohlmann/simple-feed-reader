@@ -10,6 +10,19 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.0.5] - 2026-09-06
+
+## What's Changed
+* feat(#473): syntax highlight reader code blocks by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/870
+* feat(#727): prune stale passkeys from the browser with the WebAuthn Signal API by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/871
+* fix(#872): move a feed between tags instead of duplicating it by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/873
+* feat(#874): a feed moved between tags lands at the drop position by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/875
+* Rank and cap saved searches in the sidebar (#876) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/877
+* fix(#878): stop leaking the stored proxy password's last characters by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/879
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.0.4...v1.0.5
+
 ## [v1.0.4] - 2026-09-05
 
 ## What's Changed
