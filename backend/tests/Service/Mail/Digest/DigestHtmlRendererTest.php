@@ -178,7 +178,7 @@ final class DigestHtmlRendererTest extends TestCase
         $html = $this->renderer()->render(new DigestPage([], 0), new DigestImageSet([], []), 'en');
 
         self::assertStringContainsString('max-width: 600px', $html);
-        self::assertStringContainsString('padding: 16px 6px', $html);
+        self::assertStringContainsString('padding: 12px 0', $html);
     }
 
     public function testStylesAreInlinedOntoElements(): void
