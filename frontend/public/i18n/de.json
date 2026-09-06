@@ -840,7 +840,6 @@
     "savedSearchesEmpty": "Noch keine gespeicherten Suchen. Speichern Sie eine Suche, um sie hier zu sehen.",
     "toggleSavedSearches": "Gespeicherte Suchen ein-/ausklappen",
     "showMoreSavedSearches": "{{count}} weitere anzeigen",
-    "showLessSavedSearches": "Weniger anzeigen",
     "saveSearch": "Suche speichern",
     "saveSearchShort": "Speichern",
     "removeSavedSearch": "Gespeicherte Suche entfernen",

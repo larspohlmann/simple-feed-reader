@@ -192,12 +192,19 @@ export class SidebarComponent {
    *  so reading an entry does not reshuffle the list under the reader (#876). */
   private readonly frozenSavedSearchOrder = signal<number[]>([]);
 
+  /** Re-rank the frozen order from the current unread counts. The two triggers
+   *  that reset the freeze — a structural change and a section open — share this
+   *  one write (#876). */
+  private refreezeSavedSearchOrder(): void {
+    this.frozenSavedSearchOrder.set(rankedSavedSearchIds(this.savedSearches()));
+  }
+
   /** Re-rank on a structural change: the initial load, a create, or a delete.
    *  Keyed on the id set only, so a count-only change leaves the order frozen. */
   private readonly refreezeOnStructuralChange = effect(() => {
     const ids = this.savedSearches().map((s) => s.id);
     if (!sameIds(ids, untracked(this.frozenSavedSearchOrder))) {
-      this.frozenSavedSearchOrder.set(rankedSavedSearchIds(this.savedSearches()));
+      this.refreezeSavedSearchOrder();
     }
   });
 
@@ -235,7 +242,6 @@ export class SidebarComponent {
   protected readonly hiddenSavedSearchCount = computed(
     () => this.orderedSavedSearches().length - this.visibleSavedSearches().length,
   );
-  protected readonly hasHiddenSavedSearches = computed(() => this.hiddenSavedSearchCount() > 0);
 
   toggleSavedSearchList(): void {
     this.savedSearchListExpanded.update((open) => !open);
@@ -246,7 +252,7 @@ export class SidebarComponent {
     this.savedSearchesExpanded.set(opening);
     if (opening) {
       // Opening the section is a fresh view: re-rank with the current counts.
-      this.frozenSavedSearchOrder.set(rankedSavedSearchIds(this.savedSearches()));
+      this.refreezeSavedSearchOrder();
       this.savedSearchListExpanded.set(false);
     }
   }

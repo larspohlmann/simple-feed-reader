@@ -840,7 +840,6 @@
     "savedSearchesEmpty": "No saved searches yet. Save a search to see it here.",
     "toggleSavedSearches": "Toggle saved searches",
     "showMoreSavedSearches": "Show {{count}} more",
-    "showLessSavedSearches": "Show less",
     "saveSearch": "Save search",
     "saveSearchShort": "Save",
     "removeSavedSearch": "Remove saved search",
