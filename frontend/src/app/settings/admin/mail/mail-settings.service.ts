@@ -1,7 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { parseProblem } from '../../../core/problem';
 import { DraftSettingsService } from '../../../shared/settings/draft-settings.service';
+import { MailHealthStore } from './mail-health.store';
 
 export type MailEncryption = 'none' | 'starttls' | 'tls';
 
@@ -50,17 +51,6 @@ interface MailTestResponse {
   readonly reason: string | null;
 }
 
-export interface MailFailure {
-  readonly kind: 'digest' | 'account' | 'test';
-  readonly recipient: string;
-  readonly error: string;
-  readonly at: string;
-}
-
-interface MailErrorsResponse {
-  readonly failures: MailFailure[];
-}
-
 @Injectable()
 export class MailSettingsService extends DraftSettingsService<
   MailSettingsState,
@@ -69,22 +59,20 @@ export class MailSettingsService extends DraftSettingsService<
 > {
   protected readonly endpoint = `${this.base}/api/admin/mail`;
 
+  private readonly health = inject(MailHealthStore);
+
   readonly probe = signal<MailProbe>({ status: 'idle' });
 
-  readonly failures = signal<MailFailure[]>([]);
-  /** The store is pruned to a bounded window, so the list is the whole of it:
-   *  the pill count is just its length, kept as one source of truth. */
-  readonly failureCount = computed(() => this.failures().length);
-
-  constructor() {
-    super();
-    this.loadFailures();
+  /** A test reflects the LAST-SAVED settings, so any saved-settings change --
+   *  an instant toggle or a commit -- invalidates a standing result. */
+  override saveInstant(partial: Partial<SaveMailSettings>): void {
+    this.probe.set({ status: 'idle' });
+    super.saveInstant(partial);
   }
 
-  loadFailures(): void {
-    this.http
-      .get<MailErrorsResponse>(`${this.endpoint}/errors`)
-      .subscribe((response) => this.failures.set(response.failures));
+  protected override commit(state: MailSettingsState): void {
+    this.probe.set({ status: 'idle' });
+    super.commit(state);
   }
 
   reset(): void {
@@ -112,11 +100,11 @@ export class MailSettingsService extends DraftSettingsService<
         this.probe.set(
           result.ok ? { status: 'ok' } : { status: 'error', message: result.reason ?? 'failed' },
         );
-        this.loadFailures();
+        this.health.refresh();
       },
       error: (error: HttpErrorResponse) => {
         this.probe.set({ status: 'error', message: parseProblem(error).detail ?? 'failed' });
-        this.loadFailures();
+        this.health.refresh();
       },
     });
   }

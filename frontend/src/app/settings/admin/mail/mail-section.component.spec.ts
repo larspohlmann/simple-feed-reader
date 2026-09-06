@@ -155,6 +155,22 @@ describe('MailSectionComponent', () => {
       expect(card.querySelectorAll('.mail-failure-row').length).toBe(2);
       expect(card.textContent).toContain('SMTP is down');
     });
+
+    it('renders a timestamp on each failure row', () => {
+      const fixture = mount(state(), {
+        failures: [
+          {
+            kind: 'digest',
+            recipient: 'a@example.test',
+            error: 'SMTP is down',
+            at: '2026-09-06T10:00:00Z',
+          },
+        ],
+      });
+
+      const at: HTMLElement | null = fixture.nativeElement.querySelector('.mail-failure-row .at');
+      expect(at?.textContent?.trim()).not.toBe('');
+    });
   });
 
   it('disables the enable toggle until a host is saved', () => {

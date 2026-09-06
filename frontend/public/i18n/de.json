@@ -447,6 +447,7 @@
         "heading": "Probleme beim Mailversand",
         "failedCountOne": "{{count}} fehlgeschlagener Versand",
         "failedCountOther": "{{count}} fehlgeschlagene Sendungen",
+        "badgeLabel": "{{count}} fehlgeschlagene Mailsendungen",
         "kind": {
           "digest": "Zusammenfassung",
           "account": "Konto-E-Mail",

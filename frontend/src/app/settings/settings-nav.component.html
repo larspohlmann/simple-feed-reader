@@ -18,6 +18,15 @@
                 >{{ unhealthyCount() }}</span
               >
             }
+            @if (s.path === 'admin/mail' && mailFailureCount()) {
+              <span
+                class="badge"
+                [attr.aria-label]="
+                  'settings.mail.health.badgeLabel' | transloco: { count: mailFailureCount() }
+                "
+                >{{ mailFailureCount() }}</span
+              >
+            }
             <app-icon class="chev" name="chevron_right" size="sm" />
           </a>
         </li>

@@ -447,6 +447,7 @@
         "heading": "Mail delivery problems",
         "failedCountOne": "{{count}} failed send",
         "failedCountOther": "{{count}} failed sends",
+        "badgeLabel": "{{count}} failed mail sends",
         "kind": {
           "digest": "Digest",
           "account": "Account email",

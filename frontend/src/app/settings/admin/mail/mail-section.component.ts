@@ -10,6 +10,8 @@ import { Dialog } from '@angular/cdk/dialog';
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { LanguageService } from '../../../core/language.service';
+import { formatLongDateTime } from '../../../reader/format';
 import { ButtonComponent } from '../../../shared/button/button.component';
 import {
   ConfirmDialogComponent,
@@ -26,6 +28,7 @@ import { SettingsStackComponent } from '../../../shared/settings/stack/settings-
 import { ToggleComponent } from '../../../shared/toggle/toggle.component';
 import { toastOnSaved } from '../../../shared/toast/saved-toast';
 import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.component';
+import { MailHealthStore } from './mail-health.store';
 import { MailEncryption, MailSettingsService } from './mail-settings.service';
 
 /** The default submission port, mirroring the backend's MailConnection::DEFAULT_PORT. */
@@ -63,8 +66,10 @@ type MailField = 'host' | 'port' | 'username' | 'fromAddress' | 'fromName' | 'pa
 })
 export class MailSectionComponent {
   readonly svc = inject(MailSettingsService);
+  readonly health = inject(MailHealthStore);
   private readonly i18n = inject(TranslocoService);
   private readonly dialog = inject(Dialog);
+  private readonly language = inject(LanguageService);
 
   // Instant fields: persisted the moment they change, never held in the draft.
   readonly enabled = linkedSignal<boolean>(() => this.svc.state()?.enabled ?? false);
@@ -185,7 +190,12 @@ export class MailSectionComponent {
 
   constructor() {
     this.svc.load();
+    this.health.refresh();
     toastOnSaved(this.svc, 'settings.mail.saved');
+  }
+
+  protected formatDateTime(iso: string): string {
+    return formatLongDateTime(iso, this.language.lang());
   }
 
   /** The enable toggle and the encryption select instant-save only once a DB
