@@ -63,6 +63,41 @@ describe('MailSectionComponent', () => {
     return fixture;
   }
 
+  interface MailErrorsPayload {
+    count: number;
+    failures: readonly {
+      kind: 'digest' | 'account' | 'test';
+      recipient: string;
+      error: string;
+      at: string;
+    }[];
+  }
+
+  function mountWithFailures(
+    payload: MailErrorsPayload,
+    initial: MailSettingsState = state(),
+  ): ComponentFixture<MailSectionComponent> {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [MailSectionComponent, provideTranslocoTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: API_BASE_URL, useValue: BASE },
+        { provide: ToastService, useValue: toastStub },
+        { provide: Dialog, useValue: dialogStub },
+      ],
+    });
+    http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(MailSectionComponent);
+    fixture.detectChanges();
+    http.expectOne(ENDPOINT).flush(initial);
+    http.expectOne(ERRORS_ENDPOINT).flush(payload);
+    fixture.detectChanges();
+    return fixture;
+  }
+
   const enableToggleInput = (fixture: ComponentFixture<MailSectionComponent>): HTMLInputElement =>
     fixture.nativeElement.querySelector('#mail-enabled-toggle');
 
@@ -112,6 +147,39 @@ describe('MailSectionComponent', () => {
   });
 
   afterEach(() => http.verify());
+
+  describe('mail failure health card (#882)', () => {
+    it('shows no failure card when the last send succeeded', () => {
+      const fixture = mount();
+
+      expect(fixture.nativeElement.querySelector('.mail-health')).toBeNull();
+    });
+
+    it('shows the pill and one row per failure when the last send failed', () => {
+      const fixture = mountWithFailures({
+        count: 2,
+        failures: [
+          {
+            kind: 'digest',
+            recipient: 'a@example.test',
+            error: 'SMTP is down',
+            at: '2026-09-06T10:00:00Z',
+          },
+          {
+            kind: 'account',
+            recipient: 'b@example.test',
+            error: 'relay refused',
+            at: '2026-09-06T10:05:00Z',
+          },
+        ],
+      });
+
+      const card = fixture.nativeElement.querySelector('.mail-health');
+      expect(card).not.toBeNull();
+      expect(card.querySelectorAll('.mail-failure-row').length).toBe(2);
+      expect(card.textContent).toContain('SMTP is down');
+    });
+  });
 
   it('disables the enable toggle until a host is saved', () => {
     const fixture = mount(state({ host: '' }));
