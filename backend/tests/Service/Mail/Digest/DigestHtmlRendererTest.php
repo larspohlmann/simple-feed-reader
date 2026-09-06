@@ -154,7 +154,7 @@ final class DigestHtmlRendererTest extends TestCase
             $html,
         );
         self::assertStringContainsString('style="background:#f5f5f4;"', $html);
-        self::assertStringContainsString('padding:24px 12px', $html);
+        self::assertStringContainsString('padding:16px 6px', $html);
         self::assertStringEndsWith('</td></tr></table></body></html>', $html);
     }
 
@@ -324,21 +324,21 @@ final class DigestHtmlRendererTest extends TestCase
             . 'content="width=device-width,initial-scale=1"></head><body style="margin:0;'
             . 'background:#f5f5f4;-webkit-text-size-adjust:100%;"><'
             . 'table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
-            . 'style="background:#f5f5f4;"><tr><td align="center" style="padding:24px '
-            . '12px;"><!--[if mso]><table role="presentation" width="600" cellpadding="0" '
+            . 'style="background:#f5f5f4;"><tr><td align="center" style="padding:16px '
+            . '6px;"><!--[if mso]><table role="presentation" width="600" cellpadding="0" '
             . 'cellspacing="0"><tr><td><![endif]--><table role="presentation" width="100%" '
             . 'cellpadding="0" cellspacing="0" '
             . 'style="width:100%;max-width:600px;background:#ffffff;font-family:system-ui,-apple-system,\'Segoe '
             . 'UI\',roboto,sans-serif;color:#2a2a2a;"><tr><td style="padding:24px '
-            . '24px 18px;border-bottom:1px solid #e4e4e2;"><img src="cid:digestlogo" '
+            . '16px 18px;border-bottom:1px solid #e4e4e2;"><img src="cid:digestlogo" '
             . 'width="20" height="20" alt="" style="display:inline-block;width:20px;'
             . 'height:20px;vertical-align:middle;margin-right:8px;border:0;"><span '
             . 'style="font-size:16px;font-weight:600;color:#2a2a2a;">simple feed '
             . 'reader</span><div style="margin-top:14px;font-size:14px;color:#8f8f8b;'
             . '">%TODAY% · 22 new entries</div></td></tr><tr><td style="padding:16px '
-            . '24px 0;font-size:15px;line-height:1.5;color:#5f5f5c;">These are new '
+            . '16px 0;font-size:15px;line-height:1.5;color:#5f5f5c;">These are new '
             . 'entries matching your saved searches, grouped by search.</td></tr>'
-            . '<tr><td style="padding:20px 24px 4px;"><div style="padding-bottom:10px;'
+            . '<tr><td style="padding:20px 16px 4px;"><div style="padding-bottom:10px;'
             . 'border-bottom:1px solid #e4e4e2;font-size:14px;font-weight:600;color:#5f5f5c;'
             . '">Thailand (10)</div><div style="padding-top:20px;"></div><table '
             . 'role="presentation" width="100%" cellpadding="0" cellspacing="0">'
@@ -361,12 +361,12 @@ final class DigestHtmlRendererTest extends TestCase
             . 'margin:4px 0;">No image here</a></td></tr></table><a href="https://reader.example/?q=Thailand" '
             . 'style="display:inline-block;margin:12px 0 2px;font-size:14px;color:#3f8676;'
             . 'text-decoration:none;font-weight:500;">+7 more in "Thailand" →</a>'
-            . '</td></tr><tr><td style="padding:20px 24px 4px;"><div style="padding-bottom:10px;'
+            . '</td></tr><tr><td style="padding:20px 16px 4px;"><div style="padding-bottom:10px;'
             . 'border-bottom:1px solid #e4e4e2;font-size:14px;font-weight:600;color:#5f5f5c;'
             . '">Bundesliga (12)</div><a href="https://reader.example/?q=Bundesliga" '
             . 'style="display:inline-block;margin:12px 0 2px;font-size:14px;color:#3f8676;'
             . 'text-decoration:none;font-weight:500;">+12 more in "Bundesliga" →<'
-            . '/a></td></tr><tr><td style="padding:22px 24px 26px;border-top:1px '
+            . '/a></td></tr><tr><td style="padding:22px 16px 26px;border-top:1px '
             . 'solid #e4e4e2;"><div style="margin-bottom:12px;"><a href="https://reader.example/" '
             . 'style="font-size:14px;color:#3f8676;text-decoration:none;">Open in '
             . 'the reader →</a></div><div style="font-size:13px;line-height:1.5;'

@@ -45,7 +45,7 @@ final readonly class DigestHtmlRenderer
 
         return '<!doctype html><html>' . $this->head()
             . '<body style="margin:0;background:#f5f5f4;-webkit-text-size-adjust:100%;">'
-            . $outer . '<tr><td align="center" style="padding:24px 12px;">'
+            . $outer . '<tr><td align="center" style="padding:16px 6px;">'
             . $this->sheet($body)
             . '</td></tr></table></body></html>';
     }
@@ -77,7 +77,7 @@ final readonly class DigestHtmlRenderer
         $logo = '<img src="cid:' . self::LOGO_CID . '" width="20" height="20" alt="" '
             . 'style="display:inline-block;width:20px;height:20px;vertical-align:middle;margin-right:8px;border:0;">';
 
-        return '<tr><td style="padding:24px 24px 18px;border-bottom:1px solid #e4e4e2;">'
+        return '<tr><td style="padding:24px 16px 18px;border-bottom:1px solid #e4e4e2;">'
             . $logo . '<span style="font-size:16px;font-weight:600;color:#2a2a2a;">simple feed reader</span>'
             . '<div style="margin-top:14px;font-size:14px;color:#8f8f8b;">' . $this->escapeText($line) . '</div>'
             . '</td></tr>';
@@ -85,7 +85,7 @@ final readonly class DigestHtmlRenderer
 
     private function intro(string $locale): string
     {
-        return '<tr><td style="padding:16px 24px 0;font-size:15px;line-height:1.5;color:#5f5f5c;">'
+        return '<tr><td style="padding:16px 16px 0;font-size:15px;line-height:1.5;color:#5f5f5c;">'
             . $this->escapeText($this->trans('digest.intro', [], $locale)) . '</td></tr>';
     }
 
@@ -102,7 +102,7 @@ final readonly class DigestHtmlRenderer
         $headingStyle = 'padding-bottom:10px;border-bottom:1px solid #e4e4e2;font-size:14px;'
             . 'font-weight:600;color:#5f5f5c;';
 
-        return '<tr><td style="padding:20px 24px 4px;">'
+        return '<tr><td style="padding:20px 16px 4px;">'
             . '<div style="' . $headingStyle . '">'
             . $this->escapeText($heading) . '</div>'
             . $cards . $more . '</td></tr>';
@@ -203,7 +203,7 @@ final readonly class DigestHtmlRenderer
             . 'style="font-size:14px;color:#3f8676;text-decoration:none;">'
             . $this->escapeText($openReaderLabel) . ' →</a>';
 
-        return '<tr><td style="padding:22px 24px 26px;border-top:1px solid #e4e4e2;">'
+        return '<tr><td style="padding:22px 16px 26px;border-top:1px solid #e4e4e2;">'
             . '<div style="margin-bottom:12px;">' . $openReader . '</div>'
             . '<div style="font-size:13px;line-height:1.5;color:#a7a7a3;">' . $manage . '</div>'
             . '</td></tr>';
