@@ -9,7 +9,7 @@ use App\Entity\Preferences;
 use App\Entity\User;
 use App\Repository\PreferencesRepository;
 use App\Service\Mail\MailCapability;
-use App\Service\Mail\MailDeliveryHealth;
+use App\Service\Mail\MailFailureRecorder;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
@@ -36,7 +36,7 @@ final readonly class SendDueDigests
         private ClockInterface $clock,
         private EntityManagerInterface $em,
         private LoggerInterface $logger,
-        private MailDeliveryHealth $health,
+        private MailFailureRecorder $health,
     ) {
     }
 

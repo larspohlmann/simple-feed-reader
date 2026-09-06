@@ -15,7 +15,7 @@ use App\Service\Clock\NaiveUtcClock;
  * records its outcome here; any success clears the whole log, so a non-empty
  * log means the most recent send failed.
  */
-final readonly class MailDeliveryHealth
+final readonly class MailDeliveryHealth implements MailFailureRecorder
 {
     public function __construct(
         private MailSendFailureRepository $failures,

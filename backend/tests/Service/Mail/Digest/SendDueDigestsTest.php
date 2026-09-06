@@ -23,12 +23,12 @@ use App\Service\Mail\Digest\DigestModel;
 use App\Service\Mail\Digest\DigestSchedule;
 use App\Service\Mail\Digest\SendDueDigests;
 use App\Service\Mail\MailCapability;
-use App\Service\Mail\MailDeliveryHealth;
 use App\Service\Mail\Settings\MailSettings;
-use App\Tests\DbTestCase;
+use App\Tests\Support\InMemoryMailFailureRecorder;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
+use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Mailer\Exception\TransportException;
@@ -41,12 +41,8 @@ use Symfony\Component\Mailer\Exception\TransportException;
  * away, and pins the three branches that decide whether digestLastSentAt
  * moves: advance only on a real send, never on an empty compose, never on an
  * unverified or not-yet-due account.
- *
- * Extends DbTestCase (rather than a plain TestCase) solely to obtain a real
- * MailDeliveryHealth from the container: it is `final readonly`, so PHPUnit
- * cannot double it, and the failure path genuinely calls it (#882).
  */
-final class SendDueDigestsTest extends DbTestCase
+final class SendDueDigestsTest extends TestCase
 {
     private const string NOW = '2026-08-28T09:30:00Z';
     private const string OCCURRENCE = '2026-08-28T08:00:00Z';
@@ -55,21 +51,16 @@ final class SendDueDigestsTest extends DbTestCase
     private EntryListRepository&Stub $entries;
     private PreferencesRepository&Stub $preferencesRepository;
     private DigestMailerInterface&MockObject $mailer;
-    private EntityManagerInterface&Stub $emStub;
-    private MailDeliveryHealth $health;
+    private EntityManagerInterface&Stub $em;
     private int $nextUserId = 1;
 
     protected function setUp(): void
     {
-        parent::setUp();
         $this->savedSearches = $this->createStub(SavedSearchRepository::class);
         $this->entries = $this->createStub(EntryListRepository::class);
         $this->preferencesRepository = $this->createStub(PreferencesRepository::class);
         $this->mailer = $this->createMock(DigestMailerInterface::class);
-        $this->emStub = $this->createStub(EntityManagerInterface::class);
-        /** @var MailDeliveryHealth $health */
-        $health = self::getContainer()->get(MailDeliveryHealth::class);
-        $this->health = $health;
+        $this->em = $this->createStub(EntityManagerInterface::class);
     }
 
     public function testADueUserWithMatchesIsSentAndTheMarkerAdvancesToTheOccurrence(): void
@@ -224,9 +215,9 @@ final class SendDueDigestsTest extends DbTestCase
             $this->mailer,
             $this->mailCapability($mailEnabled),
             new MockClock(self::NOW),
-            $em ?? $this->emStub,
+            $em ?? $this->em,
             new NullLogger(),
-            $this->health,
+            new InMemoryMailFailureRecorder(),
         );
     }
 
