@@ -46,6 +46,16 @@ final class ProxyHandshakeFailureTest extends TestCase
         self::assertStringContainsString('does not resolve host names', $explained);
     }
 
+    public function testTheHostUnreachableHintAlsoNamesTheIpv4OnlyProxyCause(): void
+    {
+        $explained = ProxyHandshakeFailure::explain(
+            'cannot complete SOCKS5 connection to api.ipify.org. (4)',
+        );
+
+        self::assertStringContainsString('does not resolve host names', $explained);
+        self::assertStringContainsString('IPv4', $explained);
+    }
+
     public function testRulesetRefusalPointsAtTheCredentialsInstead(): void
     {
         $explained = ProxyHandshakeFailure::explain(
