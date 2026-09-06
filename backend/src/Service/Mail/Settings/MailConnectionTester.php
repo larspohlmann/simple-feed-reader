@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Settings;
 
+use App\Entity\MailKind;
 use App\Entity\User;
 use App\Service\Crypto\Exception\SecretUnreadableException;
+use App\Service\Mail\MailFailureRecorder;
 use App\Service\Mail\Transport\ActiveMailTransportFactory;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -28,10 +30,28 @@ final readonly class MailConnectionTester
         private Security $security,
         private LoggerInterface $logger,
         private ActiveMailTransportFactory $transportFactory,
+        private MailFailureRecorder $health,
     ) {
     }
 
     public function test(): MailTestResult
+    {
+        $result = $this->attempt();
+
+        if ($result->ok) {
+            $this->health->recordSuccess();
+        } else {
+            $this->health->recordFailure(
+                MailKind::Test,
+                $this->actingAdminEmail() ?? 'unknown',
+                $result->reason ?? 'failed',
+            );
+        }
+
+        return $result;
+    }
+
+    private function attempt(): MailTestResult
     {
         try {
             $resolved = $this->settings->configuredTransport();
