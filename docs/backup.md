@@ -163,6 +163,7 @@ writes none of them.
 | `CatalogCategory` | The shared discovery catalog. Each instance holds its own copy. |
 | `CatalogFeed` | The shared discovery catalog. Each instance holds its own copy. |
 | `WorkerHeartbeat` | The liveness record of the refresh worker. It is a machine record, not your data. |
+| `MailSendFailure` | The record of automated e-mails the instance failed to send. It is a machine record, not your data. |
 
 ### 6.2 Account data that the file drops in full
 
