@@ -972,6 +972,171 @@ describe('SidebarComponent', () => {
 
       expect(f.componentInstance['savedSearchLinks']()[0].params).toBe(before);
     });
+
+    const openSaved = (f: ReturnType<typeof mount>) => {
+      (f.nativeElement.querySelector('.savedsearch-head .chevzone') as HTMLButtonElement).click();
+      f.detectChanges();
+    };
+    const terms = (f: ReturnType<typeof mount>) =>
+      Array.from(f.nativeElement.querySelectorAll('.savedsearch-item .saved-term')).map((n) =>
+        (n as HTMLElement).textContent?.trim(),
+      );
+    const saved = (id: number, term: string, unreadCount: number): SavedSearchDto => ({
+      id,
+      term,
+      wholeWord: false,
+      phrase: false,
+      position: 0,
+      unreadCount,
+      includeInDigest: false,
+    });
+
+    it('orders saved searches unread-first, then by id descending', () => {
+      const f = mount({
+        savedSearches: [
+          saved(1, 'oldest', 0),
+          saved(2, 'busy', 5),
+          saved(3, 'quiet', 0),
+          saved(4, 'busier', 5),
+        ],
+      });
+      openSaved(f);
+      // unread>0 first, by count desc then id desc: busier(4,5), busy(2,5) -> id desc; then quiet(3,0), oldest(1,0)
+      expect(terms(f)).toEqual(['busier', 'busy', 'quiet', 'oldest']);
+    });
+
+    it('keeps the frozen order when a count drops (no reshuffle on read)', () => {
+      const f = mount({ savedSearches: [saved(1, 'a', 3), saved(2, 'b', 5)] });
+      openSaved(f);
+      expect(terms(f)).toEqual(['b', 'a']); // 5 before 3
+      // A read drops b's count below a's; the order must stay frozen while open.
+      f.componentRef.setInput('savedSearches', [saved(1, 'a', 3), saved(2, 'b', 1)]);
+      f.detectChanges();
+      expect(terms(f)).toEqual(['b', 'a']);
+    });
+
+    it('re-ranks on the next section open', () => {
+      const f = mount({ savedSearches: [saved(1, 'a', 3), saved(2, 'b', 5)] });
+      openSaved(f); // b, a
+      f.componentRef.setInput('savedSearches', [saved(1, 'a', 3), saved(2, 'b', 1)]);
+      f.detectChanges();
+      openSaved(f); // close
+      openSaved(f); // open again -> re-rank: a(3) before b(1)
+      expect(terms(f)).toEqual(['a', 'b']);
+    });
+
+    it('re-ranks immediately when a saved search is deleted (structural change)', () => {
+      const f = mount({
+        savedSearches: [saved(1, 'a', 3), saved(2, 'b', 5), saved(3, 'c', 4)],
+      });
+      openSaved(f); // b(5), c(4), a(3)
+      f.componentRef.setInput('savedSearches', [saved(1, 'a', 3), saved(3, 'c', 4)]);
+      f.detectChanges();
+      expect(terms(f)).toEqual(['c', 'a']); // c(4) before a(3), no stale b
+    });
+
+    const many = Array.from({ length: 8 }, (_, i) => saved(i + 1, `s${i + 1}`, 8 - i));
+    // counts 8..1, so id 1 (count 8) ... id 8 (count 1): already ranked by both keys.
+
+    it('shows only six rows and a "Show more" link when there are more than six', () => {
+      const f = mount({ savedSearches: many });
+      openSaved(f);
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
+      const more = f.nativeElement.querySelector('.savedsearch-more') as HTMLButtonElement;
+      expect(more).not.toBeNull();
+      expect(more.textContent).toContain('Show 2 more');
+    });
+
+    it('reveals the full list on "Show more" and collapses again on "Show less"', () => {
+      const f = mount({ savedSearches: many });
+      openSaved(f);
+      (f.nativeElement.querySelector('.savedsearch-more') as HTMLButtonElement).click();
+      f.detectChanges();
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(8);
+      expect(
+        (f.nativeElement.querySelector('.savedsearch-more') as HTMLElement).textContent,
+      ).toContain('Show less');
+      (f.nativeElement.querySelector('.savedsearch-more') as HTMLButtonElement).click();
+      f.detectChanges();
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
+    });
+
+    it('shows no "Show more" link at exactly six saved searches', () => {
+      const f = mount({ savedSearches: many.slice(0, 6) });
+      openSaved(f);
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
+      expect(f.nativeElement.querySelector('.savedsearch-more')).toBeNull();
+    });
+
+    it('resets to the top six when the section is re-opened after expanding', () => {
+      const f = mount({ savedSearches: many });
+      openSaved(f);
+      (f.nativeElement.querySelector('.savedsearch-more') as HTMLButtonElement).click();
+      f.detectChanges();
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(8);
+      openSaved(f); // close
+      openSaved(f); // open again
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
+    });
+
+    it('pins the active saved search as an extra row when it is outside the top six', () => {
+      const f = mount({ savedSearches: many, activeSavedSearchId: 8 }); // id 8 has the lowest count -> last
+      openSaved(f);
+      const rows = f.nativeElement.querySelectorAll('.savedsearch-item');
+      expect(rows.length).toBe(7); // top 6 + the pinned active
+      const last = rows[rows.length - 1] as HTMLElement;
+      expect(last.querySelector('.saved-term')?.textContent?.trim()).toBe('s8');
+      expect(last.classList).toContain('active');
+    });
+
+    it('does not pin when the active search is already in the top six', () => {
+      const f = mount({ savedSearches: many, activeSavedSearchId: 1 }); // id 1 has the highest count -> first
+      openSaved(f);
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
+    });
+
+    it('shows no duplicate pinned row once the list is expanded', () => {
+      const f = mount({ savedSearches: many, activeSavedSearchId: 8 });
+      openSaved(f);
+      (f.nativeElement.querySelector('.savedsearch-more') as HTMLButtonElement).click();
+      f.detectChanges();
+      const rows = Array.from(
+        f.nativeElement.querySelectorAll('.savedsearch-item .saved-term'),
+      ).map((n) => (n as HTMLElement).textContent?.trim());
+      expect(rows.length).toBe(8);
+      expect(rows.filter((t) => t === 's8').length).toBe(1);
+    });
+
+    it('excludes the pinned active row from the hidden count', () => {
+      const f = mount({ savedSearches: many, activeSavedSearchId: 8 });
+      openSaved(f);
+      // 8 total, 6 in the top + 1 pinned active on screen -> 1 hidden.
+      expect(
+        (f.nativeElement.querySelector('.savedsearch-more') as HTMLElement).textContent,
+      ).toContain('Show 1 more');
+    });
+
+    it('shows a downward chevron on the "Show more" link and an upward one on "Show less"', () => {
+      const f = mount({ savedSearches: many });
+      openSaved(f);
+      const moreBtn = f.nativeElement.querySelector('.savedsearch-more') as HTMLElement;
+      const moreIcon = moreBtn.querySelector('app-icon') as HTMLElement;
+      expect(moreIcon).not.toBeNull();
+      expect(moreIcon.textContent).toContain('expand_more');
+
+      moreBtn.click();
+      f.detectChanges();
+      const lessBtn = f.nativeElement.querySelector('.savedsearch-more') as HTMLElement;
+      const lessIcon = lessBtn.querySelector('app-icon') as HTMLElement;
+      expect(lessIcon).not.toBeNull();
+      expect(lessIcon.textContent).toContain('expand_less');
+    });
+
+    it('does not pin when the active id is absent from the saved-search list', () => {
+      const f = mount({ savedSearches: many, activeSavedSearchId: 999 });
+      openSaved(f);
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
+    });
   });
 
   describe('per-search digest toggle', () => {

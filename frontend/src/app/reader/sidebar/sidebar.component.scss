@@ -265,6 +265,27 @@
   border-radius: var(--radius-sm);
 }
 
+/* The "Show more/less" control: a subdued text link, indented to the same
+   column as the saved-search terms (`--space-6`), with a plain chevron after
+   the label that switches to `expand_less` when expanded (#876). */
+.savedsearch-more {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-6);
+  background: none;
+  border: none;
+  font: inherit;
+  text-align: left;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.savedsearch-more:hover {
+  color: var(--text-secondary);
+}
+
 .tag {
   display: flex;
   align-items: center;

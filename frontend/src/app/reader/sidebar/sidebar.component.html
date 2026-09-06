@@ -122,7 +122,7 @@
         </button>
       </div>
       @if (savedSearchesExpanded()) {
-        @for (saved of savedSearchLinks(); track saved.id) {
+        @for (saved of visibleSavedSearches(); track saved.id) {
           <a
             class="nav savedsearch-item"
             [class.active]="saved.id === activeSavedSearchId()"
@@ -181,6 +181,24 @@
               </button>
             }
           </a>
+        }
+        @if (savedSearchListExpanded() || hiddenSavedSearchCount() > 0) {
+          <button
+            class="savedsearch-more"
+            type="button"
+            [attr.aria-expanded]="savedSearchListExpanded()"
+            (click)="toggleSavedSearchList()"
+          >
+            <span>{{
+              savedSearchListExpanded()
+                ? ('reader.showLess' | transloco)
+                : ('reader.showMoreSavedSearches' | transloco: { count: hiddenSavedSearchCount() })
+            }}</span>
+            <app-icon
+              [name]="savedSearchListExpanded() ? 'expand_less' : 'expand_more'"
+              size="sm"
+            />
+          </button>
         }
       }
     </div>
