@@ -218,11 +218,17 @@ export class SidebarComponent {
    *  section re-opens (#876) — the section chevron and this are separate states. */
   readonly savedSearchListExpanded = signal(false);
 
-  /** The rows to render: the whole list when expanded, otherwise the top six. */
+  /** The rows to render: the whole list when expanded; otherwise the top six,
+   *  plus the active search pinned as an extra row when it is not among them,
+   *  so the current selection is always visible (#876). */
   protected readonly visibleSavedSearches = computed(() => {
     const all = this.orderedSavedSearches();
     if (this.savedSearchListExpanded()) return all;
-    return all.slice(0, SIDEBAR_SAVED_SEARCH_LIMIT);
+    const top = all.slice(0, SIDEBAR_SAVED_SEARCH_LIMIT);
+    const activeId = this.activeSavedSearchId();
+    if (activeId === null || top.some((row) => row.id === activeId)) return top;
+    const active = all.find((row) => row.id === activeId);
+    return active ? [...top, active] : top;
   });
 
   /** How many ranked searches are not currently on screen. */

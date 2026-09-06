@@ -1078,6 +1078,43 @@ describe('SidebarComponent', () => {
       openSaved(f); // open again
       expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
     });
+
+    it('pins the active saved search as an extra row when it is outside the top six', () => {
+      const f = mount({ savedSearches: many, activeSavedSearchId: 8 }); // id 8 has the lowest count -> last
+      openSaved(f);
+      const rows = f.nativeElement.querySelectorAll('.savedsearch-item');
+      expect(rows.length).toBe(7); // top 6 + the pinned active
+      const last = rows[rows.length - 1] as HTMLElement;
+      expect(last.querySelector('.saved-term')?.textContent?.trim()).toBe('s8');
+      expect(last.classList).toContain('active');
+    });
+
+    it('does not pin when the active search is already in the top six', () => {
+      const f = mount({ savedSearches: many, activeSavedSearchId: 1 }); // id 1 has the highest count -> first
+      openSaved(f);
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
+    });
+
+    it('shows no duplicate pinned row once the list is expanded', () => {
+      const f = mount({ savedSearches: many, activeSavedSearchId: 8 });
+      openSaved(f);
+      (f.nativeElement.querySelector('.savedsearch-more') as HTMLButtonElement).click();
+      f.detectChanges();
+      const rows = Array.from(
+        f.nativeElement.querySelectorAll('.savedsearch-item .saved-term'),
+      ).map((n) => (n as HTMLElement).textContent?.trim());
+      expect(rows.length).toBe(8);
+      expect(rows.filter((t) => t === 's8').length).toBe(1);
+    });
+
+    it('excludes the pinned active row from the hidden count', () => {
+      const f = mount({ savedSearches: many, activeSavedSearchId: 8 });
+      openSaved(f);
+      // 8 total, 6 in the top + 1 pinned active on screen -> 1 hidden.
+      expect(
+        (f.nativeElement.querySelector('.savedsearch-more') as HTMLElement).textContent,
+      ).toContain('Show 1 more');
+    });
   });
 
   describe('per-search digest toggle', () => {
