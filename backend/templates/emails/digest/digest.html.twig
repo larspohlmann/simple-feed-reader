@@ -5,9 +5,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <style>
-        .body { margin: 0; background: #f5f5f4; -webkit-text-size-adjust: 100%; }
+        /* iPhone Mail keeps its own ~16px reading inset on the body unless the
+           body declares padding itself; only an explicit padding: 0 removes it.
+           Bisected on a real device (#886) — margin and width never moved it. */
+        .body { margin: 0; padding: 0; background: #f5f5f4; -webkit-text-size-adjust: 100%; }
         .outer { background: #f5f5f4; }
-        .frame { padding: 12px 0; }
+        .frame { padding: 12px 8px; }
         .sheet { width: 100%; max-width: 600px; background: #ffffff; color: #2a2a2a;
                  font-family: system-ui, -apple-system, 'Segoe UI', roboto, sans-serif; }
 
