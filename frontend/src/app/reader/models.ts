@@ -309,6 +309,15 @@ export interface SubscriptionUpdate {
   includeInForYou?: boolean;
 }
 
+/** A drag of one feed between the sidebar's lists: out of `fromTagId` and into
+ *  `toTagId` at `position`. A null tag id is the untagged "Feeds" list; a null
+ *  position appends. */
+export interface MoveFeedToTag {
+  fromTagId: number | null;
+  toTagId: number | null;
+  position: number | null;
+}
+
 /** A picture the backend chose to lead the article, with the dimensions its
  *  source declared. Null width/height mean unknown, so no space is reserved. */
 export interface HeroImageDto {

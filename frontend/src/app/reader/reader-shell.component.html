@@ -84,7 +84,9 @@
       (unsubscribe)="manage.unsubscribe($event)"
       (toggleAllItems)="manage.setIncludeInAllItems($event, !$event.includeInAllItems)"
       (toggleForYou)="manage.setIncludeInForYou($event, !$event.includeInForYou)"
-      (retag)="manage.retag($event.sub, $event.tagIds)"
+      (moveFeed)="
+        manage.moveFeedToTag($event.sub, $event.fromTagId, $event.toTagId, $event.position)
+      "
       (reorderTags)="manage.reorderTags($event)"
       (reorderUntagged)="manage.reorderUntagged($event)"
       (reorderTagFeeds)="manage.reorderTagFeeds($event.tagId, $event.subscriptionIds)"

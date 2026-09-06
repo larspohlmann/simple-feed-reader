@@ -64,7 +64,7 @@ describe('OrganiseTagGroupComponent', () => {
     reorderTagFeeds: jest.fn(),
     reorderUntagged: jest.fn(),
     reorderTags: jest.fn(),
-    retag: jest.fn(),
+    moveFeedToTag: jest.fn(),
     editTag: jest.fn(),
     deleteTag: jest.fn(),
     editSubscription: jest.fn(),
@@ -214,24 +214,24 @@ describe('OrganiseTagGroupComponent', () => {
     expect(manage.reorderTagFeeds).not.toHaveBeenCalled();
   });
 
-  it('moves a feed carrying two tags to a third tag that is neither of them', async () => {
+  it('moves a feed to a third tag at the drop index, out of its source tag', async () => {
     const { manage, component } = await render(THIRD_GROUP);
 
-    // SUB_WITH_TWO_TAGS carries TECH (2) and OTHER_TAG (4); dragged out of
-    // TECH and dropped on THIRD_GROUP (6). Only TECH, the source, must be
-    // dropped; OTHER_TAG must survive alongside the new tag.
+    // SUB_WITH_TWO_TAGS is dragged out of TECH (2) and dropped on THIRD_GROUP
+    // (6) at index 2. The move carries the source, the target and the index;
+    // dropping the source tag and keeping OTHER_TAG is the server's job.
     component.onFeedDropped({
       previousContainer: { data: GROUP },
       container: { data: THIRD_GROUP },
       item: { data: SUB_WITH_TWO_TAGS },
       previousIndex: 0,
-      currentIndex: 0,
+      currentIndex: 2,
     } as never);
 
-    expect(manage.retag).toHaveBeenCalledWith(SUB_WITH_TWO_TAGS, [OTHER_TAG.id, THIRD_TAG.id]);
+    expect(manage.moveFeedToTag).toHaveBeenCalledWith(SUB_WITH_TWO_TAGS, TECH.id, THIRD_TAG.id, 2);
   });
 
-  it('removes a single-tag feed entirely when dropped on the untagged group', async () => {
+  it('moves a feed onto the untagged group at the drop index', async () => {
     const { manage, component } = await render(UNTAGGED_GROUP);
 
     component.onFeedDropped({
@@ -239,35 +239,18 @@ describe('OrganiseTagGroupComponent', () => {
       container: { data: UNTAGGED_GROUP },
       item: { data: SUB_A },
       previousIndex: 0,
-      currentIndex: 0,
+      currentIndex: 1,
     } as never);
 
-    expect(manage.retag).toHaveBeenCalledWith(SUB_A, []);
-  });
-
-  it('removes only the source tag when a two-tag feed is dropped on the untagged group', async () => {
-    const { manage, component } = await render(UNTAGGED_GROUP);
-
-    // SUB_WITH_TWO_TAGS carries TECH (2) and OTHER_TAG (4) and is dragged out
-    // of the TECH group. Dropping on "Untagged" is single-tag removal, not a
-    // clear: OTHER_TAG must survive.
-    component.onFeedDropped({
-      previousContainer: { data: GROUP },
-      container: { data: UNTAGGED_GROUP },
-      item: { data: SUB_WITH_TWO_TAGS },
-      previousIndex: 0,
-      currentIndex: 0,
-    } as never);
-
-    expect(manage.retag).toHaveBeenCalledWith(SUB_WITH_TWO_TAGS, [OTHER_TAG.id]);
+    expect(manage.moveFeedToTag).toHaveBeenCalledWith(SUB_A, TECH.id, null, 1);
   });
 
   it('ignores a dropped tag header instead of mistaking it for a feed', async () => {
     const { manage, component } = await render(THIRD_GROUP);
 
     // onFeedDropped must never treat a non-feed payload as a SubscriptionDto
-    // -- `subscription.tags.map(...)` would throw, since neither an
-    // OrganiseGroup nor a TagDto has a `tags` field. See onHeaderDropped below.
+    // -- `subscription.tags` would be absent, since neither an OrganiseGroup
+    // nor a TagDto has a `tags` field. See onHeaderDropped below.
     component.onFeedDropped({
       previousContainer: { data: GROUP },
       container: { data: THIRD_GROUP },
@@ -276,7 +259,7 @@ describe('OrganiseTagGroupComponent', () => {
       currentIndex: 0,
     } as never);
 
-    expect(manage.retag).not.toHaveBeenCalled();
+    expect(manage.moveFeedToTag).not.toHaveBeenCalled();
     expect(manage.reorderTagFeeds).not.toHaveBeenCalled();
     expect(manage.reorderUntagged).not.toHaveBeenCalled();
   });
@@ -331,7 +314,7 @@ describe('OrganiseTagGroupComponent', () => {
     expect(manage.reorderTags).not.toHaveBeenCalled();
   });
 
-  it('still adds the tag when a feed is dropped on the header (delegates to the feed drop)', async () => {
+  it('appends a feed dropped on the header, which shows no list to index into', async () => {
     const { manage, component } = await render(THIRD_GROUP);
 
     component.onHeaderDropped({
@@ -342,7 +325,12 @@ describe('OrganiseTagGroupComponent', () => {
       currentIndex: 0,
     } as never);
 
-    expect(manage.retag).toHaveBeenCalledWith(SUB_WITH_TWO_TAGS, [OTHER_TAG.id, THIRD_TAG.id]);
+    expect(manage.moveFeedToTag).toHaveBeenCalledWith(
+      SUB_WITH_TWO_TAGS,
+      TECH.id,
+      THIRD_TAG.id,
+      null,
+    );
   });
 
   it('turns drag off on a coarse pointer, keeping the arrows', async () => {

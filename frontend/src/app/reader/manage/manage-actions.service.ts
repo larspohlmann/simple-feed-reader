@@ -11,6 +11,7 @@ import {
   RefreshReport,
   SubscriptionDto,
   SubscriptionFlags,
+  SubscriptionTagDto,
   TagDto,
 } from '../models';
 import {
@@ -61,33 +62,53 @@ export class ManageActions {
     write$.subscribe({ next: reload, error: reload });
   }
 
-  /** Apply an optimistic update to the subscription's tags so the sidebar
-   *  reflects the new tag set immediately, then reconcile with the server. */
-  retag(sub: SubscriptionDto, tagIds: number[]): void {
+  /** Move a feed between the sidebar's lists at the dropped position, the way a
+   *  drag reads: out of `fromTagId`, into `toTagId` at `position` (a null tag
+   *  id is the untagged "Feeds" list; a null position appends). A move within
+   *  one list is a reorder, not this. Optimistic: reflect the new membership
+   *  at once, then let the reload reconcile the exact order the server chose. */
+  moveFeedToTag(
+    sub: SubscriptionDto,
+    fromTagId: number | null,
+    toTagId: number | null,
+    position: number | null,
+  ): void {
+    if (fromTagId === toTagId) return;
     this.subs.subscriptions.update((current) =>
-      current.map((s) => {
-        if (s.id !== sub.id) return s;
-        return {
-          ...s,
-          tags: tagIds.map((id, i) => {
-            const existing = s.tags.find((t) => t.id === id);
-            if (existing) return { ...existing, position: i };
-            const tag = this.tags.tags().find((t) => t.id === id);
-            return {
-              id,
-              name: tag?.name ?? '',
-              color: tag?.color ?? null,
-              icon: tag?.icon ?? null,
-              position: i,
-            };
-          }),
-        };
-      }),
+      current.map((s) => (s.id === sub.id ? this.afterMove(s, fromTagId, toTagId, position) : s)),
     );
-    this.reloadAfter(
-      this.api.updateSubscription(sub.id, { customTitle: sub.customTitle, tagIds }),
-      () => this.subs.load(),
+    this.reloadAfter(this.api.moveFeedToTag(sub.id, { fromTagId, toTagId, position }), () =>
+      this.subs.load(),
     );
+  }
+
+  /** The moved feed's optimistic shape: the source tag dropped, the target tag
+   *  added at the drop position; dropped on Feeds, its untagged position is set
+   *  only once it has no tags left. Sibling positions are left to the reload. */
+  private afterMove(
+    sub: SubscriptionDto,
+    fromTagId: number | null,
+    toTagId: number | null,
+    position: number | null,
+  ): SubscriptionDto {
+    const kept = sub.tags.filter((t) => t.id !== fromTagId && t.id !== toTagId);
+    if (toTagId === null) {
+      const untaggedPosition = kept.length === 0 ? (position ?? sub.position) : sub.position;
+      return { ...sub, tags: kept, position: untaggedPosition };
+    }
+    const target = sub.tags.find((t) => t.id === toTagId) ?? this.tagShape(toTagId);
+    return { ...sub, tags: [...kept, { ...target, position: position ?? kept.length }] };
+  }
+
+  private tagShape(tagId: number): SubscriptionTagDto {
+    const tag = this.tags.tags().find((t) => t.id === tagId);
+    return {
+      id: tagId,
+      name: tag?.name ?? '',
+      color: tag?.color ?? null,
+      icon: tag?.icon ?? null,
+      position: 0,
+    };
   }
 
   /** Flip whether this feed contributes to the "All items" list. Optimistic:
@@ -104,7 +125,7 @@ export class ManageActions {
 
   /** The backend PATCH clears customTitle/tagIds when they are omitted, so
    *  every flag toggle sends the full mutable body — not just the flag that
-   *  changed — mirroring retag(). */
+   *  changed. */
   private patchFlags(
     sub: SubscriptionDto,
     flags: { includeInAllItems: boolean; includeInForYou: boolean },

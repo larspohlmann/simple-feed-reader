@@ -74,7 +74,7 @@ describe('OrganiseSectionComponent', () => {
     setIncludeInForYou: jest.fn(),
     unsubscribe: jest.fn(),
     retryFeed: jest.fn(),
-    retag: jest.fn(),
+    moveFeedToTag: jest.fn(),
     reorderTags: jest.fn(),
     reorderTagFeeds: jest.fn(),
     reorderUntagged: jest.fn(),
