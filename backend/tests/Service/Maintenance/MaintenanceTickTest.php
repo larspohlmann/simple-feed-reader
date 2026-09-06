@@ -20,6 +20,7 @@ use App\Service\Mail\Digest\DigestMailerInterface;
 use App\Service\Mail\Digest\DigestSchedule;
 use App\Service\Mail\Digest\SendDueDigests;
 use App\Service\Mail\MailCapability;
+use App\Service\Mail\MailDeliveryHealth;
 use App\Service\Maintenance\MaintenanceTick;
 use App\Service\OrphanedFeedReclaimer;
 use App\Service\Recommendation\ForYouSweep;
@@ -164,6 +165,8 @@ final class MaintenanceTickTest extends DbTestCase
         self::assertInstanceOf(DigestMailerInterface::class, $digestMailer);
         $mailCapability = self::getContainer()->get(MailCapability::class);
         self::assertInstanceOf(MailCapability::class, $mailCapability);
+        $mailDeliveryHealth = self::getContainer()->get(MailDeliveryHealth::class);
+        self::assertInstanceOf(MailDeliveryHealth::class, $mailDeliveryHealth);
 
         $sendDueDigests = new SendDueDigests(
             $throwingPreferences,
@@ -174,6 +177,7 @@ final class MaintenanceTickTest extends DbTestCase
             $clock,
             $this->em,
             new NullLogger(),
+            $mailDeliveryHealth,
         );
 
         $tick = new MaintenanceTick($refreshRunner, $forYouSweep, $sendDueDigests);

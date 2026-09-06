@@ -23,12 +23,13 @@ use App\Service\Mail\Digest\DigestModel;
 use App\Service\Mail\Digest\DigestSchedule;
 use App\Service\Mail\Digest\SendDueDigests as SendDueDigestsService;
 use App\Service\Mail\MailCapability;
+use App\Service\Mail\MailDeliveryHealth;
 use App\Service\Mail\Settings\MailSettings;
 use App\Service\Worker\Handler\SendDueDigestsHandler;
 use App\Service\Worker\Message\SendDueDigests;
+use App\Tests\DbTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\Stub;
-use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 
@@ -41,8 +42,11 @@ use Symfony\Component\Clock\MockClock;
  * handler is responsible for: that firing it reaches the mailer. That is
  * an honest proof of the wiring, not a re-encoding of the service's own
  * branch coverage (already pinned by SendDueDigestsTest).
+ *
+ * Extends DbTestCase for the same reason: MailDeliveryHealth is itself
+ * `final readonly`, so the service needs a real one from the container (#882).
  */
-final class SendDueDigestsHandlerTest extends TestCase
+final class SendDueDigestsHandlerTest extends DbTestCase
 {
     private const string NOW = '2026-08-28T09:30:00Z';
 
@@ -96,6 +100,7 @@ final class SendDueDigestsHandlerTest extends TestCase
             new MockClock(self::NOW),
             $this->createStub(EntityManagerInterface::class),
             new NullLogger(),
+            $this->health(),
         );
 
         return new SendDueDigestsHandler($service, new NullLogger());
@@ -107,6 +112,14 @@ final class SendDueDigestsHandlerTest extends TestCase
         $settings->method('isSendingEnabled')->willReturn(true);
 
         return new MailCapability($settings);
+    }
+
+    private function health(): MailDeliveryHealth
+    {
+        /** @var MailDeliveryHealth $health */
+        $health = self::getContainer()->get(MailDeliveryHealth::class);
+
+        return $health;
     }
 
     private function user(): User
