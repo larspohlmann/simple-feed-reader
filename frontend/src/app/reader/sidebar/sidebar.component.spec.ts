@@ -972,6 +972,68 @@ describe('SidebarComponent', () => {
 
       expect(f.componentInstance['savedSearchLinks']()[0].params).toBe(before);
     });
+
+    const openSaved = (f: ReturnType<typeof mount>) => {
+      (f.nativeElement.querySelector('.savedsearch-head .chevzone') as HTMLButtonElement).click();
+      f.detectChanges();
+    };
+    const terms = (f: ReturnType<typeof mount>) =>
+      Array.from(f.nativeElement.querySelectorAll('.savedsearch-item .saved-term')).map((n) =>
+        (n as HTMLElement).textContent?.trim(),
+      );
+    const saved = (id: number, term: string, unreadCount: number): SavedSearchDto => ({
+      id,
+      term,
+      wholeWord: false,
+      phrase: false,
+      position: 0,
+      unreadCount,
+      includeInDigest: false,
+    });
+
+    it('orders saved searches unread-first, then by id descending', () => {
+      const f = mount({
+        savedSearches: [
+          saved(1, 'oldest', 0),
+          saved(2, 'busy', 5),
+          saved(3, 'quiet', 0),
+          saved(4, 'busier', 5),
+        ],
+      });
+      openSaved(f);
+      // unread>0 first, by count desc then id desc: busier(4,5), busy(2,5) -> id desc; then quiet(3,0), oldest(1,0)
+      expect(terms(f)).toEqual(['busier', 'busy', 'quiet', 'oldest']);
+    });
+
+    it('keeps the frozen order when a count drops to zero (no reshuffle on read)', () => {
+      const f = mount({ savedSearches: [saved(1, 'a', 3), saved(2, 'b', 5)] });
+      openSaved(f);
+      expect(terms(f)).toEqual(['b', 'a']); // 5 before 3
+      // A read drops b's count below a's; the order must stay frozen while open.
+      f.componentRef.setInput('savedSearches', [saved(1, 'a', 3), saved(2, 'b', 1)]);
+      f.detectChanges();
+      expect(terms(f)).toEqual(['b', 'a']);
+    });
+
+    it('re-ranks on the next section open', () => {
+      const f = mount({ savedSearches: [saved(1, 'a', 3), saved(2, 'b', 5)] });
+      openSaved(f); // b, a
+      f.componentRef.setInput('savedSearches', [saved(1, 'a', 3), saved(2, 'b', 1)]);
+      f.detectChanges();
+      openSaved(f); // close
+      openSaved(f); // open again -> re-rank: a(3) before b(1)
+      expect(terms(f)).toEqual(['a', 'b']);
+    });
+
+    it('re-ranks immediately when a saved search is deleted (structural change)', () => {
+      const f = mount({
+        savedSearches: [saved(1, 'a', 3), saved(2, 'b', 5), saved(3, 'c', 4)],
+      });
+      openSaved(f); // b(5), c(4), a(3)
+      f.componentRef.setInput('savedSearches', [saved(1, 'a', 3), saved(3, 'c', 4)]);
+      f.detectChanges();
+      expect(terms(f)).toEqual(['c', 'a']); // c(4) before a(3), no stale b
+    });
   });
 
   describe('per-search digest toggle', () => {

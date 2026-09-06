@@ -122,7 +122,7 @@
         </button>
       </div>
       @if (savedSearchesExpanded()) {
-        @for (saved of savedSearchLinks(); track saved.id) {
+        @for (saved of orderedSavedSearches(); track saved.id) {
           <a
             class="nav savedsearch-item"
             [class.active]="saved.id === activeSavedSearchId()"

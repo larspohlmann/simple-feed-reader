@@ -46,6 +46,20 @@ const tagIdOf = (data: DropData): number | null => (data.kind === 'tag' ? data.t
 const TAGS_COLLAPSED_KEY = 'sfr.tags.collapsed';
 const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
 
+/** How many saved-search rows the sidebar shows before the "Show more" link. */
+const SIDEBAR_SAVED_SEARCH_LIMIT = 6;
+
+/** Ids of a saved-search list, ranked unread-first (count desc) then newest
+ *  first (id desc). Id is the creation-order proxy — there is no date field. */
+const rankedSavedSearchIds = (searches: readonly SavedSearchDto[]): number[] =>
+  [...searches].sort((a, b) => b.unreadCount - a.unreadCount || b.id - a.id).map((s) => s.id);
+
+const sameIds = (a: readonly number[], b: readonly number[]): boolean => {
+  if (a.length !== b.length) return false;
+  const set = new Set(b);
+  return a.every((id) => set.has(id));
+};
+
 @Component({
   selector: 'app-sidebar',
   imports: [
@@ -173,13 +187,38 @@ export class SidebarComponent {
 
   readonly savedSearchesExpanded = signal(false);
 
+  /** The frozen display order (saved-search ids). Recomputed only when the
+   *  section opens or the set of searches changes — never on a count change —
+   *  so reading an entry does not reshuffle the list under the reader (#876). */
+  private readonly frozenSavedSearchOrder = signal<number[]>([]);
+
+  /** Re-rank on a structural change: the initial load, a create, or a delete.
+   *  Keyed on the id set only, so a count-only change leaves the order frozen. */
+  private readonly refreezeOnStructuralChange = effect(() => {
+    const ids = this.savedSearches().map((s) => s.id);
+    if (!sameIds(ids, untracked(this.frozenSavedSearchOrder))) {
+      this.frozenSavedSearchOrder.set(rankedSavedSearchIds(this.savedSearches()));
+    }
+  });
+
+  /** The saved searches in frozen order, each with live params and count. */
+  protected readonly orderedSavedSearches = computed(() => {
+    const byId = new Map(this.savedSearchLinks().map((row) => [row.id, row]));
+    return this.frozenSavedSearchOrder()
+      .map((id) => byId.get(id))
+      .filter((row): row is NonNullable<typeof row> => row !== undefined);
+  });
+
   /** Total unread matches across all saved searches, for the collapsed badge. */
   readonly savedSearchesUnread = computed(() =>
     this.savedSearches().reduce((sum, saved) => sum + saved.unreadCount, 0),
   );
 
   toggleSavedSearches(): void {
-    this.savedSearchesExpanded.update((open) => !open);
+    const opening = !this.savedSearchesExpanded();
+    this.savedSearchesExpanded.set(opening);
+    // Opening the section is a fresh view: re-rank with the current counts.
+    if (opening) this.frozenSavedSearchOrder.set(rankedSavedSearchIds(this.savedSearches()));
   }
 
   /** Whether the "Tags" section is expanded. Unlike the in-memory Saved-searches
