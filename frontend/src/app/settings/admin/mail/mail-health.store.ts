@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { finalize } from 'rxjs';
 import { API_BASE_URL } from '../../../core/api';
 
 export interface MailFailure {
@@ -24,9 +25,21 @@ export class MailHealthStore {
   readonly failures = signal<MailFailure[]>([]);
   readonly failureCount = computed(() => this.failures().length);
 
+  /** Guards the settings-landing burst: the rail nav, the hub nav and the mail
+   *  section each ask to refresh at once, and one fetch serves them all. */
+  private loading = false;
+
   refresh(): void {
+    if (this.loading) return;
+    this.loading = true;
     this.http
       .get<MailErrorsResponse>(`${this.base}/api/admin/mail/errors`)
-      .subscribe((response) => this.failures.set(response.failures));
+      .pipe(finalize(() => (this.loading = false)))
+      .subscribe({
+        next: (response) => this.failures.set(response.failures),
+        error: () => {
+          // A failed refresh leaves the last-known count; the badge is advisory.
+        },
+      });
   }
 }

@@ -56,4 +56,16 @@ describe('MailHealthStore', () => {
     expect(store.failureCount()).toBe(2);
     expect(store.failures()[0].kind).toBe('digest');
   });
+
+  it('collapses concurrent refreshes into a single in-flight request', () => {
+    store.refresh();
+    store.refresh();
+
+    const req = http.expectOne(ERRORS_ENDPOINT); // expectOne fails if two were issued
+    req.flush({ failures: [] });
+
+    // Once the in-flight request settles, a later refresh issues a fresh GET.
+    store.refresh();
+    http.expectOne(ERRORS_ENDPOINT).flush({ failures: [] });
+  });
 });
