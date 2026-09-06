@@ -7,8 +7,8 @@ namespace App\Http\Admin;
 use App\Entity\ProxyServerSettings;
 
 /**
- * The admin proxy payload. The password is absent by construction: only the
- * 4-char hint and a hasPassword flag cross the wire, never the secret.
+ * The admin proxy payload. The password is absent by construction: only a
+ * hasPassword flag crosses the wire, never the secret.
  */
 final readonly class ProxySettingsJson
 {
@@ -22,7 +22,6 @@ final readonly class ProxySettingsJson
      *     username: string|null,
      *     remoteDns: bool,
      *     hasPassword: bool,
-     *     passwordHint: string,
      * }
      */
     public static function from(?ProxyServerSettings $settings): array
@@ -41,7 +40,6 @@ final readonly class ProxySettingsJson
             'username' => $settings->getUsername(),
             'remoteDns' => $settings->isRemoteDns(),
             'hasPassword' => $settings->hasPassword(),
-            'passwordHint' => $settings->getPasswordHint(),
         ];
     }
 }

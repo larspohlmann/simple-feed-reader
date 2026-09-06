@@ -118,17 +118,31 @@
         />
       </app-settings-row>
 
-      <app-settings-row [stackable]="true" [title]="'settings.proxy.password' | transloco">
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.proxy.password' | transloco"
+        [description]="passwordSaved() ? ('settings.proxy.passwordSaved' | transloco) : ''"
+      >
         <app-password-input class="credential-field">
           <input
             type="password"
             autocomplete="off"
             data-testid="proxy-password"
-            [placeholder]="passwordHint()"
             [value]="password()"
             (input)="onPassword($event)"
           />
         </app-password-input>
+        @if (passwordSaved()) {
+          <app-button
+            variant="default"
+            size="sm"
+            data-testid="proxy-remove-password"
+            [disabled]="svc.dirty()"
+            (click)="removePassword()"
+          >
+            {{ 'settings.proxy.removePassword' | transloco }}
+          </app-button>
+        }
       </app-settings-row>
 
       @let probeResult = probe();

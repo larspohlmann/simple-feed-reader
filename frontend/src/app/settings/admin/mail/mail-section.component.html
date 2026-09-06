@@ -248,7 +248,6 @@
               type="password"
               autocomplete="off"
               data-testid="mail-password"
-              [placeholder]="'settings.mail.passwordKeepHint' | transloco"
               [value]="password()"
               [attr.aria-invalid]="!!fieldError('password')"
               (input)="onPassword($event)"

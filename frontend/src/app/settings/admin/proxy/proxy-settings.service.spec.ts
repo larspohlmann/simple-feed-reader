@@ -18,7 +18,6 @@ function state(over: Partial<ProxySettingsState> = {}): ProxySettingsState {
     username: null,
     remoteDns: false,
     hasPassword: false,
-    passwordHint: '',
     ...over,
   };
 }
@@ -73,6 +72,7 @@ describe('ProxySettingsService', () => {
       port: 1080,
       username: null,
       password: null,
+      removePassword: false,
     });
 
     put.flush(state({ enabled: true }));
@@ -126,6 +126,21 @@ describe('ProxySettingsService', () => {
     );
 
     expect(service.probe()).toEqual({ status: 'error', message: 'boom' });
+  });
+
+  it('removePassword() PUTs removePassword:true and commits the returned state', () => {
+    loadState({ hasPassword: true });
+
+    service.removePassword();
+
+    const put = http.expectOne(ENDPOINT);
+    expect(put.request.method).toBe('PUT');
+    expect(put.request.body.removePassword).toBe(true);
+
+    put.flush(state({ hasPassword: false }));
+
+    expect(service.saved()).toBe(true);
+    expect(service.state()).toEqual(state({ hasPassword: false }));
   });
 
   it('a failed PUT leaves saved() false and sets failure()', () => {

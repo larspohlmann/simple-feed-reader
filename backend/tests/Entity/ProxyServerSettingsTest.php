@@ -20,7 +20,6 @@ final class ProxyServerSettingsTest extends TestCase
         $settings->apply(
             new ProxyConnection(true, true, ProxyType::Socks5, 'proxy.example', 1080, 'user'),
             $sealed,
-            'word',
         );
 
         self::assertTrue($settings->isEnabled());
@@ -29,7 +28,6 @@ final class ProxyServerSettingsTest extends TestCase
         self::assertSame('proxy.example', $settings->getHost());
         self::assertSame(1080, $settings->getPort());
         self::assertSame('user', $settings->getUsername());
-        self::assertSame('word', $settings->getPasswordHint());
         self::assertTrue($settings->hasPassword());
         self::assertEquals($sealed, $settings->getSealedPassword());
     }
@@ -38,7 +36,7 @@ final class ProxyServerSettingsTest extends TestCase
     {
         $settings = new ProxyServerSettings();
         $sealed = new SealedSecret('cipher', 'nonce', 'salt', 1);
-        $settings->apply(new ProxyConnection(true, true, ProxyType::Http, 'a', 1, 'u'), $sealed, 'word');
+        $settings->apply(new ProxyConnection(true, true, ProxyType::Http, 'a', 1, 'u'), $sealed);
 
         $settings->applyWithoutPassword(new ProxyConnection(false, false, ProxyType::Socks5, 'b', 2, null));
 
@@ -48,6 +46,21 @@ final class ProxyServerSettingsTest extends TestCase
         self::assertSame('b', $settings->getHost());
         self::assertNull($settings->getUsername());
         self::assertEquals($sealed, $settings->getSealedPassword());
-        self::assertSame('word', $settings->getPasswordHint());
+    }
+
+    public function testClearStoredPasswordDropsTheSecretButKeepsTheConnection(): void
+    {
+        $settings = new ProxyServerSettings();
+        $settings->apply(
+            new ProxyConnection(true, true, ProxyType::Socks5, 'proxy.example', 1080, 'user'),
+            new SealedSecret('cipher', 'nonce', 'salt', 1),
+        );
+
+        $settings->clearStoredPassword();
+
+        self::assertFalse($settings->hasPassword());
+        self::assertSame('proxy.example', $settings->getHost());
+        self::assertSame('user', $settings->getUsername());
+        self::assertEquals(new SealedSecret('', '', '', 1), $settings->getSealedPassword());
     }
 }

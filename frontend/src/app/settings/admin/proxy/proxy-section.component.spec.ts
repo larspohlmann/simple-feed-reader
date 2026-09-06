@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { TranslocoService } from '@jsverse/transloco';
 import { API_BASE_URL } from '../../../core/api';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../../shared/toast/toast.service';
@@ -22,7 +23,6 @@ function state(over: Partial<ProxySettingsState> = {}): ProxySettingsState {
     username: null,
     remoteDns: false,
     hasPassword: false,
-    passwordHint: '',
     ...over,
   };
 }
@@ -62,6 +62,11 @@ describe('ProxySectionComponent', () => {
 
   const testButton = (fixture: ComponentFixture<ProxySectionComponent>): HTMLButtonElement =>
     fixture.nativeElement.querySelector('[data-testid="proxy-test-button"] button');
+
+  const removePasswordButton = (
+    fixture: ComponentFixture<ProxySectionComponent>,
+  ): HTMLButtonElement | null =>
+    fixture.nativeElement.querySelector('[data-testid="proxy-remove-password"] button');
 
   const errorBanner = (fixture: ComponentFixture<ProxySectionComponent>): HTMLElement | null =>
     fixture.nativeElement.querySelector('app-error-banner');
@@ -250,14 +255,51 @@ describe('ProxySectionComponent', () => {
     expect(errorBanner(fixture)?.textContent).toContain('connection refused');
   });
 
-  it('renders the stored password hint as a placeholder, never the secret itself', () => {
-    const fixture = mount(
-      state({ host: 'proxy.example.com', hasPassword: true, passwordHint: '••••ab12' }),
-    );
+  it('never seeds the password field, and carries no truncatable placeholder hint', () => {
+    const fixture = mount(state({ host: 'proxy.example.com', hasPassword: true }));
 
-    expect(passwordInput(fixture).placeholder).toBe('••••ab12');
     expect(passwordInput(fixture).value).toBe('');
+    expect(passwordInput(fixture).placeholder).toBe('');
     expect(passwordInput(fixture).type).toBe('password');
+  });
+
+  it('shows that a password is saved with the keep hint, but never any part of it', () => {
+    const fixture = mount(state({ host: 'proxy.example.com', hasPassword: true }));
+    const i18n = TestBed.inject(TranslocoService);
+
+    expect(fixture.nativeElement.textContent).toContain(
+      i18n.translate('settings.proxy.passwordSaved'),
+    );
+  });
+
+  it('hides the saved-password line and Remove button when no password is stored', () => {
+    const fixture = mount(state({ host: 'proxy.example.com', hasPassword: false }));
+
+    expect(removePasswordButton(fixture)).toBeNull();
+  });
+
+  it('removes the stored password via svc.removePassword() when Remove is clicked', () => {
+    const fixture = mount(state({ host: 'proxy.example.com', hasPassword: true }));
+    const removeSpy = jest.spyOn(fixture.componentInstance.svc, 'removePassword');
+
+    removePasswordButton(fixture)?.click();
+    fixture.detectChanges();
+
+    expect(removeSpy).toHaveBeenCalled();
+
+    const put = http.expectOne(ENDPOINT);
+    expect(put.request.body.removePassword).toBe(true);
+    put.flush(state({ host: 'proxy.example.com', hasPassword: false }));
+  });
+
+  it('disables the Remove-password button while the draft is dirty', () => {
+    const fixture = mount(state({ host: 'proxy.example.com', hasPassword: true }));
+
+    hostInput(fixture).value = 'other.example.com';
+    hostInput(fixture).dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(removePasswordButton(fixture)?.disabled).toBe(true);
   });
 
   const remoteDnsToggle = (fixture: ComponentFixture<ProxySectionComponent>): HTMLInputElement =>
