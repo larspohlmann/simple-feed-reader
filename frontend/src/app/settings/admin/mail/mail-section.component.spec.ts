@@ -41,30 +41,7 @@ describe('MailSectionComponent', () => {
   const toastStub = { show: jest.fn() };
   const dialogStub = { open: jest.fn() };
 
-  function mount(initial: MailSettingsState = state()): ComponentFixture<MailSectionComponent> {
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({
-      imports: [MailSectionComponent, provideTranslocoTesting()],
-      providers: [
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        provideRouter([]),
-        { provide: API_BASE_URL, useValue: BASE },
-        { provide: ToastService, useValue: toastStub },
-        { provide: Dialog, useValue: dialogStub },
-      ],
-    });
-    http = TestBed.inject(HttpTestingController);
-    const fixture = TestBed.createComponent(MailSectionComponent);
-    fixture.detectChanges();
-    http.expectOne(ENDPOINT).flush(initial);
-    http.expectOne(ERRORS_ENDPOINT).flush({ count: 0, failures: [] });
-    fixture.detectChanges();
-    return fixture;
-  }
-
   interface MailErrorsPayload {
-    count: number;
     failures: readonly {
       kind: 'digest' | 'account' | 'test';
       recipient: string;
@@ -73,9 +50,9 @@ describe('MailSectionComponent', () => {
     }[];
   }
 
-  function mountWithFailures(
-    payload: MailErrorsPayload,
+  function mount(
     initial: MailSettingsState = state(),
+    errors: MailErrorsPayload = { failures: [] },
   ): ComponentFixture<MailSectionComponent> {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -93,7 +70,7 @@ describe('MailSectionComponent', () => {
     const fixture = TestBed.createComponent(MailSectionComponent);
     fixture.detectChanges();
     http.expectOne(ENDPOINT).flush(initial);
-    http.expectOne(ERRORS_ENDPOINT).flush(payload);
+    http.expectOne(ERRORS_ENDPOINT).flush(errors);
     fixture.detectChanges();
     return fixture;
   }
@@ -156,8 +133,7 @@ describe('MailSectionComponent', () => {
     });
 
     it('shows the pill and one row per failure when the last send failed', () => {
-      const fixture = mountWithFailures({
-        count: 2,
+      const fixture = mount(state(), {
         failures: [
           {
             kind: 'digest',

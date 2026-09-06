@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Injectable, signal } from '@angular/core';
+import { Injectable, computed, signal } from '@angular/core';
 import { parseProblem } from '../../../core/problem';
 import { DraftSettingsService } from '../../../shared/settings/draft-settings.service';
 
@@ -58,7 +58,6 @@ export interface MailFailure {
 }
 
 interface MailErrorsResponse {
-  readonly count: number;
   readonly failures: MailFailure[];
 }
 
@@ -73,11 +72,9 @@ export class MailSettingsService extends DraftSettingsService<
   readonly probe = signal<MailProbe>({ status: 'idle' });
 
   readonly failures = signal<MailFailure[]>([]);
-  /** The pill reads the server-reported total rather than `failures().length`:
-   *  both mirror the same server-side retention window, but the total is the
-   *  field the pill's contract names. */
-  private readonly failureTotal = signal(0);
-  readonly failureCount = this.failureTotal.asReadonly();
+  /** The store is pruned to a bounded window, so the list is the whole of it:
+   *  the pill count is just its length, kept as one source of truth. */
+  readonly failureCount = computed(() => this.failures().length);
 
   constructor() {
     super();
@@ -85,10 +82,9 @@ export class MailSettingsService extends DraftSettingsService<
   }
 
   loadFailures(): void {
-    this.http.get<MailErrorsResponse>(`${this.endpoint}/errors`).subscribe((response) => {
-      this.failures.set(response.failures);
-      this.failureTotal.set(response.count);
-    });
+    this.http
+      .get<MailErrorsResponse>(`${this.endpoint}/errors`)
+      .subscribe((response) => this.failures.set(response.failures));
   }
 
   reset(): void {

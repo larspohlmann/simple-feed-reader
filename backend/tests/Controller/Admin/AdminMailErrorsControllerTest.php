@@ -39,9 +39,9 @@ final class AdminMailErrorsControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         $body = $this->payload($this->client);
-        self::assertSame(1, $body['count']);
         $failures = $body['failures'];
         self::assertIsArray($failures);
+        self::assertCount(1, $failures);
         $firstFailure = $failures[0];
         self::assertIsArray($firstFailure);
         self::assertSame('digest', $firstFailure['kind']);

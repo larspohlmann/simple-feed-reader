@@ -31,7 +31,7 @@ final class MailDeliveryHealthTest extends DbTestCase
 
         $view = $this->health->view();
 
-        self::assertSame(1, $view['count']);
+        self::assertCount(1, $view['failures']);
         self::assertSame('digest', $view['failures'][0]['kind']);
         self::assertSame('reader@example.test', $view['failures'][0]['recipient']);
         self::assertSame('SMTP is down', $view['failures'][0]['error']);
@@ -45,7 +45,7 @@ final class MailDeliveryHealthTest extends DbTestCase
 
         $this->health->recordSuccess();
 
-        self::assertSame(0, $this->health->view()['count']);
+        self::assertSame([], $this->health->view()['failures']);
         self::assertSame(0, $this->failures->countAll());
     }
 }

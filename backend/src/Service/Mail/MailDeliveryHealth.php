@@ -36,13 +36,10 @@ final readonly class MailDeliveryHealth implements MailFailureRecorder
     }
 
     /**
-     * @return array{count: int, failures: list<array{kind: string, recipient: string, error: string, at: string}>}
+     * @return array{failures: list<array{kind: string, recipient: string, error: string, at: string}>}
      */
     public function view(): array
     {
-        return MailDeliveryHealthJson::view(
-            $this->failures->recent(MailSendFailureRepository::RETENTION),
-            $this->failures->countAll(),
-        );
+        return MailDeliveryHealthJson::view($this->failures->recent(MailSendFailureRepository::RETENTION));
     }
 }
