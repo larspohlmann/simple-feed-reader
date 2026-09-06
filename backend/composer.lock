@@ -9809,12 +9809,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/larspohlmann/phptramp.git",
-                "reference": "3af1d6031ad3f94d21812ade6cf805cf5a4ccd1c"
+                "reference": "09f7248d37357417c0b100dfc31936f47f4da0e0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/larspohlmann/phptramp/zipball/3af1d6031ad3f94d21812ade6cf805cf5a4ccd1c",
-                "reference": "3af1d6031ad3f94d21812ade6cf805cf5a4ccd1c",
+                "url": "https://api.github.com/repos/larspohlmann/phptramp/zipball/09f7248d37357417c0b100dfc31936f47f4da0e0",
+                "reference": "09f7248d37357417c0b100dfc31936f47f4da0e0",
                 "shasum": ""
             },
             "require": {
@@ -9859,7 +9859,7 @@
                 "issues": "https://github.com/larspohlmann/phptramp/issues",
                 "source": "https://github.com/larspohlmann/phptramp/tree/develop"
             },
-            "time": "2026-08-14T10:34:44+00:00"
+            "time": "2026-09-06T07:19:51+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",
