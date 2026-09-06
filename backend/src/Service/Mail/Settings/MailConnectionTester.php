@@ -36,26 +36,11 @@ final readonly class MailConnectionTester
 
     public function test(): MailTestResult
     {
-        $result = $this->attempt();
-
-        if ($result->ok) {
-            $this->health->recordSuccess();
-        } else {
-            $this->health->recordFailure(
-                MailKind::Test,
-                $this->actingAdminEmail() ?? 'unknown',
-                $result->reason ?? 'failed',
-            );
-        }
-
-        return $result;
-    }
-
-    private function attempt(): MailTestResult
-    {
         try {
             $resolved = $this->settings->configuredTransport();
         } catch (SecretUnreadableException $e) {
+            // A config guard, not a failed send: nothing was ever attempted,
+            // so the health log stays untouched.
             return MailTestResult::failed($e->getMessage());
         }
 
@@ -72,10 +57,19 @@ final readonly class MailConnectionTester
             // Address() throws RfcComplianceException on a blank address --
             // catching that would be exception-driven control flow for a
             // state we can name upfront: a saved row with no from-address
-            // and no MAIL_FROM fallback.
+            // and no MAIL_FROM fallback. Still a config guard: no send
+            // attempted, so nothing is recorded.
             return MailTestResult::failed('no_from_address');
         }
 
+        return $this->sendTestMessage($transport, $recipient, $identity);
+    }
+
+    private function sendTestMessage(
+        TransportInterface $transport,
+        string $recipient,
+        MailIdentity $identity,
+    ): MailTestResult {
         try {
             $mailer = new Mailer($transport);
             $mailer->send(
@@ -86,8 +80,12 @@ final readonly class MailConnectionTester
                     ->text('This confirms the outgoing mail configuration works.'),
             );
         } catch (TransportExceptionInterface | RfcComplianceException $e) {
+            $this->health->recordFailure(MailKind::Test, $recipient, $e->getMessage());
+
             return MailTestResult::failed($e->getMessage());
         }
+
+        $this->health->recordSuccess();
 
         return MailTestResult::ok();
     }

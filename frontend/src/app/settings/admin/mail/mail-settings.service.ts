@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { parseProblem } from '../../../core/problem';
 import { DraftSettingsService } from '../../../shared/settings/draft-settings.service';
 
@@ -73,11 +73,11 @@ export class MailSettingsService extends DraftSettingsService<
   readonly probe = signal<MailProbe>({ status: 'idle' });
 
   readonly failures = signal<MailFailure[]>([]);
+  /** The pill reads the server-reported total rather than `failures().length`:
+   *  both mirror the same server-side retention window, but the total is the
+   *  field the pill's contract names. */
   private readonly failureTotal = signal(0);
-  /** The pill counts every failure since the last success, which can exceed
-   *  the returned list during a large outage, so it reads the response
-   *  count rather than `failures().length`. */
-  readonly failureCount = computed(() => this.failureTotal());
+  readonly failureCount = this.failureTotal.asReadonly();
 
   constructor() {
     super();

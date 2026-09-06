@@ -163,10 +163,32 @@ final class MailConnectionTesterTest extends KernelTestCase
         self::assertNotSame('not_configured', $result->reason);
     }
 
-    /** The 'no_from_address' branch is the simplest deterministic failure --
-     *  no real SMTP needed -- so it doubles as the proof that a failed test
-     *  records a Test-kind failure against the acting admin (#882). */
-    public function testAFailedTestRecordsATestFailureAgainstTheActingAdmin(): void
+    /** A sendmail transport piped to the 'false' binary attempts a real send
+     *  and fails it, through the exact production code path, proving a failed
+     *  SEND records a Test-kind failure against the acting admin (#882). */
+    public function testAFailedSendRecordsATestFailureAgainstTheActingAdmin(): void
+    {
+        putenv('MAILER_FALLBACK_DSN=sendmail://default?command=false+-t');
+        $_ENV['MAILER_FALLBACK_DSN'] = 'sendmail://default?command=false+-t';
+        $_SERVER['MAILER_FALLBACK_DSN'] = 'sendmail://default?command=false+-t';
+
+        $this->authenticateAsAdmin();
+        $health = new InMemoryMailFailureRecorder();
+
+        $result = $this->testerWithHealth($health)->test();
+
+        self::assertFalse($result->ok);
+        self::assertSame(
+            [['kind' => MailKind::Test, 'recipient' => 'boss@example.com', 'error' => $result->reason]],
+            $health->recordedFailures(),
+        );
+    }
+
+    /** A pre-send config guard (here: no from-address) never dials a
+     *  transport, so it must not be mistaken for a delivery failure -- the
+     *  pill would otherwise flag an admin who has not finished configuring
+     *  mail yet, not one whose mail server is actually failing (#882). */
+    public function testAPreSendConfigGuardRecordsNothing(): void
     {
         putenv('MAIL_FROM=');
         $_ENV['MAIL_FROM'] = '';
@@ -181,10 +203,9 @@ final class MailConnectionTesterTest extends KernelTestCase
         $result = $this->testerWithHealth($health)->test();
 
         self::assertFalse($result->ok);
-        self::assertSame(
-            [['kind' => MailKind::Test, 'recipient' => 'boss@example.com', 'error' => 'no_from_address']],
-            $health->recordedFailures(),
-        );
+        self::assertSame('no_from_address', $result->reason);
+        self::assertSame([], $health->recordedFailures());
+        self::assertSame(0, $health->successCount());
     }
 
     /** A sendmail transport in '-t' mode piped to the 'true' binary sends for
