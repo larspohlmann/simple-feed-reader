@@ -266,10 +266,12 @@
 }
 
 /* The "Show more/less" control: a subdued text link, indented to the same
-   column as the saved-search terms (`--space-6`), reading as one of the rows
-   without a nav row's box (#876). */
+   column as the saved-search terms (`--space-6`), with a plain chevron after
+   the label (no bordered chevron box) that flips up when expanded (#876). */
 .savedsearch-more {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   width: 100%;
   padding: var(--space-1) var(--space-2) var(--space-1) var(--space-6);
   background: none;

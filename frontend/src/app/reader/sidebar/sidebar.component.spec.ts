@@ -1115,6 +1115,28 @@ describe('SidebarComponent', () => {
         (f.nativeElement.querySelector('.savedsearch-more') as HTMLElement).textContent,
       ).toContain('Show 1 more');
     });
+
+    it('shows a downward chevron on the "Show more" link and an upward one on "Show less"', () => {
+      const f = mount({ savedSearches: many });
+      openSaved(f);
+      const moreBtn = f.nativeElement.querySelector('.savedsearch-more') as HTMLElement;
+      const moreIcon = moreBtn.querySelector('app-icon') as HTMLElement;
+      expect(moreIcon).not.toBeNull();
+      expect(moreIcon.textContent).toContain('expand_more');
+
+      moreBtn.click();
+      f.detectChanges();
+      const lessBtn = f.nativeElement.querySelector('.savedsearch-more') as HTMLElement;
+      const lessIcon = lessBtn.querySelector('app-icon') as HTMLElement;
+      expect(lessIcon).not.toBeNull();
+      expect(lessIcon.textContent).toContain('expand_less');
+    });
+
+    it('does not pin when the active id is absent from the saved-search list', () => {
+      const f = mount({ savedSearches: many, activeSavedSearchId: 999 });
+      openSaved(f);
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
+    });
   });
 
   describe('per-search digest toggle', () => {
