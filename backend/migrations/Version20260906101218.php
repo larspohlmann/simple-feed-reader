@@ -38,7 +38,7 @@ final class Version20260906101218 extends AbstractMigration
                     error_detail LONGTEXT NOT NULL,
                     created_at DATETIME NOT NULL,
                     PRIMARY KEY (id)
-                ) DEFAULT CHARACTER SET utf8mb4
+                ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB
                 SQL);
 
             return;

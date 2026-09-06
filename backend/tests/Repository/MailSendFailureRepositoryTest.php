@@ -57,6 +57,10 @@ final class MailSendFailureRepositoryTest extends DbTestCase
             'user' . (MailSendFailureRepository::RETENTION + 4) . '@example.test',
             $this->failures->recent(1)[0]->getRecipient(),
         );
+
+        $retained = $this->failures->recent(MailSendFailureRepository::RETENTION);
+        // The oldest survivor is user5: user0..user4 were the ones pruned.
+        self::assertSame('user5@example.test', $retained[MailSendFailureRepository::RETENTION - 1]->getRecipient());
     }
 
     private function failure(string $recipient, string $createdAt): MailSendFailure
