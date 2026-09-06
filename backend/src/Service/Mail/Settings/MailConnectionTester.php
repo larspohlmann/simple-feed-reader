@@ -55,10 +55,8 @@ final readonly class MailConnectionTester
 
         if ('' === $identity->address) {
             // Address() throws RfcComplianceException on a blank address --
-            // catching that would be exception-driven control flow for a
-            // state we can name upfront: a saved row with no from-address
-            // and no MAIL_FROM fallback. Still a config guard: no send
-            // attempted, so nothing is recorded.
+            // naming that state upfront as a guard clause avoids exception-
+            // driven control flow. Still a config guard: nothing is recorded.
             return MailTestResult::failed('no_from_address');
         }
 
