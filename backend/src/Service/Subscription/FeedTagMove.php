@@ -35,6 +35,13 @@ final readonly class FeedTagMove
         ?int $position,
         int $userId,
     ): void {
+        // Same source and target is not a move but a same-list reorder, which
+        // the reorder endpoints own; without this the removeTag/addTag below
+        // would churn the join for no change.
+        if ($fromTagId === $toTagId) {
+            return;
+        }
+
         $fromTag = $this->ownedTagOrNull($fromTagId, $userId);
         $toTag = $this->ownedTagOrNull($toTagId, $userId);
 

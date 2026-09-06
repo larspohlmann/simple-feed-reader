@@ -111,6 +111,20 @@ final class FeedTagMoveTest extends DbTestCase
         self::assertSame(1, $this->joinPosition($moved, $tech));
     }
 
+    public function testDoesNothingWhenTheSourceAndTargetAreTheSameTag(): void
+    {
+        $user = $this->user('same@example.com');
+        $tech = $this->tag($user, 'Tech');
+        $this->taggedSubscription($user, 'https://x.example.com/rss', [[$tech, 0]]);
+        $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$tech, 1]]);
+
+        $this->move($moved, (int) $tech->getId(), (int) $tech->getId(), 0, (int) $user->getId());
+        $this->em->flush();
+
+        self::assertSame(1, $this->joinPosition($moved, $tech));
+        self::assertSame(['Tech'], $this->tagNames($moved));
+    }
+
     public function testRejectsATagTheUserDoesNotOwn(): void
     {
         $user = $this->user('owner@example.com');
