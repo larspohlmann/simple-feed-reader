@@ -374,6 +374,7 @@
       "remoteDns": "DNS beim Proxy auflösen",
       "remoteDnsDesc": "Standardmäßig aus — Hostnamen werden hier aufgelöst, dann bekommt der Proxy die Adresse.",
       "remoteDnsHttpHint": "Ein HTTP-Proxy löst Hostnamen immer selbst auf.",
+    "pitfalls": "Häufige Stolperfalle: Viele SOCKS5-Proxys (auch Private Internet Access) können Hostnamen nicht auflösen. Lass „DNS beim Proxy auflösen“ dafür aus, sonst meldet jede Verbindung den Host als nicht erreichbar.",
       "host": "Host",
       "port": "Port",
       "username": "Benutzername",

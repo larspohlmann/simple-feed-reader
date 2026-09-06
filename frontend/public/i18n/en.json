@@ -374,6 +374,7 @@
       "remoteDns": "Resolve DNS at the proxy",
       "remoteDnsDesc": "Off by default — host names are resolved here, then the address is given to the proxy.",
       "remoteDnsHttpHint": "An HTTP proxy always resolves host names itself.",
+    "pitfalls": "Common pitfall: many SOCKS5 proxies (Private Internet Access included) cannot resolve host names. Leave \"Resolve DNS at the proxy\" off for those, or every connection reports the host as unreachable.",
       "host": "Host",
       "port": "Port",
       "username": "Username",
