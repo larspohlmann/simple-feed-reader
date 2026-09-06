@@ -10,6 +10,7 @@ use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestEntry;
 use App\Service\Mail\Digest\DigestFormat;
 use App\Service\Mail\Digest\DigestGroup;
+use App\Tests\Support\DigestTwigEnvironment;
 use App\Service\Mail\Digest\DigestHtmlRenderer;
 use App\Service\Mail\Digest\DigestImageEmbedderInterface;
 use App\Service\Mail\Digest\DigestImageSet;
@@ -43,7 +44,7 @@ final class DigestMailBuilderTest extends TestCase
             new DigestPageBuilder(),
             $embedder,
             new DigestTextRenderer($translator),
-            new DigestHtmlRenderer($translator, $links),
+            new DigestHtmlRenderer(DigestTwigEnvironment::withTranslator($translator), $links),
             $links,
             new DigestBrandLogo(\dirname(__DIR__, 4)),
             $this->mailIdentity('noreply@feeds.example.com', 'Simple Feed Reader'),

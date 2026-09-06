@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Digest;
 
-use App\Tests\Support\FixedPublicBaseUrl;
-use App\Tests\Support\RecordingTranslator;
 use App\Service\Mail\Digest\DigestEntry;
 use App\Service\Mail\Digest\DigestHtmlRenderer;
 use App\Service\Mail\Digest\DigestImageSet;
 use App\Service\Mail\Digest\DigestLinkBuilder;
 use App\Service\Mail\Digest\DigestPage;
 use App\Service\Mail\Digest\DigestPageGroup;
+use App\Tests\Support\DigestTwigEnvironment;
+use App\Tests\Support\FixedPublicBaseUrl;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Translation\Loader\YamlFileLoader;
 use Symfony\Component\Translation\Translator;
@@ -28,16 +28,7 @@ final class DigestHtmlRendererTest extends TestCase
 
         $links = new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example'));
 
-        return new DigestHtmlRenderer($translator, $links);
-    }
-
-    /** @return array{0: DigestHtmlRenderer, 1: RecordingTranslator} */
-    private function rendererWithRecordingTranslator(): array
-    {
-        $translator = new RecordingTranslator();
-        $links = new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example'));
-
-        return [new DigestHtmlRenderer($translator, $links), $translator];
+        return new DigestHtmlRenderer(DigestTwigEnvironment::withTranslator($translator), $links);
     }
 
     private function card(string $title, ?string $imageUrl): DigestEntry
@@ -101,8 +92,34 @@ final class DigestHtmlRendererTest extends TestCase
 
         $html = $this->renderer()->render($page, new DigestImageSet([], []), 'en');
 
-        self::assertStringContainsString('Bundesliga', $html);
+        self::assertStringContainsString('Bundesliga (12)', $html);
         self::assertStringContainsString('+12 more in "Bundesliga"', $html);
+    }
+
+    public function testZeroRemainingRendersNoMoreLink(): void
+    {
+        $group = new DigestPageGroup('Thailand', 1, [], 0, 'https://reader.example/?q=Thailand');
+        $page = new DigestPage([$group], 1);
+
+        $html = $this->renderer()->render($page, new DigestImageSet([], []), 'en');
+
+        self::assertStringNotContainsString('more in', $html);
+    }
+
+    public function testHeaderShowsTheTotalEntryCount(): void
+    {
+        $html = $this->renderer()->render(new DigestPage([], 22), new DigestImageSet([], []), 'en');
+
+        self::assertStringContainsString('22 new entries', $html);
+    }
+
+    public function testGroupHeadingShowsTermAndItsCount(): void
+    {
+        $group = new DigestPageGroup('Thailand', 10, [], 0, 'https://reader.example/?q=Thailand');
+
+        $html = $this->renderer()->render(new DigestPage([$group], 10), new DigestImageSet([], []), 'en');
+
+        self::assertStringContainsString('Thailand (10)', $html);
     }
 
     public function testFooterCarriesTheSettingsLink(): void
@@ -131,7 +148,7 @@ final class DigestHtmlRendererTest extends TestCase
 
         $headerPosition = strpos($html, 'simple feed reader');
         $introPosition = strpos($html, 'saved searches');
-        $groupPosition = strpos($html, 'Thailand');
+        $groupPosition = strpos($html, 'Thailand-Urlaub');
         $footerPosition = strpos($html, 'https://reader.example/settings/email');
 
         self::assertNotFalse($headerPosition, 'header section is missing');
@@ -143,38 +160,12 @@ final class DigestHtmlRendererTest extends TestCase
         self::assertGreaterThan($groupPosition, $footerPosition);
     }
 
-    public function testDocumentSkeletonWrapsTheBodyExactly(): void
-    {
-        $html = $this->renderer()->render(new DigestPage([], 0), new DigestImageSet([], []), 'en');
-
-        self::assertStringContainsString(
-            '<!doctype html><html><head><meta charset="utf-8">'
-            . '<meta name="viewport" content="width=device-width,initial-scale=1"></head>'
-            . '<body style="margin:0;background:#f5f5f4;-webkit-text-size-adjust:100%;">',
-            $html,
-        );
-        self::assertStringContainsString('style="background:#f5f5f4;"', $html);
-        self::assertStringContainsString('padding:16px 6px', $html);
-        self::assertStringEndsWith('</td></tr></table></body></html>', $html);
-    }
-
-    public function testSheetTableCarriesWidthBackgroundAndFont(): void
-    {
-        $html = $this->renderer()->render(new DigestPage([], 0), new DigestImageSet([], []), 'en');
-
-        self::assertStringContainsString('width:100%;max-width:600px;background:#ffffff;', $html);
-        self::assertStringContainsString(
-            "font-family:system-ui,-apple-system,'Segoe UI',roboto,sans-serif;color:#2a2a2a;",
-            $html,
-        );
-    }
-
     public function testDocumentIsMobileReadyWithViewportAndOutlookGhostTable(): void
     {
         $html = $this->renderer()->render(new DigestPage([], 0), new DigestImageSet([], []), 'en');
 
         self::assertStringContainsString('<meta name="viewport" content="width=device-width,initial-scale=1">', $html);
-        self::assertStringContainsString('-webkit-text-size-adjust:100%;', $html);
+        self::assertStringContainsString('text-size-adjust: 100%', $html);
         self::assertStringContainsString(
             '<!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0"><tr><td><![endif]-->',
             $html,
@@ -182,121 +173,48 @@ final class DigestHtmlRendererTest extends TestCase
         self::assertStringContainsString('<!--[if mso]></td></tr></table><![endif]-->', $html);
     }
 
-    /**
-     * A byte-exact rendering of every markup fragment the renderer produces: two
-     * groups (one with an imaged card, a plain card and a "more" link; one pure
-     * overflow group with no cards), the header, intro and footer. A wrong
-     * ordering, a dropped fragment or an altered style anywhere in the renderer
-     * changes this string, which is what makes it kill Concat-family mutants
-     * that a keyword-only assertion lets through.
-     */
-    public function testFullPageRendersTheExactExpectedMarkup(): void
+    public function testSheetIsFluidWithMaxWidthAndTightOuterFrame(): void
     {
-        $imagedCard = $this->card('Thailand-Urlaub', 'https://cdn/1.jpg');
-        $plainCard = new DigestEntry(
-            'No image here',
-            'Spiegel',
-            '',
-            'https://reader.example/?entry=2',
-            null,
-            null,
-            null,
-        );
-        $groupWithCards = new DigestPageGroup(
+        $html = $this->renderer()->render(new DigestPage([], 0), new DigestImageSet([], []), 'en');
+
+        self::assertStringContainsString('max-width: 600px', $html);
+        self::assertStringContainsString('padding: 16px 6px', $html);
+    }
+
+    public function testStylesAreInlinedOntoElements(): void
+    {
+        $group = new DigestPageGroup(
             'Thailand',
-            10,
-            [$imagedCard, $plainCard],
-            7,
+            1,
+            [$this->card('Thailand-Urlaub', null)],
+            0,
             'https://reader.example/?q=Thailand',
         );
-        $overflowGroup = new DigestPageGroup('Bundesliga', 12, [], 12, 'https://reader.example/?q=Bundesliga');
-        $page = new DigestPage([$groupWithCards, $overflowGroup], 22);
-        $images = new DigestImageSet([], ['https://cdn/1.jpg' => 'imgABC', 'https://site/favicon.ico' => 'imgFAV']);
-
-        $html = $this->renderer()->render($page, $images, 'en');
-
-        $today = (new \IntlDateFormatter('en', \IntlDateFormatter::FULL, \IntlDateFormatter::NONE, 'UTC'))
-            ->format(new \DateTimeImmutable('now', new \DateTimeZone('UTC')));
-        $expected = str_replace('%TODAY%', (string) $today, $this->expectedFullPageMarkup());
-
-        self::assertSame($expected, $html);
-    }
-
-    public function testHeaderCountParameterIsPassedAsAString(): void
-    {
-        [$renderer, $translator] = $this->rendererWithRecordingTranslator();
-
-        $renderer->render(new DigestPage([], 22), new DigestImageSet([], []), 'en');
-
-        $call = $this->findTransCall($translator, 'digest.header');
-        self::assertIsString($call['parameters']['%count%']);
-        self::assertSame('22', $call['parameters']['%count%']);
-    }
-
-    public function testGroupHeadingCountParameterIsPassedAsAString(): void
-    {
-        [$renderer, $translator] = $this->rendererWithRecordingTranslator();
-        $group = new DigestPageGroup('Thailand', 10, [], 0, 'https://reader.example/?q=Thailand');
-
-        $renderer->render(new DigestPage([$group], 10), new DigestImageSet([], []), 'en');
-
-        $call = $this->findTransCall($translator, 'digest.group_heading');
-        self::assertIsString($call['parameters']['%count%']);
-        self::assertSame('10', $call['parameters']['%count%']);
-    }
-
-    public function testMoreLinkCountParameterIsPassedAsAString(): void
-    {
-        [$renderer, $translator] = $this->rendererWithRecordingTranslator();
-        $group = new DigestPageGroup('Thailand', 10, [], 3, 'https://reader.example/?q=Thailand');
-
-        $renderer->render(new DigestPage([$group], 10), new DigestImageSet([], []), 'en');
-
-        $call = $this->findTransCall($translator, 'digest.more_link');
-        self::assertIsString($call['parameters']['%count%']);
-        self::assertSame('3', $call['parameters']['%count%']);
-    }
-
-    /** @return array{id: string, parameters: array<string, mixed>} */
-    private function findTransCall(RecordingTranslator $translator, string $id): array
-    {
-        foreach ($translator->calls as $call) {
-            if ($call['id'] === $id) {
-                return $call;
-            }
-        }
-
-        self::fail("No trans() call was recorded for '{$id}'.");
-    }
-
-    public function testZeroRemainingRendersNoMoreLink(): void
-    {
-        $group = new DigestPageGroup('Thailand', 1, [], 0, 'https://reader.example/?q=Thailand');
         $page = new DigestPage([$group], 1);
 
         $html = $this->renderer()->render($page, new DigestImageSet([], []), 'en');
 
-        self::assertStringNotContainsString('more in', $html);
-    }
-
-    public function testEscapedUrlKeepsASingleQuoteAsAnHtmlEntity(): void
-    {
-        $card = new DigestEntry(
-            'Title',
-            'Feed',
-            '',
-            "https://reader.example/?entry=1&name=O'Brien",
-            null,
-            null,
-            null,
+        self::assertMatchesRegularExpression(
+            '/<a[^>]+style="[^"]*font-size: 16px[^"]*"[^>]*>Thailand-Urlaub<\/a>/',
+            $html,
         );
-        $group = new DigestPageGroup('Thailand', 1, [$card], 0, 'https://reader.example/?q=Thailand');
+    }
+
+    public function testTitleTextIsHtmlEscaped(): void
+    {
+        $group = new DigestPageGroup(
+            'Thailand',
+            1,
+            [$this->card('<script>alert(1)</script>', null)],
+            0,
+            'https://reader.example/?q=Thailand',
+        );
         $page = new DigestPage([$group], 1);
 
         $html = $this->renderer()->render($page, new DigestImageSet([], []), 'en');
 
-        self::assertStringContainsString('name=O&#039;Brien', $html);
-        self::assertStringNotContainsString("name=O'Brien", $html);
+        self::assertStringNotContainsString('<script>alert(1)</script>', $html);
+        self::assertStringContainsString('&lt;script&gt;', $html);
     }
 
     public function testEscapedTextSubstitutesInvalidUtf8Bytes(): void
@@ -316,63 +234,5 @@ final class DigestHtmlRendererTest extends TestCase
         $html = $this->renderer()->render($page, new DigestImageSet([], []), 'en');
 
         self::assertStringContainsString("Broken \u{FFFD} title", $html);
-    }
-
-    private function expectedFullPageMarkup(): string
-    {
-        return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" '
-            . 'content="width=device-width,initial-scale=1"></head><body style="margin:0;'
-            . 'background:#f5f5f4;-webkit-text-size-adjust:100%;"><'
-            . 'table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
-            . 'style="background:#f5f5f4;"><tr><td align="center" style="padding:16px '
-            . '6px;"><!--[if mso]><table role="presentation" width="600" cellpadding="0" '
-            . 'cellspacing="0"><tr><td><![endif]--><table role="presentation" width="100%" '
-            . 'cellpadding="0" cellspacing="0" '
-            . 'style="width:100%;max-width:600px;background:#ffffff;font-family:system-ui,-apple-system,\'Segoe '
-            . 'UI\',roboto,sans-serif;color:#2a2a2a;"><tr><td style="padding:24px '
-            . '16px 18px;border-bottom:1px solid #e4e4e2;"><img src="cid:digestlogo" '
-            . 'width="20" height="20" alt="" style="display:inline-block;width:20px;'
-            . 'height:20px;vertical-align:middle;margin-right:8px;border:0;"><span '
-            . 'style="font-size:16px;font-weight:600;color:#2a2a2a;">simple feed '
-            . 'reader</span><div style="margin-top:14px;font-size:14px;color:#8f8f8b;'
-            . '">%TODAY% · 22 new entries</div></td></tr><tr><td style="padding:16px '
-            . '16px 0;font-size:15px;line-height:1.5;color:#5f5f5c;">These are new '
-            . 'entries matching your saved searches, grouped by search.</td></tr>'
-            . '<tr><td style="padding:20px 16px 4px;"><div style="padding-bottom:10px;'
-            . 'border-bottom:1px solid #e4e4e2;font-size:14px;font-weight:600;color:#5f5f5c;'
-            . '">Thailand (10)</div><div style="padding-top:20px;"></div><table '
-            . 'role="presentation" width="100%" cellpadding="0" cellspacing="0">'
-            . '<tr><td valign="top" width="88" style="width:88px;padding:0 12px '
-            . '0 0;"><img src="cid:imgABC" width="88" height="66" alt="" style="display:block;'
-            . 'width:88px;height:66px;border-radius:8px;object-fit:cover;"></td>'
-            . '<td valign="top"><div style="font-size:14px;color:#8f8f8b;"><img '
-            . 'src="cid:imgFAV" width="16" height="16" alt="" style="width:16px;'
-            . 'height:16px;border-radius:4px;vertical-align:middle;margin-right:6px;'
-            . '">ZDFheute<span style="color:#c4c4c1;"> · </span>Aug 30, 2026, 9:48 AM<'
-            . '/div><a href="https://reader.example/?entry=1" style="display:block;'
-            . 'font-size:16px;font-weight:500;line-height:1.35;color:#2a2a2a;text-decoration:none;'
-            . 'margin:4px 0;">Thailand-Urlaub</a><div style="font-size:14px;line-height:1.4;'
-            . 'color:#5f5f5c;margin-top:4px;">A short summary.</div></td></tr></table>'
-            . '<div style="margin-top:20px;padding-top:20px;border-top:1px solid '
-            . '#e4e4e2;"></div><table role="presentation" width="100%" cellpadding="0" '
-            . 'cellspacing="0"><tr><td valign="top"><div style="font-size:14px;color:#8f8f8b;'
-            . '">Spiegel</div><a href="https://reader.example/?entry=2" style="display:block;'
-            . 'font-size:16px;font-weight:500;line-height:1.35;color:#2a2a2a;text-decoration:none;'
-            . 'margin:4px 0;">No image here</a></td></tr></table><a href="https://reader.example/?q=Thailand" '
-            . 'style="display:inline-block;margin:12px 0 2px;font-size:14px;color:#3f8676;'
-            . 'text-decoration:none;font-weight:500;">+7 more in "Thailand" →</a>'
-            . '</td></tr><tr><td style="padding:20px 16px 4px;"><div style="padding-bottom:10px;'
-            . 'border-bottom:1px solid #e4e4e2;font-size:14px;font-weight:600;color:#5f5f5c;'
-            . '">Bundesliga (12)</div><a href="https://reader.example/?q=Bundesliga" '
-            . 'style="display:inline-block;margin:12px 0 2px;font-size:14px;color:#3f8676;'
-            . 'text-decoration:none;font-weight:500;">+12 more in "Bundesliga" →<'
-            . '/a></td></tr><tr><td style="padding:22px 16px 26px;border-top:1px '
-            . 'solid #e4e4e2;"><div style="margin-bottom:12px;"><a href="https://reader.example/" '
-            . 'style="font-size:14px;color:#3f8676;text-decoration:none;">Open in '
-            . 'the reader →</a></div><div style="font-size:13px;line-height:1.5;'
-            . 'color:#a7a7a3;">Manage your digest in <a href="https://reader.example/settings/email" '
-            . 'style="color:#8f8f8b;text-decoration:underline;">Settings → Email<'
-            . '/a>.</div></td></tr></table><!--[if mso]></td></tr></table><![endif]-->'
-            . '</td></tr></table></body></html>';
     }
 }

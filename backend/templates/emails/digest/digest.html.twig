@@ -1,0 +1,70 @@
+{% apply inline_css %}
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>
+        .body { margin: 0; background: #f5f5f4; -webkit-text-size-adjust: 100%; }
+        .outer { background: #f5f5f4; }
+        .frame { padding: 16px 6px; }
+        .sheet { max-width: 600px; background: #ffffff; color: #2a2a2a;
+                 font-family: system-ui, -apple-system, 'Segoe UI', roboto, sans-serif; }
+
+        .header { padding: 24px 16px 18px; border-bottom: 1px solid #e4e4e2; }
+        .logo { display: inline-block; width: 20px; height: 20px; vertical-align: middle; margin-right: 8px; border: 0; }
+        .brand { font-size: 16px; font-weight: 600; color: #2a2a2a; }
+        .subtitle { margin-top: 14px; font-size: 14px; color: #8f8f8b; }
+
+        .intro { padding: 16px 16px 0; font-size: 15px; line-height: 1.5; color: #5f5f5c; }
+
+        .group { padding: 20px 16px 4px; }
+        .group-heading { padding-bottom: 10px; border-bottom: 1px solid #e4e4e2;
+                         font-size: 14px; font-weight: 600; color: #5f5f5c; }
+        .card-gap-first { padding-top: 20px; }
+        .card-gap { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e4e4e2; }
+
+        .thumb-cell { width: 88px; padding: 0 12px 0 0; }
+        .thumb { display: block; width: 88px; height: 66px; border-radius: 8px; object-fit: cover; }
+        .kicker { font-size: 14px; color: #8f8f8b; }
+        .favicon { width: 16px; height: 16px; border-radius: 4px; vertical-align: middle; margin-right: 6px; }
+        .dot { color: #c4c4c1; }
+        .card-title { display: block; margin: 4px 0; font-size: 16px; font-weight: 500;
+                      line-height: 1.35; color: #2a2a2a; text-decoration: none; }
+        .dek { margin-top: 4px; font-size: 14px; line-height: 1.4; color: #5f5f5c; }
+        .more { display: inline-block; margin: 12px 0 2px; font-size: 14px;
+                font-weight: 500; color: #3f8676; text-decoration: none; }
+
+        .footer { padding: 22px 16px 26px; border-top: 1px solid #e4e4e2; }
+        .footer-open { margin-bottom: 12px; }
+        .open-reader { font-size: 14px; color: #3f8676; text-decoration: none; }
+        .manage { font-size: 13px; line-height: 1.5; color: #a7a7a3; }
+        .manage a { color: #8f8f8b; text-decoration: underline; }
+    </style>
+</head>
+<body class="body">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="outer">
+<tr><td align="center" class="frame">
+<!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="sheet">
+    <tr><td class="header">
+        <img src="cid:{{ logoCid }}" width="20" height="20" alt="" class="logo">
+        <span class="brand">simple feed reader</span>
+        <div class="subtitle">{{ 'digest.header'|trans({'%date%': today, '%count%': totalCount}, 'emails', locale) }}</div>
+    </td></tr>
+    <tr><td class="intro">{{ 'digest.intro'|trans({}, 'emails', locale) }}</td></tr>
+    {% for group in groups %}{{ include('emails/digest/_group.html.twig') }}{% endfor %}
+    <tr><td class="footer">
+        <div class="footer-open">
+            <a href="{{ openReaderUrl }}" class="open-reader">{{ 'digest.open_reader'|trans({}, 'emails', locale) }} &rarr;</a>
+        </div>
+        {% set manage_link %}<a href="{{ settingsUrl }}">{{ 'digest.manage_link_label'|trans({}, 'emails', locale) }}</a>{% endset %}
+        <div class="manage">{{ 'digest.manage_html'|trans({'%link%': manage_link}, 'emails', locale)|raw }}</div>
+    </td></tr>
+</table>
+<!--[if mso]></td></tr></table><![endif]-->
+</td></tr>
+</table>
+</body>
+</html>
+{% endapply %}

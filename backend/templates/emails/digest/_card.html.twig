@@ -1,0 +1,8 @@
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+    {% if card.imageCid %}<td valign="top" width="88" class="thumb-cell"><img src="cid:{{ card.imageCid }}" width="88" height="66" alt="" class="thumb"></td>{% endif %}
+    <td valign="top">
+        <div class="kicker">{% if card.faviconCid %}<img src="cid:{{ card.faviconCid }}" width="16" height="16" alt="" class="favicon">{% endif %}{{ card.feedName }}{% if card.when %}<span class="dot"> &middot; </span>{{ card.when }}{% endif %}</div>
+        <a href="{{ card.url }}" class="card-title">{{ card.title }}</a>
+        {% if card.shortDescription %}<div class="dek">{{ card.shortDescription }}</div>{% endif %}
+    </td>
+</tr></table>

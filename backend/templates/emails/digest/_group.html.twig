@@ -1,0 +1,10 @@
+<tr><td class="group">
+    <div class="group-heading">{{ 'digest.group_heading'|trans({'%term%': group.term, '%count%': group.totalCount}, 'emails', locale) }}</div>
+    {% for card in group.cards %}
+        <div class="{{ loop.first ? 'card-gap-first' : 'card-gap' }}"></div>
+        {{ include('emails/digest/_card.html.twig') }}
+    {% endfor %}
+    {% if group.remaining > 0 %}
+        <a href="{{ group.moreUrl }}" class="more">{{ 'digest.more_link'|trans({'%count%': group.remaining, '%term%': group.term}, 'emails', locale) }} &rarr;</a>
+    {% endif %}
+</td></tr>
