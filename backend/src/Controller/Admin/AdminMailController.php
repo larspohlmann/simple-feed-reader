@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Dto\Admin\MailSettingsRequest;
+use App\Service\Mail\MailDeliveryHealth;
 use App\Service\Mail\Settings\MailConnectionTester;
 use App\Service\Mail\Settings\MailSettings;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -48,5 +49,11 @@ final readonly class AdminMailController
         $this->settings->resetToEnvironment();
 
         return new JsonResponse($this->settings->view());
+    }
+
+    #[Route('/errors', name: 'api_admin_mail_errors', methods: ['GET'])]
+    public function errors(MailDeliveryHealth $health): JsonResponse
+    {
+        return new JsonResponse($health->view());
     }
 }
