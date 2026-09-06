@@ -177,7 +177,9 @@ final class DigestHtmlRendererTest extends TestCase
     {
         $html = $this->renderer()->render(new DigestPage([], 0), new DigestImageSet([], []), 'en');
 
-        self::assertStringContainsString('max-width: 600px', $html);
+        // width:100% must sit beside max-width so Apple Mail fills the screen
+        // instead of shrinking the sheet to its content width (#886).
+        self::assertStringContainsString('width: 100%; max-width: 600px', $html);
         self::assertStringContainsString('padding: 12px 0', $html);
     }
 
