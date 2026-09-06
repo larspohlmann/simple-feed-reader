@@ -19,11 +19,20 @@ final class EgressOptions
      * DIRECT — succeeding silently, with no transport failure for the caller to
      * notice, which would defeat the whole point of `directFallback` off.
      *
-     * @return array{proxy: string, no_proxy: string}
+     * @return array{proxy: string, no_proxy: string, extra?: array{curl: array<int, int>}}
      */
     public static function proxied(ProxyConfig $proxy): array
     {
-        return ['proxy' => $proxy->dsn(), 'no_proxy' => ''];
+        $options = ['proxy' => $proxy->dsn(), 'no_proxy' => ''];
+        if (!$proxy->resolvesLocally()) {
+            return $options;
+        }
+
+        // Hand the proxy an IPv4 address; an IPv4-only SOCKS5 rejects a locally
+        // resolved IPv6 on a dual-stack host (#861, as CurlSmtpOptions).
+        $options['extra'] = ['curl' => [\CURLOPT_IPRESOLVE => \CURL_IPRESOLVE_V4]];
+
+        return $options;
     }
 
     /**

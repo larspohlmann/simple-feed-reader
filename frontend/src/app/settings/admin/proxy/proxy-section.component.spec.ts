@@ -109,6 +109,12 @@ describe('ProxySectionComponent', () => {
     expect(link?.getAttribute('href')).toBe('/settings/admin/mail');
   });
 
+  it('shows the DNS pitfalls note inline', () => {
+    const fixture = mount(state({ host: 'proxy.example.com' }));
+
+    expect(fixture.nativeElement.textContent).toContain('cannot resolve host names');
+  });
+
   it('saves instantly when the enable toggle is flipped', () => {
     const fixture = mount(state({ host: 'proxy.example.com', enabled: false }));
 

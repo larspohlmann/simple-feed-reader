@@ -31,6 +31,31 @@ final class EgressOptionsTest extends TestCase
         self::assertSame('', EgressOptions::proxied($proxy)['no_proxy']);
     }
 
+    public function testProxiedForcesIpv4WhenTheProxyResolvesNamesLocally(): void
+    {
+        $proxy = new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null); // remoteDns off → socks5
+
+        $extra = EgressOptions::proxied($proxy)['extra'] ?? null;
+
+        self::assertNotNull($extra);
+        self::assertSame(\CURL_IPRESOLVE_V4, $extra['curl'][\CURLOPT_IPRESOLVE]);
+    }
+
+    public function testProxiedDoesNotForceIpv4WhenTheProxyResolvesNames(): void
+    {
+        // remoteDns on → socks5h → curl hands the proxy the name, not an address.
+        $proxy = new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null, true, true);
+
+        self::assertArrayNotHasKey('extra', EgressOptions::proxied($proxy));
+    }
+
+    public function testProxiedDoesNotForceIpv4ForAnHttpProxy(): void
+    {
+        $proxy = new ProxyConfig(ProxyType::Http, 'p', 8080, null, null);
+
+        self::assertArrayNotHasKey('extra', EgressOptions::proxied($proxy));
+    }
+
     public function testPinnedYieldsTheResolvePinAndTheCrossFamilyKeyButNoProxy(): void
     {
         $guarded = new GuardedUrl('example.com', ['93.184.216.34']);

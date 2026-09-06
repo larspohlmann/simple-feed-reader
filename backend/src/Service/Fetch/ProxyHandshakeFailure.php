@@ -29,9 +29,9 @@ final readonly class ProxyHandshakeFailure
 
     private const string REJECTED_LOGIN_REASON = 'The proxy rejected the username and password.';
 
-    private const string REMOTE_DNS_HINT = 'A proxy that does not resolve host names answers this for every name '
-        . 'it is given — Private Internet Access is one. Turn "Resolve DNS at the proxy" off to resolve names here '
-        . 'instead.';
+    private const string REMOTE_DNS_HINT = 'Two proxy limits cause this. With "Resolve DNS at the proxy" on, '
+        . 'a proxy that does not resolve host names — Private Internet Access is one — reports every name '
+        . 'unreachable; turn it off. With it off, an IPv4-only proxy can reject a name this host resolved to IPv6.';
 
     public static function explain(string $transportMessage): string
     {
