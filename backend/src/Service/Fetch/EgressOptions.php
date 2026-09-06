@@ -24,11 +24,13 @@ final class EgressOptions
     public static function proxied(ProxyConfig $proxy): array
     {
         $options = ['proxy' => $proxy->dsn(), 'no_proxy' => ''];
-        if ($proxy->resolvesLocally()) {
-            // Hand the proxy an IPv4 address; an IPv4-only SOCKS5 rejects a
-            // locally resolved IPv6 on a dual-stack host (#861, as CurlSmtpOptions).
-            $options['extra']['curl'][\CURLOPT_IPRESOLVE] = \CURL_IPRESOLVE_V4;
+        if (!$proxy->resolvesLocally()) {
+            return $options;
         }
+
+        // Hand the proxy an IPv4 address; an IPv4-only SOCKS5 rejects a locally
+        // resolved IPv6 on a dual-stack host (#861, as CurlSmtpOptions).
+        $options['extra'] = ['curl' => [\CURLOPT_IPRESOLVE => \CURL_IPRESOLVE_V4]];
 
         return $options;
     }

@@ -35,9 +35,10 @@ final class EgressOptionsTest extends TestCase
     {
         $proxy = new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null); // remoteDns off → socks5
 
-        $curl = EgressOptions::proxied($proxy)['extra']['curl'];
+        $extra = EgressOptions::proxied($proxy)['extra'] ?? null;
 
-        self::assertSame(\CURL_IPRESOLVE_V4, $curl[\CURLOPT_IPRESOLVE]);
+        self::assertNotNull($extra);
+        self::assertSame(\CURL_IPRESOLVE_V4, $extra['curl'][\CURLOPT_IPRESOLVE]);
     }
 
     public function testProxiedDoesNotForceIpv4WhenTheProxyResolvesNames(): void
