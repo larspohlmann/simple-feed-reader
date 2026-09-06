@@ -15,6 +15,7 @@ const BASE = 'https://api.test';
 const ENDPOINT = `${BASE}/api/admin/mail`;
 const TEST_ENDPOINT = `${BASE}/api/admin/mail/test`;
 const RESET_ENDPOINT = `${BASE}/api/admin/mail/reset`;
+const ERRORS_ENDPOINT = `${ENDPOINT}/errors`;
 
 function state(over: Partial<MailSettingsState> = {}): MailSettingsState {
   return {
@@ -57,6 +58,7 @@ describe('MailSectionComponent', () => {
     const fixture = TestBed.createComponent(MailSectionComponent);
     fixture.detectChanges();
     http.expectOne(ENDPOINT).flush(initial);
+    http.expectOne(ERRORS_ENDPOINT).flush({ count: 0, failures: [] });
     fixture.detectChanges();
     return fixture;
   }
@@ -280,6 +282,7 @@ describe('MailSectionComponent', () => {
     const req = http.expectOne(TEST_ENDPOINT);
     expect(req.request.method).toBe('POST');
     req.flush({ ok: true, reason: null });
+    http.expectOne(ERRORS_ENDPOINT).flush({ count: 0, failures: [] });
   });
 
   it('marks a successful probe with a tick and the testOk message', () => {
@@ -288,6 +291,7 @@ describe('MailSectionComponent', () => {
     testButton(fixture).click();
     fixture.detectChanges();
     http.expectOne(TEST_ENDPOINT).flush({ ok: true, reason: null });
+    http.expectOne(ERRORS_ENDPOINT).flush({ count: 0, failures: [] });
     fixture.detectChanges();
 
     const glyph: HTMLElement | null = fixture.nativeElement.querySelector('.probe-status app-icon');
@@ -302,6 +306,7 @@ describe('MailSectionComponent', () => {
     testButton(fixture).click();
     fixture.detectChanges();
     http.expectOne(TEST_ENDPOINT).flush({ ok: false, reason: 'connection refused' });
+    http.expectOne(ERRORS_ENDPOINT).flush({ count: 1, failures: [] });
     fixture.detectChanges();
 
     const banner: HTMLElement | null = fixture.nativeElement.querySelector('app-error-banner');
@@ -319,6 +324,7 @@ describe('MailSectionComponent', () => {
     testButton(fixture).click();
     fixture.detectChanges();
     http.expectOne(TEST_ENDPOINT).flush({ ok: false, reason });
+    http.expectOne(ERRORS_ENDPOINT).flush({ count: 1, failures: [] });
     fixture.detectChanges();
   }
 

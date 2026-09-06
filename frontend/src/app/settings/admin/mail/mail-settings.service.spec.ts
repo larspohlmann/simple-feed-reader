@@ -8,6 +8,7 @@ const BASE = 'https://api.test';
 const ENDPOINT = `${BASE}/api/admin/mail`;
 const TEST_ENDPOINT = `${BASE}/api/admin/mail/test`;
 const RESET_ENDPOINT = `${BASE}/api/admin/mail/reset`;
+const ERRORS_ENDPOINT = `${ENDPOINT}/errors`;
 
 function state(over: Partial<MailSettingsState> = {}): MailSettingsState {
   return {
@@ -43,6 +44,7 @@ describe('MailSettingsService', () => {
     });
     service = TestBed.inject(MailSettingsService);
     http = TestBed.inject(HttpTestingController);
+    http.expectOne(ERRORS_ENDPOINT).flush({ count: 0, failures: [] });
   });
 
   afterEach(() => http.verify());
@@ -123,6 +125,7 @@ describe('MailSettingsService', () => {
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({});
     req.flush({ ok: true, reason: null });
+    http.expectOne(ERRORS_ENDPOINT).flush({ count: 0, failures: [] });
 
     expect(service.probe()).toEqual({ status: 'ok' });
   });
@@ -132,6 +135,7 @@ describe('MailSettingsService', () => {
 
     const req = http.expectOne(TEST_ENDPOINT);
     req.flush({ ok: false, reason: 'connection refused' });
+    http.expectOne(ERRORS_ENDPOINT).flush({ count: 1, failures: [] });
 
     expect(service.probe()).toEqual({ status: 'error', message: 'connection refused' });
   });
@@ -144,8 +148,34 @@ describe('MailSettingsService', () => {
       { type: 'about:blank', title: 'Request failed', status: 500, detail: 'boom' },
       { status: 500, statusText: 'Server Error' },
     );
+    http.expectOne(ERRORS_ENDPOINT).flush({ count: 1, failures: [] });
 
     expect(service.probe()).toEqual({ status: 'error', message: 'boom' });
+  });
+
+  it('loads recent failures and exposes the count', () => {
+    service.loadFailures();
+
+    http.expectOne(ERRORS_ENDPOINT).flush({
+      count: 2,
+      failures: [
+        {
+          kind: 'digest',
+          recipient: 'a@example.test',
+          error: 'SMTP is down',
+          at: '2026-09-06T10:00:00Z',
+        },
+        {
+          kind: 'test',
+          recipient: 'boss@example.test',
+          error: 'no_from_address',
+          at: '2026-09-06T10:05:00Z',
+        },
+      ],
+    });
+
+    expect(service.failureCount()).toBe(2);
+    expect(service.failures()[0].kind).toBe('digest');
   });
 
   it('a failed PUT leaves saved() false and sets failure()', () => {
