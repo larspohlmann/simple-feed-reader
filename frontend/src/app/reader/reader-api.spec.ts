@@ -251,6 +251,14 @@ describe('ReaderApi', () => {
       req.flush(null);
     });
 
+    it('PATCHes a feed move onto the move-to-tag endpoint', () => {
+      api.moveFeedToTag(7, { fromTagId: 1, toTagId: 2, position: 3 }).subscribe();
+      const req = ctrl.expectOne('https://api.test/api/subscriptions/7/move-to-tag');
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ fromTagId: 1, toTagId: 2, position: 3 });
+      req.flush({ subscription: {} });
+    });
+
     it('GETs all tags', () => {
       api.tags().subscribe();
       const req = ctrl.expectOne('https://api.test/api/tags');

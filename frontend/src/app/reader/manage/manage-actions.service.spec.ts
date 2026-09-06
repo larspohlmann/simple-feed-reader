@@ -87,17 +87,40 @@ describe('ManageActions', () => {
     expect(subSpy).toHaveBeenCalled();
   });
 
-  it('retag: PATCHes the whole tag set (preserving customTitle) then reloads', () => {
-    const named: SubscriptionDto = { ...sub, customTitle: 'My feed' };
-    const spy = jest
-      .spyOn(TestBed.inject(SubscriptionsStore), 'load')
-      .mockImplementation(() => undefined);
-    svc.retag(named, [3, 7]);
-    const req = ctrl.expectOne('https://api.test/api/subscriptions/5');
+  it('moveFeedToTag: PATCHes /move-to-tag with from/to/position then reloads', () => {
+    const s: SubscriptionDto = { ...sub, tags: [tag] };
+    const store = TestBed.inject(SubscriptionsStore);
+    store.subscriptions.set([s]);
+    const spy = jest.spyOn(store, 'load').mockImplementation(() => undefined);
+    svc.moveFeedToTag(s, 3, 7, 1);
+    const req = ctrl.expectOne('https://api.test/api/subscriptions/5/move-to-tag');
     expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({ customTitle: 'My feed', tagIds: [3, 7] });
-    req.flush({ subscription: { ...named, tags: [tag] } });
+    expect(req.request.body).toEqual({ fromTagId: 3, toTagId: 7, position: 1 });
+    req.flush({ subscription: s });
     expect(spy).toHaveBeenCalled();
+  });
+
+  it('moveFeedToTag: optimistically drops the source tag and adds the target', () => {
+    const store = TestBed.inject(SubscriptionsStore);
+    const tags = TestBed.inject(TagsStore);
+    const news: TagDto = { id: 7, name: 'News', color: null, icon: null, position: 1 };
+    tags.tags.set([tag, news]);
+    const s: SubscriptionDto = { ...sub, tags: [tag] };
+    store.subscriptions.set([s]);
+    jest.spyOn(store, 'load').mockImplementation(() => undefined);
+    svc.moveFeedToTag(s, 3, 7, 0);
+    expect(
+      store
+        .subscriptions()
+        .find((x) => x.id === 5)!
+        .tags.map((t) => t.id),
+    ).toEqual([7]);
+    ctrl.expectOne('https://api.test/api/subscriptions/5/move-to-tag').flush({ subscription: s });
+  });
+
+  it('moveFeedToTag: does nothing when the source and target lists are the same', () => {
+    svc.moveFeedToTag(sub, 3, 3, 0);
+    ctrl.expectNone('https://api.test/api/subscriptions/5/move-to-tag');
   });
 
   it('setIncludeInAllItems: PATCHes the full body with the flag flipped and optimistically updates the store', () => {

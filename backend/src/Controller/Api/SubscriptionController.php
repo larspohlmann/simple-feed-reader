@@ -6,6 +6,7 @@ namespace App\Controller\Api;
 
 use App\Dto\Subscription\BulkUnsubscribeRequest;
 use App\Dto\Subscription\BulkUpdateSubscriptionsRequest;
+use App\Dto\Subscription\MoveFeedToTagRequest;
 use App\Dto\Subscription\ReorderSubscriptionsRequest;
 use App\Dto\Subscription\SubscribeRequest;
 use App\Dto\Subscription\UpdateSubscriptionRequest;
@@ -19,6 +20,7 @@ use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
 use App\Service\Subscription\BulkSubscriptionUpdater;
+use App\Service\Subscription\FeedTagMove;
 use App\Service\Subscription\OwnedSubscriptions;
 use App\Service\Subscription\SubscriptionService;
 use App\Service\Subscription\SubscriptionTagSync;
@@ -42,6 +44,7 @@ final readonly class SubscriptionController
         private EntityManagerInterface $em,
         private OwnedSubscriptions $ownedSubscriptions,
         private BulkSubscriptionUpdater $bulkUpdater,
+        private FeedTagMove $feedTagMove,
     ) {
     }
 
@@ -137,6 +140,27 @@ final readonly class SubscriptionController
             $sub->setIncludeInForYou($request->includeInForYou);
         }
 
+        $this->em->flush();
+
+        return new JsonResponse(['subscription' => SubscriptionJson::one($sub)]);
+    }
+
+    /**
+     * Move a feed between the sidebar's lists, honouring the drop position: out
+     * of `fromTagId`, into `toTagId` at `position` (a null tag id is the
+     * untagged "Feeds" list; a null position appends).
+     */
+    #[Route('/{id}/move-to-tag', name: 'api_subscriptions_move', methods: ['PATCH'], requirements: ['id' => '\d+'])]
+    public function moveToTag(
+        int $id,
+        #[CurrentUser] User $user,
+        #[MapRequestPayload] MoveFeedToTagRequest $request,
+    ): JsonResponse {
+        $userId = (int) $user->getId();
+        $sub = $this->subscriptionRepo->findOneOwnedBy($id, $userId)
+            ?? throw new NotFoundHttpException('No such subscription.');
+
+        $this->feedTagMove->move($sub, $request->fromTagId, $request->toTagId, $request->position, $userId);
         $this->em->flush();
 
         return new JsonResponse(['subscription' => SubscriptionJson::one($sub)]);

@@ -111,20 +111,17 @@ export class OrganiseTagGroupComponent {
       return;
     }
 
-    this.manage.retag(
-      subscription,
-      this.tagIdsAfterMove(subscription, event.previousContainer.data),
-    );
+    this.moveFeedHere(subscription, event.previousContainer.data, event.currentIndex);
   }
 
-  /** A drop on this group's HEADER: a dragged feed still adds this tag (same
-   *  write as dropping it in the body — delegated to onFeedDropped so that
-   *  rule exists once), and a dragged tag header reorders the tags
-   *  themselves. The header is the only list a tag header can sensibly be
-   *  dropped on: a tag has no body list of its own to sort into. */
+  /** A drop on this group's HEADER: a dragged feed moves onto this tag, but a
+   *  header shows no feed list, so it appends (a null position) rather than
+   *  landing at an index. A dragged tag header reorders the tags themselves.
+   *  The header is the only list a tag header can sensibly be dropped on: a
+   *  tag has no body list of its own to sort into. */
   onHeaderDropped(event: CdkDragDrop<OrganiseGroup>): void {
     if (isSubscriptionDrag(event.item.data)) {
-      this.onFeedDropped(event);
+      this.moveFeedHere(event.item.data, event.previousContainer.data, null);
       return;
     }
     if (isTagDrag(event.item.data)) {
@@ -173,16 +170,19 @@ export class OrganiseTagGroupComponent {
     this.manage.reorderTagFeeds(tag.id, ids);
   }
 
-  /** The feed's tags after a move into this group: source tag goes, this
-   *  group's tag arrives. A drop on untagged removes only the SOURCE tag,
-   *  keeping every other tag -- the single-tag removal the sidebar never had
-   *  (design spec: "Dropping on 'Untagged' removes the tag it came from"). */
-  private tagIdsAfterMove(subscription: SubscriptionDto, source: OrganiseGroup): number[] {
-    const target = this.group().tag;
-    const kept = subscription.tags
-      .map((t) => t.id)
-      .filter((id) => id !== source.tag?.id && id !== target?.id);
-
-    return target === null ? kept : [...kept, target.id];
+  /** Move a feed into this group at the dropped position: out of the source
+   *  tag, into this group's tag (or the untagged "Feeds" list) at `position`.
+   *  A null position appends. */
+  private moveFeedHere(
+    subscription: SubscriptionDto,
+    source: OrganiseGroup,
+    position: number | null,
+  ): void {
+    this.manage.moveFeedToTag(
+      subscription,
+      source.tag?.id ?? null,
+      this.group().tag?.id ?? null,
+      position,
+    );
   }
 }

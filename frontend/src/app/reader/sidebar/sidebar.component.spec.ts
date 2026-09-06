@@ -289,7 +289,7 @@ describe('SidebarComponent', () => {
     expect(el.querySelectorAll('.pop').length).toBe(1);
   });
 
-  describe('drag-and-drop retagging', () => {
+  describe('drag-and-drop moving', () => {
     const tag = (id: number): TagDto => ({
       id,
       name: `t${id}`,
@@ -303,77 +303,50 @@ describe('SidebarComponent', () => {
       item: SubscriptionDto,
       target: DropData,
       source: DropData = { kind: 'untagged' },
+      currentIndex = 0,
     ): CdkDragDrop<DropData> {
       return {
         previousContainer: { data: source },
         container: { data: target },
         item: { data: item },
+        currentIndex,
       } as unknown as CdkDragDrop<DropData>;
     }
 
     const onTag = (id: number): DropData => ({ kind: 'tag', tag: tag(id) });
 
-    function retagOf(ev: CdkDragDrop<DropData>) {
+    function moveOf(ev: CdkDragDrop<DropData>) {
       const f = mount();
       const spy = jest.fn();
-      f.componentInstance.retag.subscribe(spy);
+      f.componentInstance.moveFeed.subscribe(spy);
       f.componentInstance.onDrop(ev);
       return spy;
     }
 
-    it('assigns the tag when an untagged feed is dropped on it', () => {
-      const spy = retagOf(drop(sub(1), onTag(3)));
-      expect(spy).toHaveBeenCalledWith({ sub: sub(1), tagIds: [3] });
+    it('moves an untagged feed into a tag at the drop index', () => {
+      const spy = moveOf(drop(sub(1), onTag(3), { kind: 'untagged' }, 2));
+      expect(spy).toHaveBeenCalledWith({ sub: sub(1), fromTagId: null, toTagId: 3, position: 2 });
     });
 
-    it('moves a feed from its source tag to the target tag', () => {
+    it('moves a feed from its source tag to the target tag at the drop index', () => {
       const s = withTags(sub(1), [tag(3)]);
-      const spy = retagOf(drop(s, onTag(7), onTag(3)));
-      expect(spy).toHaveBeenCalledWith({ sub: s, tagIds: [7] });
+      const spy = moveOf(drop(s, onTag(7), onTag(3), 1));
+      expect(spy).toHaveBeenCalledWith({ sub: s, fromTagId: 3, toTagId: 7, position: 1 });
     });
 
-    it('keeps the other tags on a feed moved between two tags', () => {
-      const s = withTags(sub(1), [tag(3), tag(9)]);
-      const spy = retagOf(drop(s, onTag(7), onTag(3)));
-      expect(spy).toHaveBeenCalledWith({ sub: s, tagIds: [9, 7] });
-    });
-
-    it('drops the source tag when moved onto a tag the feed already has', () => {
-      const s = withTags(sub(1), [tag(3), tag(7)]);
-      const spy = retagOf(drop(s, onTag(7), onTag(3)));
-      expect(spy).toHaveBeenCalledWith({ sub: s, tagIds: [7] });
-    });
-
-    it('removes only the source tag when dropped on Feeds', () => {
-      const s = withTags(sub(1), [tag(3), tag(7)]);
-      const spy = retagOf(drop(s, { kind: 'untagged' }, onTag(3)));
-      expect(spy).toHaveBeenCalledWith({ sub: s, tagIds: [7] });
-    });
-
-    it('untags a single-tag feed dropped on Feeds', () => {
+    it('moves a feed onto the untagged list at the drop index', () => {
       const s = withTags(sub(1), [tag(3)]);
-      const spy = retagOf(drop(s, { kind: 'untagged' }, onTag(3)));
-      expect(spy).toHaveBeenCalledWith({ sub: s, tagIds: [] });
+      const spy = moveOf(drop(s, { kind: 'untagged' }, onTag(3), 0));
+      expect(spy).toHaveBeenCalledWith({ sub: s, fromTagId: 3, toTagId: null, position: 0 });
     });
 
-    it('does nothing when the drop would not change the tag set', () => {
-      const s = withTags(sub(1), [tag(3)]);
-      const spy = retagOf(drop(s, onTag(3), onTag(3)));
-      expect(spy).not.toHaveBeenCalled();
-    });
-
-    it('does nothing when an already-untagged feed is dropped on Feeds', () => {
-      const spy = retagOf(drop(sub(1), { kind: 'untagged' }));
-      expect(spy).not.toHaveBeenCalled();
-    });
-
-    it('moves the feed when dropped on a tag header', () => {
+    it('appends when a feed is dropped on a tag header', () => {
       const s = withTags(sub(1), [tag(3)]);
       const f = mount();
       const spy = jest.fn();
-      f.componentInstance.retag.subscribe(spy);
+      f.componentInstance.moveFeed.subscribe(spy);
       f.componentInstance.onTagHeadDrop(drop(s, onTag(7), onTag(3)));
-      expect(spy).toHaveBeenCalledWith({ sub: s, tagIds: [7] });
+      expect(spy).toHaveBeenCalledWith({ sub: s, fromTagId: 3, toTagId: 7, position: null });
     });
   });
 
@@ -428,17 +401,17 @@ describe('SidebarComponent', () => {
       expect(spy).not.toHaveBeenCalled();
     });
 
-    it('assigns the tag when a feed is dropped on the tag header', () => {
+    it('moves a feed onto the tag when it is dropped on the tag header', () => {
       const f = mount({ tagTree: [tagNode(10)] });
       const spy = jest.fn();
-      f.componentInstance.retag.subscribe(spy);
+      f.componentInstance.moveFeed.subscribe(spy);
       const s = sub(1);
       f.componentInstance.onTagHeadDrop({
         previousContainer: { data: { kind: 'untagged' } },
         container: { data: { kind: 'tag', tag: tagNode(10).tag } },
         item: { data: s },
       } as unknown as CdkDragDrop<DropData>);
-      expect(spy).toHaveBeenCalledWith({ sub: s, tagIds: [10] });
+      expect(spy).toHaveBeenCalledWith({ sub: s, fromTagId: null, toTagId: 10, position: null });
     });
 
     it('emits reorderTagFeeds when a feed is reordered within its tag', () => {

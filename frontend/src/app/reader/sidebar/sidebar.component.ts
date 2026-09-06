@@ -41,9 +41,6 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
 
 const tagIdOf = (data: DropData): number | null => (data.kind === 'tag' ? data.tag.id : null);
 
-const sameTagSet = (a: readonly number[], b: readonly number[]): boolean =>
-  a.length === b.length && a.every((id) => b.includes(id));
-
 /** localStorage keys holding whether each sidebar section is collapsed.
  *  Namespaced under `sfr.*` like the other persisted UI preferences. */
 const TAGS_COLLAPSED_KEY = 'sfr.tags.collapsed';
@@ -119,9 +116,15 @@ export class SidebarComponent {
   // Semantic "settled search term" output, not a DOM element's search event.
   // eslint-disable-next-line @angular-eslint/no-output-native
   readonly search = output<string>();
-  /** A feed was dragged between tags; the payload carries its new complete tag
-   *  set (the source tag removed, the target tag added). */
-  readonly retag = output<{ sub: SubscriptionDto; tagIds: number[] }>();
+  /** A feed was dragged between lists: out of `fromTagId`, into `toTagId` at
+   *  `position` (a null tag id is the untagged "Feeds" list; a null position
+   *  appends, as when dropped on a collapsed tag header). */
+  readonly moveFeed = output<{
+    sub: SubscriptionDto;
+    fromTagId: number | null;
+    toTagId: number | null;
+    position: number | null;
+  }>();
   /** Tags were reordered — the full tag id list in its new order. */
   readonly reorderTags = output<number[]>();
   /** The untagged "Feeds" list was reordered. */
@@ -319,7 +322,8 @@ export class SidebarComponent {
     const target = event.container.data;
 
     if (isSubscriptionDrag(event.item.data)) {
-      this.moveBetweenTags(event.item.data, event.previousContainer.data, target);
+      // A tag header shows no feed list, so a feed dropped on it appends.
+      this.emitMove(event.item.data, event.previousContainer.data, target, null);
       return;
     }
     if (target.kind !== 'tag') return;
@@ -356,21 +360,25 @@ export class SidebarComponent {
     }
 
     if (isSubscriptionDrag(event.item.data)) {
-      this.moveBetweenTags(event.item.data, event.previousContainer.data, target);
+      this.emitMove(event.item.data, event.previousContainer.data, target, event.currentIndex);
     }
   }
 
-  /** Move a feed between tags: drop the tag it was dragged from, add the tag it
-   *  lands on. A drop on the untagged bucket only removes the source tag, so a
-   *  feed keeps its other tags. Emits nothing when the set would not change. */
-  private moveBetweenTags(sub: SubscriptionDto, source: DropData, target: DropData): void {
-    const current = sub.tags.map((t) => t.id);
-    const removed = tagIdOf(source);
-    const added = tagIdOf(target);
-    const tagIds = current.filter((id) => id !== removed);
-    if (added !== null && !tagIds.includes(added)) tagIds.push(added);
-    if (sameTagSet(current, tagIds)) return;
-    this.retag.emit({ sub, tagIds });
+  /** Announce a feed dragged from one list to another at a dropped position.
+   *  A drop back onto the same list it came from is a reorder, handled by the
+   *  callers before they reach here. */
+  private emitMove(
+    sub: SubscriptionDto,
+    source: DropData,
+    target: DropData,
+    position: number | null,
+  ): void {
+    this.moveFeed.emit({
+      sub,
+      fromTagId: tagIdOf(source),
+      toTagId: tagIdOf(target),
+      position,
+    });
   }
 
   toggle(tagId: number): void {

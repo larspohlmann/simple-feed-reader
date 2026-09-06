@@ -14,6 +14,7 @@ import {
   EntryStatePatch,
   FeedPreview,
   MarkReadScope,
+  MoveFeedToTag,
   OpmlImportResult,
   ReaderContent,
   RecommendationRunReport,
@@ -151,6 +152,14 @@ export class ReaderApi {
 
   deleteSubscription(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/api/subscriptions/${id}`);
+  }
+
+  /** Move a feed between lists at the dropped position (see {@link MoveFeedToTag}). */
+  moveFeedToTag(id: number, body: MoveFeedToTag): Observable<{ subscription: SubscriptionDto }> {
+    return this.http.patch<{ subscription: SubscriptionDto }>(
+      `${this.base}/api/subscriptions/${id}/move-to-tag`,
+      body,
+    );
   }
 
   /** Persist the untagged "Feeds" order. */
