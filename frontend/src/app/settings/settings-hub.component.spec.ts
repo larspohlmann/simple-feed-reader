@@ -5,6 +5,7 @@ import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { AuthService } from '../core/auth.service';
 import { LayoutService } from '../reader/layout.service';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
+import { MailHealthStore } from './admin/mail/mail-health.store';
 import { SettingsHubComponent } from './settings-hub.component';
 
 @Component({ template: '' })
@@ -23,6 +24,7 @@ describe('SettingsHubComponent', () => {
         { provide: LayoutService, useValue: { isWide } },
         { provide: AuthService, useValue: { user: () => null, isAdmin: () => false } },
         { provide: SubscriptionsStore, useValue: { unhealthyCount: signal(0) } },
+        { provide: MailHealthStore, useValue: { failureCount: signal(0), refresh: jest.fn() } },
       ],
     });
     const f = TestBed.createComponent(SettingsHubComponent);

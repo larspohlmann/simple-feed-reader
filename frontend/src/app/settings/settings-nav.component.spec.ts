@@ -4,11 +4,17 @@ import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { AuthService } from '../core/auth.service';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
+import { MailHealthStore } from './admin/mail/mail-health.store';
 import { SettingsNavComponent } from './settings-nav.component';
 import { SETTINGS_SECTIONS } from './settings-sections';
 
 describe('SettingsNavComponent', () => {
-  function mount(roles: string[], variant: 'rail' | 'hub' = 'rail', unhealthyCount = 0) {
+  function mount(
+    roles: string[],
+    variant: 'rail' | 'hub' = 'rail',
+    unhealthyCount = 0,
+    mailFailureCount = 0,
+  ) {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
@@ -18,6 +24,10 @@ describe('SettingsNavComponent', () => {
           useValue: { user: () => ({ roles }), isAdmin: () => roles.includes('ROLE_ADMIN') },
         },
         { provide: SubscriptionsStore, useValue: { unhealthyCount: signal(unhealthyCount) } },
+        {
+          provide: MailHealthStore,
+          useValue: { failureCount: signal(mailFailureCount), refresh: jest.fn() },
+        },
       ],
     });
     const f = TestBed.createComponent(SettingsNavComponent);
@@ -57,5 +67,24 @@ describe('SettingsNavComponent', () => {
   it('renders no badge anywhere when there are no unhealthy feeds', () => {
     const f = mount(['ROLE_USER'], 'rail', 0);
     expect(f.nativeElement.querySelector('.badge')).toBeNull();
+  });
+
+  it('badges the admin Outgoing mail entry with the mail-failure count for an admin', () => {
+    const f = mount(['ROLE_USER', 'ROLE_ADMIN'], 'rail', 0, 3);
+    const links = [...f.nativeElement.querySelectorAll('a')] as HTMLAnchorElement[];
+    const mail = links.find((a) => a.getAttribute('href') === '/settings/admin/mail');
+    expect(mail?.querySelector('.badge')?.textContent?.trim()).toBe('3');
+  });
+
+  it('shows no mail badge for a non-admin, even with a nonzero failure count', () => {
+    const f = mount(['ROLE_USER'], 'rail', 0, 3);
+    expect(f.nativeElement.querySelector('.badge')).toBeNull();
+  });
+
+  it('shows no mail badge for an admin with a zero failure count', () => {
+    const f = mount(['ROLE_USER', 'ROLE_ADMIN'], 'rail', 0, 0);
+    const links = [...f.nativeElement.querySelectorAll('a')] as HTMLAnchorElement[];
+    const mail = links.find((a) => a.getAttribute('href') === '/settings/admin/mail');
+    expect(mail?.querySelector('.badge')).toBeNull();
   });
 });

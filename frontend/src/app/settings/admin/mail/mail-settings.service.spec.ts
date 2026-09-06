@@ -44,7 +44,6 @@ describe('MailSettingsService', () => {
     });
     service = TestBed.inject(MailSettingsService);
     http = TestBed.inject(HttpTestingController);
-    http.expectOne(ERRORS_ENDPOINT).flush({ failures: [] });
   });
 
   afterEach(() => http.verify());
@@ -153,31 +152,6 @@ describe('MailSettingsService', () => {
     expect(service.probe()).toEqual({ status: 'error', message: 'boom' });
   });
 
-  it('loads recent failures and counts them', () => {
-    service.loadFailures();
-
-    http.expectOne(ERRORS_ENDPOINT).flush({
-      failures: [
-        {
-          kind: 'digest',
-          recipient: 'a@example.test',
-          error: 'SMTP is down',
-          at: '2026-09-06T10:00:00Z',
-        },
-        {
-          kind: 'test',
-          recipient: 'boss@example.test',
-          error: 'no_from_address',
-          at: '2026-09-06T10:05:00Z',
-        },
-      ],
-    });
-
-    expect(service.failures().length).toBe(2);
-    expect(service.failureCount()).toBe(2);
-    expect(service.failures()[0].kind).toBe('digest');
-  });
-
   it('a failed PUT leaves saved() false and sets failure()', () => {
     loadState();
 
@@ -236,5 +210,32 @@ describe('MailSettingsService', () => {
     const put = http.expectOne(ENDPOINT);
     expect(put.request.body.removePassword).toBe(true);
     expect(put.request.body.host).toBe('new.example');
+  });
+
+  function failTest(): void {
+    service.testConnection();
+    http.expectOne(TEST_ENDPOINT).flush({ ok: false, reason: 'connection refused' });
+    http.expectOne(ERRORS_ENDPOINT).flush({ failures: [] });
+    expect(service.probe()).toEqual({ status: 'error', message: 'connection refused' });
+  }
+
+  it('saveInstant() resets a stale test result before the save even completes', () => {
+    loadState();
+    failTest();
+
+    service.saveInstant({ useProxy: false });
+
+    expect(service.probe()).toEqual({ status: 'idle' });
+    http.expectOne(ENDPOINT).flush(state({ useProxy: false }));
+  });
+
+  it('reset() (via commit) resets a settled probe to idle', () => {
+    loadState();
+    failTest();
+
+    service.reset();
+    http.expectOne(RESET_ENDPOINT).flush(state({ envFallbackConfigured: true }));
+
+    expect(service.probe()).toEqual({ status: 'idle' });
   });
 });

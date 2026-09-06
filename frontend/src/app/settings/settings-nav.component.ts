@@ -4,6 +4,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthService } from '../core/auth.service';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { IconComponent } from '../shared/icon/icon.component';
+import { MailHealthStore } from './admin/mail/mail-health.store';
 import { SETTINGS_SECTIONS, SettingsSection } from './settings-sections';
 
 interface NavGroup {
@@ -26,7 +27,9 @@ interface NavGroup {
 export class SettingsNavComponent {
   readonly variant = input.required<'rail' | 'hub'>();
   private readonly auth = inject(AuthService);
+  private readonly mailHealth = inject(MailHealthStore);
   readonly unhealthyCount = inject(SubscriptionsStore).unhealthyCount;
+  readonly mailFailureCount = this.mailHealth.failureCount;
 
   readonly groups = computed<readonly NavGroup[]>(() => {
     const groups: NavGroup[] = [
@@ -40,4 +43,8 @@ export class SettingsNavComponent {
     }
     return groups;
   });
+
+  constructor() {
+    if (this.auth.isAdmin()) this.mailHealth.refresh();
+  }
 }
