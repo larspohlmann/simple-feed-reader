@@ -12,6 +12,7 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\InstanceSetting;
+use App\Entity\MailSendFailure;
 use App\Entity\MailServerSettings;
 use App\Entity\Preferences;
 use App\Entity\ProxyServerSettings;
@@ -106,6 +107,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
         CatalogCategory::class => 'The shared discovery catalog, seeded per instance.',
         CatalogFeed::class => 'The shared discovery catalog, seeded per instance.',
         WorkerHeartbeat::class => 'Liveness telemetry for the refresh worker.',
+        MailSendFailure::class => 'The instance\'s automated-mail failure log (#882); operational telemetry, '
+            . 'cleared on the next successful send.',
     ];
 
     /**

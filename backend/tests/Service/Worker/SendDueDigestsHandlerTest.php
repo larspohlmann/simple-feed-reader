@@ -26,6 +26,7 @@ use App\Service\Mail\MailCapability;
 use App\Service\Mail\Settings\MailSettings;
 use App\Service\Worker\Handler\SendDueDigestsHandler;
 use App\Service\Worker\Message\SendDueDigests;
+use App\Tests\Support\InMemoryMailFailureRecorder;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
@@ -96,6 +97,7 @@ final class SendDueDigestsHandlerTest extends TestCase
             new MockClock(self::NOW),
             $this->createStub(EntityManagerInterface::class),
             new NullLogger(),
+            new InMemoryMailFailureRecorder(),
         );
 
         return new SendDueDigestsHandler($service, new NullLogger());

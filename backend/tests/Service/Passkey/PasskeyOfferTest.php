@@ -6,7 +6,7 @@ namespace App\Tests\Service\Passkey;
 
 use App\Entity\Preferences;
 use App\Entity\User;
-use App\Service\Passkey\NaiveUtcClock;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Passkey\PasskeyOffer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;

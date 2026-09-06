@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Digest;
 
+use App\Entity\MailKind;
 use App\Entity\Preferences;
 use App\Entity\User;
 use App\Repository\PreferencesRepository;
 use App\Service\Mail\MailCapability;
+use App\Service\Mail\MailFailureRecorder;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
@@ -34,6 +36,7 @@ final readonly class SendDueDigests
         private ClockInterface $clock,
         private EntityManagerInterface $em,
         private LoggerInterface $logger,
+        private MailFailureRecorder $health,
     ) {
     }
 
@@ -110,10 +113,12 @@ final readonly class SendDueDigests
                 'Digest send failed: {userId} <{email}>',
                 ['userId' => $user->getId(), 'email' => $user->getEmail(), 'exception' => $e],
             );
+            $this->health->recordFailure(MailKind::Digest, $user->getEmail(), $e->getMessage());
 
             return null;
         }
 
+        $this->health->recordSuccess();
         $prefs->setDigestLastSentAt($occurrence);
         $this->em->flush();
 

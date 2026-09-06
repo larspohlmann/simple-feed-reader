@@ -15,6 +15,7 @@ import {
   ConfirmDialogComponent,
   ConfirmData,
 } from '../../../shared/confirm-dialog/confirm-dialog.component';
+import { DisclosureComponent } from '../../../shared/disclosure/disclosure.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { PasswordInputComponent } from '../../../shared/password-input/password-input.component';
@@ -24,6 +25,7 @@ import { SettingsSaveBarComponent } from '../../../shared/settings/save-bar/save
 import { SettingsStackComponent } from '../../../shared/settings/stack/settings-stack.component';
 import { ToggleComponent } from '../../../shared/toggle/toggle.component';
 import { toastOnSaved } from '../../../shared/toast/saved-toast';
+import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.component';
 import { MailEncryption, MailSettingsService } from './mail-settings.service';
 
 /** The default submission port, mirroring the backend's MailConnection::DEFAULT_PORT. */
@@ -40,6 +42,7 @@ type MailField = 'host' | 'port' | 'username' | 'fromAddress' | 'fromName' | 'pa
   selector: 'app-mail-section',
   imports: [
     ButtonComponent,
+    DisclosureComponent,
     ErrorBannerComponent,
     IconComponent,
     NgTemplateOutlet,
@@ -51,6 +54,7 @@ type MailField = 'host' | 'port' | 'username' | 'fromAddress' | 'fromName' | 'pa
     SettingsStackComponent,
     ToggleComponent,
     TranslocoPipe,
+    WarningBoxComponent,
   ],
   providers: [MailSettingsService],
   templateUrl: './mail-section.component.html',

@@ -41,3 +41,75 @@
   color: var(--accent);
   font-weight: 600;
 }
+
+// The mail failure-log card (#882), a structural twin of the Organise
+// feed-health card (see organise-section.component.scss's .health-* rules) --
+// same drill-in-card shell, same header-over-recessed-list layout, so the two
+// read as one system.
+.mail-health {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+  box-shadow: var(--panel-shadow);
+  overflow: hidden;
+}
+
+.health-head {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.health-head-icon {
+  color: var(--danger);
+}
+
+.health-head-title {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+// The failed-send count reads as a pill, not plain text, because it names a
+// problem rather than a neutral tally (compare the amber unhealthy-feed nav
+// badge in settings-nav.component.scss, here in the danger tone).
+.health-head-count {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--bg-danger);
+  color: var(--danger);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-tight);
+  white-space: nowrap;
+}
+
+.health-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--panel-inset-x);
+  border-top: 1px solid var(--border);
+  background: var(--surface-0);
+}
+
+.mail-failure-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.meta {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.kind {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.recipient {
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}

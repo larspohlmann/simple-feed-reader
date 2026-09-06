@@ -15,6 +15,7 @@ const BASE = 'https://api.test';
 const ENDPOINT = `${BASE}/api/admin/mail`;
 const TEST_ENDPOINT = `${BASE}/api/admin/mail/test`;
 const RESET_ENDPOINT = `${BASE}/api/admin/mail/reset`;
+const ERRORS_ENDPOINT = `${ENDPOINT}/errors`;
 
 function state(over: Partial<MailSettingsState> = {}): MailSettingsState {
   return {
@@ -40,7 +41,19 @@ describe('MailSectionComponent', () => {
   const toastStub = { show: jest.fn() };
   const dialogStub = { open: jest.fn() };
 
-  function mount(initial: MailSettingsState = state()): ComponentFixture<MailSectionComponent> {
+  interface MailErrorsPayload {
+    failures: readonly {
+      kind: 'digest' | 'account' | 'test';
+      recipient: string;
+      error: string;
+      at: string;
+    }[];
+  }
+
+  function mount(
+    initial: MailSettingsState = state(),
+    errors: MailErrorsPayload = { failures: [] },
+  ): ComponentFixture<MailSectionComponent> {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [MailSectionComponent, provideTranslocoTesting()],
@@ -57,6 +70,7 @@ describe('MailSectionComponent', () => {
     const fixture = TestBed.createComponent(MailSectionComponent);
     fixture.detectChanges();
     http.expectOne(ENDPOINT).flush(initial);
+    http.expectOne(ERRORS_ENDPOINT).flush(errors);
     fixture.detectChanges();
     return fixture;
   }
@@ -110,6 +124,38 @@ describe('MailSectionComponent', () => {
   });
 
   afterEach(() => http.verify());
+
+  describe('mail failure health card (#882)', () => {
+    it('shows no failure card when the last send succeeded', () => {
+      const fixture = mount();
+
+      expect(fixture.nativeElement.querySelector('.mail-health')).toBeNull();
+    });
+
+    it('shows the pill and one row per failure when the last send failed', () => {
+      const fixture = mount(state(), {
+        failures: [
+          {
+            kind: 'digest',
+            recipient: 'a@example.test',
+            error: 'SMTP is down',
+            at: '2026-09-06T10:00:00Z',
+          },
+          {
+            kind: 'account',
+            recipient: 'b@example.test',
+            error: 'relay refused',
+            at: '2026-09-06T10:05:00Z',
+          },
+        ],
+      });
+
+      const card = fixture.nativeElement.querySelector('.mail-health');
+      expect(card).not.toBeNull();
+      expect(card.querySelectorAll('.mail-failure-row').length).toBe(2);
+      expect(card.textContent).toContain('SMTP is down');
+    });
+  });
 
   it('disables the enable toggle until a host is saved', () => {
     const fixture = mount(state({ host: '' }));
@@ -280,6 +326,7 @@ describe('MailSectionComponent', () => {
     const req = http.expectOne(TEST_ENDPOINT);
     expect(req.request.method).toBe('POST');
     req.flush({ ok: true, reason: null });
+    http.expectOne(ERRORS_ENDPOINT).flush({ count: 0, failures: [] });
   });
 
   it('marks a successful probe with a tick and the testOk message', () => {
@@ -288,6 +335,7 @@ describe('MailSectionComponent', () => {
     testButton(fixture).click();
     fixture.detectChanges();
     http.expectOne(TEST_ENDPOINT).flush({ ok: true, reason: null });
+    http.expectOne(ERRORS_ENDPOINT).flush({ count: 0, failures: [] });
     fixture.detectChanges();
 
     const glyph: HTMLElement | null = fixture.nativeElement.querySelector('.probe-status app-icon');
@@ -302,6 +350,7 @@ describe('MailSectionComponent', () => {
     testButton(fixture).click();
     fixture.detectChanges();
     http.expectOne(TEST_ENDPOINT).flush({ ok: false, reason: 'connection refused' });
+    http.expectOne(ERRORS_ENDPOINT).flush({ count: 1, failures: [] });
     fixture.detectChanges();
 
     const banner: HTMLElement | null = fixture.nativeElement.querySelector('app-error-banner');
@@ -319,6 +368,7 @@ describe('MailSectionComponent', () => {
     testButton(fixture).click();
     fixture.detectChanges();
     http.expectOne(TEST_ENDPOINT).flush({ ok: false, reason });
+    http.expectOne(ERRORS_ENDPOINT).flush({ count: 1, failures: [] });
     fixture.detectChanges();
   }
 

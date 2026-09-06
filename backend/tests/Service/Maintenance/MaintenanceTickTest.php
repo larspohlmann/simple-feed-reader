@@ -31,6 +31,7 @@ use App\Service\Search\EntryIndexer;
 use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\InMemoryMailFailureRecorder;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\RecordingContentChangeMarker;
 use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
@@ -174,6 +175,7 @@ final class MaintenanceTickTest extends DbTestCase
             $clock,
             $this->em,
             new NullLogger(),
+            new InMemoryMailFailureRecorder(),
         );
 
         $tick = new MaintenanceTick($refreshRunner, $forYouSweep, $sendDueDigests);

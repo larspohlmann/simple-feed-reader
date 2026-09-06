@@ -1,4 +1,16 @@
 services:
+    # MailDeliveryHealthTest fetches this to drive recordFailure()/
+    # recordSuccess()/view() through the real repository/entity-manager
+    # graph. It has production callers (AdminMailController, the send paths)
+    # and would survive compilation on its own — `public: true` here is only
+    # so the test container's `self::getContainer()->get(...)` can fetch it,
+    # which the container refuses on a private service. Same `autowire`
+    # caveat as the entries below: naming a class here replaces the
+    # definition rather than amending it, and this file has no `_defaults`.
+    App\Service\Mail\MailDeliveryHealth:
+        autowire: true
+        public: true
+
     # MailConnectionTesterTest fetches this to drive test() through the real
     # settings/security graph. Its only production caller is a controller
     # action argument, so the compiler would inline it away and the test

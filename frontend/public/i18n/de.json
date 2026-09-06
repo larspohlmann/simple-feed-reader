@@ -442,6 +442,16 @@
         "label": "Mail über den Proxy versenden",
         "noneHint": "Kein Proxy ist konfiguriert.",
         "configureLink": "Proxy konfigurieren"
+      },
+      "health": {
+        "heading": "Probleme beim Mailversand",
+        "failedCountOne": "{{count}} fehlgeschlagener Versand",
+        "failedCountOther": "{{count}} fehlgeschlagene Sendungen",
+        "kind": {
+          "digest": "Zusammenfassung",
+          "account": "Konto-E-Mail",
+          "test": "Testnachricht"
+        }
       }
     },
     "organise": {

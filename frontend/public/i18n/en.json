@@ -442,6 +442,16 @@
         "label": "Send mail through the proxy",
         "noneHint": "No proxy is configured.",
         "configureLink": "Configure a proxy"
+      },
+      "health": {
+        "heading": "Mail delivery problems",
+        "failedCountOne": "{{count}} failed send",
+        "failedCountOther": "{{count}} failed sends",
+        "kind": {
+          "digest": "Digest",
+          "account": "Account email",
+          "test": "Test message"
+        }
       }
     },
     "organise": {

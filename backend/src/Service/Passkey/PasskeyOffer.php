@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Passkey;
 
 use App\Entity\User;
+use App\Service\Clock\NaiveUtcClock;
 
 /**
  * Records that the one-time passkey enrolment offer (#624) has been shown to

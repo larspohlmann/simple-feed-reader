@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Injectable, signal } from '@angular/core';
+import { Injectable, computed, signal } from '@angular/core';
 import { parseProblem } from '../../../core/problem';
 import { DraftSettingsService } from '../../../shared/settings/draft-settings.service';
 
@@ -50,6 +50,17 @@ interface MailTestResponse {
   readonly reason: string | null;
 }
 
+export interface MailFailure {
+  readonly kind: 'digest' | 'account' | 'test';
+  readonly recipient: string;
+  readonly error: string;
+  readonly at: string;
+}
+
+interface MailErrorsResponse {
+  readonly failures: MailFailure[];
+}
+
 @Injectable()
 export class MailSettingsService extends DraftSettingsService<
   MailSettingsState,
@@ -59,6 +70,22 @@ export class MailSettingsService extends DraftSettingsService<
   protected readonly endpoint = `${this.base}/api/admin/mail`;
 
   readonly probe = signal<MailProbe>({ status: 'idle' });
+
+  readonly failures = signal<MailFailure[]>([]);
+  /** The store is pruned to a bounded window, so the list is the whole of it:
+   *  the pill count is just its length, kept as one source of truth. */
+  readonly failureCount = computed(() => this.failures().length);
+
+  constructor() {
+    super();
+    this.loadFailures();
+  }
+
+  loadFailures(): void {
+    this.http
+      .get<MailErrorsResponse>(`${this.endpoint}/errors`)
+      .subscribe((response) => this.failures.set(response.failures));
+  }
 
   reset(): void {
     this.run(this.http.post<MailSettingsState>(`${this.endpoint}/reset`, {}), (state) => {
@@ -81,12 +108,16 @@ export class MailSettingsService extends DraftSettingsService<
   testConnection(): void {
     this.probe.set({ status: 'loading' });
     this.http.post<MailTestResponse>(`${this.endpoint}/test`, {}).subscribe({
-      next: (result) =>
+      next: (result) => {
         this.probe.set(
           result.ok ? { status: 'ok' } : { status: 'error', message: result.reason ?? 'failed' },
-        ),
-      error: (error: HttpErrorResponse) =>
-        this.probe.set({ status: 'error', message: parseProblem(error).detail ?? 'failed' }),
+        );
+        this.loadFailures();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.probe.set({ status: 'error', message: parseProblem(error).detail ?? 'failed' });
+        this.loadFailures();
+      },
     });
   }
 

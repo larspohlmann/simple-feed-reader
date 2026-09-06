@@ -10,6 +10,7 @@ use App\Service\Auth\AltchaService;
 use App\Service\Mail\DeferredMailer;
 use App\Tests\Support\AltchaSolver;
 use App\Tests\Support\EnablesMailInTests;
+use App\Tests\Support\InMemoryMailFailureRecorder;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\NullLogger;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -100,7 +101,7 @@ final class DeferredMailFlushListenerTest extends KernelTestCase
         $mailer->send(new RawMessage('first'));
         $mailer->send(new RawMessage('second'));
 
-        $listener = new DeferredMailFlushListener($mailer, new NullLogger());
+        $listener = new DeferredMailFlushListener($mailer, new NullLogger(), new InMemoryMailFailureRecorder());
         $listener->onKernelTerminate();
 
         self::assertFalse($mailer->hasQueuedMail());

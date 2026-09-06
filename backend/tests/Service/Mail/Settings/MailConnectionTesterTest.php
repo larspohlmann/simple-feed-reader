@@ -6,12 +6,18 @@ namespace App\Tests\Service\Mail\Settings;
 
 use App\Dto\Admin\MailSettingsRequest;
 use App\Dto\Admin\ProxySettingsRequest;
+use App\Entity\MailKind;
+use App\Service\Mail\MailFailureRecorder;
 use App\Service\Mail\Settings\MailConnectionTester;
 use App\Service\Mail\Settings\MailSettings;
+use App\Service\Mail\Transport\ActiveMailTransportFactory;
 use App\Service\Proxy\ProxySettings;
+use App\Tests\Support\InMemoryMailFailureRecorder;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
@@ -26,6 +32,19 @@ final class MailConnectionTesterTest extends KernelTestCase
     private function settings(): MailSettings
     {
         return self::getContainer()->get(MailSettings::class);
+    }
+
+    /** Builds a tester wired to a given health recorder, so a test can inspect
+     *  what got recorded instead of hitting the real mail-failure repository. */
+    private function testerWithHealth(MailFailureRecorder $health): MailConnectionTester
+    {
+        return new MailConnectionTester(
+            $this->settings(),
+            self::getContainer()->get(Security::class),
+            new NullLogger(),
+            self::getContainer()->get(ActiveMailTransportFactory::class),
+            $health,
+        );
     }
 
     /** The tester mails the acting admin's own address, so it needs a
@@ -142,6 +161,70 @@ final class MailConnectionTesterTest extends KernelTestCase
 
         self::assertFalse($result->ok);
         self::assertNotSame('not_configured', $result->reason);
+    }
+
+    /** A sendmail transport piped to the 'false' binary attempts a real send
+     *  and fails it, through the exact production code path, proving a failed
+     *  SEND records a Test-kind failure against the acting admin (#882). */
+    public function testAFailedSendRecordsATestFailureAgainstTheActingAdmin(): void
+    {
+        putenv('MAILER_FALLBACK_DSN=sendmail://default?command=false+-t');
+        $_ENV['MAILER_FALLBACK_DSN'] = 'sendmail://default?command=false+-t';
+        $_SERVER['MAILER_FALLBACK_DSN'] = 'sendmail://default?command=false+-t';
+
+        $this->authenticateAsAdmin();
+        $health = new InMemoryMailFailureRecorder();
+
+        $result = $this->testerWithHealth($health)->test();
+
+        self::assertFalse($result->ok);
+        self::assertSame(
+            [['kind' => MailKind::Test, 'recipient' => 'boss@example.com', 'error' => $result->reason]],
+            $health->recordedFailures(),
+        );
+    }
+
+    /** A pre-send config guard (here: no from-address) never dials a
+     *  transport, so it must not be mistaken for a delivery failure -- the
+     *  pill would otherwise flag an admin who has not finished configuring
+     *  mail yet, not one whose mail server is actually failing (#882). */
+    public function testAPreSendConfigGuardRecordsNothing(): void
+    {
+        putenv('MAIL_FROM=');
+        $_ENV['MAIL_FROM'] = '';
+        $_SERVER['MAIL_FROM'] = '';
+
+        $this->authenticateAsAdmin();
+        $this->settings()->update(
+            new MailSettingsRequest(enabled: true, host: 'smtp.relay.test', fromAddress: '', password: 'p'),
+        );
+        $health = new InMemoryMailFailureRecorder();
+
+        $result = $this->testerWithHealth($health)->test();
+
+        self::assertFalse($result->ok);
+        self::assertSame('no_from_address', $result->reason);
+        self::assertSame([], $health->recordedFailures());
+        self::assertSame(0, $health->successCount());
+    }
+
+    /** A sendmail transport in '-t' mode piped to the 'true' binary sends for
+     *  real, through the exact production code path, without dialing SMTP. */
+    public function testASuccessfulTestRecordsSuccessAndClearsPriorFailures(): void
+    {
+        putenv('MAILER_FALLBACK_DSN=sendmail://default?command=true+-t');
+        $_ENV['MAILER_FALLBACK_DSN'] = 'sendmail://default?command=true+-t';
+        $_SERVER['MAILER_FALLBACK_DSN'] = 'sendmail://default?command=true+-t';
+
+        $this->authenticateAsAdmin();
+        $health = new InMemoryMailFailureRecorder();
+        $health->recordFailure(MailKind::Digest, 'old@example.test', 'earlier outage');
+
+        $result = $this->testerWithHealth($health)->test();
+
+        self::assertTrue($result->ok);
+        self::assertSame(1, $health->successCount());
+        self::assertSame([], $health->recordedFailures());
     }
 
     protected function tearDown(): void

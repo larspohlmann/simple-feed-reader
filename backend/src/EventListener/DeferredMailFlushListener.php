@@ -4,11 +4,17 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
+use App\Entity\MailKind;
 use App\Service\Mail\DeferredMailer;
+use App\Service\Mail\MailFailureRecorder;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Event\ConsoleTerminateEvent;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\Event\TerminateEvent;
+use Symfony\Component\Mailer\Envelope;
+use Symfony\Component\Mime\Address;
+use Symfony\Component\Mime\Email;
+use Symfony\Component\Mime\RawMessage;
 
 /**
  * Flushes DeferredMailer once the work the user is waiting on is finished.
@@ -30,6 +36,7 @@ final readonly class DeferredMailFlushListener
     public function __construct(
         private DeferredMailer $mailer,
         private LoggerInterface $logger,
+        private MailFailureRecorder $health,
     ) {
     }
 
@@ -59,7 +66,32 @@ final readonly class DeferredMailFlushListener
                 $this->logger->error('Deferred mail delivery failed', [
                     'exception' => $exception,
                 ]);
+                $this->health->recordFailure(
+                    MailKind::Account,
+                    $this->recipientOf($message, $envelope),
+                    $exception->getMessage(),
+                );
+
+                continue;
             }
+
+            $this->health->recordSuccess();
         }
+    }
+
+    private function recipientOf(RawMessage $message, ?Envelope $envelope): string
+    {
+        $addresses = null !== $envelope
+            ? $envelope->getRecipients()
+            : ($message instanceof Email ? $message->getTo() : []);
+
+        if ([] === $addresses) {
+            return 'unknown';
+        }
+
+        return implode(', ', array_map(
+            static fn (Address $address): string => $address->getAddress(),
+            $addresses,
+        ));
     }
 }

@@ -6,6 +6,7 @@ namespace App\Service\Passkey;
 
 use App\Entity\UserPasskey;
 use App\Repository\UserPasskeyRepository;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Passkey\Exception\AssertionRejectedException;
 use App\Service\Passkey\Exception\UnknownPasskeyCredentialException;
 use Doctrine\ORM\EntityManagerInterface;

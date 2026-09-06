@@ -1,4 +1,37 @@
 <app-settings-stack>
+  @if (svc.failureCount()) {
+    <section class="mail-health">
+      <app-disclosure appearance="drill-in">
+        <div summary class="health-head">
+          <app-icon class="health-head-icon" name="heart_broken" size="sm" />
+          <span class="health-head-title">{{ 'settings.mail.health.heading' | transloco }}</span>
+          <span class="health-head-count">{{
+            (svc.failureCount() === 1
+              ? 'settings.mail.health.failedCountOne'
+              : 'settings.mail.health.failedCountOther'
+            ) | transloco: { count: svc.failureCount() }
+          }}</span>
+        </div>
+
+        <div class="health-list">
+          @for (failure of svc.failures(); track failure.at + failure.recipient) {
+            <div class="mail-failure-row">
+              <div class="meta">
+                <span class="kind">{{
+                  'settings.mail.health.kind.' + failure.kind | transloco
+                }}</span>
+                <span class="recipient">{{ failure.recipient }}</span>
+              </div>
+              <app-warning-box class="error"
+                ><code>{{ failure.error }}</code></app-warning-box
+              >
+            </div>
+          }
+        </div>
+      </app-disclosure>
+    </section>
+  }
+
   @if (svc.state()) {
     <app-settings-group
       icon="mail"
