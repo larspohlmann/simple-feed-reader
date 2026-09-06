@@ -6,6 +6,7 @@ namespace App\Service\Mail\Transport;
 
 use App\Service\Fetch\ProxyConfig;
 use App\Service\Mail\Settings\ResolvedMailTransport;
+use App\Service\Mail\Transport\Exception\ProxiedSmtpSendException;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Exception\TransportException;
@@ -61,7 +62,7 @@ final class CurlSmtpTransport extends AbstractTransport
                 throw new TransportException('Unable to configure curl for the proxied SMTP send.');
             }
             if (false === curl_exec($handle)) {
-                throw new TransportException(\sprintf('Proxied SMTP send failed: %s', curl_error($handle)));
+                throw ProxiedSmtpSendException::fromCurlError(curl_error($handle));
             }
         } finally {
             curl_close($handle);
