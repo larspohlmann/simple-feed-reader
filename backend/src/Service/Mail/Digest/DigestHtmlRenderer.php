@@ -10,6 +10,10 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  * Renders a capped DigestPage to the airy/light HTML email (#726). Table-based
  * for Outlook, every style inlined, light-only. The whole card is the reader
  * deep link; images are referenced by their CID from the DigestImageSet.
+ *
+ * The sheet is fluid (width:100%,max-width:600px) under a device-width viewport
+ * so iPhone Mail does not shrink the whole message to fit 600px (#886); an MSO
+ * ghost table holds the 600px column on Outlook desktop, which ignores max-width.
  */
 final readonly class DigestHtmlRenderer
 {
@@ -38,14 +42,31 @@ final readonly class DigestHtmlRenderer
     private function document(string $body): string
     {
         $outer = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f4;">';
-        $font = 'system-ui,-apple-system,\'Segoe UI\',roboto,sans-serif';
-        $sheet = '<table role="presentation" width="600" cellpadding="0" cellspacing="0" '
-            . 'style="width:600px;max-width:600px;background:#ffffff;font-family:' . $font . ';color:#2a2a2a;">';
 
-        return '<!doctype html><html><body style="margin:0;background:#f5f5f4;">'
+        return '<!doctype html><html>' . $this->head()
+            . '<body style="margin:0;background:#f5f5f4;-webkit-text-size-adjust:100%;">'
             . $outer . '<tr><td align="center" style="padding:24px 12px;">'
-            . $sheet . $body
-            . '</table></td></tr></table></body></html>';
+            . $this->sheet($body)
+            . '</td></tr></table></body></html>';
+    }
+
+    private function head(): string
+    {
+        return '<head><meta charset="utf-8">'
+            . '<meta name="viewport" content="width=device-width,initial-scale=1"></head>';
+    }
+
+    private function sheet(string $body): string
+    {
+        $font = 'system-ui,-apple-system,\'Segoe UI\',roboto,sans-serif';
+        $sheet = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+            . 'style="width:100%;max-width:600px;background:#ffffff;font-family:' . $font . ';color:#2a2a2a;">';
+
+        $ghostOpen = '<!--[if mso]><table role="presentation" width="600" '
+            . 'cellpadding="0" cellspacing="0"><tr><td><![endif]-->';
+
+        return $ghostOpen . $sheet . $body . '</table>'
+            . '<!--[if mso]></td></tr></table><![endif]-->';
     }
 
     private function header(int $totalCount, string $locale): string
@@ -57,14 +78,14 @@ final readonly class DigestHtmlRenderer
             . 'style="display:inline-block;width:20px;height:20px;vertical-align:middle;margin-right:8px;border:0;">';
 
         return '<tr><td style="padding:24px 24px 18px;border-bottom:1px solid #e4e4e2;">'
-            . $logo . '<span style="font-size:15px;font-weight:600;color:#2a2a2a;">simple feed reader</span>'
-            . '<div style="margin-top:14px;font-size:13px;color:#8f8f8b;">' . $this->escapeText($line) . '</div>'
+            . $logo . '<span style="font-size:16px;font-weight:600;color:#2a2a2a;">simple feed reader</span>'
+            . '<div style="margin-top:14px;font-size:14px;color:#8f8f8b;">' . $this->escapeText($line) . '</div>'
             . '</td></tr>';
     }
 
     private function intro(string $locale): string
     {
-        return '<tr><td style="padding:16px 24px 0;font-size:14px;line-height:1.5;color:#5f5f5c;">'
+        return '<tr><td style="padding:16px 24px 0;font-size:15px;line-height:1.5;color:#5f5f5c;">'
             . $this->escapeText($this->trans('digest.intro', [], $locale)) . '</td></tr>';
     }
 
@@ -78,7 +99,7 @@ final readonly class DigestHtmlRenderer
         $heading = $this->trans('digest.group_heading', $parameters, $locale);
         $cards = $this->cards($group->cards, $images, $locale, $dateFormatter);
         $more = $group->remaining > 0 ? $this->moreLink($group, $locale) : '';
-        $headingStyle = 'padding-bottom:10px;border-bottom:1px solid #e4e4e2;font-size:13px;'
+        $headingStyle = 'padding-bottom:10px;border-bottom:1px solid #e4e4e2;font-size:14px;'
             . 'font-weight:600;color:#5f5f5c;';
 
         return '<tr><td style="padding:20px 24px 4px;">'
@@ -123,7 +144,7 @@ final readonly class DigestHtmlRenderer
             . '<img src="cid:' . $thumbnailCid . '" width="88" height="66" alt="" '
             . 'style="display:block;width:88px;height:66px;border-radius:8px;object-fit:cover;"></td>';
 
-        $titleStyle = 'display:block;font-size:15px;font-weight:500;line-height:1.35;color:#2a2a2a;'
+        $titleStyle = 'display:block;font-size:16px;font-weight:500;line-height:1.35;color:#2a2a2a;'
             . 'text-decoration:none;margin:4px 0;';
         $title = '<a href="' . $this->escape($card->url) . '" style="' . $titleStyle . '">'
             . $this->escapeText($card->title) . '</a>';
@@ -144,7 +165,7 @@ final readonly class DigestHtmlRenderer
         $when = $this->when($card->publishedAt, $dateFormatter);
         $time = $when === '' ? '' : '<span style="color:#c4c4c1;"> · </span>' . $this->escapeText($when);
 
-        return '<div style="font-size:13px;color:#8f8f8b;">' . $favicon
+        return '<div style="font-size:14px;color:#8f8f8b;">' . $favicon
             . $this->escapeText($card->feedName) . $time . '</div>';
     }
 
@@ -154,7 +175,7 @@ final readonly class DigestHtmlRenderer
             return '';
         }
 
-        return '<div style="font-size:13px;line-height:1.4;color:#5f5f5c;margin-top:4px;">'
+        return '<div style="font-size:14px;line-height:1.4;color:#5f5f5c;margin-top:4px;">'
             . $this->escapeText($card->shortDescription) . '</div>';
     }
 
@@ -162,7 +183,7 @@ final readonly class DigestHtmlRenderer
     {
         $parameters = ['%count%' => (string) $group->remaining, '%term%' => $group->term];
         $label = $this->trans('digest.more_link', $parameters, $locale);
-        $style = 'display:inline-block;margin:12px 0 2px;font-size:13px;color:#3f8676;'
+        $style = 'display:inline-block;margin:12px 0 2px;font-size:14px;color:#3f8676;'
             . 'text-decoration:none;font-weight:500;';
 
         return '<a href="' . $this->escape($group->moreUrl) . '" style="' . $style . '">'
@@ -179,12 +200,12 @@ final readonly class DigestHtmlRenderer
         $manage = strtr($this->escapeText($manageHtml), ["\0" => $manageLink]);
         $openReaderLabel = $this->trans('digest.open_reader', [], $locale);
         $openReader = '<a href="' . $this->escape($this->links->base()) . '" '
-            . 'style="font-size:13px;color:#3f8676;text-decoration:none;">'
+            . 'style="font-size:14px;color:#3f8676;text-decoration:none;">'
             . $this->escapeText($openReaderLabel) . ' →</a>';
 
         return '<tr><td style="padding:22px 24px 26px;border-top:1px solid #e4e4e2;">'
             . '<div style="margin-bottom:12px;">' . $openReader . '</div>'
-            . '<div style="font-size:12px;line-height:1.5;color:#a7a7a3;">' . $manage . '</div>'
+            . '<div style="font-size:13px;line-height:1.5;color:#a7a7a3;">' . $manage . '</div>'
             . '</td></tr>';
     }
 
