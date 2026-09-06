@@ -267,7 +267,7 @@
 
 /* The "Show more/less" control: a subdued text link, indented to the same
    column as the saved-search terms (`--space-6`), with a plain chevron after
-   the label (no bordered chevron box) that flips up when expanded (#876). */
+   the label that switches to `expand_less` when expanded (#876). */
 .savedsearch-more {
   display: flex;
   align-items: center;

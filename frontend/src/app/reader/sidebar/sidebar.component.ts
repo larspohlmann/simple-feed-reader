@@ -54,10 +54,10 @@ const SIDEBAR_SAVED_SEARCH_LIMIT = 6;
 const rankedSavedSearchIds = (searches: readonly SavedSearchDto[]): number[] =>
   [...searches].sort((a, b) => b.unreadCount - a.unreadCount || b.id - a.id).map((s) => s.id);
 
-const sameIds = (a: readonly number[], b: readonly number[]): boolean => {
-  if (a.length !== b.length) return false;
-  const set = new Set(b);
-  return a.every((id) => set.has(id));
+const sameIds = (current: readonly number[], frozen: readonly number[]): boolean => {
+  if (current.length !== frozen.length) return false;
+  const set = new Set(frozen);
+  return current.every((id) => set.has(id));
 };
 
 @Component({
@@ -245,6 +245,7 @@ export class SidebarComponent {
     const opening = !this.savedSearchesExpanded();
     this.savedSearchesExpanded.set(opening);
     if (opening) {
+      // Opening the section is a fresh view: re-rank with the current counts.
       this.frozenSavedSearchOrder.set(rankedSavedSearchIds(this.savedSearches()));
       this.savedSearchListExpanded.set(false);
     }

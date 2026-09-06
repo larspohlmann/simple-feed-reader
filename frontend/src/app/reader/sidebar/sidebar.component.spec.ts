@@ -1005,7 +1005,7 @@ describe('SidebarComponent', () => {
       expect(terms(f)).toEqual(['busier', 'busy', 'quiet', 'oldest']);
     });
 
-    it('keeps the frozen order when a count drops to zero (no reshuffle on read)', () => {
+    it('keeps the frozen order when a count drops (no reshuffle on read)', () => {
       const f = mount({ savedSearches: [saved(1, 'a', 3), saved(2, 'b', 5)] });
       openSaved(f);
       expect(terms(f)).toEqual(['b', 'a']); // 5 before 3

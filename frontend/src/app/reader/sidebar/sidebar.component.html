@@ -183,12 +183,22 @@
           </a>
         }
         @if (savedSearchListExpanded()) {
-          <button class="savedsearch-more" type="button" (click)="toggleSavedSearchList()">
+          <button
+            class="savedsearch-more"
+            type="button"
+            [attr.aria-expanded]="savedSearchListExpanded()"
+            (click)="toggleSavedSearchList()"
+          >
             <span>{{ 'reader.showLessSavedSearches' | transloco }}</span>
             <app-icon name="expand_less" size="sm" />
           </button>
         } @else if (hasHiddenSavedSearches()) {
-          <button class="savedsearch-more" type="button" (click)="toggleSavedSearchList()">
+          <button
+            class="savedsearch-more"
+            type="button"
+            [attr.aria-expanded]="savedSearchListExpanded()"
+            (click)="toggleSavedSearchList()"
+          >
             <span>{{
               'reader.showMoreSavedSearches' | transloco: { count: hiddenSavedSearchCount() }
             }}</span>
