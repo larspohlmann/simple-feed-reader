@@ -122,7 +122,7 @@
         </button>
       </div>
       @if (savedSearchesExpanded()) {
-        @for (saved of orderedSavedSearches(); track saved.id) {
+        @for (saved of visibleSavedSearches(); track saved.id) {
           <a
             class="nav savedsearch-item"
             [class.active]="saved.id === activeSavedSearchId()"
@@ -181,6 +181,15 @@
               </button>
             }
           </a>
+        }
+        @if (savedSearchListExpanded()) {
+          <button class="savedsearch-more" type="button" (click)="toggleSavedSearchList()">
+            {{ 'reader.showLessSavedSearches' | transloco }}
+          </button>
+        } @else if (hasHiddenSavedSearches()) {
+          <button class="savedsearch-more" type="button" (click)="toggleSavedSearchList()">
+            {{ 'reader.showMoreSavedSearches' | transloco: { count: hiddenSavedSearchCount() } }}
+          </button>
         }
       }
     </div>

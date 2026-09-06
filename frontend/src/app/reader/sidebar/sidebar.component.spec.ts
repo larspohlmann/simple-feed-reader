@@ -1034,6 +1034,50 @@ describe('SidebarComponent', () => {
       f.detectChanges();
       expect(terms(f)).toEqual(['c', 'a']); // c(4) before a(3), no stale b
     });
+
+    const many = Array.from({ length: 8 }, (_, i) => saved(i + 1, `s${i + 1}`, 8 - i));
+    // counts 8..1, so id 1 (count 8) ... id 8 (count 1): already ranked by both keys.
+
+    it('shows only six rows and a "Show more" link when there are more than six', () => {
+      const f = mount({ savedSearches: many });
+      openSaved(f);
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
+      const more = f.nativeElement.querySelector('.savedsearch-more') as HTMLButtonElement;
+      expect(more).not.toBeNull();
+      expect(more.textContent).toContain('Show 2 more');
+    });
+
+    it('reveals the full list on "Show more" and collapses again on "Show less"', () => {
+      const f = mount({ savedSearches: many });
+      openSaved(f);
+      (f.nativeElement.querySelector('.savedsearch-more') as HTMLButtonElement).click();
+      f.detectChanges();
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(8);
+      expect(
+        (f.nativeElement.querySelector('.savedsearch-more') as HTMLElement).textContent,
+      ).toContain('Show less');
+      (f.nativeElement.querySelector('.savedsearch-more') as HTMLButtonElement).click();
+      f.detectChanges();
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
+    });
+
+    it('shows no "Show more" link at exactly six saved searches', () => {
+      const f = mount({ savedSearches: many.slice(0, 6) });
+      openSaved(f);
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
+      expect(f.nativeElement.querySelector('.savedsearch-more')).toBeNull();
+    });
+
+    it('resets to the top six when the section is re-opened after expanding', () => {
+      const f = mount({ savedSearches: many });
+      openSaved(f);
+      (f.nativeElement.querySelector('.savedsearch-more') as HTMLButtonElement).click();
+      f.detectChanges();
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(8);
+      openSaved(f); // close
+      openSaved(f); // open again
+      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
+    });
   });
 
   describe('per-search digest toggle', () => {

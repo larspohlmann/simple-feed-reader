@@ -214,11 +214,34 @@ export class SidebarComponent {
     this.savedSearches().reduce((sum, saved) => sum + saved.unreadCount, 0),
   );
 
+  /** Whether the "Show more" expansion is open. In memory only, reset when the
+   *  section re-opens (#876) — the section chevron and this are separate states. */
+  readonly savedSearchListExpanded = signal(false);
+
+  /** The rows to render: the whole list when expanded, otherwise the top six. */
+  protected readonly visibleSavedSearches = computed(() => {
+    const all = this.orderedSavedSearches();
+    if (this.savedSearchListExpanded()) return all;
+    return all.slice(0, SIDEBAR_SAVED_SEARCH_LIMIT);
+  });
+
+  /** How many ranked searches are not currently on screen. */
+  protected readonly hiddenSavedSearchCount = computed(
+    () => this.orderedSavedSearches().length - this.visibleSavedSearches().length,
+  );
+  protected readonly hasHiddenSavedSearches = computed(() => this.hiddenSavedSearchCount() > 0);
+
+  toggleSavedSearchList(): void {
+    this.savedSearchListExpanded.update((open) => !open);
+  }
+
   toggleSavedSearches(): void {
     const opening = !this.savedSearchesExpanded();
     this.savedSearchesExpanded.set(opening);
-    // Opening the section is a fresh view: re-rank with the current counts.
-    if (opening) this.frozenSavedSearchOrder.set(rankedSavedSearchIds(this.savedSearches()));
+    if (opening) {
+      this.frozenSavedSearchOrder.set(rankedSavedSearchIds(this.savedSearches()));
+      this.savedSearchListExpanded.set(false);
+    }
   }
 
   /** Whether the "Tags" section is expanded. Unlike the in-memory Saved-searches
