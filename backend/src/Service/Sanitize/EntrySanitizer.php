@@ -34,9 +34,10 @@ final class EntrySanitizer
         $config = (new HtmlSanitizerConfig())
             ->allowSafeElements()
             ->allowElement('img', ['src', 'alt', 'title', 'width', 'height', 'loading'])
-            // The narration mark must cross this barrier; class on <audio> alone
-            // is inert (no <p class> survives), so it opens no styling hole (#903).
-            ->allowAttribute('class', ['audio'])
+            // The narration mark on <audio> and the slideshow mark on <figure>
+            // must cross this barrier; class carries no script, so no styling or
+            // XSS hole opens (#903, #926).
+            ->allowAttribute('class', ['audio', 'figure'])
             ->forceAttribute('a', 'rel', 'noopener noreferrer')
             ->forceAttribute('a', 'target', '_blank')
             ->allowLinkSchemes(['http', 'https', 'mailto'])
