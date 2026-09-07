@@ -128,13 +128,18 @@ not skip it.
 
 ## 8. Backup
 
-`BackupSchema::VERSION` → 3. The backup is JSONL; each entry line gains two
-nested arrays `media` and `attachments`.
+`BackupSchema::VERSION` stays **2**. `media`/`attachments` are additive fields:
+the reader accepts a same-version file that lacks them, and the golden
+`version-2.ndjson` fixture (which has no media keys) must keep restoring — its
+absence IS the test (#556). A version bump would reject every prior file and
+break that fixture; additive fields never bump the version here. The backup is
+JSONL; each entry line gains two nested arrays `media` and `attachments`.
 
 - `AccountBackupExporter::entryLine()` emits `media`/`attachments` from the entity
   getters (VOs are `JsonSerializable`).
-- `EntryLine` DTO gains `media`/`attachments` (typed lists), read back in
-  `fromLine()` via a new `LineField` list helper.
+- `EntryLine` DTO gains `media`/`attachments` (`list<array>`), read back in
+  `fromLine()` via a new `LineField::objectListOrEmpty` helper that defaults to
+  `[]` when the key is absent, so an older same-version file still restores.
 - `EntryBatchInserter` adds the two columns to its `COLUMNS` list and binds each
   as a `json_encode`d string (raw DBAL bypasses Doctrine's json type), or `null`
   for an empty list.

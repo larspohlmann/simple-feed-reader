@@ -317,6 +317,8 @@ final readonly class AccountBackupExporter
             'imageUrl' => $entry->getImageUrl(),
             'imageWidth' => $entry->getImageWidth(),
             'imageHeight' => $entry->getImageHeight(),
+            'media' => array_map(static fn (\JsonSerializable $m): array => $m->jsonSerialize(), $entry->getMedia()),
+            'attachments' => array_map(static fn (\JsonSerializable $a): array => $a->jsonSerialize(), $entry->getAttachments()),
             'publishedAt' => $this->formatDateOrNull($entry->getPublishedAt()),
             'createdAt' => $this->formatDate($entry->getCreatedAt()),
             'effectiveDate' => $this->formatDate($entry->getEffectiveDate()),

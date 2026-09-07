@@ -13,6 +13,8 @@ final class EntryJson
      *   id: int|null, title: string, url: string|null, author: string|null,
      *   summary: string|null, contentHtml: string|null,
      *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null,
+     *   media: list<array<string, string|int>>,
+     *   attachments: list<array<string, string|int>>,
      *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
      *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool
@@ -32,6 +34,8 @@ final class EntryJson
             'imageUrl' => $e->getImageUrl(),
             'imageWidth' => $e->getImageWidth(),
             'imageHeight' => $e->getImageHeight(),
+            'media' => array_map(static fn (\JsonSerializable $m): array => $m->jsonSerialize(), $e->getMedia()),
+            'attachments' => array_map(static fn (\JsonSerializable $a): array => $a->jsonSerialize(), $e->getAttachments()),
             'publishedAt' => $e->getPublishedAt()?->format(\DateTimeInterface::ATOM),
             'createdAt' => $e->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'subscriptionId' => $row->subscriptionId,

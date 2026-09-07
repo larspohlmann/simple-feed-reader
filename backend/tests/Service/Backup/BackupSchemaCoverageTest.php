@@ -92,6 +92,17 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'counts', 'counts.tag', 'counts.savedSearch', 'counts.feed', 'counts.subscription',
             'counts.entry', 'counts.entryState',
         ],
+        // media[] and attachments[] are nested lists of value objects, not
+        // separate entities, so their subkeys are claimed here the same way the
+        // footer's nested `counts` object is — the `media`/`attachments` keys
+        // themselves are claimed by Entry's field declarations. A subkey is
+        // absent from an item that did not declare it (jsonSerialize omits
+        // unknown fields), so the flattener only ever sees a subset of these.
+        BackupSchema::KIND_ENTRY => [
+            'media.url', 'media.kind', 'media.width', 'media.height', 'media.previewImageUrl',
+            'attachments.url', 'attachments.mimeType', 'attachments.durationInSeconds',
+            'attachments.sizeInBytes', 'attachments.title',
+        ],
     ];
 
     /**
