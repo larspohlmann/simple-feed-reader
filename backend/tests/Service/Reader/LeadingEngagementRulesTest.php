@@ -152,6 +152,43 @@ final class LeadingEngagementRulesTest extends TestCase
         self::assertFalse(LeadingEngagementRules::isBareNumber('0 reactions'));
     }
 
+    public function testSeparatorOnlyIsAnchoredAtBothEnds(): void
+    {
+        self::assertFalse(LeadingEngagementRules::isSeparatorOnly('|abc'));
+        self::assertFalse(LeadingEngagementRules::isSeparatorOnly('abc|'));
+    }
+
+    public function testReadingTimeIsAnchoredAndCaseInsensitive(): void
+    {
+        self::assertFalse(LeadingEngagementRules::isReadingTime('lies 9 min'));
+        self::assertTrue(LeadingEngagementRules::isReadingTime('9 MIN'));
+    }
+
+    public function testBareNumberRejectsDigitsThatFollowLetters(): void
+    {
+        self::assertFalse(LeadingEngagementRules::isBareNumber('a1'));
+    }
+
+    public function testNavigationLabelHonoursItsLengthAndRatioBoundaries(): void
+    {
+        self::assertTrue(LeadingEngagementRules::isNavigationLabel('AAAAAAAAAA', 8));
+        self::assertFalse(LeadingEngagementRules::isNavigationLabel(str_repeat('a', 120), 120));
+        self::assertFalse(LeadingEngagementRules::isNavigationLabel('', 0));
+    }
+
+    public function testKickerHonoursItsWordAndCharacterCaps(): void
+    {
+        self::assertTrue(LeadingEngagementRules::isKicker('One Two Three', 0));
+        self::assertFalse(LeadingEngagementRules::isKicker('One Two Three Four', 0));
+        self::assertFalse(LeadingEngagementRules::isKicker(str_repeat('a', 31), 0));
+    }
+
+    public function testDateLineIsAnchoredForTheNumericForm(): void
+    {
+        self::assertFalse(LeadingEngagementRules::isDateLine('x2026-09-01'));
+        self::assertFalse(LeadingEngagementRules::isDateLine('2026-09-01x'));
+    }
+
     public function testHasAuthorTreatsNullAndBlankAsNoAuthor(): void
     {
         self::assertFalse(LeadingEngagementRules::hasAuthor(null));
