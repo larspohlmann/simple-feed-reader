@@ -88,6 +88,21 @@ final class PageMediaInserterTest extends TestCase
 
         self::assertStringContainsString('poster="https://x.test/p.jpg"', $out);
         self::assertStringContainsString('preload="none"', $out);
+        self::assertStringContainsString('src="https://x.test/v.mp4"', $out);
+    }
+
+    public function testAFeedDeclaredMimeTypePlaysThroughATypedSource(): void
+    {
+        $media = new ArticleMedia([
+            (new MediaCandidate(MediaKind::Video, 'https://x.test/v.mp4', 'https://x.test/p.jpg'))
+                ->withMimeType('video/mp4'),
+        ]);
+
+        $out = $this->insert('<body><p>Teaser</p></body>', $media);
+
+        self::assertStringContainsString('<source src="https://x.test/v.mp4" type="video/mp4"', $out);
+        // The file plays through the typed <source>, so the <video> carries no bare src.
+        self::assertStringNotContainsString('poster="https://x.test/p.jpg" src=', $out);
     }
 
     /** A stream is the same <video> a file is — Safari and AVPlayer play it natively; hls.js covers the rest. */

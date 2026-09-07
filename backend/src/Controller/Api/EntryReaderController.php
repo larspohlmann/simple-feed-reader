@@ -11,7 +11,7 @@ use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Reader\ArticleExtractorInterface;
 use App\Service\Reader\ExtractionCoverageGate;
 use App\Service\Reader\ExtractionResult;
-use App\Service\Reader\FeedFallbackPoster;
+use App\Service\Reader\FeedMedia;
 use App\Service\Reader\OriginalHeroResolver;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -33,7 +33,6 @@ final readonly class EntryReaderController
         private EntryListRepository $entryList,
         private ClockInterface $clock,
         private ArticleExtractorInterface $extractor,
-        private FeedFallbackPoster $fallbackPoster,
         private ExtractionCoverageGate $coverageGate,
         private OriginalHeroResolver $originalHero,
         private RateLimitGuard $rateLimitGuard,
@@ -60,7 +59,7 @@ final readonly class EntryReaderController
                 $url,
                 $entry->getTitle(),
                 $entry->getAuthor(),
-                $this->fallbackPoster->forEntry($entry),
+                FeedMedia::fromEntry($entry),
             );
 
         // A confident-but-wrong extraction (page furniture instead of the article)

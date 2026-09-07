@@ -7,6 +7,7 @@ namespace App\Tests\Service\ReaderAudit;
 use App\Service\Reader\ArticleExtractorInterface;
 use App\Service\Reader\ExtractionCoverageGate;
 use App\Service\Reader\ExtractionResult;
+use App\Service\Reader\FeedMedia;
 use App\Service\ReaderAudit\AuditFinding;
 use App\Service\ReaderAudit\BodyShapeMarkers;
 use App\Service\ReaderAudit\CleanupMarkers;
@@ -48,7 +49,7 @@ final class ReaderAuditRunnerTest extends TestCase
                 string $url,
                 ?string $entryTitle = null,
                 ?string $entryAuthor = null,
-                ?string $fallbackPoster = null,
+                ?FeedMedia $feedMedia = null,
             ): ExtractionResult {
                 throw new \RuntimeException('lexbor gave up');
             }
@@ -212,7 +213,7 @@ final class ReaderAuditRunnerTest extends TestCase
                 string $url,
                 ?string $entryTitle = null,
                 ?string $entryAuthor = null,
-                ?string $fallbackPoster = null,
+                ?FeedMedia $feedMedia = null,
             ): ExtractionResult {
                 throw new \RuntimeException('lexbor gave up');
             }

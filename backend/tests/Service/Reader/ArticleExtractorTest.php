@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
+use App\Entity\Entry;
+use App\Entity\EntryMedium;
+use App\Entity\Feed;
 use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
@@ -15,6 +18,7 @@ use App\Service\Reader\BoilerplateVerdict;
 use App\Service\Reader\CustomElementUnwrapper;
 use App\Service\Reader\EdgeBoilerplateTrimmer;
 use App\Service\Reader\ExtractionResult;
+use App\Service\Reader\FeedMedia;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\ImageWrapperClassRemover;
@@ -161,6 +165,26 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringContainsString('https://site.test/img/photo.jpg', (string) $result->contentHtml);
         self::assertStringNotContainsString('About', (string) $result->contentHtml);
         self::assertFalse($result->paywalled);
+    }
+
+    public function testStampsFeedDeclaredDimensionsOnAMatchingBodyImage(): void
+    {
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+        $entry = new Entry(
+            new Feed('https://site.test/feed.xml'),
+            'g1',
+            'https://site.test/post',
+            'Post',
+            new \DateTimeImmutable('2026-09-07T10:00:00Z'),
+            new \DateTimeImmutable('2026-09-07T10:00:00Z'),
+        );
+        $entry->setMedia([new EntryMedium('https://site.test/img/photo.jpg', 'image', 1600, 900)], []);
+
+        $result = $extractor->extract('https://site.test/post', feedMedia: FeedMedia::fromEntry($entry));
+
+        self::assertStringContainsString('width="1600"', (string) $result->contentHtml);
+        self::assertStringContainsString('height="900"', (string) $result->contentHtml);
     }
 
     public function testKeepsOneMarkedNarrationPlayerAndDropsTheDeadOne(): void

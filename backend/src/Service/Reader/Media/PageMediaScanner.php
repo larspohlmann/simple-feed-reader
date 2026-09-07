@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media;
 
+use App\Service\Reader\FeedMedia;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
@@ -25,20 +26,43 @@ final readonly class PageMediaScanner
     ) {
     }
 
-    public function scan(string $pageHtml, string $pageUrl, ?string $fallbackPoster = null): ArticleMedia
+    public function scan(string $pageHtml, string $pageUrl, ?FeedMedia $feedMedia = null): ArticleMedia
     {
+        $feedMedia ??= FeedMedia::none();
         $byUrl = [];
         foreach ($this->sources as $source) {
             $this->mergeSource($source->find($pageHtml, $pageUrl), $byUrl);
         }
 
+        $reconciled = $this->reconciledWithFeed(array_values($byUrl), $feedMedia);
+
         // Every source has spoken and their posters are merged, so a video that
         // is still poster-less has none from the page: the feed-declared still
         // rescues it, or it is dropped before it reaches the client (#913).
-        $withPosters = $this->withResolvedPosters(array_values($byUrl), $fallbackPoster);
+        $withPosters = $this->withResolvedPosters($reconciled, $feedMedia->posterFallback());
 
         return (new ArticleMedia(\array_slice($withPosters, 0, ArticleMedia::MAX_ITEMS)))
             ->withoutRedundantStreams();
+    }
+
+    /**
+     * A candidate whose URL the feed enumerated carries the feed-declared MIME
+     * over the reader's extension sniff (#914): it plays through a typed
+     * <source>. A candidate the feed never named keeps its guessed kind, so
+     * extension sniffing stays the default and the fallback for the rest.
+     *
+     * @param list<MediaCandidate> $candidates
+     *
+     * @return list<MediaCandidate>
+     */
+    private function reconciledWithFeed(array $candidates, FeedMedia $feedMedia): array
+    {
+        return array_map(
+            static fn (MediaCandidate $candidate): MediaCandidate => $candidate->withMimeType(
+                $feedMedia->declaredAttachmentFor($candidate->url)?->mimeType,
+            ),
+            $candidates,
+        );
     }
 
     /**

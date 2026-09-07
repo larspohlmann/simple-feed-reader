@@ -87,6 +87,30 @@ final class MediaCandidateTest extends TestCase
         self::assertSame($audio, $audio->resolvePoster('https://feed.test/fallback.jpg'));
     }
 
+    public function testWithMimeTypeCarriesTheFeedDeclaredType(): void
+    {
+        $video = new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', 'https://x.test/p.jpg');
+
+        self::assertSame('video/mp4', $video->withMimeType('video/mp4')->mimeType);
+    }
+
+    public function testWithMimeTypeIgnoresAMissingType(): void
+    {
+        $video = new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', 'https://x.test/p.jpg');
+
+        self::assertSame($video, $video->withMimeType(null));
+    }
+
+    public function testResolvePosterKeepsTheMimeTypeWhenRescuing(): void
+    {
+        $video = (new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4'))->withMimeType('video/mp4');
+
+        $resolved = $video->resolvePoster('https://feed.test/fallback.jpg');
+
+        self::assertNotNull($resolved);
+        self::assertSame('video/mp4', $resolved->mimeType);
+    }
+
     public function testAtMovesOnlyTheUrl(): void
     {
         $declared = new MediaCandidate(MediaKind::Stream, 'https://a.test/x.m3u8', 'p.jpg', null, 'prose', true);
