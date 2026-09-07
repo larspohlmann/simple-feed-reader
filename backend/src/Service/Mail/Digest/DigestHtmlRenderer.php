@@ -34,7 +34,7 @@ final readonly class DigestHtmlRenderer
             'today' => $this->today($locale),
             'totalCount' => $page->totalCount,
             'logoCid' => self::LOGO_CID,
-            'openReaderUrl' => $this->links->base(),
+            'openReaderUrl' => $this->links->savedSearchesUrl(),
             'settingsUrl' => $this->links->settingsEmailUrl(),
             'groups' => array_map($group, $page->groups),
         ]);

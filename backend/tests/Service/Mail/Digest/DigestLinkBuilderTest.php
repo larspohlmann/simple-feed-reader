@@ -51,6 +51,14 @@ final class DigestLinkBuilderTest extends TestCase
         self::assertSame('https://lars-pohlmann.de/reader/?q=rust%20', $builder->savedSearchUrl('rust', true));
     }
 
+    public function testSavedSearchesUrlSelectsTheSavedSearchesList(): void
+    {
+        self::assertSame(
+            'https://lars-pohlmann.de/reader/?view=saved-searches',
+            $this->builderFor('https://lars-pohlmann.de/reader')->savedSearchesUrl(),
+        );
+    }
+
     public function testSettingsEmailUrl(): void
     {
         $links = new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example'));

@@ -30,6 +30,11 @@ final readonly class DigestLinkBuilder
         return $this->base() . '?q=' . rawurlencode($query);
     }
 
+    public function savedSearchesUrl(): string
+    {
+        return $this->base() . '?view=saved-searches';
+    }
+
     public function settingsEmailUrl(): string
     {
         return $this->base() . 'settings/email';
