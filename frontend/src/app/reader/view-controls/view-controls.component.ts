@@ -5,7 +5,7 @@ import { MagazineStyleService } from '../../core/magazine-style.service';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { ThemeService } from '../../theme/theme.service';
 import { ThemeMode } from '../../theme/themes/registry';
-import { ReadingLayoutService } from '../reading-layout.service';
+import { MediaView, ReadingLayoutService } from '../reading-layout.service';
 
 /**
  * The reading-layout and theme segmented controls. They live in the sidebar so
@@ -32,6 +32,12 @@ export class ViewControlsComponent {
   readonly magazineStyles: { id: MagazineStyle; label: string; icon: string }[] = [
     { id: 'boxed', label: 'reader.layout.magazineBoxed', icon: 'grid_view' },
     { id: 'airy', label: 'reader.layout.magazineAiry', icon: 'density_large' },
+  ];
+
+  readonly mediaViews: { id: MediaView; label: string; icon: string }[] = [
+    { id: 'pictures', label: 'reader.layout.pictures', icon: 'photo_library' },
+    { id: 'videos', label: 'reader.layout.videos', icon: 'video_library' },
+    { id: 'audios', label: 'reader.layout.audios', icon: 'podcasts' },
   ];
 
   showMagazine(style: MagazineStyle): void {

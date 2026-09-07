@@ -98,6 +98,39 @@ describe('ViewControlsComponent', () => {
     expect(layout.mode()).toBe('pane');
   });
 
+  function mediaGroup(f: ReturnType<typeof create>): HTMLElement {
+    return f.nativeElement.querySelector('[aria-label="Media views"]') as HTMLElement;
+  }
+
+  it('offers pictures, videos and audios in a media group', () => {
+    const titles = Array.from(mediaGroup(create()).querySelectorAll('button')).map((b) =>
+      b.getAttribute('title'),
+    );
+
+    expect(titles).toEqual(['Pictures view', 'Videos view', 'Audios view']);
+  });
+
+  it('switches the reading layout to a media view', () => {
+    const f = create();
+    const layout = TestBed.inject(ReadingLayoutService);
+
+    (mediaGroup(f).querySelector('[title="Videos view"]') as HTMLButtonElement).click();
+
+    expect(layout.mode()).toBe('videos');
+  });
+
+  it('marks only the active media view', () => {
+    const f = create();
+    TestBed.inject(ReadingLayoutService).set('audios');
+    f.detectChanges();
+
+    const group = mediaGroup(f);
+    expect(group.querySelector('[title="Audios view"]')!.getAttribute('aria-pressed')).toBe('true');
+    expect(group.querySelector('[title="Videos view"]')!.getAttribute('aria-pressed')).toBe(
+      'false',
+    );
+  });
+
   it('switches the theme mode', () => {
     const f = create();
     const theme = TestBed.inject(ThemeService);

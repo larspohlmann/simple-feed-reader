@@ -126,6 +126,27 @@ function fakeScroller(f: ComponentFixture<EntryListComponent>, top: number): HTM
 describe('EntryListComponent', () => {
   beforeEach(() => localStorage.clear());
 
+  describe('media views (#916)', () => {
+    const withImage = entry(1, { media: [{ url: 'https://x.test/a.jpg', kind: 'image' }] });
+
+    it('renders the media view body on a media layout', () => {
+      const el = mount({ layout: 'pictures', entries: [withImage] }).nativeElement as HTMLElement;
+
+      expect(el.querySelector('app-media-view')).not.toBeNull();
+      expect(el.querySelector('.rows.magazine')).toBeNull();
+    });
+
+    it('raises open with the resolved entry when a tile is clicked', () => {
+      const f = mount({ layout: 'pictures', entries: [withImage] });
+      const opened: EntryDto[] = [];
+      f.componentInstance.open.subscribe((e) => opened.push(e));
+
+      (f.nativeElement as HTMLElement).querySelector<HTMLElement>('.tile')!.click();
+
+      expect(opened).toEqual([withImage]);
+    });
+  });
+
   // #321: the for-you block is now projected into the top of whichever
   // content branch is live, so it scrolls away with the list instead of
   // sitting in a permanently reserved bar above it.
