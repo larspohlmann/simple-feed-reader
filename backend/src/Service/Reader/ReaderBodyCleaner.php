@@ -9,6 +9,8 @@ use App\Service\Reader\Media\ArticleMedia;
 use App\Service\Reader\Media\InBodyEmbedRewriter;
 use App\Service\Reader\Media\PageMediaInserter;
 use App\Service\Reader\Media\SubstackPosterLink;
+use App\Service\Reader\Slideshow\Slideshow;
+use App\Service\Reader\Slideshow\SlideshowInserter;
 
 /**
  * Cleans readability's article HTML for the reader view through one shared
@@ -26,6 +28,13 @@ use App\Service\Reader\Media\SubstackPosterLink;
  * A body too broken to parse is returned unchanged: readability output is
  * always parseable in practice, but a degenerate one falls through rather
  * than crashing the pass.
+ *
+ * The ten constructor collaborators are deliberate: this is the body-cleaning
+ * pipeline's composition root, and each one is a seam the tests swap
+ * independently (trimmers, restorers, inserters, …). Bagging them into a
+ * parameter object would hide that coupling, not reduce it.
+ *
+ * @SuppressWarnings("PHPMD.ExcessiveParameterList")
  */
 final readonly class ReaderBodyCleaner
 {
@@ -39,10 +48,14 @@ final readonly class ReaderBodyCleaner
         private SubstackPosterLink $substackPoster,
         private PlayerChromeCleaner $playerChrome,
         private PageMediaInserter $mediaInserter,
+        private SlideshowInserter $slideshowInserter,
     ) {
     }
 
-    /** @param list<string|null> $titleCandidates */
+    /**
+     * @param list<string|null> $titleCandidates
+     * @param list<Slideshow>   $slideshows
+     */
     public function clean(
         string $contentHtml,
         array $titleCandidates,
@@ -50,6 +63,7 @@ final readonly class ReaderBodyCleaner
         ArticleMedia $media,
         ?string $entryAuthor = null,
         ?FeedMedia $feedMedia = null,
+        array $slideshows = [],
     ): string {
         $document = HtmlDocumentParser::parseOrNull($contentHtml);
         if ($document === null) {
@@ -69,6 +83,12 @@ final readonly class ReaderBodyCleaner
         $this->engagementCleaner->removeFrom($document, $entryAuthor);
         $this->titleRemover->removeFrom($document, $titleCandidates);
         $this->boilerplateTrimmer->trimIn($document);
+
+        // A recreated slideshow replaces the publisher's original carousel, which
+        // extraction leaves as a broken pile of markup or an empty box. Runs after
+        // the trimmers so a trimmer cannot drop the anchor, before media planning
+        // so the plan sees the finished structure.
+        $this->slideshowInserter->insert($document, $slideshows);
 
         // plan() only classifies, so restore() still sees every body image and
         // can skip the hero when a lead visual will land at the top; apply()'s

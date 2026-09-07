@@ -873,6 +873,9 @@
     "viewed": "Recently read",
     "forYou": "For you",
     "narrationPlayer": "Listen — machine-generated narration",
+    "slideshowPrevious": "Previous slide",
+    "slideshowNext": "Next slide",
+    "slideshowPosition": "{{current}} of {{total}}",
     "audioPlayer": {
       "listen": "Listen",
       "label": "Audio player",

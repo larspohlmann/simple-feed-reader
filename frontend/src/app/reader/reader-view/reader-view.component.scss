@@ -796,3 +796,51 @@ article {
 .content ::ng-deep .reader-narration-box[open] audio {
   margin: var(--space-2) 0 0;
 }
+
+/* Swipeable image carousel (#926): the same figure rhythm as a plain figure
+   above, plus its own controls row for the prev/counter/next trio. */
+.content ::ng-deep .reader-slideshow {
+  position: relative;
+  margin: var(--space-5) 0;
+
+  ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  li img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+}
+
+.content ::ng-deep .reader-slideshow__controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.content ::ng-deep .reader-slideshow__counter {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.content ::ng-deep .reader-slideshow__prev,
+.content ::ng-deep .reader-slideshow__next {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: var(--fs-xl);
+  line-height: 1;
+  cursor: pointer;
+}

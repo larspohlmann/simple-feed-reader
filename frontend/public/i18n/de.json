@@ -873,6 +873,9 @@
     "viewed": "Zuletzt gelesen",
     "forYou": "Für dich",
     "narrationPlayer": "Anhören — KI-generierte Vorlesung",
+    "slideshowPrevious": "Vorheriges Bild",
+    "slideshowNext": "Nächstes Bild",
+    "slideshowPosition": "{{current}} von {{total}}",
     "audioPlayer": {
       "listen": "Anhören",
       "label": "Audio-Player",

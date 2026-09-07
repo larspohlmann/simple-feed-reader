@@ -51,6 +51,9 @@ use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\ReaderLeadImage;
 use App\Service\Reader\ShareIntentLinkRemover;
 use App\Service\Reader\ShareWidgetRemover;
+use App\Service\Reader\Slideshow\SlideshowInserter;
+use App\Service\Reader\Slideshow\SlideshowMarkup;
+use App\Service\Reader\Slideshow\SlideshowScanner;
 use App\Service\Reader\SubstackGatedVideoPlaceholder;
 use App\Service\Sanitize\EntrySanitizer;
 use PHPUnit\Framework\TestCase;
@@ -100,6 +103,7 @@ final class ArticleExtractorTest extends TestCase
             $this->mediaScanner(),
             new StreamLocationResolver($landing, $this->urlKind()),
             new SiblingMediaExtender(new SiblingIdRule(), $landing, $this->urlKind()),
+            new SlideshowScanner([]),
         );
     }
 
@@ -125,6 +129,7 @@ final class ArticleExtractorTest extends TestCase
             new SubstackPosterLink(),
             new PlayerChromeCleaner(),
             new PageMediaInserter($markup),
+            new SlideshowInserter(new SlideshowMarkup()),
         );
     }
 
@@ -314,6 +319,7 @@ final class ArticleExtractorTest extends TestCase
             $this->mediaScanner(),
             new StreamLocationResolver($landing, $this->urlKind()),
             new SiblingMediaExtender(new SiblingIdRule(), $landing, $this->urlKind()),
+            new SlideshowScanner([]),
         );
 
         $result = $extractor->extract('http://169.254.169.254/');

@@ -82,6 +82,11 @@ services:
         # collect nothing. EmbedProvidersWiringTest guards it.
         App\Service\Reader\Media\EmbedProviderInterface:
             tags: ['app.embed_provider']
+        # Same reason as the blocks above: a plain application interface is not
+        # auto-tagged, so the slideshow pipeline's #[AutowireIterator] needs this
+        # tag to collect the per-library recognizers.
+        App\Service\Reader\Slideshow\SlideshowRecognizerInterface:
+            tags: ['app.slideshow_recognizer']
         # Same reason as the blocks above: Symfony's mailer wires its transport
         # chain from a `mailer.transport_factory`-tagged iterator, and it only
         # auto-tags the bridge factories it ships — never a plain implementation

@@ -23,6 +23,8 @@ use App\Service\Reader\PageImageInventory;
 use App\Service\Reader\PlayerChromeCleaner;
 use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\ReaderLeadImage;
+use App\Service\Reader\Slideshow\SlideshowInserter;
+use App\Service\Reader\Slideshow\SlideshowMarkup;
 use PHPUnit\Framework\TestCase;
 
 final class ReaderBodyCleanerTest extends TestCase
@@ -47,6 +49,7 @@ final class ReaderBodyCleanerTest extends TestCase
             new SubstackPosterLink(),
             new PlayerChromeCleaner(),
             new PageMediaInserter($markup),
+            new SlideshowInserter(new SlideshowMarkup()),
         );
     }
 

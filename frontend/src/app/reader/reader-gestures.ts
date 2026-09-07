@@ -35,6 +35,13 @@ export function isDrawerSwipe(dx: number, dy: number, dir: 1 | -1): boolean {
   return along >= DRAWER_SWIPE_MIN_X && along >= Math.abs(dy) * SWIPE_AXIS_RATIO;
 }
 
+/** Decisive swipe direction for slide paging: 1 leftward, -1 rightward, else 0. */
+export function isSlideSwipe(dx: number, dy: number): -1 | 0 | 1 {
+  if (isDrawerSwipe(dx, dy, -1)) return 1;
+  if (isDrawerSwipe(dx, dy, 1)) return -1;
+  return 0;
+}
+
 /** Whether an at-the-end pull is far enough to return to the list. */
 export function overscrollTriggersBack(distance: number): boolean {
   return distance >= OVERSCROLL_BACK_MIN;

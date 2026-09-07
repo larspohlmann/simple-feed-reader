@@ -138,4 +138,30 @@ final class EntrySanitizerTest extends TestCase
         // Nothing but a tail is not an article either.
         self::assertNull($this->sanitizer->sanitize('<p>&nbsp;</p><p></p><br>'));
     }
+
+    public function testKeepsTheSlideshowFigureMarker(): void
+    {
+        $html = '<figure class="reader-slideshow"><ol><li>'
+            . '<img src="https://img/1.jpg" alt="a" loading="eager"></li>'
+            . '<li><img src="https://img/2.jpg" alt="b" loading="lazy"></li></ol></figure>';
+
+        $clean = (new EntrySanitizer())->sanitize($html);
+
+        self::assertNotNull($clean);
+        self::assertStringContainsString('class="reader-slideshow"', $clean);
+        self::assertSame(2, substr_count($clean, '<img'));
+    }
+
+    public function testStripsAHostileAttributeInsideTheSlideshow(): void
+    {
+        $html = '<figure class="reader-slideshow" onclick="steal()"><ol>'
+            . '<li><img src="https://img/1.jpg" alt="a"></li>'
+            . '<li><img src="https://img/2.jpg" alt="b"></li></ol></figure>';
+
+        $clean = (new EntrySanitizer())->sanitize($html);
+
+        self::assertNotNull($clean);
+        self::assertStringNotContainsString('onclick', $clean);
+        self::assertStringContainsString('class="reader-slideshow"', $clean);
+    }
 }
