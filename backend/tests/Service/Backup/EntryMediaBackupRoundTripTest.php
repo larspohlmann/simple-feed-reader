@@ -48,7 +48,10 @@ final class EntryMediaBackupRoundTripTest extends DbTestCase
             $entryLine['media'],
         );
         self::assertSame(
-            [['url' => 'https://cdn/ep.mp3', 'mimeType' => 'audio/mpeg', 'durationInSeconds' => 3723, 'sizeInBytes' => 4200000]],
+            [[
+                'url' => 'https://cdn/ep.mp3', 'mimeType' => 'audio/mpeg',
+                'durationInSeconds' => 3723, 'sizeInBytes' => 4200000,
+            ]],
             $entryLine['attachments'],
         );
 

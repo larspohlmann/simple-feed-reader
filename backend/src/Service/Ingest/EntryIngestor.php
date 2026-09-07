@@ -9,6 +9,7 @@ use App\Entity\Feed;
 use App\Repository\EntryRepository;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
+use App\Service\Parser\ParsedMediaBundle;
 use App\Service\Image\DeclaredImage;
 use App\Service\Url\HttpsImageUrl;
 use App\Service\Sanitize\EntrySanitizer;
@@ -192,11 +193,8 @@ final class EntryIngestor
      */
     private function applyMedia(Entry $entry, ParsedEntry $parsedEntry): void
     {
-        $assembled = EntryMediaAssembler::assemble(
-            $parsedEntry->image,
-            $parsedEntry->media,
-            $parsedEntry->attachments,
-        );
+        $bundle = $parsedEntry->mediaBundle ?? new ParsedMediaBundle();
+        $assembled = EntryMediaAssembler::assemble($parsedEntry->image, $bundle->media, $bundle->attachments);
         $entry->setMedia($assembled->media, $assembled->attachments);
     }
 

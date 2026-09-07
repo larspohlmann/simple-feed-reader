@@ -23,12 +23,18 @@ final readonly class EntryAttachment implements \JsonSerializable
     /** @param array<string, mixed> $data */
     public static function fromArray(array $data): self
     {
+        $url = $data['url'] ?? null;
+        $mimeType = $data['mimeType'] ?? null;
+        $durationInSeconds = $data['durationInSeconds'] ?? null;
+        $sizeInBytes = $data['sizeInBytes'] ?? null;
+        $title = $data['title'] ?? null;
+
         return new self(
-            (string) $data['url'],
-            isset($data['mimeType']) ? (string) $data['mimeType'] : null,
-            isset($data['durationInSeconds']) ? (int) $data['durationInSeconds'] : null,
-            isset($data['sizeInBytes']) ? (int) $data['sizeInBytes'] : null,
-            isset($data['title']) ? (string) $data['title'] : null,
+            \is_string($url) ? $url : '',
+            \is_string($mimeType) ? $mimeType : null,
+            \is_int($durationInSeconds) ? $durationInSeconds : null,
+            \is_int($sizeInBytes) ? $sizeInBytes : null,
+            \is_string($title) ? $title : null,
         );
     }
 

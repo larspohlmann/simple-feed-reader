@@ -156,7 +156,13 @@ final readonly class FullyPopulatedAccount
         $entry->setMedia(
             [
                 new EntryMedium('https://populated.example/lead.jpg', 'image', 1200, 630),
-                new EntryMedium('https://populated.example/clip.mp4', 'video', null, null, 'https://populated.example/poster.jpg'),
+                new EntryMedium(
+                    'https://populated.example/clip.mp4',
+                    'video',
+                    null,
+                    null,
+                    'https://populated.example/poster.jpg',
+                ),
             ],
             [new EntryAttachment('https://populated.example/episode.mp3', 'audio/mpeg', 3723, 4200000, 'Episode one')],
         );

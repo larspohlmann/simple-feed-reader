@@ -56,7 +56,7 @@ final class Rss2Parser implements FeedFormatParserInterface
             ?? ItemImageExtractor::fromRssEnclosure($item)
             ?? ItemImageExtractor::fromCustomImageElement($item)
             ?? ItemImageExtractor::fromHtml($contentEncoded ?? $description);
-        $media = ItemMediaExtractor::extract($item);
+        $mediaBundle = ItemMediaExtractor::extract($item);
 
         return new ParsedEntry(
             guid: GuidFallback::for(XmlHelper::childText($item, 'guid'), $link, $title),
@@ -69,8 +69,7 @@ final class Rss2Parser implements FeedFormatParserInterface
                 XmlHelper::childText($item, 'pubDate') ?? XmlHelper::childText($item, 'date', self::DC_NS),
             ),
             image: $image,
-            media: $media->media,
-            attachments: $media->attachments,
+            mediaBundle: $mediaBundle,
         );
     }
 }

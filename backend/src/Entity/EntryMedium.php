@@ -29,12 +29,18 @@ final readonly class EntryMedium implements \JsonSerializable
     /** @param array<string, mixed> $data */
     public static function fromArray(array $data): self
     {
+        $url = $data['url'] ?? null;
+        $kind = $data['kind'] ?? null;
+        $width = $data['width'] ?? null;
+        $height = $data['height'] ?? null;
+        $previewImageUrl = $data['previewImageUrl'] ?? null;
+
         return new self(
-            (string) $data['url'],
-            (string) $data['kind'],
-            isset($data['width']) ? (int) $data['width'] : null,
-            isset($data['height']) ? (int) $data['height'] : null,
-            isset($data['previewImageUrl']) ? (string) $data['previewImageUrl'] : null,
+            \is_string($url) ? $url : '',
+            \is_string($kind) ? $kind : '',
+            \is_int($width) ? $width : null,
+            \is_int($height) ? $height : null,
+            \is_string($previewImageUrl) ? $previewImageUrl : null,
         );
     }
 

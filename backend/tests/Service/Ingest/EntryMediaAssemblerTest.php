@@ -44,7 +44,10 @@ final class EntryMediaAssemblerTest extends TestCase
     {
         $assembled = EntryMediaAssembler::assemble(
             null,
-            [new ParsedMedium('http://i/insecure.jpg', VisualMediaKind::Image), new ParsedMedium('https://i/ok.jpg', VisualMediaKind::Image)],
+            [
+                new ParsedMedium('http://i/insecure.jpg', VisualMediaKind::Image),
+                new ParsedMedium('https://i/ok.jpg', VisualMediaKind::Image),
+            ],
             [],
         );
 

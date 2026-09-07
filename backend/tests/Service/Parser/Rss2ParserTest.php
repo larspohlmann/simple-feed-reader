@@ -37,8 +37,10 @@ final class Rss2ParserTest extends TestCase
 
         $feed = (new Rss2Parser())->parse($this->document($xml));
 
-        self::assertCount(1, $feed->entries[0]->attachments);
-        $attachment = $feed->entries[0]->attachments[0];
+        $bundle = $feed->entries[0]->mediaBundle;
+        self::assertNotNull($bundle);
+        self::assertCount(1, $bundle->attachments);
+        $attachment = $bundle->attachments[0];
         self::assertSame('https://cdn/ep1.mp3', $attachment->url);
         self::assertSame('audio/mpeg', $attachment->mimeType);
         self::assertSame(3723, $attachment->durationInSeconds);

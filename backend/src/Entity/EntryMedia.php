@@ -53,12 +53,16 @@ class EntryMedia
     }
 
     /**
-     * @param list<\JsonSerializable> $items
+     * @param list<EntryMedium>|list<EntryAttachment> $items
      *
-     * @return list<array<string, mixed>>|null
+     * @return list<array<string, string|int>>|null
      */
     private static function encode(array $items): ?array
     {
-        return $items === [] ? null : array_map(static fn (\JsonSerializable $item): array => $item->jsonSerialize(), $items);
+        if ($items === []) {
+            return null;
+        }
+
+        return array_map(static fn (EntryMedium|EntryAttachment $item): array => $item->jsonSerialize(), $items);
     }
 }

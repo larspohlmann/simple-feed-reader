@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Backup;
 
 use App\Entity\Entry;
+use App\Entity\EntryAttachment;
+use App\Entity\EntryMedium;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\SavedSearch;
@@ -317,12 +319,22 @@ final readonly class AccountBackupExporter
             'imageUrl' => $entry->getImageUrl(),
             'imageWidth' => $entry->getImageWidth(),
             'imageHeight' => $entry->getImageHeight(),
-            'media' => array_map(static fn (\JsonSerializable $m): array => $m->jsonSerialize(), $entry->getMedia()),
-            'attachments' => array_map(static fn (\JsonSerializable $a): array => $a->jsonSerialize(), $entry->getAttachments()),
+            'media' => self::mediaList($entry->getMedia()),
+            'attachments' => self::mediaList($entry->getAttachments()),
             'publishedAt' => $this->formatDateOrNull($entry->getPublishedAt()),
             'createdAt' => $this->formatDate($entry->getCreatedAt()),
             'effectiveDate' => $this->formatDate($entry->getEffectiveDate()),
         ];
+    }
+
+    /**
+     * @param list<EntryMedium>|list<EntryAttachment> $items
+     *
+     * @return list<array<string, string|int>>
+     */
+    private static function mediaList(array $items): array
+    {
+        return array_map(static fn (EntryMedium|EntryAttachment $item): array => $item->jsonSerialize(), $items);
     }
 
     /**

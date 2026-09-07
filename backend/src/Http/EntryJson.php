@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Entity\EntryAttachment;
+use App\Entity\EntryMedium;
 use App\Repository\EntryListRow;
 
 final class EntryJson
@@ -34,8 +36,8 @@ final class EntryJson
             'imageUrl' => $e->getImageUrl(),
             'imageWidth' => $e->getImageWidth(),
             'imageHeight' => $e->getImageHeight(),
-            'media' => array_map(static fn (\JsonSerializable $m): array => $m->jsonSerialize(), $e->getMedia()),
-            'attachments' => array_map(static fn (\JsonSerializable $a): array => $a->jsonSerialize(), $e->getAttachments()),
+            'media' => self::jsonList($e->getMedia()),
+            'attachments' => self::jsonList($e->getAttachments()),
             'publishedAt' => $e->getPublishedAt()?->format(\DateTimeInterface::ATOM),
             'createdAt' => $e->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'subscriptionId' => $row->subscriptionId,
@@ -47,5 +49,15 @@ final class EntryJson
             'isKept' => $row->isKept,
             'isViewed' => $row->isViewed,
         ];
+    }
+
+    /**
+     * @param list<EntryMedium>|list<EntryAttachment> $items
+     *
+     * @return list<array<string, string|int>>
+     */
+    private static function jsonList(array $items): array
+    {
+        return array_map(static fn (EntryMedium|EntryAttachment $item): array => $item->jsonSerialize(), $items);
     }
 }

@@ -23,7 +23,10 @@ final class EntryMediaTest extends TestCase
     {
         $media = new EntryMedia();
         $media->set(
-            [new EntryMedium('https://i/one.jpg', 'image', 800, 600), new EntryMedium('https://v/clip.mp4', 'video', null, null, 'https://v/p.jpg')],
+            [
+                new EntryMedium('https://i/one.jpg', 'image', 800, 600),
+                new EntryMedium('https://v/clip.mp4', 'video', null, null, 'https://v/p.jpg'),
+            ],
             [new EntryAttachment('https://cdn/ep.mp3', 'audio/mpeg', 3723, 4200000, 'Chapter two')],
         );
 

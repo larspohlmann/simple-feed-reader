@@ -45,29 +45,22 @@ final class ItemMediaExtractor
         if (self::isMediaElement($child, 'group')) {
             return self::fromGroup($child, $fallbackDuration);
         }
-        if (self::isMediaNode($child)) {
-            return self::fromNode($child, $fallbackDuration);
-        }
+        $node = self::mediaNode($child);
 
-        return null;
+        return $node === null ? null : self::fromNode($node, $fallbackDuration);
     }
 
-    private static function fromNode(\DOMElement $node, ?int $fallbackDuration): ?ParsedMediaBundle
+    private static function fromNode(FeedMediaNode $node, ?int $fallbackDuration): ?ParsedMediaBundle
     {
-        $url = self::url($node);
-        if ($url === '') {
-            return null;
-        }
-
-        return match (FeedMediaClassifier::kind($node)) {
-            FeedMediaKind::Image => new ParsedMediaBundle([self::image($node, $url)], []),
+        return match ($node->kind()) {
+            FeedMediaKind::Image => new ParsedMediaBundle([$node->toImage()], []),
             FeedMediaKind::Video => new ParsedMediaBundle(
-                [self::video($node, $url, null)],
-                [self::attachment($node, $url, $fallbackDuration)],
+                [$node->toVideo(null)],
+                [$node->toAttachment($fallbackDuration)],
             ),
             FeedMediaKind::Audio, FeedMediaKind::Other => new ParsedMediaBundle(
                 [],
-                [self::attachment($node, $url, $fallbackDuration)],
+                [$node->toAttachment($fallbackDuration)],
             ),
             FeedMediaKind::Unknown => null,
         };
@@ -76,60 +69,34 @@ final class ItemMediaExtractor
     private static function fromGroup(\DOMElement $group, ?int $fallbackDuration): ?ParsedMediaBundle
     {
         $nodes = self::mediaNodesIn($group);
+
         $video = self::firstOfKind($nodes, FeedMediaKind::Video);
         if ($video !== null) {
-            $poster = self::posterIn($group);
-
             return new ParsedMediaBundle(
-                [self::video($video, self::url($video), $poster)],
-                [self::attachment($video, self::url($video), $fallbackDuration)],
+                [$video->toVideo(self::posterIn($group))],
+                [$video->toAttachment($fallbackDuration)],
             );
         }
 
         $image = self::widestImage($nodes);
         if ($image !== null) {
-            return new ParsedMediaBundle([self::image($image, self::url($image))], []);
+            return new ParsedMediaBundle([$image->toImage()], []);
         }
 
         $playable = self::firstPlayable($nodes);
 
         return $playable === null
             ? null
-            : new ParsedMediaBundle([], [self::attachment($playable, self::url($playable), $fallbackDuration)]);
+            : new ParsedMediaBundle([], [$playable->toAttachment($fallbackDuration)]);
     }
 
-    private static function image(\DOMElement $node, string $url): ParsedMedium
-    {
-        return new ParsedMedium($url, VisualMediaKind::Image, self::intAttr($node, 'width'), self::intAttr($node, 'height'));
-    }
-
-    private static function video(\DOMElement $node, string $url, ?string $previewImageUrl): ParsedMedium
-    {
-        return new ParsedMedium(
-            $url,
-            VisualMediaKind::Video,
-            self::intAttr($node, 'width'),
-            self::intAttr($node, 'height'),
-            $previewImageUrl,
-        );
-    }
-
-    private static function attachment(\DOMElement $node, string $url, ?int $fallbackDuration): ParsedAttachment
-    {
-        return new ParsedAttachment(
-            $url,
-            self::nonEmpty($node->getAttribute('type')),
-            MediaDuration::seconds($node->getAttribute('duration')) ?? $fallbackDuration,
-            self::intAttr($node, 'length') ?? self::intAttr($node, 'fileSize'),
-            self::mediaTitle($node),
-        );
-    }
-
-    /** @param list<\DOMElement> $nodes */
-    private static function firstOfKind(array $nodes, FeedMediaKind $kind): ?\DOMElement
+    /**
+     * @param list<FeedMediaNode> $nodes
+     */
+    private static function firstOfKind(array $nodes, FeedMediaKind $kind): ?FeedMediaNode
     {
         foreach ($nodes as $node) {
-            if (FeedMediaClassifier::kind($node) === $kind) {
+            if ($node->kind() === $kind) {
                 return $node;
             }
         }
@@ -137,21 +104,21 @@ final class ItemMediaExtractor
         return null;
     }
 
-    /** @param list<\DOMElement> $nodes */
-    private static function firstPlayable(array $nodes): ?\DOMElement
+    /** @param list<FeedMediaNode> $nodes */
+    private static function firstPlayable(array $nodes): ?FeedMediaNode
     {
         return self::firstOfKind($nodes, FeedMediaKind::Audio) ?? self::firstOfKind($nodes, FeedMediaKind::Other);
     }
 
-    /** @param list<\DOMElement> $nodes */
-    private static function widestImage(array $nodes): ?\DOMElement
+    /** @param list<FeedMediaNode> $nodes */
+    private static function widestImage(array $nodes): ?FeedMediaNode
     {
         $widest = null;
         foreach ($nodes as $node) {
-            if (FeedMediaClassifier::kind($node) !== FeedMediaKind::Image) {
+            if ($node->kind() !== FeedMediaKind::Image) {
                 continue;
             }
-            if ($widest === null || (self::intAttr($node, 'width') ?? 0) > (self::intAttr($widest, 'width') ?? 0)) {
+            if ($widest === null || ($node->width() ?? 0) > ($widest->width() ?? 0)) {
                 $widest = $node;
             }
         }
@@ -159,17 +126,23 @@ final class ItemMediaExtractor
         return $widest;
     }
 
-    /** @return list<\DOMElement> */
+    /** @return list<FeedMediaNode> */
     private static function mediaNodesIn(\DOMElement $parent): array
     {
         $nodes = [];
         foreach ($parent->childNodes as $child) {
-            if ($child instanceof \DOMElement && self::isMediaNode($child) && self::url($child) !== '') {
-                $nodes[] = $child;
+            $node = $child instanceof \DOMElement ? self::mediaNode($child) : null;
+            if ($node !== null && $node->url() !== '') {
+                $nodes[] = $node;
             }
         }
 
         return $nodes;
+    }
+
+    private static function mediaNode(\DOMElement $element): ?FeedMediaNode
+    {
+        return self::isMediaNode($element) ? new FeedMediaNode($element) : null;
     }
 
     private static function posterIn(\DOMElement $group): ?string
@@ -177,7 +150,9 @@ final class ItemMediaExtractor
         foreach ($group->childNodes as $child) {
             if (self::isMediaElement($child, 'thumbnail')) {
                 /** @var \DOMElement $child */
-                return self::nonEmpty(self::url($child));
+                $url = trim($child->getAttribute('url'));
+
+                return $url !== '' ? $url : null;
             }
         }
 
@@ -187,7 +162,7 @@ final class ItemMediaExtractor
     private static function itunesDuration(\DOMElement $item): ?int
     {
         foreach ($item->childNodes as $child) {
-            if ($child instanceof \DOMElement && $child->localName === 'duration' && $child->namespaceURI === self::ITUNES_NS) {
+            if (self::isItunesDuration($child)) {
                 return MediaDuration::seconds($child->textContent);
             }
         }
@@ -195,16 +170,11 @@ final class ItemMediaExtractor
         return null;
     }
 
-    private static function mediaTitle(\DOMElement $node): ?string
+    private static function isItunesDuration(\DOMNode $node): bool
     {
-        foreach ($node->childNodes as $child) {
-            if (self::isMediaElement($child, 'title')) {
-                /** @var \DOMElement $child */
-                return self::nonEmpty($child->textContent);
-            }
-        }
-
-        return null;
+        return $node instanceof \DOMElement
+            && $node->localName === 'duration'
+            && $node->namespaceURI === self::ITUNES_NS;
     }
 
     private static function isMediaNode(\DOMElement $node): bool
@@ -224,26 +194,5 @@ final class ItemMediaExtractor
         return $node instanceof \DOMElement
             && $node->localName === $localName
             && $node->namespaceURI === self::MEDIA_NS;
-    }
-
-    private static function url(\DOMElement $node): string
-    {
-        $url = trim($node->getAttribute('url'));
-
-        return $url !== '' ? $url : trim($node->getAttribute('href'));
-    }
-
-    private static function intAttr(\DOMElement $node, string $name): ?int
-    {
-        $value = filter_var(trim($node->getAttribute($name)), FILTER_VALIDATE_INT);
-
-        return \is_int($value) && $value > 0 ? $value : null;
-    }
-
-    private static function nonEmpty(string $value): ?string
-    {
-        $trimmed = trim($value);
-
-        return $trimmed !== '' ? $trimmed : null;
     }
 }
