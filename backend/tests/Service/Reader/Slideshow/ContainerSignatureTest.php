@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader\Slideshow;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\Slideshow\ContainerSignature;
+use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class ContainerSignatureTest extends TestCase
@@ -25,32 +26,41 @@ final class ContainerSignatureTest extends TestCase
         self::assertNull(ContainerSignature::fromClassAttribute('   '));
     }
 
-    public function testElementCarryingAllTokensMatches(): void
+    public function testToSelectorJoinsTokensAsACompoundClassSelector(): void
     {
         $signature = ContainerSignature::fromClassAttribute('carousel gallery 0');
 
         self::assertNotNull($signature);
-        self::assertTrue($signature->matches($this->elementWithClass('carousel gallery 0 extra')));
+        self::assertSame('.carousel.gallery.\30 ', $signature->toSelector());
     }
 
-    public function testElementMissingATokenDoesNotMatch(): void
+    public function testSelectorFindsAnElementCarryingAllTokens(): void
     {
         $signature = ContainerSignature::fromClassAttribute('carousel gallery 0');
 
         self::assertNotNull($signature);
-        self::assertFalse($signature->matches($this->elementWithClass('carousel gallery')));
+        self::assertNotNull(
+            $this->documentWithSpan('carousel gallery 0 extra')->querySelector($signature->toSelector()),
+        );
     }
 
-    private function elementWithClass(string $classAttribute): \Dom\Element
+    public function testSelectorFindsNothingWhenAnElementIsMissingAToken(): void
+    {
+        $signature = ContainerSignature::fromClassAttribute('carousel gallery 0');
+
+        self::assertNotNull($signature);
+        self::assertNull(
+            $this->documentWithSpan('carousel gallery')->querySelector($signature->toSelector()),
+        );
+    }
+
+    private function documentWithSpan(string $classAttribute): HTMLDocument
     {
         $document = HtmlDocumentParser::parseOrNull(
             \sprintf('<div><span class="%s">slides</span></div>', $classAttribute),
         );
         self::assertNotNull($document);
 
-        $element = $document->querySelector('span');
-        self::assertNotNull($element);
-
-        return $element;
+        return $document;
     }
 }
