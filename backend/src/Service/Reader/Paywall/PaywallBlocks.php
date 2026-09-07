@@ -23,7 +23,7 @@ final readonly class PaywallBlocks
     /** State markers like `has-paywall` sit here; the document root is the page, never a region within it. */
     private const array DOCUMENT_ROOTS = ['html', 'body'];
 
-    public static function existOutsideFurnitureIn(HTMLDocument $document): bool
+    public static function foundOutsideFurnitureIn(HTMLDocument $document): bool
     {
         foreach ((new XPath($document))->query(self::paywallClassQuery()) as $element) {
             if ($element instanceof Element && !self::isDocumentRoot($element) && !PageFurniture::holds($element)) {

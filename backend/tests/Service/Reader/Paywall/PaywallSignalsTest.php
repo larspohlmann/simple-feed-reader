@@ -18,7 +18,7 @@ final class PaywallSignalsTest extends TestCase
 
     public function testAPremiumDeclarationFlagsAPreview(): void
     {
-        self::assertTrue($this->signals($this->page(self::BODY, '{"isAccessibleForFree":false}'))->isPreview());
+        self::assertTrue($this->isPreview($this->page(self::BODY, '{"isAccessibleForFree":false}')));
     }
 
     public function testAPremiumDeclarationIsTrustedEvenWithoutAGateBlock(): void
@@ -26,47 +26,42 @@ final class PaywallSignalsTest extends TestCase
         // The publisher declares the article premium but serves the whole body,
         // as mopo.de does for its MOPO+ articles. The declaration is trusted and
         // the reader shows the banner (an accepted #908 trade-off).
-        self::assertTrue($this->signals($this->page(self::BODY, '{"isAccessibleForFree":"False"}'))->isPreview());
+        self::assertTrue($this->isPreview($this->page(self::BODY, '{"isAccessibleForFree":"False"}')));
     }
 
     public function testAFreeDeclarationIsTrustedOverAGateBlock(): void
     {
-        $page = $this->page(self::BODY . self::CTA, '{"isAccessibleForFree":true}');
-
-        self::assertFalse($this->signals($page)->isPreview());
+        self::assertFalse($this->isPreview($this->page(self::BODY . self::CTA, '{"isAccessibleForFree":true}')));
     }
 
     public function testAnAbsentDeclarationWithAGateBlockFlagsAPreview(): void
     {
-        self::assertTrue($this->signals($this->page(self::BODY . self::CTA))->isPreview());
+        self::assertTrue($this->isPreview($this->page(self::BODY . self::CTA)));
     }
 
     public function testAnAbsentDeclarationWithoutAGateBlockDoesNotFlag(): void
     {
-        self::assertFalse($this->signals($this->page(self::BODY))->isPreview());
+        self::assertFalse($this->isPreview($this->page(self::BODY)));
     }
 
     public function testAGateBlockInsidePageFurnitureDoesNotFlagAnUndeclaredPage(): void
     {
-        $page = $this->page(self::BODY . '<nav><a class="paywall-link" href="/abo">Abo</a></nav>');
+        $nav = '<nav><a class="paywall-link" href="/abo">Abo</a></nav>';
 
-        self::assertFalse($this->signals($page)->isPreview());
+        self::assertFalse($this->isPreview($this->page(self::BODY . $nav)));
     }
 
     public function testWithoutADocumentTheDeclarationStillDecides(): void
     {
-        self::assertFalse(PaywallSignals::fromPage('', null)->isPreview());
-        self::assertTrue(
-            PaywallSignals::fromPage(
-                '<script type="application/ld+json">{"isAccessibleForFree":"False"}</script>',
-                null,
-            )->isPreview(),
-        );
+        $premium = '<script type="application/ld+json">{"isAccessibleForFree":"False"}</script>';
+
+        self::assertFalse(PaywallSignals::isPreview('', null));
+        self::assertTrue(PaywallSignals::isPreview($premium, null));
     }
 
-    private function signals(string $html): PaywallSignals
+    private function isPreview(string $html): bool
     {
-        return PaywallSignals::fromPage($html, HtmlDocumentParser::parseOrNull($html));
+        return PaywallSignals::isPreview($html, HtmlDocumentParser::parseOrNull($html));
     }
 
     private function page(string $body, ?string $jsonLd = null): string

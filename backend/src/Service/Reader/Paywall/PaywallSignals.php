@@ -10,27 +10,14 @@ use Dom\HTMLDocument;
  * The reader paywall verdict. Trust the publisher's schema.org
  * `isAccessibleForFree` declaration: premium marks a preview, free ends it. A
  * page that declares nothing falls back to the mere presence of a gated block
- * outside page furniture (#908).
+ * outside page furniture (#908). Judged before readability consumes the shared
+ * document, so the normalized document must still be intact.
  */
 final readonly class PaywallSignals
 {
-    private function __construct(
-        private ?bool $declaredPaywalled,
-        private bool $hasGateBlock,
-    ) {
-    }
-
-    public static function fromPage(string $html, ?HTMLDocument $normalized): self
+    public static function isPreview(string $html, ?HTMLDocument $normalized): bool
     {
-        return new self(
-            SchemaOrgAccess::paywalledIn($html),
-            $normalized !== null && PaywallBlocks::existOutsideFurnitureIn($normalized),
-        );
-    }
-
-    /** True when the page is the free preview of a paywalled article. */
-    public function isPreview(): bool
-    {
-        return $this->declaredPaywalled ?? $this->hasGateBlock;
+        return SchemaOrgAccess::paywalledIn($html)
+            ?? ($normalized !== null && PaywallBlocks::foundOutsideFurnitureIn($normalized));
     }
 }

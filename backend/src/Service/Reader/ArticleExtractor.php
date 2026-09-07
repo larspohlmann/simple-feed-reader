@@ -66,7 +66,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
 
         $normalized = $this->normalizer->normalize($page->html);
         $pageImages = PageImageInventory::fromDocument($normalized);
-        $paywall = PaywallSignals::fromPage($page->html, $normalized);
+        $paywalled = PaywallSignals::isPreview($page->html, $normalized);
         $media = $this->mediaScanner->scan($page->html, $page->finalUrl);
 
         $article = $this->richestArticle($normalized, $page);
@@ -103,7 +103,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
             siteName: $article->siteName,
             contentHtml: $clean,
             excerpt: $article->excerpt,
-            paywalled: $paywall->isPreview(),
+            paywalled: $paywalled,
         );
     }
 

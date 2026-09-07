@@ -76,7 +76,7 @@ final class PaywallBlocksTest extends TestCase
         );
         self::assertNotNull($document);
 
-        self::assertFalse(PaywallBlocks::existOutsideFurnitureIn($document));
+        self::assertFalse(PaywallBlocks::foundOutsideFurnitureIn($document));
     }
 
     private function hasGate(string $body): bool
@@ -84,6 +84,6 @@ final class PaywallBlocksTest extends TestCase
         $document = HtmlDocumentParser::parseOrNull('<html><body>' . $body . '</body></html>');
         self::assertNotNull($document);
 
-        return PaywallBlocks::existOutsideFurnitureIn($document);
+        return PaywallBlocks::foundOutsideFurnitureIn($document);
     }
 }
