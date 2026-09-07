@@ -1566,6 +1566,13 @@ tag row pills-only. The projected element must stay inline: the kicker is a
 `<p>`, and the HTML parser closes a paragraph at a block-level child, which
 drops the icons onto a second line without any error.
 
+**The reader's narration player uses a plain `<details>`, not `<app-disclosure>`.**
+Machine-generated narration is marked server-side and rendered inside the reader
+body via `[innerHTML]` (#903), where an Angular component cannot mount. So
+`reader-narration.ts` builds a bare `<details class="reader-narration-box">`,
+styled in `reader-view.component.scss` to read as one muted, collapsed line that
+matches the disclosure look without the component.
+
 ---
 
 ## 7. Adding a new surface
