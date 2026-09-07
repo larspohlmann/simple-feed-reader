@@ -181,14 +181,15 @@ export function formatCost(nanoCredits: number | null, locale: string): string {
 }
 
 /**
- * A duration as `m:ss` -- `0:47`, `2:07`, `62:03`. Deliberately not translated:
- * a padded `m:ss` reads as a duration and keeps the column aligned, unlike a
- * value that switches between `47 s` and `2 min 7 s`. No hours field: a run is
- * bounded by a 600 s per-call timeout, so it would always read zero. Clamped at
- * zero since the server never reports a negative duration.
+ * A duration as `m:ss` -- `0:47`, `2:07` -- rolling into `h:mm:ss` past the
+ * hour (`1:02:03`) for hour-plus podcasts. Deliberately not translated: a padded
+ * clock reads as a duration and keeps the column aligned, unlike a value that
+ * switches between `47 s` and `2 min 7 s`. Clamped at zero since neither a run
+ * nor a media file ever reports a negative duration.
  */
 export function formatDuration(seconds: number): string {
   const total = Math.max(0, Math.round(seconds));
-  const minutes = Math.floor(total / 60);
-  return `${minutes}:${String(total % 60).padStart(2, '0')}`;
+  const clock = [Math.floor(total / 60) % 60, total % 60];
+  if (total >= 3_600) clock.unshift(Math.floor(total / 3_600));
+  return clock.map((part, index) => (index === 0 ? part : String(part).padStart(2, '0'))).join(':');
 }

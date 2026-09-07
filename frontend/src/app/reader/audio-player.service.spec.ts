@@ -155,7 +155,20 @@ describe('AudioPlayerService', () => {
     expect(audio.play).not.toHaveBeenCalled();
   });
 
-  it('stops and clears when the account logs out', () => {
+  it('saves the latest position when the page is hidden, past the write throttle', () => {
+    const service = make();
+    service.play(track());
+    audio.currentTime = 12;
+    audio.fire('timeupdate');
+    audio.currentTime = 18;
+    audio.fire('timeupdate');
+
+    window.dispatchEvent(new Event('pagehide'));
+
+    expect(JSON.parse(localStorage.getItem('sfr.audio') ?? '{}').position).toBe(18);
+  });
+
+  it('stops and clears when the signed-in identity changes', () => {
     const service = make();
     const tokens = TestBed.inject(TokenStore);
     tokens.set('a-jwt');

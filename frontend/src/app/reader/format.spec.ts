@@ -219,8 +219,12 @@ describe('formatDuration', () => {
     expect(formatDuration(0)).toBe('0:00');
   });
 
-  it('keeps counting in minutes rather than rolling into hours', () => {
-    expect(formatDuration(3_723)).toBe('62:03');
+  it('rolls into an hours field once past sixty minutes', () => {
+    expect(formatDuration(3_723)).toBe('1:02:03');
+  });
+
+  it('pads minutes and seconds inside an hours field', () => {
+    expect(formatDuration(7_325)).toBe('2:02:05');
   });
 
   it('never renders a negative duration', () => {

@@ -1,5 +1,5 @@
-import { InjectionToken, Injectable, effect, inject, signal } from '@angular/core';
-import { TokenStore } from '../core/token.store';
+import { DestroyRef, InjectionToken, Injectable, inject, signal } from '@angular/core';
+import { onIdentityChange } from '../core/session-identity';
 
 /** Everything the player needs to render and resume a track without another API
  *  call — built by the caller from the entry and its audio attachment (#915). */
@@ -28,13 +28,13 @@ const PERSIST_INTERVAL_MS = 5000;
  * code, never placed in a template, so playback keeps running while the reader
  * view unmounts and across route changes; the mini-player bar is only a
  * reflection of these signals. Position and the current track are saved to
- * localStorage and rehydrated paused on reload, and cleared on logout so one
- * account's podcast never bleeds into the next session.
+ * localStorage and rehydrated paused on reload, and cleared when the identity
+ * changes so one account's podcast never bleeds into the next session.
  */
 @Injectable({ providedIn: 'root' })
 export class AudioPlayerService {
   private readonly element = inject(AUDIO_ELEMENT_FACTORY)();
-  private readonly tokens = inject(TokenStore);
+  private readonly destroyRef = inject(DestroyRef);
 
   private readonly _current = signal<AudioTrack | null>(null);
   private readonly _playing = signal(false);
@@ -53,7 +53,8 @@ export class AudioPlayerService {
     this.bindElement();
     this.bindMediaSession();
     this.restore();
-    this.resetOnLogout();
+    this.bindLifecycle();
+    onIdentityChange(() => this.stop());
   }
 
   play(track: AudioTrack): void {
@@ -131,7 +132,7 @@ export class AudioPlayerService {
   private onPlaying(playing: boolean): void {
     this._playing.set(playing);
     if (!playing) this.persist();
-    this.reflectPlaybackState(playing);
+    this.reflectPlaybackState();
   }
 
   private restore(): void {
@@ -149,13 +150,10 @@ export class AudioPlayerService {
     }
   }
 
-  private resetOnLogout(): void {
-    let hadToken = this.tokens.token() !== null;
-    effect(() => {
-      const hasToken = this.tokens.token() !== null;
-      if (hadToken && !hasToken) this.stop();
-      hadToken = hasToken;
-    });
+  private bindLifecycle(): void {
+    const save = (): void => this.persist();
+    window.addEventListener('pagehide', save);
+    this.destroyRef.onDestroy(() => window.removeEventListener('pagehide', save));
   }
 
   private persistThrottled(): void {
@@ -189,7 +187,7 @@ export class AudioPlayerService {
   }
 
   private seekTo(details: MediaSessionActionDetails): void {
-    if (details.seekTime !== undefined && details.seekTime !== null) this.seek(details.seekTime);
+    if (details.seekTime != null) this.seek(details.seekTime);
   }
 
   private setMediaMetadata(track: AudioTrack): void {
@@ -202,8 +200,8 @@ export class AudioPlayerService {
     if (this.session) this.session.metadata = null;
   }
 
-  private reflectPlaybackState(playing: boolean): void {
-    if (this.session) this.session.playbackState = playing ? 'playing' : 'paused';
+  private reflectPlaybackState(): void {
+    if (this.session) this.session.playbackState = this._playing() ? 'playing' : 'paused';
   }
 
   private updatePositionState(): void {
