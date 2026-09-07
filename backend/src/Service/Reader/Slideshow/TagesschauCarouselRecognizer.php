@@ -53,8 +53,7 @@ final readonly class TagesschauCarouselRecognizer implements SlideshowRecognizer
         );
     }
 
-    /** @param mixed $image */
-    private function slide($image): ?Slide
+    private function slide(mixed $image): ?Slide
     {
         if (!is_array($image) || !is_array($image['imageUrls'] ?? null)) {
             return null;

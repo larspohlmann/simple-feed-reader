@@ -230,8 +230,11 @@ picks one URL per slide server-side:
 - With no JavaScript this is a captioned vertical image stack — every image is
   present. **This is the graceful fallback, and it is also the test oracle**: a
   backend test asserts on this static structure, independent of any client code.
-- Slide image URLs pass the same outbound/durable-URL handling as other reader
-  media (`DurableMediaUrl`); no new network path, SSRF boundary unchanged.
+- Slide image URLs are plain `<img src>`, exactly like every other reader-body
+  image: no `DurableMediaUrl` step. `DurableMediaUrl` gates the entry-level
+  `media[]`/`attachments[]` arrays (#906), not in-body markup — ordinary body
+  `<img>` tags carry their resolved URL untouched, and slide images follow the
+  same path. No new network path, SSRF boundary unchanged.
 
 ## Frontend — one hydrator
 
