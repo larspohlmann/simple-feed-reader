@@ -158,6 +158,20 @@ final class LineField
     }
 
     /**
+     * Reads a nested array-of-objects field that an older same-version file may
+     * omit entirely — an additive list like an entry's `media`. A missing key
+     * means an empty list, never an error.
+     *
+     * @param array<string, mixed> $line
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function objectListOrEmpty(array $line, string $key): array
+    {
+        return isset($line[$key]) ? self::objectList($line, $key) : [];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private static function asObject(mixed $value, string $key): array

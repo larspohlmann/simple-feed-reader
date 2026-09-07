@@ -58,6 +58,9 @@ class Entry
     #[ORM\Embedded(class: EntryImage::class, columnPrefix: false)]
     private EntryImage $image;
 
+    #[ORM\Embedded(class: EntryMedia::class, columnPrefix: false)]
+    private EntryMedia $mediaSet;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $publishedAt = null;
 
@@ -95,6 +98,7 @@ class Entry
         $this->createdAt = $createdAt;
         $this->effectiveDate = $effectiveDate;
         $this->image = new EntryImage();
+        $this->mediaSet = new EntryMedia();
     }
 
     public function getId(): ?int
@@ -185,6 +189,27 @@ class Entry
     public function setImage(?string $url, ?int $width, ?int $height): void
     {
         $this->image->set($url, $width, $height);
+    }
+
+    /** @return list<EntryMedium> */
+    public function getMedia(): array
+    {
+        return $this->mediaSet->getMedia();
+    }
+
+    /** @return list<EntryAttachment> */
+    public function getAttachments(): array
+    {
+        return $this->mediaSet->getAttachments();
+    }
+
+    /**
+     * @param list<EntryMedium>     $media
+     * @param list<EntryAttachment> $attachments
+     */
+    public function setMedia(array $media, array $attachments): void
+    {
+        $this->mediaSet->set($media, $attachments);
     }
 
     public function getPublishedAt(): ?\DateTimeImmutable

@@ -95,6 +95,7 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
             ?? ItemImageExtractor::fromCustomImageElement($entry)
             ?? ItemImageExtractor::fromHtml($contentHtml)
             ?? ItemImageExtractor::fromHtml($this->elementMarkup($entry, $ns, 'summary'));
+        $mediaBundle = ItemMediaExtractor::extract($entry);
 
         return new ParsedEntry(
             guid: GuidFallback::for($id, $link, $title),
@@ -105,6 +106,7 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
             contentHtml: $contentHtml,
             publishedAt: DateParser::parse($this->firstDate($entry, $ns)),
             image: $image,
+            mediaBundle: $mediaBundle,
         );
     }
 

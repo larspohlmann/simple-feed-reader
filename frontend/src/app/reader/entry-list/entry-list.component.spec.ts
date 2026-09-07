@@ -28,6 +28,8 @@ const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   imageUrl: null,
   imageWidth: null,
   imageHeight: null,
+  media: [],
+  attachments: [],
   publishedAt: '2026-07-22T11:00:00Z',
   createdAt: 'x',
   subscriptionId: 1,

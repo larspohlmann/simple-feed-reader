@@ -57,6 +57,7 @@ final class Rss1Parser implements FeedFormatParserInterface
         $image = ItemImageExtractor::fromMedia($item)
             ?? ItemImageExtractor::fromCustomImageElement($item)
             ?? ItemImageExtractor::fromHtml($contentEncoded ?? $description);
+        $mediaBundle = ItemMediaExtractor::extract($item);
 
         return new ParsedEntry(
             guid: GuidFallback::for($about === '' ? null : $about, $link, $title),
@@ -67,6 +68,7 @@ final class Rss1Parser implements FeedFormatParserInterface
             contentHtml: $contentEncoded ?? $description,
             publishedAt: DateParser::parse(XmlHelper::childText($item, 'date', self::DC_NS)),
             image: $image,
+            mediaBundle: $mediaBundle,
         );
     }
 }

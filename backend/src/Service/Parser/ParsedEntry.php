@@ -17,6 +17,7 @@ final readonly class ParsedEntry
         public ?string $contentHtml,
         public ?\DateTimeImmutable $publishedAt,
         public ?DeclaredImage $image = null,
+        public ?ParsedMediaBundle $mediaBundle = null,
     ) {
     }
 }

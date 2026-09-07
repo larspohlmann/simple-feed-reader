@@ -32,6 +32,7 @@ final readonly class EntryBatchInserter
     private const array COLUMNS = [
         'feed_id', 'guid', 'guid_hash', 'url', 'url_hash', 'title', 'author',
         'summary', 'content_html', 'image_url', 'image_width', 'image_height',
+        'media', 'attachments',
         'published_at', 'created_at', 'effective_date',
     ];
 
@@ -74,10 +75,22 @@ final readonly class EntryBatchInserter
             $this->urlNormalizer->hash($line->url), $line->title,
             $line->author, $line->summary, $line->contentHtml, $line->imageUrl,
             $line->imageWidth, $line->imageHeight,
+            self::encodeList($line->media), self::encodeList($line->attachments),
             self::storageDate($line->publishedAt),
             self::storageDate($line->createdAt),
             self::storageDate($line->effectiveDate),
         ];
+    }
+
+    /**
+     * Re-encodes a media list to the JSON the ORM's json type reads back — null
+     * for an empty list, matching the "no media" case a fresh ingest persists.
+     *
+     * @param list<array<string, mixed>> $list
+     */
+    private static function encodeList(array $list): ?string
+    {
+        return $list === [] ? null : json_encode($list, \JSON_THROW_ON_ERROR);
     }
 
     private static function storageDate(?\DateTimeImmutable $date): ?string

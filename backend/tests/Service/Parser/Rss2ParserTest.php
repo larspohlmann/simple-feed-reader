@@ -17,6 +17,35 @@ final class Rss2ParserTest extends TestCase
         return $document;
     }
 
+    public function testCarriesPodcastEnclosureIntoAttachments(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0"?>
+            <rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+                <channel>
+                    <title>Cast</title>
+                    <link>https://example.com/</link>
+                    <item>
+                        <title>Episode 1</title>
+                        <link>https://example.com/ep1</link>
+                        <enclosure url="https://cdn/ep1.mp3" type="audio/mpeg" length="4200000"/>
+                        <itunes:duration>1:02:03</itunes:duration>
+                    </item>
+                </channel>
+            </rss>
+            XML;
+
+        $feed = (new Rss2Parser())->parse($this->document($xml));
+
+        $bundle = $feed->entries[0]->mediaBundle;
+        self::assertNotNull($bundle);
+        self::assertCount(1, $bundle->attachments);
+        $attachment = $bundle->attachments[0];
+        self::assertSame('https://cdn/ep1.mp3', $attachment->url);
+        self::assertSame('audio/mpeg', $attachment->mimeType);
+        self::assertSame(3723, $attachment->durationInSeconds);
+    }
+
     public function testExtractsImageUrlFromMediaEnclosureOrInlineHtml(): void
     {
         // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects

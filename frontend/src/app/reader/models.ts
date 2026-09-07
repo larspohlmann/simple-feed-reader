@@ -127,6 +127,24 @@ export interface SubscriptionCountsResponse {
   viewedCount: number;
 }
 
+/** One visual media item the feed declared for an entry (#906). */
+export interface EntryMediumDto {
+  url: string;
+  kind: 'image' | 'video';
+  width?: number;
+  height?: number;
+  previewImageUrl?: string;
+}
+
+/** One playable or downloadable enclosure the feed declared (#906). */
+export interface EntryAttachmentDto {
+  url: string;
+  mimeType?: string;
+  durationInSeconds?: number;
+  sizeInBytes?: number;
+  title?: string;
+}
+
 export interface EntryDto {
   id: number;
   title: string;
@@ -139,6 +157,13 @@ export interface EntryDto {
   /** Dimensions AS DECLARED by the feed. Null means unknown, not square. */
   imageWidth: number | null;
   imageHeight: number | null;
+  /** Visual media the feed declared, lead image first (#906). Always sent by
+   *  the API, empty when the feed declared none. Dimensions are as declared;
+   *  missing fields are absent. No view consumes it yet. */
+  media: EntryMediumDto[];
+  /** Playable or downloadable enclosures the feed declared — podcast audio,
+   *  video, other files (#906). Always sent by the API, empty when none. */
+  attachments: EntryAttachmentDto[];
   publishedAt: string | null;
   createdAt: string;
   subscriptionId: number;

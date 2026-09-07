@@ -27,6 +27,10 @@ final readonly class EntryLine
         public ?\DateTimeImmutable $publishedAt,
         public \DateTimeImmutable $createdAt,
         public \DateTimeImmutable $effectiveDate,
+        /** @var list<array<string, mixed>> */
+        public array $media = [],
+        /** @var list<array<string, mixed>> */
+        public array $attachments = [],
     ) {
     }
 
@@ -50,6 +54,8 @@ final readonly class EntryLine
             publishedAt: LineField::dateOrNull($line, 'publishedAt'),
             createdAt: LineField::date($line, 'createdAt'),
             effectiveDate: LineField::date($line, 'effectiveDate'),
+            media: LineField::objectListOrEmpty($line, 'media'),
+            attachments: LineField::objectListOrEmpty($line, 'attachments'),
         );
     }
 }

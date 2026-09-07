@@ -442,8 +442,15 @@ final class AccountRestorerTest extends DbTestCase
             $targetRows['subscriptionTag']->getTag()->getName(),
         );
 
-        $this->assertFieldsRoundTripped(Entry::class, $sourceRows['entry'], $targetRows['entry'], ['feed']);
+        $this->assertFieldsRoundTripped(
+            Entry::class,
+            $sourceRows['entry'],
+            $targetRows['entry'],
+            ['feed', 'mediaSet.media', 'mediaSet.attachments'],
+        );
         self::assertSame($sourceRows['feed']->getUrl(), $targetRows['entry']->getFeed()->getUrl());
+        self::assertEquals($sourceRows['entry']->getMedia(), $targetRows['entry']->getMedia());
+        self::assertEquals($sourceRows['entry']->getAttachments(), $targetRows['entry']->getAttachments());
 
         $this->assertFieldsRoundTripped(
             EntryState::class,

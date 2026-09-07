@@ -9,6 +9,7 @@ use App\Entity\Feed;
 use App\Repository\EntryRepository;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
+use App\Service\Parser\ParsedMediaBundle;
 use App\Service\Image\DeclaredImage;
 use App\Service\Url\HttpsImageUrl;
 use App\Service\Sanitize\EntrySanitizer;
@@ -92,6 +93,7 @@ final class EntryIngestor
             $entry->setContentHtml($this->sanitizer->sanitize($parsedEntry->contentHtml));
             $entry->setPublishedAt($parsedEntry->publishedAt);
             $this->applyImage($entry, $parsedEntry->image);
+            $this->applyMedia($entry, $parsedEntry);
 
             $this->em->persist($entry);
             $created[] = $entry;
@@ -183,6 +185,17 @@ final class EntryIngestor
         }
 
         $entry->setImage($url, $image->width, $image->height);
+    }
+
+    /**
+     * The lead image leads the visual list, so the same gate runs over it here
+     * and in applyImage — media[0] stays the persisted lead.
+     */
+    private function applyMedia(Entry $entry, ParsedEntry $parsedEntry): void
+    {
+        $bundle = $parsedEntry->mediaBundle ?? new ParsedMediaBundle();
+        $assembled = EntryMediaAssembler::assemble($parsedEntry->image, $bundle->media, $bundle->attachments);
+        $entry->setMedia($assembled->media, $assembled->attachments);
     }
 
     /**

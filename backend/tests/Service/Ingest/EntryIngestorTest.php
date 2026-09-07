@@ -12,6 +12,10 @@ use App\Service\Ingest\FeedIngestContext;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
 use App\Service\Image\DeclaredImage;
+use App\Service\Parser\ParsedAttachment;
+use App\Service\Parser\ParsedMedium;
+use App\Service\Parser\ParsedMediaBundle;
+use App\Service\Parser\VisualMediaKind;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
@@ -44,6 +48,42 @@ final class EntryIngestorTest extends DbTestCase
             contentHtml: '<p>body</p>',
             publishedAt: null,
         );
+    }
+
+    public function testPersistsFeedMediaWithTheLeadAsFirstVisualAndAnAttachment(): void
+    {
+        $feed = $this->feed();
+        $parsed = new ParsedEntry(
+            guid: 'g-media',
+            url: 'https://example.com/ep',
+            title: 'Episode',
+            author: null,
+            summary: null,
+            contentHtml: '<p>body</p>',
+            publishedAt: null,
+            image: new DeclaredImage('https://i/lead.jpg', 800, 600),
+            mediaBundle: new ParsedMediaBundle(
+                [new ParsedMedium('https://i/extra.jpg', VisualMediaKind::Image)],
+                [new ParsedAttachment('https://cdn/ep.mp3', 'audio/mpeg', 3723, 4200000)],
+            ),
+        );
+
+        $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, null, [$parsed]), self::context());
+        $this->em->flush();
+        $this->em->clear();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        self::assertInstanceOf(Entry::class, $entry);
+        $media = $entry->getMedia();
+        self::assertCount(2, $media);
+        self::assertSame('https://i/lead.jpg', $media[0]->url);
+        self::assertSame($entry->getImageUrl(), $media[0]->url);
+        self::assertSame('https://i/extra.jpg', $media[1]->url);
+
+        $attachments = $entry->getAttachments();
+        self::assertCount(1, $attachments);
+        self::assertSame('https://cdn/ep.mp3', $attachments[0]->url);
+        self::assertSame(3723, $attachments[0]->durationInSeconds);
     }
 
     /**

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Backup;
 
 use App\Entity\Entry;
+use App\Entity\EntryMedia;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\SavedSearch;
@@ -317,6 +318,8 @@ final readonly class AccountBackupExporter
             'imageUrl' => $entry->getImageUrl(),
             'imageWidth' => $entry->getImageWidth(),
             'imageHeight' => $entry->getImageHeight(),
+            'media' => EntryMedia::toJsonList($entry->getMedia()),
+            'attachments' => EntryMedia::toJsonList($entry->getAttachments()),
             'publishedAt' => $this->formatDateOrNull($entry->getPublishedAt()),
             'createdAt' => $this->formatDate($entry->getCreatedAt()),
             'effectiveDate' => $this->formatDate($entry->getEffectiveDate()),
