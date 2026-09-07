@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader\Slideshow;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\Slideshow\MarkupCarouselRecognizer;
+use App\Service\Reader\Slideshow\SlideCaptionResolver;
 use App\Service\Reader\Slideshow\SlideImageResolver;
 use App\Service\Reader\Slideshow\SlideshowScanner;
 use App\Service\Reader\Slideshow\TagesschauCarouselRecognizer;
@@ -16,7 +17,7 @@ final class SlideshowScannerTest extends TestCase
     public function testScanCollectsFromEveryRecognizer(): void
     {
         $scanner = new SlideshowScanner([
-            new MarkupCarouselRecognizer(new SlideImageResolver()),
+            new MarkupCarouselRecognizer(new SlideImageResolver(), new SlideCaptionResolver()),
             new TagesschauCarouselRecognizer(),
         ]);
         $document = HtmlDocumentParser::parseOrNull(

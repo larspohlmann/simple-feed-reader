@@ -65,6 +65,29 @@ describe('hydrateSlideshows', () => {
     expect(el.textContent).toContain('2 / 3');
   });
 
+  it('keeps every slide but the current one inert so hidden links leave the tab order', () => {
+    const el = host();
+    hydrateSlideshows(el, labels);
+    const slides = el.querySelectorAll('.reader-slideshow li');
+    expect(slides[0].hasAttribute('inert')).toBe(false);
+    expect(slides[1].hasAttribute('inert')).toBe(true);
+
+    el.querySelector<HTMLButtonElement>('.reader-slideshow__next')!.click();
+    expect(slides[0].hasAttribute('inert')).toBe(true);
+    expect(slides[1].hasAttribute('inert')).toBe(false);
+  });
+
+  it('preserves a caption link inside a slide', () => {
+    const el = document.createElement('div');
+    el.innerHTML =
+      '<figure class="reader-slideshow"><ol>' +
+      '<li><img src="https://img/1.jpg" alt="one"><a href="https://example.com/a">One</a></li>' +
+      '<li><img src="https://img/2.jpg" alt="two"><a href="https://example.com/b">Two</a></li></ol></figure>';
+    hydrateSlideshows(el, labels);
+    const link = el.querySelector<HTMLAnchorElement>('.reader-slideshow li a');
+    expect(link!.getAttribute('href')).toBe('https://example.com/a');
+  });
+
   it('is idempotent', () => {
     const el = host();
     hydrateSlideshows(el, labels);

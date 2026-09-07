@@ -27,8 +27,10 @@ final readonly class MarkupCarouselRecognizer implements SlideshowRecognizerInte
         ['container' => null, 'slide' => 'tns-item'],
     ];
 
-    public function __construct(private SlideImageResolver $images)
-    {
+    public function __construct(
+        private SlideImageResolver $images,
+        private SlideCaptionResolver $captions,
+    ) {
     }
 
     public function recognize(HTMLDocument $document, PageTextBlocks $textBlocks): array
@@ -105,7 +107,11 @@ final readonly class MarkupCarouselRecognizer implements SlideshowRecognizerInte
         foreach ($slideElements as $element) {
             $url = $this->images->resolve($element);
             if ($url !== null) {
-                $slides[] = new Slide($url, $element->getAttribute('title') ?? $this->altOf($element));
+                $slides[] = new Slide(
+                    $url,
+                    $element->getAttribute('title') ?? $this->altOf($element),
+                    $this->captions->resolve($element),
+                );
             }
         }
 
