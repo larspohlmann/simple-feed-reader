@@ -598,6 +598,14 @@ article {
   width: auto;
 }
 
+/* A content picture at least half the column wide is stretched to fill it, so a
+   feed that serves a small teaser rendition still reads full-bleed; genuinely
+   small images (icons, logos) keep their natural size (#923). The class is set
+   at render time from each image's own intrinsic width, never its URL. */
+.content ::ng-deep img.reader-fill {
+  width: 100%;
+}
+
 /* Substack video placeholders (#627) carry no class — the sanitizer strips
    class/style/data-*, so alt text is the only stable hook. A play badge
    marks the poster as video, not a still image. */

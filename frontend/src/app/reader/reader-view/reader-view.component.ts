@@ -54,6 +54,7 @@ import {
 import { formatDuration, relativeTime } from '../format';
 import { markLeadParagraph } from '../lead-paragraph';
 import { markInsetCards } from '../reader-cards';
+import { fitReaderImages } from '../reader-image-fit';
 import { highlightCodeBlocks } from '../code-highlight';
 import { attachHlsStreams } from '../hls-streams';
 import { upgradeMediaEmbeds } from '../media-embeds';
@@ -365,6 +366,7 @@ export class ReaderViewComponent {
         }
         markLeadParagraph(host);
         markInsetCards(host);
+        fitReaderImages(host);
         void highlightCodeBlocks(host);
         upgradeMediaEmbeds(host);
         markNarrationPlayers(host, this.i18n.translate('reader.narrationPlayer'));
