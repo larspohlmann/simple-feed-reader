@@ -49,6 +49,19 @@ final class PaywallSignalsTest extends TestCase
         self::assertFalse($this->signals($page)->isPreview(self::PREVIEW_BODY));
     }
 
+    public function testAFadedFinalParagraphBelowThePreviewFlagsAPremiumArticle(): void
+    {
+        // ZEIT+ declares the article premium and fades its last visible paragraph
+        // (`paragraph--faded`), dropping the rest server-side. The faded prose is
+        // the gated block that stands at the end of the preview (#898).
+        $fadedProse = 'The third paragraph trails off, faded, right where the paywall cuts the article.';
+        $rawFaded = '<div class="paragraph--faded article__item"><p>' . $fadedProse . '</p></div>';
+        $page = $this->page(self::PREVIEW_BODY . $rawFaded, '{"@type":"Article","isAccessibleForFree":false}');
+        $cleaned = self::PREVIEW_BODY . '<p>' . $fadedProse . '</p>';
+
+        self::assertTrue($this->signals($page)->isPreview($cleaned));
+    }
+
     public function testAFreeDeclarationIsTrustedOverAPaywallBlock(): void
     {
         $signals = $this->signals(

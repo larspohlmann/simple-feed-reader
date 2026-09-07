@@ -50,6 +50,41 @@ final class PaywallBlocksTest extends TestCase
         );
     }
 
+    public function testMatchesAFadedFinalParagraph(): void
+    {
+        // ZEIT+ fades the last visible paragraph (`paragraph--faded`) and drops
+        // the rest server-side; no `paywall` class appears anywhere (#898).
+        $document = $this->document(
+            '<div class="paragraph--faded article__item"><p>The teaser trails off here.</p></div>',
+        );
+
+        self::assertSame(['Theteasertrailsoffhere.'], PaywallBlocks::textsIn($document));
+    }
+
+    public function testMatchesTheFadeAndTruncationFamily(): void
+    {
+        $document = $this->document(
+            '<div class="article-body fade-out"><p>One.</p></div>'
+            . '<div class="fadeout-gradient"><p>Two.</p></div>'
+            . '<section class="content-truncated"><p>Three.</p></section>',
+        );
+
+        self::assertSame(['One.', 'Two.', 'Three.'], PaywallBlocks::textsIn($document));
+    }
+
+    public function testADecorativeFadeOrEllipsisClassIsNotAGatedBlock(): void
+    {
+        // A fade-in animation, a bare fade, and a Tailwind text-truncate ellipsis
+        // are styling, not a wall; only a faded-out or truncated region counts.
+        $document = $this->document(
+            '<div class="fade-in"><p>Animated.</p></div>'
+            . '<img class="fade" alt="">'
+            . '<h2 class="truncate">Ellipsis heading</h2>',
+        );
+
+        self::assertSame([], PaywallBlocks::textsIn($document));
+    }
+
     public function testASubscribeWidgetIsNotAPaywallBlock(): void
     {
         $document = $this->document(
