@@ -62,22 +62,19 @@ final readonly class PlayerChromeCleaner
         return $blocks;
     }
 
-    /** The list row (else the paragraph) carrying the embed widget's label and code. */
+    /** The list row or paragraph around the code, so removing it takes the
+     *  widget's "Embed" label with the <code> block instead of leaving it. */
     private function embedRow(Element $code, Element $body): ?Element
     {
         $node = $code->parentElement;
-        $paragraph = null;
         while ($node !== null && $node !== $body) {
-            if ($node->localName === 'li') {
+            if ($node->localName === 'li' || $node->localName === 'p') {
                 return $node;
-            }
-            if ($paragraph === null && $node->localName === 'p') {
-                $paragraph = $node;
             }
             $node = $node->parentElement;
         }
 
-        return $paragraph;
+        return null;
     }
 
     private function restoreOrDropPlayers(HTMLDocument $document): void

@@ -165,6 +165,62 @@ final class PlayerChromeCleanerTest extends TestCase
         self::assertStringContainsString('The real story text.', $clean);
     }
 
+    public function testRemovesEveryEmbedWidgetNotJustTheFirst(): void
+    {
+        $html = '<div>' . self::NPR_EMBED_WIDGET . self::NPR_EMBED_WIDGET . '<p>Story.</p></div>';
+
+        $clean = $this->clean($html);
+
+        self::assertStringNotContainsString('player/embed', $clean);
+        self::assertStringContainsString('Story.', $clean);
+    }
+
+    public function testRemovesAnEmbedCodeAndItsLabelFromABareParagraph(): void
+    {
+        // No list wrapper: the label and code sit directly in a paragraph, which
+        // must go whole so the "Embed" label does not survive the code's removal.
+        $html = '<div><p><b>Embed</b> <code>'
+            . '&lt;iframe src="https://www.npr.org/player/embed/x/y"&gt;</code></p>'
+            . '<p>Story.</p></div>';
+
+        $clean = $this->clean($html);
+
+        self::assertStringNotContainsString('player/embed', $clean);
+        self::assertStringNotContainsString('Embed', $clean);
+        self::assertStringContainsString('Story.', $clean);
+    }
+
+    public function testRemovesAnEmbedCodeAndItsLabelFromABareListItem(): void
+    {
+        // No paragraph inside the row: the <li> itself carries the label and code.
+        $html = '<div><ul><li><b>Embed</b> <code>'
+            . '&lt;iframe src="https://www.npr.org/player/embed/x/y"&gt;</code></li></ul>'
+            . '<p>Story.</p></div>';
+
+        $clean = $this->clean($html);
+
+        self::assertStringNotContainsString('player/embed', $clean);
+        self::assertStringNotContainsString('Embed', $clean);
+        self::assertStringNotContainsString('<ul>', $clean);
+        self::assertStringContainsString('Story.', $clean);
+    }
+
+    public function testRemovesAStandaloneEmbedCodeWithNoRowWrapper(): void
+    {
+        // Neither <li> nor <p> around it: only the code is dropped, and the span
+        // it emptied with it, while the surrounding article stays.
+        $html = '<div><span><code>'
+            . '&lt;iframe src="https://www.npr.org/player/embed/x/y"&gt;</code></span>'
+            . '<p>Story.</p></div>';
+
+        $clean = $this->clean($html);
+
+        self::assertStringNotContainsString('player/embed', $clean);
+        self::assertStringNotContainsString('<code', $clean);
+        self::assertStringNotContainsString('<span>', $clean);
+        self::assertStringContainsString('Story.', $clean);
+    }
+
     public function testLeavesAnUnrelatedCodeBlockAlone(): void
     {
         $html = '<div><p>Run <code>composer install</code> first.</p></div>';
