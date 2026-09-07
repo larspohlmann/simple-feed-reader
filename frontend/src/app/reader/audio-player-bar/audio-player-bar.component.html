@@ -1,0 +1,58 @@
+@if (player.current(); as track) {
+  <div class="player" role="group" [attr.aria-label]="'reader.audioPlayer.label' | transloco">
+    <button
+      class="ctrl back"
+      type="button"
+      [attr.aria-label]="'reader.audioPlayer.back' | transloco: { seconds: skipStep }"
+      (click)="player.skip(-skipStep)"
+    >
+      <app-icon name="replay" size="md" />
+    </button>
+    <button
+      class="ctrl play"
+      type="button"
+      [attr.aria-label]="
+        (player.playing() ? 'reader.audioPlayer.pause' : 'reader.audioPlayer.play') | transloco
+      "
+      (click)="player.toggle()"
+    >
+      <app-icon [name]="player.playing() ? 'pause' : 'play_arrow'" size="lg" />
+    </button>
+    <button
+      class="ctrl forward"
+      type="button"
+      [attr.aria-label]="'reader.audioPlayer.forward' | transloco: { seconds: skipStep }"
+      (click)="player.skip(skipStep)"
+    >
+      <app-icon name="forward_media" size="md" />
+    </button>
+    <div class="meta">
+      <span class="title">
+        <app-favicon [url]="track.faviconUrl" [size]="14" />
+        {{ track.title }}
+      </span>
+      <div class="track">
+        <span class="time">{{ format(player.position()) }}</span>
+        <input
+          class="scrubber"
+          type="range"
+          min="0"
+          step="1"
+          [max]="player.duration()"
+          [value]="player.position()"
+          [attr.aria-label]="'reader.audioPlayer.seek' | transloco"
+          (input)="onScrub($event)"
+        />
+        <span class="time">{{ format(player.duration()) }}</span>
+      </div>
+    </div>
+    <button
+      class="ctrl close"
+      type="button"
+      [attr.aria-label]="'reader.audioPlayer.close' | transloco"
+      (click)="player.stop()"
+    >
+      <app-icon name="close" size="md" />
+    </button>
+  </div>
+}

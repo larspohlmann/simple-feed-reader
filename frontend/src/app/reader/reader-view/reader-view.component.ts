@@ -51,7 +51,7 @@ import {
   overscrollTriggersBack,
   rubberBand,
 } from '../reader-gestures';
-import { relativeTime } from '../format';
+import { formatDuration, relativeTime } from '../format';
 import { markLeadParagraph } from '../lead-paragraph';
 import { markInsetCards } from '../reader-cards';
 import { highlightCodeBlocks } from '../code-highlight';
@@ -61,6 +61,8 @@ import { markNarrationPlayers } from '../reader-narration';
 import { estimateReadingMinutes } from '../reading-time';
 import { selectionQueryParams } from '../query';
 import { ReadingFocusService } from '../../core/reading-focus.service';
+import { AudioPlayerService } from '../audio-player.service';
+import { firstAudioAttachment, toAudioTrack } from '../audio-attachment';
 
 /** Give up on a hung extraction and fall back to feed content (backend caps a
  *  fetch at ~20s; this is the client-side backstop for a stalled connection). */
@@ -141,7 +143,22 @@ export class ReaderViewComponent {
   private readonly scroll = inject(ListScrollMemory);
   protected readonly screen = inject(LayoutService);
   private readonly readingFocus = inject(ReadingFocusService);
+  private readonly audioPlayer = inject(AudioPlayerService);
   private readonly destroyRef = inject(DestroyRef);
+
+  protected readonly formatDuration = formatDuration;
+
+  /** The entry's first playable audio enclosure, surfaced as a listen control
+   *  above the article; null when the feed declared none (#915). */
+  protected readonly audioAttachment = computed(() =>
+    firstAudioAttachment(this.entry()?.attachments ?? []),
+  );
+
+  protected listen(): void {
+    const entry = this.entry();
+    const attachment = this.audioAttachment();
+    if (entry && attachment) this.audioPlayer.play(toAudioTrack(entry, attachment));
+  }
 
   // Article scroll restore: a resume-reload reopens the entry at the top; re-seat
   // it where the user was. `pendingRestore` holds the target until it lands
