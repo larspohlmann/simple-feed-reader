@@ -10,34 +10,28 @@ use Dom\HTMLDocument;
 use Dom\XPath;
 
 /**
- * Gated regions and CTAs matched by class fragment, read from the shared
- * document before readability consumes it — exactly what body cleaners remove.
+ * Whether the page carries a gated call to action, matched by class fragment on
+ * the shared document before readability consumes it — exactly what body
+ * cleaners remove. The presence of such a block, outside page furniture and the
+ * document root, is the fallback signal for a page that declares nothing (#908).
  */
 final readonly class PaywallBlocks
 {
     /** A gated call to action; `subscribe` alone is a newsletter form, not a wall. */
     private const array GATE_FRAGMENTS = ['paywall', 'subscription-only', 'subscriber-only', 'subscribers-only'];
-    /** The soft gate that fades or truncates the last visible region and drops the rest server-side, e.g. ZEIT `paragraph--faded`; `fade` and `fade-in` are animation, `truncate` is an ellipsis (#898). */
-    private const array FADE_FRAGMENTS = ['faded', 'fade-out', 'fadeout', 'truncated'];
     private const string LOWER_CLASS = 'translate(@class, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")';
     /** State markers like `has-paywall` sit here; the document root is the page, never a region within it. */
     private const array DOCUMENT_ROOTS = ['html', 'body'];
 
-    /** @return list<string> the squeezed text of every paywall block outside page furniture, in document order */
-    public static function textsIn(HTMLDocument $document): array
+    public static function existOutsideFurnitureIn(HTMLDocument $document): bool
     {
-        $texts = [];
         foreach ((new XPath($document))->query(self::paywallClassQuery()) as $element) {
-            if (!$element instanceof Element || self::isDocumentRoot($element) || PageFurniture::holds($element)) {
-                continue;
-            }
-            $text = SqueezedText::of((string) $element->textContent);
-            if ($text !== '') {
-                $texts[] = $text;
+            if ($element instanceof Element && !self::isDocumentRoot($element) && !PageFurniture::holds($element)) {
+                return true;
             }
         }
 
-        return $texts;
+        return false;
     }
 
     private static function isDocumentRoot(Element $element): bool
@@ -49,7 +43,7 @@ final readonly class PaywallBlocks
     {
         $fragments = array_map(
             static fn (string $fragment): string => \sprintf('contains(%s, "%s")', self::LOWER_CLASS, $fragment),
-            [...self::GATE_FRAGMENTS, ...self::FADE_FRAGMENTS],
+            self::GATE_FRAGMENTS,
         );
 
         return '//*[' . implode(' or ', $fragments) . ']';

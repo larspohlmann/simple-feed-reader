@@ -6,136 +6,84 @@ namespace App\Tests\Service\Reader\Paywall;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\Paywall\PaywallBlocks;
-use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class PaywallBlocksTest extends TestCase
 {
-    private const string SUBSTACK_CTA = "<div class=\"paywall-cta\">\n"
-        . "<h2 class=\"paywall-title\">Continue reading this post for free.</h2>\n"
-        . "<button>Claim my free post</button>\n</div>";
-
-    public function testCollectsAWrapperAndItsChildInDocumentOrder(): void
+    public function testFindsAGatedCallToAction(): void
     {
-        $texts = PaywallBlocks::textsIn($this->document('<article><p>Teaser.</p>' . self::SUBSTACK_CTA . '</article>'));
-
-        self::assertSame(
-            ['Continuereadingthispostforfree.Claimmyfreepost', 'Continuereadingthispostforfree.'],
-            $texts,
-        );
+        self::assertTrue($this->hasGate('<article><p>Teaser.</p><div class="paywall-cta">Read on</div></article>'));
     }
 
     public function testMatchesTheClassFragmentInAnyCaseAndAnyPosition(): void
     {
-        $document = $this->document(
-            '<div class="PayWall">Upper.</div><div class="duv-paywall-preview svelte-1">Zeit.</div>',
-        );
-
-        self::assertSame(['Upper.', 'Zeit.'], PaywallBlocks::textsIn($document));
+        self::assertTrue($this->hasGate('<div class="PayWall">Upper.</div>'));
+        self::assertTrue($this->hasGate('<div class="duv-paywall-preview svelte-1">Zeit.</div>'));
     }
 
-    public function testMatchesAGatedRegionNamedSubscriptionOnly(): void
+    public function testMatchesEverySubscriberOnlyVariant(): void
     {
-        // jungle.world (Drupal): the body wrapper carries `subscription-only`,
-        // the call to action `subscription-only-block`, and no `paywall` anywhere.
-        $document = $this->document(
-            '<div class="body-wrapper subscription-only"><p>Text.</p>'
-            . '<div class="subscription-only-block"><h2>Noch kein Abonnement?</h2></div></div>'
-            . '<p class="subscribers-only">Members.</p>',
-        );
-
-        self::assertSame(
-            ['Text.NochkeinAbonnement?', 'NochkeinAbonnement?', 'Members.'],
-            PaywallBlocks::textsIn($document),
-        );
+        // jungle.world (Drupal): the body wrapper carries `subscription-only`.
+        self::assertTrue($this->hasGate('<div class="body-wrapper subscription-only"><p>Text.</p></div>'));
+        self::assertTrue($this->hasGate('<p class="subscriber-only">A.</p>'));
+        self::assertTrue($this->hasGate('<p class="subscribers-only">B.</p>'));
     }
 
-    public function testMatchesAFadedFinalParagraph(): void
+    public function testAFadeOrTruncationClassIsNoLongerAGateBlock(): void
     {
-        // ZEIT+ fades the last visible paragraph (`paragraph--faded`) and drops
-        // the rest server-side; no `paywall` class appears anywhere (#898).
-        $document = $this->document(
-            '<div class="paragraph--faded article__item"><p>The teaser trails off here.</p></div>',
-        );
-
-        self::assertSame(['Theteasertrailsoffhere.'], PaywallBlocks::textsIn($document));
-    }
-
-    public function testMatchesTheFadeAndTruncationFamily(): void
-    {
-        $document = $this->document(
-            '<div class="article-body fade-out"><p>One.</p></div>'
-            . '<div class="fadeout-gradient"><p>Two.</p></div>'
+        // #908 dropped the fade family; the schema.org declaration now carries the
+        // ZEIT-style soft gate. A faded or truncated region alone does not flag.
+        self::assertFalse($this->hasGate(
+            '<div class="paragraph--faded"><p>Trails off.</p></div>'
+            . '<div class="article-body fade-out"><p>One.</p></div>'
             . '<section class="content-truncated"><p>Three.</p></section>',
-        );
-
-        self::assertSame(['One.', 'Two.', 'Three.'], PaywallBlocks::textsIn($document));
+        ));
     }
 
-    public function testADecorativeFadeOrEllipsisClassIsNotAGatedBlock(): void
+    public function testASubscribeWidgetIsNotAGateBlock(): void
     {
-        // A fade-in animation, a bare fade, and a Tailwind text-truncate ellipsis
-        // are styling, not a wall; only a faded-out or truncated region counts.
-        $document = $this->document(
-            '<div class="fade-in"><p>Animated.</p></div>'
-            . '<img class="fade" alt="">'
-            . '<h2 class="truncate">Ellipsis heading</h2>',
-        );
-
-        self::assertSame([], PaywallBlocks::textsIn($document));
-    }
-
-    public function testASubscribeWidgetIsNotAPaywallBlock(): void
-    {
-        $document = $this->document(
-            '<div class="subscribe-widget subscription-form">Subscribe to get new posts.</div>',
-        );
-
-        self::assertSame([], PaywallBlocks::textsIn($document));
+        self::assertFalse($this->hasGate('<div class="subscribe-widget subscription-form">Subscribe for posts.</div>'));
     }
 
     public function testSkipsBlocksInsidePageFurniture(): void
     {
-        $document = $this->document(
+        self::assertFalse($this->hasGate(
             '<nav><a class="paywall-link" href="/abo">Abo</a></nav>'
             . '<aside class="paywall-teaser">Side.</aside>'
-            . '<footer><p class="paywall-info">Foot.</p></footer>'
-            . '<main><p class="paywall-cta">Main.</p></main>',
-        );
-
-        self::assertSame(['Main.'], PaywallBlocks::textsIn($document));
+            . '<footer><p class="paywall-info">Foot.</p></footer>',
+        ));
     }
 
-    public function testSkipsAnEmptyBlock(): void
+    public function testFindsABlockOutsideFurnitureWhenFurnitureAlsoCarriesOne(): void
     {
-        $document = $this->document('<div class="paywall-fade"></div><p class="paywall-title">  Title  </p>');
-
-        self::assertSame(['Title'], PaywallBlocks::textsIn($document));
+        self::assertTrue($this->hasGate(
+            '<nav><a class="paywall-link" href="/abo">Abo</a></nav><main><p class="paywall-cta">Main.</p></main>',
+        ));
     }
 
-    public function testAPageWithoutPaywallClassesYieldsNothing(): void
+    public function testAPageWithoutPaywallClassesHasNoGateBlock(): void
     {
-        self::assertSame([], PaywallBlocks::textsIn($this->document('<p class="lead">No wall here.</p>')));
+        self::assertFalse($this->hasGate('<p class="lead">No wall here.</p>'));
     }
 
-    public function testAStateClassOnTheDocumentRootIsNotAGatedBlock(): void
+    public function testAStateClassOnTheDocumentRootIsNotAGateBlock(): void
     {
-        // mopo.de tags every MOPO+ article template with `has-paywall` on
-        // <body>; the whole page is not a gated region.
+        // mopo.de tags every MOPO+ article template with `has-paywall` on <body>;
+        // the whole page is not a gated region.
         $document = HtmlDocumentParser::parseOrNull(
             '<html class="has-paywall"><body class="article has-paywall">'
             . '<article><p>The full article, served in one piece.</p></article></body></html>',
         );
         self::assertNotNull($document);
 
-        self::assertSame([], PaywallBlocks::textsIn($document));
+        self::assertFalse(PaywallBlocks::existOutsideFurnitureIn($document));
     }
 
-    private function document(string $body): HTMLDocument
+    private function hasGate(string $body): bool
     {
         $document = HtmlDocumentParser::parseOrNull('<html><body>' . $body . '</body></html>');
         self::assertNotNull($document);
 
-        return $document;
+        return PaywallBlocks::existOutsideFurnitureIn($document);
     }
 }

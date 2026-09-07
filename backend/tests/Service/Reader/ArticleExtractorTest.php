@@ -524,15 +524,15 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringContainsString('First substantial paragraph', (string) $result->contentHtml);
     }
 
-    public function testAPremiumDeclarationWithoutAGatedBlockDoesNotFlag(): void
+    public function testTrustsAPremiumDeclarationEvenWithoutAGatedBlock(): void
     {
-        // The fixture declares the article premium (string "False") but serves
-        // the full body with no gated block below it, as mopo.de does for its
-        // MOPO+ articles. The declaration alone must not mark a preview.
+        // The fixture declares the article premium (string "False") and serves the
+        // full body with no gated block, as mopo.de does for its MOPO+ articles.
+        // The declaration is trusted; the reader shows the banner (a #908 trade-off).
         $result = $this->extractFixture('article-paywalled-jsonld-string.html');
 
         self::assertTrue($result->ok);
-        self::assertFalse($result->paywalled);
+        self::assertTrue($result->paywalled);
     }
 
     public function testFlagsAPaywallBlockBelowTheExtractedPreview(): void
@@ -544,10 +544,11 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringContainsString('Second substantial paragraph', (string) $result->contentHtml);
     }
 
-    public function testFlagsAFadedFinalParagraphOnAPremiumArticle(): void
+    public function testTrustsThePremiumDeclarationOnAZeitFadedArticle(): void
     {
-        // ZEIT+ fades the last visible paragraph (`paragraph--faded`) instead of
-        // adding a gated call to action, and declares the article premium (#898).
+        // ZEIT+ fades the last visible paragraph and declares the article premium.
+        // The declaration alone now carries the verdict; the fade class is no
+        // longer read (#908, replacing the #898 fade gate).
         $result = $this->extractFixture('article-paywalled-faded-paragraph.html');
 
         self::assertTrue($result->ok);
@@ -562,12 +563,15 @@ final class ArticleExtractorTest extends TestCase
         self::assertFalse($result->paywalled);
     }
 
-    public function testDoesNotFlagAPaywallBannerAboveTheArticle(): void
+    public function testFlagsAPaywallBannerAboveAnUndeclaredArticle(): void
     {
+        // Without the anchor test, a paywall-class banner above a free article now
+        // flags. The fixture declares nothing, so the block presence decides (an
+        // accepted #908 trade-off: simplicity over the position guard).
         $result = $this->extractFixture('article-free-paywall-banner.html');
 
         self::assertTrue($result->ok);
-        self::assertFalse($result->paywalled);
+        self::assertTrue($result->paywalled);
     }
 
     public function testTheJsonLdDeclarationDecidesAloneOverAPaywallBlock(): void
