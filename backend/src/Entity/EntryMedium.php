@@ -21,11 +21,6 @@ final readonly class EntryMedium implements \JsonSerializable
     ) {
     }
 
-    public function withUrl(string $url): self
-    {
-        return new self($url, $this->kind, $this->width, $this->height, $this->previewImageUrl);
-    }
-
     /** @param array<string, mixed> $data */
     public static function fromArray(array $data): self
     {

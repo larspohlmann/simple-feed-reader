@@ -30,8 +30,8 @@ final class ItemMediaExtractor
             if ($bundle === null) {
                 continue;
             }
-            $media = [...$media, ...$bundle->media];
-            $attachments = [...$attachments, ...$bundle->attachments];
+            array_push($media, ...$bundle->media);
+            array_push($attachments, ...$bundle->attachments);
         }
 
         return new ParsedMediaBundle($media, $attachments);

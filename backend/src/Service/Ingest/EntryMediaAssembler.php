@@ -9,6 +9,7 @@ use App\Entity\EntryMedium;
 use App\Service\Image\DeclaredImage;
 use App\Service\Parser\ParsedAttachment;
 use App\Service\Parser\ParsedMedium;
+use App\Service\Parser\VisualMediaKind;
 use App\Service\Url\HttpsImageUrl;
 
 /**
@@ -17,6 +18,12 @@ use App\Service\Url\HttpsImageUrl;
  * getImageUrl(); every URL passes the same https/length gate the lead image
  * uses, and a visual whose URL matches one already kept is dropped rather than
  * repeated.
+ *
+ * Storing the lead both here (as media[0]) and in the EntryImage columns is a
+ * deliberate denormalization: media[] is a self-contained visual list a native
+ * client renders alone. The `media[0].url === getImageUrl()` invariant it relies
+ * on is held by running the one gate over the same lead, and is guarded by
+ * EntryIngestorTest.
  */
 final class EntryMediaAssembler
 {
@@ -47,7 +54,13 @@ final class EntryMediaAssembler
                 continue;
             }
             $seen[$url] = true;
-            $kept[] = $medium->withUrl($url);
+            $kept[] = new EntryMedium(
+                $url,
+                $medium->kind->value,
+                $medium->width,
+                $medium->height,
+                HttpsImageUrl::orNull($medium->previewImageUrl),
+            );
         }
 
         return $kept;
@@ -56,26 +69,17 @@ final class EntryMediaAssembler
     /**
      * @param list<ParsedMedium> $media
      *
-     * @return list<EntryMedium>
+     * @return list<ParsedMedium>
      */
     private static function withLeadFirst(?DeclaredImage $lead, array $media): array
     {
-        $mapped = array_map(
-            static fn (ParsedMedium $medium): EntryMedium => new EntryMedium(
-                $medium->url,
-                $medium->kind->value,
-                $medium->width,
-                $medium->height,
-                self::gatedOrNull($medium->previewImageUrl),
-            ),
-            $media,
-        );
-
         if ($lead === null) {
-            return $mapped;
+            return $media;
         }
 
-        return [new EntryMedium($lead->url, 'image', $lead->width, $lead->height), ...$mapped];
+        $leadMedium = new ParsedMedium($lead->url, VisualMediaKind::Image, $lead->width, $lead->height);
+
+        return [$leadMedium, ...$media];
     }
 
     /**
@@ -101,10 +105,5 @@ final class EntryMediaAssembler
         }
 
         return $kept;
-    }
-
-    private static function gatedOrNull(?string $url): ?string
-    {
-        return $url === null ? null : HttpsImageUrl::orNull($url);
     }
 }

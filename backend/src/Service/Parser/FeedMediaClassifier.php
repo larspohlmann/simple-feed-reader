@@ -13,14 +13,18 @@ namespace App\Service\Parser;
  */
 final class FeedMediaClassifier
 {
-    /** @var list<string> */
-    private const array IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'bmp', 'svg'];
-
-    /** @var list<string> */
-    private const array AUDIO_EXTENSIONS = ['mp3', 'm4a', 'aac', 'ogg', 'oga', 'opus', 'wav', 'flac', 'wma'];
-
-    /** @var list<string> */
-    private const array VIDEO_EXTENSIONS = ['mp4', 'm4v', 'mov', 'webm', 'mkv', 'avi', 'ogv'];
+    /** @var array<string, FeedMediaKind> file extension => the media it denotes */
+    private const array EXTENSION_KINDS = [
+        'jpg' => FeedMediaKind::Image, 'jpeg' => FeedMediaKind::Image, 'png' => FeedMediaKind::Image,
+        'gif' => FeedMediaKind::Image, 'webp' => FeedMediaKind::Image, 'avif' => FeedMediaKind::Image,
+        'bmp' => FeedMediaKind::Image, 'svg' => FeedMediaKind::Image,
+        'mp3' => FeedMediaKind::Audio, 'm4a' => FeedMediaKind::Audio, 'aac' => FeedMediaKind::Audio,
+        'ogg' => FeedMediaKind::Audio, 'oga' => FeedMediaKind::Audio, 'opus' => FeedMediaKind::Audio,
+        'wav' => FeedMediaKind::Audio, 'flac' => FeedMediaKind::Audio, 'wma' => FeedMediaKind::Audio,
+        'mp4' => FeedMediaKind::Video, 'm4v' => FeedMediaKind::Video, 'mov' => FeedMediaKind::Video,
+        'webm' => FeedMediaKind::Video, 'mkv' => FeedMediaKind::Video, 'avi' => FeedMediaKind::Video,
+        'ogv' => FeedMediaKind::Video,
+    ];
 
     public static function kind(\DOMElement $element): FeedMediaKind
     {
@@ -62,25 +66,8 @@ final class FeedMediaClassifier
     private static function fromExtension(string $url): FeedMediaKind
     {
         $path = strtolower((string) parse_url(trim($url), \PHP_URL_PATH));
+        $extension = pathinfo($path, \PATHINFO_EXTENSION);
 
-        foreach (self::extensionTable() as [$extensions, $kind]) {
-            foreach ($extensions as $extension) {
-                if (str_ends_with($path, '.' . $extension)) {
-                    return $kind;
-                }
-            }
-        }
-
-        return FeedMediaKind::Unknown;
-    }
-
-    /** @return list<array{list<string>, FeedMediaKind}> */
-    private static function extensionTable(): array
-    {
-        return [
-            [self::IMAGE_EXTENSIONS, FeedMediaKind::Image],
-            [self::AUDIO_EXTENSIONS, FeedMediaKind::Audio],
-            [self::VIDEO_EXTENSIONS, FeedMediaKind::Video],
-        ];
+        return self::EXTENSION_KINDS[$extension] ?? FeedMediaKind::Unknown;
     }
 }

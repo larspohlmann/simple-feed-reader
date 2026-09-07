@@ -53,16 +53,26 @@ class EntryMedia
     }
 
     /**
+     * Maps a media value-object list to the JSON arrays stored, exported, and
+     * served — the one place that turns EntryMedium/EntryAttachment into arrays,
+     * shared by the entity, the API mapper, and the backup exporter.
+     *
+     * @param list<EntryMedium>|list<EntryAttachment> $items
+     *
+     * @return list<array<string, string|int>>
+     */
+    public static function toJsonList(array $items): array
+    {
+        return array_map(static fn (EntryMedium|EntryAttachment $item): array => $item->jsonSerialize(), $items);
+    }
+
+    /**
      * @param list<EntryMedium>|list<EntryAttachment> $items
      *
      * @return list<array<string, string|int>>|null
      */
     private static function encode(array $items): ?array
     {
-        if ($items === []) {
-            return null;
-        }
-
-        return array_map(static fn (EntryMedium|EntryAttachment $item): array => $item->jsonSerialize(), $items);
+        return $items === [] ? null : self::toJsonList($items);
     }
 }

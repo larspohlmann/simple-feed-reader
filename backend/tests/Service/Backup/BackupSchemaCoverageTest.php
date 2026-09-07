@@ -98,6 +98,10 @@ final class BackupSchemaCoverageTest extends DbTestCase
         // themselves are claimed by Entry's field declarations. A subkey is
         // absent from an item that did not declare it (jsonSerialize omits
         // unknown fields), so the flattener only ever sees a subset of these.
+        // If a THIRD value-object list ever lands on a line, promote these out of
+        // FILE_SCAFFOLDING into a named NESTED_VALUE_OBJECTS map: entity data
+        // carried as JSON is a distinct concept from file structure, and two
+        // instances do not yet justify the mechanism.
         BackupSchema::KIND_ENTRY => [
             'media.url', 'media.kind', 'media.width', 'media.height', 'media.previewImageUrl',
             'attachments.url', 'attachments.mimeType', 'attachments.durationInSeconds',

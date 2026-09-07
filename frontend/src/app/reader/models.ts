@@ -157,14 +157,13 @@ export interface EntryDto {
   /** Dimensions AS DECLARED by the feed. Null means unknown, not square. */
   imageWidth: number | null;
   imageHeight: number | null;
-  /** Visual media the feed declared, lead image first (#906). The API always
-   *  sends the array (empty when none); optional here because no view consumes
-   *  it yet. Dimensions are as declared; missing fields are absent. */
-  media?: EntryMediumDto[];
+  /** Visual media the feed declared, lead image first (#906). Always sent by
+   *  the API, empty when the feed declared none. Dimensions are as declared;
+   *  missing fields are absent. No view consumes it yet. */
+  media: EntryMediumDto[];
   /** Playable or downloadable enclosures the feed declared — podcast audio,
-   *  video, other files (#906). Always sent by the API; optional here until a
-   *  view consumes it. */
-  attachments?: EntryAttachmentDto[];
+   *  video, other files (#906). Always sent by the API, empty when none. */
+  attachments: EntryAttachmentDto[];
   publishedAt: string | null;
   createdAt: string;
   subscriptionId: number;
