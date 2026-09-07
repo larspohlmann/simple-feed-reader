@@ -257,7 +257,11 @@ private function isEngagementMeta(LeadingBlock $block, ?string $entryAuthor): bo
 
 ---
 
-### Task 5: Icon-label action buttons (print, correction, more-articles)
+### Task 5: Icon-label action buttons (print, correction, more-articles) — RESOLVED WITHOUT A NEW RULE
+
+**Ruling:** an icon+label action row (`<p><img>Drucken</p>`) is already removed by the existing shapes — the label text ("Drucken", "Korrektur", "Mehr Artikel") is a kicker, and the icon rides inside the same `<p>`, so it goes with it. A dedicated `isIconLabel` rule would be redundant. The only residual is a *bare* decorative icon (`<p><img></p>`, no text), which is indistinguishable from a hero without a fragile size/path heuristic (untergrund's icons even lack dimensions) — deferred to Task 9's real fixture, where the downstream hero/edge/media steps may already drop it. A guard test (`testRemovesLeadingActionButtonRowsThatPairAnIconWithALabel`) locks in the icon+label behaviour. Original (superseded) design below.
+
+
 
 **Files:**
 - Modify: `backend/src/Service/Reader/LeadingEngagementBlocks.php`, `backend/src/Service/Reader/LeadingEngagementCleaner.php`
@@ -309,13 +313,13 @@ public static function isIconLabel(Element $element): bool
 }
 ```
 
-- [ ] **Step 4: Wire into `isNavigationalChrome`** in `LeadingEngagementCleaner`:
+- [ ] **Step 4: Wire into `isNavigationalChrome`** — note: after the Task 1-4 refactor, furniture classification lives in `LeadingEngagementBlocks` (`isFurniture`/`isNavigationalChrome`/`isEngagementMeta` are static there; the cleaner does DOM work only). Add the icon-label to `LeadingEngagementBlocks::isNavigationalChrome`:
 
 ```php
 return LeadingEngagementRules::isSeparatorOnly($block->text)
     || LeadingEngagementRules::isNavigationLabel($block->text, $linkTextLength)
     || LeadingEngagementRules::isKicker($block->text, $linkTextLength)
-    || LeadingEngagementBlocks::isIconLabel($block->element);
+    || self::isIconLabel($block->element);
 ```
 
 - [ ] **Step 5: Run — expected PASS; run the whole `LeadingEngagementCleanerTest` to confirm no regression; commit.**

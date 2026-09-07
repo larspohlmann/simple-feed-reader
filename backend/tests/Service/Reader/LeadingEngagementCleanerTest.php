@@ -242,6 +242,19 @@ final class LeadingEngagementCleanerTest extends TestCase
         self::assertStringContainsString('Hamburg/Norderstedt', $clean);
     }
 
+    public function testRemovesLeadingActionButtonRowsThatPairAnIconWithALabel(): void
+    {
+        $html = '<div><p><img src="https://x.test/icons/print.png" alt="">Drucken</p>'
+            . '<p><img src="https://x.test/icons/edit.png" alt="">Korrektur</p>'
+            . '<p>' . self::PROSE . '</p></div>';
+
+        $clean = $this->clean($html, null);
+
+        self::assertStringNotContainsString('Drucken', $clean);
+        self::assertStringNotContainsString('Korrektur', $clean);
+        self::assertStringContainsString('Hamburg/Norderstedt', $clean);
+    }
+
     public function testKeepsAShortLeadingFigcaptionThatLooksLikeAKicker(): void
     {
         $html = '<div><figure><img src="https://x.test/a.jpg" alt=""><figcaption>A caption line</figcaption></figure>'
