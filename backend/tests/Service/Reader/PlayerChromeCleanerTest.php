@@ -143,6 +143,38 @@ final class PlayerChromeCleanerTest extends TestCase
         self::assertSame(1, substr_count($this->clean($html), 'controls'));
     }
 
+    // NPR renders a "copy this embed" widget beside the player — a label and a
+    // <code> block showing the iframe snippet as escaped, literal text (#922).
+    private const string NPR_EMBED_WIDGET =
+        '<div><ul><li><p><label><b>Embed</b></label><b><code>'
+        . '&lt;iframe src="https://www.npr.org/player/embed/g-s1-142210/nx-s1-mx-5960265-1" '
+        . 'width="100%" height="290" frameborder="0" scrolling="no" title="NPR embedded audio player"&gt;'
+        . '</code></b></p></li></ul></div>';
+
+    public function testRemovesTheNprEmbedCodeWidgetAndItsEmptiedWrappers(): void
+    {
+        $html = '<div>' . self::AUDIO . self::NPR_EMBED_WIDGET . '<p>The real story text.</p></div>';
+
+        $clean = $this->clean($html);
+
+        self::assertStringNotContainsString('player/embed', $clean);
+        self::assertStringNotContainsString('<code', $clean);
+        self::assertStringNotContainsString('Embed', $clean);
+        self::assertStringNotContainsString('<ul>', $clean);
+        self::assertStringContainsString('<audio', $clean);
+        self::assertStringContainsString('The real story text.', $clean);
+    }
+
+    public function testLeavesAnUnrelatedCodeBlockAlone(): void
+    {
+        $html = '<div><p>Run <code>composer install</code> first.</p></div>';
+
+        $clean = $this->clean($html);
+
+        self::assertStringContainsString('composer install', $clean);
+        self::assertStringContainsString('<code', $clean);
+    }
+
     private function clean(string $html): string
     {
         $document = HtmlDocumentParser::parseOrNull($html);
