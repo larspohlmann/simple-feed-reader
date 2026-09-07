@@ -7,11 +7,9 @@ namespace App\Service\Reader\Slideshow;
 use Dom\Element;
 
 /**
- * Finds the one image URL a slide points at. Real galleries carry the URL in
- * several shapes: a plain <img>, a library lazy attribute (Swiper/Owl/Flickity
- * all put it on data-src), or a lightbox <a href> to the image file — probed
- * over real pages (#926). The first hit wins; a slide that resolves to nothing
- * does not count as a slide.
+ * Finds the image URL a slide points at. Real galleries carry it as a plain <img>,
+ * a lazy attribute (Swiper/Owl/Flickity data-src etc), or lightbox <a href> —
+ * probed over real pages (#926). First hit wins; unresolved slides don't count.
  */
 final readonly class SlideImageResolver
 {
