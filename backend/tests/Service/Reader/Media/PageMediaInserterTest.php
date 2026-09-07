@@ -41,6 +41,24 @@ final class PageMediaInserterTest extends TestCase
         self::assertLessThan(strpos($out, 'Teaser'), strpos($out, '<audio'));
     }
 
+    public function testANarratedAudioPlayerCarriesTheNarrationClass(): void
+    {
+        $media = new ArticleMedia([
+            new MediaCandidate(MediaKind::Audio, 'https://x.test/full.mp3', null, null, null, true),
+        ]);
+
+        $out = $this->insert('<body><p>Teaser</p></body>', $media);
+
+        self::assertStringContainsString('class="reader-narration"', $out);
+    }
+
+    public function testAnOrdinaryAudioPlayerCarriesNoClass(): void
+    {
+        $media = new ArticleMedia([new MediaCandidate(MediaKind::Audio, 'https://x.test/a.mp3')]);
+
+        self::assertStringNotContainsString('class=', $this->insert('<body><p>Teaser</p></body>', $media));
+    }
+
     public function testVideoCarriesItsPoster(): void
     {
         $media = new ArticleMedia([

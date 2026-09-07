@@ -7,6 +7,7 @@ namespace App\Service\Reader\Media\Source;
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaCandidateSourceInterface;
+use App\Service\Reader\Media\NarrationSignals;
 use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\PageTextBlocks;
@@ -58,7 +59,9 @@ final readonly class SemanticMediaSource implements MediaCandidateSourceInterfac
             return null;
         }
         if (!$resolved->kind->isVideo()) {
-            return new MediaCandidate($resolved->kind, $resolved->url, null, null, $precedingText);
+            $narrated = NarrationSignals::narrates($resolved->url, $element);
+
+            return new MediaCandidate($resolved->kind, $resolved->url, null, null, $precedingText, $narrated);
         }
 
         // A video with no poster (absent or empty) rots into a dead frame in a cache with no TTL.

@@ -8,6 +8,7 @@ use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaCandidateSourceInterface;
 use App\Service\Reader\Media\MediaKind;
+use App\Service\Reader\Media\NarrationSignals;
 use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\Media\MediaRelevance;
 use App\Service\Reader\Media\PlayerPoster;
@@ -119,7 +120,9 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
         $best = $this->relevance->rank(array_keys($origins), $page->url)[0];
         $precedingText = $page->blocks->before($origins[$best]);
         if ($kind === MediaKind::Audio) {
-            return new MediaCandidate(MediaKind::Audio, $best, null, null, $precedingText);
+            $narrated = NarrationSignals::narrates($best, $origins[$best]);
+
+            return new MediaCandidate(MediaKind::Audio, $best, null, null, $precedingText, $narrated);
         }
 
         // A publisher depublishes video on a schedule and the reader's cache
