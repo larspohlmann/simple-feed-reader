@@ -60,6 +60,7 @@ import { ReaderHeaderComponent } from './header/reader-header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { EntryListComponent, TitleCount } from './entry-list/entry-list.component';
 import { ReaderViewComponent } from './reader-view/reader-view.component';
+import { AudioPlayerBarComponent } from './audio-player-bar/audio-player-bar.component';
 import { AddFeedDialogComponent } from './add-feed/add-feed-dialog.component';
 import {
   ConfirmData,
@@ -88,6 +89,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
     SidebarComponent,
     EntryListComponent,
     ReaderViewComponent,
+    AudioPlayerBarComponent,
     DrawerSwipeDirective,
     PaneResizeDirective,
     IconComponent,

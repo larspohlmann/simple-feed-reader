@@ -1,0 +1,71 @@
+:host {
+  display: block;
+}
+
+.player {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface-1);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -6px 20px rgb(0 0 0 / 16%);
+}
+
+.ctrl {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  border-radius: var(--radius-pill);
+  padding: var(--space-1);
+}
+
+.ctrl:hover {
+  background: var(--surface-2);
+}
+
+.play {
+  color: var(--accent);
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  flex: 1;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.time {
+  font-size: var(--fs-2xs);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.scrubber {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}

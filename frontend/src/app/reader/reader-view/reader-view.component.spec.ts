@@ -9,6 +9,7 @@ import { entryScrollKey } from '../list-scroll-memory';
 import { EntryDto, ReaderArticle, ReaderContent, ReaderFailure } from '../models';
 import { ReaderModeService } from '../reader-mode.service';
 import { ReadingFocusService } from '../../core/reading-focus.service';
+import { AudioPlayerService } from '../audio-player.service';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
@@ -850,6 +851,41 @@ describe('ReaderViewComponent', () => {
       c.onTouchMove(touch(200, 0));
       c.onTouchEnd();
       expect(c.leaving()).toBe(false);
+    });
+  });
+
+  describe('audio attachment', () => {
+    it('offers a listen control for an audio enclosure and plays it', () => {
+      const f = mount(
+        entry({
+          attachments: [
+            {
+              url: 'https://x.test/ep.mp3',
+              mimeType: 'audio/mpeg',
+              title: 'Ep 1',
+              durationInSeconds: 120,
+            },
+          ],
+        }),
+      );
+      const play = jest.spyOn(TestBed.inject(AudioPlayerService), 'play').mockImplementation(() => {
+        /* Do not touch the real audio element in the render test. */
+      });
+
+      const button = f.debugElement.query(By.css('.listen'));
+      button.nativeElement.click();
+
+      expect(play).toHaveBeenCalledWith(
+        expect.objectContaining({ url: 'https://x.test/ep.mp3', title: 'Ep 1' }),
+      );
+    });
+
+    it('shows no listen control when the entry has no audio enclosure', () => {
+      const f = mount(
+        entry({ attachments: [{ url: 'https://x.test/clip.mp4', mimeType: 'video/mp4' }] }),
+      );
+
+      expect(f.debugElement.query(By.css('.listen'))).toBeNull();
     });
   });
 });

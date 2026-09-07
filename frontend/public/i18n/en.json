@@ -873,6 +873,16 @@
     "viewed": "Recently read",
     "forYou": "For you",
     "narrationPlayer": "Listen — machine-generated narration",
+    "audioPlayer": {
+      "listen": "Listen",
+      "label": "Audio player",
+      "play": "Play",
+      "pause": "Pause",
+      "back": "Back {{ seconds }} seconds",
+      "forward": "Forward {{ seconds }} seconds",
+      "seek": "Seek",
+      "close": "Close player"
+    },
     "savedSearches": "Saved searches",
     "savedSearchesEmpty": "No saved searches yet. Save a search to see it here.",
     "toggleSavedSearches": "Toggle saved searches",

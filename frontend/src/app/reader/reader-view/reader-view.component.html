@@ -145,6 +145,15 @@
           <app-icon name="check" size="md" />
         </button>
       </div>
+      @if (audioAttachment(); as audio) {
+        <button class="listen" type="button" (click)="listen()">
+          <app-icon name="play_circle" size="lg" />
+          <span class="listen-label">{{ 'reader.audioPlayer.listen' | transloco }}</span>
+          @if (audio.durationInSeconds; as seconds) {
+            <span class="listen-duration">{{ formatDuration(seconds) }}</span>
+          }
+        </button>
+      }
       @if (showToc()) {
         <nav class="toc" [attr.aria-label]="'reader.contents' | transloco">
           <button
