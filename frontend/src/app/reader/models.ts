@@ -513,6 +513,32 @@ export interface RunHistoryOverview {
   latest: RunHistoryMonthPage | null;
 }
 
+/** One day of the reading-activity chart: the calendar day and how many
+ *  articles the account opened on it. Quiet days are present with a count of
+ *  zero, so the chart draws a continuous axis. */
+export interface ReadingDay {
+  date: string;
+  count: number;
+}
+
+/** One feed in the "top feeds by read" ranking: the shared feed's id (the
+ *  handle the reader scopes a feed view by) and how many of its articles the
+ *  account has opened. The title is resolved on the client from the
+ *  subscription list, so it stays the custom title the sidebar shows. */
+export interface FeedReadCount {
+  feedId: number;
+  readCount: number;
+}
+
+/** The reading-activity payload: one entry per day of the window in order
+ *  (oldest first), the window's total opens, and the account's most-read feeds
+ *  all-time. */
+export interface ReadingActivity {
+  days: ReadingDay[];
+  total: number;
+  topFeedsByRead: FeedReadCount[];
+}
+
 export interface RestoreCounts {
   tags: number;
   feeds: number;

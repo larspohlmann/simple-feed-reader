@@ -16,6 +16,7 @@ import {
   MarkReadScope,
   MoveFeedToTag,
   OpmlImportResult,
+  ReadingActivity,
   ReaderContent,
   RecommendationRunReport,
   RefreshReport,
@@ -323,6 +324,15 @@ export class ReaderApi {
     return this.http.get<DebugLogPayload>(
       `${this.base}/api/recommendations/runs/debug-log${query}`,
     );
+  }
+
+  /** How many articles the account opened on each of the last thirty days,
+   *  bucketed in `timeZone` (IANA; the server falls back to UTC on an
+   *  identifier its tzdata does not know) for the About page's reading chart. */
+  readingActivity(timeZone: string): Observable<ReadingActivity> {
+    return this.http.get<ReadingActivity>(`${this.base}/api/reading/activity`, {
+      params: { tz: timeZone },
+    });
   }
 
   /** The full request/response body for one logged provider call. */

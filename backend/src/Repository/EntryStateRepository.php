@@ -113,6 +113,72 @@ class EntryStateRepository extends ServiceEntityRepository
     }
 
     /**
+     * The instants at which the user opened an article at or after $sinceUtc,
+     * one per open, for the reading-activity chart (#896). Scalars rather than
+     * entities, and gated to feeds the user still subscribes to — the same gate
+     * stateCountsForUser() applies, so the chart counts what the "Read" total
+     * counts. Bucketing into days is left to the caller: viewedAt is naive UTC
+     * and the buckets are cut in the viewer's zone, which no portable DQL
+     * expression can shift before grouping.
+     *
+     * @return list<\DateTimeImmutable>
+     */
+    public function viewedAtSince(int $userId, \DateTimeImmutable $sinceUtc): array
+    {
+        /** @var list<array{viewedAt: \DateTimeImmutable}> $rows */
+        $rows = $this->createQueryBuilder('es')
+            ->select('es.viewedAt AS viewedAt')
+            ->join('es.entry', 'e')
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
+            ->andWhere('IDENTITY(es.user) = :user')
+            ->andWhere('es.viewedAt >= :since')
+            ->setParameter('user', $userId)
+            ->setParameter('since', $sinceUtc)
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_map(static fn (array $row): \DateTimeImmutable => $row['viewedAt'], $rows);
+    }
+
+    /**
+     * The feeds the user has opened the most articles from, busiest first, for
+     * the About page's "Top feeds by read" chart (#896). One row per feed with
+     * its read total, gated to feeds still subscribed to and capped at $limit.
+     * Only the feed id and count travel: the title is resolved on the client
+     * from the subscription list it already holds, so it stays the custom title
+     * the sidebar shows.
+     *
+     * @return list<array{feedId: int, readCount: int}>
+     */
+    public function readCountsByFeed(int $userId, int $limit): array
+    {
+        /** @var list<array{feedId: int, readCount: int}> $rows */
+        $rows = $this->createQueryBuilder('es')
+            ->select('f.id AS feedId', 'COUNT(es.entry) AS readCount')
+            ->join('es.entry', 'e')
+            ->join('e.feed', 'f')
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
+            ->andWhere('IDENTITY(es.user) = :user')
+            ->andWhere('es.isViewed = :viewed')
+            ->setParameter('user', $userId)
+            ->setParameter('viewed', true, Types::BOOLEAN)
+            ->groupBy('f.id')
+            ->orderBy('readCount', 'DESC')
+            ->addOrderBy('f.id', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_map(
+            static fn (array $row): array => [
+                'feedId' => (int) $row['feedId'],
+                'readCount' => (int) $row['readCount'],
+            ],
+            $rows,
+        );
+    }
+
+    /**
      * Which of the given entry ids already have a state row for this user.
      *
      * @param list<int> $entryIds
