@@ -442,6 +442,16 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringContainsString('Second substantial paragraph', (string) $result->contentHtml);
     }
 
+    public function testFlagsAFadedFinalParagraphOnAPremiumArticle(): void
+    {
+        // ZEIT+ fades the last visible paragraph (`paragraph--faded`) instead of
+        // adding a gated call to action, and declares the article premium (#898).
+        $result = $this->extractFixture('article-paywalled-faded-paragraph.html');
+
+        self::assertTrue($result->ok);
+        self::assertTrue($result->paywalled);
+    }
+
     public function testDoesNotFlagAFreePostWithoutAPaywallBlock(): void
     {
         $result = $this->extractFixture('article-free-substack.html');
