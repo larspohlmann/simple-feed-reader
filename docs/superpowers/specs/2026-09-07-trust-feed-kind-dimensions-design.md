@@ -54,14 +54,18 @@ allow-lists `width`/`height` on `img`; add them for `video`. Covers the restored
 lead image, body images, and video posters uniformly in one place — no scatter
 across `ReaderLeadImage`/`PageMediaInserter`/`MediaMarkup`.
 
-## Win 2 — kind (keep extension-sniffing as fallback)
+## Win 2 — MIME (keep extension-sniffing for kind)
 
 `PageMediaScanner`, **after** the merge, reconciles each candidate against
-`FeedMedia`: a candidate whose URL matches a feed medium/attachment adopts the
-feed-declared kind when it is a safe A/V correction and carries the feed
-`mimeType`. Extension-sniffing (`MediaUrlKind::byExtension`) stays the default and
-the fallback for non-enumerated media. `MediaCandidate` gains an optional
-`?string $mimeType`.
+`FeedMedia`: a candidate whose URL matches a feed attachment carries the feed
+`mimeType` (`MediaCandidate` gains an optional `?string $mimeType`), and the
+player emits it as a typed `<source>` the browser can accept or skip without a
+fetch. The candidate's `MediaKind` is **not** mutated — the classification stays
+the reader's extension sniff (`MediaUrlKind::byExtension`), which is correct for
+every media it already discovered; the feed's authority is realized through the
+declared MIME on the `<source>`, not by rewriting the kind. Rescuing a URL the
+sniff could not classify at all (extensionless feed media the scan never
+surfaced) is the deeper, separable change scoped out below.
 
 **Deliberately out of scope (→ follow-up / #916):** injecting feed-enumerated A/V
 that the page-scan sources never surfaced (extensionless-URL *rescue*). That means
