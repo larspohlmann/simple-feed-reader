@@ -1,9 +1,6 @@
 /**
- * Upgrades a backend-emitted `<figure class="reader-slideshow">` (a captioned
- * vertical image stack that already works with no JavaScript) into a swipeable,
- * keyboard-navigable carousel showing one slide at a time. Idempotent: a figure
- * already carrying `reader-slideshow--ready` is left alone, because the reader's
- * enhancement effect re-runs on the Reader/Original toggle.
+ * Upgrades a backend-emitted `<figure class="reader-slideshow">` into a
+ * swipeable, keyboard-navigable carousel. Idempotent.
  */
 export interface SlideshowLabels {
   previous: string;
@@ -53,6 +50,21 @@ function build(figure: HTMLElement, slides: HTMLElement[], labels: SlideshowLabe
     else if (event.key === 'ArrowLeft') show(current - 1);
     else return;
     event.preventDefault();
+  });
+
+  let startX = 0;
+  const SWIPE_THRESHOLD = 40;
+  figure.addEventListener(
+    'touchstart',
+    (event) => {
+      startX = event.changedTouches[0]?.clientX ?? 0;
+    },
+    { passive: true },
+  );
+  figure.addEventListener('touchend', (event) => {
+    const deltaX = (event.changedTouches[0]?.clientX ?? 0) - startX;
+    if (Math.abs(deltaX) < SWIPE_THRESHOLD) return;
+    show(deltaX < 0 ? current + 1 : current - 1);
   });
 
   show(0);

@@ -54,4 +54,36 @@ describe('hydrateSlideshows', () => {
     hydrateSlideshows(el, labels);
     expect(el.querySelectorAll('.reader-slideshow__next').length).toBe(1);
   });
+
+  it('advances on a leftward swipe', () => {
+    const el = host();
+    hydrateSlideshows(el, labels);
+    const figure = el.querySelector<HTMLElement>('.reader-slideshow')!;
+    const touch = (x: number) =>
+      ({ changedTouches: [{ clientX: x, clientY: 0 }] }) as unknown as TouchEvent;
+    figure.dispatchEvent(Object.assign(new Event('touchstart'), touch(200)));
+    figure.dispatchEvent(Object.assign(new Event('touchend'), touch(120)));
+    expect(el.textContent).toContain('2 / 3');
+  });
+
+  it('ignores a non-arrow key', () => {
+    const el = host();
+    hydrateSlideshows(el, labels);
+    const figure = el.querySelector<HTMLElement>('.reader-slideshow')!;
+    const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    figure.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+    expect(el.textContent).toContain('1 / 3');
+  });
+
+  it('leaves a single-slide figure un-hydrated', () => {
+    const el = document.createElement('div');
+    el.innerHTML =
+      '<figure class="reader-slideshow"><ol>' +
+      '<li><img src="https://img/1.jpg" alt="one"></li></ol></figure>';
+    hydrateSlideshows(el, labels);
+    const figure = el.querySelector<HTMLElement>('.reader-slideshow')!;
+    expect(figure.classList.contains('reader-slideshow--ready')).toBe(false);
+    expect(figure.querySelector('.reader-slideshow__controls')).toBeNull();
+  });
 });
