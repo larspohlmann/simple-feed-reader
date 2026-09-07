@@ -97,7 +97,11 @@ final readonly class LeadingEngagementCleaner
     {
         $removed = false;
         foreach (iterator_to_array($root->getElementsByTagName('img')) as $image) {
-            if ($this->precedes($image, $anchor) && LeadingEngagementBlocks::isDecorativeIcon($image)) {
+            if (
+                $this->precedes($image, $anchor)
+                && LeadingEngagementBlocks::isDecorativeIcon($image)
+                && !LeadingEngagementBlocks::hasFigureAncestor($image)
+            ) {
                 $image->remove();
                 $removed = true;
             }

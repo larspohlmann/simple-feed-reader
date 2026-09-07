@@ -13,6 +13,8 @@ namespace App\Service\Reader;
  */
 final readonly class LeadingFurniture
 {
+    private const array HEADING_TAGS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+
     public function __construct(private ?string $entryAuthor)
     {
     }
@@ -57,7 +59,18 @@ final readonly class LeadingFurniture
 
         return LeadingEngagementRules::isSeparatorOnly($block->text)
             || LeadingEngagementRules::isNavigationLabel($block->text, $linkTextLength)
-            || LeadingEngagementRules::isKicker($block->text, $linkTextLength);
+            || ($this->isKicker($block, $linkTextLength));
+    }
+
+    /**
+     * A heading is a real headline or subheading, never a kicker eyebrow, so the
+     * kicker shape is not allowed to swallow a short leading <h1>-<h6>. A
+     * duplicate title is dropped by LeadingTitleRemover on an exact match instead.
+     */
+    private function isKicker(LeadingBlock $block, int $linkTextLength): bool
+    {
+        return !in_array($block->element->localName, self::HEADING_TAGS, true)
+            && LeadingEngagementRules::isKicker($block->text, $linkTextLength);
     }
 
     /** Emoji rows, engagement counters, date and reading-time stamps and a duplicate byline. */

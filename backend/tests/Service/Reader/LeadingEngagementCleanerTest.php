@@ -334,6 +334,33 @@ final class LeadingEngagementCleanerTest extends TestCase
         self::assertStringContainsString('Hamburg/Norderstedt', $clean);
     }
 
+    public function testKeepsAShortLeadingHeadingThatIsNotTheTitle(): void
+    {
+        $html = '<div><h2>Markets Tumble</h2><p>' . self::PROSE . '</p></div>';
+
+        self::assertStringContainsString('Markets Tumble', $this->clean($html, null));
+    }
+
+    public function testKeepsAShortRealSubheadingBetweenTwoParagraphs(): void
+    {
+        $second = 'Ein zweiter langer Absatz mit echtem Fliesstext, der eindeutig zum Artikelkörper gehört '
+            . 'und auf keinen Fall als Vorspann-Rest entfernt werden darf, sondern erhalten bleiben muss.';
+        $html = '<div><p>' . self::PROSE . '</p><h3>Hintergrund</h3><p>' . $second . '</p></div>';
+
+        $clean = $this->clean($html, null);
+
+        self::assertStringContainsString('Hintergrund', $clean);
+        self::assertStringContainsString('zweiter langer Absatz', $clean);
+    }
+
+    public function testKeepsAFiguredHeroEvenWhenItsSlugContainsAnIconToken(): void
+    {
+        $html = '<div><figure><img src="https://x.test/media/pop-icon-madonna.jpg" alt="The singer">'
+            . '<figcaption>In 2019</figcaption></figure><p>' . self::PROSE . '</p></div>';
+
+        self::assertStringContainsString('pop-icon-madonna.jpg', $this->clean($html, null));
+    }
+
     public function testKeepsAContentImageWhoseNameMerelyContainsIcon(): void
     {
         $html = '<div><p><img src="https://x.test/fotos/silicon-valley-report.jpg" alt="Chips"></p>'

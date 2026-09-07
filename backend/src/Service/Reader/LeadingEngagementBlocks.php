@@ -55,6 +55,18 @@ final class LeadingEngagementBlocks
         return preg_match('~(?:^|[^a-z])icons?(?:[^a-z]|$)~i', $image->getAttribute('src') ?? '') === 1;
     }
 
+    /** A hero sits in a <figure>; an "icon" token in its slug must not condemn it. */
+    public static function hasFigureAncestor(Element $element): bool
+    {
+        for ($ancestor = $element->parentElement; $ancestor !== null; $ancestor = $ancestor->parentElement) {
+            if ($ancestor->localName === 'figure') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static function isTimeOnly(Element $element): bool
     {
         if ($element->localName === 'time') {

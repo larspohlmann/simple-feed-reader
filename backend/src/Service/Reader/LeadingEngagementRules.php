@@ -108,7 +108,9 @@ final class LeadingEngagementRules
         $position = 0;
         $timestamp = $formatter->parse($text, $position);
 
-        return $timestamp !== false && $position === strlen($text);
+        // parse() reports the stop position in code points, so compare with
+        // mb_strlen: a byte length rejects any date with a non-ASCII month (März).
+        return $timestamp !== false && $position === mb_strlen($text);
     }
 
     /** A stray engagement count rendered as a bare number, e.g. "0". */

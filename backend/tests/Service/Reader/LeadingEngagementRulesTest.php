@@ -133,6 +133,7 @@ final class LeadingEngagementRulesTest extends TestCase
         self::assertTrue(LeadingEngagementRules::isDateLine('Sep 01, 2026'));
         self::assertTrue(LeadingEngagementRules::isDateLine('7 September 2026'));
         self::assertTrue(LeadingEngagementRules::isDateLine('2026-09-01'));
+        self::assertTrue(LeadingEngagementRules::isDateLine('1. März 2026'));
     }
 
     public function testDateLineRejectsWordsBareMonthsYearsAndSentences(): void
