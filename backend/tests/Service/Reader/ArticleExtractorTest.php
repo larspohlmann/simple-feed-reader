@@ -274,6 +274,74 @@ final class ArticleExtractorTest extends TestCase
         self::assertContains($result->reason, ['unextractable', 'empty']);
     }
 
+    public function testStripsASemanticHeaderMasthead(): void
+    {
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-masthead-header.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post', 'The Haiku Challenge', 'Clark Strand');
+        $content = (string) $result->contentHtml;
+
+        self::assertStringNotContainsString('badge.png', $content);
+        self::assertStringNotContainsString('Culture', $content);
+        self::assertStringNotContainsString('Clark Strand', $content);
+        self::assertStringNotContainsString('Sep 01, 2026', $content);
+        self::assertStringNotContainsString('The Haiku Challenge', $content);
+        self::assertStringContainsString('Announcing the winning poems', $content);
+        self::assertStringContainsString('Illustration by Jing Li', $content);
+        self::assertStringContainsString('Because cumulus clouds', $content);
+    }
+
+    public function testStripsABreadcrumbSeparatorAndKickerMasthead(): void
+    {
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-masthead-breadcrumb.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post', 'Political Balancing Act');
+        $content = (string) $result->contentHtml;
+
+        self::assertStringNotContainsString('2026/36', $content);
+        self::assertStringNotContainsString('Ausland', $content);
+        self::assertStringNotContainsString('Demokratie', $content);
+        self::assertStringNotContainsString('Kapitalismus', $content);
+        self::assertStringNotContainsString('Political Balancing Act', $content);
+        self::assertStringContainsString('Arab-Israeli party', $content);
+    }
+
+    public function testStripsAMetaToolbarThatSitsBelowAStandfirst(): void
+    {
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-masthead-toolbar.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post', 'Shoulder to Shoulder');
+        $content = (string) $result->contentHtml;
+
+        self::assertStringContainsString('reaffirmed its course', $content);
+        self::assertStringNotContainsString('7. September 2026', $content);
+        self::assertStringNotContainsString('9 min.', $content);
+        self::assertStringNotContainsString('Drucken', $content);
+        self::assertStringNotContainsString('Korrektur', $content);
+        self::assertStringNotContainsString('mehr_artikel_icon', $content);
+        self::assertStringNotContainsString('icons/expand', $content);
+        self::assertStringContainsString('campaign_posters_w.webp', $content);
+        self::assertStringContainsString('Photo: zVg', $content);
+        self::assertStringContainsString('pro-authoritarian gathering', $content);
+    }
+
+    public function testStripsAReadingTimeAndCategoryMetaBar(): void
+    {
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-masthead-metabar.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post', 'September Wallpapers');
+        $content = (string) $result->contentHtml;
+
+        self::assertStringNotContainsString('11 min read', $content);
+        self::assertStringNotContainsString('Wallpapers</a>', $content);
+        self::assertStringContainsString('welcome the new month', $content);
+        self::assertStringContainsString('fifteen years', $content);
+    }
+
     public function testKeepsHeadingsAndImagesOnBlockComponentPages(): void
     {
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-block-components.html');

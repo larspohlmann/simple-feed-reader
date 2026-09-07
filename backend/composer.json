@@ -10,6 +10,7 @@
         "ext-dom": "*",
         "ext-gd": "*",
         "ext-iconv": "*",
+        "ext-intl": "*",
         "ext-libxml": "*",
         "ext-pdo": "*",
         "ext-sodium": "*",

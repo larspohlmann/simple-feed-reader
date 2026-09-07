@@ -77,6 +77,18 @@ final class ReaderBodyCleanerTest extends TestCase
         self::assertStringContainsString('Fliesstext', $result);
     }
 
+    public function testDropsADuplicateTitleThatSatBehindAKicker(): void
+    {
+        $title = 'Schwedens Wohlfahrtsstaat nach 30 Jahren neoliberalem Experiment';
+        $content = '<div><p>Kapitalismus</p><h2>' . $title . '</h2><p>' . self::PROSE . '</p></div>';
+
+        $result = $this->cleaner->clean($content, [$title], $this->noLead(), ArticleMedia::none());
+
+        self::assertStringNotContainsString('Kapitalismus', $result);
+        self::assertStringNotContainsString($title, $result);
+        self::assertStringContainsString('Fliesstext', $result);
+    }
+
     public function testRemovesLeadingEngagementChromeInTheSamePass(): void
     {
         $content = '<div><p>1.251 Klicks</p><p>❤️️</p><p>' . self::PROSE . '</p></div>';

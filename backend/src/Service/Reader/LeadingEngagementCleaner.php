@@ -18,36 +18,92 @@ final readonly class LeadingEngagementCleaner
             return;
         }
 
+        $furniture = new LeadingFurniture($entryAuthor);
         $root = $this->contentRoot($document->body);
         $blocks = LeadingEngagementBlocks::in($root);
-        $anchor = $this->firstProseAnchor($blocks);
+        $anchor = $furniture->bodyStart($blocks);
         if ($anchor === null) {
             return;
         }
 
-        $leading = array_slice($blocks, 0, $anchor);
-        $removedEngagement = false;
-        foreach ($leading as $block) {
-            if (!$this->isEngagement($block, $entryAuthor)) {
-                continue;
-            }
+        $anchorElement = $blocks[$anchor]->element;
+        $removedFurniture = $this->removeMatchedFurniture(array_slice($blocks, 0, $anchor), $furniture);
+        $removedBadges = $this->removeMastheadBadges($root, $anchorElement);
+        $removedIcons = $this->removeDecorativeIcons($root, $anchorElement);
 
-            $block->element->remove();
-            $removedEngagement = true;
-        }
-
+        // Only text furniture in front of the body can leave a duplicate byline behind it.
         $followingByline = $blocks[$anchor + 1] ?? null;
         if (
-            $removedEngagement
+            $removedFurniture
             && $followingByline !== null
             && $this->isDuplicateByline($followingByline, $entryAuthor)
         ) {
             $followingByline->element->remove();
         }
 
-        if ($removedEngagement) {
-            $this->removeRemaindersBefore($root, $blocks[$anchor]->element);
+        if ($removedFurniture || $removedBadges || $removedIcons) {
+            $this->removeRemaindersBefore($root, $anchorElement);
         }
+    }
+
+    /** @param list<LeadingBlock> $leading */
+    private function removeMatchedFurniture(array $leading, LeadingFurniture $furniture): bool
+    {
+        $removed = false;
+        foreach ($leading as $block) {
+            if ($furniture->matches($block)) {
+                $block->element->remove();
+                $removed = true;
+            }
+        }
+
+        return $removed;
+    }
+
+    /**
+     * A leading <header> is the masthead; an image-only link inside it is a promo
+     * badge, not a poster — a poster never sits in a <header>, so #627 is left be.
+     */
+    private function removeMastheadBadges(Element $root, Element $anchor): bool
+    {
+        $removed = false;
+        foreach ($root->getElementsByTagName('header') as $header) {
+            if (!$this->precedes($header, $anchor)) {
+                continue;
+            }
+            foreach (iterator_to_array($header->getElementsByTagName('a')) as $link) {
+                if ($this->isBadgeLink($link)) {
+                    $link->remove();
+                    $removed = true;
+                }
+            }
+        }
+
+        return $removed;
+    }
+
+    private function isBadgeLink(Element $link): bool
+    {
+        return $link->getElementsByTagName('img')->length >= 1
+            && LeadingEngagementRules::collapse($link->textContent) === '';
+    }
+
+    /** Bare decorative icons (more-articles, enlarge, share glyphs) in the head region. */
+    private function removeDecorativeIcons(Element $root, Element $anchor): bool
+    {
+        $removed = false;
+        foreach (iterator_to_array($root->getElementsByTagName('img')) as $image) {
+            if (
+                $this->precedes($image, $anchor)
+                && LeadingEngagementBlocks::isDecorativeIcon($image)
+                && !LeadingEngagementBlocks::isProtectedContent($image)
+            ) {
+                $image->remove();
+                $removed = true;
+            }
+        }
+
+        return $removed;
     }
 
     private function contentRoot(Element $body): Element
@@ -84,33 +140,6 @@ final readonly class LeadingEngagementCleaner
         return $children;
     }
 
-    /** @param list<LeadingBlock> $blocks */
-    private function firstProseAnchor(array $blocks): ?int
-    {
-        foreach ($blocks as $index => $block) {
-            if ($this->isProse($block)) {
-                return $index;
-            }
-        }
-
-        return null;
-    }
-
-    private function isProse(LeadingBlock $block): bool
-    {
-        return LeadingEngagementRules::isProse($block->text, $this->linkTextLength($block->element));
-    }
-
-    private function linkTextLength(Element $element): int
-    {
-        $length = 0;
-        foreach ($element->getElementsByTagName('a') as $link) {
-            $length += mb_strlen(LeadingEngagementRules::collapse($link->textContent));
-        }
-
-        return $length;
-    }
-
     private function removeRemaindersBefore(Element $element, Element $anchor): void
     {
         foreach ($this->elementChildren($element) as $child) {
@@ -127,14 +156,6 @@ final readonly class LeadingEngagementCleaner
         return ($element->compareDocumentPosition($anchor) & Node::DOCUMENT_POSITION_FOLLOWING) !== 0;
     }
 
-    private function isEngagement(LeadingBlock $block, ?string $entryAuthor): bool
-    {
-        return LeadingEngagementRules::isEmojiOnly($block->text)
-            || LeadingEngagementRules::isCounter($block->text)
-            || LeadingEngagementBlocks::isTimeOnly($block->element)
-            || (LeadingEngagementRules::hasAuthor($entryAuthor) && LeadingEngagementRules::isByline($block->text));
-    }
-
     /**
      * A byline block sitting right after the first prose block still duplicates
      * the reader meta line. Guard on non-prose so a real paragraph that merely
@@ -143,7 +164,7 @@ final readonly class LeadingEngagementCleaner
     private function isDuplicateByline(LeadingBlock $block, ?string $entryAuthor): bool
     {
         return LeadingEngagementRules::hasAuthor($entryAuthor)
-            && !$this->isProse($block)
+            && !LeadingEngagementBlocks::isProse($block)
             && LeadingEngagementRules::isByline($block->text);
     }
 
