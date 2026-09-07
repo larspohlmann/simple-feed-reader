@@ -31,20 +31,6 @@
   </button>
 </div>
 
-<div class="seg" role="group" [attr.aria-label]="'reader.layout.mediaAria' | transloco">
-  @for (v of mediaViews; track v.id) {
-    <button
-      [class.active]="layout.mode() === v.id"
-      [attr.aria-pressed]="layout.mode() === v.id"
-      [title]="v.label | transloco"
-      [attr.aria-label]="v.label | transloco"
-      (click)="layout.set(v.id)"
-    >
-      <app-icon [name]="v.icon" size="md" />
-    </button>
-  }
-</div>
-
 <div class="seg" role="group" [attr.aria-label]="'reader.theme.aria' | transloco">
   @for (m of modes; track m.id) {
     <button
