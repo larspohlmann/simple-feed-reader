@@ -29,6 +29,42 @@ final class PageMediaScannerTest extends TestCase
         };
     }
 
+    public function testRescuesAPosterlessVideoWithTheFallbackPoster(): void
+    {
+        $scanner = new PageMediaScanner([
+            $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', null, null, 'Prose.')]),
+        ]);
+
+        $media = $scanner->scan('<html></html>', 'https://x.test/a', 'https://feed.test/poster.jpg');
+
+        self::assertCount(1, $media->candidates);
+        self::assertSame('https://feed.test/poster.jpg', $media->candidates[0]->posterUrl);
+    }
+
+    public function testDropsAPosterlessVideoWhenNoFallbackPosterExists(): void
+    {
+        $scanner = new PageMediaScanner([
+            $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', null, null, 'Prose.')]),
+        ]);
+
+        $media = $scanner->scan('<html></html>', 'https://x.test/a');
+
+        self::assertSame([], $media->candidates);
+    }
+
+    /** A later source's og:image completes a poster-less video before the fallback is ever consulted (#913). */
+    public function testKeepsACrossSourcePosterOverTheFallback(): void
+    {
+        $scanner = new PageMediaScanner([
+            $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', null, null, 'Prose.')]),
+            $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', 'https://x.test/og.jpg')]),
+        ]);
+
+        $media = $scanner->scan('<html></html>', 'https://x.test/a', 'https://feed.test/poster.jpg');
+
+        self::assertSame('https://x.test/og.jpg', $media->candidates[0]->posterUrl);
+    }
+
     /** A declared file and a scanned one at the same URL are one candidate, and the declaration's data stands. */
     public function testTheSameUrlFromTwoSourcesIsOneCandidateWithTheDeclaredData(): void
     {
@@ -95,9 +131,10 @@ final class PageMediaScannerTest extends TestCase
     /** ARD: a lower source that re-confirms no URL of a claimed kind is seeing a rendition, not a new player — its unique URL is dropped (#788). */
     public function testALowerSourceThatConfirmsNothingAddsNoUrlOfAClaimedKind(): void
     {
+        $poster = 'https://x.test/p.jpg';
         $scanner = new PageMediaScanner([
-            $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/declared.webxxl.mp4')]),
-            $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/scanned.webs.mp4')]),
+            $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/declared.webxxl.mp4', $poster)]),
+            $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/scanned.webs.mp4', $poster)]),
         ]);
 
         $media = $scanner->scan('<html></html>', 'https://x.test/a');

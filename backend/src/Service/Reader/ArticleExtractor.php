@@ -56,8 +56,12 @@ final class ArticleExtractor implements ArticleExtractorInterface
     ) {
     }
 
-    public function extract(string $url, ?string $entryTitle = null, ?string $entryAuthor = null): ExtractionResult
-    {
+    public function extract(
+        string $url,
+        ?string $entryTitle = null,
+        ?string $entryAuthor = null,
+        ?string $fallbackPoster = null,
+    ): ExtractionResult {
         try {
             $page = $this->fetcher->fetch($url);
         } catch (PageFetchException) {
@@ -67,7 +71,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
         $normalized = $this->normalizer->normalize($page->html);
         $pageImages = PageImageInventory::fromDocument($normalized);
         $paywalled = PaywallSignals::isPreview($page->html, $normalized);
-        $media = $this->mediaScanner->scan($page->html, $page->finalUrl);
+        $media = $this->mediaScanner->scan($page->html, $page->finalUrl, $fallbackPoster);
 
         $article = $this->richestArticle($normalized, $page);
         if ($article === null) {

@@ -64,12 +64,11 @@ final readonly class SemanticMediaSource implements MediaCandidateSourceInterfac
             return new MediaCandidate($resolved->kind, $resolved->url, null, null, $precedingText, $narrated);
         }
 
-        // A video with no poster (absent or empty) rots into a dead frame in a cache with no TTL.
-        $poster = $element->getAttribute('poster');
+        // The poster may be absent or empty here; the scanner rescues or drops a
+        // still-poster-less video once every source has been merged (#913).
+        $poster = $element->getAttribute('poster') ?: null;
 
-        return $poster === null || $poster === ''
-            ? null
-            : new MediaCandidate($resolved->kind, $resolved->url, $poster, null, $precedingText);
+        return new MediaCandidate($resolved->kind, $resolved->url, $poster, null, $precedingText);
     }
 
     /** The element's own src or its first <source> whose kind fits the element: a <video> plays files and streams, an <audio> plays audio. */

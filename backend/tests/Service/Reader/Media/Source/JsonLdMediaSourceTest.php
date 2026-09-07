@@ -57,14 +57,18 @@ final class JsonLdMediaSourceTest extends TestCase
         self::assertSame('https://x.test/poster.jpg', $found[0]->posterUrl);
     }
 
-    /** D5: a video with no poster rots into a dead frame, so it is dropped, not emitted. */
-    public function testDropsAPosterlessVideoObject(): void
+    /** The scanner rescues or drops a still-poster-less video; the source just reports it (#913). */
+    public function testEmitsAPosterlessVideoObjectForTheScannerToResolve(): void
     {
         $html = '<html><body><script type="application/ld+json">'
             . '{"@type":"VideoObject","contentUrl":"https://x.test/v.mp4"}'
             . '</script></body></html>';
 
-        self::assertSame([], $this->source->find($html, 'https://x.test/a.html'));
+        $found = $this->source->find($html, 'https://x.test/a.html');
+
+        self::assertCount(1, $found);
+        self::assertSame('https://x.test/v.mp4', $found[0]->url);
+        self::assertNull($found[0]->posterUrl);
     }
 
     /** An <audio> element has no poster attribute; a phantom thumbnailUrl must not become one. */

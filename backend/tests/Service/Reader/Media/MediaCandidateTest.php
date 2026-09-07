@@ -52,6 +52,41 @@ final class MediaCandidateTest extends TestCase
         self::assertFalse($completed->narrated);
     }
 
+    public function testResolvePosterKeepsADiscoveredStillOverTheFallback(): void
+    {
+        $video = new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', 'https://x.test/still.jpg', null, 'P.');
+
+        $resolved = $video->resolvePoster('https://feed.test/fallback.jpg');
+
+        self::assertSame($video, $resolved);
+    }
+
+    public function testResolvePosterRescuesAPosterlessVideoWithTheFallback(): void
+    {
+        $video = new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', null, null, 'Prose.', true);
+
+        $resolved = $video->resolvePoster('https://feed.test/fallback.jpg');
+
+        self::assertNotNull($resolved);
+        self::assertSame('https://feed.test/fallback.jpg', $resolved->posterUrl);
+        self::assertSame('Prose.', $resolved->precedingText);
+        self::assertTrue($resolved->narrated);
+    }
+
+    public function testResolvePosterDropsAVideoWhenNeitherStillNorFallbackExists(): void
+    {
+        $video = new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', '', null);
+
+        self::assertNull($video->resolvePoster(null));
+    }
+
+    public function testResolvePosterLeavesAudioUntouched(): void
+    {
+        $audio = new MediaCandidate(MediaKind::Audio, 'https://x.test/a.mp3', null, null);
+
+        self::assertSame($audio, $audio->resolvePoster('https://feed.test/fallback.jpg'));
+    }
+
     public function testAtMovesOnlyTheUrl(): void
     {
         $declared = new MediaCandidate(MediaKind::Stream, 'https://a.test/x.m3u8', 'p.jpg', null, 'prose', true);

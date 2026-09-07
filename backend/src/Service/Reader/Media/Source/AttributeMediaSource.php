@@ -105,17 +105,14 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
     {
         $candidates = [];
         foreach ($originsByKind as $kindValue => $origins) {
-            $candidate = $this->bestCandidate(MediaKind::from($kindValue), $origins, $page);
-            if ($candidate !== null) {
-                $candidates[] = $candidate;
-            }
+            $candidates[] = $this->bestCandidate(MediaKind::from($kindValue), $origins, $page);
         }
 
         return $candidates;
     }
 
     /** @param array<string, Element> $origins durable url => the element holding it */
-    private function bestCandidate(MediaKind $kind, array $origins, ScannedPage $page): ?MediaCandidate
+    private function bestCandidate(MediaKind $kind, array $origins, ScannedPage $page): MediaCandidate
     {
         $best = $this->relevance->rank(array_keys($origins), $page->url)[0];
         $precedingText = $page->blocks->before($origins[$best]);
@@ -125,11 +122,10 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
             return new MediaCandidate(MediaKind::Audio, $best, null, null, $precedingText, $narrated);
         }
 
-        // A publisher depublishes video on a schedule and the reader's cache
-        // has no TTL; a poster-less video would rot into a dead frame instead
-        // of a still with a failing play control, so it is dropped outright.
+        // The poster may be absent here; the scanner rescues or drops a
+        // still-poster-less video once every source has been merged (#913).
         $poster = $page->posterUrl ?? PlayerPoster::near($origins[$best]);
 
-        return $poster === null ? null : new MediaCandidate($kind, $best, $poster, null, $precedingText);
+        return new MediaCandidate($kind, $best, $poster, null, $precedingText);
     }
 }
