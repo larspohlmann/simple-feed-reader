@@ -292,13 +292,6 @@ export class EntryListComponent implements OnDestroy {
     return isMediaView(layout) ? layout : null;
   });
 
-  /** A media tile carries only its owning entry id; the list owns the entries,
-   *  so it resolves the entry before raising the same `open` the rows raise. */
-  protected onMediaOpen(entryId: number): void {
-    const entry = this.entries().find((candidate) => candidate.id === entryId);
-    if (entry) this.open.emit(entry);
-  }
-
   /** Search rows dim their excerpt a shade — the marked term stays the row's
    *  focus, and the surrounding prose recedes behind it. */
   readonly isSearch = computed(() => this.selection().kind === 'search');

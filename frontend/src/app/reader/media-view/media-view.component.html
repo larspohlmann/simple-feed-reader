@@ -3,7 +3,7 @@
     @if (pictures().length) {
       <div class="grid">
         @for (tile of pictures(); track tile.url) {
-          <button class="tile" type="button" (click)="open.emit(tile.entryId)">
+          <button class="tile" type="button" (click)="openEntry(tile.entryId)">
             <img
               [src]="tile.url"
               alt=""
@@ -26,7 +26,7 @@
             class="tile video"
             type="button"
             [attr.aria-label]="tile.title"
-            (click)="open.emit(tile.entryId)"
+            (click)="openEntry(tile.entryId)"
           >
             @if (tile.posterUrl) {
               <img
@@ -62,7 +62,7 @@
             >
               <app-icon name="play_circle" size="lg" />
             </button>
-            <button class="audio-title" type="button" (click)="open.emit(item.entry.id)">
+            <button class="audio-title" type="button" (click)="open.emit(item.entry)">
               {{ item.attachment.title?.trim() || item.entry.title }}
             </button>
             <span class="audio-meta">

@@ -23,7 +23,7 @@ import { EntryDto } from '../models';
 export class MediaViewComponent {
   readonly mode = input.required<MediaView>();
   readonly entries = input.required<EntryDto[]>();
-  readonly open = output<number>();
+  readonly open = output<EntryDto>();
 
   private readonly player = inject(AudioPlayerService);
   protected readonly format = formatDuration;
@@ -31,6 +31,13 @@ export class MediaViewComponent {
   protected readonly pictures = computed(() => pictureTiles(this.entries()));
   protected readonly videos = computed(() => videoTiles(this.entries()));
   protected readonly audios = computed(() => audioItems(this.entries()));
+
+  /** A tile carries only its owning entry id; resolve it here, where the
+   *  entries live, so the `open` output speaks entries like the list rows do. */
+  protected openEntry(entryId: number): void {
+    const entry = this.entries().find((candidate) => candidate.id === entryId);
+    if (entry) this.open.emit(entry);
+  }
 
   protected listen(item: AudioItem): void {
     this.player.play(toAudioTrack(item.entry, item.attachment));

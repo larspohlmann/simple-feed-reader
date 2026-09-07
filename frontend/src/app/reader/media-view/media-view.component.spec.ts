@@ -66,16 +66,15 @@ describe('MediaViewComponent', () => {
       expect(fixture.debugElement.queryAll(By.css('.tile img'))).toHaveLength(2);
     });
 
-    it('emits open with the owning entry id when a tile is clicked', () => {
-      const fixture = render('pictures', [
-        entry({ id: 42, media: [image('https://x.test/a.jpg')] }),
-      ]);
-      const opened: number[] = [];
-      fixture.componentInstance.open.subscribe((id) => opened.push(id));
+    it('emits open with the owning entry when a tile is clicked', () => {
+      const owner = entry({ id: 42, media: [image('https://x.test/a.jpg')] });
+      const fixture = render('pictures', [owner]);
+      const opened: EntryDto[] = [];
+      fixture.componentInstance.open.subscribe((e) => opened.push(e));
 
       fixture.debugElement.query(By.css('.tile')).nativeElement.click();
 
-      expect(opened).toEqual([42]);
+      expect(opened).toEqual([owner]);
     });
 
     it('shows an empty state when no entry declares an image', () => {
@@ -99,13 +98,14 @@ describe('MediaViewComponent', () => {
     });
 
     it('opens the entry when a video tile is clicked', () => {
-      const fixture = render('videos', [entry({ id: 7, media: [video('https://x.test/v.mp4')] })]);
-      const opened: number[] = [];
-      fixture.componentInstance.open.subscribe((id) => opened.push(id));
+      const owner = entry({ id: 7, media: [video('https://x.test/v.mp4')] });
+      const fixture = render('videos', [owner]);
+      const opened: EntryDto[] = [];
+      fixture.componentInstance.open.subscribe((e) => opened.push(e));
 
       fixture.debugElement.query(By.css('.tile')).nativeElement.click();
 
-      expect(opened).toEqual([7]);
+      expect(opened).toEqual([owner]);
     });
   });
 
@@ -135,12 +135,12 @@ describe('MediaViewComponent', () => {
 
     it('opens the entry when the row title is clicked', () => {
       const fixture = render('audios', [withAudio]);
-      const opened: number[] = [];
-      fixture.componentInstance.open.subscribe((id) => opened.push(id));
+      const opened: EntryDto[] = [];
+      fixture.componentInstance.open.subscribe((e) => opened.push(e));
 
       fixture.debugElement.query(By.css('.audio-row .audio-title')).nativeElement.click();
 
-      expect(opened).toEqual([5]);
+      expect(opened).toEqual([withAudio]);
     });
   });
 });

@@ -235,7 +235,7 @@
   </div>
 } @else if (mediaView(); as mode) {
   <div class="rows media" #rows [appScrollOutsideZone]="onRowsScroll">
-    <app-media-view [mode]="mode" [entries]="entries()" (open)="onMediaOpen($event)" />
+    <app-media-view [mode]="mode" [entries]="entries()" (open)="open.emit($event)" />
     @if (hasMore()) {
       <div class="foot" #sentinel>
         <button
