@@ -63,8 +63,10 @@ final readonly class ReaderBodyCleaner
         $this->playerChrome->cleanIn($document);
 
         $this->navigationTrimmer->trimIn($document);
-        $this->titleRemover->removeFrom($document, $titleCandidates);
+        // Engagement first: it strips the leading kickers and breadcrumbs that
+        // otherwise sit in front of the title and hide it from the title remover.
         $this->engagementCleaner->removeFrom($document, $entryAuthor);
+        $this->titleRemover->removeFrom($document, $titleCandidates);
         $this->boilerplateTrimmer->trimIn($document);
 
         // plan() only classifies, so restore() still sees every body image and
