@@ -154,6 +154,116 @@ final class LeadingEngagementCleanerTest extends TestCase
         self::assertStringContainsString('<hr', $clean);
     }
 
+    public function testRemovesALeadingSectionLinkAndBareSeparator(): void
+    {
+        $html = '<div><ul><li><a href="https://x.test/news">NEWS</a></li></ul>'
+            . '<ul><li>|</li></ul><p>' . self::PROSE . '</p></div>';
+
+        $clean = $this->clean($html, null);
+
+        self::assertStringNotContainsString('NEWS', $clean);
+        self::assertStringNotContainsString('|', $clean);
+        self::assertStringContainsString('Hamburg/Norderstedt', $clean);
+    }
+
+    public function testRemovesAParagraphBreadcrumbTrail(): void
+    {
+        $html = '<div><p><a href="https://x.test/v">Video</a></p>'
+            . '<p><a href="https://x.test/hj">heute journal</a></p>'
+            . '<p>' . self::PROSE . '</p></div>';
+
+        $clean = $this->clean($html, null);
+
+        self::assertStringNotContainsString('heute journal', $clean);
+        self::assertStringNotContainsString('>Video<', $clean);
+    }
+
+    public function testRemovesABreadcrumbListNestedInsideArticle(): void
+    {
+        $html = '<div><article><div><ul>'
+            . '<li><a href="https://x.test/">Site</a></li>'
+            . '<li><a href="https://x.test/2026">2026/36</a></li>'
+            . '<li><a href="https://x.test/ausland">Ausland</a></li>'
+            . '</ul></div><p>' . self::PROSE . '</p></article></div>';
+
+        $clean = $this->clean($html, null);
+
+        self::assertStringNotContainsString('2026/36', $clean);
+        self::assertStringNotContainsString('Ausland', $clean);
+        self::assertStringContainsString('Hamburg/Norderstedt', $clean);
+    }
+
+    public function testRemovesLeadingKickerLabelsButKeepsTitleAndDek(): void
+    {
+        $html = '<div><p>Demokratie</p><p>Kapitalismus</p>'
+            . '<h2>Schwedens Wohlfahrtsstaat nach 30 Jahren</h2>'
+            . '<p>' . self::PROSE . '</p></div>';
+
+        $clean = $this->clean($html, null);
+
+        self::assertStringNotContainsString('Demokratie', $clean);
+        self::assertStringNotContainsString('Kapitalismus', $clean);
+        self::assertStringContainsString('Schwedens Wohlfahrtsstaat', $clean);
+        self::assertStringContainsString('Hamburg/Norderstedt', $clean);
+    }
+
+    public function testKeepsALeadingParagraphThatMerelyLinksOneWord(): void
+    {
+        $lede = 'For more than 15 years already, our <a href="https://x.test/join">monthly wallpapers series</a> '
+            . 'has been the perfect opportunity for creatives of all backgrounds to put their skills to the test.';
+        $html = '<div><p><a href="https://x.test/cat">Wallpapers</a></p><p>' . $lede . '</p>'
+            . '<p>' . self::PROSE . '</p></div>';
+
+        $clean = $this->clean($html, null);
+
+        self::assertStringNotContainsString('>Wallpapers<', $clean);
+        self::assertStringContainsString('For more than 15 years', $clean);
+    }
+
+    public function testRemovesCategoryBylineAndTimeFromASemanticHeaderMasthead(): void
+    {
+        $dek = 'Announcing the winning poems from the magazine monthly challenge';
+        $html = '<div><article><header>'
+            . '<p><a href="https://x.test/culture">Culture</a></p>'
+            . '<p>' . $dek . '</p>'
+            . '<address>By <a href="https://x.test/author">Clark Strand</a></address>'
+            . '<time>Sep 01, 2026</time>'
+            . '</header><section><figure><img src="https://x.test/h.jpg" alt="">'
+            . '<figcaption>Illustration by Jing Li</figcaption></figure>'
+            . '<p>' . self::PROSE . '</p></section></article></div>';
+
+        $clean = $this->clean($html, 'Clark Strand');
+
+        self::assertStringNotContainsString('Culture', $clean);
+        self::assertStringNotContainsString('Clark Strand', $clean);
+        self::assertStringNotContainsString('Sep 01, 2026', $clean);
+        self::assertStringContainsString($dek, $clean);
+        self::assertStringContainsString('Illustration by Jing Li', $clean);
+        self::assertStringContainsString('Hamburg/Norderstedt', $clean);
+    }
+
+    public function testKeepsAShortLeadingFigcaptionThatLooksLikeAKicker(): void
+    {
+        $html = '<div><figure><img src="https://x.test/a.jpg" alt=""><figcaption>A caption line</figcaption></figure>'
+            . '<p>' . self::PROSE . '</p></div>';
+
+        self::assertStringContainsString('A caption line', $this->clean($html, null));
+    }
+
+    public function testRemovesLeadingDateReadingTimeAndBareNumberRows(): void
+    {
+        $html = '<div><ul><li>11 min read</li><li><a href="https://x.test/c">Wallpapers</a></li></ul>'
+            . '<p>07. September 2026</p><p>0</p>'
+            . '<p>' . self::PROSE . '</p></div>';
+
+        $clean = $this->clean($html, null);
+
+        self::assertStringNotContainsString('11 min read', $clean);
+        self::assertStringNotContainsString('Wallpapers', $clean);
+        self::assertStringNotContainsString('07. September 2026', $clean);
+        self::assertStringContainsString('Hamburg/Norderstedt', $clean);
+    }
+
     private function clean(string $html, ?string $entryAuthor): string
     {
         $document = HtmlDocumentParser::parseOrNull($html);

@@ -66,6 +66,92 @@ final class LeadingEngagementRulesTest extends TestCase
         self::assertFalse(LeadingEngagementRules::isByline('Vonnegut'));
     }
 
+    public function testSeparatorOnlyMatchesBareGlyphRuns(): void
+    {
+        self::assertTrue(LeadingEngagementRules::isSeparatorOnly('|'));
+        self::assertTrue(LeadingEngagementRules::isSeparatorOnly('›'));
+        self::assertTrue(LeadingEngagementRules::isSeparatorOnly('•'));
+    }
+
+    public function testSeparatorOnlyRejectsEmptyAndTextThatCarriesWords(): void
+    {
+        self::assertFalse(LeadingEngagementRules::isSeparatorOnly(''));
+        self::assertFalse(LeadingEngagementRules::isSeparatorOnly('Video'));
+        self::assertFalse(LeadingEngagementRules::isSeparatorOnly('a | b'));
+    }
+
+    public function testNavigationLabelMatchesShortLinkDominatedText(): void
+    {
+        self::assertTrue(LeadingEngagementRules::isNavigationLabel('NEWS', 4));
+        self::assertTrue(LeadingEngagementRules::isNavigationLabel('heute journal', 13));
+    }
+
+    public function testNavigationLabelRejectsLinkThinAndLongText(): void
+    {
+        self::assertFalse(LeadingEngagementRules::isNavigationLabel('Read our earlier coverage here', 4));
+        self::assertFalse(LeadingEngagementRules::isNavigationLabel(str_repeat('a', 130), 130));
+    }
+
+    public function testKickerMatchesAVeryShortTextOnlyLabelAboveTheTitle(): void
+    {
+        self::assertTrue(LeadingEngagementRules::isKicker('Demokratie', 0));
+        self::assertTrue(LeadingEngagementRules::isKicker('Kapitalismus', 0));
+    }
+
+    public function testKickerRejectsLinksSentencesAndTooManyWords(): void
+    {
+        self::assertFalse(LeadingEngagementRules::isKicker('Wallpapers', 10));
+        self::assertFalse(LeadingEngagementRules::isKicker('It is over.', 0));
+        self::assertFalse(LeadingEngagementRules::isKicker('Announcing the winning poems from the challenge', 0));
+    }
+
+    public function testKickerNeverSwallowsAByline(): void
+    {
+        self::assertFalse(LeadingEngagementRules::isKicker('By Jane Doe', 0));
+    }
+
+    public function testReadingTimeMatchesTheCommonForms(): void
+    {
+        self::assertTrue(LeadingEngagementRules::isReadingTime('9 min.'));
+        self::assertTrue(LeadingEngagementRules::isReadingTime('11 min read'));
+        self::assertTrue(LeadingEngagementRules::isReadingTime('9 minutes'));
+    }
+
+    public function testReadingTimeRejectsProseThatMerelyStartsWithAMinute(): void
+    {
+        self::assertFalse(LeadingEngagementRules::isReadingTime('9 minerals were found'));
+        self::assertFalse(LeadingEngagementRules::isReadingTime('min'));
+    }
+
+    public function testDateLineMatchesGermanEnglishAndNumericForms(): void
+    {
+        self::assertTrue(LeadingEngagementRules::isDateLine('7. September 2026'));
+        self::assertTrue(LeadingEngagementRules::isDateLine('07. September 2026'));
+        self::assertTrue(LeadingEngagementRules::isDateLine('Montag, 7. September 2026'));
+        self::assertTrue(LeadingEngagementRules::isDateLine('07.09.2026'));
+        self::assertTrue(LeadingEngagementRules::isDateLine('September 7, 2026'));
+        self::assertTrue(LeadingEngagementRules::isDateLine('Sep 01, 2026'));
+        self::assertTrue(LeadingEngagementRules::isDateLine('7 September 2026'));
+        self::assertTrue(LeadingEngagementRules::isDateLine('2026-09-01'));
+    }
+
+    public function testDateLineRejectsWordsBareMonthsYearsAndSentences(): void
+    {
+        self::assertFalse(LeadingEngagementRules::isDateLine('Im Jahr 2026 passierte viel'));
+        self::assertFalse(LeadingEngagementRules::isDateLine('Hamburg'));
+        self::assertFalse(LeadingEngagementRules::isDateLine('September'));
+        self::assertFalse(LeadingEngagementRules::isDateLine('2026'));
+        self::assertFalse(LeadingEngagementRules::isDateLine('9 min.'));
+        self::assertFalse(LeadingEngagementRules::isDateLine('0'));
+    }
+
+    public function testBareNumberMatchesDigitsOnly(): void
+    {
+        self::assertTrue(LeadingEngagementRules::isBareNumber('0'));
+        self::assertTrue(LeadingEngagementRules::isBareNumber('42'));
+        self::assertFalse(LeadingEngagementRules::isBareNumber('0 reactions'));
+    }
+
     public function testHasAuthorTreatsNullAndBlankAsNoAuthor(): void
     {
         self::assertFalse(LeadingEngagementRules::hasAuthor(null));

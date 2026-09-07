@@ -26,26 +26,26 @@ final readonly class LeadingEngagementCleaner
         }
 
         $leading = array_slice($blocks, 0, $anchor);
-        $removedEngagement = false;
+        $removedFurniture = false;
         foreach ($leading as $block) {
-            if (!$this->isEngagement($block, $entryAuthor)) {
+            if (!LeadingEngagementBlocks::isFurniture($block, $entryAuthor)) {
                 continue;
             }
 
             $block->element->remove();
-            $removedEngagement = true;
+            $removedFurniture = true;
         }
 
         $followingByline = $blocks[$anchor + 1] ?? null;
         if (
-            $removedEngagement
+            $removedFurniture
             && $followingByline !== null
             && $this->isDuplicateByline($followingByline, $entryAuthor)
         ) {
             $followingByline->element->remove();
         }
 
-        if ($removedEngagement) {
+        if ($removedFurniture) {
             $this->removeRemaindersBefore($root, $blocks[$anchor]->element);
         }
     }
@@ -98,17 +98,7 @@ final readonly class LeadingEngagementCleaner
 
     private function isProse(LeadingBlock $block): bool
     {
-        return LeadingEngagementRules::isProse($block->text, $this->linkTextLength($block->element));
-    }
-
-    private function linkTextLength(Element $element): int
-    {
-        $length = 0;
-        foreach ($element->getElementsByTagName('a') as $link) {
-            $length += mb_strlen(LeadingEngagementRules::collapse($link->textContent));
-        }
-
-        return $length;
+        return LeadingEngagementRules::isProse($block->text, LeadingEngagementBlocks::linkTextLength($block->element));
     }
 
     private function removeRemaindersBefore(Element $element, Element $anchor): void
@@ -125,14 +115,6 @@ final readonly class LeadingEngagementCleaner
     private function precedes(Element $element, Element $anchor): bool
     {
         return ($element->compareDocumentPosition($anchor) & Node::DOCUMENT_POSITION_FOLLOWING) !== 0;
-    }
-
-    private function isEngagement(LeadingBlock $block, ?string $entryAuthor): bool
-    {
-        return LeadingEngagementRules::isEmojiOnly($block->text)
-            || LeadingEngagementRules::isCounter($block->text)
-            || LeadingEngagementBlocks::isTimeOnly($block->element)
-            || (LeadingEngagementRules::hasAuthor($entryAuthor) && LeadingEngagementRules::isByline($block->text));
     }
 
     /**
