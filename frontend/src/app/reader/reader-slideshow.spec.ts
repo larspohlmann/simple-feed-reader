@@ -27,6 +27,11 @@ describe('hydrateSlideshows', () => {
     expect((slides[0] as HTMLElement).hidden).toBe(false);
     expect((slides[1] as HTMLElement).hidden).toBe(true);
     expect(el.textContent).toContain('1 / 3');
+    expect(el.querySelector('.reader-slideshow__prev')!.textContent).toBe('‹');
+    expect(el.querySelector('.reader-slideshow__next')!.textContent).toBe('›');
+    expect(el.querySelector('.reader-slideshow__prev')!.getAttribute('aria-label')).toBe(
+      'Previous',
+    );
   });
 
   it('advances on the next control and wraps the counter', () => {

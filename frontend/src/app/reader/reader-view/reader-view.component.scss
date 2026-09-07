@@ -828,3 +828,19 @@ article {
   font-variant-numeric: tabular-nums;
   color: var(--text-muted);
 }
+
+.content ::ng-deep .reader-slideshow__prev,
+.content ::ng-deep .reader-slideshow__next {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: var(--fs-xl);
+  line-height: 1;
+  cursor: pointer;
+}

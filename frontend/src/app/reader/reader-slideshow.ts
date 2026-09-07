@@ -37,8 +37,18 @@ function build(figure: HTMLElement, slides: HTMLElement[], labels: SlideshowLabe
     counter.textContent = labels.position(current + 1, slides.length);
   };
 
-  const previous = control('reader-slideshow__prev', labels.previous, () => show(current - 1));
-  const next = control('reader-slideshow__next', labels.next, () => show(current + 1));
+  const previous = control({
+    className: 'reader-slideshow__prev',
+    glyph: '‹',
+    label: labels.previous,
+    onClick: () => show(current - 1),
+  });
+  const next = control({
+    className: 'reader-slideshow__next',
+    glyph: '›',
+    label: labels.next,
+    onClick: () => show(current + 1),
+  });
 
   const controls = document.createElement('div');
   controls.className = 'reader-slideshow__controls';
@@ -70,11 +80,19 @@ function build(figure: HTMLElement, slides: HTMLElement[], labels: SlideshowLabe
   show(0);
 }
 
-function control(className: string, label: string, onClick: () => void): HTMLButtonElement {
+interface ControlSpec {
+  className: string;
+  glyph: string;
+  label: string;
+  onClick: () => void;
+}
+
+function control(spec: ControlSpec): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = className;
-  button.setAttribute('aria-label', label);
-  button.addEventListener('click', onClick);
+  button.className = spec.className;
+  button.textContent = spec.glyph;
+  button.setAttribute('aria-label', spec.label);
+  button.addEventListener('click', spec.onClick);
   return button;
 }
