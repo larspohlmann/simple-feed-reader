@@ -46,6 +46,40 @@ final class EntryIngestorTest extends DbTestCase
         );
     }
 
+    public function testPersistsFeedMediaWithTheLeadAsFirstVisualAndAnAttachment(): void
+    {
+        $feed = $this->feed();
+        $parsed = new ParsedEntry(
+            guid: 'g-media',
+            url: 'https://example.com/ep',
+            title: 'Episode',
+            author: null,
+            summary: null,
+            contentHtml: '<p>body</p>',
+            publishedAt: null,
+            image: new DeclaredImage('https://i/lead.jpg', 800, 600),
+            media: [new \App\Service\Parser\ParsedMedium('https://i/extra.jpg', \App\Service\Parser\VisualMediaKind::Image)],
+            attachments: [new \App\Service\Parser\ParsedAttachment('https://cdn/ep.mp3', 'audio/mpeg', 3723, 4200000)],
+        );
+
+        $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, null, [$parsed]), self::context());
+        $this->em->flush();
+        $this->em->clear();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        self::assertInstanceOf(Entry::class, $entry);
+        $media = $entry->getMedia();
+        self::assertCount(2, $media);
+        self::assertSame('https://i/lead.jpg', $media[0]->url);
+        self::assertSame($entry->getImageUrl(), $media[0]->url);
+        self::assertSame('https://i/extra.jpg', $media[1]->url);
+
+        $attachments = $entry->getAttachments();
+        self::assertCount(1, $attachments);
+        self::assertSame('https://cdn/ep.mp3', $attachments[0]->url);
+        self::assertSame(3723, $attachments[0]->durationInSeconds);
+    }
+
     /**
      * BBC appends a revision counter to its GUID (`…#0`, `…#1`, …) while the
      * article URL stays stable, so a re-fetch of the same article carries a new
