@@ -21,6 +21,7 @@ use App\Service\Reader\Media\SubstackPosterLink;
 use App\Service\Reader\NavigationChromeTrimmer;
 use App\Service\Reader\PageImageInventory;
 use App\Service\Reader\PlayerChromeCleaner;
+use App\Service\Reader\RecipeFacts\RecipeFactsCleaner;
 use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\ReaderLeadImage;
 use App\Service\Reader\Slideshow\SlideshowInserter;
@@ -50,12 +51,29 @@ final class ReaderBodyCleanerTest extends TestCase
             new PlayerChromeCleaner(),
             new PageMediaInserter($markup),
             new SlideshowInserter(new SlideshowMarkup()),
+            new RecipeFactsCleaner(),
         );
     }
 
     private function noLead(): LeadImageCandidate
     {
         return new LeadImageCandidate(null, PageImageInventory::fromDocument(null));
+    }
+
+    public function testRelaysARecipeFactBlockToTheReaderFigure(): void
+    {
+        $facts = '<div class="details-items">'
+            . '<div class="detail-item"><span class="detail-item-icon"></span>'
+            . '<span class="detail-item-label">Portionen</span>'
+            . '<p class="detail-item-value">1</p>'
+            . '<span class="detail-item-unit">Portionen</span></div></div>';
+        $content = '<div><p>' . self::PROSE . '</p>' . $facts . '</div>';
+
+        $result = $this->cleaner->clean($content, [null], $this->noLead(), ArticleMedia::none());
+
+        self::assertStringContainsString('<figure class="reader-recipe-facts">', $result);
+        self::assertStringContainsString('<dt>Portionen</dt><dd>1 Portionen</dd>', $result);
+        self::assertStringNotContainsString('detail-item', $result);
     }
 
     public function testStripsALeadingNavigationChromeRegionInTheSamePass(): void

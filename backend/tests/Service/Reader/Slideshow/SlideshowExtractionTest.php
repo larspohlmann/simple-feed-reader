@@ -20,6 +20,7 @@ use App\Service\Reader\Media\SubstackPosterLink;
 use App\Service\Reader\NavigationChromeTrimmer;
 use App\Service\Reader\PageImageInventory;
 use App\Service\Reader\PlayerChromeCleaner;
+use App\Service\Reader\RecipeFacts\RecipeFactsCleaner;
 use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\ReaderLeadImage;
 use App\Service\Reader\Slideshow\MarkupCarouselRecognizer;
@@ -111,6 +112,7 @@ final class SlideshowExtractionTest extends TestCase
             new PlayerChromeCleaner(),
             new PageMediaInserter($markup),
             new SlideshowInserter(new SlideshowMarkup()),
+            new RecipeFactsCleaner(),
         );
     }
 }
