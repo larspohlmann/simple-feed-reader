@@ -6,6 +6,7 @@ namespace App\Tests\Support;
 
 use App\Service\Reader\ArticleExtractorInterface;
 use App\Service\Reader\ExtractionResult;
+use App\Service\Reader\FeedMedia;
 
 /**
  * Test double for the reader endpoint: returns a preconfigured outcome and
@@ -17,7 +18,7 @@ final class FakeArticleExtractor implements ArticleExtractorInterface
     /** @var list<string> */
     public array $calls = [];
 
-    /** @var list<array{url: string, title: string|null, author: string|null, fallbackPoster: string|null}> */
+    /** @var list<array{url: string, title: string|null, author: string|null, feedMedia: FeedMedia|null}> */
     public array $requests = [];
 
     private ?ExtractionResult $result = null;
@@ -31,14 +32,14 @@ final class FakeArticleExtractor implements ArticleExtractorInterface
         string $url,
         ?string $entryTitle = null,
         ?string $entryAuthor = null,
-        ?string $fallbackPoster = null,
+        ?FeedMedia $feedMedia = null,
     ): ExtractionResult {
         $this->calls[] = $url;
         $this->requests[] = [
             'url' => $url,
             'title' => $entryTitle,
             'author' => $entryAuthor,
-            'fallbackPoster' => $fallbackPoster,
+            'feedMedia' => $feedMedia,
         ];
 
         return $this->result

@@ -49,6 +49,7 @@ final readonly class ReaderBodyCleaner
         LeadImageCandidate $leadImage,
         ArticleMedia $media,
         ?string $entryAuthor = null,
+        ?FeedMedia $feedMedia = null,
     ): string {
         $document = HtmlDocumentParser::parseOrNull($contentHtml);
         if ($document === null) {
@@ -76,6 +77,10 @@ final readonly class ReaderBodyCleaner
         $plan = $this->mediaInserter->plan($document, $discoveredMedia);
         $restoredHero = $this->leadImage->restore($document, $leadImage, $plan->topPlacesLeadVisual());
         $this->mediaInserter->apply($document, $plan, $restoredHero);
+
+        // Last, over the finished body: the feed's real pixel sizes on the
+        // images and players it enumerated, so none of them reflows the article.
+        FeedDimensionStamper::stampInto($document, $feedMedia ?? FeedMedia::none());
 
         return $document->saveHtml();
     }

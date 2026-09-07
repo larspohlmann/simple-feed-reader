@@ -21,7 +21,26 @@ final readonly class MediaCandidate
         public ?string $label = null,
         public ?string $precedingText = null,
         public bool $narrated = false,
+        public ?string $mimeType = null,
     ) {
+    }
+
+    /** The same media with the feed-declared MIME type the reader trusts over its own guess (#914). */
+    public function withMimeType(?string $mimeType): self
+    {
+        if ($mimeType === null || $mimeType === $this->mimeType) {
+            return $this;
+        }
+
+        return new self(
+            $this->kind,
+            $this->url,
+            $this->posterUrl,
+            $this->label,
+            $this->precedingText,
+            $this->narrated,
+            $mimeType,
+        );
     }
 
     /**
@@ -40,7 +59,15 @@ final readonly class MediaCandidate
 
         return $fallbackPoster === null || $fallbackPoster === ''
             ? null
-            : new self($this->kind, $this->url, $fallbackPoster, $this->label, $this->precedingText, $this->narrated);
+            : new self(
+                $this->kind,
+                $this->url,
+                $fallbackPoster,
+                $this->label,
+                $this->precedingText,
+                $this->narrated,
+                $this->mimeType,
+            );
     }
 
     /** The same media with the gaps a later, weaker source can fill: poster, label, the prose anchor, and the narration tell. */
@@ -53,12 +80,21 @@ final readonly class MediaCandidate
             $this->label ?? $later->label,
             $this->precedingText ?? $later->precedingText,
             $this->narrated || $later->narrated,
+            $this->mimeType ?? $later->mimeType,
         );
     }
 
     /** The same media served from where its URL finally lands. */
     public function at(string $url): self
     {
-        return new self($this->kind, $url, $this->posterUrl, $this->label, $this->precedingText, $this->narrated);
+        return new self(
+            $this->kind,
+            $url,
+            $this->posterUrl,
+            $this->label,
+            $this->precedingText,
+            $this->narrated,
+            $this->mimeType,
+        );
     }
 }

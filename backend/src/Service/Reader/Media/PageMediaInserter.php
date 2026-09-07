@@ -155,7 +155,7 @@ final readonly class PageMediaInserter
         $player->setAttribute('controls', '');
         // Never fetch megabytes for an article the reader may only be skimming.
         $player->setAttribute('preload', 'none');
-        $player->setAttribute('src', $candidate->url);
+        $this->attachSource($document, $player, $candidate);
         // <audio> has no poster attribute; only a video ever gets one (defect i).
         if ($candidate->kind->isVideo() && $candidate->posterUrl !== null) {
             $player->setAttribute('poster', $candidate->posterUrl);
@@ -167,5 +167,24 @@ final readonly class PageMediaInserter
         }
 
         return $player;
+    }
+
+    /**
+     * The feed states the file's type authoritatively, so a matched candidate
+     * plays through a typed <source> the browser can accept or skip without a
+     * fetch (#914); a candidate the feed never enumerated keeps a bare src.
+     */
+    private function attachSource(HTMLDocument $document, Element $player, MediaCandidate $candidate): void
+    {
+        if ($candidate->mimeType === null) {
+            $player->setAttribute('src', $candidate->url);
+
+            return;
+        }
+
+        $source = $document->createElement('source');
+        $source->setAttribute('src', $candidate->url);
+        $source->setAttribute('type', $candidate->mimeType);
+        $player->appendChild($source);
     }
 }

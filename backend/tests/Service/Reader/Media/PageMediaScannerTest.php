@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Media;
 
+use App\Entity\Entry;
+use App\Entity\EntryAttachment;
+use App\Entity\Feed;
+use App\Service\Reader\FeedMedia;
 use App\Service\Reader\Media\ArticleMedia;
 use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaCandidateSourceInterface;
@@ -13,6 +17,25 @@ use PHPUnit\Framework\TestCase;
 
 final class PageMediaScannerTest extends TestCase
 {
+    /** @param list<EntryAttachment> $attachments */
+    private function feed(?string $leadPoster = null, array $attachments = []): FeedMedia
+    {
+        $entry = new Entry(
+            new Feed('https://feed.test/rss.xml'),
+            'g1',
+            'https://feed.test/article',
+            'Title',
+            new \DateTimeImmutable('2026-09-07T10:00:00Z'),
+            new \DateTimeImmutable('2026-09-07T10:00:00Z'),
+        );
+        if ($leadPoster !== null) {
+            $entry->setImage($leadPoster, 1200, 630);
+        }
+        $entry->setMedia([], $attachments);
+
+        return FeedMedia::fromEntry($entry);
+    }
+
     /** @param list<MediaCandidate> $candidates */
     private function source(array $candidates): MediaCandidateSourceInterface
     {
@@ -35,7 +58,7 @@ final class PageMediaScannerTest extends TestCase
             $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', null, null, 'Prose.')]),
         ]);
 
-        $media = $scanner->scan('<html></html>', 'https://x.test/a', 'https://feed.test/poster.jpg');
+        $media = $scanner->scan('<html></html>', 'https://x.test/a', $this->feed('https://feed.test/poster.jpg'));
 
         self::assertCount(1, $media->candidates);
         self::assertSame('https://feed.test/poster.jpg', $media->candidates[0]->posterUrl);
@@ -60,9 +83,33 @@ final class PageMediaScannerTest extends TestCase
             $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', 'https://x.test/og.jpg')]),
         ]);
 
-        $media = $scanner->scan('<html></html>', 'https://x.test/a', 'https://feed.test/poster.jpg');
+        $media = $scanner->scan('<html></html>', 'https://x.test/a', $this->feed('https://feed.test/poster.jpg'));
 
         self::assertSame('https://x.test/og.jpg', $media->candidates[0]->posterUrl);
+    }
+
+    public function testAFeedEnumeratedCandidateAdoptsTheDeclaredMimeType(): void
+    {
+        $scanner = new PageMediaScanner([
+            $this->source([new MediaCandidate(MediaKind::Video, 'https://cdn.test/clip.mp4', 'https://x.test/p.jpg')]),
+        ]);
+        $feed = $this->feed(null, [new EntryAttachment('https://cdn.test/clip.mp4', 'video/mp4')]);
+
+        $media = $scanner->scan('<html></html>', 'https://x.test/a', $feed);
+
+        self::assertSame('video/mp4', $media->candidates[0]->mimeType);
+    }
+
+    public function testAnUnenumeratedCandidateKeepsNoMimeType(): void
+    {
+        $scanner = new PageMediaScanner([
+            $this->source([new MediaCandidate(MediaKind::Video, 'https://cdn.test/other.mp4', 'https://x.test/p.jpg')]),
+        ]);
+        $feed = $this->feed(null, [new EntryAttachment('https://cdn.test/clip.mp4', 'video/mp4')]);
+
+        $media = $scanner->scan('<html></html>', 'https://x.test/a', $feed);
+
+        self::assertNull($media->candidates[0]->mimeType);
     }
 
     /** A declared file and a scanned one at the same URL are one candidate, and the declaration's data stands. */
