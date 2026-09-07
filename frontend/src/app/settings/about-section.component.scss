@@ -1,10 +1,258 @@
-// Layout glue only: the group chrome and the row line come from the shared
-// primitives. `.row` and `.label` are gone -- `app-settings-row` draws both.
-.loading {
+@use '../theme/breakpoints' as bp;
+
+// Every direct child of the group panel pads itself: the panel is unpadded by
+// design (its rows pad themselves), so these blocks read the same inset the
+// shared rows do.
+%inset {
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+}
+
+// --- Stat tiles ---------------------------------------------------------------
+
+.tiles {
+  @extend %inset;
+
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+@media (width > bp.$bp-sm) {
+  .tiles {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.tile {
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.tile-value {
+  font-size: var(--fs-xl);
+  font-weight: 650;
+  line-height: var(--lh-tight);
+  color: var(--text-primary);
+}
+
+.tile-label {
+  margin-top: var(--space-0);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+// --- A titled block inside the group (chart, top feeds) -----------------------
+
+.block {
+  @extend %inset;
+
+  border-top: 1px solid var(--border);
+}
+
+.block-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.block-title {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.block-sub {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.block-empty {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--panel-inset-y) var(--panel-inset-x);
+  min-height: var(--space-7);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+// --- Reading chart ------------------------------------------------------------
+
+.chart {
+  position: relative;
+  margin: 0;
+}
+
+.chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 320 / 88;
+  overflow: visible;
+}
+
+.chart-area {
+  fill: var(--accent);
+  opacity: 0.14;
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart-marker {
+  position: absolute;
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  border: 2px solid var(--surface-1);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.chart-tip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  padding: var(--space-0) var(--space-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--panel-shadow);
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  pointer-events: none;
+
+  strong {
+    color: var(--text-primary);
+  }
+}
+
+// One transparent hit target per day, laid across the plot so a hover or a
+// tap anywhere over a day reveals it. Focusable, so the chart is keyboard
+// readable one day at a time.
+.chart-cols {
+  position: absolute;
+  inset: 0;
+}
+
+.chart-col {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    border-radius: var(--radius-sm);
+  }
+}
+
+// --- Top feeds by unread ------------------------------------------------------
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 7rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-2);
+  margin: 0 calc(-1 * var(--space-2));
+  border-radius: var(--radius);
+  font-size: var(--fs-sm);
+  text-decoration: none;
+  color: inherit;
+
+  &:hover {
+    background: var(--accent-soft);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+}
+
+.bar-name {
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-track {
+  height: var(--space-2);
+  background: var(--accent-soft);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: var(--radius-pill);
+}
+
+.bar-value {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+// --- About identity -----------------------------------------------------------
+
+.identity {
+  @extend %inset;
+
+  border-bottom: 1px solid var(--border);
+}
+
+.identity-name {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.identity-tagline {
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.copyright {
+  @extend %inset;
+
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+// --- Version rows (carried over from the previous About page) ------------------
+
+.loading {
+  @extend %inset;
+
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   color: var(--text-muted);
 }
 
@@ -16,14 +264,22 @@
   justify-content: flex-end;
 }
 
+.link {
+  align-items: center;
+  color: var(--accent);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 .detail,
 .pending {
   color: var(--text-muted);
   font-size: var(--fs-sm);
 }
 
-// The stale-bundle note trails the rows inside the panel, which pads its rows
-// but not this paragraph.
 .stale {
   margin: 0;
   padding: var(--space-3) var(--panel-inset-x) var(--space-4);
