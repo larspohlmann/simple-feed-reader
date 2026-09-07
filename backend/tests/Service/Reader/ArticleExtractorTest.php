@@ -321,6 +321,10 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringNotContainsString('9 min.', $content);
         self::assertStringNotContainsString('Drucken', $content);
         self::assertStringNotContainsString('Korrektur', $content);
+        self::assertStringNotContainsString('mehr_artikel_icon', $content);
+        self::assertStringNotContainsString('icons/expand', $content);
+        self::assertStringContainsString('campaign_posters_w.webp', $content);
+        self::assertStringContainsString('Photo: zVg', $content);
         self::assertStringContainsString('pro-authoritarian gathering', $content);
     }
 

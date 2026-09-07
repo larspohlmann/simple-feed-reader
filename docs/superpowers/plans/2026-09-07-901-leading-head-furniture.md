@@ -268,7 +268,9 @@ private function isEngagementMeta(LeadingBlock $block, ?string $entryAuthor): bo
 
 ### Task 5: Icon-label action buttons (print, correction, more-articles) — RESOLVED WITHOUT A NEW RULE
 
-**Ruling:** an icon+label action row (`<p><img>Drucken</p>`) is already removed by the existing shapes — the label text ("Drucken", "Korrektur", "Mehr Artikel") is a kicker, and the icon rides inside the same `<p>`, so it goes with it. A dedicated `isIconLabel` rule would be redundant. The only residual is a *bare* decorative icon (`<p><img></p>`, no text), which is indistinguishable from a hero without a fragile size/path heuristic (untergrund's icons even lack dimensions) — deferred to Task 9's real fixture, where the downstream hero/edge/media steps may already drop it. A guard test (`testRemovesLeadingActionButtonRowsThatPairAnIconWithALabel`) locks in the icon+label behaviour. Original (superseded) design below.
+**Ruling:** an icon+label action row (`<p><img>Drucken</p>`) is already removed by the existing shapes — the label text ("Drucken", "Korrektur", "Mehr Artikel") is a kicker, and the icon rides inside the same `<p>`, so it goes with it. A dedicated `isIconLabel` rule would be redundant. A guard test (`testRemovesLeadingActionButtonRowsThatPairAnIconWithALabel`) locks in the icon+label behaviour.
+
+**Follow-up (user-reported):** the bare decorative icons (`<p><img></p>`, no text) do survive the pipeline and are visible at the head (untergrund's more-articles and enlarge glyphs). They are told apart from the hero by the **icon URL convention** — a path segment `icons` or an `icon` token in the file name, matched as a token so a content image like `silicon-valley.jpg` is left alone (`LeadingEngagementBlocks::isDecorativeIcon`). `LeadingEngagementCleaner::removeDecorativeIcons` drops such images in the head region only; the emptied wrapper goes to the remainder sweep. Original (superseded) design below.
 
 
 

@@ -29,6 +29,7 @@ final readonly class LeadingEngagementCleaner
         $anchorElement = $blocks[$anchor]->element;
         $removed = $this->removeMatchedFurniture(array_slice($blocks, 0, $anchor), $furniture);
         $removed = $this->removeMastheadBadges($root, $anchorElement) || $removed;
+        $removed = $this->removeDecorativeIcons($root, $anchorElement) || $removed;
 
         $followingByline = $blocks[$anchor + 1] ?? null;
         if (
@@ -84,6 +85,25 @@ final readonly class LeadingEngagementCleaner
     {
         return $link->getElementsByTagName('img')->length >= 1
             && LeadingEngagementRules::collapse($link->textContent) === '';
+    }
+
+    /**
+     * Decorative UI icons (more-articles, enlarge, share glyphs) that survive as
+     * bare images at the article head. Only in the head region, so a content
+     * image deeper in the body is untouched; the empty wrapper the removed icon
+     * leaves is taken by the remainder sweep.
+     */
+    private function removeDecorativeIcons(Element $root, Element $anchor): bool
+    {
+        $removed = false;
+        foreach (iterator_to_array($root->getElementsByTagName('img')) as $image) {
+            if ($this->precedes($image, $anchor) && LeadingEngagementBlocks::isDecorativeIcon($image)) {
+                $image->remove();
+                $removed = true;
+            }
+        }
+
+        return $removed;
     }
 
     private function contentRoot(Element $body): Element

@@ -318,6 +318,30 @@ final class LeadingEngagementCleanerTest extends TestCase
         self::assertStringContainsString('Hamburg/Norderstedt', $clean);
     }
 
+    public function testRemovesLeadingDecorativeIconImagesButKeepsTheHero(): void
+    {
+        $html = '<div>'
+            . '<p><img src="https://x.test/fotos/Antisemitische_Pakate_w.webp" alt="Wahlplakate"></p>'
+            . '<div id="more"><p><img src="https://x.test/fotos/mehr_artikel_icon_1a.png" alt="Mehr Artikel"></p></div>'
+            . '<p><img src="https://x.test/fotos/icons/expand-70.png" alt="Bild vergrössern"></p>'
+            . '<p>' . self::PROSE . '</p></div>';
+
+        $clean = $this->clean($html, null);
+
+        self::assertStringNotContainsString('mehr_artikel_icon', $clean);
+        self::assertStringNotContainsString('icons/expand', $clean);
+        self::assertStringContainsString('Antisemitische_Pakate_w.webp', $clean);
+        self::assertStringContainsString('Hamburg/Norderstedt', $clean);
+    }
+
+    public function testKeepsAContentImageWhoseNameMerelyContainsIcon(): void
+    {
+        $html = '<div><p><img src="https://x.test/fotos/silicon-valley-report.jpg" alt="Chips"></p>'
+            . '<p>' . self::PROSE . '</p></div>';
+
+        self::assertStringContainsString('silicon-valley-report.jpg', $this->clean($html, null));
+    }
+
     public function testKeepsAnImageOnlyLinkThatIsNotInsideAHeader(): void
     {
         $html = '<div><p><a href="https://x.test/post"><img src="https://x.test/poster.jpg" alt="Video"></a></p>'

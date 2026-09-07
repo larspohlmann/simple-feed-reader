@@ -45,6 +45,16 @@ final class LeadingEngagementBlocks
         return $length;
     }
 
+    /**
+     * A UI glyph rather than content: its URL carries the icon asset convention
+     * — a path segment "icons" or an "icon" token in the file name. Matched as a
+     * token so a content image like "silicon-valley.jpg" is left alone.
+     */
+    public static function isDecorativeIcon(Element $image): bool
+    {
+        return preg_match('~(?:^|[^a-z])icons?(?:[^a-z]|$)~i', $image->getAttribute('src') ?? '') === 1;
+    }
+
     public static function isTimeOnly(Element $element): bool
     {
         if ($element->localName === 'time') {
