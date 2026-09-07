@@ -208,13 +208,15 @@ final class MailConnectionTesterTest extends KernelTestCase
         self::assertSame(0, $health->successCount());
     }
 
-    /** A sendmail transport in '-t' mode piped to the 'true' binary sends for
-     *  real, through the exact production code path, without dialing SMTP. */
+    /** Sends for real through the production path, into a shell that drains stdin.
+     *  The sink must read to EOF: 'true' exits at once, and on Linux the write then
+     *  races the exit into EPIPE about once in 75 sends (#902); macOS never does. */
     public function testASuccessfulTestRecordsSuccessAndClearsPriorFailures(): void
     {
-        putenv('MAILER_FALLBACK_DSN=sendmail://default?command=true+-t');
-        $_ENV['MAILER_FALLBACK_DSN'] = 'sendmail://default?command=true+-t';
-        $_SERVER['MAILER_FALLBACK_DSN'] = 'sendmail://default?command=true+-t';
+        $dsn = 'sendmail://default?command=' . rawurlencode("sh -c 'cat >/dev/null' -t");
+        putenv('MAILER_FALLBACK_DSN=' . $dsn);
+        $_ENV['MAILER_FALLBACK_DSN'] = $dsn;
+        $_SERVER['MAILER_FALLBACK_DSN'] = $dsn;
 
         $this->authenticateAsAdmin();
         $health = new InMemoryMailFailureRecorder();
