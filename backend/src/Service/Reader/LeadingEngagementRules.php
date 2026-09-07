@@ -28,6 +28,9 @@ final class LeadingEngagementRules
         \IntlDateFormatter::MEDIUM,
     ];
 
+    /** @var array<string, \IntlDateFormatter> strict formatters, one per locale/style, reused across calls */
+    private static array $dateFormatters = [];
+
     /** The single whitespace-collapse every rule and both layers normalize with. */
     public static function collapse(?string $text): string
     {
@@ -96,14 +99,7 @@ final class LeadingEngagementRules
 
     private static function consumesWholeStringAsDate(string $text, string $locale, int $style): bool
     {
-        $formatter = new \IntlDateFormatter(
-            $locale,
-            $style,
-            \IntlDateFormatter::NONE,
-            'UTC',
-            \IntlDateFormatter::GREGORIAN,
-        );
-        $formatter->setLenient(false);
+        $formatter = self::$dateFormatters[$locale . '|' . $style] ??= self::strictDateFormatter($locale, $style);
 
         $position = 0;
         $timestamp = $formatter->parse($text, $position);
@@ -113,10 +109,24 @@ final class LeadingEngagementRules
         return $timestamp !== false && $position === mb_strlen($text);
     }
 
+    private static function strictDateFormatter(string $locale, int $style): \IntlDateFormatter
+    {
+        $formatter = new \IntlDateFormatter(
+            $locale,
+            $style,
+            \IntlDateFormatter::NONE,
+            'UTC',
+            \IntlDateFormatter::GREGORIAN,
+        );
+        $formatter->setLenient(false);
+
+        return $formatter;
+    }
+
     /** A stray engagement count rendered as a bare number, e.g. "0". */
     public static function isBareNumber(string $text): bool
     {
-        return preg_match('/^\d+$/', $text) === 1;
+        return $text !== '' && ctype_digit($text);
     }
 
     /** A masthead separator with no words of its own: "|", "›", "•". */

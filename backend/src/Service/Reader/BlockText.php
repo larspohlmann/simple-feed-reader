@@ -28,11 +28,17 @@ final class BlockText
             return false;
         }
 
-        $linkTextLength = 0;
-        foreach ($block->getElementsByTagName('a') as $link) {
-            $linkTextLength += mb_strlen(self::collapsed($link));
+        return self::linkTextLength($block) / $blockTextLength >= self::LINK_TEXT_RATIO;
+    }
+
+    /** Collapsed text length of every descendant link, the share isLinkDominated weighs. */
+    public static function linkTextLength(Element $element): int
+    {
+        $length = 0;
+        foreach ($element->getElementsByTagName('a') as $link) {
+            $length += mb_strlen(self::collapsed($link));
         }
 
-        return $linkTextLength / $blockTextLength >= self::LINK_TEXT_RATIO;
+        return $length;
     }
 }

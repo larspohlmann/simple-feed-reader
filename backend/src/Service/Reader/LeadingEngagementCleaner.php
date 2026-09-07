@@ -27,20 +27,21 @@ final readonly class LeadingEngagementCleaner
         }
 
         $anchorElement = $blocks[$anchor]->element;
-        $removed = $this->removeMatchedFurniture(array_slice($blocks, 0, $anchor), $furniture);
-        $removed = $this->removeMastheadBadges($root, $anchorElement) || $removed;
-        $removed = $this->removeDecorativeIcons($root, $anchorElement) || $removed;
+        $removedFurniture = $this->removeMatchedFurniture(array_slice($blocks, 0, $anchor), $furniture);
+        $removedBadges = $this->removeMastheadBadges($root, $anchorElement);
+        $removedIcons = $this->removeDecorativeIcons($root, $anchorElement);
 
+        // Only text furniture in front of the body can leave a duplicate byline behind it.
         $followingByline = $blocks[$anchor + 1] ?? null;
         if (
-            $removed
+            $removedFurniture
             && $followingByline !== null
             && $this->isDuplicateByline($followingByline, $entryAuthor)
         ) {
             $followingByline->element->remove();
         }
 
-        if ($removed) {
+        if ($removedFurniture || $removedBadges || $removedIcons) {
             $this->removeRemaindersBefore($root, $anchorElement);
         }
     }
@@ -87,12 +88,7 @@ final readonly class LeadingEngagementCleaner
             && LeadingEngagementRules::collapse($link->textContent) === '';
     }
 
-    /**
-     * Decorative UI icons (more-articles, enlarge, share glyphs) that survive as
-     * bare images at the article head. Only in the head region, so a content
-     * image deeper in the body is untouched; the empty wrapper the removed icon
-     * leaves is taken by the remainder sweep.
-     */
+    /** Bare decorative icons (more-articles, enlarge, share glyphs) in the head region. */
     private function removeDecorativeIcons(Element $root, Element $anchor): bool
     {
         $removed = false;
@@ -100,7 +96,7 @@ final readonly class LeadingEngagementCleaner
             if (
                 $this->precedes($image, $anchor)
                 && LeadingEngagementBlocks::isDecorativeIcon($image)
-                && !LeadingEngagementBlocks::hasFigureAncestor($image)
+                && !LeadingEngagementBlocks::isProtectedContent($image)
             ) {
                 $image->remove();
                 $removed = true;

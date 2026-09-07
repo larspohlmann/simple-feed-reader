@@ -12,6 +12,9 @@ final class LeadingEngagementBlocks
         'p', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'figcaption', 'div', 'address', 'time',
     ];
 
+    /** Tags that are article content in their own right and are never furniture. */
+    private const array CONTENT_TAGS = ['figcaption', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+
     /** @return list<LeadingBlock> */
     public static function in(Element $root): array
     {
@@ -32,17 +35,14 @@ final class LeadingEngagementBlocks
 
     public static function isProse(LeadingBlock $block): bool
     {
-        return LeadingEngagementRules::isProse($block->text, self::linkTextLength($block->element));
+        return LeadingEngagementRules::isProse($block->text, BlockText::linkTextLength($block->element));
     }
 
-    public static function linkTextLength(Element $element): int
+    /** A caption, a heading or anything inside a <figure> is content, never furniture. */
+    public static function isProtectedContent(Element $element): bool
     {
-        $length = 0;
-        foreach ($element->getElementsByTagName('a') as $link) {
-            $length += mb_strlen(LeadingEngagementRules::collapse($link->textContent));
-        }
-
-        return $length;
+        return in_array($element->localName, self::CONTENT_TAGS, true)
+            || self::hasFigureAncestor($element);
     }
 
     /**
@@ -53,18 +53,6 @@ final class LeadingEngagementBlocks
     public static function isDecorativeIcon(Element $image): bool
     {
         return preg_match('~(?:^|[^a-z])icons?(?:[^a-z]|$)~i', $image->getAttribute('src') ?? '') === 1;
-    }
-
-    /** A hero sits in a <figure>; an "icon" token in its slug must not condemn it. */
-    public static function hasFigureAncestor(Element $element): bool
-    {
-        for ($ancestor = $element->parentElement; $ancestor !== null; $ancestor = $ancestor->parentElement) {
-            if ($ancestor->localName === 'figure') {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     public static function isTimeOnly(Element $element): bool
@@ -78,6 +66,17 @@ final class LeadingEngagementBlocks
         return $times->length === 1
             && LeadingEngagementRules::collapse($element->textContent)
                 === LeadingEngagementRules::collapse($times->item(0)?->textContent);
+    }
+
+    private static function hasFigureAncestor(Element $element): bool
+    {
+        for ($ancestor = $element->parentElement; $ancestor !== null; $ancestor = $ancestor->parentElement) {
+            if ($ancestor->localName === 'figure') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static function isLeafTextBlock(Element $element): bool

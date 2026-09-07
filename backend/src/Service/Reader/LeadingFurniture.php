@@ -6,24 +6,19 @@ namespace App\Service\Reader;
 
 /**
  * Decides which leading blocks are article-head furniture rather than content,
- * and where — past an optional standfirst — the body begins. Holds the entry
- * author for the pass so no method has to forward it. The shapes are the
- * masthead readability keeps: breadcrumbs, section labels, kickers, bare
- * separators, emoji rows, counters, date and reading-time stamps and a byline.
+ * and where the body begins past an optional standfirst. Holds the entry author
+ * for the pass so no method forwards it.
  */
 final readonly class LeadingFurniture
 {
-    private const array HEADING_TAGS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
-
     public function __construct(private ?string $entryAuthor)
     {
     }
 
     /**
-     * The block index the article body starts at. A single leading standfirst may
-     * sit above masthead furniture, so when furniture still appears between the
-     * first prose block and the next one, the first is a standfirst and the body
-     * starts at the next. At most one such skip keeps the scan out of the body.
+     * The block index the article body starts at. Exactly one leading standfirst
+     * is allowed above the masthead: when furniture sits between the first prose
+     * block and the next, the body starts at the next; otherwise at the first.
      *
      * @param list<LeadingBlock> $blocks
      */
@@ -44,7 +39,7 @@ final readonly class LeadingFurniture
 
     public function matches(LeadingBlock $block): bool
     {
-        if ($block->element->localName === 'figcaption') {
+        if (LeadingEngagementBlocks::isProtectedContent($block->element)) {
             return false;
         }
 
@@ -55,22 +50,11 @@ final readonly class LeadingFurniture
     /** Breadcrumbs, section labels, kickers and bare separators. */
     private function isNavigationalChrome(LeadingBlock $block): bool
     {
-        $linkTextLength = LeadingEngagementBlocks::linkTextLength($block->element);
+        $linkTextLength = BlockText::linkTextLength($block->element);
 
         return LeadingEngagementRules::isSeparatorOnly($block->text)
             || LeadingEngagementRules::isNavigationLabel($block->text, $linkTextLength)
-            || ($this->isKicker($block, $linkTextLength));
-    }
-
-    /**
-     * A heading is a real headline or subheading, never a kicker eyebrow, so the
-     * kicker shape is not allowed to swallow a short leading <h1>-<h6>. A
-     * duplicate title is dropped by LeadingTitleRemover on an exact match instead.
-     */
-    private function isKicker(LeadingBlock $block, int $linkTextLength): bool
-    {
-        return !in_array($block->element->localName, self::HEADING_TAGS, true)
-            && LeadingEngagementRules::isKicker($block->text, $linkTextLength);
+            || LeadingEngagementRules::isKicker($block->text, $linkTextLength);
     }
 
     /** Emoji rows, engagement counters, date and reading-time stamps and a duplicate byline. */
@@ -88,8 +72,9 @@ final readonly class LeadingFurniture
     /** @param list<LeadingBlock> $blocks */
     private function firstProseIndex(array $blocks, int $from): ?int
     {
-        foreach ($blocks as $index => $block) {
-            if ($index >= $from && LeadingEngagementBlocks::isProse($block)) {
+        $count = count($blocks);
+        for ($index = $from; $index < $count; $index++) {
+            if (LeadingEngagementBlocks::isProse($blocks[$index])) {
                 return $index;
             }
         }
