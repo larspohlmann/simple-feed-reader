@@ -55,4 +55,37 @@ final class SlideshowInserterTest extends TestCase
 
         self::assertStringContainsString('reader-slideshow', $document->saveHtml());
     }
+
+    public function testPairsEachSlideshowWithItsOwnAnchorWhenTwoShareAContainerSignature(): void
+    {
+        $firstAnchor = 'The first anchor paragraph that is comfortably past forty characters.';
+        $secondAnchor = 'The second anchor paragraph that is comfortably past forty characters.';
+        $document = HtmlDocumentParser::parseOrNull(
+            "<body><p>{$firstAnchor}</p><div class=\"swiper broken\">leftover one</div>"
+            . "<p>{$secondAnchor}</p><div class=\"swiper broken\">leftover two</div></body>",
+        );
+        self::assertNotNull($document);
+        $signature = ContainerSignature::fromClassAttribute('swiper broken');
+        $first = Slideshow::fromSlides($this->slides(), null, $firstAnchor, $signature);
+        $second = Slideshow::fromSlides($this->slides(), null, $secondAnchor, $signature);
+        self::assertNotNull($first);
+        self::assertNotNull($second);
+
+        (new SlideshowInserter(new SlideshowMarkup()))->insert($document, [$first, $second]);
+        $html = $document->saveHtml();
+
+        self::assertStringNotContainsString('broken', $html);
+        self::assertSame(2, substr_count($html, 'reader-slideshow'));
+
+        $firstAnchorPosition = strpos($html, $firstAnchor);
+        $secondAnchorPosition = strpos($html, $secondAnchor);
+        $firstFigurePosition = strpos($html, 'reader-slideshow');
+        self::assertNotFalse($firstFigurePosition);
+        $secondFigurePosition = strpos($html, 'reader-slideshow', $firstFigurePosition + 1);
+        self::assertNotFalse($secondFigurePosition);
+
+        self::assertGreaterThan($firstAnchorPosition, $firstFigurePosition);
+        self::assertLessThan($secondAnchorPosition, $firstFigurePosition);
+        self::assertGreaterThan($secondAnchorPosition, $secondFigurePosition);
+    }
 }
