@@ -277,6 +277,34 @@ final class LeadingEngagementCleanerTest extends TestCase
         self::assertStringContainsString('Hamburg/Norderstedt', $clean);
     }
 
+    public function testExtendsPastOneStandfirstToReachAToolbar(): void
+    {
+        $standfirst = 'Während der Streit eskalierte, bekräftigte die Parteiführung ihren Kurs und lud '
+            . 'die gesamte Szene in die Festung Mark, wo sich der Abend dann endgültig entlud.';
+        $html = '<div><p>' . $standfirst . '</p>'
+            . '<p>7. September 2026</p><p>0</p><p>9 min.</p>'
+            . '<p>' . self::PROSE . '</p></div>';
+
+        $clean = $this->clean($html, null);
+
+        self::assertStringContainsString('Festung Mark', $clean);
+        self::assertStringNotContainsString('7. September 2026', $clean);
+        self::assertStringNotContainsString('9 min.', $clean);
+        self::assertStringContainsString('Hamburg/Norderstedt', $clean);
+    }
+
+    public function testKeepsTheBodyWhenTwoRealParagraphsPrecedeAnyFurniture(): void
+    {
+        $second = 'Ein zweiter vollständiger Absatz mit reichlich Fließtext, der klar zum Artikelkörper '
+            . 'gehört und nicht als Vorspann verworfen werden darf, sondern erhalten bleiben muss.';
+        $html = '<div><p>' . self::PROSE . '</p><p>' . $second . '</p><p>0</p></div>';
+
+        $clean = $this->clean($html, null);
+
+        self::assertStringContainsString('Hamburg/Norderstedt', $clean);
+        self::assertStringContainsString('zweiter vollständiger Absatz', $clean);
+    }
+
     private function clean(string $html, ?string $entryAuthor): string
     {
         $document = HtmlDocumentParser::parseOrNull($html);

@@ -20,7 +20,7 @@ final readonly class LeadingEngagementCleaner
 
         $root = $this->contentRoot($document->body);
         $blocks = LeadingEngagementBlocks::in($root);
-        $anchor = $this->firstProseAnchor($blocks);
+        $anchor = $this->bodyStart($blocks, $entryAuthor);
         if ($anchor === null) {
             return;
         }
@@ -84,6 +84,29 @@ final readonly class LeadingEngagementCleaner
         return $children;
     }
 
+    /**
+     * The block the article body starts at. A single leading standfirst may sit
+     * above masthead furniture, so when furniture still appears between the first
+     * prose block and the next one, the first is a standfirst and the body starts
+     * at the next. At most one such skip keeps the scan out of the body.
+     *
+     * @param list<LeadingBlock> $blocks
+     */
+    private function bodyStart(array $blocks, ?string $entryAuthor): ?int
+    {
+        $firstProse = $this->firstProseAnchor($blocks);
+        if ($firstProse === null) {
+            return null;
+        }
+
+        $nextProse = $this->nextProseAfter($blocks, $firstProse);
+        if ($nextProse !== null && $this->furnitureBetween($blocks, $firstProse, $nextProse, $entryAuthor)) {
+            return $nextProse;
+        }
+
+        return $firstProse;
+    }
+
     /** @param list<LeadingBlock> $blocks */
     private function firstProseAnchor(array $blocks): ?int
     {
@@ -94,6 +117,30 @@ final readonly class LeadingEngagementCleaner
         }
 
         return null;
+    }
+
+    /** @param list<LeadingBlock> $blocks */
+    private function nextProseAfter(array $blocks, int $from): ?int
+    {
+        foreach ($blocks as $index => $block) {
+            if ($index > $from && $this->isProse($block)) {
+                return $index;
+            }
+        }
+
+        return null;
+    }
+
+    /** @param list<LeadingBlock> $blocks */
+    private function furnitureBetween(array $blocks, int $from, int $to, ?string $entryAuthor): bool
+    {
+        for ($index = $from + 1; $index < $to; $index++) {
+            if (LeadingEngagementBlocks::isFurniture($blocks[$index], $entryAuthor)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function isProse(LeadingBlock $block): bool
