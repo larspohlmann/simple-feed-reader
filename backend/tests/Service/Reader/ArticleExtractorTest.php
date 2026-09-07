@@ -180,6 +180,23 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringNotContainsString('Ihr Browser unterstützt', $contentHtml);
     }
 
+    public function testKeepsTheHeroAboveATopPlacedNarrationPlayer(): void
+    {
+        // #907: a narration audio player is top-placed, but it is not a picture,
+        // so the page hero must still be restored — above the compact player.
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-narration-with-hero-zeit.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post');
+        $contentHtml = (string) $result->contentHtml;
+
+        self::assertTrue($result->ok);
+        self::assertStringContainsString('img.zeit.de/zeit-magazin/2026/38/hundert-jahre-zukunft', $contentHtml);
+        self::assertSame(1, substr_count($contentHtml, '<audio'));
+        self::assertStringContainsString('class="reader-narration"', $contentHtml);
+        self::assertLessThan(strpos($contentHtml, '<audio'), strpos($contentHtml, '<img'));
+    }
+
     public function testRestoresLazyLoadedImagesInsteadOfLeavingEmptyFrames(): void
     {
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-lazy-images.html');
