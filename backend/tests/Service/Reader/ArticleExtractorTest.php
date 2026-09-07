@@ -163,6 +163,23 @@ final class ArticleExtractorTest extends TestCase
         self::assertFalse($result->paywalled);
     }
 
+    public function testKeepsOneMarkedNarrationPlayerAndDropsTheDeadOne(): void
+    {
+        // ZEIT (#903): the page's own <audio> names its file only in data-src,
+        // which the sanitizer strips, so it must not survive as a dead control.
+        // The one player that reaches the reader is the recovered, marked one.
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-narration-zeit.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post');
+        $contentHtml = (string) $result->contentHtml;
+
+        self::assertTrue($result->ok);
+        self::assertSame(1, substr_count($contentHtml, '<audio'));
+        self::assertStringContainsString('class="reader-narration"', $contentHtml);
+        self::assertStringNotContainsString('Ihr Browser unterstützt', $contentHtml);
+    }
+
     public function testRestoresLazyLoadedImagesInsteadOfLeavingEmptyFrames(): void
     {
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-lazy-images.html');

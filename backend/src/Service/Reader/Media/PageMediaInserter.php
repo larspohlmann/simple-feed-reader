@@ -154,6 +154,11 @@ final readonly class PageMediaInserter
         if ($candidate->kind->isVideo() && $candidate->posterUrl !== null) {
             $player->setAttribute('poster', $candidate->posterUrl);
         }
+        // The client keys its compact, translated presentation off this class;
+        // it is the only mark that survives both sanitizers (#903).
+        if ($candidate->kind === MediaKind::Audio && $candidate->narrated) {
+            $player->setAttribute('class', 'reader-narration');
+        }
 
         return $player;
     }

@@ -24,6 +24,7 @@ final class MediaCandidateTest extends TestCase
             'https://i.ytimg.com/vi/aaaaaaaaaaa/hqdefault.jpg',
             'Scanned label',
             'The prose the player followed.',
+            true,
         );
 
         $completed = $declared->completedBy($scanned);
@@ -32,6 +33,9 @@ final class MediaCandidateTest extends TestCase
         self::assertSame('Watch on YouTube', $completed->label);
         self::assertSame('The prose the player followed.', $completed->precedingText);
         self::assertSame(MediaKind::Embed, $completed->kind);
+        // Narration is a property of the media, not of the winning source, so a
+        // later source that saw the tell flags the merged candidate.
+        self::assertTrue($completed->narrated);
     }
 
     public function testKeepsEverythingItAlreadyHas(): void
@@ -44,11 +48,13 @@ final class MediaCandidateTest extends TestCase
         self::assertSame('https://x.test/a.jpg', $completed->posterUrl);
         self::assertSame('A', $completed->label);
         self::assertSame('Prose A.', $completed->precedingText);
+        // Neither side saw narration, so the merge stays un-narrated.
+        self::assertFalse($completed->narrated);
     }
 
     public function testAtMovesOnlyTheUrl(): void
     {
-        $declared = new MediaCandidate(MediaKind::Stream, 'https://a.test/x.m3u8', 'p.jpg', null, 'prose');
+        $declared = new MediaCandidate(MediaKind::Stream, 'https://a.test/x.m3u8', 'p.jpg', null, 'prose', true);
 
         $landed = $declared->at('https://cdn.test/master.m3u8');
 
@@ -56,5 +62,6 @@ final class MediaCandidateTest extends TestCase
         self::assertSame(MediaKind::Stream, $landed->kind);
         self::assertSame('p.jpg', $landed->posterUrl);
         self::assertSame('prose', $landed->precedingText);
+        self::assertTrue($landed->narrated);
     }
 }

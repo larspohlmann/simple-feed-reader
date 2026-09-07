@@ -13,7 +13,7 @@ import {
 } from '@angular/core';
 import { Observable, Subscription, timeout } from 'rxjs';
 import { RouterLink } from '@angular/router';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
@@ -57,6 +57,7 @@ import { markInsetCards } from '../reader-cards';
 import { highlightCodeBlocks } from '../code-highlight';
 import { attachHlsStreams } from '../hls-streams';
 import { upgradeMediaEmbeds } from '../media-embeds';
+import { markNarrationPlayers } from '../reader-narration';
 import { estimateReadingMinutes } from '../reading-time';
 import { selectionQueryParams } from '../query';
 import { ReadingFocusService } from '../../core/reading-focus.service';
@@ -134,6 +135,7 @@ export class ReaderViewComponent {
   private readonly titleHeading = viewChild<ElementRef<HTMLElement>>('titleHeading');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly reader = inject(ReaderContentService);
+  private readonly i18n = inject(TranslocoService);
   protected readonly readerMode = inject(ReaderModeService);
   private readonly language = inject(LanguageService);
   private readonly scroll = inject(ListScrollMemory);
@@ -348,6 +350,7 @@ export class ReaderViewComponent {
         markInsetCards(host);
         void highlightCodeBlocks(host);
         upgradeMediaEmbeds(host);
+        markNarrationPlayers(host, this.i18n.translate('reader.narrationPlayer'));
         attachHlsStreams(host);
         this.buildToc(host);
         this.scheduleFocus();

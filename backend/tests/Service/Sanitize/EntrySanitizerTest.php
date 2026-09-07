@@ -51,6 +51,23 @@ final class EntrySanitizerTest extends TestCase
         self::assertStringContainsString('href="https://example.com/"', $clean);
     }
 
+    public function testKeepsTheNarrationClassOnAnAudioPlayer(): void
+    {
+        $clean = (string) $this->sanitizer->sanitize(
+            '<audio class="reader-narration" controls src="https://x.test/full.mp3"></audio>',
+        );
+
+        self::assertStringContainsString('class="reader-narration"', $clean);
+    }
+
+    public function testStillStripsClassFromOtherElements(): void
+    {
+        $clean = (string) $this->sanitizer->sanitize('<p class="lead">Text</p>');
+
+        self::assertStringNotContainsString('class=', $clean);
+        self::assertStringContainsString('Text', $clean);
+    }
+
     public function testForcesSafeLinkAttributes(): void
     {
         $clean = (string) $this->sanitizer->sanitize('<a href="https://example.com/">link</a>');

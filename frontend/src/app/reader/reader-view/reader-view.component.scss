@@ -741,3 +741,20 @@ article {
   width: 100%;
   margin: var(--space-5) 0;
 }
+
+// Machine-generated narration (#903): one muted, collapsed line, no card, so it
+// never reads as editorial audio. A plain <details> stands in for <app-disclosure>,
+// which cannot render inside [innerHTML] (recorded exception in design-language.md).
+.content ::ng-deep .reader-narration-box {
+  margin: var(--space-3) 0;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.content ::ng-deep .reader-narration-box summary {
+  cursor: pointer;
+}
+
+.content ::ng-deep .reader-narration-box[open] audio {
+  margin: var(--space-2) 0 0;
+}

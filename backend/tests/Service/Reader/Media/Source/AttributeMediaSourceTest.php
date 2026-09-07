@@ -41,6 +41,28 @@ final class AttributeMediaSourceTest extends TestCase
         self::assertSame(MediaKind::Audio, $found[0]->kind);
     }
 
+    /** ZEIT hides the narration mp3 in data-src on an audio inside a tts wrapper (#903). */
+    public function testFlagsNarrationFromTheFileHostOrTheHoldingElement(): void
+    {
+        $html = '<body><div data-audio-type="tts">'
+            . '<audio data-src="https://zon-speechbert-production.test/a/full.mp3"></audio></div></body>';
+
+        $found = $this->source->find($html, 'https://x.test/a.html');
+
+        self::assertCount(1, $found);
+        self::assertTrue($found[0]->narrated);
+    }
+
+    public function testDoesNotFlagAnOrdinaryPodcastFile(): void
+    {
+        $html = '<body><div data-audio-src="https://x.test/bildung-episode.mp3"></div></body>';
+
+        $found = $this->source->find($html, 'https://x.test/bildung-100.html');
+
+        self::assertCount(1, $found);
+        self::assertFalse($found[0]->narrated);
+    }
+
     /** ARD keeps its renditions in a data-v attribute, with the poster in og:image. */
     public function testFindsAVideoInAnAttributeAndTakesTheOgImagePoster(): void
     {

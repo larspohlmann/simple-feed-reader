@@ -36,6 +36,24 @@ final class SemanticMediaSourceTest extends TestCase
         self::assertSame(MediaKind::Audio, $found[0]->kind);
     }
 
+    public function testFlagsNarrationWhenAnAncestorDeclaresIt(): void
+    {
+        $html = '<body><div data-audio-type="tts"><audio src="https://x.test/full.mp3"></audio></div></body>';
+
+        $found = $this->source->find($html, 'https://x.test/a');
+
+        self::assertCount(1, $found);
+        self::assertTrue($found[0]->narrated);
+    }
+
+    public function testAnOrdinaryAudioElementIsNotFlaggedAsNarration(): void
+    {
+        $found = $this->source->find('<body><audio src="https://x.test/a.mp3"></audio></body>', 'https://x.test/a');
+
+        self::assertCount(1, $found);
+        self::assertFalse($found[0]->narrated);
+    }
+
     public function testFindsAVideoWithSourceChildrenAndKeepsItsPoster(): void
     {
         $html = '<body><video poster="https://x.test/p.jpg"><source src="https://x.test/v.mp4" type="video/mp4">'

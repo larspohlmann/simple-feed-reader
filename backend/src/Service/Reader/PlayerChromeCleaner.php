@@ -9,10 +9,12 @@ use Dom\HTMLDocument;
 
 /**
  * Repairs what readability keeps of a page's script-driven player (#786). The
- * bare <audio>/<video> has no UI at all once its script is gone, so it gets
- * native controls. The readouts that UI left behind — blocks whose whole text
- * is clock values, `0:00` beside `-13:34` — are removed together with the
- * wrapper they leave empty. A clock inside a sentence is prose and stays.
+ * bare <audio>/<video> has no UI at all once its script is gone, so a player
+ * that still names a file gets native controls; one whose file the sanitizer
+ * stripped (ZEIT hides it in data-src, #903) is dropped instead, so no dead
+ * control reaches the reader. The readouts that UI left behind — blocks whose
+ * whole text is clock values, `0:00` beside `-13:34` — are removed together
+ * with the wrapper they leave empty. A clock inside a sentence is prose and stays.
  */
 final readonly class PlayerChromeCleaner
 {
@@ -29,7 +31,7 @@ final readonly class PlayerChromeCleaner
             return;
         }
 
-        $this->restoreNativeControls($document);
+        $this->restoreOrDropPlayers($document);
         foreach (LeadingEngagementBlocks::in($body) as $block) {
             if (preg_match(self::READOUT_PATTERN, $block->text) === 1) {
                 $this->removeWithEmptiedWrappers($block->element, $body);
@@ -37,13 +39,27 @@ final readonly class PlayerChromeCleaner
         }
     }
 
-    private function restoreNativeControls(HTMLDocument $document): void
+    private function restoreOrDropPlayers(HTMLDocument $document): void
     {
         foreach ($document->querySelectorAll('audio, video') as $player) {
-            if (!$player->hasAttribute('controls')) {
-                $player->setAttribute('controls', '');
+            if ($this->hasPlayableSource($player)) {
+                if (!$player->hasAttribute('controls')) {
+                    $player->setAttribute('controls', '');
+                }
+                continue;
             }
+            // The sanitizer stripped the file (ZEIT hides it in data-src, #903);
+            // a bare player would show controls that can never play.
+            $player->remove();
         }
+    }
+
+    private function hasPlayableSource(Element $player): bool
+    {
+        $source = $player->getAttribute('src');
+
+        return ($source !== null && $source !== '')
+            || $player->getElementsByTagName('source')->length > 0;
     }
 
     private function removeWithEmptiedWrappers(Element $readout, Element $body): void
