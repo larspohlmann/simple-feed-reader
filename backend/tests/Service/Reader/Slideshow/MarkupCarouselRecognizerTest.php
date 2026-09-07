@@ -36,7 +36,34 @@ final class MarkupCarouselRecognizerTest extends TestCase
         self::assertCount(1, $shows);
         self::assertCount(2, $shows[0]->slides);
         self::assertSame('https://img/a.jpg', $shows[0]->slides[0]->imageUrl);
+        self::assertSame('A', $shows[0]->slides[0]->alt);
         self::assertSame('An intro paragraph long enough to anchor the gallery below.', $shows[0]->precedingText);
+    }
+
+    public function testDetectsSplideWithRealImages(): void
+    {
+        $shows = $this->recognize(
+            '<body><div class="splide"><div class="splide__track"><ul class="splide__list">'
+            . '<li class="splide__slide"><img src="https://img/a.jpg" alt="A"></li>'
+            . '<li class="splide__slide"><img src="https://img/b.jpg" alt="B"></li>'
+            . '</ul></div></div></body>',
+        );
+
+        self::assertCount(1, $shows);
+        self::assertCount(2, $shows[0]->slides);
+    }
+
+    public function testDetectsGlideWithRealImages(): void
+    {
+        $shows = $this->recognize(
+            '<body><div class="glide"><div class="glide__track"><ul class="glide__slides">'
+            . '<li class="glide__slide"><img src="https://img/a.jpg" alt="A"></li>'
+            . '<li class="glide__slide"><img src="https://img/b.jpg" alt="B"></li>'
+            . '</ul></div></div></body>',
+        );
+
+        self::assertCount(1, $shows);
+        self::assertCount(2, $shows[0]->slides);
     }
 
     public function testDetectsOwlByContainerNotItemClass(): void
