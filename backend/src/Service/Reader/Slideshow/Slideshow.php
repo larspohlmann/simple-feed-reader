@@ -31,6 +31,6 @@ final readonly class Slideshow
             return null;
         }
 
-        return new self(array_values($slides), $title, $precedingText, $container);
+        return new self($slides, $title, $precedingText, $container);
     }
 }

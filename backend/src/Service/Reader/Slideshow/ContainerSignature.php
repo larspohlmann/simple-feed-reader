@@ -20,14 +20,14 @@ final readonly class ContainerSignature
 
     public static function fromClassAttribute(?string $classAttribute): ?self
     {
-        $tokens = array_values(array_filter(explode(' ', $classAttribute ?? ''), static fn (string $t): bool => $t !== ''));
+        $tokens = self::tokenize($classAttribute ?? '');
 
         return $tokens === [] ? null : new self($tokens);
     }
 
     public function matches(Element $element): bool
     {
-        $present = array_filter(explode(' ', $element->getAttribute('class') ?? ''));
+        $present = self::tokenize($element->getAttribute('class') ?? '');
         foreach ($this->classTokens as $token) {
             if (!in_array($token, $present, true)) {
                 return false;
@@ -35,5 +35,11 @@ final readonly class ContainerSignature
         }
 
         return true;
+    }
+
+    /** @return list<string> */
+    private static function tokenize(string $classAttribute): array
+    {
+        return array_values(array_filter(explode(' ', $classAttribute), static fn (string $t): bool => $t !== ''));
     }
 }

@@ -22,6 +22,8 @@ final class SlideshowTest extends TestCase
         self::assertNotNull($show);
         self::assertCount(2, $show->slides);
         self::assertSame('Gallery', $show->title);
+        self::assertSame('Some preceding paragraph text that is long enough.', $show->precedingText);
+        self::assertNull($show->container);
     }
 
     public function testOneSlideIsRejected(): void
