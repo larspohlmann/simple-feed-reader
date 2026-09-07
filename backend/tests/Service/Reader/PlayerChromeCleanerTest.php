@@ -99,6 +99,30 @@ final class PlayerChromeCleanerTest extends TestCase
         self::assertStringContainsString('<body>', $this->clean('<p>0:00</p>'));
     }
 
+    public function testRemovesAPlayerWithNoSourceInsteadOfGivingItControls(): void
+    {
+        // ZEIT (#903): the page's own <audio> carries the file only in data-src,
+        // which the sanitizer strips, so restoring controls would arm a player
+        // that can never play. A second, working player exists elsewhere.
+        $html = '<div><audio data-src="https://zon-speechbert.test/full.mp3">'
+            . 'Ihr Browser unterstützt keine Audio Dateien.</audio><p>' . self::PROSE . '</p></div>';
+
+        $clean = $this->clean($html);
+
+        self::assertStringNotContainsString('<audio', $clean);
+        self::assertStringContainsString('rubber band', $clean);
+    }
+
+    public function testKeepsAPlayerWhoseFileComesFromASourceChild(): void
+    {
+        $html = '<div><video><source src="https://pub.test/c.mp4"></video></div>';
+
+        $clean = $this->clean($html);
+
+        self::assertStringContainsString('<video', $clean);
+        self::assertStringContainsString('controls', $clean);
+    }
+
     public function testGivesAScriptDrivenPlayerNativeControls(): void
     {
         // The page's own play button was script-driven and is gone; without
