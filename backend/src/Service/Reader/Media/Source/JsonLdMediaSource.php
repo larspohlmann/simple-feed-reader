@@ -107,20 +107,27 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
     }
 
     /**
-     * The file beats the player page of the same asset; the page is the fallback for a refused file.
+     * The file beats the player page of the same asset — except a poster-less
+     * video file yields to the node's embed page, which carries its own still,
+     * and stands only as the last resort for the scanner to rescue or drop.
      *
      * @param array{urls: list<string>, poster: ?string} $declaration
      */
     private function firstPlayable(array $declaration, ?string $precedingText): ?MediaCandidate
     {
+        $posterlessFile = null;
         foreach ($declaration['urls'] as $url) {
             $candidate = $this->toCandidate($url, $declaration['poster'], $precedingText);
-            if ($candidate !== null) {
+            if ($candidate === null) {
+                continue;
+            }
+            if (!$candidate->kind->isVideo() || $candidate->posterUrl !== null) {
                 return $candidate;
             }
+            $posterlessFile ??= $candidate;
         }
 
-        return null;
+        return $posterlessFile;
     }
 
     private function toCandidate(string $url, ?string $poster, ?string $precedingText): ?MediaCandidate
@@ -133,10 +140,9 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
             return new MediaCandidate(MediaKind::Audio, $resolved->url, null, null, $precedingText);
         }
         if ($resolved->kind->isVideo()) {
-            // D5: a poster-less video rots into a dead frame in the reader's TTL-less cache.
-            return $poster === null || $poster === ''
-                ? null
-                : new MediaCandidate($resolved->kind, $resolved->url, $poster, null, $precedingText);
+            // The poster may be absent here; the scanner rescues or drops a
+            // still-poster-less video once every source has been merged (#913).
+            return new MediaCandidate($resolved->kind, $resolved->url, $poster ?: null, null, $precedingText);
         }
 
         $target = $this->embedProviders->resolve($url);

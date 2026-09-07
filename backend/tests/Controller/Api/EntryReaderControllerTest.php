@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\Entry;
+use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
@@ -192,6 +193,32 @@ final class EntryReaderControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame('Jana Steger', $fake->requests[0]['author']);
+    }
+
+    public function testCarriesTheFeedFallbackPosterIntoTheReaderExtraction(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('reader-poster@example.com');
+        $fake = $this->installFake();
+        $fake->willReturn(ExtractionResult::ok(
+            'https://example.com/article',
+            'The Title',
+            null,
+            null,
+            '<p>Body</p>',
+            null,
+        ));
+        $entry = $this->seedEntry($user, 'https://example.com/article');
+        $entry->setMedia(
+            [new EntryMedium('https://example.com/clip.mp4', 'video', null, null, 'https://example.com/poster.jpg')],
+            [],
+        );
+        $this->flush();
+
+        $client->request('GET', '/api/entries/' . $entry->getId() . '/reader', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('https://example.com/poster.jpg', $fake->requests[0]['fallbackPoster']);
     }
 
     public function testOffTopicExtractionOfAFullFeedArticleFallsBackToTheFeed(): void

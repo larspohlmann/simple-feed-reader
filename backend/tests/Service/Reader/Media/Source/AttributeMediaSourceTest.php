@@ -75,14 +75,16 @@ final class AttributeMediaSourceTest extends TestCase
         self::assertSame('https://x.test/p.jpg', $found[0]->posterUrl);
     }
 
-    /** D5: a video with no poster from the page or the player would rot into a dead frame, so it is dropped. */
-    public function testDropsAVideoWhenNeitherOgImageNorAStillBesideThePlayerExists(): void
+    /** The scanner rescues or drops a still-poster-less video; the source just reports it (#913). */
+    public function testEmitsAVideoWithNoPosterForTheScannerToResolve(): void
     {
         $html = '<body><div data-v="https://x.test/clip.mp4"></div></body>';
 
         $found = $this->source->find($html, 'https://x.test/a.html');
 
-        self::assertSame([], $found);
+        self::assertCount(1, $found);
+        self::assertSame(MediaKind::Video, $found[0]->kind);
+        self::assertNull($found[0]->posterUrl);
     }
 
     /** tagesschau's broadcast pages: no og:image, the still sits in the player wrapper beside the URL holder. */

@@ -17,7 +17,7 @@ final class FakeArticleExtractor implements ArticleExtractorInterface
     /** @var list<string> */
     public array $calls = [];
 
-    /** @var list<array{url: string, title: string|null, author: string|null}> */
+    /** @var list<array{url: string, title: string|null, author: string|null, fallbackPoster: string|null}> */
     public array $requests = [];
 
     private ?ExtractionResult $result = null;
@@ -27,10 +27,19 @@ final class FakeArticleExtractor implements ArticleExtractorInterface
         $this->result = $result;
     }
 
-    public function extract(string $url, ?string $entryTitle = null, ?string $entryAuthor = null): ExtractionResult
-    {
+    public function extract(
+        string $url,
+        ?string $entryTitle = null,
+        ?string $entryAuthor = null,
+        ?string $fallbackPoster = null,
+    ): ExtractionResult {
         $this->calls[] = $url;
-        $this->requests[] = ['url' => $url, 'title' => $entryTitle, 'author' => $entryAuthor];
+        $this->requests[] = [
+            'url' => $url,
+            'title' => $entryTitle,
+            'author' => $entryAuthor,
+            'fallbackPoster' => $fallbackPoster,
+        ];
 
         return $this->result
             ?? throw new \LogicException('FakeArticleExtractor::extract called without a configured result.');

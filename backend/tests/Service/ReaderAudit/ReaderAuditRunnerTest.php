@@ -48,6 +48,7 @@ final class ReaderAuditRunnerTest extends TestCase
                 string $url,
                 ?string $entryTitle = null,
                 ?string $entryAuthor = null,
+                ?string $fallbackPoster = null,
             ): ExtractionResult {
                 throw new \RuntimeException('lexbor gave up');
             }
@@ -211,6 +212,7 @@ final class ReaderAuditRunnerTest extends TestCase
                 string $url,
                 ?string $entryTitle = null,
                 ?string $entryAuthor = null,
+                ?string $fallbackPoster = null,
             ): ExtractionResult {
                 throw new \RuntimeException('lexbor gave up');
             }

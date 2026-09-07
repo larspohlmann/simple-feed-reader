@@ -65,11 +65,16 @@ final class SemanticMediaSourceTest extends TestCase
         self::assertSame('https://x.test/p.jpg', $found[0]->posterUrl);
     }
 
-    public function testSkipsAVideoWithNoPoster(): void
+    /** The scanner rescues or drops a still-poster-less video; the source just reports it (#913). */
+    public function testEmitsAVideoWithNoPosterForTheScannerToResolve(): void
     {
         $html = '<body><video><source src="https://x.test/v.mp4" type="video/mp4"></video></body>';
 
-        self::assertSame([], $this->source->find($html, 'https://x.test/a'));
+        $found = $this->source->find($html, 'https://x.test/a');
+
+        self::assertCount(1, $found);
+        self::assertSame('https://x.test/v.mp4', $found[0]->url);
+        self::assertNull($found[0]->posterUrl);
     }
 
     /** A page nobody designed for: a <video> whose only source is an HLS master. */
@@ -86,11 +91,14 @@ final class SemanticMediaSourceTest extends TestCase
         self::assertSame('https://cdn.test/p.jpg', $found[0]->posterUrl);
     }
 
-    public function testSkipsAVideoWithEmptyPoster(): void
+    public function testNormalizesAnEmptyPosterToNull(): void
     {
         $html = '<body><video poster=""><source src="https://x.test/v.mp4" type="video/mp4"></video></body>';
 
-        self::assertSame([], $this->source->find($html, 'https://x.test/a'));
+        $found = $this->source->find($html, 'https://x.test/a');
+
+        self::assertCount(1, $found);
+        self::assertNull($found[0]->posterUrl);
     }
 
     public function testSkipsAVideoSourceThatResolvesToAnEmbedInsteadOfANativeFile(): void

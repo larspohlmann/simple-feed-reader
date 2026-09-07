@@ -25,15 +25,38 @@ final readonly class PageMediaScanner
     ) {
     }
 
-    public function scan(string $pageHtml, string $pageUrl): ArticleMedia
+    public function scan(string $pageHtml, string $pageUrl, ?string $fallbackPoster = null): ArticleMedia
     {
         $byUrl = [];
         foreach ($this->sources as $source) {
             $this->mergeSource($source->find($pageHtml, $pageUrl), $byUrl);
         }
 
-        return (new ArticleMedia(\array_slice(array_values($byUrl), 0, ArticleMedia::MAX_ITEMS)))
+        // Every source has spoken and their posters are merged, so a video that
+        // is still poster-less has none from the page: the feed-declared still
+        // rescues it, or it is dropped before it reaches the client (#913).
+        $withPosters = $this->withResolvedPosters(array_values($byUrl), $fallbackPoster);
+
+        return (new ArticleMedia(\array_slice($withPosters, 0, ArticleMedia::MAX_ITEMS)))
             ->withoutRedundantStreams();
+    }
+
+    /**
+     * @param list<MediaCandidate> $candidates
+     *
+     * @return list<MediaCandidate>
+     */
+    private function withResolvedPosters(array $candidates, ?string $fallbackPoster): array
+    {
+        $resolved = [];
+        foreach ($candidates as $candidate) {
+            $rescued = $candidate->resolvePoster($fallbackPoster);
+            if ($rescued !== null) {
+                $resolved[] = $rescued;
+            }
+        }
+
+        return $resolved;
     }
 
     /**

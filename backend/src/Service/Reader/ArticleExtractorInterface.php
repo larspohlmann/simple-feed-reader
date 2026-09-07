@@ -13,9 +13,17 @@ namespace App\Service\Reader;
 interface ArticleExtractorInterface
 {
     /**
-     * @param string|null $entryTitle the feed entry's own title, when the caller
-     *                                knows it — extraction uses it to recognize
-     *                                (and drop) a headline repeated in the body
+     * @param string|null $entryTitle     the feed entry's own title, when the caller
+     *                                     knows it — extraction uses it to recognize
+     *                                     (and drop) a headline repeated in the body
+     * @param string|null $fallbackPoster the entry's feed-declared still, used as the
+     *                                     poster for a video the page offers without
+     *                                     one instead of dropping it (#913)
      */
-    public function extract(string $url, ?string $entryTitle = null, ?string $entryAuthor = null): ExtractionResult;
+    public function extract(
+        string $url,
+        ?string $entryTitle = null,
+        ?string $entryAuthor = null,
+        ?string $fallbackPoster = null,
+    ): ExtractionResult;
 }

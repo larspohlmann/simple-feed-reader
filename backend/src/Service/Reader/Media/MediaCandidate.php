@@ -24,6 +24,25 @@ final readonly class MediaCandidate
     ) {
     }
 
+    /**
+     * The candidate a video needs a still to be, or none. A video plays in a
+     * <video> element and rots into a dead frame in the reader's TTL-less cache
+     * without a poster; once every source has had its say and none supplied one,
+     * the feed-declared still rescues it (#913), and a video the feed cannot
+     * back either is dropped. A non-video passes through untouched — audio and
+     * an embed carry no poster of their own.
+     */
+    public function resolvePoster(?string $fallbackPoster): ?self
+    {
+        if (!$this->kind->isVideo() || ($this->posterUrl !== null && $this->posterUrl !== '')) {
+            return $this;
+        }
+
+        return $fallbackPoster === null || $fallbackPoster === ''
+            ? null
+            : new self($this->kind, $this->url, $fallbackPoster, $this->label, $this->precedingText, $this->narrated);
+    }
+
     /** The same media with the gaps a later, weaker source can fill: poster, label, the prose anchor, and the narration tell. */
     public function completedBy(self $later): self
     {
