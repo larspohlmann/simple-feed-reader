@@ -18,36 +18,72 @@ final readonly class LeadingEngagementCleaner
             return;
         }
 
+        $furniture = new LeadingFurniture($entryAuthor);
         $root = $this->contentRoot($document->body);
         $blocks = LeadingEngagementBlocks::in($root);
-        $anchor = $this->bodyStart($blocks, $entryAuthor);
+        $anchor = $furniture->bodyStart($blocks);
         if ($anchor === null) {
             return;
         }
 
-        $leading = array_slice($blocks, 0, $anchor);
-        $removedFurniture = false;
-        foreach ($leading as $block) {
-            if (!LeadingEngagementBlocks::isFurniture($block, $entryAuthor)) {
-                continue;
-            }
-
-            $block->element->remove();
-            $removedFurniture = true;
-        }
+        $anchorElement = $blocks[$anchor]->element;
+        $removed = $this->removeMatchedFurniture(array_slice($blocks, 0, $anchor), $furniture);
+        $removed = $this->removeMastheadBadges($root, $anchorElement) || $removed;
 
         $followingByline = $blocks[$anchor + 1] ?? null;
         if (
-            $removedFurniture
+            $removed
             && $followingByline !== null
             && $this->isDuplicateByline($followingByline, $entryAuthor)
         ) {
             $followingByline->element->remove();
         }
 
-        if ($removedFurniture) {
-            $this->removeRemaindersBefore($root, $blocks[$anchor]->element);
+        if ($removed) {
+            $this->removeRemaindersBefore($root, $anchorElement);
         }
+    }
+
+    /** @param list<LeadingBlock> $leading */
+    private function removeMatchedFurniture(array $leading, LeadingFurniture $furniture): bool
+    {
+        $removed = false;
+        foreach ($leading as $block) {
+            if ($furniture->matches($block)) {
+                $block->element->remove();
+                $removed = true;
+            }
+        }
+
+        return $removed;
+    }
+
+    /**
+     * A leading <header> is the masthead; an image-only link inside it is a promo
+     * badge, not a poster — a poster never sits in a <header>, so #627 is left be.
+     */
+    private function removeMastheadBadges(Element $root, Element $anchor): bool
+    {
+        $removed = false;
+        foreach ($root->getElementsByTagName('header') as $header) {
+            if (!$this->precedes($header, $anchor)) {
+                continue;
+            }
+            foreach (iterator_to_array($header->getElementsByTagName('a')) as $link) {
+                if ($this->isBadgeLink($link)) {
+                    $link->remove();
+                    $removed = true;
+                }
+            }
+        }
+
+        return $removed;
+    }
+
+    private function isBadgeLink(Element $link): bool
+    {
+        return $link->getElementsByTagName('img')->length >= 1
+            && LeadingEngagementRules::collapse($link->textContent) === '';
     }
 
     private function contentRoot(Element $body): Element
@@ -84,70 +120,6 @@ final readonly class LeadingEngagementCleaner
         return $children;
     }
 
-    /**
-     * The block the article body starts at. A single leading standfirst may sit
-     * above masthead furniture, so when furniture still appears between the first
-     * prose block and the next one, the first is a standfirst and the body starts
-     * at the next. At most one such skip keeps the scan out of the body.
-     *
-     * @param list<LeadingBlock> $blocks
-     */
-    private function bodyStart(array $blocks, ?string $entryAuthor): ?int
-    {
-        $firstProse = $this->firstProseAnchor($blocks);
-        if ($firstProse === null) {
-            return null;
-        }
-
-        $nextProse = $this->nextProseAfter($blocks, $firstProse);
-        if ($nextProse !== null && $this->furnitureBetween($blocks, $firstProse, $nextProse, $entryAuthor)) {
-            return $nextProse;
-        }
-
-        return $firstProse;
-    }
-
-    /** @param list<LeadingBlock> $blocks */
-    private function firstProseAnchor(array $blocks): ?int
-    {
-        foreach ($blocks as $index => $block) {
-            if ($this->isProse($block)) {
-                return $index;
-            }
-        }
-
-        return null;
-    }
-
-    /** @param list<LeadingBlock> $blocks */
-    private function nextProseAfter(array $blocks, int $from): ?int
-    {
-        foreach ($blocks as $index => $block) {
-            if ($index > $from && $this->isProse($block)) {
-                return $index;
-            }
-        }
-
-        return null;
-    }
-
-    /** @param list<LeadingBlock> $blocks */
-    private function furnitureBetween(array $blocks, int $from, int $to, ?string $entryAuthor): bool
-    {
-        for ($index = $from + 1; $index < $to; $index++) {
-            if (LeadingEngagementBlocks::isFurniture($blocks[$index], $entryAuthor)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function isProse(LeadingBlock $block): bool
-    {
-        return LeadingEngagementRules::isProse($block->text, LeadingEngagementBlocks::linkTextLength($block->element));
-    }
-
     private function removeRemaindersBefore(Element $element, Element $anchor): void
     {
         foreach ($this->elementChildren($element) as $child) {
@@ -172,7 +144,7 @@ final readonly class LeadingEngagementCleaner
     private function isDuplicateByline(LeadingBlock $block, ?string $entryAuthor): bool
     {
         return LeadingEngagementRules::hasAuthor($entryAuthor)
-            && !$this->isProse($block)
+            && !LeadingEngagementBlocks::isProse($block)
             && LeadingEngagementRules::isByline($block->text);
     }
 

@@ -30,37 +30,9 @@ final class LeadingEngagementBlocks
         return $blocks;
     }
 
-    /** A leading block that is masthead furniture, not article content. */
-    public static function isFurniture(LeadingBlock $block, ?string $entryAuthor): bool
+    public static function isProse(LeadingBlock $block): bool
     {
-        if ($block->element->localName === 'figcaption') {
-            return false;
-        }
-
-        return self::isNavigationalChrome($block)
-            || self::isEngagementMeta($block, $entryAuthor);
-    }
-
-    /** Breadcrumbs, section labels, kickers, bare separators and icon-label buttons. */
-    private static function isNavigationalChrome(LeadingBlock $block): bool
-    {
-        $linkTextLength = self::linkTextLength($block->element);
-
-        return LeadingEngagementRules::isSeparatorOnly($block->text)
-            || LeadingEngagementRules::isNavigationLabel($block->text, $linkTextLength)
-            || LeadingEngagementRules::isKicker($block->text, $linkTextLength);
-    }
-
-    /** Emoji rows, engagement counters, date and reading-time stamps and a duplicate byline. */
-    private static function isEngagementMeta(LeadingBlock $block, ?string $entryAuthor): bool
-    {
-        return LeadingEngagementRules::isEmojiOnly($block->text)
-            || LeadingEngagementRules::isCounter($block->text)
-            || LeadingEngagementRules::isBareNumber($block->text)
-            || LeadingEngagementRules::isReadingTime($block->text)
-            || LeadingEngagementRules::isDateLine($block->text)
-            || self::isTimeOnly($block->element)
-            || (LeadingEngagementRules::hasAuthor($entryAuthor) && LeadingEngagementRules::isByline($block->text));
+        return LeadingEngagementRules::isProse($block->text, self::linkTextLength($block->element));
     }
 
     public static function linkTextLength(Element $element): int

@@ -10,6 +10,15 @@
 
 **Spec:** GitHub issue #901 (https://github.com/larspohlmann/simple-feed-reader/issues/901) — the shape catalogue, the seven observed articles and the two-phase reasoning live there.
 
+## Design change during execution
+
+The plan first kept everything in the existing trio. Two mechanical gates forced one small addition, recorded here:
+
+- PHPMD `ExcessiveClassComplexity` (>50) on the cleaner as shapes accrued, and
+- phptramp flagged `$entryAuthor` threaded through four static hops (tramp data).
+
+Both are answered by a **per-pass collaborator** (CLAUDE.md's prescribed fix for tramp data): a new `final readonly class LeadingFurniture` constructed with the entry author, holding it as a field. It owns furniture **classification** (`matches`) and **body-start** analysis (`bodyStart`, past one standfirst). `LeadingEngagementBlocks` stays low-level (block collection, `isProse`, `linkTextLength`, `isTimeOnly`). `LeadingEngagementCleaner` does DOM surgery only and builds one `LeadingFurniture` per pass. This is the file map the tasks below assume from Task 6 onward.
+
 ## Global Constraints
 
 - `declare(strict_types=1)` in every PHP file; PSR-12; PHPStan level max over `src` and `tests`.

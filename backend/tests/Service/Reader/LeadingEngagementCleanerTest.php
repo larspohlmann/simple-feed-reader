@@ -305,6 +305,27 @@ final class LeadingEngagementCleanerTest extends TestCase
         self::assertStringContainsString('zweiter vollständiger Absatz', $clean);
     }
 
+    public function testRemovesAnImageOnlyBadgeLinkInsideALeadingHeader(): void
+    {
+        $html = '<div><article><header><div><p>'
+            . '<a href="https://google.com/preferences/source?q=x.test">'
+            . '<img src="https://x.test/img/badge.png" alt="Add as a preferred source on Google"></a>'
+            . '</p></div></header><section><p>' . self::PROSE . '</p></section></article></div>';
+
+        $clean = $this->clean($html, null);
+
+        self::assertStringNotContainsString('badge.png', $clean);
+        self::assertStringContainsString('Hamburg/Norderstedt', $clean);
+    }
+
+    public function testKeepsAnImageOnlyLinkThatIsNotInsideAHeader(): void
+    {
+        $html = '<div><p><a href="https://x.test/post"><img src="https://x.test/poster.jpg" alt="Video"></a></p>'
+            . '<p>' . self::PROSE . '</p></div>';
+
+        self::assertStringContainsString('poster.jpg', $this->clean($html, null));
+    }
+
     private function clean(string $html, ?string $entryAuthor): string
     {
         $document = HtmlDocumentParser::parseOrNull($html);
