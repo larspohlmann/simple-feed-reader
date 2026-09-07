@@ -995,7 +995,17 @@
       "magazineBoxed": "Magazine layout, boxed",
       "magazineAiry": "Magazine layout, airy",
       "list": "List layout",
-      "pane": "Pane layout"
+      "pane": "Pane layout",
+      "mediaAria": "Media views",
+      "pictures": "Pictures view",
+      "videos": "Videos view",
+      "audios": "Audios view"
+    },
+    "media": {
+      "play": "Play",
+      "picturesEmpty": "No pictures in this view.",
+      "videosEmpty": "No videos in this view.",
+      "audiosEmpty": "No audio in this view."
     },
     "theme": {
       "aria": "Theme",

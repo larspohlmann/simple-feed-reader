@@ -1,8 +1,17 @@
 import { Injectable, signal } from '@angular/core';
 
-export type ReadingLayout = 'list' | 'pane' | 'magazine';
+/** The media-first views, each projecting the current selection through the
+ *  entries' `media[]`/`attachments[]` rather than listing whole entries (#916). */
+export type MediaView = 'pictures' | 'videos' | 'audios';
+export type ReadingLayout = 'list' | 'pane' | 'magazine' | MediaView;
 const KEY = 'sfr.layout';
-const MODES: ReadingLayout[] = ['list', 'pane', 'magazine'];
+const MEDIA_VIEWS: MediaView[] = ['pictures', 'videos', 'audios'];
+const MODES: ReadingLayout[] = ['list', 'pane', 'magazine', ...MEDIA_VIEWS];
+
+/** Whether a layout is one of the media-first projections. */
+export function isMediaView(layout: ReadingLayout): layout is MediaView {
+  return (MEDIA_VIEWS as ReadingLayout[]).includes(layout);
+}
 
 @Injectable({ providedIn: 'root' })
 export class ReadingLayoutService {

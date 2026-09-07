@@ -43,7 +43,8 @@ import { EntryKickerComponent } from '../magazine/entry-kicker.component';
 import { MagazineBlock } from '../magazine/magazine-block';
 import { planMagazine } from '../magazine/magazine-planner';
 import { ScrollOutsideZoneDirective } from '../scroll-outside-zone.directive';
-import { ReadingLayout } from '../reading-layout.service';
+import { MediaView, ReadingLayout, isMediaView } from '../reading-layout.service';
+import { MediaViewComponent } from '../media-view/media-view.component';
 import { EntryDto, SubscriptionTagDto, TagDto } from '../models';
 import {
   Selection,
@@ -140,6 +141,7 @@ export interface TitleCount {
     EntryKickerComponent,
     ToTopButtonComponent,
     ScrollOutsideZoneDirective,
+    MediaViewComponent,
   ],
   templateUrl: './entry-list.component.html',
   styleUrl: './entry-list.component.scss',
@@ -282,6 +284,20 @@ export class EntryListComponent implements OnDestroy {
   readonly effectiveLayout = computed(() =>
     isDirectSearch(this.selection()) ? 'list' : this.layout(),
   );
+
+  /** The active media-first view, or null when the layout lists whole entries.
+   *  A media view swaps the list body for a projection of the same entries. */
+  readonly mediaView = computed<MediaView | null>(() => {
+    const layout = this.effectiveLayout();
+    return isMediaView(layout) ? layout : null;
+  });
+
+  /** A media tile carries only its owning entry id; the list owns the entries,
+   *  so it resolves the entry before raising the same `open` the rows raise. */
+  protected onMediaOpen(entryId: number): void {
+    const entry = this.entries().find((candidate) => candidate.id === entryId);
+    if (entry) this.open.emit(entry);
+  }
 
   /** Search rows dim their excerpt a shade — the marked term stays the row's
    *  focus, and the surrounding prose recedes behind it. */

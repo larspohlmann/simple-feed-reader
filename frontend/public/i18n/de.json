@@ -995,7 +995,17 @@
       "magazineBoxed": "Magazin-Layout, mit Rahmen",
       "magazineAiry": "Magazin-Layout, luftig",
       "list": "Listen-Layout",
-      "pane": "Spalten-Layout"
+      "pane": "Spalten-Layout",
+      "mediaAria": "Medien-Ansichten",
+      "pictures": "Bilder-Ansicht",
+      "videos": "Video-Ansicht",
+      "audios": "Audio-Ansicht"
+    },
+    "media": {
+      "play": "Abspielen",
+      "picturesEmpty": "Keine Bilder in dieser Ansicht.",
+      "videosEmpty": "Keine Videos in dieser Ansicht.",
+      "audiosEmpty": "Kein Audio in dieser Ansicht."
     },
     "theme": {
       "aria": "Design",
