@@ -16,6 +16,12 @@ function host(): HTMLElement {
   return el;
 }
 
+function touch(x: number, y: number, type: string): TouchEvent {
+  return Object.assign(new Event(type, { bubbles: true, cancelable: true }), {
+    changedTouches: [{ clientX: x, clientY: y }],
+  }) as unknown as TouchEvent;
+}
+
 describe('hydrateSlideshows', () => {
   it('shows the first slide and marks the figure ready', () => {
     const el = host();
@@ -24,8 +30,11 @@ describe('hydrateSlideshows', () => {
     expect(
       el.querySelector('.reader-slideshow')!.classList.contains('reader-slideshow--ready'),
     ).toBe(true);
-    expect((slides[0] as HTMLElement).hidden).toBe(false);
-    expect((slides[1] as HTMLElement).hidden).toBe(true);
+    expect((el.querySelector('.reader-slideshow ol') as HTMLElement).style.transform).toBe(
+      'translateX(0%)',
+    );
+    expect(slides[0].getAttribute('aria-hidden')).toBe('false');
+    expect(slides[1].getAttribute('aria-hidden')).toBe('true');
     expect(el.textContent).toContain('1 / 3');
     expect(el.querySelector('.reader-slideshow__prev')!.textContent).toBe('‹');
     expect(el.querySelector('.reader-slideshow__next')!.textContent).toBe('›');
@@ -34,13 +43,16 @@ describe('hydrateSlideshows', () => {
     );
   });
 
-  it('advances on the next control and wraps the counter', () => {
+  it('advances on the next control by translating the track', () => {
     const el = host();
     hydrateSlideshows(el, labels);
     el.querySelector<HTMLButtonElement>('.reader-slideshow__next')!.click();
     const slides = el.querySelectorAll('.reader-slideshow li');
-    expect((slides[0] as HTMLElement).hidden).toBe(true);
-    expect((slides[1] as HTMLElement).hidden).toBe(false);
+    expect((el.querySelector('.reader-slideshow ol') as HTMLElement).style.transform).toBe(
+      'translateX(-100%)',
+    );
+    expect(slides[0].getAttribute('aria-hidden')).toBe('true');
+    expect(slides[1].getAttribute('aria-hidden')).toBe('false');
     expect(el.textContent).toContain('2 / 3');
   });
 
@@ -64,10 +76,8 @@ describe('hydrateSlideshows', () => {
     const el = host();
     hydrateSlideshows(el, labels);
     const figure = el.querySelector<HTMLElement>('.reader-slideshow')!;
-    const touch = (x: number) =>
-      ({ changedTouches: [{ clientX: x, clientY: 0 }] }) as unknown as TouchEvent;
-    figure.dispatchEvent(Object.assign(new Event('touchstart'), touch(200)));
-    figure.dispatchEvent(Object.assign(new Event('touchend'), touch(120)));
+    figure.dispatchEvent(touch(200, 0, 'touchstart'));
+    figure.dispatchEvent(touch(120, 0, 'touchend'));
     expect(el.textContent).toContain('2 / 3');
   });
 
@@ -75,11 +85,47 @@ describe('hydrateSlideshows', () => {
     const el = host();
     hydrateSlideshows(el, labels);
     const figure = el.querySelector<HTMLElement>('.reader-slideshow')!;
-    const touch = (x: number, y: number) =>
-      ({ changedTouches: [{ clientX: x, clientY: y }] }) as unknown as TouchEvent;
-    figure.dispatchEvent(Object.assign(new Event('touchstart'), touch(200, 0)));
-    figure.dispatchEvent(Object.assign(new Event('touchend'), touch(190, 200)));
+    figure.dispatchEvent(touch(200, 0, 'touchstart'));
+    figure.dispatchEvent(touch(190, 200, 'touchend'));
     expect(el.textContent).toContain('1 / 3');
+  });
+
+  it('claims a horizontal swipe so the page gesture never sees it', () => {
+    const parent = document.createElement('div');
+    const el = host();
+    parent.append(el);
+    hydrateSlideshows(el, labels);
+    const figure = el.querySelector<HTMLElement>('.reader-slideshow')!;
+
+    const pageMove = jest.fn();
+    const pageEnd = jest.fn();
+    parent.addEventListener('touchmove', pageMove);
+    parent.addEventListener('touchend', pageEnd);
+
+    figure.dispatchEvent(touch(200, 100, 'touchstart'));
+    const move = touch(120, 105, 'touchmove'); // horizontal-dominant
+    figure.dispatchEvent(move);
+    figure.dispatchEvent(touch(110, 105, 'touchend'));
+
+    expect(pageMove).not.toHaveBeenCalled();
+    expect(pageEnd).not.toHaveBeenCalled();
+    expect(move.defaultPrevented).toBe(true);
+  });
+
+  it('lets a vertical drag bubble to the page so the article can scroll', () => {
+    const parent = document.createElement('div');
+    const el = host();
+    parent.append(el);
+    hydrateSlideshows(el, labels);
+    const figure = el.querySelector<HTMLElement>('.reader-slideshow')!;
+
+    const pageMove = jest.fn();
+    parent.addEventListener('touchmove', pageMove);
+
+    figure.dispatchEvent(touch(200, 100, 'touchstart'));
+    figure.dispatchEvent(touch(195, 260, 'touchmove')); // vertical-dominant
+
+    expect(pageMove).toHaveBeenCalled();
   });
 
   it('ignores a non-arrow key', () => {
