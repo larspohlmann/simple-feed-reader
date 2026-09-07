@@ -54,7 +54,7 @@ final readonly class MarkupCarouselRecognizer implements SlideshowRecognizerInte
     private function containers(HTMLDocument $document, array $rule): array
     {
         if ($rule['container'] !== null) {
-            return $this->elementsByClass($document, $rule['container']);
+            return $this->elementsMatching($document, $rule['container']);
         }
 
         // Container-less libraries: each set of slide-class siblings is a carousel.
@@ -80,12 +80,7 @@ final readonly class MarkupCarouselRecognizer implements SlideshowRecognizerInte
             return $this->directChildren($container);
         }
 
-        $slides = [];
-        foreach ($container->querySelectorAll('.' . $rule['slide']) as $slide) {
-            $slides[] = $slide;
-        }
-
-        return $slides;
+        return $this->elementsMatching($container, $rule['slide']);
     }
 
     /**
@@ -135,10 +130,10 @@ final readonly class MarkupCarouselRecognizer implements SlideshowRecognizerInte
     }
 
     /** @return list<Element> */
-    private function elementsByClass(HTMLDocument $document, string $class): array
+    private function elementsMatching(HTMLDocument|Element $scope, string $class): array
     {
         $elements = [];
-        foreach ($document->querySelectorAll('.' . $class) as $element) {
+        foreach ($scope->querySelectorAll('.' . $class) as $element) {
             $elements[] = $element;
         }
 
