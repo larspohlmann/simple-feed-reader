@@ -47,6 +47,7 @@ use App\Service\Reader\Media\StreamLocationResolver;
 use App\Service\Reader\Media\SubstackPosterLink;
 use App\Service\Reader\NavigationChromeTrimmer;
 use App\Service\Reader\PlayerChromeCleaner;
+use App\Service\Reader\RecipeFacts\RecipeFactsCleaner;
 use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\ReaderLeadImage;
 use App\Service\Reader\ShareIntentLinkRemover;
@@ -130,6 +131,7 @@ final class ArticleExtractorTest extends TestCase
             new PlayerChromeCleaner(),
             new PageMediaInserter($markup),
             new SlideshowInserter(new SlideshowMarkup()),
+            new RecipeFactsCleaner(),
         );
     }
 

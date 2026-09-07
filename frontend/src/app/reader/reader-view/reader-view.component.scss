@@ -885,3 +885,40 @@ article {
   line-height: 1;
   cursor: pointer;
 }
+
+/* Recipe fact block (#932): the publisher's servings/calories/time row loses
+   its layout at the sanitizer, so the reader supplies its own — a wrapping row
+   of cells, each stacking a muted label over its value. */
+.content ::ng-deep .reader-recipe-facts {
+  margin: var(--space-5) 0;
+
+  dl {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3) var(--space-5);
+    margin: 0;
+    padding: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-1);
+  }
+
+  dl > div {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  dt {
+    font-size: var(--fs-sm);
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 650;
+    color: var(--text-primary);
+  }
+}

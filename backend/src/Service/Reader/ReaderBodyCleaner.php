@@ -9,6 +9,7 @@ use App\Service\Reader\Media\ArticleMedia;
 use App\Service\Reader\Media\InBodyEmbedRewriter;
 use App\Service\Reader\Media\PageMediaInserter;
 use App\Service\Reader\Media\SubstackPosterLink;
+use App\Service\Reader\RecipeFacts\RecipeFactsCleaner;
 use App\Service\Reader\Slideshow\Slideshow;
 use App\Service\Reader\Slideshow\SlideshowInserter;
 
@@ -29,7 +30,7 @@ use App\Service\Reader\Slideshow\SlideshowInserter;
  * always parseable in practice, but a degenerate one falls through rather
  * than crashing the pass.
  *
- * The ten constructor collaborators are deliberate: this is the body-cleaning
+ * The constructor collaborators are deliberate: this is the body-cleaning
  * pipeline's composition root, and each one is a seam the tests swap
  * independently (trimmers, restorers, inserters, …). Bagging them into a
  * parameter object would hide that coupling, not reduce it.
@@ -49,6 +50,7 @@ final readonly class ReaderBodyCleaner
         private PlayerChromeCleaner $playerChrome,
         private PageMediaInserter $mediaInserter,
         private SlideshowInserter $slideshowInserter,
+        private RecipeFactsCleaner $recipeFactsCleaner,
     ) {
     }
 
@@ -89,6 +91,11 @@ final readonly class ReaderBodyCleaner
         // the trimmers so a trimmer cannot drop the anchor, before media planning
         // so the plan sees the finished structure.
         $this->slideshowInserter->insert($document, $slideshows);
+
+        // A publisher's recipe-fact block (servings/calories/time) lays out with
+        // its own stylesheet, which the sanitizer never receives; relay it to the
+        // reader's own row-of-cells marker before media planning sees the body.
+        $this->recipeFactsCleaner->cleanIn($document);
 
         // plan() only classifies, so restore() still sees every body image and
         // can skip the hero when a lead visual will land at the top; apply()'s
