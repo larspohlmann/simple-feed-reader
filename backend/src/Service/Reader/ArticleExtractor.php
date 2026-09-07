@@ -9,6 +9,7 @@ use App\Service\Reader\Media\PageMediaScanner;
 use App\Service\Reader\Media\Sibling\SiblingMediaExtender;
 use App\Service\Reader\Media\StreamLocationResolver;
 use App\Service\Reader\Paywall\PaywallSignals;
+use App\Service\Reader\Slideshow\SlideshowScanner;
 use App\Service\Sanitize\EntrySanitizer;
 use Dom\HTMLDocument;
 use fivefilters\Readability\Article;
@@ -20,7 +21,8 @@ use fivefilters\Readability\Readability;
  * Turns an article URL into clean, sanitized, distraction-free HTML: fetch
  * (SSRF-guarded) → normalize → page-media scan → readability extraction →
  * body cleaning (duplicate-title removal, edge-boilerplate trim, lead-image
- * restore, media insertion) → EntrySanitizer (feed HTML's own XSS barrier).
+ * restore, media insertion, slideshow recreation) → EntrySanitizer (feed
+ * HTML's own XSS barrier).
  * Never throws for an ordinary failure — returns a `failed` ExtractionResult
  * with a machine reason so the endpoint stays 200 and the client falls back
  * to feed content.
@@ -53,6 +55,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
         private readonly PageMediaScanner $mediaScanner,
         private readonly StreamLocationResolver $streamLocations,
         private readonly SiblingMediaExtender $siblings,
+        private readonly SlideshowScanner $slideshowScanner,
     ) {
     }
 
@@ -73,6 +76,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
         $pageImages = PageImageInventory::fromDocument($normalized);
         $paywalled = PaywallSignals::isPreview($page->html, $normalized);
         $media = $this->mediaScanner->scan($page->html, $page->finalUrl, $feedMedia);
+        $slideshows = $normalized === null ? [] : $this->slideshowScanner->scan($normalized);
 
         $article = $this->richestArticle($normalized, $page);
         if ($article === null) {
@@ -96,6 +100,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
             $this->siblings->extend($media, $this->streamLocations->resolve($media), $page->html),
             $entryAuthor,
             $feedMedia,
+            $slideshows,
         );
         $clean = $this->sanitizer->sanitize($body);
         if ($clean === null) {
