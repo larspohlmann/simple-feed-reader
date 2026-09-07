@@ -1,3 +1,5 @@
+import { isSlideSwipe } from './reader-gestures';
+
 /**
  * Upgrades a backend-emitted `<figure class="reader-slideshow">` into a
  * swipeable, keyboard-navigable carousel. Idempotent.
@@ -31,8 +33,8 @@ function build(figure: HTMLElement, slides: HTMLElement[], labels: SlideshowLabe
   counter.className = 'reader-slideshow__counter';
   counter.setAttribute('aria-live', 'polite');
 
-  const show = (next: number): void => {
-    current = (next + slides.length) % slides.length;
+  const show = (target: number): void => {
+    current = (target + slides.length) % slides.length;
     slides.forEach((slide, index) => (slide.hidden = index !== current));
     counter.textContent = labels.position(current + 1, slides.length);
   };
@@ -63,18 +65,21 @@ function build(figure: HTMLElement, slides: HTMLElement[], labels: SlideshowLabe
   });
 
   let startX = 0;
-  const SWIPE_THRESHOLD = 40;
+  let startY = 0;
   figure.addEventListener(
     'touchstart',
     (event) => {
       startX = event.changedTouches[0]?.clientX ?? 0;
+      startY = event.changedTouches[0]?.clientY ?? 0;
     },
     { passive: true },
   );
   figure.addEventListener('touchend', (event) => {
-    const deltaX = (event.changedTouches[0]?.clientX ?? 0) - startX;
-    if (Math.abs(deltaX) < SWIPE_THRESHOLD) return;
-    show(deltaX < 0 ? current + 1 : current - 1);
+    const direction = isSlideSwipe(
+      (event.changedTouches[0]?.clientX ?? 0) - startX,
+      (event.changedTouches[0]?.clientY ?? 0) - startY,
+    );
+    if (direction !== 0) show(current + direction);
   });
 
   show(0);

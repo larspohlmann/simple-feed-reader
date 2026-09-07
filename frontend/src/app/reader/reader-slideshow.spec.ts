@@ -71,6 +71,17 @@ describe('hydrateSlideshows', () => {
     expect(el.textContent).toContain('2 / 3');
   });
 
+  it('ignores a mostly-vertical swipe', () => {
+    const el = host();
+    hydrateSlideshows(el, labels);
+    const figure = el.querySelector<HTMLElement>('.reader-slideshow')!;
+    const touch = (x: number, y: number) =>
+      ({ changedTouches: [{ clientX: x, clientY: y }] }) as unknown as TouchEvent;
+    figure.dispatchEvent(Object.assign(new Event('touchstart'), touch(200, 0)));
+    figure.dispatchEvent(Object.assign(new Event('touchend'), touch(190, 200)));
+    expect(el.textContent).toContain('1 / 3');
+  });
+
   it('ignores a non-arrow key', () => {
     const el = host();
     hydrateSlideshows(el, labels);
