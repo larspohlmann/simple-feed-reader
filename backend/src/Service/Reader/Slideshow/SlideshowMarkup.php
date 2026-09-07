@@ -8,13 +8,8 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Builds the one markup shape every recreated slideshow uses: a
- * <figure class="reader-slideshow"> with an <ol> of single-image slides. The
- * class on the figure is the mark the client upgrades to a swipeable carousel;
- * with no JavaScript the figure reads as a captioned vertical image stack.
- *
- * Single <img> per slide, not <picture>: EntrySanitizer strips srcset and
- * <source>, so the recognizer already picked one URL per slide.
+ * Single <img> per slide (EntrySanitizer strips <picture>/<source>).
+ * class="reader-slideshow" is the client's carousel marker.
  */
 final readonly class SlideshowMarkup
 {
