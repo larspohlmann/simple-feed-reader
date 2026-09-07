@@ -143,6 +143,94 @@ final class PlayerChromeCleanerTest extends TestCase
         self::assertSame(1, substr_count($this->clean($html), 'controls'));
     }
 
+    // NPR renders a "copy this embed" widget beside the player — a label and a
+    // <code> block showing the iframe snippet as escaped, literal text (#922).
+    private const string NPR_EMBED_WIDGET =
+        '<div><ul><li><p><label><b>Embed</b></label><b><code>'
+        . '&lt;iframe src="https://www.npr.org/player/embed/g-s1-142210/nx-s1-mx-5960265-1" '
+        . 'width="100%" height="290" frameborder="0" scrolling="no" title="NPR embedded audio player"&gt;'
+        . '</code></b></p></li></ul></div>';
+
+    public function testRemovesTheNprEmbedCodeWidgetAndItsEmptiedWrappers(): void
+    {
+        $html = '<div>' . self::AUDIO . self::NPR_EMBED_WIDGET . '<p>The real story text.</p></div>';
+
+        $clean = $this->clean($html);
+
+        self::assertStringNotContainsString('player/embed', $clean);
+        self::assertStringNotContainsString('<code', $clean);
+        self::assertStringNotContainsString('Embed', $clean);
+        self::assertStringNotContainsString('<ul>', $clean);
+        self::assertStringContainsString('<audio', $clean);
+        self::assertStringContainsString('The real story text.', $clean);
+    }
+
+    public function testRemovesEveryEmbedWidgetNotJustTheFirst(): void
+    {
+        $html = '<div>' . self::NPR_EMBED_WIDGET . self::NPR_EMBED_WIDGET . '<p>Story.</p></div>';
+
+        $clean = $this->clean($html);
+
+        self::assertStringNotContainsString('player/embed', $clean);
+        self::assertStringContainsString('Story.', $clean);
+    }
+
+    public function testRemovesAnEmbedCodeAndItsLabelFromABareParagraph(): void
+    {
+        // No list wrapper: the label and code sit directly in a paragraph, which
+        // must go whole so the "Embed" label does not survive the code's removal.
+        $html = '<div><p><b>Embed</b> <code>'
+            . '&lt;iframe src="https://www.npr.org/player/embed/x/y"&gt;</code></p>'
+            . '<p>Story.</p></div>';
+
+        $clean = $this->clean($html);
+
+        self::assertStringNotContainsString('player/embed', $clean);
+        self::assertStringNotContainsString('Embed', $clean);
+        self::assertStringContainsString('Story.', $clean);
+    }
+
+    public function testRemovesAnEmbedCodeAndItsLabelFromABareListItem(): void
+    {
+        // No paragraph inside the row: the <li> itself carries the label and code.
+        $html = '<div><ul><li><b>Embed</b> <code>'
+            . '&lt;iframe src="https://www.npr.org/player/embed/x/y"&gt;</code></li></ul>'
+            . '<p>Story.</p></div>';
+
+        $clean = $this->clean($html);
+
+        self::assertStringNotContainsString('player/embed', $clean);
+        self::assertStringNotContainsString('Embed', $clean);
+        self::assertStringNotContainsString('<ul>', $clean);
+        self::assertStringContainsString('Story.', $clean);
+    }
+
+    public function testRemovesAStandaloneEmbedCodeWithNoRowWrapper(): void
+    {
+        // Neither <li> nor <p> around it: only the code is dropped, and the span
+        // it emptied with it, while the surrounding article stays.
+        $html = '<div><span><code>'
+            . '&lt;iframe src="https://www.npr.org/player/embed/x/y"&gt;</code></span>'
+            . '<p>Story.</p></div>';
+
+        $clean = $this->clean($html);
+
+        self::assertStringNotContainsString('player/embed', $clean);
+        self::assertStringNotContainsString('<code', $clean);
+        self::assertStringNotContainsString('<span>', $clean);
+        self::assertStringContainsString('Story.', $clean);
+    }
+
+    public function testLeavesAnUnrelatedCodeBlockAlone(): void
+    {
+        $html = '<div><p>Run <code>composer install</code> first.</p></div>';
+
+        $clean = $this->clean($html);
+
+        self::assertStringContainsString('composer install', $clean);
+        self::assertStringContainsString('<code', $clean);
+    }
+
     private function clean(string $html): string
     {
         $document = HtmlDocumentParser::parseOrNull($html);

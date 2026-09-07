@@ -15,6 +15,11 @@ use Dom\HTMLDocument;
  * control reaches the reader. The readouts that UI left behind — blocks whose
  * whole text is clock values, `0:00` beside `-13:34` — are removed together
  * with the wrapper they leave empty. A clock inside a sentence is prose and stays.
+ *
+ * The same pass drops NPR's "copy this embed" widget (#922): a label and a
+ * <code> block that show the player's <iframe> snippet as escaped, literal text
+ * for a human to copy. It sits beside the real <audio> and is chrome, not
+ * content, so the reader shows source code where an article should be.
  */
 final readonly class PlayerChromeCleaner
 {
@@ -23,6 +28,8 @@ final readonly class PlayerChromeCleaner
     private const string READOUT_PATTERN = '/^' . self::CLOCK . '(?:\s*[\/|]\s*' . self::CLOCK . ')*$/';
 
     private const array MEDIA_TAGS = ['img', 'audio', 'video', 'iframe', 'svg'];
+
+    private const string EMBED_CODE_MARK = 'npr.org/player/embed/';
 
     public function cleanIn(HTMLDocument $document): void
     {
@@ -37,6 +44,37 @@ final readonly class PlayerChromeCleaner
                 $this->removeWithEmptiedWrappers($block->element, $body);
             }
         }
+        foreach ($this->embedCodeBlocks($document) as $code) {
+            $this->removeWithEmptiedWrappers($this->embedRow($code, $body) ?? $code, $body);
+        }
+    }
+
+    /** @return list<Element> collected before mutation, so removals don't skip nodes */
+    private function embedCodeBlocks(HTMLDocument $document): array
+    {
+        $blocks = [];
+        foreach ($document->querySelectorAll('code') as $code) {
+            if (str_contains($code->textContent ?? '', self::EMBED_CODE_MARK)) {
+                $blocks[] = $code;
+            }
+        }
+
+        return $blocks;
+    }
+
+    /** The list row or paragraph around the code, so removing it takes the
+     *  widget's "Embed" label with the <code> block instead of leaving it. */
+    private function embedRow(Element $code, Element $body): ?Element
+    {
+        $node = $code->parentElement;
+        while ($node !== null && $node !== $body) {
+            if ($node->localName === 'li' || $node->localName === 'p') {
+                return $node;
+            }
+            $node = $node->parentElement;
+        }
+
+        return null;
     }
 
     private function restoreOrDropPlayers(HTMLDocument $document): void
