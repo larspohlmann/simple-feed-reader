@@ -70,81 +70,114 @@ positives). Every recognizer obeys one guard: **it fires only when it finds two
 or more slides that each carry a real image.** A lone figure never becomes a
 carousel.
 
-### Recognizer roster
+### Recognizer roster — corrected against real pages
 
 Market share (wmtips, 2026): Swiper ~20%, Slick ~10%, Owl ~10%, then Splide,
 Glide, Flickity, tiny-slider. Embla is common in the React ecosystem.
 
-| Recognizer | Marker (container › slide) | Stage | Confidence in fetched HTML |
-|---|---|---|---|
-| Tagesschau `data-v` | `[data-v-type="Carousel"]`, slides in `data-v` JSON | raw-page | High (verified) |
-| Swiper | `.swiper` › `.swiper-slide` | in-body | High — author-written |
-| Splide | `.splide` › `.splide__slide` | in-body | High — author-written |
-| Glide | `.glide` › `.glide__slide` | in-body | High — author-written |
-| Embla | `.embla` › `.embla__slide` | in-body | High — author-written |
-| Owl Carousel | `.owl-carousel` › child items (`.item`) | in-body | Medium — `.owl-item` is added by JS; container class is author-written |
-| Flickity | container › `.carousel-cell` | in-body | Medium — `.carousel-cell` is a convention, not enforced |
-| Slick | `.slick-slider` › `.slick-slide` | in-body | Low — classes added by JS; fires only on pre-rendered pages |
-| tiny-slider | `.tns-item` | in-body | Low — same, JS-injected |
+I ran a probe that models the recognizer over real gallery pages, fetched with
+`curl` (raw server HTML, no JavaScript — exactly what our fetcher sees). The
+lightGallery library demos are faithful stand-ins for the article-embedded
+gallery our reader meets. Results:
 
-Slick and tiny-slider recognizers are included but flagged best-effort: they
-only match when the page was served with the markup pre-rendered. We do not
-claim to recover a Slick carousel that only exists after the browser runs it.
+| Recognizer | Marker | Real-page result |
+|---|---|---|
+| Tagesschau `data-v` | `[data-v-type="Carousel"]`, slides in `data-v` JSON | ✅ verified — 24 slides |
+| Swiper | `.swiper-slide` | ✅ detected — image slides present |
+| Owl Carousel | `.owl-carousel` container | ✅ detected — via container |
+| Flickity | `.carousel-cell` | ✅ detected — image slides present |
+| Splide | `.splide__slide` | ✅ shape verified |
+| Glide | `.glide__slide` | ✅ verified — and correctly **abstains** on Glide's imageless animation frames |
+| Slick | `.slick-slide` | ⚠️ opportunistic — classes injected at runtime, usually absent server-side |
+| tiny-slider | `.tns-item` | ⚠️ opportunistic — same |
+| Embla | `.embla__slide` | ⚠️ opportunistic — slides usually built by JS |
 
-## Two stages, one model
+Four corrections the real data forced (each is now a design rule):
 
-Both stages produce the same value objects and share one markup builder. The
-split is by **where the slides live**, which is a real difference, not
-ceremony.
+1. **The two-or-more-image-slide guard is validated and essential.** It abstained
+   on Glide's empty animation frames and Flickity's empty homepage cells (true
+   negatives) and fired only on real image galleries. It stays exactly as
+   specified.
+2. **A slide's image is often in `data-src` / a lazy attribute / an `<a href>`,
+   not a bare `<img src>`.** Real galleries (the lightGallery pattern publishers
+   embed) carry the URL on the slide's `data-src` (e.g. Swiper/Owl/Flickity all
+   did). Slide-image resolution therefore reads, in order: a descendant
+   `<img src=http…>`; a lazy attribute on the slide or a descendant
+   (`data-src`, `data-lazy-src`, `data-original`, `data-thumb`,
+   `data-splide-lazy`, `data-flickity-lazyload-src`); an `<a href>` pointing to
+   an image file. First hit wins; a slide that resolves to nothing does not count
+   toward the guard.
+3. **Owl keys on the `.owl-carousel` container, never a `.item` class.** Bare
+   `item` appeared on almost every page tested (pure noise) and the real Owl
+   slide class varied (`owl-carousel-item`). Owl slides are the container's
+   element children.
+4. **Detection runs on the raw normalized page, before Readability.** `data-src`
+   and the `data-v` blob do not reliably survive extraction, so scanning raw —
+   where the URLs still live — is the one robust path. The earlier "in-body"
+   stage is dropped: everything is one raw scan.
 
-### Stage A — raw-page recognizers (tagesschau `data-v`)
+Slick, tiny-slider, and Embla stay in the roster but are honestly labelled
+opportunistic: they fire only if a page happens to be served with their markup
+and images pre-rendered. We claim no real coverage of a carousel that exists
+only after the browser runs the library.
 
-Runs next to `PageMediaScanner` on the raw page HTML (before Readability), the
-same place recovered media is scanned today ([ArticleExtractor.php:75](../../../backend/src/Service/Reader/ArticleExtractor.php)).
-A recognizer decodes the `data-v` JSON, reads each slide's `alttext` and
-responsive URLs, and emits a `Slideshow` carrying an **anchor** (the album link
-href, which also appears on the surviving `.copytext-galerie` `<a>`). The
-inserter later seats the recreated block at that anchor in the cleaned body.
+## One raw scan, several recognizers, one body insertion
 
-### Stage B — in-body recognizers (static-markup libraries)
+Detection is a single pass over the raw normalized document, next to
+`PageMediaScanner` ([ArticleExtractor.php:75](../../../backend/src/Service/Reader/ArticleExtractor.php)).
+A locator of recognizers each returns `list<Slideshow>`; the combined result is
+threaded into `ReaderBodyCleaner::clean()`, which inserts each recreated block
+into the cleaned body and removes any surviving original carousel container so
+the images are not duplicated.
 
-Runs inside `ReaderBodyCleaner` on the cleaned body, where the slides and their
-`<img>` tags already sit. A recognizer finds the carousel element, reads the
-existing slides, and **rewrites the element in place** into the `reader-slideshow`
-block. No anchor is needed — the element is already in position.
+### Value objects (`Service/Reader/Slideshow/`)
 
-### Value objects
-
-- `Slide` — one slide. Responsive image sources (a small ordered set of
-  url+width, as `<picture>`/`srcset` will consume), `alt` text, optional
-  `caption`. Immutable.
-- `Slideshow` — `list<Slide>` plus an optional `anchorHref` (stage A only) and a
-  `title` (the gallery heading when present). Immutable. Rejects itself when it
-  holds fewer than two slides (the guard lives here, enforced once).
-- `SlideshowRecognizerInterface` — one method returning `list<Slideshow>` from
-  the document it is given. Two tagged, keyed locators (raw-page, in-body) hold
-  the two recognizer families, following the repo's strategy pattern
-  ([Service/Refresh/FeedBodyParser.php](../../../backend/src/Service/Refresh/FeedBodyParser.php)).
+- `Slide` — `{ imageUrl: string, alt: string }`. One resolved image URL (the
+  sanitizer permits only a single-src `<img>`) plus alt text. Immutable.
+- `ContainerSignature` — the set of class tokens on the original carousel element
+  (e.g. `swiper`, or tagesschau's `carousel__prerender-height--gallery`). The
+  inserter uses it to find and remove that element from the cleaned body when it
+  survived. Nullable — tagesschau's attribute-only div may leave nothing behind.
+- `Slideshow` — `{ slides: list<Slide>, title: ?string, precedingText: ?string,
+  container: ?ContainerSignature }`. `precedingText` is the normalized text of
+  the block immediately before the gallery in the raw document, used to seat the
+  block via the existing `PageTextBlocks::withText()` anchor mechanism. Immutable.
+  A static factory returns `null` below two image-bearing slides, so the guard is
+  enforced once, in one place.
+- `SlideshowRecognizerInterface::recognize(HTMLDocument $rawDocument): list<Slideshow>`
+  — one tagged, keyed locator holds every recognizer, following the repo's
+  strategy pattern ([Service/Refresh/FeedBodyParser.php](../../../backend/src/Service/Refresh/FeedBodyParser.php)).
 
 ### Backend units
 
-1. `Slide`, `Slideshow` — the model above (`Service/Reader/Slideshow/`).
-2. `SlideshowRecognizerInterface` + the recognizers, one class per library.
-3. `RawSlideshowScanner` — runs stage-A recognizers over the raw document;
-   returns `list<Slideshow>`. Invoked from `ArticleExtractor` alongside the
-   media scan, its result threaded into `ReaderBodyCleaner::clean()`.
+1. `Slide`, `ContainerSignature`, `Slideshow` — the model above.
+2. `SlideshowRecognizerInterface` + two recognizers:
+   - `MarkupCarouselRecognizer` — one class driven by a config table, one row per
+     library (Swiper, Splide, Glide, Embla, Owl, Flickity, Slick, tiny-slider).
+     Swiper/Splide/Glide/Embla share one shape, so per-library classes would
+     violate DRY; a row is `{ containerClass, slideClass }` (either may be null —
+     Owl matches by container and takes element children; Flickity/tiny-slider
+     match by slide class and group by parent). Slide-image resolution follows
+     rule 2 above.
+   - `TagesschauCarouselRecognizer` — `[data-v-type="Carousel"]`, decodes the
+     `data-v` JSON (`name` → title; `images[].alttext` → alt;
+     `images[].imageUrls.l ?? m ?? s ?? xs` → image), `precedingText` from the
+     preceding `a.copytext-galerie` heading.
+3. `SlideshowScanner` — runs the locator over the raw document; returns
+   `list<Slideshow>`. Invoked from `ArticleExtractor`, result threaded into
+   `ReaderBodyCleaner::clean()`.
 4. `SlideshowMarkup` — builds the sanitizer-safe `reader-slideshow` HTML from a
-   `Slideshow`. One place; both stages call it.
-5. `SlideshowInserter` — stage A: seats the block at `anchorHref`, or appends it
-   at body end when the anchor did not survive (never drops it). Stage B:
-   replaces the recognized element in place. Modelled on `PageMediaInserter`.
+   `Slideshow`. One place.
+5. `SlideshowInserter` — for each `Slideshow`: remove the original container (by
+   `ContainerSignature`) if it survived; then seat the recreated block after the
+   `precedingText` block via `PageTextBlocks::withText()`, or append it at body
+   end when no anchor survived (never drops it). Modelled on `PageMediaInserter`.
 6. `EntrySanitizer` allow-list — admit the `reader-slideshow` structure and its
-   attributes (see markup below).
+   marker attribute (see markup below).
 
-`ReaderBodyCleaner::clean()` gains one parameter: the stage-A `list<Slideshow>`.
-Stage-B recognition is a cleaning step it already owns, so it needs no new input
-for it. If the parameter list grows tramp-ish, the clean() inputs move into a
-context object rather than lengthening the signature (phptramp rule).
+`ReaderBodyCleaner::clean()` gains one parameter: `list<Slideshow>` (default
+`[]`, so existing callers and tests are untouched). It forwards it to
+`SlideshowInserter` — one hop within the reader, no tramp chain.
 
 ## Extensibility — adding the next slideshow source is one file
 
@@ -155,47 +188,48 @@ slideshow source touches **only its own recognizer**.
 
 When we find another slideshow in real data later:
 
-1. Add one `FooSlideshowRecognizer implements SlideshowRecognizerInterface`
-   (`Service/Reader/Slideshow/Recognizer/`), keyed on that source's high-signal
-   marker, returning `Slideshow` value objects.
-2. Tag it into the right locator — **raw-page** if the images hide in a data
-   attribute, **in-body** if they already sit as `<img>` in the extracted body.
-   The tag is the whole wiring; no existing code changes.
-3. Add one fixture in `tests/Fixtures/**` and its recognizer test.
+- **A new CSS-class carousel library** — add one `{ containerClass, slideClass }`
+  row to `MarkupCarouselRecognizer`'s table. No new class.
+- **A new JSON-blob or bespoke source** (like tagesschau) — add one
+  `FooSlideshowRecognizer implements SlideshowRecognizerInterface`
+  (`Service/Reader/Slideshow/Recognizer/`), keyed on its marker, and tag it into
+  the locator. The tag is the whole wiring; no existing code changes.
 
-No new markup, insertion, sanitizer, or frontend work — a new source reuses all
-of it. This is why the two-stage split is by *where the slides live* (a fact
-about the source) and not by library: a future source falls into one of the two
-stages by its nature, and the recognizer is the only new code. New recognizers
-are still added only for a marker seen in real data ("generalize on the second
-case"), so the roster grows deliberately, not speculatively.
+Either way, add one fixture in `tests/Fixtures/**` and its recognizer test. No
+new markup, insertion, sanitizer, or frontend work — a new source reuses all of
+it, because everything downstream consumes the source-agnostic `Slideshow`. New
+recognizers are still added only for a marker seen in real data ("generalize on
+the second case"), so the roster grows deliberately, not speculatively.
 
 ## Recreated markup
 
-`SlideshowMarkup` emits, for both stages, a self-describing block:
+`SlideshowMarkup` emits a self-describing block. Each slide is a **single-src
+`<img>`** — `EntrySanitizer` strips `<picture>`/`<source>`/`srcset` (see
+[LazyImageSources.php](../../../backend/src/Service/Reader/LazyImageSources.php),
+which flattens picture to one `<img>` for exactly this reason), so the recognizer
+picks one URL per slide server-side:
 
 ```html
-<figure class="reader-slideshow" aria-roledescription="carousel">
-  <figcaption class="reader-slideshow__title">Die Hauptgründe für das Ergebnis …</figcaption>
-  <ol class="reader-slideshow__track">
-    <li class="reader-slideshow__slide">
-      <picture>
-        <source srcset="…-122.webp?width=1280" media="(min-width: …)">
-        <img src="…-122.webp?width=960" alt="Umfrage, …" loading="eager">
-      </picture>
-    </li>
-    <li class="reader-slideshow__slide">
-      <img src="…-118.webp?width=960" alt="Umfrage, …" loading="lazy">
-    </li>
+<figure class="reader-slideshow">
+  <figcaption>Die Hauptgründe für das Ergebnis in Sachsen-Anhalt</figcaption>
+  <ol>
+    <li><img src="…-122.webp?width=1280" alt="Umfrage, …" loading="eager"></li>
+    <li><img src="…-118.webp?width=1280" alt="Umfrage, …" loading="lazy"></li>
     …
   </ol>
 </figure>
 ```
 
-- Real `<img>`/`<picture>` per slide. First eager, the rest lazy.
-- With no JavaScript this is a captioned vertical stack — the images are all
-  there. **This is the fallback, and it is also the test oracle**: a backend
-  test asserts on this static structure, independent of any client behaviour.
+- One `<img>` per slide; first eager, the rest lazy. Structure (`figure`,
+  `figcaption`, `ol`, `li`, `img`) is all in `allowSafeElements()`.
+- **The marker is `class="reader-slideshow"` on the `<figure>`.** `EntrySanitizer`
+  allows `class` only on `<audio>` today (#903), so the allow-list is widened to
+  `class` on `<figure>` — the narrow, non-scriptable marker the client selects as
+  `figure.reader-slideshow` (mirroring `audio.reader-narration`). Class carries no
+  script, so no XSS surface opens.
+- With no JavaScript this is a captioned vertical image stack — every image is
+  present. **This is the graceful fallback, and it is also the test oracle**: a
+  backend test asserts on this static structure, independent of any client code.
 - Slide image URLs pass the same outbound/durable-URL handling as other reader
   media (`DurableMediaUrl`); no new network path, SSRF boundary unchanged.
 
@@ -216,8 +250,13 @@ carousel:
   `"n of total"`, `alt` carried from the source, a live region announcing the
   current slide, controls reachable by keyboard.
 - Lazy slides load as they approach view.
-- Styles in a sibling `.scss` (`styleUrl`) with design tokens — no hex, no raw
-  `px`, per the frontend conventions.
+- Styles live in `reader-view.component.scss` under `.content ::ng-deep
+  .reader-slideshow …`, the same place the narration box is styled — that is how
+  a rule reaches `[innerHTML]` content. Design tokens only: no hex, no raw `px`.
+- Labels are passed in by the caller (translated via Transloco), like
+  `markNarrationPlayers`. New i18n keys under `reader.` in `public/i18n/{en,de}.json`:
+  `slideshowPrevious`, `slideshowNext`, and a position string the caller
+  interpolates to `"3 / 24"`.
 
 Idempotent: re-running the enhancer over an already-hydrated block is a no-op
 (guard with a marker attribute), because the enhancement effect re-runs on the
@@ -225,16 +264,23 @@ Reader/Original toggle.
 
 ## Testing
 
-- **Backend, per recognizer:** a fixture HTML in `tests/Fixtures/**` → assert the
-  emitted `reader-slideshow` structure and slide count. Add one fixture per
-  library so each marker is proven, and measure against `tests/Fixtures/**`, not
-  a topical subset.
-- **Tagesschau anchor (the key risk):** a fixture of the real page → assert (a)
-  Readability keeps the `.copytext-galerie` anchor, (b) the slideshow lands
-  directly after that heading, (c) all ~20 slides are present. If the anchor is
-  ever absent, assert the block appends at body end rather than vanishing.
-- **Guard:** a single-figure fixture and a one-slide carousel → assert **no**
-  slideshow is produced (the two-slide floor holds).
+- **Backend, per recognizer:** a small fixture in `tests/Fixtures/**`, its markup
+  copied faithfully from the real pages the probe validated (Swiper/Owl/Flickity
+  with `data-src`, Splide/Glide with a real `<img>`, tagesschau `data-v`) → assert
+  the emitted `reader-slideshow` structure and slide count. One fixture per
+  library so each marker is proven; measure against `tests/Fixtures/**`, not a
+  topical subset.
+- **Image resolution:** a slide fixture whose URL sits only on `data-src`, and one
+  on an `<a href>` image → assert both resolve; a slide with no resolvable image
+  does not count toward the guard.
+- **Tagesschau anchor (the key risk):** the real page fixture → assert (a)
+  Readability keeps the `.copytext-galerie` heading text so `precedingText`
+  matches, (b) the slideshow lands directly after that heading, (c) all 24 slides
+  are present. Then a variant with the heading removed → assert the block appends
+  at body end rather than vanishing.
+- **Abstain (validated true negatives):** a Glide fixture of imageless animation
+  frames and a Flickity fixture of empty cells → assert **no** slideshow. Plus a
+  one-slide carousel → assert none (the two-slide floor holds).
 - **Sanitizer:** assert the `reader-slideshow` markup survives `EntrySanitizer`
   unchanged, and that a hostile attribute inside it is still stripped.
 - **Frontend (Jest, in the Docker frontend container):** given the static
@@ -247,16 +293,30 @@ Reader/Original toggle.
 
 ## Key risks
 
-1. **Anchor survival (stage A).** The design depends on the gallery heading
-   surviving Readability. Proven by the fixture test above; the append-at-end
-   path is the safety net when it does not.
-2. **False positives (all stages).** Contained by keying on documented markers
-   plus the two-slide-with-image floor. New recognizers are added only for a
-   marker we have seen in real data ("generalize on the second case").
-3. **Slick / tiny-slider yield.** Low on fetched HTML by nature. Documented as
-   best-effort, not a coverage claim.
+1. **Anchor survival.** Placement depends on the gallery's preceding heading or
+   paragraph surviving Readability so `precedingText` matches. Proven by the
+   fixture tests; append-at-body-end is the safety net when it does not.
+2. **False positives.** Contained by keying on documented markers plus the
+   two-image-slide floor — validated against real pages, where it abstained on
+   Glide's animation frames and Flickity's empty cells. New recognizers are added
+   only for a marker seen in real data.
+3. **Server-side detectability varies by library and site.** The probe confirmed
+   that some libraries build slides only at runtime; those galleries are simply
+   invisible to a no-JS fetch and out of reach for any server-side reader. We
+   detect what is in the fetched HTML and claim nothing more.
+
+## Validation
+
+`docs/superpowers/plans/` holds no probe; the probe was a throwaway modelling the
+recognizer, run over real gallery pages fetched with `curl`. Evidence recorded in
+the roster table above: Swiper, Owl, Flickity detected on real (lightGallery)
+galleries; tagesschau `data-v` verified at 24 slides; Glide/Flickity empty
+carousels correctly rejected. The findings are folded into rules 1–4 in the
+roster section.
 
 ## Sources
 
 - Market share: <https://www.wmtips.com/technologies/javascript-libraries/filter/carousel/>
 - Splide structure: <https://splidejs.com/guides/structure/>
+- Library galleries probed: lightGallery demos (Swiper, Owl, Slick, Flickity),
+  splidejs.com, glidejs.com, flickity.metafizzy.co
