@@ -33,8 +33,8 @@ use fivefilters\Readability\Readability;
  * PageMediaScanner also runs on the raw page before readability, so recovered
  * media can satisfy the length gate below and still be inserted when
  * readability's own extraction is thin (#748). PaywallSignals reads the same
- * normalised document and raw source first, deciding on the cleaned body
- * (#785).
+ * normalised document and raw source, trusting the publisher's declaration and
+ * falling back to a gated-block presence check (#908).
  *
  * SiblingMediaExtender derives from the declared scan but appends onto the
  * stream-resolved media only when consumed, so a failed extraction never pays
@@ -66,7 +66,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
 
         $normalized = $this->normalizer->normalize($page->html);
         $pageImages = PageImageInventory::fromDocument($normalized);
-        $paywall = PaywallSignals::fromPage($page->html, $normalized);
+        $paywalled = PaywallSignals::isPreview($page->html, $normalized);
         $media = $this->mediaScanner->scan($page->html, $page->finalUrl);
 
         $article = $this->richestArticle($normalized, $page);
@@ -103,7 +103,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
             siteName: $article->siteName,
             contentHtml: $clean,
             excerpt: $article->excerpt,
-            paywalled: $paywall->isPreview($clean),
+            paywalled: $paywalled,
         );
     }
 

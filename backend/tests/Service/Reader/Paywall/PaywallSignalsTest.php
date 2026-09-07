@@ -10,167 +10,64 @@ use PHPUnit\Framework\TestCase;
 
 final class PaywallSignalsTest extends TestCase
 {
-    private const string FIRST = '<p>The first preview paragraph carries enough prose to be kept by readability.</p>';
-    private const string SECOND = '<p>The second preview paragraph is where the free part of the article ends.</p>';
+    private const string BODY = "<article>\n<h1>Headline</h1>\n"
+        . '<p>The preview paragraph carries enough prose to stand in for the article body.</p>' . "\n</article>";
     private const string CTA = '<div class="paywall-cta">'
         . '<h2 class="paywall-title">Continue reading this post for free.</h2>'
         . '<button>Claim my free post</button></div>';
-    private const string PREVIEW_BODY = self::FIRST . self::SECOND;
 
-    public function testAPremiumDeclarationWithoutATruncatedBodyDoesNotFlag(): void
+    public function testAPremiumDeclarationFlagsAPreview(): void
     {
-        // The publisher marks the article premium, but the reader extracted the
-        // whole body and no gated block stands below it. mopo.de serves its
-        // MOPO+ articles in full server-side; the banner would be wrong.
-        $signals = $this->signals($this->page(self::PREVIEW_BODY, '{"@type":"Article","isAccessibleForFree":false}'));
-
-        self::assertFalse($signals->isPreview(self::PREVIEW_BODY));
+        self::assertTrue($this->isPreview($this->page(self::BODY, '{"isAccessibleForFree":false}')));
     }
 
-    public function testAPremiumDeclarationWithAGatedBlockBelowFlagsAPreview(): void
+    public function testAPremiumDeclarationIsTrustedEvenWithoutAGateBlock(): void
     {
-        $signals = $this->signals(
-            $this->page(self::PREVIEW_BODY . self::CTA, '{"@type":"Article","isAccessibleForFree":false}'),
-        );
-
-        self::assertTrue($signals->isPreview(self::PREVIEW_BODY));
+        // The publisher declares the article premium but serves the whole body,
+        // as mopo.de does for its MOPO+ articles. The declaration is trusted and
+        // the reader shows the banner (an accepted #908 trade-off).
+        self::assertTrue($this->isPreview($this->page(self::BODY, '{"isAccessibleForFree":"False"}')));
     }
 
-    public function testAMopoStylePremiumTemplateWithTheFullBodyIsNotAPreview(): void
+    public function testAFreeDeclarationIsTrustedOverAGateBlock(): void
     {
-        // NewsArticle isAccessibleForFree:false with a free hasPart, the full
-        // article served server-side, and `has-paywall` only on <body>.
-        $jsonLd = '{"@type":"NewsArticle","isAccessibleForFree":false,'
-            . '"hasPart":{"@type":"WebPageElement","isAccessibleForFree":true,"cssSelector":".teaser"}}';
-        $page = '<html><head><script type="application/ld+json">' . $jsonLd . '</script></head>'
-            . '<body class="article has-paywall"><nav><a href="/">Home</a></nav>'
-            . '<article><h1>Headline</h1>' . self::PREVIEW_BODY . '</article></body></html>';
-
-        self::assertFalse($this->signals($page)->isPreview(self::PREVIEW_BODY));
+        self::assertFalse($this->isPreview($this->page(self::BODY . self::CTA, '{"isAccessibleForFree":true}')));
     }
 
-    public function testAFadedFinalParagraphBelowThePreviewFlagsAPremiumArticle(): void
+    public function testAnAbsentDeclarationWithAGateBlockFlagsAPreview(): void
     {
-        // ZEIT+ declares the article premium and fades its last visible paragraph
-        // (`paragraph--faded`), dropping the rest server-side. The faded prose is
-        // the gated block that stands at the end of the preview (#898).
-        $fadedProse = 'The third paragraph trails off, faded, right where the paywall cuts the article.';
-        $rawFaded = '<div class="paragraph--faded article__item"><p>' . $fadedProse . '</p></div>';
-        $page = $this->page(self::PREVIEW_BODY . $rawFaded, '{"@type":"Article","isAccessibleForFree":false}');
-        $cleaned = self::PREVIEW_BODY . '<p>' . $fadedProse . '</p>';
-
-        self::assertTrue($this->signals($page)->isPreview($cleaned));
+        self::assertTrue($this->isPreview($this->page(self::BODY . self::CTA)));
     }
 
-    public function testAFreeDeclarationIsTrustedOverAPaywallBlock(): void
+    public function testAnAbsentDeclarationWithoutAGateBlockDoesNotFlag(): void
     {
-        $signals = $this->signals(
-            $this->page(self::PREVIEW_BODY . self::CTA, '{"@type":"Article","isAccessibleForFree":true}'),
-        );
-
-        self::assertFalse($signals->isPreview(self::PREVIEW_BODY));
+        self::assertFalse($this->isPreview($this->page(self::BODY)));
     }
 
-    public function testAPaywallBlockBelowTheLastExtractedParagraphFlagsAPreview(): void
+    public function testAGateBlockInsidePageFurnitureDoesNotFlagAnUndeclaredPage(): void
     {
-        $signals = $this->signals($this->page(self::PREVIEW_BODY . self::CTA));
+        $nav = '<nav><a class="paywall-link" href="/abo">Abo</a></nav>';
 
-        self::assertTrue($signals->isPreview(self::PREVIEW_BODY));
+        self::assertFalse($this->isPreview($this->page(self::BODY . $nav)));
     }
 
-    public function testAPaywallBannerAboveTheArticleDoesNotFlagAFreeArticle(): void
+    public function testWithoutADocumentTheDeclarationStillDecides(): void
     {
-        $banner = '<div class="paywall-banner"><p>Support independent journalism: become a member.</p></div>';
-        $signals = $this->signals($this->page($banner . self::PREVIEW_BODY));
+        $premium = '<script type="application/ld+json">{"isAccessibleForFree":"False"}</script>';
 
-        self::assertFalse($signals->isPreview(self::PREVIEW_BODY));
+        self::assertFalse(PaywallSignals::isPreview('', null));
+        self::assertTrue(PaywallSignals::isPreview($premium, null));
     }
 
-    public function testAPromoBoxBetweenTwoExtractedParagraphsDoesNotFlagAFreeArticle(): void
+    private function isPreview(string $html): bool
     {
-        $signals = $this->signals($this->page(self::FIRST . self::CTA . self::SECOND));
-
-        self::assertFalse($signals->isPreview(self::PREVIEW_BODY));
+        return PaywallSignals::isPreview($html, HtmlDocumentParser::parseOrNull($html));
     }
 
-    public function testProseThatMentionsAPaywallIsNotASignal(): void
-    {
-        $prose = '<p>Some sites hide their best writing behind a paywall, and that is their right.</p>';
-        $signals = $this->signals($this->page(self::FIRST . $prose));
-
-        self::assertFalse($signals->isPreview(self::FIRST . $prose));
-    }
-
-    public function testACtaTheCleanersLeftInTheBodyStillCountsFromTheLastProseParagraph(): void
-    {
-        $signals = $this->signals($this->page(self::PREVIEW_BODY . self::CTA));
-
-        self::assertTrue($signals->isPreview(self::PREVIEW_BODY . '<p>Continue reading this post for free.</p>'));
-    }
-
-    public function testWhenTheLastParagraphCannotBeFoundABlockAbsentFromTheBodyCounts(): void
-    {
-        $signals = $this->signals($this->page(self::PREVIEW_BODY . self::CTA));
-
-        self::assertTrue($signals->isPreview('<p>A paragraph a cleaner rewrote beyond recognition.</p>'));
-    }
-
-    public function testWhenTheLastParagraphCannotBeFoundABlockStillInTheBodyDoesNotCount(): void
-    {
-        $signals = $this->signals($this->page(self::PREVIEW_BODY . self::CTA));
-        $html = '<p>Rewritten.</p><p>Continue reading this post for free. Claim my free post</p>';
-
-        self::assertFalse($signals->isPreview($html));
-    }
-
-    public function testAPageWithoutADocumentIsNeverAPreview(): void
-    {
-        // No parsed document leaves no content to corroborate a declaration.
-        self::assertFalse(PaywallSignals::fromPage('', null)->isPreview(self::PREVIEW_BODY));
-        self::assertFalse(
-            PaywallSignals::fromPage(
-                '<script type="application/ld+json">{"isAccessibleForFree":"False"}</script>',
-                null,
-            )->isPreview(self::PREVIEW_BODY),
-        );
-    }
-
-    public function testAnEmptyBodyIsNeverAPreviewWithoutADeclaration(): void
-    {
-        $signals = $this->signals($this->page(self::PREVIEW_BODY . self::CTA));
-
-        self::assertFalse($signals->isPreview(''));
-    }
-
-    public function testAGatedWrapperAroundTheWholeArticleCountsByTheCallToActionItAdds(): void
-    {
-        // jungle.world: `subscription-only` wraps the preview AND the call to
-        // action, so no paragraph stands outside a block and the fallback decides.
-        $wrapper = '<div class="body-wrapper subscription-only">' . self::PREVIEW_BODY
-            . '<div class="subscription-only-block"><h2>Noch kein Abonnement?</h2>'
-            . '<p>Um diesen Inhalt zu lesen, wird ein Online-Abo benötigt.</p></div></div>';
-        $signals = $this->signals($this->page($wrapper));
-
-        self::assertTrue($signals->isPreview(self::PREVIEW_BODY));
-    }
-
-    public function testAGatedWrapperThatAddsNothingBeyondTheBodyDoesNotCount(): void
-    {
-        $signals = $this->signals($this->page('<div class="paywall-container">' . self::PREVIEW_BODY . '</div>'));
-
-        self::assertFalse($signals->isPreview(self::PREVIEW_BODY));
-    }
-
-    private function signals(string $html): PaywallSignals
-    {
-        return PaywallSignals::fromPage($html, HtmlDocumentParser::parseOrNull($html));
-    }
-
-    private function page(string $article, ?string $jsonLd = null): string
+    private function page(string $body, ?string $jsonLd = null): string
     {
         $head = $jsonLd === null ? '' : '<script type="application/ld+json">' . $jsonLd . '</script>';
 
-        return "<html><head>{$head}</head><body>\n<nav><a href=\"/\">Home</a></nav>\n"
-            . "<article>\n<h1>Headline</h1>\n{$article}\n</article>\n<footer>Foot</footer>\n</body></html>";
+        return "<html><head>{$head}</head><body>\n{$body}\n<footer>Foot</footer>\n</body></html>";
     }
 }
