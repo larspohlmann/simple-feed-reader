@@ -1,4 +1,4 @@
-import { isSlideSwipe } from './reader-gestures';
+import { AXIS_LOCK_MIN, isSlideSwipe } from './reader-gestures';
 
 /**
  * Upgrades a backend-emitted `<figure class="reader-slideshow">` into a
@@ -33,9 +33,12 @@ function build(figure: HTMLElement, slides: HTMLElement[], labels: SlideshowLabe
   counter.className = 'reader-slideshow__counter';
   counter.setAttribute('aria-live', 'polite');
 
+  const track = slides[0].parentElement as HTMLElement;
   const show = (target: number): void => {
     current = (target + slides.length) % slides.length;
-    slides.forEach((slide, index) => (slide.hidden = index !== current));
+    // Slide the track; CSS transitions the transform (instant under reduced motion).
+    track.style.transform = `translateX(${current * -100}%)`;
+    slides.forEach((slide, index) => slide.setAttribute('aria-hidden', String(index !== current)));
     counter.textContent = labels.position(current + 1, slides.length);
   };
 
@@ -64,22 +67,47 @@ function build(figure: HTMLElement, slides: HTMLElement[], labels: SlideshowLabe
     event.preventDefault();
   });
 
+  // The reader body is a horizontally-swipeable "back to list" surface, so the
+  // carousel claims horizontal drags (stop them reaching it) while letting a
+  // vertical drag bubble, so the article still scrolls when dragging on an image.
   let startX = 0;
   let startY = 0;
+  let axis: 'none' | 'horizontal' | 'vertical' = 'none';
   figure.addEventListener(
     'touchstart',
     (event) => {
       startX = event.changedTouches[0]?.clientX ?? 0;
       startY = event.changedTouches[0]?.clientY ?? 0;
+      axis = 'none';
     },
     { passive: true },
+  );
+  figure.addEventListener(
+    'touchmove',
+    (event) => {
+      const dx = (event.changedTouches[0]?.clientX ?? 0) - startX;
+      const dy = (event.changedTouches[0]?.clientY ?? 0) - startY;
+      if (axis === 'none') {
+        if (Math.abs(dx) < AXIS_LOCK_MIN && Math.abs(dy) < AXIS_LOCK_MIN) return;
+        axis = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical';
+      }
+      if (axis === 'horizontal') {
+        event.stopPropagation();
+        event.preventDefault();
+      }
+    },
+    { passive: false },
   );
   figure.addEventListener('touchend', (event) => {
     const direction = isSlideSwipe(
       (event.changedTouches[0]?.clientX ?? 0) - startX,
       (event.changedTouches[0]?.clientY ?? 0) - startY,
     );
-    if (direction !== 0) show(current + direction);
+    if (direction !== 0) {
+      show(current + direction);
+      event.stopPropagation();
+    }
+    axis = 'none';
   });
 
   show(0);

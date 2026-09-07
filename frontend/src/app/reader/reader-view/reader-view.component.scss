@@ -816,6 +816,29 @@ article {
   }
 }
 
+/* Hydrated only: the figure clips a horizontal row of full-width slides, and the
+   track translates between them. The bare .reader-slideshow above stays a
+   vertical stack — the graceful no-JavaScript fallback. */
+.content ::ng-deep .reader-slideshow--ready {
+  overflow: hidden;
+
+  ol {
+    display: flex;
+    transition: transform 250ms ease-out;
+    will-change: transform;
+  }
+
+  li {
+    flex: 0 0 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .content ::ng-deep .reader-slideshow--ready ol {
+    transition: none;
+  }
+}
+
 .content ::ng-deep .reader-slideshow__controls {
   display: flex;
   align-items: center;
