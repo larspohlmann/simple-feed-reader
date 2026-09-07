@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Slideshow;
 
+use Dom\Element;
+
 /**
  * The class tokens of the original carousel element, so the inserter can find
  * and remove it from the cleaned body when it survived extraction — otherwise
@@ -23,26 +25,21 @@ final readonly class ContainerSignature
         return $tokens === [] ? null : new self($tokens);
     }
 
-    public function toSelector(): string
+    public function matches(Element $element): bool
     {
-        return '.' . implode('.', array_map(self::escapeLeadingDigit(...), $this->classTokens));
+        $present = self::tokenize($element->getAttribute('class') ?? '');
+        foreach ($this->classTokens as $token) {
+            if (!in_array($token, $present, true)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /** @return list<string> */
     private static function tokenize(string $classAttribute): array
     {
         return array_values(array_filter(explode(' ', $classAttribute), static fn (string $t): bool => $t !== ''));
-    }
-
-    /** A CSS class cannot start with a digit; escape it as its hex code point. */
-    private static function escapeLeadingDigit(string $token): string
-    {
-        if (preg_match('/^-?\d/', $token) !== 1) {
-            return $token;
-        }
-
-        $offset = $token[0] === '-' ? 1 : 0;
-
-        return substr($token, 0, $offset) . sprintf('\\%x ', ord($token[$offset])) . substr($token, $offset + 1);
     }
 }

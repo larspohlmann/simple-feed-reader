@@ -39,7 +39,13 @@ final readonly class SlideshowInserter
         if ($container === null) {
             return;
         }
-        $root->querySelector($container->toSelector())?->remove();
+        foreach (iterator_to_array($root->getElementsByTagName('*')) as $element) {
+            if ($container->matches($element)) {
+                $element->remove();
+
+                return;
+            }
+        }
     }
 
     private function seat(HTMLDocument $body, PageTextBlocks $textBlocks, Slideshow $slideshow): void
