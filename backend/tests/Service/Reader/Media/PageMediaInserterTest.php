@@ -41,6 +41,25 @@ final class PageMediaInserterTest extends TestCase
         self::assertLessThan(strpos($out, 'Teaser'), strpos($out, '<audio'));
     }
 
+    public function testSeatsATopPlacedPlayerBelowARestoredHero(): void
+    {
+        // #907: a restored hero figure is handed in as the anchor, so the
+        // top-placed narration player lands under the picture, not above it.
+        $document = HtmlDocumentParser::parseOrNull('<body><figure><img src="https://x.test/hero.jpg"></figure>'
+            . '<p>Prose</p></body>');
+        self::assertNotNull($document);
+        $hero = $document->querySelector('figure');
+        self::assertNotNull($hero);
+        $media = new ArticleMedia([new MediaCandidate(MediaKind::Audio, 'https://x.test/a.mp3')]);
+
+        $plan = $this->inserter->plan($document, $media);
+        $this->inserter->apply($document, $plan, $hero);
+        $out = $document->saveHtml();
+
+        self::assertLessThan(strpos($out, '<audio'), strpos($out, '<img'));
+        self::assertLessThan(strpos($out, 'Prose'), strpos($out, '<audio'));
+    }
+
     public function testANarratedAudioPlayerCarriesTheNarrationClass(): void
     {
         $media = new ArticleMedia([

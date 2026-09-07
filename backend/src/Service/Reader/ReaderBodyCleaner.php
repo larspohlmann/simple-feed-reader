@@ -70,12 +70,12 @@ final readonly class ReaderBodyCleaner
         $this->boilerplateTrimmer->trimIn($document);
 
         // plan() only classifies, so restore() still sees every body image and
-        // can skip the hero when a player will land at the top; apply()'s
+        // can skip the hero when a lead visual will land at the top; apply()'s
         // mutation runs after, or the hero would come back (#755).
         $discoveredMedia = $recoveredInBody ? $media->withoutEmbeds() : $media;
         $plan = $this->mediaInserter->plan($document, $discoveredMedia);
-        $this->leadImage->restore($document, $leadImage, $plan->hasTopPlaced());
-        $this->mediaInserter->apply($document, $plan);
+        $restoredHero = $this->leadImage->restore($document, $leadImage, $plan->topPlacesLeadVisual());
+        $this->mediaInserter->apply($document, $plan, $restoredHero);
 
         return $document->saveHtml();
     }

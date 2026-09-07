@@ -9,28 +9,33 @@ use Dom\HTMLDocument;
 
 /**
  * Restores a page-drawn lead unless the body starts with an image, already
- * contains that asset, or a recovered player is about to be top-placed. A
+ * contains that asset, or a recovered lead visual is about to be top-placed. A
  * share render — a subscribe card, a generated preview — is refused by what
  * it is: an imageless body takes any lead, so drawn-on-page cannot gate it
  * (#786).
  */
 final readonly class ReaderLeadImage
 {
-    public function restore(HTMLDocument $document, LeadImageCandidate $lead, bool $willTopPlace): void
+    /** @return ?Element the restored hero figure, so a top-placed player can be seated below it (#907) */
+    public function restore(HTMLDocument $document, LeadImageCandidate $lead, bool $topPlacesLeadVisual): ?Element
     {
         $body = $document->body;
         $leadUrl = $lead->url;
         if ($body === null || $leadUrl === null || preg_match('#^https?://#i', $leadUrl) !== 1) {
-            return;
+            return null;
         }
 
-        // A top-placed player becomes the article's lead visual and carries its
-        // own poster; adding the hero above it would stack a second picture.
-        if ($willTopPlace || !$this->belongsAbove($body, $lead)) {
-            return;
+        // A top-placed video or embed takes the article's lead position; adding
+        // the hero above it would stack a second lead. A narration audio player
+        // does not, so the hero still belongs above it (#907).
+        if ($topPlacesLeadVisual || !$this->belongsAbove($body, $lead)) {
+            return null;
         }
 
-        $body->insertBefore($this->figure($document, $leadUrl), $body->firstChild);
+        $figure = $this->figure($document, $leadUrl);
+        $body->insertBefore($figure, $body->firstChild);
+
+        return $figure;
     }
 
     private function belongsAbove(Element $body, LeadImageCandidate $lead): bool

@@ -17,7 +17,7 @@ use Dom\HTMLDocument;
  * block the media followed, so the player goes after it), or top-placed (no
  * trace in the body). `apply()` mutates in that order, then prepends
  * top-placed candidates in source order — split so restore() can check
- * `hasTopPlaced()` before either mutation runs.
+ * `topPlacesLeadVisual()` before either mutation runs.
  */
 final readonly class PageMediaInserter
 {
@@ -35,19 +35,20 @@ final readonly class PageMediaInserter
         return $this->classify($media, $this->reconcilableImages($root), PageTextBlocks::fromDocument($document));
     }
 
-    public function apply(HTMLDocument $document, MediaInsertionPlan $plan): void
+    /** @param ?Element $belowHero a restored lead hero the top-placed media seats under, not above (#907) */
+    public function apply(HTMLDocument $document, MediaInsertionPlan $plan, ?Element $belowHero = null): void
     {
         foreach ($plan->reconcilePairs as $pair) {
             $pair['image']->parentNode?->replaceChild($this->element($document, $pair['candidate']), $pair['image']);
         }
 
-        // Reversed for the same reason as prependTopPlaced: two players after
-        // one block each go right behind it, so the last inserted ends up first.
+        // Reversed: two players anchored to one block each go right behind it,
+        // so inserting last-first leaves them in source order.
         foreach (array_reverse($plan->anchoredPairs) as $pair) {
             $this->insertAfter($pair['block'], $this->element($document, $pair['candidate']));
         }
 
-        $this->prependTopPlaced($document, $plan->topPlaced);
+        $this->prependTopPlaced($document, $plan->topPlaced, $belowHero);
     }
 
     /** @param list<Element> $pool candidate body images, in document order */
@@ -118,15 +119,20 @@ final readonly class PageMediaInserter
     }
 
     /** @param list<MediaCandidate> $topPlaced */
-    private function prependTopPlaced(HTMLDocument $document, array $topPlaced): void
+    private function prependTopPlaced(HTMLDocument $document, array $topPlaced, ?Element $belowHero): void
     {
         $root = $document->body;
         if ($root === null) {
             return;
         }
 
-        foreach (array_reverse($topPlaced) as $candidate) {
-            $root->insertBefore($this->element($document, $candidate), $root->firstChild);
+        // Insert before a fixed slot — the top of the body, or right after a
+        // restored hero when there is one — so each lands after the last and
+        // source order holds. The ternary, not `?? firstChild`: a hero that is
+        // the body's last child has no nextSibling, and the players append (#907).
+        $reference = $belowHero !== null ? $belowHero->nextSibling : $root->firstChild;
+        foreach ($topPlaced as $candidate) {
+            $root->insertBefore($this->element($document, $candidate), $reference);
         }
     }
 

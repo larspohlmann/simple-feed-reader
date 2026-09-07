@@ -11,8 +11,9 @@ use Dom\Element;
  * pair names a body `<img>` to swap for a player in place, each anchored pair
  * names the body block the player follows, and the remainder go to the top,
  * in source order. Built by `PageMediaInserter::plan()` before
- * `ReaderLeadImage::restore()` runs, so restore can consult `hasTopPlaced()`
- * without any document mutation happening first (see ReaderBodyCleaner).
+ * `ReaderLeadImage::restore()` runs, so restore can consult
+ * `topPlacesLeadVisual()` without any document mutation happening first
+ * (see ReaderBodyCleaner).
  */
 final readonly class MediaInsertionPlan
 {
@@ -28,8 +29,13 @@ final readonly class MediaInsertionPlan
     ) {
     }
 
-    public function hasTopPlaced(): bool
+    /**
+     * A top-placed video or embed takes the article's lead position, so the page
+     * hero must not stack above it; a top-placed audio player (narration, a
+     * podcast) leaves the hero its place (#907).
+     */
+    public function topPlacesLeadVisual(): bool
     {
-        return $this->topPlaced !== [];
+        return array_any($this->topPlaced, static fn (MediaCandidate $c): bool => $c->kind->readsAsLeadVisual());
     }
 }

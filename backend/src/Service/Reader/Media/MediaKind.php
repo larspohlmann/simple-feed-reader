@@ -17,4 +17,17 @@ enum MediaKind: string
     {
         return $this === self::Video || $this === self::Stream;
     }
+
+    /**
+     * Takes the article's lead position when placed at the top, so the page hero
+     * must not stack above it. Audio — narration, a podcast — is not (#907). A
+     * match, so a future kind must declare where it sits rather than default in.
+     */
+    public function readsAsLeadVisual(): bool
+    {
+        return match ($this) {
+            self::Video, self::Stream, self::Embed => true,
+            self::Audio => false,
+        };
+    }
 }
