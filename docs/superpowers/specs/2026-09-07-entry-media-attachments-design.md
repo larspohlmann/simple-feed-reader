@@ -72,8 +72,12 @@ matching where `DeclaredImage` lives):
 - `ParsedAttachment` (`final readonly`): `url`, `?mimeType`, `?durationInSeconds`,
   `?sizeInBytes`, `?title`.
 
-`ParsedEntry` gains `media: list<ParsedMedium> = []` and
-`attachments: list<ParsedAttachment> = []`.
+`ParsedEntry` gains one field, `?ParsedMediaBundle $mediaBundle`, holding both
+lists — one parameter rather than two, so the constructor stays within the PHPMD
+parameter ceiling and the bundle the extractor already returns is passed through
+whole. Per-node attribute reading and value-object construction live in a
+`FeedMediaNode` wrapper so `ItemMediaExtractor` stays within the class-complexity
+ceiling.
 
 The four format parsers (`Rss2Parser`, `Rss1Parser`, the Atom parsers,
 `WordPressJsonParser`) call `ItemMediaExtractor` once per item next to their
