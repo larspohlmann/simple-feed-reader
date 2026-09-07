@@ -814,6 +814,24 @@ article {
     width: 100%;
     height: auto;
   }
+
+  /* Each slide keeps the text it carried in the source (a linked headline, a
+     gallery caption). Long teaser text clamps to ten lines (#930). */
+  li > a,
+  li > p {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 10;
+    line-clamp: 10;
+    overflow: hidden;
+    margin: var(--space-2) 0 0;
+    font-size: var(--fs-sm);
+    line-height: var(--lh-normal);
+  }
+
+  li > p {
+    color: var(--text-secondary);
+  }
 }
 
 /* Hydrated only: the figure clips a horizontal row of full-width slides, and the

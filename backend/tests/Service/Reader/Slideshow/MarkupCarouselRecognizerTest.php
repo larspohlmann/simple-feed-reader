@@ -7,6 +7,7 @@ namespace App\Tests\Service\Reader\Slideshow;
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\Media\PageTextBlocks;
 use App\Service\Reader\Slideshow\MarkupCarouselRecognizer;
+use App\Service\Reader\Slideshow\SlideCaptionResolver;
 use App\Service\Reader\Slideshow\SlideImageResolver;
 use App\Service\Reader\Slideshow\Slideshow;
 use PHPUnit\Framework\TestCase;
@@ -19,7 +20,7 @@ final class MarkupCarouselRecognizerTest extends TestCase
         $document = HtmlDocumentParser::parseOrNull($html);
         self::assertNotNull($document);
 
-        return (new MarkupCarouselRecognizer(new SlideImageResolver()))
+        return (new MarkupCarouselRecognizer(new SlideImageResolver(), new SlideCaptionResolver()))
             ->recognize($document, PageTextBlocks::fromDocument($document));
     }
 
@@ -38,6 +39,35 @@ final class MarkupCarouselRecognizerTest extends TestCase
         self::assertSame('https://img/a.jpg', $shows[0]->slides[0]->imageUrl);
         self::assertSame('A', $shows[0]->slides[0]->alt);
         self::assertSame('An intro paragraph long enough to anchor the gallery below.', $shows[0]->precedingText);
+    }
+
+    public function testKeepsEachSlidesCaptionTextAndLink(): void
+    {
+        $shows = $this->recognize(
+            '<body><div class="swiper"><div class="swiper-wrapper">'
+            . '<a class="swiper-slide" href="https://example.com/one">'
+            . '<img src="https://img/a.jpg" alt="A"><h3>First headline</h3></a>'
+            . '<a class="swiper-slide" href="https://example.com/two">'
+            . '<img src="https://img/b.jpg" alt="B"><h3>Second headline</h3></a>'
+            . '</div></div></body>',
+        );
+
+        self::assertCount(2, $shows[0]->slides);
+        self::assertSame('First headline', $shows[0]->slides[0]->caption->text);
+        self::assertSame('https://example.com/one', $shows[0]->slides[0]->caption->link);
+        self::assertSame('Second headline', $shows[0]->slides[1]->caption->text);
+    }
+
+    public function testPrefersTheSlideTitleOverTheImageAltForTheSlideAlt(): void
+    {
+        $shows = $this->recognize(
+            '<body><div class="swiper"><div class="swiper-wrapper">'
+            . '<div class="swiper-slide" title="Slide title"><img src="https://img/a.jpg" alt="Image alt"></div>'
+            . '<div class="swiper-slide"><img src="https://img/b.jpg" alt="B"></div>'
+            . '</div></div></body>',
+        );
+
+        self::assertSame('Slide title', $shows[0]->slides[0]->alt);
     }
 
     public function testDetectsSplideWithRealImages(): void

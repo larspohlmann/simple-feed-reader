@@ -38,7 +38,13 @@ function build(figure: HTMLElement, slides: HTMLElement[], labels: SlideshowLabe
     current = (target + slides.length) % slides.length;
     // Slide the track; CSS transitions the transform (instant under reduced motion).
     track.style.transform = `translateX(${current * -100}%)`;
-    slides.forEach((slide, index) => slide.setAttribute('aria-hidden', String(index !== current)));
+    slides.forEach((slide, index) => {
+      const hidden = index !== current;
+      slide.setAttribute('aria-hidden', String(hidden));
+      // A caption link in an off-screen slide must leave the tab order, or an
+      // aria-hidden slide would hold a focusable element (an ARIA violation).
+      slide.toggleAttribute('inert', hidden);
+    });
     counter.textContent = labels.position(current + 1, slides.length);
   };
 

@@ -9,6 +9,7 @@ final readonly class Slide
     public function __construct(
         public string $imageUrl,
         public string $alt,
+        public SlideCaption $caption = new SlideCaption('', null),
     ) {
     }
 }

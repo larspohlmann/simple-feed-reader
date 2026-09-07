@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader\Slideshow;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\Slideshow\Slide;
+use App\Service\Reader\Slideshow\SlideCaption;
 use App\Service\Reader\Slideshow\Slideshow;
 use App\Service\Reader\Slideshow\SlideshowMarkup;
 use PHPUnit\Framework\TestCase;
@@ -51,5 +52,48 @@ final class SlideshowMarkupTest extends TestCase
         $document->body?->appendChild($figure);
 
         self::assertStringNotContainsString('<figcaption>', $document->saveHtml());
+    }
+
+    public function testRendersALinkedCaptionAsAnAnchorAndAPlainOneAsAParagraph(): void
+    {
+        $document = HtmlDocumentParser::parseOrNull('<body></body>');
+        self::assertNotNull($document);
+        $show = Slideshow::fromSlides(
+            [
+                new Slide('https://img/1.jpg', 'a', new SlideCaption('Linked headline', 'https://example.com/one')),
+                new Slide('https://img/2.jpg', 'b', new SlideCaption('Plain headline', null)),
+            ],
+            null,
+            null,
+            null,
+        );
+        self::assertNotNull($show);
+
+        $figure = (new SlideshowMarkup())->figureFor($document, $show);
+        $document->body?->appendChild($figure);
+        $html = $document->saveHtml();
+
+        self::assertStringContainsString('<a href="https://example.com/one">Linked headline</a>', $html);
+        self::assertStringContainsString('<p>Plain headline</p>', $html);
+    }
+
+    public function testOmitsAnEmptyCaption(): void
+    {
+        $document = HtmlDocumentParser::parseOrNull('<body></body>');
+        self::assertNotNull($document);
+        $show = Slideshow::fromSlides(
+            [new Slide('https://img/1.jpg', 'a'), new Slide('https://img/2.jpg', 'b')],
+            null,
+            null,
+            null,
+        );
+        self::assertNotNull($show);
+
+        $figure = (new SlideshowMarkup())->figureFor($document, $show);
+        $document->body?->appendChild($figure);
+        $html = $document->saveHtml();
+
+        self::assertStringNotContainsString('<p>', $html);
+        self::assertStringNotContainsString('<a ', $html);
     }
 }

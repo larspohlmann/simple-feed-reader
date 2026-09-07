@@ -23,11 +23,13 @@ use App\Service\Reader\PlayerChromeCleaner;
 use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\ReaderLeadImage;
 use App\Service\Reader\Slideshow\MarkupCarouselRecognizer;
+use App\Service\Reader\Slideshow\SlideCaptionResolver;
 use App\Service\Reader\Slideshow\SlideImageResolver;
 use App\Service\Reader\Slideshow\SlideshowInserter;
 use App\Service\Reader\Slideshow\SlideshowMarkup;
 use App\Service\Reader\Slideshow\SlideshowScanner;
 use App\Service\Reader\Slideshow\TagesschauCarouselRecognizer;
+use App\Service\Sanitize\EntrySanitizer;
 use PHPUnit\Framework\TestCase;
 
 final class SlideshowExtractionTest extends TestCase
@@ -39,11 +41,7 @@ final class SlideshowExtractionTest extends TestCase
         $rawDocument = HtmlDocumentParser::parseOrNull($raw);
         self::assertNotNull($rawDocument);
 
-        $scanner = new SlideshowScanner([
-            new MarkupCarouselRecognizer(new SlideImageResolver()),
-            new TagesschauCarouselRecognizer(),
-        ]);
-        $slideshows = $scanner->scan($rawDocument);
+        $slideshows = $this->scanner()->scan($rawDocument);
 
         // The cleaned "body" here is the readability output: the heading survives,
         // the attribute-only carousel div is gone.
@@ -61,6 +59,41 @@ final class SlideshowExtractionTest extends TestCase
         self::assertStringContainsString('reader-slideshow', $clean);
         self::assertSame(3, substr_count($clean, '<img'));
         self::assertLessThan(strpos($clean, 'reader-slideshow'), strpos($clean, 'Hauptgründe'));
+    }
+
+    public function testSwiperTeaserCaptionsAndLinksSurviveTheSanitizer(): void
+    {
+        $raw = file_get_contents(__DIR__ . '/../../../Fixtures/Slideshow/swiper-teaser-carousel.html');
+        self::assertIsString($raw);
+        $rawDocument = HtmlDocumentParser::parseOrNull($raw);
+        self::assertNotNull($rawDocument);
+
+        $body = '<p>An intro paragraph long enough to anchor the gallery that follows it here.</p>';
+        $clean = $this->cleaner()->clean(
+            $body,
+            ['Article title', 'Article title'],
+            new LeadImageCandidate(null, PageImageInventory::fromDocument(null)),
+            ArticleMedia::none(),
+            null,
+            null,
+            $this->scanner()->scan($rawDocument),
+        );
+
+        $safe = (new EntrySanitizer())->sanitize($clean);
+        self::assertIsString($safe);
+        self::assertStringContainsString('First headline', $safe);
+        self::assertStringContainsString('https://www.example.com/first-article', $safe);
+        self::assertStringContainsString('<p>Second headline</p>', $safe);
+        // The script text inside the slide is not visible, so it never reaches the caption.
+        self::assertStringNotContainsString('drop me', $safe);
+    }
+
+    private function scanner(): SlideshowScanner
+    {
+        return new SlideshowScanner([
+            new MarkupCarouselRecognizer(new SlideImageResolver(), new SlideCaptionResolver()),
+            new TagesschauCarouselRecognizer(),
+        ]);
     }
 
     private function cleaner(): ReaderBodyCleaner

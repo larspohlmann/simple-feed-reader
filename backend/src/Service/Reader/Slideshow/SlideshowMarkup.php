@@ -44,7 +44,26 @@ final readonly class SlideshowMarkup
 
         $item = $document->createElement('li');
         $item->appendChild($image);
+        if (!$slide->caption->isEmpty()) {
+            $item->appendChild($this->caption($document, $slide->caption));
+        }
 
         return $item;
+    }
+
+    /**
+     * A linked caption becomes an <a> (the sanitizer forces rel/target and safe
+     * schemes); a plain one a <p>. Both are safe elements, so neither needs a
+     * class to cross the sanitizer.
+     */
+    private function caption(HTMLDocument $document, SlideCaption $caption): Element
+    {
+        $element = $document->createElement($caption->hasLink() ? 'a' : 'p');
+        if ($caption->link !== null) {
+            $element->setAttribute('href', $caption->link);
+        }
+        $element->appendChild($document->createTextNode($caption->text));
+
+        return $element;
     }
 }
