@@ -29,17 +29,23 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
         private readonly UrlGuard $urlGuard,
         private readonly ResponseClassifier $classifier,
         private readonly int $concurrency,
+        private readonly int $hostConcurrency,
         private readonly string $userAgent,
         private readonly ProxyEgressResolver $proxyEgressResolver,
         private readonly FetchRetryPolicy $retryPolicy,
     ) {
         // A cap below one opens no requests at all, and the engine would report
         // an empty run as a clean one: the sweep's `remaining` never decrements
-        // and the frontend's poll loop recurses forever on `partial`. This value
-        // is bound from a container parameter, so a typo has to fail loudly.
+        // and the frontend's poll loop recurses forever on `partial`. These are
+        // bound from container parameters, so a typo has to fail loudly.
         if ($concurrency < 1) {
             throw new \InvalidArgumentException(
                 sprintf('Concurrency must be at least 1, got %d.', $concurrency),
+            );
+        }
+        if ($hostConcurrency < 1) {
+            throw new \InvalidArgumentException(
+                sprintf('Per-host concurrency must be at least 1, got %d.', $hostConcurrency),
             );
         }
     }
@@ -63,7 +69,13 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
             return;
         }
 
-        $queue = new FetchQueue($this->iterator($tickets), $batchProxy);
+        // Look no further past a full host than there are slots to fill: staging
+        // more full-host candidates than that cannot open a request this pass, and
+        // it would advance — and so commit — the budget-gated ticket source for
+        // feeds no slot has opened for.
+        $lookAhead = $this->concurrency;
+        $hostSlots = new HostSlots($this->hostConcurrency);
+        $queue = new FetchQueue($this->iterator($tickets), $hostSlots, $lookAhead, $batchProxy);
         /** @var \SplObjectStorage<ResponseInterface, FetchAttempt> $inFlight */
         $inFlight = new \SplObjectStorage();
 
@@ -87,8 +99,12 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
     }
 
     /**
-     * Opens requests until the concurrency cap is reached or the queue dries up.
-     * A URL the guard rejects never becomes a request, so it is reported here.
+     * Opens requests until the concurrency cap is reached or no queued attempt
+     * can run now — the queue returns null both when it is empty and when every
+     * remaining attempt's host is at capacity, in which case a freed slot has to
+     * come from an in-flight response. A URL the guard rejects never becomes a
+     * request, so it is reported here. The host slot is claimed on the queue the
+     * moment the request goes on the wire and released when its response retires.
      *
      * @param \SplObjectStorage<ResponseInterface, FetchAttempt> $inFlight
      *
@@ -96,11 +112,14 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
      */
     private function fill(FetchQueue $queue, \SplObjectStorage $inFlight): \Generator
     {
-        while ($inFlight->count() < $this->concurrency && $queue->hasMore()) {
-            $attempt = $queue->next();
+        while ($inFlight->count() < $this->concurrency) {
+            $attempt = $queue->takeRunnable();
+            if (null === $attempt) {
+                return;
+            }
 
             try {
-                $inFlight[$this->send($attempt)] = $attempt;
+                $response = $this->send($attempt);
             } catch (FetchException $e) {
                 $fallback = $this->retryPolicy->directFallbackFor($attempt);
                 if (null !== $fallback) {
@@ -109,7 +128,11 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
                 }
 
                 yield $attempt->key => FetchOutcome::failed($e);
+                continue;
             }
+
+            $queue->onSent($attempt);
+            $inFlight[$response] = $attempt;
         }
     }
 
@@ -131,7 +154,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
             try {
                 $verdict = $this->advance($response, $chunk, $attempt);
             } catch (FetchException $e) {
-                $this->retire($inFlight, $response);
+                $this->retire($queue, $inFlight, $response);
 
                 $requeue = $this->retryPolicy->nextAttemptAfter($attempt, $e);
                 if (null !== $requeue) {
@@ -149,7 +172,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
                 continue;
             }
 
-            $this->retire($inFlight, $response);
+            $this->retire($queue, $inFlight, $response);
 
             if ($verdict instanceof FetchAttempt) {
                 $queue->requeue($verdict);
@@ -223,8 +246,9 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
     }
 
     /** @param \SplObjectStorage<ResponseInterface, FetchAttempt> $inFlight */
-    private function retire(\SplObjectStorage $inFlight, ResponseInterface $response): void
+    private function retire(FetchQueue $queue, \SplObjectStorage $inFlight, ResponseInterface $response): void
     {
+        $queue->onRetired($inFlight[$response]);
         $inFlight->detach($response);
         $response->cancel();
     }

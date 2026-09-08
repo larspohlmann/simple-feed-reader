@@ -146,8 +146,11 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
      * Every URL resolves to the same public address; the SSRF rules themselves
      * are UrlGuard's own responsibility and already have their own tests.
      */
-    private function concurrentFetcher(MockHttpClient $httpClient, int $concurrency = 8): ConcurrentFeedFetcher
-    {
+    private function concurrentFetcher(
+        MockHttpClient $httpClient,
+        int $concurrency = 8,
+        int $hostConcurrency = 100,
+    ): ConcurrentFeedFetcher {
         $resolver = new class () implements DnsResolverInterface {
             public function resolve(string $hostname): array
             {
@@ -165,6 +168,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
             $urlGuard,
             new ResponseClassifier($this->clock),
             $concurrency,
+            $hostConcurrency,
             'TestAgent/1.0',
             $proxyEgressResolver,
             new FetchRetryPolicy($urlGuard),

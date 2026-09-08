@@ -53,6 +53,7 @@ final class HttpFeedFetcherTest extends TestCase
             $urlGuard,
             new ResponseClassifier(new MockClock()),
             1,
+            100,
             'TestAgent/1.0',
             $proxyEgressResolver,
             new FetchRetryPolicy($urlGuard),
