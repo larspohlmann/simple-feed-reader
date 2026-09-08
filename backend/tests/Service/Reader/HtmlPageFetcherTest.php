@@ -76,13 +76,44 @@ final class HtmlPageFetcherTest extends TestCase
         $fetcher->fetch('http://169.254.169.254/latest/meta-data/');
     }
 
-    public function testRejectsNon2xx(): void
+    public function testRejectsNon2xxWithTheStandardReasonPhrase(): void
     {
         $fetcher = $this->fetcher([new MockResponse('nope', ['http_code' => 404])]);
 
         $this->expectException(PageFetchException::class);
-        $this->expectExceptionMessage('HTTP 404');
+        $this->expectExceptionMessage('HTTP 404 Not Found');
         $fetcher->fetch('https://example.com/missing');
+    }
+
+    public function testNon2xxAppendsTheVisibleTextOfTheErrorBody(): void
+    {
+        $body = '<html><head><style>.x{color:red}</style></head><body>'
+            . '<h1>Access Denied</h1><script>var blocked = 1;</script>'
+            . '<p>Your request was blocked.</p></body></html>';
+        $fetcher = $this->fetcher([new MockResponse($body, ['http_code' => 403])]);
+
+        try {
+            $fetcher->fetch('https://example.com/blocked');
+            self::fail('expected a PageFetchException');
+        } catch (PageFetchException $failure) {
+            self::assertStringContainsString('HTTP 403 Forbidden', $failure->getMessage());
+            self::assertStringContainsString('Access Denied', $failure->getMessage());
+            self::assertStringContainsString('Your request was blocked.', $failure->getMessage());
+            self::assertStringNotContainsString('color:red', $failure->getMessage());
+            self::assertStringNotContainsString('var blocked', $failure->getMessage());
+        }
+    }
+
+    public function testNon2xxWithAnEmptyBodyReportsOnlyTheStatus(): void
+    {
+        $fetcher = $this->fetcher([new MockResponse("   \n  ", ['http_code' => 404])]);
+
+        try {
+            $fetcher->fetch('https://example.com/missing');
+            self::fail('expected a PageFetchException');
+        } catch (PageFetchException $failure) {
+            self::assertSame('HTTP 404 Not Found', $failure->getMessage());
+        }
     }
 
     public function testSendsTheAcceptHeaderAndTimeBudgetForEveryFetch(): void

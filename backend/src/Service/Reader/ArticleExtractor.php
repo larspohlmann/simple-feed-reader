@@ -68,8 +68,8 @@ final class ArticleExtractor implements ArticleExtractorInterface
         $feedMedia ??= FeedMedia::none();
         try {
             $page = $this->fetcher->fetch($url);
-        } catch (PageFetchException) {
-            return ExtractionResult::failed($url, 'fetch');
+        } catch (PageFetchException $failure) {
+            return ExtractionResult::failed($url, 'fetch', $failure->getMessage());
         }
 
         $normalized = $this->normalizer->normalize($page->html);

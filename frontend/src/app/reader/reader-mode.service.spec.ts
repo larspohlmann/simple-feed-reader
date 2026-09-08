@@ -38,4 +38,20 @@ describe('ReaderModeService', () => {
     expect(s.mode()).toBe('original');
     expect(s.canToggle()).toBe(false);
   });
+
+  it('presents the reader view when a retry recovers from a failed extraction', () => {
+    const s = new ReaderModeService();
+    s.setOriginalOnly();
+    s.enableToggle();
+    expect(s.mode()).toBe('reader');
+    expect(s.canToggle()).toBe(true);
+  });
+
+  it('leaves the chosen view alone when a reload succeeds while toggling is already allowed', () => {
+    const s = new ReaderModeService();
+    s.enableToggle();
+    s.toggle(); // the reader chose the original view
+    s.enableToggle(); // a reload succeeds again
+    expect(s.mode()).toBe('original');
+  });
 });

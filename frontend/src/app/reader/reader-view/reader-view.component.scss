@@ -750,10 +750,68 @@ article {
   color: var(--accent);
 }
 
-.reader-note {
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
+/* The card chrome (amber ring, surface, padding) lives in app-warning-box; this
+   owns only the note's place in the reader and its inner layout. The glyph sits
+   in the box's gutter, the body hangs beside it — the paywall-notice pattern. */
+.reader-fallback {
   margin: 0 0 var(--space-3);
+  font-size: var(--fs-sm);
+}
+
+.reader-fallback-icon {
+  flex: none;
+  color: var(--warning);
+  font-size: var(--fs-base);
+  line-height: 1;
+}
+
+.reader-fallback-body {
+  color: var(--text-primary);
+}
+
+.reader-note {
+  margin: 0;
+}
+
+/* A text link, not a button: the retry sits inside the note and must read as
+   part of the sentence, so it borrows the note's size and drops all button
+   chrome. Amber to match the warning box it lives in. */
+.reader-note-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--warning);
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.reader-note-link:hover {
+  text-decoration: none;
+}
+
+.reader-error {
+  margin-top: var(--space-2);
+  color: var(--text-muted);
+}
+
+.reader-error summary {
+  cursor: pointer;
+  user-select: none;
+}
+
+.reader-error pre {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-3);
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: ui-monospace, monospace;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 /* Recovered media (#748). The embed box keeps a 16:9 frame at any width; the

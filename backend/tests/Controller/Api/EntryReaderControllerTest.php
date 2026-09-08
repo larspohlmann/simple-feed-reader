@@ -152,7 +152,9 @@ final class EntryReaderControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('reader-fail@example.com');
         $fake = $this->installFake();
-        $fake->willReturn(ExtractionResult::failed('https://example.com/article', 'fetch'));
+        $fake->willReturn(
+            ExtractionResult::failed('https://example.com/article', 'fetch', 'HTTP 403 Forbidden'),
+        );
         $entry = $this->seedEntry($user, 'https://example.com/article');
 
         $client->request('GET', '/api/entries/' . $entry->getId() . '/reader', server: $headers);
@@ -162,6 +164,7 @@ final class EntryReaderControllerTest extends WebTestCase
         self::assertIsArray($body);
         self::assertSame('failed', $body['status']);
         self::assertSame('fetch', $body['reason']);
+        self::assertSame('HTTP 403 Forbidden', $body['detail']);
         self::assertSame(['https://example.com/article'], $fake->calls);
         // A failed extraction is exactly when the feed's own picture is the only
         // one there is, so the original hero must still be resolved.

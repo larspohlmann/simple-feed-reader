@@ -181,7 +181,23 @@
           <app-paywall-notice class="paywall-note" [url]="paywallUrl()" />
         }
         @if (failed() && mode() === 'original') {
-          <p class="reader-note">{{ 'reader.readerFallback' | transloco }}</p>
+          <app-warning-box class="reader-fallback">
+            <span class="reader-fallback-icon" aria-hidden="true">⚠</span>
+            <div class="reader-fallback-body">
+              <p class="reader-note">
+                {{ 'reader.readerFallback' | transloco }}
+                <button type="button" class="reader-note-link" (click)="refreshArticle()">
+                  {{ 'reader.retry' | transloco }}
+                </button>
+              </p>
+              @if (errorDetail(); as detail) {
+                <details class="reader-error">
+                  <summary>{{ 'reader.showError' | transloco }}</summary>
+                  <pre>{{ detail }}</pre>
+                </details>
+              }
+            </div>
+          </app-warning-box>
         }
         @if (hero(); as image) {
           <!-- The original-feed view's lead picture (the reader view carries its own

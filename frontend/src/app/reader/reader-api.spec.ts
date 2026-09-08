@@ -329,6 +329,7 @@ describe('ReaderApi', () => {
       status: 'failed',
       url: null,
       reason: 'no_url',
+      detail: null,
       originalHero: null,
     } satisfies ReaderContent);
 

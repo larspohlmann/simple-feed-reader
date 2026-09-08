@@ -76,6 +76,7 @@ describe('ReaderContentService', () => {
       status: 'failed',
       url: null,
       reason: 'fetch',
+      detail: null,
       originalHero: null,
     };
     apiGet.mockReturnValue(of(failure));
@@ -99,6 +100,7 @@ describe('ReaderContentService', () => {
       status: 'failed',
       url: null,
       reason: 'fetch',
+      detail: null,
       originalHero: null,
     };
     apiGet.mockReturnValue(of(failure));

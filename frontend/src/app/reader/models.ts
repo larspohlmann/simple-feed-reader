@@ -373,7 +373,10 @@ export interface ReaderArticle {
 export interface ReaderFailure {
   status: 'failed';
   url: string | null;
-  reason: 'no_url' | 'fetch' | 'unextractable' | 'empty';
+  reason: 'no_url' | 'fetch' | 'unextractable' | 'empty' | 'mismatch';
+  /** The underlying cause in words when one exists — a fetch carries the HTTP
+   *  status or transport message; a reason with no such cause is null. */
+  detail: string | null;
   originalHero: HeroImageDto | null;
 }
 

@@ -17,10 +17,14 @@ namespace App\Service\Reader;
  */
 final readonly class ExtractionResult
 {
+    /** True for a successful extraction. Derived, not stored: a failure always
+     *  carries a reason and a success never does, so the two cannot disagree. */
+    public bool $ok;
+
     private function __construct(
-        public bool $ok,
         public ?string $url,
         public ?string $reason,
+        public ?string $detail,
         public ?string $title,
         public ?string $byline,
         public ?string $siteName,
@@ -28,6 +32,7 @@ final readonly class ExtractionResult
         public ?string $excerpt,
         public bool $paywalled,
     ) {
+        $this->ok = $reason === null;
     }
 
     public static function ok(
@@ -39,11 +44,13 @@ final readonly class ExtractionResult
         ?string $excerpt,
         bool $paywalled = false,
     ): self {
-        return new self(true, $url, null, $title, $byline, $siteName, $contentHtml, $excerpt, $paywalled);
+        return new self($url, null, null, $title, $byline, $siteName, $contentHtml, $excerpt, $paywalled);
     }
 
-    public static function failed(?string $url, string $reason): self
+    /** `$detail` is the underlying cause in words when one exists — a fetch carries
+     *  the HTTP status or transport message; a reason with no such cause passes null. */
+    public static function failed(?string $url, string $reason, ?string $detail = null): self
     {
-        return new self(false, $url, $reason, null, null, null, null, null, false);
+        return new self($url, $reason, $detail, null, null, null, null, null, false);
     }
 }
