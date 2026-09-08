@@ -311,4 +311,40 @@ final class HtmlPageFetcherTest extends TestCase
         self::assertStringContainsString('the real article', $result->html);
         self::assertSame('https://example.com/6', $result->finalUrl);
     }
+
+    public function testDecodesABodyWhoseCharsetOnlyTheHeaderDeclares(): void
+    {
+        // #904: no <meta charset>, so the parser would otherwise read the
+        // Windows-1252 bytes as UTF-8 and render mojibake.
+        $fetcher = $this->fetcher([new MockResponse("<html lang=\"fr\"><body><p>Caf\xE9 cr\xE8me</p></body></html>", [
+            'http_code' => 200,
+            'response_headers' => ['content-type' => ['text/html; charset=windows-1252']],
+        ])]);
+
+        $result = $fetcher->fetch('https://example.com/post');
+
+        self::assertStringContainsString('Café crème', $result->html);
+    }
+
+    public function testKeepsTheRawBodyWhenTheHeaderDeclaresUtf8(): void
+    {
+        $body = '<html lang="fr"><body><p>Café crème</p></body></html>';
+        $fetcher = $this->fetcher([new MockResponse($body, [
+            'http_code' => 200,
+            'response_headers' => ['content-type' => ['text/html; charset=UTF-8']],
+        ])]);
+
+        self::assertSame($body, $fetcher->fetch('https://example.com/post')->html);
+    }
+
+    public function testKeepsTheRawBodyWhenTheHeaderCharsetIsUnknown(): void
+    {
+        $body = "<html lang=\"fr\"><body><p>Caf\xE9</p></body></html>";
+        $fetcher = $this->fetcher([new MockResponse($body, [
+            'http_code' => 200,
+            'response_headers' => ['content-type' => ['text/html; charset=x-nonsense']],
+        ])]);
+
+        self::assertSame($body, $fetcher->fetch('https://example.com/post')->html);
+    }
 }
