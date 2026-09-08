@@ -10,6 +10,16 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.0.8] - 2026-09-08
+
+## What's Changed
+* Rebuild inline media teasers the extraction orphans (#948) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/949
+* fix(#950): defer hls.js attach to first play so the HLS poster shows no spinner by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/951
+* fix(#952): stop a badly shaped poster from collapsing a reader video by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/954
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.0.7...v1.0.8
+
 ## [v1.0.7] - 2026-09-08
 
 ## What's Changed
