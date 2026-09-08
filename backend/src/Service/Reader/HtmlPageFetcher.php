@@ -25,16 +25,52 @@ final readonly class HtmlPageFetcher
     private const float TIMEOUT_SECONDS = 10.0;
     private const int SNIPPET_LENGTH = 200;
     private const int SNIPPET_SCAN_LENGTH = 20_000;
+    private const int LANDING_SCAN_LENGTH = 20_000;
 
     public function __construct(
         private RedirectFollower $redirects,
+        private MetaRefreshTarget $metaRefresh,
+        private LandingChallenge $challenge,
         private string $userAgent,
     ) {
     }
 
     public function fetch(string $url): PageResponse
     {
-        $landed = $this->land($url);
+        $remainingHops = self::MAX_REDIRECTS;
+        $target = $url;
+        while (true) {
+            $landed = $this->land($target, $remainingHops);
+            $remainingHops -= $landed->hops;
+            $body = $this->readableBody($landed);
+
+            $head = mb_substr($body, 0, self::LANDING_SCAN_LENGTH);
+            $this->assertNotChallenge($head, $landed);
+            $next = $this->metaRefresh->within($head, $landed->url);
+            if ($next === null) {
+                return new PageResponse($landed->url, $body);
+            }
+
+            $landed->response->cancel();
+            if ($remainingHops < 1) {
+                throw new PageFetchException(sprintf('%s: more than %d redirects', $url, self::MAX_REDIRECTS));
+            }
+            $remainingHops--;
+            $target = $next;
+        }
+    }
+
+    private function land(string $url, int $maxRedirects): LandedResponse
+    {
+        try {
+            return $this->redirects->follow($url, $this->options(), $maxRedirects);
+        } catch (RedirectChainException $e) {
+            throw new PageFetchException($e->getMessage(), previous: $e);
+        }
+    }
+
+    private function readableBody(LandedResponse $landed): string
+    {
         if (!$landed->isSuccess()) {
             $snippet = $this->errorBodySnippet($landed->response);
             $landed->response->cancel();
@@ -48,15 +84,15 @@ final readonly class HtmlPageFetcher
             throw new PageFetchException(sprintf('response exceeds %d bytes', self::MAX_BYTES));
         }
 
-        return new PageResponse($landed->url, $body);
+        return $body;
     }
 
-    private function land(string $url): LandedResponse
+    private function assertNotChallenge(string $head, LandedResponse $landed): void
     {
-        try {
-            return $this->redirects->follow($url, $this->options(), self::MAX_REDIRECTS);
-        } catch (RedirectChainException $e) {
-            throw new PageFetchException($e->getMessage(), previous: $e);
+        if ($this->challenge->matches($head)) {
+            $landed->response->cancel();
+
+            throw new PageFetchException(sprintf('%s: bot or consent challenge interstitial', $landed->url));
         }
     }
 
