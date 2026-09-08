@@ -304,6 +304,20 @@ final class FetchedPageNormalizerTest extends TestCase
         self::assertStringContainsString('<img src="https://x.test/a.jpg" alt="">', $normalized);
     }
 
+    public function testPromotesAContentPhotoOutOfItsLightboxButtonSoReadabilityKeepsIt(): void
+    {
+        $normalized = $this->normalized(
+            '<html lang="en"><body><article><figure>'
+            . '<button type="button" class="lightbox-trigger">'
+            . '<img src="https://x.test/a.jpg" width="992" height="558" alt="A"></button>'
+            . '<figcaption>Caption.</figcaption></figure></article></body></html>',
+        );
+
+        $photo = '<img src="https://x.test/a.jpg" width="992" height="558" alt="A">';
+        self::assertStringNotContainsString('<button', $normalized);
+        self::assertStringContainsString($photo, $normalized);
+    }
+
     public function testStripsTheClassOfATextlessPictureWrapperBeforeReadabilityScoresIt(): void
     {
         $normalized = $this->normalized(

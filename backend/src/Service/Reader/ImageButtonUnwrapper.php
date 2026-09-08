@@ -31,9 +31,9 @@ final readonly class ImageButtonUnwrapper
 
     public function unwrapIn(HTMLDocument $document): void
     {
-        // Innermost first, so an outer button unwrapped later still holds the
-        // already-promoted children of any button nested inside it.
-        foreach (array_reverse(iterator_to_array($document->getElementsByTagName('button'))) as $button) {
+        // A snapshot, since replaceWith mutates the live tag list mid-walk. A
+        // button cannot nest inside a button, so document order needs no reversal.
+        foreach (iterator_to_array($document->getElementsByTagName('button')) as $button) {
             if ($button->parentNode !== null && $this->wrapsContentPhoto($button)) {
                 $button->replaceWith(...iterator_to_array($button->childNodes));
             }

@@ -52,6 +52,72 @@ final class ImageButtonUnwrapperTest extends TestCase
         self::assertStringContainsString('<button', $html);
     }
 
+    public function testLeavesAButtonWhoseImageOnlyReachesTheIconCeiling(): void
+    {
+        // Exactly the ceiling on one edge is still icon-sized; the ceiling is exclusive.
+        $html = $this->unwrapped(
+            '<button><img src="https://x.test/a.jpg" width="100" height="200" alt=""></button>',
+        );
+
+        self::assertStringContainsString('<button', $html);
+    }
+
+    public function testLeavesAButtonWhoseImagePassesOnOnlyOneEdge(): void
+    {
+        // Both edges must clear the ceiling: a wide but short strip is not a photo.
+        $html = $this->unwrapped(
+            '<button><img src="https://x.test/a.jpg" width="640" height="80" alt=""></button>',
+        );
+
+        self::assertStringContainsString('<button', $html);
+    }
+
+    public function testLeavesAButtonWhoseWidthIsNotNumeric(): void
+    {
+        $html = $this->unwrapped(
+            '<button><img src="https://x.test/a.jpg" width="auto" height="558" alt=""></button>',
+        );
+
+        self::assertStringContainsString('<button', $html);
+    }
+
+    public function testLeavesAButtonWhoseHeightIsNotNumeric(): void
+    {
+        $html = $this->unwrapped(
+            '<button><img src="https://x.test/a.jpg" width="992" height="auto" alt=""></button>',
+        );
+
+        self::assertStringContainsString('<button', $html);
+    }
+
+    public function testPromotesAContentPhotoWhoseSourceSchemeIsUppercase(): void
+    {
+        $html = $this->unwrapped(
+            '<button><img src="HTTPS://x.test/a.jpg" width="992" height="558" alt=""></button>',
+        );
+
+        self::assertStringNotContainsString('<button', $html);
+    }
+
+    public function testPromotesAContentPhotoWhoseSourceCarriesSurroundingWhitespace(): void
+    {
+        $html = $this->unwrapped(
+            '<button><img src="  https://x.test/a.jpg  " width="992" height="558" alt=""></button>',
+        );
+
+        self::assertStringNotContainsString('<button', $html);
+    }
+
+    public function testLeavesAButtonWhoseSourceOnlyContainsAScheme(): void
+    {
+        // A proxy path that merely embeds a URL is not itself an absolute source.
+        $html = $this->unwrapped(
+            '<button><img src="/redirect?to=http://x.test/a.jpg" width="992" height="558" alt=""></button>',
+        );
+
+        self::assertStringContainsString('<button', $html);
+    }
+
     public function testLeavesATrackingPixelButtonAlone(): void
     {
         $html = $this->unwrapped(
