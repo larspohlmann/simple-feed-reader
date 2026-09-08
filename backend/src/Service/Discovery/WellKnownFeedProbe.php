@@ -20,8 +20,8 @@ use App\Service\Parser\FeedParser;
  * sites and gives up on a feed one request away; this guesses that request.
  *
  * The guesses go out together over the concurrent fetcher, so the walk costs
- * one round trip rather than six — a slow host must not hold the subscribe
- * request for six timeouts. They inherit that fetcher's SSRF guard, and a
+ * one round trip rather than seven — a slow host must not hold the subscribe
+ * request for seven timeouts. They inherit that fetcher's SSRF guard, and a
  * failed guess is not an error: a 404, a timeout, and a non-feed body are
  * all just answers of "not here".
  */
@@ -34,7 +34,7 @@ final readonly class WellKnownFeedProbe
      *
      * @var list<string>
      */
-    private const array SUFFIXES = ['.rss', 'feed', 'rss', 'feed.xml', 'atom.xml', 'index.xml'];
+    private const array SUFFIXES = ['.rss', 'feed', 'rss', 'rss.xml', 'feed.xml', 'atom.xml', 'index.xml'];
 
     public function __construct(
         private BatchFeedFetcherInterface $fetcher,

@@ -66,6 +66,11 @@ final class WellKnownFeedProbeTest extends KernelTestCase
             'https://example.com/blog/.rss',
         ];
         yield 'a bare host' => ['https://example.com', 'https://example.com/.rss'];
+        // A site whose only feed is /rss.xml, advertised nowhere on the page.
+        yield 'the rss.xml convention' => [
+            'https://www.radiohamburg.de/',
+            'https://www.radiohamburg.de/rss.xml',
+        ];
     }
 
     #[DataProvider('pageUrls')]
@@ -95,12 +100,13 @@ final class WellKnownFeedProbeTest extends KernelTestCase
         $fetcher = $this->fetcher();
         self::assertNull($this->probe($fetcher)->probe($page));
 
-        // The whole walk goes out together — one round trip, not six — so a
-        // slow host cannot hold the subscribe request for six timeouts.
+        // The whole walk goes out together — one round trip, not seven — so a
+        // slow host cannot hold the subscribe request for seven timeouts.
         self::assertSame([
             $page . '.rss',
             $page . 'feed',
             $page . 'rss',
+            $page . 'rss.xml',
             $page . 'feed.xml',
             $page . 'atom.xml',
             $page . 'index.xml',

@@ -59,7 +59,7 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         try {
             $response = $this->fetcher->fetch($url);
         } catch (FeedThrottledException) {
-            // The site has just asked us to slow down; six parallel guesses are
+            // The site has just asked us to slow down; the parallel guesses are
             // the opposite of that, and each would draw its own 429.
             return FeedDiscoveryResult::scrapeFailed('throttled');
         } catch (FeedUnreachableException $e) {
