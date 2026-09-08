@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\CustomElementUnwrapper;
 use App\Service\Reader\FetchedPageNormalizer;
+use App\Service\Reader\ImageButtonUnwrapper;
 use App\Service\Reader\ImageWrapperClassRemover;
 use App\Service\Reader\LazyImageSources;
 use App\Service\Reader\NoscriptImageUnwrapper;
@@ -22,6 +23,7 @@ final class FetchedPageNormalizerTest extends TestCase
     {
         $this->normalizer = new FetchedPageNormalizer(
             new CustomElementUnwrapper(),
+            new ImageButtonUnwrapper(),
             new NoscriptImageUnwrapper(),
             new LazyImageSources(),
             new ShareWidgetRemover(),

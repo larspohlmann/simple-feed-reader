@@ -86,6 +86,7 @@ final readonly class FetchedPageNormalizer
 
     public function __construct(
         private CustomElementUnwrapper $customElements,
+        private ImageButtonUnwrapper $imageButtons,
         private NoscriptImageUnwrapper $noscriptImages,
         private LazyImageSources $lazyImages,
         private ShareWidgetRemover $shareWidgets,
@@ -138,6 +139,7 @@ final readonly class FetchedPageNormalizer
         $this->customElements->unwrapIn($document);
         $this->noscriptImages->unwrapIn($document);
         $this->lazyImages->resolveIn($document);
+        $this->imageButtons->unwrapIn($document);
         $this->shareWidgets->removeFrom($document);
         $this->shareIntentLinks->removeFrom($document);
         $this->substackPlaceholder->replaceIn($document);
