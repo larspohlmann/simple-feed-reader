@@ -2,7 +2,6 @@ import { attachHlsStreams } from './hls-streams';
 
 const loadSource = jest.fn();
 const attachMedia = jest.fn();
-const startLoad = jest.fn();
 const destroy = jest.fn();
 let supported = true;
 
@@ -10,7 +9,6 @@ class FakeHls {
   static isSupported = (): boolean => supported;
   loadSource = loadSource;
   attachMedia = attachMedia;
-  startLoad = startLoad;
   destroy = destroy;
 }
 
@@ -26,7 +24,12 @@ function host(html: string): HTMLElement {
   return el;
 }
 
-const flush = () => new Promise((r) => setTimeout(r, 0));
+const flush = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
+
+function firstPlay(el: HTMLElement): Promise<void> {
+  el.querySelector('video')!.dispatchEvent(new Event('play'));
+  return flush();
+}
 
 describe('attachHlsStreams', () => {
   beforeEach(() => {
@@ -34,55 +37,62 @@ describe('attachHlsStreams', () => {
     supported = true;
     document.body.innerHTML = '';
     HTMLMediaElement.prototype.canPlayType = () => '';
+    HTMLMediaElement.prototype.load = () => undefined;
+    HTMLMediaElement.prototype.play = () => Promise.resolve();
   });
 
-  it('attaches hls.js to an m3u8 video when the browser has no native HLS', async () => {
+  it('attaches nothing on render, so the idle poster keeps its playlist src and paints no spinner', async () => {
     const el = host('<video src="https://x.test/master.m3u8" poster="p.jpg"></video>');
     attachHlsStreams(el);
     await flush();
 
-    expect(loadSource).toHaveBeenCalledWith('https://x.test/master.m3u8');
-    expect(attachMedia).toHaveBeenCalledWith(el.querySelector('video'));
+    expect(el.querySelector('video')!.getAttribute('src')).toBe('https://x.test/master.m3u8');
+    expect(attachMedia).not.toHaveBeenCalled();
   });
 
-  it('starts loading only on the first play, so preload="none" keeps its meaning', async () => {
+  it('attaches hls.js only on the first play, so preload="none" keeps its meaning', async () => {
     const el = host('<video src="https://x.test/master.m3u8"></video>');
     attachHlsStreams(el);
     await flush();
-    expect(startLoad).not.toHaveBeenCalled();
+    expect(attachMedia).not.toHaveBeenCalled();
 
-    el.querySelector('video')!.dispatchEvent(new Event('play'));
-    expect(startLoad).toHaveBeenCalledTimes(1);
+    await firstPlay(el);
+
+    expect(loadSource).toHaveBeenCalledWith('https://x.test/master.m3u8');
+    expect(attachMedia).toHaveBeenCalledWith(el.querySelector('video'));
   });
 
   it('takes the stream even when the browser claims native HLS, because Chrome claims and never plays', async () => {
     HTMLMediaElement.prototype.canPlayType = () => 'maybe';
     const el = host('<video src="https://x.test/master.m3u8"></video>');
     attachHlsStreams(el);
-    await flush();
+    await firstPlay(el);
 
     expect(attachMedia).toHaveBeenCalledWith(el.querySelector('video'));
   });
 
   it('leaves a file video alone', async () => {
-    attachHlsStreams(host('<video src="https://x.test/a.mp4"></video>'));
-    await flush();
+    const el = host('<video src="https://x.test/a.mp4"></video>');
+    attachHlsStreams(el);
+    await firstPlay(el);
 
+    expect(el.querySelector('video')!.getAttribute('src')).toBe('https://x.test/a.mp4');
     expect(attachMedia).not.toHaveBeenCalled();
   });
 
   it('leaves the video alone when hls.js reports no support', async () => {
     supported = false;
-    attachHlsStreams(host('<video src="https://x.test/master.m3u8"></video>'));
-    await flush();
+    const el = host('<video src="https://x.test/master.m3u8"></video>');
+    attachHlsStreams(el);
+    await firstPlay(el);
 
     expect(attachMedia).not.toHaveBeenCalled();
   });
 
-  it('destroys the instance of a video the re-render removed', async () => {
+  it('destroys the instance of a played video the re-render removed', async () => {
     const el = host('<video src="https://x.test/master.m3u8"></video>');
     attachHlsStreams(el);
-    await flush();
+    await firstPlay(el);
     el.innerHTML = '<p>re-rendered</p>';
     attachHlsStreams(el);
     await flush();
@@ -90,12 +100,12 @@ describe('attachHlsStreams', () => {
     expect(destroy).toHaveBeenCalledTimes(1);
   });
 
-  it('does not attach twice to the same still-connected video', async () => {
+  it('does not arm the same still-connected video twice', async () => {
     const el = host('<video src="https://x.test/master.m3u8" poster="p.jpg"></video>');
     attachHlsStreams(el);
     await flush();
     attachHlsStreams(el);
-    await flush();
+    await firstPlay(el);
 
     expect(attachMedia).toHaveBeenCalledTimes(1);
   });
