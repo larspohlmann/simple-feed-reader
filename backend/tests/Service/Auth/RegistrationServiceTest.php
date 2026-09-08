@@ -80,7 +80,7 @@ final class RegistrationServiceTest extends DbTestCase
         $settings = self::getContainer()->get(InstanceSettings::class);
         $settings->update(new InstanceSettingsUpdate($confirm, $approve, null, null, null));
 
-        $mailSettings = $this->createMock(MailSettings::class);
+        $mailSettings = $this->createStub(MailSettings::class);
         $mailSettings->method('isSendingEnabled')->willReturn(true);
 
         return new RegistrationPolicy(new MailCapability($mailSettings), $settings);

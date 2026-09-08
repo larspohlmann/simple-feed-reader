@@ -45,7 +45,7 @@ final class MailGatedDigestMailerTest extends TestCase
 
     private function mailCapability(bool $enabled): MailCapability
     {
-        $settings = $this->createMock(MailSettings::class);
+        $settings = $this->createStub(MailSettings::class);
         $settings->method('isSendingEnabled')->willReturn($enabled);
 
         return new MailCapability($settings);

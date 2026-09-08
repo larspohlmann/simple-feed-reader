@@ -105,7 +105,7 @@ final class SendDueDigestsHandlerTest extends TestCase
 
     private function mailCapabilityEnabled(): MailCapability
     {
-        $settings = $this->createMock(MailSettings::class);
+        $settings = $this->createStub(MailSettings::class);
         $settings->method('isSendingEnabled')->willReturn(true);
 
         return new MailCapability($settings);

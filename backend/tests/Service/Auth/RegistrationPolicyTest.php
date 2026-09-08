@@ -32,7 +32,7 @@ final class RegistrationPolicyTest extends KernelTestCase
     {
         $this->settings->update(new InstanceSettingsUpdate($confirm, $approve, null, null, null));
 
-        $mailSettings = $this->createMock(MailSettings::class);
+        $mailSettings = $this->createStub(MailSettings::class);
         $mailSettings->method('isSendingEnabled')->willReturn($mailOn);
 
         return new RegistrationPolicy(

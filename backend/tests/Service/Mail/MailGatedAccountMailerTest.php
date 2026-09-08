@@ -43,7 +43,7 @@ final class MailGatedAccountMailerTest extends TestCase
             'Mail disabled; skipped {kind} mail to {email}.',
             ['kind' => 'approved', 'email' => 'a@b.test'],
         );
-        $inner = $this->createMock(AccountMailerInterface::class);
+        $inner = $this->createStub(AccountMailerInterface::class);
 
         $gated = new MailGatedAccountMailer($inner, $this->mailCapability(false), $logger);
         $gated->sendApproved(new User('a@b.test', new \DateTimeImmutable()));
@@ -51,7 +51,7 @@ final class MailGatedAccountMailerTest extends TestCase
 
     private function mailCapability(bool $enabled): MailCapability
     {
-        $settings = $this->createMock(MailSettings::class);
+        $settings = $this->createStub(MailSettings::class);
         $settings->method('isSendingEnabled')->willReturn($enabled);
 
         return new MailCapability($settings);

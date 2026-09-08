@@ -54,17 +54,17 @@ docker compose -f "$REPO_ROOT/docker-compose.yml" exec -T php \
 # trap, so a second `trap … EXIT` further down would silently replace the first
 # and leak whatever the first one was cleaning up.
 CA_BUNDLE=""
-GATES_TO_RESTORE=""
+SETTINGS_TO_RESTORE=""
 # shellcheck disable=SC2329  # reached through the EXIT trap below, never by name.
 cleanup() {
   if [ -n "$CA_BUNDLE" ]; then
     rm -f "$CA_BUNDLE"
   fi
-  if [ -n "$GATES_TO_RESTORE" ]; then
-    echo "==> Restoring the instance registration gates ..."
-    if ! put_registration_gates "$GATES_TO_RESTORE"; then
-      echo "WARNING: could not restore the registration gates to $GATES_TO_RESTORE." >&2
-      echo "WARNING: set them by hand under Settings → Admin → Registration." >&2
+  if [ -n "$SETTINGS_TO_RESTORE" ]; then
+    echo "==> Restoring the instance settings ..."
+    if ! put_settings "$SETTINGS_TO_RESTORE"; then
+      echo "WARNING: could not restore the instance settings to $SETTINGS_TO_RESTORE." >&2
+      echo "WARNING: set the registration gates by hand under Settings → Admin → Registration." >&2
     fi
   fi
 }
@@ -79,20 +79,30 @@ json_string() {
   php -r '$b = json_decode(stream_get_contents(STDIN), true); echo is_array($b) && isset($b[$argv[1]]) && is_string($b[$argv[1]]) ? $b[$argv[1]] : "";' "$1"
 }
 
-json_bool() {
-  # shellcheck disable=SC2016  # ditto: $b and $argv belong to PHP.
-  php -r '$b = json_decode(stream_get_contents(STDIN), true); echo is_array($b) && !empty($b[$argv[1]]) ? "true" : "false";' "$1"
+# Build a full InstanceSettingsRequest body from the current settings on stdin,
+# optionally forcing the two registration gates. `PUT /api/admin/settings` is a
+# full-replace payload, not a patch: a body that omits a field resets it to the
+# constructor default, so a two-field pin would clear passkeyRpId back to the
+# derived host and 409 on any instance with an enrolled passkey (the guard reads
+# it as a relying-party change). Carry every writable field through verbatim and
+# override only the gates. `mailEnabled`, `publicBaseUrlDefault` and
+# `passkeyRpIdEffective` are read-only in the GET and not part of the PUT DTO.
+settings_body() {
+  # shellcheck disable=SC2016  # single quotes are the point: this is PHP source, not shell.
+  php -r '
+    $s = json_decode(stream_get_contents(STDIN), true) ?: [];
+    echo json_encode([
+      "requireEmailConfirmation" => "" !== $argv[1] ? "true" === $argv[1] : (bool) ($s["requireEmailConfirmation"] ?? true),
+      "requireApproval" => "" !== $argv[2] ? "true" === $argv[2] : (bool) ($s["requireApproval"] ?? true),
+      "publicBaseUrl" => $s["publicBaseUrl"] ?? null,
+      "passkeyRpId" => $s["passkeyRpId"] ?? null,
+      "passkeyRpName" => $s["passkeyRpName"] ?? null,
+      "passkeySignInEnabled" => (bool) ($s["passkeySignInEnabled"] ?? false),
+    ]);
+  ' "$1" "$2"
 }
 
-get_registration_gates() {
-  local settings
-  settings="$(curl -fsS "$BASE_URL/api/admin/settings" -H "Authorization: Bearer $ADMIN_TOKEN")"
-  printf '{"requireEmailConfirmation":%s,"requireApproval":%s}' \
-    "$(printf '%s' "$settings" | json_bool requireEmailConfirmation)" \
-    "$(printf '%s' "$settings" | json_bool requireApproval)"
-}
-
-put_registration_gates() {
+put_settings() {
   curl -fsS -o /dev/null -X PUT "$BASE_URL/api/admin/settings" \
     -H "Authorization: Bearer $ADMIN_TOKEN" \
     -H 'Content-Type: application/json' \
@@ -104,8 +114,10 @@ put_registration_gates() {
 # register → verify → approve → login. A developer who switched either gate off
 # in the admin UI therefore failed three tests for a reason that has nothing to
 # do with the code — the suite was reading state it did not own. It now pins
-# both gates for the duration of the run and puts them back afterwards, in the
-# trap above, so an interrupted run does not leave the instance rewired.
+# both gates for the duration of the run and restores the whole settings object
+# afterwards, in the trap above, so an interrupted run does not leave the
+# instance rewired. It snapshots and replays every field, not just the two
+# gates, because the endpoint is full-replace (see settings_body).
 echo "==> Pinning the registration gates the suite asserts on ..."
 ADMIN_TOKEN="$(curl -fsS -X POST "$BASE_URL/api/auth/login" \
   -H 'Content-Type: application/json' \
@@ -115,8 +127,9 @@ if [ -z "$ADMIN_TOKEN" ]; then
   echo "ERROR: could not sign in as the fixtures admin to read the instance settings." >&2
   exit 1
 fi
-GATES_TO_RESTORE="$(get_registration_gates)"
-put_registration_gates '{"requireEmailConfirmation":true,"requireApproval":true}'
+CURRENT_SETTINGS="$(curl -fsS "$BASE_URL/api/admin/settings" -H "Authorization: Bearer $ADMIN_TOKEN")"
+SETTINGS_TO_RESTORE="$(printf '%s' "$CURRENT_SETTINGS" | settings_body '' '')"
+put_settings "$(printf '%s' "$CURRENT_SETTINGS" | settings_body true true)"
 
 # Make PHP CLI trust the mkcert root even where it keeps its own CA bundle.
 # `mkcert -install` trusts the root at the SYSTEM level (system curl verifies
