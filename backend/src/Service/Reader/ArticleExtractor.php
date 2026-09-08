@@ -8,7 +8,10 @@ use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\Media\PageMediaScanner;
 use App\Service\Reader\Media\Sibling\SiblingMediaExtender;
 use App\Service\Reader\Media\StreamLocationResolver;
+use App\Service\Reader\Media\Teaser\TeaserPlayer;
+use App\Service\Reader\Media\Teaser\TeaserPlayerScanner;
 use App\Service\Reader\Paywall\PaywallSignals;
+use App\Service\Reader\Slideshow\Slideshow;
 use App\Service\Reader\Slideshow\SlideshowScanner;
 use App\Service\Sanitize\EntrySanitizer;
 use Dom\HTMLDocument;
@@ -56,6 +59,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
         private readonly StreamLocationResolver $streamLocations,
         private readonly SiblingMediaExtender $siblings,
         private readonly SlideshowScanner $slideshowScanner,
+        private readonly TeaserPlayerScanner $teaserScanner,
     ) {
     }
 
@@ -77,7 +81,8 @@ final class ArticleExtractor implements ArticleExtractorInterface
         $leadCaptions = LeadFigureCaptions::fromDocument($normalized);
         $paywalled = PaywallSignals::isPreview($page->html, $normalized);
         $media = $this->mediaScanner->scan($page->html, $page->finalUrl, $feedMedia);
-        $slideshows = $normalized === null ? [] : $this->slideshowScanner->scan($normalized);
+        $slideshows = $this->slideshowsIn($normalized);
+        $teasers = $this->teasersIn($normalized, $page->finalUrl);
 
         $article = $this->richestArticle($normalized, $page);
         if ($article === null) {
@@ -102,6 +107,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
             $entryAuthor,
             $feedMedia,
             $slideshows,
+            $teasers,
         );
         $clean = $this->sanitizer->sanitize($body);
         if ($clean === null) {
@@ -117,6 +123,18 @@ final class ArticleExtractor implements ArticleExtractorInterface
             excerpt: $article->excerpt,
             paywalled: $paywalled,
         );
+    }
+
+    /** @return list<Slideshow> */
+    private function slideshowsIn(?HTMLDocument $normalized): array
+    {
+        return $normalized === null ? [] : $this->slideshowScanner->scan($normalized);
+    }
+
+    /** @return list<TeaserPlayer> */
+    private function teasersIn(?HTMLDocument $normalized, string $finalUrl): array
+    {
+        return $normalized === null ? [] : $this->teaserScanner->scan($normalized, $finalUrl);
     }
 
     /**

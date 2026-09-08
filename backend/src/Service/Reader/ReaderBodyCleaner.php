@@ -9,6 +9,8 @@ use App\Service\Reader\Media\ArticleMedia;
 use App\Service\Reader\Media\InBodyEmbedRewriter;
 use App\Service\Reader\Media\PageMediaInserter;
 use App\Service\Reader\Media\SubstackPosterLink;
+use App\Service\Reader\Media\Teaser\TeaserPlayer;
+use App\Service\Reader\Media\Teaser\TeaserPlayerInserter;
 use App\Service\Reader\RecipeFacts\RecipeFactsCleaner;
 use App\Service\Reader\Slideshow\Slideshow;
 use App\Service\Reader\Slideshow\SlideshowInserter;
@@ -51,12 +53,14 @@ final readonly class ReaderBodyCleaner
         private PageMediaInserter $mediaInserter,
         private SlideshowInserter $slideshowInserter,
         private RecipeFactsCleaner $recipeFactsCleaner,
+        private TeaserPlayerInserter $teaserInserter,
     ) {
     }
 
     /**
-     * @param list<string|null> $titleCandidates
-     * @param list<Slideshow>   $slideshows
+     * @param list<string|null>  $titleCandidates
+     * @param list<Slideshow>    $slideshows
+     * @param list<TeaserPlayer> $teasers
      */
     public function clean(
         string $contentHtml,
@@ -66,6 +70,7 @@ final readonly class ReaderBodyCleaner
         ?string $entryAuthor = null,
         ?FeedMedia $feedMedia = null,
         array $slideshows = [],
+        array $teasers = [],
     ): string {
         $document = HtmlDocumentParser::parseOrNull($contentHtml);
         if ($document === null) {
@@ -105,10 +110,21 @@ final readonly class ReaderBodyCleaner
         $restoredHero = $this->leadImage->restore($document, $leadImage, $plan->topPlacesLeadVisual());
         $this->mediaInserter->apply($document, $plan, $restoredHero);
 
+        // Inline teasers the extraction reduced to a lone thumbnail: rebuild each
+        // as a player where its still still sits, skipping any the media pipeline
+        // already placed so the lead media is never mistaken for one (#948).
+        $this->teaserInserter->insert($document, $teasers, $this->mediaUrls($media));
+
         // Last, over the finished body: the feed's real pixel sizes on the
         // images and players it enumerated, so none of them reflows the article.
         FeedDimensionStamper::stampInto($document, $feedMedia ?? FeedMedia::none());
 
         return $document->saveHtml();
+    }
+
+    /** @return list<string> the URLs the media pipeline placed, so a teaser is not rebuilt over one */
+    private function mediaUrls(ArticleMedia $media): array
+    {
+        return array_map(static fn ($candidate): string => $candidate->url, $media->candidates);
     }
 }

@@ -14,6 +14,8 @@ use App\Service\Reader\Media\ArticleMedia;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\InBodyEmbedRewriter;
 use App\Service\Reader\Media\MediaMarkup;
+use App\Service\Reader\Media\Teaser\TeaserPlayerInserter;
+use App\Service\Reader\Media\Teaser\TeaserPlayerMarkup;
 use App\Service\Reader\Media\PageMediaInserter;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\SubstackPosterLink;
@@ -113,6 +115,7 @@ final class SlideshowExtractionTest extends TestCase
             new PageMediaInserter($markup),
             new SlideshowInserter(new SlideshowMarkup()),
             new RecipeFactsCleaner(),
+            new TeaserPlayerInserter(new TeaserPlayerMarkup()),
         );
     }
 }

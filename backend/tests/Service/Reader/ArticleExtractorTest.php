@@ -31,6 +31,9 @@ use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\InBodyEmbedRewriter;
 use App\Service\Reader\Media\MediaLanding;
 use App\Service\Reader\Media\MediaMarkup;
+use App\Service\Reader\Media\Teaser\TeaserPlayerInserter;
+use App\Service\Reader\Media\Teaser\TeaserPlayerScanner;
+use App\Service\Reader\Media\Teaser\TeaserPlayerMarkup;
 use App\Service\Reader\Media\MediaRelevance;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\PageMediaInserter;
@@ -111,6 +114,7 @@ final class ArticleExtractorTest extends TestCase
             new StreamLocationResolver($landing, $this->urlKind()),
             new SiblingMediaExtender(new SiblingIdRule(), $landing, $this->urlKind()),
             new SlideshowScanner([]),
+            new TeaserPlayerScanner($this->urlKind()),
         );
     }
 
@@ -138,6 +142,7 @@ final class ArticleExtractorTest extends TestCase
             new PageMediaInserter($markup),
             new SlideshowInserter(new SlideshowMarkup()),
             new RecipeFactsCleaner(),
+            new TeaserPlayerInserter(new TeaserPlayerMarkup()),
         );
     }
 
@@ -367,6 +372,7 @@ final class ArticleExtractorTest extends TestCase
             new StreamLocationResolver($landing, $this->urlKind()),
             new SiblingMediaExtender(new SiblingIdRule(), $landing, $this->urlKind()),
             new SlideshowScanner([]),
+            new TeaserPlayerScanner($this->urlKind()),
         );
 
         $result = $extractor->extract('http://169.254.169.254/');
