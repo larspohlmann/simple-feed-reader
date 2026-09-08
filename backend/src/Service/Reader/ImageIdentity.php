@@ -80,14 +80,13 @@ final readonly class ImageIdentity
     }
 
     /**
-     * heise (#894): the same photo is re-encoded per rendition, and each
-     * rendition gets its own trailing hex hash appended to an otherwise
-     * identical filename. The hash names the render, not the photo, so it
-     * must not survive into the stem that identity is computed from.
+     * heise (#894): a per-rendition hex hash must not survive into the stem.
+     * A decimal digit is valid hex too, so only a suffix with a genuine hex
+     * letter is stripped — a decimal asset id (timestamp, content id) stays.
      */
     private static function stripRenderHash(string $stem): string
     {
-        return (string) preg_replace('/[-_][0-9a-f]{12,}$/i', '', $stem);
+        return (string) preg_replace('/[-_](?=[0-9a-f]*[a-f])[0-9a-f]{12,}$/i', '', $stem);
     }
 
     /** A `WxH` word is a rendition size, never a photo. */

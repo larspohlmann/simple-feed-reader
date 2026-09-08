@@ -37,13 +37,35 @@ final readonly class NoscriptImageUnwrapper
     private function removePrecedingPlaceholder(Element $noscript): void
     {
         $sibling = $noscript->previousElementSibling;
-        if ($sibling !== null && $this->isPlaceholderImage($sibling)) {
+        if ($sibling !== null && $this->isPlaceholderFor($sibling, $noscript)) {
             $sibling->remove();
         }
     }
 
+    /**
+     * A shape match alone is not enough: an unrelated content image right
+     * before a noscript would otherwise be deleted as if it were the lazy-load
+     * placeholder for the noscript's own photo.
+     */
+    private function isPlaceholderFor(Element $sibling, Element $noscript): bool
+    {
+        if (!$this->isSingleImageShape($sibling)) {
+            return false;
+        }
+
+        $placeholderSource = $this->imageSource($sibling);
+        if ($placeholderSource === '' || str_starts_with($placeholderSource, 'data:')) {
+            return true;
+        }
+
+        $noscriptImageSource = $this->imageSource($noscript);
+
+        return $noscriptImageSource !== ''
+            && ImageIdentity::fromUrl($placeholderSource)->isSameAsset(ImageIdentity::fromUrl($noscriptImageSource));
+    }
+
     /** An <img>, or a wrapper around exactly one and no text of its own. */
-    private function isPlaceholderImage(Element $element): bool
+    private function isSingleImageShape(Element $element): bool
     {
         if ($element->localName === 'img') {
             return true;
@@ -51,5 +73,12 @@ final readonly class NoscriptImageUnwrapper
 
         return $element->getElementsByTagName('img')->length === 1
             && trim((string) $element->textContent) === '';
+    }
+
+    private function imageSource(Element $element): string
+    {
+        $img = $element->localName === 'img' ? $element : $element->getElementsByTagName('img')->item(0);
+
+        return $img?->getAttribute('src') ?? '';
     }
 }

@@ -530,6 +530,25 @@ final class ImageIdentityTest extends TestCase
         self::assertTrue($header->isSameAsset($ogImage));
     }
 
+    public function testSameAssetRejectsDifferentDecimalTimestampSuffixes(): void
+    {
+        // A trailing decimal id (timestamp, bigint, numeric content id) is not a
+        // hex render hash: stripping it as one would erase the only signal that
+        // tells two photos with the same descriptive words apart.
+        $first = ImageIdentity::fromUrl('https://cdn.test/city-skyline-view-1704067200000.jpg');
+        $second = ImageIdentity::fromUrl('https://cdn.test/city-skyline-view-1704067201234.jpg');
+
+        self::assertFalse($first->isSameAsset($second));
+    }
+
+    public function testSameAssetRejectsDifferentTwelveDigitDecimalSuffixes(): void
+    {
+        $first = ImageIdentity::fromUrl('https://cdn.test/mountain-lake-sunset-123456789012.jpg');
+        $second = ImageIdentity::fromUrl('https://cdn.test/mountain-lake-sunset-987654321098.jpg');
+
+        self::assertFalse($first->isSameAsset($second));
+    }
+
     private function isShareRender(string $url): bool
     {
         return ImageIdentity::fromUrl($url)->isShareRender();
