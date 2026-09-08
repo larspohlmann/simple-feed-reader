@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 /**
- * Recognises a bot- or consent-gate interstitial served with a 2xx status in
- * place of the article. Every marker is a vendor/machine string, never prose, so
- * the pre-extraction check cannot reject an article that merely names a captcha.
- * A new vendor earns a row once its markup is observed (cf. BotChallengePage, #424).
+ * Recognises a bot- or consent-gate interstitial served with a 2xx status. Markers are
+ * vendor/machine strings, never prose, so the check cannot reject an article that merely
+ * names a captcha; a new vendor earns a row once its markup is observed (cf. BotChallengePage, #424).
  */
 final readonly class LandingChallenge
 {

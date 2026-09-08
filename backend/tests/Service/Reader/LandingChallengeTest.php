@@ -16,7 +16,9 @@ final class LandingChallengeTest extends TestCase
     public static function challengeBodies(): iterable
     {
         yield 'cloudflare verification' => ['<html><body class="cf-browser-verification">Just a moment…</body></html>'];
-        yield 'cloudflare challenge platform' => ['<script src="/cdn-cgi/challenge-platform/h/b/orchestrate"></script>'];
+        yield 'cloudflare challenge platform' => [
+            '<script src="/cdn-cgi/challenge-platform/h/b/orchestrate"></script>',
+        ];
         yield 'cloudflare challenge form' => ['<form id="challenge-form" action="/cdn-cgi/l/chk_jschl">'];
         yield 'anubis' => ['<script id="anubis_challenge" type="application/json">{}</script>'];
         yield 'siteground captcha' => ['<meta http-equiv="refresh" content="0;url=/.well-known/sgcaptcha/">'];
