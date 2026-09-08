@@ -35,11 +35,16 @@ final readonly class TeaserPlayerInserter
             return;
         }
 
+        // Each still's identity is derived once, not per body image it is tried against.
+        $stills = array_map(
+            static fn (TeaserPlayer $teaser): ImageIdentity => ImageIdentity::fromUrl($teaser->posterUrl),
+            $pending,
+        );
         foreach (iterator_to_array($root->getElementsByTagName('img')) as $image) {
-            $index = $this->matching($pending, $image);
+            $index = $this->matching($stills, $image);
             if ($index !== null) {
                 $this->replace($document, $image, $pending[$index]);
-                unset($pending[$index]);
+                unset($stills[$index]);
             }
         }
     }
@@ -58,21 +63,17 @@ final readonly class TeaserPlayerInserter
     }
 
     /**
-     * @param array<int, TeaserPlayer> $pending
+     * @param array<int, ImageIdentity> $stills the pending teasers' still identities, keyed as $pending
      */
-    private function matching(array $pending, Element $image): ?int
+    private function matching(array $stills, Element $image): ?int
     {
         $source = $image->getAttribute('src') ?? '';
         if ($source === '') {
             return null;
         }
-        $stillAsset = ImageIdentity::fromUrl($source);
+        $imageAsset = ImageIdentity::fromUrl($source);
 
-        return array_find_key(
-            $pending,
-            static fn (TeaserPlayer $teaser): bool
-                => $stillAsset->isSameAsset(ImageIdentity::fromUrl($teaser->posterUrl)),
-        );
+        return array_find_key($stills, static fn (ImageIdentity $still): bool => $imageAsset->isSameAsset($still));
     }
 
     private function replace(HTMLDocument $document, Element $image, TeaserPlayer $teaser): void

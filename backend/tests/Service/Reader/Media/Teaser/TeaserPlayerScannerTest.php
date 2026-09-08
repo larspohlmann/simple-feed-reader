@@ -83,8 +83,8 @@ final class TeaserPlayerScannerTest extends TestCase
         self::assertSame([], $this->scanner->scan($this->document($html), 'https://x.test/a-100.html'));
     }
 
-    /** A path-relative href (no leading slash) cannot be resolved safely, so it is dropped. */
-    public function testDropsAPathRelativeLink(): void
+    /** A path-relative href resolves against the page directory, not dropped. */
+    public function testResolvesAPathRelativeLinkAgainstThePage(): void
     {
         $html = '<body><div class="block">'
             . '<picture><img src="https://x.test/s.jpg"></picture>'
@@ -92,9 +92,9 @@ final class TeaserPlayerScannerTest extends TestCase
             . '<a href="deeper/related.html">Headline</a>'
             . '</div></body>';
 
-        $found = $this->scanner->scan($this->document($html), 'https://news.test/a-100.html');
+        $found = $this->scanner->scan($this->document($html), 'https://news.test/section/a-100.html');
 
-        self::assertNull($found[0]->linkUrl);
+        self::assertSame('https://news.test/section/deeper/related.html', $found[0]->linkUrl);
     }
 
     /** Audio teasers count too — the pflege page is four of them. */

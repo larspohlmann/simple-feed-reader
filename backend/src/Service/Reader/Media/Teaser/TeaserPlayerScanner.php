@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\Teaser;
 
+use App\Service\Fetch\UrlResolver;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\PageFurniture;
+use App\Service\Reader\Media\PlayerPoster;
+use App\Service\Reader\Media\ResolvedMediaUrl;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -26,7 +29,7 @@ final readonly class TeaserPlayerScanner
 {
     private const string URL_PATTERN = '#https://[^"\'\s\\\\<>]+#i';
 
-    /** How far above the player its still and its link may sit. */
+    /** How far above the player its headline link may sit. */
     private const int ANCESTOR_LEVELS = 4;
 
     public function __construct(private MediaUrlKind $kind)
@@ -37,13 +40,23 @@ final readonly class TeaserPlayerScanner
     public function scan(HTMLDocument $document, string $pageUrl): array
     {
         $teasers = [];
-        foreach ($this->playersByElement($document) as [$element, $kind, $mediaUrl]) {
-            $poster = $this->stillAbove($element);
+        $seen = [];
+        foreach ($document->querySelectorAll('*') as $element) {
+            if (PageFurniture::holds($element)) {
+                continue;
+            }
+            $file = $this->playableFileOn($element);
+            $player = $element->closest('video, audio') ?? $element;
+            if ($file === null || isset($seen[spl_object_id($player)])) {
+                continue;
+            }
+            $seen[spl_object_id($player)] = true;
+            $poster = PlayerPoster::near($player);
             if ($poster !== null) {
-                [$caption, $link] = $this->captionAndLink($element);
-                $teasers[$mediaUrl] ??= new TeaserPlayer(
-                    $kind,
-                    $mediaUrl,
+                [$caption, $link] = $this->captionAndLink($player);
+                $teasers[$file->url] ??= new TeaserPlayer(
+                    $file->kind,
+                    $file->url,
                     $poster,
                     $caption,
                     $this->absolute($link, $pageUrl),
@@ -55,36 +68,11 @@ final readonly class TeaserPlayerScanner
     }
 
     /**
-     * One entry per player element, its kind and one playable URL. A file wins
-     * over the stream beside it; renditions collapse onto their shared element.
-     *
-     * @return list<array{0: Element, 1: MediaKind, 2: string}>
+     * The first playable file — a video or audio, not the bare stream beside it,
+     * since the file plays without a library — that an element's attributes hold.
      */
-    private function playersByElement(HTMLDocument $document): array
+    private function playableFileOn(Element $element): ?ResolvedMediaUrl
     {
-        $byElement = [];
-        foreach ($document->querySelectorAll('*') as $element) {
-            if (PageFurniture::holds($element)) {
-                continue;
-            }
-            foreach ($this->fileUrls($element) as [$kind, $url]) {
-                $player = $element->closest('video, audio') ?? $element;
-                $byElement[spl_object_id($player)] ??= [$player, $kind, $url];
-            }
-        }
-
-        return array_values($byElement);
-    }
-
-    /**
-     * The playable file URLs an element's attributes hold, kind first — a stream
-     * is skipped while a file is present, since the file plays without a library.
-     *
-     * @return list<array{0: MediaKind, 1: string}>
-     */
-    private function fileUrls(Element $element): array
-    {
-        $files = [];
         foreach ($element->attributes as $attribute) {
             $decoded = html_entity_decode($attribute->value, \ENT_QUOTES | \ENT_HTML5);
             if (preg_match_all(self::URL_PATTERN, $decoded, $matches) === false) {
@@ -93,30 +81,17 @@ final readonly class TeaserPlayerScanner
             foreach ($matches[0] as $candidate) {
                 $resolved = $this->kind->resolve($candidate);
                 if ($resolved !== null && $this->isPlayableFile($resolved->kind)) {
-                    $files[] = [$resolved->kind, $resolved->url];
+                    return $resolved;
                 }
             }
         }
 
-        return $files;
+        return null;
     }
 
     private function isPlayableFile(MediaKind $kind): bool
     {
         return $kind === MediaKind::Video || $kind === MediaKind::Audio;
-    }
-
-    private function stillAbove(Element $player): ?string
-    {
-        foreach ($this->ancestors($player) as $ancestor) {
-            $image = $ancestor->querySelector('img[src]');
-            $source = $image?->getAttribute('src') ?? '';
-            if (preg_match('#^https://#i', $source) === 1) {
-                return $source;
-            }
-        }
-
-        return null;
     }
 
     /**
@@ -145,20 +120,12 @@ final readonly class TeaserPlayerScanner
     }
 
     /**
-     * The sanitizer drops a scheme-less link, so a root-relative href is resolved
-     * against the page origin before it reaches that barrier; an absolute one stands.
+     * The sanitizer drops a scheme-less link, so the headline link is resolved
+     * against the page (origin, port and all) before it reaches that barrier.
      */
     private function absolute(?string $href, string $pageUrl): ?string
     {
-        if ($href === null || preg_match('#^https?://#i', $href) === 1) {
-            return $href;
-        }
-        $parts = parse_url($pageUrl);
-        if (!isset($parts['scheme'], $parts['host']) || !str_starts_with($href, '/')) {
-            return null;
-        }
-
-        return $parts['scheme'] . '://' . $parts['host'] . $href;
+        return $href === null ? null : UrlResolver::resolve($pageUrl, $href);
     }
 
     /** @return list<Element> the player and its ancestors, nearest first */
