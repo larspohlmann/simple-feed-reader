@@ -9,6 +9,12 @@ parameters:
     # config alone. Eight x the 5 MB response cap is 40 MB against a 512 MB limit.
     fetch_concurrency: 8
 
+    # How many of those in-flight requests may target one host at once. Caps the
+    # burst a host concentration (many Substack, YouTube or shared-CDN feeds)
+    # would otherwise fire at a single origin, which earns a 429. Two is polite
+    # and still lets the global cap fill with other hosts.
+    fetch_host_concurrency: 2
+
     # The one User-Agent every outbound request to a publisher carries.
     #
     # It names NO host, and it must stay that way. The usual courtesy of a
@@ -177,6 +183,7 @@ services:
     App\Service\Fetch\ConcurrentFeedFetcher:
         arguments:
             $concurrency: '%fetch_concurrency%'
+            $hostConcurrency: '%fetch_host_concurrency%'
 
     # Account mail is queued and sent on kernel.terminate, after the response
     # has been flushed — see App\Service\Mail\DeferredMailer for why that is a

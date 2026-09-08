@@ -37,6 +37,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
         callable|iterable $responses,
         int $concurrency = 4,
         array $dnsOverrides = [],
+        int $hostConcurrency = 100,
     ): ConcurrentFeedFetcher {
         $resolver = new class ($dnsOverrides) implements DnsResolverInterface {
             /** @param array<string, list<string>> $overrides */
@@ -61,6 +62,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
             $urlGuard,
             new ResponseClassifier(new MockClock()),
             $concurrency,
+            $hostConcurrency,
             'TestAgent/1.0',
             $proxyEgressResolver,
             new FetchRetryPolicy($urlGuard),
@@ -83,6 +85,28 @@ final class ConcurrentFeedFetcherTest extends TestCase
     }
 
     /**
+     * A response factory that records the highest number of requests in flight at
+     * once into $peakInFlight: it counts up when a request starts and down when
+     * its body finishes. Callers assert the peak against the host cap.
+     */
+    private function peakTrackingResponder(int &$peakInFlight): callable
+    {
+        $inFlight = 0;
+
+        return static function () use (&$inFlight, &$peakInFlight): MockResponse {
+            ++$inFlight;
+            $peakInFlight = max($peakInFlight, $inFlight);
+
+            $body = (static function () use (&$inFlight): \Generator {
+                yield '<rss/>';
+                --$inFlight;
+            })();
+
+            return new MockResponse($body, ['http_code' => 200]);
+        };
+    }
+
+    /**
      * The cap is bound from a container parameter so the host can be dialled
      * down in config alone. A value below one opens no requests, which the
      * engine cannot tell apart from an empty batch — it has to fail loudly.
@@ -93,6 +117,14 @@ final class ConcurrentFeedFetcherTest extends TestCase
         $this->expectExceptionMessage('Concurrency must be at least 1, got 0.');
 
         $this->fetcher([], concurrency: 0);
+    }
+
+    public function testRejectsAPerHostConcurrencyBelowOne(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Per-host concurrency must be at least 1, got 0.');
+
+        $this->fetcher([], hostConcurrency: 0);
     }
 
     public function testFetchesASingleTicket(): void
@@ -573,5 +605,109 @@ final class ConcurrentFeedFetcherTest extends TestCase
         // pulled, so an aborted run stops making requests instead of draining
         // the whole batch.
         self::assertSame(3, $started);
+    }
+
+    /**
+     * A run over many feeds on one host must not burst: the per-host cap keeps
+     * at most N of them on the wire at once even when the global cap would allow
+     * more, and every feed still completes this run — a feed the cap defers is
+     * paced, not failed.
+     */
+    public function testCapsConcurrentRequestsToOneHost(): void
+    {
+        $peakInFlight = 0;
+        $fetcher = $this->fetcher(
+            $this->peakTrackingResponder($peakInFlight),
+            concurrency: 5,
+            hostConcurrency: 2,
+        );
+
+        $tickets = [];
+        foreach (range(1, 5) as $index) {
+            $tickets[$index] = new FetchTicket(sprintf('https://one.example.com/feed%d', $index));
+        }
+
+        $outcomes = $this->collect($fetcher->fetchAll($tickets));
+
+        self::assertCount(5, $outcomes);
+        foreach ($outcomes as $key => $outcome) {
+            self::assertNull($outcome->failure(), sprintf('feed %s should have succeeded', $key));
+        }
+        self::assertLessThanOrEqual(2, $peakInFlight, 'no more than two requests to the one host at once');
+    }
+
+    /**
+     * A cap of one is the strictest legal setting: same-host requests are fully
+     * serialised, never overlapping, and every feed still completes.
+     */
+    public function testAPerHostCapOfOneSerialisesTheHost(): void
+    {
+        $peakInFlight = 0;
+        $fetcher = $this->fetcher(
+            $this->peakTrackingResponder($peakInFlight),
+            concurrency: 4,
+            hostConcurrency: 1,
+        );
+
+        $outcomes = $this->collect($fetcher->fetchAll([
+            1 => new FetchTicket('https://one.example.com/a'),
+            2 => new FetchTicket('https://one.example.com/b'),
+            3 => new FetchTicket('https://one.example.com/c'),
+        ]));
+
+        self::assertCount(3, $outcomes);
+        foreach ($outcomes as $outcome) {
+            self::assertNull($outcome->failure());
+        }
+        self::assertSame(1, $peakInFlight);
+    }
+
+    /**
+     * The cap is per host, not global: while one host runs at capacity, a feed
+     * on a different host is not held behind it — it opens its own requests up to
+     * the same cap, and the global cap still bounds the total.
+     */
+    public function testAHostAtCapacityDoesNotBlockOtherHosts(): void
+    {
+        /** @var array<string, int> $inFlight */
+        $inFlight = [];
+        /** @var array<string, int> $peakInFlight */
+        $peakInFlight = [];
+        $fetcher = $this->fetcher(
+            function (string $method, string $url) use (&$inFlight, &$peakInFlight): MockResponse {
+                $host = (string) parse_url($url, \PHP_URL_HOST);
+                $inFlight[$host] = ($inFlight[$host] ?? 0) + 1;
+                $peakInFlight[$host] = max($peakInFlight[$host] ?? 0, $inFlight[$host]);
+
+                $body = (function () use (&$inFlight, $host): \Generator {
+                    yield '<rss/>';
+                    --$inFlight[$host];
+                })();
+
+                return new MockResponse($body, ['http_code' => 200]);
+            },
+            concurrency: 6,
+            hostConcurrency: 2,
+        );
+
+        $outcomes = $this->collect($fetcher->fetchAll([
+            1 => new FetchTicket('https://busy.example.com/a'),
+            2 => new FetchTicket('https://free.example.com/a'),
+            3 => new FetchTicket('https://busy.example.com/b'),
+            4 => new FetchTicket('https://free.example.com/b'),
+            5 => new FetchTicket('https://busy.example.com/c'),
+            6 => new FetchTicket('https://free.example.com/c'),
+        ]));
+
+        self::assertCount(6, $outcomes);
+        foreach ($outcomes as $outcome) {
+            self::assertNull($outcome->failure());
+        }
+        self::assertLessThanOrEqual(2, $peakInFlight['busy.example.com']);
+        self::assertSame(
+            2,
+            $peakInFlight['free.example.com'],
+            'the free host runs its own two in parallel rather than waiting behind the busy one',
+        );
     }
 }
