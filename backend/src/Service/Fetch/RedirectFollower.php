@@ -39,7 +39,7 @@ final readonly class RedirectFollower
             $response = $this->send($currentUrl, $options);
             $status = $this->statusCode($response, $currentUrl);
             if (!\in_array($status, self::REDIRECT_STATUSES, true)) {
-                return new LandedResponse($currentUrl, $status, $response);
+                return new LandedResponse($currentUrl, $status, $response, $hop);
             }
             $currentUrl = $this->redirectTarget($response, $currentUrl);
         }

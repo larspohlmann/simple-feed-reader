@@ -22,6 +22,7 @@ use App\Service\Reader\FeedMedia;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\ImageWrapperClassRemover;
+use App\Service\Reader\LandingChallenge;
 use App\Service\Reader\LazyImageSources;
 use App\Service\Reader\LeadingEngagementCleaner;
 use App\Service\Reader\LeadingTitleRemover;
@@ -45,6 +46,7 @@ use App\Service\Reader\Media\Source\SemanticMediaSource;
 use App\Service\Reader\Media\Source\YouTubeIdAttributeSource;
 use App\Service\Reader\Media\StreamLocationResolver;
 use App\Service\Reader\Media\SubstackPosterLink;
+use App\Service\Reader\MetaRefreshTarget;
 use App\Service\Reader\NavigationChromeTrimmer;
 use App\Service\Reader\NoscriptImageUnwrapper;
 use App\Service\Reader\PlayerChromeCleaner;
@@ -91,7 +93,7 @@ final class ArticleExtractorTest extends TestCase
         $landing = new MediaLanding($redirects, 'TestAgent/1.0');
 
         return new ArticleExtractor(
-            new HtmlPageFetcher($redirects, 'TestAgent/1.0'),
+            new HtmlPageFetcher($redirects, new MetaRefreshTarget(), new LandingChallenge(), 'TestAgent/1.0'),
             new FetchedPageNormalizer(
                 new CustomElementUnwrapper(),
                 new NoscriptImageUnwrapper(),
@@ -347,7 +349,7 @@ final class ArticleExtractorTest extends TestCase
         );
         $landing = new MediaLanding($redirects, 'TestAgent/1.0');
         $extractor = new ArticleExtractor(
-            new HtmlPageFetcher($redirects, 'TestAgent/1.0'),
+            new HtmlPageFetcher($redirects, new MetaRefreshTarget(), new LandingChallenge(), 'TestAgent/1.0'),
             new FetchedPageNormalizer(
                 new CustomElementUnwrapper(),
                 new NoscriptImageUnwrapper(),

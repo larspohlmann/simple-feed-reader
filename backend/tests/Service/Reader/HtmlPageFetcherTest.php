@@ -12,6 +12,8 @@ use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\HtmlPageFetcher;
+use App\Service\Reader\LandingChallenge;
+use App\Service\Reader\MetaRefreshTarget;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -43,6 +45,8 @@ final class HtmlPageFetcherTest extends TestCase
                 new FailoverRequestSender(new MockHttpClient($responses), $this->noProxyResolver()),
                 new UrlGuard($resolver, new IpValidator()),
             ),
+            new MetaRefreshTarget(),
+            new LandingChallenge(),
             'TestAgent/1.0',
         );
     }
@@ -53,6 +57,12 @@ final class HtmlPageFetcherTest extends TestCase
         $resolver->method('resolve')->willReturn(null);
 
         return $resolver;
+    }
+
+    private static function metaRefresh(string $target): string
+    {
+        return '<html><head><meta http-equiv="refresh" content="0; url=' . $target . '">'
+            . '</head><body>interstitial</body></html>';
     }
 
     public function testReturnsBodyAndFinalUrlOnSuccess(): void
@@ -208,5 +218,97 @@ final class HtmlPageFetcherTest extends TestCase
             ['dual.example.com' => '93.184.216.34,2606:2800:220:1:248:1893:25c8:1946'],
             $seenResolve,
         );
+    }
+
+    public function testFollowsAZeroDelayMetaRefreshToTheArticle(): void
+    {
+        $fetcher = $this->fetcher([
+            new MockResponse(self::metaRefresh('https://example.com/article'), ['http_code' => 200]),
+            new MockResponse('<html><body>the real article</body></html>', ['http_code' => 200]),
+        ]);
+
+        $result = $fetcher->fetch('https://example.com/wall');
+
+        self::assertStringContainsString('the real article', $result->html);
+        self::assertSame('https://example.com/article', $result->finalUrl);
+    }
+
+    public function testLeavesANonZeroDelayMetaRefreshAlone(): void
+    {
+        $body = '<html><head><meta http-equiv="refresh" content="5; url=https://example.com/later">'
+            . '</head><body>timed reload page</body></html>';
+        $fetcher = $this->fetcher([new MockResponse($body, ['http_code' => 200])]);
+
+        $result = $fetcher->fetch('https://example.com/wall');
+
+        self::assertStringContainsString('timed reload page', $result->html);
+        self::assertSame('https://example.com/wall', $result->finalUrl);
+    }
+
+    public function testStopsAMetaRefreshSelfLoopAtTheBudget(): void
+    {
+        $fetcher = $this->fetcher(
+            static fn (): MockResponse => new MockResponse(
+                self::metaRefresh('https://example.com/wall'),
+                ['http_code' => 200],
+            ),
+        );
+
+        $this->expectException(PageFetchException::class);
+        $this->expectExceptionMessage('more than 5 redirects');
+        $fetcher->fetch('https://example.com/wall');
+    }
+
+    public function testSharesOneBudgetAcrossHttpRedirectAndMetaHops(): void
+    {
+        $fetcher = $this->fetcher([
+            new MockResponse('', ['http_code' => 301, 'response_headers' => ['location' => '/a']]),
+            new MockResponse(self::metaRefresh('https://example.com/b'), ['http_code' => 200]),
+            new MockResponse('', ['http_code' => 301, 'response_headers' => ['location' => '/c']]),
+            new MockResponse(self::metaRefresh('https://example.com/d'), ['http_code' => 200]),
+            new MockResponse('', ['http_code' => 301, 'response_headers' => ['location' => '/e']]),
+            new MockResponse(self::metaRefresh('https://example.com/f'), ['http_code' => 200]),
+        ]);
+
+        $this->expectException(PageFetchException::class);
+        $this->expectExceptionMessage('more than 5 redirects');
+        $fetcher->fetch('https://example.com/start');
+    }
+
+    public function testRejectsA200ChallengeBody(): void
+    {
+        $body = '<html><body class="cf-browser-verification">Just a moment…</body></html>';
+        $fetcher = $this->fetcher([new MockResponse($body, ['http_code' => 200])]);
+
+        $this->expectException(PageFetchException::class);
+        $fetcher->fetch('https://example.com/wall');
+    }
+
+    public function testSsrfGuardsAMetaRefreshTarget(): void
+    {
+        $fetcher = $this->fetcher(
+            [new MockResponse(self::metaRefresh('http://internal.test/secret'), ['http_code' => 200])],
+            ['example.com' => ['93.184.216.34'], 'internal.test' => ['10.0.0.1']],
+        );
+
+        $this->expectException(PageFetchException::class);
+        $fetcher->fetch('https://example.com/wall');
+    }
+
+    public function testFollowsAMetaRefreshChainUpToTheFullBudget(): void
+    {
+        $fetcher = $this->fetcher([
+            new MockResponse(self::metaRefresh('https://example.com/2'), ['http_code' => 200]),
+            new MockResponse(self::metaRefresh('https://example.com/3'), ['http_code' => 200]),
+            new MockResponse(self::metaRefresh('https://example.com/4'), ['http_code' => 200]),
+            new MockResponse(self::metaRefresh('https://example.com/5'), ['http_code' => 200]),
+            new MockResponse(self::metaRefresh('https://example.com/6'), ['http_code' => 200]),
+            new MockResponse('<html><body>the real article</body></html>', ['http_code' => 200]),
+        ]);
+
+        $result = $fetcher->fetch('https://example.com/1');
+
+        self::assertStringContainsString('the real article', $result->html);
+        self::assertSame('https://example.com/6', $result->finalUrl);
     }
 }

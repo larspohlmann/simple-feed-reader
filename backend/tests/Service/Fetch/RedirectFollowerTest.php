@@ -156,4 +156,25 @@ final class RedirectFollowerTest extends TestCase
 
         self::assertSame(0, $seen);
     }
+
+    public function testReportsZeroHopsWhenTheFirstResponseLands(): void
+    {
+        $landed = $this->follower([new MockResponse('ok', ['http_code' => 200])])
+            ->follow('https://example.com/start', [], 5);
+
+        self::assertSame(0, $landed->hops);
+    }
+
+    public function testReportsTheNumberOfRedirectsFollowedBeforeLanding(): void
+    {
+        $follower = $this->follower([
+            self::redirect('/a'),
+            self::redirect('/b'),
+            new MockResponse('ok', ['http_code' => 200]),
+        ]);
+
+        $landed = $follower->follow('https://example.com/start', [], 5);
+
+        self::assertSame(2, $landed->hops);
+    }
 }
