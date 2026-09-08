@@ -76,12 +76,12 @@ final class HtmlPageFetcherTest extends TestCase
         $fetcher->fetch('http://169.254.169.254/latest/meta-data/');
     }
 
-    public function testRejectsNon2xx(): void
+    public function testRejectsNon2xxWithTheStandardReasonPhrase(): void
     {
         $fetcher = $this->fetcher([new MockResponse('nope', ['http_code' => 404])]);
 
         $this->expectException(PageFetchException::class);
-        $this->expectExceptionMessage('HTTP 404');
+        $this->expectExceptionMessage('HTTP 404 Not Found');
         $fetcher->fetch('https://example.com/missing');
     }
 

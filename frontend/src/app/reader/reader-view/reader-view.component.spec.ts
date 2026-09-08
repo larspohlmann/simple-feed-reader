@@ -2,7 +2,8 @@ import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
-import { of, Subject } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ReaderViewComponent } from './reader-view.component';
 import { ReaderContentService } from '../reader-content.service';
 import { entryScrollKey } from '../list-scroll-memory';
@@ -62,6 +63,7 @@ const okContent = (over: Partial<ReaderArticle> = {}): ReaderArticle => ({
 const failedContent = (over: Partial<ReaderFailure> = {}): ReaderFailure => ({
   status: 'failed',
   reason: 'fetch',
+  detail: null,
   url: null,
   originalHero: null,
   ...over,
@@ -618,6 +620,66 @@ describe('ReaderViewComponent', () => {
     const el = mount(entry()).nativeElement as HTMLElement;
     expect(el.querySelector('.content')!.innerHTML).toContain('Body');
     expect(el.querySelector('.reader-note')).not.toBeNull();
+  });
+
+  describe('reader fallback: retry and error detail', () => {
+    it('retries extraction past the cache when the note link is clicked', () => {
+      loadMock.mockReturnValue(of<ReaderContent>(failedContent()));
+      const subject = new Subject<ReaderContent>();
+      reloadMock.mockReturnValue(subject.asObservable());
+      const f = mount(entry());
+      const el = f.nativeElement as HTMLElement;
+
+      (el.querySelector('.reader-note-link') as HTMLButtonElement).click();
+      f.detectChanges();
+      expect(reloadMock).toHaveBeenCalledWith(1);
+      expect(el.querySelector('app-loading-overlay.shown')).not.toBeNull();
+
+      subject.next(okContent({ contentHtml: '<p>FRESH</p>' }));
+      subject.complete();
+      f.detectChanges();
+      expect(el.querySelector('.content')!.innerHTML).toContain('FRESH');
+    });
+
+    it('reveals the server-supplied cause behind a collapsed "show error" disclosure', () => {
+      loadMock.mockReturnValue(
+        of<ReaderContent>(failedContent({ reason: 'fetch', detail: 'HTTP 403 Forbidden' })),
+      );
+      const el = mount(entry()).nativeElement as HTMLElement;
+
+      const details = el.querySelector('.reader-error') as HTMLDetailsElement;
+      expect(details).not.toBeNull();
+      expect(details.open).toBe(false);
+      expect(details.querySelector('pre')!.textContent).toContain('HTTP 403 Forbidden');
+    });
+
+    it('falls back to the bare reason code when the server sent no cause', () => {
+      loadMock.mockReturnValue(
+        of<ReaderContent>(failedContent({ reason: 'unextractable', detail: null })),
+      );
+      const el = mount(entry()).nativeElement as HTMLElement;
+
+      expect(el.querySelector('.reader-error pre')!.textContent).toContain('unextractable');
+    });
+
+    it('reveals the complete HTTP message when the load fails at the transport', () => {
+      loadMock.mockReturnValue(
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 502,
+              statusText: 'Bad Gateway',
+              url: 'https://host.test/api/entries/1/reader',
+            }),
+        ),
+      );
+      const el = mount(entry()).nativeElement as HTMLElement;
+
+      const detail = el.querySelector('.reader-error pre')!.textContent!;
+      expect(detail).toContain('502');
+      expect(detail).toContain('Bad Gateway');
+      expect(detail).toContain('https://host.test/api/entries/1/reader');
+    });
   });
 
   it('says above the body that this is the free preview of a paywalled article', () => {

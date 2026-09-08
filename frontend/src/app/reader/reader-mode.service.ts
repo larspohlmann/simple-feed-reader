@@ -20,8 +20,12 @@ export class ReaderModeService {
     this.canToggle.set(false);
   }
 
-  /** Extraction succeeded: allow switching between reader and original. */
+  /** Extraction succeeded: allow switching between reader and original. When
+   *  toggling was impossible (a fresh load, or a retry recovering from a failed
+   *  extraction that forced the original view), present the reader view; a
+   *  reload while toggling is already allowed leaves the reader's choice alone. */
   enableToggle(): void {
+    if (!this.canToggle()) this.mode.set('reader');
     this.canToggle.set(true);
   }
 

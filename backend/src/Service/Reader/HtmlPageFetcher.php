@@ -8,6 +8,7 @@ use App\Service\Fetch\Exception\RedirectChainException;
 use App\Service\Fetch\LandedResponse;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Reader\Exception\PageFetchException;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 
 /**
@@ -34,12 +35,12 @@ final readonly class HtmlPageFetcher
         if (!$landed->isSuccess()) {
             $landed->response->cancel();
 
-            throw new PageFetchException(sprintf('%s: HTTP %d', $landed->url, $landed->status));
+            throw new PageFetchException(self::describeStatus($landed->status));
         }
 
         $body = $this->content($landed);
         if (\strlen($body) > self::MAX_BYTES) {
-            throw new PageFetchException(sprintf('%s: response exceeds %d bytes', $landed->url, self::MAX_BYTES));
+            throw new PageFetchException(sprintf('response exceeds %d bytes', self::MAX_BYTES));
         }
 
         return new PageResponse($landed->url, $body);
@@ -77,12 +78,21 @@ final readonly class HtmlPageFetcher
         ];
     }
 
+    /** The status line as a reader would read it — the code with its standard
+     *  reason phrase ("HTTP 403 Forbidden"), or the bare code for an unknown one. */
+    private static function describeStatus(int $status): string
+    {
+        $phrase = Response::$statusTexts[$status] ?? '';
+
+        return $phrase === '' ? sprintf('HTTP %d', $status) : sprintf('HTTP %d %s', $status, $phrase);
+    }
+
     private function content(LandedResponse $landed): string
     {
         try {
             return $landed->response->getContent(false);
         } catch (ExceptionInterface $e) {
-            throw new PageFetchException(sprintf('%s: %s', $landed->url, $e->getMessage()), previous: $e);
+            throw new PageFetchException($e->getMessage(), previous: $e);
         }
     }
 }

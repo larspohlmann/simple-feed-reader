@@ -330,6 +330,17 @@ final class ArticleExtractorTest extends TestCase
         self::assertSame('fetch', $result->reason);
     }
 
+    public function testFetchFailureCarriesTheRealErrorMessageAsDetail(): void
+    {
+        $extractor = $this->extractor([new MockResponse('nope', ['http_code' => 403])]);
+
+        $result = $extractor->extract('https://site.test/x');
+
+        self::assertFalse($result->ok);
+        self::assertSame('fetch', $result->reason);
+        self::assertSame('HTTP 403 Forbidden', $result->detail);
+    }
+
     public function testUnextractablePageMapsToReason(): void
     {
         $extractor = $this->extractor([new MockResponse('<html lang="en"><body></body></html>', ['http_code' => 200])]);

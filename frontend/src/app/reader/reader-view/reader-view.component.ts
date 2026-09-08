@@ -24,6 +24,7 @@ import {
 } from '../../shared/to-top-button/to-top-button.component';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
 import { PaywallNoticeComponent } from '../paywall-notice/paywall-notice.component';
+import { WarningBoxComponent } from '../../shared/warning-box/warning-box.component';
 import {
   EntryDto,
   ReaderArticle,
@@ -32,6 +33,7 @@ import {
   SubscriptionTagDto,
 } from '../models';
 import { ReaderContentService } from '../reader-content.service';
+import { describeLoadError } from '../reader-load-error';
 import { ReaderModeService } from '../reader-mode.service';
 import { LanguageService } from '../../core/language.service';
 import { LayoutService } from '../layout.service';
@@ -112,6 +114,7 @@ function slugify(text: string): string {
     RouterLink,
     TranslocoPipe,
     PaywallNoticeComponent,
+    WarningBoxComponent,
   ],
   templateUrl: './reader-view.component.html',
   styleUrl: './reader-view.component.scss',
@@ -212,7 +215,7 @@ export class ReaderViewComponent {
   private readonly state = signal<
     | { status: 'idle' | 'loading' }
     | { status: 'ok'; article: ReaderArticle }
-    | { status: 'failed'; failure: ReaderFailure | null }
+    | { status: 'failed'; failure: ReaderFailure | null; error: unknown }
   >({ status: 'idle' });
 
   // Table of contents, built from the rendered article headings. Collapsed by
@@ -254,6 +257,15 @@ export class ReaderViewComponent {
 
   readonly loading = computed(() => this.state().status === 'loading');
   readonly failed = computed(() => this.state().status === 'failed');
+  /** The diagnostic detail behind the fallback note's "show error" disclosure.
+   *  A backend failure prefers the server's own cause (the fetch's HTTP status or
+   *  transport message), falling back to the bare reason code when it sent none;
+   *  a transport failure in the browser carries the complete HTTP message. */
+  readonly errorDetail = computed<string | null>(() => {
+    const s = this.state();
+    if (s.status !== 'failed') return null;
+    return s.failure ? (s.failure.detail ?? s.failure.reason) : describeLoadError(s.error);
+  });
   private readonly article = computed(() => {
     const s = this.state();
     return s.status === 'ok' ? s.article : null;
@@ -452,14 +464,15 @@ export class ReaderViewComponent {
           this.state.set({ status: 'ok', article: c });
           this.readerMode.enableToggle();
         } else {
-          this.state.set({ status: 'failed', failure: c });
+          this.state.set({ status: 'failed', failure: c, error: null });
           this.readerMode.setOriginalOnly();
         }
       },
-      error: () => {
+      error: (error: unknown) => {
         // A timeout or a transport error leaves no payload, so this article
-        // shows the feed's content with no hero.
-        this.state.set({ status: 'failed', failure: null });
+        // shows the feed's content with no hero. Keep the error so the reader
+        // can reveal the complete HTTP message behind the fallback note.
+        this.state.set({ status: 'failed', failure: null, error });
         this.readerMode.setOriginalOnly();
       },
     });

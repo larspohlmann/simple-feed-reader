@@ -19,7 +19,7 @@ final class ReaderJson
      *   siteName: string|null, contentHtml: string, excerpt: string|null, paywalled: bool,
      *   originalHero: array{url: string, width: int|null, height: int|null}|null,
      *   extractedAt: string}
-     *  |array{status: 'failed', url: string|null, reason: string,
+     *  |array{status: 'failed', url: string|null, reason: string, detail: string|null,
      *   originalHero: array{url: string, width: int|null, height: int|null}|null}
      */
     public static function one(ExtractionResult $r, ?DeclaredImage $originalHero, \DateTimeImmutable $now): array
@@ -29,6 +29,7 @@ final class ReaderJson
                 'status' => 'failed',
                 'url' => $r->url,
                 'reason' => (string) $r->reason,
+                'detail' => $r->detail,
                 'originalHero' => self::hero($originalHero),
             ];
         }

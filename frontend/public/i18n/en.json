@@ -990,6 +990,8 @@
     "refreshArticle": "Reload article",
     "readingTime": "≈ {{minutes}} min",
     "readerFallback": "Couldn't load the full article — showing the feed's summary.",
+    "retry": "Retry",
+    "showError": "Show error",
     "paywalled": "This is the free preview of a paywalled article. The rest is on the publisher's site.",
     "paywalledLink": "Continue on the publisher's site",
     "selectArticle": "Select an article to read.",
