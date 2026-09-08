@@ -103,6 +103,25 @@
     @if (leadingActions(); as actions) {
       <ng-container [ngTemplateOutlet]="actions" />
     }
+    @if (canRefresh()) {
+      <button
+        appListAction
+        class="refresh mobile-icon-only"
+        type="button"
+        [class.spinning]="refreshing()"
+        [disabled]="refreshing()"
+        (click)="refresh.emit()"
+        [attr.aria-label]="'reader.refresh' | transloco"
+        [attr.title]="'reader.refresh' | transloco"
+      >
+        <app-icon name="refresh" size="sm" />
+        <span class="txt">{{ 'reader.refresh' | transloco }}</span>
+        <span class="txt-short">{{ 'reader.refresh' | transloco }}</span>
+      </button>
+    }
+    @if (headerActions(); as actions) {
+      <ng-container [ngTemplateOutlet]="actions" />
+    }
     @if (hasUnreadFilter()) {
       <!-- One switch, not a two-option toggle: filled circle means unread-only,
            hollow means all, matching the "filled means unread" row convention
@@ -146,25 +165,6 @@
         <span class="txt">{{ 'reader.markAllRead' | transloco }}</span>
         <span class="txt-short">{{ 'reader.markAllReadShort' | transloco }}</span>
       </button>
-    }
-    @if (canRefresh()) {
-      <button
-        appListAction
-        class="refresh mobile-icon-only"
-        type="button"
-        [class.spinning]="refreshing()"
-        [disabled]="refreshing()"
-        (click)="refresh.emit()"
-        [attr.aria-label]="'reader.refresh' | transloco"
-        [attr.title]="'reader.refresh' | transloco"
-      >
-        <app-icon name="refresh" size="sm" />
-        <span class="txt">{{ 'reader.refresh' | transloco }}</span>
-        <span class="txt-short">{{ 'reader.refresh' | transloco }}</span>
-      </button>
-    }
-    @if (headerActions(); as actions) {
-      <ng-container [ngTemplateOutlet]="actions" />
     }
   </div>
 </header>
