@@ -66,6 +66,8 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class ArticleExtractorTest extends TestCase
 {
+    private const string WINDOWS_1252_SENTENCE = 'Café crème für señor Müller — “quoted” ½ ©.';
+
     /**
      * @param callable|iterable<MockResponse> $responses
      * @param array<string, list<string>>     $dnsMap
@@ -888,5 +890,32 @@ final class ArticleExtractorTest extends TestCase
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/' . $fixture);
 
         return $this->extractor([new MockResponse($html, ['http_code' => 200])])->extract('https://site.test/post');
+    }
+
+    public function testDecodesAPageWhoseCharsetOnlyTheHttpHeaderDeclares(): void
+    {
+        // #904: a legacy site that states its charset in Content-Type alone.
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-windows-1252.html');
+        $extractor = $this->extractor([new MockResponse($html, [
+            'http_code' => 200,
+            'response_headers' => ['content-type' => ['text/html; charset=windows-1252']],
+        ])]);
+
+        $result = $extractor->extract('https://site.test/post');
+
+        self::assertTrue($result->ok);
+        self::assertStringContainsString(self::WINDOWS_1252_SENTENCE, (string) $result->contentHtml);
+        self::assertStringContainsString('The Real Headline — Site', (string) $result->title);
+    }
+
+    public function testDecodesAPageWhoseMetaDeclaresItsCharset(): void
+    {
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-windows-1252-meta.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post');
+
+        self::assertTrue($result->ok);
+        self::assertStringContainsString(self::WINDOWS_1252_SENTENCE, (string) $result->contentHtml);
     }
 }

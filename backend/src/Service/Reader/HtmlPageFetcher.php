@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Service\Fetch\Exception\RedirectChainException;
+use App\Service\Fetch\ContentTypeCharset;
 use App\Service\Fetch\LandedResponse;
 use App\Service\Fetch\RedirectFollower;
+use App\Service\Html\HtmlTranscoder;
 use App\Service\Reader\Exception\PageFetchException;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
@@ -15,8 +17,9 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 /**
  * Retrieves an article's source HTML for reader-mode extraction: the guarded
  * redirect chain lives in RedirectFollower; this class negotiates HTML, caps the
- * body, and returns the decoded body plus the final URL (readability needs it
- * to resolve relative image URLs).
+ * body, and returns the body as UTF-8 plus the final URL (readability needs it
+ * to resolve relative image URLs). A charset declared only by the Content-Type
+ * header is transcoded here, where the header is still in hand (#904).
  */
 final readonly class HtmlPageFetcher
 {
@@ -84,7 +87,14 @@ final readonly class HtmlPageFetcher
             throw new PageFetchException(sprintf('response exceeds %d bytes', self::MAX_BYTES));
         }
 
-        return $body;
+        return $this->utf8($body, $landed);
+    }
+
+    private function utf8(string $body, LandedResponse $landed): string
+    {
+        $charset = ContentTypeCharset::of($landed->header('content-type'));
+
+        return $charset === null ? $body : HtmlTranscoder::toUtf8($body, $charset);
     }
 
     private function assertNotChallenge(string $head, LandedResponse $landed): void
