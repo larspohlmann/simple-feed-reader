@@ -46,6 +46,7 @@ use App\Service\Reader\Media\Source\YouTubeIdAttributeSource;
 use App\Service\Reader\Media\StreamLocationResolver;
 use App\Service\Reader\Media\SubstackPosterLink;
 use App\Service\Reader\NavigationChromeTrimmer;
+use App\Service\Reader\NoscriptImageUnwrapper;
 use App\Service\Reader\PlayerChromeCleaner;
 use App\Service\Reader\RecipeFacts\RecipeFactsCleaner;
 use App\Service\Reader\ReaderBodyCleaner;
@@ -93,6 +94,7 @@ final class ArticleExtractorTest extends TestCase
             new HtmlPageFetcher($redirects, 'TestAgent/1.0'),
             new FetchedPageNormalizer(
                 new CustomElementUnwrapper(),
+                new NoscriptImageUnwrapper(),
                 new LazyImageSources(),
                 new ShareWidgetRemover(),
                 new ShareIntentLinkRemover(),
@@ -245,6 +247,25 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringNotContainsString('data:image', (string) $result->contentHtml);
     }
 
+    public function testRecoversAnImageStoredOnlyInsideNoscript(): void
+    {
+        // heise ships the real photo only inside <noscript>, next to a `data:`
+        // placeholder <img>; the sanitizer would otherwise drop the tag with
+        // the image still inside it (#894).
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-noscript-image.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post');
+
+        self::assertTrue($result->ok);
+        self::assertStringContainsString(
+            '<img src="https://site.test/img/photo.jpg"',
+            (string) $result->contentHtml,
+        );
+        self::assertStringNotContainsString('data:image', (string) $result->contentHtml);
+        self::assertStringNotContainsString('<noscript', (string) $result->contentHtml);
+    }
+
     public function testRestoresTheLeadIntoATextOnlyBody(): void
     {
         // readability drops the og:image (it sits outside the scored body) and the
@@ -310,6 +331,7 @@ final class ArticleExtractorTest extends TestCase
             new HtmlPageFetcher($redirects, 'TestAgent/1.0'),
             new FetchedPageNormalizer(
                 new CustomElementUnwrapper(),
+                new NoscriptImageUnwrapper(),
                 new LazyImageSources(),
                 new ShareWidgetRemover(),
                 new ShareIntentLinkRemover(),
