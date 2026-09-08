@@ -280,6 +280,25 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringContainsString('<img src="https://site.test/hero.jpg"', (string) $result->contentHtml);
     }
 
+    public function testRestoresTheLeadInlineWithItsCaption(): void
+    {
+        // heise: the dropped header figure carries a figcaption naming the
+        // photographer. The restored lead must bring that caption along, not
+        // just the bare image (#894).
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-lead-image-caption.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post');
+        $content = (string) $result->contentHtml;
+
+        self::assertTrue($result->ok);
+        self::assertStringContainsString('<img src="https://site.test/hero.jpg"', $content);
+        self::assertStringContainsString(
+            '<figcaption>Ugreen Home Agent auf der IFA 2026 (Bild: Berti Kolbow-Lehradt / heise medien)</figcaption>',
+            $content,
+        );
+    }
+
     public function testRestoresADistinctPageHeroAboveTheBodyPhoto(): void
     {
         // #681: the og:image hero sits in the page header (a different CDN image id
