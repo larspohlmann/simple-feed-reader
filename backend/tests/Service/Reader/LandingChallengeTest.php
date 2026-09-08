@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\LandingChallenge;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class LandingChallengeTest extends TestCase
@@ -21,9 +22,7 @@ final class LandingChallengeTest extends TestCase
         yield 'siteground captcha' => ['<meta http-equiv="refresh" content="0;url=/.well-known/sgcaptcha/">'];
     }
 
-    /**
-     * @dataProvider challengeBodies
-     */
+    #[DataProvider('challengeBodies')]
     public function testRecognisesAChallengeBody(string $body): void
     {
         self::assertTrue((new LandingChallenge())->matches($body));
