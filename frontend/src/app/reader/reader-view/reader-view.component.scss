@@ -838,6 +838,17 @@ article {
   margin: var(--space-5) 0;
 }
 
+/* A feed video carries no dimensions and, with preload="none", loads no metadata
+   until play, so the browser sizes the box from the poster. A publisher that
+   ships a badly shaped poster (ZDF served a 1140×120 strip for a 16:9 clip, #952)
+   then collapses the player to a sliver. Pin the 16:9 box every .reader-embed
+   iframe already gets, and letterbox whatever the poster or the frames are. */
+.content ::ng-deep video {
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  background: var(--surface-1);
+}
+
 // Machine-generated narration (#903): one muted, collapsed line, no card, so it
 // never reads as editorial audio. A plain <details> stands in for <app-disclosure>,
 // which cannot render inside [innerHTML] (recorded exception in design-language.md).
