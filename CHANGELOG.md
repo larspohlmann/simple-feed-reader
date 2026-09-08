@@ -10,6 +10,41 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.0.7] - 2026-09-08
+
+## What's Changed
+* About page: reading stats with graphics + richer identity content by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/897
+* fix(#898): detect the faded-paragraph paywall gate (ZEIT+) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/900
+* fix(digest): land "Open in the reader" on the saved searches list by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/899
+* Strip leading article-head furniture from the reader (#901) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/905
+* fix(#903): drop dead narration duplicate, mark and compact the narration player by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/909
+* fix(#907): keep the page hero above a top-placed narration player by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/910
+* fix(#908): trust isAccessibleForFree for the paywall verdict by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/911
+* Keep feed media: entry media[] + attachments[] (#906) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/912
+* feat(#913): rescue a poster-less video with the feed-declared poster by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/917
+* feat(#914): trust feed-declared kind/dimensions in the reader by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/918
+* Podcast/audio player for entry attachments (#915) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/919
+* Dedicated Pictures / Videos / Audios media views (#916) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/920
+* Revert #916 media views by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/921
+* Strip NPR embed-code widget from reader content (#922) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/924
+* Fill the column with substantial reader images (#923) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/925
+* Detect slideshows and recreate them as swipeable carousels (#926) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/927
+* Fix slideshow swipe conflict + slide transitions (#928) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/929
+* Keep each slideshow slide's caption text and link (#930) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/931
+* fix(#932): relay recipe-fact blocks to a reader-styled facts figure by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/933
+* Reader fallback: retry link and expandable real error detail by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/936
+* feat(#935): batch-size dropdown, drop recommendation settings from backup by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/937
+* fix(#894): recover noscript images and restore the lead image inline with its caption by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/939
+* fix(#938): fall back to a direct connection on a proxied refusal status by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/940
+* Reader: follow meta-refresh interstitials and reject 200 challenge bodies (#892) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/941
+* chore(#770): untrack SDD execution-plan notes committed against .gitignore by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/943
+* fix(#904): decode pages whose charset only the HTTP header declares by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/942
+* feat(#893): cap concurrent feed requests per host in the refresh sweep by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/944
+* fix(#945): unblock e2e gate-pinning and clear PHPUnit stub notices by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/946
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.0.6...v1.0.7
+
 ## [v1.0.6] - 2026-09-06
 
 ## What's Changed
