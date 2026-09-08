@@ -37,7 +37,7 @@ final readonly class ImageIdentity
         private string $stem,
         private array $ids,
         private array $tokens,
-        private ?string $numericAsset,
+        private ?string $assetToken,
         private ?string $pathUuid,
     ) {
     }
@@ -56,7 +56,7 @@ final readonly class ImageIdentity
         $words = preg_split('/[^a-z0-9]+/', $stem, -1, \PREG_SPLIT_NO_EMPTY) ?: [];
         $tokens = array_values(array_filter($words, self::isPhotoSpecificToken(...)));
 
-        return new self($path, $stem, $ids, $tokens, self::numericAsset($words), self::pathUuid($path));
+        return new self($path, $stem, $ids, $tokens, self::assetToken($words), self::pathUuid($path));
     }
 
     public function isShareRender(): bool
@@ -121,25 +121,33 @@ final readonly class ImageIdentity
         }
 
         return array_intersect($this->tokens, $other->tokens) !== []
-            && !$this->hasDifferentNumericAsset($other);
+            && !$this->hasDifferentAssetToken($other);
     }
 
-    private function hasDifferentNumericAsset(self $other): bool
+    private function hasDifferentAssetToken(self $other): bool
     {
-        return $this->numericAsset !== null
-            && $other->numericAsset !== null
-            && $this->numericAsset !== $other->numericAsset;
+        return $this->assetToken !== null
+            && $other->assetToken !== null
+            && $this->assetToken !== $other->assetToken;
     }
 
-    /** @param list<string> $words */
-    private static function numericAsset(array $words): ?string
+    /**
+     * A trailing decimal id or long hex hash names one photo among shared words.
+     * @param list<string> $words
+     */
+    private static function assetToken(array $words): ?string
     {
         $last = array_pop($words);
         if (is_string($last) && preg_match('/^\d+x\d+$/', $last) === 1) {
             $last = array_pop($words);
         }
 
-        return is_string($last) && ctype_digit($last) ? $last : null;
+        return is_string($last) && self::isAssetTokenShape($last) ? $last : null;
+    }
+
+    private static function isAssetTokenShape(string $word): bool
+    {
+        return ctype_digit($word) || preg_match('/^[0-9a-f]{12,}$/i', $word) === 1;
     }
 
     /** Return an embedded HTTP source URL, or keep the original URL. */

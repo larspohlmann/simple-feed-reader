@@ -492,6 +492,28 @@ final class ImageIdentityTest extends TestCase
         ));
     }
 
+    public function testSameAssetRejectsHeiseHexHashFilenamesThatShareDescriptiveWords(): void
+    {
+        // heise (#894): two different IFA photos share every descriptive word and
+        // differ only in a trailing per-photo hex hash, not a decimal id.
+        $first = ImageIdentity::fromUrl(
+            'https://heise.test/Ugreen-Home-Agent-Master-Agent-IFA-26-2-0b28ee11659fa5be.jpeg',
+        );
+        $second = ImageIdentity::fromUrl(
+            'https://heise.test/Ugreen-Home-Agent-Master-Agent-IFA-26-6-6958ecdcb563b3f6.jpg',
+        );
+
+        self::assertFalse($first->isSameAsset($second));
+    }
+
+    public function testSameAssetAcceptsTheSameHeiseHexHashAcrossSizeQueries(): void
+    {
+        self::assertTrue($this->sameImage(
+            'https://heise.test/Storage-8a72c64e5498ae16.jpg?width=696',
+            'https://heise.test/Storage-8a72c64e5498ae16.jpg?width=1200',
+        ));
+    }
+
     private function isShareRender(string $url): bool
     {
         return ImageIdentity::fromUrl($url)->isShareRender();
