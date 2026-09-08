@@ -20,18 +20,24 @@ describe('describeLoadError', () => {
       status: 500,
       statusText: 'Internal Server Error',
       url: 'https://host.test/api/entries/1/reader',
-      error: { title: 'Extraction failed', detail: 'upstream timed out fetching the page' },
+      error: {
+        type: 'about:blank',
+        title: 'Extraction failed',
+        detail: 'upstream timed out fetching the page',
+      },
     });
     expect(describeLoadError(error)).toContain('upstream timed out fetching the page');
   });
 
-  it('appends a plain-text error body verbatim', () => {
+  it('does not dump a raw non-JSON error body, only the status message', () => {
     const error = new HttpErrorResponse({
-      status: 503,
-      statusText: 'Service Unavailable',
-      error: 'gateway is warming up',
+      status: 502,
+      statusText: 'Bad Gateway',
+      error: '<html><body>nginx gateway page</body></html>',
     });
-    expect(describeLoadError(error)).toContain('gateway is warming up');
+    const detail = describeLoadError(error);
+    expect(detail).toContain('Bad Gateway');
+    expect(detail).not.toContain('<html>');
   });
 
   it('reports the load timeout in words', () => {

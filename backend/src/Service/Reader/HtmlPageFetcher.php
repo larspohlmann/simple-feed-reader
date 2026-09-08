@@ -24,6 +24,7 @@ final readonly class HtmlPageFetcher
     private const int MAX_BYTES = 3_000_000;
     private const float TIMEOUT_SECONDS = 10.0;
     private const int SNIPPET_LENGTH = 200;
+    private const int SNIPPET_SCAN_LENGTH = 20_000;
 
     public function __construct(
         private RedirectFollower $redirects,
@@ -105,10 +106,14 @@ final readonly class HtmlPageFetcher
 
     private static function visibleText(string $html): ?string
     {
-        $withoutCode = preg_replace('#<(script|style)\b[^>]*>.*?</\1>#is', ' ', $html) ?? $html;
+        // Only the head can survive the truncation below, so clean that much and
+        // spare the regex passes a whole multi-megabyte error page.
+        $head = mb_substr($html, 0, self::SNIPPET_SCAN_LENGTH);
+        $withoutCode = preg_replace('#<(script|style)\b[^>]*>.*?</\1>#is', ' ', $head) ?? $head;
         $withoutTags = preg_replace('/<[^>]+>/', ' ', $withoutCode) ?? $withoutCode;
-        $decoded = html_entity_decode($withoutTags, \ENT_QUOTES | \ENT_HTML5, 'UTF-8');
-        $text = trim(preg_replace('/\s+/', ' ', $decoded) ?? '');
+        $text = LeadingEngagementRules::collapse(
+            html_entity_decode($withoutTags, \ENT_QUOTES | \ENT_HTML5, 'UTF-8'),
+        );
         if ($text === '') {
             return null;
         }
