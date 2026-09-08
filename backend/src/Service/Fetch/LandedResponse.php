@@ -13,6 +13,7 @@ final readonly class LandedResponse
         public string $url,
         public int $status,
         public ResponseInterface $response,
+        public int $hops = 0,
     ) {
     }
 
