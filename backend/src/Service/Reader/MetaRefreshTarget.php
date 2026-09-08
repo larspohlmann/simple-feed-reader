@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
-use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\UrlResolver;
+use App\Service\Fetch\PageUrls;
 use App\Service\Html\HtmlDocumentParser;
 
 /**
@@ -17,44 +16,29 @@ final readonly class MetaRefreshTarget
 {
     public function within(string $html, string $baseUrl): ?string
     {
+        // Almost every landed page is an ordinary article with no refresh meta;
+        // skip the DOM parse unless the markup can carry one.
+        if (stripos($html, 'http-equiv') === false) {
+            return null;
+        }
+
         $document = HtmlDocumentParser::parseOrNull($html);
         if ($document === null) {
             return null;
         }
 
+        $pageUrls = new PageUrls($baseUrl);
         foreach ($document->querySelectorAll('meta[http-equiv]') as $meta) {
             if (strtolower((string) $meta->getAttribute('http-equiv')) !== 'refresh') {
                 continue;
             }
-            $target = $this->httpTarget((string) $meta->getAttribute('content'), $baseUrl);
+            $target = $pageUrls->httpUrl($this->zeroDelayTarget((string) $meta->getAttribute('content')));
             if ($target !== null) {
                 return $target;
             }
         }
 
         return null;
-    }
-
-    private function httpTarget(string $content, string $baseUrl): ?string
-    {
-        $rawTarget = $this->zeroDelayTarget($content);
-        if ($rawTarget === null) {
-            return null;
-        }
-
-        $scheme = parse_url($rawTarget, \PHP_URL_SCHEME);
-        if (\is_string($scheme)) {
-            return \in_array(strtolower($scheme), ['http', 'https'], true) ? $rawTarget : null;
-        }
-        if ($scheme === false) {
-            return null;
-        }
-
-        try {
-            return UrlResolver::resolve($baseUrl, $rawTarget);
-        } catch (FetchException) {
-            return null;
-        }
     }
 
     private function zeroDelayTarget(string $content): ?string
