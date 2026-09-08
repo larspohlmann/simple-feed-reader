@@ -8,6 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationSettings;
 use App\Entity\User;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationPackingSettings;
 use App\Service\Recommendation\RecommendationSettingsResolver;
@@ -46,7 +47,7 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         self::assertSame(50, $effective->picksLimit);
         self::assertSame(32768, $effective->packing->contextWindow);
         self::assertSame('fallback', $effective->packing->contextWindowSource);
-        self::assertNull($effective->packing->batchCount);
+        self::assertSame(RecommendationBatchSize::Medium, $effective->packing->batchSize);
         self::assertFalse($effective->debugEnabled);
     }
 
@@ -73,7 +74,7 @@ final class RecommendationSettingsResolverTest extends DbTestCase
             lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: 50,
             contextWindow: 65536,
-            batchCount: 12,
+            batchSize: RecommendationBatchSize::Large,
             debugEnabled: true,
         ));
         $this->em->persist($row);
@@ -89,7 +90,7 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         self::assertSame(50, $effective->picksLimit);
         self::assertSame(65536, $effective->packing->contextWindow);
         self::assertSame('user', $effective->packing->contextWindowSource);
-        self::assertSame(12, $effective->packing->batchCount);
+        self::assertSame(RecommendationBatchSize::Large, $effective->packing->batchSize);
         self::assertTrue($effective->debugEnabled);
     }
 
@@ -209,7 +210,7 @@ final class RecommendationSettingsResolverTest extends DbTestCase
             lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
             contextWindow: null,
-            batchCount: null,
+            batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,
             profileText: $profileText,
             showReasons: $showReasons,

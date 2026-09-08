@@ -6,6 +6,7 @@ namespace App\Tests\Service\Recommendation;
 
 use App\Entity\User;
 use App\Repository\RecommendationSettingsRepository;
+use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Recommendation\RecommendationSettingsWriter;
@@ -73,7 +74,7 @@ final class RecommendationSettingsWriterTest extends DbTestCase
             lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: 50,
             contextWindow: 65536,
-            batchCount: 12,
+            batchSize: RecommendationBatchSize::Large,
             debugEnabled: true,
         ));
 
@@ -87,7 +88,7 @@ final class RecommendationSettingsWriterTest extends DbTestCase
         self::assertSame(20, $values->keptCap);
         self::assertSame(30, $values->viewedCap);
         self::assertSame(65536, $values->contextWindow);
-        self::assertSame(12, $values->batchCount);
+        self::assertSame(RecommendationBatchSize::Large, $values->batchSize);
         self::assertTrue($values->debugEnabled);
         self::assertSame('Likes long-form essays on typography.', $values->profileText);
     }
@@ -109,7 +110,7 @@ final class RecommendationSettingsWriterTest extends DbTestCase
             lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: 50,
             contextWindow: 65536,
-            batchCount: 12,
+            batchSize: RecommendationBatchSize::Large,
             debugEnabled: false,
             showReasons: true,
         ));
@@ -140,7 +141,7 @@ final class RecommendationSettingsWriterTest extends DbTestCase
             lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: 50,
             contextWindow: 65536,
-            batchCount: 12,
+            batchSize: RecommendationBatchSize::Large,
             debugEnabled: true,
         ));
 

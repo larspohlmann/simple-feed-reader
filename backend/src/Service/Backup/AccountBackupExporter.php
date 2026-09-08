@@ -15,7 +15,6 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
-use App\Repository\RecommendationSettingsRepository;
 use App\Repository\SavedSearchRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
@@ -45,7 +44,6 @@ final readonly class AccountBackupExporter
         private SubscriptionRepository $subscriptions,
         private EntryRepository $entries,
         private EntryStateRepository $entryStates,
-        private RecommendationSettingsRepository $recommendationSettings,
         private ClockInterface $clock,
     ) {
     }
@@ -190,36 +188,6 @@ final readonly class AccountBackupExporter
             'locale' => $user->getLocale(),
             'scrapeFallbackEnabled' => $user->getPreferences()->isScrapeFallbackEnabled(),
             'magazineStyle' => $user->getPreferences()->getMagazineStyle()->value,
-            'recommendationSettings' => $this->recommendationSettingsFields($user),
-        ];
-    }
-
-    /**
-     * @return array<string, mixed>|null
-     */
-    private function recommendationSettingsFields(User $user): ?array
-    {
-        $settings = $this->recommendationSettings->findForUser($user);
-        if (null === $settings) {
-            return null;
-        }
-
-        $values = $settings->values();
-
-        return [
-            'guidancePrompt' => $values->guidancePrompt,
-            'profileText' => $values->profileText,
-            'favoritesCap' => $values->favoritesCap,
-            'keptCap' => $values->keptCap,
-            'viewedCap' => $values->viewedCap,
-            'candidatePoolSize' => $values->candidatePoolSize,
-            'lookbackDays' => $values->lookbackDays,
-            'picksLimit' => $values->picksLimit,
-            'contextWindow' => $values->contextWindow,
-            'batchCount' => $values->batchCount,
-            'debugEnabled' => $values->debugEnabled,
-            'autoGenerateIntervalHours' => $values->autoGenerateIntervalHours,
-            'showReasons' => $values->showReasons,
         ];
     }
 

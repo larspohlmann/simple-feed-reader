@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation;
 
 use App\Entity\User;
+use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationSettingsResolver;
 use App\Service\Recommendation\RecommendationSettingsValues;
@@ -27,7 +28,7 @@ final class RecommendationSettingsRoundTripTest extends KernelTestCase
             lookbackDays: $lookbackDays,
             picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
             contextWindow: null,
-            batchCount: null,
+            batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,
             autoGenerateIntervalHours: $autoGenerateIntervalHours,
         );

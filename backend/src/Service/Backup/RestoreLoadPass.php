@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Backup;
 
 use App\Entity\Feed;
-use App\Entity\RecommendationSettings;
 use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\Tag;
@@ -108,13 +107,6 @@ final class RestoreLoadPass
         $this->user->setLocale($line->locale);
         $this->user->getPreferences()->setScrapeFallbackEnabled($line->scrapeFallbackEnabled);
         $this->user->getPreferences()->setMagazineStyle($line->magazineStyle);
-        if (null === $line->recommendationSettings) {
-            return;
-        }
-
-        $settings = new RecommendationSettings($this->user);
-        $settings->update($line->recommendationSettings);
-        $this->em->persist($settings);
     }
 
     private function loadTag(TagLine $line): void

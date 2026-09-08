@@ -47,7 +47,7 @@ final readonly class RecommendationSettingsResolver
             packing: new RecommendationPackingSettings(
                 contextWindow: $window,
                 contextWindowSource: $source,
-                batchCount: $row?->values()->batchCount,
+                batchSize: $row?->values()->batchSize ?? RecommendationBatchSize::Medium,
                 maximumBatchSize: self::batchCeilingFor($provider),
             ),
             debugEnabled: $row?->values()->debugEnabled ?? false,

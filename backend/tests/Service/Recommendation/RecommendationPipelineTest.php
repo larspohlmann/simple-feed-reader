@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
 use App\Repository\RecommendationSettingsRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
@@ -198,10 +199,12 @@ final class RecommendationPipelineTest extends DbTestCase
         }
         $this->em->flush();
 
-        // The batchCount expert override forces the packer to split into
-        // exactly two batches, regardless of the context window -- the same
-        // technique RecommendationRunAdvancerTest's seedForcedBatchCountFixture
-        // uses.
+        // A connection ceiling of 10 caps each batch at 10 candidates, so the
+        // 20-candidate pool packs into exactly two batches under a wide window
+        // -- the same technique RecommendationRunAdvancerTest's
+        // seedForcedBatchCountFixture uses.
+        $this->fixtures->capBatchesAt($this->user, 10);
+
         $settings = new RecommendationSettings($this->user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: null,
@@ -211,8 +214,8 @@ final class RecommendationPipelineTest extends DbTestCase
             candidatePoolSize: $entryCount,
             lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
-            contextWindow: 2500,
-            batchCount: 2,
+            contextWindow: 200000,
+            batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,
         ));
         $this->em->persist($settings);

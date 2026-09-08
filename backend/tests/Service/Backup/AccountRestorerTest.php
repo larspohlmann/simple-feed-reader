@@ -8,7 +8,6 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Preferences;
-use App\Entity\RecommendationSettings;
 use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
@@ -28,7 +27,6 @@ use App\Service\Backup\EntryBatchInserter;
 use App\Service\Backup\Exception\BackupDoesNotFitException;
 use App\Service\Backup\Exception\InvalidBackupException;
 use App\Service\Backup\RestoreLoader;
-use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Search\EntryIndexer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
@@ -94,24 +92,6 @@ final class AccountRestorerTest extends DbTestCase
         return $restorer;
     }
 
-    private function settingsValues(): RecommendationSettingsValues
-    {
-        return new RecommendationSettingsValues(
-            guidancePrompt: 'Only long reads, please.',
-            favoritesCap: 11,
-            keptCap: 12,
-            viewedCap: 13,
-            candidatePoolSize: 14,
-            lookbackDays: 15,
-            picksLimit: 16,
-            contextWindow: 17000,
-            batchCount: 3,
-            debugEnabled: true,
-            autoGenerateIntervalHours: 8,
-            showReasons: true,
-        );
-    }
-
     private function makeFeed(string $url, string $title, string $sourceFormat): Feed
     {
         $feed = new Feed($url);
@@ -153,8 +133,7 @@ final class AccountRestorerTest extends DbTestCase
      * Two feeds, two tags with colours and per-subscription tag positions, two
      * saved searches (one whole-word), two subscriptions with a custom title
      * and a watermark, three entries with bodies and images, two entry
-     * states, preferences on, a recommendation settings row and a
-     * non-default locale.
+     * states, preferences on and a non-default locale.
      */
     private function seedRichAccount(User $user): void
     {
@@ -205,9 +184,6 @@ final class AccountRestorerTest extends DbTestCase
 
         $user->setLocale('de');
         $user->getPreferences()->setScrapeFallbackEnabled(true);
-        $settings = new RecommendationSettings($user);
-        $settings->update($this->settingsValues());
-        $this->em->persist($settings);
 
         $this->em->flush();
         self::assertNotNull($entryB->getId());
@@ -358,11 +334,6 @@ final class AccountRestorerTest extends DbTestCase
         self::assertSame('de', $restored->getLocale());
         self::assertTrue($restored->getPreferences()->isScrapeFallbackEnabled());
 
-        $settings = $this->em->getRepository(RecommendationSettings::class)
-            ->findOneBy(['user' => $userId]);
-        self::assertInstanceOf(RecommendationSettings::class, $settings);
-        self::assertEquals($this->settingsValues(), $settings->values());
-
         $tags = $this->em->getRepository(Tag::class)->findBy(['user' => $userId], ['name' => 'ASC']);
         self::assertCount(2, $tags);
         $tagShapes = array_map(
@@ -407,14 +378,8 @@ final class AccountRestorerTest extends DbTestCase
         $this->restorer()->restore($this->reloadUser($targetId), $gzip, 'REPLACE');
         $targetRows = $this->fixtureRowsOf($this->reloadUser($targetId));
 
-        $this->assertFieldsRoundTripped(
-            User::class,
-            $sourceRows['user'],
-            $targetRows['user'],
-            ['recommendationSettings'],
-        );
+        $this->assertFieldsRoundTripped(User::class, $sourceRows['user'], $targetRows['user']);
         $this->assertFieldsRoundTripped(Preferences::class, $sourceRows['preferences'], $targetRows['preferences']);
-        $this->assertRecommendationSettingsRoundTripped($sourceRows['settings'], $targetRows['settings']);
         $this->assertFieldsRoundTripped(Tag::class, $sourceRows['tag'], $targetRows['tag']);
         $this->assertFieldsRoundTripped(SavedSearch::class, $sourceRows['savedSearch'], $targetRows['savedSearch']);
         $this->assertFieldsRoundTripped(Feed::class, $sourceRows['feed'], $targetRows['feed']);
@@ -470,7 +435,7 @@ final class AccountRestorerTest extends DbTestCase
      * fresh so a caller can compare a source account's rows against a restored
      * account's rows field by field.
      *
-     * @return array{user: User, preferences: Preferences, settings: RecommendationSettings,
+     * @return array{user: User, preferences: Preferences,
      *     tag: Tag, savedSearch: SavedSearch, feed: Feed, subscription: Subscription,
      *     subscriptionTag: SubscriptionTag, entry: Entry, entryState: EntryState}
      */
@@ -502,13 +467,10 @@ final class AccountRestorerTest extends DbTestCase
         self::assertInstanceOf(Tag::class, $tag);
         $savedSearch = $this->em->getRepository(SavedSearch::class)->findOneBy(['user' => $userId]);
         self::assertInstanceOf(SavedSearch::class, $savedSearch);
-        $settings = $this->em->getRepository(RecommendationSettings::class)->findOneBy(['user' => $userId]);
-        self::assertInstanceOf(RecommendationSettings::class, $settings);
 
         return [
             'user' => $user,
             'preferences' => $user->getPreferences(),
-            'settings' => $settings,
             'tag' => $tag,
             'savedSearch' => $savedSearch,
             'feed' => $feed,
@@ -548,22 +510,6 @@ final class AccountRestorerTest extends DbTestCase
                     '%s::$%s did not survive the export/restore round trip: the exporter '
                     . 'writes it, but no Line DTO reads it back on restore.',
                     $entityClass,
-                    $field,
-                ),
-            );
-        }
-    }
-
-    private function assertRecommendationSettingsRoundTripped(
-        RecommendationSettings $source,
-        RecommendationSettings $target,
-    ): void {
-        foreach (array_keys(BackupFieldDeclarations::BACKED_UP[RecommendationSettings::class]) as $field) {
-            self::assertEquals(
-                $source->values()->{$field},
-                $target->values()->{$field},
-                sprintf(
-                    'RecommendationSettings::$%s did not survive the export/restore round trip.',
                     $field,
                 ),
             );

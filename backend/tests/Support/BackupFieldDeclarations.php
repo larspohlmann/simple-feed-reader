@@ -8,7 +8,6 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Preferences;
-use App\Entity\RecommendationSettings;
 use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
@@ -44,26 +43,10 @@ final class BackupFieldDeclarations
     public const array BACKED_UP = [
         User::class => [
             'locale' => 'locale',
-            'recommendationSettings' => 'recommendationSettings',
         ],
         Preferences::class => [
             'scrapeFallbackEnabled' => 'scrapeFallbackEnabled',
             'magazineStyle' => 'magazineStyle',
-        ],
-        RecommendationSettings::class => [
-            'guidancePrompt' => 'recommendationSettings.guidancePrompt',
-            'profileText' => 'recommendationSettings.profileText',
-            'favoritesCap' => 'recommendationSettings.favoritesCap',
-            'keptCap' => 'recommendationSettings.keptCap',
-            'viewedCap' => 'recommendationSettings.viewedCap',
-            'candidatePoolSize' => 'recommendationSettings.candidatePoolSize',
-            'lookbackDays' => 'recommendationSettings.lookbackDays',
-            'picksLimit' => 'recommendationSettings.picksLimit',
-            'contextWindow' => 'recommendationSettings.contextWindow',
-            'batchCount' => 'recommendationSettings.batchCount',
-            'debugEnabled' => 'recommendationSettings.debugEnabled',
-            'autoGenerateIntervalHours' => 'recommendationSettings.autoGenerateIntervalHours',
-            'showReasons' => 'recommendationSettings.showReasons',
         ],
         Tag::class => [
             'name' => 'name', 'color' => 'color', 'icon' => 'icon', 'position' => 'position',
@@ -117,7 +100,6 @@ final class BackupFieldDeclarations
     public const array KIND_OF = [
         User::class => BackupSchema::KIND_ACCOUNT,
         Preferences::class => BackupSchema::KIND_ACCOUNT,
-        RecommendationSettings::class => BackupSchema::KIND_ACCOUNT,
         Tag::class => BackupSchema::KIND_TAG,
         SavedSearch::class => BackupSchema::KIND_SAVED_SEARCH,
         Feed::class => BackupSchema::KIND_FEED,

@@ -23,7 +23,7 @@ final readonly class RecommendationSettingsValues
         public int $lookbackDays,
         public int $picksLimit,
         public ?int $contextWindow,
-        public ?int $batchCount,
+        public RecommendationBatchSize $batchSize,
         public bool $debugEnabled,
         public ?int $autoGenerateIntervalHours = null,
         /**

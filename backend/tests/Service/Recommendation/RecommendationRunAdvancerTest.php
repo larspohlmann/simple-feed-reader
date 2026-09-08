@@ -22,6 +22,7 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ProviderTimeouts;
+use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\CompletionStreamHeartbeat;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationAnswerBudget;
@@ -197,7 +198,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             lookbackDays: 5,
             picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
             contextWindow: null,
-            batchCount: null,
+            batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,
         ));
         $this->em->persist($settings);
@@ -2693,7 +2694,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->persistSettings(self::SINGLE_BATCH_ENTRY_COUNT, $picksLimit);
     }
 
-    private function persistSettings(int $candidatePoolSize, int $picksLimit, ?int $batchCount = null): void
+    private function persistSettings(int $candidatePoolSize, int $picksLimit): void
     {
         $settings = new RecommendationSettings($this->user);
         $settings->update(new RecommendationSettingsValues(
@@ -2705,7 +2706,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: $picksLimit,
             contextWindow: self::MULTI_BATCH_CONTEXT_WINDOW,
-            batchCount: $batchCount,
+            batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,
         ));
         $this->em->persist($settings);
@@ -2713,15 +2714,15 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * Forces an exact batch count through the expert batchCount override, so a
-     * wave test can pin how many batches a wave has to work with. ceil(entries
-     * / batchCount) is the per-batch cap, and each cap here stays under the
-     * MINIMUM_BATCH_SIZE the token budget splits on, so the packer produces
-     * exactly $batchCount batches regardless of the context window.
+     * Forces an exact batch count through the connection's per-batch ceiling,
+     * so a wave test can pin how many batches a wave has to work with. Each cap
+     * here stays under the MINIMUM_BATCH_SIZE the token budget splits on, so the
+     * packer produces exactly $batchCount batches regardless of the context window.
      */
     private function seedForcedBatchCountFixture(int $entryCount, int $batchCount): void
     {
         $this->seedReadyAiSettings($this->user);
+        $this->fixtures->capBatchesAt($this->user, (int) ceil($entryCount / $batchCount));
 
         $summary = str_repeat('Lorem ipsum dolor sit amet consectetur adipiscing elit. ', 5);
         for ($i = 0; $i < $entryCount; $i++) {
@@ -2733,7 +2734,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         }
         $this->em->flush();
 
-        $this->persistSettings($entryCount, EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT, $batchCount);
+        $this->persistSettings($entryCount, EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT);
     }
 
     /**

@@ -11,6 +11,7 @@ use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\ProviderTimeouts;
+use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
@@ -39,8 +40,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 final class RecommendationDrainCommandTest extends DbTestCase
 {
     /**
-     * candidatePoolSize 20 with the batchCount expert override forced to 2
-     * makes packBatches produce exactly two batches of 10 (see
+     * candidatePoolSize 20 with the connection's per-batch ceiling forced to
+     * 10 makes packBatches produce exactly two batches of 10 (see
      * seedTwoBatchFixture) -- enough to prove the drain command's loop
      * actually loops, which a single-batch fixture cannot: one sweep
      * finalizes a single-batch run outright, so a command that replaced its
@@ -409,15 +410,15 @@ final class RecommendationDrainCommandTest extends DbTestCase
     }
 
     /**
-     * The batchCount expert override forces packBatches to split the pool
-     * into exactly two batches of 10 regardless of the context window (see
-     * RecommendationPromptBuilder::batchCap) -- unlike seedSingleBatchFixture,
-     * this fixture cannot complete in one provider tick.
+     * A connection ceiling of half the pool caps each batch at 10 candidates,
+     * so the 20-candidate pool packs into exactly two batches -- unlike
+     * seedSingleBatchFixture, this fixture cannot complete in one provider tick.
      */
     private function seedTwoBatchFixture(User $user): void
     {
         $this->fixtures->seedReadyAiSettings($user);
         $this->fixtures->seedFeedWithEntries($user, self::TWO_BATCH_ENTRY_COUNT);
+        $this->fixtures->capBatchesAt($user, intdiv(self::TWO_BATCH_ENTRY_COUNT, 2));
 
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
@@ -429,7 +430,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
             lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
             contextWindow: null,
-            batchCount: 2,
+            batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,
         ));
         $this->em->persist($settings);

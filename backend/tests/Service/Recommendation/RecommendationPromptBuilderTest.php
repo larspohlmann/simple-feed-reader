@@ -7,10 +7,12 @@ namespace App\Tests\Service\Recommendation;
 use App\Service\Recommendation\CandidatePoolSummary;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\PromptLine;
+use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\RecommendationHistory;
 use App\Service\Recommendation\RecommendationPackingSettings;
 use App\Service\Recommendation\RecommendationPromptBuilder;
 use App\Service\Recommendation\RecommendationPromptText;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationPromptBuilderTest extends TestCase
@@ -168,10 +170,9 @@ final class RecommendationPromptBuilderTest extends TestCase
      * The batch call only ever asks for a score, not a reason, and its history
      * budget is the not-yet-distilled profile plus FAVORITES rather than the
      * full three-section history — both reserves are far smaller than the old
-     * reason-bearing, three-section formula. An explicit batchCount of 1 keeps
-     * the cap out of the way (ceil(200/1) = 200, same technique as
-     * testAnExplicitBatchCountStillSplitsOnTheTokenBudget), so the token
-     * budget alone decides the split here. At this window the old formula's
+     * reason-bearing, three-section formula. A Large batch size lifts the cap
+     * to 200 (2 × the 100 automatic ceiling), past the 200 candidates, so the
+     * token budget alone decides the split here. At this window the old formula's
      * budget goes negative — a 70-token-per-pick reserve plus the full
      * three-section history outweighs it — so the packer falls back to
      * MINIMUM_BATCH_SIZE-sized batches, about 20 of them for 200 candidates.
@@ -190,7 +191,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             kept: array_map(static fn (int $id): PromptLine => self::line($id, "Kept $id", 100), range(1, 40)),
             viewed: array_map(static fn (int $id): PromptLine => self::line($id, "Viewed $id", 100), range(1, 80)),
         );
-        $settings = $this->settings(10000, 50, batchCount: 1);
+        $settings = $this->settings(10000, 50, batchSize: RecommendationBatchSize::Large);
 
         $batches = $this->builder->packBatches($candidates, $history, $settings);
 
@@ -328,12 +329,19 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertLessThanOrEqual(300, $large);
     }
 
-    public function testAnExplicitBatchCountReplacesTheDefaultCapUnderAHugeBudget(): void
-    {
-        // A huge window means the token budget never binds, so an explicit
-        // batchCount of 12 is the only thing that can produce 12 batches of
-        // at most ceil(500 / 12) = 42.
-        $candidateCount = 500;
+    /**
+     * A huge window means the token budget never binds, so only the cap splits
+     * the pool. Small halves the 100 automatic ceiling and Large doubles it, so
+     * 250 candidates pack into five 50s or into 200 + 50.
+     *
+     * @param list<int> $expectedBatchSizes
+     */
+    #[DataProvider('sizeScalingCases')]
+    public function testBatchSizeScalesTheDefaultCapUnderAHugeBudget(
+        RecommendationBatchSize $batchSize,
+        array $expectedBatchSizes,
+    ): void {
+        $candidateCount = 250;
         $candidates = array_map(
             static fn (int $id): PromptLine => new PromptLine($id, "C$id", 'F', 'D', null),
             range(1, $candidateCount),
@@ -342,23 +350,27 @@ final class RecommendationPromptBuilderTest extends TestCase
         $batches = $this->builder->packBatches(
             $candidates,
             $this->emptyHistory(),
-            $this->settings(1_000_000, 50, batchCount: 12),
+            $this->settings(1_000_000, 50, batchSize: $batchSize),
         );
 
-        self::assertCount(12, $batches);
-        foreach ($batches as $batch) {
-            self::assertLessThanOrEqual(42, \count($batch));
-        }
-
-        $ids = array_merge(...$batches);
-        self::assertSame(range(1, $candidateCount), $ids);
+        self::assertSame($expectedBatchSizes, array_map('count', $batches));
+        self::assertSame(range(1, $candidateCount), array_merge(...$batches));
     }
 
-    public function testAnExplicitBatchCountStillSplitsOnTheTokenBudget(): void
+    /**
+     * @return iterable<string, array{RecommendationBatchSize, list<int>}>
+     */
+    public static function sizeScalingCases(): iterable
     {
-        // batchCount = 1 asks for a single batch, but a small context window
-        // cannot hold every candidate: the token budget below still forces a
-        // split, proving the expert override does not bypass it.
+        yield 'small halves the ceiling' => [RecommendationBatchSize::Small, [50, 50, 50, 50, 50]];
+        yield 'large doubles the ceiling' => [RecommendationBatchSize::Large, [200, 50]];
+    }
+
+    public function testTheTokenBudgetStillSplitsRegardlessOfBatchSize(): void
+    {
+        // Large lifts the cap to 200, past these 60 candidates, but a small
+        // context window cannot hold them all: the token budget below still
+        // forces a split, proving the size choice does not bypass it.
         $candidateCount = 60;
         $candidates = array_map(
             static fn (int $id): PromptLine => self::line($id, "Candidate $id", 400),
@@ -368,7 +380,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         $batches = $this->builder->packBatches(
             $candidates,
             $this->emptyHistory(),
-            $this->settings(4096, 10, batchCount: 1),
+            $this->settings(4096, 10, batchSize: RecommendationBatchSize::Large),
         );
 
         self::assertGreaterThan(1, \count($batches));
@@ -991,7 +1003,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         int $contextWindow,
         int $picksLimit,
         ?string $guidancePrompt = null,
-        ?int $batchCount = null,
+        RecommendationBatchSize $batchSize = RecommendationBatchSize::Medium,
         int $maximumBatchSize = RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE,
     ): EffectiveRecommendationSettings {
         return new EffectiveRecommendationSettings(
@@ -1005,7 +1017,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             packing: new RecommendationPackingSettings(
                 contextWindow: $contextWindow,
                 contextWindowSource: 'default',
-                batchCount: $batchCount,
+                batchSize: $batchSize,
                 maximumBatchSize: $maximumBatchSize,
             ),
             debugEnabled: false,

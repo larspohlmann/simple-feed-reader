@@ -6,10 +6,10 @@ namespace App\Service\Recommendation;
 
 /**
  * The inputs RecommendationPromptBuilder reads to size a batch: the resolved
- * context window, its source, the optional expert batchCount override, and the
- * ceiling on candidates per batch. Bundled into one value object so batchCount
- * (#321) did not push EffectiveRecommendationSettings past PHPMD's
- * parameter-count ceiling.
+ * context window, its source, the reader's batch-size choice, and the
+ * connection's automatic ceiling on candidates per batch. Bundled into one
+ * value object so these (#321) did not push EffectiveRecommendationSettings
+ * past PHPMD's parameter-count ceiling.
  */
 final readonly class RecommendationPackingSettings
 {
@@ -29,7 +29,7 @@ final readonly class RecommendationPackingSettings
     public function __construct(
         public int $contextWindow,
         public string $contextWindowSource,
-        public ?int $batchCount,
+        public RecommendationBatchSize $batchSize,
         public int $maximumBatchSize,
     ) {
     }

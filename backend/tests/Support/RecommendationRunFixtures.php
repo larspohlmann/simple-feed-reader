@@ -13,6 +13,7 @@ use App\Entity\RecommendationSettings;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use Doctrine\ORM\EntityManagerInterface;
@@ -47,6 +48,20 @@ final readonly class RecommendationRunFixtures
         $settings->chooseModel('m', $now, 32768);
         $user->setActiveAiProviderSettings($settings);
         $this->em->flush();
+    }
+
+    /**
+     * Caps how many candidates one batch may hold by writing the connection's
+     * per-batch ceiling — the production knob the resolver reads, so a test can
+     * force an exact batch count without a user-facing override. Not flushed,
+     * like {@see createRun()}: the caller batches it with the surrounding
+     * fixture rows. Requires {@see seedReadyAiSettings()} first.
+     */
+    public function capBatchesAt(User $user, int $maximumBatchSize): void
+    {
+        $provider = $user->getActiveAiProviderSettings()
+            ?? throw new \LogicException('Cannot cap batches before a provider is seeded.');
+        $provider->setMaxBatchSize($maximumBatchSize);
     }
 
     /**
@@ -241,7 +256,7 @@ final readonly class RecommendationRunFixtures
             lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
             contextWindow: null,
-            batchCount: null,
+            batchSize: RecommendationBatchSize::Medium,
             debugEnabled: $debugEnabled,
             showReasons: $showReasons,
         ));

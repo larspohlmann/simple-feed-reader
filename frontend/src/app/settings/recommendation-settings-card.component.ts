@@ -28,6 +28,7 @@ import { LanguageService } from '../core/language.service';
 import { formatInteger } from '../reader/format';
 import {
   RecommendationSettingsService,
+  RecommendationBatchSize,
   RecommendationExpertField,
   RecommendationSettingBounds,
   TypedRecommendationEdits,
@@ -81,8 +82,11 @@ export class RecommendationSettingsCardComponent {
   readonly viewedCap = linkedSignal<number>(() => this.svc.state()?.viewedCap ?? 0);
   readonly candidatePoolSize = linkedSignal<number>(() => this.svc.state()?.candidatePoolSize ?? 0);
   readonly picksLimit = linkedSignal<number>(() => this.svc.state()?.picksLimit ?? 0);
-  /** Blank stays `null` ("automatic packing"), same treatment as `contextWindow`. */
-  readonly batchCount = linkedSignal<number | null>(() => this.svc.state()?.batchCount ?? null);
+  /** The batch-size choice; the batch count is derived from it (#935). Defaults
+   *  to `medium`, the automatic packing the old blank value gave. */
+  readonly batchSize = linkedSignal<RecommendationBatchSize>(
+    () => this.svc.state()?.batchSize ?? 'medium',
+  );
   /** The override the account may set; blank stays `null` ("use provider or default"). */
   readonly contextWindow = linkedSignal<number | null>(
     () => this.svc.state()?.contextWindowOverride ?? null,
@@ -111,6 +115,16 @@ export class RecommendationSettingsCardComponent {
     { value: 6, key: 'settings.ai.recommendations.autoGenerate6' },
     { value: 12, key: 'settings.ai.recommendations.autoGenerate12' },
     { value: 24, key: 'settings.ai.recommendations.autoGenerate24' },
+  ];
+
+  /** The three batch-size choices; medium is the automatic default (#935). */
+  readonly batchSizeOptions: readonly {
+    readonly value: RecommendationBatchSize;
+    readonly key: string;
+  }[] = [
+    { value: 'small', key: 'settings.ai.recommendations.batchSizeSmall' },
+    { value: 'medium', key: 'settings.ai.recommendations.batchSizeMedium' },
+    { value: 'large', key: 'settings.ai.recommendations.batchSizeLarge' },
   ];
 
   /** The seven look-back choices, one per day (#386). */
@@ -194,11 +208,10 @@ export class RecommendationSettingsCardComponent {
     this.svc.setTypedField('guidancePrompt', trimmed === '' ? null : trimmed);
   }
 
-  onBatchCountInput(event: Event): void {
-    this.clearFieldError('batchCount');
-    const value = this.nullableNumberValue(event);
-    this.batchCount.set(value);
-    this.svc.setTypedField('batchCount', value);
+  onBatchSizeChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value as RecommendationBatchSize;
+    this.batchSize.set(value);
+    this.svc.setTypedField('batchSize', value);
   }
 
   onContextWindowInput(event: Event): void {
@@ -256,7 +269,7 @@ export class RecommendationSettingsCardComponent {
     this.viewedCap.set(defaults.viewedCap);
     this.candidatePoolSize.set(defaults.candidatePoolSize);
     this.picksLimit.set(defaults.picksLimit);
-    this.batchCount.set(defaults.batchCount);
+    this.batchSize.set(defaults.batchSize);
     this.contextWindow.set(defaults.contextWindow);
     this.clientValidationErrors.set({});
     this.dismissedServerErrors.set({});
@@ -303,7 +316,7 @@ export class RecommendationSettingsCardComponent {
     this.viewedCap.set(state?.viewedCap ?? 0);
     this.candidatePoolSize.set(state?.candidatePoolSize ?? 0);
     this.picksLimit.set(state?.picksLimit ?? 0);
-    this.batchCount.set(state?.batchCount ?? null);
+    this.batchSize.set(state?.batchSize ?? 'medium');
     this.contextWindow.set(state?.contextWindowOverride ?? null);
     this.clientValidationErrors.set({});
     this.dismissedServerErrors.set({});
@@ -331,7 +344,6 @@ export class RecommendationSettingsCardComponent {
       viewedCap: this.viewedCap(),
       candidatePoolSize: this.candidatePoolSize(),
       picksLimit: this.picksLimit(),
-      batchCount: this.batchCount(),
       contextWindow: this.contextWindow(),
     };
   }
