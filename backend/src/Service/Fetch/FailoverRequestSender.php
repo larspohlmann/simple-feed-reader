@@ -15,9 +15,10 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * when one cannot serve the request.
  *
  * A resolved proxy is attempted first; the pinned direct families are only
- * its fallback, used when direct fallback is on and the failure is one
- * direct can plausibly fix (§CrossFamilyFailover) — a proxy hides the real
- * IP, so a failure with fallback off is terminal, not a silent leak.
+ * its fallback, used when direct fallback is on and the proxied attempt either
+ * fails at transport or answers with a status a direct route may not return
+ * (§CrossFamilyFailover) — a proxy hides the real IP, so any proxied failure
+ * with fallback off is terminal, not a silent leak.
  *
  * The client's own happy-eyeballs races families only at the TCP connect;
  * once connected it is committed, so a family resetting during the TLS
@@ -99,9 +100,7 @@ final readonly class FailoverRequestSender
         $response = $this->httpClient->request($method, $url, [...$options, ...EgressOptions::proxied($proxy)]);
 
         try {
-            $response->getStatusCode();
-
-            return $response;
+            $status = $response->getStatusCode();
         } catch (TransportExceptionInterface $transportError) {
             $response->cancel();
             // No direct fallback when the admin turned it off: falling back to
@@ -112,6 +111,19 @@ final readonly class FailoverRequestSender
 
             return null;
         }
+
+        // A refusal status the origin tied to the proxy's egress IP — a CDN/WAF
+        // 403, typically — is not a dropped connection, so the transport branch
+        // above never sees it, yet a direct route may still be served. Route
+        // around it exactly as the pinned-family path does, but only when
+        // fallback is on: off, the refusal stays terminal and leaks no IP.
+        if ($proxy->directFallback && CrossFamilyFailover::isRetryableStatus($status)) {
+            $response->cancel();
+
+            return null;
+        }
+
+        return $response;
     }
 
     /**
