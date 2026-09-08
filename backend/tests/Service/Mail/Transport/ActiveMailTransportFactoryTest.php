@@ -22,8 +22,8 @@ final class ActiveMailTransportFactoryTest extends TestCase
 {
     public function testDirectResolvedGivesAnEsmtpTransport(): void
     {
-        $proxySettings = $this->createMock(ProxySettings::class);
-        $factory = new ActiveMailTransportFactory($proxySettings, $this->createMock(HttpClientInterface::class));
+        $proxySettings = $this->createStub(ProxySettings::class);
+        $factory = new ActiveMailTransportFactory($proxySettings, $this->createStub(HttpClientInterface::class));
         $resolved = new ResolvedMailTransport('h', 587, 'u', 'p', MailEncryption::Starttls, false);
 
         self::assertInstanceOf(EsmtpTransport::class, $factory->forResolved($resolved, null, new NullLogger()));
@@ -31,11 +31,11 @@ final class ActiveMailTransportFactoryTest extends TestCase
 
     public function testProxiedResolvedGivesACurlTransport(): void
     {
-        $proxySettings = $this->createMock(ProxySettings::class);
+        $proxySettings = $this->createStub(ProxySettings::class);
         $proxySettings->method('configuredProxy')->willReturn(
             new ProxyConfig(ProxyType::Socks5, 'proxy.example', 1080, null, null, true, true),
         );
-        $factory = new ActiveMailTransportFactory($proxySettings, $this->createMock(HttpClientInterface::class));
+        $factory = new ActiveMailTransportFactory($proxySettings, $this->createStub(HttpClientInterface::class));
         $resolved = new ResolvedMailTransport('smtp.gmail.com', 587, 'u', 'p', MailEncryption::Starttls, true);
 
         self::assertInstanceOf(CurlSmtpTransport::class, $factory->forResolved($resolved, null, new NullLogger()));
@@ -43,9 +43,9 @@ final class ActiveMailTransportFactoryTest extends TestCase
 
     public function testProxiedResolvedWithNoProxyThrows(): void
     {
-        $proxySettings = $this->createMock(ProxySettings::class);
+        $proxySettings = $this->createStub(ProxySettings::class);
         $proxySettings->method('configuredProxy')->willReturn(null);
-        $factory = new ActiveMailTransportFactory($proxySettings, $this->createMock(HttpClientInterface::class));
+        $factory = new ActiveMailTransportFactory($proxySettings, $this->createStub(HttpClientInterface::class));
         $resolved = new ResolvedMailTransport('smtp.gmail.com', 587, 'u', 'p', MailEncryption::Starttls, true);
 
         $this->expectException(IncompleteMailConfigurationException::class);
@@ -55,8 +55,8 @@ final class ActiveMailTransportFactoryTest extends TestCase
     public function testFallbackDsnBuildsTheTransportForThatDsn(): void
     {
         $factory = new ActiveMailTransportFactory(
-            $this->createMock(ProxySettings::class),
-            $this->createMock(HttpClientInterface::class),
+            $this->createStub(ProxySettings::class),
+            $this->createStub(HttpClientInterface::class),
         );
 
         self::assertInstanceOf(

@@ -33,7 +33,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
     ): ConcurrentFeedFetcher {
         $resolver = $this->dns($dnsOverrides);
 
-        $proxyEgressResolver = $this->createMock(ProxyEgressResolver::class);
+        $proxyEgressResolver = $this->createStub(ProxyEgressResolver::class);
         $proxyEgressResolver->method('resolve')->willReturn($resolvedProxy);
 
         $urlGuard = new UrlGuard($resolver, new IpValidator());
@@ -94,7 +94,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
 
             return new MockResponse('ok');
         });
-        $proxyEgressResolver = $this->createMock(ProxyEgressResolver::class);
+        $proxyEgressResolver = $this->createStub(ProxyEgressResolver::class);
         $proxyEgressResolver->method('resolve')->willThrowException(
             new SecretUnreadableException('The stored secret failed its integrity check.'),
         );

@@ -43,7 +43,7 @@ final class HttpFeedFetcherTest extends TestCase
             }
         };
 
-        $proxyEgressResolver = $this->createMock(ProxyEgressResolver::class);
+        $proxyEgressResolver = $this->createStub(ProxyEgressResolver::class);
         $proxyEgressResolver->method('resolve')->willReturn(null);
 
         $urlGuard = new UrlGuard($resolver, new IpValidator());

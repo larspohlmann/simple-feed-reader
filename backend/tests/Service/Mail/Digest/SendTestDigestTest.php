@@ -238,7 +238,7 @@ final class SendTestDigestTest extends TestCase
 
     private function mailIdentity(string $address, string $name): MailSettings
     {
-        $settings = $this->createMock(MailSettings::class);
+        $settings = $this->createStub(MailSettings::class);
         $settings->method('identity')->willReturn(new MailIdentity($address, $name));
 
         return $settings;

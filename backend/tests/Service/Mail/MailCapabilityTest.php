@@ -12,7 +12,7 @@ final class MailCapabilityTest extends TestCase
 {
     public function testItDelegatesToTheSettingsResolution(): void
     {
-        $settings = $this->createMock(MailSettings::class);
+        $settings = $this->createStub(MailSettings::class);
         $settings->method('isSendingEnabled')->willReturn(true);
 
         self::assertTrue((new MailCapability($settings))->isEnabled());
@@ -20,7 +20,7 @@ final class MailCapabilityTest extends TestCase
 
     public function testItIsDisabledWhenSettingsResolveDisabled(): void
     {
-        $settings = $this->createMock(MailSettings::class);
+        $settings = $this->createStub(MailSettings::class);
         $settings->method('isSendingEnabled')->willReturn(false);
 
         self::assertFalse((new MailCapability($settings))->isEnabled());
