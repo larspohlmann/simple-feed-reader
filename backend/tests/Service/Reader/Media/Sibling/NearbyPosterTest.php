@@ -18,6 +18,15 @@ final class NearbyPosterTest extends TestCase
         self::assertSame('https://a.test/assets/still-100~1920x1080?cb=1', NearbyPoster::after($html, 0));
     }
 
+    /** ZDF names an asset `<stem>-1x1-100~WxH`; the `1x1` marks the square source, not a rendition, so the size is the suffix, not the first dimensions in the URL (#952). */
+    public function testReadsTheRenditionSuffixNotAnAspectMarkerInTheStem(): void
+    {
+        $html = 'id "layouts":{"1140x120":"https://a.test/assets/pisa-1x1-100~1140x120?cb=1",'
+            . '"1920x1080":"https://a.test/assets/pisa-1x1-100~1920x1080?cb=1"}';
+
+        self::assertSame('https://a.test/assets/pisa-1x1-100~1920x1080?cb=1', NearbyPoster::after($html, 0));
+    }
+
     public function testAnImageExtensionCountsWithoutDimensions(): void
     {
         $html = 'id … "src":"https://a.test/img/still.jpg?w=1"';

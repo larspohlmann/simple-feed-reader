@@ -35,9 +35,14 @@ final readonly class NearbyPoster
         if (preg_match(self::NEVER_AN_IMAGE, $url) === 1 || preg_match(self::IMAGE_LIKE, $url) !== 1) {
             return -1;
         }
+        // The rendition size is the last dimensions token in the path; an earlier one
+        // marks the source aspect (ZDF's `<stem>-1x1-100~1920x1080`), not the size (#952).
+        $count = preg_match_all(self::DIMENSIONS, explode('?', $url, 2)[0], $matches, \PREG_SET_ORDER);
+        if ($count < 1) {
+            return 0;
+        }
+        [, $width, $height] = $matches[$count - 1];
 
-        return preg_match(self::DIMENSIONS, $url, $dimensions) === 1
-            ? (int) $dimensions[1] * (int) $dimensions[2]
-            : 0;
+        return (int) $width * (int) $height;
     }
 }
