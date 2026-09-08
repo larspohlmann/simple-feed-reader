@@ -61,6 +61,76 @@ final class FailoverRequestSenderProxyTest extends TestCase
     }
 
     /**
+     * A CDN/WAF that blocks the proxy's egress IP answers with a status, not a
+     * dropped connection — so the transport-failure branch never sees it. With
+     * direct fallback on, a direct route may still be served (radiohamburg.de's
+     * CloudFront 403s the proxy, 200s a direct request), so the refusal must
+     * fall through exactly as a transport failure does.
+     */
+    public function testProxyErrorStatusFallsThroughToPinnedDirectWhenFallbackOn(): void
+    {
+        $calls = [];
+        $client = new MockHttpClient(function (string $m, string $u, array $o) use (&$calls): MockResponse {
+            $calls[] = $o;
+            if (isset($o['proxy'])) {
+                return new MockResponse('blocked', ['http_code' => 403]);
+            }
+
+            return new MockResponse('ok');
+        });
+        $sender = new FailoverRequestSender($client, $this->resolver($this->proxy()));
+
+        $status = $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
+
+        self::assertSame(200, $status);
+        self::assertArrayHasKey('proxy', $calls[0]);
+        self::assertArrayHasKey('resolve', $calls[1]);
+    }
+
+    /**
+     * Fallback off keeps a proxied refusal terminal: a direct retry would reveal
+     * the real server IP the proxy exists to hide. The refusal status is handed
+     * back for the caller's own classifier to report.
+     */
+    public function testProxyErrorStatusStaysTerminalWhenFallbackOff(): void
+    {
+        $calls = [];
+        $client = new MockHttpClient(function (string $m, string $u, array $o) use (&$calls): MockResponse {
+            $calls[] = $o;
+
+            return new MockResponse('blocked', ['http_code' => 403]);
+        });
+        $sender = new FailoverRequestSender($client, $this->resolver($this->proxy(directFallback: false)));
+
+        $status = $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
+
+        self::assertSame(403, $status);
+        self::assertCount(1, $calls);
+        self::assertArrayNotHasKey('resolve', $calls[0]);
+    }
+
+    /**
+     * The 400 boundary: a redirect is the follower's to chase, not a refusal to
+     * route around. A proxied 3xx is returned as-is even with fallback on.
+     */
+    public function testProxyRedirectIsReturnedNotSecondGuessed(): void
+    {
+        $calls = [];
+        $client = new MockHttpClient(function (string $m, string $u, array $o) use (&$calls): MockResponse {
+            $calls[] = $o;
+
+            return new MockResponse('', ['http_code' => 302, 'response_headers' => ['location' => '/moved']]);
+        });
+        $sender = new FailoverRequestSender($client, $this->resolver($this->proxy()));
+
+        $status = $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
+
+        self::assertSame(302, $status);
+        self::assertCount(1, $calls);
+        self::assertArrayHasKey('proxy', $calls[0]);
+    }
+
+    /**
      * MockHttpClient wraps every response in a fresh object, so a canceled flag
      * set on the mock template is invisible from the test. A hand-built
      * ResponseInterface double is the only way to observe that the failed proxy
@@ -78,6 +148,30 @@ final class FailoverRequestSenderProxyTest extends TestCase
 
         $httpClient = $this->createStub(HttpClientInterface::class);
         $httpClient->method('request')->willReturnOnConsecutiveCalls($failedResponse, $okResponse);
+
+        $sender = new FailoverRequestSender($httpClient, $this->resolver($this->proxy()));
+
+        $status = $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
+
+        self::assertSame(200, $status);
+    }
+
+    /**
+     * The refused proxy response is released before the direct attempt, not left
+     * open — the same guarantee the transport-failure branch gives, for the
+     * error-status branch. A hand-built double is the only way to observe cancel.
+     */
+    public function testProxyErrorStatusCancelsTheRefusedResponse(): void
+    {
+        $refusedResponse = $this->createMock(ResponseInterface::class);
+        $refusedResponse->method('getStatusCode')->willReturn(403);
+        $refusedResponse->expects(self::once())->method('cancel');
+
+        $okResponse = $this->createStub(ResponseInterface::class);
+        $okResponse->method('getStatusCode')->willReturn(200);
+
+        $httpClient = $this->createStub(HttpClientInterface::class);
+        $httpClient->method('request')->willReturnOnConsecutiveCalls($refusedResponse, $okResponse);
 
         $sender = new FailoverRequestSender($httpClient, $this->resolver($this->proxy()));
 
