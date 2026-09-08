@@ -332,13 +332,14 @@ final class ArticleExtractorTest extends TestCase
 
     public function testFetchFailureCarriesTheRealErrorMessageAsDetail(): void
     {
-        $extractor = $this->extractor([new MockResponse('nope', ['http_code' => 403])]);
+        $body = '<html><body><h1>Access Denied</h1><p>Your request was blocked.</p></body></html>';
+        $extractor = $this->extractor([new MockResponse($body, ['http_code' => 403])]);
 
         $result = $extractor->extract('https://site.test/x');
 
         self::assertFalse($result->ok);
         self::assertSame('fetch', $result->reason);
-        self::assertSame('HTTP 403 Forbidden', $result->detail);
+        self::assertSame('HTTP 403 Forbidden — Access Denied Your request was blocked.', $result->detail);
     }
 
     public function testUnextractablePageMapsToReason(): void

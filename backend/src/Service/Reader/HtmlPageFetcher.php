@@ -10,6 +10,7 @@ use App\Service\Fetch\RedirectFollower;
 use App\Service\Reader\Exception\PageFetchException;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
  * Retrieves an article's source HTML for reader-mode extraction: the guarded
@@ -22,6 +23,7 @@ final readonly class HtmlPageFetcher
     private const int MAX_REDIRECTS = 5;
     private const int MAX_BYTES = 3_000_000;
     private const float TIMEOUT_SECONDS = 10.0;
+    private const int SNIPPET_LENGTH = 200;
 
     public function __construct(
         private RedirectFollower $redirects,
@@ -33,9 +35,11 @@ final readonly class HtmlPageFetcher
     {
         $landed = $this->land($url);
         if (!$landed->isSuccess()) {
+            $snippet = $this->errorBodySnippet($landed->response);
             $landed->response->cancel();
+            $status = self::describeStatus($landed->status);
 
-            throw new PageFetchException(self::describeStatus($landed->status));
+            throw new PageFetchException($snippet === null ? $status : $status . ' — ' . $snippet);
         }
 
         $body = $this->content($landed);
@@ -85,6 +89,33 @@ final readonly class HtmlPageFetcher
         $phrase = Response::$statusTexts[$status] ?? '';
 
         return $phrase === '' ? sprintf('HTTP %d', $status) : sprintf('HTTP %d %s', $status, $phrase);
+    }
+
+    /** A short piece of the error page's visible text, to say why past the status
+     *  code — a blocked request often explains itself in the body. Null when the
+     *  body is unreadable or carries no text once its markup and scripts are gone. */
+    private function errorBodySnippet(ResponseInterface $response): ?string
+    {
+        try {
+            return self::visibleText($response->getContent(false));
+        } catch (ExceptionInterface) {
+            return null;
+        }
+    }
+
+    private static function visibleText(string $html): ?string
+    {
+        $withoutCode = preg_replace('#<(script|style)\b[^>]*>.*?</\1>#is', ' ', $html) ?? $html;
+        $withoutTags = preg_replace('/<[^>]+>/', ' ', $withoutCode) ?? $withoutCode;
+        $decoded = html_entity_decode($withoutTags, \ENT_QUOTES | \ENT_HTML5, 'UTF-8');
+        $text = trim(preg_replace('/\s+/', ' ', $decoded) ?? '');
+        if ($text === '') {
+            return null;
+        }
+
+        return mb_strlen($text) > self::SNIPPET_LENGTH
+            ? rtrim(mb_substr($text, 0, self::SNIPPET_LENGTH)) . '…'
+            : $text;
     }
 
     private function content(LandedResponse $landed): string
