@@ -294,4 +294,21 @@ final class HtmlPageFetcherTest extends TestCase
         $this->expectException(PageFetchException::class);
         $fetcher->fetch('https://example.com/wall');
     }
+
+    public function testFollowsAMetaRefreshChainUpToTheFullBudget(): void
+    {
+        $fetcher = $this->fetcher([
+            new MockResponse(self::metaRefresh('https://example.com/2'), ['http_code' => 200]),
+            new MockResponse(self::metaRefresh('https://example.com/3'), ['http_code' => 200]),
+            new MockResponse(self::metaRefresh('https://example.com/4'), ['http_code' => 200]),
+            new MockResponse(self::metaRefresh('https://example.com/5'), ['http_code' => 200]),
+            new MockResponse(self::metaRefresh('https://example.com/6'), ['http_code' => 200]),
+            new MockResponse('<html><body>the real article</body></html>', ['http_code' => 200]),
+        ]);
+
+        $result = $fetcher->fetch('https://example.com/1');
+
+        self::assertStringContainsString('the real article', $result->html);
+        self::assertSame('https://example.com/6', $result->finalUrl);
+    }
 }
