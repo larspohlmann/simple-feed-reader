@@ -15,6 +15,9 @@ use App\Service\Reader\Media\InBodyEmbedRewriter;
 use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaMarkup;
+use App\Service\Reader\Media\Teaser\TeaserPlayer;
+use App\Service\Reader\Media\Teaser\TeaserPlayerInserter;
+use App\Service\Reader\Media\Teaser\TeaserPlayerMarkup;
 use App\Service\Reader\Media\PageMediaInserter;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\SubstackPosterLink;
@@ -52,12 +55,44 @@ final class ReaderBodyCleanerTest extends TestCase
             new PageMediaInserter($markup),
             new SlideshowInserter(new SlideshowMarkup()),
             new RecipeFactsCleaner(),
+            new TeaserPlayerInserter(new TeaserPlayerMarkup()),
         );
     }
 
     private function noLead(): LeadImageCandidate
     {
         return new LeadImageCandidate(null, PageImageInventory::fromDocument(null));
+    }
+
+    public function testRebuildsAnOrphanTeaserThumbnailAsAnInlinePlayer(): void
+    {
+        $content = '<p>' . self::PROSE . '</p><p><img src="https://x.test/still.jpg"></p>';
+        $teaser = new TeaserPlayer(
+            MediaKind::Video,
+            'https://x.test/clip.mp4',
+            'https://x.test/still.jpg',
+            'The headline',
+            'https://x.test/related.html',
+        );
+
+        $result = $this->cleaner->clean($content, [null], $this->noLead(), ArticleMedia::none(), teasers: [$teaser]);
+
+        self::assertStringContainsString('<figure class="reader-teaser">', $result);
+        self::assertStringContainsString('<video', $result);
+        self::assertStringContainsString('https://x.test/related.html', $result);
+    }
+
+    public function testDoesNotRebuildATeaserThePipelineAlreadyPlaced(): void
+    {
+        $content = '<p>' . self::PROSE . '</p><p><img src="https://x.test/still.jpg"></p>';
+        $teaser = new TeaserPlayer(MediaKind::Video, 'https://x.test/clip.mp4', 'https://x.test/still.jpg', null, null);
+        $media = new ArticleMedia([
+            new MediaCandidate(MediaKind::Video, 'https://x.test/clip.mp4', 'https://x.test/still.jpg'),
+        ]);
+
+        $result = $this->cleaner->clean($content, [null], $this->noLead(), $media, teasers: [$teaser]);
+
+        self::assertStringNotContainsString('reader-teaser', $result);
     }
 
     public function testRelaysARecipeFactBlockToTheReaderFigure(): void
