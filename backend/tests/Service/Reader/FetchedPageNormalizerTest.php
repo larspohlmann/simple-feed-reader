@@ -8,6 +8,7 @@ use App\Service\Reader\CustomElementUnwrapper;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\ImageWrapperClassRemover;
 use App\Service\Reader\LazyImageSources;
+use App\Service\Reader\NoscriptImageUnwrapper;
 use App\Service\Reader\ShareIntentLinkRemover;
 use App\Service\Reader\ShareWidgetRemover;
 use App\Service\Reader\SubstackGatedVideoPlaceholder;
@@ -21,6 +22,7 @@ final class FetchedPageNormalizerTest extends TestCase
     {
         $this->normalizer = new FetchedPageNormalizer(
             new CustomElementUnwrapper(),
+            new NoscriptImageUnwrapper(),
             new LazyImageSources(),
             new ShareWidgetRemover(),
             new ShareIntentLinkRemover(),

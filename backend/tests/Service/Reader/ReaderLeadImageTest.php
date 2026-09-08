@@ -211,6 +211,33 @@ final class ReaderLeadImageTest extends TestCase
         self::assertStringContainsString('hero-photo.jpg', $result);
     }
 
+    public function testRestoresTheLeadWithItsCaptionAsAFigcaption(): void
+    {
+        $lead = 'https://cdn.test/hero-photo.jpg';
+        $document = HtmlDocumentParser::parseOrNull('<p>Just words.</p>');
+        self::assertNotNull($document);
+        $candidate = new LeadImageCandidate($lead, $this->pageDrawingNothing(), 'Bild: Berti Kolbow-Lehradt');
+
+        $this->leadImage->restore($document, $candidate, false);
+        $body = (string) $document->body?->innerHTML;
+
+        self::assertStringContainsString('hero-photo.jpg', $body);
+        self::assertMatchesRegularExpression(
+            '#<figure><img[^>]*><figcaption>Bild: Berti Kolbow-Lehradt</figcaption></figure>#',
+            $body,
+        );
+    }
+
+    public function testRestoresTheBareFigureWhenTheCandidateCarriesNoCaption(): void
+    {
+        $lead = 'https://cdn.test/hero-photo.jpg';
+
+        $result = $this->restoredBody('<p>Just words.</p>', $this->pageDrawingNothing(), $lead);
+
+        self::assertStringContainsString('hero-photo.jpg', $result);
+        self::assertStringNotContainsString('<figcaption', $result);
+    }
+
     public function testDrawsALazyLoadedLeadOnceLazyImageSourcesResolvedIt(): void
     {
         // The page ships the real URL on data-src behind a data: placeholder.

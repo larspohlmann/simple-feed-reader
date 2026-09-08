@@ -492,6 +492,63 @@ final class ImageIdentityTest extends TestCase
         ));
     }
 
+    public function testSameAssetRejectsHeiseHexHashFilenamesThatShareDescriptiveWords(): void
+    {
+        // heise (#894): two different IFA photos share every descriptive word and
+        // differ only in a trailing per-photo hex hash, not a decimal id.
+        $first = ImageIdentity::fromUrl(
+            'https://heise.test/Ugreen-Home-Agent-Master-Agent-IFA-26-2-0b28ee11659fa5be.jpeg',
+        );
+        $second = ImageIdentity::fromUrl(
+            'https://heise.test/Ugreen-Home-Agent-Master-Agent-IFA-26-6-6958ecdcb563b3f6.jpg',
+        );
+
+        self::assertFalse($first->isSameAsset($second));
+    }
+
+    public function testSameAssetAcceptsTheSameHeiseHexHashAcrossSizeQueries(): void
+    {
+        self::assertTrue($this->sameImage(
+            'https://heise.test/Storage-8a72c64e5498ae16.jpg?width=696',
+            'https://heise.test/Storage-8a72c64e5498ae16.jpg?width=1200',
+        ));
+    }
+
+    public function testSameAssetAcceptsDifferentRenderHashesOfTheSamePhoto(): void
+    {
+        // heise (#894): the SAME photo (#2) is served under two different
+        // trailing hashes — one per rendition — in the header figure and in
+        // og:image. The hash is per-render, not per-photo, so stripping it
+        // must unify these two filenames.
+        $header = ImageIdentity::fromUrl(
+            'https://heise.test/Ugreen-Home-Agent-Master-Agent-IFA-26-2-0b28ee11659fa5be.jpeg?width=696',
+        );
+        $ogImage = ImageIdentity::fromUrl(
+            'https://heise.test/Ugreen-Home-Agent-Master-Agent-IFA-26-2-913b264b33072428.jpg?width=1200',
+        );
+
+        self::assertTrue($header->isSameAsset($ogImage));
+    }
+
+    public function testSameAssetRejectsDifferentDecimalTimestampSuffixes(): void
+    {
+        // A trailing decimal id (timestamp, bigint, numeric content id) is not a
+        // hex render hash: stripping it as one would erase the only signal that
+        // tells two photos with the same descriptive words apart.
+        $first = ImageIdentity::fromUrl('https://cdn.test/city-skyline-view-1704067200000.jpg');
+        $second = ImageIdentity::fromUrl('https://cdn.test/city-skyline-view-1704067201234.jpg');
+
+        self::assertFalse($first->isSameAsset($second));
+    }
+
+    public function testSameAssetRejectsDifferentTwelveDigitDecimalSuffixes(): void
+    {
+        $first = ImageIdentity::fromUrl('https://cdn.test/mountain-lake-sunset-123456789012.jpg');
+        $second = ImageIdentity::fromUrl('https://cdn.test/mountain-lake-sunset-987654321098.jpg');
+
+        self::assertFalse($first->isSameAsset($second));
+    }
+
     private function isShareRender(string $url): bool
     {
         return ImageIdentity::fromUrl($url)->isShareRender();

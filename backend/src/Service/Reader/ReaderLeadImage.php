@@ -32,7 +32,7 @@ final readonly class ReaderLeadImage
             return null;
         }
 
-        $figure = $this->figure($document, $leadUrl);
+        $figure = $this->figure($document, $leadUrl, $lead->caption);
         $body->insertBefore($figure, $body->firstChild);
 
         return $figure;
@@ -91,13 +91,18 @@ final readonly class ReaderLeadImage
         return false;
     }
 
-    private function figure(HTMLDocument $document, string $leadUrl): Element
+    private function figure(HTMLDocument $document, string $leadUrl, ?string $caption): Element
     {
         $image = $document->createElement('img');
         $image->setAttribute('src', $leadUrl);
         $image->setAttribute('alt', '');
         $figure = $document->createElement('figure');
         $figure->appendChild($image);
+        if ($caption !== null && $caption !== '') {
+            $figcaption = $document->createElement('figcaption');
+            $figcaption->textContent = $caption;
+            $figure->appendChild($figcaption);
+        }
 
         return $figure;
     }

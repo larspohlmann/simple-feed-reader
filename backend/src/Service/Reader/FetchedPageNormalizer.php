@@ -20,6 +20,10 @@ use Dom\XPath;
  *  - A custom element (nature's <sh-background-transition>) is unknown to the
  *    sanitizer, which drops it with its children; CustomElementUnwrapper
  *    replaces it with its children first (#789).
+ *  - A lazy-loading site (heise) ships the real photo only inside <noscript>,
+ *    next to a `data:` placeholder <img>; the sanitizer drops <noscript> with
+ *    its content, so NoscriptImageUnwrapper promotes the real image out and
+ *    removes the placeholder before anything else sees it (#894).
  *  - Screen-reader-only labels ("Image source, …") are hidden by CSS class. The
  *    sanitizer strips classes later, so extracted they would render as visible
  *    text; removed here while the class still identifies them.
@@ -82,6 +86,7 @@ final readonly class FetchedPageNormalizer
 
     public function __construct(
         private CustomElementUnwrapper $customElements,
+        private NoscriptImageUnwrapper $noscriptImages,
         private LazyImageSources $lazyImages,
         private ShareWidgetRemover $shareWidgets,
         private ShareIntentLinkRemover $shareIntentLinks,
@@ -131,6 +136,7 @@ final readonly class FetchedPageNormalizer
         }
 
         $this->customElements->unwrapIn($document);
+        $this->noscriptImages->unwrapIn($document);
         $this->lazyImages->resolveIn($document);
         $this->shareWidgets->removeFrom($document);
         $this->shareIntentLinks->removeFrom($document);

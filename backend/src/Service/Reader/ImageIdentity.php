@@ -37,7 +37,7 @@ final readonly class ImageIdentity
         private string $stem,
         private array $ids,
         private array $tokens,
-        private ?string $numericAsset,
+        private ?string $assetToken,
         private ?string $pathUuid,
     ) {
     }
@@ -46,7 +46,9 @@ final readonly class ImageIdentity
     {
         $source = self::unwrapProxy($url);
         $path = (string) (parse_url($source, PHP_URL_PATH) ?? '');
-        $stem = strtolower((string) preg_replace('/\.[a-z0-9]{2,5}$/i', '', basename($path)));
+        $stem = self::stripRenderHash(
+            strtolower((string) preg_replace('/\.[a-z0-9]{2,5}$/i', '', basename($path))),
+        );
 
         $ids = [];
         if (preg_match_all('/imageid=(\w+)/i', $source, $matches)) {
@@ -56,7 +58,7 @@ final readonly class ImageIdentity
         $words = preg_split('/[^a-z0-9]+/', $stem, -1, \PREG_SPLIT_NO_EMPTY) ?: [];
         $tokens = array_values(array_filter($words, self::isPhotoSpecificToken(...)));
 
-        return new self($path, $stem, $ids, $tokens, self::numericAsset($words), self::pathUuid($path));
+        return new self($path, $stem, $ids, $tokens, self::assetToken($words), self::pathUuid($path));
     }
 
     public function isShareRender(): bool
@@ -75,6 +77,16 @@ final readonly class ImageIdentity
         return preg_match(self::UUID_PATH_SEGMENT_PATTERN, $path, $matches) === 1
             ? strtolower($matches[1])
             : null;
+    }
+
+    /**
+     * heise (#894): a per-rendition hex hash must not survive into the stem.
+     * A decimal digit is valid hex too, so only a suffix with a genuine hex
+     * letter is stripped — a decimal asset id (timestamp, content id) stays.
+     */
+    private static function stripRenderHash(string $stem): string
+    {
+        return (string) preg_replace('/[-_](?=[0-9a-f]*[a-f])[0-9a-f]{12,}$/i', '', $stem);
     }
 
     /** A `WxH` word is a rendition size, never a photo. */
@@ -121,18 +133,21 @@ final readonly class ImageIdentity
         }
 
         return array_intersect($this->tokens, $other->tokens) !== []
-            && !$this->hasDifferentNumericAsset($other);
+            && !$this->hasDifferentAssetToken($other);
     }
 
-    private function hasDifferentNumericAsset(self $other): bool
+    private function hasDifferentAssetToken(self $other): bool
     {
-        return $this->numericAsset !== null
-            && $other->numericAsset !== null
-            && $this->numericAsset !== $other->numericAsset;
+        return $this->assetToken !== null
+            && $other->assetToken !== null
+            && $this->assetToken !== $other->assetToken;
     }
 
-    /** @param list<string> $words */
-    private static function numericAsset(array $words): ?string
+    /**
+     * A trailing decimal id names one photo among shared words.
+     * @param list<string> $words
+     */
+    private static function assetToken(array $words): ?string
     {
         $last = array_pop($words);
         if (is_string($last) && preg_match('/^\d+x\d+$/', $last) === 1) {

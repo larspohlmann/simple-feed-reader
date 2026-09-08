@@ -74,6 +74,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
 
         $normalized = $this->normalizer->normalize($page->html);
         $pageImages = PageImageInventory::fromDocument($normalized);
+        $leadCaptions = LeadFigureCaptions::fromDocument($normalized);
         $paywalled = PaywallSignals::isPreview($page->html, $normalized);
         $media = $this->mediaScanner->scan($page->html, $page->finalUrl, $feedMedia);
         $slideshows = $normalized === null ? [] : $this->slideshowScanner->scan($normalized);
@@ -92,7 +93,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
             return ExtractionResult::failed($url, 'empty');
         }
 
-        $leadImage = new LeadImageCandidate($article->image, $pageImages);
+        $leadImage = new LeadImageCandidate($article->image, $pageImages, $leadCaptions->captionFor($article->image));
         $body = $this->bodyCleaner->clean(
             $article->content,
             [$article->title, $entryTitle],
