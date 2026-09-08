@@ -514,6 +514,22 @@ final class ImageIdentityTest extends TestCase
         ));
     }
 
+    public function testSameAssetAcceptsDifferentRenderHashesOfTheSamePhoto(): void
+    {
+        // heise (#894): the SAME photo (#2) is served under two different
+        // trailing hashes — one per rendition — in the header figure and in
+        // og:image. The hash is per-render, not per-photo, so stripping it
+        // must unify these two filenames.
+        $header = ImageIdentity::fromUrl(
+            'https://heise.test/Ugreen-Home-Agent-Master-Agent-IFA-26-2-0b28ee11659fa5be.jpeg?width=696',
+        );
+        $ogImage = ImageIdentity::fromUrl(
+            'https://heise.test/Ugreen-Home-Agent-Master-Agent-IFA-26-2-913b264b33072428.jpg?width=1200',
+        );
+
+        self::assertTrue($header->isSameAsset($ogImage));
+    }
+
     private function isShareRender(string $url): bool
     {
         return ImageIdentity::fromUrl($url)->isShareRender();

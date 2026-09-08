@@ -46,7 +46,9 @@ final readonly class ImageIdentity
     {
         $source = self::unwrapProxy($url);
         $path = (string) (parse_url($source, PHP_URL_PATH) ?? '');
-        $stem = strtolower((string) preg_replace('/\.[a-z0-9]{2,5}$/i', '', basename($path)));
+        $stem = self::stripRenderHash(
+            strtolower((string) preg_replace('/\.[a-z0-9]{2,5}$/i', '', basename($path))),
+        );
 
         $ids = [];
         if (preg_match_all('/imageid=(\w+)/i', $source, $matches)) {
@@ -75,6 +77,17 @@ final readonly class ImageIdentity
         return preg_match(self::UUID_PATH_SEGMENT_PATTERN, $path, $matches) === 1
             ? strtolower($matches[1])
             : null;
+    }
+
+    /**
+     * heise (#894): the same photo is re-encoded per rendition, and each
+     * rendition gets its own trailing hex hash appended to an otherwise
+     * identical filename. The hash names the render, not the photo, so it
+     * must not survive into the stem that identity is computed from.
+     */
+    private static function stripRenderHash(string $stem): string
+    {
+        return (string) preg_replace('/[-_][0-9a-f]{12,}$/i', '', $stem);
     }
 
     /** A `WxH` word is a rendition size, never a photo. */
@@ -132,7 +145,7 @@ final readonly class ImageIdentity
     }
 
     /**
-     * A trailing decimal id or long hex hash names one photo among shared words.
+     * A trailing decimal id names one photo among shared words.
      * @param list<string> $words
      */
     private static function assetToken(array $words): ?string
@@ -142,12 +155,7 @@ final readonly class ImageIdentity
             $last = array_pop($words);
         }
 
-        return is_string($last) && self::isAssetTokenShape($last) ? $last : null;
-    }
-
-    private static function isAssetTokenShape(string $word): bool
-    {
-        return ctype_digit($word) || preg_match('/^[0-9a-f]{12,}$/i', $word) === 1;
+        return is_string($last) && ctype_digit($last) ? $last : null;
     }
 
     /** Return an embedded HTTP source URL, or keep the original URL. */
