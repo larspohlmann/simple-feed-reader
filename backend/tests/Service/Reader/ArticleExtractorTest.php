@@ -21,6 +21,7 @@ use App\Service\Reader\ExtractionResult;
 use App\Service\Reader\FeedMedia;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
+use App\Service\Reader\ImageButtonUnwrapper;
 use App\Service\Reader\ImageWrapperClassRemover;
 use App\Service\Reader\LandingChallenge;
 use App\Service\Reader\LazyImageSources;
@@ -101,6 +102,7 @@ final class ArticleExtractorTest extends TestCase
             new HtmlPageFetcher($redirects, new MetaRefreshTarget(), new LandingChallenge(), 'TestAgent/1.0'),
             new FetchedPageNormalizer(
                 new CustomElementUnwrapper(),
+                new ImageButtonUnwrapper(),
                 new NoscriptImageUnwrapper(),
                 new LazyImageSources(),
                 new ShareWidgetRemover(),
@@ -359,6 +361,7 @@ final class ArticleExtractorTest extends TestCase
             new HtmlPageFetcher($redirects, new MetaRefreshTarget(), new LandingChallenge(), 'TestAgent/1.0'),
             new FetchedPageNormalizer(
                 new CustomElementUnwrapper(),
+                new ImageButtonUnwrapper(),
                 new NoscriptImageUnwrapper(),
                 new LazyImageSources(),
                 new ShareWidgetRemover(),
