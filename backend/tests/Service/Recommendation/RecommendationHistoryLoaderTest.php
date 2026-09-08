@@ -9,6 +9,7 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationHistoryLoader;
 use App\Service\Recommendation\RecommendationPackingSettings;
@@ -215,7 +216,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
             packing: new RecommendationPackingSettings(
                 contextWindow: 32768,
                 contextWindowSource: 'fallback',
-                batchCount: null,
+                batchSize: RecommendationBatchSize::Medium,
                 maximumBatchSize: RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE,
             ),
             debugEnabled: false,

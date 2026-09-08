@@ -7,6 +7,10 @@ import { RecommendationsService } from '../reader/recommendations.service';
 
 export type ContextWindowSource = 'user' | 'provider' | 'fallback';
 
+/** How large each provider call is packed; the batch count is always derived
+ *  from this and the pool. `medium` reproduces the old automatic packing (#935). */
+export type RecommendationBatchSize = 'small' | 'medium' | 'large';
+
 export interface RecommendationExpertDefaults {
   readonly guidancePrompt: string | null;
   readonly favoritesCap: number;
@@ -14,7 +18,7 @@ export interface RecommendationExpertDefaults {
   readonly viewedCap: number;
   readonly candidatePoolSize: number;
   readonly picksLimit: number;
-  readonly batchCount: number | null;
+  readonly batchSize: RecommendationBatchSize;
   readonly contextWindow: number | null;
 }
 
@@ -24,13 +28,7 @@ export interface RecommendationSettingBounds {
 }
 
 export type RecommendationExpertField =
-  | 'favoritesCap'
-  | 'keptCap'
-  | 'viewedCap'
-  | 'candidatePoolSize'
-  | 'picksLimit'
-  | 'batchCount'
-  | 'contextWindow';
+  'favoritesCap' | 'keptCap' | 'viewedCap' | 'candidatePoolSize' | 'picksLimit' | 'contextWindow';
 
 /** Mirrors the GET payload 1:1 — see Task 14's `RecommendationSettingsJson`. */
 export interface RecommendationSettingsState {
@@ -49,9 +47,9 @@ export interface RecommendationSettingsState {
   /** How many days back the candidate pool reaches; 1-7, default 2 (#386). */
   readonly lookbackDays: number;
   readonly picksLimit: number;
-  /** How many entries the provider scores per call. `null` packs batches
-   *  automatically; see Task 5's `RecommendationPackingSettings`. */
-  readonly batchCount: number | null;
+  /** How large each provider call is packed; the batch count is derived from it
+   *  and the pool. `medium` is the automatic default (#935). */
+  readonly batchSize: RecommendationBatchSize;
   readonly contextWindow: number;
   readonly contextWindowOverride: number | null;
   readonly contextWindowSource: ContextWindowSource;
@@ -80,7 +78,7 @@ export interface SaveRecommendationSettings {
   readonly candidatePoolSize: number;
   readonly lookbackDays: number;
   readonly picksLimit: number;
-  readonly batchCount: number | null;
+  readonly batchSize: RecommendationBatchSize;
   readonly contextWindow: number | null;
   readonly debugEnabled: boolean;
   readonly autoGenerateIntervalHours: number | null;
@@ -132,7 +130,7 @@ export class RecommendationSettingsService extends DraftSettingsService<
       candidatePoolSize: state.candidatePoolSize,
       lookbackDays: state.lookbackDays,
       picksLimit: state.picksLimit,
-      batchCount: state.batchCount,
+      batchSize: state.batchSize,
       contextWindow: state.contextWindowOverride,
       debugEnabled: state.debugEnabled,
       autoGenerateIntervalHours: state.autoGenerateIntervalHours,

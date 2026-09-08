@@ -10,6 +10,7 @@ use App\Repository\RecommendationRunRepository;
 use App\Repository\RecommendationSettingsRepository;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\DueRecommendationRunFinder;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationRunStarter;
@@ -54,7 +55,7 @@ final class DueRecommendationRunFinderTest extends DbTestCase
             lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
             contextWindow: null,
-            batchCount: null,
+            batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,
             autoGenerateIntervalHours: $hours,
         ));

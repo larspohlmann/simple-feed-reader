@@ -119,24 +119,6 @@ final class LineField
     }
 
     /**
-     * Reads a nested JSON object field, e.g. `recommendationSettings`, whose
-     * own keys a dto factory then reads with these same helpers.
-     *
-     * @param array<string, mixed> $line
-     *
-     * @return array<string, mixed>|null
-     */
-    public static function objectOrNull(array $line, string $key): ?array
-    {
-        $value = $line[$key] ?? null;
-        if (null === $value) {
-            return null;
-        }
-
-        return self::asObject($value, $key);
-    }
-
-    /**
      * Reads a nested JSON array-of-objects field, e.g. a subscription's
      * `tags`, as a list of decoded objects.
      *

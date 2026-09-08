@@ -6,6 +6,7 @@ namespace App\Entity;
 
 use App\Repository\RecommendationSettingsRepository;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
+use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -65,8 +66,8 @@ class RecommendationSettings
     #[ORM\Column(nullable: true)]
     private ?int $contextWindow = null;
 
-    #[ORM\Column(nullable: true)]
-    private ?int $batchCount = null;
+    #[ORM\Column(length: 10, enumType: RecommendationBatchSize::class, options: ['default' => 'medium'])]
+    private RecommendationBatchSize $batchSize = RecommendationBatchSize::Medium;
 
     #[ORM\Column(options: ['default' => false])]
     private bool $debugEnabled = false;
@@ -107,7 +108,7 @@ class RecommendationSettings
         $this->lookbackDays = $values->lookbackDays;
         $this->picksLimit = $values->picksLimit;
         $this->contextWindow = $values->contextWindow;
-        $this->batchCount = $values->batchCount;
+        $this->batchSize = $values->batchSize;
         $this->debugEnabled = $values->debugEnabled;
         $this->autoGenerateIntervalHours = $values->autoGenerateIntervalHours;
         $this->showReasons = $values->showReasons;
@@ -125,7 +126,7 @@ class RecommendationSettings
             lookbackDays: $this->lookbackDays,
             picksLimit: $this->picksLimit,
             contextWindow: $this->contextWindow,
-            batchCount: $this->batchCount,
+            batchSize: $this->batchSize,
             debugEnabled: $this->debugEnabled,
             autoGenerateIntervalHours: $this->autoGenerateIntervalHours,
             showReasons: $this->showReasons,

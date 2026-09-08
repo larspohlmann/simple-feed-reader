@@ -13,6 +13,7 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Backup\AccountBackupExporter;
+use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -258,12 +259,12 @@ final class AccountBackupExporterTest extends DbTestCase
         self::assertSame(1201, $entryLines);
     }
 
-    public function testExportsTheStoredPreferenceProfileOnTheAccountLine(): void
+    public function testTheAccountLineCarriesNoRecommendationSettings(): void
     {
-        $user = $this->makeUser('profile-export@example.com');
+        $user = $this->makeUser('no-recommendation-settings@example.com');
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
-            guidancePrompt: null,
+            guidancePrompt: 'Only long reads.',
             favoritesCap: 40,
             keptCap: 40,
             viewedCap: 80,
@@ -271,7 +272,7 @@ final class AccountBackupExporterTest extends DbTestCase
             lookbackDays: 2,
             picksLimit: 50,
             contextWindow: null,
-            batchCount: null,
+            batchSize: RecommendationBatchSize::Large,
             debugEnabled: false,
             profileText: 'Reads long-form essays about urban planning.',
         ));
@@ -280,10 +281,6 @@ final class AccountBackupExporterTest extends DbTestCase
 
         $accountLine = $this->decodedLines($user)[1];
 
-        self::assertIsArray($accountLine['recommendationSettings']);
-        self::assertSame(
-            'Reads long-form essays about urban planning.',
-            $accountLine['recommendationSettings']['profileText'],
-        );
+        self::assertArrayNotHasKey('recommendationSettings', $accountLine);
     }
 }

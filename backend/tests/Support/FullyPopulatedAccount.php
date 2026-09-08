@@ -9,14 +9,12 @@ use App\Entity\EntryAttachment;
 use App\Entity\EntryMedium;
 use App\Entity\EntryState;
 use App\Entity\Feed;
-use App\Entity\RecommendationSettings;
 use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SourceFormat;
 use App\Service\Reader\MagazineStyle;
-use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Url\UrlNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -46,8 +44,6 @@ final readonly class FullyPopulatedAccount
         $user->getPreferences()->setScrapeFallbackEnabled(true);
         $user->getPreferences()->setMagazineStyle(MagazineStyle::Airy);
 
-        $this->em->persist($this->settingsFor($user));
-
         $tag = $this->tagFor($user);
         $this->em->persist($tag);
 
@@ -64,33 +60,6 @@ final readonly class FullyPopulatedAccount
         $this->em->flush();
 
         return $user;
-    }
-
-    private function settingsFor(User $user): RecommendationSettings
-    {
-        $settings = new RecommendationSettings($user);
-        $settings->update($this->recommendationValues());
-
-        return $settings;
-    }
-
-    private function recommendationValues(): RecommendationSettingsValues
-    {
-        return new RecommendationSettingsValues(
-            guidancePrompt: 'Prefer long-form reporting over news wires.',
-            favoritesCap: 11,
-            keptCap: 12,
-            viewedCap: 13,
-            candidatePoolSize: 14,
-            lookbackDays: 15,
-            picksLimit: 16,
-            contextWindow: 17,
-            batchCount: 18,
-            debugEnabled: true,
-            autoGenerateIntervalHours: 19,
-            profileText: 'Reads infrastructure essays and typography criticism.',
-            showReasons: true,
-        );
     }
 
     private function savedSearchFor(User $user): SavedSearch

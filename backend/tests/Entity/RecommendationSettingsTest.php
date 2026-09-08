@@ -6,6 +6,7 @@ namespace App\Tests\Entity;
 
 use App\Entity\RecommendationSettings;
 use App\Entity\User;
+use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use PHPUnit\Framework\TestCase;
 
@@ -31,7 +32,7 @@ final class RecommendationSettingsTest extends TestCase
             lookbackDays: 2,
             picksLimit: 50,
             contextWindow: 32768,
-            batchCount: 4,
+            batchSize: RecommendationBatchSize::Large,
             debugEnabled: false,
             autoGenerateIntervalHours: 12,
             profileText: 'reads about databases',
@@ -39,6 +40,7 @@ final class RecommendationSettingsTest extends TestCase
         ));
 
         self::assertTrue($settings->values()->showReasons);
+        self::assertSame(RecommendationBatchSize::Large, $settings->values()->batchSize);
     }
 
     public function testANewRowDoesNotShowReasonsByDefault(): void
@@ -46,5 +48,12 @@ final class RecommendationSettingsTest extends TestCase
         $settings = new RecommendationSettings($this->user);
 
         self::assertFalse($settings->values()->showReasons);
+    }
+
+    public function testANewRowUsesTheMediumBatchSizeByDefault(): void
+    {
+        $settings = new RecommendationSettings($this->user);
+
+        self::assertSame(RecommendationBatchSize::Medium, $settings->values()->batchSize);
     }
 }

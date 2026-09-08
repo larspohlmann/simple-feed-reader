@@ -18,6 +18,7 @@ use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Account\AccountReset;
+use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -78,7 +79,7 @@ final class AccountResetTest extends DbTestCase
             lookbackDays: 7,
             picksLimit: 3,
             contextWindow: null,
-            batchCount: null,
+            batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,
         ));
         $this->em->persist($settings);

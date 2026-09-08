@@ -6,6 +6,7 @@ namespace App\Tests\Service\Backup;
 
 use App\Service\Backup\BackupReader;
 use App\Service\Backup\Dto\AccountLine;
+use App\Service\Reader\MagazineStyle;
 use App\Service\Backup\Dto\BackupHeader;
 use App\Service\Backup\Dto\EntryLine;
 use App\Service\Backup\Dto\EntryStateLine;
@@ -47,7 +48,6 @@ final class BackupReaderTest extends TestCase
             'kind' => 'account',
             'locale' => 'de',
             'scrapeFallbackEnabled' => true,
-            'recommendationSettings' => null,
         ];
     }
 
@@ -76,7 +76,7 @@ final class BackupReaderTest extends TestCase
         self::assertInstanceOf(AccountLine::class, $objects[1]);
         self::assertSame('de', $objects[1]->locale);
         self::assertTrue($objects[1]->scrapeFallbackEnabled);
-        self::assertNull($objects[1]->recommendationSettings);
+        self::assertSame(MagazineStyle::Boxed, $objects[1]->magazineStyle);
     }
 
     public function testReadsEveryKindInOrderAndNormalisesDatesToUtc(): void

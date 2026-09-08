@@ -134,7 +134,7 @@ restore again with the same file.
 | Line | What the line holds |
 |---|---|
 | `header` | The format version, the export date, the address of the instance the file came from, and the account address the file came from. |
-| `account` | Your language (`locale`), the scrape fallback setting (`scrapeFallbackEnabled`), the magazine style (`magazineStyle`), and all "For you" settings (`recommendationSettings`). |
+| `account` | Your language (`locale`), the scrape fallback setting (`scrapeFallbackEnabled`), and the magazine style (`magazineStyle`). |
 | `tag` | Each tag: `name`, `color`, `icon` and `position`. |
 | `savedSearch` | Each saved search: `term`, `wholeWord`, `phrase` and `position`. |
 | `feed` | Each feed you subscribe to: `url`, `siteUrl`, `title`, `description`, `faviconUrl`, `imageUrl` and `sourceFormat`. |
@@ -142,10 +142,6 @@ restore again with the same file.
 | `entry` | Each article, with the address of the feed it came from: `guid`, `url`, `title`, `author`, `summary`, `contentHtml`, the image (`imageUrl`, `imageWidth`, `imageHeight`), `publishedAt`, `createdAt` (the date this instance first saw the article) and `effectiveDate`. |
 | `entryState` | Each article mark: `isHidden`, `isViewed`, `isFavorite`, `isKept`, `hiddenAt` and `viewedAt`. Each mark names its article by feed and by article identifier. |
 | `footer` | The number of lines of each kind. The restore uses these numbers to show you what the file holds. |
-
-The "For you" settings in the `account` line are complete: the guidance prompt,
-the learned profile text, all limits and caps, the lookback window, the context
-window, the batch count, the automatic interval, and the two display switches.
 
 ## 6. What a backup does not carry
 
@@ -174,12 +170,14 @@ These rows belong to your account. A backup drops each of them completely.
 | `AiProviderSettings` | Your AI connections: the endpoint and the API key. A backup is a file you handle, store and send. A key must not travel in such a file. Your AI connections stay in the account, and a restore does not touch them. |
 | `UserIdentity` | Your links to Google and Apple sign-in. A restore writes what the file says, and the file comes from you. See section 7. |
 | `ActionToken` | Short-lived tokens for address verification and password reset. Each token lives for minutes and works once. |
+| `RecommendationSettings` | Your "For you" settings: the guidance prompt, the learned profile, the caps and limits, and the batch size. They are quick to set again after a restore, and not worth carrying in a file you handle and send. |
 | `RecommendationRun` | The history of your "For you" runs. Run the engine again to get new results. The history is large, and it points at articles the restore has replaced. |
 | `RecommendationRunLog` | The diagnostic log of one run. It has no meaning without the run, and the run is not restored. |
 | `RecommendationItem` | The picks of one run. They have no meaning without the run, and the run is not restored. |
 | `UserPasskey` | Your passkeys. A passkey is tied to one device and to this instance's identity. A credential restored onto another account, or onto another device, could never sign you in. Carrying credential ids and keys in the file would only make a stolen backup more dangerous. |
 
-Your "For you" **settings** are carried. Only the **results** are dropped.
+Your "For you" **settings** and **results** are both dropped. A restore leaves
+the settings at their defaults; set them again once, and run the engine.
 
 ### 6.3 Fields the file drops
 
@@ -196,12 +194,13 @@ Your "For you" **settings** are carried. Only the **results** are dropped.
 | `accountLimits.maxSubscriptions` | The subscription limit an administrator gave the account. If the file carried it, you could write your own limit. |
 | `preferences` | Not a value, but the pointer from the account to its preferences row. The `account` line writes the preference itself, so the pointer becomes no key in the file. |
 | `activeAiProviderSettings` | The pointer to the AI connection in use. It points at data that section 6.2 drops in full. |
+| `recommendationSettings` | The pointer to your "For you" settings row. It points at data that section 6.2 drops in full. |
 | `digestEnabled`, `digestCadence`, `digestSendHour`, `digestWeekday`, `digestFormat` | The email digest settings (#636, #726). Added ahead of the backup format's support for them; a later task carries them. |
 | `digestLastSentAt` | The date the digest last sent. The next send writes it again, so a restored value would only delay that send. |
 | `passkeyOfferAnsweredAt` | Whether you have already been offered a passkey (#624). This is the state of the app on this device, not a setting of your account. A restore into a fresh account should let that account see the offer. |
 
-**On each row you own.** The preferences, the "For you" settings, each tag, each
-subscription and each article mark all hold one pointer to their owner.
+**On each row you own.** The preferences, each tag, each subscription and each
+article mark all hold one pointer to their owner.
 
 | Field | Why the file leaves it out |
 |---|---|

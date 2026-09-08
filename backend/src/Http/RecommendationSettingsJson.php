@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Service\Recommendation\EffectiveRecommendationSettings;
+use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\RecommendationPromptText;
 use App\Service\Recommendation\RecommendationSettingsBounds;
 
@@ -41,7 +42,7 @@ final class RecommendationSettingsJson
                 'viewedCap' => EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
                 'candidatePoolSize' => EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
                 'picksLimit' => EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
-                'batchCount' => null,
+                'batchSize' => RecommendationBatchSize::Medium->value,
                 'contextWindow' => null,
             ],
             'expertBounds' => RecommendationSettingsBounds::EXPERT_FIELDS,
@@ -56,7 +57,7 @@ final class RecommendationSettingsJson
                 ? $effective->packing->contextWindow
                 : null,
             'contextWindowSource' => $effective->packing->contextWindowSource,
-            'batchCount' => $effective->packing->batchCount,
+            'batchSize' => $effective->packing->batchSize->value,
             'debugEnabled' => $effective->debugEnabled,
             'showReasons' => $effective->showReasons,
             'autoGenerateIntervalHours' => $effective->autoGenerateIntervalHours,

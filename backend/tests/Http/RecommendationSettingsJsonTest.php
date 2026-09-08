@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\RecommendationSettingsJson;
+use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationPackingSettings;
 use App\Service\Recommendation\RecommendationPromptText;
@@ -86,9 +87,16 @@ final class RecommendationSettingsJsonTest extends TestCase
             'viewedCap' => 80,
             'candidatePoolSize' => 500,
             'picksLimit' => 50,
-            'batchCount' => null,
+            'batchSize' => 'medium',
             'contextWindow' => null,
         ], $state['expertDefaults']);
+    }
+
+    public function testStateEmitsTheEffectiveBatchSize(): void
+    {
+        $state = RecommendationSettingsJson::state($this->effectiveSettings(), workerAlive: true);
+
+        self::assertSame('medium', $state['batchSize']);
     }
 
     public function testStateEmitsTheExpertFieldBounds(): void
@@ -101,7 +109,6 @@ final class RecommendationSettingsJsonTest extends TestCase
             'viewedCap' => ['min' => 0, 'max' => 500],
             'candidatePoolSize' => ['min' => 10, 'max' => 5000],
             'picksLimit' => ['min' => 1, 'max' => 500],
-            'batchCount' => ['min' => 1, 'max' => 100],
             'contextWindow' => ['min' => 4096, 'max' => 2097152],
         ], $state['expertBounds']);
     }
@@ -121,7 +128,7 @@ final class RecommendationSettingsJsonTest extends TestCase
             packing: new RecommendationPackingSettings(
                 contextWindow: EffectiveRecommendationSettings::FALLBACK_CONTEXT_WINDOW,
                 contextWindowSource: 'fallback',
-                batchCount: null,
+                batchSize: RecommendationBatchSize::Medium,
                 maximumBatchSize: RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE,
             ),
             debugEnabled: false,

@@ -18,6 +18,7 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ProviderConnectionFactory;
+use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationBatchWave;
 use App\Service\Recommendation\RecommendationCandidateLoader;
@@ -731,14 +732,15 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     }
 
     /**
-     * Forces an exact batch count through the expert batchCount override, so a
-     * worker-regime test can pin how many batches a wave has to work with (the
-     * per-batch cap stays under the token budget's split size, so the packer
-     * produces exactly $batchCount batches).
+     * Forces an exact batch count through the connection's per-batch ceiling,
+     * so a worker-regime test can pin how many batches a wave has to work with
+     * (the per-batch cap stays under the token budget's split size, so the
+     * packer produces exactly $batchCount batches).
      */
     private function seedForcedBatchCountFixture(User $user, int $entryCount, int $batchCount): void
     {
         $this->fixtures->seedReadyAiSettings($user);
+        $this->fixtures->capBatchesAt($user, (int) ceil($entryCount / $batchCount));
 
         $summary = str_repeat('Lorem ipsum dolor sit amet consectetur adipiscing elit. ', 5);
         foreach ($this->fixtures->seedFeedWithEntries($user, $entryCount) as $entry) {
@@ -755,8 +757,8 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             candidatePoolSize: $entryCount,
             lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
-            contextWindow: 2500,
-            batchCount: $batchCount,
+            contextWindow: 200000,
+            batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,
         ));
         $this->em->persist($settings);

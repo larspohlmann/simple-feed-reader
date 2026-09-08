@@ -29,7 +29,7 @@ describe('RecommendationSettingsCardComponent', () => {
       viewedCap: 80,
       candidatePoolSize: 500,
       picksLimit: 50,
-      batchCount: null,
+      batchSize: 'medium',
       contextWindow: null,
     },
     expertBounds: {
@@ -38,7 +38,6 @@ describe('RecommendationSettingsCardComponent', () => {
       viewedCap: { min: 0, max: 500 },
       candidatePoolSize: { min: 10, max: 5000 },
       picksLimit: { min: 1, max: 500 },
-      batchCount: { min: 1, max: 100 },
       contextWindow: { min: 4096, max: 2097152 },
     },
     favoritesCap: 50,
@@ -46,7 +45,7 @@ describe('RecommendationSettingsCardComponent', () => {
     viewedCap: 200,
     candidatePoolSize: 400,
     picksLimit: 20,
-    batchCount: null,
+    batchSize: 'medium',
     contextWindow: 128000,
     contextWindowOverride: null,
     contextWindowSource: 'provider',
@@ -136,7 +135,7 @@ describe('RecommendationSettingsCardComponent', () => {
 
     expect(fixture.componentInstance.favoritesCap()).toBe(50);
     expect(fixture.componentInstance.picksLimit()).toBe(20);
-    expect(fixture.componentInstance.batchCount()).toBeNull();
+    expect(fixture.componentInstance.batchSize()).toBe('medium');
     expect(fixture.componentInstance.contextWindow()).toBeNull();
     expect(fixture.componentInstance.guidance()).toBe('');
     expect(fixture.componentInstance.debugEnabled()).toBe(false);
@@ -151,7 +150,7 @@ describe('RecommendationSettingsCardComponent', () => {
     expect(pre.textContent).toContain('Return at most 20 picks as a JSON array of entry ids.');
   });
 
-  it('renders the six numeric tuning fields inside the expert drill-in', () => {
+  it('renders the five numeric tuning fields and the batch-size select inside the expert drill-in', () => {
     const fixture = mount();
 
     const grid = fixture.nativeElement.querySelector('details .expert-grid') as HTMLElement;
@@ -163,7 +162,7 @@ describe('RecommendationSettingsCardComponent', () => {
         expect.stringContaining('Viewed in history'),
         expect.stringContaining('Maximum articles'),
         expect.stringContaining('Maximum picks'),
-        expect.stringContaining('Batches (empty = automatic)'),
+        expect.stringContaining('Batch size'),
       ]),
     );
   });
@@ -176,7 +175,7 @@ describe('RecommendationSettingsCardComponent', () => {
     const ranges = Array.from(rangeElements).map((range) => range.textContent?.trim());
 
     expect(ranges).toEqual(
-      expect.arrayContaining(['0–500', '10–5,000', '1–500', '1–100', '4,096–2,097,152']),
+      expect.arrayContaining(['0–500', '10–5,000', '1–500', '4,096–2,097,152']),
     );
     expect(ranges.filter((range) => range === '0–500')).toHaveLength(3);
   });
@@ -294,11 +293,11 @@ describe('RecommendationSettingsCardComponent', () => {
       expect(fixture.componentInstance.svc.dirty()).toBe(false);
     });
 
-    it('sends the batch count and context window override the user typed', () => {
+    it('sends the batch size and context window override the user chose', () => {
       const fixture = mount();
 
-      fixture.componentInstance.onBatchCountInput({
-        target: { value: '10' },
+      fixture.componentInstance.onBatchSizeChange({
+        target: { value: 'large' },
       } as unknown as Event);
       fixture.componentInstance.onContextWindowInput({
         target: { value: '64000' },
@@ -309,9 +308,9 @@ describe('RecommendationSettingsCardComponent', () => {
 
       const request = http.expectOne('/api/me/ai/recommendations');
       expect(request.request.body).toEqual(
-        expect.objectContaining({ batchCount: 10, contextWindow: 64000 }),
+        expect.objectContaining({ batchSize: 'large', contextWindow: 64000 }),
       );
-      request.flush({ ...STATE, batchCount: 10 });
+      request.flush({ ...STATE, batchSize: 'large' });
     });
 
     it('sends guidancePrompt: null after a reset to default', () => {
@@ -340,7 +339,7 @@ describe('RecommendationSettingsCardComponent', () => {
       expect(fixture.componentInstance.viewedCap()).toBe(80);
       expect(fixture.componentInstance.candidatePoolSize()).toBe(500);
       expect(fixture.componentInstance.picksLimit()).toBe(50);
-      expect(fixture.componentInstance.batchCount()).toBeNull();
+      expect(fixture.componentInstance.batchSize()).toBe('medium');
       expect(fixture.componentInstance.contextWindow()).toBeNull();
       expect(fixture.componentInstance.svc.draft()).toEqual(STATE.expertDefaults);
       http.expectNone('/api/me/ai/recommendations');
@@ -568,7 +567,7 @@ describe('RecommendationSettingsCardComponent', () => {
       'Viewed in history',
       'Maximum articles',
       'Maximum picks',
-      'Batches (empty = automatic)',
+      'Batch size',
     ]);
   });
 

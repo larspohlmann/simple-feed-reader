@@ -108,7 +108,7 @@ final class RecommendationPromptBuilder
         // packer budgets for that shape rather than the full history (#493).
         $favoritesSection = $this->historySection('FAVORITES (newest first):', $history->favorites, $descriptionLength);
         $historyTokens = self::ESTIMATED_PROFILE_TOKENS + $this->tokens($favoritesSection);
-        $cap = $this->batchCap(\count($candidates), $settings);
+        $cap = $settings->packing->batchSize->batchItemCap($settings->packing->maximumBatchSize);
         // The reply scores one line per candidate, so its size is bounded by
         // the batch cap, not by the final list size. The batch reply is
         // score-only (id + score, no reason), so it is charged the score-only
@@ -403,19 +403,6 @@ final class RecommendationPromptBuilder
         }
 
         return [...$messages, ...$this->correctiveTail($lastInvalidReply, $correction)];
-    }
-
-    /** The explicit batch-count override wins over the #308 size ceiling: it is
-     *  an expert setting, and the token budget below still protects the context
-     *  window. Null means automatic packing under the connection's own ceiling,
-     *  which is lower for an endpoint the account marked slow (#437). */
-    private function batchCap(int $candidateCount, EffectiveRecommendationSettings $settings): int
-    {
-        if (null === $settings->packing->batchCount) {
-            return $settings->packing->maximumBatchSize;
-        }
-
-        return max(1, (int) ceil($candidateCount / $settings->packing->batchCount));
     }
 
     /**

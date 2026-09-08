@@ -167,19 +167,21 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
             </app-field>
 
             <app-field
-              [label]="'settings.ai.recommendations.batchCount' | transloco"
-              [info]="'settings.ai.info.batchCount' | transloco"
-              [error]="fieldError('batchCount')"
+              [label]="'settings.ai.recommendations.batchSize' | transloco"
+              [info]="'settings.ai.info.batchSize' | transloco"
             >
-              <p class="numeric-range">{{ rangeLabel('batchCount') }}</p>
-              <input
-                type="number"
-                [min]="range('batchCount').min"
-                [max]="range('batchCount').max"
-                [attr.aria-invalid]="isFieldInvalid('batchCount')"
-                [value]="batchCount() ?? ''"
-                (input)="onBatchCountInput($event)"
-              />
+              <!-- Reserves the numeric fields' range-line height so the select
+                   lines up with their inputs across the grid row. The shared
+                   field's own label sits in a separate style scope, so the row
+                   is matched from projected content here. -->
+              <p class="numeric-range" aria-hidden="true">&nbsp;</p>
+              <select data-testid="batch-size" (change)="onBatchSizeChange($event)">
+                @for (opt of batchSizeOptions; track opt.value) {
+                  <option [value]="opt.value" [selected]="batchSize() === opt.value">
+                    {{ opt.key | transloco }}
+                  </option>
+                }
+              </select>
             </app-field>
           </div>
 

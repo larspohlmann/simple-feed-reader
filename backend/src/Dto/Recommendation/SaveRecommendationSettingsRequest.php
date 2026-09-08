@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Recommendation;
 
+use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Recommendation\RecommendationSettingsBounds;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -55,11 +56,7 @@ final readonly class SaveRecommendationSettingsRequest
             max: RecommendationSettingsBounds::CONTEXT_WINDOW_MAXIMUM,
         )]
         public ?int $contextWindow,
-        #[Assert\Range(
-            min: RecommendationSettingsBounds::BATCH_COUNT_MINIMUM,
-            max: RecommendationSettingsBounds::BATCH_COUNT_MAXIMUM,
-        )]
-        public ?int $batchCount,
+        public RecommendationBatchSize $batchSize,
         public bool $debugEnabled,
         #[Assert\Choice(choices: [null, 1, 3, 6, 12, 24])]
         public ?int $autoGenerateIntervalHours,
@@ -78,7 +75,7 @@ final readonly class SaveRecommendationSettingsRequest
             lookbackDays: $this->lookbackDays,
             picksLimit: $this->picksLimit,
             contextWindow: $this->contextWindow,
-            batchCount: $this->batchCount,
+            batchSize: $this->batchSize,
             debugEnabled: $this->debugEnabled,
             autoGenerateIntervalHours: $this->autoGenerateIntervalHours,
             showReasons: $this->showReasons,

@@ -1,8 +1,13 @@
 // The shared save/reset row for a settings surface, ported from the Grouped
 // mockup's `.savebar`: a leading "unsaved changes" indicator, a right-aligned
 // Reset/Save pair, and a top border seating it against the panel above.
+// Sticks to the bottom of the viewport so the "unsaved changes" pill and the
+// Save/Reset pair stay reachable while a long settings form scrolls.
 :host {
   display: block;
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
 }
 
 .savebar {
@@ -11,16 +16,23 @@
   gap: var(--space-3);
   padding: var(--space-3) var(--space-5);
   border-top: 1px solid var(--border);
+  background: var(--surface-1);
 }
 
 .spacer {
   flex: 1;
 }
 
+// A pill so the pending-change state reads at a glance and holds its shape
+// against the panel behind it while the bar is stuck over scrolling content.
 .unsaved {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
   color: var(--text-secondary);
   font-size: var(--fs-sm);
 }

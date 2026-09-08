@@ -25,7 +25,7 @@ function state(over: Partial<RecommendationSettingsState> = {}): RecommendationS
     candidatePoolSize: 400,
     lookbackDays: 2,
     picksLimit: 20,
-    batchCount: null,
+    batchSize: 'medium',
     contextWindow: 128000,
     contextWindowOverride: null,
     contextWindowSource: 'provider',
@@ -42,7 +42,7 @@ function state(over: Partial<RecommendationSettingsState> = {}): RecommendationS
       viewedCap: 80,
       candidatePoolSize: 500,
       picksLimit: 50,
-      batchCount: null,
+      batchSize: 'medium',
       contextWindow: null,
     },
     expertBounds: expertBounds ?? {
@@ -51,7 +51,6 @@ function state(over: Partial<RecommendationSettingsState> = {}): RecommendationS
       viewedCap: { min: 0, max: 500 },
       candidatePoolSize: { min: 10, max: 5000 },
       picksLimit: { min: 1, max: 500 },
-      batchCount: { min: 1, max: 100 },
       contextWindow: { min: 4096, max: 2097152 },
     },
   };
