@@ -1,11 +1,15 @@
 // src/app/core/auth.guard.ts
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
+import { ReaderLocationService } from './reader-location.service';
 import { TokenStore } from './token.store';
 
-export const authGuard: CanActivateFn = () => {
+export const authGuard: CanActivateFn = (_, state) => {
   const tokens = inject(TokenStore);
-  return tokens.isAuthenticated() ? true : inject(Router).createUrlTree(['/login']);
+  const readerLocation = inject(ReaderLocationService);
+  if (tokens.isAuthenticated()) return true;
+  readerLocation.rememberAttemptedReaderUrl(state.url);
+  return inject(Router).createUrlTree(['/login']);
 };
 
 export const guestGuard: CanActivateFn = () => {
