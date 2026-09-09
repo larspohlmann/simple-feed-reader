@@ -26,6 +26,7 @@ use App\Service\Reader\NavigationChromeTrimmer;
 use App\Service\Reader\PageImageInventory;
 use App\Service\Reader\PlayerChromeCleaner;
 use App\Service\Reader\RecipeFacts\RecipeFactsCleaner;
+use App\Service\Reader\DuplicateBlockCollapser;
 use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\ReaderLeadImage;
 use App\Service\Reader\Slideshow\SlideshowInserter;
@@ -58,7 +59,23 @@ final class ReaderBodyCleanerTest extends TestCase
             new RecipeFactsCleaner(),
             new TeaserPlayerInserter(new TeaserPlayerMarkup()),
             new MediaOnlyLede(),
+            new DuplicateBlockCollapser(),
         );
+    }
+
+    /** The Verge ships the dek and the lead image once per breakpoint; the reader must show each once (#963). */
+    public function testCollapsesResponsiveDuplicateDekAndLeadImage(): void
+    {
+        $dek = 'Apple might recycle the name from Microsoft dual-screen device for its first folding iPhone.';
+        $content = "<div><p>$dek</p></div><div><p>$dek</p></div>"
+            . '<p><img src="https://x.test/stk071-apple-b.jpg?w=2400" alt="Apple event"></p>'
+            . '<p><img src="https://x.test/stk071-apple-b.jpg?w=828" alt="Apple event"></p>'
+            . '<p>' . self::PROSE . '</p>';
+
+        $result = $this->cleaner->clean($content, [null], $this->noLead(), ArticleMedia::none());
+
+        self::assertSame(1, substr_count($result, 'recycle the name from Microsoft'));
+        self::assertSame(1, substr_count($result, '<img'));
     }
 
     private function noLead(): LeadImageCandidate

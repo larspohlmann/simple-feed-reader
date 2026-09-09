@@ -16,6 +16,7 @@ use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\ArticleExtractor;
 use App\Service\Reader\BoilerplateVerdict;
 use App\Service\Reader\CustomElementUnwrapper;
+use App\Service\Reader\DuplicateBlockCollapser;
 use App\Service\Reader\EdgeBoilerplateTrimmer;
 use App\Service\Reader\ExtractionResult;
 use App\Service\Reader\FeedMedia;
@@ -151,6 +152,7 @@ final class ArticleExtractorTest extends TestCase
             new RecipeFactsCleaner(),
             new TeaserPlayerInserter(new TeaserPlayerMarkup()),
             new MediaOnlyLede(),
+            new DuplicateBlockCollapser(),
         );
     }
 
