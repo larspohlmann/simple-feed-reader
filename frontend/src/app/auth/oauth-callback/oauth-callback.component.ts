@@ -1,11 +1,10 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { API_BASE_URL } from '../../core/api';
 import { AuthService } from '../../core/auth.service';
 import { parseProblem } from '../../core/problem';
-import { ReaderLocationService } from '../../core/reader-location.service';
 import { TokenStore } from '../../core/token.store';
 import { AuthShellComponent } from '../auth-shell/auth-shell.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
@@ -20,10 +19,8 @@ export class OAuthCallbackComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly base = inject(API_BASE_URL);
   private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
   private readonly tokens = inject(TokenStore);
   private readonly auth = inject(AuthService);
-  private readonly readerLocation = inject(ReaderLocationService);
   readonly state = signal<'loading' | 'error' | 'blocked'>('loading');
 
   /**
@@ -60,11 +57,7 @@ export class OAuthCallbackComponent implements OnInit {
         .subscribe({
           next: (res) => {
             this.tokens.set(res.token);
-            const destination = this.readerLocation.consumeSignInReturnUrl();
-            this.auth.loadMe().subscribe({
-              next: () => void this.router.navigateByUrl(destination),
-              error: () => void this.router.navigateByUrl(destination),
-            });
+            this.auth.finishSignIn();
           },
           error: (response: HttpErrorResponse) => this.show(response),
         });

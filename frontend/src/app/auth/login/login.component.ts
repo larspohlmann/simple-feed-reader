@@ -1,13 +1,12 @@
 import { Component, ElementRef, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { API_BASE_URL } from '../../core/api';
 import { AuthService } from '../../core/auth.service';
 import { PasskeyService } from '../../core/passkey.service';
 import { Problem, parseProblem } from '../../core/problem';
-import { ReaderLocationService } from '../../core/reader-location.service';
 import { isConditionalMediationSupported, isPasskeySupported } from '../../core/webauthn';
 import { adoptAutofilledValues } from '../autofill';
 import { SetupService } from '../../setup/setup.service';
@@ -37,12 +36,10 @@ export class LoginComponent implements OnInit, OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly http = inject(HttpClient);
   private readonly base = inject(API_BASE_URL);
-  private readonly router = inject(Router);
   private readonly i18n = inject(TranslocoService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly setup = inject(SetupService);
   private readonly passkeyService = inject(PasskeyService);
-  private readonly readerLocation = inject(ReaderLocationService);
 
   readonly form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -174,16 +171,11 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.conditionalAbort = null;
   }
 
-  /** Shared by password, explicit-passkey and conditional-passkey sign-in, all
-   *  landing the visitor in the same place. `TokenStore` is already populated
-   *  by this point -- both `AuthService.login()` and `PasskeyService` set it
-   *  before resolving. */
+  /** Shared by password, explicit-passkey and conditional-passkey sign-in.
+   *  `TokenStore` is already populated -- both `AuthService.login()` and
+   *  `PasskeyService` set it before resolving. */
   private afterSignIn(): void {
-    const destination = this.readerLocation.consumeSignInReturnUrl();
-    this.auth.loadMe().subscribe({
-      next: () => void this.router.navigateByUrl(destination),
-      error: () => void this.router.navigateByUrl(destination),
-    });
+    this.auth.finishSignIn();
   }
 
   /** Only the explicit `signInWithPasskey()` calls this, never the background

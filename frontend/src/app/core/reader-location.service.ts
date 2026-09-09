@@ -76,7 +76,7 @@ export class ReaderLocationService {
     try {
       sessionStorage.removeItem(key);
     } catch {
-      // Reader restoration remains usable in memory when browser storage is blocked.
+      // Same in-memory fallback as write() above.
     }
   }
 }

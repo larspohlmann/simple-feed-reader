@@ -42,14 +42,18 @@ export class SettingsShellComponent implements OnInit {
 
   /** On a phone a section page steps back to the hub; everywhere else the bar
    *  leads back to the reader location that opened settings. */
-  readonly backTarget = computed(() =>
-    !this.layout.isWide() && this.section() !== null
-      ? '/settings'
-      : this.readerLocation.savedReaderUrl(),
+  private readonly stepsBackToHub = computed(
+    () => !this.layout.isWide() && this.section() !== null,
   );
 
+  readonly backTarget = computed(() =>
+    this.stepsBackToHub() ? '/settings' : this.readerLocation.savedReaderUrl(),
+  );
+
+  readonly backRouterLink = computed(() => this.router.parseUrl(this.backTarget()));
+
   readonly backLabelKey = computed(() =>
-    this.backTarget() === '/settings' ? 'settings.title' : 'settings.backReader',
+    this.stepsBackToHub() ? 'settings.title' : 'settings.backReader',
   );
 
   ngOnInit(): void {

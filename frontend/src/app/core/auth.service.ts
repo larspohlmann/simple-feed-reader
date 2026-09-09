@@ -85,6 +85,15 @@ export class AuthService {
     );
   }
 
+  /** Loads the account, then lands the visitor on the reader location saved
+   *  before sign-in (`/` when none). One-use, honoured on success or failure;
+   *  password, passkey and OAuth sign-in all finish here. */
+  finishSignIn(): void {
+    const destination = this.readerLocation.consumeSignInReturnUrl();
+    const land = (): void => void this.router.navigateByUrl(destination);
+    this.loadMe().subscribe({ next: land, error: land });
+  }
+
   logout(): void {
     this.tokens.clear();
     this.user.set(null);
