@@ -10,6 +10,19 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.0.9] - 2026-09-09
+
+## What's Changed
+* fix(#955): keep a photo readability strips with its lightbox button by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/956
+* Show and sort feed refresh times on Organise (#957) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/958
+* fix(#959): drop silent text-to-speech widgets from the reader body by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/960
+* fix(#961): recover more slideshows, their captions, and the media-only lede by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/962
+* fix(#963): collapse responsive duplicate dek and lead image in the reader by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/964
+* fix(#965): promote a bare <img>'s widest srcset rendition over an LQIP src by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/966
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.0.8...v1.0.9
+
 ## [v1.0.8] - 2026-09-08
 
 ## What's Changed
