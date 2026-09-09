@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Service\Html\ImageRendition;
+use App\Service\Html\ImageSourceUrl;
 use App\Service\Html\PictureSources;
 use App\Service\Html\Srcset;
 use Dom\Element;
@@ -44,9 +45,6 @@ final readonly class LazyImageSources
     /** Attributes holding a candidate list; the first entry is taken. */
     private const array SRCSET_ATTRIBUTES = ['data-lazy-srcset', 'data-srcset', 'srcset'];
 
-    /** A URL carrying a scheme that is neither http nor https — never promoted. */
-    private const string FOREIGN_SCHEME = '#^(?!https?://)[a-z][a-z0-9+.\-]*:#i';
-
     public function __construct(private PictureSources $pictureSources)
     {
     }
@@ -75,7 +73,7 @@ final readonly class LazyImageSources
      */
     private function ensureUsableSource(Element $image): bool
     {
-        if ($this->isUsable($image->getAttribute('src'))) {
+        if (ImageSourceUrl::isUsable($image->getAttribute('src'))) {
             $this->preferWiderPictureSource($image);
             $this->preferWiderOwnSrcset($image);
 
@@ -135,14 +133,11 @@ final readonly class LazyImageSources
         }
 
         $widest = Srcset::widest($image->getAttribute('srcset'));
-        if ($widest === null || !$this->isUsable($widest->url)) {
+        if ($widest === null || !ImageSourceUrl::isUsable($widest->url)) {
             return;
         }
 
-        $this->adoptWiderRendition(
-            $image,
-            new ImageRendition($widest->url, $widest->width ?? ImageRendition::widthFromUrl($widest->url)),
-        );
+        $this->adoptWiderRendition($image, ImageRendition::measuredFromUrl($widest->url, $widest->width));
     }
 
     /**
@@ -191,7 +186,7 @@ final readonly class LazyImageSources
     {
         foreach (self::URL_ATTRIBUTES as $attribute) {
             $candidate = trim($image->getAttribute($attribute) ?? '');
-            if ($this->isUsable($candidate)) {
+            if (ImageSourceUrl::isUsable($candidate)) {
                 return $candidate;
             }
         }
@@ -220,15 +215,6 @@ final readonly class LazyImageSources
     }
 
     /**
-     * A relative URL stays a candidate: readability resolves it against the
-     * page's final URL right after this step.
-     */
-    private function isUsable(?string $url): bool
-    {
-        return $url !== null && $url !== '' && preg_match(self::FOREIGN_SCHEME, $url) !== 1;
-    }
-
-    /**
      * The <picture> an image belongs to. The HTML5 parser treats <source> as a
      * void element, so the candidates and the <img> stay siblings under the
      * <picture> however the page spells its source tags — the image is the
@@ -246,6 +232,6 @@ final readonly class LazyImageSources
     {
         $candidate = Srcset::firstUrl($srcset);
 
-        return $candidate !== null && $this->isUsable($candidate) ? $candidate : null;
+        return $candidate !== null && ImageSourceUrl::isUsable($candidate) ? $candidate : null;
     }
 }

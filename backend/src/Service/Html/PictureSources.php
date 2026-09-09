@@ -21,9 +21,6 @@ final readonly class PictureSources
     /** Attributes holding a candidate list, in the order publishers prefer them. */
     private const array SRCSET_ATTRIBUTES = ['data-lazy-srcset', 'data-srcset', 'srcset'];
 
-    /** A URL carrying a scheme that is neither http nor https — never a candidate. */
-    private const string FOREIGN_SCHEME = '#^(?!https?://)[a-z][a-z0-9+.\-]*:#i';
-
     /**
      * The widest usable rendition the <source> set offers. When no source
      * declares a width the first usable one stands in, so a src-less picture
@@ -47,7 +44,7 @@ final readonly class PictureSources
     {
         foreach ($picture->getElementsByTagName('source') as $source) {
             $candidate = Srcset::firstUrl($this->srcsetOf($source));
-            if ($candidate !== null && $this->isUsable($candidate)) {
+            if ($candidate !== null && ImageSourceUrl::isUsable($candidate)) {
                 return $candidate;
             }
         }
@@ -65,11 +62,11 @@ final readonly class PictureSources
         }
 
         $candidate = Srcset::widest($this->srcsetOf($source));
-        if ($candidate === null || !$this->isUsable($candidate->url)) {
+        if ($candidate === null || !ImageSourceUrl::isUsable($candidate->url)) {
             return null;
         }
 
-        return new ImageRendition($candidate->url, $candidate->width ?? ImageRendition::widthFromUrl($candidate->url));
+        return ImageRendition::measuredFromUrl($candidate->url, $candidate->width);
     }
 
     /** A <source>'s candidate list, from the same lazy attributes an <img> is read by. */
@@ -83,11 +80,5 @@ final readonly class PictureSources
         }
 
         return null;
-    }
-
-    /** A relative URL stays usable: readability resolves it against the page URL. */
-    private function isUsable(string $url): bool
-    {
-        return $url !== '' && preg_match(self::FOREIGN_SCHEME, $url) !== 1;
     }
 }

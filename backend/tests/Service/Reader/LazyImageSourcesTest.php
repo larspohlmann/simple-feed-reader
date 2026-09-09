@@ -76,6 +76,17 @@ final class LazyImageSourcesTest extends TestCase
         self::assertStringNotContainsString('<img', $html);
     }
 
+    public function testIgnoresAnImageSrcsetWhoseFirstCandidateIsUnsafe(): void
+    {
+        // The img's own srcset leads with an unsafe scheme, so it is no
+        // candidate; the image is dropped rather than promoted to it.
+        $html = $this->resolvedHtml(
+            '<img src="data:image/gif;base64,R0lGOD" data-srcset="javascript:alert(1) 400w">'
+        );
+
+        self::assertStringNotContainsString('<img', $html);
+    }
+
     public function testPromotesTheSourceOfTheEnclosingPicture(): void
     {
         $source = $this->resolvedSource(
