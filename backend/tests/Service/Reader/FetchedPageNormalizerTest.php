@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
+use App\Service\Html\PictureSources;
 use App\Service\Reader\CustomElementUnwrapper;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\ImageButtonUnwrapper;
@@ -25,7 +26,7 @@ final class FetchedPageNormalizerTest extends TestCase
             new CustomElementUnwrapper(),
             new ImageButtonUnwrapper(),
             new NoscriptImageUnwrapper(),
-            new LazyImageSources(),
+            new LazyImageSources(new PictureSources()),
             new ShareWidgetRemover(),
             new ShareIntentLinkRemover(),
             new SubstackGatedVideoPlaceholder(),

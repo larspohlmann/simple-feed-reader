@@ -51,7 +51,9 @@ export class ReaderCacheService {
   // only by a sibling id in a script payload (#800).
   // v21: v20 records hold a dead second player and no narration mark for a page
   // whose narration file sits in data-src (#903).
-  private static readonly VERSION = 22;
+  // v23: v22 records hold a 16px placeholder lead image for a page whose real
+  // renditions sit only in the srcset of a bare <img> (#965).
+  private static readonly VERSION = 23;
 
   private db: Promise<IDBDatabase | null> | null = null;
   /** Strictly monotonic clock so puts within the same millisecond keep insertion order. */
