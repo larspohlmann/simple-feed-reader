@@ -49,7 +49,7 @@ final readonly class TagesschauCarouselRecognizer implements SlideshowRecognizer
             $slides,
             is_string($data['name'] ?? null) ? $data['name'] : null,
             $textBlocks->before($carousel),
-            ContainerSignature::fromClassAttribute($carousel->getAttribute('class')),
+            ContainerSignature::fromElement($carousel),
         );
     }
 
@@ -62,10 +62,39 @@ final readonly class TagesschauCarouselRecognizer implements SlideshowRecognizer
         foreach (self::RENDITIONS as $size) {
             $url = $image['imageUrls'][$size] ?? null;
             if (is_string($url) && $url !== '') {
-                return new Slide($url, is_string($image['alttext'] ?? null) ? $image['alttext'] : '');
+                return new Slide(
+                    $url,
+                    $this->stringOf($image['alttext'] ?? null),
+                    $this->captionFrom($image['description'] ?? null, $image['title'] ?? null),
+                );
             }
         }
 
         return null;
+    }
+
+    /** The caption is the slide's description; the photo credit trails its title after a "|". */
+    private function captionFrom(mixed $description, mixed $title): SlideCaption
+    {
+        $text = $this->stringOf($description);
+        $credit = $this->creditFrom($this->stringOf($title));
+
+        return new SlideCaption(trim($credit === '' ? $text : "$text ($credit)"), null);
+    }
+
+    private function creditFrom(string $title): string
+    {
+        if (!str_contains($title, '|')) {
+            return '';
+        }
+
+        $parts = explode('|', $title);
+
+        return trim((string) end($parts));
+    }
+
+    private function stringOf(mixed $value): string
+    {
+        return is_string($value) ? $value : '';
     }
 }

@@ -10,8 +10,9 @@ use Dom\HTMLDocument;
 
 /**
  * Recognizes the CSS-class carousel libraries from one config row per library:
- * Swiper/Splide/Glide/Embla/Owl/Flickity/Slick/tiny-slider share the shape
- * container-class › slide-class, so the rule table replaces a class per library.
+ * Swiper/Splide/Glide/Embla/Owl/Flickity/Slick/tiny-slider and the "purple" CMS
+ * gallery (slideshowcontainer › slideshow-image) share the shape container-class
+ * › slide-class, so the rule table replaces a class per library.
  */
 final readonly class MarkupCarouselRecognizer implements SlideshowRecognizerInterface
 {
@@ -25,6 +26,7 @@ final readonly class MarkupCarouselRecognizer implements SlideshowRecognizerInte
         ['container' => null, 'slide' => 'carousel-cell'],
         ['container' => 'slick-slider', 'slide' => 'slick-slide'],
         ['container' => null, 'slide' => 'tns-item'],
+        ['container' => 'slideshowcontainer', 'slide' => 'slideshow-image'],
     ];
 
     public function __construct(
@@ -119,7 +121,7 @@ final readonly class MarkupCarouselRecognizer implements SlideshowRecognizerInte
             $slides,
             null,
             $textBlocks->before($container),
-            ContainerSignature::fromClassAttribute($container->getAttribute('class')),
+            ContainerSignature::fromElement($container),
         );
     }
 

@@ -20,9 +20,9 @@ use App\Service\Reader\Slideshow\SlideshowInserter;
  * \Dom\HTMLDocument: parse once, rewrite in-body media, repair the page's own
  * players, drop the duplicate leading title, trim edge boilerplate, plan where
  * page-discovered media belongs, restore the lead image against that plan,
- * reconcile the media into the body, serialise once — mirroring
- * FetchedPageNormalizer's discipline of never serialising and re-parsing
- * between steps (#586, #684, #748).
+ * reconcile the media into the body, restore the lede of a media-only article,
+ * serialise once — mirroring FetchedPageNormalizer's discipline of never
+ * serialising and re-parsing between steps (#586, #684, #748).
  *
  * Handed on to EntrySanitizer, the XSS boundary, which stays string-in/
  * string-out since Symfony's HtmlSanitizer operates on strings, not a shared
@@ -54,6 +54,7 @@ final readonly class ReaderBodyCleaner
         private SlideshowInserter $slideshowInserter,
         private RecipeFactsCleaner $recipeFactsCleaner,
         private TeaserPlayerInserter $teaserInserter,
+        private MediaOnlyLede $mediaOnlyLede,
     ) {
     }
 
@@ -71,6 +72,7 @@ final readonly class ReaderBodyCleaner
         ?FeedMedia $feedMedia = null,
         array $slideshows = [],
         array $teasers = [],
+        ?string $excerpt = null,
     ): string {
         $document = HtmlDocumentParser::parseOrNull($contentHtml);
         if ($document === null) {
@@ -114,6 +116,11 @@ final readonly class ReaderBodyCleaner
         // as a player where its still still sits, skipping any the media pipeline
         // already placed so the lead media is never mistaken for one (#948).
         $this->teaserInserter->insert($document, $teasers, $this->mediaUrls($media));
+
+        // A gallery or video article whose only prose lived in a dropped header
+        // now has a body of pure media; give it back the lede readability kept as
+        // the excerpt. Runs last, so it judges "media-only" against the final body.
+        $this->mediaOnlyLede->restore($document, $excerpt);
 
         // Last, over the finished body: the feed's real pixel sizes on the
         // images and players it enumerated, so none of them reflows the article.
