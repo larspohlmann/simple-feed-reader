@@ -17,8 +17,10 @@ use Dom\XPath;
  */
 final readonly class PaywallBlocks
 {
-    /** A gated call to action; `subscribe` alone is a newsletter form, not a wall. */
-    private const array GATE_FRAGMENTS = ['paywall', 'subscription-only', 'subscriber-only', 'subscribers-only'];
+    /** A gated call to action; `subscribe` alone is a newsletter form, not a wall. `regwall` is Ghost's gate. */
+    private const array GATE_FRAGMENTS = [
+        'paywall', 'regwall', 'subscription-only', 'subscriber-only', 'subscribers-only',
+    ];
     private const string LOWER_CLASS = 'translate(@class, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")';
     /** State markers like `has-paywall` sit here; the document root is the page, never a region within it. */
     private const array DOCUMENT_ROOTS = ['html', 'body'];

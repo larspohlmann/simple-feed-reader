@@ -29,6 +29,16 @@ final class PaywallBlocksTest extends TestCase
         self::assertTrue($this->hasGate('<p class="subscribers-only">B.</p>'));
     }
 
+    public function testFindsAGhostRegistrationWall(): void
+    {
+        // surplusmagazin.de (Ghost custom theme): the preview ends in a `c-regwall`
+        // block whose paid card gates the rest; no schema.org declaration (#967).
+        self::assertTrue($this->hasGate(
+            '<article><p>Teaser.</p></article>'
+            . '<div class="c-regwall"><div class="c-regwall__card c-regwall__card--paid">4 Wochen.</div></div>',
+        ));
+    }
+
     public function testAFadeOrTruncationClassIsNoLongerAGateBlock(): void
     {
         // #908 dropped the fade family; the schema.org declaration now carries the
