@@ -108,6 +108,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
             $feedMedia,
             $slideshows,
             $teasers,
+            $article->excerpt,
         );
         $clean = $this->sanitizer->sanitize($body);
         if ($clean === null) {

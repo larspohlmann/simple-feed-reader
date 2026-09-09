@@ -51,6 +51,7 @@ use App\Service\Reader\Media\Source\YouTubeIdAttributeSource;
 use App\Service\Reader\Media\StreamLocationResolver;
 use App\Service\Reader\Media\SubstackPosterLink;
 use App\Service\Reader\MetaRefreshTarget;
+use App\Service\Reader\MediaOnlyLede;
 use App\Service\Reader\NavigationChromeTrimmer;
 use App\Service\Reader\NoscriptImageUnwrapper;
 use App\Service\Reader\PlayerChromeCleaner;
@@ -59,6 +60,9 @@ use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\ReaderLeadImage;
 use App\Service\Reader\ShareIntentLinkRemover;
 use App\Service\Reader\ShareWidgetRemover;
+use App\Service\Reader\Slideshow\MarkupCarouselRecognizer;
+use App\Service\Reader\Slideshow\SlideCaptionResolver;
+use App\Service\Reader\Slideshow\SlideImageResolver;
 use App\Service\Reader\Slideshow\SlideshowInserter;
 use App\Service\Reader\Slideshow\SlideshowMarkup;
 use App\Service\Reader\Slideshow\SlideshowScanner;
@@ -79,6 +83,7 @@ final class ArticleExtractorTest extends TestCase
     private function extractor(
         callable|iterable $responses,
         array $dnsMap = ['site.test' => ['93.184.216.34']],
+        ?SlideshowScanner $slideshowScanner = null,
     ): ArticleExtractor {
         $resolver = new class ($dnsMap) implements DnsResolverInterface {
             /** @param array<string, list<string>> $map */
@@ -115,7 +120,7 @@ final class ArticleExtractorTest extends TestCase
             $this->mediaScanner(),
             new StreamLocationResolver($landing, $this->urlKind()),
             new SiblingMediaExtender(new SiblingIdRule(), $landing, $this->urlKind()),
-            new SlideshowScanner([]),
+            $slideshowScanner ?? new SlideshowScanner([]),
             new TeaserPlayerScanner($this->urlKind()),
         );
     }
@@ -145,6 +150,7 @@ final class ArticleExtractorTest extends TestCase
             new SlideshowInserter(new SlideshowMarkup()),
             new RecipeFactsCleaner(),
             new TeaserPlayerInserter(new TeaserPlayerMarkup()),
+            new MediaOnlyLede(),
         );
     }
 
@@ -257,6 +263,33 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringNotContainsString('Listen to this article', $contentHtml);
         self::assertStringNotContainsString('AI-based technology', $contentHtml);
         self::assertStringContainsString('third attendee of the Burning Man festival', $contentHtml);
+    }
+
+    public function testRebuildsAPpMediaGalleryAsAReaderSlideshow(): void
+    {
+        // A "purple/pp-media" carousel (Mopo et al.): normalisation keeps the
+        // slideshowcontainer/slideshow-image classes because each slide holds
+        // caption text, so the recogniser sees it on the raw page and the cleaner
+        // rebuilds it even though readability would drop the original box.
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-slideshow-ppmedia.html');
+        $extractor = $this->extractor(
+            [new MockResponse($html, ['http_code' => 200])],
+            slideshowScanner: new SlideshowScanner(
+                [new MarkupCarouselRecognizer(new SlideImageResolver(), new SlideCaptionResolver())],
+            ),
+        );
+
+        $result = $extractor->extract('https://site.test/post');
+        $content = (string) $result->contentHtml;
+
+        self::assertTrue($result->ok);
+        self::assertStringContainsString('reader-slideshow', $content);
+        self::assertStringContainsString('Ein roter Lieferwagen passiert die Baustelle.', $content);
+        // The publisher's original carousel is removed, so each photo appears once
+        // (normalisation promotes the <source> rendition over the small <img>).
+        self::assertStringNotContainsString('pp-media--gallery', $content);
+        self::assertSame(1, substr_count($content, 'site.test/a-large.webp'));
+        self::assertSame(1, substr_count($content, 'site.test/b.jpg'));
     }
 
     public function testRestoresLazyLoadedImagesInsteadOfLeavingEmptyFrames(): void

@@ -30,6 +30,59 @@ final class TagesschauCarouselRecognizerTest extends TestCase
         self::assertSame('Umfrage eins', $show->slides[0]->alt);
     }
 
+    public function testReadsEachSlideCaptionFromTheDescriptionAndCredit(): void
+    {
+        $document = HtmlDocumentParser::parseOrNull($this->carousel([
+            [
+                'alttext' => 'König Harald V.',
+                'title' => 'König Harald V. | via REUTERS',
+                'description' => 'Er war Europas ältester amtierender Monarch.',
+                'imageUrls' => ['l' => 'https://img/1-l.webp'],
+            ],
+            [
+                'alttext' => 'Kronprinz Harald',
+                'title' => 'Kronprinz Harald',
+                'description' => 'Der junge Kronprinz.',
+                'imageUrls' => ['l' => 'https://img/2-l.webp'],
+            ],
+        ]));
+        self::assertNotNull($document);
+
+        $shows = (new TagesschauCarouselRecognizer())
+            ->recognize($document, PageTextBlocks::fromDocument($document));
+
+        self::assertSame(
+            'Er war Europas ältester amtierender Monarch. (via REUTERS)',
+            $shows[0]->slides[0]->caption->text,
+        );
+        self::assertSame('Der junge Kronprinz.', $shows[0]->slides[1]->caption->text);
+    }
+
+    public function testACreditWithoutADescriptionHasNoLeadingSpace(): void
+    {
+        $document = HtmlDocumentParser::parseOrNull($this->carousel([
+            ['title' => 'König Harald V. | via REUTERS', 'imageUrls' => ['l' => 'https://img/1-l.webp']],
+            ['title' => 'Kronprinz Harald | EPA', 'imageUrls' => ['l' => 'https://img/2-l.webp']],
+        ]));
+        self::assertNotNull($document);
+
+        $shows = (new TagesschauCarouselRecognizer())
+            ->recognize($document, PageTextBlocks::fromDocument($document));
+
+        self::assertSame('(via REUTERS)', $shows[0]->slides[0]->caption->text);
+    }
+
+    /** @param list<array<string, mixed>> $images */
+    private function carousel(array $images): string
+    {
+        $dataV = htmlspecialchars(
+            (string) json_encode(['name' => 'Gallery', 'images' => $images], JSON_THROW_ON_ERROR),
+            ENT_QUOTES,
+        );
+
+        return '<body><div data-v-type="Carousel" data-v="' . $dataV . '"></div></body>';
+    }
+
     #[DataProvider('malformedCarouselMarkup')]
     public function testAbstainsWithoutThrowingOnMalformedCarouselData(string $html): void
     {

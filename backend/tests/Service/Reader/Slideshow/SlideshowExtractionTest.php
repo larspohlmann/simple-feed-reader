@@ -10,6 +10,7 @@ use App\Service\Reader\EdgeBoilerplateTrimmer;
 use App\Service\Reader\LeadImageCandidate;
 use App\Service\Reader\LeadingEngagementCleaner;
 use App\Service\Reader\LeadingTitleRemover;
+use App\Service\Reader\MediaOnlyLede;
 use App\Service\Reader\Media\ArticleMedia;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\InBodyEmbedRewriter;
@@ -91,6 +92,30 @@ final class SlideshowExtractionTest extends TestCase
         self::assertStringNotContainsString('drop me', $safe);
     }
 
+    public function testRestoresTheExcerptWhenTheGalleryLeavesTheBodyWithoutProse(): void
+    {
+        $raw = file_get_contents(__DIR__ . '/../../../Fixtures/Slideshow/tagesschau-carousel.html');
+        self::assertIsString($raw);
+        $rawDocument = HtmlDocumentParser::parseOrNull($raw);
+        self::assertNotNull($rawDocument);
+
+        // Readability dropped the header block, so its output carries no prose.
+        $clean = $this->cleaner()->clean(
+            '<div></div>',
+            ['Article title', 'Article title'],
+            new LeadImageCandidate(null, PageImageInventory::fromDocument(null)),
+            ArticleMedia::none(),
+            null,
+            null,
+            $this->scanner()->scan($rawDocument),
+            [],
+            'Er war passionierter Segler und bei den Norwegern ausgesprochen beliebt.',
+        );
+
+        self::assertStringContainsString('<p>Er war passionierter Segler', $clean);
+        self::assertLessThan(strpos($clean, 'reader-slideshow'), strpos($clean, 'passionierter Segler'));
+    }
+
     private function scanner(): SlideshowScanner
     {
         return new SlideshowScanner([
@@ -116,6 +141,7 @@ final class SlideshowExtractionTest extends TestCase
             new SlideshowInserter(new SlideshowMarkup()),
             new RecipeFactsCleaner(),
             new TeaserPlayerInserter(new TeaserPlayerMarkup()),
+            new MediaOnlyLede(),
         );
     }
 }

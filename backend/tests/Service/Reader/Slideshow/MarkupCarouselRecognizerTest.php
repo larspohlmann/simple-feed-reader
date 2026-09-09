@@ -122,6 +122,27 @@ final class MarkupCarouselRecognizerTest extends TestCase
         self::assertCount(2, $shows[0]->slides);
     }
 
+    public function testDetectsThePurpleSlideshowContainer(): void
+    {
+        $shows = $this->recognize(
+            '<body><p>An intro paragraph long enough to anchor the gallery below.</p>'
+            . '<div class="slideshowcontainer" id="slideshow-1">'
+            . '<div class="scroll-item snap-element slideshow-image">'
+            . '<figure class="pp-media--gallery"><picture><img src="https://img/a.jpg" alt="A"></picture>'
+            . '<figcaption itemprop="caption">Caption A</figcaption></figure></div>'
+            . '<div class="scroll-item snap-element slideshow-image">'
+            . '<figure class="pp-media--gallery"><picture><img src="https://img/b.jpg" alt="B"></picture>'
+            . '<figcaption itemprop="caption">Caption B</figcaption></figure></div>'
+            . '</div></body>',
+        );
+
+        self::assertCount(1, $shows);
+        self::assertCount(2, $shows[0]->slides);
+        self::assertSame('https://img/a.jpg', $shows[0]->slides[0]->imageUrl);
+        self::assertSame('A', $shows[0]->slides[0]->alt);
+        self::assertSame('Caption A', $shows[0]->slides[0]->caption->text);
+    }
+
     public function testAbstainsOnImagelessGlideFrames(): void
     {
         self::assertSame([], $this->recognize(

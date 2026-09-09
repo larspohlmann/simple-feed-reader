@@ -21,6 +21,7 @@ use App\Service\Reader\Media\Teaser\TeaserPlayerMarkup;
 use App\Service\Reader\Media\PageMediaInserter;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\SubstackPosterLink;
+use App\Service\Reader\MediaOnlyLede;
 use App\Service\Reader\NavigationChromeTrimmer;
 use App\Service\Reader\PageImageInventory;
 use App\Service\Reader\PlayerChromeCleaner;
@@ -56,6 +57,7 @@ final class ReaderBodyCleanerTest extends TestCase
             new SlideshowInserter(new SlideshowMarkup()),
             new RecipeFactsCleaner(),
             new TeaserPlayerInserter(new TeaserPlayerMarkup()),
+            new MediaOnlyLede(),
         );
     }
 

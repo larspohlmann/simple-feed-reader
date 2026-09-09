@@ -41,14 +41,43 @@ final class ContainerSignatureTest extends TestCase
         self::assertFalse($signature->matches($this->elementWithClass('carousel gallery')));
     }
 
+    public function testMatchesByIdWhenTheClassChangedButTheIdSurvived(): void
+    {
+        $signature = ContainerSignature::fromElement(
+            $this->element('<div class="slideshowcontainer fullwidthTarget" id="slideshow-1">x</div>'),
+        );
+
+        self::assertNotNull($signature);
+        // Readability merged the wrapper chain: the class became the outer wrapper's,
+        // but the inner id survived, so the original is still found for removal.
+        $merged = $this->element('<div class="column slideshow-box" id="slideshow-1">x</div>');
+        self::assertTrue($signature->matches($merged));
+    }
+
+    public function testIdOnlySignatureDoesNotMatchAnUnrelatedElement(): void
+    {
+        $signature = ContainerSignature::fromElement($this->element('<div id="slideshow-1">x</div>'));
+
+        self::assertNotNull($signature);
+        self::assertFalse($signature->matches($this->element('<div class="anything">y</div>')));
+    }
+
+    public function testElementWithNeitherClassNorIdProducesNoSignature(): void
+    {
+        self::assertNull(ContainerSignature::fromElement($this->element('<div>x</div>')));
+    }
+
     private function elementWithClass(string $classAttribute): \Dom\Element
     {
-        $document = HtmlDocumentParser::parseOrNull(
-            \sprintf('<div><span class="%s">slides</span></div>', $classAttribute),
-        );
+        return $this->element(\sprintf('<span class="%s">slides</span>', $classAttribute));
+    }
+
+    private function element(string $markup): \Dom\Element
+    {
+        $document = HtmlDocumentParser::parseOrNull("<div>{$markup}</div>");
         self::assertNotNull($document);
 
-        $element = $document->querySelector('span');
+        $element = $document->querySelector('div > *') ?? $document->querySelector('div');
         self::assertNotNull($element);
 
         return $element;
