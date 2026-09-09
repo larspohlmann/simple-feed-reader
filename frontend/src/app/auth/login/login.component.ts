@@ -7,6 +7,7 @@ import { API_BASE_URL } from '../../core/api';
 import { AuthService } from '../../core/auth.service';
 import { PasskeyService } from '../../core/passkey.service';
 import { Problem, parseProblem } from '../../core/problem';
+import { ReaderLocationService } from '../../core/reader-location.service';
 import { isConditionalMediationSupported, isPasskeySupported } from '../../core/webauthn';
 import { adoptAutofilledValues } from '../autofill';
 import { SetupService } from '../../setup/setup.service';
@@ -41,6 +42,7 @@ export class LoginComponent implements OnInit, OnDestroy {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly setup = inject(SetupService);
   private readonly passkeyService = inject(PasskeyService);
+  private readonly readerLocation = inject(ReaderLocationService);
 
   readonly form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -177,9 +179,10 @@ export class LoginComponent implements OnInit, OnDestroy {
    *  by this point -- both `AuthService.login()` and `PasskeyService` set it
    *  before resolving. */
   private afterSignIn(): void {
+    const destination = this.readerLocation.consumeSignInReturnUrl();
     this.auth.loadMe().subscribe({
-      next: () => void this.router.navigate(['/']),
-      error: () => void this.router.navigate(['/']),
+      next: () => void this.router.navigateByUrl(destination),
+      error: () => void this.router.navigateByUrl(destination),
     });
   }
 

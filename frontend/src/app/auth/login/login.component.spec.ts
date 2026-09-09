@@ -5,16 +5,18 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Router, provideRouter } from '@angular/router';
 import { API_BASE_URL } from '../../core/api';
 import { PasskeyService } from '../../core/passkey.service';
+import { ReaderLocationService } from '../../core/reader-location.service';
 import { LoginComponent } from './login.component';
 import { SetupService } from '../../setup/setup.service';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 
 describe('LoginComponent', () => {
   let ctrl: HttpTestingController;
-  let navigate: jest.SpyInstance;
+  let navigateByUrl: jest.SpyInstance;
 
   beforeEach(async () => {
     localStorage.clear();
+    sessionStorage.clear();
     await TestBed.configureTestingModule({
       imports: [LoginComponent, provideTranslocoTesting()],
       providers: [
@@ -25,7 +27,7 @@ describe('LoginComponent', () => {
       ],
     }).compileComponents();
     ctrl = TestBed.inject(HttpTestingController);
-    navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    navigateByUrl = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
   });
 
   function create() {
@@ -41,7 +43,8 @@ describe('LoginComponent', () => {
     expect(f.componentInstance.oauthUrl('google')).toBe('https://api.test/api/auth/oauth/google');
   });
 
-  it('logs in, loads the user, and navigates home', () => {
+  it('restores the pending reader destination after password sign-in', () => {
+    TestBed.inject(ReaderLocationService).rememberAttemptedReaderUrl('/?tag=17&entry=42-example');
     const f = create();
     f.componentInstance.form.setValue({ email: 'a@b.c', password: 'password12345' });
     f.componentInstance.submit();
@@ -54,10 +57,26 @@ describe('LoginComponent', () => {
       createdAt: 'x',
       locale: 'de',
     });
-    expect(navigate).toHaveBeenCalledWith(['/']);
+    expect(navigateByUrl).toHaveBeenCalledWith('/?tag=17&entry=42-example');
+    expect(TestBed.inject(ReaderLocationService).consumeSignInReturnUrl()).toBe('/');
     // Proves the account's locale, not the cached one, drives the UI after login.
     expect(document.documentElement.lang).toBe('de');
     expect(localStorage.getItem('sfr.lang')).toBe('de');
+  });
+
+  it('falls back to the reader root after loadMe fails following password sign-in', () => {
+    const f = create();
+    f.componentInstance.form.setValue({ email: 'a@b.c', password: 'password12345' });
+    f.componentInstance.submit();
+    ctrl.expectOne('https://api.test/api/auth/login').flush({ token: 'jwt' });
+    ctrl
+      .expectOne('https://api.test/api/me')
+      .flush(
+        { type: 'unavailable', title: 'Unavailable', status: 503 },
+        { status: 503, statusText: 'Unavailable' },
+      );
+
+    expect(navigateByUrl).toHaveBeenCalledWith('/');
   });
 
   it('renders the problem detail on a failed login', () => {
@@ -196,7 +215,7 @@ interface PasskeyServiceStub {
 
 describe('LoginComponent — passkey login', () => {
   let ctrl: HttpTestingController;
-  let navigate: jest.SpyInstance;
+  let navigateByUrl: jest.SpyInstance;
   let passkeyService: PasskeyServiceStub;
 
   /** jsdom carries neither `PublicKeyCredential` nor
@@ -214,6 +233,7 @@ describe('LoginComponent — passkey login', () => {
 
   beforeEach(async () => {
     localStorage.clear();
+    sessionStorage.clear();
     passkeyService = {
       signIn: jest.fn(),
       // Never resolves unless a test overrides it: standing in for a live
@@ -232,7 +252,7 @@ describe('LoginComponent — passkey login', () => {
       ],
     }).compileComponents();
     ctrl = TestBed.inject(HttpTestingController);
-    navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    navigateByUrl = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
   });
 
   function create() {
@@ -277,9 +297,10 @@ describe('LoginComponent — passkey login', () => {
     expect(email.getAttribute('autocomplete')).toBe('username webauthn');
   });
 
-  it('shows the passkey button, signs in, and navigates exactly where password login does', async () => {
+  it('restores the pending reader destination after explicit passkey sign-in', async () => {
     stubPasskeySupport(false);
     passkeyService.signIn.mockResolvedValue('jwt');
+    TestBed.inject(ReaderLocationService).rememberAttemptedReaderUrl('/?tag=17&entry=42-example');
     const f = create();
     f.detectChanges();
 
@@ -290,7 +311,7 @@ describe('LoginComponent — passkey login', () => {
     f.detectChanges();
 
     flushSuccessfulLogin();
-    expect(navigate).toHaveBeenCalledWith(['/']);
+    expect(navigateByUrl).toHaveBeenCalledWith('/?tag=17&entry=42-example');
   });
 
   it('renders a passkey sign-in failure through app-form-error', async () => {
@@ -359,7 +380,20 @@ describe('LoginComponent — passkey login', () => {
 
     ctrl.expectOne('https://api.test/api/auth/login').flush({ token: 'jwt' });
     flushSuccessfulLogin();
-    expect(navigate).toHaveBeenCalledWith(['/']);
+    expect(navigateByUrl).toHaveBeenCalledWith('/');
+  });
+
+  it('restores the pending reader destination after conditional passkey sign-in', async () => {
+    stubPasskeySupport(true);
+    passkeyService.signInConditionally.mockResolvedValue('jwt');
+    TestBed.inject(ReaderLocationService).rememberAttemptedReaderUrl('/?tag=17&entry=42-example');
+
+    create();
+    await flushMicrotasks();
+
+    flushSuccessfulLogin();
+
+    expect(navigateByUrl).toHaveBeenCalledWith('/?tag=17&entry=42-example');
   });
 
   it('renders no banner for a NotAllowedError from the conditional ceremony (the user dismissed it)', async () => {
