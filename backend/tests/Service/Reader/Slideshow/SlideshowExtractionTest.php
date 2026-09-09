@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader\Slideshow;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\BoilerplateVerdict;
+use App\Service\Reader\DuplicateBlockCollapser;
 use App\Service\Reader\EdgeBoilerplateTrimmer;
 use App\Service\Reader\LeadImageCandidate;
 use App\Service\Reader\LeadingEngagementCleaner;
@@ -142,6 +143,7 @@ final class SlideshowExtractionTest extends TestCase
             new RecipeFactsCleaner(),
             new TeaserPlayerInserter(new TeaserPlayerMarkup()),
             new MediaOnlyLede(),
+            new DuplicateBlockCollapser(),
         );
     }
 }

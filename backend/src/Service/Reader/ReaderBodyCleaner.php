@@ -55,6 +55,7 @@ final readonly class ReaderBodyCleaner
         private RecipeFactsCleaner $recipeFactsCleaner,
         private TeaserPlayerInserter $teaserInserter,
         private MediaOnlyLede $mediaOnlyLede,
+        private DuplicateBlockCollapser $duplicateCollapser,
     ) {
     }
 
@@ -103,6 +104,11 @@ final readonly class ReaderBodyCleaner
         // its own stylesheet, which the sanitizer never receives; relay it to the
         // reader's own row-of-cells marker before media planning sees the body.
         $this->recipeFactsCleaner->cleanIn($document);
+
+        // Before planning: drop the dek and lead image a responsive page ships
+        // twice (one copy hidden by CSS the scraper never runs), so the planner
+        // sees one image, not a phantom second lead visual (#963).
+        $this->duplicateCollapser->collapseIn($document);
 
         // plan() only classifies, so restore() still sees every body image and
         // can skip the hero when a lead visual will land at the top; apply()'s
