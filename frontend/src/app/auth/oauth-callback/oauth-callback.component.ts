@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { API_BASE_URL } from '../../core/api';
 import { AuthService } from '../../core/auth.service';
@@ -19,7 +19,6 @@ export class OAuthCallbackComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly base = inject(API_BASE_URL);
   private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
   private readonly tokens = inject(TokenStore);
   private readonly auth = inject(AuthService);
   readonly state = signal<'loading' | 'error' | 'blocked'>('loading');
@@ -58,10 +57,7 @@ export class OAuthCallbackComponent implements OnInit {
         .subscribe({
           next: (res) => {
             this.tokens.set(res.token);
-            this.auth.loadMe().subscribe({
-              next: () => void this.router.navigate(['/']),
-              error: () => void this.router.navigate(['/']),
-            });
+            this.auth.finishSignIn();
           },
           error: (response: HttpErrorResponse) => this.show(response),
         });

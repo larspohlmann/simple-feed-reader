@@ -3,6 +3,7 @@ import { Location } from '@angular/common';
 import { provideLocationMocks } from '@angular/common/testing';
 import { DefaultUrlSerializer, NavigationStart, Router, provideRouter } from '@angular/router';
 import { Subject } from 'rxjs';
+import { ReaderLocationService } from '../core/reader-location.service';
 import { ListScrollMemory } from './list-scroll-memory';
 import { ListScrollReset, ReaderPlace, forgetsPosition } from './list-scroll-reset';
 import { Selection } from './query';
@@ -162,7 +163,7 @@ describe('ListScrollReset, driven by the real router', () => {
       providers: [
         provideRouter([
           { path: '', children: [] },
-          { path: 'settings', children: [] },
+          { path: 'settings', children: [{ path: 'preferences', children: [] }] },
         ]),
         provideLocationMocks(),
       ],
@@ -216,6 +217,21 @@ describe('ListScrollReset, driven by the real router', () => {
     tick();
 
     router.navigateByUrl('/?tag=5');
+    tick();
+
+    expect(memory.read(TAG)).toBe(300);
+  }));
+
+  it('keeps the offset when settings returns through the saved reader URL', fakeAsync(() => {
+    const readerLocation = TestBed.inject(ReaderLocationService);
+    router.navigateByUrl('/?tag=5');
+    tick();
+    memory.save(TAG, 300);
+    expect(readerLocation.savedReaderUrl()).toBe('/?tag=5');
+    router.navigateByUrl('/settings/preferences');
+    tick();
+
+    router.navigateByUrl(readerLocation.savedReaderUrl());
     tick();
 
     expect(memory.read(TAG)).toBe(300);

@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { API_BASE_URL } from '../../core/api';
+import { ReaderLocationService } from '../../core/reader-location.service';
 import { TokenStore } from '../../core/token.store';
 import { OAuthCallbackComponent } from './oauth-callback.component';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
@@ -28,13 +29,14 @@ function setup(params: Record<string, string | null>) {
     ],
   });
   localStorage.clear();
-  const navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+  sessionStorage.clear();
+  const navigateByUrl = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
   const f = TestBed.createComponent(OAuthCallbackComponent);
   // detectChanges runs ngOnInit and renders, so the specs below assert the
   // strings on screen rather than only the signals behind them.
   f.detectChanges();
   const text = (): string => (f.nativeElement as HTMLElement).textContent ?? '';
-  return { f, text, ctrl: TestBed.inject(HttpTestingController), navigate };
+  return { f, text, ctrl: TestBed.inject(HttpTestingController), navigateByUrl };
 }
 
 /** Blocks the exchange the way the API does for an account that may not sign in. */
@@ -55,8 +57,9 @@ function blockWith(accountStatus: string) {
 }
 
 describe('OAuthCallbackComponent', () => {
-  it('exchanges the code CREDENTIALED, stores the token, loads me, and navigates home', () => {
-    const { ctrl, navigate } = setup({ code: 'one-time' });
+  it('restores the pending reader destination after OAuth sign-in', () => {
+    const { ctrl, navigateByUrl } = setup({ code: 'one-time' });
+    TestBed.inject(ReaderLocationService).rememberAttemptedReaderUrl('/?tag=17&entry=42-example');
     const req = ctrl.expectOne(EXCHANGE);
     expect(req.request.withCredentials).toBe(true);
     expect(req.request.body).toEqual({ code: 'one-time' });
@@ -70,10 +73,25 @@ describe('OAuthCallbackComponent', () => {
       createdAt: 'x',
       locale: 'de',
     });
-    expect(navigate).toHaveBeenCalledWith(['/']);
+    expect(navigateByUrl).toHaveBeenCalledWith('/?tag=17&entry=42-example');
+    expect(TestBed.inject(ReaderLocationService).consumeSignInReturnUrl()).toBe('/');
     // Proves the account's locale, not the cached one, drives the UI after login.
     expect(document.documentElement.lang).toBe('de');
     expect(localStorage.getItem('sfr.lang')).toBe('de');
+  });
+
+  it('restores the pending reader destination when OAuth loadMe fails', () => {
+    const { ctrl, navigateByUrl } = setup({ code: 'one-time' });
+    TestBed.inject(ReaderLocationService).rememberAttemptedReaderUrl('/?tag=17&entry=42-example');
+    ctrl.expectOne(EXCHANGE).flush({ token: 'jwt-oauth' });
+    ctrl
+      .expectOne('https://api.test/api/me')
+      .flush(
+        { type: 'unavailable', title: 'Unavailable', status: 503 },
+        { status: 503, statusText: 'Unavailable' },
+      );
+
+    expect(navigateByUrl).toHaveBeenCalledWith('/?tag=17&entry=42-example');
   });
 
   it('shows the error and does not call exchange when the provider returned ?error', () => {

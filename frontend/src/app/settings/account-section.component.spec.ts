@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { Dialog } from '@angular/cdk/dialog';
 import { Router, provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { API_BASE_URL } from '../core/api';
 import { AccountSectionComponent } from './account-section.component';
@@ -46,6 +46,7 @@ describe('AccountSectionComponent', () => {
 
   function mount(u: CurrentUser | null) {
     TestBed.resetTestingModule();
+    const events = new Subject<unknown>();
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
@@ -53,7 +54,7 @@ describe('AccountSectionComponent', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: API_BASE_URL, useValue: base },
-        { provide: Router, useValue: { navigate } },
+        { provide: Router, useValue: { events, navigate } },
         { provide: Dialog, useValue: dialogStub },
       ],
     });
