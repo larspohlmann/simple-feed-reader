@@ -9,11 +9,11 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * A feed's fetch-schedule state: when it was last asked, when it last
- * actually delivered, when it may be asked again, and the failure streak and
- * message behind that schedule.
+ * actually delivered, when it last brought back new entries, when it may be
+ * asked again, and the failure streak and message behind that schedule.
  *
- * Embedded into Feed rather than left as six of its own scalar columns —
- * PHPMD's field-count ceiling on Feed is a proxy for a real seam: these six
+ * Embedded into Feed rather than left as seven of its own scalar columns —
+ * PHPMD's field-count ceiling on Feed is a proxy for a real seam: these seven
  * values are read and written together, by FeedScheduler alone, and belong
  * to the same concern. An embeddable keeps them there without the join or
  * lifecycle a separate entity would add; the column names are unprefixed so
@@ -33,6 +33,15 @@ class FetchSchedule
      */
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $lastSuccessfulFetchAt = null;
+
+    /**
+     * When a fetch last brought back new entries — as opposed to
+     * lastSuccessfulFetchAt, which advances on every 200 even when the feed
+     * carried nothing new. This is the "last updated" the reader shows. Null
+     * until the first fetch that adds an entry.
+     */
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $lastNewEntryAt = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $nextFetchAt = null;
@@ -64,6 +73,16 @@ class FetchSchedule
     public function setLastSuccessfulFetchAt(?\DateTimeImmutable $lastSuccessfulFetchAt): void
     {
         $this->lastSuccessfulFetchAt = $lastSuccessfulFetchAt;
+    }
+
+    public function getLastNewEntryAt(): ?\DateTimeImmutable
+    {
+        return $this->lastNewEntryAt;
+    }
+
+    public function setLastNewEntryAt(?\DateTimeImmutable $lastNewEntryAt): void
+    {
+        $this->lastNewEntryAt = $lastNewEntryAt;
     }
 
     public function getNextFetchAt(): ?\DateTimeImmutable

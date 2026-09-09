@@ -254,4 +254,41 @@ final class SubscriptionJsonTest extends TestCase
         self::assertSame(0, $shape['consecutiveFailures']);
         self::assertNull($shape['lastErrorMessage']);
     }
+
+    public function testSerialisesTheStoredNextFetchTime(): void
+    {
+        $feed = new Feed('https://example.com/feed.xml');
+        $feed->setNextFetchAt(new \DateTimeImmutable('2026-02-04T11:00:00Z'));
+
+        self::assertSame(
+            '2026-02-04T11:00:00+00:00',
+            SubscriptionJson::one($this->subscriptionTo($feed))['nextFetchAt'],
+        );
+    }
+
+    public function testAGoneFeedReportsANullNextFetchTime(): void
+    {
+        $feed = new Feed('https://example.com/feed.xml');
+        $feed->setNextFetchAt(null);
+
+        self::assertNull(SubscriptionJson::one($this->subscriptionTo($feed))['nextFetchAt']);
+    }
+
+    public function testSerialisesTheLastNewContentTime(): void
+    {
+        $feed = new Feed('https://example.com/feed.xml');
+        $feed->setLastNewEntryAt(new \DateTimeImmutable('2026-02-04T10:00:00Z'));
+
+        self::assertSame(
+            '2026-02-04T10:00:00+00:00',
+            SubscriptionJson::one($this->subscriptionTo($feed))['lastNewContentAt'],
+        );
+    }
+
+    public function testAFeedThatNeverGainedAnEntryReportsANullLastNewContentTime(): void
+    {
+        $feed = new Feed('https://example.com/feed.xml');
+
+        self::assertNull(SubscriptionJson::one($this->subscriptionTo($feed))['lastNewContentAt']);
+    }
 }

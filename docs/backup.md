@@ -216,6 +216,7 @@ article mark all hold one pointer to their owner.
 | `lastModified` | The second half of the same pair of conditional-request values as `etag`. It is left out for the same reason. |
 | `fetchSchedule.lastFetchedAt` | Fetch bookkeeping of the instance. A restored feed has never been fetched by the new instance. |
 | `fetchSchedule.lastSuccessfulFetchAt` | The same bookkeeping. If it were carried, the new instance would report the feed as healthy before it had reached the feed once. |
+| `fetchSchedule.lastNewEntryAt` | The same bookkeeping: when the instance last saw new entries. A restored feed has seen none yet, so it stays empty. |
 | `fetchSchedule.nextFetchAt` | The date the scheduler must fetch the feed again. It stays empty, so a restored feed is due immediately. That is what you want after a restore. |
 | `fetchSchedule.fetchIntervalMinutes` | The interval between two fetches. A restored feed gets a new schedule and is refreshed immediately, as an OPML import is. |
 | `fetchSchedule.consecutiveFailures` | The count of failures in sequence against one network. If it were carried, the new instance would apply the backoff of another host to a feed it has never tried. |

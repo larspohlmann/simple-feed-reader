@@ -43,6 +43,28 @@ final class FeedSchedulerTest extends TestCase
         self::assertSame(5, $feed->getFetchIntervalMinutes());
     }
 
+    public function testNewEntriesStampTheLastNewEntryTime(): void
+    {
+        $feed = new Feed('https://example.com/feed');
+
+        $this->scheduler->recordSuccess($feed, 2);
+
+        self::assertSame('2026-07-21 12:00:00', $feed->getLastNewEntryAt()?->format('Y-m-d H:i:s'));
+    }
+
+    public function testASuccessWithNoNewEntriesLeavesTheLastNewEntryTimeUntouched(): void
+    {
+        $feed = new Feed('https://example.com/feed');
+        $feed->setLastNewEntryAt(new \DateTimeImmutable('2026-07-20 08:00:00'));
+
+        // A 200 that carried nothing new is a successful fetch, but not an
+        // update: the "last new content" mark must not advance on it.
+        $this->scheduler->recordSuccess($feed, 0);
+
+        self::assertSame('2026-07-20 08:00:00', $feed->getLastNewEntryAt()?->format('Y-m-d H:i:s'));
+        self::assertSame('2026-07-21 12:00:00', $feed->getLastSuccessfulFetchAt()?->format('Y-m-d H:i:s'));
+    }
+
     public function testAThrottleCostsTheFeedNothingButItsPlaceInTheQueue(): void
     {
         $feed = new Feed('https://example.com/feed');

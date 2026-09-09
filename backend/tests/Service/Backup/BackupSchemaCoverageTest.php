@@ -224,6 +224,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
                 . 'feed has never been fetched by this instance.',
             'fetchSchedule.lastSuccessfulFetchAt' => 'The same bookkeeping. Carried over, it would '
                 . 'report a feed as healthy before this instance had reached it once.',
+            'fetchSchedule.lastNewEntryAt' => 'The same bookkeeping — when this instance last saw '
+                . 'new entries. A restored feed has seen none yet, so it starts unset.',
             'fetchSchedule.nextFetchAt' => 'The scheduler\'s due stamp. Left unset so the restored '
                 . 'feed is due at once, which is what a reader wants after a restore.',
             'fetchSchedule.fetchIntervalMinutes' => 'A restored feed gets a virgin schedule and is '
