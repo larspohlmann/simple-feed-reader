@@ -223,13 +223,14 @@ describe('ListScrollReset, driven by the real router', () => {
   }));
 
   it('keeps the offset when settings returns through the saved reader URL', fakeAsync(() => {
+    const readerLocation = TestBed.inject(ReaderLocationService);
     router.navigateByUrl('/?tag=5');
     tick();
     memory.save(TAG, 300);
+    expect(readerLocation.savedReaderUrl()).toBe('/?tag=5');
     router.navigateByUrl('/settings/preferences');
     tick();
 
-    const readerLocation = TestBed.inject(ReaderLocationService);
     router.navigateByUrl(readerLocation.savedReaderUrl());
     tick();
 
