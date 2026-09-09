@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader;
 
 use App\Service\Html\HtmlDocumentParser;
+use App\Service\Html\PictureSources;
 use App\Service\Reader\LazyImageSources;
 use App\Service\Reader\LeadImageCandidate;
 use App\Service\Reader\PageImageInventory;
@@ -41,7 +42,7 @@ final class ReaderLeadImageTest extends TestCase
     {
         $document = HtmlDocumentParser::parseOrNull($pageHtml);
         self::assertNotNull($document);
-        (new LazyImageSources())->resolveIn($document);
+        (new LazyImageSources(new PictureSources()))->resolveIn($document);
 
         return PageImageInventory::fromDocument($document);
     }

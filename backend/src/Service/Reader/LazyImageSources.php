@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
-use App\Service\Html\DesktopViewport;
 use App\Service\Html\ImageRendition;
+use App\Service\Html\ImageSourceUrl;
+use App\Service\Html\PictureSources;
 use App\Service\Html\Srcset;
 use Dom\Element;
 use Dom\HTMLDocument;
@@ -44,8 +45,9 @@ final readonly class LazyImageSources
     /** Attributes holding a candidate list; the first entry is taken. */
     private const array SRCSET_ATTRIBUTES = ['data-lazy-srcset', 'data-srcset', 'srcset'];
 
-    /** A URL carrying a scheme that is neither http nor https — never promoted. */
-    private const string FOREIGN_SCHEME = '#^(?!https?://)[a-z][a-z0-9+.\-]*:#i';
+    public function __construct(private PictureSources $pictureSources)
+    {
+    }
 
     public function resolveIn(HTMLDocument $document): void
     {
@@ -71,8 +73,9 @@ final readonly class LazyImageSources
      */
     private function ensureUsableSource(Element $image): bool
     {
-        if ($this->isUsable($image->getAttribute('src'))) {
+        if (ImageSourceUrl::isUsable($image->getAttribute('src'))) {
             $this->preferWiderPictureSource($image);
+            $this->preferWiderOwnSrcset($image);
 
             return true;
         }
@@ -105,62 +108,59 @@ final readonly class LazyImageSources
             return;
         }
 
-        $widest = $this->widestPictureSource($picture);
-        if ($widest === null) {
+        $widest = $this->pictureSources->widest($picture);
+        if ($widest !== null) {
+            $this->adoptWiderRendition($image, $widest);
+        }
+    }
+
+    /**
+     * A lazy-loaded <img> outside any <picture> can pin its own src to a tiny
+     * LQIP rendition and keep the real sizes in its srcset (heise ships the lead
+     * image so, inside a <noscript> the sanitizer would drop; entry 508092).
+     * EntrySanitizer strips srcset, so the widest rendition has to move into src
+     * here or the reader shows the placeholder. Unlike a <picture> fallback,
+     * a bare <img>'s src is the author's chosen rendition, so only a src that
+     * measurably undersizes the srcset is upgraded; an unmeasured one stays.
+     */
+    private function preferWiderOwnSrcset(Element $image): void
+    {
+        if (
+            $this->enclosingPicture($image) !== null
+            || ImageRendition::widthFromUrl($image->getAttribute('src')) === null
+        ) {
             return;
         }
 
+        $widest = Srcset::widest($image->getAttribute('srcset'));
+        if ($widest === null || !ImageSourceUrl::isUsable($widest->url)) {
+            return;
+        }
+
+        $this->adoptWiderRendition($image, ImageRendition::measuredFromUrl($widest->url, $widest->width));
+    }
+
+    /**
+     * Moves a wider rendition into the <img>'s src, dropping the width and
+     * height the smaller rendition carried. The src stays when it already
+     * measures at least as wide, so a real photo is never traded for a
+     * narrower one (the NDR mirror case, entry 480204).
+     */
+    private function adoptWiderRendition(Element $image, ImageRendition $candidate): void
+    {
         $imageSource = $image->getAttribute('src');
-        if ($imageSource === $widest->url) {
+        if ($imageSource === $candidate->url) {
             return;
         }
 
         $imageWidth = ImageRendition::widthFromUrl($imageSource);
-        if ($imageWidth !== null && ($widest->width === null || $imageWidth >= $widest->width)) {
+        if ($imageWidth !== null && ($candidate->width === null || $imageWidth >= $candidate->width)) {
             return;
         }
 
-        $image->setAttribute('src', $widest->url);
+        $image->setAttribute('src', $candidate->url);
         $image->removeAttribute('width');
         $image->removeAttribute('height');
-    }
-
-    /**
-     * The widest usable rendition the picture's <source> set offers. When no
-     * source declares a width the first usable one stands in, so a src-less
-     * picture still resolves to a real image.
-     */
-    private function widestPictureSource(Element $picture): ?ImageRendition
-    {
-        $widest = null;
-        foreach ($picture->getElementsByTagName('source') as $source) {
-            $rendition = $this->renditionOf($source);
-            if ($rendition === null) {
-                continue;
-            }
-            if ($widest === null || $rendition->outsizes($widest)) {
-                $widest = $rendition;
-            }
-        }
-
-        return $widest;
-    }
-
-    /** A source's widest usable candidate, its width filled from the URL when the
-     *  srcset omits a descriptor. Null when the source is scoped to a viewport
-     *  the reader does not stand in for, or carries nothing loadable. */
-    private function renditionOf(Element $source): ?ImageRendition
-    {
-        if (!DesktopViewport::admits($source->getAttribute('media'))) {
-            return null;
-        }
-
-        $candidate = Srcset::widest($this->srcsetOf($source));
-        if ($candidate === null || !$this->isUsable($candidate->url)) {
-            return null;
-        }
-
-        return new ImageRendition($candidate->url, $candidate->width ?? ImageRendition::widthFromUrl($candidate->url));
     }
 
     /**
@@ -186,7 +186,7 @@ final readonly class LazyImageSources
     {
         foreach (self::URL_ATTRIBUTES as $attribute) {
             $candidate = trim($image->getAttribute($attribute) ?? '');
-            if ($this->isUsable($candidate)) {
+            if (ImageSourceUrl::isUsable($candidate)) {
                 return $candidate;
             }
         }
@@ -210,27 +210,8 @@ final readonly class LazyImageSources
     private function candidateFromEnclosingPicture(Element $image): ?string
     {
         $picture = $this->enclosingPicture($image);
-        if ($picture === null) {
-            return null;
-        }
 
-        foreach ($picture->getElementsByTagName('source') as $source) {
-            $candidate = $this->usableSrcsetHead($this->srcsetOf($source) ?? '');
-            if ($candidate !== null) {
-                return $candidate;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * A relative URL stays a candidate: readability resolves it against the
-     * page's final URL right after this step.
-     */
-    private function isUsable(?string $url): bool
-    {
-        return $url !== null && $url !== '' && preg_match(self::FOREIGN_SCHEME, $url) !== 1;
+        return $picture === null ? null : $this->pictureSources->firstUsableUrl($picture);
     }
 
     /**
@@ -251,19 +232,6 @@ final readonly class LazyImageSources
     {
         $candidate = Srcset::firstUrl($srcset);
 
-        return $candidate !== null && $this->isUsable($candidate) ? $candidate : null;
-    }
-
-    /** A <source>'s candidate list, from the same lazy attributes an <img> is read by. */
-    private function srcsetOf(Element $source): ?string
-    {
-        foreach (self::SRCSET_ATTRIBUTES as $attribute) {
-            $srcset = $source->getAttribute($attribute);
-            if ($srcset !== null && trim($srcset) !== '') {
-                return $srcset;
-            }
-        }
-
-        return null;
+        return $candidate !== null && ImageSourceUrl::isUsable($candidate) ? $candidate : null;
     }
 }

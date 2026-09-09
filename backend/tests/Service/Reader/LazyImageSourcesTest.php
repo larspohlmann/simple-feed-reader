@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
+use App\Service\Html\PictureSources;
 use App\Service\Reader\LazyImageSources;
 use PHPUnit\Framework\TestCase;
 
@@ -13,7 +14,7 @@ final class LazyImageSourcesTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->lazyImages = new LazyImageSources();
+        $this->lazyImages = new LazyImageSources(new PictureSources());
     }
 
     public function testPromotesLazySourceOverPlaceholder(): void
@@ -71,6 +72,17 @@ final class LazyImageSourcesTest extends TestCase
     public function testIgnoresACandidateWithAnUnsafeScheme(): void
     {
         $html = $this->resolvedHtml('<img src="data:image/gif;base64,R0lGOD" data-src="javascript:alert(1)">');
+
+        self::assertStringNotContainsString('<img', $html);
+    }
+
+    public function testIgnoresAnImageSrcsetWhoseFirstCandidateIsUnsafe(): void
+    {
+        // The img's own srcset leads with an unsafe scheme, so it is no
+        // candidate; the image is dropped rather than promoted to it.
+        $html = $this->resolvedHtml(
+            '<img src="data:image/gif;base64,R0lGOD" data-srcset="javascript:alert(1) 400w">'
+        );
 
         self::assertStringNotContainsString('<img', $html);
     }
@@ -353,6 +365,18 @@ final class LazyImageSourcesTest extends TestCase
         self::assertSame('https://images.example.com/real.jpg', $source);
     }
 
+    public function testAWhitespaceOnlyLazyAttributeFallsThroughToTheNextSourceAttribute(): void
+    {
+        // A source attribute holding only whitespace carries no candidate, so
+        // the reader passes over it to the next list rather than adopting blank.
+        $source = $this->resolvedSource(
+            '<picture data-lazy="true"><source data-lazy-srcset="   " '
+            . 'data-srcset="https://images.example.com/real.jpg 750w"><img alt="A"></picture>'
+        );
+
+        self::assertSame('https://images.example.com/real.jpg', $source);
+    }
+
     public function testSkipsPictureSourcesScopedToNarrowViewports(): void
     {
         // zeit art-directs by viewport and scales by density, with no width
@@ -381,6 +405,85 @@ final class LazyImageSourcesTest extends TestCase
         );
 
         self::assertSame('https://img.example.com/desktop.jpg', $source);
+    }
+
+    public function testAdoptsAWiderSrcsetWhenTheBareImageSrcIsAPlaceholder(): void
+    {
+        // heise ships the lead image inside a <noscript> whose <img> pins its
+        // src to the 16px no-JavaScript base and lists the real sizes only in
+        // srcset (Telepolis entry 508092). NoscriptImageUnwrapper promotes that
+        // bare <img>; the sanitizer then strips srcset, so a small-but-usable
+        // src would leave the reader on a 16px image.
+        $source = $this->resolvedSource(
+            '<img src="https://heise.cloudimg.io/v7/photo.jpeg?q=50&width=16"'
+            . ' srcset="https://heise.cloudimg.io/v7/photo.jpeg?q=30&width=336 336w,'
+            . ' https://heise.cloudimg.io/v7/photo.jpeg?q=30&width=1008 1008w,'
+            . ' https://heise.cloudimg.io/v7/photo.jpeg?q=30&width=16 16w">'
+        );
+
+        self::assertSame('https://heise.cloudimg.io/v7/photo.jpeg?q=30&width=1008', $source);
+    }
+
+    public function testKeepsTheBareImageWhenItsSrcOutsizesItsSrcset(): void
+    {
+        // A measurably wide src is the author's real rendition; its narrower
+        // srcset variants are no improvement and must not replace it.
+        $source = $this->resolvedSource(
+            '<img src="https://images.example.com/photo.jpg?width=1000"'
+            . ' srcset="https://images.example.com/photo.jpg?width=300 300w">'
+        );
+
+        self::assertSame('https://images.example.com/photo.jpg?width=1000', $source);
+    }
+
+    public function testKeepsABareImageWhoseSrcDeclaresNoWidth(): void
+    {
+        // Without a measurable src width the reader cannot tell a placeholder
+        // from a full rendition, so a plain responsive <img> is left untouched.
+        $source = $this->resolvedSource(
+            '<img src="https://images.example.com/photo.jpg"'
+            . ' srcset="https://images.example.com/photo-800.jpg 800w">'
+        );
+
+        self::assertSame('https://images.example.com/photo.jpg', $source);
+    }
+
+    public function testDoesNotAdoptAnUnsafeSrcsetCandidateOntoABareImage(): void
+    {
+        // The widest srcset candidate carries an unsafe scheme, so it is no
+        // candidate; the placeholder src stays rather than the reader promoting
+        // a javascript: URL into the image.
+        $source = $this->resolvedSource(
+            '<img src="https://images.example.com/photo.jpg?width=16"'
+            . ' srcset="javascript:alert(1) 1008w">'
+        );
+
+        self::assertSame('https://images.example.com/photo.jpg?width=16', $source);
+    }
+
+    public function testMeasuresABareImagesSrcsetByItsDescriptorNotItsUrlQuery(): void
+    {
+        // The srcset descriptor says 300w though the candidate URL query says
+        // 999. The descriptor is authoritative, so the 500-wide src stays.
+        $source = $this->resolvedSource(
+            '<img src="https://images.example.com/from-image.jpg?width=500"'
+            . ' srcset="https://images.example.com/from-srcset.jpg?width=999 300w">'
+        );
+
+        self::assertSame('https://images.example.com/from-image.jpg?width=500', $source);
+    }
+
+    public function testRemovesStaleDimensionsWhenAdoptingAWiderSrcset(): void
+    {
+        $image = $this->resolvedDocument(
+            '<img src="https://images.example.com/photo.jpg?width=16" width="16" height="9"'
+            . ' srcset="https://images.example.com/photo.jpg?width=1008 1008w">'
+        )->getElementsByTagName('img')->item(0);
+
+        self::assertInstanceOf(\Dom\Element::class, $image);
+        self::assertSame('https://images.example.com/photo.jpg?width=1008', $image->getAttribute('src'));
+        self::assertNull($image->getAttribute('width'));
+        self::assertNull($image->getAttribute('height'));
     }
 
     private function resolvedSource(string $bodyHtml): ?string
