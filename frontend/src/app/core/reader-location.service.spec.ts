@@ -121,8 +121,9 @@ describe('ReaderLocationService', () => {
     const service = build();
 
     expect(() => service.rememberAttemptedReaderUrl('/?tag=17')).not.toThrow();
+    expect(service.savedReaderUrl()).toBe('/?tag=17');
+    expect(service.consumeSignInReturnUrl()).toBe('/?tag=17');
     expect(() => service.clearSignInReturnUrl()).not.toThrow();
-    expect(() => service.consumeSignInReturnUrl()).not.toThrow();
 
     setItem.mockRestore();
     removeItem.mockRestore();
