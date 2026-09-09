@@ -17,10 +17,12 @@ use Dom\HTMLDocument;
  * whole text is clock values, `0:00` beside `-13:34` — are removed together
  * with the wrapper they leave empty. A clock inside a sentence is prose and stays.
  *
- * The same pass drops NPR's "copy this embed" widget (#922): a label and a
- * <code> block that show the player's <iframe> snippet as escaped, literal text
- * for a human to copy. It sits beside the real <audio> and is chrome, not
- * content, so the reader shows source code where an article should be.
+ * The same pass drops a "copy this embed" widget (#922, NPR; generalised #959):
+ * a label and a <code> block that show a player's <iframe> snippet as escaped,
+ * literal text for a human to copy. Any host's embed matches — the tell is an
+ * <iframe> tag with a src rendered as text, not a code sample a reader wrote —
+ * and it is chrome, not content, so the reader shows source where an article
+ * should be.
  *
  * It also drops a silent text-to-speech widget (#959): a container a page marks
  * as narration (`NarrationSignals`) but which holds no <audio> or <video> at
@@ -37,7 +39,9 @@ final readonly class PlayerChromeCleaner
 
     private const array MEDIA_TAGS = ['img', 'audio', 'video', 'iframe', 'svg'];
 
-    private const string EMBED_CODE_MARK = 'npr.org/player/embed/';
+    /** A code block whose literal text is an <iframe> embed snippet (src and
+     *  all) is a "copy this embed" widget, not a code sample a reader wrote. */
+    private const string EMBED_SNIPPET_PATTERN = '/<iframe\b[^>]*\bsrc=/i';
 
     public function cleanIn(HTMLDocument $document): void
     {
@@ -90,7 +94,7 @@ final readonly class PlayerChromeCleaner
     {
         $blocks = [];
         foreach ($document->querySelectorAll('code') as $code) {
-            if (str_contains($code->textContent ?? '', self::EMBED_CODE_MARK)) {
+            if (preg_match(self::EMBED_SNIPPET_PATTERN, $code->textContent ?? '') === 1) {
                 $blocks[] = $code;
             }
         }

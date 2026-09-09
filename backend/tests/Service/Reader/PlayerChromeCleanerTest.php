@@ -165,6 +165,23 @@ final class PlayerChromeCleanerTest extends TestCase
         self::assertStringContainsString('The real story text.', $clean);
     }
 
+    public function testRemovesACopyEmbedWidgetForAnyHostNotJustNpr(): void
+    {
+        // The "copy this embed" widget is not NPR's alone: any player renders its
+        // <iframe> snippet as literal text to copy. A YouTube embed is the same
+        // chrome, and readability keeps it as source code in the body.
+        $html = '<div><p><b>Embed</b> <code>'
+            . '&lt;iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" width="560" height="315" '
+            . 'frameborder="0" allowfullscreen&gt;&lt;/iframe&gt;</code></p><p>Story.</p></div>';
+
+        $clean = $this->clean($html);
+
+        self::assertStringNotContainsString('<iframe', $clean);
+        self::assertStringNotContainsString('<code', $clean);
+        self::assertStringNotContainsString('Embed', $clean);
+        self::assertStringContainsString('Story.', $clean);
+    }
+
     public function testRemovesEveryEmbedWidgetNotJustTheFirst(): void
     {
         $html = '<div>' . self::NPR_EMBED_WIDGET . self::NPR_EMBED_WIDGET . '<p>Story.</p></div>';
