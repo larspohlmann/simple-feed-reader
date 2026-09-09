@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { Router } from '@angular/router';
+import { NavigationEnd, Router } from '@angular/router';
+import { Subject } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { API_BASE_URL } from './api';
 import { TokenStore } from './token.store';
@@ -13,22 +14,26 @@ import { PreferencesService } from './preferences.service';
 import { DigestService } from './digest.service';
 import { AiAvailabilityService } from './ai-availability.service';
 import { CatalogStore } from '../discover/catalog.store';
+import { ReaderLocationService } from './reader-location.service';
 
 describe('AuthService', () => {
   let svc: AuthService;
   let ctrl: HttpTestingController;
   let tokens: TokenStore;
+  let events: Subject<unknown>;
   const navigate = jest.fn();
 
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
+    events = new Subject<unknown>();
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
-        { provide: Router, useValue: { navigate } },
+        { provide: Router, useValue: { events, navigate } },
         // Wire the real, HttpClient-backed writer rather than LOCALE_WRITER's
         // no-op default: the "no write-through on adopt" test below needs an
         // actual PATCH to *not* happen, which only the real writer can prove.
@@ -119,6 +124,17 @@ describe('AuthService', () => {
     expect(tokens.token()).toBeNull();
     expect(svc.user()).toBeNull();
     expect(navigate).toHaveBeenCalledWith(['/login']);
+  });
+
+  it('logout clears the pending sign-in destination but keeps the saved reader URL', () => {
+    const location = TestBed.inject(ReaderLocationService);
+    events.next(new NavigationEnd(1, '/?tag=17', '/?tag=17&entry=42-example#comments'));
+    location.rememberSavedReaderUrlForSignIn();
+
+    svc.logout();
+
+    expect(location.savedReaderUrl()).toBe('/?tag=17&entry=42-example#comments');
+    expect(location.consumeSignInReturnUrl()).toBe('/');
   });
 
   it('logout resets the cached preferences, so the next account never sees a stale toggle', () => {

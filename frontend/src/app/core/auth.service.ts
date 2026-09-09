@@ -9,6 +9,7 @@ import { DigestService } from './digest.service';
 import { LanguageService } from './language.service';
 import { MagazineStyleService } from './magazine-style.service';
 import { PreferencesService } from './preferences.service';
+import { ReaderLocationService } from './reader-location.service';
 import { TokenStore } from './token.store';
 
 export interface UserDigestPreferences {
@@ -57,6 +58,7 @@ export class AuthService {
   private readonly magazineStyle = inject(MagazineStyleService);
   private readonly digest = inject(DigestService);
   private readonly ai = inject(AiAvailabilityService);
+  private readonly readerLocation = inject(ReaderLocationService);
 
   readonly user = signal<CurrentUser | null>(null);
 
@@ -93,6 +95,7 @@ export class AuthService {
     this.magazineStyle.reset();
     this.digest.reset();
     this.ai.reset();
+    this.readerLocation.clearSignInReturnUrl();
     void this.router.navigate(['/login']);
   }
 
