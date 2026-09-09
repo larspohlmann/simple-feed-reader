@@ -23,8 +23,14 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   return next(authed).pipe(
     catchError((err) => {
       if (err.status === 401) {
+        // Only a 401 for the live session's own token means the session
+        // expired; a request that carried no token, or a stale one an explicit
+        // logout already replaced, must not resurrect a return destination.
+        const requestUsesCurrentToken = isApi && token !== null && token === tokens.token();
         tokens.clear();
-        readerLocation.rememberSavedReaderUrlForSignIn();
+        if (requestUsesCurrentToken) {
+          readerLocation.rememberSavedReaderUrlForSignIn();
+        }
         void router.navigate(['/login']);
       }
       return throwError(() => err);

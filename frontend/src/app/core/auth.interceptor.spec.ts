@@ -8,8 +8,9 @@ import { TokenStore } from './token.store';
 import { authInterceptor } from './auth.interceptor';
 import { CatalogStore } from '../discover/catalog.store';
 import { AiAvailabilityService } from './ai-availability.service';
-import { CurrentUser } from './auth.service';
+import { AuthService, CurrentUser } from './auth.service';
 import { ReaderLocationService } from './reader-location.service';
+import { provideTranslocoTesting } from '../../testing/transloco-testing';
 
 describe('authInterceptor', () => {
   let http: HttpClient;
@@ -23,6 +24,7 @@ describe('authInterceptor', () => {
     sessionStorage.clear();
     events = new Subject<unknown>();
     TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
       providers: [
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
@@ -72,6 +74,49 @@ describe('authInterceptor', () => {
       .flush(null, { status: 401, statusText: 'Unauthorized' });
 
     expect(location.consumeSignInReturnUrl()).toBe('/?tag=17&entry=42-example#comments');
+  });
+
+  it('does not restore the prior account destination after logout then failed password sign-in', () => {
+    const auth = TestBed.inject(AuthService);
+    const location = TestBed.inject(ReaderLocationService);
+    tokens.set('account-a');
+    location.rememberAttemptedReaderUrl('/?tag=17&entry=42-account-a#comments');
+
+    auth.logout();
+    auth.login('account-b@example.test', 'wrong-password').subscribe({ error: () => undefined });
+    ctrl
+      .expectOne('https://api.test/api/auth/login')
+      .flush(null, { status: 401, statusText: 'Unauthorized' });
+
+    expect(location.consumeSignInReturnUrl()).toBe('/');
+  });
+
+  it('does not restore an expired-session destination after explicit logout', () => {
+    const auth = TestBed.inject(AuthService);
+    const location = TestBed.inject(ReaderLocationService);
+    tokens.set('account-a');
+    location.rememberAttemptedReaderUrl('/?tag=17&entry=42-account-a#comments');
+
+    http.get('https://api.test/api/me').subscribe({ error: () => undefined });
+    const request = ctrl.expectOne('https://api.test/api/me');
+    auth.logout();
+    request.flush(null, { status: 401, statusText: 'Unauthorized' });
+
+    expect(location.consumeSignInReturnUrl()).toBe('/');
+  });
+
+  it('does not save a return destination for a 401 request that carried no token', () => {
+    const location = TestBed.inject(ReaderLocationService);
+    tokens.set('account-a');
+    location.rememberAttemptedReaderUrl('/?tag=17&entry=42-account-a#comments');
+    location.clearSignInReturnUrl();
+
+    http.get('https://public.example.test/denied').subscribe({ error: () => undefined });
+    const request = ctrl.expectOne('https://public.example.test/denied');
+    expect(request.request.headers.has('Authorization')).toBe(false);
+    request.flush(null, { status: 401, statusText: 'Unauthorized' });
+
+    expect(location.consumeSignInReturnUrl()).toBe('/');
   });
 
   // This path never calls AuthService.logout(), so a per-user cache that reset
