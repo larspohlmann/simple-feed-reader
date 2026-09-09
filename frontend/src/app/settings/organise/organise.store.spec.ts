@@ -325,6 +325,60 @@ describe('OrganiseStore', () => {
     ]);
   });
 
+  it('sorts the list view by last checked, descending puts the most recent first', () => {
+    const store = make([
+      makeSubscription({ id: 1, title: 'a', lastFetchedAt: '2026-01-01T00:00:00Z' }),
+      makeSubscription({ id: 2, title: 'b', lastFetchedAt: '2026-03-01T00:00:00Z' }),
+      makeSubscription({ id: 3, title: 'c', lastFetchedAt: null }),
+    ]);
+    store.view.set('list');
+    store.sortField.set('checked');
+    store.sortDirection.set('desc');
+
+    expect(store.listRows().map((s) => s.id)).toEqual([2, 1, 3]);
+  });
+
+  it('sorts the list view by next refresh, ascending puts the soonest first', () => {
+    const store = make([
+      makeSubscription({ id: 1, title: 'a', nextFetchAt: '2026-05-01T00:00:00Z' }),
+      makeSubscription({ id: 2, title: 'b', nextFetchAt: null }),
+      makeSubscription({ id: 3, title: 'c', nextFetchAt: '2026-01-01T00:00:00Z' }),
+    ]);
+    store.view.set('list');
+    store.sortField.set('due');
+    store.sortDirection.set('asc');
+
+    expect(store.listRows().map((s) => s.id)).toEqual([3, 1, 2]);
+  });
+
+  it('reverses the title order when the direction flips to descending', () => {
+    const store = make([
+      makeSubscription({ id: 1, title: 'apple' }),
+      makeSubscription({ id: 2, title: 'cherry' }),
+      makeSubscription({ id: 3, title: 'banana' }),
+    ]);
+    store.view.set('list');
+    store.sortDirection.set('desc');
+
+    expect(store.listRows().map((s) => s.title)).toEqual(['cherry', 'banana', 'apple']);
+  });
+
+  it('keeps a null timing value last whichever way the direction runs', () => {
+    const subs = [
+      makeSubscription({ id: 1, title: 'a', lastFetchedAt: '2026-01-01T00:00:00Z' }),
+      makeSubscription({ id: 2, title: 'b', lastFetchedAt: null }),
+    ];
+    const store = make(subs);
+    store.view.set('list');
+    store.sortField.set('checked');
+
+    store.sortDirection.set('asc');
+    expect(store.listRows().map((s) => s.id)).toEqual([1, 2]);
+
+    store.sortDirection.set('desc');
+    expect(store.listRows().map((s) => s.id)).toEqual([1, 2]);
+  });
+
   it('persists the collapsed groups under its own key, not the sidebar key', () => {
     const store = make();
 

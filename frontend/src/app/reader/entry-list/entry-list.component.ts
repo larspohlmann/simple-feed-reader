@@ -58,7 +58,7 @@ import {
   visibleSearchTerm,
 } from '../query';
 import { atTop, pullTriggersRefresh, rubberBand } from '../reader-gestures';
-import { relativeTime } from '../format';
+import { relativeTime, relativeTimeUntil } from '../format';
 import { LanguageService } from '../../core/language.service';
 import { Problem } from '../../core/problem';
 import { LayoutService } from '../layout.service';
@@ -198,6 +198,9 @@ export class EntryListComponent implements OnDestroy {
   /** The selected feed's last-fetched time (ISO), or null. Only meaningful for a
    *  single-feed selection; drives the header's "Last refreshed" hint. */
   readonly lastRefreshed = input<string | null>(null);
+  /** When the selected feed is next due to be fetched (ISO), or null. Only a
+   *  real feed has a next fetch — the for-you list and a gone feed carry none. */
+  readonly nextRefresh = input<string | null>(null);
   /** The id of the run whose picks the header already names ("Last refreshed").
    *  For the for-you list only; that one run's boundary divider is suppressed.
    *  Null off the for-you view, where entries carry no run id anyway (#348). */
@@ -295,6 +298,15 @@ export class EntryListComponent implements OnDestroy {
     const iso = this.lastRefreshed();
     if (!isSingleStreamView(this.selection()) || !iso) return null;
     return relativeTime(iso, this.language.lang());
+  });
+
+  /** A localised "next refresh in 20 min" label beside the last-refreshed hint,
+   *  for a single feed only — a ranking (for-you) has no next fetch, nor does a
+   *  feed with no scheduled run. */
+  readonly nextRefreshLabel = computed(() => {
+    const iso = this.nextRefresh();
+    if (this.selection().kind !== 'subscription' || !iso) return null;
+    return relativeTimeUntil(iso, this.language.lang());
   });
 
   // Pull-to-refresh (mobile): pulling past the top rubber-bands an indicator;

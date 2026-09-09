@@ -9,6 +9,7 @@ import {
   formatTime,
   relativeTime,
   relativeTimeNarrow,
+  relativeTimeUntil,
   trialDaysRemaining,
   trialExpired,
 } from './format';
@@ -61,6 +62,31 @@ describe('relativeTimeNarrow', () => {
   });
 
   it('handles bad input', () => expect(relativeTimeNarrow('nope', 'en', now)).toBe(''));
+});
+
+// A feed's next-due time is a FUTURE instant, so it reads "in 45 min", not
+// "45 min ago". An already-due (past) time is not overdue-shamed — it reads as
+// "now", because the scheduler will pick it up on its next run.
+describe('relativeTimeUntil', () => {
+  const now = new Date('2026-07-22T12:00:00Z');
+
+  it('formats a future instant as "in …" in English', () => {
+    const min = relativeTimeUntil('2026-07-22T12:45:00Z', 'en', now);
+    expect(min).toContain('45');
+    expect(min).toContain('in');
+    expect(relativeTimeUntil('2026-07-22T15:00:00Z', 'en', now)).toContain('in');
+  });
+
+  it('formats a future instant in German', () => {
+    expect(relativeTimeUntil('2026-07-22T12:45:00Z', 'de', now)).toContain('45');
+  });
+
+  it('reads a due-or-overdue instant as "now"', () => {
+    expect(relativeTimeUntil('2026-07-22T11:30:00Z', 'en', now)).toBe('now');
+    expect(relativeTimeUntil('2026-07-22T12:00:00Z', 'en', now)).toBe('now');
+  });
+
+  it('handles bad input', () => expect(relativeTimeUntil('nope', 'en', now)).toBe(''));
 });
 
 describe('formatLongDate', () => {

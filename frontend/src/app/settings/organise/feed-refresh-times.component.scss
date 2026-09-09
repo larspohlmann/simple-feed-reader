@@ -1,0 +1,41 @@
+@use '../../theme/breakpoints' as bp;
+
+:host {
+  display: block;
+}
+
+.times {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+
+  // `--text-muted` is the faintest text token the theme defines; the extra
+  // fade past it comes from opacity, since this hint sits below even that.
+  color: var(--text-muted);
+  opacity: 0.7;
+  font-size: var(--fs-xs);
+  line-height: var(--lh-normal);
+}
+
+// Each timing is a fixed-width cell whose content sits at the left edge, so the
+// three columns line up down the whole list — the same reason a table column
+// has one width, not one per cell.
+.item {
+  display: inline-flex;
+  justify-content: flex-start;
+  gap: var(--space-1);
+  width: 8rem;
+  white-space: nowrap;
+}
+
+.value {
+  color: var(--text-muted);
+}
+
+// A phone row already spends its width on the title and four action controls;
+// the meta line drops rather than wrap the row into three lines.
+@media (width <= bp.$bp-sm) {
+  :host {
+    display: none;
+  }
+}

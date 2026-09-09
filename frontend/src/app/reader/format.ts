@@ -1,19 +1,36 @@
-/** The signed magnitude and unit `relativeTime`/`relativeTimeNarrow` share —
- *  which bucket (second/minute/hour/day) an instant falls into is one
- *  decision; how wide to render it is a second, independent one. */
+/** Seconds between `iso` and `now`, positive when `iso` is in the past. Null
+ *  for an unparseable input, which every caller renders as an empty label. */
+function elapsedSeconds(iso: string, now: Date): number | null {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return null;
+  return (now.getTime() - then) / 1000;
+}
+
+/** Which bucket (second/minute/hour/day) a gap of `seconds` falls into, and how
+ *  many of that unit — the choice `relativeTime` (past) and `relativeTimeUntil`
+ *  (future) share. `sign` picks the direction Intl.RelativeTimeFormat reads: -1
+ *  renders "ago", +1 renders "in". Under a minute is the sign-free "now" bucket. */
+function bucketGap(
+  seconds: number,
+  sign: -1 | 1,
+): { value: number; unit: Intl.RelativeTimeFormatUnit } {
+  if (seconds < 60) return { value: 0, unit: 'second' }; // numeric:auto → "now" / "jetzt"
+  const m = Math.floor(seconds / 60);
+  if (m < 60) return { value: sign * m, unit: 'minute' };
+  const h = Math.floor(m / 60);
+  if (h < 24) return { value: sign * h, unit: 'hour' };
+  return { value: sign * Math.floor(h / 24), unit: 'day' };
+}
+
+/** The signed magnitude and unit `relativeTime`/`relativeTimeNarrow` share.
+ *  Clamps a future instant to "now": both labels only ever describe the past. */
 function relativeMagnitude(
   iso: string,
   now: Date,
 ): { value: number; unit: Intl.RelativeTimeFormatUnit } | null {
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return null;
-  const s = Math.max(0, Math.floor((now.getTime() - then) / 1000));
-  if (s < 60) return { value: 0, unit: 'second' }; // numeric:auto → "now" / "jetzt"
-  const m = Math.floor(s / 60);
-  if (m < 60) return { value: -m, unit: 'minute' };
-  const h = Math.floor(m / 60);
-  if (h < 24) return { value: -h, unit: 'hour' };
-  return { value: -Math.floor(h / 24), unit: 'day' };
+  const elapsed = elapsedSeconds(iso, now);
+  if (elapsed === null) return null;
+  return bucketGap(Math.max(0, Math.floor(elapsed)), -1);
 }
 
 /** One formatter per locale and style, not one per row: constructing an
@@ -50,6 +67,19 @@ export function relativeTimeNarrow(iso: string, locale = 'en', now: Date = new D
   const magnitude = relativeMagnitude(iso, now);
   if (!magnitude) return '';
   return relativeFormatter(locale, 'narrow').format(magnitude.value, magnitude.unit);
+}
+
+/**
+ * A short, localised "time until" label for a FUTURE instant (e.g. "in 45 min" /
+ * "in 45 Min."), the forward-looking twin of `relativeTime`. A due-or-overdue
+ * instant reads as "now": a feed past its next-fetch time is simply waiting for
+ * the scheduler's next run, not something to count up as overdue.
+ */
+export function relativeTimeUntil(iso: string, locale = 'en', now: Date = new Date()): string {
+  const elapsed = elapsedSeconds(iso, now);
+  if (elapsed === null) return '';
+  const { value, unit } = bucketGap(Math.max(0, Math.floor(-elapsed)), 1);
+  return relativeFormatter(locale, 'short').format(value, unit);
 }
 
 /** A localised long date (e.g. "July 22, 2026" / "22. Juli 2026"). */

@@ -94,9 +94,12 @@
       }
     </div>
     @if (lastRefreshedLabel()) {
-      <span class="last-refreshed"
-        >{{ 'reader.lastRefreshed' | transloco }} {{ lastRefreshedLabel() }}</span
-      >
+      <span class="last-refreshed">
+        {{ 'reader.lastRefreshed' | transloco }} {{ lastRefreshedLabel() }}
+        @if (nextRefreshLabel(); as label) {
+          <span class="next-refresh">({{ 'reader.nextRefresh' | transloco }} {{ label }})</span>
+        }
+      </span>
     }
   </div>
   <div class="tools">

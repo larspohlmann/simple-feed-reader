@@ -22,6 +22,8 @@ const sub: SubscriptionDto = {
   createdAt: 'x',
   lastFetchedAt: null,
   lastSuccessfulFetchAt: null,
+  lastNewContentAt: null,
+  nextFetchAt: null,
   consecutiveFailures: 0,
   lastErrorMessage: null,
   position: 0,

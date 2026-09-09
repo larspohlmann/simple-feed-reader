@@ -144,13 +144,34 @@
           <select
             class="sort"
             data-test="sort"
-            [value]="store.sort()"
+            [value]="store.sortField()"
             [attr.aria-label]="'settings.organise.sort' | transloco"
-            (change)="store.sort.set($any($event.target).value)"
+            (change)="store.sortField.set($any($event.target).value)"
           >
             <option value="title">{{ 'settings.organise.sortTitle' | transloco }}</option>
             <option value="added">{{ 'settings.organise.sortAdded' | transloco }}</option>
+            <option value="checked">{{ 'settings.organise.sortChecked' | transloco }}</option>
+            <option value="updated">{{ 'settings.organise.sortUpdate' | transloco }}</option>
+            <option value="due">{{ 'settings.organise.sortDue' | transloco }}</option>
           </select>
+          <button
+            type="button"
+            appIconButton
+            class="sort-dir"
+            data-test="sort-direction"
+            [attr.aria-label]="
+              (store.sortDirection() === 'asc'
+                ? 'settings.organise.sortDescending'
+                : 'settings.organise.sortAscending'
+              ) | transloco
+            "
+            (click)="store.sortDirection.set(store.sortDirection() === 'asc' ? 'desc' : 'asc')"
+          >
+            <app-icon
+              [name]="store.sortDirection() === 'asc' ? 'arrow_upward' : 'arrow_downward'"
+              size="sm"
+            />
+          </button>
         }
       </div>
 

@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { OrganiseTagGroupComponent } from './organise-tag-group.component';
@@ -84,6 +85,7 @@ describe('OrganiseTagGroupComponent', () => {
       .configureTestingModule({
         imports: [OrganiseTagGroupComponent, provideTranslocoTesting()],
         providers: [
+          provideRouter([]),
           OrganiseStore,
           { provide: ManageActions, useValue: manage },
           { provide: LayoutService, useValue: { isCoarse: signal(options.coarse ?? false) } },

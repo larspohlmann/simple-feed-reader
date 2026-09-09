@@ -78,6 +78,13 @@ export interface SubscriptionDto {
   /** When the feed last delivered content (ISO), or null if it never has.
    *  With `status` and `consecutiveFailures`, powers the unhealthy-feeds list. */
   lastSuccessfulFetchAt: string | null;
+  /** When a fetch last brought back NEW entries (ISO), or null if none ever
+   *  have — distinct from `lastSuccessfulFetchAt`, which advances on every 200.
+   *  The Organise row's "Updated" and its sort read this. */
+  lastNewContentAt: string | null;
+  /** When the scheduler may next fetch the feed (ISO), or null when there is no
+   *  next run — a `gone` feed. The Organise row shows it and sorts by it. */
+  nextFetchAt: string | null;
   /** The feed's current failure streak; 0 when healthy. */
   consecutiveFailures: number;
   /** The raw fetcher error for the last failed attempt, or null. Untranslated,

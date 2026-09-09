@@ -176,6 +176,16 @@ class Feed
         $this->fetchSchedule->setLastSuccessfulFetchAt($lastSuccessfulFetchAt);
     }
 
+    public function getLastNewEntryAt(): ?\DateTimeImmutable
+    {
+        return $this->fetchSchedule->getLastNewEntryAt();
+    }
+
+    public function setLastNewEntryAt(?\DateTimeImmutable $lastNewEntryAt): void
+    {
+        $this->fetchSchedule->setLastNewEntryAt($lastNewEntryAt);
+    }
+
     public function getNextFetchAt(): ?\DateTimeImmutable
     {
         return $this->fetchSchedule->getNextFetchAt();
