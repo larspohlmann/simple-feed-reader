@@ -190,6 +190,12 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   white-space: nowrap;
 }
 
+// The next-refresh aside sits a step below even the last-refreshed hint it
+// trails; `--text-muted` is the faintest token, so the extra fade is opacity.
+.next-refresh {
+  opacity: 0.7;
+}
+
 /* Narrow layout: as you scroll the list down the header collapses to a slim
          tag-name-only bar (Unread/All + Mark-all-read drop away), expanding again
          on scroll up. Wide screens always show the full header. */

@@ -10,14 +10,17 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { RouterLink } from '@angular/router';
 import { CdkDragHandle } from '@angular/cdk/drag-drop';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
 import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
+import { FeedRefreshTimesComponent } from './feed-refresh-times.component';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { LayoutService } from '../../reader/layout.service';
+import { selectionQueryParams } from '../../reader/query';
 import { SubscriptionDto } from '../../reader/models';
 
 /**
@@ -33,8 +36,10 @@ import { SubscriptionDto } from '../../reader/models';
     FaviconComponent,
     TagGlyphComponent,
     CdkDragHandle,
+    RouterLink,
     DismissOnOutsideDirective,
     IconButtonDirective,
+    FeedRefreshTimesComponent,
   ],
   templateUrl: './organise-feed-row.component.html',
   styleUrl: './organise-feed-row.component.scss',
@@ -76,6 +81,12 @@ export class OrganiseFeedRowComponent {
 
   protected readonly visibleTags = computed(() =>
     this.subscription().tags.filter((tag) => tag.id !== this.hideTagId()),
+  );
+
+  /** The reader query that opens this feed's own list view — the target of the
+   *  feed-name link, opened in a new tab. */
+  protected readonly listParams = computed(() =>
+    selectionQueryParams({ subscription: this.subscription().id }),
   );
 
   protected toggleMenu(): void {

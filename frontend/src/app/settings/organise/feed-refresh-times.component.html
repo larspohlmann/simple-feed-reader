@@ -1,0 +1,28 @@
+<span class="times">
+  <span class="item" data-test="checked">
+    <span class="label">{{ 'settings.organise.refreshChecked' | transloco }}</span>
+    @if (subscription().lastFetchedAt; as iso) {
+      <span class="value" [title]="full(iso)">{{ relative(iso) }}</span>
+    } @else {
+      <span class="value">{{ 'settings.organise.refreshNever' | transloco }}</span>
+    }
+  </span>
+
+  <span class="item" data-test="updated">
+    <span class="label">{{ 'settings.organise.refreshUpdate' | transloco }}</span>
+    @if (subscription().lastNewContentAt; as iso) {
+      <span class="value" [title]="full(iso)">{{ relative(iso) }}</span>
+    } @else {
+      <span class="value">{{ 'settings.organise.refreshNever' | transloco }}</span>
+    }
+  </span>
+
+  <span class="item" data-test="next">
+    <span class="label">{{ 'settings.organise.refreshNext' | transloco }}</span>
+    @if (subscription().nextFetchAt; as iso) {
+      <span class="value" [title]="full(iso)">{{ until(iso) }}</span>
+    } @else {
+      <span class="value">—</span>
+    }
+  </span>
+</span>

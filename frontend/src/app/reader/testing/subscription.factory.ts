@@ -20,6 +20,8 @@ export function makeSubscription(partial: Partial<SubscriptionDto> = {}): Subscr
     createdAt: '2026-01-01T00:00:00Z',
     lastFetchedAt: null,
     lastSuccessfulFetchAt: null,
+    lastNewContentAt: null,
+    nextFetchAt: null,
     consecutiveFailures: 0,
     lastErrorMessage: null,
     position: 0,

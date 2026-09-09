@@ -1049,6 +1049,36 @@ describe('EntryListComponent', () => {
     ).toBeNull();
   });
 
+  it('shows a next-refresh hint beside the last-refreshed one for a single feed', () => {
+    const el = mount({
+      selection: { kind: 'subscription', id: 7, unread: true },
+      lastRefreshed: '2026-07-25T08:00:00Z',
+      nextRefresh: '2099-07-25T09:00:00Z',
+    }).nativeElement as HTMLElement;
+    expect(el.querySelector('.next-refresh')).not.toBeNull();
+  });
+
+  it('shows no next-refresh hint for the for-you list or a gone feed', () => {
+    expect(
+      (
+        mount({
+          selection: { kind: 'for-you', id: null, unread: false },
+          lastRefreshed: '2026-08-08T09:00:00Z',
+          nextRefresh: null,
+        }).nativeElement as HTMLElement
+      ).querySelector('.next-refresh'),
+    ).toBeNull();
+    expect(
+      (
+        mount({
+          selection: { kind: 'subscription', id: 7, unread: true },
+          lastRefreshed: '2026-07-25T08:00:00Z',
+          nextRefresh: null,
+        }).nativeElement as HTMLElement
+      ).querySelector('.next-refresh'),
+    ).toBeNull();
+  });
+
   it('renders planned magazine blocks when layout is magazine', () => {
     // The grouped run must not sit at the very start — the planner leads with
     // featured blocks, never a group. Lead with distinct sources so the

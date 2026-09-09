@@ -6,7 +6,9 @@ import { SubscriptionDto, TagDto } from '../../reader/models';
 /** A group is one tag, or the untagged bucket that always sits last. */
 export type GroupKey = number | 'untagged';
 export type OrganiseView = 'tree' | 'list';
-export type OrganiseSort = 'title' | 'added';
+/** The column the flat list sorts on. */
+export type OrganiseSortField = 'title' | 'added' | 'checked' | 'updated' | 'due';
+export type SortDirection = 'asc' | 'desc';
 /** What a group's checkbox shows: nothing, some of its feeds, or all of them. */
 export type GroupState = 'none' | 'some' | 'all';
 
@@ -86,7 +88,8 @@ export class OrganiseStore {
   readonly view = signal<OrganiseView>('tree');
   readonly titleFilter = signal('');
   readonly tagFilter = signal<ReadonlySet<GroupKey>>(new Set());
-  readonly sort = signal<OrganiseSort>('title');
+  readonly sortField = signal<OrganiseSortField>('title');
+  readonly sortDirection = signal<SortDirection>('asc');
   /** True while a bulk write is in flight; the bulk bar disables itself. */
   readonly busy = signal(false);
 
@@ -152,11 +155,8 @@ export class OrganiseStore {
   /** The flat view's rows: every filtered feed once, in the chosen sort. */
   readonly listRows = computed<SubscriptionDto[]>(() => {
     const rows = [...this.filteredSubscriptions()];
-    if (this.sort() === 'added') {
-      return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    }
 
-    return rows.sort((a, b) => a.title.localeCompare(b.title));
+    return rows.sort(compareBy(this.sortField(), this.sortDirection()));
   });
 
   /** Every feed the filter currently shows, counted once. */
@@ -290,6 +290,43 @@ export class OrganiseStore {
     if (this.allExpanded()) this.collapseAll();
     else this.expandAll();
   }
+}
+
+/** The value a feed sorts on for a column. `title` is always present; a timing
+ *  column is null until the feed reaches that state (never fetched, no next run). */
+function sortKey(field: OrganiseSortField, subscription: SubscriptionDto): string | null {
+  switch (field) {
+    case 'added':
+      return subscription.createdAt;
+    case 'checked':
+      return subscription.lastFetchedAt;
+    case 'updated':
+      return subscription.lastNewContentAt;
+    case 'due':
+      return subscription.nextFetchAt;
+    default:
+      return subscription.title;
+  }
+}
+
+/** Orders the flat list by one column: alphabetical for the title, chronological
+ *  for the timestamps since ISO strings compare by time. A null always sorts
+ *  last, in BOTH directions — a feed with no such time belongs at the bottom
+ *  whether the user reads the column up or down, so the direction never flips it. */
+function compareBy(
+  field: OrganiseSortField,
+  direction: SortDirection,
+): (a: SubscriptionDto, b: SubscriptionDto) => number {
+  const sign = direction === 'asc' ? 1 : -1;
+
+  return (a, b) => {
+    const first = sortKey(field, a);
+    const second = sortKey(field, b);
+    if (first === null) return second === null ? 0 : 1;
+    if (second === null) return -1;
+
+    return sign * first.localeCompare(second);
+  };
 }
 
 function persistExpanded(keys: ReadonlySet<GroupKey>): void {

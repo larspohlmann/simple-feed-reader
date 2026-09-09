@@ -17,6 +17,7 @@ import { SkeletonComponent } from '../../shared/skeleton/skeleton.component';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
 import { DisclosureComponent } from '../../shared/disclosure/disclosure.component';
 import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
+import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
 import { OrganiseStore, OrganiseGroup, GroupKey } from './organise.store';
@@ -65,6 +66,7 @@ interface VisibilityMenuItem {
     UnhealthyFeedRowComponent,
     DisclosureComponent,
     DismissOnOutsideDirective,
+    IconButtonDirective,
     CdkDropListGroup,
   ],
   providers: [OrganiseStore],

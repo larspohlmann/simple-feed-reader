@@ -6,14 +6,26 @@
 
 .row {
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  flex-direction: column;
   padding: var(--row-pad-y) var(--row-pad-x);
-  min-height: var(--tap-target);
 }
 
 .row.selected {
   background: var(--accent-soft);
+}
+
+.primary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap-target);
+}
+
+// The refresh-times sit at the right of the row, just before the action icons.
+// `margin-left: auto` takes the free space, so their fixed-width columns line up
+// down the list like table cells regardless of how long each title is.
+.meta {
+  margin-left: auto;
 }
 
 .handle {
@@ -25,9 +37,17 @@
 .title {
   font-size: var(--fs-sm);
   color: var(--text-primary);
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-decoration: none;
+}
+
+@media (hover: hover) {
+  a.title:hover {
+    text-decoration: underline;
+  }
 }
 
 .pills {
@@ -66,11 +86,13 @@
   color: var(--text-muted);
 }
 
+// No `margin-left: auto` here: `.meta` already carries it, and a second auto
+// margin would split the free space between the two, letting the time columns
+// drift out of line from row to row. The icons pack directly after `.meta`.
 .acts {
   display: flex;
   align-items: center;
   gap: var(--space-0);
-  margin-left: auto;
 }
 
 // The `.ib` icon-only button look (move up/down, edit, more) is the shared

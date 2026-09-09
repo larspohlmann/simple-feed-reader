@@ -3,6 +3,7 @@ import { computed, signal, WritableSignal } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Dialog } from '@angular/cdk/dialog';
+import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { OrganiseSectionComponent } from './organise-section.component';
@@ -15,6 +16,7 @@ import { TagsStore } from '../../reader/tags.store';
 import { ManageActions } from '../../reader/manage/manage-actions.service';
 import { LayoutService } from '../../reader/layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
+import { LanguageService } from '../../core/language.service';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
 
@@ -94,10 +96,12 @@ describe('OrganiseSectionComponent', () => {
       .configureTestingModule({
         imports: [OrganiseSectionComponent, provideTranslocoTesting()],
         providers: [
+          provideRouter([]),
           { provide: ManageActions, useValue: manage },
           { provide: Dialog, useValue: { open: jest.fn(() => ({ closed: of(undefined) })) } },
           { provide: LayoutService, useValue: { isCoarse: signal(false) } },
           { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
+          { provide: LanguageService, useValue: { lang: () => 'en' } },
           { provide: SubscriptionsStore, useValue: makeSubscriptionsStoreMock(subs) },
           { provide: TagsStore, useValue: { tags: signal([TECH]), load: jest.fn() } },
         ],
@@ -121,6 +125,28 @@ describe('OrganiseSectionComponent', () => {
     await render();
 
     expect(fixture.debugElement.query(By.css('[data-test="bulk-bar"]'))).toBeNull();
+  });
+
+  it('offers the refresh-timing sort options in the list view', async () => {
+    const store = await render();
+    store.view.set('list');
+    fixture.detectChanges();
+
+    const values = fixture.debugElement
+      .queryAll(By.css('[data-test="sort"] option'))
+      .map((option) => (option.nativeElement as HTMLOptionElement).value);
+    expect(values).toEqual(['title', 'added', 'checked', 'updated', 'due']);
+  });
+
+  it('flips the sort direction when the direction toggle is pressed', async () => {
+    const store = await render();
+    store.view.set('list');
+    fixture.detectChanges();
+    expect(store.sortDirection()).toBe('asc');
+
+    fixture.debugElement.query(By.css('[data-test="sort-direction"]')).nativeElement.click();
+
+    expect(store.sortDirection()).toBe('desc');
   });
 
   it('shows the exact count once something is selected', async () => {
@@ -295,10 +321,12 @@ describe('OrganiseSectionComponent', () => {
       .configureTestingModule({
         imports: [OrganiseSectionComponent, provideTranslocoTesting()],
         providers: [
+          provideRouter([]),
           { provide: ManageActions, useValue: manage },
           { provide: Dialog, useValue: { open: jest.fn(() => ({ closed: of(undefined) })) } },
           { provide: LayoutService, useValue: { isCoarse: signal(false) } },
           { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
+          { provide: LanguageService, useValue: { lang: () => 'en' } },
           { provide: SubscriptionsStore, useValue: makeSubscriptionsStoreMock(SUBS) },
           { provide: TagsStore, useValue: { tags: signal([TECH, NEWS]), load: jest.fn() } },
         ],
@@ -330,10 +358,12 @@ describe('OrganiseSectionComponent', () => {
       .configureTestingModule({
         imports: [OrganiseSectionComponent, provideTranslocoTesting()],
         providers: [
+          provideRouter([]),
           { provide: ManageActions, useValue: manage },
           { provide: Dialog, useValue: { open: jest.fn(() => ({ closed: of(undefined) })) } },
           { provide: LayoutService, useValue: { isCoarse: signal(false) } },
           { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
+          { provide: LanguageService, useValue: { lang: () => 'en' } },
           { provide: SubscriptionsStore, useValue: makeSubscriptionsStoreMock(subsWithNews) },
           { provide: TagsStore, useValue: { tags: signal([TECH, NEWS]), load: jest.fn() } },
         ],

@@ -1,11 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { OrganiseFeedRowComponent } from './organise-feed-row.component';
 import { LayoutService } from '../../reader/layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
+import { LanguageService } from '../../core/language.service';
+import { formatLongDateTime } from '../../reader/format';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
 
 const SUBSCRIPTION = makeSubscription({
@@ -25,8 +28,10 @@ describe('OrganiseFeedRowComponent', () => {
     await TestBed.configureTestingModule({
       imports: [OrganiseFeedRowComponent, provideTranslocoTesting()],
       providers: [
+        provideRouter([]),
         { provide: LayoutService, useValue: { isCoarse: signal(false) } },
         { provide: ActionSheet, useValue: { open: sheetOpen } },
+        { provide: LanguageService, useValue: { lang: () => 'en' } },
       ],
     }).compileComponents();
 
@@ -48,6 +53,31 @@ describe('OrganiseFeedRowComponent', () => {
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('heise online');
     expect(text).toContain('Tech');
+  });
+
+  it('links the feed name to its list view in a new tab', async () => {
+    await render({ subscription: makeSubscription({ id: 7, title: 'heise online' }) });
+
+    const link = fixture.debugElement.query(By.css('a.title')).nativeElement as HTMLAnchorElement;
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('href')).toContain('subscription=7');
+  });
+
+  it('shows the refresh-times meta line with the last-checked tooltip', async () => {
+    await render({
+      subscription: makeSubscription({
+        id: 7,
+        title: 'heise online',
+        lastFetchedAt: '2026-01-01T09:00:00Z',
+      }),
+    });
+
+    const checked = fixture.debugElement.query(
+      By.css('app-feed-refresh-times [data-test="checked"] .value'),
+    );
+    expect(checked.nativeElement.getAttribute('title')).toBe(
+      formatLongDateTime('2026-01-01T09:00:00Z', 'en'),
+    );
   });
 
   it('disables the up arrow at the top of a group', async () => {
@@ -184,8 +214,10 @@ describe('OrganiseFeedRowComponent', () => {
     await TestBed.configureTestingModule({
       imports: [OrganiseFeedRowComponent, provideTranslocoTesting()],
       providers: [
+        provideRouter([]),
         { provide: LayoutService, useValue: { isCoarse: signal(true) } },
         { provide: ActionSheet, useValue: { open: sheetOpen } },
+        { provide: LanguageService, useValue: { lang: () => 'en' } },
       ],
     }).compileComponents();
 

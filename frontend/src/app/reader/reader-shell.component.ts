@@ -314,6 +314,13 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     if (s.kind !== 'subscription') return null;
     return this.subs.subscriptions().find((x) => x.id === s.id)?.lastFetchedAt ?? null;
   });
+  /** When the selected feed is next due to be fetched — the header's "Next
+   *  refresh" hint. Only a single feed has one; null for every other view. */
+  readonly listNextRefresh = computed(() => {
+    const s = this.selection();
+    if (s.kind !== 'subscription') return null;
+    return this.subs.subscriptions().find((x) => x.id === s.id)?.nextFetchAt ?? null;
+  });
   /** The id of the run whose picks head the for-you list — the one the header
    *  already names, so the list suppresses its boundary divider. Null off the
    *  for-you view, where there are no run dividers. */
