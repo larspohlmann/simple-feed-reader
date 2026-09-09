@@ -283,6 +283,20 @@ final class PlayerChromeCleanerTest extends TestCase
         self::assertStringContainsString('photo.jpg', $clean);
     }
 
+    public function testRemovesEverySilentNarrationWidgetNotJustTheFirst(): void
+    {
+        // A page can carry the widget more than once (a lead reader and a repeat
+        // lower down); every silent one goes, not only the first.
+        $second = str_replace('texttospeech.svg', 'readspeaker.svg', self::SILENT_TTS_WIDGET);
+        $html = '<div>' . self::SILENT_TTS_WIDGET . '<p>' . self::PROSE . '</p>' . $second . '</div>';
+
+        $clean = $this->clean($html);
+
+        self::assertStringNotContainsString('texttospeech.svg', $clean);
+        self::assertStringNotContainsString('readspeaker.svg', $clean);
+        self::assertStringContainsString('rubber band', $clean);
+    }
+
     public function testKeepsANarrationContainerThatStillHoldsItsPlayer(): void
     {
         // A live narration player declares narration too, but it has a real
