@@ -241,6 +241,24 @@ final class ArticleExtractorTest extends TestCase
         self::assertLessThan(strpos($contentHtml, '<audio'), strpos($contentHtml, '<img'));
     }
 
+    public function testDropsASilentTextToSpeechWidgetButKeepsTheArticle(): void
+    {
+        // CBC (#959): a script-driven text-to-speech widget with no <audio>.
+        // The reader has no player to attach, so the whole widget is chrome;
+        // the lead figure and prose beside it stay.
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-tts-widget-cbc.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post');
+        $contentHtml = (string) $result->contentHtml;
+
+        self::assertTrue($result->ok);
+        self::assertStringNotContainsString('texttospeech.svg', $contentHtml);
+        self::assertStringNotContainsString('Listen to this article', $contentHtml);
+        self::assertStringNotContainsString('AI-based technology', $contentHtml);
+        self::assertStringContainsString('third attendee of the Burning Man festival', $contentHtml);
+    }
+
     public function testRestoresLazyLoadedImagesInsteadOfLeavingEmptyFrames(): void
     {
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-lazy-images.html');

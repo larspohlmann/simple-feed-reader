@@ -14,9 +14,10 @@ use Dom\Element;
  */
 final readonly class NarrationSignals
 {
-    /** Each token with the publisher it was measured on (#903 survey). */
+    /** Each token with the publisher it was measured on (#903, #959 survey). */
     private const array NARRATION_TOKENS = [
         'text-to-speech', // Süddeutsche: file path /text-to-speech/full/
+        'texttospeech',   // CBC: icon texttospeech.svg, wrapper class textToSpeech
         'speechbert',     // ZEIT: narration file host zon-speechbert-production
         'readspeaker',    // heise, Belltower: ReadSpeaker widget
         'read-aloud',     // heise: data-read-aloud-url
@@ -28,13 +29,24 @@ final readonly class NarrationSignals
         return self::declaresNarration($fileUrl) || self::holderChainDeclaresNarration($holder);
     }
 
+    /** Whether the element's own attributes name narration — the tell a silent
+     *  text-to-speech widget carries on its container or icon (#959). */
+    public static function declaredOn(Element $element): bool
+    {
+        foreach ($element->attributes as $attribute) {
+            if (self::declaresNarration($attribute->value)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static function holderChainDeclaresNarration(?Element $holder): bool
     {
         for ($element = $holder; $element !== null; $element = $element->parentElement) {
-            foreach ($element->attributes as $attribute) {
-                if (self::declaresNarration($attribute->value)) {
-                    return true;
-                }
+            if (self::declaredOn($element)) {
+                return true;
             }
         }
 
