@@ -4,6 +4,7 @@ import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router
 import { TranslocoPipe } from '@jsverse/transloco';
 import { filter, map } from 'rxjs';
 import { AuthService } from '../core/auth.service';
+import { ReaderLocationService } from '../core/reader-location.service';
 import { LayoutService } from '../reader/layout.service';
 import { IconComponent } from '../shared/icon/icon.component';
 import { SettingsNavComponent } from './settings-nav.component';
@@ -22,6 +23,7 @@ import { SETTINGS_SECTIONS, SettingsSection } from './settings-sections';
 export class SettingsShellComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly layout = inject(LayoutService);
+  private readonly readerLocation = inject(ReaderLocationService);
   private readonly router = inject(Router);
 
   private readonly url = toSignal(
@@ -39,9 +41,11 @@ export class SettingsShellComponent implements OnInit {
   readonly wideSection = computed(() => this.section()?.wide === true);
 
   /** On a phone a section page steps back to the hub; everywhere else the bar
-   *  leads back to the reader. */
+   *  leads back to the reader location that opened settings. */
   readonly backTarget = computed(() =>
-    !this.layout.isWide() && this.section() !== null ? '/settings' : '/',
+    !this.layout.isWide() && this.section() !== null
+      ? '/settings'
+      : this.readerLocation.savedReaderUrl(),
   );
 
   readonly backLabelKey = computed(() =>

@@ -4,6 +4,7 @@ import { Router, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { AuthService } from '../core/auth.service';
+import { ReaderLocationService } from '../core/reader-location.service';
 import { LayoutService } from '../reader/layout.service';
 import { SettingsShellComponent } from './settings-shell.component';
 
@@ -37,6 +38,7 @@ describe('SettingsShellComponent', () => {
   }
 
   beforeEach(() => {
+    sessionStorage.clear();
     loadMe.mockClear();
     currentUser = null;
     isWide.set(true);
@@ -57,7 +59,23 @@ describe('SettingsShellComponent', () => {
     expect(loadMe).not.toHaveBeenCalled();
   });
 
-  it('leads back to the reader from a section on desktop', async () => {
+  it('leads back to the saved list from a section on desktop', async () => {
+    const f = mount();
+    TestBed.inject(ReaderLocationService).rememberAttemptedReaderUrl('/?tag=5');
+    await goTo('/settings/preferences');
+    expect(f.componentInstance.backTarget()).toBe('/?tag=5');
+  });
+
+  it('leads back to the saved article from a section on desktop', async () => {
+    const f = mount();
+    TestBed.inject(ReaderLocationService).rememberAttemptedReaderUrl(
+      '/?tag=5&entry=12-saved-article',
+    );
+    await goTo('/settings/preferences');
+    expect(f.componentInstance.backTarget()).toBe('/?tag=5&entry=12-saved-article');
+  });
+
+  it('falls back to the reader root when no reader location is saved', async () => {
     const f = mount();
     await goTo('/settings/preferences');
     expect(f.componentInstance.backTarget()).toBe('/');
@@ -74,8 +92,9 @@ describe('SettingsShellComponent', () => {
   it('leads back to the reader from the hub on mobile', async () => {
     isWide.set(false);
     const f = mount();
+    TestBed.inject(ReaderLocationService).rememberAttemptedReaderUrl('/?view=unread');
     await goTo('/settings');
-    expect(f.componentInstance.backTarget()).toBe('/');
+    expect(f.componentInstance.backTarget()).toBe('/?view=unread');
   });
 
   it('flags the wide sections', async () => {
