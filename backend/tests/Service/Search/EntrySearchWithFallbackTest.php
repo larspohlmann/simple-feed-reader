@@ -145,19 +145,22 @@ final class EntrySearchWithFallbackTest extends DbTestCase
         self::assertCount(1, $logSpy->getRecords());
     }
 
-    public function testAnUnreadSearchBypassesAConfiguredEngineWithoutLogging(): void
+    public function testAnUnreadSearchStillRanksThroughTheConfiguredEngine(): void
     {
-        $reader = new FakeSearchIndexReader(
-            failure: new SearchEngineUnavailableException('The search engine must not be called.'),
-        );
+        // Read state lives in the database, not the index, but the ENGINE still
+        // ranks the matches — IndexedEntrySearch drops the read rows after
+        // hydration. So an unread search must not bypass a configured engine
+        // and fall back to the LIKE query, which would lose typo tolerance and
+        // relevance ranking exactly when the reader is refining a real search.
+        $reader = new FakeSearchIndexReader(matchedWords: ['engine-word']);
         $logSpy = new TestHandler();
 
         $result = $this->fallback($reader, new Logger('test', [$logSpy]), 'http://meilisearch.test')
             ->search($this->unreadQuery());
 
-        self::assertNull($reader->received);
+        self::assertNotNull($reader->received);
+        self::assertSame(['engine-word'], $result->matchedWords);
         self::assertSame([], $logSpy->getRecords());
-        self::assertSame([], $result->matchedWords);
     }
 
     public function testAnUnexpectedExceptionIsNotSwallowed(): void

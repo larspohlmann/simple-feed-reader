@@ -6,6 +6,7 @@ namespace App\Tests\Http;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Http\EntryCursor;
 use App\Http\SearchPage;
 use App\Repository\EntryListRow;
 use App\Service\Search\EntrySearchResult;
@@ -94,6 +95,25 @@ final class SearchPageTest extends TestCase
         $page = SearchPage::of($result, 1);
 
         self::assertNotNull($page['nextCursor']);
+    }
+
+    /**
+     * The indexed unread search returns only the unread rows of a page but must
+     * resume past the last candidate it hydrated (continuationRow). SearchPage
+     * must forward that row so the cursor keys off it, not off the shown rows —
+     * otherwise a page whose tail was read re-reads it or, when empty, stops.
+     */
+    public function testTheContinuationRowDecidesTheCursor(): void
+    {
+        $result = new EntrySearchResult([], ['angular'], matchCount: 1, continuationRow: $this->row(4));
+
+        $page = SearchPage::of($result, 1);
+
+        self::assertSame([], $page['entries']);
+        self::assertNotNull($page['nextCursor'], 'A fully-read page must still advance the cursor.');
+        $cursor = EntryCursor::decode($page['nextCursor']);
+        self::assertNotNull($cursor);
+        self::assertSame(4, $cursor->id);
     }
 
     private function row(int $id): EntryListRow

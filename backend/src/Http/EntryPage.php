@@ -49,17 +49,26 @@ final readonly class EntryPage
      * read's own count before any such drop; search passes it explicitly, and
      * of() above just supplies count($rows) where nothing removes rows after.
      *
-     * The cursor itself always comes from the last SURVIVING row, not from
-     * $matchCount — the client only saw the rows it was handed, so a cursor
-     * must name one of those, never a dropped id's position.
+     * The cursor comes from the row the caller must resume past. That is the
+     * last returned row for a plain read, but a post-filtered read (the indexed
+     * unread search drops the read rows of a page after hydration) passes its
+     * last candidate as $continuationRow so a fully-read page still advances
+     * rather than ending the list. Either way the cursor names a real position,
+     * never a dropped id's.
      *
      * @param list<EntryListRow> $rows
      *
      * @return array{entries: list<array<string, mixed>>, nextCursor: string|null}
      */
-    public static function withMatchCount(array $rows, int $limit, int $matchCount, EntryListSort $sort): array
-    {
-        $nextCursor = $matchCount >= $limit ? self::cursorFromLastRow($rows, $sort) : null;
+    public static function withMatchCount(
+        array $rows,
+        int $limit,
+        int $matchCount,
+        EntryListSort $sort,
+        ?EntryListRow $continuationRow = null,
+    ): array {
+        $resumeAfter = $continuationRow ?? ($rows[array_key_last($rows)] ?? null);
+        $nextCursor = $matchCount >= $limit ? self::cursorFromRow($resumeAfter, $sort) : null;
 
         return [
             'entries' => array_map(static fn ($r) => EntryJson::one($r), $rows),
@@ -67,22 +76,20 @@ final readonly class EntryPage
         ];
     }
 
-    /** @param list<EntryListRow> $rows */
-    private static function cursorFromLastRow(array $rows, EntryListSort $sort): ?string
+    private static function cursorFromRow(?EntryListRow $row, EntryListSort $sort): ?string
     {
-        $last = $rows === [] ? null : $rows[array_key_last($rows)];
-        // A full page of matches with every id dropped by hydration leaves no
-        // surviving row to build a cursor from. Ending pagination here is the safe
-        // choice: the ghost ids are cleared by the next app:search:reindex (or a
-        // later page whose matches DO survive hydration reopens the cursor there).
-        if ($last === null) {
+        // A full page whose every candidate was dropped by hydration leaves no
+        // row to build a cursor from. Ending pagination here is the safe choice:
+        // the ghost ids are cleared by the next app:search:reindex (or a later
+        // page whose candidates DO survive reopens the cursor there).
+        if ($row === null) {
             return null;
         }
 
-        $entryId = $last->entry->getId() ?? throw new \LogicException(
+        $entryId = $row->entry->getId() ?? throw new \LogicException(
             'An entry loaded from the database must have an id.',
         );
 
-        return EntryCursor::encode($sort->instantOf($last), $entryId);
+        return EntryCursor::encode($sort->instantOf($row), $entryId);
     }
 }

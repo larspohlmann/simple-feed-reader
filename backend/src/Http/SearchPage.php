@@ -32,6 +32,7 @@ final readonly class SearchPage
             $limit,
             $result->matchCount,
             EntryListSort::PublishedDate,
+            $result->continuationRow,
         );
 
         return [...$page, 'matchedWords' => $result->matchedWords];

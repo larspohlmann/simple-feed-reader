@@ -42,10 +42,6 @@ final readonly class EntrySearchWithFallback implements EntrySearchInterface
 
     public function search(EntrySearchQuery $query): EntrySearchResult
     {
-        if ($query->unread) {
-            return $this->database->search($query);
-        }
-
         if (!$this->capability->isConfigured()) {
             return $this->database->search($query);
         }

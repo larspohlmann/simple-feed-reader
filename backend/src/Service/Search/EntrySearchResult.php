@@ -26,12 +26,27 @@ final readonly class EntrySearchResult
     /**
      * @param list<EntryListRow> $rows
      * @param list<string>       $matchedWords
-     * @param int|null           $matchCount defaults to count($rows)
+     * @param int|null           $matchCount     defaults to count($rows)
+     * @param EntryListRow|null  $continuationRow the candidate the next cursor
+     *                                            must resume past when it differs
+     *                                            from the last returned row: the
+     *                                            indexed unread search returns
+     *                                            only the unread rows of a page
+     *                                            but must continue after the last
+     *                                            candidate the engine handed back,
+     *                                            read or not. It pairs with
+     *                                            $matchCount — that says another
+     *                                            page exists, this says where it
+     *                                            resumes: the engine's pagination
+     *                                            frontier, which a post-filtered
+     *                                            read separates from the shown
+     *                                            rows (see EntryPage::withMatchCount())
      */
     public function __construct(
         public array $rows,
         public array $matchedWords,
         ?int $matchCount = null,
+        public ?EntryListRow $continuationRow = null,
     ) {
         $this->matchCount = $matchCount ?? \count($rows);
     }
