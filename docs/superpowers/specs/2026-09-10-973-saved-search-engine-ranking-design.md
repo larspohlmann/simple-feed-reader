@@ -223,9 +223,12 @@ exactly as today — only the id **source** changes. On an engine failure the ex
 propagates out of the loop; the partial collection is discarded and the fallback recomputes
 the full set from the database.
 
-`ENUMERATION_PAGE` is a fixed batch (e.g. `200`) — larger than a client page to cut round
-trips, and comfortably under Meilisearch's per-query `maxTotalHits` (keyset paging removes
-the cumulative cap, but each page's `limit` still must stay under it).
+`ENUMERATION_PAGE` is `EntryQuery::MAX_LIMIT` (100) — the largest page `SavedSearchEntryQuery`
+will accept, so it both cuts round trips and keeps the stop test honest: a larger value
+would be clamped by `clampLimit` at construction, and the `matchCount < ENUMERATION_PAGE`
+comparison would then test against a page size the query never used. It also stays under
+Meilisearch's per-query `maxTotalHits` (keyset paging removes the cumulative cap, but each
+page's `limit` must stay under it).
 
 The `DatabaseSavedSearchUnreadMatches` fallback wraps the existing
 `SavedSearchEntryRepository::unreadMatchIdsForSavedSearches`, unchanged.
