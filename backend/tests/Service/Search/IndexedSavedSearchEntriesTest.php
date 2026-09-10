@@ -203,6 +203,8 @@ final class IndexedSavedSearchEntriesTest extends DbTestCase
         $result = $this->list($reader, $this->query([]));
 
         self::assertSame([], $result->rows);
+        self::assertSame([], $result->savedSearchIds);
+        self::assertSame(0, $result->matchCount);
         self::assertSame([], $reader->receivedRounds);
     }
 
@@ -223,6 +225,8 @@ final class IndexedSavedSearchEntriesTest extends DbTestCase
         ));
 
         self::assertSame([], $result->rows);
+        self::assertSame([], $result->savedSearchIds);
+        self::assertSame(0, $result->matchCount);
         self::assertSame([], $reader->receivedRounds);
     }
 }

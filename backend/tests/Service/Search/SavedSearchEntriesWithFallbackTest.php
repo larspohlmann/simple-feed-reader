@@ -146,7 +146,8 @@ final class SavedSearchEntriesWithFallbackTest extends DbTestCase
 
     public function testAnUnavailableEngineFallsBackToTheDatabaseAndLogsExactlyOneWarning(): void
     {
-        $reader = new FakeMultiSearchReader(failure: new SearchEngineUnavailableException('no answer'));
+        $failure = new SearchEngineUnavailableException('no answer');
+        $reader = new FakeMultiSearchReader(failure: $failure);
         $logSpy = new TestHandler();
 
         $result = $this->fallback($reader, new Logger('test', [$logSpy]), 'http://meilisearch.test')
@@ -154,7 +155,9 @@ final class SavedSearchEntriesWithFallbackTest extends DbTestCase
 
         self::assertNotEmpty($result->rows); // the DB path answered
         self::assertTrue($logSpy->hasWarningRecords());
-        self::assertCount(1, $logSpy->getRecords());
+        $records = $logSpy->getRecords();
+        self::assertCount(1, $records);
+        self::assertSame($failure, $records[0]->context['exception']);
     }
 
     public function testAnUnexpectedExceptionIsNotSwallowed(): void
