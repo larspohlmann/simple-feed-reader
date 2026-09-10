@@ -360,6 +360,39 @@ final class ImageIdentityTest extends TestCase
         self::assertFalse($first->matches($second));
     }
 
+    public function testIsSameAssetRejectsDifferentUuidsCarriedInTheFilenameStem(): void
+    {
+        // BBC c74edv9887eo: the CMS asset UUID is the filename stem, not a
+        // path segment (`/live/<uuid>.jpg.webp`). Two different photos share
+        // the UUID's node field, so token matching wrongly tied them and the
+        // second figure lost its image, leaving an orphan caption.
+        $hassabis = ImageIdentity::fromUrl(
+            'https://ichef.bbci.co.uk/ace/standard/976/cpsprodpb/d3a8/live/'
+            . '3b927d50-ac60-11f1-a540-61c3f7fc4e6c.jpg.webp',
+        );
+        $antiAiMarch = ImageIdentity::fromUrl(
+            'https://ichef.bbci.co.uk/ace/standard/976/cpsprodpb/f9d8/live/'
+            . '1d2fd2a0-ac5f-11f1-a540-61c3f7fc4e6c.jpg.webp',
+        );
+
+        self::assertFalse($hassabis->isSameAsset($antiAiMarch));
+    }
+
+    public function testIsSameAssetAcceptsTheSameFilenameStemUuidAcrossRenditions(): void
+    {
+        // The same BBC photo at two widths shares the stem UUID; the renditions
+        // must still read as one asset.
+        $wide = ImageIdentity::fromUrl(
+            'https://ichef.bbci.co.uk/ace/standard/1920/cpsprodpb/d3a8/live/'
+            . '3b927d50-ac60-11f1-a540-61c3f7fc4e6c.jpg.webp',
+        );
+        $narrow = ImageIdentity::fromUrl(
+            'https://ichef.bbci.co.uk/ace/standard/240/cpsprodpb/d3a8/live/3b927d50-ac60-11f1-a540-61c3f7fc4e6c.jpg',
+        );
+
+        self::assertTrue($wide->isSameAsset($narrow));
+    }
+
     public function testIsSameAssetFallsBackToStemWhenOnlyOneSideHasAPathUuid(): void
     {
         // #681 regression pin (54 articles): the UUID branch only fires when

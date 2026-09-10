@@ -26,7 +26,7 @@ final readonly class ImageIdentity
         . '|(?:^|/)(?:og|opengraph)[-_]?image\.[a-z0-9]{2,5}$#i';
 
     private const string UUID_PATH_SEGMENT_PATTERN =
-        '#/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:/|$)#i';
+        '#/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[/.]|$)#i';
 
     /**
      * @param list<string> $ids    every `imageId=` token, lower-cased
@@ -67,10 +67,13 @@ final readonly class ImageIdentity
     }
 
     /**
-     * A path segment shaped like a full UUID (8-4-4-4-12 hex) is the CMS asset
-     * id (tagesschau, ARD): different rendition folders and filenames around
-     * it still name the same photo. A per-rendition transform hash has no such
-     * shape and must not be mistaken for one.
+     * A full UUID (8-4-4-4-12 hex) in the path is the CMS asset id (tagesschau
+     * and ARD carry it as a folder, BBC as the filename stem `<uuid>.jpg.webp`):
+     * different rendition folders, sizes and extensions around it still name the
+     * same photo, and two different UUIDs never do — which stops BBC's shared
+     * UUID node field from tying two photos through token matching. A
+     * per-rendition transform hash has no such shape and must not be mistaken
+     * for one.
      */
     private static function pathUuid(string $path): ?string
     {
