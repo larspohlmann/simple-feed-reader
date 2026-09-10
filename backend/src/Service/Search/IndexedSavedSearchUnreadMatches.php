@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Search;
 
 use App\Http\EntryCursor;
+use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
 use App\Repository\SavedSearchEntryQuery;
 
@@ -65,8 +66,14 @@ final readonly class IndexedSavedSearchUnreadMatches implements SavedSearchUnrea
             return null;
         }
 
-        $entry = $result->continuationRow->entry;
+        // Build the cursor through EntryListSort, the single source that keeps the
+        // ORDER BY column, the keyset predicate and the cursor instant in lockstep
+        // (as EntryPage::cursorFromRow does), rather than reading the date field here.
+        $row = $result->continuationRow;
 
-        return new EntryCursor($entry->getEffectiveDate(), (int) $entry->getId());
+        return new EntryCursor(
+            EntryListSort::PublishedDate->instantOf($row),
+            (int) $row->entry->getId(),
+        );
     }
 }

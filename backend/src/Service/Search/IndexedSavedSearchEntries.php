@@ -35,12 +35,12 @@ final readonly class IndexedSavedSearchEntries implements SavedSearchEntriesInte
     public function list(SavedSearchEntryQuery $query): SavedSearchEntriesResult
     {
         if ($query->savedSearches === []) {
-            return new SavedSearchEntriesResult([], [], 0);
+            return new SavedSearchEntriesResult([], []);
         }
 
         $feedIds = $this->feeds->idsSubscribedByUser($query->userId);
         if ($feedIds === []) {
-            return new SavedSearchEntriesResult([], [], 0);
+            return new SavedSearchEntriesResult([], []);
         }
 
         $firstMatch = $this->firstMatchBySearch(

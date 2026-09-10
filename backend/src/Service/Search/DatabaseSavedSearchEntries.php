@@ -31,7 +31,6 @@ final readonly class DatabaseSavedSearchEntries implements SavedSearchEntriesInt
         return new SavedSearchEntriesResult(
             rows: $rows,
             savedSearchIds: $this->entries->matchedSavedSearchIds($entryIds, $query->savedSearches),
-            matchCount: \count($rows),
         );
     }
 }
