@@ -8,11 +8,10 @@ use App\Dto\Entry\MarkSavedSearchesReadRequest;
 use App\Entity\User;
 use App\Http\EntryCursor;
 use App\Http\SavedSearchPage;
-use App\Repository\EntryListRow;
 use App\Repository\EntryQuery;
 use App\Repository\SavedSearchEntryQuery;
-use App\Repository\SavedSearchEntryRepository;
 use App\Service\Reader\SavedSearchMarkReadService;
+use App\Service\Search\SavedSearchEntriesInterface;
 use App\Service\Search\SavedSearchTerms;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -31,7 +30,7 @@ final readonly class SavedSearchEntriesController
 {
     public function __construct(
         private SavedSearchTerms $terms,
-        private SavedSearchEntryRepository $entries,
+        private SavedSearchEntriesInterface $entries,
         private SavedSearchMarkReadService $markRead,
     ) {
     }
@@ -44,23 +43,15 @@ final readonly class SavedSearchEntriesController
         #[MapQueryParameter] bool $unread = false,
     ): JsonResponse {
         $userId = (int) $user->getId();
-        $savedSearches = $this->terms->forUser($userId);
         $query = new SavedSearchEntryQuery(
             userId: $userId,
-            savedSearches: $savedSearches,
+            savedSearches: $this->terms->forUser($userId),
             onlyUnread: $unread,
             cursor: EntryCursor::fromRequestValue($cursor),
             limit: $limit,
         );
 
-        $rows = $this->entries->listForSavedSearches($query);
-        $entryIds = array_map(static fn (EntryListRow $row): int => (int) $row->entry->getId(), $rows);
-
-        return new JsonResponse(SavedSearchPage::of(
-            $rows,
-            $query->limit,
-            $this->entries->matchedSavedSearchIds($entryIds, $savedSearches),
-        ));
+        return new JsonResponse(SavedSearchPage::of($this->entries->list($query), $query->limit));
     }
 
     #[Route('/mark-read', name: 'api_entries_saved_searches_mark_read', methods: ['POST'])]
