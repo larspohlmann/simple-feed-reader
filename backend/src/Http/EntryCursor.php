@@ -45,6 +45,17 @@ final readonly class EntryCursor
             ?? throw new ValidationException(['cursor' => ['The cursor is malformed.']]);
     }
 
+    /**
+     * The upper bound of a keyset walk that must include every row AT $until, not
+     * only those strictly before it. The keyset predicate is strict (id < c.id),
+     * so the max int id admits every real (auto-increment) id at $until. Internal
+     * to the engine mark-read enumeration; never encoded for a client.
+     */
+    public static function inclusiveUpperBound(\DateTimeImmutable $until): self
+    {
+        return new self($until, PHP_INT_MAX);
+    }
+
     public static function encode(\DateTimeImmutable $sortInstant, int $id): string
     {
         $raw = $sortInstant->format(\DateTimeInterface::ATOM) . '|' . $id;
