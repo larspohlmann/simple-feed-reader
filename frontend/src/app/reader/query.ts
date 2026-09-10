@@ -231,7 +231,11 @@ export function savedSearchTerm(term: string, wholeWord: boolean, phrase: boolea
   return wholeWord ? `${term} ` : term;
 }
 
-export function savedSearchParams(term: string, wholeWord: boolean, phrase: boolean) {
+export function savedSearchParams(
+  term: string,
+  wholeWord: boolean,
+  phrase: boolean,
+): SelectionParams & { unread: null } {
   return {
     ...selectionQueryParams({
       q: savedSearchTerm(term, wholeWord, phrase),
@@ -322,9 +326,9 @@ export function queryFromSelection(s: Selection): EntryQuery {
       // you's does rather than becoming a view of its own.
       return s.unread ? { view: 'saved-searches', unread: true } : { view: 'saved-searches' };
     case 'search':
-      return isSavedSearchResult(s) && s.unread
-        ? { view: 'all', q: s.term, unread: true }
-        : { view: 'all', q: s.term };
+      // Only a saved-search result ever carries unread (selectionFromParams
+      // forces a direct search to false), so the flag alone decides here.
+      return s.unread ? { view: 'all', q: s.term, unread: true } : { view: 'all', q: s.term };
   }
 }
 

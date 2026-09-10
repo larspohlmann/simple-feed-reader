@@ -158,7 +158,7 @@
       <button
         appListAction
         class="mark-all"
-        [class.mobile-icon-only]="selection().kind !== 'search' || savedSearchResult()"
+        [class.mobile-icon-only]="!directSearch()"
         type="button"
         (click)="markAllRead.emit()"
         [attr.aria-label]="'reader.markAllRead' | transloco"

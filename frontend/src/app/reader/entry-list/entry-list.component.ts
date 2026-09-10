@@ -50,7 +50,6 @@ import {
   canScopedRefresh,
   hasUnreadFilter,
   isDirectSearch,
-  isSavedSearchResult,
   isSingleStreamView,
   isWholeWordTerm,
   isPhraseTerm,
@@ -239,7 +238,10 @@ export class EntryListComponent implements OnDestroy {
    *  question when it builds the list query. */
   readonly hasUnreadFilter = computed(() => hasUnreadFilter(this.selection()));
 
-  readonly savedSearchResult = computed(() => isSavedSearchResult(this.selection()));
+  /** A direct (unsaved) search is the one selection that keeps its short header
+   *  labels and list layout; every other list, saved-search results included,
+   *  drops to icon-only actions. */
+  readonly directSearch = computed(() => isDirectSearch(this.selection()));
 
   /** The number the heading shows, or 0 for the two cases that show none: a
    *  list with nothing in it, and a search — whose heading already carries its
@@ -285,9 +287,7 @@ export class EntryListComponent implements OnDestroy {
    *  subscription (their glyph and favicon already lead the heading) (#411). */
   readonly titleIcon = computed(() => FIXED_VIEW_ICON[this.selection().kind] ?? null);
 
-  readonly effectiveLayout = computed(() =>
-    isDirectSearch(this.selection()) ? 'list' : this.layout(),
-  );
+  readonly effectiveLayout = computed(() => (this.directSearch() ? 'list' : this.layout()));
 
   /** Search rows dim their excerpt a shade — the marked term stays the row's
    *  focus, and the surrounding prose recedes behind it. */
