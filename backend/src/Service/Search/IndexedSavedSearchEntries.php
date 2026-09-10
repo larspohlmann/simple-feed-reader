@@ -48,8 +48,10 @@ final readonly class IndexedSavedSearchEntries implements SavedSearchEntriesInte
             $this->index->findMany($this->indexSearches($query, $feedIds)),
         );
 
-        $candidates = $this->entries->rowsByIdsForUser(array_keys($firstMatch), $query->userId);
-        $page = \array_slice($candidates, 0, $query->limit);
+        // The engine can return up to (searches × limit) ids, but only the
+        // newest $limit are shown; rowsByIdsForUser caps the hydration in SQL so
+        // the discarded tail is never fetched. It already orders newest-first.
+        $page = $this->entries->rowsByIdsForUser(array_keys($firstMatch), $query->userId, $query->limit);
         $rows = $query->onlyUnread ? $this->unreadOnly($page) : $page;
 
         return new SavedSearchEntriesResult(

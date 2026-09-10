@@ -153,24 +153,33 @@ class EntryListRepository extends AbstractEntryProjectionRepository
      * caller does not subscribe to is dropped here, even one from a search
      * index whose filter was wrong or stale.
      *
+     * $limit caps the hydration in SQL for a caller that unions several id sets
+     * but only shows the newest $limit of them (IndexedSavedSearchEntries): the
+     * rows already come back newest-first, so the tail past $limit need never be
+     * fetched or hydrated. Null hydrates every given id, as the single-search
+     * and digest callers need.
+     *
      * @param list<int> $entryIds
      *
      * @return list<EntryListRow>
      */
-    public function rowsByIdsForUser(array $entryIds, int $userId): array
+    public function rowsByIdsForUser(array $entryIds, int $userId, ?int $limit = null): array
     {
         if ($entryIds === []) {
             return [];
         }
 
-        /** @var list<array<array-key, mixed>> $rows */
-        $rows = $this->newestFirst(
+        $rowQuery = $this->newestFirst(
             $this->rowQueryBuilder($userId)
                 ->andWhere('e.id IN (:ids)')
                 ->setParameter('ids', $entryIds),
-        )
-            ->getQuery()
-            ->getResult();
+        );
+        if ($limit !== null) {
+            $rowQuery->setMaxResults($limit);
+        }
+
+        /** @var list<array<array-key, mixed>> $rows */
+        $rows = $rowQuery->getQuery()->getResult();
 
         return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
     }
