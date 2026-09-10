@@ -185,9 +185,10 @@ controller reads `savedSearchIds` off the result instead of calling
 ## 4. Engine-consistent mark-read
 
 Mark-read needs the **set** of unread entry ids that any saved search matches with
-`effectiveDate <= until`. The engine has no "all matches" call, and Meilisearch caps a
-single response (`maxTotalHits`, default 1000). Keyset filtering bypasses that cap, so
-the set is enumerated by paging each saved search to exhaustion.
+`effectiveDate <= until`. Rather than reimplement engine paging, mark-read **drives the
+indexed list's own pagination** — the list already unions the N searches, hydrates
+newest-first, applies the access gate, drops read rows, and cursors correctly. Reusing
+it keeps one engine matching path and needs no change to `IndexMatches`.
 
 A new match source behind a fallback interface:
 
@@ -199,38 +200,52 @@ interface SavedSearchUnreadMatchSource
 }
 ```
 
-`IndexedSavedSearchUnreadMatches::unreadMatchIdsUpTo(...)`:
+`IndexedSavedSearchUnreadMatches` depends on `IndexedSavedSearchEntries` (the raw indexed
+list, not the fallback — a mid-enumeration engine failure must surface so mark-read's own
+fallback catches it) and enumerates:
 
-1. `$feedIds = idsSubscribedByUser($userId)`. Empty → `[]`.
-2. Seed each saved search's `IndexSearch` cursor at the **inclusive upper bound** of
-   `until` (see 4.1), so the engine filter yields `effectiveDate <= until`.
-3. Loop: `findMany` over the still-active searches; collect ids; a search whose page
-   returned `< limit` hits is exhausted and drops out; an exhausted-later search's next
-   cursor is its page's last hit. Continue until no search is active. (One
-   `/multi-search` round trip per round; rounds = the deepest search's page count.)
-4. Hydrate the union through `rowsByIdsForUser`, keep the unread rows (`!isHidden`),
-   return their ids.
+1. Seed `$cursor = EntryCursor::inclusiveUpperBound($until)` (see 4.1) so the first page
+   begins at `until`, skipping newer entries.
+2. Loop: `$result = $indexedList->list(new SavedSearchEntryQuery($userId, $savedSearches,
+   onlyUnread: true, cursor: $cursor, limit: self::ENUMERATION_PAGE))`. Collect
+   `$result->rows`' entry ids — each is unread, matches an engine query, and has
+   `effectiveDate <= until` by construction.
+3. Stop when `$result->matchCount < self::ENUMERATION_PAGE` or `$result->continuationRow`
+   is null (no further page). Otherwise advance
+   `$cursor = new EntryCursor($result->continuationRow->entry->getEffectiveDate(),
+   (int) $result->continuationRow->entry->getId())` and repeat.
+
+Keyset pagination is strictly decreasing, so no id repeats across pages; each page also
+dedups the union, so the collected ids are already distinct.
 
 `SavedSearchMarkReadService::mark` then passes those ids to `BulkEntryReadMarker`,
-exactly as today — only the id **source** changes.
+exactly as today — only the id **source** changes. On an engine failure the exception
+propagates out of the loop; the partial collection is discarded and the fallback recomputes
+the full set from the database.
+
+`ENUMERATION_PAGE` is a fixed batch (e.g. `200`) — larger than a client page to cut round
+trips, and comfortably under Meilisearch's per-query `maxTotalHits` (keyset paging removes
+the cumulative cap, but each page's `limit` still must stay under it).
 
 The `DatabaseSavedSearchUnreadMatches` fallback wraps the existing
 `SavedSearchEntryRepository::unreadMatchIdsForSavedSearches`, unchanged.
 
 ### 4.1 The inclusive upper bound
 
-The keyset filter is strict: `effectiveDate < c.date OR (effectiveDate = c.date AND id <
-c.id)`. To include *every* row at `until` (any id), seed the cursor at `(until,
-PHP_INT_MAX)` through a named factory, e.g. `EntryCursor::inclusiveUpperBound(\DateTimeImmutable
-$until)`. Entry ids are DB auto-increment ints far below `PHP_INT_MAX`, so `id <
-PHP_INT_MAX` holds for all real rows; the predicate becomes `effectiveDate <= until`.
-This cursor is internal to mark-read and is never encoded for a client, so the sentinel
-id never leaves the process.
+The list cursor is strict — `effectiveDate < c.date OR (effectiveDate = c.date AND id <
+c.id)` — so a plain `(until, id)` cursor would exclude the rows at `until`. To begin the
+enumeration **at and below** `until`, seed the cursor at `(until, PHP_INT_MAX)` through a
+named factory `EntryCursor::inclusiveUpperBound(\DateTimeImmutable $until)`. Entry ids are
+DB auto-increment ints far below `PHP_INT_MAX`, so `id < PHP_INT_MAX` holds for every real
+row; the first page then starts at the newest entry no newer than `until`. This cursor is
+internal to mark-read and is never encoded for a client, so the sentinel id never leaves
+the process.
 
 **Alternative considered:** add an explicit `?int $maxEffectiveDate` to `IndexSearch` and
-`MeilisearchIndex::filterFor`. Rejected as the default because it adds a field one caller
-uses to the hot single-search value object. The named-cursor factory keeps `IndexSearch`
-untouched and states intent at the call site. Open to reversal at spec review.
+page each search directly. Rejected: it duplicates the list's paging logic and would force
+`IndexMatches` to carry each hit's sort key so the next keyset cursor could be built
+without hydration. Driving the existing list keeps `IndexSearch`/`IndexMatches` untouched
+and states intent at the call site. Open to reversal at spec review.
 
 ## 5. Structure and fallback
 
@@ -287,9 +302,9 @@ Mirror the #972 test additions, one level up (N searches, attribution):
   dropped from rows but not from `matchCount`; a user with no subscriptions returns empty
   without asking the engine. Uses a `FakeMultiSearchReader` (a `findMany` fake shaped
   like `FakeSearchIndexReader`).
-- `IndexedSavedSearchUnreadMatchesTest` — enumeration pages each search to exhaustion and
-  unions; the `until` upper bound excludes newer rows; read rows dropped; no
-  subscriptions → empty.
+- `IndexedSavedSearchUnreadMatchesTest` — enumeration drives the list pagination across a
+  multi-page match set and unions; the `until` upper bound excludes newer rows; read rows
+  are dropped; paging stops at exhaustion; no subscriptions → empty.
 - `SavedSearchEntriesWithFallbackTest` / `SavedSearchUnreadMatchesWithFallbackTest` —
   unconfigured engine never calls the reader and the database answers (silent);
   `SearchEngineUnavailableException` falls back and logs exactly one warning; any other
