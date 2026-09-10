@@ -153,6 +153,14 @@ final class IndexedSavedSearchEntriesTest extends DbTestCase
         self::assertNotNull($result->continuationRow);
         self::assertSame('middle', $result->continuationRow->entry->getGuid());
         self::assertSame(3, $result->matchCount);
+        self::assertFalse(
+            array_key_exists((int)($oldest->getId() ?? 0), $result->savedSearchIds),
+            'Truncated row must not appear in savedSearchIds badge map.',
+        );
+        self::assertSame(
+            [(int)($newest->getId() ?? 0), (int)($middle->getId() ?? 0)],
+            array_keys($result->savedSearchIds),
+        );
     }
 
     public function testTheUnreadFilterDropsReadRowsButStillResumesPastThem(): void
@@ -179,6 +187,18 @@ final class IndexedSavedSearchEntriesTest extends DbTestCase
         self::assertNotNull($result->continuationRow);
         self::assertSame('read-older', $result->continuationRow->entry->getGuid());
         self::assertSame(3, $result->matchCount, 'The engine frontier survives the unread filter.');
+        self::assertFalse(
+            array_key_exists((int)($readNewer->getId() ?? 0), $result->savedSearchIds),
+            'Unread-filtered row must not appear in savedSearchIds badge map.',
+        );
+        self::assertFalse(
+            array_key_exists((int)($readOlder->getId() ?? 0), $result->savedSearchIds),
+            'Unread-filtered row must not appear in savedSearchIds badge map.',
+        );
+        self::assertSame(
+            [(int)($unread->getId() ?? 0)],
+            array_keys($result->savedSearchIds),
+        );
     }
 
     public function testAGhostIdIsDroppedFromRowsButNotFromTheMatchCount(): void
