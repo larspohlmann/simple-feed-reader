@@ -179,11 +179,10 @@ Confirmed facts:
   }
   ```
 
-  The shape matches the single-index error envelope (fact 3's filter note);
-  the only addition is the `` Inside `.queries[N]` `` prefix naming which
-  query in the batch was at fault. A caller that wants any results from a
-  batch containing a bad query gets none — there is no per-query
-  degradation to code around.
+  The shape matches the single-index error envelope; the only addition is
+  the `` Inside `.queries[N]` `` prefix naming which query in the batch was
+  at fault. A caller that wants any results from a batch containing a bad
+  query gets none — there is no per-query degradation to code around.
 
 ## The search request the adapter sends
 
