@@ -90,6 +90,16 @@ final class MeilisearchIndexTest extends TestCase
         return $decoded;
     }
 
+    /** @return list<array<string, mixed>> the captured request's `queries` array, decoded from the body */
+    private function capturedQueries(): array
+    {
+        $queries = $this->capturedJsonObject()['queries'];
+        self::assertIsArray($queries);
+
+        /** @var list<array<string, mixed>> $queries */
+        return $queries;
+    }
+
     public function testFindSendsMatchingStrategyAllAndTheTermsJoinedBySpace(): void
     {
         $this->index($this->clientCapturing(new MockResponse('{"hits":[]}')))->find($this->search());
@@ -304,6 +314,63 @@ final class MeilisearchIndexTest extends TestCase
         $this->index($this->clientCapturing(new MockResponse('{"hits":[]}')))->find($this->search());
 
         self::assertContains('Authorization: Bearer test-master-key', $this->capturedRequest['headers']);
+    }
+
+    public function testFindManySendsOneMultiSearchWithOneQueryPerSearch(): void
+    {
+        $client = $this->clientCapturing(new MockResponse('{"results":[{"hits":[]},{"hits":[]}]}'));
+        $this->index($client)->findMany([
+            new IndexSearch(SearchTerms::fromInput('widgets'), [1, 2], null, 20),
+            new IndexSearch(SearchTerms::fromInput('gizmos '), [1, 2], null, 20),
+        ]);
+
+        self::assertSame('POST', $this->capturedRequest['method']);
+        self::assertSame(self::BASE_URL . '/multi-search', $this->capturedRequest['url']);
+        $queries = $this->capturedQueries();
+        self::assertCount(2, $queries);
+        self::assertSame('entries', $queries[0]['indexUid']);
+        self::assertSame('widgets', $queries[0]['q']);
+        self::assertSame('"gizmos"', $queries[1]['q']);
+    }
+
+    public function testFindManyMapsResultSetsBackToTheQueryOrder(): void
+    {
+        $client = $this->clientCapturing(new MockResponse(
+            '{"results":[{"hits":[{"id":7}]},{"hits":[{"id":9},{"id":11}]}]}',
+        ));
+        $matches = $this->index($client)->findMany([
+            new IndexSearch(SearchTerms::fromInput('widgets'), [1], null, 20),
+            new IndexSearch(SearchTerms::fromInput('gizmos'), [1], null, 20),
+        ]);
+
+        self::assertSame([7], $matches[0]->entryIds);
+        self::assertSame([9, 11], $matches[1]->entryIds);
+    }
+
+    public function testFindManyRaisesWhenTheResultCountDoesNotMatchTheQueryCount(): void
+    {
+        $client = $this->clientCapturing(new MockResponse('{"results":[{"hits":[]}]}'));
+
+        $this->expectException(SearchEngineUnavailableException::class);
+        $this->index($client)->findMany([
+            new IndexSearch(SearchTerms::fromInput('widgets'), [1], null, 20),
+            new IndexSearch(SearchTerms::fromInput('gizmos'), [1], null, 20),
+        ]);
+    }
+
+    public function testFindManyRaisesOnATransportFailure(): void
+    {
+        $client = new MockHttpClient(static function (): MockResponse {
+            throw new TransportException('boom');
+        });
+
+        $this->expectException(SearchEngineUnavailableException::class);
+        $this->index($client)->findMany([new IndexSearch(SearchTerms::fromInput('widgets'), [1], null, 20)]);
+    }
+
+    public function testFindManyReturnsNothingForNoSearchesWithoutCallingTheEngine(): void
+    {
+        self::assertSame([], $this->index($this->clientThatMustNotBeCalled())->findMany([]));
     }
 
     public function testConfigureSendsTheSettingsToThePatchEndpoint(): void

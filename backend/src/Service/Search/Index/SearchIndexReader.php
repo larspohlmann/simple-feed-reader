@@ -16,4 +16,13 @@ interface SearchIndexReader
 {
     /** @throws SearchEngineUnavailableException */
     public function find(IndexSearch $search): IndexMatches;
+
+    /**
+     * @param list<IndexSearch> $searches
+     *
+     * @return list<IndexMatches> result i pairs with searches[i], in request order
+     *
+     * @throws SearchEngineUnavailableException
+     */
+    public function findMany(array $searches): array;
 }
