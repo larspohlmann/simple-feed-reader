@@ -122,6 +122,68 @@ typo-tolerant prefix match can highlight only the matched prefix of a word
 (`<mark>receivi</mark>ng`), not the whole token — cosmetic, but a highlight
 boundary can land mid-word.
 
+## 5. `POST /multi-search` batches `/search` faithfully, but one bad query fails the whole batch
+
+Measured against the same `entries` index used above (55,485 documents),
+running two queries in one call — one bare (`"the"`), one whole-word-quoted
+(`"\"news\""`) — both scoped to `feedId IN [5,133]`, sorted
+`["effectiveDate:desc","id:desc"]`, `matchingStrategy:"all"`,
+`attributesToRetrieve:["id"]`, `attributesToHighlight:["title","summary"]`:
+
+```json
+POST /multi-search
+{"queries":[
+  {"indexUid":"entries","q":"the","filter":"feedId IN [5,133]", ...},
+  {"indexUid":"entries","q":"\"news\"","filter":"feedId IN [5,133]", ...}
+]}
+```
+
+```json
+{
+  "results": [
+    {"indexUid":"entries","hits":[...],"query":"the","processingTimeMs":3,"limit":5,"offset":0,"estimatedTotalHits":728},
+    {"indexUid":"entries","hits":[...],"query":"\"news\"","processingTimeMs":1,"limit":5,"offset":0,"estimatedTotalHits":813}
+  ]
+}
+```
+
+Confirmed facts:
+
+- The envelope is `{"results": [...]}`, one entry per query, and each entry
+  is shaped exactly like a single-index `/search` response (`hits`, `query`,
+  `processingTimeMs`, `limit`, `offset`, `estimatedTotalHits`).
+- **`results` preserves request order.** `results[0]` answers `queries[0]`
+  (the bare `"the"` query), `results[1]` answers `queries[1]` (the quoted
+  `"\"news\""` query) — confirmed by each result's own echoed `query` field,
+  not just position.
+- `sort`, `filter`, and `matchingStrategy` behave identically inside
+  `/multi-search` and on single-index `/search`: running query 1 verbatim
+  against `POST /indexes/entries/search` returned the same five ids in the
+  same order and the same `estimatedTotalHits: 728` as `results[0]` above.
+  No deviation observed.
+- The highlight fields behave identically too — `_formatted.title` and
+  `_formatted.summary` come back wrapped in `[[sfr:hl]]…[[/sfr:hl]]` on both
+  queries, the same as fact 4 above documents for single-index `/search`.
+- **A malformed query fails the entire batch, not just its own slot.**
+  Sending one valid query and one referencing a non-filterable attribute
+  does not return partial `results` for the valid query — the whole call
+  comes back `400`, with a single top-level error envelope (not one nested
+  per query):
+
+  ```json
+  {
+    "message": "Inside `.queries[1]`: Index `entries`: Attribute `notAField` is not filterable. Available filterable attributes are: `effectiveDate`, `feedId`, `id`.\n1:10 notAField IN [5,133]",
+    "code": "invalid_search_filter",
+    "type": "invalid_request",
+    "link": "https://docs.meilisearch.com/errors#invalid_search_filter"
+  }
+  ```
+
+  The shape matches the single-index error envelope; the only addition is
+  the `` Inside `.queries[N]` `` prefix naming which query in the batch was
+  at fault. A caller that wants any results from a batch containing a bad
+  query gets none — there is no per-query degradation to code around.
+
 ## The search request the adapter sends
 
 `MeilisearchIndex::searchPayload()` builds this shape:

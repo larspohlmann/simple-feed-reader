@@ -116,6 +116,8 @@ services:
     App\Service\Discovery\FeedDiscoveryInterface: '@App\Service\Discovery\FeedDiscovery'
     App\Service\Reader\ArticleExtractorInterface: '@App\Service\Reader\ArticleExtractor'
     App\Service\Search\EntrySearchInterface: '@App\Service\Search\EntrySearchWithFallback'
+    App\Service\Search\SavedSearchEntriesInterface: '@App\Service\Search\SavedSearchEntriesWithFallback'
+    App\Service\Search\SavedSearchUnreadMatchSource: '@App\Service\Search\SavedSearchUnreadMatchesWithFallback'
     # Both interfaces resolve to the one adapter that knows Meilisearch's wire
     # format (#432, see MeilisearchIndex).
     App\Service\Search\Index\SearchIndexReader: '@App\Service\Search\Index\MeilisearchIndex'

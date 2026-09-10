@@ -5,20 +5,20 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Entity\User;
-use App\Repository\SavedSearchEntryRepository;
 use App\Service\Search\SavedSearchTerms;
+use App\Service\Search\SavedSearchUnreadMatchSource;
 
 /**
  * Marks read every unread entry that matches any of the caller's saved
- * searches. Like the single-search mark-read, and unlike feed/tag mark-read,
- * there is no watermark to bump: a search spans every feed, so each matching
- * entry needs its own EntryState row.
+ * searches. The match set now comes through SavedSearchUnreadMatchSource, so it
+ * is engine-consistent when Meilisearch is configured and the LIKE set when it
+ * is not — exactly the set the combined list shows on the same path (#973).
  */
 final readonly class SavedSearchMarkReadService
 {
     public function __construct(
         private SavedSearchTerms $terms,
-        private SavedSearchEntryRepository $entries,
+        private SavedSearchUnreadMatchSource $matches,
         private BulkEntryReadMarker $readMarker,
     ) {
     }
@@ -27,7 +27,7 @@ final readonly class SavedSearchMarkReadService
     {
         $userId = (int) $user->getId();
 
-        $this->readMarker->markRead($userId, $this->entries->unreadMatchIdsForSavedSearches(
+        $this->readMarker->markRead($userId, $this->matches->unreadMatchIdsUpTo(
             $userId,
             $this->terms->forUser($userId),
             $until,

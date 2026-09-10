@@ -98,6 +98,24 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
         return $this->matchesFromResponse($body);
     }
 
+    /**
+     * @param list<IndexSearch> $searches
+     *
+     * @return list<IndexMatches>
+     */
+    public function findMany(array $searches): array
+    {
+        if ($searches === []) {
+            return [];
+        }
+
+        $body = $this->requestBody('POST', '/multi-search', [
+            'json' => ['queries' => array_map($this->multiSearchQuery(...), $searches)],
+        ]);
+
+        return $this->manyMatchesFromResponse($body, \count($searches));
+    }
+
     public function configure(): void
     {
         $this->write('PATCH', '/indexes/' . self::INDEX . '/settings', [
@@ -203,6 +221,12 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
         return str_replace('"', ' ', $term);
     }
 
+    /** @return array<string, mixed> */
+    private function multiSearchQuery(IndexSearch $search): array
+    {
+        return ['indexUid' => self::INDEX, ...$this->searchPayload($search)];
+    }
+
     private function filterFor(IndexSearch $search): string
     {
         $filter = sprintf('feedId IN [%s]', implode(',', $search->feedIds));
@@ -229,8 +253,39 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
             throw new SearchEngineUnavailableException('The search engine answered with an unreadable response.');
         }
 
+        return $this->matchesFromHits($decoded['hits']);
+    }
+
+    /** @return list<IndexMatches> */
+    private function manyMatchesFromResponse(string $body, int $expected): array
+    {
+        $decoded = json_decode($body, true);
+        if (!\is_array($decoded) || !isset($decoded['results']) || !\is_array($decoded['results'])) {
+            throw new SearchEngineUnavailableException('The search engine answered with an unreadable response.');
+        }
+
+        /** @var list<array<mixed>> $results */
+        $results = array_values(array_filter($decoded['results'], static fn (mixed $r): bool => \is_array($r)));
+        if (\count($results) !== $expected) {
+            throw new SearchEngineUnavailableException(
+                'The search engine returned a different number of result sets than queries.',
+            );
+        }
+
+        return array_map(function (array $result): IndexMatches {
+            $hits = isset($result['hits']) && \is_array($result['hits']) ? $result['hits'] : [];
+
+            return $this->matchesFromHits($hits);
+        }, $results);
+    }
+
+    /**
+     * @param array<mixed> $rawHits
+     */
+    private function matchesFromHits(array $rawHits): IndexMatches
+    {
         /** @var list<array<mixed>> $hits */
-        $hits = array_values(array_filter($decoded['hits'], static fn (mixed $hit): bool => \is_array($hit)));
+        $hits = array_values(array_filter($rawHits, static fn (mixed $hit): bool => \is_array($hit)));
 
         return new IndexMatches($this->entryIdsOf($hits), $this->matchedWordsOf($hits));
     }

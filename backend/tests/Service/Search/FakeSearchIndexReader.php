@@ -21,6 +21,9 @@ final class FakeSearchIndexReader implements SearchIndexReader
 {
     public ?IndexSearch $received = null;
 
+    /** @var list<IndexSearch>|null */
+    public ?array $receivedMany = null;
+
     /**
      * @param list<int>    $entryIds
      * @param list<string> $matchedWords
@@ -41,5 +44,21 @@ final class FakeSearchIndexReader implements SearchIndexReader
         }
 
         return new IndexMatches($this->entryIds, $this->matchedWords);
+    }
+
+    /**
+     * @param list<IndexSearch> $searches
+     *
+     * @return list<IndexMatches>
+     */
+    public function findMany(array $searches): array
+    {
+        $this->receivedMany = $searches;
+
+        if ($this->failure !== null) {
+            throw $this->failure;
+        }
+
+        return array_map(fn (): IndexMatches => new IndexMatches($this->entryIds, $this->matchedWords), $searches);
     }
 }
