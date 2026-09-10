@@ -1,5 +1,6 @@
 import { convertToParamMap } from '@angular/router';
 import {
+  hasUnreadFilter,
   queryFromSelection,
   sameSelection,
   savedSearchParams,
@@ -25,6 +26,7 @@ describe('saved-search query helpers', () => {
     expect(params.tag).toBeNull();
     expect(params.subscription).toBeNull();
     expect(params.entry).toBeNull();
+    expect(params.unread).toBeNull();
   });
 
   it('savedSearchParams wraps a phrase search in quotes on q', () => {
@@ -60,6 +62,45 @@ describe('saved-search query helpers', () => {
     const direct = selectionFromParams(convertToParamMap({ q: 'climate' })).selection;
 
     expect(sameSelection(saved, direct)).toBe(false);
+  });
+
+  it('keeps the unread refinement only for a saved-search result', () => {
+    const saved = selectionFromParams(
+      convertToParamMap({ q: 'climate', searchOrigin: 'saved', unread: '1' }),
+    ).selection;
+    const direct = selectionFromParams(convertToParamMap({ q: 'climate', unread: '1' })).selection;
+
+    expect(saved).toEqual({
+      kind: 'search',
+      id: null,
+      unread: true,
+      term: 'climate',
+      searchOrigin: 'saved',
+    });
+    expect(direct.unread).toBe(false);
+  });
+
+  it('offers and forwards the unread filter for a saved-search result', () => {
+    const selection = {
+      kind: 'search' as const,
+      id: null,
+      unread: true,
+      term: 'climate',
+      searchOrigin: 'saved' as const,
+    };
+
+    expect(hasUnreadFilter(selection)).toBe(true);
+    expect(queryFromSelection(selection)).toEqual({
+      view: 'all',
+      q: 'climate',
+      unread: true,
+    });
+  });
+
+  it('does not offer the unread filter for a direct search', () => {
+    expect(hasUnreadFilter({ kind: 'search', id: null, unread: false, term: 'climate' })).toBe(
+      false,
+    );
   });
 
   it('clears the saved origin when navigating to another list', () => {

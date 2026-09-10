@@ -128,6 +128,10 @@ export function isDirectSearch(selection: Selection): boolean {
   return selection.kind === 'search' && selection.searchOrigin !== 'saved';
 }
 
+export function isSavedSearchResult(selection: Selection): boolean {
+  return selection.kind === 'search' && selection.searchOrigin === 'saved';
+}
+
 /** `Selection.term` with the trailing whole-word-match space stripped for
  *  display. The space must reach the server (`EntryQuery.q`) and stay in
  *  `Selection.term` (part of identity, see `sameSelection`) — this is only
@@ -139,11 +143,16 @@ export function visibleSearchTerm(term: string): string {
   return phraseWithin(term) ?? term.trimEnd();
 }
 
-/** Whether the list offers the "All posts / only unread" switch. The saved
- *  views and a single search are already filters, on state and on content; a
- *  standing list the reader keeps is not (#710, #769). */
+/** Whether the list offers the "All posts / only unread" switch. A direct
+ *  search is temporary, but a saved-search result is a standing list and takes
+ *  the same refinement as the combined saved-search view (#710, #769, #971). */
 export function hasUnreadFilter(s: Selection): boolean {
-  return canScopedRefresh(s) || s.kind === 'for-you' || s.kind === 'saved-searches';
+  return (
+    canScopedRefresh(s) ||
+    s.kind === 'for-you' ||
+    s.kind === 'saved-searches' ||
+    isSavedSearchResult(s)
+  );
 }
 
 /** Whether the current selection supports a scoped refresh — the cross-feed
@@ -222,15 +231,14 @@ export function savedSearchTerm(term: string, wholeWord: boolean, phrase: boolea
   return wholeWord ? `${term} ` : term;
 }
 
-export function savedSearchParams(
-  term: string,
-  wholeWord: boolean,
-  phrase: boolean,
-): SelectionParams {
-  return selectionQueryParams({
-    q: savedSearchTerm(term, wholeWord, phrase),
-    searchOrigin: 'saved',
-  });
+export function savedSearchParams(term: string, wholeWord: boolean, phrase: boolean) {
+  return {
+    ...selectionQueryParams({
+      q: savedSearchTerm(term, wholeWord, phrase),
+      searchOrigin: 'saved',
+    }),
+    unread: null,
+  };
 }
 
 export function selectionFromParams(p: ParamMap): {
@@ -254,8 +262,9 @@ export function selectionFromParams(p: ParamMap): {
   if (isSearchableTerm(term)) {
     // A search is its own view over every subscription, so a tag or feed
     // parameter left in the URL by hand is ignored rather than combined.
-    const selection: Selection = { kind: 'search', id: null, unread: false, term };
-    if (selectionParam(p, 'searchOrigin') === 'saved') selection.searchOrigin = 'saved';
+    const savedOrigin = selectionParam(p, 'searchOrigin') === 'saved';
+    const selection: Selection = { kind: 'search', id: null, unread: savedOrigin && unread, term };
+    if (savedOrigin) selection.searchOrigin = 'saved';
     return { selection, entryId };
   }
 
@@ -313,7 +322,9 @@ export function queryFromSelection(s: Selection): EntryQuery {
       // you's does rather than becoming a view of its own.
       return s.unread ? { view: 'saved-searches', unread: true } : { view: 'saved-searches' };
     case 'search':
-      return { view: 'all', q: s.term };
+      return isSavedSearchResult(s) && s.unread
+        ? { view: 'all', q: s.term, unread: true }
+        : { view: 'all', q: s.term };
   }
 }
 

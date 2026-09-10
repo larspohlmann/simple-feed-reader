@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
@@ -80,6 +81,20 @@ final class EntrySearchTest extends DbTestCase
             terms: SearchTerms::fromInput($input),
             cursor: $cursor,
             limit: $limit,
+        ));
+
+        return array_map(static fn ($row) => $row->entry->getGuid(), $rows);
+    }
+
+    /** @return list<string> the unread guids the search returned, in order */
+    private function unreadSearch(string $input, ?EntryCursor $cursor = null, int $limit = 50): array
+    {
+        $rows = $this->repo()->searchForUser(new EntrySearchQuery(
+            userId: $this->user->getId() ?? 0,
+            terms: SearchTerms::fromInput($input),
+            cursor: $cursor,
+            limit: $limit,
+            unread: true,
         ));
 
         return array_map(static fn ($row) => $row->entry->getGuid(), $rows);
@@ -170,6 +185,21 @@ final class EntrySearchTest extends DbTestCase
         $cursor = new EntryCursor($newer->getEffectiveDate(), $newer->getId() ?? 0);
 
         self::assertSame(['older'], $this->search('angular', $cursor));
+    }
+
+    public function testUnreadSearchAppliesKeysetPaginationAfterFilteringReadMatches(): void
+    {
+        $this->entry('older', 'Angular one', null, '2026-07-10T00:00:00Z');
+        $middle = $this->entry('middle', 'Angular two', null, '2026-07-11T00:00:00Z');
+        $newer = $this->entry('newer', 'Angular three', null, '2026-07-12T00:00:00Z');
+        $read = new EntryState($this->user, $newer);
+        $read->setIsHidden(true);
+        $this->em->persist($read);
+        $this->em->flush();
+
+        self::assertSame(['middle'], $this->unreadSearch('angular', limit: 1));
+        $cursor = new EntryCursor($middle->getEffectiveDate(), $middle->getId() ?? 0);
+        self::assertSame(['older'], $this->unreadSearch('angular', $cursor, 1));
     }
 
     public function testHonoursTheLimit(): void

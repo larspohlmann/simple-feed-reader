@@ -278,6 +278,7 @@
     <button
       appListAction
       class="save-search"
+      [class.mobile-icon-only]="savedSearchResult()"
       type="button"
       [attr.aria-label]="savedSearchActionLabel() | transloco"
       [attr.title]="savedSearchActionLabel() | transloco"

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Search;
 
 use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
@@ -62,5 +63,70 @@ final class LikeEntrySearchTest extends DbTestCase
         // step — so EntrySearchResult must default it from count($rows)
         // rather than the caller having to say so.
         self::assertSame(1, $result->matchCount);
+    }
+
+    public function testUnreadSearchReturnsOnlyEffectivelyUnreadMatches(): void
+    {
+        $user = new User('unread-search@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->em->persist($user);
+        $feed = new Feed('https://example.com/unread-search.xml');
+        $this->em->persist($feed);
+        $subscription = new Subscription(
+            $user,
+            $feed,
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+        );
+        $subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+        $this->em->persist($subscription);
+
+        $belowWatermark = $this->matchingEntry($feed, 'below-watermark', '2026-07-05T00:00:00Z');
+        $aboveWatermark = $this->matchingEntry($feed, 'above-watermark', '2026-07-15T00:00:00Z');
+        $explicitUnread = $this->matchingEntry($feed, 'explicit-unread', '2026-07-05T00:00:00Z');
+        $explicitRead = $this->matchingEntry($feed, 'explicit-read', '2026-07-15T00:00:00Z');
+
+        $unreadState = new EntryState($user, $explicitUnread);
+        $unreadState->setIsHidden(false);
+        $readState = new EntryState($user, $explicitRead);
+        $readState->setIsHidden(true);
+        $this->em->persist($unreadState);
+        $this->em->persist($readState);
+        $this->em->flush();
+
+        $repository = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repository);
+        $result = (new LikeEntrySearch($repository))->search(new EntrySearchQuery(
+            userId: $user->getId() ?? 0,
+            terms: SearchTerms::fromInput('angular'),
+            unread: true,
+        ));
+
+        self::assertSame(
+            [$aboveWatermark->getGuid(), $explicitUnread->getGuid()],
+            array_map(static fn ($row): string => $row->entry->getGuid(), $result->rows),
+        );
+        self::assertNotContains($belowWatermark->getGuid(), array_map(
+            static fn ($row): string => $row->entry->getGuid(),
+            $result->rows,
+        ));
+        self::assertNotContains($explicitRead->getGuid(), array_map(
+            static fn ($row): string => $row->entry->getGuid(),
+            $result->rows,
+        ));
+    }
+
+    private function matchingEntry(Feed $feed, string $guid, string $effectiveDate): Entry
+    {
+        $date = new \DateTimeImmutable($effectiveDate);
+        $entry = new Entry(
+            $feed,
+            $guid,
+            'https://example.com/' . $guid,
+            'Angular ' . $guid,
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            $date,
+        );
+        $this->em->persist($entry);
+
+        return $entry;
     }
 }

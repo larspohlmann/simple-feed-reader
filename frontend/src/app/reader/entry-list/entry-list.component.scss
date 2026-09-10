@@ -302,10 +302,10 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
     display: none;
   }
 
-  /* Only the search result list keeps a label on mobile — other lists' Mark
-     all read and Refresh stand on the icon alone (aria-label/title). Refresh
-     never appears in a search list, so it's always icon-only here. */
-  .list-header.is-search .mark-all .txt-short {
+  /* Only a direct search keeps a label on mobile. A saved-search result is a
+     standing list, so its Mark all read action uses the same icon-only form as
+     the other lists (#971). Refresh never appears in a search list. */
+  .list-header.is-search .mark-all:not(.mobile-icon-only) .txt-short {
     display: inline-flex;
   }
 }

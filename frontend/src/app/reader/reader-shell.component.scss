@@ -203,8 +203,9 @@ app-reader-header.hidden {
 }
 
 /* Below this breakpoint buttons drop labels and stand on the icon alone
-   (aria-label named), like the header's other tools. Save-search keeps a
-   short inline label instead (#581 follow-up) — it's an action, not a toggle. */
+   (aria-label named), like the header's other tools. A direct search keeps the
+   short Save/Remove label from #581; a saved-search result joins the standing
+   lists and uses only its icon (#971). */
 @media (width <= bp.$bp-sm) {
   .for-you-run .label,
   .save-search .txt {
@@ -213,6 +214,10 @@ app-reader-header.hidden {
 
   .save-search .txt-short {
     display: inline-flex;
+  }
+
+  .save-search.mobile-icon-only .txt-short {
+    display: none;
   }
 }
 

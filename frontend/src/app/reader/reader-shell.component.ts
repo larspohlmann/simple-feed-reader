@@ -36,6 +36,7 @@ import {
   RefreshScope,
   Selection,
   isDirectSearch,
+  isSavedSearchResult,
   isWholeWordTerm,
   isPhraseTerm,
   MarkReadTarget,
@@ -273,6 +274,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly selection = computed(() => this.parsed().selection, {
     equal: sameSelection,
   });
+  readonly savedSearchResult = computed(() => isSavedSearchResult(this.selection()));
   readonly entryId = computed(() => this.parsed().entryId);
 
   // A deep-linked entry the current list page doesn't contain, fetched by id.

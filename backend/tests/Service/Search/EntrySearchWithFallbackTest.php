@@ -85,6 +85,15 @@ final class EntrySearchWithFallbackTest extends DbTestCase
         );
     }
 
+    private function unreadQuery(): EntrySearchQuery
+    {
+        return new EntrySearchQuery(
+            userId: $this->user->getId() ?? 0,
+            terms: SearchTerms::fromInput('angular'),
+            unread: true,
+        );
+    }
+
     public function testAnUnconfiguredEngineIsNeverCalledAndTheDatabaseAnswers(): void
     {
         $reader = new FakeSearchIndexReader(matchedWords: ['would-only-appear-if-called']);
@@ -134,6 +143,21 @@ final class EntrySearchWithFallbackTest extends DbTestCase
         self::assertSame([], $result->matchedWords);
         self::assertTrue($logSpy->hasWarningRecords());
         self::assertCount(1, $logSpy->getRecords());
+    }
+
+    public function testAnUnreadSearchBypassesAConfiguredEngineWithoutLogging(): void
+    {
+        $reader = new FakeSearchIndexReader(
+            failure: new SearchEngineUnavailableException('The search engine must not be called.'),
+        );
+        $logSpy = new TestHandler();
+
+        $result = $this->fallback($reader, new Logger('test', [$logSpy]), 'http://meilisearch.test')
+            ->search($this->unreadQuery());
+
+        self::assertNull($reader->received);
+        self::assertSame([], $logSpy->getRecords());
+        self::assertSame([], $result->matchedWords);
     }
 
     public function testAnUnexpectedExceptionIsNotSwallowed(): void

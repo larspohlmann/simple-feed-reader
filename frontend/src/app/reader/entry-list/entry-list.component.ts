@@ -50,6 +50,7 @@ import {
   canScopedRefresh,
   hasUnreadFilter,
   isDirectSearch,
+  isSavedSearchResult,
   isSingleStreamView,
   isWholeWordTerm,
   isPhraseTerm,
@@ -237,6 +238,8 @@ export class EntryListComponent implements OnDestroy {
    *  the selection vocabulary's, not this header's — the shell asks the same
    *  question when it builds the list query. */
   readonly hasUnreadFilter = computed(() => hasUnreadFilter(this.selection()));
+
+  readonly savedSearchResult = computed(() => isSavedSearchResult(this.selection()));
 
   /** The number the heading shows, or 0 for the two cases that show none: a
    *  list with nothing in it, and a search — whose heading already carries its
