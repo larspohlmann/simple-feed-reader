@@ -22,6 +22,7 @@ final readonly class EntrySearchQuery
         public SearchTerms $terms,
         public ?EntryCursor $cursor = null,
         int $limit = EntryQuery::DEFAULT_LIMIT,
+        public bool $unread = false,
     ) {
         $this->limit = EntryQuery::clampLimit($limit);
     }

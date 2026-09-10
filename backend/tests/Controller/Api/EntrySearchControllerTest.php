@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
@@ -109,6 +110,35 @@ final class EntrySearchControllerTest extends ApiTestCase
         $body = $this->payload($client);
         self::assertIsArray($body['entries']);
         self::assertCount(0, $body['entries']);
+    }
+
+    public function testUnreadSearchReturnsOnlyEffectivelyUnreadEntries(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('s-unread@example.com');
+        $subscription = $this->seedSubscribedFeedWithEntries($user, 'Angular', 4);
+        $em = $this->em();
+        $subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-07-02T00:00:00Z'));
+
+        $belowWatermark = $em->getRepository(Entry::class)->findOneBy(['title' => 'Angular Post 1']);
+        $aboveWatermark = $em->getRepository(Entry::class)->findOneBy(['title' => 'Angular Post 3']);
+        self::assertInstanceOf(Entry::class, $belowWatermark);
+        self::assertInstanceOf(Entry::class, $aboveWatermark);
+
+        $explicitUnread = new EntryState($user, $belowWatermark);
+        $explicitUnread->setIsHidden(false);
+        $explicitRead = new EntryState($user, $aboveWatermark);
+        $explicitRead->setIsHidden(true);
+        $em->persist($explicitUnread);
+        $em->persist($explicitRead);
+        $em->flush();
+
+        $client->request('GET', '/api/entries/search?q=angular&unread=1', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload($client);
+        self::assertIsArray($body['entries']);
+        self::assertSame(['Angular Post 4', 'Angular Post 1'], array_column($body['entries'], 'title'));
     }
 
     public function testTooShortQueryIsAValidationError(): void

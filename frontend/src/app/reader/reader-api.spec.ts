@@ -121,6 +121,14 @@ describe('ReaderApi', () => {
     req.flush({ entries: [], nextCursor: null });
   });
 
+  it('forwards the unread refinement on the search path', () => {
+    api.entries({ view: 'all', q: 'testing', unread: true }).subscribe();
+
+    const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries/search');
+    expect(req.request.params.get('unread')).toBe('1');
+    req.flush({ entries: [], nextCursor: null });
+  });
+
   it('still routes a query without q to the main list', () => {
     api.entries({ view: 'favorites' }).subscribe();
     const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');

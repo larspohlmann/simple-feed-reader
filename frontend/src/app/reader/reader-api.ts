@@ -70,7 +70,7 @@ export class ReaderApi {
   }
 
   entries(query: EntryQuery, cursor?: string | null): Observable<EntriesPage> {
-    if (query.q) return this.searchEntries(query.q, cursor);
+    if (query.q) return this.searchEntries(query.q, query.unread, cursor);
     if (query.view === 'saved-searches') return this.savedSearchEntries(query.unread, cursor);
     let params = new HttpParams().set('view', query.view).set('limit', PAGE_SIZE);
     if (query.subscription != null) params = params.set('subscription', query.subscription);
@@ -80,10 +80,15 @@ export class ReaderApi {
     return this.http.get<EntriesPage>(`${this.base}/api/entries`, { params });
   }
 
-  /** Search carries none of the list's filters — it is its own view over every
-   *  subscription — so it never forwards `view`, `tag` or `subscription`. */
-  private searchEntries(term: string, cursor?: string | null): Observable<EntriesPage> {
+  /** Search is its own view over every subscription. It never forwards `view`,
+   *  `tag` or `subscription`; a saved-search result can add only `unread`. */
+  private searchEntries(
+    term: string,
+    unread: boolean | undefined,
+    cursor?: string | null,
+  ): Observable<EntriesPage> {
     let params = new HttpParams().set('q', term).set('limit', PAGE_SIZE);
+    if (unread) params = params.set('unread', '1');
     if (cursor) params = params.set('cursor', cursor);
     return this.http.get<EntriesPage>(`${this.base}/api/entries/search`, { params });
   }

@@ -97,6 +97,21 @@ test.describe('list-header actions on a phone', () => {
       await expect(action.locator('app-icon')).toHaveCSS('border-top-width', '0px');
     }
   });
+
+  test('an individual saved-search result uses icon-only actions and offers the unread switch', async ({
+    page,
+  }) => {
+    await openReader(page, 'q=design&searchOrigin=saved');
+
+    const actions = page.locator('.list-header :is(.save-search, .unread-switch, .mark-all)');
+    await expect(actions).toHaveCount(3);
+
+    for (const action of await actions.all()) {
+      await expect(action.locator('.txt')).toBeHidden();
+      await expect(action.locator('.txt-short')).toBeHidden();
+      await expect(action.locator('app-icon')).toHaveCSS('border-top-width', '1px');
+    }
+  });
 });
 
 test.describe('list-header actions on desktop', () => {

@@ -2990,11 +2990,15 @@ describe('ReaderShellComponent', () => {
     // boot() drained the shell's own initial saved-searches load with an empty
     // set, so seed through a second real load() — the store maps the wire (ids)
     // to the view the button reads, exactly as production does.
-    function bootWithSearchSelected(saved: SavedSearchWire[], q = 'climate ') {
+    function bootWithSearchSelected(
+      saved: SavedSearchWire[],
+      q = 'climate ',
+      searchOrigin?: 'saved',
+    ) {
       const f = boot();
       f.componentInstance.savedSearchesStore.load();
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: saved });
-      qp.next(convertToParamMap({ q }));
+      qp.next(convertToParamMap({ q, searchOrigin }));
       f.detectChanges();
       ctrl
         .expectOne((r) => r.url === 'https://api.test/api/entries/search')
@@ -3148,6 +3152,20 @@ describe('ReaderShellComponent', () => {
       const f = bootWithSearchSelected([savedClimate]);
       const button = (f.nativeElement as HTMLElement).querySelector('.save-search')!;
       expect(button.querySelector('.txt-short')?.textContent).toBe('Remove');
+    });
+
+    it('marks the saved-search result action as icon-only on mobile', () => {
+      const f = bootWithSearchSelected([savedClimate], 'climate ', 'saved');
+      const button = (f.nativeElement as HTMLElement).querySelector('.save-search')!;
+
+      expect(button.classList.contains('mobile-icon-only')).toBe(true);
+    });
+
+    it('keeps the short action label for a direct search on mobile', () => {
+      const f = bootWithSearchSelected([savedClimate]);
+      const button = (f.nativeElement as HTMLElement).querySelector('.save-search')!;
+
+      expect(button.classList.contains('mobile-icon-only')).toBe(false);
     });
   });
 

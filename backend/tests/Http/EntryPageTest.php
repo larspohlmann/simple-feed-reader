@@ -166,6 +166,42 @@ final class EntryPageTest extends TestCase
         );
     }
 
+    /**
+     * A post-filtered read (the indexed unread search) returns only some rows
+     * of a page but must resume past the LAST candidate it saw, not the last
+     * row it shows. Given a continuation row, the cursor keys off it — so a page
+     * that filtered its tail away still advances instead of re-reading it.
+     */
+    public function testAContinuationRowDecidesTheCursorOverTheLastReturnedRow(): void
+    {
+        $shown = $this->rowForEntry(9, new \DateTimeImmutable('2026-07-12T00:00:00Z'));
+        $resumeAfter = $this->rowForEntry(4, new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+
+        $page = EntryPage::withMatchCount([$shown], 2, 2, EntryListSort::PublishedDate, $resumeAfter);
+
+        self::assertNotNull($page['nextCursor']);
+        $cursor = EntryCursor::decode($page['nextCursor']);
+        self::assertNotNull($cursor);
+        self::assertSame(4, $cursor->id, 'The cursor must resume past the continuation row, not the shown row.');
+    }
+
+    /**
+     * The fully-filtered page: every row was dropped, but a continuation row
+     * still names where to resume, so pagination continues rather than ending.
+     */
+    public function testAContinuationRowKeepsAnEmptyPageGoing(): void
+    {
+        $resumeAfter = $this->rowForEntry(4, new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+
+        $page = EntryPage::withMatchCount([], 1, 1, EntryListSort::PublishedDate, $resumeAfter);
+
+        self::assertSame([], $page['entries']);
+        self::assertNotNull($page['nextCursor'], 'A fully-filtered page must still advance the cursor.');
+        $cursor = EntryCursor::decode($page['nextCursor']);
+        self::assertNotNull($cursor);
+        self::assertSame(4, $cursor->id);
+    }
+
     public function testTheViewedSortEncodesTheViewedInstantNotThePublishDate(): void
     {
         // The Recently-read list orders by when the entry was opened, so its

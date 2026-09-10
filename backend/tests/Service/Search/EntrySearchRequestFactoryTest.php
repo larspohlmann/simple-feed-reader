@@ -28,8 +28,29 @@ final class EntrySearchRequestFactoryTest extends TestCase
         $query = $this->factory->fromRequest($request, $this->buildUser());
 
         self::assertSame(['angular'], $query->terms->terms);
+        self::assertFalse($query->unread);
         self::assertNull($query->cursor);
         self::assertSame(EntryQuery::DEFAULT_LIMIT, $query->limit);
+    }
+
+    public function testOnlyTheExactOneValueEnablesUnreadSearches(): void
+    {
+        $request = Request::create('/api/entries/search?q=angular&unread=1');
+
+        $query = $this->factory->fromRequest($request, $this->buildUser());
+
+        self::assertTrue($query->unread);
+    }
+
+    public function testOtherUnreadValuesKeepTheSearchUnfiltered(): void
+    {
+        foreach (['0', 'true', 'yes'] as $value) {
+            $request = Request::create('/api/entries/search?q=angular&unread=' . $value);
+
+            $query = $this->factory->fromRequest($request, $this->buildUser());
+
+            self::assertFalse($query->unread, $value);
+        }
     }
 
     public function testUsesTheIdOfThePassedUser(): void

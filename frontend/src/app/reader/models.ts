@@ -297,9 +297,8 @@ export interface EntryQuery {
   view: EntryView;
   subscription?: number;
   tag?: number;
-  /** For you only. Every other list says "only unread" by asking for the
-   *  `unread` VIEW; the ranked feed IS a view, so its filter travels as a flag
-   *  beside it (#710). */
+  /** Views that cannot express "only unread" through `view=unread` carry the
+   *  refinement as a flag beside their own view or search term. */
   unread?: boolean;
   /** Presence selects the search endpoint instead of the main list. */
   q?: string;

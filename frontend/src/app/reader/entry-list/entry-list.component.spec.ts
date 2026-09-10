@@ -888,6 +888,20 @@ describe('EntryListComponent', () => {
       }
     });
 
+    it('shows the switch for an individual saved-search result', () => {
+      const el = mount({
+        selection: {
+          kind: 'search',
+          id: null,
+          unread: false,
+          term: 'climate',
+          searchOrigin: 'saved',
+        },
+      }).nativeElement as HTMLElement;
+
+      expect(el.querySelector('.unread-switch')).not.toBeNull();
+    });
+
     // The href is where the queryParams ternary shows up. Filtered to unread,
     // the switch turns the filter OFF — it drops the param (default all), so no
     // unread=1. Showing all, it turns the filter ON with an explicit unread=1.
@@ -909,6 +923,28 @@ describe('EntryListComponent', () => {
     const el = mount({ hasMore: false }).nativeElement as HTMLElement;
     expect(el.querySelector('.mark-all .txt-short')?.textContent).toBe('Mark read');
     expect(el.querySelector('.refresh .txt-short')?.textContent).toBe('Refresh');
+  });
+
+  it('marks saved-search result actions as icon-only on mobile', () => {
+    const el = mount({
+      selection: {
+        kind: 'search',
+        id: null,
+        unread: false,
+        term: 'climate',
+        searchOrigin: 'saved',
+      },
+    }).nativeElement as HTMLElement;
+
+    expect(el.querySelector('.mark-all')?.classList.contains('mobile-icon-only')).toBe(true);
+  });
+
+  it('keeps the short Mark read label for a direct search on mobile', () => {
+    const el = mount({
+      selection: { kind: 'search', id: null, unread: false, term: 'climate' },
+    }).nativeElement as HTMLElement;
+
+    expect(el.querySelector('.mark-all')?.classList.contains('mobile-icon-only')).toBe(false);
   });
 
   it('emits refresh when the scoped refresh button is clicked', () => {

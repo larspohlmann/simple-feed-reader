@@ -89,6 +89,9 @@ class EntryListRepository extends AbstractEntryProjectionRepository
             ->setMaxResults($query->limit);
 
         $this->applyTerms($qb, $query->terms);
+        if ($query->unread) {
+            $this->applyUnreadFilter($qb);
+        }
         // Search ranks by publish instant like the default list, never by view
         // time, so its cursor predicate is the effectiveDate one.
         $this->applyCursor($qb, $query->cursor, EntryListSort::PublishedDate);
@@ -219,7 +222,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
     {
         switch ($view) {
             case 'unread':
-                $qb->andWhere(UnreadDql::predicate())->setParameter('notHidden', false, Types::BOOLEAN);
+                $this->applyUnreadFilter($qb);
                 break;
             case 'favorites':
                 $qb->andWhere('es.isFavorite = :flag')->setParameter('flag', true, Types::BOOLEAN);
@@ -243,5 +246,11 @@ class EntryListRepository extends AbstractEntryProjectionRepository
     private function applyTerms(QueryBuilder $qb, SearchTerms $terms): void
     {
         $qb->andWhere($this->termsPredicateBuilder->build($qb, $terms, 'term'));
+    }
+
+    private function applyUnreadFilter(QueryBuilder $qb): void
+    {
+        $qb->andWhere(UnreadDql::predicate())
+            ->setParameter('notHidden', false, Types::BOOLEAN);
     }
 }

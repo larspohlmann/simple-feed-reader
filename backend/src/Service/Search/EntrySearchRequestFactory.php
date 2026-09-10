@@ -19,7 +19,7 @@ use Symfony\Component\HttpFoundation\Request;
  */
 final readonly class EntrySearchRequestFactory
 {
-    public const array ALLOWED_PARAMETERS = ['q', 'cursor', 'limit'];
+    public const array ALLOWED_PARAMETERS = ['q', 'cursor', 'limit', 'unread'];
 
     public function fromRequest(Request $request, User $user): EntrySearchQuery
     {
@@ -30,6 +30,7 @@ final readonly class EntrySearchRequestFactory
             terms: SearchTerms::fromInput($this->singleValue($request, 'q')),
             cursor: EntryCursor::fromRequestValue($this->singleValue($request, 'cursor')),
             limit: $this->limit($request),
+            unread: $this->unread($request),
         );
     }
 
@@ -85,5 +86,10 @@ final readonly class EntrySearchRequestFactory
         }
 
         return (int) $raw;
+    }
+
+    private function unread(Request $request): bool
+    {
+        return $this->singleValue($request, 'unread') === '1';
     }
 }
