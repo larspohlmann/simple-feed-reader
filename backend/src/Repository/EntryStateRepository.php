@@ -10,6 +10,7 @@ use App\Entity\Subscription;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\DBAL\Types\Types;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -252,25 +253,26 @@ class EntryStateRepository extends ServiceEntityRepository
      */
     public function unreadCountsForUser(int $userId): array
     {
-        $collapse = $this->collapse->fragment(UnreadDql::predicate(EntryAliases::collapse()));
+        $qb = $this->getEntityManager()->createQueryBuilder()
+            ->select('s.id AS subscriptionId', 'COUNT(e.id) AS unreadCount')
+            ->from(Subscription::class, 's')
+            ->join(Entry::class, 'e', 'ON', 'e.feed = s.feed')
+            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = s.user')
+            ->andWhere('s.user = :user')
+            ->andWhere(UnreadDql::predicate())
+            ->groupBy('s.id')
+            ->setParameter('user', $userId)
+            ->setParameter('notHidden', false, Types::BOOLEAN);
+        $this->collapse->apply(
+            $qb,
+            static function (QueryBuilder $inner, EntryAliases $aliases): void {
+                $inner->andWhere(UnreadDql::predicate($aliases));
+            },
+            $userId,
+        );
 
         /** @var list<array{subscriptionId: int, unreadCount: int}> $rows */
-        $rows = $this->getEntityManager()->createQuery(sprintf(
-            'SELECT s.id AS subscriptionId, COUNT(e.id) AS unreadCount
-             FROM %s s
-             JOIN %s e ON e.feed = s.feed
-             LEFT JOIN %s es ON es.entry = e AND es.user = s.user
-             WHERE s.user = :user AND (%s) AND (%s)
-             GROUP BY s.id',
-            Subscription::class,
-            Entry::class,
-            EntryState::class,
-            UnreadDql::predicate(),
-            $collapse,
-        ))
-            ->setParameter('user', $userId)
-            ->setParameter('notHidden', false, Types::BOOLEAN)
-            ->getResult();
+        $rows = $qb->getQuery()->getResult();
 
         $map = [];
         foreach ($rows as $row) {

@@ -7,10 +7,7 @@ namespace App\Repository;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
-use Doctrine\DBAL\ArrayParameterType;
-use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Query\Parameter;
 use Doctrine\ORM\QueryBuilder;
 
 /**
@@ -34,40 +31,13 @@ final readonly class DuplicateCollapseDql
         $inner = $this->entityManager->createQueryBuilder()
             ->select('1')
             ->from(Entry::class, 'e2')
-            ->join(Subscription::class, 's2', 'WITH', 's2.feed = e2.feed AND s2.user = :user')
-            ->leftJoin(EntryState::class, 'es2', 'WITH', 'es2.entry = e2 AND es2.user = :user')
+            ->join(Subscription::class, 's2', 'ON', 's2.feed = e2.feed AND s2.user = :user')
+            ->leftJoin(EntryState::class, 'es2', 'ON', 'es2.entry = e2 AND es2.user = :user')
             ->andWhere('e2.urlHash = e.urlHash')
             ->andWhere('e2.id < e.id');
         $applyScope($inner, EntryAliases::collapse());
 
         $qb->andWhere('e.urlHash IS NULL OR NOT EXISTS (' . $inner->getDQL() . ')')
             ->setParameter('user', $userId);
-        foreach ($inner->getParameters() as $parameter) {
-            $qb->setParameter($parameter->getName(), $parameter->getValue(), $this->parameterType($parameter));
-        }
-    }
-
-    private function parameterType(Parameter $parameter): ArrayParameterType|ParameterType|int|string|null
-    {
-        $type = $parameter->getType();
-
-        return match (true) {
-            $type instanceof ArrayParameterType, $type instanceof ParameterType => $type,
-            \is_int($type), \is_string($type) => $type,
-            default => null,
-        };
-    }
-
-    public function fragment(string $innerScope): string
-    {
-        $exists = 'SELECT 1 FROM ' . Entry::class . ' e2'
-            . ' JOIN ' . Subscription::class . ' s2 WITH s2.feed = e2.feed AND s2.user = :user'
-            . ' LEFT JOIN ' . EntryState::class . ' es2 WITH es2.entry = e2 AND es2.user = :user'
-            . ' WHERE e2.urlHash = e.urlHash AND e2.id < e.id';
-        if ($innerScope !== '') {
-            $exists .= ' AND (' . $innerScope . ')';
-        }
-
-        return 'e.urlHash IS NULL OR NOT EXISTS (' . $exists . ')';
     }
 }
