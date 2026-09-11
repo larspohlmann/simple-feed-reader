@@ -32,6 +32,7 @@ final class LokiClientTest extends TestCase
          *     method: string,
          *     url: string,
          *     options: array{
+         *         headers: list<string>,
          *         body: string,
          *         timeout: float,
          *         normalized_headers: array{authorization: list<string>},
@@ -41,6 +42,7 @@ final class LokiClientTest extends TestCase
         self::assertSame('POST', $seen['method']);
         self::assertSame('http://loki:3100/loki/api/v1/push', $seen['url']);
         self::assertSame(1.0, $seen['options']['timeout']);
+        self::assertContains('Content-Type: application/json', $seen['options']['headers']);
         // Asserted as a whole payload rather than key by key, so a stream
         // silently gaining or losing an entry cannot pass unnoticed.
         self::assertSame(
@@ -91,6 +93,37 @@ final class LokiClientTest extends TestCase
         $client->push([['ts' => '1', 'line' => '{}', 'labels' => ['app' => 'sfr']]]);
 
         self::assertSame(0, $calls);
+    }
+
+    public function testDoesNothingWhenLinesAreEmpty(): void
+    {
+        $calls = 0;
+        $http = new MockHttpClient(function () use (&$calls): MockResponse {
+            ++$calls;
+
+            return new MockResponse();
+        });
+        $client = new LokiClient($http, $this->endpoint('http://loki:3100/loki/api/v1/push', null, null));
+
+        $client->push([]);
+
+        self::assertSame(0, $calls);
+    }
+
+    public function testOmitsBasicAuthWhenOnlyOneCredentialIsConfigured(): void
+    {
+        $seen = [];
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$seen): MockResponse {
+            $seen = $options;
+
+            return new MockResponse('', ['http_code' => 204]);
+        });
+        $client = new LokiClient($http, $this->endpoint('http://loki:3100/loki/api/v1/push', 'u', null));
+
+        $client->push([['ts' => '1', 'line' => '{}', 'labels' => ['app' => 'sfr']]]);
+
+        /** @var array{normalized_headers: array<string, mixed>} $seen */
+        self::assertArrayNotHasKey('authorization', $seen['normalized_headers']);
     }
 
     private function endpoint(?string $url, ?string $user, ?string $token): LokiEndpoint

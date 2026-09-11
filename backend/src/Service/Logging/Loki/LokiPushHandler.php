@@ -78,6 +78,6 @@ final class LokiPushHandler extends AbstractProcessingHandler
             throw new \LogicException('LokiPushHandler requires a formatter that produces a string.');
         }
 
-        return trim($record->formatted);
+        return $record->formatted;
     }
 }
