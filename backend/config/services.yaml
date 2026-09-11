@@ -251,3 +251,11 @@ services:
             $appendNewline: true
             $ignoreEmptyContextAndExtra: false
             $includeStacktraces: true
+
+    App\Service\Logging\Loki\EnvLokiEndpoint:
+        arguments:
+            $pushUrl: '%env(default::GRAFANA_LOKI_PUSH_URL)%'
+            $username: '%env(default::GRAFANA_LOKI_USERNAME)%'
+            $token: '%env(default::GRAFANA_LOKI_TOKEN)%'
+
+    App\Service\Logging\Loki\LokiEndpoint: '@App\Service\Logging\Loki\EnvLokiEndpoint'
