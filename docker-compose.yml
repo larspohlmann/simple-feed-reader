@@ -51,6 +51,8 @@ services:
       MAILER_FALLBACK_DSN: "smtp://mailpit:1025"
       MEILISEARCH_URL: "http://meilisearch:7700"
       MEILISEARCH_KEY: "dev-master-key-not-a-secret"
+      GRAFANA_LOKI_PUSH_URL: "http://loki:3100/loki/api/v1/push"
+      GRAFANA_URL: "http://localhost:3000"
     extra_hosts:
       # Makes host.docker.internal work on Docker Engine variants where it is
       # not built in; harmless on Docker Desktop.
@@ -123,6 +125,8 @@ services:
       MAILER_FALLBACK_DSN: "smtp://mailpit:1025"
       MEILISEARCH_URL: "http://meilisearch:7700"
       MEILISEARCH_KEY: "dev-master-key-not-a-secret"
+      GRAFANA_LOKI_PUSH_URL: "http://loki:3100/loki/api/v1/push"
+      GRAFANA_URL: "http://localhost:3000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -161,6 +165,33 @@ services:
       # Dashboard and API; internal traffic uses the compose network.
       - "127.0.0.1:7700:7700"
 
+  # Log store, always on in dev (like meilisearch): the app pushes its JSON logs
+  # here and Grafana reads them. No depends_on — the app fails open if Loki is
+  # down (see LokiClient).
+  loki:
+    image: grafana/loki:3.4.2
+    command: ["-config.file=/etc/loki/loki-config.yaml"]
+    volumes:
+      - ./docker/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki-data:/loki
+    ports:
+      - "127.0.0.1:3100:3100"
+
+  grafana:
+    image: grafana/grafana:11.5.2
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: "admin"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - loki
+
   # Default dev frontend: the Angular CLI dev server with live reload. The
   # browser (on the host) fetches the bundle from here on :4200 and calls the
   # API at https://localhost:8443 directly — cross-origin, which the backend
@@ -190,3 +221,5 @@ volumes:
   mysql-data:
   frontend-node-modules:
   meili-data:
+  loki-data:
+  grafana-data:
