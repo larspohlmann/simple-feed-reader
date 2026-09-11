@@ -239,3 +239,7 @@ services:
     App\Command\CheckCatalogUrlsCommand:
         arguments:
             $httpClient: '@catalog.rot_check.http_client'
+
+    App\Service\Logging\RequestLogProcessor:
+        tags:
+            - { name: monolog.processor }
