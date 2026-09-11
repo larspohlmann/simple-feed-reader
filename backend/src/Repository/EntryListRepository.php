@@ -29,6 +29,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
         private readonly EntryListRowHydrator $rowHydrator,
         private readonly SearchTermsPredicateBuilder $termsPredicateBuilder,
         private readonly EntryScopePredicates $scope,
+        private readonly DuplicateCollapseDql $collapse,
     ) {
         parent::__construct($registry, Entry::class);
     }
@@ -46,10 +47,14 @@ class EntryListRepository extends AbstractEntryProjectionRepository
     public function listForUser(EntryQuery $query): array
     {
         $sort = EntryListSort::forView($query->view);
+        $applyScope = function (QueryBuilder $qb, EntryAliases $aliases) use ($query): void {
+            $this->scope->applyList($qb, $aliases, $query);
+        };
+
         $qb = $this->orderedBy($this->rowQueryBuilder($query->userId), $sort)
             ->setMaxResults($query->limit);
-
-        $this->scope->applyList($qb, EntryAliases::primary(), $query);
+        $applyScope($qb, EntryAliases::primary());
+        $this->collapse->apply($qb, $applyScope, $query->userId);
         $this->applyCursor($qb, $query->cursor, $sort);
 
         /** @var list<array<array-key, mixed>> $rows */
