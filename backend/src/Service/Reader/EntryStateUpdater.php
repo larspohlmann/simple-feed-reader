@@ -43,6 +43,8 @@ final readonly class EntryStateUpdater
     private function applyTo(EntryState $state, UpdateEntryStateRequest $request): void
     {
         if ($request->isHidden !== null) {
+            // Unread also clears "opened" (EntryState::markUnread, #478), so the
+            // rule reaches every client, not just the web app.
             $request->isHidden ? $state->hide($this->clock->now()) : $state->markUnread();
         }
         if ($request->isFavorite !== null) {
@@ -52,6 +54,8 @@ final readonly class EntryStateUpdater
             $state->setIsKept($request->isKept);
         }
         if ($request->isViewed !== null) {
+            // markViewed sets only the viewed flag; ViewedImpliesHiddenListener
+            // adds the hidden flag on flush. clearViewed leaves the entry hidden.
             $request->isViewed ? $state->markViewed($this->clock->now()) : $state->clearViewed();
         }
     }
@@ -74,6 +78,8 @@ final readonly class EntryStateUpdater
 
     private function mirrorOnto(EntryState $sibling, UpdateEntryStateRequest $request): void
     {
+        // Same isHidden/isViewed invariants as applyTo() above (#478,
+        // ViewedImpliesHiddenListener): mirroring must not sidestep them.
         if ($request->isHidden !== null) {
             $request->isHidden ? $sibling->hide($this->clock->now()) : $sibling->markUnread();
         }
