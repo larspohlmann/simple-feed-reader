@@ -13,6 +13,26 @@ import { ReadingFocusService } from '../../core/reading-focus.service';
 import { MagazineStyleService } from '../../core/magazine-style.service';
 import { MAGAZINE_STYLE_WRITER } from '../../core/magazine-style-writer';
 
+class MockResizeObserver {
+  static instances: MockResizeObserver[] = [];
+  readonly targets = new Set<Element>();
+  constructor(readonly callback: ResizeObserverCallback) {
+    MockResizeObserver.instances.push(this);
+  }
+  observe(t: Element): void {
+    this.targets.add(t);
+  }
+  unobserve(t: Element): void {
+    this.targets.delete(t);
+  }
+  disconnect(): void {
+    this.targets.clear();
+  }
+  fire(): void {
+    this.callback([], this as unknown as ResizeObserver);
+  }
+}
+
 const memory = { save: jest.fn(), read: jest.fn().mockReturnValue(0) };
 // A stub for the two signals `catalogEmpty` reads — keeps the real CatalogStore
 // (and its HttpClient chain) out of this component's unit test.
@@ -123,8 +143,21 @@ function fakeScroller(f: ComponentFixture<EntryListComponent>, top: number): HTM
   return rows;
 }
 
+/** Fires the reading-focus applier's own observer on the `.rows` scroller — the
+ *  last mock instance watching it, since the applier is rebuilt whenever the
+ *  scroller element swaps. */
+function fireRowsResize(f: ComponentFixture<EntryListComponent>): void {
+  const rows = (f.nativeElement as HTMLElement).querySelector('.rows')!;
+  const obs = MockResizeObserver.instances.find((o) => o.targets.has(rows));
+  obs?.fire();
+}
+
 describe('EntryListComponent', () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+    MockResizeObserver.instances = [];
+    (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = MockResizeObserver;
+  });
 
   // #321: the for-you block is now projected into the top of whichever
   // content branch is live, so it scrolls away with the list instead of
@@ -1678,44 +1711,23 @@ describe('EntryListComponent', () => {
       expect(rowOpacities(f)).not.toContain('');
     });
 
-    // The central subscriber (#478): a saved-view row collapses in place, which
-    // moves the rows below it but fires no scroll — so without a trigger the
-    // dimming would freeze. Blank the marks the first pass wrote, then prove the
-    // event re-touches every row.
+    // The central subscriber (#478): a saved-view row collapses in place, moving
+    // the rows below it without firing a scroll. Blank the marks the first pass
+    // wrote, then prove the resize pass re-touches every row.
     function blankOpacities(f: ComponentFixture<EntryListComponent>): HTMLElement {
       const rows = (f.nativeElement as HTMLElement).querySelector('.rows') as HTMLElement;
       for (const child of Array.from(rows.children) as HTMLElement[]) child.style.opacity = '';
       return rows;
     }
 
-    // View encapsulation rewrites keyframe names to `_ngcontent-xxx_<name>`, so
-    // the real event never starts with the authored name — mirror that here so
-    // the handler's matching is tested the way the browser fires it.
-    function animationEnd(name: string): AnimationEvent {
-      const event = new Event('animationend') as AnimationEvent;
-      Object.defineProperty(event, 'animationName', { value: `_ngcontent-ng-c123_${name}` });
-      return event;
-    }
-
     it('recomputes focus when a row-collapse animation settles', async () => {
       const f = mount({ entries: loaded });
       await frames();
-      const rows = blankOpacities(f);
-      rows.dispatchEvent(animationEnd('row-leave'));
+      blankOpacities(f);
+      fireRowsResize(f);
       f.detectChanges();
       await frames();
       expect(rowOpacities(f)).not.toContain('');
-    });
-
-    it('ignores an unrelated animation ending in the scroller', async () => {
-      const f = mount({ entries: loaded });
-      await frames();
-      const rows = blankOpacities(f);
-      rows.dispatchEvent(animationEnd('refresh-spin'));
-      f.detectChanges();
-      await frames();
-      // Untouched: the marks stay blank, so no needless pass ran.
-      expect(rowOpacities(f)).toContain('');
     });
 
     it('recomputes focus on a view change, before the new page lands (#462)', async () => {
@@ -1729,15 +1741,15 @@ describe('EntryListComponent', () => {
     });
 
     // A density switch (boxed <-> airy) keeps the same #rows element and only
-    // toggles a class on it, so nothing the pass tracks fires — yet airy changes
-    // every row's height and position. Without the style as a source the rows
-    // keep the stale opacities the old geometry earned.
+    // toggles a class on it, resizing every row; the applier's own ResizeObserver
+    // is what catches it, not a signal this component tracks.
     it('recomputes focus when the magazine density switches boxed <-> airy', async () => {
       const f = mount({ entries: loaded, layout: 'magazine' });
       await frames();
       blankOpacities(f);
       TestBed.inject(MagazineStyleService).set('airy');
       f.detectChanges();
+      fireRowsResize(f);
       await frames();
       expect(rowOpacities(f)).not.toContain('');
     });

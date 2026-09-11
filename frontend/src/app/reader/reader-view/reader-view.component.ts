@@ -39,12 +39,8 @@ import { LanguageService } from '../../core/language.service';
 import { LayoutService } from '../layout.service';
 import { ListScrollMemory } from '../list-scroll-memory';
 import { nextHeaderHidden } from '../header-scroll';
-import {
-  ARTICLE_FOCUS_CURVE,
-  focusOpacityForSpan,
-  needsReadingTail,
-  readingBlocks,
-} from '../reading-focus';
+import { ARTICLE_FOCUS_CURVE, needsReadingTail, readingBlocks } from '../reading-focus';
+import { ReadingFocusApplier } from '../reading-focus-applier';
 import { articleOverflowsViewport, readingProgress } from '../reading-progress';
 import {
   AXIS_LOCK_MIN,
@@ -171,12 +167,12 @@ export class ReaderViewComponent {
   private pendingRestore: { id: number; top: number } | null = null;
   private restoreRaf = 0;
 
-  // Reading-focus effect: the paragraph nearest the reading centre stays fully
-  // opaque while the rest dims, refreshed on scroll. Skipped entirely when the
-  // setting is off or the reader prefers reduced motion.
+  // Reading-focus: the paragraph nearest the reading centre stays fully opaque
+  // while the rest dims. Skipped entirely when the setting is off or the reader
+  // prefers reduced motion.
   private readonly reduceMotion =
     typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  private focusRaf = 0;
+  private applier?: ReadingFocusApplier;
   private contentObs?: ResizeObserver;
 
   // Touch gestures (full-screen only): a rightward swipe or a pull past the end
@@ -348,14 +344,24 @@ export class ReaderViewComponent {
     });
     this.destroyRef.onDestroy(() => this.loadSub?.unsubscribe());
 
+    // The applier is rebuilt whenever `content` itself is (re)created — per
+    // article and on the reader/original swap — destroying the old one first.
     effect(() => {
-      if (this.readingFocus.enabled()) {
-        this.scheduleFocus();
-        return;
-      }
-      if (this.focusRaf) cancelAnimationFrame(this.focusRaf);
-      this.focusRaf = 0;
-      this.clearFocus();
+      const content = this.content()?.nativeElement;
+      this.applier?.destroy();
+      this.applier = undefined;
+      if (!content) return;
+      this.applier = new ReadingFocusApplier({
+        scroller: this.host.nativeElement,
+        blocks: () => readingBlocks(content),
+        curve: ARTICLE_FOCUS_CURVE,
+        isActive: () => this.readingFocus.enabled() && !this.screen.isWide() && !this.reduceMotion,
+      });
+    });
+
+    effect(() => {
+      if (this.readingFocus.enabled()) this.applier?.refresh();
+      else this.applier?.clear();
     });
 
     // Re-decorate external links and re-seat the reading focus whenever the
@@ -391,7 +397,7 @@ export class ReaderViewComponent {
         });
         attachHlsStreams(host);
         this.buildToc(host);
-        this.scheduleFocus();
+        this.applier?.refresh();
         this.measureScrollRange();
         // Content just (re-)rendered — re-seat a pending scroll restore. Runs on
         // the original render and again when the reader content swaps in.
@@ -399,18 +405,13 @@ export class ReaderViewComponent {
       });
     });
 
-    // Registered whatever the motion preference: scheduleFocus() no-ops under
-    // reduced motion, but the tail below is a scroll-range concern, not a motion
-    // one, and a viewport resize changes whether the article still needs it.
+    // A viewport resize changes whether the article still needs tail space —
+    // the applier observes its own geometry and needs no nudge here.
     const onResize = () => {
-      this.scheduleFocus();
       this.measureScrollRange();
     };
     window.addEventListener('resize', onResize, { passive: true });
-    this.destroyRef.onDestroy(() => {
-      window.removeEventListener('resize', onResize);
-      if (this.focusRaf) cancelAnimationFrame(this.focusRaf);
-    });
+    this.destroyRef.onDestroy(() => window.removeEventListener('resize', onResize));
 
     // The article's height firms up after first paint (images, fonts, the
     // original→reader swap), and whether it overflows can change with it.
@@ -424,6 +425,7 @@ export class ReaderViewComponent {
       this.contentObs = obs;
     });
     this.destroyRef.onDestroy(() => this.contentObs?.disconnect());
+    this.destroyRef.onDestroy(() => this.applier?.destroy());
 
     // Touch listeners live on the scroll host. touchmove is non-passive so a
     // committed horizontal swipe / at-end pull can preventDefault the scroll.
@@ -558,7 +560,6 @@ export class ReaderViewComponent {
 
   @HostListener('scroll')
   protected onScroll(): void {
-    this.scheduleFocus();
     const scrollTop = this.host.nativeElement.scrollTop;
     this.scrollTop.set(scrollTop);
     this.showToTop.set(scrollTop > BACK_TO_TOP_AFTER_PX);
@@ -643,46 +644,6 @@ export class ReaderViewComponent {
     this.contentBottom.set(
       content.getBoundingClientRect().bottom - host.getBoundingClientRect().top + host.scrollTop,
     );
-  }
-
-  /** Coalesce focus recomputes to one per animation frame. */
-  private scheduleFocus(): void {
-    if (this.reduceMotion || !this.readingFocus.enabled() || this.focusRaf) return;
-    this.focusRaf = requestAnimationFrame(() => {
-      this.focusRaf = 0;
-      this.applyFocus();
-    });
-  }
-
-  /** Dim each article block by its distance from the viewport's centre. Only
-   *  active below the split-pane layout — a desktop reader's stationary column
-   *  reads dimming as interference, not focus (#435). */
-  private applyFocus(): void {
-    const content = this.content()?.nativeElement;
-    if (!content) return;
-    if (!this.readingFocus.enabled() || this.screen.isWide()) {
-      this.clearFocus();
-      return;
-    }
-    const scroller = this.host.nativeElement;
-    const viewport = scroller.clientHeight;
-    const hostTop = scroller.getBoundingClientRect().top;
-    for (const block of readingBlocks(content)) {
-      const rect = block.getBoundingClientRect();
-      const top = rect.top - hostTop;
-      // Fade by the block's span, not its centre, so a block taller than the
-      // viewport — a wide table, a code listing, a long paragraph — stays bright
-      // while it fills the screen instead of dimming from its off-screen centre.
-      block.style.opacity = String(
-        focusOpacityForSpan(top, top + rect.height, viewport, ARTICLE_FOCUS_CURVE),
-      );
-    }
-  }
-
-  private clearFocus(): void {
-    const content = this.content()?.nativeElement;
-    if (!content) return;
-    for (const block of readingBlocks(content)) block.style.opacity = '';
   }
 
   /** Extract the article's headings into a contents list, giving each a unique
