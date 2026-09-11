@@ -1,0 +1,39 @@
+@use '../../../theme/breakpoints' as bp;
+
+// A bare <input> is ~20 characters wide; real values run longer. Sized in
+// `ch`, matching the admin-settings URL fields.
+.url-field {
+  width: 40ch;
+}
+
+.credential-field {
+  width: 24ch;
+}
+
+// Narrow viewport: the row stacks, so a field takes the whole line.
+@media (width <= bp.$bp-sm) {
+  .url-field,
+  .credential-field {
+    width: 100%;
+  }
+}
+
+.open-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// Matches proxy-section: the save-failure banner sits above the save bar, so
+// the form it belongs to stays on screen.
+.panel-banner {
+  padding: 0 var(--space-5) var(--space-4);
+}

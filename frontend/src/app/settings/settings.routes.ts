@@ -95,6 +95,15 @@ export const SETTINGS_ROUTES: Routes = [
           import('./admin/proxy/proxy-section.component').then((m) => m.ProxySectionComponent),
       },
       {
+        path: 'admin/grafana',
+        title: sectionLabelKey('admin/grafana'),
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./admin/grafana/grafana-section.component').then(
+            (m) => m.GrafanaSectionComponent,
+          ),
+      },
+      {
         path: 'admin/mail',
         title: sectionLabelKey('admin/mail'),
         canActivate: [adminGuard],

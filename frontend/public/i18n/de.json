@@ -481,6 +481,29 @@
         }
       }
     },
+    "grafana": {
+      "title": "Grafana",
+      "logShipping": {
+        "title": "Log-Versand",
+        "caption": "Anwendungs-Logs an Loki senden, damit sie in Grafana erscheinen.",
+        "lokiPushUrl": "Loki-Push-URL",
+        "localContainer": "Lokaler Container: {{url}}",
+        "lokiUsername": "Loki-Benutzername",
+        "token": "API-Token",
+        "tokenRemove": "Entfernen"
+      },
+      "viewing": {
+        "title": "Ansicht",
+        "caption": "Von wo aus Grafana aus dieser App geöffnet wird.",
+        "grafanaUrl": "Grafana-URL",
+        "hint": "Aktuell: {{url}}",
+        "open": "Grafana öffnen"
+      },
+      "saved": "Grafana-Einstellungen gespeichert",
+      "save": "Speichern",
+      "reset": "Zurücksetzen",
+      "unsaved": "Nicht gespeicherte Änderungen"
+    },
     "organise": {
       "title": "Organisieren",
       "summary": "{{feeds}} Feeds in {{tags}} Tags",
