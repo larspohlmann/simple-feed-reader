@@ -74,6 +74,20 @@ describe('ClientErrorReporter', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('keeps an explicitly-supplied kind even when the reason is an Error', () => {
+    setup().report(new Error('HTTP 401 GET /api/entries'), 'HttpError');
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.errors[0].kind).toBe('HttpError');
+  });
+
+  it('falls back to the Error name when no kind is supplied', () => {
+    setup().report(new TypeError('y'));
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.errors[0].kind).toBe('TypeError');
+  });
+
   it('posts under the API_BASE_URL prefix, so a Strato deploy hits /reader/api/client-errors', () => {
     TestBed.configureTestingModule({
       providers: [

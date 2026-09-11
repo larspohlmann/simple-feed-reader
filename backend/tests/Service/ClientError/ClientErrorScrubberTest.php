@@ -107,6 +107,27 @@ final class ClientErrorScrubberTest extends TestCase
         self::assertStringContainsString('[REDACTED_HEX]', (string) $scrubbed->stack);
     }
 
+    public function testStripsQueryAndFragmentFromRoute(): void
+    {
+        $scrubbed = $this->scrubber->scrub($this->item(route: '/reader/entry/9?token=SECRET#frag'));
+
+        self::assertSame('/reader/entry/9', $scrubbed->route);
+    }
+
+    public function testLeavesACleanRouteUnchanged(): void
+    {
+        $scrubbed = $this->scrubber->scrub($this->item(route: '/reader/inbox'));
+
+        self::assertSame('/reader/inbox', $scrubbed->route);
+    }
+
+    public function testLeavesANullRouteUnchanged(): void
+    {
+        $scrubbed = $this->scrubber->scrub($this->item(route: null));
+
+        self::assertNull($scrubbed->route);
+    }
+
     public function testLeavesAPlainMessageUntouched(): void
     {
         $scrubbed = $this->scrubber->scrub($this->item(message: 'Cannot read properties of undefined'));
@@ -135,13 +156,14 @@ final class ClientErrorScrubberTest extends TestCase
         string $message = 'boom',
         ?string $stack = null,
         ?string $url = null,
+        ?string $route = '/reader',
     ): ClientErrorItem {
         return new ClientErrorItem(
             message: $message,
             stack: $stack,
             kind: 'Error',
             url: $url,
-            route: '/reader',
+            route: $route,
             buildVersion: 'dev+local@',
             userAgent: 'jest',
             at: '2026-09-11T00:00:00.000Z',

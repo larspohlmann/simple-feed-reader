@@ -25,7 +25,7 @@ export class ClientErrorReporter {
   private rateWindowStartedAt = 0;
   private reportsSentInWindow = 0;
 
-  report(error: unknown, kind = 'Error'): void {
+  report(error: unknown, kind?: string): void {
     try {
       const item = this.toWireItem(error, kind);
       if (this.isSuppressed(item)) {
@@ -40,12 +40,12 @@ export class ClientErrorReporter {
     }
   }
 
-  private toWireItem(error: unknown, kind: string): ClientErrorItem {
+  private toWireItem(error: unknown, kind: string | undefined): ClientErrorItem {
     const normalized = error instanceof Error ? error : new Error(String(error));
     return {
       message: normalized.message || String(error),
       stack: normalized.stack ?? null,
-      kind: error instanceof Error ? error.name : kind,
+      kind: kind ?? (error instanceof Error ? error.name : 'Error'),
       url: window.location.href,
       route: this.router.url,
       buildVersion: buildVersionTag(),

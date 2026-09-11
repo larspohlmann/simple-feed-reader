@@ -35,7 +35,7 @@ final readonly class ClientErrorScrubber
             stack: null === $item->stack ? null : $this->redact($item->stack),
             kind: $item->kind,
             url: $this->stripQueryAndFragment($item->url),
-            route: $item->route,
+            route: $this->stripQueryAndFragment($item->route),
             buildVersion: $item->buildVersion,
             userAgent: $item->userAgent,
             at: $item->at,
