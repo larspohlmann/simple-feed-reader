@@ -8,10 +8,8 @@ use App\Entity\Entry;
 
 /**
  * One row of the entry list: the shared Entry plus the caller-specific view of
- * it. `isHidden` already has the subscription watermark folded in, so the client
- * never re-derives it. `subscriptionId`/`subscriptionTitle` identify the source
- * for a cross-feed listing; they arrive bundled as an EntryListRowSubscription
- * so this constructor stays under PHPMD's parameter-count gate.
+ * it. `isHidden` already has the subscription watermark folded in, so the
+ * client never re-derives it.
  */
 final readonly class EntryListRow
 {

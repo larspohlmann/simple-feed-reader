@@ -142,15 +142,9 @@ final readonly class RecommendationCandidateLoader
     }
 
     /**
-     * The pool's scope: an includeInForYou feed, not favorited/kept/viewed, inside the
-     * window. es is a LEFT JOIN, so a stateless entry stays a candidate via the null-safe
-     * OR; there is no read/unread filter (isHidden, markedReadUntil) -- excluding caught-up
-     * entries emptied the pool and zeroed the run. :since is inclusive: an entry stamped
-     * exactly at the boundary is inside the window.
-     *
-     * Drives both the outer pool query (EntryAliases::primary()) and DuplicateCollapseDql's
-     * inner semi-join (EntryAliases::collapse()), so a collapse candidate that fails this
-     * scope cannot survive to knock out an in-scope copy, and the two cannot drift apart.
+     * The pool's scope, shared by the outer query and DuplicateCollapseDql's inner
+     * semi-join so the two cannot drift and reopen a hole (#496). No read/unread
+     * filter: excluding caught-up entries emptied the pool and zeroed the run.
      */
     private function poolScope(QueryBuilder $inner, EntryAliases $aliases): void
     {

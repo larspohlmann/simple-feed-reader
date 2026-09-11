@@ -13,12 +13,9 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * Applies a state PATCH to its target, then mirrors isHidden/isViewed onto
- * every other subscribed copy of the same article (#496): two feeds carrying
- * the same story must read and hide together, or a duplicate the collapse
- * hid behind the target reappears as unread once the target itself is read.
- * isFavorite/isKept stay local — favouriting one copy says nothing about the
- * other feed's copy.
+ * Mirrors isHidden/isViewed onto every other subscribed copy of the same
+ * article (#496) so a collapse-hidden duplicate cannot resurface as unread;
+ * isFavorite/isKept stay per-copy.
  */
 final readonly class EntryStateUpdater
 {
