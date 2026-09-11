@@ -12,6 +12,26 @@ import { ReaderModeService } from '../reader-mode.service';
 import { ReadingFocusService } from '../../core/reading-focus.service';
 import { AudioPlayerService } from '../audio-player.service';
 
+class MockResizeObserver {
+  static instances: MockResizeObserver[] = [];
+  readonly targets = new Set<Element>();
+  constructor(readonly callback: ResizeObserverCallback) {
+    MockResizeObserver.instances.push(this);
+  }
+  observe(t: Element): void {
+    this.targets.add(t);
+  }
+  unobserve(t: Element): void {
+    this.targets.delete(t);
+  }
+  disconnect(): void {
+    this.targets.clear();
+  }
+  fire(): void {
+    this.callback([], this as unknown as ResizeObserver);
+  }
+}
+
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
   title: 'Deep dive',
@@ -72,6 +92,8 @@ const failedContent = (over: Partial<ReaderFailure> = {}): ReaderFailure => ({
 describe('ReaderViewComponent', () => {
   beforeEach(() => {
     localStorage.clear();
+    MockResizeObserver.instances = [];
+    (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = MockResizeObserver;
     // Default: extraction fails so the existing presentational tests keep
     // asserting against the feed's own content. Reader-specific tests override.
     loadMock = jest.fn(() => of<ReaderContent>(failedContent()));
