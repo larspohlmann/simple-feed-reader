@@ -21,7 +21,7 @@ natively. It is strictly additive: the native SQLite workflow (plain
 
 ## 1. What you get
 
-Seven services, started with one command from the repository root:
+Nine services, started with one command from the repository root:
 
 | Service | Where |
 |---|---|
@@ -30,6 +30,8 @@ Seven services, started with one command from the repository root:
 | Mailpit web inbox | http://localhost:8025 |
 | MySQL 8.4 | 127.0.0.1:33306 (user/password `feedreader`/`feedreader`, root `root`) |
 | Meilisearch — full-content entry search, dashboard and API | http://127.0.0.1:7700 (key `dev-master-key-not-a-secret`) |
+| Grafana — app logs, provisioned with an "Application logs" dashboard | http://localhost:3000 (login `admin`/`admin`) |
+| Loki — log storage behind Grafana, fed by the app | 127.0.0.1:3100 |
 | Worker — recommendation runs in the background, 5-minute feed refresh sweep | `docker compose logs -f worker` |
 
 The app answers searches from the database whenever Meilisearch is absent or

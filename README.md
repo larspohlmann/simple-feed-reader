@@ -165,6 +165,10 @@ The figures are measured on an idle, healthy stack holding a real account of
 107 feeds and 17,427 articles. S and M do not grow with the number of
 articles; L adds roughly 45 MB per 1,000 articles on top of its base.
 
+Every path but Quick also asks a separate question about an optional Grafana
+log dashboard — off by default, not part of any package, viewing only (no
+tracing yet); `./scripts/prod-configure.sh` can turn it on or off later.
+
 Both installers take a target directory and `--ref <branch-or-tag>`, which
 installs something other than the latest release — how a change is tried on a
 test instance before it ships:
