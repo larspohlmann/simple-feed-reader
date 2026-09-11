@@ -27,32 +27,55 @@ final class LokiClientTest extends TestCase
             ['ts' => '1700000000000000001', 'line' => '{"m":"b"}', 'labels' => ['app' => 'sfr', 'level' => 'info']],
         ]);
 
+        /**
+         * @var array{
+         *     method: string,
+         *     url: string,
+         *     options: array{
+         *         body: string,
+         *         timeout: float,
+         *         normalized_headers: array{authorization: list<string>},
+         *     },
+         * } $seen
+         */
         self::assertSame('POST', $seen['method']);
         self::assertSame('http://loki:3100/loki/api/v1/push', $seen['url']);
         self::assertSame(1.0, $seen['options']['timeout']);
-        $body = json_decode((string) $seen['options']['body'], true, 512, JSON_THROW_ON_ERROR);
-        self::assertCount(1, $body['streams']); // both share the same labels
-        self::assertSame(['app' => 'sfr', 'level' => 'info'], $body['streams'][0]['stream']);
-        self::assertSame([['1700000000000000000', '{"m":"a"}'], ['1700000000000000001', '{"m":"b"}']], $body['streams'][0]['values']);
+        // Asserted as a whole payload rather than key by key, so a stream
+        // silently gaining or losing an entry cannot pass unnoticed.
+        self::assertSame(
+            [
+                'streams' => [
+                    [
+                        'stream' => ['app' => 'sfr', 'level' => 'info'],
+                        'values' => [
+                            ['1700000000000000000', '{"m":"a"}'],
+                            ['1700000000000000001', '{"m":"b"}'],
+                        ],
+                    ],
+                ],
+            ],
+            json_decode($seen['options']['body'], true, 512, JSON_THROW_ON_ERROR),
+        );
         // MockHttpClient's HttpClientTrait::prepareRequest() normalizes
         // "auth_basic" into an "Authorization: Basic" header and removes the
         // option itself, so the credentials show up there instead.
         self::assertSame(
-            ['Authorization: Basic '.base64_encode('u:t')],
+            ['Authorization: Basic ' . base64_encode('u:t')],
             $seen['options']['normalized_headers']['authorization'],
         );
     }
 
     public function testSwallowsTransportErrors(): void
     {
+        $this->expectNotToPerformAssertions();
+
         $http = new MockHttpClient(function (): MockResponse {
             throw new \RuntimeException('loki down');
         });
         $client = new LokiClient($http, $this->endpoint('http://loki:3100/loki/api/v1/push', null, null));
 
         $client->push([['ts' => '1', 'line' => '{}', 'labels' => ['app' => 'sfr']]]);
-
-        self::assertTrue(true); // reached here without throwing
     }
 
     public function testDoesNothingWhenNoUrlConfigured(): void
@@ -72,7 +95,7 @@ final class LokiClientTest extends TestCase
 
     private function endpoint(?string $url, ?string $user, ?string $token): LokiEndpoint
     {
-        return new class($url, $user, $token) implements LokiEndpoint {
+        return new class ($url, $user, $token) implements LokiEndpoint {
             public function __construct(private ?string $url, private ?string $user, private ?string $token)
             {
             }

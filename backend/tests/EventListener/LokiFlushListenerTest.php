@@ -47,7 +47,7 @@ final class LokiFlushListenerTest extends TestCase
     private function endpoint(): LokiEndpoint
     {
         return new class implements LokiEndpoint {
-            public function pushUrl(): ?string
+            public function pushUrl(): string
             {
                 return 'http://loki:3100/loki/api/v1/push';
             }

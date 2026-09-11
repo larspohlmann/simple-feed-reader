@@ -29,7 +29,7 @@ final class LokiPushHandler extends AbstractProcessingHandler
     {
         $this->buffer[] = [
             'ts' => $this->nanoTimestamp($record->datetime),
-            'line' => trim((string) $record->formatted),
+            'line' => $this->formattedLine($record),
             'labels' => [
                 'app' => $this->appLabel,
                 'env' => $this->envLabel,
@@ -69,6 +69,15 @@ final class LokiPushHandler extends AbstractProcessingHandler
 
     private function nanoTimestamp(\DateTimeInterface $time): string
     {
-        return $time->format('U').str_pad($time->format('u'), 6, '0', STR_PAD_RIGHT).'000';
+        return $time->format('U') . str_pad($time->format('u'), 6, '0', STR_PAD_RIGHT) . '000';
+    }
+
+    private function formattedLine(LogRecord $record): string
+    {
+        if (!is_string($record->formatted)) {
+            throw new \LogicException('LokiPushHandler requires a formatter that produces a string.');
+        }
+
+        return trim($record->formatted);
     }
 }

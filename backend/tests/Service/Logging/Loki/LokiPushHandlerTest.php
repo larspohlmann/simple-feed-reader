@@ -17,7 +17,7 @@ final class LokiPushHandlerTest extends TestCase
 {
     public function testBuffersUntilFlushThenPostsLabelledLines(): void
     {
-        $seen = null;
+        $seen = [];
         $http = new MockHttpClient(function (string $m, string $u, array $o) use (&$seen): MockResponse {
             $seen = $o;
 
@@ -26,17 +26,28 @@ final class LokiPushHandlerTest extends TestCase
         $handler = new LokiPushHandler(new LokiClient($http, $this->endpoint()), 'sfr', 'prod', Level::Info, 100);
 
         $handler->handle($this->record(Level::Info, 'app', 'hello'));
-        self::assertNull($seen, 'must buffer, not post per record');
+        self::assertSame([], $seen, 'must buffer, not post per record');
 
         $handler->flush();
 
-        $body = json_decode((string) $seen['body'], true, 512, JSON_THROW_ON_ERROR);
+        /** @var array{body: string} $seen */
+        $body = json_decode($seen['body'], true, 512, JSON_THROW_ON_ERROR);
+        /**
+         * @var array{
+         *     streams: list<array{
+         *         stream: array{app: string, env: string, channel: string, level: string, source: string},
+         *         values: list<array{0: string, 1: string}>,
+         *     }>,
+         * } $body
+         */
         $stream = $body['streams'][0];
         self::assertSame('sfr', $stream['stream']['app']);
         self::assertSame('prod', $stream['stream']['env']);
         self::assertSame('app', $stream['stream']['channel']);
         self::assertSame('info', $stream['stream']['level']);
         self::assertSame('backend', $stream['stream']['source']);
+
+        /** @var array{message: string} $decodedLine */
         $decodedLine = json_decode($stream['values'][0][1], true, 512, JSON_THROW_ON_ERROR);
         self::assertSame('hello', $decodedLine['message']);
     }
@@ -81,7 +92,7 @@ final class LokiPushHandlerTest extends TestCase
     private function endpoint(): LokiEndpoint
     {
         return new class implements LokiEndpoint {
-            public function pushUrl(): ?string
+            public function pushUrl(): string
             {
                 return 'http://loki:3100/loki/api/v1/push';
             }
