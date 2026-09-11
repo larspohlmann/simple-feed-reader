@@ -8,7 +8,6 @@ use App\Entity\EntryState;
 use App\Entity\User;
 use App\Repository\EntryListRow;
 use App\Repository\EntryStateRepository;
-use Doctrine\ORM\EntityManagerInterface;
 
 /**
  * The single place a lazily created EntryState row comes into existence.
@@ -29,43 +28,43 @@ final readonly class EntryStateResolver
 {
     public function __construct(
         private EntryStateRepository $states,
-        private EntityManagerInterface $em,
     ) {
     }
 
     /**
-     * The user's state row for the entry, created and persisted when absent.
+     * The user's state row for the entry, created when absent.
      *
      * Takes a list row rather than a bare Entry because the row already carries
      * the effective read state: the projection folds the watermark in, so this
      * needs no second query and no second copy of the watermark rule.
+     *
+     * A missing row is created by an idempotent insert and then loaded, never by
+     * an ORM new+persist: entry_state has concurrent writers, so a persist would
+     * race two requests into a duplicate-primary-key flush (see
+     * EntryStateRepository::ensureRow). The reloaded row is already managed, so
+     * the caller's flush only ever issues UPDATEs.
      */
     public function resolve(User $user, EntryListRow $row): EntryState
     {
-        $entry = $row->entry;
-        $existing = $this->states->findOneForUserEntry((int) $user->getId(), (int) $entry->getId());
+        $userId = (int) $user->getId();
+        $entryId = (int) $row->entry->getId();
+
+        $existing = $this->states->findOneForUserEntry($userId, $entryId);
         if ($existing !== null) {
             return $existing;
         }
 
-        $state = new EntryState($user, $entry);
-        $this->seedReadState($state, $row);
-        $this->em->persist($state);
+        // The watermark, not the clock: an effectively-read entry became read
+        // when the sweep ran, so a lazily created row must record that instant.
+        // Seeding isHidden=false would flip a read entry back to unread and
+        // raise the badge.
+        $this->states->ensureRow($userId, $entryId, $row->isHidden, $row->isHidden ? $row->markedReadUntil : null);
 
-        return $state;
-    }
-
-    private function seedReadState(EntryState $state, EntryListRow $row): void
-    {
-        if (!$row->isHidden) {
-            return;
+        $created = $this->states->findOneForUserEntry($userId, $entryId);
+        if ($created === null) {
+            throw new \LogicException('ensureRow created the entry_state row, so the reload cannot be null.');
         }
 
-        $state->setIsHidden(true);
-        // The watermark, not the current time: the entry became read when the
-        // sweep ran, and the clock would claim a read that never happened at
-        // this instant. It is also the same value the sweep itself compared
-        // against, so the row now states exactly what the watermark implied.
-        $state->setHiddenAt($row->markedReadUntil);
+        return $created;
     }
 }

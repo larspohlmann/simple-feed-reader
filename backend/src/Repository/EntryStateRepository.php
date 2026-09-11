@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -35,6 +36,46 @@ class EntryStateRepository extends ServiceEntityRepository
             ->andWhere('s.user = :userId')->setParameter('userId', $userId)
             ->getQuery()
             ->getSingleScalarResult();
+    }
+
+    /**
+     * Insert the (user, entry) state row if it is absent, seeded for read state,
+     * and do nothing when it already exists.
+     *
+     * entry_state has concurrent writers, so the lazy find-or-create in
+     * EntryStateResolver cannot use an ORM new+persist: two racing requests both
+     * see no row and both INSERT the same composite primary key, and the second
+     * flush dies on a UniqueConstraintViolationException. An idempotent insert
+     * lets one writer win and silently ignores the loser; the resolver then
+     * loads the winning row and issues only UPDATEs from it. IGNORE is exactly
+     * right here — a row that already exists keeps its flags, and the caller's
+     * requested change applies afterwards through the ORM.
+     */
+    public function ensureRow(int $userId, int $entryId, bool $seedHidden, ?\DateTimeImmutable $seedHiddenAt): void
+    {
+        $connection = $this->getEntityManager()->getConnection();
+        $isMysql = $connection->getDatabasePlatform() instanceof AbstractMySQLPlatform;
+        $conflictClause = $isMysql ? 'IGNORE' : 'OR IGNORE';
+
+        $connection->executeStatement(
+            sprintf(
+                'INSERT %s INTO entry_state'
+                . ' (user_id, entry_id, is_hidden, hidden_at, is_favorite, is_kept, is_viewed, viewed_at)'
+                . ' VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                $conflictClause,
+            ),
+            [$userId, $entryId, $seedHidden, $seedHiddenAt, false, false, false, null],
+            [
+                Types::INTEGER,
+                Types::INTEGER,
+                Types::BOOLEAN,
+                Types::DATETIME_IMMUTABLE,
+                Types::BOOLEAN,
+                Types::BOOLEAN,
+                Types::BOOLEAN,
+                Types::DATETIME_IMMUTABLE,
+            ],
+        );
     }
 
     public function findOneForUserEntry(int $userId, int $entryId): ?EntryState
