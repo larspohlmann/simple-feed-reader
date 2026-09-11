@@ -23,7 +23,7 @@ export interface SaveGrafanaSettings {
   readonly removeToken: boolean;
 }
 
-export type TypedGrafanaEdits = Partial<Omit<SaveGrafanaSettings, never>>;
+export type TypedGrafanaEdits = Partial<Omit<SaveGrafanaSettings, 'removeToken'>>;
 
 @Injectable()
 export class GrafanaSettingsService extends DraftSettingsService<
