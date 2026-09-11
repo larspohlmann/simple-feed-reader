@@ -57,6 +57,7 @@ function deliver(url: string, body: string, bearerToken?: string | null): void {
     void fetch(url, { method: 'POST', keepalive: true, headers, body }).catch(() => undefined);
     return;
   }
+  // The Beacon API carries no custom headers, so this path drops the bearer and is unattributed.
   navigator.sendBeacon?.(url, new Blob([body], { type: 'application/json' }));
 }
 

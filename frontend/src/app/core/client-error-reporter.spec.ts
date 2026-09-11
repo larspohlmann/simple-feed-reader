@@ -1,7 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { API_BASE_URL } from './api';
-import { ClientErrorReporter } from './client-error-reporter';
+import {
+  ClientErrorReporter,
+  DEDUPE_WINDOW_MS,
+  MAX_REPORTS_PER_WINDOW,
+  RATE_WINDOW_MS,
+} from './client-error-reporter';
 import { TokenStore } from './token.store';
 
 describe('ClientErrorReporter', () => {
@@ -81,5 +86,48 @@ describe('ClientErrorReporter', () => {
     TestBed.inject(ClientErrorReporter).report(new Error('boom'));
 
     expect(fetchMock.mock.calls[0][0]).toBe('/reader/api/client-errors');
+  });
+
+  describe('dedupe map pruning', () => {
+    afterEach(() => jest.useRealTimers());
+
+    it('forgets a signature once it ages out of the dedupe window, instead of growing forever', () => {
+      jest.useFakeTimers({ now: new Date('2026-01-01T00:00:00Z') });
+      const reporter = setup();
+      const internals = reporter as unknown as { lastSentAtBySignature: Map<string, number> };
+
+      reporter.report(new Error('first'));
+      expect(internals.lastSentAtBySignature.size).toBe(1);
+
+      jest.advanceTimersByTime(DEDUPE_WINDOW_MS + 1);
+      reporter.report(new Error('second'));
+
+      // 'first' aged out and was swept; only 'second' remains, so the map
+      // does not keep one entry per distinct message forever.
+      expect(internals.lastSentAtBySignature.size).toBe(1);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('flood cap', () => {
+    afterEach(() => jest.useRealTimers());
+
+    it('sends up to MAX_REPORTS_PER_WINDOW distinct errors, suppresses the next, then resumes after RATE_WINDOW_MS', () => {
+      jest.useFakeTimers({ now: new Date('2026-01-01T00:00:00Z') });
+      const reporter = setup();
+
+      for (let index = 0; index < MAX_REPORTS_PER_WINDOW; index += 1) {
+        reporter.report(new Error(`distinct-${index}`));
+      }
+      expect(fetchMock).toHaveBeenCalledTimes(MAX_REPORTS_PER_WINDOW);
+
+      reporter.report(new Error('one-too-many'));
+      expect(fetchMock).toHaveBeenCalledTimes(MAX_REPORTS_PER_WINDOW);
+
+      jest.advanceTimersByTime(RATE_WINDOW_MS + 1);
+      reporter.report(new Error('after-the-window'));
+
+      expect(fetchMock).toHaveBeenCalledTimes(MAX_REPORTS_PER_WINDOW + 1);
+    });
   });
 });

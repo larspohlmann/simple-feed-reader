@@ -5,9 +5,9 @@ import { API_BASE_URL } from './api';
 import { ClientErrorItem, buildVersionTag, sendClientError } from './client-error-beacon';
 import { TokenStore } from './token.store';
 
-const DEDUPE_WINDOW_MS = 10_000;
-const RATE_WINDOW_MS = 60_000;
-const MAX_REPORTS_PER_WINDOW = 20;
+export const DEDUPE_WINDOW_MS = 10_000;
+export const RATE_WINDOW_MS = 60_000;
+export const MAX_REPORTS_PER_WINDOW = 20;
 
 /**
  * The one root sink for reportable frontend errors (#984). Tags each report
@@ -55,25 +55,37 @@ export class ClientErrorReporter {
   }
 
   /** Collapses a flood from one broken render: the same signature is dropped
-   *  inside the dedupe window, and the window-wide cap drops the rest. */
+   *  inside the dedupe window, and the window-wide cap drops the rest. Also
+   *  sweeps signatures that aged out, so a singleton living for a whole tab
+   *  session never accumulates one entry per distinct message forever. */
   private isSuppressed(item: ClientErrorItem): boolean {
-    if (this.rateLimitExceeded()) {
+    const now = Date.now();
+    this.forgetSignaturesOlderThan(now - DEDUPE_WINDOW_MS);
+
+    if (this.rateLimitExceeded(now)) {
       return true;
     }
 
     const signature = this.signatureOf(item);
     const lastSentAt = this.lastSentAtBySignature.get(signature);
-    if (lastSentAt !== undefined && Date.now() - lastSentAt < DEDUPE_WINDOW_MS) {
+    if (lastSentAt !== undefined && now - lastSentAt < DEDUPE_WINDOW_MS) {
       return true;
     }
 
-    this.lastSentAtBySignature.set(signature, Date.now());
+    this.lastSentAtBySignature.set(signature, now);
     this.reportsSentInWindow += 1;
     return false;
   }
 
-  private rateLimitExceeded(): boolean {
-    const now = Date.now();
+  private forgetSignaturesOlderThan(cutoff: number): void {
+    for (const [signature, sentAt] of this.lastSentAtBySignature) {
+      if (sentAt < cutoff) {
+        this.lastSentAtBySignature.delete(signature);
+      }
+    }
+  }
+
+  private rateLimitExceeded(now: number): boolean {
     if (now - this.rateWindowStartedAt > RATE_WINDOW_MS) {
       this.rateWindowStartedAt = now;
       this.reportsSentInWindow = 0;
