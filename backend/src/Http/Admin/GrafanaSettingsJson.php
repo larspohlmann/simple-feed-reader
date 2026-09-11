@@ -28,8 +28,11 @@ final readonly class GrafanaSettingsJson
      *     containerPresent: bool,
      * }
      */
-    public static function from(?GrafanaSettings $settings, string $lokiPushUrlDefault, string $grafanaUrlDefault): array
-    {
+    public static function from(
+        ?GrafanaSettings $settings,
+        string $lokiPushUrlDefault,
+        string $grafanaUrlDefault,
+    ): array {
         $settings ??= new GrafanaSettings();
         $lokiOverride = $settings->getLokiPushUrlOverride();
         $grafanaOverride = $settings->getGrafanaUrlOverride();

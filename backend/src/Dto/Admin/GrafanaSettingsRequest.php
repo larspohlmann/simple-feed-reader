@@ -16,12 +16,12 @@ final readonly class GrafanaSettingsRequest
 {
     public function __construct(
         #[Assert\Length(max: 255)]
-        #[Assert\Url]
+        #[Assert\Url(requireTld: false)]
         public ?string $lokiPushUrl = null,
         #[Assert\Length(max: 255)]
         public ?string $lokiUsername = null,
         #[Assert\Length(max: 255)]
-        #[Assert\Url]
+        #[Assert\Url(requireTld: false)]
         public ?string $grafanaUrl = null,
         #[Assert\Length(max: 512)]
         public ?string $token = null,

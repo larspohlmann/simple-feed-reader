@@ -30,9 +30,17 @@ final class GrafanaSettingsJsonTest extends TestCase
     public function testOverrideWinsOverDefaultAndSecretNeverLeaks(): void
     {
         $settings = new GrafanaSettings();
-        $settings->apply(new GrafanaConnection('https://cloud/loki/push', 'tenant42', 'https://cloud/grafana'), new SealedSecret('c', 'n', 's', 1), 'wxyz');
+        $settings->apply(
+            new GrafanaConnection('https://cloud/loki/push', 'tenant42', 'https://cloud/grafana'),
+            new SealedSecret('c', 'n', 's', 1),
+            'wxyz',
+        );
 
-        $payload = GrafanaSettingsJson::from($settings, 'http://loki:3100/loki/api/v1/push', 'http://localhost:3000');
+        $payload = GrafanaSettingsJson::from(
+            $settings,
+            'http://loki:3100/loki/api/v1/push',
+            'http://localhost:3000',
+        );
 
         self::assertSame('https://cloud/loki/push', $payload['lokiPushUrl']);
         self::assertSame('https://cloud/loki/push', $payload['lokiPushUrlEffective']);
