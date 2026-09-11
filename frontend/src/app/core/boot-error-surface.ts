@@ -1,4 +1,6 @@
 // src/app/core/boot-error-surface.ts
+import { reportBootError } from './client-error-beacon';
+
 /**
  * Reveals the static `#boot-error` div declared in index.html (#280).
  *
@@ -10,11 +12,13 @@
  *
  * This must stay a plain function with no Angular imports: the bootstrap-reject
  * caller runs before any injector exists, so nothing here can depend on DI, a
- * service, or anything the bundle would still need to resolve.
+ * service, or anything the bundle would still need to resolve. `client-error-beacon`
+ * is itself Angular-free (#984), so reporting the failure here keeps that promise.
  */
 export function revealBootErrorSurface(error: unknown): void {
   // A console line helps nobody on a phone, but it is the only trace once the
   // surface takes over; keep the failure diagnosable instead of swallowing it.
   console.error(error);
   document.getElementById('boot-error')?.removeAttribute('hidden');
+  reportBootError(error);
 }

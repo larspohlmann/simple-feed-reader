@@ -1,6 +1,7 @@
 // src/app/core/navigation-failure.ts
-import { Injectable, Signal, signal } from '@angular/core';
+import { Injectable, Signal, inject, signal } from '@angular/core';
 import { revealBootErrorSurface } from './boot-error-surface';
+import { ClientErrorReporter } from './client-error-reporter';
 
 /**
  * The one place that decides how a broken navigation reaches the user (#285).
@@ -17,6 +18,7 @@ import { revealBootErrorSurface } from './boot-error-surface';
  */
 @Injectable({ providedIn: 'root' })
 export class NavigationFailureReporter {
+  private readonly reporter = inject(ClientErrorReporter);
   private readonly hasRendered = signal(false);
   private readonly bannerVisible = signal(false);
 
@@ -28,6 +30,7 @@ export class NavigationFailureReporter {
       return;
     }
     console.error(error);
+    this.reporter.report(error);
     this.bannerVisible.set(true);
   }
 

@@ -62,8 +62,29 @@
           var surface = document.getElementById('boot-error');
           var root = document.querySelector('app-root');
           var timer = setTimeout(function () {
-            console.error('Boot watchdog: no content within ' + BOOT_DEADLINE_MS + ' ms.');
+            var message = 'Boot watchdog: no content within ' + BOOT_DEADLINE_MS + ' ms.';
+            console.error(message);
             surface.removeAttribute('hidden');
+            try {
+              // Relative, resolved against <base>: a leading-slash absolute
+              // would 404 under the Strato /reader subpath (#984).
+              var url = new URL('api/client-errors', document.baseURI).href;
+              var body = JSON.stringify({
+                errors: [
+                  {
+                    message: message,
+                    stack: null,
+                    kind: 'BootWatchdog',
+                    url: location.href,
+                    route: null,
+                    buildVersion: null,
+                    userAgent: navigator.userAgent,
+                    at: new Date().toISOString(),
+                  },
+                ],
+              });
+              navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }));
+            } catch (e) {}
           }, BOOT_DEADLINE_MS);
           // app.html holds nothing but <router-outlet>, which Angular appends
           // ~70 ms into bootstrap — long before a lazy route chunk is even
