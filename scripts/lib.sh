@@ -1685,6 +1685,10 @@ current_grafana_choice() {
 use_no_grafana() {
   env_prod_set GRAFANA_LOKI_PUSH_URL ''
   env_prod_set GRAFANA_URL ''
+  # Tracing rides the same off switch: no extension-loading and every
+  # auto-instrumentation disabled, matching the tempo container staying off.
+  env_prod_set OTEL_PHP_AUTOLOAD_ENABLED 'false'
+  env_prod_set OTEL_PHP_DISABLED_INSTRUMENTATIONS 'all'
   say 'No Grafana log dashboard.'
 }
 
@@ -1697,6 +1701,11 @@ use_grafana() {
   if [ -z "$(trim_whitespace "$(env_prod_get GRAFANA_ADMIN_PASSWORD)")" ]; then
     env_prod_set GRAFANA_ADMIN_PASSWORD "$(generate_secret)"
   fi
+  # Tracing rides the same on switch: load the extension and leave nothing
+  # disabled -- an empty OTEL_PHP_DISABLED_INSTRUMENTATIONS means every
+  # auto-instrumentation stays active.
+  env_prod_set OTEL_PHP_AUTOLOAD_ENABLED 'true'
+  env_prod_set OTEL_PHP_DISABLED_INSTRUMENTATIONS ''
   say 'Using the bundled Grafana + Loki containers. The admin password is in'
   say '.env.prod (GRAFANA_ADMIN_PASSWORD).'
 }

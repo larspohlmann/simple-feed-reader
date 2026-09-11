@@ -66,6 +66,24 @@ x-app-environment: &app-environment
   GRAFANA_LOKI_USERNAME: ${GRAFANA_LOKI_USERNAME:-}
   GRAFANA_LOKI_TOKEN: ${GRAFANA_LOKI_TOKEN:-}
   GRAFANA_URL: ${GRAFANA_URL:-}
+  # Tracing rides the grafana profile: use_grafana/use_no_grafana (scripts/lib.sh)
+  # write both of these together, so they always agree with the tempo service's
+  # own `grafana` profile below. The auto-instrumentation entrypoint
+  # (_register.php) checks BOTH vars -- AUTOLOAD_ENABLED alone does not gate it,
+  # DISABLED_INSTRUMENTATIONS=all is what actually turns instrumentation off.
+  # Single-dash `-` (not `:-`): compose's `:-` treats an empty value as unset
+  # and would override the installer's deliberately-empty
+  # OTEL_PHP_DISABLED_INSTRUMENTATIONS (meaning "nothing disabled") back to
+  # "all". `-` only substitutes when the variable is truly unset.
+  OTEL_PHP_AUTOLOAD_ENABLED: ${OTEL_PHP_AUTOLOAD_ENABLED-false}
+  OTEL_PHP_DISABLED_INSTRUMENTATIONS: ${OTEL_PHP_DISABLED_INSTRUMENTATIONS-all}
+  OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-simple-feed-reader}
+  OTEL_TRACES_EXPORTER: ${OTEL_TRACES_EXPORTER:-otlp}
+  OTEL_METRICS_EXPORTER: "none"
+  OTEL_LOGS_EXPORTER: "none"
+  OTEL_EXPORTER_OTLP_PROTOCOL: ${OTEL_EXPORTER_OTLP_PROTOCOL:-http/protobuf}
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4318}
+  OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-always_on}
   GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
   GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
   APPLE_OAUTH_CLIENT_ID: ${APPLE_OAUTH_CLIENT_ID:-}
@@ -139,6 +157,19 @@ services:
     volumes:
       - ./docker/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
       - loki-data:/loki
+
+  # Distributed tracing, riding the SAME grafana profile as loki+grafana above
+  # (Q19): an install that enables observability gets tracing too, and one
+  # that declines it never starts this container either. No published port --
+  # only php and worker, on the internal compose network, ever talk to this.
+  tempo:
+    image: grafana/tempo:2.7.1
+    profiles: ["grafana"]
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo/tempo-config.yaml"]
+    volumes:
+      - ./docker/tempo/tempo-config.yaml:/etc/tempo/tempo-config.yaml:ro
+      - tempo-data:/var/tempo
 
   grafana:
     image: grafana/grafana:11.5.2
@@ -258,5 +289,6 @@ volumes:
   meili-data:
   loki-data:
   grafana-data:
+  tempo-data:
   php-var:
   jwt-keys:

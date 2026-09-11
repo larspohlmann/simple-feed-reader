@@ -53,6 +53,17 @@ services:
       MEILISEARCH_KEY: "dev-master-key-not-a-secret"
       GRAFANA_LOKI_PUSH_URL: "http://loki:3100/loki/api/v1/push"
       GRAFANA_URL: "http://localhost:3000"
+      # Always on in dev; the tempo container is opt-in behind the `tracing`
+      # profile (see below), and the exporter fails open when it is absent --
+      # a dropped export never breaks a request.
+      OTEL_PHP_AUTOLOAD_ENABLED: "true"
+      OTEL_SERVICE_NAME: "simple-feed-reader"
+      OTEL_TRACES_EXPORTER: "otlp"
+      OTEL_METRICS_EXPORTER: "none"
+      OTEL_LOGS_EXPORTER: "none"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://tempo:4318"
+      OTEL_TRACES_SAMPLER: "always_on"
     extra_hosts:
       # Makes host.docker.internal work on Docker Engine variants where it is
       # not built in; harmless on Docker Desktop.
@@ -127,6 +138,14 @@ services:
       MEILISEARCH_KEY: "dev-master-key-not-a-secret"
       GRAFANA_LOKI_PUSH_URL: "http://loki:3100/loki/api/v1/push"
       GRAFANA_URL: "http://localhost:3000"
+      OTEL_PHP_AUTOLOAD_ENABLED: "true"
+      OTEL_SERVICE_NAME: "simple-feed-reader"
+      OTEL_TRACES_EXPORTER: "otlp"
+      OTEL_METRICS_EXPORTER: "none"
+      OTEL_LOGS_EXPORTER: "none"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://tempo:4318"
+      OTEL_TRACES_SAMPLER: "always_on"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -192,6 +211,22 @@ services:
     depends_on:
       - loki
 
+  # Distributed tracing, opt-in behind the `tracing` profile: a plain
+  # `docker compose up` never starts it, so the OTLP exporter above (pointed
+  # at http://tempo:4318 unconditionally) fails open with the container
+  # absent -- run `COMPOSE_PROFILES=tracing docker compose up -d` to see
+  # traces. No depends_on, same reasoning as loki: a dropped export must
+  # never break a request.
+  tempo:
+    image: grafana/tempo:2.7.1
+    profiles: ["tracing"]
+    command: ["-config.file=/etc/tempo/tempo-config.yaml"]
+    volumes:
+      - ./docker/tempo/tempo-config.yaml:/etc/tempo/tempo-config.yaml:ro
+      - tempo-data:/var/tempo
+    ports:
+      - "127.0.0.1:4318:4318"
+
   # Default dev frontend: the Angular CLI dev server with live reload. The
   # browser (on the host) fetches the bundle from here on :4200 and calls the
   # API at https://localhost:8443 directly — cross-origin, which the backend
@@ -223,3 +258,4 @@ volumes:
   meili-data:
   loki-data:
   grafana-data:
+  tempo-data:

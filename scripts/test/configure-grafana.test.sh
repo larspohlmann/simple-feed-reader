@@ -82,6 +82,8 @@ assert_env GRAFANA_URL 'http://localhost:3000'
 [ -n "$(env_prod_get GRAFANA_ADMIN_PASSWORD)" ] || fail 'the default answer must generate GRAFANA_ADMIN_PASSWORD'
 prod_uses_grafana || fail 'a default of yes must enable grafana'
 assert_profiles 'mysql,grafana'
+assert_env OTEL_PHP_AUTOLOAD_ENABLED 'true'
+assert_env OTEL_PHP_DISABLED_INSTRUMENTATIONS ''
 
 fresh_install_answer_with 'n' ''
 assert_env GRAFANA_LOKI_PUSH_URL ''
@@ -90,6 +92,8 @@ if prod_uses_grafana; then
   fail 'a default of no must not enable grafana'
 fi
 assert_profiles 'mysql'
+assert_env OTEL_PHP_AUTOLOAD_ENABLED 'false'
+assert_env OTEL_PHP_DISABLED_INSTRUMENTATIONS 'all'
 
 # --- 2. an explicit answer beats the default in both directions -------------
 fresh_install_answer_with 'y' n
@@ -98,11 +102,15 @@ if prod_uses_grafana; then
   fail 'answering no must not enable grafana'
 fi
 assert_profiles 'mysql'
+assert_env OTEL_PHP_AUTOLOAD_ENABLED 'false'
+assert_env OTEL_PHP_DISABLED_INSTRUMENTATIONS 'all'
 
 fresh_install_answer_with 'n' y
 assert_env GRAFANA_LOKI_PUSH_URL 'http://loki:3100/loki/api/v1/push'
 prod_uses_grafana || fail 'answering yes must enable grafana'
 assert_profiles 'mysql,grafana'
+assert_env OTEL_PHP_AUTOLOAD_ENABLED 'true'
+assert_env OTEL_PHP_DISABLED_INSTRUMENTATIONS ''
 
 # --- 3. re-ask: pressing return never reverses the stored decision ----------
 # 3a. Already ON: pressing return keeps it on, and does not rotate the
@@ -112,6 +120,8 @@ GRAFANA_URL=http://localhost:3000
 GRAFANA_ADMIN_PASSWORD=already-on-password' ''
 assert_env GRAFANA_LOKI_PUSH_URL 'http://loki:3100/loki/api/v1/push'
 assert_env GRAFANA_ADMIN_PASSWORD 'already-on-password'
+assert_env OTEL_PHP_AUTOLOAD_ENABLED 'true'
+assert_env OTEL_PHP_DISABLED_INSTRUMENTATIONS ''
 
 # 3b. Already OFF: pressing return keeps it off.
 reask_with 'GRAFANA_LOKI_PUSH_URL=
@@ -121,6 +131,8 @@ assert_env GRAFANA_LOKI_PUSH_URL ''
 if prod_uses_grafana; then
   fail 're-asking with return must not enable grafana after it was declined'
 fi
+assert_env OTEL_PHP_AUTOLOAD_ENABLED 'false'
+assert_env OTEL_PHP_DISABLED_INSTRUMENTATIONS 'all'
 
 # --- 4. the profile list combines with mysql and meilisearch, in order ------
 printf 'DATABASE_URL=\nMEILISEARCH_URL=\nGRAFANA_LOKI_PUSH_URL=http://loki:3100/loki/api/v1/push\nGRAFANA_ADMIN_PASSWORD=already-set\n' > "${ENV_PROD_FILE}"
@@ -138,6 +150,8 @@ printf '\n' > "${queue}"
 configure_grafana 'y' > /dev/null 2>&1
 assert_env GRAFANA_ADMIN_PASSWORD 'existing-password'
 assert_env GRAFANA_LOKI_PUSH_URL 'http://loki:3100/loki/api/v1/push'
+assert_env OTEL_PHP_AUTOLOAD_ENABLED 'true'
+assert_env OTEL_PHP_DISABLED_INSTRUMENTATIONS ''
 
 # --- 6. an unreadable terminal REAPPLIES the current decision, changing -----
 # nothing when the caller's default already matches it.
@@ -146,6 +160,8 @@ printf 'DATABASE_URL=\nGRAFANA_LOKI_PUSH_URL=http://loki:3100/loki/api/v1/push\n
 configure_grafana 'y' > /dev/null 2>&1
 assert_env GRAFANA_LOKI_PUSH_URL 'http://loki:3100/loki/api/v1/push'
 assert_env GRAFANA_ADMIN_PASSWORD 'existing-password'
+assert_env OTEL_PHP_AUTOLOAD_ENABLED 'true'
+assert_env OTEL_PHP_DISABLED_INSTRUMENTATIONS ''
 
 # --- 7. a headless run applies the default it was given, either way --------
 can_prompt() { return 1; }
@@ -154,12 +170,16 @@ configure_grafana 'y' > /dev/null 2>&1
 assert_env GRAFANA_LOKI_PUSH_URL 'http://loki:3100/loki/api/v1/push'
 [ -n "$(env_prod_get GRAFANA_ADMIN_PASSWORD)" ] || fail 'a headless default of yes must generate an admin password'
 prod_uses_grafana || fail 'a headless default of yes must enable grafana'
+assert_env OTEL_PHP_AUTOLOAD_ENABLED 'true'
+assert_env OTEL_PHP_DISABLED_INSTRUMENTATIONS ''
 
 can_prompt() { return 1; }
 printf 'DATABASE_URL=\nGRAFANA_LOKI_PUSH_URL=\nGRAFANA_ADMIN_PASSWORD=\n' > "${ENV_PROD_FILE}"
 configure_grafana 'n' > /dev/null 2>&1
 assert_env GRAFANA_LOKI_PUSH_URL ''
 assert_env GRAFANA_ADMIN_PASSWORD ''
+assert_env OTEL_PHP_AUTOLOAD_ENABLED 'false'
+assert_env OTEL_PHP_DISABLED_INSTRUMENTATIONS 'all'
 
 # --- 7b. and install.sh passes 'n' as the default in both its branches -----
 # Pressing return through the whole installer must never turn Grafana on:
@@ -181,6 +201,8 @@ assert_env GRAFANA_LOKI_PUSH_URL ''
 if prod_uses_grafana; then
   fail 'a headless re-ask must not turn on grafana the operator declined'
 fi
+assert_env OTEL_PHP_AUTOLOAD_ENABLED 'false'
+assert_env OTEL_PHP_DISABLED_INSTRUMENTATIONS 'all'
 
 # --- 9. whitespace-only GRAFANA_LOKI_PUSH_URL does not count as configured --
 printf 'DATABASE_URL=\nGRAFANA_LOKI_PUSH_URL=   \nGRAFANA_ADMIN_PASSWORD=\n' > "${ENV_PROD_FILE}"
