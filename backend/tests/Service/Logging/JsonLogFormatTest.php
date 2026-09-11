@@ -26,10 +26,15 @@ final class JsonLogFormatTest extends TestCase
 
         self::assertStringEndsWith("\n", $line);
         $decoded = json_decode(trim($line), true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
         self::assertSame('hello', $decoded['message']);
         self::assertSame('app', $decoded['channel']);
         self::assertSame('INFO', $decoded['level_name']);
-        self::assertSame('01J000000000000000000TEST', $decoded['extra']['request_id']);
-        self::assertSame('v', $decoded['context']['k']);
+        $extra = $decoded['extra'];
+        self::assertIsArray($extra);
+        self::assertSame('01J000000000000000000TEST', $extra['request_id']);
+        $context = $decoded['context'];
+        self::assertIsArray($context);
+        self::assertSame('v', $context['k']);
     }
 }

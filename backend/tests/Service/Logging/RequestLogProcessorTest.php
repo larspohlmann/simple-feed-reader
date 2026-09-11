@@ -45,17 +45,17 @@ final class RequestLogProcessorTest extends TestCase
 
     private function tracingContext(string $traceId, string $spanId): TraceContext
     {
-        return new class($traceId, $spanId) implements TraceContext {
+        return new class ($traceId, $spanId) implements TraceContext {
             public function __construct(private string $traceId, private string $spanId)
             {
             }
 
-            public function traceId(): ?string
+            public function traceId(): string
             {
                 return $this->traceId;
             }
 
-            public function spanId(): ?string
+            public function spanId(): string
             {
                 return $this->spanId;
             }
