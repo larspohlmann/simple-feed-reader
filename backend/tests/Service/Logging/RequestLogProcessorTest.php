@@ -38,6 +38,28 @@ final class RequestLogProcessorTest extends TestCase
         self::assertSame('span-xyz', $record->extra['span_id']);
     }
 
+    public function testOmitsBothIdsWhenOnlyATraceIdIsPresent(): void
+    {
+        $provider = new RequestIdProvider();
+        $processor = new RequestLogProcessor($provider, $this->partialTracingContext('trace-abc', null));
+
+        $record = $processor($this->record());
+
+        self::assertArrayNotHasKey('trace_id', $record->extra);
+        self::assertArrayNotHasKey('span_id', $record->extra);
+    }
+
+    public function testOmitsBothIdsWhenOnlyASpanIdIsPresent(): void
+    {
+        $provider = new RequestIdProvider();
+        $processor = new RequestLogProcessor($provider, $this->partialTracingContext(null, 'span-xyz'));
+
+        $record = $processor($this->record());
+
+        self::assertArrayNotHasKey('trace_id', $record->extra);
+        self::assertArrayNotHasKey('span_id', $record->extra);
+    }
+
     private function record(): LogRecord
     {
         return new LogRecord(new \DateTimeImmutable(), 'app', Level::Info, 'hello');
@@ -56,6 +78,25 @@ final class RequestLogProcessorTest extends TestCase
             }
 
             public function spanId(): string
+            {
+                return $this->spanId;
+            }
+        };
+    }
+
+    private function partialTracingContext(?string $traceId, ?string $spanId): TraceContext
+    {
+        return new class ($traceId, $spanId) implements TraceContext {
+            public function __construct(private ?string $traceId, private ?string $spanId)
+            {
+            }
+
+            public function traceId(): ?string
+            {
+                return $this->traceId;
+            }
+
+            public function spanId(): ?string
             {
                 return $this->spanId;
             }
