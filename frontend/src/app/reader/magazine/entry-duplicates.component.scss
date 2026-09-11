@@ -27,8 +27,10 @@
   cursor: pointer;
 }
 
-.also-entry:hover {
-  background: var(--card-bg);
+@media (hover: hover) {
+  .also-entry:hover {
+    background: var(--card-hover-bg);
+  }
 }
 
 .sep {
