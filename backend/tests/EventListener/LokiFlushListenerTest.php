@@ -13,16 +13,41 @@ use Monolog\LogRecord;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Event\TerminateEvent;
-use Symfony\Component\HttpKernel\HttpKernelInterface;
 
 final class LokiFlushListenerTest extends TestCase
 {
     public function testTerminateFlushesTheHandler(): void
     {
         $posts = 0;
+        $listener = $this->bufferedListener($posts);
+
+        $listener->onKernelTerminate();
+
+        self::assertSame(1, $posts);
+    }
+
+    public function testWorkerMessageHandledFlushesTheHandler(): void
+    {
+        $posts = 0;
+        $listener = $this->bufferedListener($posts);
+
+        $listener->onWorkerMessageHandled();
+
+        self::assertSame(1, $posts);
+    }
+
+    public function testWorkerMessageFailedFlushesTheHandler(): void
+    {
+        $posts = 0;
+        $listener = $this->bufferedListener($posts);
+
+        $listener->onWorkerMessageFailed();
+
+        self::assertSame(1, $posts);
+    }
+
+    private function bufferedListener(int &$posts): LokiFlushListener
+    {
         $http = new MockHttpClient(function () use (&$posts): MockResponse {
             ++$posts;
 
@@ -30,18 +55,8 @@ final class LokiFlushListenerTest extends TestCase
         });
         $handler = new LokiPushHandler(new LokiClient($http, $this->endpoint()), 'sfr', 'prod', Level::Info, 100);
         $handler->handle(new LogRecord(new \DateTimeImmutable(), 'app', Level::Info, 'buffered'));
-        $listener = new LokiFlushListener($handler);
 
-        $listener->onKernelTerminate($this->terminateEvent());
-
-        self::assertSame(1, $posts);
-    }
-
-    private function terminateEvent(): TerminateEvent
-    {
-        $kernel = $this->createStub(HttpKernelInterface::class);
-
-        return new TerminateEvent($kernel, new Request(), new Response());
+        return new LokiFlushListener($handler);
     }
 
     private function endpoint(): LokiEndpoint

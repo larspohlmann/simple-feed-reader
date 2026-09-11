@@ -19,17 +19,17 @@ final readonly class LokiFlushListener
     {
     }
 
-    public function onKernelTerminate(TerminateEvent $event): void
+    public function onKernelTerminate(): void
     {
         $this->handler->flush();
     }
 
-    public function onWorkerMessageHandled(WorkerMessageHandledEvent $event): void
+    public function onWorkerMessageHandled(): void
     {
         $this->handler->flush();
     }
 
-    public function onWorkerMessageFailed(WorkerMessageFailedEvent $event): void
+    public function onWorkerMessageFailed(): void
     {
         $this->handler->flush();
     }
