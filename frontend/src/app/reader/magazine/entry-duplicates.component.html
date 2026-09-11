@@ -17,6 +17,9 @@
       }
     </div>
     @if (selected(); as copy) {
+      <!-- The handler suppresses an activation rather than performing one: a
+           click reaching the host card would open the host entry, not this copy. -->
+      <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events -->
       <span
         class="dup-popover"
         [id]="panelId"
