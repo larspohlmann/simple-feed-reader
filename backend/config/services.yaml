@@ -252,10 +252,18 @@ services:
             $ignoreEmptyContextAndExtra: false
             $includeStacktraces: true
 
+    # Deliberately NOT the `default:` processor: it treats an empty value as
+    # "unset" and returns null (see $github_release_repository above), but
+    # EnvLokiEndpoint needs the raw '' to map empty-to-null itself.
     App\Service\Logging\Loki\EnvLokiEndpoint:
         arguments:
-            $pushUrl: '%env(default::GRAFANA_LOKI_PUSH_URL)%'
-            $username: '%env(default::GRAFANA_LOKI_USERNAME)%'
-            $token: '%env(default::GRAFANA_LOKI_TOKEN)%'
+            $pushUrl: '%env(GRAFANA_LOKI_PUSH_URL)%'
+            $username: '%env(GRAFANA_LOKI_USERNAME)%'
+            $token: '%env(GRAFANA_LOKI_TOKEN)%'
 
     App\Service\Logging\Loki\LokiEndpoint: '@App\Service\Logging\Loki\EnvLokiEndpoint'
+
+    App\Service\Logging\Loki\LokiPushHandler:
+        arguments:
+            $appLabel: 'simple-feed-reader'
+            $envLabel: '%kernel.environment%'

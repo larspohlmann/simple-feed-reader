@@ -17,6 +17,11 @@ when@dev:
                 level: debug
                 channels: ["!event"]
                 formatter: monolog.formatter.json
+            loki:
+                type: service
+                id: App\Service\Logging\Loki\LokiPushHandler
+                level: info
+                channels: ["!event"]
             console:
                 type: console
                 process_psr_3_messages: false
@@ -49,3 +54,8 @@ when@prod:
                 level: info
                 max_files: 7
                 formatter: monolog.formatter.json
+            loki:
+                type: service
+                id: App\Service\Logging\Loki\LokiPushHandler
+                level: info
+                channels: ["!event"]
