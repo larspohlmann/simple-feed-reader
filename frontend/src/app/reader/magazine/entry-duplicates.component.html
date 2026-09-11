@@ -3,10 +3,28 @@
     <span class="layers" aria-hidden="true">⧉</span>
     <span class="lead">{{ 'reader.alsoIn' | transloco }}</span>
     @for (copy of copies(); track copy.id) {
-      <button type="button" class="also-entry">
+      <button type="button" class="also-entry" (click)="toggle(copy, $event)">
         {{ copy.source }} <span class="sep">·</span>
         <span class="t">{{ when(copy) }}</span>
       </button>
     }
   </div>
+}
+@if (selected(); as copy) {
+  <span
+    class="dup-popover"
+    [appDismissOnOutside]="!!selected()"
+    (dismiss)="close()"
+    [style.top.px]="panelTop()"
+    [style.left.px]="panelLeft()"
+  >
+    <span class="phd">{{ 'reader.alsoPublishedAs' | transloco }}</span>
+    <app-entry-row
+      [entry]="copy"
+      (open)="open.emit($event)"
+      (favorite)="favorite.emit($event)"
+      (keep)="keep.emit($event)"
+      (read)="read.emit($event)"
+    />
+  </span>
 }

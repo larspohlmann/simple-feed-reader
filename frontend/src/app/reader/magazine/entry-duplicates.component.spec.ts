@@ -51,3 +51,19 @@ it('renders one chip per duplicate with its source', () => {
   expect(chips.length).toBe(1);
   expect(chips[0].textContent).toContain('NDR Schleswig-Holstein');
 });
+
+it('opens a popover with the copy card and re-emits open for that copy', () => {
+  const dup = entry({ id: 2, title: 'NDR wording', source: 'NDR SH' });
+  const f = mount(entry({ duplicates: [dup] }));
+  const opened = jest.fn();
+  f.componentInstance.open.subscribe(opened);
+
+  (f.nativeElement.querySelector('.also-entry') as HTMLElement).click();
+  f.detectChanges();
+  const panel = f.nativeElement.querySelector('.dup-popover');
+  expect(panel).not.toBeNull();
+  expect(panel.textContent).toContain('NDR wording');
+
+  (panel.querySelector('app-entry-row .row') as HTMLElement).click();
+  expect(opened).toHaveBeenCalledWith(dup);
+});

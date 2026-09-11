@@ -40,3 +40,22 @@
 .t {
   color: var(--text-muted);
 }
+
+.dup-popover {
+  position: fixed;
+  z-index: 30;
+  display: block;
+  width: min(24rem, calc(100vw - var(--space-4)));
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  box-shadow: var(--panel-shadow);
+}
+
+.phd {
+  display: block;
+  margin-bottom: var(--space-1);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
