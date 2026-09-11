@@ -16,4 +16,21 @@ describe('ReportingErrorHandler', () => {
     expect(consoleError).toHaveBeenCalledWith(error);
     expect(report).toHaveBeenCalledWith(error);
   });
+
+  // provideBrowserGlobalErrorListeners() (app.config.ts) forwards a window
+  // `unhandledrejection` event's `reason` straight into this same
+  // handleError() — there is no separate listener for it (#984). A rejection
+  // with a non-Error reason exercises that path without simulating the
+  // window event, which would test Angular's own internals instead of ours.
+  it('reports an unhandled-rejection-style reason the same way', () => {
+    const report = jest.fn();
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    TestBed.configureTestingModule({
+      providers: [ReportingErrorHandler, { provide: ClientErrorReporter, useValue: { report } }],
+    });
+
+    TestBed.inject(ReportingErrorHandler).handleError('not ready');
+
+    expect(report).toHaveBeenCalledWith('not ready');
+  });
 });
