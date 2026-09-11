@@ -50,5 +50,6 @@ final class GrafanaSettingsTest extends TestCase
         self::assertFalse($settings->hasToken());
         self::assertSame('', $settings->getTokenHint());
         self::assertSame('u', $settings->getLokiPushUrlOverride());
+        self::assertEquals(new SealedSecret('', '', '', 1), $settings->getSealedToken());
     }
 }
