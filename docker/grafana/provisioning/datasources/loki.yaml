@@ -10,8 +10,10 @@ datasources:
     editable: false
     jsonData:
       derivedFields:
+        # trace_id rides inside the JSON log line, not as a stream label, so the
+        # matcher must read the line, not a label.
         - name: TraceID
-          matcherType: label
-          matcherRegex: trace_id
+          matcherType: regex
+          matcherRegex: '"trace_id":"(\w+)"'
           datasourceUid: tempo
           url: '${__value.raw}'
