@@ -25,6 +25,9 @@ final readonly class EntryScopePredicates
                 ->setParameter('sid', $query->subscriptionId);
         }
         if ($query->tagId !== null) {
+            // A tag matches at most one join row per subscription, so this inner
+            // join never duplicates an entry. IDENTITY() reads the tag_id FK
+            // without a second join to the tag table.
             $qb->innerJoin(
                 \sprintf('%s.subscriptionTags', $a->subscription),
                 $a->tag,
