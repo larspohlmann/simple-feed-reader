@@ -1,3 +1,7 @@
+.dup-wrap {
+  display: contents;
+}
+
 .also-foot {
   display: flex;
   align-items: center;
@@ -53,7 +57,7 @@
   box-shadow: var(--panel-shadow);
 }
 
-.phd {
+.popover-heading {
   display: block;
   margin-bottom: var(--space-1);
   color: var(--text-muted);

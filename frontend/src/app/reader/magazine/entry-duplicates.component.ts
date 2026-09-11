@@ -6,6 +6,8 @@ import { relativeTime } from '../format';
 import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
 
+let nextId = 0;
+
 @Component({
   selector: 'app-entry-duplicates',
   imports: [TranslocoPipe, DismissOnOutsideDirective, EntryRowComponent],
@@ -24,11 +26,13 @@ export class EntryDuplicatesComponent {
   readonly when = (copy: EntryDto): string =>
     relativeTime(copy.publishedAt ?? copy.createdAt, this.language.lang());
 
-  readonly selected = signal<EntryDto | null>(null);
+  protected readonly selected = signal<EntryDto | null>(null);
   protected readonly panelTop = signal(0);
   protected readonly panelLeft = signal(0);
+  protected readonly panelId = `dup-popover-${nextId++}`;
 
   toggle(copy: EntryDto, event: Event): void {
+    event.stopPropagation();
     const trigger = event.currentTarget as HTMLElement;
     if (this.selected() === copy) {
       this.close();
