@@ -62,6 +62,10 @@
           var surface = document.getElementById('boot-error');
           var root = document.querySelector('app-root');
           var timer = setTimeout(function () {
+            // A bootstrap rejection already revealed the surface and beaconed
+            // the real error (main.ts -> revealBootErrorSurface); reporting
+            // again here would double-report the same boot failure.
+            if (!surface || !surface.hasAttribute('hidden')) return;
             var message = 'Boot watchdog: no content within ' + BOOT_DEADLINE_MS + ' ms.';
             console.error(message);
             surface.removeAttribute('hidden');

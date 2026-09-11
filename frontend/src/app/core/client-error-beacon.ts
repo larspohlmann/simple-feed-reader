@@ -29,7 +29,7 @@ export interface SendClientErrorOptions {
   bearerToken?: string | null;
 }
 
-const CLIENT_ERRORS_PATH = 'api/client-errors';
+export const CLIENT_ERRORS_PATH = 'api/client-errors';
 
 /** The one place the three version fields become the one wire string. */
 export function buildVersionTag(): string {
@@ -61,21 +61,14 @@ function deliver(url: string, body: string, bearerToken?: string | null): void {
   navigator.sendBeacon?.(url, new Blob([body], { type: 'application/json' }));
 }
 
-/** Fire-and-forget POST of one error batch. Never throws back to the caller. */
-export function sendClientErrors(
-  items: ClientErrorItem[],
-  options: SendClientErrorOptions = {},
-): void {
+/** Fire-and-forget POST of one error. Never throws back to the caller. */
+export function sendClientError(item: ClientErrorItem, options: SendClientErrorOptions = {}): void {
   try {
     const url = options.url ?? resolveClientErrorsUrl();
-    deliver(url, JSON.stringify({ errors: items }), options.bearerToken);
+    deliver(url, JSON.stringify({ errors: [item] }), options.bearerToken);
   } catch {
     // Reporting an error must never raise one of its own.
   }
-}
-
-export function sendClientError(item: ClientErrorItem, options?: SendClientErrorOptions): void {
-  sendClientErrors([item], options);
 }
 
 /** Boot-time convenience for callers with no injector (boot-error-surface.ts). */

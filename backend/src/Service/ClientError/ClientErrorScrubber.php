@@ -44,11 +44,7 @@ final readonly class ClientErrorScrubber
 
     private function redact(string $text): string
     {
-        foreach (self::PATTERNS as $pattern => $replacement) {
-            $text = (string) preg_replace($pattern, $replacement, $text);
-        }
-
-        return $text;
+        return (string) preg_replace(array_keys(self::PATTERNS), array_values(self::PATTERNS), $text);
     }
 
     private function stripQueryAndFragment(?string $url): ?string

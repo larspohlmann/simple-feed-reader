@@ -6,6 +6,7 @@ namespace App\Service\ClientError;
 
 use App\Dto\ClientError\ClientErrorItem;
 use App\Entity\User;
+use App\Service\Logging\Loki\LokiPushHandler;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
@@ -19,7 +20,7 @@ final readonly class ClientErrorRecorder
 {
     public function __construct(
         private ClientErrorScrubber $scrubber,
-        #[Autowire(service: 'monolog.logger.client_errors')]
+        #[Autowire(service: 'monolog.logger.' . LokiPushHandler::CLIENT_ERRORS_CHANNEL)]
         private LoggerInterface $logger,
     ) {
     }

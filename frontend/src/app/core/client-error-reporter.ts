@@ -2,7 +2,12 @@
 import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { API_BASE_URL } from './api';
-import { ClientErrorItem, buildVersionTag, sendClientError } from './client-error-beacon';
+import {
+  CLIENT_ERRORS_PATH,
+  ClientErrorItem,
+  buildVersionTag,
+  sendClientError,
+} from './client-error-beacon';
 import { TokenStore } from './token.store';
 
 export const DEDUPE_WINDOW_MS = 10_000;
@@ -32,7 +37,7 @@ export class ClientErrorReporter {
         return;
       }
       sendClientError(item, {
-        url: `${this.baseUrl}/api/client-errors`,
+        url: `${this.baseUrl}/${CLIENT_ERRORS_PATH}`,
         bearerToken: this.tokens.token(),
       });
     } catch {
