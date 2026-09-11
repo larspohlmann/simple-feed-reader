@@ -243,3 +243,11 @@ services:
     App\Service\Logging\RequestLogProcessor:
         tags:
             - { name: monolog.processor }
+
+    monolog.formatter.json:
+        class: Monolog\Formatter\JsonFormatter
+        arguments:
+            $batchMode: !php/const Monolog\Formatter\JsonFormatter::BATCH_MODE_JSON
+            $appendNewline: true
+            $ignoreEmptyContextAndExtra: false
+            $includeStacktraces: true

@@ -190,7 +190,8 @@ Enforced mechanically by `composer check` and `composer md`:
   (`monolog.yaml`, #596), so the active file is
   `backend/var/log/dev-YYYY-MM-DD.log`, not `dev.log`. Scan today's file, e.g.
   `ls -t backend/var/log/dev-*.log | head -1`. `dev.log` reaches back 3 days;
-  the level stays `debug`.
+  the level stays `debug`. The dev file is JSON lines (#983); read it with
+  `jq`, e.g. `ls -t backend/var/log/dev-*.log | head -1 | xargs tail -n 50 | jq .`.
 - Symfony's `SendmailTransport` hardcodes `-bs`; a sendmail DSN needs an explicit
   `?command=` or mail fails silently after a `202`.
 
