@@ -118,9 +118,14 @@
         "tramp": "phptramp",
         "tramp:update": "composer update phptramp/phptramp --no-interaction --no-progress --no-scripts",
         "check": ["@cs", "@stan", "@tramp"],
-        "infection:coverage": "@php -d pcov.directory=src vendor/bin/phpunit --coverage-xml=var/infection/coverage-xml --log-junit=var/infection/junit.xml",
-        "infection": ["@infection:coverage", "infection --threads=max --coverage=var/infection --skip-initial-tests"],
-        "infection:diff": ["@infection:coverage", "infection --git-diff-filter=AM --git-diff-base=origin/develop --threads=max --ignore-msi-with-no-mutations --coverage=var/infection --skip-initial-tests"],
+        "infection": [
+            "@putenv OTEL_PHP_DISABLED_INSTRUMENTATIONS=all",
+            "infection --threads=max"
+        ],
+        "infection:diff": [
+            "@putenv OTEL_PHP_DISABLED_INSTRUMENTATIONS=all",
+            "infection --git-diff-filter=AM --git-diff-base=origin/develop --threads=max --ignore-msi-with-no-mutations"
+        ],
         "e2e": "bin/e2e.sh"
     },
     "conflict": {
