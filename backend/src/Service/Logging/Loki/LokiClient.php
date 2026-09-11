@@ -26,12 +26,15 @@ final readonly class LokiClient
      */
     public function push(array $lines): void
     {
-        $url = $this->endpoint->pushUrl();
-        if (null === $url || [] === $lines) {
+        if ([] === $lines) {
             return;
         }
 
         try {
+            $url = $this->endpoint->pushUrl();
+            if (null === $url) {
+                return;
+            }
             $this->httpClient->request('POST', $url, $this->options($lines))->getStatusCode();
         } catch (\Throwable) {
             // fail-open: logging must never break the request

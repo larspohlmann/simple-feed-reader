@@ -80,6 +80,32 @@ final class LokiClientTest extends TestCase
         $client->push([['ts' => '1', 'line' => '{}', 'labels' => ['app' => 'sfr']]]);
     }
 
+    public function testSwallowsErrorsFromResolvingTheEndpoint(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        $http = new MockHttpClient(fn (): MockResponse => new MockResponse('', ['http_code' => 204]));
+        $endpoint = new class implements LokiEndpoint {
+            public function pushUrl(): ?string
+            {
+                throw new \RuntimeException('settings unavailable');
+            }
+
+            public function username(): ?string
+            {
+                return null;
+            }
+
+            public function token(): ?string
+            {
+                return null;
+            }
+        };
+        $client = new LokiClient($http, $endpoint);
+
+        $client->push([['ts' => '1', 'line' => '{}', 'labels' => ['app' => 'sfr']]]);
+    }
+
     public function testDoesNothingWhenNoUrlConfigured(): void
     {
         $calls = 0;
