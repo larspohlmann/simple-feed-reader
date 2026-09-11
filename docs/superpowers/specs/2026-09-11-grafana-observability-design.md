@@ -40,6 +40,9 @@ Strato cannot run containers or the PECL extension. It still gets JSON logs, a
   **without** the `opentelemetry` extension and must stay green.
 - Log retention (Loki) 14 days; trace retention (Tempo) 72 hours; 100% head
   sampling for traces.
+- **Grafana image pinned to a 9.0-or-later release** — the `mcp-grafana` server
+  requires Grafana 9.0+. Phases 4 and 5 use `grafana/grafana:11.5.2`; never
+  downgrade below 9.0.
 
 ## Phase 1 — structured JSON logging + request-id processor
 
@@ -196,6 +199,17 @@ span waterfall in Tempo, correlated to its logs.
 **Testable:** the conditional bundle registration (present-vs-absent extension);
 composer resolves without the extension; `docker compose config`; a manual smoke
 that a request appears as a trace in Tempo and its logs link across.
+
+## Dev tooling — Grafana MCP server
+
+Not a product/stack change: a repo-root `.mcp.json` entry runs the open-source
+`mcp/grafana` server over stdio (in Docker) for local Claude sessions, pointed
+at the dev Grafana (`http://host.docker.internal:3000`). It reads a Grafana
+service-account token from `GRAFANA_SERVICE_ACCOUNT_TOKEN` (never committed);
+setup is documented in `docs/local-docker.md`. Requires Grafana 9.0+ (satisfied
+by the pinned 11.5.2). It is deliberately **not** shipped as a stack container
+(the user chose tooling-only), and production uses its own Grafana or Grafana
+Cloud's MCP.
 
 ## Out of scope (this issue)
 
