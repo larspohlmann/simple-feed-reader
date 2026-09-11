@@ -7,6 +7,8 @@ namespace App\Service\Recommendation;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
+use App\Repository\DuplicateCollapseDql;
+use App\Repository\EntryAliases;
 use App\Repository\SubscriptionDisplayTitle;
 use App\Service\Text\PlainText;
 use Doctrine\DBAL\Types\Types;
@@ -28,8 +30,10 @@ use Random\Randomizer;
  */
 final readonly class RecommendationCandidateLoader
 {
-    public function __construct(private EntityManagerInterface $entityManager)
-    {
+    public function __construct(
+        private EntityManagerInterface $entityManager,
+        private DuplicateCollapseDql $collapse,
+    ) {
     }
 
     /**
@@ -62,9 +66,11 @@ final readonly class RecommendationCandidateLoader
             ->andWhere('e.effectiveDate >= :since')
             ->orderBy('e.effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
-            ->setMaxResults($request->poolSize)
             ->setParameter('since', $request->since)
             ->setParameter('notInteracted', false, Types::BOOLEAN);
+
+        $this->collapse->apply($qb, $this->poolScope(...), $userId);
+        $qb->setMaxResults($request->poolSize);
 
         $lines = $this->linesFor($qb);
 
@@ -147,6 +153,22 @@ final readonly class RecommendationCandidateLoader
             oldest: (new \DateTimeImmutable($oldest))->format('Y-m-d'),
             newest: (new \DateTimeImmutable($newest))->format('Y-m-d'),
         );
+    }
+
+    /**
+     * The pool's own scope, restated for DuplicateCollapseDql's e2/es2/s2 aliases: a
+     * collapse candidate that fails this must not survive to knock out an in-scope copy.
+     */
+    private function poolScope(QueryBuilder $inner, EntryAliases $aliases): void
+    {
+        $inner->andWhere(\sprintf('%s.includeInForYou = true', $aliases->subscription))
+            ->andWhere(\sprintf(
+                '(%1$s.isFavorite = :notInteracted OR %1$s.isFavorite IS NULL)'
+                . ' AND (%1$s.isKept = :notInteracted OR %1$s.isKept IS NULL)'
+                . ' AND (%1$s.isViewed = :notInteracted OR %1$s.isViewed IS NULL)',
+                $aliases->state,
+            ))
+            ->andWhere(\sprintf('%s.effectiveDate >= :since', $aliases->entry));
     }
 
     private function candidateQueryBuilder(int $userId): QueryBuilder
