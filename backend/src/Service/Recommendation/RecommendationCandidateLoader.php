@@ -7,6 +7,8 @@ namespace App\Service\Recommendation;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
+use App\Repository\DuplicateCollapseDql;
+use App\Repository\EntryAliases;
 use App\Repository\SubscriptionDisplayTitle;
 use App\Service\Text\PlainText;
 use Doctrine\DBAL\Types\Types;
@@ -28,8 +30,10 @@ use Random\Randomizer;
  */
 final readonly class RecommendationCandidateLoader
 {
-    public function __construct(private EntityManagerInterface $entityManager)
-    {
+    public function __construct(
+        private EntityManagerInterface $entityManager,
+        private DuplicateCollapseDql $collapse,
+    ) {
     }
 
     /**
@@ -45,26 +49,14 @@ final readonly class RecommendationCandidateLoader
     {
         $qb = $this->candidateQueryBuilder($userId)
             ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
-            // No read/unread filter (isHidden flag, markedReadUntil watermark): excluding
-            // caught-up entries emptied the pool and zeroed the run. Only per-entry history
-            // is excluded -- favorited/kept/viewed entries already fill the prompt's
-            // FAVORITES/KEPT/VIEWED sections, so re-scoring them re-recommends what the
-            // reader acted on; a change there must update both. es is a LEFT JOIN, so a
-            // stateless entry stays a candidate, hence the null-safe OR on each flag.
-            ->andWhere(
-                '(es.isFavorite = :notInteracted OR es.isFavorite IS NULL)'
-                . ' AND (es.isKept = :notInteracted OR es.isKept IS NULL)'
-                . ' AND (es.isViewed = :notInteracted OR es.isViewed IS NULL)',
-            )
-            // The window is the reader's own look-back setting, already
-            // resolved to an instant by the caller. Inclusive: an entry
-            // stamped exactly at the boundary is inside the window.
-            ->andWhere('e.effectiveDate >= :since')
             ->orderBy('e.effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
-            ->setMaxResults($request->poolSize)
             ->setParameter('since', $request->since)
             ->setParameter('notInteracted', false, Types::BOOLEAN);
+
+        $this->poolScope($qb, EntryAliases::primary());
+        $this->collapse->apply($qb, $this->poolScope(...), $userId);
+        $qb->setMaxResults($request->poolSize);
 
         $lines = $this->linesFor($qb);
 
@@ -147,6 +139,23 @@ final readonly class RecommendationCandidateLoader
             oldest: (new \DateTimeImmutable($oldest))->format('Y-m-d'),
             newest: (new \DateTimeImmutable($newest))->format('Y-m-d'),
         );
+    }
+
+    /**
+     * The pool's scope, shared by the outer query and DuplicateCollapseDql's inner
+     * semi-join so the two cannot drift and reopen a hole (#496). No read/unread
+     * filter: excluding caught-up entries emptied the pool and zeroed the run.
+     */
+    private function poolScope(QueryBuilder $inner, EntryAliases $aliases): void
+    {
+        $inner->andWhere(\sprintf('%s.includeInForYou = true', $aliases->subscription))
+            ->andWhere(\sprintf(
+                '(%1$s.isFavorite = :notInteracted OR %1$s.isFavorite IS NULL)'
+                . ' AND (%1$s.isKept = :notInteracted OR %1$s.isKept IS NULL)'
+                . ' AND (%1$s.isViewed = :notInteracted OR %1$s.isViewed IS NULL)',
+                $aliases->state,
+            ))
+            ->andWhere(\sprintf('%s.effectiveDate >= :since', $aliases->entry));
     }
 
     private function candidateQueryBuilder(int $userId): QueryBuilder

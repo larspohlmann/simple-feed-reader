@@ -6,8 +6,6 @@ namespace App\Repository;
 
 use App\Entity\Entry;
 use App\Entity\Subscription;
-use App\Service\Search\SearchTerms;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -30,6 +28,8 @@ class EntryListRepository extends AbstractEntryProjectionRepository
         ManagerRegistry $registry,
         private readonly EntryListRowHydrator $rowHydrator,
         private readonly SearchTermsPredicateBuilder $termsPredicateBuilder,
+        private readonly EntryScopePredicates $scope,
+        private readonly DuplicateCollapseDql $collapse,
     ) {
         parent::__construct($registry, Entry::class);
     }
@@ -47,32 +47,21 @@ class EntryListRepository extends AbstractEntryProjectionRepository
     public function listForUser(EntryQuery $query): array
     {
         $sort = EntryListSort::forView($query->view);
+        $applyScope = function (QueryBuilder $qb, EntryAliases $aliases) use ($query): void {
+            $this->scope->applyList($qb, $aliases, $query);
+        };
+
         $qb = $this->orderedBy($this->rowQueryBuilder($query->userId), $sort)
             ->setMaxResults($query->limit);
-
-        if ($query->subscriptionId !== null) {
-            $qb->andWhere('s.id = :sid')->setParameter('sid', $query->subscriptionId);
-        }
-
-        if ($query->tagId !== null) {
-            // A tag matches at most one join row per subscription, so this inner
-            // join never duplicates an entry. IDENTITY() reads the tag_id FK
-            // without a second join to the tag table.
-            $qb->innerJoin('s.subscriptionTags', 'st', 'WITH', 'IDENTITY(st.tag) = :tagId')
-                ->setParameter('tagId', $query->tagId);
-        }
-
-        if ($query->hidesExcludedFeeds()) {
-            $qb->andWhere('s.includeInAllItems = true');
-        }
-
-        $this->applyView($qb, $query->view);
+        $applyScope($qb, EntryAliases::primary());
+        $this->collapse->apply($qb, $applyScope, $query->userId);
         $this->applyCursor($qb, $query->cursor, $sort);
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $qb->getQuery()->getResult();
+        $survivors = array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
 
-        return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
+        return $this->attachDuplicates($survivors, $applyScope, $query->userId);
     }
 
     /**
@@ -85,21 +74,22 @@ class EntryListRepository extends AbstractEntryProjectionRepository
      */
     public function searchForUser(EntrySearchQuery $query): array
     {
+        $applyScope = function (QueryBuilder $qb, EntryAliases $aliases) use ($query): void {
+            $this->scope->applySearch($qb, $aliases, $query);
+        };
         $qb = $this->newestFirst($this->rowQueryBuilder($query->userId))
             ->setMaxResults($query->limit);
-
-        $this->applyTerms($qb, $query->terms);
-        if ($query->unread) {
-            $this->applyUnreadFilter($qb);
-        }
+        $applyScope($qb, EntryAliases::primary());
+        $this->collapse->apply($qb, $applyScope, $query->userId);
         // Search ranks by publish instant like the default list, never by view
         // time, so its cursor predicate is the effectiveDate one.
         $this->applyCursor($qb, $query->cursor, EntryListSort::PublishedDate);
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $qb->getQuery()->getResult();
+        $survivors = array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
 
-        return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
+        return $this->attachDuplicates($survivors, $applyScope, $query->userId);
     }
 
     /**
@@ -169,19 +159,21 @@ class EntryListRepository extends AbstractEntryProjectionRepository
             return [];
         }
 
-        $rowQuery = $this->newestFirst(
-            $this->rowQueryBuilder($userId)
-                ->andWhere('e.id IN (:ids)')
-                ->setParameter('ids', $entryIds),
-        );
+        $applyScope = function (QueryBuilder $qb, EntryAliases $aliases) use ($entryIds): void {
+            $this->scope->applyIds($qb, $aliases, $entryIds);
+        };
+        $rowQuery = $this->newestFirst($this->rowQueryBuilder($userId));
+        $applyScope($rowQuery, EntryAliases::primary());
+        $this->collapse->apply($rowQuery, $applyScope, $userId);
         if ($limit !== null) {
             $rowQuery->setMaxResults($limit);
         }
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $rowQuery->getQuery()->getResult();
+        $survivors = array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
 
-        return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
+        return $this->attachDuplicates($survivors, $applyScope, $userId);
     }
 
     /**
@@ -199,6 +191,27 @@ class EntryListRepository extends AbstractEntryProjectionRepository
             ->getOneOrNullResult();
 
         return $row === null ? null : $this->rowHydrator->hydrate($row);
+    }
+
+    /**
+     * Every OTHER copy of the same article this caller subscribes to, as list
+     * rows — the group a read/viewed mirror must reach. Not collapsed: the
+     * mirror needs each copy, hidden or shown.
+     *
+     * @return list<EntryListRow>
+     */
+    public function siblingRowsForUser(string $urlHash, int $excludeEntryId, int $userId): array
+    {
+        /** @var list<array<array-key, mixed>> $rows */
+        $rows = $this->rowQueryBuilder($userId)
+            ->andWhere('e.urlHash = :hash')
+            ->andWhere('e.id <> :self')
+            ->setParameter('hash', $urlHash)
+            ->setParameter('self', $excludeEntryId)
+            ->getQuery()
+            ->getResult();
+
+        return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
     }
 
     /**
@@ -222,44 +235,60 @@ class EntryListRepository extends AbstractEntryProjectionRepository
     private function unreadMatchQueryBuilder(EntrySearchQuery $query): QueryBuilder
     {
         $qb = $this->unreadEntriesQueryBuilder($query->userId);
-        $this->applyTerms($qb, $query->terms);
+        $qb->andWhere($this->termsPredicateBuilder->build($qb, $query->terms, 'term'));
 
         return $qb;
     }
 
-    private function applyView(QueryBuilder $qb, string $view): void
-    {
-        switch ($view) {
-            case 'unread':
-                $this->applyUnreadFilter($qb);
-                break;
-            case 'favorites':
-                $qb->andWhere('es.isFavorite = :flag')->setParameter('flag', true, Types::BOOLEAN);
-                break;
-            case 'kept':
-                $qb->andWhere('es.isKept = :flag')->setParameter('flag', true, Types::BOOLEAN);
-                break;
-            case 'viewed':
-                $qb->andWhere('es.isViewed = :flag')->setParameter('flag', true, Types::BOOLEAN);
-                break;
-            default:
-                // 'all' — no state filter.
-                break;
-        }
-    }
-
     /**
-     * The mode is decided once for the whole query (SearchTerms::$isWholeWord),
-     * not per term — every term takes the same path.
+     * Attach to each survivor the in-scope copies the collapse hid, so a card can
+     * name them. One extra query per page over the same scope, minus the collapse
+     * and the cursor.
+     *
+     * @param list<EntryListRow>                          $survivors
+     * @param callable(QueryBuilder, EntryAliases): void  $applyScope
+     *
+     * @return list<EntryListRow>
      */
-    private function applyTerms(QueryBuilder $qb, SearchTerms $terms): void
+    private function attachDuplicates(array $survivors, callable $applyScope, int $userId): array
     {
-        $qb->andWhere($this->termsPredicateBuilder->build($qb, $terms, 'term'));
-    }
+        $hashes = [];
+        $survivorIds = [];
+        foreach ($survivors as $row) {
+            $hash = $row->entry->getUrlHash();
+            if ($hash !== null) {
+                $hashes[$hash] = true;
+                $survivorIds[] = (int) $row->entry->getId();
+            }
+        }
+        if ($hashes === []) {
+            return $survivors;
+        }
 
-    private function applyUnreadFilter(QueryBuilder $qb): void
-    {
-        $qb->andWhere(UnreadDql::predicate())
-            ->setParameter('notHidden', false, Types::BOOLEAN);
+        $qb = $this->rowQueryBuilder($userId);
+        $applyScope($qb, EntryAliases::primary());
+        $qb->andWhere('e.urlHash IN (:dupHashes)')
+            ->andWhere('e.id NOT IN (:survivorIds)')
+            ->setParameter('dupHashes', array_keys($hashes))
+            ->setParameter('survivorIds', $survivorIds);
+
+        /** @var list<array<array-key, mixed>> $rows */
+        $rows = $qb->getQuery()->getResult();
+        $byHash = [];
+        foreach ($rows as $raw) {
+            $sibling = $this->rowHydrator->hydrate($raw);
+            $byHash[(string) $sibling->entry->getUrlHash()][] = $sibling;
+        }
+
+        return array_map(
+            static function (EntryListRow $row) use ($byHash): EntryListRow {
+                $hash = $row->entry->getUrlHash();
+
+                return $hash !== null && isset($byHash[$hash])
+                    ? $row->withDuplicates($byHash[$hash])
+                    : $row;
+            },
+            $survivors,
+        );
     }
 }

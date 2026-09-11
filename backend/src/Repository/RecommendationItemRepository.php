@@ -219,8 +219,7 @@ final class RecommendationItemRepository extends ServiceEntityRepository
 
         $listRow = new EntryListRow(
             entry: $entry,
-            subscriptionId: self::toInt($row['subscriptionId']),
-            subscriptionTitle: $this->rowTitle($row),
+            subscription: new EntryListRowSubscription(self::toInt($row['subscriptionId']), $this->rowTitle($row)),
             isHidden: EffectiveReadState::isHidden(
                 $esHidden === null ? null : (bool) $esHidden,
                 $markedReadUntil instanceof \DateTimeInterface ? $markedReadUntil : null,

@@ -869,6 +869,8 @@
   },
   "reader": {
     "toggleSidebar": "Seitenleiste umschalten",
+    "alsoIn": "Auch in",
+    "alsoPublishedAs": "Auch veröffentlicht als",
     "refresh": "Aktualisieren",
     "refreshing": "Aktualisiere…",
     "lastRefreshed": "Zuletzt aktualisiert",

@@ -9,6 +9,7 @@ use App\Entity\Feed;
 use App\Http\EntryCursor;
 use App\Http\SearchPage;
 use App\Repository\EntryListRow;
+use App\Repository\EntryListRowSubscription;
 use App\Service\Search\EntrySearchResult;
 use PHPUnit\Framework\TestCase;
 
@@ -132,8 +133,7 @@ final class SearchPageTest extends TestCase
 
         return new EntryListRow(
             entry: $entry,
-            subscriptionId: 1,
-            subscriptionTitle: 'Example',
+            subscription: new EntryListRowSubscription(1, 'Example'),
             isHidden: false,
             isFavorite: false,
             isKept: false,

@@ -869,6 +869,8 @@
   },
   "reader": {
     "toggleSidebar": "Toggle sidebar",
+    "alsoIn": "Also in",
+    "alsoPublishedAs": "Also published as",
     "refresh": "Refresh",
     "refreshing": "Refreshing…",
     "lastRefreshed": "Last refreshed",

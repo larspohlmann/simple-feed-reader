@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -16,8 +17,10 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 class EntryStateRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
-    {
+    public function __construct(
+        ManagerRegistry $registry,
+        private readonly DuplicateCollapseDql $collapse,
+    ) {
         parent::__construct($registry, EntryState::class);
     }
 
@@ -33,6 +36,38 @@ class EntryStateRepository extends ServiceEntityRepository
             ->andWhere('s.user = :userId')->setParameter('userId', $userId)
             ->getQuery()
             ->getSingleScalarResult();
+    }
+
+    /**
+     * Idempotent insert of the (user, entry) state row, seeded for read state:
+     * one racing writer wins, the other's INSERT is ignored rather than dying on
+     * the duplicate primary key, and an existing row keeps its flags.
+     */
+    public function ensureRow(int $userId, int $entryId, bool $seedHidden, ?\DateTimeImmutable $seedHiddenAt): void
+    {
+        $connection = $this->getEntityManager()->getConnection();
+        $isMysql = $connection->getDatabasePlatform() instanceof AbstractMySQLPlatform;
+        $conflictClause = $isMysql ? 'IGNORE' : 'OR IGNORE';
+
+        $connection->executeStatement(
+            sprintf(
+                'INSERT %s INTO entry_state'
+                . ' (user_id, entry_id, is_hidden, hidden_at, is_favorite, is_kept, is_viewed, viewed_at)'
+                . ' VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                $conflictClause,
+            ),
+            [$userId, $entryId, $seedHidden, $seedHiddenAt, false, false, false, null],
+            [
+                Types::INTEGER,
+                Types::INTEGER,
+                Types::BOOLEAN,
+                Types::DATETIME_IMMUTABLE,
+                Types::BOOLEAN,
+                Types::BOOLEAN,
+                Types::BOOLEAN,
+                Types::DATETIME_IMMUTABLE,
+            ],
+        );
     }
 
     public function findOneForUserEntry(int $userId, int $entryId): ?EntryState
@@ -217,18 +252,21 @@ class EntryStateRepository extends ServiceEntityRepository
      */
     public function unreadCountsForUser(int $userId): array
     {
+        $collapse = $this->collapse->fragment(UnreadDql::predicate(EntryAliases::collapse()));
+
         /** @var list<array{subscriptionId: int, unreadCount: int}> $rows */
         $rows = $this->getEntityManager()->createQuery(sprintf(
             'SELECT s.id AS subscriptionId, COUNT(e.id) AS unreadCount
              FROM %s s
              JOIN %s e ON e.feed = s.feed
              LEFT JOIN %s es ON es.entry = e AND es.user = s.user
-             WHERE s.user = :user AND (%s)
+             WHERE s.user = :user AND (%s) AND (%s)
              GROUP BY s.id',
             Subscription::class,
             Entry::class,
             EntryState::class,
             UnreadDql::predicate(),
+            $collapse,
         ))
             ->setParameter('user', $userId)
             ->setParameter('notHidden', false, Types::BOOLEAN)

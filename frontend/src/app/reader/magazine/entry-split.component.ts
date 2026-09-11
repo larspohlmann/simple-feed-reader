@@ -1,11 +1,12 @@
 import { Component, computed, input } from '@angular/core';
 import { EntryKickerLineComponent } from './entry-kicker-line.component';
 import { EntryMetaComponent } from '../entry-meta/entry-meta.component';
+import { EntryDuplicatesComponent } from './entry-duplicates.component';
 import { EntryImageBlockBase } from './entry-image-block-base';
 
 @Component({
   selector: 'app-entry-split',
-  imports: [EntryKickerLineComponent, EntryMetaComponent],
+  imports: [EntryKickerLineComponent, EntryMetaComponent, EntryDuplicatesComponent],
   templateUrl: './entry-split.component.html',
   styleUrl: './entry-split.component.scss',
 })

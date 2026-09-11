@@ -18,7 +18,8 @@ final class EntryJson
      *   attachments: list<array<string, string|int>>,
      *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
-     *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool
+     *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool,
+     *   duplicates: list<array<string, mixed>>
      * }
      */
     public static function one(EntryListRow $row): array
@@ -47,6 +48,7 @@ final class EntryJson
             'isFavorite' => $row->isFavorite,
             'isKept' => $row->isKept,
             'isViewed' => $row->isViewed,
+            'duplicates' => array_map(self::one(...), $row->duplicates),
         ];
     }
 }

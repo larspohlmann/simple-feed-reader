@@ -66,6 +66,39 @@ final class EntryControllerTest extends WebTestCase
         return $sub;
     }
 
+    /**
+     * A single-entry feed sharing $urlHash with another feed seeded the same
+     * way, for asserting the cross-feed duplicate-collapse footer.
+     */
+    private function seedFeedWithMatchingEntry(
+        User $user,
+        string $feedTitle,
+        string $urlHash,
+        \DateTimeImmutable $effectiveDate,
+    ): Entry {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+
+        $feed = new Feed('https://example.com/dup-feed-' . uniqid('', true) . '.xml');
+        $feed->setTitle($feedTitle);
+        $em->persist($feed);
+        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+
+        $entry = new Entry(
+            $feed,
+            'dup-guid-' . uniqid('', true),
+            'https://tagesschau.de/x',
+            $feedTitle . ' entry',
+            $effectiveDate,
+            $effectiveDate,
+            $urlHash,
+        );
+        $em->persist($entry);
+        $em->flush();
+
+        return $entry;
+    }
+
     private function seedDebugEnabledSettings(User $user): void
     {
         $em = self::getContainer()->get(EntityManagerInterface::class);
@@ -150,6 +183,31 @@ final class EntryControllerTest extends WebTestCase
         self::assertNull($second['imageUrl']);
         self::assertNull($second['imageWidth']);
         self::assertNull($second['imageHeight']);
+    }
+
+    public function testEntryDuplicatesNameTheOtherFeedAsSource(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-duplicates@example.com');
+
+        $earlier = new \DateTimeImmutable('2026-07-05T09:00:00Z');
+        $later = new \DateTimeImmutable('2026-07-05T10:00:00Z');
+        $this->seedFeedWithMatchingEntry($user, 'Feed A', 'urlhash-dup-x', $earlier);
+        $this->seedFeedWithMatchingEntry($user, 'Feed B', 'urlhash-dup-x', $later);
+
+        $client->request('GET', '/api/entries', server: $headers);
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entries']);
+        self::assertCount(1, $body['entries']);
+        $entry = $body['entries'][0];
+        self::assertIsArray($entry);
+        self::assertIsArray($entry['duplicates']);
+        self::assertCount(1, $entry['duplicates']);
+        $duplicate = $entry['duplicates'][0];
+        self::assertIsArray($duplicate);
+        self::assertSame('Feed B', $duplicate['source']);
     }
 
     public function testPaginatesWithCursor(): void
@@ -847,6 +905,53 @@ final class EntryControllerTest extends WebTestCase
         self::assertIsArray($body['state']);
         self::assertTrue($body['state']['isViewed']);
         self::assertNotNull($body['state']['viewedAt']);
+    }
+
+    /**
+     * The duplicate-collapse badge count (#496) hides a higher-id duplicate's
+     * own unread count as long as a lower-id copy is unread: two subscribed
+     * copies of the same article show ONE unread, attributed to the survivor
+     * (lowest id). Without the mirror, hiding the survivor alone would make the
+     * sibling's own copy the "only" unread one left in its group — its badge
+     * would jump from 0 to 1, a duplicate resurfacing as unread in another
+     * feed. Mirroring isHidden onto the sibling keeps its badge at 0.
+     */
+    public function testHidingASurvivorMirrorsToTheSiblingSoItsBadgeStaysClear(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-mirror@example.com');
+
+        $earlier = new \DateTimeImmutable('2026-07-05T09:00:00Z');
+        $later = new \DateTimeImmutable('2026-07-05T10:00:00Z');
+        $survivor = $this->seedFeedWithMatchingEntry($user, 'Feed A', 'urlhash-mirror-x', $earlier);
+        $sibling = $this->seedFeedWithMatchingEntry($user, 'Feed B', 'urlhash-mirror-x', $later);
+
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $survivorSubscription = $em->getRepository(Subscription::class)
+            ->findOneBy(['user' => $user, 'feed' => $survivor->getFeed()]);
+        $siblingSubscription = $em->getRepository(Subscription::class)
+            ->findOneBy(['user' => $user, 'feed' => $sibling->getFeed()]);
+        self::assertInstanceOf(Subscription::class, $survivorSubscription);
+        self::assertInstanceOf(Subscription::class, $siblingSubscription);
+
+        self::assertSame(1, $this->unreadCountOf($client, $headers, (int) $survivorSubscription->getId()));
+        self::assertSame(0, $this->unreadCountOf($client, $headers, (int) $siblingSubscription->getId()));
+
+        $client->request(
+            'PATCH',
+            '/api/entries/' . $survivor->getId() . '/state',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['isHidden' => true], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseIsSuccessful();
+
+        self::assertSame(0, $this->unreadCountOf($client, $headers, (int) $survivorSubscription->getId()));
+        self::assertSame(
+            0,
+            $this->unreadCountOf($client, $headers, (int) $siblingSubscription->getId()),
+            'Hiding the survivor must mirror isHidden onto the sibling copy, not resurrect it as unread.',
+        );
     }
 
     public function testCannotPatchEntryOfUnsubscribedFeed(): void

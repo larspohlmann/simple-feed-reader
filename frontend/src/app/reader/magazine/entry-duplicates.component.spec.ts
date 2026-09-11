@@ -1,0 +1,109 @@
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { OverlayContainer } from '@angular/cdk/overlay';
+import { EntryDto } from '../models';
+import { EntryDuplicatesComponent } from './entry-duplicates.component';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
+
+const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
+  id: 1,
+  title: 'Main',
+  url: null,
+  author: null,
+  summary: null,
+  contentHtml: null,
+  imageUrl: null,
+  imageWidth: null,
+  imageHeight: null,
+  media: [],
+  attachments: [],
+  publishedAt: '2026-07-05T09:00:00Z',
+  createdAt: '2026-07-05T09:00:00Z',
+  subscriptionId: 1,
+  source: 'tagesschau',
+  faviconUrl: null,
+  isHidden: false,
+  isFavorite: false,
+  isKept: false,
+  isViewed: false,
+  ...over,
+});
+
+function mount(e: EntryDto) {
+  TestBed.configureTestingModule({
+    imports: [EntryDuplicatesComponent, provideTranslocoTesting()],
+    providers: [provideRouter([])],
+  });
+  const f = TestBed.createComponent(EntryDuplicatesComponent);
+  f.componentRef.setInput('entry', e);
+  f.detectChanges();
+  return f;
+}
+
+it('renders nothing without duplicates', () => {
+  const el = mount(entry()).nativeElement as HTMLElement;
+  expect(el.querySelector('.also-foot')).toBeNull();
+});
+
+it('renders one chip per duplicate with its source', () => {
+  const dup = entry({ id: 2, source: 'NDR Schleswig-Holstein' });
+  const el = mount(entry({ duplicates: [dup] })).nativeElement as HTMLElement;
+  const chips = el.querySelectorAll('.also-entry');
+  expect(chips.length).toBe(1);
+  expect(chips[0].textContent).toContain('NDR Schleswig-Holstein');
+});
+
+it('opens a popover with the copy card and re-emits open for that copy', () => {
+  const dup = entry({ id: 2, title: 'NDR wording', source: 'NDR SH' });
+  const f = mount(entry({ duplicates: [dup] }));
+  const opened = jest.fn();
+  f.componentInstance.open.subscribe(opened);
+
+  (f.nativeElement.querySelector('.also-entry') as HTMLElement).click();
+  f.detectChanges();
+  const overlay = TestBed.inject(OverlayContainer).getContainerElement();
+  const panel = overlay.querySelector('.dup-popover');
+  expect(panel).not.toBeNull();
+  expect(panel!.textContent).toContain('NDR wording');
+
+  (panel!.querySelector('app-entry-row .row') as HTMLElement).click();
+  expect(opened).toHaveBeenCalledWith(dup);
+});
+
+it('closes the popover once the copy is opened', () => {
+  const dup = entry({ id: 2, title: 'NDR wording', source: 'NDR SH' });
+  const f = mount(entry({ duplicates: [dup] }));
+  const opened = jest.fn();
+  f.componentInstance.open.subscribe(opened);
+
+  (f.nativeElement.querySelector('.also-entry') as HTMLElement).click();
+  f.detectChanges();
+  const overlay = TestBed.inject(OverlayContainer).getContainerElement();
+
+  (overlay.querySelector('.dup-popover app-entry-row .row') as HTMLElement).click();
+  f.detectChanges();
+
+  expect(opened).toHaveBeenCalledWith(dup);
+  expect(overlay.querySelector('.dup-popover')).toBeNull();
+});
+
+it('flips the favorite icon in the popover and re-emits favorite for the copy', () => {
+  const dup = entry({ id: 2, title: 'NDR wording', source: 'NDR SH' });
+  const f = mount(entry({ duplicates: [dup] }));
+  const favorited = jest.fn();
+  f.componentInstance.favorite.subscribe(favorited);
+
+  (f.nativeElement.querySelector('.also-entry') as HTMLElement).click();
+  f.detectChanges();
+  const overlay = TestBed.inject(OverlayContainer).getContainerElement();
+  const favoriteButton = overlay.querySelector(
+    '.dup-popover button[aria-label="Favorite"]',
+  ) as HTMLElement;
+
+  favoriteButton.click();
+  f.detectChanges();
+
+  expect(favorited).toHaveBeenCalledWith(dup);
+  expect(favoriteButton.classList.contains('on')).toBe(true);
+  expect(favoriteButton.getAttribute('aria-pressed')).toBe('true');
+});

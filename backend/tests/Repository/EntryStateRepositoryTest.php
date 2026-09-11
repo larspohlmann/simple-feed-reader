@@ -80,4 +80,70 @@ final class EntryStateRepositoryTest extends DbTestCase
 
         self::assertSame([(int) $withState->getId()], $result);
     }
+
+    public function testEnsureRowIsIdempotentAndLeavesExactlyOneRow(): void
+    {
+        $entry = $this->entry('ensure-idempotent');
+        $userId = (int) $this->user->getId();
+        $entryId = (int) $entry->getId();
+
+        $this->repo()->ensureRow($userId, $entryId, false, null);
+        $this->repo()->ensureRow($userId, $entryId, false, null);
+
+        self::assertSame(1, $this->repo()->countForUser($userId));
+    }
+
+    public function testEnsureRowDoesNotClobberAnExistingRowsFlags(): void
+    {
+        $entry = $this->entry('ensure-keeps-flags');
+        $userId = (int) $this->user->getId();
+        $entryId = (int) $entry->getId();
+
+        $this->repo()->ensureRow($userId, $entryId, false, null);
+
+        $state = $this->repo()->findOneForUserEntry($userId, $entryId);
+        self::assertNotNull($state);
+        $state->setIsFavorite(true);
+        $this->em->flush();
+
+        $this->repo()->ensureRow($userId, $entryId, false, null);
+
+        $this->em->clear();
+        $reloaded = $this->repo()->findOneForUserEntry($userId, $entryId);
+        self::assertNotNull($reloaded);
+        self::assertTrue($reloaded->isFavorite());
+    }
+
+    public function testEnsureRowSeedsAnEffectivelyReadRowHiddenFromTheWatermark(): void
+    {
+        $entry = $this->entry('ensure-seed-hidden');
+        $userId = (int) $this->user->getId();
+        $entryId = (int) $entry->getId();
+        $watermark = new \DateTimeImmutable('2026-07-08T09:30:00');
+
+        $this->repo()->ensureRow($userId, $entryId, true, $watermark);
+
+        $this->em->clear();
+        $state = $this->repo()->findOneForUserEntry($userId, $entryId);
+        self::assertNotNull($state);
+        self::assertTrue($state->isHidden());
+        self::assertEquals($watermark, $state->getHiddenAt());
+    }
+
+    public function testEnsureRowLeavesTheNonReadFlagsAtTheirFalseDefault(): void
+    {
+        $entry = $this->entry('ensure-flag-defaults');
+        $userId = (int) $this->user->getId();
+        $entryId = (int) $entry->getId();
+
+        $this->repo()->ensureRow($userId, $entryId, false, null);
+
+        $this->em->clear();
+        $state = $this->repo()->findOneForUserEntry($userId, $entryId);
+        self::assertNotNull($state);
+        self::assertFalse($state->isFavorite());
+        self::assertFalse($state->isKept());
+        self::assertFalse($state->isViewed());
+        self::assertNull($state->getViewedAt());
+    }
 }

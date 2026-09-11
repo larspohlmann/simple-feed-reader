@@ -17,4 +17,11 @@
     (keep)="keep.emit($event)"
     (read)="read.emit($event)"
   />
+  <app-entry-duplicates
+    [entry]="entry()"
+    (open)="open.emit($event)"
+    (favorite)="favorite.emit($event)"
+    (keep)="keep.emit($event)"
+    (read)="read.emit($event)"
+  />
 </article>

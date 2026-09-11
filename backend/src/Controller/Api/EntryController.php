@@ -17,12 +17,10 @@ use App\Repository\EntryListRepository;
 use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
 use App\Repository\ForYouFeedQuery;
-use App\Service\Reader\EntryStateResolver;
+use App\Service\Reader\EntryStateUpdater;
 use App\Service\Reader\MarkReadService;
 use App\Service\Recommendation\ForYouFeedResponder;
 use App\Service\Recommendation\ForYouMarkReadService;
-use Doctrine\ORM\EntityManagerInterface;
-use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
@@ -36,9 +34,7 @@ final readonly class EntryController
 {
     public function __construct(
         private EntryListRepository $entryList,
-        private EntryStateResolver $entryStates,
-        private EntityManagerInterface $em,
-        private ClockInterface $clock,
+        private EntryStateUpdater $entryStateUpdater,
         private MarkReadService $markRead,
         private ForYouFeedResponder $forYouFeed,
         private ForYouMarkReadService $forYouMarkRead,
@@ -143,30 +139,7 @@ final readonly class EntryController
         $row = $this->entryList->oneRowForUser($id, (int) $user->getId())
             ?? throw new NotFoundHttpException('No such entry.');
 
-        $state = $this->entryStates->resolve($user, $row);
-
-        if ($request->isHidden !== null) {
-            // Unread also clears "opened" (EntryState::markUnread, #478), so the
-            // rule reaches every client, not just the web app.
-            $request->isHidden
-                ? $state->hide($this->clock->now())
-                : $state->markUnread();
-        }
-        if ($request->isFavorite !== null) {
-            $state->setIsFavorite($request->isFavorite);
-        }
-        if ($request->isKept !== null) {
-            $state->setIsKept($request->isKept);
-        }
-        if ($request->isViewed !== null) {
-            // markViewed sets only the viewed flag; ViewedImpliesHiddenListener
-            // adds the hidden flag on flush. clearViewed leaves the entry hidden.
-            $request->isViewed
-                ? $state->markViewed($this->clock->now())
-                : $state->clearViewed();
-        }
-
-        $this->em->flush();
+        $state = $this->entryStateUpdater->apply($user, $row, $request);
 
         return new JsonResponse(['state' => EntryStateJson::one($state, $id)]);
     }

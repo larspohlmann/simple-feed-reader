@@ -64,4 +64,105 @@ final class UnreadCountsTest extends DbTestCase
         $counts = $this->repo()->unreadCountsForUser((int) $user->getId());
         self::assertArrayNotHasKey((int) $sub->getId(), $counts);
     }
+
+    public function testCrossFeedDuplicateCountsOnceAcrossSubscriptions(): void
+    {
+        $user = new User('dup@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->em->persist($user);
+
+        $feedA = new Feed('https://example.com/a.xml');
+        $this->em->persist($feedA);
+        $feedB = new Feed('https://example.com/b.xml');
+        $this->em->persist($feedB);
+
+        $subA = new Subscription($user, $feedA, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->em->persist($subA);
+        $subB = new Subscription($user, $feedB, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->em->persist($subB);
+
+        $publishedAt = new \DateTimeImmutable('2026-07-20T00:00:00Z');
+        $entryA = new Entry(
+            $feedA,
+            'guid-a',
+            'https://example.com/dup',
+            'dup',
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            $publishedAt,
+            'shared-hash',
+        );
+        $entryA->setPublishedAt($publishedAt);
+        $this->em->persist($entryA);
+        $this->em->flush(); // entryA gets the lower id first.
+
+        $entryB = new Entry(
+            $feedB,
+            'guid-b',
+            'https://example.com/dup',
+            'dup',
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            $publishedAt,
+            'shared-hash',
+        );
+        $entryB->setPublishedAt($publishedAt);
+        $this->em->persist($entryB);
+        $this->em->flush();
+
+        $counts = $this->repo()->unreadCountsForUser((int) $user->getId());
+        $subAId = (int) $subA->getId();
+        $subBId = (int) $subB->getId();
+
+        self::assertSame(1, ($counts[$subAId] ?? 0) + ($counts[$subBId] ?? 0));
+        self::assertSame(1, $counts[$subAId] ?? 0);
+    }
+
+    public function testUnreadCopySurvivesWhenTheLowerIdDuplicateIsAlreadyRead(): void
+    {
+        $user = new User('read-lower@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->em->persist($user);
+
+        $feedA = new Feed('https://example.com/a.xml');
+        $this->em->persist($feedA);
+        $feedB = new Feed('https://example.com/b.xml');
+        $this->em->persist($feedB);
+
+        $subA = new Subscription($user, $feedA, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->em->persist($subA);
+        $subB = new Subscription($user, $feedB, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->em->persist($subB);
+
+        $publishedAt = new \DateTimeImmutable('2026-07-20T00:00:00Z');
+        $lower = new Entry(
+            $feedA,
+            'guid-lower',
+            'https://example.com/dup',
+            'dup',
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            $publishedAt,
+            'shared-hash',
+        );
+        $this->em->persist($lower);
+        $this->em->flush(); // $lower gets the lower id first.
+
+        $higher = new Entry(
+            $feedB,
+            'guid-higher',
+            'https://example.com/dup',
+            'dup',
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            $publishedAt,
+            'shared-hash',
+        );
+        $this->em->persist($higher);
+        $state = new EntryState($user, $lower);
+        $state->setIsHidden(true);
+        $this->em->persist($state);
+        $this->em->flush();
+
+        // The collapse's inner scope must exclude the read lower copy, or it
+        // wrongly suppresses the still-unread higher copy too.
+        $counts = $this->repo()->unreadCountsForUser((int) $user->getId());
+
+        self::assertSame(1, $counts[(int) $subB->getId()] ?? 0);
+        self::assertSame(0, $counts[(int) $subA->getId()] ?? 0);
+    }
 }

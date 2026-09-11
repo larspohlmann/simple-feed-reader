@@ -489,6 +489,62 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         self::assertSame([$onBoundary->getId()], array_map(static fn ($l) => $l->entryId, $lines));
     }
 
+    public function testCrossFeedDuplicateIsOfferedOnce(): void
+    {
+        $secondFeed = new Feed('https://example.com/second-feed.xml');
+        $secondFeed->setTitle('Second');
+        $this->em->persist($secondFeed);
+        $secondSubscription = new Subscription(
+            $this->user,
+            $secondFeed,
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+        );
+        $this->em->persist($secondSubscription);
+        $this->em->flush();
+
+        $lower = $this->duplicateEntry($this->feed, 'lower-copy', 'urlhash-shared', '2026-07-10T09:00:00Z');
+        $higher = $this->duplicateEntry($secondFeed, 'higher-copy', 'urlhash-shared', '2026-07-10T10:00:00Z');
+
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest());
+
+        $ids = array_map(static fn ($l) => $l->entryId, $lines);
+        self::assertContains($lower->getId(), $ids);
+        self::assertNotContains($higher->getId(), $ids);
+        self::assertSame(1, \count(array_filter($ids, static fn ($id) => $id === $lower->getId())));
+    }
+
+    public function testDuplicateWhoseLowerCopyIsOutOfScopeDoesNotHideTheHigherCopy(): void
+    {
+        $secondFeed = new Feed('https://example.com/second-feed.xml');
+        $secondFeed->setTitle('Second');
+        $this->em->persist($secondFeed);
+        $secondSubscription = new Subscription(
+            $this->user,
+            $secondFeed,
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+        );
+        $this->em->persist($secondSubscription);
+        $this->em->flush();
+
+        $lower = $this->duplicateEntry($this->feed, 'lower-copy', 'urlhash-out-of-scope', '2026-07-10T09:00:00Z');
+        $higher = $this->duplicateEntry($secondFeed, 'higher-copy', 'urlhash-out-of-scope', '2026-07-10T10:00:00Z');
+
+        // The lower-id copy has been viewed, so it fails poolScope's own not-interacted
+        // clause and is not itself a legitimate pool candidate. Without that clause
+        // carried into the collapse semi-join, this viewed copy would still count as
+        // an in-scope blocker and wrongly hide the higher copy -- a hole in the pool.
+        $state = new EntryState($this->user, $lower);
+        $state->markViewed(new \DateTimeImmutable('2026-07-10T09:30:00Z'));
+        $this->em->persist($state);
+        $this->em->flush();
+
+        $lines = $this->loader()->load($this->userId(), $this->poolRequest());
+
+        $ids = array_map(static fn ($l) => $l->entryId, $lines);
+        self::assertContains($higher->getId(), $ids);
+        self::assertNotContains($lower->getId(), $ids);
+    }
+
     public function testThePoolSizeStillCapsTheCandidatesInsideTheWindow(): void
     {
         $this->entry('older-inside', '2026-07-11T00:00:00Z');
@@ -531,6 +587,25 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
             $guid,
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             $publishedAt,
+        );
+        $entry->setPublishedAt($publishedAt);
+        $this->em->persist($entry);
+        $this->em->flush();
+
+        return $entry;
+    }
+
+    private function duplicateEntry(Feed $feed, string $guid, string $urlHash, string $published): Entry
+    {
+        $publishedAt = new \DateTimeImmutable($published);
+        $entry = new Entry(
+            $feed,
+            $guid,
+            'https://example.com/shared-article',
+            $guid,
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            $publishedAt,
+            $urlHash,
         );
         $entry->setPublishedAt($publishedAt);
         $this->em->persist($entry);

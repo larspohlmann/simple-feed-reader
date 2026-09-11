@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { OverlayContainer } from '@angular/cdk/overlay';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { EntryRowComponent } from './entry-row.component';
 import { EntryActionsComponent } from '../entry-actions/entry-actions.component';
@@ -159,5 +160,18 @@ describe('EntryRowComponent', () => {
   it('renders no pill outside the combined saved-search list (#769)', () => {
     const el = mount(entry()).nativeElement as HTMLElement;
     expect(el.querySelector('.saved-search-pill')).toBeNull();
+  });
+
+  it('bubbles open for a duplicate copy through the footer', () => {
+    const dup = entry({ id: 9, source: 'NDR SH' });
+    const f = mount(entry({ duplicates: [dup] }));
+    const opened = jest.fn();
+    f.componentInstance.open.subscribe(opened);
+    (f.nativeElement.querySelector('app-entry-duplicates .also-entry') as HTMLElement).click();
+    f.detectChanges();
+    const overlay = TestBed.inject(OverlayContainer).getContainerElement();
+    (overlay.querySelector('.dup-popover app-entry-row .row') as HTMLElement).click();
+    expect(opened).toHaveBeenCalledWith(dup);
+    expect(opened).toHaveBeenCalledTimes(1);
   });
 });

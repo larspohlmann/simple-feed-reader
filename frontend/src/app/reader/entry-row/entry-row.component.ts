@@ -1,8 +1,18 @@
-import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  forwardRef,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { MarkedTextComponent } from '../../shared/marked-text/marked-text.component';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
 import { EntryActionsComponent } from '../entry-actions/entry-actions.component';
+import { EntryDuplicatesComponent } from '../magazine/entry-duplicates.component';
 import { LanguageService } from '../../core/language.service';
 import { EntryDto, SubscriptionTagDto } from '../models';
 import { entryImage, textSnippet } from '../preview-image';
@@ -10,7 +20,16 @@ import { relativeTime } from '../format';
 
 @Component({
   selector: 'app-entry-row',
-  imports: [FaviconComponent, MarkedTextComponent, SourceTagsComponent, EntryActionsComponent],
+  // forwardRef, not a direct reference: entry-duplicates renders entry-row for
+  // its popover card, so a plain reference here would resolve
+  // EntryDuplicatesComponent mid-import-cycle and read as undefined.
+  imports: [
+    FaviconComponent,
+    MarkedTextComponent,
+    SourceTagsComponent,
+    EntryActionsComponent,
+    forwardRef(() => EntryDuplicatesComponent),
+  ],
   templateUrl: './entry-row.component.html',
   styleUrl: './entry-row.component.scss',
 })
