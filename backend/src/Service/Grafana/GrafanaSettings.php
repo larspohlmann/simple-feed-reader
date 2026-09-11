@@ -10,7 +10,6 @@ use App\Http\Admin\GrafanaSettingsJson;
 use App\Repository\GrafanaSettingsRepository;
 use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
  * Reads and writes the instance-wide Grafana row, defaulting to the env values
@@ -33,17 +32,14 @@ class GrafanaSettings
         private readonly GrafanaSettingsRepository $repository,
         private readonly EntityManagerInterface $em,
         private readonly GrafanaApiKeyCipher $cipher,
-        #[Autowire('%env(GRAFANA_LOKI_PUSH_URL)%')]
-        private readonly string $lokiPushUrlDefault,
-        #[Autowire('%env(GRAFANA_URL)%')]
-        private readonly string $grafanaUrlDefault,
+        private readonly GrafanaEnvDefaults $defaults,
     ) {
     }
 
     /** @return array<string, mixed> */
     public function view(): array
     {
-        return GrafanaSettingsJson::from($this->settings(), $this->lokiPushUrlDefault, $this->grafanaUrlDefault);
+        return GrafanaSettingsJson::from($this->settings(), $this->defaults->lokiPushUrl, $this->defaults->grafanaUrl);
     }
 
     public function update(GrafanaSettingsRequest $request): void
@@ -73,7 +69,7 @@ class GrafanaSettings
     {
         $override = $this->settings()->getLokiPushUrlOverride();
 
-        return $override ?? ('' === $this->lokiPushUrlDefault ? null : $this->lokiPushUrlDefault);
+        return $override ?? ('' === $this->defaults->lokiPushUrl ? null : $this->defaults->lokiPushUrl);
     }
 
     public function lokiUsername(): ?string

@@ -10,6 +10,7 @@ use App\Repository\GrafanaSettingsRepository;
 use App\Service\Crypto\InstanceSecretCipher;
 use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
 use App\Service\Grafana\GrafanaConnection;
+use App\Service\Grafana\GrafanaEnvDefaults;
 use App\Service\Grafana\GrafanaSettings;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -130,8 +131,7 @@ final class GrafanaSettingsTest extends TestCase
             $repository,
             $this->createStub(EntityManagerInterface::class),
             new GrafanaApiKeyCipher(new InstanceSecretCipher(self::SECRET)),
-            '',
-            '',
+            new GrafanaEnvDefaults('', ''),
         );
 
         self::assertSame('https://cloud.example/loki/push', $settings->effectiveLokiPushUrl());
@@ -148,7 +148,7 @@ final class GrafanaSettingsTest extends TestCase
         $em->expects(self::once())->method('flush');
 
         $cipher = new GrafanaApiKeyCipher(new InstanceSecretCipher(self::SECRET));
-        $settings = new GrafanaSettings($repository, $em, $cipher, '', '');
+        $settings = new GrafanaSettings($repository, $em, $cipher, new GrafanaEnvDefaults('', ''));
 
         $settings->update(new GrafanaSettingsRequest(grafanaUrl: 'https://a.example'));
     }
@@ -173,7 +173,8 @@ final class GrafanaSettingsTest extends TestCase
         });
 
         $cipher = new GrafanaApiKeyCipher(new InstanceSecretCipher(self::SECRET));
+        $defaults = new GrafanaEnvDefaults($lokiPushUrlDefault, $grafanaUrlDefault);
 
-        return new GrafanaSettings($repository, $em, $cipher, $lokiPushUrlDefault, $grafanaUrlDefault);
+        return new GrafanaSettings($repository, $em, $cipher, $defaults);
     }
 }
