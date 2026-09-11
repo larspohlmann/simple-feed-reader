@@ -4,6 +4,7 @@ import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import { API_BASE_URL } from './api';
+import { ClientErrorReporter } from './client-error-reporter';
 import { ReaderLocationService } from './reader-location.service';
 import { TokenStore } from './token.store';
 
@@ -14,6 +15,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const tokens = inject(TokenStore);
   const router = inject(Router);
   const readerLocation = inject(ReaderLocationService);
+  const reporter = inject(ClientErrorReporter);
 
   const isApi = req.url.startsWith(base ? base : '/') || req.url.startsWith('/api');
   const token = tokens.token();
@@ -32,6 +34,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
           readerLocation.rememberSavedReaderUrlForSignIn();
         }
         void router.navigate(['/login']);
+        return throwError(() => err);
+      }
+      // Report real breakage, but never the report endpoint's own failure — that
+      // would loop. 401 is handled above and is not breakage worth reporting.
+      const isClientErrorEndpoint = req.url.includes('/api/client-errors');
+      if (!isClientErrorEndpoint && (err.status === 0 || err.status >= 500)) {
+        reporter.report(new Error(`HTTP ${err.status} ${req.method} ${req.url}`), 'HttpError');
       }
       return throwError(() => err);
     }),
