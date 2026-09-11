@@ -11,6 +11,8 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryQuery;
+use App\Repository\EntrySearchQuery;
+use App\Service\Search\SearchTerms;
 use App\Tests\DbTestCase;
 
 final class DuplicateCollapseTest extends DbTestCase
@@ -92,6 +94,38 @@ final class DuplicateCollapseTest extends DbTestCase
         $ids = array_map(static fn ($r) => $r->entry->getId(), $rows);
         self::assertContains($one->getId(), $ids);
         self::assertContains($two->getId(), $ids);
+    }
+
+    public function testSearchGroupsWithinTheMatchedTermsOnly(): void
+    {
+        // Same urlHash, but only the higher-id copy's title matches the search.
+        $this->entry($this->feedA, 'a-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T09:00:00Z')
+            ->setTitle('Lübecker Hauptbahnhof gesperrt');
+        $match = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
+        $match->setTitle('Lübeck Zugausfälle am Wochenende');
+        $this->em->flush();
+
+        $rows = $this->repo()->searchForUser(new EntrySearchQuery(
+            (int) $this->user->getId(),
+            SearchTerms::fromInput('Zugausfälle'),
+        ));
+
+        self::assertCount(1, $rows);
+        self::assertSame($match->getId(), $rows[0]->entry->getId());
+    }
+
+    public function testRowsByIdsGroupsWithinTheGivenIdSet(): void
+    {
+        $this->entry($this->feedA, 'a-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T09:00:00Z');
+        $higher = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
+        $this->em->flush();
+
+        // Meilisearch matched only the higher-id copy; the lower-id copy is not in
+        // the set, so it must not win and delete the article from the results.
+        $rows = $this->repo()->rowsByIdsForUser([(int) $higher->getId()], (int) $this->user->getId());
+
+        self::assertCount(1, $rows);
+        self::assertSame($higher->getId(), $rows[0]->entry->getId());
     }
 
     private function repo(): EntryListRepository

@@ -73,10 +73,13 @@ class EntryListRepository extends AbstractEntryProjectionRepository
      */
     public function searchForUser(EntrySearchQuery $query): array
     {
+        $applyScope = function (QueryBuilder $qb, EntryAliases $aliases) use ($query): void {
+            $this->scope->applySearch($qb, $aliases, $query);
+        };
         $qb = $this->newestFirst($this->rowQueryBuilder($query->userId))
             ->setMaxResults($query->limit);
-
-        $this->scope->applySearch($qb, EntryAliases::primary(), $query);
+        $applyScope($qb, EntryAliases::primary());
+        $this->collapse->apply($qb, $applyScope, $query->userId);
         // Search ranks by publish instant like the default list, never by view
         // time, so its cursor predicate is the effectiveDate one.
         $this->applyCursor($qb, $query->cursor, EntryListSort::PublishedDate);
@@ -154,11 +157,12 @@ class EntryListRepository extends AbstractEntryProjectionRepository
             return [];
         }
 
-        $rowQuery = $this->newestFirst(
-            $this->rowQueryBuilder($userId)
-                ->andWhere('e.id IN (:ids)')
-                ->setParameter('ids', $entryIds),
-        );
+        $applyScope = function (QueryBuilder $qb, EntryAliases $aliases) use ($entryIds): void {
+            $this->scope->applyIds($qb, $aliases, $entryIds);
+        };
+        $rowQuery = $this->newestFirst($this->rowQueryBuilder($userId));
+        $applyScope($rowQuery, EntryAliases::primary());
+        $this->collapse->apply($rowQuery, $applyScope, $userId);
         if ($limit !== null) {
             $rowQuery->setMaxResults($limit);
         }
