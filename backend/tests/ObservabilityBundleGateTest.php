@@ -10,9 +10,9 @@ final class ObservabilityBundleGateTest extends KernelTestCase
 {
     public function testNoOpenTelemetryBundleIsRegistered(): void
     {
-        self::bootKernel();
+        $kernel = self::bootKernel();
 
-        $bundleNames = array_keys(self::$kernel->getBundles());
+        $bundleNames = array_keys($kernel->getBundles());
 
         foreach ($bundleNames as $bundleName) {
             self::assertStringNotContainsString('OpenTelemetry', $bundleName);

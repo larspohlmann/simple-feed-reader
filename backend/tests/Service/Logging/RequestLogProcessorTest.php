@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Logging;
 
-use App\Service\Logging\NullTraceContext;
 use App\Service\Logging\RequestIdProvider;
 use App\Service\Logging\RequestLogProcessor;
 use App\Service\Logging\TraceContext;
@@ -18,7 +17,7 @@ final class RequestLogProcessorTest extends TestCase
     {
         $provider = new RequestIdProvider();
         $provider->set('01J000000000000000000TEST');
-        $processor = new RequestLogProcessor($provider, new NullTraceContext());
+        $processor = new RequestLogProcessor($provider, $this->partialTracingContext(null, null));
 
         $record = $processor($this->record());
 
