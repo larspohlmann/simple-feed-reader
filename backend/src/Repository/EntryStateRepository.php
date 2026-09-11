@@ -16,8 +16,10 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 class EntryStateRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
-    {
+    public function __construct(
+        ManagerRegistry $registry,
+        private readonly DuplicateCollapseDql $collapse,
+    ) {
         parent::__construct($registry, EntryState::class);
     }
 
@@ -217,18 +219,21 @@ class EntryStateRepository extends ServiceEntityRepository
      */
     public function unreadCountsForUser(int $userId): array
     {
+        $collapse = $this->collapse->fragment(UnreadDql::predicate(EntryAliases::collapse()));
+
         /** @var list<array{subscriptionId: int, unreadCount: int}> $rows */
         $rows = $this->getEntityManager()->createQuery(sprintf(
             'SELECT s.id AS subscriptionId, COUNT(e.id) AS unreadCount
              FROM %s s
              JOIN %s e ON e.feed = s.feed
              LEFT JOIN %s es ON es.entry = e AND es.user = s.user
-             WHERE s.user = :user AND (%s)
+             WHERE s.user = :user AND (%s) AND (%s)
              GROUP BY s.id',
             Subscription::class,
             Entry::class,
             EntryState::class,
             UnreadDql::predicate(),
+            $collapse,
         ))
             ->setParameter('user', $userId)
             ->setParameter('notHidden', false, Types::BOOLEAN)
