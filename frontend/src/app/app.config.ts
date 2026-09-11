@@ -1,6 +1,7 @@
 // src/app/app.config.ts
 import {
   ApplicationConfig,
+  ErrorHandler,
   inject,
   isDevMode,
   provideAppInitializer,
@@ -14,6 +15,8 @@ import { routes } from './app.routes';
 import { API_BASE_URL } from './core/api';
 import { authInterceptor } from './core/auth.interceptor';
 import { preloadInitialLanguage } from './core/boot-language';
+import { ClientErrorReporter } from './core/client-error-reporter';
+import { ReportingErrorHandler } from './core/global-error-handler';
 import { NavigationFailureReporter } from './core/navigation-failure';
 import { startNavigationWatchdog } from './core/navigation-watchdog';
 import { DIGEST_WRITER } from './core/digest-writer';
@@ -33,6 +36,7 @@ import { environment } from '../environments/environment';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
+    { provide: ErrorHandler, useClass: ReportingErrorHandler },
     provideZoneChangeDetection({ eventCoalescing: true }),
     // A lazy route chunk can fail or stall exactly like the dictionary fetch
     // (#280) — Brave's resume-reload serves main.js from the immutable cache
@@ -84,5 +88,13 @@ export const appConfig: ApplicationConfig = {
     }),
     // Must run in an injection context, and only once the router exists.
     provideAppInitializer(() => startNavigationWatchdog()),
+    // One global handler for promise rejections nothing awaited (#984). Runs in
+    // an injection context so it can resolve the root reporter.
+    provideAppInitializer(() => {
+      const reporter = inject(ClientErrorReporter);
+      window.addEventListener('unhandledrejection', (event) =>
+        reporter.report(event.reason, 'UnhandledRejection'),
+      );
+    }),
   ],
 };
