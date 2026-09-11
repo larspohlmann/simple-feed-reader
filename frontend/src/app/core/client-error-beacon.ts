@@ -1,0 +1,93 @@
+// src/app/core/client-error-beacon.ts
+//
+// No Angular imports: boot-error-surface.ts and the pre-injector boot path
+// call into this module before any injector exists (#984). `buildVersion` is
+// a plain constant, so importing it here keeps that promise.
+//
+// The default URL is resolved relative to `document.baseURI`, not a
+// hardcoded absolute path: `<base href="/">` in development and
+// `<base href="/reader/">` on the Strato build both turn a relative
+// `api/client-errors` into the correct same-origin path.
+import { buildVersion } from '../../environments/version';
+
+export interface ClientErrorItem {
+  message: string;
+  stack: string | null;
+  kind: string | null;
+  url: string | null;
+  route: string | null;
+  buildVersion: string | null;
+  userAgent: string | null;
+  at: string | null;
+}
+
+export interface SendClientErrorOptions {
+  /** Overrides the default baseURI-relative resolution, e.g. an
+   *  `${API_BASE_URL}`-derived url the injectable reporter already knows is
+   *  env-correct. */
+  url?: string;
+  bearerToken?: string | null;
+}
+
+const CLIENT_ERRORS_PATH = 'api/client-errors';
+
+/** The one place the three version fields become the one wire string. */
+export function buildVersionTag(): string {
+  return `${buildVersion.version}+${buildVersion.commit}@${buildVersion.builtAt}`;
+}
+
+/** Resolves the endpoint against the document's own `<base>`, so the same
+ *  relative path lands correctly on every deployment. */
+export function resolveClientErrorsUrl(): string {
+  return new URL(CLIENT_ERRORS_PATH, document.baseURI).href;
+}
+
+/** True only when there is positive evidence keepalive is missing: an old
+ *  browser can ship `fetch` without it, and jsdom ships neither `fetch` nor
+ *  `Request` by default, so the absence of `Request` is not itself evidence. */
+function keepaliveIsUnsupported(): boolean {
+  return typeof Request !== 'undefined' && !('keepalive' in Request.prototype);
+}
+
+function deliver(url: string, body: string, bearerToken?: string | null): void {
+  if (typeof fetch === 'function' && !keepaliveIsUnsupported()) {
+    const headers: HeadersInit = bearerToken
+      ? { 'Content-Type': 'application/json', Authorization: `Bearer ${bearerToken}` }
+      : { 'Content-Type': 'application/json' };
+    void fetch(url, { method: 'POST', keepalive: true, headers, body }).catch(() => undefined);
+    return;
+  }
+  navigator.sendBeacon?.(url, new Blob([body], { type: 'application/json' }));
+}
+
+/** Fire-and-forget POST of one error batch. Never throws back to the caller. */
+export function sendClientErrors(
+  items: ClientErrorItem[],
+  options: SendClientErrorOptions = {},
+): void {
+  try {
+    const url = options.url ?? resolveClientErrorsUrl();
+    deliver(url, JSON.stringify({ errors: items }), options.bearerToken);
+  } catch {
+    // Reporting an error must never raise one of its own.
+  }
+}
+
+export function sendClientError(item: ClientErrorItem, options?: SendClientErrorOptions): void {
+  sendClientErrors([item], options);
+}
+
+/** Boot-time convenience for callers with no injector (boot-error-surface.ts). */
+export function reportBootError(error: unknown): void {
+  const normalized = error instanceof Error ? error : new Error(String(error));
+  sendClientError({
+    message: normalized.message || String(error),
+    stack: normalized.stack ?? null,
+    kind: normalized.name || 'BootError',
+    url: typeof location !== 'undefined' ? location.href : null,
+    route: null,
+    buildVersion: buildVersionTag(),
+    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+    at: new Date().toISOString(),
+  });
+}
