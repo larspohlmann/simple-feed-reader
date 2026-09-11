@@ -39,17 +39,9 @@ class EntryStateRepository extends ServiceEntityRepository
     }
 
     /**
-     * Insert the (user, entry) state row if it is absent, seeded for read state,
-     * and do nothing when it already exists.
-     *
-     * entry_state has concurrent writers, so the lazy find-or-create in
-     * EntryStateResolver cannot use an ORM new+persist: two racing requests both
-     * see no row and both INSERT the same composite primary key, and the second
-     * flush dies on a UniqueConstraintViolationException. An idempotent insert
-     * lets one writer win and silently ignores the loser; the resolver then
-     * loads the winning row and issues only UPDATEs from it. IGNORE is exactly
-     * right here — a row that already exists keeps its flags, and the caller's
-     * requested change applies afterwards through the ORM.
+     * Idempotent insert of the (user, entry) state row, seeded for read state:
+     * one racing writer wins, the other's INSERT is ignored rather than dying on
+     * the duplicate primary key, and an existing row keeps its flags.
      */
     public function ensureRow(int $userId, int $entryId, bool $seedHidden, ?\DateTimeImmutable $seedHiddenAt): void
     {
