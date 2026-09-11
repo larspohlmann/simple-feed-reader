@@ -107,6 +107,10 @@ security:
         # JWT. They hold no user data — the subscribed flags live on the
         # authenticated /api/catalog list, not here — so this one path is public.
         - { path: '^/api/catalog/feeds/\d+/favicon$', roles: PUBLIC_ACCESS }
+        # Frontend error ingest (#984). Anonymous is allowed — errors happen
+        # while logged out — but the api firewall still runs the JWT
+        # authenticator, so a logged-in report resolves a #[CurrentUser].
+        - { path: ^/api/client-errors$, roles: PUBLIC_ACCESS }
         - { path: ^/api/admin/, roles: ROLE_ADMIN }
         - { path: ^/api/, roles: IS_AUTHENTICATED_FULLY }
 
