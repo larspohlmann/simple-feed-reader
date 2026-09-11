@@ -49,26 +49,12 @@ final readonly class RecommendationCandidateLoader
     {
         $qb = $this->candidateQueryBuilder($userId)
             ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
-            // No read/unread filter (isHidden flag, markedReadUntil watermark): excluding
-            // caught-up entries emptied the pool and zeroed the run. Only per-entry history
-            // is excluded -- favorited/kept/viewed entries already fill the prompt's
-            // FAVORITES/KEPT/VIEWED sections, so re-scoring them re-recommends what the
-            // reader acted on; a change there must update both. es is a LEFT JOIN, so a
-            // stateless entry stays a candidate, hence the null-safe OR on each flag.
-            ->andWhere(
-                '(es.isFavorite = :notInteracted OR es.isFavorite IS NULL)'
-                . ' AND (es.isKept = :notInteracted OR es.isKept IS NULL)'
-                . ' AND (es.isViewed = :notInteracted OR es.isViewed IS NULL)',
-            )
-            // The window is the reader's own look-back setting, already
-            // resolved to an instant by the caller. Inclusive: an entry
-            // stamped exactly at the boundary is inside the window.
-            ->andWhere('e.effectiveDate >= :since')
             ->orderBy('e.effectiveDate', 'DESC')
             ->addOrderBy('e.id', 'DESC')
             ->setParameter('since', $request->since)
             ->setParameter('notInteracted', false, Types::BOOLEAN);
 
+        $this->poolScope($qb, EntryAliases::primary());
         $this->collapse->apply($qb, $this->poolScope(...), $userId);
         $qb->setMaxResults($request->poolSize);
 
@@ -156,8 +142,15 @@ final readonly class RecommendationCandidateLoader
     }
 
     /**
-     * The pool's own scope, restated for DuplicateCollapseDql's e2/es2/s2 aliases: a
-     * collapse candidate that fails this must not survive to knock out an in-scope copy.
+     * The pool's scope: an includeInForYou feed, not favorited/kept/viewed, inside the
+     * window. es is a LEFT JOIN, so a stateless entry stays a candidate via the null-safe
+     * OR; there is no read/unread filter (isHidden, markedReadUntil) -- excluding caught-up
+     * entries emptied the pool and zeroed the run. :since is inclusive: an entry stamped
+     * exactly at the boundary is inside the window.
+     *
+     * Drives both the outer pool query (EntryAliases::primary()) and DuplicateCollapseDql's
+     * inner semi-join (EntryAliases::collapse()), so a collapse candidate that fails this
+     * scope cannot survive to knock out an in-scope copy, and the two cannot drift apart.
      */
     private function poolScope(QueryBuilder $inner, EntryAliases $aliases): void
     {
