@@ -9,6 +9,7 @@ use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
 use App\Repository\GrafanaSettingsRepository;
 use App\Service\Crypto\InstanceSecretCipher;
 use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
+use App\Service\Grafana\GrafanaConnection;
 use App\Service\Grafana\GrafanaSettings;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -97,19 +98,45 @@ final class GrafanaSettingsTest extends TestCase
         self::assertNull($settings->effectiveLokiPushUrl());
     }
 
-    public function testBlankUsernameClearsTheStoredOverride(): void
+    public function testBlankUsernameClearsTheStoredOverrideAndItStartsNull(): void
     {
         $settings = $this->service($stored);
-        $settings->update(new GrafanaSettingsRequest(lokiUsername: 'tenant42'));
+        self::assertNull($settings->lokiUsername());
 
+        $settings->update(new GrafanaSettingsRequest(lokiUsername: 'tenant42'));
         $settings->update(new GrafanaSettingsRequest(lokiUsername: ''));
 
         self::assertNull($settings->lokiUsername());
     }
 
-    public function testLokiUsernameIsNullWhenNeverConfigured(): void
+    /**
+     * A Loki flush resolves pushUrl, username and token in a row (#983 review
+     * finding 1): the singleton read must be memoised so that costs one query,
+     * not three.
+     */
+    public function testResolvingPushUrlUsernameAndTokenTogetherQueriesTheRepositoryOnce(): void
     {
-        self::assertNull($this->service($stored)->lokiUsername());
+        $entity = new GrafanaSettingsEntity();
+        $entity->apply(
+            new GrafanaConnection('https://cloud.example/loki/push', 'tenant42', null),
+            (new GrafanaApiKeyCipher(new InstanceSecretCipher(self::SECRET)))->seal('glc_secrettoken'),
+            'oken',
+        );
+
+        $repository = $this->createMock(GrafanaSettingsRepository::class);
+        $repository->expects(self::once())->method('findSingleton')->willReturn($entity);
+
+        $settings = new GrafanaSettings(
+            $repository,
+            $this->createStub(EntityManagerInterface::class),
+            new GrafanaApiKeyCipher(new InstanceSecretCipher(self::SECRET)),
+            '',
+            '',
+        );
+
+        self::assertSame('https://cloud.example/loki/push', $settings->effectiveLokiPushUrl());
+        self::assertSame('tenant42', $settings->lokiUsername());
+        self::assertSame('glc_secrettoken', $settings->lokiToken());
     }
 
     public function testUpdateFlushesTheEntityManager(): void
