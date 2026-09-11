@@ -66,15 +66,9 @@ x-app-environment: &app-environment
   GRAFANA_LOKI_USERNAME: ${GRAFANA_LOKI_USERNAME:-}
   GRAFANA_LOKI_TOKEN: ${GRAFANA_LOKI_TOKEN:-}
   GRAFANA_URL: ${GRAFANA_URL:-}
-  # Tracing rides the grafana profile: use_grafana/use_no_grafana (scripts/lib.sh)
-  # write both of these together, so they always agree with the tempo service's
-  # own `grafana` profile below. The auto-instrumentation entrypoint
-  # (_register.php) checks BOTH vars -- AUTOLOAD_ENABLED alone does not gate it,
-  # DISABLED_INSTRUMENTATIONS=all is what actually turns instrumentation off.
-  # Single-dash `-` (not `:-`): compose's `:-` treats an empty value as unset
-  # and would override the installer's deliberately-empty
-  # OTEL_PHP_DISABLED_INSTRUMENTATIONS (meaning "nothing disabled") back to
-  # "all". `-` only substitutes when the variable is truly unset.
+  # Single-dash `-` (not `:-`): use_grafana writes DISABLED_INSTRUMENTATIONS empty
+  # ("nothing disabled"); `:-` would read empty as unset and force it back to "all".
+  # Both vars gate tracing together -- AUTOLOAD_ENABLED alone does not.
   OTEL_PHP_AUTOLOAD_ENABLED: ${OTEL_PHP_AUTOLOAD_ENABLED-false}
   OTEL_PHP_DISABLED_INSTRUMENTATIONS: ${OTEL_PHP_DISABLED_INSTRUMENTATIONS-all}
   OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-simple-feed-reader}
@@ -158,10 +152,9 @@ services:
       - ./docker/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
       - loki-data:/loki
 
-  # Distributed tracing, riding the SAME grafana profile as loki+grafana above
-  # (Q19): an install that enables observability gets tracing too, and one
-  # that declines it never starts this container either. No published port --
-  # only php and worker, on the internal compose network, ever talk to this.
+  # Distributed tracing, on the same grafana profile as loki+grafana above:
+  # enabling observability enables tracing too. No published port -- only php
+  # and worker reach it, on the internal compose network.
   tempo:
     image: grafana/tempo:2.7.1
     profiles: ["grafana"]

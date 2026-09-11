@@ -212,11 +212,8 @@ services:
       - loki
 
   # Distributed tracing, opt-in behind the `tracing` profile: a plain
-  # `docker compose up` never starts it, so the OTLP exporter above (pointed
-  # at http://tempo:4318 unconditionally) fails open with the container
-  # absent -- run `COMPOSE_PROFILES=tracing docker compose up -d` to see
-  # traces. No depends_on, same reasoning as loki: a dropped export must
-  # never break a request.
+  # `docker compose up` never starts it, and the OTLP exporter fails open when
+  # the container is absent. Run `COMPOSE_PROFILES=tracing docker compose up -d`.
   tempo:
     image: grafana/tempo:2.7.1
     profiles: ["tracing"]
