@@ -31,6 +31,13 @@ final class ClientErrorReportRequestTest extends KernelTestCase
         self::assertGreaterThan(0, $this->validator()->validate(new ClientErrorReportRequest($items))->count());
     }
 
+    public function testAcceptsExactlyTenItems(): void
+    {
+        $items = array_fill(0, 10, $this->item('boom'));
+
+        self::assertCount(0, $this->validator()->validate(new ClientErrorReportRequest($items)));
+    }
+
     public function testCascadesToRejectAnItemWithABlankMessage(): void
     {
         $request = new ClientErrorReportRequest([$this->item('')]);
