@@ -11,10 +11,8 @@ export interface ReadingFocusConfig {
 
 /**
  * Keeps each block's inline opacity in step with its distance from the scroll
- * centre. It observes the geometry it reads — the scroller (viewport) and every
- * block (reflow) — plus scroll, so it never enumerates the causes of a layout
- * change. The two inputs with no geometric signature (the enable gate and the
- * block set changing) are pushed in by the owner via refresh()/clear().
+ * centre. It observes the geometry it reads — the scroller and every block —
+ * so it never enumerates the causes of a layout change.
  */
 export class ReadingFocusApplier {
   private readonly runOutsideZone: <T>(run: () => T) => T;
@@ -33,7 +31,6 @@ export class ReadingFocusApplier {
     this.schedule();
   }
 
-  /** Re-sync the observed targets to the current blocks, then schedule a pass. */
   refresh(): void {
     this.observe();
     this.schedule();
