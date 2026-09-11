@@ -21,14 +21,14 @@ final readonly class SearchTermsPredicateBuilder
      * cannot express. $prefix keys the bound parameters, so two searches that
      * share a word cannot overwrite each other's value.
      */
-    public function build(QueryBuilder $qb, SearchTerms $terms, string $prefix): string
+    public function build(QueryBuilder $qb, SearchTerms $terms, string $prefix, string $entryAlias = 'e'): string
     {
         $predicates = [];
         foreach ($terms->terms as $position => $term) {
             $parameter = $prefix . $position;
             $predicates[] = $terms->isWholeWord
-                ? $this->wholeWordPredicate($qb, $parameter, $term)
-                : $this->substringPredicate($qb, $parameter, $term);
+                ? $this->wholeWordPredicate($qb, $parameter, $term, $entryAlias)
+                : $this->substringPredicate($qb, $parameter, $term, $entryAlias);
         }
 
         return '(' . implode(' AND ', $predicates) . ')';
@@ -38,14 +38,16 @@ final readonly class SearchTermsPredicateBuilder
      * A summary is nullable, and NULL LIKE … is never true, so the OR alone
      * handles an entry that carries no summary.
      */
-    private function substringPredicate(QueryBuilder $qb, string $parameter, string $term): string
+    private function substringPredicate(QueryBuilder $qb, string $parameter, string $term, string $entryAlias): string
     {
         $qb->setParameter($parameter, LikePattern::containing($term));
 
         return \sprintf(
-            "(e.title LIKE :%s ESCAPE '%s' OR e.summary LIKE :%s ESCAPE '%s')",
+            "(%s LIKE :%s ESCAPE '%s' OR %s LIKE :%s ESCAPE '%s')",
+            \sprintf('%s.title', $entryAlias),
             $parameter,
             LikePattern::ESCAPE_CHARACTER,
+            \sprintf('%s.summary', $entryAlias),
             $parameter,
             LikePattern::ESCAPE_CHARACTER,
         );
@@ -65,7 +67,7 @@ final readonly class SearchTermsPredicateBuilder
      * Such a term skips the prefilter and pays for the chain — rare, and a
      * wrong answer is not worth the scan.
      */
-    private function wholeWordPredicate(QueryBuilder $qb, string $parameter, string $term): string
+    private function wholeWordPredicate(QueryBuilder $qb, string $parameter, string $term, string $entryAlias): string
     {
         $word = $parameter . 'Word';
         $cheap = WordBoundaries::areIn($term) ? null : $parameter . 'Cheap';
@@ -77,8 +79,8 @@ final readonly class SearchTermsPredicateBuilder
 
         return \sprintf(
             '(%s OR %s)',
-            $this->wholeWordColumnPredicate('title', $cheap, $word),
-            $this->wholeWordColumnPredicate('summary', $cheap, $word),
+            $this->wholeWordColumnPredicate('title', $cheap, $word, $entryAlias),
+            $this->wholeWordColumnPredicate('summary', $cheap, $word, $entryAlias),
         );
     }
 
@@ -87,11 +89,12 @@ final readonly class SearchTermsPredicateBuilder
      * when it is sound, the normalized boundary check for the rows that
      * survive it.
      */
-    private function wholeWordColumnPredicate(string $column, ?string $cheap, string $word): string
+    private function wholeWordColumnPredicate(string $column, ?string $cheap, string $word, string $entryAlias): string
     {
         $escape = LikePattern::ESCAPE_CHARACTER;
         $normalized = \sprintf(
-            "CONCAT(' ', NORMALIZE_WORD_BOUNDARIES(e.%s), ' ') LIKE :%s ESCAPE '%s'",
+            "CONCAT(' ', NORMALIZE_WORD_BOUNDARIES(%s.%s), ' ') LIKE :%s ESCAPE '%s'",
+            $entryAlias,
             $column,
             $word,
             $escape,
@@ -102,7 +105,8 @@ final readonly class SearchTermsPredicateBuilder
         }
 
         return \sprintf(
-            "(e.%s LIKE :%s ESCAPE '%s' AND %s)",
+            "(%s.%s LIKE :%s ESCAPE '%s' AND %s)",
+            $entryAlias,
             $column,
             $cheap,
             $escape,

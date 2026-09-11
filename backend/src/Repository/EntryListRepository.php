@@ -6,8 +6,6 @@ namespace App\Repository;
 
 use App\Entity\Entry;
 use App\Entity\Subscription;
-use App\Service\Search\SearchTerms;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -30,6 +28,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
         ManagerRegistry $registry,
         private readonly EntryListRowHydrator $rowHydrator,
         private readonly SearchTermsPredicateBuilder $termsPredicateBuilder,
+        private readonly EntryScopePredicates $scope,
     ) {
         parent::__construct($registry, Entry::class);
     }
@@ -50,23 +49,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
         $qb = $this->orderedBy($this->rowQueryBuilder($query->userId), $sort)
             ->setMaxResults($query->limit);
 
-        if ($query->subscriptionId !== null) {
-            $qb->andWhere('s.id = :sid')->setParameter('sid', $query->subscriptionId);
-        }
-
-        if ($query->tagId !== null) {
-            // A tag matches at most one join row per subscription, so this inner
-            // join never duplicates an entry. IDENTITY() reads the tag_id FK
-            // without a second join to the tag table.
-            $qb->innerJoin('s.subscriptionTags', 'st', 'WITH', 'IDENTITY(st.tag) = :tagId')
-                ->setParameter('tagId', $query->tagId);
-        }
-
-        if ($query->hidesExcludedFeeds()) {
-            $qb->andWhere('s.includeInAllItems = true');
-        }
-
-        $this->applyView($qb, $query->view);
+        $this->scope->applyList($qb, EntryAliases::primary(), $query);
         $this->applyCursor($qb, $query->cursor, $sort);
 
         /** @var list<array<array-key, mixed>> $rows */
@@ -88,10 +71,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
         $qb = $this->newestFirst($this->rowQueryBuilder($query->userId))
             ->setMaxResults($query->limit);
 
-        $this->applyTerms($qb, $query->terms);
-        if ($query->unread) {
-            $this->applyUnreadFilter($qb);
-        }
+        $this->scope->applySearch($qb, EntryAliases::primary(), $query);
         // Search ranks by publish instant like the default list, never by view
         // time, so its cursor predicate is the effectiveDate one.
         $this->applyCursor($qb, $query->cursor, EntryListSort::PublishedDate);
@@ -222,44 +202,8 @@ class EntryListRepository extends AbstractEntryProjectionRepository
     private function unreadMatchQueryBuilder(EntrySearchQuery $query): QueryBuilder
     {
         $qb = $this->unreadEntriesQueryBuilder($query->userId);
-        $this->applyTerms($qb, $query->terms);
+        $qb->andWhere($this->termsPredicateBuilder->build($qb, $query->terms, 'term'));
 
         return $qb;
-    }
-
-    private function applyView(QueryBuilder $qb, string $view): void
-    {
-        switch ($view) {
-            case 'unread':
-                $this->applyUnreadFilter($qb);
-                break;
-            case 'favorites':
-                $qb->andWhere('es.isFavorite = :flag')->setParameter('flag', true, Types::BOOLEAN);
-                break;
-            case 'kept':
-                $qb->andWhere('es.isKept = :flag')->setParameter('flag', true, Types::BOOLEAN);
-                break;
-            case 'viewed':
-                $qb->andWhere('es.isViewed = :flag')->setParameter('flag', true, Types::BOOLEAN);
-                break;
-            default:
-                // 'all' — no state filter.
-                break;
-        }
-    }
-
-    /**
-     * The mode is decided once for the whole query (SearchTerms::$isWholeWord),
-     * not per term — every term takes the same path.
-     */
-    private function applyTerms(QueryBuilder $qb, SearchTerms $terms): void
-    {
-        $qb->andWhere($this->termsPredicateBuilder->build($qb, $terms, 'term'));
-    }
-
-    private function applyUnreadFilter(QueryBuilder $qb): void
-    {
-        $qb->andWhere(UnreadDql::predicate())
-            ->setParameter('notHidden', false, Types::BOOLEAN);
     }
 }
