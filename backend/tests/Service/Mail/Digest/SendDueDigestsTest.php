@@ -12,6 +12,7 @@ use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
+use App\Repository\EntryListRowSubscription;
 use App\Repository\PreferencesRepository;
 use App\Repository\SavedSearchRepository;
 use App\Service\Mail\Digest\DigestCadence;
@@ -278,8 +279,7 @@ final class SendDueDigestsTest extends TestCase
 
         return new EntryListRow(
             entry: $entry,
-            subscriptionId: 1,
-            subscriptionTitle: 'Feed',
+            subscription: new EntryListRowSubscription(1, 'Feed'),
             isHidden: false,
             isFavorite: false,
             isKept: false,

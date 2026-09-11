@@ -22,8 +22,7 @@ final readonly class EntryListRowHydrator
 
         return new EntryListRow(
             entry: $entry,
-            subscriptionId: self::toInt($row['subscriptionId']),
-            subscriptionTitle: $this->rowTitle($row),
+            subscription: new EntryListRowSubscription(self::toInt($row['subscriptionId']), $this->rowTitle($row)),
             isHidden: $this->rowIsHidden($row, $entry),
             isFavorite: (bool) ($row['esFavorite'] ?? false),
             isKept: (bool) ($row['esKept'] ?? false),

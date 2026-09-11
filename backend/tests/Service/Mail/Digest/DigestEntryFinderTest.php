@@ -10,6 +10,7 @@ use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
+use App\Repository\EntryListRowSubscription;
 use App\Repository\EntrySearchQuery;
 use App\Service\Mail\Digest\DigestEntryFinder;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -46,7 +47,16 @@ final class DigestEntryFinderTest extends TestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
 
-        return new EntryListRow($entry, 1, 'Example', false, false, false, false, null, null);
+        return new EntryListRow(
+            $entry,
+            new EntryListRowSubscription(1, 'Example'),
+            false,
+            false,
+            false,
+            false,
+            null,
+            null,
+        );
     }
 
     public function testHydratesOnlyThePerSearchNewestButKeepsTheFullTotal(): void

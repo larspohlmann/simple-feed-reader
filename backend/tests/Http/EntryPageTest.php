@@ -9,6 +9,7 @@ use App\Entity\Feed;
 use App\Http\EntryCursor;
 use App\Http\EntryPage;
 use App\Repository\EntryListRow;
+use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
 use PHPUnit\Framework\TestCase;
@@ -263,8 +264,7 @@ final class EntryPageTest extends TestCase
 
         return new EntryListRow(
             entry: $entry,
-            subscriptionId: 1,
-            subscriptionTitle: 'Example',
+            subscription: new EntryListRowSubscription(1, 'Example'),
             isHidden: false,
             isFavorite: false,
             isKept: false,

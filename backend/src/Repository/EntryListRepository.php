@@ -59,8 +59,9 @@ class EntryListRepository extends AbstractEntryProjectionRepository
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $qb->getQuery()->getResult();
+        $survivors = array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
 
-        return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
+        return $this->attachDuplicates($survivors, $applyScope, $query->userId);
     }
 
     /**
@@ -86,8 +87,9 @@ class EntryListRepository extends AbstractEntryProjectionRepository
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $qb->getQuery()->getResult();
+        $survivors = array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
 
-        return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
+        return $this->attachDuplicates($survivors, $applyScope, $query->userId);
     }
 
     /**
@@ -169,8 +171,9 @@ class EntryListRepository extends AbstractEntryProjectionRepository
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $rowQuery->getQuery()->getResult();
+        $survivors = array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
 
-        return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
+        return $this->attachDuplicates($survivors, $applyScope, $userId);
     }
 
     /**
@@ -214,5 +217,57 @@ class EntryListRepository extends AbstractEntryProjectionRepository
         $qb->andWhere($this->termsPredicateBuilder->build($qb, $query->terms, 'term'));
 
         return $qb;
+    }
+
+    /**
+     * Attach to each survivor the in-scope copies the collapse hid, so a card can
+     * name them. One extra query per page over the same scope, minus the collapse
+     * and the cursor.
+     *
+     * @param list<EntryListRow>                          $survivors
+     * @param callable(QueryBuilder, EntryAliases): void  $applyScope
+     *
+     * @return list<EntryListRow>
+     */
+    private function attachDuplicates(array $survivors, callable $applyScope, int $userId): array
+    {
+        $hashes = [];
+        $survivorIds = [];
+        foreach ($survivors as $row) {
+            $hash = $row->entry->getUrlHash();
+            if ($hash !== null) {
+                $hashes[$hash] = true;
+                $survivorIds[] = (int) $row->entry->getId();
+            }
+        }
+        if ($hashes === []) {
+            return $survivors;
+        }
+
+        $qb = $this->rowQueryBuilder($userId);
+        $applyScope($qb, EntryAliases::primary());
+        $qb->andWhere('e.urlHash IN (:dupHashes)')
+            ->andWhere('e.id NOT IN (:survivorIds)')
+            ->setParameter('dupHashes', array_keys($hashes))
+            ->setParameter('survivorIds', $survivorIds);
+
+        /** @var list<array<array-key, mixed>> $rows */
+        $rows = $qb->getQuery()->getResult();
+        $byHash = [];
+        foreach ($rows as $raw) {
+            $sibling = $this->rowHydrator->hydrate($raw);
+            $byHash[(string) $sibling->entry->getUrlHash()][] = $sibling;
+        }
+
+        return array_map(
+            static function (EntryListRow $row) use ($byHash): EntryListRow {
+                $hash = $row->entry->getUrlHash();
+
+                return $hash !== null && isset($byHash[$hash])
+                    ? $row->withDuplicates($byHash[$hash])
+                    : $row;
+            },
+            $survivors,
+        );
     }
 }

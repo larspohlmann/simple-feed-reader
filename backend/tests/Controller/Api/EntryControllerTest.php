@@ -66,6 +66,39 @@ final class EntryControllerTest extends WebTestCase
         return $sub;
     }
 
+    /**
+     * A single-entry feed sharing $urlHash with another feed seeded the same
+     * way, for asserting the cross-feed duplicate-collapse footer.
+     */
+    private function seedFeedWithMatchingEntry(
+        User $user,
+        string $feedTitle,
+        string $urlHash,
+        \DateTimeImmutable $effectiveDate,
+    ): Entry {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+
+        $feed = new Feed('https://example.com/dup-feed-' . uniqid('', true) . '.xml');
+        $feed->setTitle($feedTitle);
+        $em->persist($feed);
+        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+
+        $entry = new Entry(
+            $feed,
+            'dup-guid-' . uniqid('', true),
+            'https://tagesschau.de/x',
+            $feedTitle . ' entry',
+            $effectiveDate,
+            $effectiveDate,
+            $urlHash,
+        );
+        $em->persist($entry);
+        $em->flush();
+
+        return $entry;
+    }
+
     private function seedDebugEnabledSettings(User $user): void
     {
         $em = self::getContainer()->get(EntityManagerInterface::class);
@@ -150,6 +183,31 @@ final class EntryControllerTest extends WebTestCase
         self::assertNull($second['imageUrl']);
         self::assertNull($second['imageWidth']);
         self::assertNull($second['imageHeight']);
+    }
+
+    public function testEntryDuplicatesNameTheOtherFeedAsSource(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-duplicates@example.com');
+
+        $earlier = new \DateTimeImmutable('2026-07-05T09:00:00Z');
+        $later = new \DateTimeImmutable('2026-07-05T10:00:00Z');
+        $this->seedFeedWithMatchingEntry($user, 'Feed A', 'urlhash-dup-x', $earlier);
+        $this->seedFeedWithMatchingEntry($user, 'Feed B', 'urlhash-dup-x', $later);
+
+        $client->request('GET', '/api/entries', server: $headers);
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entries']);
+        self::assertCount(1, $body['entries']);
+        $entry = $body['entries'][0];
+        self::assertIsArray($entry);
+        self::assertIsArray($entry['duplicates']);
+        self::assertCount(1, $entry['duplicates']);
+        $duplicate = $entry['duplicates'][0];
+        self::assertIsArray($duplicate);
+        self::assertSame('Feed B', $duplicate['source']);
     }
 
     public function testPaginatesWithCursor(): void

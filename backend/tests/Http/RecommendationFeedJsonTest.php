@@ -9,6 +9,7 @@ use App\Entity\Feed;
 use App\Http\FeedAnnotationVisibility;
 use App\Http\RecommendationFeedJson;
 use App\Repository\EntryListRow;
+use App\Repository\EntryListRowSubscription;
 use App\Repository\RecommendationFeedRow;
 use PHPUnit\Framework\TestCase;
 
@@ -105,8 +106,7 @@ final class RecommendationFeedJsonTest extends TestCase
 
         $listRow = new EntryListRow(
             entry: $entry,
-            subscriptionId: 1,
-            subscriptionTitle: 'Seeded',
+            subscription: new EntryListRowSubscription(1, 'Seeded'),
             isHidden: false,
             isFavorite: false,
             isKept: false,

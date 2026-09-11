@@ -164,6 +164,37 @@ final class DuplicateCollapseTest extends DbTestCase
         self::assertSame($lower->getId(), $rows[0]->entry->getId());
     }
 
+    public function testSurvivorCarriesTheInScopeHiddenCopy(): void
+    {
+        $lower = $this->entry($this->feedA, 'a-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T09:00:00Z');
+        $higher = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
+        $this->em->flush();
+
+        $rows = $this->repo()->listForUser(new EntryQuery((int) $this->user->getId(), view: 'all'));
+
+        self::assertCount(1, $rows);
+        self::assertSame($lower->getId(), $rows[0]->entry->getId());
+        self::assertCount(1, $rows[0]->duplicates);
+        self::assertSame($higher->getId(), $rows[0]->duplicates[0]->entry->getId());
+        self::assertSame([], $rows[0]->duplicates[0]->duplicates); // flattened
+    }
+
+    public function testUnreadViewFooterOmitsAReadCopy(): void
+    {
+        $lower = $this->entry($this->feedA, 'a-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T09:00:00Z');
+        $higher = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
+        $read = new EntryState($this->user, $higher);
+        $read->setIsHidden(true);
+        $this->em->persist($read);
+        $this->em->flush();
+
+        $rows = $this->repo()->listForUser(new EntryQuery((int) $this->user->getId(), view: 'unread'));
+
+        self::assertCount(1, $rows);
+        self::assertSame($lower->getId(), $rows[0]->entry->getId());
+        self::assertSame([], $rows[0]->duplicates); // the read copy is out of unread scope
+    }
+
     private function repo(): EntryListRepository
     {
         $repo = self::getContainer()->get(EntryListRepository::class);

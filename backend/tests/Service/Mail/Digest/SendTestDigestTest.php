@@ -11,6 +11,7 @@ use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
+use App\Repository\EntryListRowSubscription;
 use App\Repository\EntrySearchQuery;
 use App\Repository\SavedSearchRepository;
 use App\Service\Mail\Digest\DigestBrandLogo;
@@ -225,8 +226,7 @@ final class SendTestDigestTest extends TestCase
 
         return new EntryListRow(
             entry: $entry,
-            subscriptionId: 1,
-            subscriptionTitle: 'Feed',
+            subscription: new EntryListRowSubscription(1, 'Feed'),
             isHidden: false,
             isFavorite: false,
             isKept: false,

@@ -10,6 +10,7 @@ use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Http\EntryJson;
 use App\Repository\EntryListRow;
+use App\Repository\EntryListRowSubscription;
 use PHPUnit\Framework\TestCase;
 
 final class EntryJsonTest extends TestCase
@@ -59,8 +60,45 @@ final class EntryJsonTest extends TestCase
         self::assertSame([], $json['attachments']);
     }
 
+    public function testEmitsDuplicatesAsFlattenedEntryJson(): void
+    {
+        $sibling = new Entry(
+            new Feed('https://example.com/other-feed'),
+            'sibling-guid',
+            'https://example.com/dup',
+            'Sibling',
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+        );
+        $entry = new Entry(
+            new Feed('https://example.com/feed'),
+            'guid',
+            'https://example.com/dup',
+            'Survivor',
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+        );
+        $row = $this->row($entry)->withDuplicates([$this->row($sibling)]);
+
+        $json = EntryJson::one($row);
+
+        self::assertCount(1, $json['duplicates']);
+        self::assertSame($sibling->getId(), $json['duplicates'][0]['id']);
+        self::assertSame('Sibling', $json['duplicates'][0]['title']);
+        self::assertSame([], $json['duplicates'][0]['duplicates']);
+    }
+
     private function row(Entry $entry): EntryListRow
     {
-        return new EntryListRow($entry, 1, 'Source', false, false, false, false, null, null);
+        return new EntryListRow(
+            $entry,
+            new EntryListRowSubscription(1, 'Source'),
+            false,
+            false,
+            false,
+            false,
+            null,
+            null,
+        );
     }
 }
