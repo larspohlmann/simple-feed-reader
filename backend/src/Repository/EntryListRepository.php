@@ -194,6 +194,27 @@ class EntryListRepository extends AbstractEntryProjectionRepository
     }
 
     /**
+     * Every OTHER copy of the same article this caller subscribes to, as list
+     * rows — the group a read/viewed mirror must reach. Not collapsed: the
+     * mirror needs each copy, hidden or shown.
+     *
+     * @return list<EntryListRow>
+     */
+    public function siblingRowsForUser(string $urlHash, int $excludeEntryId, int $userId): array
+    {
+        /** @var list<array<array-key, mixed>> $rows */
+        $rows = $this->rowQueryBuilder($userId)
+            ->andWhere('e.urlHash = :hash')
+            ->andWhere('e.id <> :self')
+            ->setParameter('hash', $urlHash)
+            ->setParameter('self', $excludeEntryId)
+            ->getQuery()
+            ->getResult();
+
+        return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
+    }
+
+    /**
      * The entry only if the caller subscribes to its feed — the IDOR gate for
      * per-entry state writes. Returns a managed Entry (or null → 404).
      */

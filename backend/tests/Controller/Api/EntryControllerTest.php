@@ -907,6 +907,53 @@ final class EntryControllerTest extends WebTestCase
         self::assertNotNull($body['state']['viewedAt']);
     }
 
+    /**
+     * The duplicate-collapse badge count (#496) hides a higher-id duplicate's
+     * own unread count as long as a lower-id copy is unread: two subscribed
+     * copies of the same article show ONE unread, attributed to the survivor
+     * (lowest id). Without the mirror, hiding the survivor alone would make the
+     * sibling's own copy the "only" unread one left in its group — its badge
+     * would jump from 0 to 1, a duplicate resurfacing as unread in another
+     * feed. Mirroring isHidden onto the sibling keeps its badge at 0.
+     */
+    public function testHidingASurvivorMirrorsToTheSiblingSoItsBadgeStaysClear(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-mirror@example.com');
+
+        $earlier = new \DateTimeImmutable('2026-07-05T09:00:00Z');
+        $later = new \DateTimeImmutable('2026-07-05T10:00:00Z');
+        $survivor = $this->seedFeedWithMatchingEntry($user, 'Feed A', 'urlhash-mirror-x', $earlier);
+        $sibling = $this->seedFeedWithMatchingEntry($user, 'Feed B', 'urlhash-mirror-x', $later);
+
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $survivorSubscription = $em->getRepository(Subscription::class)
+            ->findOneBy(['user' => $user, 'feed' => $survivor->getFeed()]);
+        $siblingSubscription = $em->getRepository(Subscription::class)
+            ->findOneBy(['user' => $user, 'feed' => $sibling->getFeed()]);
+        self::assertInstanceOf(Subscription::class, $survivorSubscription);
+        self::assertInstanceOf(Subscription::class, $siblingSubscription);
+
+        self::assertSame(1, $this->unreadCountOf($client, $headers, (int) $survivorSubscription->getId()));
+        self::assertSame(0, $this->unreadCountOf($client, $headers, (int) $siblingSubscription->getId()));
+
+        $client->request(
+            'PATCH',
+            '/api/entries/' . $survivor->getId() . '/state',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['isHidden' => true], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseIsSuccessful();
+
+        self::assertSame(0, $this->unreadCountOf($client, $headers, (int) $survivorSubscription->getId()));
+        self::assertSame(
+            0,
+            $this->unreadCountOf($client, $headers, (int) $siblingSubscription->getId()),
+            'Hiding the survivor must mirror isHidden onto the sibling copy, not resurrect it as unread.',
+        );
+    }
+
     public function testCannotPatchEntryOfUnsubscribedFeed(): void
     {
         $client = self::createClient();
