@@ -83,10 +83,17 @@ Non-negotiables:
   (see `Service/Refresh/FeedBodyParser.php` for the pattern).
 - **Errors are exceptions**, typed and namespaced next to their service
   (`Service/*/Exception/`). Never signal failure with `null` or a magic value.
-- **Default to no comment.** A clear name or a smaller method beats a sentence
-  about the code. Write a comment only for the *why* the code cannot state: a
-  non-obvious invariant, a defensive branch, a hard-won bug, a decision that
-  costs more to rediscover than to read.
+- **Default to no comment, and mean it.** A clear name, a smaller method, a
+  typed value, or the git history beats a sentence about the code — reach for
+  those first, and prefer them even when a comment would be easy. Write a
+  comment only when a specific future reader would get the code *wrong*
+  without it: a genuinely non-obvious invariant the code cannot express, or a
+  hard-won bug that returns without the warning. "It might help", "it adds
+  context", a defensive branch that already reads clearly, or a *why* the
+  reader could recover from the code or the linked issue is **not** enough —
+  leave it out. When in doubt, no comment. Do not add or keep a comment to
+  satisfy a reviewer; a moved or deleted comment that does not clear this bar
+  stays gone.
 - **One line. Three at the absolute most.** More than three lines needs a VERY
   GOOD reason, and the reason goes in the comment. Holds for every language in
   the tree and for docblocks.
