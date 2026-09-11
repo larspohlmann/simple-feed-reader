@@ -34,7 +34,7 @@ import { groupByRun, RunGroup } from '../for-you-runs';
 import { EntryHeroComponent } from '../magazine/entry-hero.component';
 import { EntryCompactComponent } from '../magazine/entry-compact.component';
 import { SourceGroupComponent } from '../magazine/source-group.component';
-import { focusOpacityForSpan } from '../reading-focus';
+import { LIST_FOCUS_CURVE } from '../reading-focus';
 import { EntrySplitComponent } from '../magazine/entry-split.component';
 import { EntryWideComponent } from '../magazine/entry-wide.component';
 import { EntryThumbComponent } from '../magazine/entry-thumb.component';
@@ -68,6 +68,7 @@ import { nextHeaderHidden } from '../header-scroll';
 import { prefetchMargin } from '../paging';
 import { ReadingFocusService } from '../../core/reading-focus.service';
 import { MagazineStyleService } from '../../core/magazine-style.service';
+import { ReadingFocusApplier } from '../reading-focus-applier';
 
 // Scroll-restore settle window: re-assert the target for at most this many frames,
 // stopping early once the content height has held steady for this many in a row.
@@ -415,14 +416,7 @@ export class EntryListComponent implements OnDestroy {
     host.addEventListener('wheel', this.onUserScrollIntent, { passive: true, capture: true });
     host.addEventListener('touchmove', this.onUserScrollIntent, { passive: true, capture: true });
     host.style.setProperty('--refresh-reveal', `${REFRESH_REVEAL}px`);
-
-    const onResize = (): void => this.scheduleFocus();
-    this.zone.runOutsideAngular(() =>
-      window.addEventListener('resize', onResize, { passive: true }),
-    );
-    this.destroyRef.onDestroy(() => {
-      window.removeEventListener('resize', onResize);
-    });
+    this.destroyRef.onDestroy(() => this.applier?.destroy());
   }
   // On narrow layouts the list header collapses to a slim bar on scroll-down,
   // expanding on scroll-up (always expanded on wide screens). The shell's app
@@ -430,7 +424,6 @@ export class EntryListComponent implements OnDestroy {
   // which is why switching lists returns the app bar to the top (#630).
   readonly collapsed = signal(false);
   private lastScrollTop = 0;
-  private focusRaf = 0;
 
   /** Drives the corner back-to-top button; set from the scroll handler. */
   readonly showToTop = signal(false);
@@ -490,39 +483,39 @@ export class EntryListComponent implements OnDestroy {
     this.lastScrollTop = 0;
   });
 
-  /**
-   * The one subscriber that keeps the reading focus fresh. It reads every source
-   * that can change which rows sit under the reading centre and recomputes once,
-   * coalesced to a frame — the pass writes an inline opacity per row, so a row it
-   * has never measured renders undimmed until something runs it.
-   *
-   * The sources, gathered here rather than wired up piecemeal so a new one is a
-   * single line and never a place to forget (each miss was its own bug):
-   *  - `readingFocus.enabled()` — the local setting that starts or clears the pass.
-   *  - `screen.isWide()` — the breakpoint the fade is gated on.
-   *  - `entries()` — a finished load or a load-more append.
-   *  - `rows()` — the scroller element itself being replaced (skeleton -> list,
-   *     list <-> magazine).
-   *  - `selection()` — a view switch, whose retained outgoing list (#254) can
-   *     otherwise keep its stale fade until the new page lands (#462).
-   *  - `magazineStyle.style()` — boxed <-> airy only toggles a class on the same
-   *     `#rows` element (so `rows()` does not fire), yet airy resizes every row;
-   *     without this the fade stays computed against the old geometry.
-   *  Imperative events (scroll, resize, row collapse) call `scheduleFocus()` directly.
-   */
-  private readonly _readingFocus = effect(() => {
-    if (!this.readingFocus.enabled()) {
-      if (this.focusRaf) cancelAnimationFrame(this.focusRaf);
-      this.focusRaf = 0;
-      this.clearFocus();
-      return;
-    }
-    this.screen.isWide();
+  private applier?: ReadingFocusApplier;
+
+  // (Re)build the applier when the scroller element appears or swaps (skeleton ->
+  // list, list <-> magazine). Its constructor runs the first pass and starts
+  // observing; nothing here enumerates the causes of a later geometry change.
+  private readonly _bindReadingFocus = effect(() => {
+    const scroller = this.rows()?.nativeElement;
+    this.applier?.destroy();
+    this.applier = undefined;
+    if (!scroller) return;
+    this.applier = new ReadingFocusApplier({
+      scroller,
+      blocks: () =>
+        (Array.from(scroller.children) as HTMLElement[]).filter(
+          (child) => !child.classList.contains('foot'),
+        ),
+      curve: LIST_FOCUS_CURVE,
+      isActive: () => this.readingFocus.enabled() && !this.screen.isWide() && !this.reduceMotion,
+      runOutsideZone: (run) => this.zone.runOutsideAngular(run),
+    });
+  });
+
+  // The two inputs with no geometric signature: the enable gate, and the block
+  // set changing (a finished load, a load-more append, a view switch whose
+  // retained outgoing rows (#254) must re-fade before the new page lands (#462)).
+  private readonly _pushReadingFocus = effect(() => {
+    const enabled = this.readingFocus.enabled();
     this.entries();
-    this.rows();
     this.selection();
-    this.magazineStyle.style();
-    this.scheduleFocus();
+    const applier = this.applier;
+    if (!applier) return;
+    if (enabled) applier.refresh();
+    else applier.clear();
   });
 
   readonly onRowsScroll = (e: Event): void => {
@@ -534,7 +527,6 @@ export class EntryListComponent implements OnDestroy {
     );
     this.lastScrollTop = top;
     this.showToTop.set(top > BACK_TO_TOP_AFTER_PX);
-    this.scheduleFocus();
     // Remember where the user is so a browser resume-reload (iOS/Brave discard the
     // tab and reload it) can drop them back here rather than at the top.
     if (this.rowsBelongToSelection()) this.scroll.save(this.selection(), top);
@@ -546,55 +538,6 @@ export class EntryListComponent implements OnDestroy {
   private rowsBelongToSelection(): boolean {
     const rendered = this.renderedSelection;
     return rendered === null || sameSelection(rendered, this.selection());
-  }
-
-  /** The reading-focus recompute, coalesced to one pass per animation frame. */
-  private scheduleFocus(): void {
-    if (this.reduceMotion || !this.readingFocus.enabled() || this.focusRaf) return;
-    // Outside the zone: the pass writes inline styles and no signal, so its frame
-    // must not end in a tick over every loaded block (#501).
-    this.focusRaf = this.zone.runOutsideAngular(() =>
-      requestAnimationFrame(() => {
-        this.focusRaf = 0;
-        this.applyFocus();
-      }),
-    );
-  }
-
-  /** A CSS animation finished inside the scroller. Only a saved-view row
-   *  collapsing (#478) matters — it moves rows without firing a scroll, so this
-   *  re-triggers dimming. `includes`: encapsulation puts the marker mid-string. */
-  onContentSettled(event: AnimationEvent): void {
-    if (event.animationName.includes('row-leave')) this.scheduleFocus();
-  }
-
-  /** Dim each list entry by its distance from the scroll viewport's centre.
-   *  Only active on the narrow (mobile) layout — on wide screens any residual
-   *  inline opacities are cleared. */
-  private applyFocus(): void {
-    const rows = this.rows()?.nativeElement;
-    if (!rows) return;
-    if (!this.readingFocus.enabled() || this.screen.isWide()) {
-      this.clearFocus();
-      return;
-    }
-    const viewport = rows.clientHeight;
-    const rowsTop = rows.getBoundingClientRect().top;
-    for (const child of Array.from(rows.children) as HTMLElement[]) {
-      if (child.classList.contains('foot')) continue;
-      const rect = child.getBoundingClientRect();
-      const top = rect.top - rowsTop;
-      // Fade by the row's span, not its centre: a source group taller than the
-      // viewport must stay bright while it fills the screen, not dim to the
-      // minimum because its off-screen centre is a viewport away (#213).
-      child.style.opacity = String(focusOpacityForSpan(top, top + rect.height, viewport));
-    }
-  }
-
-  private clearFocus(): void {
-    const rows = this.rows()?.nativeElement;
-    if (!rows) return;
-    for (const child of Array.from(rows.children) as HTMLElement[]) child.style.opacity = '';
   }
 
   /**
@@ -843,9 +786,6 @@ export class EntryListComponent implements OnDestroy {
   private readonly onUserScrollIntent = (): void => this.cancelSettle();
 
   ngOnDestroy(): void {
-    if (this.focusRaf && typeof cancelAnimationFrame !== 'undefined') {
-      cancelAnimationFrame(this.focusRaf);
-    }
     this.observer?.disconnect();
     this.headerObs?.disconnect();
     this.pullCleanup?.();

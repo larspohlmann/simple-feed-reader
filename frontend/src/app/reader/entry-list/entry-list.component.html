@@ -248,7 +248,6 @@
     [style.transform]="revealTransform()"
     #rows
     [appScrollOutsideZone]="onRowsScroll"
-    (animationend)="onContentSettled($event)"
   >
     @if (topBlock(); as block) {
       <!-- Wrapped in an element this component owns, so the column's own
@@ -382,7 +381,6 @@
     [style.transform]="revealTransform()"
     #rows
     [appScrollOutsideZone]="onRowsScroll"
-    (animationend)="onContentSettled($event)"
   >
     @if (topBlock(); as block) {
       <!-- Wrapped in an element this component owns, so the column's own
