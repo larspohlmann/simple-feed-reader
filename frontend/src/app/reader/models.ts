@@ -197,6 +197,9 @@ export interface EntryDto {
   /** The saved search this entry came from, for the kicker's pill. Set by the
    *  store from the combined list's own provenance map, and by nothing else. */
   savedSearchTerm?: string;
+  /** Other copies of this article the reader also subscribes to, in this
+   *  list's scope. Set by the API's collapse; empty for a non-duplicated row. */
+  duplicates?: EntryDto[];
 }
 
 export interface EntriesPage {
