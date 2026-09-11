@@ -1,6 +1,7 @@
 monolog:
     channels:
         - deprecation # Deprecations are logged in the dedicated "deprecation" channel when it exists
+        - client_errors # Frontend error reports; LokiPushHandler labels this channel source=frontend
 
 when@dev:
     monolog:
@@ -44,6 +45,16 @@ when@test:
                 path: "%kernel.logs_dir%/%kernel.environment%.log"
                 max_files: 3
                 level: debug
+            # Scoped to client_errors only (unlike dev/prod's "!event"): this
+            # makes the channel-logger-to-LokiPushHandler wiring provable in a
+            # test, without every backend channel's routine noise (e.g.
+            # doctrine's connect log) landing in the shared buffer and
+            # breaking unrelated assertions like LokiFlushListenerTest's.
+            loki:
+                type: service
+                id: App\Service\Logging\Loki\LokiPushHandler
+                level: info
+                channels: ["client_errors"]
 
 when@prod:
     monolog:

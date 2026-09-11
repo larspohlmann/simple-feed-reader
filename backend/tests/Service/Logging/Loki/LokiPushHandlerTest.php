@@ -200,6 +200,45 @@ final class LokiPushHandlerTest extends TestCase
         self::assertSame(0, $posts);
     }
 
+    public function testLabelsSourceFrontendForTheClientErrorsChannel(): void
+    {
+        $seen = [];
+        $http = new MockHttpClient(function (string $m, string $u, array $o) use (&$seen): MockResponse {
+            $seen = $o;
+
+            return new MockResponse('', ['http_code' => 204]);
+        });
+        $handler = new LokiPushHandler(new LokiClient($http, $this->endpoint()), 'sfr', 'prod', Level::Info, 100);
+
+        $handler->handle($this->record(Level::Error, LokiPushHandler::CLIENT_ERRORS_CHANNEL, 'render blew up'));
+        $handler->flush();
+
+        /** @var array{body: string} $seen */
+        $body = json_decode($seen['body'], true, 512, JSON_THROW_ON_ERROR);
+        /** @var array{streams: list<array{stream: array{source: string, channel: string}}>} $body */
+        self::assertSame('frontend', $body['streams'][0]['stream']['source']);
+        self::assertSame('client_errors', $body['streams'][0]['stream']['channel']);
+    }
+
+    public function testLabelsSourceBackendForEveryOtherChannel(): void
+    {
+        $seen = [];
+        $http = new MockHttpClient(function (string $m, string $u, array $o) use (&$seen): MockResponse {
+            $seen = $o;
+
+            return new MockResponse('', ['http_code' => 204]);
+        });
+        $handler = new LokiPushHandler(new LokiClient($http, $this->endpoint()), 'sfr', 'prod', Level::Info, 100);
+
+        $handler->handle($this->record(Level::Info, 'app', 'ordinary'));
+        $handler->flush();
+
+        /** @var array{body: string} $seen */
+        $body = json_decode($seen['body'], true, 512, JSON_THROW_ON_ERROR);
+        /** @var array{streams: list<array{stream: array{source: string}}>} $body */
+        self::assertSame('backend', $body['streams'][0]['stream']['source']);
+    }
+
     private function record(Level $level, string $channel, string $message): LogRecord
     {
         return new LogRecord(new \DateTimeImmutable(), $channel, $level, $message, [], ['request_id' => '01TEST']);

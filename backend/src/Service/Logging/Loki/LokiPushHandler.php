@@ -11,6 +11,10 @@ use Monolog\LogRecord;
 
 final class LokiPushHandler extends AbstractProcessingHandler
 {
+    public const string CLIENT_ERRORS_CHANNEL = 'client_errors';
+
+    private const array SOURCE_BY_CHANNEL = [self::CLIENT_ERRORS_CHANNEL => 'frontend'];
+
     /** @var list<array{ts: string, line: string, labels: array<string, string>}> */
     private array $buffer = [];
 
@@ -35,7 +39,7 @@ final class LokiPushHandler extends AbstractProcessingHandler
                 'env' => $this->envLabel,
                 'channel' => $record->channel,
                 'level' => strtolower($record->level->getName()),
-                'source' => 'backend',
+                'source' => self::SOURCE_BY_CHANNEL[$record->channel] ?? 'backend',
             ],
         ];
 
