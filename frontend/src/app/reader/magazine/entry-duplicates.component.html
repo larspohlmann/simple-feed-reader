@@ -1,17 +1,17 @@
 @if (copies().length) {
   <div class="also-foot">
-    <span class="layers" aria-hidden="true">⧉</span>
+    <app-icon class="layers" name="layers" size="sm" aria-hidden="true" />
     <span class="lead">{{ 'reader.alsoIn' | transloco }}</span>
-    @for (copy of copies(); track copy.id) {
+    @for (item of copies(); track item.copy.id) {
       <button
         type="button"
         class="also-entry"
-        [attr.aria-expanded]="selected() === copy"
-        [attr.aria-controls]="selected() === copy ? panelId : null"
-        (click)="toggle(copy, $event)"
+        [attr.aria-expanded]="displayed()?.id === item.copy.id"
+        [attr.aria-controls]="displayed()?.id === item.copy.id ? panelId : null"
+        (click)="toggle(item.copy, $event)"
       >
-        {{ copy.source }} <span class="sep">·</span>
-        <span class="t">{{ when(copy) }}</span>
+        {{ item.copy.source }} <span class="sep">·</span>
+        <span class="t">{{ item.when }}</span>
       </button>
     }
   </div>
@@ -19,7 +19,7 @@
     <ng-template
       cdkConnectedOverlay
       [cdkConnectedOverlayOrigin]="trigger"
-      [cdkConnectedOverlayOpen]="!!selected()"
+      [cdkConnectedOverlayOpen]="!!displayed()"
       [cdkConnectedOverlayPositions]="positions"
       [cdkConnectedOverlayHasBackdrop]="true"
       cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"

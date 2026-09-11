@@ -5,6 +5,7 @@ import { EntryDto } from '../models';
 import { LanguageService } from '../../core/language.service';
 import { relativeTime } from '../format';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 let nextId = 0;
 
@@ -18,7 +19,7 @@ const OVERLAY_POSITIONS: ConnectedPosition[] = [
   // forwardRef: entry-row renders entry-duplicates for its own footer, so a
   // plain reference here would resolve EntryRowComponent mid-import-cycle and
   // read as undefined, depending on which of the two loads first.
-  imports: [TranslocoPipe, CdkConnectedOverlay, forwardRef(() => EntryRowComponent)],
+  imports: [TranslocoPipe, IconComponent, CdkConnectedOverlay, forwardRef(() => EntryRowComponent)],
   templateUrl: './entry-duplicates.component.html',
   styleUrl: './entry-duplicates.component.scss',
 })
@@ -30,13 +31,15 @@ export class EntryDuplicatesComponent {
   readonly read = output<EntryDto>();
 
   private readonly language = inject(LanguageService);
-  readonly copies = computed(() => this.entry().duplicates ?? []);
-  readonly when = (copy: EntryDto): string =>
-    relativeTime(copy.publishedAt ?? copy.createdAt, this.language.lang());
+  readonly copies = computed(() =>
+    (this.entry().duplicates ?? []).map((copy) => ({
+      copy,
+      when: relativeTime(copy.publishedAt ?? copy.createdAt, this.language.lang()),
+    })),
+  );
 
-  protected readonly selected = signal<EntryDto | null>(null);
-  // The card shown in the popover: a clone of `selected`, flipped locally on
-  // each action so the icons react without the copy ever joining the list
+  // The card shown in the popover: a clone of the clicked copy, flipped locally
+  // on each action so the icons react without the copy ever joining the list
   // the shell keeps in sync with the backend.
   protected readonly displayed = signal<EntryDto | null>(null);
   protected readonly origin = signal<HTMLElement | null>(null);
@@ -45,12 +48,11 @@ export class EntryDuplicatesComponent {
 
   toggle(copy: EntryDto, event: Event): void {
     event.stopPropagation();
-    if (this.selected() === copy) {
+    if (this.displayed()?.id === copy.id) {
       this.close();
       return;
     }
     this.origin.set(event.currentTarget as HTMLElement);
-    this.selected.set(copy);
     this.displayed.set({ ...copy });
   }
 
@@ -77,7 +79,6 @@ export class EntryDuplicatesComponent {
   }
 
   close(): void {
-    this.selected.set(null);
     this.displayed.set(null);
   }
 }
