@@ -77,6 +77,18 @@ final class EntryStateUpdaterTest extends DbTestCase
             ?? new EntryState($user, $entry);
     }
 
+    /**
+     * The persisted row, or null when a mirror that should have skipped this
+     * sibling never created one. stateOf() cannot tell the two apart: its
+     * unpersisted fallback reads all-false, same as a row that was created
+     * but never written to.
+     */
+    private function persistedStateOf(User $user, Entry $entry): ?EntryState
+    {
+        return $this->em->getRepository(EntryState::class)
+            ->findOneForUserEntry((int) $user->getId(), (int) $entry->getId());
+    }
+
     private function rows(): EntryListRepository
     {
         $repo = self::getContainer()->get(EntryListRepository::class);
@@ -115,6 +127,7 @@ final class EntryStateUpdaterTest extends DbTestCase
 
         self::assertTrue($this->stateOf($user, $target)->isFavorite());
         self::assertFalse($this->stateOf($user, $sibling)->isFavorite());
+        self::assertNull($this->persistedStateOf($user, $sibling));
     }
 
     public function testKeptDoesNotMirror(): void
@@ -127,6 +140,7 @@ final class EntryStateUpdaterTest extends DbTestCase
 
         self::assertTrue($this->stateOf($user, $target)->isKept());
         self::assertFalse($this->stateOf($user, $sibling)->isKept());
+        self::assertNull($this->persistedStateOf($user, $sibling));
     }
 
     public function testViewedMirrorsToTheSubscribedSiblingAndImpliesHiddenThere(): void

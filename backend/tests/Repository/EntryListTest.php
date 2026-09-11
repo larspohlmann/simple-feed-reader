@@ -326,6 +326,32 @@ final class EntryListTest extends DbTestCase
         self::assertSame('e1', $page2[0]->entry->getGuid());
     }
 
+    public function testSubscriptionFilterExcludesEntriesFromTheUsersOtherSubscription(): void
+    {
+        $ownEntry = $this->entry('own', '2026-07-10T00:00:00Z');
+
+        $otherFeed = new Feed('https://other.example.com/feed.xml');
+        $this->em->persist($otherFeed);
+        $otherSub = new Subscription($this->user, $otherFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->em->persist($otherSub);
+        $otherEntry = new Entry(
+            $otherFeed,
+            'other',
+            'https://other.example.com/1',
+            'Other',
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            new \DateTimeImmutable('2026-07-11T00:00:00Z'),
+        );
+        $this->em->persist($otherEntry);
+        $this->em->flush();
+
+        $rows = $this->repo()->listForUser(
+            new EntryQuery($this->user->getId() ?? 0, subscriptionId: $this->sub->getId()),
+        );
+
+        self::assertSame([$ownEntry->getId()], array_map(static fn ($row) => $row->entry->getId(), $rows));
+    }
+
     public function testExcludesFeedsTheUserDoesNotSubscribeTo(): void
     {
         $strangerFeed = new Feed('https://stranger.example.com/feed.xml');
