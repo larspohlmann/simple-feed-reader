@@ -1,11 +1,12 @@
 import { Component } from '@angular/core';
 import { EntryKickerLineComponent } from './entry-kicker-line.component';
 import { EntryMetaComponent } from '../entry-meta/entry-meta.component';
+import { EntryDuplicatesComponent } from './entry-duplicates.component';
 import { EntryBlockBase } from './entry-block-base';
 
 @Component({
   selector: 'app-entry-kicker',
-  imports: [EntryKickerLineComponent, EntryMetaComponent],
+  imports: [EntryKickerLineComponent, EntryMetaComponent, EntryDuplicatesComponent],
   templateUrl: './entry-kicker.component.html',
   styleUrl: './entry-kicker.component.scss',
 })

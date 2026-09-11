@@ -110,4 +110,16 @@ describe('EntryHeroComponent', () => {
     expect(keep).toHaveBeenCalled();
     expect(read).toHaveBeenCalled();
   });
+
+  it('bubbles open for a duplicate copy through the footer', () => {
+    const dup = entry({ id: 9, source: 'NDR SH' });
+    const f = mount(entry({ duplicates: [dup] }));
+    const opened = jest.fn();
+    f.componentInstance.open.subscribe(opened);
+    (f.nativeElement.querySelector('app-entry-duplicates .also-entry') as HTMLElement).click();
+    f.detectChanges();
+    (f.nativeElement.querySelector('.dup-popover app-entry-row .row') as HTMLElement).click();
+    expect(opened).toHaveBeenCalledWith(dup);
+    expect(opened).toHaveBeenCalledTimes(1);
+  });
 });

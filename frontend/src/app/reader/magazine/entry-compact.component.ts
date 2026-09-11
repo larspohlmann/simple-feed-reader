@@ -2,11 +2,17 @@ import { Component, input } from '@angular/core';
 import { EntryKickerLineComponent } from './entry-kicker-line.component';
 import { EntryMetaComponent } from '../entry-meta/entry-meta.component';
 import { EntryActionsComponent } from '../entry-actions/entry-actions.component';
+import { EntryDuplicatesComponent } from './entry-duplicates.component';
 import { EntryBlockBase } from './entry-block-base';
 
 @Component({
   selector: 'app-entry-compact',
-  imports: [EntryKickerLineComponent, EntryMetaComponent, EntryActionsComponent],
+  imports: [
+    EntryKickerLineComponent,
+    EntryMetaComponent,
+    EntryActionsComponent,
+    EntryDuplicatesComponent,
+  ],
   templateUrl: './entry-compact.component.html',
   styleUrl: './entry-compact.component.scss',
 })

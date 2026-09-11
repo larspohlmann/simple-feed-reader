@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, forwardRef, inject, input, output, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { EntryDto } from '../models';
 import { LanguageService } from '../../core/language.service';
@@ -10,7 +10,10 @@ let nextId = 0;
 
 @Component({
   selector: 'app-entry-duplicates',
-  imports: [TranslocoPipe, DismissOnOutsideDirective, EntryRowComponent],
+  // forwardRef: entry-row renders entry-duplicates for its own footer, so a
+  // plain reference here would resolve EntryRowComponent mid-import-cycle and
+  // read as undefined, depending on which of the two loads first.
+  imports: [TranslocoPipe, DismissOnOutsideDirective, forwardRef(() => EntryRowComponent)],
   templateUrl: './entry-duplicates.component.html',
   styleUrl: './entry-duplicates.component.scss',
 })
