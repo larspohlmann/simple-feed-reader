@@ -21,7 +21,7 @@ natively. It is strictly additive: the native SQLite workflow (plain
 
 ## 1. What you get
 
-Seven services, started with one command from the repository root:
+Nine services, started with one command from the repository root:
 
 | Service | Where |
 |---|---|
@@ -30,6 +30,8 @@ Seven services, started with one command from the repository root:
 | Mailpit web inbox | http://localhost:8025 |
 | MySQL 8.4 | 127.0.0.1:33306 (user/password `feedreader`/`feedreader`, root `root`) |
 | Meilisearch — full-content entry search, dashboard and API | http://127.0.0.1:7700 (key `dev-master-key-not-a-secret`) |
+| Grafana — app logs, provisioned with an "Application logs" dashboard | http://localhost:3000 (login `admin`/`admin`) |
+| Loki — log storage behind Grafana, fed by the app | 127.0.0.1:3100 |
 | Worker — recommendation runs in the background, 5-minute feed refresh sweep | `docker compose logs -f worker` |
 
 The app answers searches from the database whenever Meilisearch is absent or
@@ -358,3 +360,29 @@ Run it early with:
 ```bash
 gh workflow run e2e-rot-check.yml
 ```
+
+## Grafana MCP server (optional dev tooling)
+
+The dev stack runs Grafana on <http://localhost:3000> and Loki on `:3100`
+(see #983). To let Claude query the logs and dashboards, the repo ships an
+`.mcp.json` entry that runs the open-source
+[`mcp/grafana`](https://grafana.com/docs/grafana/latest/developer-resources/mcp/)
+server over stdio in Docker, pointed at the dev Grafana.
+
+It needs a Grafana **service-account token**, which is a secret and is **never
+committed** — `.mcp.json` reads it from the `GRAFANA_SERVICE_ACCOUNT_TOKEN`
+environment variable. One-time setup:
+
+1. Open <http://localhost:3000> (dev login `admin` / `admin`).
+2. Administration → Users and access → Service accounts → **Add service
+   account** (role Viewer is enough for querying), then **Add service account
+   token** and copy it.
+3. Export it where your Claude session can see it:
+
+   ```bash
+   export GRAFANA_SERVICE_ACCOUNT_TOKEN=glsa_xxx…
+   ```
+
+The container reaches the host's Grafana at `host.docker.internal:3000`; set
+`GRAFANA_URL` to override. This is developer tooling only — it is not part of
+the deployed stack, and production uses its own Grafana (or Grafana Cloud).

@@ -124,6 +124,7 @@ services:
     App\Service\Search\Index\SearchIndexWriter: '@App\Service\Search\Index\MeilisearchIndex'
     App\Service\Version\ReleaseVersionReader: '@App\Service\Version\FileReleaseVersionReader'
     App\Service\Version\LatestReleaseReader: '@App\Service\Version\GitHubLatestReleaseReader'
+    App\Service\Logging\TraceContext: '@App\Service\Logging\OtelTraceContext'
     # $repository is set here rather than as a `bind`: a binding matches by
     # parameter NAME, and `$repository` is a name a Doctrine-shaped service could
     # easily reuse, so a global bind would leak this string into unrelated code.
@@ -238,3 +239,22 @@ services:
     App\Command\CheckCatalogUrlsCommand:
         arguments:
             $httpClient: '@catalog.rot_check.http_client'
+
+    App\Service\Logging\RequestLogProcessor:
+        tags:
+            - { name: monolog.processor }
+
+    monolog.formatter.json:
+        class: Monolog\Formatter\JsonFormatter
+        arguments:
+            $batchMode: !php/const Monolog\Formatter\JsonFormatter::BATCH_MODE_JSON
+            $appendNewline: true
+            $ignoreEmptyContextAndExtra: false
+            $includeStacktraces: true
+
+    App\Service\Logging\Loki\LokiEndpoint: '@App\Service\Grafana\SettingsLokiEndpoint'
+
+    App\Service\Logging\Loki\LokiPushHandler:
+        arguments:
+            $appLabel: 'simple-feed-reader'
+            $envLabel: '%kernel.environment%'

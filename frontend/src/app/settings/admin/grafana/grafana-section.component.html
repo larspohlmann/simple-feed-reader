@@ -1,0 +1,121 @@
+<app-settings-stack>
+  @if (svc.state()) {
+    <app-settings-group
+      icon="cloud_upload"
+      [title]="'settings.grafana.logShipping.title' | transloco"
+      [caption]="'settings.grafana.logShipping.caption' | transloco"
+    >
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.grafana.logShipping.lokiPushUrl' | transloco"
+        [description]="
+          containerPresent()
+            ? ('settings.grafana.logShipping.localContainer'
+              | transloco: { url: lokiPushUrlEffective() })
+            : ''
+        "
+      >
+        <input
+          type="url"
+          inputmode="url"
+          class="url-field"
+          autocomplete="off"
+          data-testid="grafana-loki-push-url"
+          [value]="lokiPushUrl()"
+          [placeholder]="lokiPushUrlDefault()"
+          (input)="onLokiPushUrl($event)"
+        />
+      </app-settings-row>
+
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.grafana.logShipping.lokiUsername' | transloco"
+      >
+        <input
+          type="text"
+          class="credential-field"
+          autocomplete="off"
+          data-testid="grafana-loki-username"
+          [value]="lokiUsername()"
+          (input)="onLokiUsername($event)"
+        />
+      </app-settings-row>
+
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.grafana.logShipping.token' | transloco"
+        [description]="hasToken() ? tokenHint() : ''"
+      >
+        <app-password-input class="credential-field">
+          <input
+            type="password"
+            autocomplete="off"
+            data-testid="grafana-token"
+            [value]="token()"
+            (input)="onToken($event)"
+          />
+        </app-password-input>
+        @if (hasToken()) {
+          <app-button
+            variant="default"
+            size="sm"
+            data-testid="grafana-remove-token"
+            [disabled]="svc.dirty()"
+            (click)="removeToken()"
+          >
+            {{ 'settings.grafana.logShipping.tokenRemove' | transloco }}
+          </app-button>
+        }
+      </app-settings-row>
+    </app-settings-group>
+
+    <app-settings-group
+      icon="monitoring"
+      [title]="'settings.grafana.viewing.title' | transloco"
+      [caption]="'settings.grafana.viewing.caption' | transloco"
+    >
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.grafana.viewing.grafanaUrl' | transloco"
+        [description]="
+          grafanaUrlEffective()
+            ? ('settings.grafana.viewing.hint' | transloco: { url: grafanaUrlEffective() })
+            : ''
+        "
+      >
+        <input
+          type="url"
+          inputmode="url"
+          class="url-field"
+          autocomplete="off"
+          data-testid="grafana-url"
+          [value]="grafanaUrl()"
+          [placeholder]="grafanaUrlDefault()"
+          (input)="onGrafanaUrl($event)"
+        />
+        @if (grafanaUrlEffective(); as effective) {
+          <a class="open-link" [href]="effective" target="_blank" rel="noopener noreferrer">
+            {{ 'settings.grafana.viewing.open' | transloco }}
+            <app-icon name="open_in_new" size="xs" />
+          </a>
+        }
+      </app-settings-row>
+    </app-settings-group>
+
+    @if (failureMessage(); as message) {
+      <div class="panel-banner">
+        <app-error-banner [message]="message" />
+      </div>
+    }
+
+    <app-settings-save-bar
+      [dirty]="svc.dirty()"
+      [saving]="svc.busy()"
+      [saveLabel]="'settings.grafana.save' | transloco"
+      [resetLabel]="'settings.grafana.reset' | transloco"
+      [unsavedLabel]="'settings.grafana.unsaved' | transloco"
+      (save)="onSave()"
+      (reset)="onReset()"
+    />
+  }
+</app-settings-stack>

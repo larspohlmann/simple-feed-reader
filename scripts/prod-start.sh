@@ -92,6 +92,7 @@ run_step 'Building and starting the production stack (the first build takes a fe
 # every start to keep the container in step with MEILISEARCH_URL -- see
 # stop_disabled_search_engine_container in lib.sh.
 stop_disabled_search_engine_container
+stop_disabled_grafana_containers
 
 # The web entrypoint picks HTTP or TLS mode by checking docker/certs-prod/
 # once, at container start. That directory is a bind mount, so dropping

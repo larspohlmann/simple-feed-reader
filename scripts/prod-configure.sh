@@ -4,9 +4,10 @@ set -euo pipefail
 # Reconfigure an existing production install: re-ask the questions
 # scripts/install.sh asked -- how users reach the instance, under which
 # hostname, on which port, whether to run the search engine, how mail is
-# sent, the From: address -- each defaulting to the current .env.prod value,
-# then apply by re-running prod-start.sh and offer the same mail-delivery
-# check. Answering every question with return is a no-op.
+# sent, the From: address, whether to run the Grafana log dashboard -- each
+# defaulting to the current .env.prod value, then apply by re-running
+# prod-start.sh and offer the same mail-delivery check. Answering every
+# question with return is a no-op.
 #
 # The database question is the one exception -- see configure_database's own
 # comment in lib.sh for why switching engines needs a manual data move and is
@@ -30,10 +31,10 @@ usage() {
 Usage: prod-configure.sh
 
 Reconfigure an existing production install: re-ask how users reach the instance,
-whether to run the search engine, and how mail is sent -- each defaulting to the
-current .env.prod value -- then apply by re-running prod-start.sh. Interactive:
-it needs a terminal. Secrets, passwords, and the database engine are never
-changed.
+whether to run the search engine, how mail is sent, and whether to run the
+Grafana log dashboard -- each defaulting to the current .env.prod value -- then
+apply by re-running prod-start.sh. Interactive: it needs a terminal. Secrets,
+passwords, and the database engine are never changed.
 
 Options:
   -h, --help              Show this help and exit.
@@ -58,6 +59,7 @@ configure_public_url
 # back so pressing return through this question never reverses it.
 configure_search_engine "$(current_search_engine_choice)"
 configure_mail
+configure_grafana "$(current_grafana_choice)"
 
 say 'Applying the configuration ...'
 # The mail check below still asks a question, so the closing block waits until

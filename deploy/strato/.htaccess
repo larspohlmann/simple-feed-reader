@@ -8,6 +8,13 @@
 # instead of serving the app.
 DirectoryIndex index.html
 
+# Strato has no opentelemetry extension; the committed OTel packages' autoload
+# would otherwise warn on every request. Disable the auto-instrumentation so
+# its registration takes the silent path. No-op if mod_env is unavailable.
+<IfModule mod_env.c>
+    SetEnv OTEL_PHP_DISABLED_INSTRUMENTATIONS all
+</IfModule>
+
 <IfModule mod_negotiation.c>
     # Without this, a request for /reader/index could be content-negotiated
     # onto index.php and bypass the rules below.

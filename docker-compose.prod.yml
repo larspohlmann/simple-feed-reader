@@ -62,6 +62,22 @@ x-app-environment: &app-environment
   # guard here would abort every install that runs no engine.
   MEILISEARCH_URL: ${MEILISEARCH_URL:-}
   MEILISEARCH_KEY: ${MEILISEARCH_KEY:-}
+  GRAFANA_LOKI_PUSH_URL: ${GRAFANA_LOKI_PUSH_URL:-}
+  GRAFANA_LOKI_USERNAME: ${GRAFANA_LOKI_USERNAME:-}
+  GRAFANA_LOKI_TOKEN: ${GRAFANA_LOKI_TOKEN:-}
+  GRAFANA_URL: ${GRAFANA_URL:-}
+  # Single-dash `-` (not `:-`): use_grafana writes DISABLED_INSTRUMENTATIONS empty
+  # ("nothing disabled"); `:-` would read empty as unset and force it back to "all".
+  # Both vars gate tracing together -- AUTOLOAD_ENABLED alone does not.
+  OTEL_PHP_AUTOLOAD_ENABLED: ${OTEL_PHP_AUTOLOAD_ENABLED-false}
+  OTEL_PHP_DISABLED_INSTRUMENTATIONS: ${OTEL_PHP_DISABLED_INSTRUMENTATIONS-all}
+  OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-simple-feed-reader}
+  OTEL_TRACES_EXPORTER: ${OTEL_TRACES_EXPORTER:-otlp}
+  OTEL_METRICS_EXPORTER: "none"
+  OTEL_LOGS_EXPORTER: "none"
+  OTEL_EXPORTER_OTLP_PROTOCOL: ${OTEL_EXPORTER_OTLP_PROTOCOL:-http/protobuf}
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4318}
+  OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-always_on}
   GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
   GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
   APPLE_OAUTH_CLIENT_ID: ${APPLE_OAUTH_CLIENT_ID:-}
@@ -121,6 +137,53 @@ services:
       MEILI_ENV: "production"
     volumes:
       - meili-data:/meili_data
+
+  # Log store + dashboard, behind the grafana profile: an install that declined
+  # observability, or cannot run more containers, never starts these.
+  # prod_compose_profiles in scripts/lib.sh enables this profile exactly while
+  # GRAFANA_LOKI_PUSH_URL in .env.prod is non-empty. No depends_on: the app
+  # fails open when Loki is absent (LokiClient).
+  loki:
+    image: grafana/loki:3.4.2
+    profiles: ["grafana"]
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki-config.yaml"]
+    volumes:
+      - ./docker/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki-data:/loki
+
+  # Distributed tracing, on the same grafana profile as loki+grafana above:
+  # enabling observability enables tracing too. No published port -- only php
+  # and worker reach it, on the internal compose network.
+  tempo:
+    image: grafana/tempo:2.7.1
+    profiles: ["grafana"]
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo/tempo-config.yaml"]
+    volumes:
+      - ./docker/tempo/tempo-config.yaml:/etc/tempo/tempo-config.yaml:ro
+      - tempo-data:/var/tempo
+
+  grafana:
+    image: grafana/grafana:11.5.2
+    profiles: ["grafana"]
+    restart: unless-stopped
+    environment:
+      # Permissive, not `:?`: compose resolves every variable in this file
+      # BEFORE it filters services by profile (see the mysql service above),
+      # so a required guard here would abort every install that runs the
+      # grafana profile off. The installer generates this whenever the
+      # profile is on.
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: ${GRAFANA_URL:-}
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "${WEB_BIND_ADDRESS:-0.0.0.0}:${GRAFANA_PORT:-3000}:3000"
 
   php:
     build:
@@ -217,5 +280,8 @@ services:
 volumes:
   mysql-data:
   meili-data:
+  loki-data:
+  grafana-data:
+  tempo-data:
   php-var:
   jwt-keys:

@@ -203,6 +203,7 @@ if quick_package_chosen; then
   # without it.
   apply_default_public_origin
   use_no_mail
+  use_no_grafana
 else
   configure_public_url
   if custom_package_chosen; then
@@ -215,6 +216,9 @@ else
     configure_search_engine 'n'
   fi
   configure_mail
+  # 'n' for the same reason as configure_search_engine above: a fresh
+  # .env.prod has no Grafana decision on file to read back.
+  configure_grafana 'n'
 fi
 
 # --- 7. start, or explain how to --------------------------------------------

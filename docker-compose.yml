@@ -51,6 +51,19 @@ services:
       MAILER_FALLBACK_DSN: "smtp://mailpit:1025"
       MEILISEARCH_URL: "http://meilisearch:7700"
       MEILISEARCH_KEY: "dev-master-key-not-a-secret"
+      GRAFANA_LOKI_PUSH_URL: "http://loki:3100/loki/api/v1/push"
+      GRAFANA_URL: "http://localhost:3000"
+      # Always on in dev; the tempo container is opt-in behind the `tracing`
+      # profile (see below), and the exporter fails open when it is absent --
+      # a dropped export never breaks a request.
+      OTEL_PHP_AUTOLOAD_ENABLED: "true"
+      OTEL_SERVICE_NAME: "simple-feed-reader"
+      OTEL_TRACES_EXPORTER: "otlp"
+      OTEL_METRICS_EXPORTER: "none"
+      OTEL_LOGS_EXPORTER: "none"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://tempo:4318"
+      OTEL_TRACES_SAMPLER: "always_on"
     extra_hosts:
       # Makes host.docker.internal work on Docker Engine variants where it is
       # not built in; harmless on Docker Desktop.
@@ -123,6 +136,16 @@ services:
       MAILER_FALLBACK_DSN: "smtp://mailpit:1025"
       MEILISEARCH_URL: "http://meilisearch:7700"
       MEILISEARCH_KEY: "dev-master-key-not-a-secret"
+      GRAFANA_LOKI_PUSH_URL: "http://loki:3100/loki/api/v1/push"
+      GRAFANA_URL: "http://localhost:3000"
+      OTEL_PHP_AUTOLOAD_ENABLED: "true"
+      OTEL_SERVICE_NAME: "simple-feed-reader"
+      OTEL_TRACES_EXPORTER: "otlp"
+      OTEL_METRICS_EXPORTER: "none"
+      OTEL_LOGS_EXPORTER: "none"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://tempo:4318"
+      OTEL_TRACES_SAMPLER: "always_on"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -161,6 +184,46 @@ services:
       # Dashboard and API; internal traffic uses the compose network.
       - "127.0.0.1:7700:7700"
 
+  # Log store, always on in dev (like meilisearch): the app pushes its JSON logs
+  # here and Grafana reads them. No depends_on — the app fails open if Loki is
+  # down (see LokiClient).
+  loki:
+    image: grafana/loki:3.4.2
+    command: ["-config.file=/etc/loki/loki-config.yaml"]
+    volumes:
+      - ./docker/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki-data:/loki
+    ports:
+      - "127.0.0.1:3100:3100"
+
+  grafana:
+    image: grafana/grafana:11.5.2
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: "admin"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - loki
+
+  # Distributed tracing, opt-in behind the `tracing` profile: a plain
+  # `docker compose up` never starts it, and the OTLP exporter fails open when
+  # the container is absent. Run `COMPOSE_PROFILES=tracing docker compose up -d`.
+  tempo:
+    image: grafana/tempo:2.7.1
+    profiles: ["tracing"]
+    command: ["-config.file=/etc/tempo/tempo-config.yaml"]
+    volumes:
+      - ./docker/tempo/tempo-config.yaml:/etc/tempo/tempo-config.yaml:ro
+      - tempo-data:/var/tempo
+    ports:
+      - "127.0.0.1:4318:4318"
+
   # Default dev frontend: the Angular CLI dev server with live reload. The
   # browser (on the host) fetches the bundle from here on :4200 and calls the
   # API at https://localhost:8443 directly — cross-origin, which the backend
@@ -190,3 +253,6 @@ volumes:
   mysql-data:
   frontend-node-modules:
   meili-data:
+  loki-data:
+  grafana-data:
+  tempo-data:

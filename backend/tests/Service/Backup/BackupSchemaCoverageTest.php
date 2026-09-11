@@ -11,6 +11,7 @@ use App\Entity\CatalogFeed;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\GrafanaSettings;
 use App\Entity\InstanceSetting;
 use App\Entity\MailSendFailure;
 use App\Entity\MailServerSettings;
@@ -117,6 +118,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
     private const array INSTANCE_SCOPED = [
         InstanceSetting::class => 'Instance-wide configuration, identical for every account.',
         ProxyServerSettings::class => 'The instance\'s egress configuration (#490); an operator setting.',
+        GrafanaSettings::class => 'The instance\'s Grafana/Loki wiring (#983); an operator setting.',
         MailServerSettings::class => 'The instance\'s outgoing-mail transport and identity (#834); an operator '
             . 'setting.',
         CatalogCategory::class => 'The shared discovery catalog, seeded per instance.',
