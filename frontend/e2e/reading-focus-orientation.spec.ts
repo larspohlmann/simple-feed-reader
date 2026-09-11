@@ -5,13 +5,9 @@ import { test, expect, Page } from '@playwright/test';
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
 
-/**
- * A phone in portrait, and the same phone rotated. Both widths sit inside the
- * narrow-drawer band (`NARROW_QUERY`, `max-width: 720px`) and the dim-active
- * band (`WIDE_QUERY`, `min-width: 900px` is where the dim turns off), so this
- * rotation never crosses either breakpoint — only the viewport height, and so
- * the reading centre `ReadingFocusApplier` computes against, moves.
- */
+/** A phone portrait and the same phone rotated — both under `WIDE_QUERY`
+ *  (900px), the dim's only gate, so it stays active; only the viewport
+ *  height, and so the reading centre, changes. */
 const PORTRAIT = { width: 375, height: 667 };
 const LANDSCAPE = { width: 667, height: 375 };
 
@@ -44,12 +40,9 @@ function entry(id: number) {
 // neighbours.
 const ENTRIES = Array.from({ length: ENTRY_COUNT }, (_, i) => entry(i + 1));
 
-/**
- * Stub the entry list so this spec owns its data (an e2e spec must own the
- * data it asserts on — reading whatever the seeded account holds rots on a
- * fresh database, #96). Matched on the pathname so entry detail/state calls
- * still reach the real backend, as in magazine-kicker-one-line.spec.ts.
- */
+/** Stub the entry list so this spec owns its data (#96). Matched on the
+ *  pathname so entry detail/state calls still reach the real backend, as in
+ *  magazine-kicker-one-line.spec.ts. */
 async function stubEntries(page: Page): Promise<void> {
   await page.route(
     (url) => url.pathname === '/api/entries',
@@ -62,10 +55,13 @@ async function stubEntries(page: Page): Promise<void> {
 
 async function signInAsAdmin(page: Page): Promise<boolean> {
   await stubEntries(page);
-  // Force the list layout (not magazine): uniform, single-column rows make
-  // the reading centre land on a predictable row. Same trick as
-  // reading-focus-blocks.spec.ts.
-  await page.addInitScript(() => localStorage.setItem('sfr.layout', 'list'));
+  // Pin layout to list (not magazine) and reading focus on — the trick from
+  // reading-focus-blocks.spec.ts, now also covering the focus toggle so this
+  // spec doesn't depend on the app's own default.
+  await page.addInitScript(() => {
+    localStorage.setItem('sfr.layout', 'list');
+    localStorage.setItem('sfr.readingFocus', 'true');
+  });
   await page.goto('/login');
   await page.locator('input[type=email]').fill(ADMIN_EMAIL);
   await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
@@ -82,15 +78,9 @@ interface FocusEdge {
   opacity: number;
 }
 
-/**
- * The row nearest the scroller's own visible mid-line, and the row farthest
- * from it, mirroring the metric `ReadingFocusApplier` uses
- * (`reading-focus.ts#focusOpacityForSpan`): each row's position relative to
- * the scroller's bounding box, against that box's own centre. Reads each
- * row's CURRENT inline opacity as-is (not `getComputedStyle`, no waiting) —
- * so a poll built on this can distinguish a settled state from one still
- * carrying a stale value from before a resize.
- */
+/** The row nearest the scroller's mid-line, and the row farthest from it —
+ *  the same distance metric `focusOpacityForSpan` uses. Reads each row's
+ *  current inline opacity as-is, so a poll can tell settled from stale. */
 async function readingFocusEdges(page: Page): Promise<{ near: FocusEdge; far: FocusEdge }> {
   return page.evaluate(() => {
     const scroller = document.querySelector('.rows') as HTMLElement;
@@ -143,9 +133,8 @@ test.describe('Reading focus dim survives a rotation', () => {
     // count the entry rows themselves to confirm the fixture rendered in full.
     await expect(page.locator('.rows > .row-slot')).toHaveCount(ENTRY_COUNT);
 
-    // Scroll so a mid-list row sits near the centre, with plenty of rows on
-    // both sides — enough that the row nearest the centre isn't simply the
-    // first or last one in the list, which would shift for reasons of their
+    // Scroll so a mid-list row sits near the centre, with rows on both
+    // sides — not the first/last row, which would shift for reasons of its
     // own and not isolate what the rotation does to the geometry.
     await page.locator('.rows').evaluate((el) => {
       el.scrollTo({ top: (el.scrollHeight - el.clientHeight) / 2, behavior: 'instant' });
@@ -158,13 +147,9 @@ test.describe('Reading focus dim survives a rotation', () => {
 
     await page.setViewportSize(LANDSCAPE);
 
-    // The viewport shrank by 292px, so the scroller's own centre moved by
-    // ~146px — the browser's layout reflects that immediately, before
-    // `ReadingFocusApplier`'s ResizeObserver pass has re-painted a single
-    // row's opacity. Reading the geometry right away, with no poll, both
-    // proves the rotation actually moved the reading centre onto a different
-    // row (so the poll below has something to wait for and cannot hang) and
-    // captures that row's still-stale opacity from the portrait pass.
+    // Layout reflects the new viewport at once, but `ReadingFocusApplier`'s
+    // opacity write lags a frame — reading now both proves the centre moved
+    // to a new row (so the poll below can't hang) and captures its stale value.
     const { near: rotatedNear } = await readingFocusEdges(page);
     expect(
       rotatedNear.index,
