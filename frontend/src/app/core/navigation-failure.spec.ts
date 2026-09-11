@@ -1,9 +1,11 @@
 import { TestBed } from '@angular/core/testing';
+import { ClientErrorReporter } from './client-error-reporter';
 import { NavigationFailureReporter } from './navigation-failure';
 
 describe('NavigationFailureReporter', () => {
   let reporter: NavigationFailureReporter;
   let bootSurface: HTMLElement;
+  let report: jest.Mock;
 
   beforeEach(() => {
     // The real static surface from index.html, which the reporter reveals by
@@ -13,6 +15,10 @@ describe('NavigationFailureReporter', () => {
     bootSurface.hidden = true;
     document.body.appendChild(bootSurface);
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    report = jest.fn();
+    TestBed.configureTestingModule({
+      providers: [{ provide: ClientErrorReporter, useValue: { report } }],
+    });
     reporter = TestBed.inject(NavigationFailureReporter);
   });
 
@@ -44,5 +50,20 @@ describe('NavigationFailureReporter', () => {
     reporter.noteNavigationSucceeded();
 
     expect(reporter.failed()).toBe(false);
+  });
+
+  it('reports the failure through the client-error reporter', () => {
+    reporter.noteNavigationSucceeded();
+
+    const error = new Error('chunk load failed');
+    reporter.report(error);
+
+    expect(report).toHaveBeenCalledWith(error);
+  });
+
+  it('does not report through the client-error reporter before anything has rendered', () => {
+    reporter.report(new Error('chunk load failed'));
+
+    expect(report).not.toHaveBeenCalled();
   });
 });

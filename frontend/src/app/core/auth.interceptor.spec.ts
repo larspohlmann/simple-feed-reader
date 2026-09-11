@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { NavigationEnd, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { API_BASE_URL } from './api';
+import { ClientErrorReporter } from './client-error-reporter';
 import { TokenStore } from './token.store';
 import { authInterceptor } from './auth.interceptor';
 import { CatalogStore } from '../discover/catalog.store';
@@ -17,12 +18,14 @@ describe('authInterceptor', () => {
   let ctrl: HttpTestingController;
   let tokens: TokenStore;
   let events: Subject<unknown>;
+  let reportSpy: jest.Mock;
   const navigate = jest.fn();
 
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
     events = new Subject<unknown>();
+    reportSpy = jest.fn();
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
@@ -30,6 +33,7 @@ describe('authInterceptor', () => {
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
         { provide: Router, useValue: { events, navigate } },
+        { provide: ClientErrorReporter, useValue: { report: reportSpy } },
       ],
     });
     http = TestBed.inject(HttpClient);
@@ -155,5 +159,49 @@ describe('authInterceptor', () => {
 
     expect(ai.ready()).toBe(false);
     expect(ai.model()).toBeNull();
+  });
+
+  it('reports a 500 failure', () => {
+    http
+      .get('https://api.test/api/entries')
+      .subscribe({ next: () => undefined, error: () => undefined });
+    ctrl
+      .expectOne('https://api.test/api/entries')
+      .flush('boom', { status: 500, statusText: 'Server Error' });
+
+    expect(reportSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a network failure (status 0)', () => {
+    http
+      .get('https://api.test/api/entries')
+      .subscribe({ next: () => undefined, error: () => undefined });
+    ctrl
+      .expectOne('https://api.test/api/entries')
+      .error(new ProgressEvent('error'), { status: 0, statusText: '' });
+
+    expect(reportSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not report a 401', () => {
+    http
+      .get('https://api.test/api/entries')
+      .subscribe({ next: () => undefined, error: () => undefined });
+    ctrl
+      .expectOne('https://api.test/api/entries')
+      .flush('no', { status: 401, statusText: 'Unauthorized' });
+
+    expect(reportSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not report a failure of the client-errors endpoint itself', () => {
+    http
+      .post('https://api.test/api/client-errors', {})
+      .subscribe({ next: () => undefined, error: () => undefined });
+    ctrl
+      .expectOne('https://api.test/api/client-errors')
+      .flush('boom', { status: 500, statusText: 'Server Error' });
+
+    expect(reportSpy).not.toHaveBeenCalled();
   });
 });

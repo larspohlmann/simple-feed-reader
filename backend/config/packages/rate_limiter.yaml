@@ -199,3 +199,16 @@ framework:
             limit: 5
             interval: '15 minutes'
             cache_pool: cache.rate_limiter
+
+        # Anonymous frontend error ingest (#984), so the only key is the client
+        # IP — same trusted-proxy caveat as setup/registration above. Sized for a
+        # genuinely broken client that fires a burst while it flails, but capped
+        # so one wedged tab cannot flood the endpoint: 30 in 1 minute per IP. The
+        # reporter also dedupes and throttles client-side, so this is the outer
+        # backstop, not the primary throttle. Sliding window and the same pool as
+        # its neighbours, for the reasons documented above.
+        client_errors:
+            policy: 'sliding_window'
+            limit: 30
+            interval: '1 minute'
+            cache_pool: cache.rate_limiter
