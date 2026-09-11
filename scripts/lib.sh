@@ -405,10 +405,17 @@ prod_uses_search_engine() {
   [ -n "$(trim_whitespace "$(env_prod_get MEILISEARCH_URL)")" ]
 }
 
+# Whether the operator asked for the self-hosted Loki+Grafana log stack -- a
+# non-empty GRAFANA_LOKI_PUSH_URL, mirroring prod_uses_search_engine above.
+prod_uses_grafana() {
+  [ -n "$(trim_whitespace "$(env_prod_get GRAFANA_LOKI_PUSH_URL)")" ]
+}
+
 # The compose profiles the stack runs with: 'mysql' for the bundled database,
-# 'meilisearch' for the bundled search engine, both comma-separated when both
-# are on, nothing at all when neither is. docker-compose.prod.yml puts each
-# service behind its own profile.
+# 'meilisearch' for the bundled search engine, 'grafana' for the log
+# dashboard, comma-separated in that order when more than one is on, nothing
+# at all when none is. docker-compose.prod.yml puts each service behind its
+# own profile.
 prod_compose_profiles() {
   local profiles=''
   if prod_uses_bundled_mysql; then
@@ -416,6 +423,9 @@ prod_compose_profiles() {
   fi
   if prod_uses_search_engine; then
     profiles="${profiles:+${profiles},}meilisearch"
+  fi
+  if prod_uses_grafana; then
+    profiles="${profiles:+${profiles},}grafana"
   fi
   printf '%s' "${profiles}"
 }
@@ -471,6 +481,20 @@ stop_disabled_search_engine_container() {
   fi
   say 'The search engine is disabled -- removing its container (the meili-data volume is kept) ...'
   prod_compose rm -sf meilisearch >/dev/null
+}
+
+# Mirrors stop_disabled_search_engine_container above, for the loki+grafana
+# pair: prod-start.sh calls this after every `up` so a decline removes both
+# containers while keeping loki-data and grafana-data.
+stop_disabled_grafana_containers() {
+  if prod_uses_grafana; then
+    return 0
+  fi
+  if [ -z "$(prod_compose ps -aq loki grafana 2>/dev/null)" ]; then
+    return 0
+  fi
+  say 'Grafana is disabled -- removing its containers (loki-data and grafana-data are kept) ...'
+  prod_compose rm -sf loki grafana >/dev/null
 }
 
 # --- what an earlier production install leaves behind -----------------------
@@ -1354,6 +1378,9 @@ package_question_follow_up() {
   tell "  ${_c_dim}SMTP relay, or this machine's own MTA. Without one the app sends no${_c_reset}"
   tell "  ${_c_dim}verification, password-reset or approval mail. C asks for those two as${_c_reset}"
   tell "  ${_c_dim}well, plus the database and the search engine.${_c_reset}"
+  tell ''
+  tell "  ${_c_dim}All but Q can also add a Grafana log dashboard (Loki + Grafana),${_c_reset}"
+  tell "  ${_c_dim}asked after the package.${_c_reset}"
 }
 
 # What the stack needs, measured and not estimated: read from an idle, healthy
@@ -1613,6 +1640,65 @@ use_bundled_search_engine() {
   ensure_meilisearch_key
   say 'Using the bundled Meilisearch container. Run app:search:reindex once it'
   say 'is up to index what is already stored.'
+}
+
+# Ask whether to run the self-hosted Loki+Grafana log dashboard. Same opt-in
+# shape as configure_search_engine: the caller's default is applied outright
+# without a terminal, so a headless run still leaves .env.prod complete.
+configure_grafana() {
+  local default=$1 choice
+  if ! can_prompt; then
+    apply_grafana_choice "${default}"
+    return 0
+  fi
+  say 'Run a Grafana log dashboard?'
+  tell '  A Loki + Grafana container pair collects the app'\''s logs into a'
+  tell '  browsable dashboard. Declining leaves logs in the container output'
+  tell '  only (docker compose logs), which needs no extra container.'
+  choice=$(prompt_with_default 'Enable Grafana? (y/n)' "${default}")
+  apply_grafana_choice "${choice}"
+}
+
+# The y/n answer applied, shared by the interactive path above and the
+# headless default -- mirrors apply_search_engine_choice.
+apply_grafana_choice() {
+  case "$1" in
+    [nN]*)
+      use_no_grafana
+      ;;
+    *)
+      use_grafana
+      ;;
+  esac
+}
+
+# The default configure_grafana offers on a re-ask -- mirrors
+# current_search_engine_choice.
+current_grafana_choice() {
+  if prod_uses_grafana; then
+    printf 'y'
+    return 0
+  fi
+  printf 'n'
+}
+
+use_no_grafana() {
+  env_prod_set GRAFANA_LOKI_PUSH_URL ''
+  env_prod_set GRAFANA_URL ''
+  say 'No Grafana log dashboard.'
+}
+
+# The internal push URL and a local viewing URL become the effective
+# defaults; GRAFANA_ADMIN_PASSWORD is generated once and never rotated, the
+# same permissive way ensure_ai_key_secret handles INSTANCE_SECRET_KEY.
+use_grafana() {
+  env_prod_set GRAFANA_LOKI_PUSH_URL 'http://loki:3100/loki/api/v1/push'
+  env_prod_set GRAFANA_URL 'http://localhost:3000'
+  if [ -z "$(trim_whitespace "$(env_prod_get GRAFANA_ADMIN_PASSWORD)")" ]; then
+    env_prod_set GRAFANA_ADMIN_PASSWORD "$(generate_secret)"
+  fi
+  say 'Using the bundled Grafana + Loki containers. The admin password is in'
+  say '.env.prod (GRAFANA_ADMIN_PASSWORD).'
 }
 
 # The host part of PUBLIC_URL -- the default mail domain both the transport
