@@ -100,6 +100,8 @@ for (const block of blocks()) {
 `clear()` runs synchronously (a disable must clear the same tick — the existing
 list spec asserts the cleared state without awaiting a frame).
 
+The scroll listener registration itself, not only the rAF, must go through `runOutsideZone` — otherwise the list's scroll path re-enters the Angular zone on every tick (#501).
+
 ## Global constraints (from CLAUDE.md)
 
 - Angular 20 standalone + signals; no NgModules. Node 22.

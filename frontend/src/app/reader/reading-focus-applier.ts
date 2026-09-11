@@ -23,7 +23,9 @@ export class ReadingFocusApplier {
 
   constructor(private readonly config: ReadingFocusConfig) {
     this.runOutsideZone = config.runOutsideZone ?? ((run) => run());
-    config.scroller.addEventListener('scroll', this.onScroll, { passive: true });
+    this.runOutsideZone(() =>
+      config.scroller.addEventListener('scroll', this.onScroll, { passive: true }),
+    );
     if (typeof ResizeObserver !== 'undefined') {
       this.observer = new ResizeObserver(() => this.schedule());
     }

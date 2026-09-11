@@ -344,9 +344,8 @@ export class ReaderViewComponent {
     });
     this.destroyRef.onDestroy(() => this.loadSub?.unsubscribe());
 
-    // (Re)build the applier when the article content element appears or swaps.
-    // Its identity is stable across an innerHTML render, so this effect fires
-    // only on a genuine mount/unmount, not on every article.
+    // The applier is rebuilt whenever `content` itself is (re)created — per
+    // article and on the reader/original swap — destroying the old one first.
     effect(() => {
       const content = this.content()?.nativeElement;
       this.applier?.destroy();

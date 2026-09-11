@@ -140,9 +140,11 @@ test.describe('Reading focus dim survives a rotation', () => {
       el.scrollTo({ top: (el.scrollHeight - el.clientHeight) / 2, behavior: 'instant' });
     });
 
-    await expect.poll(() => isSettled(page), {
-      message: 'reading-focus dim did not settle in portrait',
-    }).toBe(true);
+    await expect
+      .poll(() => isSettled(page), {
+        message: 'reading-focus dim did not settle in portrait',
+      })
+      .toBe(true);
     const { near: portraitNear } = await readingFocusEdges(page);
 
     await page.setViewportSize(LANDSCAPE);
@@ -158,21 +160,27 @@ test.describe('Reading focus dim survives a rotation', () => {
 
     // The dim re-applies against the new centre: some row settles near-focused
     // and some row settles clearly dimmed (the general shape of the curve)…
-    await expect.poll(() => isSettled(page), {
-      message: 'reading-focus dim did not re-apply after the rotation',
-    }).toBe(true);
+    await expect
+      .poll(() => isSettled(page), {
+        message: 'reading-focus dim did not re-apply after the rotation',
+      })
+      .toBe(true);
 
     // …and, concretely, it is the row the rotation actually moved onto the
     // centre line that picks up the focused opacity, not merely some row.
-    await expect.poll(() => opacityOfRow(page, rotatedNear.index), {
-      message: 'the row now on the reading centre never regained focus',
-    }).toBeGreaterThanOrEqual(0.9);
+    await expect
+      .poll(() => opacityOfRow(page, rotatedNear.index), {
+        message: 'the row now on the reading centre never regained focus',
+      })
+      .toBeGreaterThanOrEqual(0.9);
 
     // The row that used to sit on the centre is off it now, so it must have
     // lost the focused opacity it carried in portrait — otherwise nothing
     // would actually have been recomputed for the new geometry.
-    await expect.poll(() => opacityOfRow(page, portraitNear.index), {
-      message: 'the old centre row kept its portrait opacity instead of re-fading',
-    }).toBeLessThan(0.8);
+    await expect
+      .poll(() => opacityOfRow(page, portraitNear.index), {
+        message: 'the old centre row kept its portrait opacity instead of re-fading',
+      })
+      .toBeLessThan(0.8);
   });
 });

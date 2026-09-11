@@ -1711,10 +1711,9 @@ describe('EntryListComponent', () => {
       expect(rowOpacities(f)).not.toContain('');
     });
 
-    // The central subscriber (#478): a saved-view row collapses in place, which
-    // moves the rows below it but fires no scroll — so without a trigger the
-    // dimming would freeze. Blank the marks the first pass wrote, then prove the
-    // event re-touches every row.
+    // The central subscriber (#478): a saved-view row collapses in place, moving
+    // the rows below it without firing a scroll. Blank the marks the first pass
+    // wrote, then prove the resize pass re-touches every row.
     function blankOpacities(f: ComponentFixture<EntryListComponent>): HTMLElement {
       const rows = (f.nativeElement as HTMLElement).querySelector('.rows') as HTMLElement;
       for (const child of Array.from(rows.children) as HTMLElement[]) child.style.opacity = '';
