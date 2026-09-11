@@ -1,19 +1,24 @@
 import { Component, computed, forwardRef, inject, input, output, signal } from '@angular/core';
+import { CdkConnectedOverlay, ConnectedPosition } from '@angular/cdk/overlay';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { EntryDto } from '../models';
 import { LanguageService } from '../../core/language.service';
 import { relativeTime } from '../format';
-import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
 
 let nextId = 0;
+
+const OVERLAY_POSITIONS: ConnectedPosition[] = [
+  { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 6 },
+  { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -6 },
+];
 
 @Component({
   selector: 'app-entry-duplicates',
   // forwardRef: entry-row renders entry-duplicates for its own footer, so a
   // plain reference here would resolve EntryRowComponent mid-import-cycle and
   // read as undefined, depending on which of the two loads first.
-  imports: [TranslocoPipe, DismissOnOutsideDirective, forwardRef(() => EntryRowComponent)],
+  imports: [TranslocoPipe, CdkConnectedOverlay, forwardRef(() => EntryRowComponent)],
   templateUrl: './entry-duplicates.component.html',
   styleUrl: './entry-duplicates.component.scss',
 })
@@ -30,29 +35,21 @@ export class EntryDuplicatesComponent {
     relativeTime(copy.publishedAt ?? copy.createdAt, this.language.lang());
 
   protected readonly selected = signal<EntryDto | null>(null);
-  protected readonly panelTop = signal(0);
-  protected readonly panelLeft = signal(0);
+  protected readonly origin = signal<HTMLElement | null>(null);
+  protected readonly positions = OVERLAY_POSITIONS;
   protected readonly panelId = `dup-popover-${nextId++}`;
 
   toggle(copy: EntryDto, event: Event): void {
     event.stopPropagation();
-    const trigger = event.currentTarget as HTMLElement;
     if (this.selected() === copy) {
       this.close();
       return;
     }
-    this.positionAgainst(trigger);
+    this.origin.set(event.currentTarget as HTMLElement);
     this.selected.set(copy);
   }
 
   close(): void {
     this.selected.set(null);
-  }
-
-  private positionAgainst(trigger: HTMLElement): void {
-    const gap = 6;
-    const rect = trigger.getBoundingClientRect();
-    this.panelTop.set(Math.round(rect.bottom + gap));
-    this.panelLeft.set(Math.round(rect.left));
   }
 }

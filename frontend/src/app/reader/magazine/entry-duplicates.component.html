@@ -1,42 +1,44 @@
 @if (copies().length) {
-  <span class="dup-wrap" [appDismissOnOutside]="!!selected()" (dismiss)="close()">
-    <div class="also-foot">
-      <span class="layers" aria-hidden="true">⧉</span>
-      <span class="lead">{{ 'reader.alsoIn' | transloco }}</span>
-      @for (copy of copies(); track copy.id) {
-        <button
-          type="button"
-          class="also-entry"
-          [attr.aria-expanded]="selected() === copy"
-          [attr.aria-controls]="selected() === copy ? panelId : null"
-          (click)="toggle(copy, $event)"
-        >
-          {{ copy.source }} <span class="sep">·</span>
-          <span class="t">{{ when(copy) }}</span>
-        </button>
-      }
-    </div>
-    @if (selected(); as copy) {
-      <!-- The handler suppresses an activation rather than performing one: a
-           click reaching the host card would open the host entry, not this copy. -->
-      <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events -->
-      <span
-        class="dup-popover"
-        [id]="panelId"
-        role="note"
-        [style.top.px]="panelTop()"
-        [style.left.px]="panelLeft()"
-        (click)="$event.stopPropagation()"
+  <div class="also-foot">
+    <span class="layers" aria-hidden="true">⧉</span>
+    <span class="lead">{{ 'reader.alsoIn' | transloco }}</span>
+    @for (copy of copies(); track copy.id) {
+      <button
+        type="button"
+        class="also-entry"
+        [attr.aria-expanded]="selected() === copy"
+        [attr.aria-controls]="selected() === copy ? panelId : null"
+        (click)="toggle(copy, $event)"
       >
-        <span class="popover-heading">{{ 'reader.alsoPublishedAs' | transloco }}</span>
-        <app-entry-row
-          [entry]="copy"
-          (open)="open.emit($event)"
-          (favorite)="favorite.emit($event)"
-          (keep)="keep.emit($event)"
-          (read)="read.emit($event)"
-        />
-      </span>
+        {{ copy.source }} <span class="sep">·</span>
+        <span class="t">{{ when(copy) }}</span>
+      </button>
     }
-  </span>
+  </div>
+  @if (origin(); as trigger) {
+    <ng-template
+      cdkConnectedOverlay
+      [cdkConnectedOverlayOrigin]="trigger"
+      [cdkConnectedOverlayOpen]="!!selected()"
+      [cdkConnectedOverlayPositions]="positions"
+      [cdkConnectedOverlayHasBackdrop]="true"
+      cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+      (backdropClick)="close()"
+      (overlayOutsideClick)="close()"
+      (overlayKeydown)="$event.key === 'Escape' && close()"
+    >
+      @if (selected(); as copy) {
+        <div class="dup-popover" [id]="panelId" role="note">
+          <span class="popover-heading">{{ 'reader.alsoPublishedAs' | transloco }}</span>
+          <app-entry-row
+            [entry]="copy"
+            (open)="open.emit($event)"
+            (favorite)="favorite.emit($event)"
+            (keep)="keep.emit($event)"
+            (read)="read.emit($event)"
+          />
+        </div>
+      }
+    </ng-template>
+  }
 }

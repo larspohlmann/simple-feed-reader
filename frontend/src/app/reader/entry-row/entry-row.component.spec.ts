@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { OverlayContainer } from '@angular/cdk/overlay';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { EntryRowComponent } from './entry-row.component';
 import { EntryActionsComponent } from '../entry-actions/entry-actions.component';
@@ -168,7 +169,8 @@ describe('EntryRowComponent', () => {
     f.componentInstance.open.subscribe(opened);
     (f.nativeElement.querySelector('app-entry-duplicates .also-entry') as HTMLElement).click();
     f.detectChanges();
-    (f.nativeElement.querySelector('.dup-popover app-entry-row .row') as HTMLElement).click();
+    const overlay = TestBed.inject(OverlayContainer).getContainerElement();
+    (overlay.querySelector('.dup-popover app-entry-row .row') as HTMLElement).click();
     expect(opened).toHaveBeenCalledWith(dup);
     expect(opened).toHaveBeenCalledTimes(1);
   });

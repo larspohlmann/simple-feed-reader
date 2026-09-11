@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { OverlayContainer } from '@angular/cdk/overlay';
 import { EntryDto } from '../models';
 import { EntryDuplicatesComponent } from './entry-duplicates.component';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
@@ -60,10 +61,11 @@ it('opens a popover with the copy card and re-emits open for that copy', () => {
 
   (f.nativeElement.querySelector('.also-entry') as HTMLElement).click();
   f.detectChanges();
-  const panel = f.nativeElement.querySelector('.dup-popover');
+  const overlay = TestBed.inject(OverlayContainer).getContainerElement();
+  const panel = overlay.querySelector('.dup-popover');
   expect(panel).not.toBeNull();
-  expect(panel.textContent).toContain('NDR wording');
+  expect(panel!.textContent).toContain('NDR wording');
 
-  (panel.querySelector('app-entry-row .row') as HTMLElement).click();
+  (panel!.querySelector('app-entry-row .row') as HTMLElement).click();
   expect(opened).toHaveBeenCalledWith(dup);
 });
