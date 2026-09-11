@@ -32,6 +32,27 @@ final class ClientErrorScrubberTest extends TestCase
         self::assertSame('https://app.example', $scrubbed->url);
     }
 
+    public function testStripsAQueryFromAPathLessUrl(): void
+    {
+        $scrubbed = $this->scrubber->scrub($this->item(url: 'https://app.example?token=SECRETVALUE'));
+
+        self::assertSame('https://app.example', $scrubbed->url);
+    }
+
+    public function testStripsQueryAndFragmentFromAPathLessUrlWithMultipleSecrets(): void
+    {
+        $scrubbed = $this->scrubber->scrub($this->item(url: 'https://app.example?token=A&password=B#frag'));
+
+        self::assertSame('https://app.example', $scrubbed->url);
+    }
+
+    public function testStripsTheQueryFromAPurelyRelativeUrl(): void
+    {
+        $scrubbed = $this->scrubber->scrub($this->item(url: '?token=SECRETVALUE'));
+
+        self::assertStringNotContainsString('SECRETVALUE', (string) $scrubbed->url);
+    }
+
     public function testRedactsBearerTokensInStack(): void
     {
         $scrubbed = $this->scrubber->scrub($this->item(

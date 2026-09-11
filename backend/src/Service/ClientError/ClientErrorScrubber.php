@@ -58,13 +58,14 @@ final readonly class ClientErrorScrubber
         }
 
         $parts = parse_url($url);
-        if (false === $parts || !isset($parts['path'])) {
+        if (false === $parts) {
             return $url;
         }
 
         $scheme = isset($parts['scheme']) ? $parts['scheme'] . '://' : '';
         $host = $parts['host'] ?? '';
+        $path = $parts['path'] ?? '';
 
-        return $scheme . $host . $parts['path'];
+        return $scheme . $host . $path;
     }
 }
