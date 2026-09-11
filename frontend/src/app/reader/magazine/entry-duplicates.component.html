@@ -27,15 +27,15 @@
       (overlayOutsideClick)="close()"
       (overlayKeydown)="$event.key === 'Escape' && close()"
     >
-      @if (selected(); as copy) {
+      @if (displayed(); as copy) {
         <div class="dup-popover" [id]="panelId" role="note">
           <span class="popover-heading">{{ 'reader.alsoPublishedAs' | transloco }}</span>
           <app-entry-row
             [entry]="copy"
-            (open)="open.emit($event)"
-            (favorite)="favorite.emit($event)"
-            (keep)="keep.emit($event)"
-            (read)="read.emit($event)"
+            (open)="openCopy($event)"
+            (favorite)="favoriteCopy($event)"
+            (keep)="keepCopy($event)"
+            (read)="readCopy($event)"
           />
         </div>
       }

@@ -69,3 +69,41 @@ it('opens a popover with the copy card and re-emits open for that copy', () => {
   (panel!.querySelector('app-entry-row .row') as HTMLElement).click();
   expect(opened).toHaveBeenCalledWith(dup);
 });
+
+it('closes the popover once the copy is opened', () => {
+  const dup = entry({ id: 2, title: 'NDR wording', source: 'NDR SH' });
+  const f = mount(entry({ duplicates: [dup] }));
+  const opened = jest.fn();
+  f.componentInstance.open.subscribe(opened);
+
+  (f.nativeElement.querySelector('.also-entry') as HTMLElement).click();
+  f.detectChanges();
+  const overlay = TestBed.inject(OverlayContainer).getContainerElement();
+
+  (overlay.querySelector('.dup-popover app-entry-row .row') as HTMLElement).click();
+  f.detectChanges();
+
+  expect(opened).toHaveBeenCalledWith(dup);
+  expect(overlay.querySelector('.dup-popover')).toBeNull();
+});
+
+it('flips the favorite icon in the popover and re-emits favorite for the copy', () => {
+  const dup = entry({ id: 2, title: 'NDR wording', source: 'NDR SH' });
+  const f = mount(entry({ duplicates: [dup] }));
+  const favorited = jest.fn();
+  f.componentInstance.favorite.subscribe(favorited);
+
+  (f.nativeElement.querySelector('.also-entry') as HTMLElement).click();
+  f.detectChanges();
+  const overlay = TestBed.inject(OverlayContainer).getContainerElement();
+  const favoriteButton = overlay.querySelector(
+    '.dup-popover button[aria-label="Favorite"]',
+  ) as HTMLElement;
+
+  favoriteButton.click();
+  f.detectChanges();
+
+  expect(favorited).toHaveBeenCalledWith(dup);
+  expect(favoriteButton.classList.contains('on')).toBe(true);
+  expect(favoriteButton.getAttribute('aria-pressed')).toBe('true');
+});

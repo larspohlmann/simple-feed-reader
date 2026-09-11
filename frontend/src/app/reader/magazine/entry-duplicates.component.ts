@@ -35,6 +35,10 @@ export class EntryDuplicatesComponent {
     relativeTime(copy.publishedAt ?? copy.createdAt, this.language.lang());
 
   protected readonly selected = signal<EntryDto | null>(null);
+  // The card shown in the popover: a clone of `selected`, flipped locally on
+  // each action so the icons react without the copy ever joining the list
+  // the shell keeps in sync with the backend.
+  protected readonly displayed = signal<EntryDto | null>(null);
   protected readonly origin = signal<HTMLElement | null>(null);
   protected readonly positions = OVERLAY_POSITIONS;
   protected readonly panelId = `dup-popover-${nextId++}`;
@@ -47,9 +51,33 @@ export class EntryDuplicatesComponent {
     }
     this.origin.set(event.currentTarget as HTMLElement);
     this.selected.set(copy);
+    this.displayed.set({ ...copy });
+  }
+
+  openCopy(copy: EntryDto): void {
+    this.open.emit(copy);
+    this.close();
+  }
+
+  // Emit before flipping the clone: the shell reads the flag's pre-toggle
+  // value to decide which way to PATCH.
+  favoriteCopy(copy: EntryDto): void {
+    this.favorite.emit(copy);
+    this.displayed.update((c) => (c ? { ...c, isFavorite: !c.isFavorite } : c));
+  }
+
+  keepCopy(copy: EntryDto): void {
+    this.keep.emit(copy);
+    this.displayed.update((c) => (c ? { ...c, isKept: !c.isKept } : c));
+  }
+
+  readCopy(copy: EntryDto): void {
+    this.read.emit(copy);
+    this.displayed.update((c) => (c ? { ...c, isViewed: !c.isViewed } : c));
   }
 
   close(): void {
     this.selected.set(null);
+    this.displayed.set(null);
   }
 }
