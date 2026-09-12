@@ -68,7 +68,7 @@ describe('ClientErrorReporter', () => {
     expect(() => setup().report(new Error('boom'))).not.toThrow();
   });
 
-  it('dedupes the identical object reported twice by identity, even before signature dedupe applies', () => {
+  it('dedupes the identical object reported twice within the window, even before signature dedupe applies', () => {
     const reporter = setup();
     const httpError = new HttpErrorResponse({ status: 0, url: '/api/entries' });
 
@@ -205,6 +205,23 @@ describe('ClientErrorReporter', () => {
 
       jest.advanceTimersByTime(RATE_WINDOW_MS + 1);
       reporter.report(new Error('after-the-window'));
+
+      expect(fetchMock).toHaveBeenCalledTimes(MAX_REPORTS_PER_WINDOW + 1);
+    });
+
+    it('does not permanently drop an object instance first seen while the rate limit was exceeded', () => {
+      jest.useFakeTimers({ now: new Date('2026-01-01T00:00:00Z') });
+      const reporter = setup();
+      const recurring = new Error('recurring-while-capped');
+
+      for (let index = 0; index < MAX_REPORTS_PER_WINDOW; index += 1) {
+        reporter.report(new Error(`distinct-${index}`));
+      }
+      reporter.report(recurring);
+      expect(fetchMock).toHaveBeenCalledTimes(MAX_REPORTS_PER_WINDOW);
+
+      jest.advanceTimersByTime(RATE_WINDOW_MS + 1);
+      reporter.report(recurring);
 
       expect(fetchMock).toHaveBeenCalledTimes(MAX_REPORTS_PER_WINDOW + 1);
     });

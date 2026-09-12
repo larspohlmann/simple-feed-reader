@@ -44,28 +44,45 @@ export class ClientErrorReporter {
   private readonly tokens = inject(TokenStore);
 
   private readonly lastSentAtBySignature = new Map<string, number>();
-  private readonly reportedObjects = new WeakSet<object>();
+  private readonly objectLastReportedAt = new WeakMap<object, number>();
   private rateWindowStartedAt = 0;
   private reportsSentInWindow = 0;
 
   report(error: unknown): void {
     try {
-      if (typeof error === 'object' && error !== null) {
-        if (this.reportedObjects.has(error)) {
-          return;
-        }
-        this.reportedObjects.add(error);
-      }
-      const item = this.toWireItem(error);
-      if (this.isSuppressed(item)) {
+      const now = Date.now();
+      if (this.reportedByIdentityWithin(error, now)) {
         return;
       }
+      const item = this.toWireItem(error);
+      if (this.isSuppressed(item, now)) {
+        return;
+      }
+      this.rememberReportedIdentity(error, now);
       sendClientError(item, {
         url: `${this.baseUrl}/${CLIENT_ERRORS_PATH}`,
         bearerToken: this.tokens.token(),
       });
     } catch {
       // A reporter that throws would defeat the handler that called it.
+    }
+  }
+
+  /** A suppressed instance is NOT remembered here: a recurring error that
+   *  rethrows the same instance still needs its per-window "still broken"
+   *  heartbeat, and an instance first seen while the rate limit is exceeded
+   *  must not be dropped forever once the window resets. */
+  private reportedByIdentityWithin(error: unknown, now: number): boolean {
+    if (typeof error !== 'object' || error === null) {
+      return false;
+    }
+    const lastReportedAt = this.objectLastReportedAt.get(error) ?? -Infinity;
+    return now - lastReportedAt < DEDUPE_WINDOW_MS;
+  }
+
+  private rememberReportedIdentity(error: unknown, now: number): void {
+    if (typeof error === 'object' && error !== null) {
+      this.objectLastReportedAt.set(error, now);
     }
   }
 
@@ -79,8 +96,7 @@ export class ClientErrorReporter {
    *  inside the dedupe window, and the window-wide cap drops the rest. Also
    *  sweeps signatures that aged out, so a singleton living for a whole tab
    *  session never accumulates one entry per distinct message forever. */
-  private isSuppressed(item: ClientErrorItem): boolean {
-    const now = Date.now();
+  private isSuppressed(item: ClientErrorItem, now: number): boolean {
     this.forgetSignaturesOlderThan(now - DEDUPE_WINDOW_MS);
 
     if (this.rateLimitExceeded(now)) {

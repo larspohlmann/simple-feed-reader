@@ -220,6 +220,11 @@ describe('client-error-beacon', () => {
     it('uses the given fallback kind when the value carries no kind of its own', () => {
       expect(describeError('boot broke', 'BootError').kind).toBe('BootError');
     });
+
+    it('falls back to the fallback kind for an empty or whitespace-only string, never a blank message', () => {
+      expect(describeError('').message).toBe('Error');
+      expect(describeError('   ').message).toBe('Error');
+    });
   });
 
   describe('toClientErrorItem', () => {
@@ -239,6 +244,15 @@ describe('client-error-beacon', () => {
       );
 
       expect(item.stack).toHaveLength(8000);
+    });
+
+    it('truncates by Unicode code point, never splitting a surrogate pair in two', () => {
+      const message = 'x'.repeat(1999) + '😀' + 'y'.repeat(50);
+      const item = toClientErrorItem({ message, stack: null, kind: 'Error' }, { route: '/reader' });
+
+      expect(item.message).not.toMatch(/[\ud800-\udbff](?![\udc00-\udfff])/);
+      expect(() => JSON.parse(JSON.stringify(item.message))).not.toThrow();
+      expect(JSON.parse(JSON.stringify(item.message))).toBe(item.message);
     });
 
     it('keeps a null stack null', () => {
