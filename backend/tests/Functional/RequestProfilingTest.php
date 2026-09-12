@@ -11,6 +11,7 @@ use App\Service\Profiling\ProfileSampler;
 use App\Service\Profiling\PyroscopeClient;
 use App\Service\Profiling\PyroscopeEndpoint;
 use App\Tests\Support\ApiTestCase;
+use OpenTelemetry\API\Instrumentation\Configurator;
 use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\SDK\Trace\ImmutableSpan;
 use OpenTelemetry\SDK\Trace\SpanExporter\InMemoryExporter;
@@ -31,28 +32,42 @@ final class RequestProfilingTest extends ApiTestCase
         $this->enableProfilingWithPushUrl('http://pyroscope.test');
 
         $exporter = new InMemoryExporter();
-        $tracer = (new TracerProvider(new SimpleSpanProcessor($exporter)))->getTracer('test');
-        $span = $tracer->spanBuilder('functional-test-span')->setSpanKind(SpanKind::KIND_SERVER)->startSpan();
-        $scope = $span->activate();
+        $tracerProvider = new TracerProvider(new SimpleSpanProcessor($exporter));
+        $providerScope = Configurator::create()->withTracerProvider($tracerProvider)->activate();
 
-        $traceId = $span->getContext()->getTraceId();
-        $spanId = $span->getContext()->getSpanId();
+        $span = $tracerProvider->getTracer('test')->spanBuilder('functional-test-span')
+            ->setSpanKind(SpanKind::KIND_SERVER)
+            ->startSpan();
+        $spanScope = $span->activate();
 
         $client->request('GET', '/api/health');
 
-        $scope->detach();
+        $spanScope->detach();
         $span->end();
+        $providerScope->detach();
 
         self::assertResponseIsSuccessful();
+        $taggedSpan = $this->taggedSpan($exporter);
+
         self::assertCount(1, $this->pyroscopePushes);
         /** @var array{query: array{name: string}} $push */
         $push = $this->pyroscopePushes[0];
-        self::assertStringContainsString('trace_id=' . $traceId, $push['query']['name']);
-        self::assertStringContainsString('span_id=' . $spanId, $push['query']['name']);
+        self::assertStringContainsString('trace_id=' . $taggedSpan->getTraceId(), $push['query']['name']);
+        self::assertStringContainsString('span_id=' . $taggedSpan->getSpanId(), $push['query']['name']);
+    }
 
-        /** @var ImmutableSpan $recordedSpan */
-        $recordedSpan = $exporter->getSpans()[0];
-        self::assertSame($spanId, $recordedSpan->getAttributes()->get('pyroscope.profile.id'));
+    /** Auto-instrumentation (Docker) tags its own server span, not the one this test activates. */
+    private function taggedSpan(InMemoryExporter $exporter): ImmutableSpan
+    {
+        /** @var list<ImmutableSpan> $exportedSpans */
+        $exportedSpans = $exporter->getSpans();
+        foreach ($exportedSpans as $exportedSpan) {
+            if (null !== $exportedSpan->getAttributes()->get('pyroscope.profile.id')) {
+                return $exportedSpan;
+            }
+        }
+
+        self::fail('No exported span carries the pyroscope.profile.id attribute.');
     }
 
     private function installPyroscopeCapture(): void
