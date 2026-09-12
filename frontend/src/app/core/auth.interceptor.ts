@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import { API_BASE_URL } from './api';
 import { ClientErrorReporter } from './client-error-reporter';
+import { rememberHttpMethod } from './client-error-http-method';
 import { ReaderLocationService } from './reader-location.service';
 import { TokenStore } from './token.store';
 
@@ -40,6 +41,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       // would loop. 401 is handled above and is not breakage worth reporting.
       const isClientErrorEndpoint = req.url.includes('/api/client-errors');
       if (!isClientErrorEndpoint && (err.status === 0 || err.status >= 500)) {
+        rememberHttpMethod(err, req.method);
         reporter.report(err);
       }
       return throwError(() => err);

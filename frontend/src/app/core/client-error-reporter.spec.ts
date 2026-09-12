@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { API_BASE_URL } from './api';
@@ -7,6 +8,7 @@ import {
   MAX_REPORTS_PER_WINDOW,
   RATE_WINDOW_MS,
 } from './client-error-reporter';
+import { rememberHttpMethod } from './client-error-http-method';
 import { TokenStore } from './token.store';
 
 describe('ClientErrorReporter', () => {
@@ -66,9 +68,9 @@ describe('ClientErrorReporter', () => {
     expect(() => setup().report(new Error('boom'))).not.toThrow();
   });
 
-  it('collapses the same HttpErrorResponse reported twice, as the interceptor and the global handler both would', () => {
+  it('dedupes the identical object reported twice by identity, even before signature dedupe applies', () => {
     const reporter = setup();
-    const httpError = { name: 'HttpErrorResponse', status: 0, url: '/api/entries' };
+    const httpError = new HttpErrorResponse({ status: 0, url: '/api/entries' });
 
     reporter.report(httpError);
     reporter.report(httpError);
@@ -76,6 +78,17 @@ describe('ClientErrorReporter', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body.errors[0]).toMatchObject({ message: 'HTTP 0 /api/entries', kind: 'HttpError' });
+  });
+
+  it('does not dedupe by identity a different object with the same content', () => {
+    const reporter = setup();
+
+    reporter.report(new HttpErrorResponse({ status: 0, url: '/api/entries' }));
+    reporter.report(new HttpErrorResponse({ status: 0, url: '/api/entries' }));
+
+    // Not deduped by identity (distinct instances), but still collapsed by
+    // the existing signature dedupe: same message, same kind.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('does not dedupe errors with different messages', () => {
@@ -86,18 +99,58 @@ describe('ClientErrorReporter', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('keeps an explicitly-supplied kind even when the reason is an Error', () => {
-    setup().report(new Error('HTTP 401 GET /api/entries'), 'HttpError');
-
-    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
-    expect(body.errors[0].kind).toBe('HttpError');
-  });
-
   it('falls back to the Error name when no kind is supplied', () => {
     setup().report(new TypeError('y'));
 
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body.errors[0].kind).toBe('TypeError');
+  });
+
+  describe('HTTP error serialization', () => {
+    it('serializes status, method and stripped url as "HTTP <status> <method> <url>"', () => {
+      const reporter = setup();
+      const error = new HttpErrorResponse({ status: 500, url: '/api/entries?q=secret' });
+      rememberHttpMethod(error, 'GET');
+
+      reporter.report(error);
+
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(body.errors[0].message).toBe('HTTP 500 GET /api/entries');
+      expect(body.errors[0].kind).toBe('HttpError');
+    });
+
+    it('omits the method when none was remembered for the response', () => {
+      const reporter = setup();
+      const error = new HttpErrorResponse({ status: 0, url: '/api/entries' });
+
+      reporter.report(error);
+
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(body.errors[0].message).toBe('HTTP 0 /api/entries');
+    });
+
+    it('strips the query string, so a search term or cursor never reaches Loki', () => {
+      const reporter = setup();
+      const error = new HttpErrorResponse({ status: 500, url: '/api/search?q=my-secret-query' });
+      rememberHttpMethod(error, 'GET');
+
+      reporter.report(error);
+
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(body.errors[0].message).not.toContain('my-secret-query');
+      expect(body.errors[0].message).toBe('HTTP 500 GET /api/search');
+    });
+
+    it('appends "(response parse error)" for a 2xx status', () => {
+      const reporter = setup();
+      const error = new HttpErrorResponse({ status: 200, url: '/api/entries' });
+      rememberHttpMethod(error, 'GET');
+
+      reporter.report(error);
+
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(body.errors[0].message).toBe('HTTP 200 GET /api/entries (response parse error)');
+    });
   });
 
   it('posts under the API_BASE_URL prefix, so a Strato deploy hits /reader/api/client-errors', () => {

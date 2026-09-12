@@ -6,6 +6,7 @@ import {
   reportBootError,
   resolveClientErrorsUrl,
   sendClientError,
+  toClientErrorItem,
 } from './client-error-beacon';
 
 describe('client-error-beacon', () => {
@@ -139,40 +140,6 @@ describe('client-error-beacon', () => {
       });
     });
 
-    it('serializes a fake HttpErrorResponse to its canonical message and kind', () => {
-      const error = { name: 'HttpErrorResponse', status: 0, url: '/x' };
-
-      expect(describeError(error)).toEqual({
-        message: 'HTTP 0 /x',
-        stack: null,
-        kind: 'HttpError',
-      });
-    });
-
-    it('serializes a plain object to its JSON, never [object Object]', () => {
-      const described = describeError({ code: 'E_BOOM', detail: 'context' });
-
-      expect(described.message).toBe(JSON.stringify({ code: 'E_BOOM', detail: 'context' }));
-      expect(described.message).not.toBe('[object Object]');
-      expect(described.stack).toBeNull();
-    });
-
-    it('serializes an empty object to "{}", never [object Object]', () => {
-      expect(describeError({})).toEqual({ message: '{}', stack: null, kind: 'Error' });
-    });
-
-    it('falls back to the constructor name for a circular object, never [object Object]', () => {
-      class Circular {}
-      const circular = new Circular() as Circular & { self?: unknown };
-      circular.self = circular;
-
-      const described = describeError(circular);
-
-      expect(described.message).toBe('Circular');
-      expect(described.message).not.toBe('[object Object]');
-      expect(described.stack).toBeNull();
-    });
-
     it('keeps both message and name from a DOMException-shaped object', () => {
       const error = { name: 'AbortError', message: 'The operation was aborted.' };
 
@@ -203,8 +170,94 @@ describe('client-error-beacon', () => {
       });
     });
 
+    it('serializes a number, bigint and symbol via String()', () => {
+      expect(describeError(404).message).toBe('404');
+      expect(describeError(BigInt(9)).message).toBe('9');
+      expect(describeError(Symbol('boom')).message).toBe('Symbol(boom)');
+    });
+
+    it('serializes a plain object to its constructor and keys, values absent', () => {
+      const described = describeError({ code: 'E_BOOM', detail: 'context' });
+
+      expect(described.message).toBe('Object{code, detail}');
+      expect(described.message).not.toContain('E_BOOM');
+      expect(described.message).not.toContain('context');
+      expect(described.stack).toBeNull();
+    });
+
+    it('serializes an empty object to "Object{}", never [object Object]', () => {
+      expect(describeError({})).toEqual({ message: 'Object{}', stack: null, kind: 'Error' });
+    });
+
+    it('serializes a circular object to a readable summary, never [object Object]', () => {
+      class Circular {}
+      const circular = new Circular() as Circular & { self?: unknown };
+      circular.self = circular;
+
+      const described = describeError(circular);
+
+      expect(described.message).toBe('Circular{self}');
+      expect(described.message).not.toBe('[object Object]');
+      expect(described.stack).toBeNull();
+    });
+
+    it('never throws when a getter on the value throws, and returns the fallback', () => {
+      const poisoned = {
+        get name(): string {
+          throw new Error('getter blew up');
+        },
+        message: 'irrelevant',
+      };
+
+      expect(() => describeError(poisoned, 'BootError')).not.toThrow();
+      expect(describeError(poisoned, 'BootError')).toEqual({
+        message: 'BootError',
+        stack: null,
+        kind: 'BootError',
+      });
+    });
+
     it('uses the given fallback kind when the value carries no kind of its own', () => {
       expect(describeError('boot broke', 'BootError').kind).toBe('BootError');
+    });
+  });
+
+  describe('toClientErrorItem', () => {
+    it('truncates an over-long message to the backend cap of 2000 chars', () => {
+      const item = toClientErrorItem(
+        { message: 'x'.repeat(3000), stack: null, kind: 'Error' },
+        { route: '/reader' },
+      );
+
+      expect(item.message).toHaveLength(2000);
+    });
+
+    it('truncates an over-long stack to the backend cap of 8000 chars', () => {
+      const item = toClientErrorItem(
+        { message: 'boom', stack: 'x'.repeat(9000), kind: 'Error' },
+        { route: '/reader' },
+      );
+
+      expect(item.stack).toHaveLength(8000);
+    });
+
+    it('keeps a null stack null', () => {
+      const item = toClientErrorItem(
+        { message: 'boom', stack: null, kind: 'Error' },
+        { route: '/reader' },
+      );
+
+      expect(item.stack).toBeNull();
+    });
+
+    it('works for the boot path, where the route is null', () => {
+      const item = toClientErrorItem(
+        { message: 'boot broke', stack: null, kind: 'BootError' },
+        { route: null },
+      );
+
+      expect(item.route).toBeNull();
+      expect(typeof item.buildVersion).toBe('string');
     });
   });
 

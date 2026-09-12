@@ -1,15 +1,31 @@
 // src/app/core/client-error-reporter.ts
+import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { API_BASE_URL } from './api';
 import {
   CLIENT_ERRORS_PATH,
   ClientErrorItem,
-  buildVersionTag,
+  ErrorDescription,
   describeError,
   sendClientError,
+  toClientErrorItem,
 } from './client-error-beacon';
+import { httpMethodOf } from './client-error-http-method';
 import { TokenStore } from './token.store';
+
+function stripQueryAndFragment(url: string): string {
+  return url.split(/[?#]/)[0];
+}
+
+function describeHttpError(error: HttpErrorResponse): ErrorDescription {
+  const url = stripQueryAndFragment(error.url ?? 'unknown');
+  const method = httpMethodOf(error);
+  const isParseErrorOnSuccess = error.status >= 200 && error.status < 300;
+  const parseNote = isParseErrorOnSuccess ? ' (response parse error)' : '';
+  const message = `HTTP ${error.status}${method ? ' ' + method : ''} ${url}${parseNote}`;
+  return { message, stack: null, kind: 'HttpError' };
+}
 
 export const DEDUPE_WINDOW_MS = 10_000;
 export const RATE_WINDOW_MS = 60_000;
@@ -28,12 +44,19 @@ export class ClientErrorReporter {
   private readonly tokens = inject(TokenStore);
 
   private readonly lastSentAtBySignature = new Map<string, number>();
+  private readonly reportedObjects = new WeakSet<object>();
   private rateWindowStartedAt = 0;
   private reportsSentInWindow = 0;
 
-  report(error: unknown, kind?: string): void {
+  report(error: unknown): void {
     try {
-      const item = this.toWireItem(error, kind);
+      if (typeof error === 'object' && error !== null) {
+        if (this.reportedObjects.has(error)) {
+          return;
+        }
+        this.reportedObjects.add(error);
+      }
+      const item = this.toWireItem(error);
       if (this.isSuppressed(item)) {
         return;
       }
@@ -46,18 +69,10 @@ export class ClientErrorReporter {
     }
   }
 
-  private toWireItem(error: unknown, kind: string | undefined): ClientErrorItem {
-    const described = describeError(error);
-    return {
-      message: described.message,
-      stack: described.stack,
-      kind: kind ?? described.kind,
-      url: window.location.href,
-      route: this.router.url,
-      buildVersion: buildVersionTag(),
-      userAgent: navigator.userAgent,
-      at: new Date().toISOString(),
-    };
+  private toWireItem(error: unknown): ClientErrorItem {
+    const description =
+      error instanceof HttpErrorResponse ? describeHttpError(error) : describeError(error);
+    return toClientErrorItem(description, { route: this.router.url });
   }
 
   /** Collapses a flood from one broken render: the same signature is dropped

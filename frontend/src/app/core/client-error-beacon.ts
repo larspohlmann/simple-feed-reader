@@ -77,30 +77,18 @@ export interface ErrorDescription {
   kind: string;
 }
 
-function isHttpErrorResponse(
-  error: unknown,
-): error is { status: number; url: string | null; name: string } {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    (error as { name?: unknown }).name === 'HttpErrorResponse' &&
-    typeof (error as { status?: unknown }).status === 'number'
-  );
-}
-
 function constructorNameOf(error: unknown): string {
-  return (error as { constructor?: { name?: string } })?.constructor?.name ?? 'Object';
+  return (error as { constructor?: { name?: string } })?.constructor?.name || 'Object';
 }
 
+/** Bounded, value-free: object VALUES may hold secrets the scrubber does not
+ *  know about, but the KEYS are safe to report and still useful for triage. */
 function stringifyUnknown(error: unknown): string {
-  if (error === undefined) {
-    return 'undefined';
+  if (typeof error !== 'object' || error === null) {
+    return String(error);
   }
-  try {
-    return JSON.stringify(error) ?? constructorNameOf(error);
-  } catch {
-    return constructorNameOf(error);
-  }
+  const keys = Object.keys(error).slice(0, 20);
+  return `${constructorNameOf(error)}{${keys.join(', ')}}`;
 }
 
 function isErrorLike(error: unknown): error is { message: string; name: string; stack?: unknown } {
@@ -113,43 +101,51 @@ function isErrorLike(error: unknown): error is { message: string; name: string; 
   );
 }
 
-/** Turns any thrown value into wire-ready content, never `[object Object]`. */
+/** Turns any thrown value into wire-ready content, never `[object Object]`,
+ *  and never throws itself — a revoked Proxy or a throwing getter must not
+ *  escape the error-reporting path. */
 export function describeError(error: unknown, fallbackKind = 'Error'): ErrorDescription {
-  if (isHttpErrorResponse(error)) {
-    return {
-      message: `HTTP ${error.status} ${error.url ?? 'unknown'}`,
-      stack: null,
-      kind: 'HttpError',
-    };
+  try {
+    if (isErrorLike(error)) {
+      return {
+        message: error.message || error.name || fallbackKind,
+        stack: typeof error.stack === 'string' ? error.stack : null,
+        kind: error.name || fallbackKind,
+      };
+    }
+    return { message: stringifyUnknown(error), stack: null, kind: fallbackKind };
+  } catch {
+    return { message: fallbackKind, stack: null, kind: fallbackKind };
   }
-  if (isErrorLike(error)) {
-    return {
-      message: error.message || error.name,
-      stack: typeof error.stack === 'string' ? error.stack : null,
-      kind: error.name || fallbackKind,
-    };
-  }
-  if (typeof error === 'string') {
-    return { message: error, stack: null, kind: fallbackKind };
-  }
-  return { message: stringifyUnknown(error), stack: null, kind: fallbackKind };
 }
 
-/** Boot-time convenience for callers with no injector (boot-error-surface.ts). */
+const MAX_MESSAGE = 2000;
+const MAX_STACK = 8000;
+
+function truncate(text: string, max: number): string {
+  return text.length > max ? text.slice(0, max) : text;
+}
+
+/** The one place the wire shape and the backend's length caps live. */
+export function toClientErrorItem(
+  description: ErrorDescription,
+  context: { route: string | null },
+): ClientErrorItem {
+  return {
+    message: truncate(description.message, MAX_MESSAGE),
+    stack: description.stack === null ? null : truncate(description.stack, MAX_STACK),
+    kind: description.kind,
+    url: typeof location !== 'undefined' ? location.href : null,
+    route: context.route,
+    buildVersion: buildVersionTag(),
+    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+    at: new Date().toISOString(),
+  };
+}
+
+/** Boot-time convenience for callers with no injector (boot-error-surface.ts).
+ *  `describeError` is total and `sendClientError` is already guarded, so the
+ *  boot path is throw-safe without its own try/catch. */
 export function reportBootError(error: unknown): void {
-  try {
-    const described = describeError(error, 'BootError');
-    sendClientError({
-      message: described.message,
-      stack: described.stack,
-      kind: described.kind,
-      url: typeof location !== 'undefined' ? location.href : null,
-      route: null,
-      buildVersion: buildVersionTag(),
-      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-      at: new Date().toISOString(),
-    });
-  } catch {
-    // Reporting an error must never raise one of its own.
-  }
+  sendClientError(toClientErrorItem(describeError(error, 'BootError'), { route: null }));
 }

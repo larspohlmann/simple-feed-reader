@@ -4,8 +4,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { NavigationEnd, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { API_BASE_URL } from './api';
-import { describeError } from './client-error-beacon';
 import { ClientErrorReporter } from './client-error-reporter';
+import { httpMethodOf } from './client-error-http-method';
 import { TokenStore } from './token.store';
 import { authInterceptor } from './auth.interceptor';
 import { CatalogStore } from '../discover/catalog.store';
@@ -162,19 +162,19 @@ describe('authInterceptor', () => {
     expect(ai.model()).toBeNull();
   });
 
-  it('reports a 500 failure with the HttpErrorResponse itself and no kind', () => {
+  it('reports a 500 failure with the HttpErrorResponse itself, its method remembered', () => {
     http
-      .get('https://api.test/api/entries')
+      .get('https://api.test/api/entries?q=secret')
       .subscribe({ next: () => undefined, error: () => undefined });
     ctrl
-      .expectOne('https://api.test/api/entries')
+      .expectOne('https://api.test/api/entries?q=secret')
       .flush('boom', { status: 500, statusText: 'Server Error' });
 
     expect(reportSpy).toHaveBeenCalledTimes(1);
-    const [reported, kind] = reportSpy.mock.calls[0];
+    const [reported] = reportSpy.mock.calls[0];
     expect(reported.status).toBe(500);
-    expect(kind).toBeUndefined();
-    expect(describeError(reported).message).toBe('HTTP 500 https://api.test/api/entries');
+    expect(httpMethodOf(reported)).toBe('GET');
+    expect(reported.url).toContain('q=secret');
   });
 
   it('reports a network failure (status 0)', () => {
