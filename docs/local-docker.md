@@ -383,29 +383,3 @@ See the profiles two ways:
 
 `ext-excimer` is only in the Docker image, so profiling is inert on hosts
 without it (the toggle then shows "profiler not available on this host").
-
-## Grafana MCP server (optional dev tooling)
-
-The dev stack runs Grafana on <http://localhost:3000> and Loki on `:3100`
-(see #983). To let Claude query the logs and dashboards, the repo ships an
-`.mcp.json` entry that runs the open-source
-[`mcp/grafana`](https://grafana.com/docs/grafana/latest/developer-resources/mcp/)
-server over stdio in Docker, pointed at the dev Grafana.
-
-It needs a Grafana **service-account token**, which is a secret and is **never
-committed** — `.mcp.json` reads it from the `GRAFANA_SERVICE_ACCOUNT_TOKEN`
-environment variable. One-time setup:
-
-1. Open <http://localhost:3000> (dev login `admin` / `admin`).
-2. Administration → Users and access → Service accounts → **Add service
-   account** (role Viewer is enough for querying), then **Add service account
-   token** and copy it.
-3. Export it where your Claude session can see it:
-
-   ```bash
-   export GRAFANA_SERVICE_ACCOUNT_TOKEN=glsa_xxx…
-   ```
-
-The container reaches the host's Grafana at `host.docker.internal:3000`; set
-`GRAFANA_URL` to override. This is developer tooling only — it is not part of
-the deployed stack, and production uses its own Grafana (or Grafana Cloud).
