@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Logging;
 
+use App\Service\Logging\Loki\LokiPushHandler;
 use App\Service\Logging\RequestIdProvider;
 use App\Service\Logging\RequestLogProcessor;
 use App\Service\Logging\TraceContext;
@@ -59,9 +60,22 @@ final class RequestLogProcessorTest extends TestCase
         self::assertArrayNotHasKey('span_id', $record->extra);
     }
 
-    private function record(): LogRecord
+    public function testOmitsTraceForClientErrorsChannelEvenWhenASpanIsActive(): void
     {
-        return new LogRecord(new \DateTimeImmutable(), 'app', Level::Info, 'hello');
+        $provider = new RequestIdProvider();
+        $provider->set('01J000000000000000000TEST');
+        $processor = new RequestLogProcessor($provider, $this->tracingContext('trace-abc', 'span-xyz'));
+
+        $record = $processor($this->record(LokiPushHandler::CLIENT_ERRORS_CHANNEL));
+
+        self::assertSame('01J000000000000000000TEST', $record->extra['request_id']);
+        self::assertArrayNotHasKey('trace_id', $record->extra);
+        self::assertArrayNotHasKey('span_id', $record->extra);
+    }
+
+    private function record(string $channel = 'app'): LogRecord
+    {
+        return new LogRecord(new \DateTimeImmutable(), $channel, Level::Info, 'hello');
     }
 
     private function tracingContext(string $traceId, string $spanId): TraceContext

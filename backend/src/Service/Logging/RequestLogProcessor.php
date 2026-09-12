@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Logging;
 
+use App\Service\Logging\Loki\LokiPushHandler;
 use Monolog\LogRecord;
 use Monolog\Processor\ProcessorInterface;
 
@@ -19,6 +20,13 @@ final readonly class RequestLogProcessor implements ProcessorInterface
     {
         $extra = $record->extra;
         $extra['request_id'] = $this->requestId->current();
+
+        // A client error's active span is the ingest request's, not the
+        // browser's, so tagging it would offer a trace link that leads nowhere
+        // meaningful. Leave it untagged; the Loki->Tempo link then never shows.
+        if (LokiPushHandler::CLIENT_ERRORS_CHANNEL === $record->channel) {
+            return $record->with(extra: $extra);
+        }
 
         $traceId = $this->trace->traceId();
         $spanId = $this->trace->spanId();
