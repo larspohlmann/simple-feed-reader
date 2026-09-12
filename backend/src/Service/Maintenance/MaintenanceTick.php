@@ -34,8 +34,8 @@ use App\Service\Refresh\RefreshRunner;
  * flushes through the default EntityManager, so it is skipped on the same
  * aborted-refresh tick.
  *
- * The tick also drains the Loki spool (#1003) up front, independent of that
- * guard: the shipper touches no EntityManager.
+ * The tick drains the Loki spool (#1003) last, after refresh and the sweep,
+ * independent of the EM guard: the shipper touches no EntityManager.
  */
 final readonly class MaintenanceTick
 {
@@ -53,22 +53,17 @@ final readonly class MaintenanceTick
 
     public function run(): MaintenanceTickReport
     {
-        $logShipping = $this->logSpoolShipper->ship()->toArray();
-
         $refresh = $this->refreshRunner->run(RefreshRequest::allDue(self::REFRESH_BUDGET_SECONDS));
         if ($refresh->isAborted()) {
-            return new MaintenanceTickReport(
-                $refresh->toArray(),
-                $this->skippedRecommendations(),
-                $this->skippedDigests(),
-                $logShipping,
-            );
+            $recommendations = $this->skippedRecommendations();
+            $digests = $this->skippedDigests();
+        } else {
+            $recommendations = $this->forYouSweep->sweepOnce()->toArray();
+            $digests = $this->sendDueDigests->run()->toArray();
         }
+        $logShipping = $this->logSpoolShipper->ship()->toArray();
 
-        $recommendations = $this->forYouSweep->sweepOnce();
-        $digests = $this->sendDueDigests->run()->toArray();
-
-        return new MaintenanceTickReport($refresh->toArray(), $recommendations->toArray(), $digests, $logShipping);
+        return new MaintenanceTickReport($refresh->toArray(), $recommendations, $digests, $logShipping);
     }
 
     /**

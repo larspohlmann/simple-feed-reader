@@ -23,8 +23,20 @@ final readonly class SpoolLokiSink implements LokiSink
             if (!$this->ensureSpoolDirectoryExists()) {
                 return;
             }
-            file_put_contents($this->filePath(), json_encode($lines, JSON_THROW_ON_ERROR));
+            $this->writeAtomically(json_encode($lines, JSON_THROW_ON_ERROR));
         } catch (\Throwable) {
+        }
+    }
+
+    private function writeAtomically(string $encodedLines): void
+    {
+        $path = $this->filePath();
+        $temporaryPath = $path . '.tmp';
+        if (false === file_put_contents($temporaryPath, $encodedLines)) {
+            return;
+        }
+        if (!@rename($temporaryPath, $path)) {
+            @unlink($temporaryPath);
         }
     }
 

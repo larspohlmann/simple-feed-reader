@@ -11,6 +11,8 @@ namespace App\Service\Logging\Loki;
  */
 final readonly class LokiSpoolShipper
 {
+    private const int MAX_FILES_PER_TICK = 100;
+
     public function __construct(
         private LokiClient $client,
         private string $spoolDirectory,
@@ -39,8 +41,11 @@ final readonly class LokiSpoolShipper
     private function files(): array
     {
         $files = glob($this->spoolDirectory . '/*.json');
+        if (false === $files) {
+            return [];
+        }
 
-        return false === $files ? [] : $files;
+        return array_slice($files, 0, self::MAX_FILES_PER_TICK);
     }
 
     private function shipFile(string $file): bool

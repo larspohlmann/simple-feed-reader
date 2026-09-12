@@ -40,6 +40,7 @@ final class SpoolLokiSinkTest extends TestCase
         self::assertCount(2, $files);
         $decoded = json_decode((string) file_get_contents($files[0]), true, 512, JSON_THROW_ON_ERROR);
         self::assertSame($lines, $decoded);
+        self::assertSame([], glob($this->spoolDirectory . '/*.tmp') ?: []);
     }
 
     public function testEmptyLinesWriteNothing(): void

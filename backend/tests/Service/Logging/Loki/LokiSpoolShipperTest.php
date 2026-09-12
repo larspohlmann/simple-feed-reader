@@ -59,6 +59,25 @@ final class LokiSpoolShipperTest extends TestCase
         self::assertSame([], glob($this->spoolDirectory . '/*.json') ?: []);
     }
 
+    public function testShipsAtMostOneHundredFilesPerCallOldestFirst(): void
+    {
+        for ($i = 0; $i < 101; ++$i) {
+            $this->spool([['ts' => (string) $i, 'line' => '{"m":"a"}', 'labels' => ['app' => 'sfr']]]);
+        }
+        $http = new MockHttpClient(fn (): MockResponse => new MockResponse('', ['http_code' => 204]));
+        $shipper = new LokiSpoolShipper(new LokiClient($http, $this->endpoint()), $this->spoolDirectory);
+
+        $firstReport = $shipper->ship();
+
+        self::assertSame(100, $firstReport->shipped);
+        self::assertCount(1, glob($this->spoolDirectory . '/*.json') ?: []);
+
+        $secondReport = $shipper->ship();
+
+        self::assertSame(1, $secondReport->shipped);
+        self::assertSame([], glob($this->spoolDirectory . '/*.json') ?: []);
+    }
+
     public function testEmptyDirectoryIsANoOp(): void
     {
         $shipper = new LokiSpoolShipper(new LokiClient(new MockHttpClient(), $this->endpoint()), $this->spoolDirectory);
