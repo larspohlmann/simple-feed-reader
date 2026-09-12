@@ -104,7 +104,7 @@
       "type": "logs",
       "title": "Frontend errors",
       "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 8 },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 18 },
       "options": {
         "showTime": true,
         "wrapLogMessage": true,
@@ -123,7 +123,7 @@
       "type": "logs",
       "title": "Backend errors",
       "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 18 },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 8 },
       "options": {
         "showTime": true,
         "wrapLogMessage": true,
