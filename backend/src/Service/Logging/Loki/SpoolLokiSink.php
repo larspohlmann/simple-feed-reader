@@ -6,9 +6,7 @@ namespace App\Service\Logging\Loki;
 
 /**
  * Writes each flush to its own file so concurrent cgi-fcgi processes never
- * contend: no lock, no shared offset. LokiSpoolShipper drains and deletes them
- * out-of-band. Fail-open: a spool write that fails drops that batch, exactly as
- * a failed HTTP push would.
+ * contend. Fail-open: a failed spool write silently drops that batch.
  */
 final readonly class SpoolLokiSink implements LokiSink
 {

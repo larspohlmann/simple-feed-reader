@@ -66,4 +66,17 @@ final class SpoolLokiSinkTest extends TestCase
         self::assertFileExists($file);
         unlink($file);
     }
+
+    public function testSwallowsJsonEncodingErrors(): void
+    {
+        $sink = new SpoolLokiSink($this->spoolDirectory);
+
+        $sink->write([[
+            'ts' => '1',
+            'line' => "\xB1\x31",
+            'labels' => ['app' => 'sfr'],
+        ]]);
+
+        self::assertSame([], glob($this->spoolDirectory . '/*.json') ?: []);
+    }
 }
