@@ -9,6 +9,7 @@ use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
 use App\Http\Admin\GrafanaSettingsJson;
 use App\Repository\GrafanaSettingsRepository;
 use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
+use App\Service\Profiling\ProfileSampler;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -33,13 +34,14 @@ class GrafanaSettings
         private readonly EntityManagerInterface $em,
         private readonly GrafanaApiKeyCipher $cipher,
         private readonly GrafanaEnvDefaults $defaults,
+        private readonly ProfileSampler $sampler,
     ) {
     }
 
     /** @return array<string, mixed> */
     public function view(): array
     {
-        return GrafanaSettingsJson::from($this->settings(), $this->defaults->lokiPushUrl, $this->defaults->grafanaUrl);
+        return GrafanaSettingsJson::from($this->settings(), $this->defaults, $this->sampler->isAvailable());
     }
 
     public function update(GrafanaSettingsRequest $request): void
@@ -72,6 +74,17 @@ class GrafanaSettings
         return $override ?? ('' === $this->defaults->lokiPushUrl ? null : $this->defaults->lokiPushUrl);
     }
 
+    public function effectivePyroscopePushUrl(): ?string
+    {
+        return $this->settings()->getPyroscopePushUrlOverride()
+            ?? ('' === $this->defaults->pyroscopePushUrl ? null : $this->defaults->pyroscopePushUrl);
+    }
+
+    public function profilingEnabled(): bool
+    {
+        return $this->settings()->isProfilingEnabled();
+    }
+
     public function lokiUsername(): ?string
     {
         return $this->settings()->getLokiUsername();
@@ -100,6 +113,8 @@ class GrafanaSettings
             $this->blankToNull($request->lokiPushUrl),
             $this->blankToNull($request->lokiUsername),
             $this->blankToNull($request->grafanaUrl),
+            $this->blankToNull($request->pyroscopePushUrl),
+            $request->profilingEnabled,
         );
     }
 

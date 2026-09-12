@@ -252,6 +252,8 @@ services:
             $ignoreEmptyContextAndExtra: false
             $includeStacktraces: true
 
+    App\Service\Profiling\ProfileSampler: '@App\Service\Profiling\NullProfileSampler'
+
     App\Service\Logging\Loki\LokiEndpoint: '@App\Service\Grafana\SettingsLokiEndpoint'
 
     App\Service\Logging\Loki\LokiPushHandler:

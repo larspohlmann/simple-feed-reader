@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Admin;
 
 use App\Entity\GrafanaSettings;
+use App\Service\Grafana\GrafanaEnvDefaults;
 
 /**
  * The admin Grafana payload. The token is absent by construction: only hasToken
@@ -26,28 +27,41 @@ final readonly class GrafanaSettingsJson
      *     hasToken: bool,
      *     tokenHint: string,
      *     containerPresent: bool,
+     *     pyroscopePushUrl: string|null,
+     *     pyroscopePushUrlDefault: string,
+     *     pyroscopePushUrlEffective: string|null,
+     *     profilingEnabled: bool,
+     *     profilingContainerPresent: bool,
+     *     profilerAvailable: bool,
      * }
      */
     public static function from(
         ?GrafanaSettings $settings,
-        string $lokiPushUrlDefault,
-        string $grafanaUrlDefault,
+        GrafanaEnvDefaults $defaults,
+        bool $profilerAvailable,
     ): array {
         $settings ??= new GrafanaSettings();
         $lokiOverride = $settings->getLokiPushUrlOverride();
         $grafanaOverride = $settings->getGrafanaUrlOverride();
+        $pyroscopeOverride = $settings->getPyroscopePushUrlOverride();
 
         return [
             'lokiPushUrl' => $lokiOverride,
-            'lokiPushUrlDefault' => $lokiPushUrlDefault,
-            'lokiPushUrlEffective' => self::effective($lokiOverride, $lokiPushUrlDefault),
+            'lokiPushUrlDefault' => $defaults->lokiPushUrl,
+            'lokiPushUrlEffective' => self::effective($lokiOverride, $defaults->lokiPushUrl),
             'lokiUsername' => $settings->getLokiUsername(),
             'grafanaUrl' => $grafanaOverride,
-            'grafanaUrlDefault' => $grafanaUrlDefault,
-            'grafanaUrlEffective' => self::effective($grafanaOverride, $grafanaUrlDefault),
+            'grafanaUrlDefault' => $defaults->grafanaUrl,
+            'grafanaUrlEffective' => self::effective($grafanaOverride, $defaults->grafanaUrl),
             'hasToken' => $settings->hasToken(),
             'tokenHint' => $settings->getTokenHint(),
-            'containerPresent' => '' !== $lokiPushUrlDefault,
+            'containerPresent' => '' !== $defaults->lokiPushUrl,
+            'pyroscopePushUrl' => $pyroscopeOverride,
+            'pyroscopePushUrlDefault' => $defaults->pyroscopePushUrl,
+            'pyroscopePushUrlEffective' => self::effective($pyroscopeOverride, $defaults->pyroscopePushUrl),
+            'profilingEnabled' => $settings->isProfilingEnabled(),
+            'profilingContainerPresent' => '' !== $defaults->pyroscopePushUrl,
+            'profilerAvailable' => $profilerAvailable,
         ];
     }
 
