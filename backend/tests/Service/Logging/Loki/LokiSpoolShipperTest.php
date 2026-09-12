@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Logging\Loki;
 
 use App\Service\Logging\Loki\LokiClient;
-use App\Service\Logging\Loki\LokiEndpoint;
 use App\Service\Logging\Loki\LokiSpoolShipper;
+use App\Tests\Support\StubLokiEndpoint;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -37,7 +37,7 @@ final class LokiSpoolShipperTest extends TestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $shipper = new LokiSpoolShipper(new LokiClient($http, $this->endpoint()), $this->spoolDirectory);
+        $shipper = new LokiSpoolShipper(new LokiClient($http, new StubLokiEndpoint()), $this->spoolDirectory);
 
         $report = $shipper->ship();
 
@@ -50,7 +50,10 @@ final class LokiSpoolShipperTest extends TestCase
     public function testDeletesACorruptFileAndCountsItFailed(): void
     {
         file_put_contents($this->spoolDirectory . '/1-deadbeef.json', 'not json');
-        $shipper = new LokiSpoolShipper(new LokiClient(new MockHttpClient(), $this->endpoint()), $this->spoolDirectory);
+        $shipper = new LokiSpoolShipper(
+            new LokiClient(new MockHttpClient(), new StubLokiEndpoint()),
+            $this->spoolDirectory,
+        );
 
         $report = $shipper->ship();
 
@@ -65,7 +68,7 @@ final class LokiSpoolShipperTest extends TestCase
             $this->spool([['ts' => (string) $i, 'line' => '{"m":"a"}', 'labels' => ['app' => 'sfr']]]);
         }
         $http = new MockHttpClient(fn (): MockResponse => new MockResponse('', ['http_code' => 204]));
-        $shipper = new LokiSpoolShipper(new LokiClient($http, $this->endpoint()), $this->spoolDirectory);
+        $shipper = new LokiSpoolShipper(new LokiClient($http, new StubLokiEndpoint()), $this->spoolDirectory);
 
         $firstReport = $shipper->ship();
 
@@ -80,7 +83,10 @@ final class LokiSpoolShipperTest extends TestCase
 
     public function testEmptyDirectoryIsANoOp(): void
     {
-        $shipper = new LokiSpoolShipper(new LokiClient(new MockHttpClient(), $this->endpoint()), $this->spoolDirectory);
+        $shipper = new LokiSpoolShipper(
+            new LokiClient(new MockHttpClient(), new StubLokiEndpoint()),
+            $this->spoolDirectory,
+        );
 
         $report = $shipper->ship();
 
@@ -91,7 +97,7 @@ final class LokiSpoolShipperTest extends TestCase
     public function testShipsAFileNestedToTheDefaultJsonDepthLimit(): void
     {
         $this->spoolRawJson($this->nestedArrayJson(511));
-        $client = new LokiClient(new MockHttpClient(), $this->endpointWithNoPushUrl());
+        $client = new LokiClient(new MockHttpClient(), new StubLokiEndpoint(pushUrl: null));
         $shipper = new LokiSpoolShipper($client, $this->spoolDirectory);
 
         $report = $shipper->ship();
@@ -103,7 +109,7 @@ final class LokiSpoolShipperTest extends TestCase
     public function testDeletesAFileNestedOneLevelBeyondTheDefaultJsonDepthLimitAndCountsItFailed(): void
     {
         $this->spoolRawJson($this->nestedArrayJson(512));
-        $client = new LokiClient(new MockHttpClient(), $this->endpointWithNoPushUrl());
+        $client = new LokiClient(new MockHttpClient(), new StubLokiEndpoint(pushUrl: null));
         $shipper = new LokiSpoolShipper($client, $this->spoolDirectory);
 
         $report = $shipper->ship();
@@ -128,58 +134,12 @@ final class LokiSpoolShipperTest extends TestCase
         file_put_contents($fileName, $json);
     }
 
-    private function endpointWithNoPushUrl(): LokiEndpoint
-    {
-        return new class implements LokiEndpoint {
-            public function pushUrl(): ?string
-            {
-                return null;
-            }
-
-            public function username(): ?string
-            {
-                return null;
-            }
-
-            public function token(): ?string
-            {
-                return null;
-            }
-        };
-    }
-
     /**
      * @param list<array{ts: string, line: string, labels: array<string, string>}> $lines
      */
     private function spool(array $lines): void
     {
-        $fileName = sprintf(
-            '%s/%d-%s.json',
-            $this->spoolDirectory,
-            (int) (microtime(true) * 1_000_000),
-            bin2hex(random_bytes(6)),
-        );
-        file_put_contents($fileName, json_encode($lines, JSON_THROW_ON_ERROR));
+        $this->spoolRawJson(json_encode($lines, JSON_THROW_ON_ERROR));
         usleep(1000);
-    }
-
-    private function endpoint(): LokiEndpoint
-    {
-        return new class implements LokiEndpoint {
-            public function pushUrl(): string
-            {
-                return 'http://loki:3100/loki/api/v1/push';
-            }
-
-            public function username(): ?string
-            {
-                return null;
-            }
-
-            public function token(): ?string
-            {
-                return null;
-            }
-        };
     }
 }

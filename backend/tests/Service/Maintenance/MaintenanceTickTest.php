@@ -16,7 +16,6 @@ use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\FetchResponse;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Logging\Loki\LokiClient;
-use App\Service\Logging\Loki\LokiEndpoint;
 use App\Service\Logging\Loki\LokiSpoolShipper;
 use App\Service\Mail\Digest\DigestComposer;
 use App\Service\Mail\Digest\DigestMailerInterface;
@@ -37,6 +36,7 @@ use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\InMemoryMailFailureRecorder;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\RecordingContentChangeMarker;
+use App\Tests\Support\StubLokiEndpoint;
 use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
@@ -184,15 +184,13 @@ final class MaintenanceTickTest extends DbTestCase
             new InMemoryMailFailureRecorder(),
         );
 
-        $spoolDirectory = sys_get_temp_dir() . '/loki-tick-test-' . bin2hex(random_bytes(4));
-        mkdir($spoolDirectory, 0770, true);
-        $lokiClient = new LokiClient(new MockHttpClient(), $this->emptyLokiEndpoint());
+        $spoolDirectory = sys_get_temp_dir() . '/loki-tick-' . bin2hex(random_bytes(4));
+        $lokiClient = new LokiClient(new MockHttpClient(), new StubLokiEndpoint());
         $logSpoolShipper = new LokiSpoolShipper($lokiClient, $spoolDirectory);
 
         $tick = new MaintenanceTick($refreshRunner, $forYouSweep, $sendDueDigests, $logSpoolShipper);
 
         $report = $tick->run()->toArray();
-        rmdir($spoolDirectory);
 
         self::assertSame('aborted', $report['refresh']['status']);
         self::assertSame(
@@ -214,25 +212,5 @@ final class MaintenanceTickTest extends DbTestCase
             $report['digests'],
         );
         self::assertSame(['shipped' => 0, 'failed' => 0], $report['logShipping']);
-    }
-
-    private function emptyLokiEndpoint(): LokiEndpoint
-    {
-        return new class implements LokiEndpoint {
-            public function pushUrl(): string
-            {
-                return 'http://loki:3100/loki/api/v1/push';
-            }
-
-            public function username(): ?string
-            {
-                return null;
-            }
-
-            public function token(): ?string
-            {
-                return null;
-            }
-        };
     }
 }

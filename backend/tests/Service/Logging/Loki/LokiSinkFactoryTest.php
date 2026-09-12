@@ -6,9 +6,9 @@ namespace App\Tests\Service\Logging\Loki;
 
 use App\Service\Logging\Loki\DirectLokiSink;
 use App\Service\Logging\Loki\LokiClient;
-use App\Service\Logging\Loki\LokiEndpoint;
 use App\Service\Logging\Loki\LokiSinkFactory;
 use App\Service\Logging\Loki\SpoolLokiSink;
+use App\Tests\Support\StubLokiEndpoint;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 
@@ -33,30 +33,10 @@ final class LokiSinkFactoryTest extends TestCase
     public function testCreateReturnsALokiSink(): void
     {
         $factory = new LokiSinkFactory(
-            new DirectLokiSink(new LokiClient(new MockHttpClient(), $this->endpoint())),
+            new DirectLokiSink(new LokiClient(new MockHttpClient(), new StubLokiEndpoint(pushUrl: null))),
             new SpoolLokiSink(sys_get_temp_dir()),
         );
 
         self::assertInstanceOf(DirectLokiSink::class, $factory->create());
-    }
-
-    private function endpoint(): LokiEndpoint
-    {
-        return new class implements LokiEndpoint {
-            public function pushUrl(): ?string
-            {
-                return null;
-            }
-
-            public function username(): ?string
-            {
-                return null;
-            }
-
-            public function token(): ?string
-            {
-                return null;
-            }
-        };
     }
 }

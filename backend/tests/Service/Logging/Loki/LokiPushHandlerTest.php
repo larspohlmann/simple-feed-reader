@@ -6,8 +6,8 @@ namespace App\Tests\Service\Logging\Loki;
 
 use App\Service\Logging\Loki\DirectLokiSink;
 use App\Service\Logging\Loki\LokiClient;
-use App\Service\Logging\Loki\LokiEndpoint;
 use App\Service\Logging\Loki\LokiPushHandler;
+use App\Tests\Support\StubLokiEndpoint;
 use Monolog\Level;
 use Monolog\LogRecord;
 use PHPUnit\Framework\TestCase;
@@ -24,7 +24,7 @@ final class LokiPushHandlerTest extends TestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $sink = new DirectLokiSink(new LokiClient($http, $this->endpoint()));
+        $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
         $handler = new LokiPushHandler($sink, 'sfr', 'prod', Level::Info, 100);
 
         $handler->handle($this->record(Level::Info, 'app', 'hello'));
@@ -60,7 +60,7 @@ final class LokiPushHandlerTest extends TestCase
 
     public function testHandleReturnsFalseSoOtherHandlersStillReceiveTheRecord(): void
     {
-        $sink = new DirectLokiSink(new LokiClient(new MockHttpClient(), $this->endpoint()));
+        $sink = new DirectLokiSink(new LokiClient(new MockHttpClient(), new StubLokiEndpoint()));
         $handler = new LokiPushHandler($sink, 'sfr', 'prod');
 
         $bubbles = $handler->handle($this->record(Level::Info, 'app', 'hello'));
@@ -76,7 +76,7 @@ final class LokiPushHandlerTest extends TestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $sink = new DirectLokiSink(new LokiClient($http, $this->endpoint()));
+        $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
         $handler = new LokiPushHandler($sink, 'sfr', 'prod');
 
         for ($i = 0; $i < 99; ++$i) {
@@ -97,7 +97,7 @@ final class LokiPushHandlerTest extends TestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $sink = new DirectLokiSink(new LokiClient($http, $this->endpoint()));
+        $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
         $handler = new LokiPushHandler($sink, 'sfr', 'prod', Level::Info, 100);
         $handler->handle($this->record(Level::Info, 'app', 'pending'));
 
@@ -114,7 +114,7 @@ final class LokiPushHandlerTest extends TestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $sink = new DirectLokiSink(new LokiClient($http, $this->endpoint()));
+        $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
         $handler = new LokiPushHandler($sink, 'sfr', 'prod', Level::Info, 100);
         $handler->handle($this->record(Level::Info, 'app', 'pending'));
 
@@ -131,7 +131,7 @@ final class LokiPushHandlerTest extends TestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $sink = new DirectLokiSink(new LokiClient($http, $this->endpoint()));
+        $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
         $handler = new LokiPushHandler($sink, 'sfr', 'prod', Level::Info, 100);
 
         $handler->handle(new LogRecord(
@@ -161,7 +161,7 @@ final class LokiPushHandlerTest extends TestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $sink = new DirectLokiSink(new LokiClient($http, $this->endpoint()));
+        $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
         $handler = new LokiPushHandler($sink, 'sfr', 'prod', Level::Info, 100);
 
         $time = new \DateTimeImmutable('2024-03-05T10:20:30.123456+00:00');
@@ -184,7 +184,7 @@ final class LokiPushHandlerTest extends TestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $sink = new DirectLokiSink(new LokiClient($http, $this->endpoint()));
+        $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
         $handler = new LokiPushHandler($sink, 'sfr', 'prod', Level::Info, 2);
 
         $handler->handle($this->record(Level::Info, 'app', 'one'));
@@ -201,7 +201,7 @@ final class LokiPushHandlerTest extends TestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $sink = new DirectLokiSink(new LokiClient($http, $this->endpoint()));
+        $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
         $handler = new LokiPushHandler($sink, 'sfr', 'prod', Level::Info, 100);
 
         $handler->handle($this->record(Level::Debug, 'app', 'noise'));
@@ -218,7 +218,7 @@ final class LokiPushHandlerTest extends TestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $sink = new DirectLokiSink(new LokiClient($http, $this->endpoint()));
+        $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
         $handler = new LokiPushHandler($sink, 'sfr', 'prod', Level::Info, 100);
 
         $handler->handle($this->record(Level::Error, LokiPushHandler::CLIENT_ERRORS_CHANNEL, 'render blew up'));
@@ -239,7 +239,7 @@ final class LokiPushHandlerTest extends TestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $sink = new DirectLokiSink(new LokiClient($http, $this->endpoint()));
+        $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
         $handler = new LokiPushHandler($sink, 'sfr', 'prod', Level::Info, 100);
 
         $handler->handle($this->record(Level::Info, 'app', 'ordinary'));
@@ -254,25 +254,5 @@ final class LokiPushHandlerTest extends TestCase
     private function record(Level $level, string $channel, string $message): LogRecord
     {
         return new LogRecord(new \DateTimeImmutable(), $channel, $level, $message, [], ['request_id' => '01TEST']);
-    }
-
-    private function endpoint(): LokiEndpoint
-    {
-        return new class implements LokiEndpoint {
-            public function pushUrl(): string
-            {
-                return 'http://loki:3100/loki/api/v1/push';
-            }
-
-            public function username(): ?string
-            {
-                return null;
-            }
-
-            public function token(): ?string
-            {
-                return null;
-            }
-        };
     }
 }

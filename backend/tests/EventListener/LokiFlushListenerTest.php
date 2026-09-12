@@ -8,8 +8,8 @@ use App\EventListener\LokiFlushListener;
 use App\Kernel;
 use App\Service\Logging\Loki\DirectLokiSink;
 use App\Service\Logging\Loki\LokiClient;
-use App\Service\Logging\Loki\LokiEndpoint;
 use App\Service\Logging\Loki\LokiPushHandler;
+use App\Tests\Support\StubLokiEndpoint;
 use Monolog\Level;
 use Monolog\LogRecord;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -145,30 +145,10 @@ final class LokiFlushListenerTest extends KernelTestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $sink = new DirectLokiSink(new LokiClient($http, $this->endpoint()));
+        $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
         $handler = new LokiPushHandler($sink, 'sfr', 'prod', Level::Info, 100);
         $handler->handle(new LogRecord(new \DateTimeImmutable(), 'app', Level::Info, 'buffered'));
 
         return new LokiFlushListener($handler);
-    }
-
-    private function endpoint(): LokiEndpoint
-    {
-        return new class implements LokiEndpoint {
-            public function pushUrl(): string
-            {
-                return 'http://loki:3100/loki/api/v1/push';
-            }
-
-            public function username(): ?string
-            {
-                return null;
-            }
-
-            public function token(): ?string
-            {
-                return null;
-            }
-        };
     }
 }

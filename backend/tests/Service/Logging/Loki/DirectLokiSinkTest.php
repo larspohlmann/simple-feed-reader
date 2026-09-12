@@ -6,7 +6,7 @@ namespace App\Tests\Service\Logging\Loki;
 
 use App\Service\Logging\Loki\DirectLokiSink;
 use App\Service\Logging\Loki\LokiClient;
-use App\Service\Logging\Loki\LokiEndpoint;
+use App\Tests\Support\StubLokiEndpoint;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -21,7 +21,7 @@ final class DirectLokiSinkTest extends TestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $sink = new DirectLokiSink(new LokiClient($http, $this->endpoint()));
+        $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
 
         $sink->write([[
             'ts' => '1700000000000000000',
@@ -33,25 +33,5 @@ final class DirectLokiSinkTest extends TestCase
         $body = json_decode($seen['body'], true, 512, JSON_THROW_ON_ERROR);
         /** @var array{streams: list<array{values: list<array{0: string, 1: string}>}>} $body */
         self::assertSame('{"message":"hello"}', $body['streams'][0]['values'][0][1]);
-    }
-
-    private function endpoint(): LokiEndpoint
-    {
-        return new class implements LokiEndpoint {
-            public function pushUrl(): string
-            {
-                return 'http://loki:3100/loki/api/v1/push';
-            }
-
-            public function username(): ?string
-            {
-                return null;
-            }
-
-            public function token(): ?string
-            {
-                return null;
-            }
-        };
     }
 }
