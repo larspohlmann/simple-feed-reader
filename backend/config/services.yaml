@@ -259,7 +259,16 @@ services:
 
     App\Service\Logging\Loki\LokiEndpoint: '@App\Service\Grafana\SettingsLokiEndpoint'
 
-    App\Service\Logging\Loki\LokiSink: '@App\Service\Logging\Loki\DirectLokiSink'
+    App\Service\Logging\Loki\SpoolLokiSink:
+        arguments:
+            $spoolDirectory: '%kernel.logs_dir%/loki-spool'
+
+    App\Service\Logging\Loki\LokiSpoolShipper:
+        arguments:
+            $spoolDirectory: '%kernel.logs_dir%/loki-spool'
+
+    App\Service\Logging\Loki\LokiSink:
+        factory: ['@App\Service\Logging\Loki\LokiSinkFactory', 'create']
 
     App\Service\Logging\Loki\LokiPushHandler:
         arguments:
