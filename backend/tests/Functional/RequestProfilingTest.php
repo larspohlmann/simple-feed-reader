@@ -40,14 +40,17 @@ final class RequestProfilingTest extends ApiTestCase
             ->startSpan();
         $spanScope = $span->activate();
 
-        $client->request('GET', '/api/health');
-
-        $spanScope->detach();
-        $span->end();
-        $providerScope->detach();
+        try {
+            $client->request('GET', '/api/health');
+        } finally {
+            $spanScope->detach();
+            $span->end();
+            $providerScope->detach();
+        }
 
         self::assertResponseIsSuccessful();
         $taggedSpan = $this->taggedSpan($exporter);
+        self::assertSame($taggedSpan->getSpanId(), $taggedSpan->getAttributes()->get('pyroscope.profile.id'));
 
         self::assertCount(1, $this->pyroscopePushes);
         /** @var array{query: array{name: string}} $push */
