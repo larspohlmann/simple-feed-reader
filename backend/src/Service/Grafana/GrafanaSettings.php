@@ -22,8 +22,10 @@ use Doctrine\ORM\EntityManagerInterface;
  * flush reading pushUrl/username/token in a row issues one SELECT instead of
  * three (mirrors App\Service\Settings\InstanceSettings). The memo is a plain
  * field — request-scoped under PHP-FPM, never promote it to a shared cache.
- * update() clears it so a read after a write sees the new value. Not marked
- * `final`: SettingsLokiEndpointTest stubs this class.
+ * update() clears it so a read after a write sees the new value; the
+ * long-running worker calls refresh() on its periodic toggle re-check so a
+ * change is seen without a restart. Not marked `final`: SettingsLokiEndpointTest
+ * stubs this class.
  */
 class GrafanaSettings
 {
@@ -64,7 +66,7 @@ class GrafanaSettings
         }
 
         $this->em->flush();
-        $this->memoisedSettings = null;
+        $this->refresh();
     }
 
     public function refresh(): void
