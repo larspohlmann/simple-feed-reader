@@ -58,9 +58,12 @@ final class RequestProfilingListener
         }
         $labels = $this->labels;
         $this->labels = null;
-        $profile = $this->sampler->stop();
-        if (null !== $profile) {
-            $this->client->push($profile, $labels);
+        try {
+            $profile = $this->sampler->stop();
+            if (null !== $profile) {
+                $this->client->push($profile, $labels);
+            }
+        } catch (\Throwable) {
         }
     }
 }

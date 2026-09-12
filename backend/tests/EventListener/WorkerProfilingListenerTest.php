@@ -138,13 +138,74 @@ final class WorkerProfilingListenerTest extends TestCase
         self::assertSame([], $pushes);
     }
 
+    public function testAThrowingSamplerNeverCrashesWorkerStarted(): void
+    {
+        $pushes = [];
+        $enabled = ['value' => true];
+        $log = [];
+        $listener = $this->listener(
+            $this->throwingSampler(),
+            $pushes,
+            $enabled,
+            new MockClock('2026-09-12T00:00:00Z'),
+            $log,
+        );
+
+        $listener->onWorkerStarted();
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function testAThrowingSamplerNeverCrashesWorkerStopped(): void
+    {
+        $pushes = [];
+        $enabled = ['value' => true];
+        $log = [];
+        $listener = $this->listener(
+            $this->throwingSampler(),
+            $pushes,
+            $enabled,
+            new MockClock('2026-09-12T00:00:00Z'),
+            $log,
+        );
+
+        $listener->onWorkerStopped();
+
+        $this->addToAssertionCount(1);
+    }
+
+    private function throwingSampler(): ProfileSampler
+    {
+        return new class implements ProfileSampler {
+            public function isAvailable(): bool
+            {
+                return true;
+            }
+
+            public function start(float $periodSeconds): void
+            {
+                throw new \RuntimeException('sampler start failed');
+            }
+
+            public function stop(): ?CollapsedProfile
+            {
+                throw new \RuntimeException('sampler stop failed');
+            }
+
+            public function isRunning(): bool
+            {
+                return false;
+            }
+        };
+    }
+
     /**
      * @param list<array{name: string}> $pushes
      * @param array{value: bool} $enabled
      * @param list<string> $log
      */
     private function listener(
-        TrackingProfileSampler $sampler,
+        ProfileSampler $sampler,
         array &$pushes,
         array &$enabled,
         MockClock $clock,

@@ -20,8 +20,8 @@ import { ToggleComponent } from '../../../shared/toggle/toggle.component';
 import { GrafanaSettingsService } from './grafana-settings.service';
 
 /** The admin "Grafana" settings section (#983), on the grouped design language
- *  from #541: every field here is typed and waits behind the shared save bar --
- *  there are no instant toggles in this section. */
+ *  from #541. The profiling toggle saves instantly; every other field is typed
+ *  and waits behind the shared save bar. */
 @Component({
   selector: 'app-grafana-section',
   imports: [

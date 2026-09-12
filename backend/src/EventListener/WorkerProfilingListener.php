@@ -38,23 +38,33 @@ final class WorkerProfilingListener
 
     public function onWorkerStarted(): void
     {
-        $this->refreshToggle();
+        try {
+            $this->refreshToggle();
+        } catch (\Throwable) {
+            // fail-open: profiling must never crash the worker
+        }
     }
 
     public function onWorkerRunning(): void
     {
-        $now = $this->now();
-        if ($now - $this->lastToggleCheckAt >= self::TOGGLE_RECHECK_SECONDS) {
-            $this->refreshToggle();
-        }
-        if ($this->sampler->isRunning() && $now - $this->lastFlushAt >= self::FLUSH_INTERVAL_SECONDS) {
-            $this->rotate();
+        try {
+            $now = $this->now();
+            if ($now - $this->lastToggleCheckAt >= self::TOGGLE_RECHECK_SECONDS) {
+                $this->refreshToggle();
+            }
+            if ($this->sampler->isRunning() && $now - $this->lastFlushAt >= self::FLUSH_INTERVAL_SECONDS) {
+                $this->rotate();
+            }
+        } catch (\Throwable) {
         }
     }
 
     public function onWorkerStopped(): void
     {
-        $this->flush();
+        try {
+            $this->flush();
+        } catch (\Throwable) {
+        }
     }
 
     private function refreshToggle(): void

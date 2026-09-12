@@ -315,7 +315,7 @@ describe('GrafanaSectionComponent', () => {
     put.flush(state({ pyroscopePushUrl: 'https://pyroscope.example.com' }));
   });
 
-  it('shows the local-container hint with the effective push URL when a container is present', () => {
+  it('shows the local-container hint with the effective Pyroscope push URL when a container is present', () => {
     const fixture = mount(
       state({
         profilingContainerPresent: true,

@@ -96,9 +96,62 @@ final class RequestProfilingListenerTest extends TestCase
         self::assertSame([], $pushes);
     }
 
+    public function testATerminateThatThrowsSwallowsTheErrorAndResetsLabels(): void
+    {
+        $pushes = [];
+        $sampler = $this->samplerThatThrowsOnFirstStopOnly();
+        $listener = $this->listener(
+            $sampler,
+            $pushes,
+            enabled: true,
+            traceId: self::TRACE_ID,
+            spanId: self::SPAN_ID,
+        );
+        $listener->onKernelRequest($this->mainRequestEvent());
+
+        $listener->onKernelTerminate();
+        $listener->onKernelTerminate();
+
+        self::assertSame([], $pushes);
+    }
+
+    private function samplerThatThrowsOnFirstStopOnly(): ProfileSampler
+    {
+        return new class implements ProfileSampler {
+            private int $stopCalls = 0;
+
+            public function isAvailable(): bool
+            {
+                return true;
+            }
+
+            public function start(float $periodSeconds): void
+            {
+            }
+
+            public function stop(): ?CollapsedProfile
+            {
+                ++$this->stopCalls;
+                if (1 === $this->stopCalls) {
+                    throw new \RuntimeException('sampler stop failed');
+                }
+                if ($this->stopCalls > 2) {
+                    return null;
+                }
+
+                return new CollapsedProfile('main;work 1', 1, 1000, 1_700_000_000, 1_700_000_001);
+            }
+
+            public function isRunning(): bool
+            {
+                return false;
+            }
+        };
+    }
+
     /** @param list<array{name: string}> $pushes */
     private function listener(
-        RecordingProfileSampler $sampler,
+        ProfileSampler $sampler,
         array &$pushes,
         bool $enabled,
         ?string $traceId,
