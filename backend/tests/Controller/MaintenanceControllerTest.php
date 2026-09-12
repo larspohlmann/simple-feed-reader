@@ -231,11 +231,16 @@ final class MaintenanceControllerTest extends WebTestCase
         $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
         self::assertArrayHasKey('refresh', $payload);
         self::assertArrayHasKey('recommendations', $payload);
+        self::assertArrayHasKey('logShipping', $payload);
         /** @var array<string, mixed> $refresh */
         $refresh = $payload['refresh'];
         self::assertSame('completed', $refresh['status']);
         /** @var array<string, mixed> $recommendations */
         $recommendations = $payload['recommendations'];
         self::assertIsInt($recommendations['activeRuns']);
+        /** @var array<string, mixed> $logShipping */
+        $logShipping = $payload['logShipping'];
+        self::assertIsInt($logShipping['shipped']);
+        self::assertIsInt($logShipping['failed']);
     }
 }

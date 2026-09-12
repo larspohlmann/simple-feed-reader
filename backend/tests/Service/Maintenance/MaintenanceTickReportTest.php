@@ -15,6 +15,7 @@ final class MaintenanceTickReportTest extends TestCase
             ['status' => 'completed', 'remaining' => 0],
             ['startedRuns' => 1, 'advancedRuns' => 2, 'activeRuns' => 3],
             ['considered' => 4, 'sent' => 5, 'skippedEmpty' => 6],
+            ['shipped' => 1, 'failed' => 0],
         );
 
         self::assertSame(
@@ -22,6 +23,7 @@ final class MaintenanceTickReportTest extends TestCase
                 'refresh' => ['status' => 'completed', 'remaining' => 0],
                 'recommendations' => ['startedRuns' => 1, 'advancedRuns' => 2, 'activeRuns' => 3],
                 'digests' => ['considered' => 4, 'sent' => 5, 'skippedEmpty' => 6],
+                'logShipping' => ['shipped' => 1, 'failed' => 0],
             ],
             $report->toArray(),
         );

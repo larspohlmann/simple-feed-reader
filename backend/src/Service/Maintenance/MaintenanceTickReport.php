@@ -15,16 +15,23 @@ final readonly class MaintenanceTickReport
      * @param array<string,mixed> $refresh
      * @param array<string,mixed> $recommendations
      * @param array<string,mixed> $digests
+     * @param array<string,mixed> $logShipping
      */
     public function __construct(
         public array $refresh,
         public array $recommendations,
         public array $digests,
+        public array $logShipping,
     ) {
     }
 
     /**
-     * @return array{refresh: array<string,mixed>, recommendations: array<string,mixed>, digests: array<string,mixed>}
+     * @return array{
+     *     refresh: array<string,mixed>,
+     *     recommendations: array<string,mixed>,
+     *     digests: array<string,mixed>,
+     *     logShipping: array<string,mixed>,
+     * }
      */
     public function toArray(): array
     {
@@ -32,6 +39,7 @@ final readonly class MaintenanceTickReport
             'refresh' => $this->refresh,
             'recommendations' => $this->recommendations,
             'digests' => $this->digests,
+            'logShipping' => $this->logShipping,
         ];
     }
 }
