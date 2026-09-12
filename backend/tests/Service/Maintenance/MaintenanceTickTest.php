@@ -15,6 +15,8 @@ use App\Service\FeedScheduler;
 use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\FetchResponse;
 use App\Service\Ingest\EntryIngestor;
+use App\Service\Logging\Loki\LokiClient;
+use App\Service\Logging\Loki\LokiSpoolShipper;
 use App\Service\Mail\Digest\DigestComposer;
 use App\Service\Mail\Digest\DigestMailerInterface;
 use App\Service\Mail\Digest\DigestSchedule;
@@ -34,11 +36,13 @@ use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\InMemoryMailFailureRecorder;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\RecordingContentChangeMarker;
+use App\Tests\Support\StubLokiEndpoint;
 use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\Store\InMemoryStore;
 
@@ -65,6 +69,8 @@ final class MaintenanceTickTest extends DbTestCase
         self::assertIsInt($report['digests']['sent']);
         self::assertIsInt($report['digests']['skippedEmpty']);
         self::assertArrayNotHasKey('skipped', $report['digests']);
+        self::assertIsInt($report['logShipping']['shipped']);
+        self::assertIsInt($report['logShipping']['failed']);
     }
 
     /**
@@ -178,7 +184,11 @@ final class MaintenanceTickTest extends DbTestCase
             new InMemoryMailFailureRecorder(),
         );
 
-        $tick = new MaintenanceTick($refreshRunner, $forYouSweep, $sendDueDigests);
+        $spoolDirectory = sys_get_temp_dir() . '/loki-tick-' . bin2hex(random_bytes(4));
+        $lokiClient = new LokiClient(new MockHttpClient(), new StubLokiEndpoint());
+        $logSpoolShipper = new LokiSpoolShipper($lokiClient, $spoolDirectory);
+
+        $tick = new MaintenanceTick($refreshRunner, $forYouSweep, $sendDueDigests, $logSpoolShipper);
 
         $report = $tick->run()->toArray();
 
@@ -201,5 +211,6 @@ final class MaintenanceTickTest extends DbTestCase
             ],
             $report['digests'],
         );
+        self::assertSame(['shipped' => 0, 'failed' => 0], $report['logShipping']);
     }
 }

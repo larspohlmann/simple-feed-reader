@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Maintenance;
 
+use App\Service\Logging\Loki\LokiSpoolShipper;
 use App\Service\Mail\Digest\DigestSweepReport;
 use App\Service\Mail\Digest\SendDueDigests;
 use App\Service\Recommendation\ForYouSweep;
@@ -32,6 +33,9 @@ use App\Service\Refresh\RefreshRunner;
  * The due-digests sweep (#636) runs last and shares the guard: it also
  * flushes through the default EntityManager, so it is skipped on the same
  * aborted-refresh tick.
+ *
+ * The tick drains the Loki spool (#1003) last, after refresh and the sweep,
+ * independent of the EM guard: the shipper touches no EntityManager.
  */
 final readonly class MaintenanceTick
 {
@@ -43,6 +47,7 @@ final readonly class MaintenanceTick
         private RefreshRunner $refreshRunner,
         private ForYouSweep $forYouSweep,
         private SendDueDigests $sendDueDigests,
+        private LokiSpoolShipper $logSpoolShipper,
     ) {
     }
 
@@ -50,17 +55,15 @@ final readonly class MaintenanceTick
     {
         $refresh = $this->refreshRunner->run(RefreshRequest::allDue(self::REFRESH_BUDGET_SECONDS));
         if ($refresh->isAborted()) {
-            return new MaintenanceTickReport(
-                $refresh->toArray(),
-                $this->skippedRecommendations(),
-                $this->skippedDigests(),
-            );
+            $recommendations = $this->skippedRecommendations();
+            $digests = $this->skippedDigests();
+        } else {
+            $recommendations = $this->forYouSweep->sweepOnce()->toArray();
+            $digests = $this->sendDueDigests->run()->toArray();
         }
+        $logShipping = $this->logSpoolShipper->ship()->toArray();
 
-        $recommendations = $this->forYouSweep->sweepOnce();
-        $digests = $this->sendDueDigests->run()->toArray();
-
-        return new MaintenanceTickReport($refresh->toArray(), $recommendations->toArray(), $digests);
+        return new MaintenanceTickReport($refresh->toArray(), $recommendations, $digests, $logShipping);
     }
 
     /**

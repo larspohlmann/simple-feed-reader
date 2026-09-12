@@ -42,6 +42,8 @@ parameters:
     # var reach GitHub instead of switching the check off.
     github_release_repository: '%env(GITHUB_RELEASE_REPOSITORY)%'
 
+    app.loki_spool_directory: '%kernel.logs_dir%/loki-spool'
+
 services:
     # default configuration for services in *this* file
     _defaults:
@@ -258,6 +260,17 @@ services:
     App\Service\Profiling\PyroscopeEndpoint: '@App\Service\Grafana\SettingsPyroscopeEndpoint'
 
     App\Service\Logging\Loki\LokiEndpoint: '@App\Service\Grafana\SettingsLokiEndpoint'
+
+    App\Service\Logging\Loki\SpoolLokiSink:
+        arguments:
+            $spoolDirectory: '%app.loki_spool_directory%'
+
+    App\Service\Logging\Loki\LokiSpoolShipper:
+        arguments:
+            $spoolDirectory: '%app.loki_spool_directory%'
+
+    App\Service\Logging\Loki\LokiSink:
+        factory: ['@App\Service\Logging\Loki\LokiSinkFactory', 'create']
 
     App\Service\Logging\Loki\LokiPushHandler:
         arguments:

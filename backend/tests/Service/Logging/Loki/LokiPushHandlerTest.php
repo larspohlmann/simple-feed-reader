@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Logging\Loki;
 
+use App\Service\Logging\Loki\DirectLokiSink;
 use App\Service\Logging\Loki\LokiClient;
-use App\Service\Logging\Loki\LokiEndpoint;
 use App\Service\Logging\Loki\LokiPushHandler;
+use App\Tests\Support\StubLokiEndpoint;
 use Monolog\Level;
 use Monolog\LogRecord;
 use PHPUnit\Framework\TestCase;
@@ -23,7 +24,8 @@ final class LokiPushHandlerTest extends TestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $handler = new LokiPushHandler(new LokiClient($http, $this->endpoint()), 'sfr', 'prod', Level::Info, 100);
+        $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
+        $handler = new LokiPushHandler($sink, 'sfr', 'prod', Level::Info, 100);
 
         $handler->handle($this->record(Level::Info, 'app', 'hello'));
         self::assertSame([], $seen, 'must buffer, not post per record');
@@ -58,7 +60,8 @@ final class LokiPushHandlerTest extends TestCase
 
     public function testHandleReturnsFalseSoOtherHandlersStillReceiveTheRecord(): void
     {
-        $handler = new LokiPushHandler(new LokiClient(new MockHttpClient(), $this->endpoint()), 'sfr', 'prod');
+        $sink = new DirectLokiSink(new LokiClient(new MockHttpClient(), new StubLokiEndpoint()));
+        $handler = new LokiPushHandler($sink, 'sfr', 'prod');
 
         $bubbles = $handler->handle($this->record(Level::Info, 'app', 'hello'));
 
@@ -73,7 +76,8 @@ final class LokiPushHandlerTest extends TestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $handler = new LokiPushHandler(new LokiClient($http, $this->endpoint()), 'sfr', 'prod');
+        $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
+        $handler = new LokiPushHandler($sink, 'sfr', 'prod');
 
         for ($i = 0; $i < 99; ++$i) {
             $handler->handle($this->record(Level::Info, 'app', 'line'));
@@ -93,7 +97,8 @@ final class LokiPushHandlerTest extends TestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $handler = new LokiPushHandler(new LokiClient($http, $this->endpoint()), 'sfr', 'prod', Level::Info, 100);
+        $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
+        $handler = new LokiPushHandler($sink, 'sfr', 'prod', Level::Info, 100);
         $handler->handle($this->record(Level::Info, 'app', 'pending'));
 
         $handler->reset();
@@ -109,7 +114,8 @@ final class LokiPushHandlerTest extends TestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $handler = new LokiPushHandler(new LokiClient($http, $this->endpoint()), 'sfr', 'prod', Level::Info, 100);
+        $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
+        $handler = new LokiPushHandler($sink, 'sfr', 'prod', Level::Info, 100);
         $handler->handle($this->record(Level::Info, 'app', 'pending'));
 
         $handler->close();
@@ -125,7 +131,8 @@ final class LokiPushHandlerTest extends TestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $handler = new LokiPushHandler(new LokiClient($http, $this->endpoint()), 'sfr', 'prod', Level::Info, 100);
+        $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
+        $handler = new LokiPushHandler($sink, 'sfr', 'prod', Level::Info, 100);
 
         $handler->handle(new LogRecord(
             new \DateTimeImmutable(),
@@ -154,7 +161,8 @@ final class LokiPushHandlerTest extends TestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $handler = new LokiPushHandler(new LokiClient($http, $this->endpoint()), 'sfr', 'prod', Level::Info, 100);
+        $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
+        $handler = new LokiPushHandler($sink, 'sfr', 'prod', Level::Info, 100);
 
         $time = new \DateTimeImmutable('2024-03-05T10:20:30.123456+00:00');
         $handler->handle(new LogRecord($time, 'app', Level::Info, 'hello'));
@@ -176,7 +184,8 @@ final class LokiPushHandlerTest extends TestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $handler = new LokiPushHandler(new LokiClient($http, $this->endpoint()), 'sfr', 'prod', Level::Info, 2);
+        $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
+        $handler = new LokiPushHandler($sink, 'sfr', 'prod', Level::Info, 2);
 
         $handler->handle($this->record(Level::Info, 'app', 'one'));
         $handler->handle($this->record(Level::Info, 'app', 'two'));
@@ -192,7 +201,8 @@ final class LokiPushHandlerTest extends TestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $handler = new LokiPushHandler(new LokiClient($http, $this->endpoint()), 'sfr', 'prod', Level::Info, 100);
+        $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
+        $handler = new LokiPushHandler($sink, 'sfr', 'prod', Level::Info, 100);
 
         $handler->handle($this->record(Level::Debug, 'app', 'noise'));
         $handler->flush();
@@ -208,7 +218,8 @@ final class LokiPushHandlerTest extends TestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $handler = new LokiPushHandler(new LokiClient($http, $this->endpoint()), 'sfr', 'prod', Level::Info, 100);
+        $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
+        $handler = new LokiPushHandler($sink, 'sfr', 'prod', Level::Info, 100);
 
         $handler->handle($this->record(Level::Error, LokiPushHandler::CLIENT_ERRORS_CHANNEL, 'render blew up'));
         $handler->flush();
@@ -228,7 +239,8 @@ final class LokiPushHandlerTest extends TestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $handler = new LokiPushHandler(new LokiClient($http, $this->endpoint()), 'sfr', 'prod', Level::Info, 100);
+        $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
+        $handler = new LokiPushHandler($sink, 'sfr', 'prod', Level::Info, 100);
 
         $handler->handle($this->record(Level::Info, 'app', 'ordinary'));
         $handler->flush();
@@ -242,25 +254,5 @@ final class LokiPushHandlerTest extends TestCase
     private function record(Level $level, string $channel, string $message): LogRecord
     {
         return new LogRecord(new \DateTimeImmutable(), $channel, $level, $message, [], ['request_id' => '01TEST']);
-    }
-
-    private function endpoint(): LokiEndpoint
-    {
-        return new class implements LokiEndpoint {
-            public function pushUrl(): string
-            {
-                return 'http://loki:3100/loki/api/v1/push';
-            }
-
-            public function username(): ?string
-            {
-                return null;
-            }
-
-            public function token(): ?string
-            {
-                return null;
-            }
-        };
     }
 }
