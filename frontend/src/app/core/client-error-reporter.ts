@@ -1,14 +1,31 @@
 // src/app/core/client-error-reporter.ts
+import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { API_BASE_URL } from './api';
 import {
   CLIENT_ERRORS_PATH,
   ClientErrorItem,
-  buildVersionTag,
+  ErrorDescription,
+  describeError,
   sendClientError,
+  toClientErrorItem,
 } from './client-error-beacon';
+import { httpMethodOf } from './client-error-http-method';
 import { TokenStore } from './token.store';
+
+function stripQueryAndFragment(url: string): string {
+  return url.split(/[?#]/)[0];
+}
+
+function describeHttpError(error: HttpErrorResponse): ErrorDescription {
+  const url = stripQueryAndFragment(error.url ?? 'unknown');
+  const method = httpMethodOf(error);
+  const isParseErrorOnSuccess = error.status >= 200 && error.status < 300;
+  const parseNote = isParseErrorOnSuccess ? ' (response parse error)' : '';
+  const message = `HTTP ${error.status}${method ? ' ' + method : ''} ${url}${parseNote}`;
+  return { message, stack: null, kind: 'HttpError' };
+}
 
 export const DEDUPE_WINDOW_MS = 10_000;
 export const RATE_WINDOW_MS = 60_000;
@@ -27,15 +44,21 @@ export class ClientErrorReporter {
   private readonly tokens = inject(TokenStore);
 
   private readonly lastSentAtBySignature = new Map<string, number>();
+  private readonly objectLastReportedAt = new WeakMap<object, number>();
   private rateWindowStartedAt = 0;
   private reportsSentInWindow = 0;
 
-  report(error: unknown, kind?: string): void {
+  report(error: unknown): void {
     try {
-      const item = this.toWireItem(error, kind);
-      if (this.isSuppressed(item)) {
+      const now = Date.now();
+      if (this.reportedByIdentityWithin(error, now)) {
         return;
       }
+      const item = this.toWireItem(error);
+      if (this.isSuppressed(item, now)) {
+        return;
+      }
+      this.rememberReportedIdentity(error, now);
       sendClientError(item, {
         url: `${this.baseUrl}/${CLIENT_ERRORS_PATH}`,
         bearerToken: this.tokens.token(),
@@ -45,26 +68,34 @@ export class ClientErrorReporter {
     }
   }
 
-  private toWireItem(error: unknown, kind: string | undefined): ClientErrorItem {
-    const normalized = error instanceof Error ? error : new Error(String(error));
-    return {
-      message: normalized.message || String(error),
-      stack: normalized.stack ?? null,
-      kind: kind ?? (error instanceof Error ? error.name : 'Error'),
-      url: window.location.href,
-      route: this.router.url,
-      buildVersion: buildVersionTag(),
-      userAgent: navigator.userAgent,
-      at: new Date().toISOString(),
-    };
+  /** A suppressed instance is not remembered (recording happens after
+   *  `isSuppressed`): a recurring one keeps its per-window heartbeat, and a
+   *  rate-limited one is not dropped forever once the window resets. */
+  private reportedByIdentityWithin(error: unknown, now: number): boolean {
+    if (typeof error !== 'object' || error === null) {
+      return false;
+    }
+    const lastReportedAt = this.objectLastReportedAt.get(error) ?? -Infinity;
+    return now - lastReportedAt < DEDUPE_WINDOW_MS;
+  }
+
+  private rememberReportedIdentity(error: unknown, now: number): void {
+    if (typeof error === 'object' && error !== null) {
+      this.objectLastReportedAt.set(error, now);
+    }
+  }
+
+  private toWireItem(error: unknown): ClientErrorItem {
+    const description =
+      error instanceof HttpErrorResponse ? describeHttpError(error) : describeError(error);
+    return toClientErrorItem(description, { route: this.router.url });
   }
 
   /** Collapses a flood from one broken render: the same signature is dropped
    *  inside the dedupe window, and the window-wide cap drops the rest. Also
    *  sweeps signatures that aged out, so a singleton living for a whole tab
    *  session never accumulates one entry per distinct message forever. */
-  private isSuppressed(item: ClientErrorItem): boolean {
-    const now = Date.now();
+  private isSuppressed(item: ClientErrorItem, now: number): boolean {
     this.forgetSignaturesOlderThan(now - DEDUPE_WINDOW_MS);
 
     if (this.rateLimitExceeded(now)) {

@@ -5,6 +5,7 @@ import { NavigationEnd, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { API_BASE_URL } from './api';
 import { ClientErrorReporter } from './client-error-reporter';
+import { httpMethodOf } from './client-error-http-method';
 import { TokenStore } from './token.store';
 import { authInterceptor } from './auth.interceptor';
 import { CatalogStore } from '../discover/catalog.store';
@@ -161,15 +162,19 @@ describe('authInterceptor', () => {
     expect(ai.model()).toBeNull();
   });
 
-  it('reports a 500 failure', () => {
+  it('reports a 500 failure with the HttpErrorResponse itself, its method remembered', () => {
     http
-      .get('https://api.test/api/entries')
+      .get('https://api.test/api/entries?q=secret')
       .subscribe({ next: () => undefined, error: () => undefined });
     ctrl
-      .expectOne('https://api.test/api/entries')
+      .expectOne('https://api.test/api/entries?q=secret')
       .flush('boom', { status: 500, statusText: 'Server Error' });
 
     expect(reportSpy).toHaveBeenCalledTimes(1);
+    const [reported] = reportSpy.mock.calls[0];
+    expect(reported.status).toBe(500);
+    expect(httpMethodOf(reported)).toBe('GET');
+    expect(reported.url).toContain('q=secret');
   });
 
   it('reports a network failure (status 0)', () => {
@@ -181,6 +186,7 @@ describe('authInterceptor', () => {
       .error(new ProgressEvent('error'), { status: 0, statusText: '' });
 
     expect(reportSpy).toHaveBeenCalledTimes(1);
+    expect(reportSpy.mock.calls[0][0].status).toBe(0);
   });
 
   it('does not report a 401', () => {

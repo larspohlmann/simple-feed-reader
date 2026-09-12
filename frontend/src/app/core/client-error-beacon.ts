@@ -71,17 +71,89 @@ export function sendClientError(item: ClientErrorItem, options: SendClientErrorO
   }
 }
 
-/** Boot-time convenience for callers with no injector (boot-error-surface.ts). */
-export function reportBootError(error: unknown): void {
-  const normalized = error instanceof Error ? error : new Error(String(error));
-  sendClientError({
-    message: normalized.message || String(error),
-    stack: normalized.stack ?? null,
-    kind: normalized.name || 'BootError',
+export interface ErrorDescription {
+  message: string;
+  stack: string | null;
+  kind: string;
+}
+
+function constructorNameOf(error: unknown): string {
+  return (error as { constructor?: { name?: string } })?.constructor?.name || 'Object';
+}
+
+/** Bounded, value-free: object VALUES may hold secrets the scrubber does not
+ *  know about, but the KEYS are safe to report and still useful for triage. */
+function stringifyUnknown(error: unknown): string {
+  if (typeof error !== 'object' || error === null) {
+    return String(error);
+  }
+  const keys = Object.keys(error).slice(0, 20);
+  return `${constructorNameOf(error)}{${keys.join(', ')}}`;
+}
+
+function isErrorLike(error: unknown): error is { message: string; name: string; stack?: unknown } {
+  return (
+    error instanceof Error ||
+    (typeof error === 'object' &&
+      error !== null &&
+      typeof (error as { message?: unknown }).message === 'string' &&
+      typeof (error as { name?: unknown }).name === 'string')
+  );
+}
+
+/** Turns any thrown value into wire-ready content, never `[object Object]`,
+ *  and never throws itself — a revoked Proxy or a throwing getter must not
+ *  escape the error-reporting path. */
+export function describeError(error: unknown, fallbackKind = 'Error'): ErrorDescription {
+  try {
+    if (isErrorLike(error)) {
+      return {
+        message: error.message || error.name || fallbackKind,
+        stack: typeof error.stack === 'string' ? error.stack : null,
+        kind: error.name || fallbackKind,
+      };
+    }
+    return {
+      message: stringifyUnknown(error).trim() || fallbackKind,
+      stack: null,
+      kind: fallbackKind,
+    };
+  } catch {
+    return { message: fallbackKind, stack: null, kind: fallbackKind };
+  }
+}
+
+const MAX_MESSAGE = 2000;
+const MAX_STACK = 8000;
+
+/** Cut by code point: a cut mid-surrogate leaves a lone `\ud83d`, which PHP's
+ *  `json_decode` rejects (JSON_ERROR_UTF16 → backend 400). Also matches
+ *  Symfony's `mb_strlen` cap. */
+function truncate(text: string, max: number): string {
+  const codePoints = Array.from(text);
+  return codePoints.length > max ? codePoints.slice(0, max).join('') : text;
+}
+
+/** The one place the wire shape and the backend's length caps live. */
+export function toClientErrorItem(
+  description: ErrorDescription,
+  context: { route: string | null },
+): ClientErrorItem {
+  return {
+    message: truncate(description.message, MAX_MESSAGE),
+    stack: description.stack === null ? null : truncate(description.stack, MAX_STACK),
+    kind: description.kind,
     url: typeof location !== 'undefined' ? location.href : null,
-    route: null,
+    route: context.route,
     buildVersion: buildVersionTag(),
     userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
     at: new Date().toISOString(),
-  });
+  };
+}
+
+/** Boot-time convenience for callers with no injector (boot-error-surface.ts).
+ *  `describeError` is total and `sendClientError` is already guarded, so the
+ *  boot path is throw-safe without its own try/catch. */
+export function reportBootError(error: unknown): void {
+  sendClientError(toClientErrorItem(describeError(error, 'BootError'), { route: null }));
 }
