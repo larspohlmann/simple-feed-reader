@@ -6,6 +6,7 @@ namespace App\Tests\EventListener;
 
 use App\EventListener\LokiFlushListener;
 use App\Kernel;
+use App\Service\Logging\Loki\DirectLokiSink;
 use App\Service\Logging\Loki\LokiClient;
 use App\Service\Logging\Loki\LokiEndpoint;
 use App\Service\Logging\Loki\LokiPushHandler;
@@ -144,7 +145,8 @@ final class LokiFlushListenerTest extends KernelTestCase
 
             return new MockResponse('', ['http_code' => 204]);
         });
-        $handler = new LokiPushHandler(new LokiClient($http, $this->endpoint()), 'sfr', 'prod', Level::Info, 100);
+        $sink = new DirectLokiSink(new LokiClient($http, $this->endpoint()));
+        $handler = new LokiPushHandler($sink, 'sfr', 'prod', Level::Info, 100);
         $handler->handle(new LogRecord(new \DateTimeImmutable(), 'app', Level::Info, 'buffered'));
 
         return new LokiFlushListener($handler);

@@ -259,6 +259,8 @@ services:
 
     App\Service\Logging\Loki\LokiEndpoint: '@App\Service\Grafana\SettingsLokiEndpoint'
 
+    App\Service\Logging\Loki\LokiSink: '@App\Service\Logging\Loki\DirectLokiSink'
+
     App\Service\Logging\Loki\LokiPushHandler:
         arguments:
             $appLabel: 'simple-feed-reader'

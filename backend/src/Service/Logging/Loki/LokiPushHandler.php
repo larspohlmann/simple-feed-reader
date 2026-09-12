@@ -19,7 +19,7 @@ final class LokiPushHandler extends AbstractProcessingHandler
     private array $buffer = [];
 
     public function __construct(
-        private readonly LokiClient $client,
+        private readonly LokiSink $sink,
         private readonly string $appLabel,
         private readonly string $envLabel,
         Level $level = Level::Info,
@@ -56,7 +56,7 @@ final class LokiPushHandler extends AbstractProcessingHandler
 
         $lines = $this->buffer;
         $this->buffer = [];
-        $this->client->push($lines);
+        $this->sink->write($lines);
     }
 
     public function reset(): void
