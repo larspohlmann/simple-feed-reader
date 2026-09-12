@@ -69,6 +69,66 @@ final class LokiSpoolShipperTest extends TestCase
         self::assertSame(0, $report->failed);
     }
 
+    public function testShipsAFileNestedToTheDefaultJsonDepthLimit(): void
+    {
+        $this->spoolRawJson($this->nestedArrayJson(511));
+        $client = new LokiClient(new MockHttpClient(), $this->endpointWithNoPushUrl());
+        $shipper = new LokiSpoolShipper($client, $this->spoolDirectory);
+
+        $report = $shipper->ship();
+
+        self::assertSame(1, $report->shipped);
+        self::assertSame(0, $report->failed);
+    }
+
+    public function testDeletesAFileNestedOneLevelBeyondTheDefaultJsonDepthLimitAndCountsItFailed(): void
+    {
+        $this->spoolRawJson($this->nestedArrayJson(512));
+        $client = new LokiClient(new MockHttpClient(), $this->endpointWithNoPushUrl());
+        $shipper = new LokiSpoolShipper($client, $this->spoolDirectory);
+
+        $report = $shipper->ship();
+
+        self::assertSame(0, $report->shipped);
+        self::assertSame(1, $report->failed);
+    }
+
+    private function nestedArrayJson(int $depth): string
+    {
+        return str_repeat('[', $depth) . '1' . str_repeat(']', $depth);
+    }
+
+    private function spoolRawJson(string $json): void
+    {
+        $fileName = sprintf(
+            '%s/%d-%s.json',
+            $this->spoolDirectory,
+            (int) (microtime(true) * 1_000_000),
+            bin2hex(random_bytes(6)),
+        );
+        file_put_contents($fileName, $json);
+    }
+
+    private function endpointWithNoPushUrl(): LokiEndpoint
+    {
+        return new class implements LokiEndpoint {
+            public function pushUrl(): ?string
+            {
+                return null;
+            }
+
+            public function username(): ?string
+            {
+                return null;
+            }
+
+            public function token(): ?string
+            {
+                return null;
+            }
+        };
+    }
+
     /**
      * @param list<array{ts: string, line: string, labels: array<string, string>}> $lines
      */

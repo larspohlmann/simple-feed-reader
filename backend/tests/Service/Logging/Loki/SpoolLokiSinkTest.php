@@ -79,4 +79,17 @@ final class SpoolLokiSinkTest extends TestCase
 
         self::assertSame([], glob($this->spoolDirectory . '/*.json') ?: []);
     }
+
+    public function testFileNameEncodesAMicrosecondTimestampAndTwelveHexCharacters(): void
+    {
+        $sink = new SpoolLokiSink($this->spoolDirectory);
+
+        $sink->write([['ts' => '1', 'line' => '{}', 'labels' => ['app' => 'sfr']]]);
+
+        $files = glob($this->spoolDirectory . '/*.json') ?: [];
+        self::assertCount(1, $files);
+        self::assertMatchesRegularExpression('/^\d+-[0-9a-f]{12}\.json$/', basename($files[0]));
+        [$micros] = explode('-', basename($files[0], '.json'), 2);
+        self::assertGreaterThan(1_000_000_000_000, (int) $micros);
+    }
 }
