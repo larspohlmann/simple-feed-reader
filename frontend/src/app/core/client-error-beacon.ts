@@ -103,15 +103,18 @@ function stringifyUnknown(error: unknown): string {
   }
 }
 
+function isErrorLike(error: unknown): error is { message: string; name: string; stack?: unknown } {
+  return (
+    error instanceof Error ||
+    (typeof error === 'object' &&
+      error !== null &&
+      typeof (error as { message?: unknown }).message === 'string' &&
+      typeof (error as { name?: unknown }).name === 'string')
+  );
+}
+
 /** Turns any thrown value into wire-ready content, never `[object Object]`. */
 export function describeError(error: unknown, fallbackKind = 'Error'): ErrorDescription {
-  if (error instanceof Error) {
-    return {
-      message: error.message || error.name,
-      stack: error.stack ?? null,
-      kind: error.name || fallbackKind,
-    };
-  }
   if (isHttpErrorResponse(error)) {
     return {
       message: `HTTP ${error.status} ${error.url ?? 'unknown'}`,
@@ -119,12 +122,11 @@ export function describeError(error: unknown, fallbackKind = 'Error'): ErrorDesc
       kind: 'HttpError',
     };
   }
-  const errorLike = error as { message?: unknown; name?: unknown; stack?: unknown } | null;
-  if (errorLike && typeof errorLike.message === 'string' && typeof errorLike.name === 'string') {
+  if (isErrorLike(error)) {
     return {
-      message: errorLike.message || errorLike.name,
-      stack: typeof errorLike.stack === 'string' ? errorLike.stack : null,
-      kind: errorLike.name || fallbackKind,
+      message: error.message || error.name,
+      stack: typeof error.stack === 'string' ? error.stack : null,
+      kind: error.name || fallbackKind,
     };
   }
   if (typeof error === 'string') {
