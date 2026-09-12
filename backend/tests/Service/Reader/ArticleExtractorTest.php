@@ -29,6 +29,7 @@ use App\Service\Reader\LandingChallenge;
 use App\Service\Reader\LazyImageSources;
 use App\Service\Reader\LeadingEngagementCleaner;
 use App\Service\Reader\LeadingTitleRemover;
+use App\Service\Reader\Media\BodyMediaResolver;
 use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\InBodyEmbedRewriter;
@@ -60,6 +61,7 @@ use App\Service\Reader\PlayerChromeCleaner;
 use App\Service\Reader\RecipeFacts\RecipeFactsCleaner;
 use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\ReaderLeadImage;
+use App\Service\Reader\RelatedTeaserGridRemover;
 use App\Service\Reader\ShareIntentLinkRemover;
 use App\Service\Reader\ShareWidgetRemover;
 use App\Service\Reader\Slideshow\MarkupCarouselRecognizer;
@@ -120,10 +122,13 @@ final class ArticleExtractorTest extends TestCase
             $this->bodyCleaner(),
             new EntrySanitizer(),
             $this->mediaScanner(),
-            new StreamLocationResolver($landing, $this->urlKind()),
-            new SiblingMediaExtender(new SiblingIdRule(), $landing, $this->urlKind()),
+            new BodyMediaResolver(
+                new StreamLocationResolver($landing, $this->urlKind()),
+                new SiblingMediaExtender(new SiblingIdRule(), $landing, $this->urlKind()),
+            ),
             $slideshowScanner ?? new SlideshowScanner([]),
             new TeaserPlayerScanner($this->urlKind()),
+            new RelatedTeaserGridRemover(),
         );
     }
 
@@ -194,6 +199,25 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringContainsString('https://site.test/img/photo.jpg', (string) $result->contentHtml);
         self::assertStringNotContainsString('About', (string) $result->contentHtml);
         self::assertFalse($result->paywalled);
+    }
+
+    public function testDropsTheRelatedTeaserGridButKeepsTheStoryAndLeadImage(): void
+    {
+        // NDR (#1002): the "Mehr zum Thema" box is a grid of headline-linked
+        // thumbnails. Readability keeps its images but strips the links, leaving
+        // orphan thumbnails at the tail; the grid must go, the lead image stays.
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/related-teaser-grid.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post');
+        $contentHtml = (string) $result->contentHtml;
+
+        self::assertTrue($result->ok);
+        self::assertStringContainsString('sieben Jahren Haft', $contentHtml);
+        self::assertStringContainsString('prozess-992', $contentHtml);
+        self::assertStringNotContainsString('prozessdrogenurteil-100', $contentHtml);
+        self::assertStringNotContainsString('kokain510', $contentHtml);
+        self::assertStringNotContainsString('kokainurteil-100', $contentHtml);
     }
 
     public function testStampsFeedDeclaredDimensionsOnAMatchingBodyImage(): void
@@ -426,10 +450,13 @@ final class ArticleExtractorTest extends TestCase
             $this->bodyCleaner(),
             new EntrySanitizer(),
             $this->mediaScanner(),
-            new StreamLocationResolver($landing, $this->urlKind()),
-            new SiblingMediaExtender(new SiblingIdRule(), $landing, $this->urlKind()),
+            new BodyMediaResolver(
+                new StreamLocationResolver($landing, $this->urlKind()),
+                new SiblingMediaExtender(new SiblingIdRule(), $landing, $this->urlKind()),
+            ),
             new SlideshowScanner([]),
             new TeaserPlayerScanner($this->urlKind()),
+            new RelatedTeaserGridRemover(),
         );
 
         $result = $extractor->extract('http://169.254.169.254/');

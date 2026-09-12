@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Service\Reader\Exception\PageFetchException;
+use App\Service\Reader\Media\BodyMediaResolver;
 use App\Service\Reader\Media\PageMediaScanner;
-use App\Service\Reader\Media\Sibling\SiblingMediaExtender;
-use App\Service\Reader\Media\StreamLocationResolver;
 use App\Service\Reader\Media\Teaser\TeaserPlayer;
 use App\Service\Reader\Media\Teaser\TeaserPlayerScanner;
 use App\Service\Reader\Paywall\PaywallSignals;
+use App\Service\Reader\Slideshow\ContainerSignature;
 use App\Service\Reader\Slideshow\Slideshow;
 use App\Service\Reader\Slideshow\SlideshowScanner;
 use App\Service\Sanitize\EntrySanitizer;
@@ -56,10 +56,10 @@ final class ArticleExtractor implements ArticleExtractorInterface
         private readonly ReaderBodyCleaner $bodyCleaner,
         private readonly EntrySanitizer $sanitizer,
         private readonly PageMediaScanner $mediaScanner,
-        private readonly StreamLocationResolver $streamLocations,
-        private readonly SiblingMediaExtender $siblings,
+        private readonly BodyMediaResolver $bodyMedia,
         private readonly SlideshowScanner $slideshowScanner,
         private readonly TeaserPlayerScanner $teaserScanner,
+        private readonly RelatedTeaserGridRemover $teaserGridRemover,
     ) {
     }
 
@@ -84,7 +84,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
         $slideshows = $this->slideshowsIn($normalized);
         $teasers = $this->teasersIn($normalized, $page->finalUrl);
 
-        $article = $this->richestArticle($normalized, $page);
+        $article = $this->richestArticle($normalized, $page, $this->slideshowContainers($slideshows));
         if ($article === null) {
             return ExtractionResult::failed($url, 'unextractable');
         }
@@ -103,7 +103,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
             $article->content,
             [$article->title, $entryTitle],
             $leadImage,
-            $this->siblings->extend($media, $this->streamLocations->resolve($media), $page->html),
+            $this->bodyMedia->resolveForBody($media, $page->html),
             $entryAuthor,
             $feedMedia,
             $slideshows,
@@ -139,6 +139,17 @@ final class ArticleExtractor implements ArticleExtractorInterface
     }
 
     /**
+     * @param list<Slideshow> $slideshows
+     * @return list<ContainerSignature>
+     */
+    private function slideshowContainers(array $slideshows): array
+    {
+        return array_values(array_filter(
+            array_map(static fn (Slideshow $slideshow): ?ContainerSignature => $slideshow->container, $slideshows),
+        ));
+    }
+
+    /**
      * Keep the richer of two extractions: the passed score-neutral document
      * (repairs only) and the wrapper-chain-collapsed variant (#235), which
      * rescues block-component pages but breaks some well-structured ones
@@ -149,13 +160,26 @@ final class ArticleExtractor implements ArticleExtractorInterface
      * The conservative document arrives already normalised because the caller
      * reads its image inventory before readability consumes (mutates) it
      * (#684).
+     *
+     * @param list<ContainerSignature> $slideshowContainers
      */
-    private function richestArticle(?HTMLDocument $normalized, PageResponse $page): ?Article
+    private function richestArticle(?HTMLDocument $normalized, PageResponse $page, array $slideshowContainers): ?Article
     {
-        $conservative = $this->parse($normalized, $page->finalUrl);
-        $collapsed = $this->parse($this->normalizer->collapseWrapperChains($page->html), $page->finalUrl);
+        $collapsed = $this->normalizer->collapseWrapperChains($page->html);
+        $this->removeTeaserGrids($normalized, $slideshowContainers);
+        $this->removeTeaserGrids($collapsed, $slideshowContainers);
 
-        return $this->richer($conservative, $collapsed);
+        return $this->richer($this->parse($normalized, $page->finalUrl), $this->parse($collapsed, $page->finalUrl));
+    }
+
+    /**
+     * @param list<ContainerSignature> $slideshowContainers
+     */
+    private function removeTeaserGrids(?HTMLDocument $document, array $slideshowContainers): void
+    {
+        if ($document !== null) {
+            $this->teaserGridRemover->removeFrom($document, $slideshowContainers);
+        }
     }
 
     private function parse(?HTMLDocument $document, string $finalUrl): ?Article
