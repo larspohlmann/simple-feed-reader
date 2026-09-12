@@ -80,6 +80,20 @@ final class ReaderBodyCleanerTest extends TestCase
         self::assertSame(1, substr_count($result, '<img'));
     }
 
+    /** The trailing "about the author" furniture is set apart in its own figure (#1000). */
+    public function testSetsTheTrailingAuthorBioApartFromTheBody(): void
+    {
+        $content = '<div>'
+            . '<div><p>' . self::PROSE . ' Erster.</p><p>' . self::PROSE . ' Zweiter.</p></div>'
+            . '<div><p>' . self::PROSE . ' Zur Autorin.</p>'
+            . '<p><a href="https://news.test/author/jane-doe/">View Bio</a></p></div>'
+            . '</div>';
+
+        $result = $this->cleaner->clean($content, [null], $this->noLead(), ArticleMedia::none());
+
+        self::assertStringContainsString('<figure class="reader-author-bio">', $result);
+    }
+
     private function noLead(): LeadImageCandidate
     {
         return new LeadImageCandidate(null, PageImageInventory::fromDocument(null));

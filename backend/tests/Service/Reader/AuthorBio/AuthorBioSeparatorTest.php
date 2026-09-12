@@ -51,7 +51,7 @@ final class AuthorBioSeparatorTest extends TestCase
         $body = '<div>'
             . '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p></div>'
             . '<div><p>' . self::BIO . '</p>'
-            . '<p><a href="https://example.com/author/jane-doe/">More by Jane</a></p></div>'
+            . '<p><a href="https://example.com/Author/jane-doe/">More by Jane</a></p></div>'
             . '</div>';
 
         $result = $this->separate($body);
@@ -83,11 +83,34 @@ final class AuthorBioSeparatorTest extends TestCase
 
     public function testDoesNotSwallowASecondArticleSectionInTheTrailingRegion(): void
     {
+        // Three paragraphs make the first block the article body; the trailing
+        // block still holds two, so it is a second section, not a bio, and the
+        // profile link inside it does not make it one.
         $body = '<div>'
-            . '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p></div>'
+            . '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p></div>'
             . '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . '<p><a href="https://example.com/author/jane-doe/">By Jane</a></p></div>'
             . '</div>';
+
+        self::assertStringNotContainsString('reader-author-bio', $this->separate($body));
+    }
+
+    public function testSeparatesABioThatFollowsAShortTwoParagraphArticle(): void
+    {
+        $body = '<div>'
+            . '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p></div>'
+            . '<p><a href="https://example.com/author/jane-doe/">View Bio</a></p>'
+            . '</div>';
+
+        self::assertStringContainsString('reader-author-bio', $this->separate($body));
+    }
+
+    public function testLeavesAProfileLinkAloneWhenThereIsNoSubstantialArticleBody(): void
+    {
+        // One substantial paragraph in the whole document: there is no article
+        // body to set a bio apart from, so a trailing profile link stays put.
+        $body = '<div><p>' . self::PROSE . '</p>'
+            . '<p><a href="https://example.com/author/jane-doe/">View Bio</a></p></div>';
 
         self::assertStringNotContainsString('reader-author-bio', $this->separate($body));
     }

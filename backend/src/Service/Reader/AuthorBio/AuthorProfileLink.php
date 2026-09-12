@@ -37,10 +37,7 @@ final class AuthorProfileLink
             return false;
         }
 
-        $segments = array_filter(
-            explode('/', strtolower($path)),
-            static fn (string $segment): bool => $segment !== '',
-        );
+        $segments = explode('/', strtolower($path));
 
         return array_intersect($segments, self::PROFILE_SEGMENTS) !== [];
     }
