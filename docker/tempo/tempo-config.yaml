@@ -16,6 +16,23 @@ storage:
     wal:
       path: /var/tempo/wal
 
+# local-blocks alone powers TraceQL metrics (rate, quantiles); the other
+# generator processors need a Prometheus remote-write we do not run.
+metrics_generator:
+  storage:
+    path: /var/tempo/generator/wal
+  traces_storage:
+    path: /var/tempo/generator/traces
+  processor:
+    local_blocks:
+      filter_server_spans: false
+      flush_to_storage: true
+
+overrides:
+  defaults:
+    metrics_generator:
+      processors: [local-blocks]
+
 compactor:
   compaction:
     block_retention: 72h
