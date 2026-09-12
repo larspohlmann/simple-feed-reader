@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Logging\Loki;
 
 /**
- * Drains the Loki spool out-of-band from the machine-facing maintenance tick.
- * LokiClient::push() is fail-open, so a dead Loki silently drops a batch —
- * logging was always best-effort, never durable. The only local failure is a
- * corrupt file, which is deleted so it cannot wedge the queue.
+ * Drains the Loki spool out-of-band. LokiClient::push() is fail-open, so a
+ * dead Loki silently drops a batch; the only local failure is a corrupt file,
+ * which is deleted so it cannot wedge the queue.
  */
 final readonly class LokiSpoolShipper
 {
