@@ -5,7 +5,7 @@
   "tags": ["simple-feed-reader"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "editable": true,
   "time": {
     "from": "now-6h",
@@ -85,7 +85,7 @@
       "type": "logs",
       "title": "Logs",
       "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 8 },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 28 },
       "options": {
         "showTime": true,
         "wrapLogMessage": true,
@@ -96,6 +96,44 @@
           "refId": "A",
           "datasource": { "type": "loki", "uid": "loki" },
           "expr": "{app=\"simple-feed-reader\"} | json | level=~\"$level\" | channel=~\"$channel\""
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "logs",
+      "title": "Frontend errors",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 8 },
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{app=\"simple-feed-reader\", source=\"frontend\"} | json | level=~\"error|critical\""
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "logs",
+      "title": "Backend errors",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 18 },
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{app=\"simple-feed-reader\", source=\"backend\"} | json | level=~\"error|critical\""
         }
       ]
     }
