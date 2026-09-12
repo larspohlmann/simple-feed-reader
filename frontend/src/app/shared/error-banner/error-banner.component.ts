@@ -25,4 +25,10 @@ export class ErrorBannerComponent {
   readonly actionLabel = input<string | null>(null);
 
   readonly action = output<void>();
+
+  /** The dismiss control's accessible label; `null` renders no dismiss control,
+   *  mirroring how `actionLabel` gates the action button. */
+  readonly dismissLabel = input<string | null>(null);
+
+  readonly dismiss = output<void>();
 }

@@ -198,24 +198,29 @@
   </div>
 }
 
-@if (error()) {
-  <div class="banner" role="alert">
-    {{ error()!.detail ?? error()!.title }}
-  </div>
+@if (error(); as problem) {
+  <app-error-banner
+    class="list-error"
+    [message]="
+      problem.status === 0
+        ? ('reader.errorOffline' | transloco)
+        : ('reader.errorServer' | transloco: { status: problem.status })
+    "
+    [actionLabel]="'reader.retry' | transloco"
+    [dismissLabel]="'reader.dismiss' | transloco"
+    (action)="retry.emit()"
+    (dismiss)="dismiss.emit()"
+  />
 }
 
 @if (loading() && entries().length === 0) {
-  <div class="rows" [class.after-banner]="!!error()">
+  <div class="rows">
     @for (i of [1, 2, 3, 4, 5]; track i) {
       <div class="skeleton"></div>
     }
   </div>
 } @else if (visibleEntryCount() === 0) {
-  <div
-    class="empty-wrap"
-    [class.after-banner]="!!error()"
-    [class.magazine]="effectiveLayout() === 'magazine'"
-  >
+  <div class="empty-wrap" [class.magazine]="effectiveLayout() === 'magazine'">
     @if (topBlock(); as block) {
       <!-- Wrapped in an element this component owns, so it can apply the active
            layout's measure to projected content. -->
@@ -243,7 +248,6 @@
     [class.reloading]="reloadCue()"
     [attr.inert]="reloadCue() ? '' : null"
     [attr.aria-busy]="loading() ? 'true' : null"
-    [class.after-banner]="!!error()"
     [class.dragging]="dragging()"
     [style.transform]="revealTransform()"
     #rows
@@ -376,7 +380,6 @@
     [class.reloading]="reloadCue()"
     [attr.inert]="reloadCue() ? '' : null"
     [attr.aria-busy]="loading() ? 'true' : null"
-    [class.after-banner]="!!error()"
     [class.dragging]="dragging()"
     [style.transform]="revealTransform()"
     #rows

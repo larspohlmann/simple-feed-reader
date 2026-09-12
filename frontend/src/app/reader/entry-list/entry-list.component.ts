@@ -18,6 +18,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
 import { ListActionDirective } from '../../shared/list-action/list-action.directive';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
@@ -123,6 +124,7 @@ export interface TitleCount {
     RouterLink,
     TranslocoPipe,
     IconComponent,
+    ErrorBannerComponent,
     ListActionDirective,
     SpinnerComponent,
     LoadingOverlayComponent,
@@ -224,6 +226,11 @@ export class EntryListComponent implements OnDestroy {
   readonly matchedWords = input<string[]>([]);
 
   readonly loadMore = output<void>();
+  /** The error banner's retry: replays whichever request failed (the shell wires
+   *  it to `EntriesStore.retry`). */
+  readonly retry = output<void>();
+  /** The error banner's dismiss: clears the banner without a request. */
+  readonly dismiss = output<void>();
   readonly markAllRead = output<void>();
   readonly refresh = output<void>();
   readonly favorite = output<EntryDto>();

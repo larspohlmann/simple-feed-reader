@@ -1,6 +1,13 @@
 <div class="banner" role="alert">
-  {{ message() }}
-  @if (actionLabel(); as label) {
-    <button type="button" (click)="action.emit()">{{ label }}</button>
-  }
+  <span class="text">{{ message() }}</span>
+  <span class="controls">
+    @if (actionLabel(); as label) {
+      <button class="action" type="button" (click)="action.emit()">{{ label }}</button>
+    }
+    @if (dismissLabel(); as label) {
+      <button class="dismiss" type="button" [attr.aria-label]="label" (click)="dismiss.emit()">
+        &times;
+      </button>
+    }
+  </span>
 </div>
