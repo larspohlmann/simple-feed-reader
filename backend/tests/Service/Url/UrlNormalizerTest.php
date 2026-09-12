@@ -42,6 +42,16 @@ final class UrlNormalizerTest extends TestCase
         );
     }
 
+    public function testStripsWebtrekkTrackingParameters(): void
+    {
+        self::assertSame(
+            'https://www.heise.de/news/A-11449625.html',
+            $this->normalizer->normalize(
+                'https://www.heise.de/news/A-11449625.html?wt_mc=rss.red.ho.ho.atom.beitrag.beitrag',
+            ),
+        );
+    }
+
     public function testKeepsNonTrackingQueryParametersThatIdentifyTheArticle(): void
     {
         self::assertSame(
