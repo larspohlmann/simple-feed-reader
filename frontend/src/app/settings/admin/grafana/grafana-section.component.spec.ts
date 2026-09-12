@@ -23,6 +23,12 @@ function state(over: Partial<GrafanaSettingsState> = {}): GrafanaSettingsState {
     hasToken: false,
     tokenHint: '',
     containerPresent: true,
+    pyroscopePushUrl: null,
+    pyroscopePushUrlDefault: 'http://pyroscope:4040',
+    pyroscopePushUrlEffective: 'http://pyroscope:4040',
+    profilingEnabled: false,
+    profilingContainerPresent: true,
+    profilerAvailable: true,
     ...over,
   };
 }
@@ -75,19 +81,28 @@ describe('GrafanaSectionComponent', () => {
   const openLink = (fixture: ComponentFixture<GrafanaSectionComponent>): HTMLAnchorElement | null =>
     fixture.nativeElement.querySelector('.open-link');
 
+  const profilingToggle = (fixture: ComponentFixture<GrafanaSectionComponent>): HTMLInputElement =>
+    fixture.nativeElement.querySelector('[data-testid="grafana-profiling-toggle"] input');
+
+  const pyroscopePushUrlInput = (
+    fixture: ComponentFixture<GrafanaSectionComponent>,
+  ): HTMLInputElement =>
+    fixture.nativeElement.querySelector('[data-testid="grafana-pyroscope-push-url"]');
+
   beforeEach(() => {
     toastStub.show.mockReset();
   });
 
   afterEach(() => http.verify());
 
-  it('renders both groups once state loads', () => {
+  it('renders all three groups once state loads', () => {
     const fixture = mount();
 
     const groups = fixture.nativeElement.querySelectorAll('app-settings-group');
-    expect(groups.length).toBe(2);
+    expect(groups.length).toBe(3);
     expect(fixture.nativeElement.textContent).toContain('Log shipping');
     expect(fixture.nativeElement.textContent).toContain('Viewing');
+    expect(fixture.nativeElement.textContent).toContain('Profiling');
   });
 
   it('shows the local-container hint with the effective push URL when a container is present', () => {
@@ -99,7 +114,7 @@ describe('GrafanaSectionComponent', () => {
   });
 
   it('hides the local-container hint when no container is present', () => {
-    const fixture = mount(state({ containerPresent: false }));
+    const fixture = mount(state({ containerPresent: false, profilingContainerPresent: false }));
 
     expect(fixture.nativeElement.textContent).not.toContain('Local container:');
   });
@@ -135,6 +150,8 @@ describe('GrafanaSectionComponent', () => {
       grafanaUrl: null,
       token: null,
       removeToken: false,
+      pyroscopePushUrl: null,
+      profilingEnabled: false,
     });
 
     put.flush(state({ lokiPushUrl: 'https://loki.example.com', lokiUsername: 'sam' }));
@@ -255,5 +272,72 @@ describe('GrafanaSectionComponent', () => {
 
     expect(lokiPushUrlInput(fixture).placeholder).toBe('http://loki:3100');
     expect(grafanaUrlInput(fixture).placeholder).toBe('http://grafana:3000');
+  });
+
+  it('toggling profiling PUTs the full body with profilingEnabled: true and stays clean', () => {
+    const fixture = mount();
+
+    profilingToggle(fixture).checked = true;
+    profilingToggle(fixture).dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    const put = http.expectOne(ENDPOINT);
+    expect(put.request.method).toBe('PUT');
+    expect(put.request.body).toEqual({
+      lokiPushUrl: null,
+      lokiUsername: null,
+      grafanaUrl: null,
+      token: null,
+      removeToken: false,
+      pyroscopePushUrl: null,
+      profilingEnabled: true,
+    });
+
+    put.flush(state({ profilingEnabled: true }));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.svc.dirty()).toBe(false);
+  });
+
+  it('editing the Pyroscope URL marks dirty and Save sends pyroscopePushUrl', () => {
+    const fixture = mount();
+
+    pyroscopePushUrlInput(fixture).value = 'https://pyroscope.example.com';
+    pyroscopePushUrlInput(fixture).dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.svc.dirty()).toBe(true);
+
+    fixture.componentInstance.onSave();
+
+    const put = http.expectOne(ENDPOINT);
+    expect(put.request.body.pyroscopePushUrl).toBe('https://pyroscope.example.com');
+    put.flush(state({ pyroscopePushUrl: 'https://pyroscope.example.com' }));
+  });
+
+  it('shows the local-container hint with the effective push URL when a container is present', () => {
+    const fixture = mount(
+      state({
+        profilingContainerPresent: true,
+        pyroscopePushUrlEffective: 'http://pyroscope:4040',
+      }),
+    );
+
+    expect(fixture.nativeElement.textContent).toContain('Local container: http://pyroscope:4040');
+  });
+
+  it('disables the profiling toggle and shows the unavailable hint when the profiler is missing', () => {
+    const fixture = mount(state({ profilerAvailable: false }));
+
+    expect(profilingToggle(fixture).disabled).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain(
+      'The profiler extension is not installed on this host, so profiling cannot run here.',
+    );
+  });
+
+  it('uses the Pyroscope URL default as the placeholder', () => {
+    const fixture = mount(state({ pyroscopePushUrlDefault: 'http://pyroscope:4040' }));
+
+    expect(pyroscopePushUrlInput(fixture).placeholder).toBe('http://pyroscope:4040');
   });
 });

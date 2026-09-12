@@ -499,6 +499,14 @@
         "hint": "Currently: {{url}}",
         "open": "Open Grafana"
       },
+      "profiling": {
+        "title": "Profiling",
+        "enabled": "Profile requests and the worker",
+        "caption": "Samples PHP stacks and ships them to Pyroscope; traces gain a Profiles link. Off by default.",
+        "unavailable": "The profiler extension is not installed on this host, so profiling cannot run here.",
+        "pyroscopePushUrl": "Pyroscope URL",
+        "localContainer": "Local container: {{url}}"
+      },
       "saved": "Grafana settings saved",
       "save": "Save",
       "reset": "Reset",

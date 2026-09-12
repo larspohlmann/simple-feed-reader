@@ -16,6 +16,7 @@ import { SettingsRowComponent } from '../../../shared/settings/settings-row/sett
 import { SettingsSaveBarComponent } from '../../../shared/settings/save-bar/save-bar.component';
 import { SettingsStackComponent } from '../../../shared/settings/stack/settings-stack.component';
 import { toastOnSaved } from '../../../shared/toast/saved-toast';
+import { ToggleComponent } from '../../../shared/toggle/toggle.component';
 import { GrafanaSettingsService } from './grafana-settings.service';
 
 /** The admin "Grafana" settings section (#983), on the grouped design language
@@ -32,6 +33,7 @@ import { GrafanaSettingsService } from './grafana-settings.service';
     SettingsRowComponent,
     SettingsSaveBarComponent,
     SettingsStackComponent,
+    ToggleComponent,
     TranslocoPipe,
   ],
   providers: [GrafanaSettingsService],
@@ -53,6 +55,9 @@ export class GrafanaSectionComponent {
   readonly grafanaUrl = linkedSignal<string>(
     () => this.svc.pending('grafanaUrl') ?? this.svc.state()?.grafanaUrl ?? '',
   );
+  readonly pyroscopePushUrl = linkedSignal<string>(
+    () => this.svc.pending('pyroscopePushUrl') ?? this.svc.state()?.pyroscopePushUrl ?? '',
+  );
   /** Never seeded from server truth -- the API never returns the secret. */
   readonly token = signal('');
 
@@ -63,6 +68,17 @@ export class GrafanaSectionComponent {
   readonly grafanaUrlEffective = computed(() => this.svc.state()?.grafanaUrlEffective ?? null);
   readonly hasToken = computed(() => this.svc.state()?.hasToken ?? false);
   readonly tokenHint = computed(() => this.svc.state()?.tokenHint ?? '');
+  readonly profilingEnabled = computed(() => this.svc.state()?.profilingEnabled ?? false);
+  readonly profilerAvailable = computed(() => this.svc.state()?.profilerAvailable ?? false);
+  readonly profilingContainerPresent = computed(
+    () => this.svc.state()?.profilingContainerPresent ?? false,
+  );
+  readonly pyroscopePushUrlDefault = computed(
+    () => this.svc.state()?.pyroscopePushUrlDefault ?? '',
+  );
+  readonly pyroscopePushUrlEffective = computed(
+    () => this.svc.state()?.pyroscopePushUrlEffective ?? null,
+  );
 
   readonly failureMessage = computed(() => {
     const failure = this.svc.failure();
@@ -98,6 +114,16 @@ export class GrafanaSectionComponent {
     const value = (event.target as HTMLInputElement).value;
     this.token.set(value);
     this.svc.setTypedField('token', value === '' ? null : value);
+  }
+
+  onPyroscopePushUrl(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.pyroscopePushUrl.set(value);
+    this.svc.setTypedField('pyroscopePushUrl', emptyToNull(value));
+  }
+
+  onProfilingToggled(value: boolean): void {
+    this.svc.saveInstant({ profilingEnabled: value });
   }
 
   onSave(): void {
