@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
+use App\Service\Reader\AuthorBio\AuthorBioSeparator;
 use App\Service\Reader\BoilerplateVerdict;
 use App\Service\Reader\EdgeBoilerplateTrimmer;
 use App\Service\Reader\LeadImageCandidate;
@@ -60,6 +61,7 @@ final class ReaderBodyCleanerTest extends TestCase
             new TeaserPlayerInserter(new TeaserPlayerMarkup()),
             new MediaOnlyLede(),
             new DuplicateBlockCollapser(),
+            new AuthorBioSeparator(),
         );
     }
 
@@ -76,6 +78,20 @@ final class ReaderBodyCleanerTest extends TestCase
 
         self::assertSame(1, substr_count($result, 'recycle the name from Microsoft'));
         self::assertSame(1, substr_count($result, '<img'));
+    }
+
+    /** The trailing "about the author" furniture is set apart in its own figure (#1000). */
+    public function testSetsTheTrailingAuthorBioApartFromTheBody(): void
+    {
+        $content = '<div>'
+            . '<div><p>' . self::PROSE . ' Erster.</p><p>' . self::PROSE . ' Zweiter.</p></div>'
+            . '<div><p>' . self::PROSE . ' Zur Autorin.</p>'
+            . '<p><a href="https://news.test/author/jane-doe/">View Bio</a></p></div>'
+            . '</div>';
+
+        $result = $this->cleaner->clean($content, [null], $this->noLead(), ArticleMedia::none());
+
+        self::assertStringContainsString('<figure class="reader-author-bio">', $result);
     }
 
     private function noLead(): LeadImageCandidate

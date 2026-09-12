@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Service\Html\HtmlDocumentParser;
+use App\Service\Reader\AuthorBio\AuthorBioSeparator;
 use App\Service\Reader\Media\ArticleMedia;
 use App\Service\Reader\Media\InBodyEmbedRewriter;
 use App\Service\Reader\Media\PageMediaInserter;
@@ -56,6 +57,7 @@ final readonly class ReaderBodyCleaner
         private TeaserPlayerInserter $teaserInserter,
         private MediaOnlyLede $mediaOnlyLede,
         private DuplicateBlockCollapser $duplicateCollapser,
+        private AuthorBioSeparator $authorBioSeparator,
     ) {
     }
 
@@ -127,6 +129,10 @@ final readonly class ReaderBodyCleaner
         // now has a body of pure media; give it back the lede readability kept as
         // the excerpt. Runs last, so it judges "media-only" against the final body.
         $this->mediaOnlyLede->restore($document, $excerpt);
+
+        // Over the settled body: set the trailing author bio and its disclosure
+        // apart from the article prose they otherwise run on into (#1000).
+        $this->authorBioSeparator->separateIn($document);
 
         // Last, over the finished body: the feed's real pixel sizes on the
         // images and players it enumerated, so none of them reflows the article.

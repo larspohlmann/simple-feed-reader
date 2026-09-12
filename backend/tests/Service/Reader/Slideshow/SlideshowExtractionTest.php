@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Slideshow;
 
 use App\Service\Html\HtmlDocumentParser;
+use App\Service\Reader\AuthorBio\AuthorBioSeparator;
 use App\Service\Reader\BoilerplateVerdict;
 use App\Service\Reader\DuplicateBlockCollapser;
 use App\Service\Reader\EdgeBoilerplateTrimmer;
@@ -144,6 +145,7 @@ final class SlideshowExtractionTest extends TestCase
             new TeaserPlayerInserter(new TeaserPlayerMarkup()),
             new MediaOnlyLede(),
             new DuplicateBlockCollapser(),
+            new AuthorBioSeparator(),
         );
     }
 }
