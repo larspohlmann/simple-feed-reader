@@ -89,6 +89,9 @@ function isHttpErrorResponse(
 }
 
 function stringifyUnknown(error: unknown): string {
+  if (error === undefined) {
+    return 'undefined';
+  }
   try {
     const json = JSON.stringify(error);
     return json && json !== '{}' ? json : Object.prototype.toString.call(error);

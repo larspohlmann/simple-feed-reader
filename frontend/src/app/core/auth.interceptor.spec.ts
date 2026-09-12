@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { NavigationEnd, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { API_BASE_URL } from './api';
+import { describeError } from './client-error-beacon';
 import { ClientErrorReporter } from './client-error-reporter';
 import { TokenStore } from './token.store';
 import { authInterceptor } from './auth.interceptor';
@@ -173,6 +174,7 @@ describe('authInterceptor', () => {
     const [reported, kind] = reportSpy.mock.calls[0];
     expect(reported.status).toBe(500);
     expect(kind).toBeUndefined();
+    expect(describeError(reported).message).toBe('HTTP 500 https://api.test/api/entries');
   });
 
   it('reports a network failure (status 0)', () => {

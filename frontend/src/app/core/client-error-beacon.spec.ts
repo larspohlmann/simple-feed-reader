@@ -179,12 +179,12 @@ describe('client-error-beacon', () => {
       expect(describeError(null)).toEqual({ message: 'null', stack: null, kind: 'Error' });
     });
 
-    it('serializes undefined without ever falling back to [object Object]', () => {
-      const described = describeError(undefined);
-
-      expect(described.message).not.toBe('[object Object]');
-      expect(described.stack).toBeNull();
-      expect(described.kind).toBe('Error');
+    it('serializes undefined to the literal string "undefined", never [object Object]', () => {
+      expect(describeError(undefined)).toEqual({
+        message: 'undefined',
+        stack: null,
+        kind: 'Error',
+      });
     });
 
     it('uses the given fallback kind when the value carries no kind of its own', () => {
