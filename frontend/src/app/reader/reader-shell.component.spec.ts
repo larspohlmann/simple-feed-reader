@@ -30,6 +30,7 @@ import { ListScrollMemory } from './list-scroll-memory';
 import { EntryDto, SavedSearchDto, SavedSearchWire } from './models';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
 import { SubscriptionsStore } from './subscriptions.store';
+import { EntriesStore } from './entries.store';
 import { Selection } from './query';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { RefreshService } from './refresh.service';
@@ -3458,6 +3459,25 @@ describe('ReaderShellComponent', () => {
         expect(auth.answerPasskeyOffer).toHaveBeenCalledTimes(1);
         expect(container().querySelector('.cdk-overlay-pane')).toBeNull();
       });
+    });
+  });
+
+  // #996: the list's error banner offers retry and dismiss; the shell must route
+  // them to the store, or a wired-looking banner does nothing on click. Proven
+  // through the real template binding rather than a direct store call.
+  describe('error banner wiring (#996)', () => {
+    it('routes the list retry and dismiss outputs to the store', () => {
+      const fixture = boot();
+      const store = TestBed.inject(EntriesStore);
+      const retry = jest.spyOn(store, 'retry');
+      const dismiss = jest.spyOn(store, 'dismissError');
+
+      const list = fixture.debugElement.query(By.directive(EntryListComponent));
+      list.triggerEventHandler('retry');
+      list.triggerEventHandler('dismiss');
+
+      expect(retry).toHaveBeenCalledTimes(1);
+      expect(dismiss).toHaveBeenCalledTimes(1);
     });
   });
 });

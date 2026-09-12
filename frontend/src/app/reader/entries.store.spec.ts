@@ -1,7 +1,11 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  TestRequest,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { API_BASE_URL } from '../core/api';
 import { EntriesStore } from './entries.store';
 import { EntryDto, SavedSearchDto } from './models';
@@ -517,5 +521,92 @@ describe('EntriesStore', () => {
       .expectOne('https://api.test/api/entries/1/state')
       .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
     expect(called).toBe(1);
+  });
+
+  // #996: the error surface offers a retry that replays exactly the operation
+  // that failed — not a blanket reload — so a failed pagination or row action
+  // resumes where it broke, and a dismiss clears the banner without a request.
+  describe('retry and dismiss (#996)', () => {
+    const flushError = (req: TestRequest): void =>
+      req.flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+
+    it('retries a failed first-page load by re-issuing the same query', () => {
+      store.load({ view: 'unread' });
+      flushError(ctrl.expectOne((r) => r.params.get('view') === 'unread'));
+      expect(store.error()).not.toBeNull();
+
+      store.retry();
+      expect(store.error()).toBeNull();
+      ctrl
+        .expectOne((r) => r.params.get('view') === 'unread')
+        .flush({ entries: [entry(1)], nextCursor: null });
+      expect(store.entries().map((e) => e.id)).toEqual([1]);
+    });
+
+    it('retries a failed loadMore by re-requesting the same cursor', () => {
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({ entries: [entry(1)], nextCursor: 'C1' });
+
+      store.loadMore();
+      flushError(ctrl.expectOne((r) => r.params.get('cursor') === 'C1'));
+      expect(store.error()).not.toBeNull();
+
+      store.retry();
+      ctrl
+        .expectOne((r) => r.params.get('cursor') === 'C1')
+        .flush({ entries: [entry(2)], nextCursor: null });
+      expect(store.entries().map((e) => e.id)).toEqual([1, 2]);
+      expect(store.error()).toBeNull();
+    });
+
+    it('retries a failed state PATCH by re-sending it', () => {
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({ entries: [entry(1)], nextCursor: null });
+
+      store.setState(1, { isFavorite: true });
+      flushError(ctrl.expectOne('https://api.test/api/entries/1/state'));
+      expect(store.entries()[0].isFavorite).toBe(false); // rolled back
+      expect(store.error()).not.toBeNull();
+
+      store.retry();
+      expect(store.entries()[0].isFavorite).toBe(true); // optimistic re-applied
+      ctrl.expectOne('https://api.test/api/entries/1/state').flush({ state: {} });
+      expect(store.entries()[0].isFavorite).toBe(true);
+      expect(store.error()).toBeNull();
+    });
+
+    it('does nothing when no operation has failed', () => {
+      store.retry();
+      ctrl.expectNone(() => true);
+    });
+
+    it('forgets the failed operation once a fresh load supersedes it', () => {
+      store.load({ view: 'unread' });
+      flushError(ctrl.expectOne((r) => r.url === 'https://api.test/api/entries'));
+
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((r) => r.params.get('view') === 'all')
+        .flush({ entries: [entry(1)], nextCursor: null });
+
+      store.retry();
+      ctrl.expectNone(() => true); // the failed load is no longer pending a retry
+    });
+
+    it('dismisses the error and forgets the pending retry', () => {
+      store.load({ view: 'unread' });
+      flushError(ctrl.expectOne((r) => r.url === 'https://api.test/api/entries'));
+      expect(store.error()).not.toBeNull();
+
+      store.dismissError();
+      expect(store.error()).toBeNull();
+
+      store.retry();
+      ctrl.expectNone(() => true);
+    });
   });
 });

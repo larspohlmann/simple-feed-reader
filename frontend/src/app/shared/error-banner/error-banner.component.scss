@@ -4,7 +4,19 @@
   background: var(--bg-danger);
   color: var(--danger);
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.text {
+  min-width: 0;
+}
+
+.controls {
+  display: flex;
+  flex: none;
+  align-items: center;
   gap: var(--space-3);
 }
 
@@ -13,5 +25,13 @@
   border: none;
   color: var(--danger);
   cursor: pointer;
+}
+
+.action {
   text-decoration: underline;
+}
+
+.dismiss {
+  line-height: 1;
+  font-size: var(--fs-lg);
 }

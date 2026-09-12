@@ -2,7 +2,7 @@
 
 /* What every scroller/overlay branch below reserves before its own content:
    app bar + list header + gap. Was 4 independent copies of this calc
-   (.rows, .rows.magazine, empty state, .banner) — one variable now (#321). */
+   (.rows, .rows.magazine, empty state, .list-error) — one variable now (#321). */
 $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
 
 :host {
@@ -340,13 +340,6 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
     opacity 0.2s ease;
 }
 
-/* An error banner sits above the scroller in the flow and takes the reservation
-   itself; the scroller must not add it a second time. */
-.rows.after-banner,
-.empty-wrap.after-banner {
-  padding-top: 0;
-}
-
 /* One row's slot: a single-track grid. When a row leaves its saved view,
    `.leaving` runs `row-leave`, collapsing the track 1fr -> 0fr (no guess at
    row height needed). `forwards` holds it collapsed until a reload. */
@@ -559,13 +552,16 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   }
 }
 
-.banner {
-  margin: var(--space-3) var(--space-4);
-  margin-top: $header-clear;
-  padding: var(--space-3);
-  border-radius: var(--radius);
-  background: var(--bg-danger);
-  color: var(--danger);
+/* Overlays the top of the content, just below the floating header, instead of
+   sitting in the flow. The scroller keeps its own `$header-clear` reservation
+   unconditionally, so the error appearing or being dismissed never moves a row
+   (#996 — the old flow banner handed the reservation back and forth, #321). */
+.list-error {
+  position: absolute;
+  top: $header-clear;
+  left: var(--space-4);
+  right: var(--space-4);
+  z-index: 2;
 }
 
 .skeleton {

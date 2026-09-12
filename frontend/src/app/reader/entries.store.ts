@@ -71,6 +71,11 @@ export class EntriesStore {
   readonly matchedWords = signal<string[]>([]);
 
   private query: EntryQuery | null = null;
+  /** Replays whichever request last failed, so the error banner's retry resumes
+   *  exactly that operation — a first-page load, a pagination page, or a row
+   *  state PATCH. Cleared when any fresh operation starts, so a stale failure
+   *  never lingers behind a later success (#996). */
+  private failedOperation: (() => void) | null = null;
   /** Monotonic token stamped on every load/loadMore request; a stale response is
    *  dropped so it can't clobber a fresher result — refresh fires overlapping
    *  reloads that can arrive out of order (#158). Mirrors the shell's id-guard. */
@@ -87,6 +92,7 @@ export class EntriesStore {
     // A fresh top-of-list load abandons any pagination still on the wire.
     this.loadingMore.set(false);
     this.error.set(null);
+    this.failedOperation = null;
     this.loadedAt.set(new Date().toISOString());
     this.api.entries(query).subscribe({
       next: (page) => {
@@ -105,6 +111,7 @@ export class EntriesStore {
         this.savedSearchIdsByEntryId.set({});
         this.matchedWords.set([]);
         this.error.set(parseProblem(e));
+        this.failedOperation = () => this.load(query);
         this.loading.set(false);
       },
     });
@@ -115,6 +122,7 @@ export class EntriesStore {
     if (!cursor || !this.query || this.loading() || this.loadingMore()) return;
     const seq = this.loadSeq;
     this.loadingMore.set(true);
+    this.failedOperation = null;
     this.api.entries(this.query, cursor).subscribe({
       next: (page) => {
         if (seq !== this.loadSeq) return; // a load() has since replaced the list
@@ -132,6 +140,7 @@ export class EntriesStore {
       error: (e: HttpErrorResponse) => {
         if (seq !== this.loadSeq) return;
         this.error.set(parseProblem(e));
+        this.failedOperation = () => this.loadMore();
         this.loadingMore.set(false);
       },
     });
@@ -143,6 +152,7 @@ export class EntriesStore {
     const before = this.rawEntries().find((e) => e.id === entryId);
     if (!before) return;
     this.error.set(null);
+    this.failedOperation = null;
     this.rawEntries.update((cur) =>
       cur.map((e) => (e.id === entryId ? { ...e, ...localStatePatch(patch) } : e)),
     );
@@ -150,9 +160,25 @@ export class EntriesStore {
       error: (err: HttpErrorResponse) => {
         this.rawEntries.update((cur) => cur.map((e) => (e.id === entryId ? before : e)));
         this.error.set(parseProblem(err));
+        this.failedOperation = () => this.setState(entryId, patch, onError);
         onError?.();
       },
     });
+  }
+
+  /** Replays the request that set the current error, clearing the banner first
+   *  so a fresh attempt reads as progress. A no-op when nothing has failed. */
+  retry(): void {
+    const operation = this.failedOperation;
+    if (!operation) return;
+    this.error.set(null);
+    operation();
+  }
+
+  /** Clears the error banner and abandons its pending retry. */
+  dismissError(): void {
+    this.error.set(null);
+    this.failedOperation = null;
   }
 }
 

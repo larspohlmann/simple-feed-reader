@@ -545,15 +545,63 @@ describe('EntryListComponent', () => {
       expect(host.querySelector('.list-header')!.classList).toContain('collapsed');
     });
 
-    it('marks the scroller so it drops the reservation when a banner takes it', () => {
-      // Both claiming it would open a gap the height of both bars below the banner.
-      const el = mount({ layout: 'list', error: { title: 'Nope', detail: 'Broken' } })
-        .nativeElement as HTMLElement;
-      expect(el.querySelector('.banner')).not.toBeNull();
-      expect(el.querySelector('.rows')!.classList).toContain('after-banner');
+    it('keeps the scroller reservation constant whether or not an error shows (#996)', () => {
+      // The decouple: the scroller always reserves header clearance itself, so an
+      // error appearing no longer hands the reservation to the banner and reflows
+      // the pane. The `.after-banner` toggle is gone.
+      const withError = mount({
+        layout: 'list',
+        error: { type: 'about:blank', title: 'Request failed', status: 502 },
+      }).nativeElement as HTMLElement;
+      expect(withError.querySelector('.rows')!.classList).not.toContain('after-banner');
 
       const clean = mount({ layout: 'list' }).nativeElement as HTMLElement;
       expect(clean.querySelector('.rows')!.classList).not.toContain('after-banner');
+    });
+  });
+
+  describe('error banner (#996)', () => {
+    const failure = { type: 'about:blank', title: 'Request failed', status: 502 };
+
+    it('routes the error through the shared banner with a friendly message and status', () => {
+      const el = mount({ layout: 'list', error: failure }).nativeElement as HTMLElement;
+      const banner = el.querySelector('app-error-banner');
+      expect(banner).not.toBeNull();
+      const text = banner!.querySelector('.text')!.textContent!;
+      expect(text).toContain('502');
+      expect(text).not.toContain('Request failed'); // the bare fallback never reaches the user
+    });
+
+    it('shows an offline message when the server was unreachable', () => {
+      const el = mount({
+        layout: 'list',
+        error: { type: 'about:blank', title: 'Could not reach the server', status: 0 },
+      }).nativeElement as HTMLElement;
+      const text = el.querySelector('app-error-banner .text')!.textContent!;
+      expect(text).toContain('Could not reach the server');
+    });
+
+    it('emits retry when the banner action is used', () => {
+      const f = mount({ layout: 'list', error: failure });
+      const retried = jest.fn();
+      f.componentInstance.retry.subscribe(retried);
+
+      (f.nativeElement.querySelector('app-error-banner .action') as HTMLButtonElement).click();
+      expect(retried).toHaveBeenCalledTimes(1);
+    });
+
+    it('emits dismiss when the banner dismiss control is used', () => {
+      const f = mount({ layout: 'list', error: failure });
+      const dismissed = jest.fn();
+      f.componentInstance.dismiss.subscribe(dismissed);
+
+      (f.nativeElement.querySelector('app-error-banner .dismiss') as HTMLButtonElement).click();
+      expect(dismissed).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows no banner when there is no error', () => {
+      const el = mount({ layout: 'list', error: null }).nativeElement as HTMLElement;
+      expect(el.querySelector('app-error-banner')).toBeNull();
     });
   });
 
