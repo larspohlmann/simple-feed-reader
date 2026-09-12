@@ -66,6 +66,18 @@ describe('ClientErrorReporter', () => {
     expect(() => setup().report(new Error('boom'))).not.toThrow();
   });
 
+  it('collapses the same HttpErrorResponse reported twice, as the interceptor and the global handler both would', () => {
+    const reporter = setup();
+    const httpError = { name: 'HttpErrorResponse', status: 0, url: '/api/entries' };
+
+    reporter.report(httpError);
+    reporter.report(httpError);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.errors[0]).toMatchObject({ message: 'HTTP 0 /api/entries', kind: 'HttpError' });
+  });
+
   it('does not dedupe errors with different messages', () => {
     const reporter = setup();
     reporter.report(new Error('first'));

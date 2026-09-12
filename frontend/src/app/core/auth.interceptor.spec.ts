@@ -161,7 +161,7 @@ describe('authInterceptor', () => {
     expect(ai.model()).toBeNull();
   });
 
-  it('reports a 500 failure', () => {
+  it('reports a 500 failure with the HttpErrorResponse itself and no kind', () => {
     http
       .get('https://api.test/api/entries')
       .subscribe({ next: () => undefined, error: () => undefined });
@@ -170,6 +170,9 @@ describe('authInterceptor', () => {
       .flush('boom', { status: 500, statusText: 'Server Error' });
 
     expect(reportSpy).toHaveBeenCalledTimes(1);
+    const [reported, kind] = reportSpy.mock.calls[0];
+    expect(reported.status).toBe(500);
+    expect(kind).toBeUndefined();
   });
 
   it('reports a network failure (status 0)', () => {
@@ -181,6 +184,7 @@ describe('authInterceptor', () => {
       .error(new ProgressEvent('error'), { status: 0, statusText: '' });
 
     expect(reportSpy).toHaveBeenCalledTimes(1);
+    expect(reportSpy.mock.calls[0][0].status).toBe(0);
   });
 
   it('does not report a 401', () => {

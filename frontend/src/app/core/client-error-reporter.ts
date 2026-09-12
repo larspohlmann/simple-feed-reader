@@ -6,6 +6,7 @@ import {
   CLIENT_ERRORS_PATH,
   ClientErrorItem,
   buildVersionTag,
+  describeError,
   sendClientError,
 } from './client-error-beacon';
 import { TokenStore } from './token.store';
@@ -46,11 +47,11 @@ export class ClientErrorReporter {
   }
 
   private toWireItem(error: unknown, kind: string | undefined): ClientErrorItem {
-    const normalized = error instanceof Error ? error : new Error(String(error));
+    const described = describeError(error);
     return {
-      message: normalized.message || String(error),
-      stack: normalized.stack ?? null,
-      kind: kind ?? (error instanceof Error ? error.name : 'Error'),
+      message: described.message,
+      stack: described.stack,
+      kind: kind ?? described.kind,
       url: window.location.href,
       route: this.router.url,
       buildVersion: buildVersionTag(),

@@ -40,7 +40,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       // would loop. 401 is handled above and is not breakage worth reporting.
       const isClientErrorEndpoint = req.url.includes('/api/client-errors');
       if (!isClientErrorEndpoint && (err.status === 0 || err.status >= 500)) {
-        reporter.report(new Error(`HTTP ${err.status} ${req.method} ${req.url}`), 'HttpError');
+        reporter.report(err);
       }
       return throwError(() => err);
     }),

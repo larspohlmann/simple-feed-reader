@@ -2,6 +2,7 @@ import { buildVersion } from '../../environments/version';
 import {
   ClientErrorItem,
   buildVersionTag,
+  describeError,
   reportBootError,
   resolveClientErrorsUrl,
   sendClientError,
@@ -124,6 +125,70 @@ describe('client-error-beacon', () => {
 
       expect(() => sendClientError(item)).not.toThrow();
       expect(fetchMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('describeError', () => {
+    it('keeps an Error message, stack, and name as kind', () => {
+      const error = new TypeError('boom');
+
+      expect(describeError(error)).toEqual({
+        message: 'boom',
+        stack: error.stack,
+        kind: 'TypeError',
+      });
+    });
+
+    it('serializes a fake HttpErrorResponse to its canonical message and kind', () => {
+      const error = { name: 'HttpErrorResponse', status: 0, url: '/x' };
+
+      expect(describeError(error)).toEqual({
+        message: 'HTTP 0 /x',
+        stack: null,
+        kind: 'HttpError',
+      });
+    });
+
+    it('serializes a plain object to its JSON, never [object Object]', () => {
+      const described = describeError({ code: 'E_BOOM', detail: 'context' });
+
+      expect(described.message).toBe(JSON.stringify({ code: 'E_BOOM', detail: 'context' }));
+      expect(described.message).not.toBe('[object Object]');
+      expect(described.stack).toBeNull();
+    });
+
+    it('keeps both message and name from a DOMException-shaped object', () => {
+      const error = { name: 'AbortError', message: 'The operation was aborted.' };
+
+      expect(describeError(error)).toEqual({
+        message: 'The operation was aborted.',
+        stack: null,
+        kind: 'AbortError',
+      });
+    });
+
+    it('serializes a string to itself', () => {
+      expect(describeError('plain string blew up')).toEqual({
+        message: 'plain string blew up',
+        stack: null,
+        kind: 'Error',
+      });
+    });
+
+    it('serializes null to the literal string "null", never [object Object]', () => {
+      expect(describeError(null)).toEqual({ message: 'null', stack: null, kind: 'Error' });
+    });
+
+    it('serializes undefined without ever falling back to [object Object]', () => {
+      const described = describeError(undefined);
+
+      expect(described.message).not.toBe('[object Object]');
+      expect(described.stack).toBeNull();
+      expect(described.kind).toBe('Error');
+    });
+
+    it('uses the given fallback kind when the value carries no kind of its own', () => {
+      expect(describeError('boot broke', 'BootError').kind).toBe('BootError');
     });
   });
 

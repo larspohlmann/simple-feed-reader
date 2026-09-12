@@ -71,13 +71,69 @@ export function sendClientError(item: ClientErrorItem, options: SendClientErrorO
   }
 }
 
+export interface ErrorDescription {
+  message: string;
+  stack: string | null;
+  kind: string;
+}
+
+function isHttpErrorResponse(
+  error: unknown,
+): error is { status: number; url: string | null; name: string } {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    (error as { name?: unknown }).name === 'HttpErrorResponse' &&
+    typeof (error as { status?: unknown }).status === 'number'
+  );
+}
+
+function stringifyUnknown(error: unknown): string {
+  try {
+    const json = JSON.stringify(error);
+    return json && json !== '{}' ? json : Object.prototype.toString.call(error);
+  } catch {
+    return Object.prototype.toString.call(error);
+  }
+}
+
+/** Turns any thrown value into wire-ready content, never `[object Object]`. */
+export function describeError(error: unknown, fallbackKind = 'Error'): ErrorDescription {
+  if (error instanceof Error) {
+    return {
+      message: error.message || error.name,
+      stack: error.stack ?? null,
+      kind: error.name || fallbackKind,
+    };
+  }
+  if (isHttpErrorResponse(error)) {
+    return {
+      message: `HTTP ${error.status} ${error.url ?? 'unknown'}`,
+      stack: null,
+      kind: 'HttpError',
+    };
+  }
+  const errorLike = error as { message?: unknown; name?: unknown; stack?: unknown } | null;
+  if (errorLike && typeof errorLike.message === 'string' && typeof errorLike.name === 'string') {
+    return {
+      message: errorLike.message || errorLike.name,
+      stack: typeof errorLike.stack === 'string' ? errorLike.stack : null,
+      kind: errorLike.name || fallbackKind,
+    };
+  }
+  if (typeof error === 'string') {
+    return { message: error, stack: null, kind: fallbackKind };
+  }
+  return { message: stringifyUnknown(error), stack: null, kind: fallbackKind };
+}
+
 /** Boot-time convenience for callers with no injector (boot-error-surface.ts). */
 export function reportBootError(error: unknown): void {
-  const normalized = error instanceof Error ? error : new Error(String(error));
+  const described = describeError(error, 'BootError');
   sendClientError({
-    message: normalized.message || String(error),
-    stack: normalized.stack ?? null,
-    kind: normalized.name || 'BootError',
+    message: described.message,
+    stack: described.stack,
+    kind: described.kind,
     url: typeof location !== 'undefined' ? location.href : null,
     route: null,
     buildVersion: buildVersionTag(),
