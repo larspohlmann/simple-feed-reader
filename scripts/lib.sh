@@ -490,11 +490,11 @@ stop_disabled_grafana_containers() {
   if prod_uses_grafana; then
     return 0
   fi
-  if [ -z "$(prod_compose ps -aq loki grafana 2>/dev/null)" ]; then
+  if [ -z "$(prod_compose ps -aq loki grafana tempo pyroscope 2>/dev/null)" ]; then
     return 0
   fi
-  say 'Grafana is disabled -- removing its containers (loki-data and grafana-data are kept) ...'
-  prod_compose rm -sf loki grafana >/dev/null
+  say 'Grafana is disabled -- removing its containers (data volumes are kept) ...'
+  prod_compose rm -sf loki grafana tempo pyroscope >/dev/null
 }
 
 # --- what an earlier production install leaves behind -----------------------
@@ -1685,6 +1685,7 @@ current_grafana_choice() {
 use_no_grafana() {
   env_prod_set GRAFANA_LOKI_PUSH_URL ''
   env_prod_set GRAFANA_URL ''
+  env_prod_set PYROSCOPE_PUSH_URL ''
   # Tracing rides the same off switch: no extension-loading and every
   # auto-instrumentation disabled, matching the tempo container staying off.
   env_prod_set OTEL_PHP_AUTOLOAD_ENABLED 'false'
@@ -1698,6 +1699,7 @@ use_no_grafana() {
 use_grafana() {
   env_prod_set GRAFANA_LOKI_PUSH_URL 'http://loki:3100/loki/api/v1/push'
   env_prod_set GRAFANA_URL 'http://localhost:3000'
+  env_prod_set PYROSCOPE_PUSH_URL 'http://pyroscope:4040'
   if [ -z "$(trim_whitespace "$(env_prod_get GRAFANA_ADMIN_PASSWORD)")" ]; then
     env_prod_set GRAFANA_ADMIN_PASSWORD "$(generate_secret)"
   fi

@@ -12,6 +12,9 @@ parameters:
         # Fixtures for ThinControllerRuleTest: deliberate rule violations in the
         # App\Controller namespace, analysed only by the rule's own RuleTestCase.
         - tests/PhpStan/data/*
+    stubFiles:
+        # ext-excimer is absent on the native/CI PHP that runs PHPStan.
+        - tests/PhpStan/stubs/excimer.stub
     symfony:
         containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
 

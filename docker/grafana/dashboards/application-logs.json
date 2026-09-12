@@ -2,10 +2,12 @@
   "id": null,
   "uid": "application-logs",
   "title": "Application logs",
-  "tags": ["simple-feed-reader"],
+  "tags": [
+    "simple-feed-reader"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 2,
+  "version": 3,
   "editable": true,
   "time": {
     "from": "now-6h",
@@ -18,25 +20,47 @@
         "name": "level",
         "label": "Level",
         "type": "query",
-        "datasource": { "type": "loki", "uid": "loki" },
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
         "query": "label_values({app=\"simple-feed-reader\"}, level)",
         "refresh": 2,
         "sort": 1,
         "multi": true,
         "includeAll": true,
-        "current": { "selected": true, "text": ["All"], "value": ["$__all"] }
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        }
       },
       {
         "name": "channel",
         "label": "Channel",
         "type": "query",
-        "datasource": { "type": "loki", "uid": "loki" },
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
         "query": "label_values({app=\"simple-feed-reader\"}, channel)",
         "refresh": 2,
         "sort": 1,
         "multi": true,
         "includeAll": true,
-        "current": { "selected": true, "text": ["All"], "value": ["$__all"] }
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        }
       }
     ]
   },
@@ -45,17 +69,35 @@
       "id": 1,
       "type": "timeseries",
       "title": "Log volume by level",
-      "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 0 },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "loki", "uid": "loki" },
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
           "expr": "sum by (level) (count_over_time({app=\"simple-feed-reader\"} | json | level=~\"$level\" | channel=~\"$channel\" [$__interval]))"
         }
       ],
       "fieldConfig": {
-        "defaults": { "custom": { "drawStyle": "bars", "stacking": { "mode": "normal" } } },
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
         "overrides": []
       }
     },
@@ -63,20 +105,45 @@
       "id": 2,
       "type": "stat",
       "title": "Errors + critical",
-      "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "loki", "uid": "loki" },
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
           "expr": "sum(count_over_time({app=\"simple-feed-reader\"} | json | level=~\"error|critical\" [$__range]))"
         }
       ],
       "fieldConfig": {
-        "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [
-          { "color": "green", "value": null },
-          { "color": "red", "value": 1 }
-        ] } },
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
         "overrides": []
       }
     },
@@ -84,8 +151,16 @@
       "id": 3,
       "type": "logs",
       "title": "Logs",
-      "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 28 },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
       "options": {
         "showTime": true,
         "wrapLogMessage": false,
@@ -94,7 +169,10 @@
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "loki", "uid": "loki" },
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
           "expr": "{app=\"simple-feed-reader\"} | json | level=~\"$level\" | channel=~\"$channel\""
         }
       ]
@@ -103,8 +181,16 @@
       "id": 4,
       "type": "logs",
       "title": "Frontend errors",
-      "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 18 },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
       "options": {
         "showTime": true,
         "wrapLogMessage": false,
@@ -113,7 +199,10 @@
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "loki", "uid": "loki" },
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
           "expr": "{app=\"simple-feed-reader\", source=\"frontend\"} | json | level=~\"error|critical\""
         }
       ]
@@ -122,8 +211,16 @@
       "id": 5,
       "type": "logs",
       "title": "Backend errors",
-      "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 8 },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
       "options": {
         "showTime": true,
         "wrapLogMessage": false,
@@ -132,10 +229,23 @@
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "loki", "uid": "loki" },
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
           "expr": "{app=\"simple-feed-reader\", source=\"backend\"} | json | level=~\"error|critical\""
         }
       ]
+    }
+  ],
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "simple-feed-reader"
+      ],
+      "asDropdown": true,
+      "title": "Dashboards"
     }
   ]
 }

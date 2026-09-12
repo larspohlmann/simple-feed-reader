@@ -137,4 +137,28 @@ final class AdminGrafanaControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
         self::assertFalse($this->payload($this->client)['hasToken']);
     }
+
+    public function testAdminCanRoundTripTheProfilingToggleAndPyroscopeUrl(): void
+    {
+        $admin = $this->admin();
+
+        $this->requestWithJsonBody('PUT', $admin, [
+            'grafanaUrl' => 'https://cloud.example/grafana',
+            'profilingEnabled' => true,
+            'pyroscopePushUrl' => 'http://custom:4040',
+        ]);
+        self::assertResponseIsSuccessful();
+
+        $this->client->request(
+            'GET',
+            self::GRAFANA,
+            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin)],
+        );
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload($this->client);
+        self::assertTrue($body['profilingEnabled']);
+        self::assertSame('http://custom:4040', $body['pyroscopePushUrl']);
+        self::assertIsBool($body['profilerAvailable']);
+    }
 }

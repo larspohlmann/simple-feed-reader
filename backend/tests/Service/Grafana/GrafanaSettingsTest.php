@@ -12,6 +12,7 @@ use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
 use App\Service\Grafana\GrafanaConnection;
 use App\Service\Grafana\GrafanaEnvDefaults;
 use App\Service\Grafana\GrafanaSettings;
+use App\Service\Profiling\NullProfileSampler;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 
@@ -99,6 +100,38 @@ final class GrafanaSettingsTest extends TestCase
         self::assertNull($settings->effectiveLokiPushUrl());
     }
 
+    public function testEffectivePyroscopePushUrlFallsBackToTheEnvDefaultWhenNoOverrideIsStored(): void
+    {
+        $settings = $this->service($stored, pyroscopePushUrlDefault: 'http://pyroscope:4040');
+
+        self::assertSame('http://pyroscope:4040', $settings->effectivePyroscopePushUrl());
+    }
+
+    public function testEffectivePyroscopePushUrlPrefersTheStoredOverrideOverTheEnvDefault(): void
+    {
+        $settings = $this->service($stored, pyroscopePushUrlDefault: 'http://pyroscope:4040');
+        $settings->update(new GrafanaSettingsRequest(pyroscopePushUrl: 'http://custom:4040'));
+
+        self::assertSame('http://custom:4040', $settings->effectivePyroscopePushUrl());
+    }
+
+    public function testEffectivePyroscopePushUrlIsNullWhenNeitherOverrideNorDefaultIsConfigured(): void
+    {
+        $settings = $this->service($stored, pyroscopePushUrlDefault: '');
+
+        self::assertNull($settings->effectivePyroscopePushUrl());
+    }
+
+    public function testProfilingEnabledReflectsTheStoredRow(): void
+    {
+        $settings = $this->service($stored);
+        self::assertFalse($settings->profilingEnabled());
+
+        $settings->update(new GrafanaSettingsRequest(profilingEnabled: true));
+
+        self::assertTrue($settings->profilingEnabled());
+    }
+
     public function testBlankUsernameClearsTheStoredOverrideAndItStartsNull(): void
     {
         $settings = $this->service($stored);
@@ -119,7 +152,7 @@ final class GrafanaSettingsTest extends TestCase
     {
         $entity = new GrafanaSettingsEntity();
         $entity->apply(
-            new GrafanaConnection('https://cloud.example/loki/push', 'tenant42', null),
+            new GrafanaConnection('https://cloud.example/loki/push', 'tenant42', null, null, false),
             (new GrafanaApiKeyCipher(new InstanceSecretCipher(self::SECRET)))->seal('glc_secrettoken'),
             'oken',
         );
@@ -131,12 +164,42 @@ final class GrafanaSettingsTest extends TestCase
             $repository,
             $this->createStub(EntityManagerInterface::class),
             new GrafanaApiKeyCipher(new InstanceSecretCipher(self::SECRET)),
-            new GrafanaEnvDefaults('', ''),
+            new GrafanaEnvDefaults('', '', ''),
+            new NullProfileSampler(),
         );
 
         self::assertSame('https://cloud.example/loki/push', $settings->effectiveLokiPushUrl());
         self::assertSame('tenant42', $settings->lokiUsername());
         self::assertSame('glc_secrettoken', $settings->lokiToken());
+    }
+
+    public function testRefreshMakesTheNextReadSeeAChangedRow(): void
+    {
+        $original = new GrafanaSettingsEntity();
+        $original->applyWithoutToken(new GrafanaConnection(null, null, null, null, false));
+
+        $changed = new GrafanaSettingsEntity();
+        $changed->applyWithoutToken(new GrafanaConnection(null, null, null, null, true));
+
+        $repository = $this->createMock(GrafanaSettingsRepository::class);
+        $repository->expects(self::exactly(2))
+            ->method('findSingleton')
+            ->willReturnOnConsecutiveCalls($original, $changed);
+
+        $settings = new GrafanaSettings(
+            $repository,
+            $this->createStub(EntityManagerInterface::class),
+            new GrafanaApiKeyCipher(new InstanceSecretCipher(self::SECRET)),
+            new GrafanaEnvDefaults('', '', ''),
+            new NullProfileSampler(),
+        );
+
+        self::assertFalse($settings->profilingEnabled());
+        self::assertFalse($settings->profilingEnabled());
+
+        $settings->refresh();
+
+        self::assertTrue($settings->profilingEnabled());
     }
 
     public function testUpdateFlushesTheEntityManager(): void
@@ -148,7 +211,13 @@ final class GrafanaSettingsTest extends TestCase
         $em->expects(self::once())->method('flush');
 
         $cipher = new GrafanaApiKeyCipher(new InstanceSecretCipher(self::SECRET));
-        $settings = new GrafanaSettings($repository, $em, $cipher, new GrafanaEnvDefaults('', ''));
+        $settings = new GrafanaSettings(
+            $repository,
+            $em,
+            $cipher,
+            new GrafanaEnvDefaults('', '', ''),
+            new NullProfileSampler(),
+        );
 
         $settings->update(new GrafanaSettingsRequest(grafanaUrl: 'https://a.example'));
     }
@@ -158,6 +227,7 @@ final class GrafanaSettingsTest extends TestCase
         ?GrafanaSettingsEntity &$stored,
         string $lokiPushUrlDefault = '',
         string $grafanaUrlDefault = '',
+        string $pyroscopePushUrlDefault = '',
     ): GrafanaSettings {
         $stored = null;
         $repository = $this->createStub(GrafanaSettingsRepository::class);
@@ -173,8 +243,8 @@ final class GrafanaSettingsTest extends TestCase
         });
 
         $cipher = new GrafanaApiKeyCipher(new InstanceSecretCipher(self::SECRET));
-        $defaults = new GrafanaEnvDefaults($lokiPushUrlDefault, $grafanaUrlDefault);
+        $defaults = new GrafanaEnvDefaults($lokiPushUrlDefault, $grafanaUrlDefault, $pyroscopePushUrlDefault);
 
-        return new GrafanaSettings($repository, $em, $cipher, $defaults);
+        return new GrafanaSettings($repository, $em, $cipher, $defaults, new NullProfileSampler());
     }
 }

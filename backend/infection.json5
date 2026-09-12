@@ -2,6 +2,9 @@
     $schema: 'vendor/infection/infection/resources/schema.json',
     source: {
         directories: ['src'],
+        // The Excimer adapter needs ext-excimer, which the native mutation run
+        // lacks; it is covered by the Docker leg's ExcimerSamplerTest instead.
+        excludes: ['Service/Profiling/ExcimerSampler.php'],
     },
     logs: {
         text: 'var/infection.log',

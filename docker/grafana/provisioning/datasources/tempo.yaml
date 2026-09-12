@@ -12,3 +12,9 @@ datasources:
         datasourceUid: loki
         filterByTraceID: true
         tags: [{ key: 'trace_id', value: 'trace_id' }]
+      tracesToProfiles:
+        datasourceUid: pyroscope
+        profileTypeId: 'process_cpu:cpu:nanoseconds:cpu:nanoseconds'
+        customQuery: true
+        # $$ keeps the literal for Grafana; a single $ is expanded to empty at load.
+        query: 'span_id="$${__span.spanId}"'

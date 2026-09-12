@@ -66,6 +66,7 @@ x-app-environment: &app-environment
   GRAFANA_LOKI_USERNAME: ${GRAFANA_LOKI_USERNAME:-}
   GRAFANA_LOKI_TOKEN: ${GRAFANA_LOKI_TOKEN:-}
   GRAFANA_URL: ${GRAFANA_URL:-}
+  PYROSCOPE_PUSH_URL: ${PYROSCOPE_PUSH_URL:-}
   # Single-dash `-` (not `:-`): use_grafana writes DISABLED_INSTRUMENTATIONS empty
   # ("nothing disabled"); `:-` would read empty as unset and force it back to "all".
   # Both vars gate tracing together -- AUTOLOAD_ENABLED alone does not.
@@ -163,6 +164,13 @@ services:
     volumes:
       - ./docker/tempo/tempo-config.yaml:/etc/tempo/tempo-config.yaml:ro
       - tempo-data:/var/tempo
+
+  pyroscope:
+    image: grafana/pyroscope:2.3.1
+    profiles: ["grafana"]
+    restart: unless-stopped
+    volumes:
+      - pyroscope-data:/data
 
   grafana:
     image: grafana/grafana:11.5.2
@@ -283,5 +291,6 @@ volumes:
   loki-data:
   grafana-data:
   tempo-data:
+  pyroscope-data:
   php-var:
   jwt-keys:

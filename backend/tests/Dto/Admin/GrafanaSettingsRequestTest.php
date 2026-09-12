@@ -29,6 +29,29 @@ final class GrafanaSettingsRequestTest extends TestCase
         self::assertNull($request->grafanaUrl);
         self::assertNull($request->token);
         self::assertFalse($request->removeToken);
+        self::assertNull($request->pyroscopePushUrl);
+        self::assertFalse($request->profilingEnabled);
+    }
+
+    public function testPyroscopePushUrlOverTheLengthLimitIsRejected(): void
+    {
+        $overLimit = new GrafanaSettingsRequest(pyroscopePushUrl: 'http://' . str_repeat('a', 249));
+
+        self::assertGreaterThan(0, \count($this->validator->validate($overLimit)));
+    }
+
+    public function testPyroscopePushUrlThatIsNotAUrlIsRejected(): void
+    {
+        $request = new GrafanaSettingsRequest(pyroscopePushUrl: 'not a url');
+
+        self::assertGreaterThan(0, \count($this->validator->validate($request)));
+    }
+
+    public function testPyroscopePushUrlWithoutATldIsValid(): void
+    {
+        $request = new GrafanaSettingsRequest(pyroscopePushUrl: 'http://pyroscope:4040');
+
+        self::assertCount(0, $this->validator->validate($request));
     }
 
     public function testLokiPushUrlAtTheLengthLimitIsValidButOneOverIsNot(): void

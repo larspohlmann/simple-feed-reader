@@ -102,6 +102,49 @@
       </app-settings-row>
     </app-settings-group>
 
+    <app-settings-group icon="speed" [title]="'settings.grafana.profiling.title' | transloco">
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.grafana.profiling.enabled' | transloco"
+        [description]="
+          (profilerAvailable()
+            ? 'settings.grafana.profiling.caption'
+            : 'settings.grafana.profiling.unavailable'
+          ) | transloco
+        "
+      >
+        <app-toggle
+          data-testid="grafana-profiling-toggle"
+          [checked]="profilingEnabled()"
+          [disabled]="!profilerAvailable()"
+          [label]="'settings.grafana.profiling.enabled' | transloco"
+          (toggled)="onProfilingToggled($event)"
+        />
+      </app-settings-row>
+
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.grafana.profiling.pyroscopePushUrl' | transloco"
+        [description]="
+          profilingContainerPresent()
+            ? ('settings.grafana.profiling.localContainer'
+              | transloco: { url: pyroscopePushUrlEffective() })
+            : ''
+        "
+      >
+        <input
+          type="url"
+          inputmode="url"
+          class="url-field"
+          autocomplete="off"
+          data-testid="grafana-pyroscope-push-url"
+          [value]="pyroscopePushUrl()"
+          [placeholder]="pyroscopePushUrlDefault()"
+          (input)="onPyroscopePushUrl($event)"
+        />
+      </app-settings-row>
+    </app-settings-group>
+
     @if (failureMessage(); as message) {
       <div class="panel-banner">
         <app-error-banner [message]="message" />

@@ -28,7 +28,7 @@ final class GrafanaSettingsRepositoryTest extends KernelTestCase
     private function rowFor(string $grafanaUrl): GrafanaSettings
     {
         $settings = new GrafanaSettings();
-        $settings->applyWithoutToken(new GrafanaConnection(null, null, $grafanaUrl));
+        $settings->applyWithoutToken(new GrafanaConnection(null, null, $grafanaUrl, null, false));
 
         return $settings;
     }

@@ -79,6 +79,7 @@ reask_with() {
 fresh_install_answer_with 'y' ''
 assert_env GRAFANA_LOKI_PUSH_URL 'http://loki:3100/loki/api/v1/push'
 assert_env GRAFANA_URL 'http://localhost:3000'
+assert_env PYROSCOPE_PUSH_URL 'http://pyroscope:4040'
 [ -n "$(env_prod_get GRAFANA_ADMIN_PASSWORD)" ] || fail 'the default answer must generate GRAFANA_ADMIN_PASSWORD'
 prod_uses_grafana || fail 'a default of yes must enable grafana'
 assert_profiles 'mysql,grafana'
@@ -88,6 +89,7 @@ assert_env OTEL_PHP_DISABLED_INSTRUMENTATIONS ''
 fresh_install_answer_with 'n' ''
 assert_env GRAFANA_LOKI_PUSH_URL ''
 assert_env GRAFANA_URL ''
+assert_env PYROSCOPE_PUSH_URL ''
 if prod_uses_grafana; then
   fail 'a default of no must not enable grafana'
 fi

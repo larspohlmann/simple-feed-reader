@@ -14,6 +14,8 @@ final readonly class GrafanaEnvDefaults
         public string $lokiPushUrl,
         #[Autowire('%env(GRAFANA_URL)%')]
         public string $grafanaUrl,
+        #[Autowire('%env(PYROSCOPE_PUSH_URL)%')]
+        public string $pyroscopePushUrl,
     ) {
     }
 }

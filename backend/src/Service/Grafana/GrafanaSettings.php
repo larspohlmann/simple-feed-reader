@@ -9,6 +9,7 @@ use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
 use App\Http\Admin\GrafanaSettingsJson;
 use App\Repository\GrafanaSettingsRepository;
 use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
+use App\Service\Profiling\ProfileSampler;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -21,8 +22,10 @@ use Doctrine\ORM\EntityManagerInterface;
  * flush reading pushUrl/username/token in a row issues one SELECT instead of
  * three (mirrors App\Service\Settings\InstanceSettings). The memo is a plain
  * field — request-scoped under PHP-FPM, never promote it to a shared cache.
- * update() clears it so a read after a write sees the new value. Not marked
- * `final`: SettingsLokiEndpointTest stubs this class.
+ * update() clears it so a read after a write sees the new value; the
+ * long-running worker calls refresh() on its periodic toggle re-check so a
+ * change is seen without a restart. Not marked `final`: SettingsLokiEndpointTest
+ * stubs this class.
  */
 class GrafanaSettings
 {
@@ -33,13 +36,14 @@ class GrafanaSettings
         private readonly EntityManagerInterface $em,
         private readonly GrafanaApiKeyCipher $cipher,
         private readonly GrafanaEnvDefaults $defaults,
+        private readonly ProfileSampler $sampler,
     ) {
     }
 
     /** @return array<string, mixed> */
     public function view(): array
     {
-        return GrafanaSettingsJson::from($this->settings(), $this->defaults->lokiPushUrl, $this->defaults->grafanaUrl);
+        return GrafanaSettingsJson::from($this->settings(), $this->defaults, $this->sampler->isAvailable());
     }
 
     public function update(GrafanaSettingsRequest $request): void
@@ -62,6 +66,11 @@ class GrafanaSettings
         }
 
         $this->em->flush();
+        $this->refresh();
+    }
+
+    public function refresh(): void
+    {
         $this->memoisedSettings = null;
     }
 
@@ -70,6 +79,17 @@ class GrafanaSettings
         $override = $this->settings()->getLokiPushUrlOverride();
 
         return $override ?? ('' === $this->defaults->lokiPushUrl ? null : $this->defaults->lokiPushUrl);
+    }
+
+    public function effectivePyroscopePushUrl(): ?string
+    {
+        return $this->settings()->getPyroscopePushUrlOverride()
+            ?? ('' === $this->defaults->pyroscopePushUrl ? null : $this->defaults->pyroscopePushUrl);
+    }
+
+    public function profilingEnabled(): bool
+    {
+        return $this->settings()->isProfilingEnabled();
     }
 
     public function lokiUsername(): ?string
@@ -100,6 +120,8 @@ class GrafanaSettings
             $this->blankToNull($request->lokiPushUrl),
             $this->blankToNull($request->lokiUsername),
             $this->blankToNull($request->grafanaUrl),
+            $this->blankToNull($request->pyroscopePushUrl),
+            $request->profilingEnabled,
         );
     }
 

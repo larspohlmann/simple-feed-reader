@@ -47,7 +47,8 @@ docker compose exec php bin/console doctrine:migrations:migrate --no-interaction
 ```
 
 `docker compose down` is safe. **`docker compose down -v` deletes the MySQL volume.**
-Dev also runs Grafana (http://localhost:3000, `admin`/`admin`) and Loki, for viewing app logs.
+Dev also runs Grafana (http://localhost:3000, `admin`/`admin`), Loki, Tempo and
+Pyroscope, for viewing app logs, traces and profiles.
 
 ## Layout
 

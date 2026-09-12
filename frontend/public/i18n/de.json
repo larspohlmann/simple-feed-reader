@@ -499,6 +499,14 @@
         "hint": "Aktuell: {{url}}",
         "open": "Grafana öffnen"
       },
+      "profiling": {
+        "title": "Profiling",
+        "enabled": "Requests und Worker profilen",
+        "caption": "Erfasst PHP-Stacks und sendet sie an Pyroscope; Traces erhalten einen Profil-Link. Standardmäßig aus.",
+        "unavailable": "Die Profiler-Erweiterung ist auf diesem Host nicht installiert, Profiling ist hier nicht möglich.",
+        "pyroscopePushUrl": "Pyroscope-URL",
+        "localContainer": "Lokaler Container: {{url}}"
+      },
       "saved": "Grafana-Einstellungen gespeichert",
       "save": "Speichern",
       "reset": "Zurücksetzen",

@@ -30,8 +30,10 @@ Nine services, started with one command from the repository root:
 | Mailpit web inbox | http://localhost:8025 |
 | MySQL 8.4 | 127.0.0.1:33306 (user/password `feedreader`/`feedreader`, root `root`) |
 | Meilisearch — full-content entry search, dashboard and API | http://127.0.0.1:7700 (key `dev-master-key-not-a-secret`) |
-| Grafana — app logs, provisioned with an "Application logs" dashboard | http://localhost:3000 (login `admin`/`admin`) |
+| Grafana — provisioned with "Application logs" and "Application performance" dashboards | http://localhost:3000 (login `admin`/`admin`) |
 | Loki — log storage behind Grafana, fed by the app | 127.0.0.1:3100 |
+| Tempo — trace storage behind Grafana, fed by the app's OTel exporter | 127.0.0.1:4318 (OTLP) |
+| Pyroscope — continuous + per-request profiles, off until the admin toggle is on | http://localhost:4040 |
 | Worker — recommendation runs in the background, 5-minute feed refresh sweep | `docker compose logs -f worker` |
 
 The app answers searches from the database whenever Meilisearch is absent or
@@ -361,28 +363,23 @@ Run it early with:
 gh workflow run e2e-rot-check.yml
 ```
 
-## Grafana MCP server (optional dev tooling)
+## Profiling (Pyroscope)
 
-The dev stack runs Grafana on <http://localhost:3000> and Loki on `:3100`
-(see #983). To let Claude query the logs and dashboards, the repo ships an
-`.mcp.json` entry that runs the open-source
-[`mcp/grafana`](https://grafana.com/docs/grafana/latest/developer-resources/mcp/)
-server over stdio in Docker, pointed at the dev Grafana.
+The stack runs a `pyroscope` container (<http://localhost:4040>) that stores
+code-level profiles. Profiling is **off by default**: turn it on in the admin
+**Settings → Grafana → Profiling** toggle (or `PUT /api/admin/grafana` with
+`{"profilingEnabled": true}`). While it is on, each traced HTTP request and the
+`messenger:consume` worker sample PHP stacks (via `ext-excimer`) and ship folded
+stacks to Pyroscope; the pusher fails open, so a dead or absent Pyroscope never
+breaks a request or the worker. The toggle takes effect within ~30 s on the
+worker without a restart.
 
-It needs a Grafana **service-account token**, which is a secret and is **never
-committed** — `.mcp.json` reads it from the `GRAFANA_SERVICE_ACCOUNT_TOKEN`
-environment variable. One-time setup:
+See the profiles two ways:
 
-1. Open <http://localhost:3000> (dev login `admin` / `admin`).
-2. Administration → Users and access → Service accounts → **Add service
-   account** (role Viewer is enough for querying), then **Add service account
-   token** and copy it.
-3. Export it where your Claude session can see it:
+- The **Application performance** dashboard's "Service profile" flame graph.
+- From a trace: **Explore → Tempo →** open a request's root span **→ Profiles** —
+  the span carries `pyroscope.profile.id`, so the flame graph is that one
+  request's hotspots.
 
-   ```bash
-   export GRAFANA_SERVICE_ACCOUNT_TOKEN=glsa_xxx…
-   ```
-
-The container reaches the host's Grafana at `host.docker.internal:3000`; set
-`GRAFANA_URL` to override. This is developer tooling only — it is not part of
-the deployed stack, and production uses its own Grafana (or Grafana Cloud).
+`ext-excimer` is only in the Docker image, so profiling is inert on hosts
+without it (the toggle then shows "profiler not available on this host").

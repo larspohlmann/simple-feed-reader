@@ -19,6 +19,12 @@ function state(over: Partial<GrafanaSettingsState> = {}): GrafanaSettingsState {
     hasToken: false,
     tokenHint: '',
     containerPresent: true,
+    pyroscopePushUrl: null,
+    pyroscopePushUrlDefault: 'http://pyroscope:4040',
+    pyroscopePushUrlEffective: 'http://pyroscope:4040',
+    profilingEnabled: false,
+    profilingContainerPresent: true,
+    profilerAvailable: true,
     ...over,
   };
 }
@@ -71,6 +77,8 @@ describe('GrafanaSettingsService', () => {
       grafanaUrl: 'https://grafana.example.com',
       token: null,
       removeToken: false,
+      pyroscopePushUrl: null,
+      profilingEnabled: false,
     });
 
     put.flush(state({ lokiPushUrl: 'https://loki.example.com', lokiUsername: 'sam' }));

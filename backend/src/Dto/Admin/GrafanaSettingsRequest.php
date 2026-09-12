@@ -27,6 +27,11 @@ final readonly class GrafanaSettingsRequest
         public ?string $token = null,
         #[Assert\Type('bool')]
         public bool $removeToken = false,
+        #[Assert\Length(max: 255)]
+        #[Assert\Url(requireTld: false)]
+        public ?string $pyroscopePushUrl = null,
+        #[Assert\Type('bool')]
+        public bool $profilingEnabled = false,
     ) {
     }
 }
