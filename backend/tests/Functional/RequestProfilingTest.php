@@ -19,14 +19,6 @@ use OpenTelemetry\SDK\Trace\TracerProvider;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
-/**
- * Runs the whole request-profiling stack through a real kernel: a real span
- * is activated around the request, the listener reads it via TraceContext,
- * and kernel.terminate (fired synchronously by KernelBrowser) pushes the
- * profile. The push is captured the way ClientErrorControllerTest captures
- * Loki, since kernel.terminate has already run by the time the test method
- * gets control back.
- */
 final class RequestProfilingTest extends ApiTestCase
 {
     /** @var list<array<string, mixed>> */

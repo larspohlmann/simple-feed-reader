@@ -36,14 +36,19 @@ final class RequestProfilingListener
         if (!$event->isMainRequest() || !$this->policy->isEnabled()) {
             return;
         }
-        $traceId = $this->trace->traceId();
-        $spanId = $this->trace->spanId();
-        if (null === $traceId || null === $spanId) {
-            return;
+        try {
+            $traceId = $this->trace->traceId();
+            $spanId = $this->trace->spanId();
+            if (null === $traceId || null === $spanId) {
+                return;
+            }
+            Span::getCurrent()->setAttribute(self::PROFILE_ID_ATTRIBUTE, $spanId);
+            $this->labels = ProfileLabels::forWebRequest($traceId, $spanId);
+            $this->sampler->start(self::SAMPLE_PERIOD_SECONDS);
+        } catch (\Throwable) {
+            // fail-open: profiling must never break a request
+            $this->labels = null;
         }
-        Span::getCurrent()->setAttribute(self::PROFILE_ID_ATTRIBUTE, $spanId);
-        $this->labels = ProfileLabels::forWebRequest($traceId, $spanId);
-        $this->sampler->start(self::SAMPLE_PERIOD_SECONDS);
     }
 
     public function onKernelTerminate(): void
