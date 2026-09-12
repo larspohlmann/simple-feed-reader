@@ -68,10 +68,9 @@ export class ClientErrorReporter {
     }
   }
 
-  /** A suppressed instance is NOT remembered here: a recurring error that
-   *  rethrows the same instance still needs its per-window "still broken"
-   *  heartbeat, and an instance first seen while the rate limit is exceeded
-   *  must not be dropped forever once the window resets. */
+  /** A suppressed instance is not remembered (recording happens after
+   *  `isSuppressed`): a recurring one keeps its per-window heartbeat, and a
+   *  rate-limited one is not dropped forever once the window resets. */
   private reportedByIdentityWithin(error: unknown, now: number): boolean {
     if (typeof error !== 'object' || error === null) {
       return false;

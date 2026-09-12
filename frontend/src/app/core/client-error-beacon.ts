@@ -126,10 +126,9 @@ export function describeError(error: unknown, fallbackKind = 'Error'): ErrorDesc
 const MAX_MESSAGE = 2000;
 const MAX_STACK = 8000;
 
-/** Truncates by Unicode code point, not UTF-16 code unit: cutting mid-surrogate-
- *  pair would leave a lone surrogate that `JSON.stringify` emits as an unpaired
- *  `\ud83d`, which PHP's `json_decode` rejects as invalid UTF-8 (backend 400).
- *  This also matches Symfony's `mb_strlen` cap exactly. */
+/** Cut by code point: a cut mid-surrogate leaves a lone `\ud83d`, which PHP's
+ *  `json_decode` rejects (JSON_ERROR_UTF16 → backend 400). Also matches
+ *  Symfony's `mb_strlen` cap. */
 function truncate(text: string, max: number): string {
   const codePoints = Array.from(text);
   return codePoints.length > max ? codePoints.slice(0, max).join('') : text;
