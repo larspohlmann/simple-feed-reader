@@ -16,4 +16,7 @@ datasources:
           matcherType: regex
           matcherRegex: '"trace_id":"(\w+)"'
           datasourceUid: tempo
-          url: '${__value.raw}'
+          # $$ escapes Grafana's config env-var interpolation, so the literal
+          # ${__value.raw} reaches the datasource and resolves to the captured
+          # trace id at click time. A single $ is expanded to empty at load.
+          url: '$${__value.raw}'
