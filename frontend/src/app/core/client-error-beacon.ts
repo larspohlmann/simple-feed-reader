@@ -88,15 +88,18 @@ function isHttpErrorResponse(
   );
 }
 
+function constructorNameOf(error: unknown): string {
+  return (error as { constructor?: { name?: string } })?.constructor?.name ?? 'Object';
+}
+
 function stringifyUnknown(error: unknown): string {
   if (error === undefined) {
     return 'undefined';
   }
   try {
-    const json = JSON.stringify(error);
-    return json && json !== '{}' ? json : Object.prototype.toString.call(error);
+    return JSON.stringify(error) ?? constructorNameOf(error);
   } catch {
-    return Object.prototype.toString.call(error);
+    return constructorNameOf(error);
   }
 }
 
@@ -132,15 +135,19 @@ export function describeError(error: unknown, fallbackKind = 'Error'): ErrorDesc
 
 /** Boot-time convenience for callers with no injector (boot-error-surface.ts). */
 export function reportBootError(error: unknown): void {
-  const described = describeError(error, 'BootError');
-  sendClientError({
-    message: described.message,
-    stack: described.stack,
-    kind: described.kind,
-    url: typeof location !== 'undefined' ? location.href : null,
-    route: null,
-    buildVersion: buildVersionTag(),
-    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-    at: new Date().toISOString(),
-  });
+  try {
+    const described = describeError(error, 'BootError');
+    sendClientError({
+      message: described.message,
+      stack: described.stack,
+      kind: described.kind,
+      url: typeof location !== 'undefined' ? location.href : null,
+      route: null,
+      buildVersion: buildVersionTag(),
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+      at: new Date().toISOString(),
+    });
+  } catch {
+    // Reporting an error must never raise one of its own.
+  }
 }

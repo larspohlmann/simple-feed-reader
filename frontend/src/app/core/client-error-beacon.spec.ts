@@ -157,6 +157,22 @@ describe('client-error-beacon', () => {
       expect(described.stack).toBeNull();
     });
 
+    it('serializes an empty object to "{}", never [object Object]', () => {
+      expect(describeError({})).toEqual({ message: '{}', stack: null, kind: 'Error' });
+    });
+
+    it('falls back to the constructor name for a circular object, never [object Object]', () => {
+      class Circular {}
+      const circular = new Circular() as Circular & { self?: unknown };
+      circular.self = circular;
+
+      const described = describeError(circular);
+
+      expect(described.message).toBe('Circular');
+      expect(described.message).not.toBe('[object Object]');
+      expect(described.stack).toBeNull();
+    });
+
     it('keeps both message and name from a DOMException-shaped object', () => {
       const error = { name: 'AbortError', message: 'The operation was aborted.' };
 
