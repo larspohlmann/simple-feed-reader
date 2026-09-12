@@ -19,7 +19,7 @@ namespace App\Service\Url;
 final class UrlNormalizer
 {
     /** Query keys, or key prefixes, that never identify the article itself. */
-    private const array TRACKING_PREFIXES = ['utm_', 'at_'];
+    private const array TRACKING_PREFIXES = ['utm_', 'at_', 'wt_'];
     private const array TRACKING_KEYS = ['fbclid', 'gclid'];
     private const array DEFAULT_PORTS = ['http' => 80, 'https' => 443];
 
