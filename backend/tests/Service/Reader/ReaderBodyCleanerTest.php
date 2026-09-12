@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
+use App\Service\Reader\AuthorBio\AuthorBioSeparator;
 use App\Service\Reader\BoilerplateVerdict;
 use App\Service\Reader\EdgeBoilerplateTrimmer;
 use App\Service\Reader\LeadImageCandidate;
@@ -60,6 +61,7 @@ final class ReaderBodyCleanerTest extends TestCase
             new TeaserPlayerInserter(new TeaserPlayerMarkup()),
             new MediaOnlyLede(),
             new DuplicateBlockCollapser(),
+            new AuthorBioSeparator(),
         );
     }
 

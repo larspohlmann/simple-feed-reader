@@ -14,6 +14,7 @@ use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Html\PictureSources;
+use App\Service\Reader\AuthorBio\AuthorBioSeparator;
 use App\Service\Reader\ArticleExtractor;
 use App\Service\Reader\BoilerplateVerdict;
 use App\Service\Reader\CustomElementUnwrapper;
@@ -159,6 +160,7 @@ final class ArticleExtractorTest extends TestCase
             new TeaserPlayerInserter(new TeaserPlayerMarkup()),
             new MediaOnlyLede(),
             new DuplicateBlockCollapser(),
+            new AuthorBioSeparator(),
         );
     }
 
