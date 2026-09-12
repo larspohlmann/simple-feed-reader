@@ -1,0 +1,20 @@
+<?php
+
+const EXCIMER_REAL = 0;
+const EXCIMER_CPU = 1;
+
+class ExcimerLog implements \Countable
+{
+    public function formatCollapsed(): string {}
+    public function count(): int {}
+}
+
+class ExcimerProfiler
+{
+    public function setPeriod(float $period): void {}
+    public function setEventType(int $eventType): void {}
+    public function setMaxDepth(int $maxDepth): void {}
+    public function start(): void {}
+    public function stop(): void {}
+    public function getLog(): ExcimerLog {}
+}

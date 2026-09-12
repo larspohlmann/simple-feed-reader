@@ -252,7 +252,8 @@ services:
             $ignoreEmptyContextAndExtra: false
             $includeStacktraces: true
 
-    App\Service\Profiling\ProfileSampler: '@App\Service\Profiling\NullProfileSampler'
+    App\Service\Profiling\ProfileSampler:
+        factory: ['@App\Service\Profiling\ProfileSamplerFactory', 'create']
 
     App\Service\Logging\Loki\LokiEndpoint: '@App\Service\Grafana\SettingsLokiEndpoint'
 
