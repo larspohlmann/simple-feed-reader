@@ -53,9 +53,9 @@ services:
       MEILISEARCH_KEY: "dev-master-key-not-a-secret"
       GRAFANA_LOKI_PUSH_URL: "http://loki:3100/loki/api/v1/push"
       GRAFANA_URL: "http://localhost:3000"
-      # Always on in dev; the tempo container is opt-in behind the `tracing`
-      # profile (see below), and the exporter fails open when it is absent --
-      # a dropped export never breaks a request.
+      # Always on in dev; the tempo container runs by default (see below), and
+      # the exporter fails open when it is absent -- a dropped export never
+      # breaks a request.
       OTEL_PHP_AUTOLOAD_ENABLED: "true"
       OTEL_SERVICE_NAME: "simple-feed-reader"
       OTEL_TRACES_EXPORTER: "otlp"
@@ -211,12 +211,11 @@ services:
     depends_on:
       - loki
 
-  # Distributed tracing, opt-in behind the `tracing` profile: a plain
-  # `docker compose up` never starts it, and the OTLP exporter fails open when
-  # the container is absent. Run `COMPOSE_PROFILES=tracing docker compose up -d`.
+  # Distributed tracing, on by default like Grafana and Loki. To opt out, stop
+  # just this container (`docker compose stop tempo`); the OTLP exporter fails
+  # open when it is absent, so a dropped export never breaks a request.
   tempo:
     image: grafana/tempo:2.7.1
-    profiles: ["tracing"]
     command: ["-config.file=/etc/tempo/tempo-config.yaml"]
     volumes:
       - ./docker/tempo/tempo-config.yaml:/etc/tempo/tempo-config.yaml:ro
