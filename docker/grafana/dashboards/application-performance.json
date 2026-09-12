@@ -1,0 +1,116 @@
+{
+  "uid": "application-performance",
+  "title": "Application performance",
+  "tags": ["simple-feed-reader"],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "id": null,
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "30s",
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": ["simple-feed-reader"],
+      "asDropdown": true,
+      "title": "Dashboards"
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Requests / s by status",
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "queryType": "traceql", "query": "{ kind = server } | rate() by (status)" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Error rate",
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 0.01 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        { "refId": "A", "queryType": "traceql", "query": "{ kind = server && status = error } | rate()" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "p95 latency",
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "queryType": "traceql", "query": "{ kind = server } | quantile_over_time(duration, .95)" }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "p95 latency by route",
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "traceql",
+          "query": "{ kind = server } | quantile_over_time(duration, .95) by (span.http.route)"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "traces",
+      "title": "Slowest traces (>100 ms)",
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        { "refId": "A", "queryType": "traceql", "query": "{ kind = server && duration > 100ms }", "limit": 20 }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "traces",
+      "title": "Error traces",
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        { "refId": "A", "queryType": "traceql", "query": "{ kind = server && status = error }", "limit": 20 }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "flamegraph",
+      "title": "Service profile (wall time)",
+      "datasource": { "type": "grafana-pyroscope-datasource", "uid": "pyroscope" },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 26 },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "profile",
+          "profileTypeId": "process_cpu:cpu:nanoseconds:cpu:nanoseconds",
+          "labelSelector": "{service_name=\"simple-feed-reader\"}"
+        }
+      ]
+    }
+  ]
+}
