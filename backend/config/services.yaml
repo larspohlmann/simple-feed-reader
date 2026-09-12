@@ -255,6 +255,8 @@ services:
     App\Service\Profiling\ProfileSampler:
         factory: ['@App\Service\Profiling\ProfileSamplerFactory', 'create']
 
+    App\Service\Profiling\PyroscopeEndpoint: '@App\Service\Grafana\SettingsPyroscopeEndpoint'
+
     App\Service\Logging\Loki\LokiEndpoint: '@App\Service\Grafana\SettingsLokiEndpoint'
 
     App\Service\Logging\Loki\LokiPushHandler:
