@@ -80,9 +80,9 @@ final readonly class AuthorBioSeparator
 
     private function substantialParagraphCount(Element $element): int
     {
-        $count = $this->isSubstantialParagraph($element) ? 1 : 0;
+        $count = 0;
         foreach ($element->getElementsByTagName('p') as $paragraph) {
-            if ($this->isSubstantialParagraph($paragraph)) {
+            if ($this->isSubstantialProse($paragraph)) {
                 ++$count;
             }
         }
@@ -90,11 +90,10 @@ final readonly class AuthorBioSeparator
         return $count;
     }
 
-    private function isSubstantialParagraph(Element $element): bool
+    private function isSubstantialProse(Element $paragraph): bool
     {
-        return $element->localName === 'p'
-            && mb_strlen(BlockText::collapsed($element)) >= self::SUBSTANTIAL_PROSE_LENGTH
-            && !BlockText::isLinkDominated($element);
+        return mb_strlen(BlockText::collapsed($paragraph)) >= self::SUBSTANTIAL_PROSE_LENGTH
+            && !BlockText::isLinkDominated($paragraph);
     }
 
     /** @return list<Element> */
