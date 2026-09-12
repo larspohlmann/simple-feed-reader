@@ -88,7 +88,7 @@
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 28 },
       "options": {
         "showTime": true,
-        "wrapLogMessage": true,
+        "wrapLogMessage": false,
         "sortOrder": "Descending"
       },
       "targets": [
@@ -107,7 +107,7 @@
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 18 },
       "options": {
         "showTime": true,
-        "wrapLogMessage": true,
+        "wrapLogMessage": false,
         "sortOrder": "Descending"
       },
       "targets": [
@@ -126,7 +126,7 @@
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 8 },
       "options": {
         "showTime": true,
-        "wrapLogMessage": true,
+        "wrapLogMessage": false,
         "sortOrder": "Descending"
       },
       "targets": [
