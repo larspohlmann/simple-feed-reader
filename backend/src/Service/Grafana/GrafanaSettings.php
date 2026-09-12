@@ -67,6 +67,11 @@ class GrafanaSettings
         $this->memoisedSettings = null;
     }
 
+    public function refresh(): void
+    {
+        $this->memoisedSettings = null;
+    }
+
     public function effectiveLokiPushUrl(): ?string
     {
         $override = $this->settings()->getLokiPushUrlOverride();

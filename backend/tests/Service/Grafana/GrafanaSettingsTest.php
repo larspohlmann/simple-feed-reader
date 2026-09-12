@@ -173,6 +173,35 @@ final class GrafanaSettingsTest extends TestCase
         self::assertSame('glc_secrettoken', $settings->lokiToken());
     }
 
+    public function testRefreshMakesTheNextReadSeeAChangedRow(): void
+    {
+        $original = new GrafanaSettingsEntity();
+        $original->applyWithoutToken(new GrafanaConnection(null, null, null, null, false));
+
+        $changed = new GrafanaSettingsEntity();
+        $changed->applyWithoutToken(new GrafanaConnection(null, null, null, null, true));
+
+        $repository = $this->createMock(GrafanaSettingsRepository::class);
+        $repository->expects(self::exactly(2))
+            ->method('findSingleton')
+            ->willReturnOnConsecutiveCalls($original, $changed);
+
+        $settings = new GrafanaSettings(
+            $repository,
+            $this->createStub(EntityManagerInterface::class),
+            new GrafanaApiKeyCipher(new InstanceSecretCipher(self::SECRET)),
+            new GrafanaEnvDefaults('', '', ''),
+            new NullProfileSampler(),
+        );
+
+        self::assertFalse($settings->profilingEnabled());
+        self::assertFalse($settings->profilingEnabled());
+
+        $settings->refresh();
+
+        self::assertTrue($settings->profilingEnabled());
+    }
+
     public function testUpdateFlushesTheEntityManager(): void
     {
         $repository = $this->createStub(GrafanaSettingsRepository::class);

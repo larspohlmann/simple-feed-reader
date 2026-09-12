@@ -23,20 +23,23 @@ final class WorkerProfilingListenerTest extends TestCase
     {
         $pushes = [];
         $enabled = ['value' => true];
+        $log = [];
         $sampler = new TrackingProfileSampler();
-        $listener = $this->listener($sampler, $pushes, $enabled, new MockClock('2026-09-12T00:00:00Z'));
+        $listener = $this->listener($sampler, $pushes, $enabled, new MockClock('2026-09-12T00:00:00Z'), $log);
 
         $listener->onWorkerStarted();
 
         self::assertSame([WorkerProfilingListener::SAMPLE_PERIOD_SECONDS], $sampler->startedWithPeriods);
+        self::assertSame(['refresh', 'profilingEnabled'], $log);
     }
 
     public function testRunningBeforeTheFlushIntervalPushesNothing(): void
     {
         $pushes = [];
         $enabled = ['value' => true];
+        $log = [];
         $sampler = new TrackingProfileSampler();
-        $listener = $this->listener($sampler, $pushes, $enabled, new MockClock('2026-09-12T00:00:00Z'));
+        $listener = $this->listener($sampler, $pushes, $enabled, new MockClock('2026-09-12T00:00:00Z'), $log);
         $listener->onWorkerStarted();
 
         $listener->onWorkerRunning();
@@ -49,9 +52,10 @@ final class WorkerProfilingListenerTest extends TestCase
     {
         $pushes = [];
         $enabled = ['value' => true];
+        $log = [];
         $clock = new MockClock('2026-09-12T00:00:00Z');
         $sampler = new TrackingProfileSampler();
-        $listener = $this->listener($sampler, $pushes, $enabled, $clock);
+        $listener = $this->listener($sampler, $pushes, $enabled, $clock, $log);
         $listener->onWorkerStarted();
 
         $clock->sleep(10);
@@ -66,13 +70,33 @@ final class WorkerProfilingListenerTest extends TestCase
         self::assertTrue($sampler->isRunning());
     }
 
+    public function testRunningRechecksTheToggleEveryThirtySeconds(): void
+    {
+        $pushes = [];
+        $enabled = ['value' => true];
+        $log = [];
+        $clock = new MockClock('2026-09-12T00:00:00Z');
+        $sampler = new TrackingProfileSampler();
+        $listener = $this->listener($sampler, $pushes, $enabled, $clock, $log);
+        $listener->onWorkerStarted();
+
+        $clock->sleep(30);
+        $listener->onWorkerRunning();
+
+        self::assertSame(
+            ['refresh', 'profilingEnabled', 'refresh', 'profilingEnabled'],
+            $log,
+        );
+    }
+
     public function testPolicyDisabledWhileRunningFlushesWithoutRestarting(): void
     {
         $pushes = [];
         $enabled = ['value' => true];
+        $log = [];
         $clock = new MockClock('2026-09-12T00:00:00Z');
         $sampler = new TrackingProfileSampler();
-        $listener = $this->listener($sampler, $pushes, $enabled, $clock);
+        $listener = $this->listener($sampler, $pushes, $enabled, $clock, $log);
         $listener->onWorkerStarted();
 
         $enabled['value'] = false;
@@ -89,8 +113,9 @@ final class WorkerProfilingListenerTest extends TestCase
     {
         $pushes = [];
         $enabled = ['value' => true];
+        $log = [];
         $sampler = new TrackingProfileSampler();
-        $listener = $this->listener($sampler, $pushes, $enabled, new MockClock('2026-09-12T00:00:00Z'));
+        $listener = $this->listener($sampler, $pushes, $enabled, new MockClock('2026-09-12T00:00:00Z'), $log);
         $listener->onWorkerStarted();
 
         $listener->onWorkerStopped();
@@ -103,8 +128,9 @@ final class WorkerProfilingListenerTest extends TestCase
     {
         $pushes = [];
         $enabled = ['value' => false];
+        $log = [];
         $sampler = new TrackingProfileSampler();
-        $listener = $this->listener($sampler, $pushes, $enabled, new MockClock('2026-09-12T00:00:00Z'));
+        $listener = $this->listener($sampler, $pushes, $enabled, new MockClock('2026-09-12T00:00:00Z'), $log);
 
         $listener->onWorkerStarted();
 
@@ -115,16 +141,23 @@ final class WorkerProfilingListenerTest extends TestCase
     /**
      * @param list<array{name: string}> $pushes
      * @param array{value: bool} $enabled
+     * @param list<string> $log
      */
     private function listener(
         TrackingProfileSampler $sampler,
         array &$pushes,
         array &$enabled,
         MockClock $clock,
+        array &$log,
     ): WorkerProfilingListener {
         $settings = $this->createStub(GrafanaSettings::class);
+        $settings->method('refresh')->willReturnCallback(static function () use (&$log): void {
+            $log[] = 'refresh';
+        });
         $settings->method('profilingEnabled')->willReturnCallback(
-            static function () use (&$enabled): bool {
+            static function () use (&$enabled, &$log): bool {
+                $log[] = 'profilingEnabled';
+
                 return $enabled['value'];
             },
         );
@@ -140,7 +173,7 @@ final class WorkerProfilingListenerTest extends TestCase
             $this->endpoint(),
         );
 
-        return new WorkerProfilingListener($policy, $sampler, $client, $clock);
+        return new WorkerProfilingListener($policy, $sampler, $client, $clock, $settings);
     }
 
     private function endpoint(): PyroscopeEndpoint
