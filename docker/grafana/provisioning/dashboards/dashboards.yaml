@@ -5,7 +5,9 @@ providers:
     orgId: 1
     folder: ''
     type: file
-    disableDeletion: false
+    # A desynced Docker Desktop bind mount can present this folder empty; with
+    # deletion allowed, that provisioning run would drop the live dashboard.
+    disableDeletion: true
     editable: true
     options:
       path: /var/lib/grafana/dashboards
