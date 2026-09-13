@@ -40,6 +40,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Service\Scraper\ScrapedFixtures;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\StubFeedFetcher;
+use App\Tests\Support\TtlRecordingLockFactory;
 use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
 use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
@@ -47,7 +48,6 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\ServiceLocator;
-use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\Store\InMemoryStore;
 
 final class RefreshRunnerTest extends DbTestCase
@@ -57,7 +57,7 @@ final class RefreshRunnerTest extends DbTestCase
     private MockClock $clock;
     private StubFeedFetcher $fetcher;
     private StubFeedFetcher $faviconFetcher;
-    private LockFactory $lockFactory;
+    private TtlRecordingLockFactory $lockFactory;
     private User $subscriber;
     private RecordingSearchIndexWriter $indexWriter;
     private RecordingContentChangeMarker $changeMarker;
@@ -71,7 +71,7 @@ final class RefreshRunnerTest extends DbTestCase
         // Favicon resolution has its own fetcher so homepage fetches never
         // pollute assertions on which FEEDS the runner fetched.
         $this->faviconFetcher = new StubFeedFetcher();
-        $this->lockFactory = new LockFactory(new InMemoryStore());
+        $this->lockFactory = new TtlRecordingLockFactory(new InMemoryStore());
         $this->indexWriter = new RecordingSearchIndexWriter();
         // dueFeed() subscribes every fixture feed to this user so the #246
         // orphan sweep (wired into every allDue() request) never deletes a
@@ -213,6 +213,18 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertNotNull($feedA->getNextFetchAt());
         self::assertGreaterThan($this->clock->now(), $feedA->getNextFetchAt());
         self::assertCount(1, $this->em->getRepository(Entry::class)->findAll());
+    }
+
+    /**
+     * A fatal never reaches the finally that releases the lock, so the TTL is
+     * what frees the next tick: well under the cron cadence, above the longest
+     * run budget (25 s).
+     */
+    public function testHoldsTheRefreshLockForOneMinute(): void
+    {
+        $this->runner()->run(RefreshRequest::allDue(300));
+
+        self::assertSame(60.0, $this->lockFactory->lastTtlFor('feed-refresh'));
     }
 
     public function testMovesTheChangeMarkerWhenAnImportStoredNewEntries(): void

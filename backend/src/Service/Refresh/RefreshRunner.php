@@ -50,7 +50,7 @@ use Symfony\Component\Lock\LockFactory;
 final class RefreshRunner implements RefreshRunnerInterface
 {
     private const string LOCK_NAME = 'feed-refresh';
-    private const float LOCK_TTL_SECONDS = 300.0;
+    private const float LOCK_TTL_SECONDS = 60.0;
     private const int BATCH_LIMIT = 50;
     private const int COOLDOWN_MINUTES = 5;
     private const int ETAG_MAX = 512;
