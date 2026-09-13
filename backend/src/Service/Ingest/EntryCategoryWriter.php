@@ -80,6 +80,7 @@ final class EntryCategoryWriter
     {
         $resolved = $this->categories->findExistingByIdentities(array_values($distinct));
 
+        $persistedNew = false;
         foreach ($distinct as $identity => $category) {
             if (isset($resolved[$identity])) {
                 continue;
@@ -87,9 +88,12 @@ final class EntryCategoryWriter
             $created = new Category($category->canonicalKey, $category->scheme);
             $this->entityManager->persist($created);
             $resolved[$identity] = $created;
+            $persistedNew = true;
         }
 
-        $this->entityManager->flush();
+        if ($persistedNew) {
+            $this->entityManager->flush();
+        }
 
         return $resolved;
     }
