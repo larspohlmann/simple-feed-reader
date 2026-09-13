@@ -6,6 +6,7 @@ namespace App\Service\Recommendation;
 
 use App\Entity\User;
 use App\Http\RecommendationRunStatusJson;
+use OpenTelemetry\API\Instrumentation\WithSpan;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
@@ -25,6 +26,7 @@ final readonly class RecommendationRunStatusPayload
     }
 
     /** @return array<string, mixed> */
+    #[WithSpan]
     public function forReport(RecommendationRunReport $report, User $user): array
     {
         return RecommendationRunStatusJson::report(

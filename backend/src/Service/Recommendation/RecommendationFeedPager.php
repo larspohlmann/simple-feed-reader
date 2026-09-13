@@ -8,6 +8,7 @@ use App\Http\RecommendationCursor;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationFeedRow;
 use App\Repository\RecommendationItemRepository;
+use OpenTelemetry\API\Instrumentation\WithSpan;
 
 final readonly class RecommendationFeedPager
 {
@@ -21,6 +22,7 @@ final readonly class RecommendationFeedPager
      * than an error — the same leniency EntryCursor deliberately does NOT
      * have, because here a stale/garbled cursor should never break the feed.
      */
+    #[WithSpan]
     public function page(ForYouFeedQuery $query): RecommendationFeedPage
     {
         $cursor = $query->cursor;

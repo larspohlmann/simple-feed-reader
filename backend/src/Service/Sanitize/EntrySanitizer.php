@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Sanitize;
 
+use OpenTelemetry\API\Instrumentation\WithSpan;
 use Symfony\Component\HtmlSanitizer\HtmlSanitizer;
 use Symfony\Component\HtmlSanitizer\HtmlSanitizerConfig;
 use Symfony\Component\HtmlSanitizer\HtmlSanitizerInterface;
@@ -47,6 +48,7 @@ final class EntrySanitizer
         $this->sanitizer = new HtmlSanitizer($config);
     }
 
+    #[WithSpan]
     public function sanitize(?string $html): ?string
     {
         if ($html === null || trim($html) === '') {
