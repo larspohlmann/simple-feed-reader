@@ -17,7 +17,9 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
+use Symfony\Component\HttpKernel\Event\TerminateEvent;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 
 final class RequestProfilingListenerTest extends TestCase
@@ -30,14 +32,28 @@ final class RequestProfilingListenerTest extends TestCase
         $sampler = new RecordingProfileSampler();
         $pushes = [];
         $listener = $this->listener($sampler, $pushes, enabled: true, traceId: self::TRACE_ID, spanId: self::SPAN_ID);
+        $request = $this->routedRequest('api_entries_list');
 
-        $listener->onKernelRequest($this->mainRequestEvent());
-        $listener->onKernelTerminate();
+        $listener->onKernelRequest($this->mainRequestEvent($request));
+        $listener->onKernelTerminate($this->terminateEvent($request));
 
         self::assertSame([RequestProfilingListener::SAMPLE_PERIOD_SECONDS], $sampler->startedWithPeriods);
         self::assertCount(1, $pushes);
         self::assertStringContainsString('trace_id=' . self::TRACE_ID, $pushes[0]['name']);
         self::assertStringContainsString('span_id=' . self::SPAN_ID, $pushes[0]['name']);
+        self::assertStringContainsString('route=api_entries_list', $pushes[0]['name']);
+    }
+
+    public function testARequestThatNeverReachedTheRouterIsLabelledUnrouted(): void
+    {
+        $sampler = new RecordingProfileSampler();
+        $pushes = [];
+        $listener = $this->listener($sampler, $pushes, enabled: true, traceId: self::TRACE_ID, spanId: self::SPAN_ID);
+
+        $listener->onKernelRequest($this->mainRequestEvent());
+        $listener->onKernelTerminate($this->terminateEvent());
+
+        self::assertStringContainsString('route=unrouted', $pushes[0]['name']);
     }
 
     public function testASubRequestNeverStartsTheSampler(): void
@@ -79,7 +95,7 @@ final class RequestProfilingListenerTest extends TestCase
         $pushes = [];
         $listener = $this->listener($sampler, $pushes, enabled: true, traceId: self::TRACE_ID, spanId: self::SPAN_ID);
 
-        $listener->onKernelTerminate();
+        $listener->onKernelTerminate($this->terminateEvent());
 
         self::assertSame([], $pushes);
     }
@@ -91,7 +107,7 @@ final class RequestProfilingListenerTest extends TestCase
         $listener = $this->listener($sampler, $pushes, enabled: true, traceId: self::TRACE_ID, spanId: self::SPAN_ID);
 
         $listener->onKernelRequest($this->mainRequestEvent());
-        $listener->onKernelTerminate();
+        $listener->onKernelTerminate($this->terminateEvent());
 
         self::assertSame([], $pushes);
     }
@@ -109,8 +125,8 @@ final class RequestProfilingListenerTest extends TestCase
         );
         $listener->onKernelRequest($this->mainRequestEvent());
 
-        $listener->onKernelTerminate();
-        $listener->onKernelTerminate();
+        $listener->onKernelTerminate($this->terminateEvent());
+        $listener->onKernelTerminate($this->terminateEvent());
 
         self::assertSame([], $pushes);
     }
@@ -218,14 +234,27 @@ final class RequestProfilingListenerTest extends TestCase
         };
     }
 
-    private function mainRequestEvent(): RequestEvent
+    private function mainRequestEvent(Request $request = new Request()): RequestEvent
     {
-        return new RequestEvent($this->kernel(), new Request(), HttpKernelInterface::MAIN_REQUEST);
+        return new RequestEvent($this->kernel(), $request, HttpKernelInterface::MAIN_REQUEST);
     }
 
     private function subRequestEvent(): RequestEvent
     {
         return new RequestEvent($this->kernel(), new Request(), HttpKernelInterface::SUB_REQUEST);
+    }
+
+    private function terminateEvent(Request $request = new Request()): TerminateEvent
+    {
+        return new TerminateEvent($this->kernel(), $request, new Response());
+    }
+
+    private function routedRequest(string $route): Request
+    {
+        $request = new Request();
+        $request->attributes->set('_route', $route);
+
+        return $request;
     }
 
     private function kernel(): HttpKernelInterface

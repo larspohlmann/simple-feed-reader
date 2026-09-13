@@ -28,6 +28,11 @@ final readonly class ProfileLabels
         return new self(['service_name' => self::SERVICE_NAME, 'process' => 'worker']);
     }
 
+    public function withRoute(string $route): self
+    {
+        return new self([...$this->labels, 'route' => $route]);
+    }
+
     public function toNameParameter(string $application): string
     {
         $pairs = array_map(

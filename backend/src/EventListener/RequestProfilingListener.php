@@ -11,6 +11,7 @@ use App\Service\Profiling\ProfilingPolicy;
 use App\Service\Profiling\PyroscopeClient;
 use OpenTelemetry\API\Trace\Span;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Event\TerminateEvent;
 
@@ -20,6 +21,7 @@ final class RequestProfilingListener
 {
     public const float SAMPLE_PERIOD_SECONDS = 0.001;
     private const string PROFILE_ID_ATTRIBUTE = 'pyroscope.profile.id';
+    private const string UNROUTED = 'unrouted';
 
     private ?ProfileLabels $labels = null;
 
@@ -51,12 +53,12 @@ final class RequestProfilingListener
         }
     }
 
-    public function onKernelTerminate(): void
+    public function onKernelTerminate(TerminateEvent $event): void
     {
         if (null === $this->labels) {
             return;
         }
-        $labels = $this->labels;
+        $labels = $this->labels->withRoute(self::routeOf($event->getRequest()));
         $this->labels = null;
         try {
             $profile = $this->sampler->stop();
@@ -65,5 +67,10 @@ final class RequestProfilingListener
             }
         } catch (\Throwable) {
         }
+    }
+
+    private static function routeOf(Request $request): string
+    {
+        return $request->attributes->getString('_route', self::UNROUTED);
     }
 }

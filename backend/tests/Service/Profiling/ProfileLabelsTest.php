@@ -25,4 +25,25 @@ final class ProfileLabelsTest extends TestCase
 
         self::assertSame('simple-feed-reader{service_name=simple-feed-reader,process=worker}', $name);
     }
+
+    public function testWithRouteAppendsARouteLabelToTheWebRequestLabels(): void
+    {
+        $name = ProfileLabels::forWebRequest('abc', 'def')
+            ->withRoute('api_entries_list')
+            ->toNameParameter('simple-feed-reader');
+
+        self::assertSame(
+            'simple-feed-reader{service_name=simple-feed-reader,process=web,trace_id=abc,span_id=def,'
+            . 'route=api_entries_list}',
+            $name,
+        );
+    }
+
+    public function testWithRouteLeavesTheOriginalLabelsUntouched(): void
+    {
+        $original = ProfileLabels::forWebRequest('abc', 'def');
+        $original->withRoute('api_entries_list');
+
+        self::assertStringNotContainsString('route=', $original->toNameParameter('simple-feed-reader'));
+    }
 }
