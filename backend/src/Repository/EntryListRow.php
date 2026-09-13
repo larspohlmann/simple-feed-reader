@@ -48,21 +48,20 @@ final readonly class EntryListRow
      */
     public function withDuplicates(array $duplicates): self
     {
-        return new self(
-            $this->entry,
-            new EntryListRowSubscription($this->subscriptionId, $this->subscriptionTitle),
-            $this->isHidden,
-            $this->isFavorite,
-            $this->isKept,
-            new EntryListRowViewState($this->isViewed, $this->viewedAt),
-            $this->markedReadUntil,
-            $duplicates,
-            $this->categories,
-        );
+        return $this->copyWith($duplicates, $this->categories);
     }
 
     /** @param list<string> $categories */
     public function withCategories(array $categories): self
+    {
+        return $this->copyWith($this->duplicates, $categories);
+    }
+
+    /**
+     * @param list<self>   $duplicates
+     * @param list<string> $categories
+     */
+    private function copyWith(array $duplicates, array $categories): self
     {
         return new self(
             $this->entry,
@@ -72,7 +71,7 @@ final readonly class EntryListRow
             $this->isKept,
             new EntryListRowViewState($this->isViewed, $this->viewedAt),
             $this->markedReadUntil,
-            $this->duplicates,
+            $duplicates,
             $categories,
         );
     }
