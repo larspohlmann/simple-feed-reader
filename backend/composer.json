@@ -119,6 +119,10 @@
         "tramp": "phptramp",
         "tramp:update": "composer update phptramp/phptramp --no-interaction --no-progress --no-scripts",
         "check": ["@cs", "@stan", "@tramp"],
+        "test": [
+            "@putenv OTEL_PHP_DISABLED_INSTRUMENTATIONS=all",
+            "@php bin/phpunit"
+        ],
         "infection": [
             "@putenv OTEL_PHP_DISABLED_INSTRUMENTATIONS=all",
             "infection --threads=max"

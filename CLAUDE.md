@@ -23,6 +23,7 @@ composer tramp       # phptramp, tramp-data chains (thresholds in phptramp.dist.
 composer tramp:update     # re-resolve phptramp to the tip of its develop branch
 composer check       # cs + stan + tramp
 php bin/phpunit      # unit/integration suite (SQLite natively)
+composer test        # phpunit with OpenTelemetry off — use this in Docker (see below)
 composer infection   # mutation testing over all of src (needs pcov or xdebug)
 composer infection:diff   # …over the files this branch changes — what CI gates
 composer e2e         # black-box e2e against the running Docker stack
@@ -42,9 +43,14 @@ Docker stack (from the repo root) — see [docs/local-docker.md](docs/local-dock
 
 ```bash
 docker compose up -d
-docker compose exec php vendor/bin/phpunit    # the MySQL leg of the suite
+docker compose exec php composer test         # the MySQL leg of the suite
 docker compose exec php bin/console doctrine:migrations:migrate --no-interaction
 ```
+
+**Run the MySQL leg with `composer test`, not bare `vendor/bin/phpunit`.** The dev
+stack exports OpenTelemetry traces on every query, and a bare phpunit inherits that
+env — a ~6x tax. `composer test` disables it (`composer test -- --filter=Foo` passes
+args); CI never installs the extension, so it is unaffected.
 
 `docker compose down` is safe. **`docker compose down -v` deletes the MySQL volume.**
 Dev also runs Grafana (http://localhost:3000, `admin`/`admin`), Loki, Tempo and
@@ -230,7 +236,8 @@ control, not ceremony — do not "simplify" it away, and do not delete
 ## Testing
 
 - Backend unit/integration: `php bin/phpunit` (SQLite) natively, or
-  `docker compose exec php vendor/bin/phpunit` (MySQL). Run both legs before a PR.
+  `docker compose exec php composer test` (MySQL — see the Docker stack note on why
+  not bare `vendor/bin/phpunit`). Run both legs before a PR.
 - **Direct-invocation tests mislead.** A listener test that bypasses the dispatcher
   can assert something the real wiring makes impossible — back it with a
   functional test.
