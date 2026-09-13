@@ -12,9 +12,11 @@ use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
 use App\Service\Grafana\GrafanaConnection;
 use App\Service\Grafana\GrafanaEnvDefaults;
 use App\Service\Grafana\GrafanaSettings;
+use App\Service\Grafana\GrafanaSettingsCache;
 use App\Service\Profiling\NullProfileSampler;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
 final class GrafanaSettingsTest extends TestCase
 {
@@ -166,6 +168,7 @@ final class GrafanaSettingsTest extends TestCase
             new GrafanaApiKeyCipher(new InstanceSecretCipher(self::SECRET)),
             new GrafanaEnvDefaults('', '', ''),
             new NullProfileSampler(),
+            new GrafanaSettingsCache(new ArrayAdapter()),
         );
 
         self::assertSame('https://cloud.example/loki/push', $settings->effectiveLokiPushUrl());
@@ -173,18 +176,15 @@ final class GrafanaSettingsTest extends TestCase
         self::assertSame('glc_secrettoken', $settings->lokiToken());
     }
 
-    public function testRefreshMakesTheNextReadSeeAChangedRow(): void
+    /**
+     * refresh() clears only the per-request memo; a warm shared pool keeps
+     * answering without a query (#1012). The worker relies on this — its 30 s
+     * re-check must not become a query per tick.
+     */
+    public function testRefreshAloneKeepsServingTheCachedRowWithoutQueryingAgain(): void
     {
-        $original = new GrafanaSettingsEntity();
-        $original->applyWithoutToken(new GrafanaConnection(null, null, null, null, false));
-
-        $changed = new GrafanaSettingsEntity();
-        $changed->applyWithoutToken(new GrafanaConnection(null, null, null, null, true));
-
         $repository = $this->createMock(GrafanaSettingsRepository::class);
-        $repository->expects(self::exactly(2))
-            ->method('findSingleton')
-            ->willReturnOnConsecutiveCalls($original, $changed);
+        $repository->expects(self::once())->method('findSingleton')->willReturn(new GrafanaSettingsEntity());
 
         $settings = new GrafanaSettings(
             $repository,
@@ -192,14 +192,32 @@ final class GrafanaSettingsTest extends TestCase
             new GrafanaApiKeyCipher(new InstanceSecretCipher(self::SECRET)),
             new GrafanaEnvDefaults('', '', ''),
             new NullProfileSampler(),
+            new GrafanaSettingsCache(new ArrayAdapter()),
         );
 
-        self::assertFalse($settings->profilingEnabled());
-        self::assertFalse($settings->profilingEnabled());
-
+        $settings->profilingEnabled();
         $settings->refresh();
+        $settings->profilingEnabled();
+    }
 
-        self::assertTrue($settings->profilingEnabled());
+    /**
+     * The admin form saves in php-fpm; the worker re-checks the toggle in its
+     * own process. update() forgets the shared pool so the worker, once its
+     * memo is refreshed, reads the new row rather than the stale cache (#1012).
+     */
+    public function testAnAdminSaveInvalidatesTheSharedCacheSoTheWorkerSeesTheChange(): void
+    {
+        $cache = new GrafanaSettingsCache(new ArrayAdapter());
+
+        $webProcess = $this->service($stored, cache: $cache);
+        $workerProcess = $this->service($stored, cache: $cache);
+
+        self::assertFalse($workerProcess->profilingEnabled());
+
+        $webProcess->update(new GrafanaSettingsRequest(profilingEnabled: true));
+
+        $workerProcess->refresh();
+        self::assertTrue($workerProcess->profilingEnabled());
     }
 
     public function testUpdateFlushesTheEntityManager(): void
@@ -217,6 +235,7 @@ final class GrafanaSettingsTest extends TestCase
             $cipher,
             new GrafanaEnvDefaults('', '', ''),
             new NullProfileSampler(),
+            new GrafanaSettingsCache(new ArrayAdapter()),
         );
 
         $settings->update(new GrafanaSettingsRequest(grafanaUrl: 'https://a.example'));
@@ -228,6 +247,7 @@ final class GrafanaSettingsTest extends TestCase
         string $lokiPushUrlDefault = '',
         string $grafanaUrlDefault = '',
         string $pyroscopePushUrlDefault = '',
+        ?GrafanaSettingsCache $cache = null,
     ): GrafanaSettings {
         $stored = null;
         $repository = $this->createStub(GrafanaSettingsRepository::class);
@@ -245,6 +265,13 @@ final class GrafanaSettingsTest extends TestCase
         $cipher = new GrafanaApiKeyCipher(new InstanceSecretCipher(self::SECRET));
         $defaults = new GrafanaEnvDefaults($lokiPushUrlDefault, $grafanaUrlDefault, $pyroscopePushUrlDefault);
 
-        return new GrafanaSettings($repository, $em, $cipher, $defaults, new NullProfileSampler());
+        return new GrafanaSettings(
+            $repository,
+            $em,
+            $cipher,
+            $defaults,
+            new NullProfileSampler(),
+            $cache ?? new GrafanaSettingsCache(new ArrayAdapter()),
+        );
     }
 }

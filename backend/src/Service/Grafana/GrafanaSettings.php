@@ -19,12 +19,14 @@ use Doctrine\ORM\EntityManagerInterface;
  * the token sealing all live in one place.
  *
  * `class`, not `readonly`: settings() memoises the resolved row so a Loki
- * flush reading pushUrl/username/token in a row issues one SELECT instead of
+ * flush reading pushUrl/username/token in a row issues one lookup instead of
  * three (mirrors App\Service\Settings\InstanceSettings). The memo is a plain
- * field — request-scoped under PHP-FPM, never promote it to a shared cache.
- * update() clears it so a read after a write sees the new value; the
- * long-running worker calls refresh() on its periodic toggle re-check so a
- * change is seen without a restart. Not marked `final`: SettingsLokiEndpointTest
+ * field — request-scoped under PHP-FPM. The row itself is read through
+ * GrafanaSettingsCache, so a warm request answers profiling/Loki/Pyroscope from
+ * the shared pool without a query (#1012). update() forgets that pool so a read
+ * after a write sees the new value; refresh() clears only the memo, which the
+ * long-running worker calls on its periodic toggle re-check to pick up an
+ * admin save from the web process. Not marked `final`: SettingsLokiEndpointTest
  * stubs this class.
  */
 class GrafanaSettings
@@ -37,6 +39,7 @@ class GrafanaSettings
         private readonly GrafanaApiKeyCipher $cipher,
         private readonly GrafanaEnvDefaults $defaults,
         private readonly ProfileSampler $sampler,
+        private readonly GrafanaSettingsCache $cache,
     ) {
     }
 
@@ -66,6 +69,7 @@ class GrafanaSettings
         }
 
         $this->em->flush();
+        $this->cache->forget();
         $this->refresh();
     }
 
@@ -105,13 +109,19 @@ class GrafanaSettings
     }
 
     /**
-     * Never persisted: a fresh GrafanaSettings stands in for the no-row case
-     * only for the span of one request. update() above has its own
-     * findSingleton()-then-persist path and never reads through this memo.
+     * Never persisted: a fresh GrafanaSettings stands in for the no-row case,
+     * and the entity a cache hit rebuilds is detached. update() above has its
+     * own findSingleton()-then-persist path and never reads through this memo
+     * or the cache.
      */
     private function settings(): GrafanaSettingsEntity
     {
-        return $this->memoisedSettings ??= $this->repository->findSingleton() ?? new GrafanaSettingsEntity();
+        return $this->memoisedSettings ??= $this->cache->remember($this->loadSingleton(...))->toEntity();
+    }
+
+    private function loadSingleton(): GrafanaSettingsSnapshot
+    {
+        return GrafanaSettingsSnapshot::fromEntity($this->repository->findSingleton() ?? new GrafanaSettingsEntity());
     }
 
     private function connectionFrom(GrafanaSettingsRequest $request): GrafanaConnection
