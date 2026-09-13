@@ -10,6 +10,7 @@ use App\Http\EntryCursor;
 use App\Http\EntryPage;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowSubscription;
+use App\Repository\EntryListRowViewState;
 use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
 use PHPUnit\Framework\TestCase;
@@ -268,8 +269,7 @@ final class EntryPageTest extends TestCase
             isHidden: false,
             isFavorite: false,
             isKept: false,
-            isViewed: $viewedAt !== null,
-            viewedAt: $viewedAt,
+            viewState: new EntryListRowViewState(isViewed: $viewedAt !== null, viewedAt: $viewedAt),
             markedReadUntil: null,
         );
     }
