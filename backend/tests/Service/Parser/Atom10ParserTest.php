@@ -57,10 +57,10 @@ final class Atom10ParserTest extends TestCase
         $feed = $this->parse($xml);
 
         self::assertCount(4, $feed->entries);
-        self::assertSame('https://e/t.jpg', $feed->entries[0]->image?->url);
-        self::assertSame('https://e/enc.png', $feed->entries[1]->image?->url);
-        self::assertSame('https://e/inline.jpg', $feed->entries[2]->image?->url);
-        self::assertNull($feed->entries[3]->image);
+        self::assertSame('https://e/t.jpg', $feed->entries[0]->media?->image?->url);
+        self::assertSame('https://e/enc.png', $feed->entries[1]->media?->image?->url);
+        self::assertSame('https://e/inline.jpg', $feed->entries[2]->media?->image?->url);
+        self::assertNull($feed->entries[3]->media?->image);
     }
 
     public function testEntryImageFallsBackToAnImgInAnHtmlSummary(): void
@@ -86,7 +86,7 @@ final class Atom10ParserTest extends TestCase
 
         $feed = $this->parse($xml);
 
-        self::assertSame('https://e/summary.jpg', $feed->entries[0]->image?->url);
+        self::assertSame('https://e/summary.jpg', $feed->entries[0]->media?->image?->url);
     }
 
     public function testEntryImageFallsBackToAnImgInAnXhtmlSummary(): void
@@ -114,7 +114,7 @@ final class Atom10ParserTest extends TestCase
 
         $feed = $this->parse($xml);
 
-        self::assertSame('https://e/xhtml.jpg', $feed->entries[0]->image?->url);
+        self::assertSame('https://e/xhtml.jpg', $feed->entries[0]->media?->image?->url);
     }
 
     public function testEntryContentImageStillWinsOverASummaryImage(): void
@@ -139,7 +139,7 @@ final class Atom10ParserTest extends TestCase
 
         $feed = $this->parse($xml);
 
-        self::assertSame('https://e/content.jpg', $feed->entries[0]->image?->url);
+        self::assertSame('https://e/content.jpg', $feed->entries[0]->media?->image?->url);
     }
 
     public function testMediaImageWinsWhenEveryImageSourceIsPresent(): void
@@ -167,7 +167,7 @@ final class Atom10ParserTest extends TestCase
 
         $feed = $this->parse($xml);
 
-        self::assertSame('https://e/media.jpg', $feed->entries[0]->image?->url);
+        self::assertSame('https://e/media.jpg', $feed->entries[0]->media?->image?->url);
     }
 
     public function testEnclosureWinsOverCustomImageAndBodyImages(): void
@@ -194,7 +194,7 @@ final class Atom10ParserTest extends TestCase
 
         $feed = $this->parse($xml);
 
-        self::assertSame('https://e/enc.png', $feed->entries[0]->image?->url);
+        self::assertSame('https://e/enc.png', $feed->entries[0]->media?->image?->url);
     }
 
     public function testCustomImageElementWinsOverBodyImages(): void
@@ -220,7 +220,7 @@ final class Atom10ParserTest extends TestCase
 
         $feed = $this->parse($xml);
 
-        self::assertSame('https://e/custom.jpg', $feed->entries[0]->image?->url);
+        self::assertSame('https://e/custom.jpg', $feed->entries[0]->media?->image?->url);
     }
 
     public function testEntryImageComesFromACustomImageBigElement(): void
@@ -245,7 +245,7 @@ final class Atom10ParserTest extends TestCase
 
         $feed = $this->parse($xml);
 
-        $image = $feed->entries[0]->image;
+        $image = $feed->entries[0]->media?->image;
         self::assertNotNull($image);
         self::assertSame('https://images.example.de/big.jpg', $image->url);
         self::assertSame(640, $image->width);

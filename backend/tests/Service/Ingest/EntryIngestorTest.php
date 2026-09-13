@@ -10,6 +10,7 @@ use App\Repository\EntryRepository;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\FeedIngestContext;
 use App\Service\Parser\ParsedEntry;
+use App\Service\Parser\ParsedEntryMedia;
 use App\Service\Parser\ParsedFeed;
 use App\Service\Image\DeclaredImage;
 use App\Service\Parser\ParsedAttachment;
@@ -61,10 +62,12 @@ final class EntryIngestorTest extends DbTestCase
             summary: null,
             contentHtml: '<p>body</p>',
             publishedAt: null,
-            image: new DeclaredImage('https://i/lead.jpg', 800, 600),
-            mediaBundle: new ParsedMediaBundle(
-                [new ParsedMedium('https://i/extra.jpg', VisualMediaKind::Image)],
-                [new ParsedAttachment('https://cdn/ep.mp3', 'audio/mpeg', 3723, 4200000)],
+            media: new ParsedEntryMedia(
+                new DeclaredImage('https://i/lead.jpg', 800, 600),
+                new ParsedMediaBundle(
+                    [new ParsedMedium('https://i/extra.jpg', VisualMediaKind::Image)],
+                    [new ParsedAttachment('https://cdn/ep.mp3', 'audio/mpeg', 3723, 4200000)],
+                ),
             ),
         );
 
@@ -242,7 +245,7 @@ final class EntryIngestorTest extends DbTestCase
             summary: null,
             contentHtml: '<p>body</p>',
             publishedAt: null,
-            image: $image,
+            media: $image === null ? null : new ParsedEntryMedia($image),
         );
     }
 
@@ -388,7 +391,7 @@ final class EntryIngestorTest extends DbTestCase
                 summary: null,
                 contentHtml: '<p>body</p>',
                 publishedAt: null,
-                image: new DeclaredImage('https://i/1.jpg', 948, 474),
+                media: new ParsedEntryMedia(new DeclaredImage('https://i/1.jpg', 948, 474)),
             ),
         ]);
 
@@ -432,7 +435,7 @@ final class EntryIngestorTest extends DbTestCase
                 summary: null,
                 contentHtml: '<p>body</p>',
                 publishedAt: null,
-                image: new DeclaredImage($overlongUrl, 100, 100),
+                media: new ParsedEntryMedia(new DeclaredImage($overlongUrl, 100, 100)),
             ),
         ]);
 

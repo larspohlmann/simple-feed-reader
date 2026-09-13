@@ -74,7 +74,6 @@ final class SubscriptionServiceTest extends DbTestCase
             publishedAt: new \DateTimeImmutable('2026-05-31T12:00:00Z'),
             contentHtml: '<p>Hello.</p>',
             summary: null,
-            image: null,
         );
 
         return FeedDiscoveryResult::directFeed(new DiscoveredFeed(

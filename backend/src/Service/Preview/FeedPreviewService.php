@@ -95,14 +95,18 @@ final readonly class FeedPreviewService
             title: $feed->title,
             itemCount: \count($feed->entries),
             content: $this->verdict($tiers),
-            hasImages: array_any($sample, fn (ParsedEntry $e): bool => $this->httpsImageUrl($e->image) !== null),
+            hasImages: array_any(
+                $sample,
+                fn (ParsedEntry $e): bool => $this->httpsImageUrl($e->media?->image) !== null,
+            ),
             items: $items,
         );
     }
 
     private function item(ParsedEntry $entry): FeedPreviewItem
     {
-        $imageUrl = $this->httpsImageUrl($entry->image);
+        $image = $entry->media?->image;
+        $imageUrl = $this->httpsImageUrl($image);
 
         return new FeedPreviewItem(
             title: $entry->title,
@@ -112,8 +116,8 @@ final readonly class FeedPreviewService
             // reverse this precedence (contentHtml ?? summary) to measure the full body.
             summary: EntrySnippet::from($entry->summary ?? $entry->contentHtml),
             imageUrl: $imageUrl,
-            imageWidth: $imageUrl === null ? null : $entry->image?->width,
-            imageHeight: $imageUrl === null ? null : $entry->image?->height,
+            imageWidth: $imageUrl === null ? null : $image?->width,
+            imageHeight: $imageUrl === null ? null : $image?->height,
             publishedAt: $entry->publishedAt,
         );
     }

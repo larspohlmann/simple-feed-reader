@@ -174,7 +174,6 @@ final class FirstFetchRecorderTest extends DbTestCase
             summary: null,
             contentHtml: '<p>Body.</p>',
             publishedAt: $publishedAt,
-            image: null,
         );
     }
 

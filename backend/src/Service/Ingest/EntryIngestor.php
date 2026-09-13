@@ -92,7 +92,7 @@ final class EntryIngestor
             $entry->setSummary(EntrySnippet::from($parsedEntry->summary ?? $parsedEntry->contentHtml));
             $entry->setContentHtml($this->sanitizer->sanitize($parsedEntry->contentHtml));
             $entry->setPublishedAt($parsedEntry->publishedAt);
-            $this->applyImage($entry, $parsedEntry->image);
+            $this->applyImage($entry, $parsedEntry->media?->image);
             $this->applyMedia($entry, $parsedEntry);
 
             $this->em->persist($entry);
@@ -123,18 +123,19 @@ final class EntryIngestor
 
         $updated = 0;
         foreach ($parsed->entries as $parsedEntry) {
-            if ($parsedEntry->image === null) {
+            $image = $parsedEntry->media?->image;
+            if ($image === null) {
                 continue;
             }
             $entry = $existing[self::guidHash($parsedEntry->guid)] ?? null;
             if ($entry === null || $entry->getImageUrl() !== null) {
                 continue;
             }
-            $url = $this->persistableImageUrl($parsedEntry->image);
+            $url = $this->persistableImageUrl($image);
             if ($url === null) {
                 continue;
             }
-            $entry->setImage($url, $parsedEntry->image->width, $parsedEntry->image->height);
+            $entry->setImage($url, $image->width, $image->height);
             $updated++;
         }
 
@@ -193,8 +194,8 @@ final class EntryIngestor
      */
     private function applyMedia(Entry $entry, ParsedEntry $parsedEntry): void
     {
-        $bundle = $parsedEntry->mediaBundle ?? new ParsedMediaBundle();
-        $assembled = EntryMediaAssembler::assemble($parsedEntry->image, $bundle->media, $bundle->attachments);
+        $bundle = $parsedEntry->media->mediaBundle ?? new ParsedMediaBundle();
+        $assembled = EntryMediaAssembler::assemble($parsedEntry->media?->image, $bundle->media, $bundle->attachments);
         $entry->setMedia($assembled->media, $assembled->attachments);
     }
 

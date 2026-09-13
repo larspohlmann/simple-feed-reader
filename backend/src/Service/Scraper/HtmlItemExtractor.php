@@ -6,6 +6,7 @@ namespace App\Service\Scraper;
 
 use App\Service\Parser\GuidFallback;
 use App\Service\Parser\ParsedEntry;
+use App\Service\Parser\ParsedEntryMedia;
 use App\Service\Parser\ParsedFeed;
 use App\Service\Image\DeclaredImage;
 use App\Service\Scraper\Exception\HtmlExtractionException;
@@ -145,7 +146,7 @@ final readonly class HtmlItemExtractor
                 ? null
                 : '<p>' . htmlspecialchars($teaser, \ENT_QUOTES) . '</p>',
             publishedAt: $item->publishedAt,
-            image: $item->imageUrl === null ? null : new DeclaredImage($item->imageUrl),
+            media: $item->imageUrl === null ? null : new ParsedEntryMedia(new DeclaredImage($item->imageUrl)),
         );
     }
 }

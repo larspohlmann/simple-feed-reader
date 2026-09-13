@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Parser;
 
-use App\Service\Image\DeclaredImage;
-
 final readonly class ParsedEntry
 {
     public function __construct(
@@ -16,8 +14,7 @@ final readonly class ParsedEntry
         public ?string $summary,
         public ?string $contentHtml,
         public ?\DateTimeImmutable $publishedAt,
-        public ?DeclaredImage $image = null,
-        public ?ParsedMediaBundle $mediaBundle = null,
+        public ?ParsedEntryMedia $media = null,
         /** @var list<ParsedCategory> */
         public array $categories = [],
     ) {
