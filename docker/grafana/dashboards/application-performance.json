@@ -37,7 +37,7 @@
       "transformations": [
         { "id": "labelsToFields", "options": { "mode": "columns" } },
         { "id": "merge", "options": {} },
-        { "id": "organize", "options": { "excludeByName": { "time": true, "Time": true, "p": true }, "renameByName": { "span.http.route": "Route", "value": "p95", "Value": "p95" } } }
+        { "id": "organize", "options": { "excludeByName": { "time": true, "Time": true, "p": true }, "renameByName": { "span.http.route": "Route", "value": "p95" } } }
       ],
       "fieldConfig": {
         "defaults": { "custom": { "align": "auto", "filterable": true } },
@@ -64,7 +64,7 @@
       "transformations": [
         { "id": "labelsToFields", "options": { "mode": "columns" } },
         { "id": "merge", "options": {} },
-        { "id": "organize", "options": { "excludeByName": { "time": true, "Time": true }, "renameByName": { "span.http.route": "Route", "value": "Avg", "Value": "Avg" } } }
+        { "id": "organize", "options": { "excludeByName": { "time": true, "Time": true }, "renameByName": { "span.http.route": "Route", "value": "Avg" } } }
       ],
       "fieldConfig": {
         "defaults": { "custom": { "align": "auto", "filterable": true } },
@@ -91,7 +91,7 @@
       "transformations": [
         { "id": "labelsToFields", "options": { "mode": "columns" } },
         { "id": "merge", "options": {} },
-        { "id": "organize", "options": { "excludeByName": { "time": true, "Time": true }, "renameByName": { "span.http.route": "Route", "value": "Requests", "Value": "Requests" } } }
+        { "id": "organize", "options": { "excludeByName": { "time": true, "Time": true }, "renameByName": { "span.http.route": "Route", "value": "Requests" } } }
       ],
       "fieldConfig": {
         "defaults": { "custom": { "align": "auto", "filterable": true } },
@@ -118,7 +118,7 @@
       "transformations": [
         { "id": "labelsToFields", "options": { "mode": "columns" } },
         { "id": "merge", "options": {} },
-        { "id": "organize", "options": { "excludeByName": { "time": true, "Time": true }, "renameByName": { "span.http.route": "Route", "value": "Errors", "Value": "Errors" } } }
+        { "id": "organize", "options": { "excludeByName": { "time": true, "Time": true }, "renameByName": { "span.http.route": "Route", "value": "Errors" } } }
       ],
       "fieldConfig": {
         "defaults": { "custom": { "align": "auto", "filterable": true } },
@@ -164,7 +164,7 @@
       "datasource": { "type": "tempo", "uid": "tempo" },
       "gridPos": { "h": 10, "w": 12, "x": 0, "y": 27 },
       "targets": [
-        { "refId": "A", "queryType": "traceql", "metricsQueryType": "range", "step": "1m", "query": "{ kind = server && span.http.route = \"$route\" } >> { kind = internal } | avg_over_time(duration) by (name)" }
+        { "refId": "A", "queryType": "traceql", "metricsQueryType": "range", "step": "1h", "query": "{ kind = server && span.http.route = \"$route\" } >> { kind = internal } | avg_over_time(duration) by (name)" }
       ],
       "transformations": [
         { "id": "reduce", "options": { "mode": "seriesToRows", "reducers": ["mean"] } },
@@ -187,7 +187,7 @@
       "datasource": { "type": "tempo", "uid": "tempo" },
       "gridPos": { "h": 10, "w": 12, "x": 12, "y": 27 },
       "targets": [
-        { "refId": "A", "queryType": "traceql", "metricsQueryType": "range", "step": "1m", "query": "{ kind = server && span.http.route = \"$route\" } >> { span.db.query.text != \"\" } | avg_over_time(duration) by (span.db.query.text)" }
+        { "refId": "A", "queryType": "traceql", "metricsQueryType": "range", "step": "1h", "query": "{ kind = server && span.http.route = \"$route\" } >> { span.db.query.text != \"\" } | avg_over_time(duration) by (span.db.query.text)" }
       ],
       "transformations": [
         { "id": "reduce", "options": { "mode": "seriesToRows", "reducers": ["mean"] } },
