@@ -192,6 +192,31 @@ describe('EntriesStore', () => {
     expect(store.loadingMore()).toBe(false);
   });
 
+  // A reload landing while a row's state PATCH is still on the wire carries the
+  // server's not-yet-updated copy. Replacing the list wholesale undid the optimistic
+  // flag, so the star emptied until a second tap re-sent it.
+  it('keeps an in-flight optimistic state across a list reload that lands first', () => {
+    store.load({ view: 'unread' });
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [entry(1)], nextCursor: null });
+
+    store.setState(1, { isFavorite: true });
+    const patch = ctrl.expectOne('https://api.test/api/entries/1/state'); // still on the wire
+    expect(store.entries()[0].isFavorite).toBe(true);
+
+    // A refresh reloads the list before the server has applied the PATCH.
+    store.load({ view: 'unread' });
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [entry(1)], nextCursor: null }); // isFavorite still false server-side
+
+    expect(store.entries()[0].isFavorite).toBe(true); // must survive the reload
+
+    patch.flush({ state: {} });
+    expect(store.entries()[0].isFavorite).toBe(true);
+  });
+
   it('optimistically sets state and rolls back on error', () => {
     store.load({ view: 'all' });
     ctrl

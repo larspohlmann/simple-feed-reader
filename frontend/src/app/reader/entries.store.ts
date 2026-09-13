@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { finalize } from 'rxjs';
 import { Problem, parseProblem } from '../core/problem';
 import { ReaderApi } from './reader-api';
 import { EntryDto, EntryQuery, EntryStatePatch } from './models';
@@ -31,12 +32,20 @@ function sameTermsById(a: Map<number, string>, b: Map<number, string>): boolean 
   return true;
 }
 
+/** A state PATCH still on the wire, kept so a list reload that lands meanwhile
+ *  can lay the row's optimistic state back over the server's stale copy. */
+interface InFlightPatch {
+  entryId: number;
+  patch: EntryStatePatch;
+}
+
 @Injectable({ providedIn: 'root' })
 export class EntriesStore {
   private readonly api = inject(ReaderApi);
   private readonly savedSearchesStore = inject(SavedSearchesStore);
 
   private readonly rawEntries = signal<EntryDto[]>([]);
+  private readonly inFlightPatches = new Set<InFlightPatch>();
   /** Entry id (stringified, as the wire sends it) => the saved search that
    *  matched it. Kept apart from `rawEntries` so a term arriving after its
    *  entries still reaches the pill. */
@@ -97,7 +106,7 @@ export class EntriesStore {
     this.api.entries(query).subscribe({
       next: (page) => {
         if (seq !== this.loadSeq) return;
-        this.rawEntries.set(page.entries);
+        this.rawEntries.set(this.withInFlightPatches(page.entries));
         this.savedSearchIdsByEntryId.set(page.savedSearchIds ?? {});
         this.nextCursor.set(page.nextCursor);
         this.matchedWords.set(page.matchedWords ?? []);
@@ -126,7 +135,7 @@ export class EntriesStore {
     this.api.entries(this.query, cursor).subscribe({
       next: (page) => {
         if (seq !== this.loadSeq) return; // a load() has since replaced the list
-        this.rawEntries.update((cur) => [...cur, ...page.entries]);
+        this.rawEntries.update((cur) => [...cur, ...this.withInFlightPatches(page.entries)]);
         this.savedSearchIdsByEntryId.update((cur) => ({ ...cur, ...page.savedSearchIds }));
         this.nextCursor.set(page.nextCursor);
         // Unioned, not replaced: the previous page's rows are still on
@@ -146,6 +155,19 @@ export class EntriesStore {
     });
   }
 
+  /** The server's page with every still-in-flight optimistic patch laid back over
+   *  it: a reload landing mid-PATCH carries the row's not-yet-updated copy. */
+  private withInFlightPatches(entries: EntryDto[]): EntryDto[] {
+    if (this.inFlightPatches.size === 0) return entries;
+    return entries.map((entry) => {
+      let patched = entry;
+      for (const inFlight of this.inFlightPatches) {
+        if (inFlight.entryId === entry.id) patched = { ...patched, ...inFlight.patch };
+      }
+      return patched;
+    });
+  }
+
   /** Optimistic patch of one entry's flags; reverts only that entry if the PATCH
    *  fails (never clobbering pages appended in the meantime) and surfaces the error. */
   setState(entryId: number, patch: EntryStatePatch, onError?: () => void): void {
@@ -153,17 +175,22 @@ export class EntriesStore {
     if (!before) return;
     this.error.set(null);
     this.failedOperation = null;
+    const inFlight: InFlightPatch = { entryId, patch: localStatePatch(patch) };
+    this.inFlightPatches.add(inFlight);
     this.rawEntries.update((cur) =>
-      cur.map((e) => (e.id === entryId ? { ...e, ...localStatePatch(patch) } : e)),
+      cur.map((e) => (e.id === entryId ? { ...e, ...inFlight.patch } : e)),
     );
-    this.api.updateState(entryId, patch).subscribe({
-      error: (err: HttpErrorResponse) => {
-        this.rawEntries.update((cur) => cur.map((e) => (e.id === entryId ? before : e)));
-        this.error.set(parseProblem(err));
-        this.failedOperation = () => this.setState(entryId, patch, onError);
-        onError?.();
-      },
-    });
+    this.api
+      .updateState(entryId, patch)
+      .pipe(finalize(() => this.inFlightPatches.delete(inFlight)))
+      .subscribe({
+        error: (err: HttpErrorResponse) => {
+          this.rawEntries.update((cur) => cur.map((e) => (e.id === entryId ? before : e)));
+          this.error.set(parseProblem(err));
+          this.failedOperation = () => this.setState(entryId, patch, onError);
+          onError?.();
+        },
+      });
   }
 
   /** Replays the request that set the current error, clearing the banner first
