@@ -18,7 +18,7 @@
         "label": "Route",
         "type": "query",
         "datasource": { "type": "tempo", "uid": "tempo" },
-        "query": { "refId": "TempoVariableQueryEditor-VariableQuery", "type": 1, "label": "span.http.route" },
+        "query": { "refId": "TempoVariableQueryEditor-VariableQuery", "type": 1, "label": "http.route" },
         "refresh": 2,
         "sort": 1,
         "multi": false,
