@@ -15,6 +15,7 @@ import { Observable, Subscription, timeout } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { ListActionDirective } from '../../shared/list-action/list-action.directive';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 import { LoadingOverlayComponent } from '../../shared/loading-overlay/loading-overlay.component';
@@ -102,6 +103,7 @@ function slugify(text: string): string {
   selector: 'app-reader-view',
   imports: [
     IconComponent,
+    ListActionDirective,
     FaviconComponent,
     SpinnerComponent,
     LoadingOverlayComponent,
