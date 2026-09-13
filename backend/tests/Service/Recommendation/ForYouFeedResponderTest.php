@@ -96,7 +96,7 @@ final class ForYouFeedResponderTest extends DbTestCase
         self::assertSame(88, $first['recommendationScore']);
     }
 
-    public function testEntryCategoriesAreEnrichedWithoutAnExtraQuery(): void
+    public function testEntryCategoriesAreEnrichedOnTheForYouFeed(): void
     {
         $entry = $this->em->getRepository(Entry::class)->findOneBy(['title' => 'Title g1']);
         self::assertInstanceOf(Entry::class, $entry);

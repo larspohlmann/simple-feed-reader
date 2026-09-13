@@ -13,6 +13,7 @@ use App\Repository\EntryListRow;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
 use App\Tests\DbTestCase;
+use App\Tests\Support\QueryRecorder;
 
 final class EntryCategoryLoaderTest extends DbTestCase
 {
@@ -83,6 +84,40 @@ final class EntryCategoryLoaderTest extends DbTestCase
 
         self::assertSame([], $out[0]->categories);
         self::assertSame(['Tech'], $out[0]->duplicates[0]->categories);
+    }
+
+    public function testEnrichingAPageOfMultipleEntriesCostsExactlyOneQuery(): void
+    {
+        $feed = new Feed('https://f.test/' . uniqid('', true));
+        $this->em->persist($feed);
+        $now = new \DateTimeImmutable('2026-01-01T00:00:00Z');
+        $first = new Entry($feed, 'q1', 'https://x.test/q1', 'One', $now, $now, null);
+        $second = new Entry($feed, 'q2', 'https://x.test/q2', 'Two', $now, $now, null);
+        $this->em->persist($first);
+        $this->em->persist($second);
+        $category = new Category('tech', '');
+        $this->em->persist($category);
+        $this->em->persist(new EntryCategory($first, $category, 0, 'Tech'));
+        $this->em->persist(new EntryCategory($second, $category, 0, 'Tech'));
+        $this->em->flush();
+
+        $rows = [
+            $this->row($first, new EntryListRowSubscription(1, 'S')),
+            $this->row($second, new EntryListRowSubscription(1, 'S')),
+        ];
+
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        $recorder->reset();
+
+        $this->loader->loadInto($rows);
+
+        self::assertCount(
+            1,
+            $recorder->queriesMatching('entry_category'),
+            'loadInto() must batch a page of rows into exactly one query, got:'
+                . "\n" . implode("\n", $recorder->queries()),
+        );
     }
 
     /** @param list<EntryListRow> $duplicates */
