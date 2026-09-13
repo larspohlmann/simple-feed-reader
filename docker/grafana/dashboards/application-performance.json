@@ -16,13 +16,9 @@
       {
         "name": "route",
         "label": "Route",
-        "type": "query",
-        "datasource": { "type": "tempo", "uid": "tempo" },
-        "query": { "refId": "TempoVariableQueryEditor-VariableQuery", "type": 1, "label": "http.route" },
-        "refresh": 2,
-        "sort": 1,
-        "multi": false,
-        "includeAll": false,
+        "description": "Click a row in the Routes table to drill in, or type a route name.",
+        "type": "textbox",
+        "query": "api_entries_list",
         "current": { "selected": true, "text": "api_entries_list", "value": "api_entries_list" }
       }
     ]
@@ -52,7 +48,11 @@
       "fieldConfig": {
         "defaults": { "custom": { "align": "auto", "filterable": true } },
         "overrides": [
-          { "matcher": { "id": "byName", "options": "Max" }, "properties": [{ "id": "unit", "value": "s" }, { "id": "decimals", "value": 3 }] }
+          { "matcher": { "id": "byName", "options": "Max" }, "properties": [{ "id": "unit", "value": "s" }, { "id": "decimals", "value": 3 }] },
+          { "matcher": { "id": "byName", "options": "Route" }, "properties": [
+            { "id": "mappings", "value": [ { "type": "regex", "options": { "pattern": "^\"(.*)\"$", "result": { "text": "$1" } } } ] },
+            { "id": "links", "value": [ { "title": "Show this route below", "url": "/d/application-performance/application-performance?${__url_time_range}&var-route=${__value.text}" } ] }
+          ] }
         ]
       },
       "options": { "sortBy": [{ "displayName": "Max", "desc": true }], "showHeader": true }

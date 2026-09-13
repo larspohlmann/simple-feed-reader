@@ -387,10 +387,11 @@ without it (the toggle then shows "profiler not available on this host").
 
 ## Application performance dashboard
 
-Pick a route at the top. The first table lists every route seen in the time
-range, slowest first, by its longest request. The panels below belong to the
-picked route: one point per request, the `#[WithSpan]` methods and the DBAL
-statements that ran under it (each slowest first by duration), the slowest
-traces, and the flame graph of its sampled requests. It is built for a site that
-serves a handful of requests per hour, so it shows single-request timings, not
-requests-per-second or p95 rates.
+The first table lists every route seen in the time range, slowest first, by its
+longest request. Click a route to load its detail below (or type a route name in
+the **Route** box at the top). The panels below belong to the picked route: one
+point per request, the `#[WithSpan]` methods and the DBAL statements that ran
+under it (each slowest first by duration), the slowest traces, and the flame
+graph of its sampled requests. It is built for a site that serves a handful of
+requests per hour, so it shows single-request timings, not requests-per-second
+or p95 rates.
