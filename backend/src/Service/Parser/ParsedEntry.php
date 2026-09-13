@@ -18,6 +18,8 @@ final readonly class ParsedEntry
         public ?\DateTimeImmutable $publishedAt,
         public ?DeclaredImage $image = null,
         public ?ParsedMediaBundle $mediaBundle = null,
+        /** @var list<ParsedCategory> */
+        public array $categories = [],
     ) {
     }
 }
