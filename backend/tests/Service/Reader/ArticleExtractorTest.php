@@ -725,6 +725,18 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringContainsString('Second substantial paragraph', (string) $result->contentHtml);
     }
 
+    public function testFlagsAMemberfulGatedArticleWithNoDeclarationOrGateClass(): void
+    {
+        // psychedelicalpha.com: the JSON-LD @graph declares no isAccessibleForFree
+        // and the gate is a generic `<div class="join">`; the Memberful checkout
+        // link below the free intro carries the verdict (#998).
+        $result = $this->extractFixture('article-paywalled-memberful.html');
+
+        self::assertTrue($result->ok);
+        self::assertTrue($result->paywalled);
+        self::assertStringContainsString('Second substantial paragraph', (string) $result->contentHtml);
+    }
+
     public function testTrustsThePremiumDeclarationOnAZeitFadedArticle(): void
     {
         // ZEIT+ fades the last visible paragraph and declares the article premium.
