@@ -53,18 +53,10 @@ final readonly class ForYouFeedResponder
             array_map(static fn (RecommendationFeedRow $row): EntryListRow => $row->row, $rows),
         );
 
-        return array_map(self::withEntryRow(...), $rows, $entryRows);
-    }
-
-    private static function withEntryRow(RecommendationFeedRow $row, EntryListRow $entryRow): RecommendationFeedRow
-    {
-        return new RecommendationFeedRow(
-            $entryRow,
-            $row->reason,
-            $row->runId,
-            $row->position,
-            $row->score,
-            $row->runGeneratedAt,
+        return array_map(
+            static fn (RecommendationFeedRow $row, EntryListRow $entryRow) => $row->withRow($entryRow),
+            $rows,
+            $entryRows,
         );
     }
 }

@@ -20,4 +20,9 @@ final readonly class RecommendationFeedRow
         public ?\DateTimeImmutable $runGeneratedAt = null,
     ) {
     }
+
+    public function withRow(EntryListRow $row): self
+    {
+        return new self($row, $this->reason, $this->runId, $this->position, $this->score, $this->runGeneratedAt);
+    }
 }
