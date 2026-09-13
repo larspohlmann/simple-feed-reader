@@ -10,6 +10,7 @@ use App\Http\EntryCursor;
 use App\Http\SavedSearchPage;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowSubscription;
+use App\Repository\EntryListRowViewState;
 use App\Service\Search\SavedSearchEntriesResult;
 use PHPUnit\Framework\TestCase;
 
@@ -68,8 +69,7 @@ final class SavedSearchPageTest extends TestCase
             isHidden: false,
             isFavorite: false,
             isKept: false,
-            isViewed: false,
-            viewedAt: null,
+            viewState: new EntryListRowViewState(isViewed: false, viewedAt: null),
             markedReadUntil: null,
         );
     }

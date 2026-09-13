@@ -8,7 +8,9 @@ use App\Entity\ActionToken;
 use App\Entity\AiProviderSettings;
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
+use App\Entity\Category;
 use App\Entity\Entry;
+use App\Entity\EntryCategory;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\GrafanaSettings;
@@ -123,6 +125,10 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'setting.',
         CatalogCategory::class => 'The shared discovery catalog, seeded per instance.',
         CatalogFeed::class => 'The shared discovery catalog, seeded per instance.',
+        Category::class => 'A feed-declared category identity (#953); the same row for every '
+            . 'account that sees it.',
+        EntryCategory::class => 'A feed-declared entry↔category link (#953); identical for every '
+            . 'account, since it names no account.',
         WorkerHeartbeat::class => 'Liveness telemetry for the refresh worker.',
         MailSendFailure::class => 'The instance\'s automated-mail failure log (#882); operational telemetry, '
             . 'cleared on the next successful send.',

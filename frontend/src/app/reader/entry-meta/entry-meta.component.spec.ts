@@ -16,6 +16,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   imageHeight: null,
   media: [],
   attachments: [],
+  categories: [],
   publishedAt: null,
   createdAt: 'x',
   subscriptionId: 7,

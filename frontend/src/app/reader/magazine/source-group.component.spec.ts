@@ -24,6 +24,7 @@ const e = (id: number): EntryDto => ({
   imageHeight: null,
   media: [],
   attachments: [],
+  categories: [],
   publishedAt: null,
   createdAt: 'x',
   subscriptionId: 7,

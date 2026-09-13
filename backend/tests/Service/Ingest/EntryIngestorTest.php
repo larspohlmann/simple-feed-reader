@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingest;
 
+use App\Entity\Category;
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Repository\CategoryRepository;
 use App\Repository\EntryRepository;
+use App\Service\Category\CategoryNormalizer;
+use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\FeedIngestContext;
 use App\Service\Parser\ParsedEntry;
+use App\Service\Parser\ParsedEntryMedia;
 use App\Service\Parser\ParsedFeed;
 use App\Service\Image\DeclaredImage;
 use App\Service\Parser\ParsedAttachment;
@@ -29,11 +34,14 @@ final class EntryIngestorTest extends DbTestCase
         parent::setUp();
         /** @var EntryRepository $entryRepository */
         $entryRepository = $this->em->getRepository(Entry::class);
+        /** @var CategoryRepository $categoryRepository */
+        $categoryRepository = $this->em->getRepository(Category::class);
         $this->ingestor = new EntryIngestor(
             $this->em,
             $entryRepository,
             new EntrySanitizer(),
             new UrlNormalizer(),
+            new EntryCategoryWriter($this->em, $categoryRepository, new CategoryNormalizer()),
         );
     }
 
@@ -61,10 +69,12 @@ final class EntryIngestorTest extends DbTestCase
             summary: null,
             contentHtml: '<p>body</p>',
             publishedAt: null,
-            image: new DeclaredImage('https://i/lead.jpg', 800, 600),
-            mediaBundle: new ParsedMediaBundle(
-                [new ParsedMedium('https://i/extra.jpg', VisualMediaKind::Image)],
-                [new ParsedAttachment('https://cdn/ep.mp3', 'audio/mpeg', 3723, 4200000)],
+            media: new ParsedEntryMedia(
+                new DeclaredImage('https://i/lead.jpg', 800, 600),
+                new ParsedMediaBundle(
+                    [new ParsedMedium('https://i/extra.jpg', VisualMediaKind::Image)],
+                    [new ParsedAttachment('https://cdn/ep.mp3', 'audio/mpeg', 3723, 4200000)],
+                ),
             ),
         );
 
@@ -242,7 +252,7 @@ final class EntryIngestorTest extends DbTestCase
             summary: null,
             contentHtml: '<p>body</p>',
             publishedAt: null,
-            image: $image,
+            media: new ParsedEntryMedia($image),
         );
     }
 
@@ -388,7 +398,7 @@ final class EntryIngestorTest extends DbTestCase
                 summary: null,
                 contentHtml: '<p>body</p>',
                 publishedAt: null,
-                image: new DeclaredImage('https://i/1.jpg', 948, 474),
+                media: new ParsedEntryMedia(new DeclaredImage('https://i/1.jpg', 948, 474)),
             ),
         ]);
 
@@ -406,7 +416,7 @@ final class EntryIngestorTest extends DbTestCase
     {
         $feed = $this->feed();
         $parsed = new ParsedFeed('T', null, null, null, [
-            new ParsedEntry('no-image', 'https://x/1', 'One', null, null, '<p>body</p>', null, null),
+            new ParsedEntry('no-image', 'https://x/1', 'One', null, null, '<p>body</p>', null),
         ]);
 
         $this->ingestor->ingest($feed, $parsed, self::context());
@@ -432,7 +442,7 @@ final class EntryIngestorTest extends DbTestCase
                 summary: null,
                 contentHtml: '<p>body</p>',
                 publishedAt: null,
-                image: new DeclaredImage($overlongUrl, 100, 100),
+                media: new ParsedEntryMedia(new DeclaredImage($overlongUrl, 100, 100)),
             ),
         ]);
 

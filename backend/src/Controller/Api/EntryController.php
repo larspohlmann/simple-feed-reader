@@ -13,6 +13,7 @@ use App\Http\EntryCursor;
 use App\Http\EntryJson;
 use App\Http\EntryPage;
 use App\Http\EntryStateJson;
+use App\Repository\EntryCategoryLoader;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
@@ -34,6 +35,7 @@ final readonly class EntryController
 {
     public function __construct(
         private EntryListRepository $entryList,
+        private EntryCategoryLoader $categoryLoader,
         private EntryStateUpdater $entryStateUpdater,
         private MarkReadService $markRead,
         private ForYouFeedResponder $forYouFeed,
@@ -87,7 +89,7 @@ final readonly class EntryController
         );
 
         return new JsonResponse(EntryPage::of(
-            $this->entryList->listForUser($query),
+            $this->categoryLoader->loadInto($this->entryList->listForUser($query)),
             $query->limit,
             EntryListSort::forView($view),
         ));
@@ -100,6 +102,7 @@ final readonly class EntryController
     ): JsonResponse {
         $row = $this->entryList->oneRowForUser($id, (int) $user->getId())
             ?? throw new NotFoundHttpException('No such entry.');
+        $row = $this->categoryLoader->loadInto([$row])[0];
 
         return new JsonResponse(['entry' => EntryJson::one($row)]);
     }

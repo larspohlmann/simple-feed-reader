@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Tests\Service\Refresh;
 
 use App\Tests\Support\RecordingContentChangeMarker;
+use App\Entity\Category;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Repository\EntryRepository;
 use App\Repository\FeedRepository;
+use App\Service\Category\CategoryNormalizer;
 use App\Service\FeedScheduler;
 use App\Service\Fetch\FaviconResolver;
+use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\OrphanedFeedReclaimer;
 use App\Service\Parser\Atom03Parser;
@@ -88,7 +91,17 @@ final class RefreshRunnerOrphanSweepTest extends DbTestCase
                 ),
                 ScrapedBodyParser::format() => static fn (): ScrapedBodyParser => new ScrapedBodyParser($extractor),
             ])),
-            new EntryIngestor($this->em, $entryRepository, new EntrySanitizer(), new UrlNormalizer()),
+            new EntryIngestor(
+                $this->em,
+                $entryRepository,
+                new EntrySanitizer(),
+                new UrlNormalizer(),
+                new EntryCategoryWriter(
+                    $this->em,
+                    $this->em->getRepository(Category::class),
+                    new CategoryNormalizer(),
+                ),
+            ),
             new FaviconResolver($this->faviconFetcher, new NullLogger()),
             new FeedScheduler($this->clock),
             new EntryPruner($this->em, $this->clock, $this->indexer()),

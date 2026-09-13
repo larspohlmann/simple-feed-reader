@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\Category;
 use App\Entity\Entry;
+use App\Entity\EntryCategory;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
@@ -95,6 +97,29 @@ final class EntrySearchControllerTest extends ApiTestCase
         self::assertIsArray($first);
         self::assertSame('Angular Post 1', $first['title']);
         self::assertSame([], $body['matchedWords']);
+    }
+
+    public function testMatchingEntryCarriesItsFeedDeclaredCategories(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('s-categories@example.com');
+        $this->seedSubscribedFeedWithEntries($user, 'Angular', 1);
+        $em = $this->em();
+        $entry = $em->getRepository(Entry::class)->findOneBy(['title' => 'Angular Post 1']);
+        self::assertInstanceOf(Entry::class, $entry);
+        $category = new Category('frontend', '');
+        $em->persist($category);
+        $em->persist(new EntryCategory($entry, $category, 0, 'Frontend'));
+        $em->flush();
+
+        $client->request('GET', '/api/entries/search?q=angular', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload($client);
+        self::assertIsArray($body['entries']);
+        $first = $body['entries'][0];
+        self::assertIsArray($first);
+        self::assertSame(['Frontend'], $first['categories']);
     }
 
     public function testEntryInAFeedTheCallerDoesNotSubscribeToIsAbsent(): void

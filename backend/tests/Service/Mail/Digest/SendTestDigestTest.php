@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowSubscription;
+use App\Repository\EntryListRowViewState;
 use App\Repository\EntrySearchQuery;
 use App\Repository\SavedSearchRepository;
 use App\Service\Mail\Digest\DigestBrandLogo;
@@ -230,8 +231,7 @@ final class SendTestDigestTest extends TestCase
             isHidden: false,
             isFavorite: false,
             isKept: false,
-            isViewed: false,
-            viewedAt: null,
+            viewState: new EntryListRowViewState(isViewed: false, viewedAt: null),
             markedReadUntil: null,
         );
     }

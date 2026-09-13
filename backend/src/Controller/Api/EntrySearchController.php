@@ -7,6 +7,7 @@ namespace App\Controller\Api;
 use App\Dto\Search\MarkSearchReadRequest;
 use App\Entity\User;
 use App\Http\SearchPage;
+use App\Repository\EntryCategoryLoader;
 use App\Service\Reader\SearchMarkReadService;
 use App\Service\Search\EntrySearchInterface;
 use App\Service\Search\EntrySearchRequestFactory;
@@ -23,6 +24,7 @@ final readonly class EntrySearchController
     public function __construct(
         private EntrySearchInterface $search,
         private EntrySearchRequestFactory $requests,
+        private EntryCategoryLoader $categoryLoader,
         private SearchMarkReadService $searchMarkRead,
     ) {
     }
@@ -31,8 +33,12 @@ final readonly class EntrySearchController
     public function search(Request $request, #[CurrentUser] User $user): JsonResponse
     {
         $query = $this->requests->fromRequest($request, $user);
+        $result = $this->search->search($query);
 
-        return new JsonResponse(SearchPage::of($this->search->search($query), $query->limit));
+        return new JsonResponse(SearchPage::of(
+            $result->withRows($this->categoryLoader->loadInto($result->rows)),
+            $query->limit,
+        ));
     }
 
     #[Route('/mark-read', name: 'api_entries_search_mark_read', methods: ['POST'])]

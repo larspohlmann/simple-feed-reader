@@ -15,6 +15,8 @@ final readonly class EntryListRow
 {
     public int $subscriptionId;
     public string $subscriptionTitle;
+    public bool $isViewed;
+    public ?\DateTimeImmutable $viewedAt;
 
     public function __construct(
         public Entry $entry,
@@ -22,15 +24,7 @@ final readonly class EntryListRow
         public bool $isHidden,
         public bool $isFavorite,
         public bool $isKept,
-        public bool $isViewed,
-        /**
-         * When the caller opened this entry in the reader, or null if never.
-         * The "viewed" list orders by it (see EntryListSort::ViewedAt); every
-         * other list ignores it. Non-null on every row the "viewed" view
-         * returns, because that view filters on `es.isViewed = true` and
-         * markViewed() stamps both together.
-         */
-        public ?\DateTimeImmutable $viewedAt,
+        EntryListRowViewState $viewState,
         /**
          * The subscription's mark-all-read watermark, already selected by the
          * row projection. `isHidden` above has it folded in; it is carried
@@ -40,9 +34,13 @@ final readonly class EntryListRow
         public ?\DateTimeImmutable $markedReadUntil,
         /** @var list<self> */
         public array $duplicates = [],
+        /** @var list<string> the feed-declared category labels, in declared order */
+        public array $categories = [],
     ) {
         $this->subscriptionId = $subscription->id;
         $this->subscriptionTitle = $subscription->title;
+        $this->isViewed = $viewState->isViewed;
+        $this->viewedAt = $viewState->viewedAt;
     }
 
     /**
@@ -50,16 +48,31 @@ final readonly class EntryListRow
      */
     public function withDuplicates(array $duplicates): self
     {
+        return $this->copyWith($duplicates, $this->categories);
+    }
+
+    /** @param list<string> $categories */
+    public function withCategories(array $categories): self
+    {
+        return $this->copyWith($this->duplicates, $categories);
+    }
+
+    /**
+     * @param list<self>   $duplicates
+     * @param list<string> $categories
+     */
+    private function copyWith(array $duplicates, array $categories): self
+    {
         return new self(
             $this->entry,
             new EntryListRowSubscription($this->subscriptionId, $this->subscriptionTitle),
             $this->isHidden,
             $this->isFavorite,
             $this->isKept,
-            $this->isViewed,
-            $this->viewedAt,
+            new EntryListRowViewState($this->isViewed, $this->viewedAt),
             $this->markedReadUntil,
             $duplicates,
+            $categories,
         );
     }
 }

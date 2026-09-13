@@ -11,6 +11,7 @@ use App\Entity\Feed;
 use App\Http\EntryJson;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowSubscription;
+use App\Repository\EntryListRowViewState;
 use PHPUnit\Framework\TestCase;
 
 final class EntryJsonTest extends TestCase
@@ -96,8 +97,7 @@ final class EntryJsonTest extends TestCase
             false,
             false,
             false,
-            false,
-            null,
+            new EntryListRowViewState(false, null),
             null,
         );
     }

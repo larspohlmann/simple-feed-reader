@@ -68,8 +68,8 @@ final class Rss2Parser implements FeedFormatParserInterface
             publishedAt: DateParser::parse(
                 XmlHelper::childText($item, 'pubDate') ?? XmlHelper::childText($item, 'date', self::DC_NS),
             ),
-            image: $image,
-            mediaBundle: $mediaBundle,
+            media: new ParsedEntryMedia($image, $mediaBundle),
+            categories: ItemCategoryExtractor::extract($item),
         );
     }
 }

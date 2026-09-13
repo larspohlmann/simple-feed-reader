@@ -58,9 +58,9 @@ final class Rss1ParserTest extends TestCase
         $feed = (new Rss1Parser())->parse($this->document($xml));
 
         self::assertCount(3, $feed->entries);
-        self::assertSame('https://e/c.jpg', $feed->entries[0]->image?->url);
-        self::assertSame('https://e/m.jpg', $feed->entries[1]->image?->url);
-        self::assertNull($feed->entries[2]->image);
+        self::assertSame('https://e/c.jpg', $feed->entries[0]->media->image?->url);
+        self::assertSame('https://e/m.jpg', $feed->entries[1]->media->image?->url);
+        self::assertNull($feed->entries[2]->media->image);
     }
 
     public function testReadsACustomImageBigElementWhenTheItemHasNoStandardImage(): void
@@ -90,7 +90,7 @@ final class Rss1ParserTest extends TestCase
         $feed = (new Rss1Parser())->parse($this->document($xml));
 
         self::assertCount(1, $feed->entries);
-        $image = $feed->entries[0]->image;
+        $image = $feed->entries[0]->media->image;
         self::assertNotNull($image);
         self::assertSame('https://images.example.de/big.jpg', $image->url);
         self::assertSame(640, $image->width);
@@ -123,7 +123,7 @@ final class Rss1ParserTest extends TestCase
 
         $feed = (new Rss1Parser())->parse($this->document($xml));
 
-        self::assertSame('https://e/media.jpg', $feed->entries[0]->image?->url);
+        self::assertSame('https://e/media.jpg', $feed->entries[0]->media->image?->url);
     }
 
     public function testCustomImageElementWinsOverAnInlineImg(): void
@@ -152,7 +152,7 @@ final class Rss1ParserTest extends TestCase
 
         $feed = (new Rss1Parser())->parse($this->document($xml));
 
-        self::assertSame('https://e/custom.jpg', $feed->entries[0]->image?->url);
+        self::assertSame('https://e/custom.jpg', $feed->entries[0]->media->image?->url);
     }
 
     public function testTitlesAreReducedToPlainText(): void

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Maintenance;
 
+use App\Entity\Category;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
@@ -11,9 +12,11 @@ use App\Entity\User;
 use App\Repository\EntryRepository;
 use App\Repository\FeedRepository;
 use App\Repository\PreferencesRepository;
+use App\Service\Category\CategoryNormalizer;
 use App\Service\FeedScheduler;
 use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\FetchResponse;
+use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Logging\Loki\LokiClient;
 use App\Service\Logging\Loki\LokiSpoolShipper;
@@ -143,7 +146,17 @@ final class MaintenanceTickTest extends DbTestCase
             $failingEm,
             $fetcher,
             $bodyParser,
-            new EntryIngestor($this->em, $entryRepository, new EntrySanitizer(), new UrlNormalizer()),
+            new EntryIngestor(
+                $this->em,
+                $entryRepository,
+                new EntrySanitizer(),
+                new UrlNormalizer(),
+                new EntryCategoryWriter(
+                    $this->em,
+                    $this->em->getRepository(Category::class),
+                    new CategoryNormalizer(),
+                ),
+            ),
             new FaviconResolver($fetcher, new NullLogger()),
             new FeedScheduler($clock),
             new EntryPruner($this->em, $clock, $indexer),

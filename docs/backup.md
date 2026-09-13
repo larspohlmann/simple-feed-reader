@@ -159,6 +159,8 @@ writes none of them.
 | `GrafanaSettings` | The instance's Grafana/Loki wiring. An operator sets it. |
 | `CatalogCategory` | The shared discovery catalog. Each instance holds its own copy. |
 | `CatalogFeed` | The shared discovery catalog. Each instance holds its own copy. |
+| `Category` | A category a feed declared on an article. The same category is the same row for every account that sees it. |
+| `EntryCategory` | The link between an article and a category it was published under. It names no account. |
 | `WorkerHeartbeat` | The liveness record of the refresh worker. It is a machine record, not your data. |
 | `MailSendFailure` | The record of automated e-mails the instance failed to send. It is a machine record, not your data. |
 

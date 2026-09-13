@@ -37,7 +37,7 @@ final class Rss2ParserTest extends TestCase
 
         $feed = (new Rss2Parser())->parse($this->document($xml));
 
-        $bundle = $feed->entries[0]->mediaBundle;
+        $bundle = $feed->entries[0]->media->mediaBundle;
         self::assertNotNull($bundle);
         self::assertCount(1, $bundle->attachments);
         $attachment = $bundle->attachments[0];
@@ -81,9 +81,9 @@ final class Rss2ParserTest extends TestCase
         $feed = (new Rss2Parser())->parse($this->document($xml));
 
         self::assertCount(3, $feed->entries);
-        self::assertSame('https://e/a.jpg', $feed->entries[0]->image?->url);
-        self::assertSame('https://e/b.jpg', $feed->entries[1]->image?->url);
-        self::assertNull($feed->entries[2]->image);
+        self::assertSame('https://e/a.jpg', $feed->entries[0]->media->image?->url);
+        self::assertSame('https://e/b.jpg', $feed->entries[1]->media->image?->url);
+        self::assertNull($feed->entries[2]->media->image);
     }
 
     public function testReadsACustomImageBigElementWhenTheItemHasNoStandardImage(): void
@@ -115,7 +115,7 @@ final class Rss2ParserTest extends TestCase
         $feed = (new Rss2Parser())->parse($this->document($xml));
 
         self::assertCount(1, $feed->entries);
-        $image = $feed->entries[0]->image;
+        $image = $feed->entries[0]->media->image;
         self::assertNotNull($image);
         self::assertSame('https://images.utopia.de/x/w:640/h:300/big.jpg', $image->url);
         self::assertSame(640, $image->width);
@@ -150,7 +150,7 @@ final class Rss2ParserTest extends TestCase
 
         $feed = (new Rss2Parser())->parse($this->document($xml));
 
-        self::assertSame('https://e/media.jpg', $feed->entries[0]->image?->url);
+        self::assertSame('https://e/media.jpg', $feed->entries[0]->media->image?->url);
     }
 
     public function testEnclosureWinsOverCustomImageAndInlineImg(): void
@@ -178,7 +178,7 @@ final class Rss2ParserTest extends TestCase
 
         $feed = (new Rss2Parser())->parse($this->document($xml));
 
-        self::assertSame('https://e/enclosure.jpg', $feed->entries[0]->image?->url);
+        self::assertSame('https://e/enclosure.jpg', $feed->entries[0]->media->image?->url);
     }
 
     public function testCustomImageElementWinsOverAnInlineImg(): void
@@ -205,7 +205,7 @@ final class Rss2ParserTest extends TestCase
 
         $feed = (new Rss2Parser())->parse($this->document($xml));
 
-        $image = $feed->entries[0]->image;
+        $image = $feed->entries[0]->media->image;
         self::assertNotNull($image);
         self::assertSame('https://e/custom.jpg', $image->url);
         self::assertSame(640, $image->width);

@@ -20,6 +20,7 @@ const e = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   imageHeight: null,
   media: [],
   attachments: [],
+  categories: [],
   publishedAt: null,
   createdAt: NOW,
   subscriptionId: 1,
@@ -43,6 +44,7 @@ const wire = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
     imageHeight: 90,
     media: [],
     attachments: [],
+    categories: [],
     summary: 'A wire-service summary long enough to fill a pull quote. '.repeat(8),
     ...over,
   });

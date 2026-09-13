@@ -9,6 +9,7 @@ use App\Entity\Feed;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\FeedIngestContext;
 use App\Service\Parser\ParsedEntry;
+use App\Service\Parser\ParsedEntryMedia;
 use App\Service\Parser\ParsedFeed;
 use App\Service\Image\DeclaredImage;
 use App\Tests\DbTestCase;
@@ -44,7 +45,16 @@ final class FillMissingImagesTest extends DbTestCase
 
     private function parsedEntry(string $guid, ?DeclaredImage $image): ParsedEntry
     {
-        return new ParsedEntry($guid, null, $guid, null, null, null, null, $image);
+        return new ParsedEntry(
+            $guid,
+            null,
+            $guid,
+            null,
+            null,
+            null,
+            null,
+            new ParsedEntryMedia($image),
+        );
     }
 
     public function testPopulatesAnEntryIngestedWithoutOne(): void

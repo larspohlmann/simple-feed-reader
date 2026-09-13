@@ -36,4 +36,10 @@ final readonly class SavedSearchEntriesResult
     ) {
         $this->matchCount = $matchCount ?? \count($rows);
     }
+
+    /** @param list<EntryListRow> $rows */
+    public function withRows(array $rows): self
+    {
+        return new self($rows, $this->savedSearchIds, $this->matchCount, $this->continuationRow);
+    }
 }

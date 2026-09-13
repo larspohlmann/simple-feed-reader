@@ -324,6 +324,14 @@ article {
   margin-inline-end: 0.55em;
 }
 
+/* Feed-declared categories (#953): a muted footnote line closing the
+   article, the same weight as the meta row that opens it. */
+.categories {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  margin: var(--space-3) 0 0;
+}
+
 .tags {
   display: block;
   margin: 0 0 var(--space-3);

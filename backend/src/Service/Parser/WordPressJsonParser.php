@@ -43,6 +43,8 @@ final readonly class WordPressJsonParser
     /** @param array<string, mixed> $post */
     private function entry(array $post): ParsedEntry
     {
+        $image = $this->image($post);
+
         return new ParsedEntry(
             guid: $this->guid($post),
             url: $this->stringOrNull($post['link'] ?? null),
@@ -53,7 +55,7 @@ final readonly class WordPressJsonParser
             summary: $this->rendered($post, 'excerpt'),
             contentHtml: $this->rendered($post, 'content'),
             publishedAt: $this->publishedAt($post),
-            image: $this->image($post),
+            media: new ParsedEntryMedia($image),
         );
     }
 

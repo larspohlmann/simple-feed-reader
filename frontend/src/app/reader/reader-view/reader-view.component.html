@@ -229,6 +229,9 @@
         }
         <div #content class="content" [innerHTML]="displayHtml()"></div>
       }
+      @if (e.categories?.length) {
+        <p class="categories">{{ e.categories.join(', ') }}</p>
+      }
     </article>
     <!-- Laid over the whole pane while an article loads or refetches, in place
          of a line of text — the same overlay the feed list raises on reload. -->

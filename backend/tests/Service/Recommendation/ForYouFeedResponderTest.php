@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation;
 
+use App\Entity\Category;
 use App\Entity\Entry;
+use App\Entity\EntryCategory;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Repository\EntryCategoryLoader;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationItemRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
@@ -93,6 +96,20 @@ final class ForYouFeedResponderTest extends DbTestCase
         self::assertSame(88, $first['recommendationScore']);
     }
 
+    public function testEntryCategoriesAreEnrichedOnTheForYouFeed(): void
+    {
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['title' => 'Title g1']);
+        self::assertInstanceOf(Entry::class, $entry);
+        $category = new Category('world', '');
+        $this->em->persist($category);
+        $this->em->persist(new EntryCategory($entry, $category, 0, 'World'));
+        $this->em->flush();
+
+        $first = $this->firstEntry();
+
+        self::assertSame(['World'], $first['categories']);
+    }
+
     /** `assertIsArray()` narrows to a plain array, not to a keyed shape, so
      *  this says what the assertion actually proves.
      *
@@ -116,6 +133,9 @@ final class ForYouFeedResponderTest extends DbTestCase
         $settings = self::getContainer()->get(RecommendationSettingsResolver::class);
         self::assertInstanceOf(RecommendationSettingsResolver::class, $settings);
 
-        return new ForYouFeedResponder(new RecommendationFeedPager($repository), $settings);
+        $categoryLoader = self::getContainer()->get(EntryCategoryLoader::class);
+        self::assertInstanceOf(EntryCategoryLoader::class, $categoryLoader);
+
+        return new ForYouFeedResponder(new RecommendationFeedPager($repository), $settings, $categoryLoader);
     }
 }

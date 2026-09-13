@@ -26,10 +26,10 @@ final readonly class EntryListRowHydrator
             isHidden: $this->rowIsHidden($row, $entry),
             isFavorite: (bool) ($row['esFavorite'] ?? false),
             isKept: (bool) ($row['esKept'] ?? false),
-            isViewed: (bool) ($row['esViewed'] ?? false),
-            viewedAt: $row['esViewedAt'] instanceof \DateTimeImmutable
-                ? $row['esViewedAt']
-                : null,
+            viewState: new EntryListRowViewState(
+                isViewed: (bool) ($row['esViewed'] ?? false),
+                viewedAt: $row['esViewedAt'] instanceof \DateTimeImmutable ? $row['esViewedAt'] : null,
+            ),
             markedReadUntil: $row['markedReadUntil'] instanceof \DateTimeImmutable
                 ? $row['markedReadUntil']
                 : null,

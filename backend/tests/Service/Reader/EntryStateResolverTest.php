@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowSubscription;
+use App\Repository\EntryListRowViewState;
 use App\Repository\EntryStateRepository;
 use App\Service\Reader\EntryStateResolver;
 use App\Tests\DbTestCase;
@@ -88,8 +89,7 @@ final class EntryStateResolverTest extends DbTestCase
             $isHidden,
             false,
             false,
-            false,
-            null,
+            new EntryListRowViewState(false, null),
             $markedReadUntil,
         );
     }

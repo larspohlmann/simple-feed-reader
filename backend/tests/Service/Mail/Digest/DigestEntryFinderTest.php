@@ -11,6 +11,7 @@ use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowSubscription;
+use App\Repository\EntryListRowViewState;
 use App\Repository\EntrySearchQuery;
 use App\Service\Mail\Digest\DigestEntryFinder;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -53,8 +54,7 @@ final class DigestEntryFinderTest extends TestCase
             false,
             false,
             false,
-            false,
-            null,
+            new EntryListRowViewState(false, null),
             null,
         );
     }
