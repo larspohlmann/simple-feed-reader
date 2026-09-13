@@ -50,6 +50,14 @@
              MEILISEARCH_* above. -->
         <env name="GITHUB_RELEASE_REPOSITORY" value="" force="true" />
         <server name="GITHUB_RELEASE_REPOSITORY" value="" />
+
+        <!-- The dev php/worker containers set a real MAILER_FALLBACK_DSN=smtp://mailpit:1025
+             (docker-compose.yml), unscoped to APP_ENV, so a process under APP_ENV=test
+             inside the container inherits it and MailFallback derives "mail on" — failing
+             the mail-off wiring tests that pass natively off .env's null://null. Forced in
+             all three lookups for the same reason as MEILISEARCH_* above (#1013). -->
+        <env name="MAILER_FALLBACK_DSN" value="null://null" force="true" />
+        <server name="MAILER_FALLBACK_DSN" value="null://null" />
     </php>
 
     <testsuites>
