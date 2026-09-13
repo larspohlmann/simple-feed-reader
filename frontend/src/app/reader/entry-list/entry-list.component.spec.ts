@@ -7,7 +7,7 @@ import { provideRouter } from '@angular/router';
 import { EntryListComponent, REFRESH_REVEAL } from './entry-list.component';
 import { ListScrollMemory } from '../list-scroll-memory';
 import { CatalogStore } from '../../discover/catalog.store';
-import { prefetchMargin } from '../paging';
+import { REVEAL_STEP, prefetchMargin } from '../paging';
 import { EntryDto } from '../models';
 import { ReadingFocusService } from '../../core/reading-focus.service';
 import { MagazineStyleService } from '../../core/magazine-style.service';
@@ -1799,6 +1799,72 @@ describe('EntryListComponent', () => {
       f.detectChanges();
       fireRowsResize(f);
       await frames();
+      expect(rowOpacities(f)).not.toContain('');
+    });
+  });
+
+  // #501: rendering a whole load-more page in one tick stalls the main thread
+  // for hundreds of ms on a long list; iOS keeps scrolling into unpainted rows.
+  describe('load-more reveal', () => {
+    const rowCount = (f: ComponentFixture<EntryListComponent>): number =>
+      (f.nativeElement as HTMLElement).querySelectorAll('.rows app-entry-row').length;
+    const page = (from: number, count: number): EntryDto[] =>
+      Array.from({ length: count }, (_, i) => entry(from + i));
+
+    async function settle(f: ComponentFixture<EntryListComponent>): Promise<void> {
+      for (let i = 0; i < 12; i++) {
+        await frames();
+        f.detectChanges();
+      }
+    }
+
+    it('reveals an appended page over several frames instead of one tick', async () => {
+      const first = page(1, 3);
+      const f = mount({ entries: first, hasMore: true });
+      f.componentRef.setInput('entries', [...first, ...page(4, REVEAL_STEP * 3)]);
+      f.detectChanges();
+      expect(rowCount(f)).toBe(3);
+
+      await frames();
+      f.detectChanges();
+      const afterOneFrame = rowCount(f);
+      expect(afterOneFrame).toBeGreaterThan(3);
+      expect(afterOneFrame).toBeLessThan(3 + REVEAL_STEP * 3);
+
+      await settle(f);
+      expect(rowCount(f)).toBe(3 + REVEAL_STEP * 3);
+    });
+
+    it('renders a replaced list at once', () => {
+      const f = mount({ entries: page(1, 3) });
+      f.componentRef.setInput('entries', page(100, REVEAL_STEP * 3));
+      f.detectChanges();
+      expect(rowCount(f)).toBe(REVEAL_STEP * 3);
+    });
+
+    it('converges on the same magazine plan a one-shot render produces', async () => {
+      const all = page(1, 6 + REVEAL_STEP * 2);
+      const f = mount({ entries: all.slice(0, 6), hasMore: true, layout: 'magazine' });
+      f.componentRef.setInput('entries', all);
+      f.componentRef.setInput('hasMore', false);
+      f.detectChanges();
+      await settle(f);
+      const revealed = (f.nativeElement as HTMLElement).querySelectorAll('.magazine-slot').length;
+
+      const oneShot = mount({ entries: all, hasMore: false, layout: 'magazine' });
+      expect(revealed).toBe(
+        (oneShot.nativeElement as HTMLElement).querySelectorAll('.magazine-slot').length,
+      );
+    });
+
+    it('fades the rows of an appended page once they are all revealed', async () => {
+      const first = page(1, 3);
+      const f = mount({ entries: first, hasMore: true });
+      await frames();
+      f.componentRef.setInput('entries', [...first, ...page(4, REVEAL_STEP * 2)]);
+      f.detectChanges();
+      await settle(f);
+      expect(rowOpacities(f)).toHaveLength(3 + REVEAL_STEP * 2);
       expect(rowOpacities(f)).not.toContain('');
     });
   });

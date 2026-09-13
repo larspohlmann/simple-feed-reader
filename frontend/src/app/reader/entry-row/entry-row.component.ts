@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   computed,
   effect,
@@ -15,11 +16,12 @@ import { EntryActionsComponent } from '../entry-actions/entry-actions.component'
 import { EntryDuplicatesComponent } from '../magazine/entry-duplicates.component';
 import { LanguageService } from '../../core/language.service';
 import { EntryDto, SubscriptionTagDto } from '../models';
-import { entryImage, textSnippet } from '../preview-image';
+import { entryImage, entrySnippet } from '../preview-image';
 import { relativeTime } from '../format';
 
 @Component({
   selector: 'app-entry-row',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   // forwardRef, not a direct reference: entry-duplicates renders entry-row for
   // its popover card, so a plain reference here would resolve
   // EntryDuplicatesComponent mid-import-cycle and read as undefined.
@@ -55,11 +57,7 @@ export class EntryRowComponent {
   // persisted hero when present, else an inline <img>. One source of truth, so
   // a picture never shows in one view and hides in another.
   readonly image = computed(() => entryImage(this.entry())?.url ?? null);
-  readonly snippet = computed(() =>
-    this.entry().summary
-      ? textSnippet(this.entry().summary)
-      : textSnippet(this.entry().contentHtml),
-  );
+  readonly snippet = computed(() => entrySnippet(this.entry()));
   private readonly language = inject(LanguageService);
   readonly when = computed(() =>
     relativeTime(this.entry().publishedAt ?? this.entry().createdAt, this.language.lang()),

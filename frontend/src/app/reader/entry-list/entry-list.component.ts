@@ -66,7 +66,7 @@ import { LayoutService } from '../layout.service';
 import { CatalogStore } from '../../discover/catalog.store';
 import { ListScrollMemory } from '../list-scroll-memory';
 import { nextHeaderHidden } from '../header-scroll';
-import { prefetchMargin } from '../paging';
+import { REVEAL_STEP, isAppendedPage, prefetchMargin } from '../paging';
 import { ReadingFocusService } from '../../core/reading-focus.service';
 import { MagazineStyleService } from '../../core/magazine-style.service';
 import { ReadingFocusApplier } from '../reading-focus-applier';
@@ -84,6 +84,9 @@ export const REFRESH_REVEAL = 48;
 // How long a reload may run before it earns a spinner. A switch that lands
 // sooner would only flash one, which reads as a glitch rather than as progress.
 const RELOAD_SPINNER_DELAY_MS = 150;
+// One shared instance: a fresh `[]` per check would change every tag-less block's
+// input identity on every tick and re-render it, defeating OnPush (#501).
+const NO_TAGS: SubscriptionTagDto[] = [];
 
 /** The heading icon for each fixed view, matching its sidebar row's glyph so the
  *  list a reader lands in reads as the row they clicked (#411). Tag and
@@ -354,9 +357,61 @@ export class EntryListComponent implements OnDestroy {
   private pullStartY = 0;
   private pullTracking = false;
 
+  /** How many of `entries()` are rendered. Trails the list while an appended
+   *  page is revealed a step per frame (#501); equals the length otherwise. */
+  private readonly revealedCount = signal(0);
+  private revealFrame = 0;
+  private lastEntries: EntryDto[] = [];
+
+  private readonly renderedEntries = computed(() => {
+    const all = this.entries();
+    const count = this.revealedCount();
+    return count >= all.length ? all : all.slice(0, count);
+  });
+  private readonly fullyRevealed = computed(() => this.renderedEntries() === this.entries());
+
+  private readonly _revealAppended = effect(() => {
+    const next = this.entries();
+    const previous = this.lastEntries;
+    this.lastEntries = next;
+    untracked(() => this.startReveal(previous, next));
+  });
+
+  private startReveal(previous: EntryDto[], next: EntryDto[]): void {
+    this.cancelReveal();
+    if (!isAppendedPage(previous, next)) {
+      this.revealedCount.set(next.length);
+      return;
+    }
+    this.revealedCount.update((count) => Math.min(count, previous.length));
+    this.scheduleRevealStep();
+  }
+
+  private scheduleRevealStep(): void {
+    if (typeof requestAnimationFrame === 'undefined') {
+      this.revealedCount.set(this.entries().length);
+      return;
+    }
+    this.revealFrame = this.zone.runOutsideAngular(() =>
+      requestAnimationFrame(() => {
+        this.revealFrame = 0;
+        const total = this.entries().length;
+        this.revealedCount.update((count) => Math.min(count + REVEAL_STEP, total));
+        if (this.revealedCount() < total) this.scheduleRevealStep();
+      }),
+    );
+  }
+
+  private cancelReveal(): void {
+    if (this.revealFrame && typeof cancelAnimationFrame !== 'undefined') {
+      cancelAnimationFrame(this.revealFrame);
+    }
+    this.revealFrame = 0;
+  }
+
   /** The loaded entries split into one group per recommendation run (#348). One
    *  run-less group for every non-for-you view, so those render exactly as before. */
-  readonly runGroups = computed<RunGroup[]>(() => groupByRun(this.entries()));
+  readonly runGroups = computed<RunGroup[]>(() => groupByRun(this.renderedEntries()));
 
   /** Whether a run group opens with a divider. Suppressed only for the run the
    *  header already names ("Last refreshed"), matched by id; every other run
@@ -370,12 +425,12 @@ export class EntryListComponent implements OnDestroy {
     // Only aggregated views collapse same-source runs into a group widget; a
     // single-stream view (a feed, or the for-you list) must not.
     const grouping = !isSingleStreamView(this.selection());
-    const complete = !this.hasMore();
+    const complete = !this.hasMore() && this.fullyRevealed();
 
     // Fast path: no dividers (every non-for-you view, and a for-you list showing
     // only the newest run). Plan the whole list at once — identical to before.
     if (!groups.some((group) => this.showRunHeader(group))) {
-      return planMagazine({ entries: this.entries(), grouping, complete });
+      return planMagazine({ entries: this.renderedEntries(), grouping, complete });
     }
 
     const out: ListBlock[] = [];
@@ -512,17 +567,20 @@ export class EntryListComponent implements OnDestroy {
     });
   });
 
-  // The two inputs with no geometric signature: the enable gate, and the block
-  // set changing (a finished load, a load-more append, a view switch whose
-  // retained outgoing rows (#254) must re-fade before the new page lands (#462)).
+  // The inputs with no geometric signature: the enable gate and the rendered set
+  // (a load, a view switch's retained rows (#254, #462), a fully revealed append —
+  // the scroll listener covers the reveal steps in between).
   private readonly _pushReadingFocus = effect(() => {
     const enabled = this.readingFocus.enabled();
-    this.entries();
+    const rendered = this.renderedEntries();
     this.selection();
     const applier = this.applier;
     if (!applier) return;
-    if (enabled) applier.refresh();
-    else applier.clear();
+    if (!enabled) {
+      applier.clear();
+      return;
+    }
+    if (rendered === this.entries()) applier.refresh();
   });
 
   readonly onRowsScroll = (e: Event): void => {
@@ -576,7 +634,7 @@ export class EntryListComponent implements OnDestroy {
   }
 
   tagsFor(subscriptionId: number): SubscriptionTagDto[] {
-    return this.feedTags().get(subscriptionId) ?? [];
+    return this.feedTags().get(subscriptionId) ?? NO_TAGS;
   }
 
   blockKey(block: ListBlock): string {
@@ -797,6 +855,7 @@ export class EntryListComponent implements OnDestroy {
     this.headerObs?.disconnect();
     this.pullCleanup?.();
     this.cancelSettle();
+    this.cancelReveal();
     const host = this.host.nativeElement;
     host.removeEventListener('wheel', this.onUserScrollIntent, { capture: true });
     host.removeEventListener('touchmove', this.onUserScrollIntent, { capture: true });
