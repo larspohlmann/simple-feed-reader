@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Parser;
 
 /**
- * Reads the categories a feed item declares into a flat list, across the three
- * XML dialects: RSS 2.0 <category> (text, optional domain), Atom <category
- * term= scheme=>, and Dublin Core <dc:subject>. Reads only what the parsed
- * document already holds — no fetch. Normalization happens in CategoryNormalizer.
+ * Reads a feed item's declared categories into a flat list, across RSS 2.0
+ * <category>, Atom <category term= scheme=>, and Dublin Core <dc:subject>.
  */
 final class ItemCategoryExtractor
 {
