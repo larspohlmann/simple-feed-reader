@@ -16,3 +16,6 @@ AGENTS.local.md
 /.env.prod
 /docker/certs-prod/*
 !/docker/certs-prod/.gitkeep
+
+# Local Docker Compose overrides (developer machine only).
+/docker-compose.override.yml
