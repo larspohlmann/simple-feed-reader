@@ -1,7 +1,7 @@
 import { Directive, computed, inject, input, output } from '@angular/core';
 import { EntryDto, SubscriptionTagDto } from '../models';
 import { relativeTime } from '../format';
-import { textSnippet } from '../preview-image';
+import { entrySnippet } from '../preview-image';
 import { LanguageService } from '../../core/language.service';
 
 /** The signal inputs/outputs every magazine block shares, whether or not it
@@ -29,5 +29,5 @@ export abstract class EntryBlockBase {
   /** The lead of the entry's own copy, plain-texted. A block renders it as a
    *  clamped dek beneath the title; an empty result (a headline-only feed) lets
    *  the block fall back to title-only via its own `@if (snippet())`. */
-  readonly snippet = computed(() => textSnippet(this.entry().summary || this.entry().contentHtml));
+  readonly snippet = computed(() => entrySnippet(this.entry()));
 }

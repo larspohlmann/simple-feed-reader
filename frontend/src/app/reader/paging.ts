@@ -20,3 +20,16 @@ export const MIN_PREFETCH_MARGIN = 300;
 export function prefetchMargin(rootHeight: number): string {
   return `${Math.max(MIN_PREFETCH_MARGIN, Math.round(rootHeight * PREFETCH_VIEWPORTS))}px`;
 }
+
+/** Entries an appended page reveals per animation frame. Rendering a whole page
+ *  in one tick costs hundreds of ms on a long list on a phone; iOS keeps scrolling
+ *  into the unpainted rows meanwhile (#501). */
+export const REVEAL_STEP = 8;
+
+/** Whether `next` is `previous` with a further page appended — the one list
+ *  change that can land mid-scroll and so is revealed a step per frame. A first
+ *  page, a reload and an in-place row update all render at once. */
+export function isAppendedPage<T>(previous: readonly T[], next: readonly T[]): boolean {
+  if (previous.length === 0 || next.length <= previous.length) return false;
+  return next[0] === previous[0] && next[previous.length - 1] === previous[previous.length - 1];
+}

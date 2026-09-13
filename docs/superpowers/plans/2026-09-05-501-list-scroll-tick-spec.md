@@ -288,3 +288,90 @@ const result = await page.evaluate(async () => {
 console.log(JSON.stringify({ PAGES, FOCUS, THROTTLE, ...result }));
 await browser.close();
 ```
+
+## Round 2 (2026-09-13) — the blink survived PR #863
+
+PR #863 removed the per-scroll-event ticks and the phone got more responsive, but
+the blink stayed, sometimes taking only a few entries at the leading edge of the
+scroll instead of the whole list. The per-frame cost was no longer the stall.
+
+### What still stalls the main thread
+
+Measured with the appendix script's stub, headless Chromium 375x812, CPU
+throttle 6, `sfr.readingFocus` on, `PerformanceObserver('longtask')` around each
+load-more append (`scrollTo(scrollHeight)` until the next page renders):
+
+| append (blocks) | long tasks on `develop` (ms) |
+|---|---|
+| 101 → 197 | 84, 376, 171, 50 |
+| 301 → 398 | 134, 359, 52, 298, 71 |
+| 501 → 601 | 220, 63, 484, 412 |
+
+About 1.2 s of main-thread stall per append at 600 blocks, in chunks of up to
+half a second. A load-more fires 1.5 viewports before the end of the list, so on
+a phone the page lands while the user is still flinging; iOS keeps scrolling on
+the compositor thread and reaches rows that are not painted yet. A short stall
+blanks a few rows at the leading edge, a long one the whole list — both reports.
+
+A CDP trace and a bucketed CPU profile of the 501 → 601 append split it into:
+
+1. **Rendering the new page in one tick** — creating 100 block components
+   (~285 ms at 6x, of which ~150 ms was `DOMParser.parseFromString`) plus the
+   native layout, style and paint of the appended subtree (~490 ms at 6x).
+   Proportional to the page size.
+2. **The planner re-parsing every loaded entry on every plan.** `planMagazine`
+   calls `textSnippet` (a `DOMParser` parse) per entry in `hasSummary` and the
+   quote fit, and `entryImage` parses `contentHtml` for archive rows; every
+   `entries()` change (append, favourite toggle) re-planned all 600. Linear in
+   the loaded list.
+3. **`ReadingFocusApplier.recompute` interleaving reads and writes** — rect,
+   opacity, rect, opacity … over 600 blocks, so each read forced a style recalc
+   after the previous write (~150 ms at 6x when many values change).
+4. **Three further ticks** per append (the `loadingMore` flips, the footer, the
+   focus refresh) at 60–160 ms each on a Default-CD tree of 600 blocks.
+
+Refuted on the way: a 20-entry page size left the stalls at 230–300 ms (so the
+cost was not only per page); reading focus off changed nothing; `OnPush` alone
+changed nothing measurable — and the first two "no change" runs were of the old
+bundle, because a missing import had broken the build and the dev server keeps
+serving the last good build (check `docker compose logs frontend` for `ERROR`
+and grep the served chunk before trusting a measurement).
+
+### Fix (this round)
+
+- `entrySnippet(entry)` / `entryImage(entry)` memoise per entry object
+  (`WeakMap`); the planner and both row components use them. A plan parses only
+  new entries.
+- `ReadingFocusApplier.recompute` reads every rect first, then writes only the
+  opacities that changed.
+- An appended page is revealed `REVEAL_STEP` (8) entries per animation frame
+  (`isAppendedPage`, `revealedCount` in `EntryListComponent`); the planner sees
+  `complete` only once the reveal is done, so it holds the trailing partial page
+  exactly as it does while a page is loading. A first page, a reload and an
+  in-place row update still render at once. The focus refresh runs once the
+  reveal completes; the scroll listener covers the steps.
+- `OnPush` on the eleven list block components plus a shared `NO_TAGS` array
+  (a fresh `[]` per check re-rendered every tag-less block). Measured as
+  removing the extra ticks once the applier was batched.
+
+| append (blocks), 6x, page 100 | develop | this branch |
+|---|---|---|
+| 501 → 601 long tasks (ms) | 220, 63, 484, 412 | 54, 52, 55, 78, 186 |
+| scroll frame time, max (ms) | 102 | 30 |
+
+The residual ~190 ms task is the last reveal step: the planner lays out the
+held-back trailing page, the focus refresh re-observes and writes the ~100 new
+opacities, and `hasMore` toggles the footer.
+
+### Not done, and why
+
+- `content-visibility: auto` on the slots would drop the append's layout and
+  paint to near zero but trades iOS's multi-viewport tile pre-painting for a
+  half-viewport render margin — the leading edge would blank on every fast fling
+  whenever the main thread is busy, and scroll restore would land on placeholder
+  heights. Not without a device test.
+- The device itself. Nothing here was verified on an iPhone; the numbers are
+  Chromium at 6x. The remaining open question on the phone is whether a blink
+  still lines up with a page loading (the footer spinner) or happens without one
+  — the latter would point at WebKit memory pressure, which these measurements
+  cannot see.

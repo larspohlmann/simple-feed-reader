@@ -1,4 +1,4 @@
-import { MIN_PREFETCH_MARGIN, PAGE_SIZE, prefetchMargin } from './paging';
+import { MIN_PREFETCH_MARGIN, PAGE_SIZE, isAppendedPage, prefetchMargin } from './paging';
 
 describe('paging', () => {
   it('asks for a full page, within the backend cap', () => {
@@ -24,5 +24,26 @@ describe('paging', () => {
 
   it('rounds to whole pixels', () => {
     expect(prefetchMargin(801)).toBe('1202px');
+  });
+});
+
+describe('isAppendedPage', () => {
+  const entries = (ids: number[]): { id: number }[] => ids.map((id) => ({ id }));
+
+  it('recognises a next page appended behind the loaded list', () => {
+    const previous = entries([1, 2, 3]);
+    const next = [...previous, ...entries([4, 5])];
+    expect(isAppendedPage(previous, next)).toBe(true);
+  });
+
+  it('treats a replaced list as a fresh render, not an append', () => {
+    expect(isAppendedPage(entries([1, 2, 3]), entries([9, 10, 11, 12]))).toBe(false);
+  });
+
+  it('treats the first page, a same-length update and a shrink as fresh renders', () => {
+    const loaded = entries([1, 2, 3]);
+    expect(isAppendedPage([], loaded)).toBe(false);
+    expect(isAppendedPage(loaded, [loaded[0], { id: 2 }, loaded[2]])).toBe(false);
+    expect(isAppendedPage(loaded, loaded.slice(0, 2))).toBe(false);
   });
 });

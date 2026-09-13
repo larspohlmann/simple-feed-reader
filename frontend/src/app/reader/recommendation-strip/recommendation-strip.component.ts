@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { EntryDto } from '../models';
 
@@ -15,6 +15,7 @@ import { EntryDto } from '../models';
  *  single entry) with the same wrapper. */
 @Component({
   selector: 'app-recommendation-strip',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslocoPipe],
   templateUrl: './recommendation-strip.component.html',
   styleUrl: './recommendation-strip.component.scss',

@@ -162,3 +162,65 @@ it('stops recomputing after destroy()', async () => {
   await frames();
   expect(opacities(blocks)).toEqual(['', '', '']);
 });
+
+// #501: a pass that reads one block's rect, writes its opacity, then reads the
+// next forces a style recalc per block. Reads must all land before any write.
+describe('geometry reads and style writes', () => {
+  function spyOnOpacityWrites(block: HTMLElement, log: string[]): void {
+    let value = '';
+    Object.defineProperty(block.style, 'opacity', {
+      configurable: true,
+      get: () => value,
+      set: (next: string) => {
+        log.push('write');
+        value = next;
+      },
+    });
+  }
+
+  function traced(count: number): {
+    scroller: HTMLElement;
+    blocks: () => HTMLElement[];
+    log: string[];
+  } {
+    const { scroller, blocks } = scrollerWith(count);
+    const log: string[] = [];
+    for (const block of blocks()) {
+      spyOnOpacityWrites(block, log);
+      block.getBoundingClientRect = () => {
+        log.push('read');
+        return { top: 0, height: 10 } as DOMRect;
+      };
+    }
+    return { scroller, blocks, log };
+  }
+
+  it('reads every block before it writes any', async () => {
+    const { scroller, blocks, log } = traced(3);
+    const applier = new ReadingFocusApplier({
+      scroller,
+      blocks,
+      curve: LIST_FOCUS_CURVE,
+      isActive: () => true,
+    });
+    await frames();
+    expect(log).toEqual(['read', 'read', 'read', 'write', 'write', 'write']);
+    applier.destroy();
+  });
+
+  it('leaves a block untouched when its opacity has not changed', async () => {
+    const { scroller, blocks, log } = traced(2);
+    const applier = new ReadingFocusApplier({
+      scroller,
+      blocks,
+      curve: LIST_FOCUS_CURVE,
+      isActive: () => true,
+    });
+    await frames();
+    log.length = 0;
+    scroller.dispatchEvent(new Event('scroll'));
+    await frames();
+    expect(log.filter((entry) => entry === 'write')).toEqual([]);
+    applier.destroy();
+  });
+});
