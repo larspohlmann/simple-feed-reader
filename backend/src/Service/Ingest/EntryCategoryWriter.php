@@ -32,34 +32,33 @@ final class EntryCategoryWriter
      */
     public function attach(array $pairs): void
     {
-        $resolvedByIdentity = [];
-        $normalizedByEntry = $this->normalizeEach($pairs);
-        $this->resolveCategories($this->distinctCategories($normalizedByEntry), $resolvedByIdentity);
-        $this->writeLinks($pairs, $normalizedByEntry, $resolvedByIdentity);
+        $entriesWithCategories = $this->normalizeEach($pairs);
+        $resolvedByIdentity = $this->resolveCategories($this->distinctCategories($entriesWithCategories));
+        $this->writeLinks($entriesWithCategories, $resolvedByIdentity);
     }
 
     /**
      * @param list<array{0: Entry, 1: ParsedEntry}> $pairs
      *
-     * @return list<list<NormalizedCategory>>
+     * @return list<array{0: Entry, 1: list<NormalizedCategory>}>
      */
     private function normalizeEach(array $pairs): array
     {
         return array_map(
-            fn (array $pair): array => $this->normalizer->normalize($pair[1]->categories),
+            fn (array $pair): array => [$pair[0], $this->normalizer->normalize($pair[1]->categories)],
             $pairs,
         );
     }
 
     /**
-     * @param list<list<NormalizedCategory>> $normalizedByEntry
+     * @param list<array{0: Entry, 1: list<NormalizedCategory>}> $entriesWithCategories
      *
      * @return array<string, NormalizedCategory>
      */
-    private function distinctCategories(array $normalizedByEntry): array
+    private function distinctCategories(array $entriesWithCategories): array
     {
         $distinct = [];
-        foreach ($normalizedByEntry as $categories) {
+        foreach ($entriesWithCategories as [, $categories]) {
             foreach ($categories as $category) {
                 $distinct[$category->identity()] = $category;
             }
@@ -69,53 +68,40 @@ final class EntryCategoryWriter
     }
 
     /**
-     * @param array<string, NormalizedCategory> $distinct
-     * @param array<string, Category>           $resolvedByIdentity
-     */
-    private function resolveCategories(array $distinct, array &$resolvedByIdentity): void
-    {
-        $createdAny = false;
-        foreach ($distinct as $identity => $category) {
-            $createdAny = $this->resolveOne($identity, $category, $resolvedByIdentity) || $createdAny;
-        }
-
-        if ($createdAny) {
-            $this->entityManager->flush();
-        }
-    }
-
-    /**
      * A concurrent refresh of another feed can insert the same identity between
-     * the lookup and this flush; the unique index rejects the duplicate and the
-     * feed's refresh retries next cycle.
+     * the batch lookup and this flush; the unique index rejects the duplicate
+     * and the feed's refresh retries next cycle.
      *
-     * @param array<string, Category> $resolvedByIdentity
+     * @param array<string, NormalizedCategory> $distinct
+     *
+     * @return array<string, Category>
      */
-    private function resolveOne(string $identity, NormalizedCategory $category, array &$resolvedByIdentity): bool
+    private function resolveCategories(array $distinct): array
     {
-        $existing = $this->categories->findOneByIdentity($category->canonicalKey, $category->scheme);
-        if ($existing !== null) {
-            $resolvedByIdentity[$identity] = $existing;
+        $resolved = $this->categories->findExistingByIdentities(array_values($distinct));
 
-            return false;
+        foreach ($distinct as $identity => $category) {
+            if (isset($resolved[$identity])) {
+                continue;
+            }
+            $created = new Category($category->canonicalKey, $category->scheme);
+            $this->entityManager->persist($created);
+            $resolved[$identity] = $created;
         }
 
-        $created = new Category($category->canonicalKey, $category->scheme);
-        $this->entityManager->persist($created);
-        $resolvedByIdentity[$identity] = $created;
+        $this->entityManager->flush();
 
-        return true;
+        return $resolved;
     }
 
     /**
-     * @param list<array{0: Entry, 1: ParsedEntry}> $pairs
-     * @param list<list<NormalizedCategory>>        $normalizedByEntry
-     * @param array<string, Category>               $resolvedByIdentity
+     * @param list<array{0: Entry, 1: list<NormalizedCategory>}> $entriesWithCategories
+     * @param array<string, Category>                            $resolvedByIdentity
      */
-    private function writeLinks(array $pairs, array $normalizedByEntry, array $resolvedByIdentity): void
+    private function writeLinks(array $entriesWithCategories, array $resolvedByIdentity): void
     {
-        foreach ($pairs as $index => [$entry]) {
-            foreach ($normalizedByEntry[$index] as $position => $category) {
+        foreach ($entriesWithCategories as [$entry, $categories]) {
+            foreach ($categories as $position => $category) {
                 $this->entityManager->persist(new EntryCategory(
                     $entry,
                     $resolvedByIdentity[$category->identity()],

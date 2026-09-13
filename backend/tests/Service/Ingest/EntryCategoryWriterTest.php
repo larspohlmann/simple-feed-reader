@@ -14,6 +14,7 @@ use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Parser\ParsedCategory;
 use App\Service\Parser\ParsedEntry;
 use App\Tests\DbTestCase;
+use App\Tests\Support\QueryRecorder;
 
 final class EntryCategoryWriterTest extends DbTestCase
 {
@@ -79,5 +80,29 @@ final class EntryCategoryWriterTest extends DbTestCase
         $this->em->clear();
 
         self::assertCount(1, $this->em->getRepository(Category::class)->findBy(['canonicalKey' => 'politics']));
+    }
+
+    public function testResolvingMultipleDistinctCategoriesCostsExactlyOneSelect(): void
+    {
+        $feed = $this->persistFeed();
+        $entryA = $this->persistEntry($feed, 'a');
+        $entryB = $this->persistEntry($feed, 'b');
+        $this->em->flush();
+
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        $recorder->reset();
+
+        $this->writer->attach([
+            [$entryA, $this->parsed('a', new ParsedCategory('Politics'), new ParsedCategory('World'))],
+            [$entryB, $this->parsed('b', new ParsedCategory('Tech'))],
+        ]);
+
+        self::assertCount(
+            1,
+            $recorder->queriesMatching('from category'),
+            'attach() must resolve a batch of distinct categories in exactly one select, got:'
+                . "\n" . implode("\n", $recorder->queries()),
+        );
     }
 }
