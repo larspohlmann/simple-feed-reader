@@ -68,6 +68,7 @@ final class Rss1Parser implements FeedFormatParserInterface
             contentHtml: $contentEncoded ?? $description,
             publishedAt: DateParser::parse(XmlHelper::childText($item, 'date', self::DC_NS)),
             media: new ParsedEntryMedia($image, $mediaBundle),
+            categories: ItemCategoryExtractor::extract($item),
         );
     }
 }
