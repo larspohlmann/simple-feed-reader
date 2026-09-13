@@ -3,7 +3,7 @@
   "title": "Application performance",
   "tags": ["simple-feed-reader"],
   "schemaVersion": 39,
-  "version": 4,
+  "version": 6,
   "editable": true,
   "id": null,
   "time": { "from": "now-24h", "to": "now" },
@@ -16,7 +16,7 @@
       {
         "name": "route",
         "label": "Route",
-        "description": "Click a row in the Routes table to drill in, or type a route name.",
+        "description": "Click a route in any table below to drill in, or type a route name.",
         "type": "textbox",
         "query": "api_entries_list",
         "current": { "selected": true, "text": "api_entries_list", "value": "api_entries_list" }
@@ -27,43 +27,122 @@
     {
       "id": 1,
       "type": "table",
-      "title": "Routes by slowest request in range",
-      "description": "Every route seen in the time range, slowest first. The value is the longest server-span duration for that route.",
+      "title": "Routes by p95 latency",
+      "description": "Routes by 95th-percentile server-span duration in the range (robust to outliers). Click a route to load its detail below.",
       "datasource": { "type": "tempo", "uid": "tempo" },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 0 },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
       "targets": [
-        { "refId": "A", "queryType": "traceql", "metricsQueryType": "instant", "query": "{ kind = server } | max_over_time(duration) by (span.http.route)" }
+        { "refId": "A", "queryType": "traceql", "metricsQueryType": "instant", "query": "{ kind = server } | quantile_over_time(duration, .95) by (span.http.route)" }
       ],
       "transformations": [
         { "id": "labelsToFields", "options": { "mode": "columns" } },
         { "id": "merge", "options": {} },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": { "time": true, "Time": true },
-            "renameByName": { "span.http.route": "Route", "value": "Max", "Value": "Max" }
-          }
-        }
+        { "id": "organize", "options": { "excludeByName": { "time": true, "Time": true, "p": true }, "renameByName": { "span.http.route": "Route", "value": "p95", "Value": "p95" } } }
       ],
       "fieldConfig": {
         "defaults": { "custom": { "align": "auto", "filterable": true } },
         "overrides": [
-          { "matcher": { "id": "byName", "options": "Max" }, "properties": [{ "id": "unit", "value": "s" }, { "id": "decimals", "value": 3 }] },
+          { "matcher": { "id": "byName", "options": "p95" }, "properties": [{ "id": "unit", "value": "s" }, { "id": "decimals", "value": 3 }] },
           { "matcher": { "id": "byName", "options": "Route" }, "properties": [
             { "id": "mappings", "value": [ { "type": "regex", "options": { "pattern": "^\"(.*)\"$", "result": { "text": "$1" } } } ] },
             { "id": "links", "value": [ { "title": "Show this route below", "url": "/d/application-performance/application-performance?${__url_time_range}&var-route=${__value.text}" } ] }
           ] }
         ]
       },
-      "options": { "sortBy": [{ "displayName": "Max", "desc": true }], "showHeader": true }
+      "options": { "sortBy": [{ "displayName": "p95", "desc": true }], "showHeader": true }
+    },
+    {
+      "id": 7,
+      "type": "table",
+      "title": "Routes by average latency",
+      "description": "Routes by mean server-span duration in the range. Click a route to load its detail below.",
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        { "refId": "A", "queryType": "traceql", "metricsQueryType": "instant", "query": "{ kind = server } | avg_over_time(duration) by (span.http.route)" }
+      ],
+      "transformations": [
+        { "id": "labelsToFields", "options": { "mode": "columns" } },
+        { "id": "merge", "options": {} },
+        { "id": "organize", "options": { "excludeByName": { "time": true, "Time": true }, "renameByName": { "span.http.route": "Route", "value": "Avg", "Value": "Avg" } } }
+      ],
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "auto", "filterable": true } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Avg" }, "properties": [{ "id": "unit", "value": "s" }, { "id": "decimals", "value": 3 }] },
+          { "matcher": { "id": "byName", "options": "Route" }, "properties": [
+            { "id": "mappings", "value": [ { "type": "regex", "options": { "pattern": "^\"(.*)\"$", "result": { "text": "$1" } } } ] },
+            { "id": "links", "value": [ { "title": "Show this route below", "url": "/d/application-performance/application-performance?${__url_time_range}&var-route=${__value.text}" } ] }
+          ] }
+        ]
+      },
+      "options": { "sortBy": [{ "displayName": "Avg", "desc": true }], "showHeader": true }
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Busiest routes (requests)",
+      "description": "Request count per route in the range. Click a route to load its detail below.",
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+      "targets": [
+        { "refId": "A", "queryType": "traceql", "metricsQueryType": "instant", "query": "{ kind = server } | count_over_time() by (span.http.route)" }
+      ],
+      "transformations": [
+        { "id": "labelsToFields", "options": { "mode": "columns" } },
+        { "id": "merge", "options": {} },
+        { "id": "organize", "options": { "excludeByName": { "time": true, "Time": true }, "renameByName": { "span.http.route": "Route", "value": "Requests", "Value": "Requests" } } }
+      ],
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "auto", "filterable": true } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Requests" }, "properties": [{ "id": "unit", "value": "short" }, { "id": "decimals", "value": 0 }] },
+          { "matcher": { "id": "byName", "options": "Route" }, "properties": [
+            { "id": "mappings", "value": [ { "type": "regex", "options": { "pattern": "^\"(.*)\"$", "result": { "text": "$1" } } } ] },
+            { "id": "links", "value": [ { "title": "Show this route below", "url": "/d/application-performance/application-performance?${__url_time_range}&var-route=${__value.text}" } ] }
+          ] }
+        ]
+      },
+      "options": { "sortBy": [{ "displayName": "Requests", "desc": true }], "showHeader": true }
+    },
+    {
+      "id": 9,
+      "type": "table",
+      "title": "Routes with errors",
+      "description": "Server spans with status=error, counted per route in the range. Empty when there are no errors.",
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
+      "targets": [
+        { "refId": "A", "queryType": "traceql", "metricsQueryType": "instant", "query": "{ kind = server && status = error } | count_over_time() by (span.http.route)" }
+      ],
+      "transformations": [
+        { "id": "labelsToFields", "options": { "mode": "columns" } },
+        { "id": "merge", "options": {} },
+        { "id": "organize", "options": { "excludeByName": { "time": true, "Time": true }, "renameByName": { "span.http.route": "Route", "value": "Errors", "Value": "Errors" } } }
+      ],
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "auto", "filterable": true } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Errors" }, "properties": [
+            { "id": "unit", "value": "short" }, { "id": "decimals", "value": 0 },
+            { "id": "custom.cellOptions", "value": { "type": "color-text" } },
+            { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "text", "value": null }, { "color": "red", "value": 1 }] } }
+          ] },
+          { "matcher": { "id": "byName", "options": "Route" }, "properties": [
+            { "id": "mappings", "value": [ { "type": "regex", "options": { "pattern": "^\"(.*)\"$", "result": { "text": "$1" } } } ] },
+            { "id": "links", "value": [ { "title": "Show this route below", "url": "/d/application-performance/application-performance?${__url_time_range}&var-route=${__value.text}" } ] }
+          ] }
+        ]
+      },
+      "options": { "sortBy": [{ "displayName": "Errors", "desc": true }], "showHeader": true }
     },
     {
       "id": 2,
       "type": "timeseries",
-      "title": "Requests of $route",
-      "description": "One point per minute that saw a request: the slowest request that started in that minute. At this traffic that is every request.",
+      "title": "Requests of $route (each dot is one request)",
+      "description": "One point per minute that saw a request: the slowest request that started in that minute. At this traffic that is every request, so outliers are visible as individual dots.",
       "datasource": { "type": "tempo", "uid": "tempo" },
-      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 10 },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 18 },
       "targets": [
         { "refId": "A", "queryType": "traceql", "metricsQueryType": "range", "step": "1m", "query": "{ kind = server && span.http.route = \"$route\" } | max_over_time(duration)" }
       ],
@@ -80,68 +159,55 @@
     {
       "id": 3,
       "type": "table",
-      "title": "Methods inside $route, slowest first",
-      "description": "#[WithSpan] methods called under this route's requests, by longest duration in the range.",
+      "title": "Methods inside $route by average latency",
+      "description": "#[WithSpan] methods called under this route's requests, by mean duration in the range (max is omitted: single outliers make it misleading).",
       "datasource": { "type": "tempo", "uid": "tempo" },
-      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 19 },
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 27 },
       "targets": [
-        { "refId": "A", "queryType": "traceql", "metricsQueryType": "instant", "query": "{ kind = server && span.http.route = \"$route\" } >> { kind = internal } | max_over_time(duration) by (name)" }
+        { "refId": "A", "queryType": "traceql", "metricsQueryType": "range", "step": "1m", "query": "{ kind = server && span.http.route = \"$route\" } >> { kind = internal } | avg_over_time(duration) by (name)" }
       ],
       "transformations": [
-        { "id": "labelsToFields", "options": { "mode": "columns" } },
-        { "id": "merge", "options": {} },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": { "time": true, "Time": true },
-            "renameByName": { "name": "Method", "value": "Max", "Value": "Max" }
-          }
-        }
+        { "id": "reduce", "options": { "mode": "seriesToRows", "reducers": ["mean"] } },
+        { "id": "organize", "options": { "renameByName": { "Field": "Method", "Mean": "Avg" } } }
       ],
       "fieldConfig": {
         "defaults": {},
         "overrides": [
-          { "matcher": { "id": "byName", "options": "Max" }, "properties": [{ "id": "unit", "value": "s" }, { "id": "decimals", "value": 3 }] }
+          { "matcher": { "id": "byName", "options": "Avg" }, "properties": [{ "id": "unit", "value": "s" }, { "id": "decimals", "value": 3 }] },
+          { "matcher": { "id": "byName", "options": "Method" }, "properties": [{ "id": "mappings", "value": [ { "type": "regex", "options": { "pattern": "^\"(.*)\"$", "result": { "text": "$1" } } } ] }] }
         ]
       },
-      "options": { "sortBy": [{ "displayName": "Max", "desc": true }], "showHeader": true }
+      "options": { "sortBy": [{ "displayName": "Avg", "desc": true }], "showHeader": true }
     },
     {
       "id": 4,
       "type": "table",
-      "title": "Queries inside $route, slowest first",
-      "description": "DBAL statements executed under this route's requests, by longest duration. Prepared statements show placeholders, never values.",
+      "title": "Queries inside $route by average latency",
+      "description": "DBAL statements executed under this route's requests, by mean duration. Prepared statements show placeholders, never values.",
       "datasource": { "type": "tempo", "uid": "tempo" },
-      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 19 },
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 27 },
       "targets": [
-        { "refId": "A", "queryType": "traceql", "metricsQueryType": "instant", "query": "{ kind = server && span.http.route = \"$route\" } >> { span.db.query.text != \"\" } | max_over_time(duration) by (span.db.query.text)" }
+        { "refId": "A", "queryType": "traceql", "metricsQueryType": "range", "step": "1m", "query": "{ kind = server && span.http.route = \"$route\" } >> { span.db.query.text != \"\" } | avg_over_time(duration) by (span.db.query.text)" }
       ],
       "transformations": [
-        { "id": "labelsToFields", "options": { "mode": "columns" } },
-        { "id": "merge", "options": {} },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": { "time": true, "Time": true },
-            "renameByName": { "span.db.query.text": "SQL", "value": "Max", "Value": "Max" }
-          }
-        }
+        { "id": "reduce", "options": { "mode": "seriesToRows", "reducers": ["mean"] } },
+        { "id": "organize", "options": { "renameByName": { "Field": "SQL", "Mean": "Avg" } } }
       ],
       "fieldConfig": {
         "defaults": { "custom": { "inspect": true } },
         "overrides": [
-          { "matcher": { "id": "byName", "options": "Max" }, "properties": [{ "id": "unit", "value": "s" }, { "id": "decimals", "value": 3 }] },
-          { "matcher": { "id": "byName", "options": "SQL" }, "properties": [{ "id": "custom.width", "value": 520 }] }
+          { "matcher": { "id": "byName", "options": "Avg" }, "properties": [{ "id": "unit", "value": "s" }, { "id": "decimals", "value": 3 }] },
+          { "matcher": { "id": "byName", "options": "SQL" }, "properties": [{ "id": "custom.width", "value": 360 }, { "id": "mappings", "value": [ { "type": "regex", "options": { "pattern": "^\"(.*)\"$", "result": { "text": "$1" } } } ] }] }
         ]
       },
-      "options": { "sortBy": [{ "displayName": "Max", "desc": true }], "showHeader": true }
+      "options": { "sortBy": [{ "displayName": "Avg", "desc": true }], "showHeader": true }
     },
     {
       "id": 5,
       "type": "table",
       "title": "Traces of $route, slowest first",
       "datasource": { "type": "tempo", "uid": "tempo" },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 29 },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 37 },
       "targets": [
         { "refId": "A", "queryType": "traceql", "tableType": "traces", "limit": 50, "spss": 1, "query": "{ kind = server && span.http.route = \"$route\" }" }
       ],
@@ -153,7 +219,7 @@
       "type": "flamegraph",
       "title": "Profile of $route (CPU/wall time, all sampled requests in range)",
       "datasource": { "type": "grafana-pyroscope-datasource", "uid": "pyroscope" },
-      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 39 },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 47 },
       "targets": [
         {
           "refId": "A",
