@@ -1,5 +1,5 @@
 import { EntryDto } from '../models';
-import { entryImage, EntryImage, textSnippet } from '../preview-image';
+import { entryImage, EntryImage, entrySnippet } from '../preview-image';
 import { BLOCK_HEIGHT, DEMOTION, EntryKind, MagazineBlock } from './magazine-block';
 import { IMAGE_TEMPLATES, Slot, TEXT_TEMPLATES } from './magazine-templates';
 
@@ -203,7 +203,7 @@ function isImageRich(entries: EntryDto[]): boolean {
 function isTextRich(entries: EntryDto[]): boolean {
   if (entries.length === 0) return false;
   const withLongText = entries.filter(
-    (entry) => textSnippet(entry.summary || entry.contentHtml).length >= QUOTE_MIN_TEXT,
+    (entry) => entrySnippet(entry).length >= QUOTE_MIN_TEXT,
   ).length;
   return withLongText / entries.length >= TEXT_RICH_SHARE;
 }
@@ -381,7 +381,7 @@ function hasSummaryButNoImage(entry: EntryDto): boolean {
  *  renders (`EntryBlockBase`), so a `kicker` is only offered to an entry whose
  *  dek will not render empty. */
 function hasSummary(entry: EntryDto): boolean {
-  return textSnippet(entry.summary || entry.contentHtml).length > 0;
+  return entrySnippet(entry).length > 0;
 }
 
 function fits(kind: EntryKind, entry: EntryDto): boolean {
@@ -403,7 +403,7 @@ function fits(kind: EntryKind, entry: EntryDto): boolean {
     case 'thumb':
       return !!image;
     case 'quote':
-      return textSnippet(entry.summary || entry.contentHtml).length >= QUOTE_MIN_TEXT;
+      return entrySnippet(entry).length >= QUOTE_MIN_TEXT;
     case 'kicker':
       // A kicker shows a title AND a dek; with no dek it is only a taller
       // compact, so a summary-less entry demotes past it to the `compact` floor.

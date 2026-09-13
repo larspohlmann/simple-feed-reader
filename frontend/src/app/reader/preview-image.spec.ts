@@ -1,4 +1,4 @@
-import { entryImage, firstPreviewImage, textSnippet } from './preview-image';
+import { entryImage, entrySnippet, firstPreviewImage, textSnippet } from './preview-image';
 import { EntryDto } from './models';
 
 describe('firstPreviewImage', () => {
@@ -86,5 +86,59 @@ describe('entryImage', () => {
 
   it('returns null when there is no image anywhere', () => {
     expect(entryImage(entry())).toBeNull();
+  });
+});
+
+// #501: the planner judges every loaded entry on every plan and each block
+// renders its dek; parsing the HTML once per entry keeps both O(new entries).
+describe('per-entry memoisation', () => {
+  const base: EntryDto = {
+    id: 1,
+    title: 't',
+    url: null,
+    author: null,
+    summary: null,
+    contentHtml: '<p>Some <b>copy</b></p><img src="https://x/y.png">',
+    imageUrl: null,
+    imageWidth: null,
+    imageHeight: null,
+    media: [],
+    attachments: [],
+    publishedAt: 'x',
+    createdAt: 'x',
+    subscriptionId: 1,
+    source: 's',
+    faviconUrl: null,
+    isHidden: false,
+    isFavorite: false,
+    isKept: false,
+    isViewed: false,
+  };
+  let parses: jest.SpyInstance;
+  beforeEach(() => {
+    parses = jest.spyOn(DOMParser.prototype, 'parseFromString');
+  });
+  afterEach(() => parses.mockRestore());
+
+  it('entrySnippet parses an entry once and answers from memory after', () => {
+    const entry = { ...base };
+    expect(entrySnippet(entry)).toBe('Some copy');
+    expect(entrySnippet(entry)).toBe('Some copy');
+    expect(parses).toHaveBeenCalledTimes(1);
+  });
+
+  it('entryImage parses an archive row once and answers from memory after', () => {
+    const entry = { ...base };
+    const first = entryImage(entry);
+    expect(first?.url).toBe('https://x/y.png');
+    expect(entryImage(entry)).toBe(first);
+    expect(parses).toHaveBeenCalledTimes(1);
+  });
+
+  it('a replaced entry object is judged afresh', () => {
+    const entry = { ...base };
+    entrySnippet(entry);
+    expect(entrySnippet({ ...entry, contentHtml: '<p>New</p>' })).toBe('New');
+    expect(parses).toHaveBeenCalledTimes(2);
   });
 });

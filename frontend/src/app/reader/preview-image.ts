@@ -34,6 +34,19 @@ export function textSnippet(html: string | null): string {
   return NULL_LEAK.test(text) ? '' : text;
 }
 
+const snippets = new WeakMap<EntryDto, string>();
+const images = new WeakMap<EntryDto, EntryImage | null>();
+
+/** The entry's dek: its summary's text, else its body's. Parsed once per entry
+ *  object — the planner asks for every loaded entry on every plan (#501). */
+export function entrySnippet(entry: EntryDto): string {
+  const known = snippets.get(entry);
+  if (known !== undefined) return known;
+  const snippet = textSnippet(entry.summary || entry.contentHtml);
+  snippets.set(entry, snippet);
+  return snippet;
+}
+
 /** Same shape as the API's HeroImageDto — one declaration, so a picture the
  *  client derives and a picture the backend resolved cannot drift apart.
  *  Null width/height mean the feed did not say. */
@@ -44,6 +57,14 @@ export type EntryImage = HeroImageDto;
  *  refresh only backfills what the feed still serves, so the deep archive keeps
  *  depending on inline markup indefinitely. */
 export function entryImage(entry: EntryDto): EntryImage | null {
+  const known = images.get(entry);
+  if (known !== undefined) return known;
+  const image = resolveEntryImage(entry);
+  images.set(entry, image);
+  return image;
+}
+
+function resolveEntryImage(entry: EntryDto): EntryImage | null {
   if (entry.imageUrl) {
     return { url: entry.imageUrl, width: entry.imageWidth, height: entry.imageHeight };
   }
