@@ -162,6 +162,11 @@ while the URL 404s. Verification step 1 is what catches that.
    Also set `DRAIN_PHP_CLI_BINARY=/opt/RZphp84/bin/php-cli`: it names the CLI binary the web
    request uses to spawn the recommendation drainer; without it, runs fall back to the
    maintenance cron's pace.
+
+   Also set `FETCH_CONCURRENCY=3` (#1025). The host's cgi-fcgi worker refuses memory at
+   180–245 MB of PHP heap, far below the advertised 512M, and the ceiling moves between
+   requests; at the committed default of eight in-flight fetches the maintenance tick
+   occasionally dies with an OS-level `Out of memory` three seconds in.
 9. **Remove the placeholder `current`** — `~/simplefeedreader/current` exists on the host
    as a **real directory**, holding a placeholder `public/index.html` from before this
    deployment was built. It has to be gone before the first deploy:
