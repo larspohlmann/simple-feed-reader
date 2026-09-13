@@ -80,4 +80,51 @@ final class CategoryNormalizerTest extends TestCase
         self::assertSame(128, mb_strlen($out[0]->canonicalKey));
         self::assertSame(255, mb_strlen($out[0]->scheme));
     }
+
+    public function testInvalidCategoryInTheMiddleDoesNotStopProcessingLaterOnes(): void
+    {
+        $out = $this->normalizer->normalize([
+            new ParsedCategory('Politics'),
+            new ParsedCategory('   '),
+            new ParsedCategory('World'),
+        ]);
+
+        self::assertCount(2, $out);
+        self::assertSame('Politics', $out[0]->displayLabel);
+        self::assertSame('World', $out[1]->displayLabel);
+    }
+
+    public function testInvalidUtf8LabelNormalizesToEmptyCanonicalKeyWithoutThrowing(): void
+    {
+        $out = $this->normalizer->normalize([new ParsedCategory("abc\x80\x81def")]);
+
+        self::assertCount(1, $out);
+        self::assertSame('', $out[0]->canonicalKey);
+    }
+
+    public function testCanonicalKeyLowercasesMultibyteCharacters(): void
+    {
+        $out = $this->normalizer->normalize([new ParsedCategory('MÜNCHEN')]);
+
+        self::assertSame('münchen', $out[0]->canonicalKey);
+    }
+
+    public function testTruncatesMultibyteLabelsByCharacterCountNotBytes(): void
+    {
+        $label = str_repeat('ü', 200);
+
+        $out = $this->normalizer->normalize([new ParsedCategory($label)]);
+
+        self::assertSame(str_repeat('ü', 128), $out[0]->displayLabel);
+        self::assertSame(str_repeat('ü', 128), $out[0]->canonicalKey);
+    }
+
+    public function testSchemeIsTrimmedAndTruncatedByCharacterCount(): void
+    {
+        $scheme = '  X' . str_repeat('ü', 300) . '  ';
+
+        $out = $this->normalizer->normalize([new ParsedCategory('Politics', $scheme)]);
+
+        self::assertSame('X' . str_repeat('ü', 254), $out[0]->scheme);
+    }
 }

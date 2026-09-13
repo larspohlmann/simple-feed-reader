@@ -82,6 +82,55 @@ final class EntryCategoryWriterTest extends DbTestCase
         self::assertCount(1, $this->em->getRepository(Category::class)->findBy(['canonicalKey' => 'politics']));
     }
 
+    public function testDoesNotFlushEarlyWhenNoNewCategoryIsCreated(): void
+    {
+        $feed = $this->persistFeed();
+        $seedEntry = $this->persistEntry($feed, 'seed');
+        $this->writer->attach([[$seedEntry, $this->parsed('seed', new ParsedCategory('Politics'))]]);
+        $this->em->flush();
+
+        $entry = $this->persistEntry($feed, 'a');
+        self::assertNull($entry->getId());
+
+        $this->writer->attach([[$entry, $this->parsed('a', new ParsedCategory('Politics'))]]);
+
+        self::assertNull($entry->getId(), 'attach() must not flush when it created no new Category row');
+    }
+
+    public function testFlushesImmediatelyWhenANewCategoryIsCreated(): void
+    {
+        $feed = $this->persistFeed();
+        $entry = $this->persistEntry($feed, 'a');
+        $this->em->flush();
+
+        $this->writer->attach([[$entry, $this->parsed('a', new ParsedCategory('Politics'))]]);
+
+        $categories = $this->em->getRepository(Category::class)->findBy(['canonicalKey' => 'politics']);
+        self::assertCount(1, $categories);
+        self::assertNotNull(
+            $categories[0]->getId(),
+            'a newly created Category must be flushed inside attach(), not deferred to the caller',
+        );
+    }
+
+    public function testCreatesANewCategoryEvenWhenAnEarlierOneAlreadyExists(): void
+    {
+        $feed = $this->persistFeed();
+        $seedEntry = $this->persistEntry($feed, 'seed');
+        $this->writer->attach([[$seedEntry, $this->parsed('seed', new ParsedCategory('Politics'))]]);
+        $this->em->flush();
+
+        $entry = $this->persistEntry($feed, 'a');
+        $this->writer->attach([
+            [$entry, $this->parsed('a', new ParsedCategory('Politics'), new ParsedCategory('World'))],
+        ]);
+        $this->em->flush();
+        $this->em->clear();
+
+        $links = $this->em->getRepository(EntryCategory::class)->findBy(['entry' => $entry->getId()]);
+        self::assertCount(2, $links);
+    }
+
     public function testResolvingMultipleDistinctCategoriesCostsExactlyOneSelect(): void
     {
         $feed = $this->persistFeed();

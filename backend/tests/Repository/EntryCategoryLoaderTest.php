@@ -48,6 +48,39 @@ final class EntryCategoryLoaderTest extends DbTestCase
         self::assertSame(['Politics', 'World'], $out[0]->categories);
     }
 
+    public function testEmptyInputReturnsEmptyList(): void
+    {
+        self::assertSame([], $this->loader->loadInto([]));
+    }
+
+    public function testLabelsAreGroupedByTheirOwnEntryAcrossMultipleEntries(): void
+    {
+        $feed = new Feed('https://f.test/' . uniqid('', true));
+        $this->em->persist($feed);
+        $now = new \DateTimeImmutable('2026-01-01T00:00:00Z');
+        $first = new Entry($feed, 'm1', 'https://x.test/m1', 'One', $now, $now, null);
+        $second = new Entry($feed, 'm2', 'https://x.test/m2', 'Two', $now, $now, null);
+        $this->em->persist($first);
+        $this->em->persist($second);
+        $categoryOne = new Category('one', '');
+        $categoryTwo = new Category('two', '');
+        $this->em->persist($categoryOne);
+        $this->em->persist($categoryTwo);
+        $this->em->persist(new EntryCategory($first, $categoryOne, 0, 'One'));
+        $this->em->persist(new EntryCategory($second, $categoryTwo, 0, 'Two'));
+        $this->em->flush();
+
+        $rows = [
+            $this->row($first, new EntryListRowSubscription(1, 'S')),
+            $this->row($second, new EntryListRowSubscription(1, 'S')),
+        ];
+
+        $out = $this->loader->loadInto($rows);
+
+        self::assertSame(['One'], $out[0]->categories);
+        self::assertSame(['Two'], $out[1]->categories);
+    }
+
     public function testEntryWithoutCategoriesGetsEmptyList(): void
     {
         $feed = new Feed('https://f.test/' . uniqid('', true));
