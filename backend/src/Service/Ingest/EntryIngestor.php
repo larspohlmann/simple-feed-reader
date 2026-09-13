@@ -44,6 +44,7 @@ final class EntryIngestor
         private readonly EntryRepository $entryRepository,
         private readonly EntrySanitizer $sanitizer,
         private readonly UrlNormalizer $urlNormalizer,
+        private readonly EntryCategoryWriter $categoryWriter,
     ) {
     }
 
@@ -69,6 +70,7 @@ final class EntryIngestor
         );
 
         $created = [];
+        $newPairs = [];
         foreach ($parsed->entries as $parsedEntry) {
             $guidHash = self::guidHash($parsedEntry->guid);
             $urlHash = $this->urlHash($parsedEntry->url);
@@ -97,7 +99,10 @@ final class EntryIngestor
 
             $this->em->persist($entry);
             $created[] = $entry;
+            $newPairs[] = [$entry, $parsedEntry];
         }
+
+        $this->categoryWriter->attach($newPairs);
 
         return $created;
     }

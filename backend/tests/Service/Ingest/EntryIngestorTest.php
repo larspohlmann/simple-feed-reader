@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingest;
 
+use App\Entity\Category;
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Repository\CategoryRepository;
 use App\Repository\EntryRepository;
+use App\Service\Category\CategoryNormalizer;
+use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\FeedIngestContext;
 use App\Service\Parser\ParsedEntry;
@@ -30,11 +34,14 @@ final class EntryIngestorTest extends DbTestCase
         parent::setUp();
         /** @var EntryRepository $entryRepository */
         $entryRepository = $this->em->getRepository(Entry::class);
+        /** @var CategoryRepository $categoryRepository */
+        $categoryRepository = $this->em->getRepository(Category::class);
         $this->ingestor = new EntryIngestor(
             $this->em,
             $entryRepository,
             new EntrySanitizer(),
             new UrlNormalizer(),
+            new EntryCategoryWriter($this->em, $categoryRepository, new CategoryNormalizer()),
         );
     }
 

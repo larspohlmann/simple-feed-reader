@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Subscription;
 
+use App\Entity\Category;
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Service\Category\CategoryNormalizer;
 use App\Service\Discovery\DiscoveredFeed;
 use App\Service\FeedScheduler;
+use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
@@ -37,6 +40,11 @@ final class FirstFetchRecorderTest extends DbTestCase
                 $this->em->getRepository(Entry::class),
                 new EntrySanitizer(),
                 new UrlNormalizer(),
+                new EntryCategoryWriter(
+                    $this->em,
+                    $this->em->getRepository(Category::class),
+                    new CategoryNormalizer(),
+                ),
             ),
             new FeedScheduler($clock),
             $this->em,

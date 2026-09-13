@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Tests\Service\Refresh;
 
 use App\Tests\Support\RecordingContentChangeMarker;
+use App\Entity\Category;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryRepository;
 use App\Repository\FeedRepository;
+use App\Service\Category\CategoryNormalizer;
 use App\Service\FeedScheduler;
 use App\Service\Fetch\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolverInterface;
@@ -21,6 +23,7 @@ use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
+use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\OrphanedFeedReclaimer;
 use App\Service\Parser\Atom03Parser;
@@ -129,7 +132,17 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
             $this->em,
             $fetcher,
             $bodyParser,
-            new EntryIngestor($this->em, $entryRepository, new EntrySanitizer(), new UrlNormalizer()),
+            new EntryIngestor(
+                $this->em,
+                $entryRepository,
+                new EntrySanitizer(),
+                new UrlNormalizer(),
+                new EntryCategoryWriter(
+                    $this->em,
+                    $this->em->getRepository(Category::class),
+                    new CategoryNormalizer(),
+                ),
+            ),
             new FaviconResolver($this->faviconFetcher, new NullLogger()),
             new FeedScheduler($this->clock),
             new EntryPruner($this->em, $this->clock, $this->indexer()),

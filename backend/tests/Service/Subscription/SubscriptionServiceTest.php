@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Subscription;
 
+use App\Entity\Category;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
@@ -13,6 +14,7 @@ use App\Enum\ScrapeFallback;
 use App\Enum\SourceFormat;
 use App\Exception\AlreadySubscribedException;
 use App\Exception\SubscriptionLimitReachedException;
+use App\Service\Category\CategoryNormalizer;
 use App\Service\Discovery\DiscoveredFeed;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
 use App\Service\Discovery\FeedCandidate;
@@ -20,6 +22,7 @@ use App\Service\Discovery\FeedDiscoveryInterface;
 use App\Service\Discovery\FeedDiscoveryResult;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\FeedScheduler;
+use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\OrphanedFeedReclaimer;
 use App\Service\Parser\ParsedEntry;
@@ -103,6 +106,11 @@ final class SubscriptionServiceTest extends DbTestCase
                     $this->em->getRepository(Entry::class),
                     new EntrySanitizer(),
                     new UrlNormalizer(),
+                    new EntryCategoryWriter(
+                        $this->em,
+                        $this->em->getRepository(Category::class),
+                        new CategoryNormalizer(),
+                    ),
                 ),
                 new FeedScheduler($clock),
                 $this->em,
