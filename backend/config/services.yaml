@@ -56,6 +56,7 @@ services:
             Psr\Cache\CacheItemPoolInterface $githubReleaseCache: '@github.release.cache'
             Psr\Cache\CacheItemPoolInterface $passkeyChallengeCache: '@passkey.challenge.cache'
             Psr\Cache\CacheItemPoolInterface $refreshRunCache: '@refresh.run.cache'
+            Psr\Cache\CacheItemPoolInterface $grafanaSettingsCache: '@grafana.settings.cache'
             Symfony\Contracts\Cache\CacheInterface $schedulerStateCache: '@scheduler.state.cache'
             # A name-matched bind, unlike the $concurrency case further down: there
             # the global match was the objection, here it is the point. Any service
