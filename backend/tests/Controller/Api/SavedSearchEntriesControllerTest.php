@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\Category;
 use App\Entity\Entry;
+use App\Entity\EntryCategory;
 use App\Entity\Feed;
 use App\Entity\SavedSearch;
 use App\Entity\Subscription;
@@ -84,6 +86,29 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         self::assertIsArray($body['entries']);
         $titles = array_column($body['entries'], 'title');
         self::assertSame(['Climate report', 'Rocket launch'], $titles);
+    }
+
+    public function testMatchingEntryCarriesItsFeedDeclaredCategories(): void
+    {
+        $client = self::createClient();
+        $user = $this->factory()->create('saved-search-categories@example.com');
+        $headers = $this->authHeaderFor($user);
+        $feed = $this->seedSubscribedFeed($user);
+        $entry = $this->seedEntry($feed, 'Climate report', new \DateTimeImmutable('2026-07-02T00:00:00Z'));
+        $category = new Category('world', '');
+        $this->em()->persist($category);
+        $this->em()->persist(new EntryCategory($entry, $category, 0, 'World'));
+        $this->em()->persist(new SavedSearch($user, 'climate', false));
+        $this->em()->flush();
+
+        $client->request('GET', '/api/entries/saved-searches', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload($client);
+        self::assertIsArray($body['entries']);
+        $first = $body['entries'][0];
+        self::assertIsArray($first);
+        self::assertSame(['World'], $first['categories']);
     }
 
     public function testTheListSaysWhichSavedSearchMatchedEachEntry(): void

@@ -56,4 +56,10 @@ final readonly class EntrySearchResult
     {
         return new self($rows, []);
     }
+
+    /** @param list<EntryListRow> $rows */
+    public function withRows(array $rows): self
+    {
+        return new self($rows, $this->matchedWords, $this->matchCount, $this->continuationRow);
+    }
 }

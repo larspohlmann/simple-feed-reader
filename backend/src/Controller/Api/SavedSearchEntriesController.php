@@ -8,6 +8,7 @@ use App\Dto\Entry\MarkSavedSearchesReadRequest;
 use App\Entity\User;
 use App\Http\EntryCursor;
 use App\Http\SavedSearchPage;
+use App\Repository\EntryCategoryLoader;
 use App\Repository\EntryQuery;
 use App\Repository\SavedSearchEntryQuery;
 use App\Service\Reader\SavedSearchMarkReadService;
@@ -31,6 +32,7 @@ final readonly class SavedSearchEntriesController
     public function __construct(
         private SavedSearchTerms $terms,
         private SavedSearchEntriesInterface $entries,
+        private EntryCategoryLoader $categoryLoader,
         private SavedSearchMarkReadService $markRead,
     ) {
     }
@@ -51,7 +53,12 @@ final readonly class SavedSearchEntriesController
             limit: $limit,
         );
 
-        return new JsonResponse(SavedSearchPage::of($this->entries->list($query), $query->limit));
+        $result = $this->entries->list($query);
+
+        return new JsonResponse(SavedSearchPage::of(
+            $result->withRows($this->categoryLoader->loadInto($result->rows)),
+            $query->limit,
+        ));
     }
 
     #[Route('/mark-read', name: 'api_entries_saved_searches_mark_read', methods: ['POST'])]
