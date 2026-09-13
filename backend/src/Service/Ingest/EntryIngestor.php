@@ -94,7 +94,7 @@ final class EntryIngestor
             $entry->setSummary(EntrySnippet::from($parsedEntry->summary ?? $parsedEntry->contentHtml));
             $entry->setContentHtml($this->sanitizer->sanitize($parsedEntry->contentHtml));
             $entry->setPublishedAt($parsedEntry->publishedAt);
-            $this->applyImage($entry, $parsedEntry->media?->image);
+            $this->applyImage($entry, $parsedEntry->media->image);
             $this->applyMedia($entry, $parsedEntry);
 
             $this->em->persist($entry);
@@ -128,7 +128,7 @@ final class EntryIngestor
 
         $updated = 0;
         foreach ($parsed->entries as $parsedEntry) {
-            $image = $parsedEntry->media?->image;
+            $image = $parsedEntry->media->image;
             if ($image === null) {
                 continue;
             }
@@ -200,7 +200,7 @@ final class EntryIngestor
     private function applyMedia(Entry $entry, ParsedEntry $parsedEntry): void
     {
         $bundle = $parsedEntry->media->mediaBundle ?? new ParsedMediaBundle();
-        $assembled = EntryMediaAssembler::assemble($parsedEntry->media?->image, $bundle->media, $bundle->attachments);
+        $assembled = EntryMediaAssembler::assemble($parsedEntry->media->image, $bundle->media, $bundle->attachments);
         $entry->setMedia($assembled->media, $assembled->attachments);
     }
 

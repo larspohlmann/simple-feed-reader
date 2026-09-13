@@ -97,7 +97,7 @@ final readonly class FeedPreviewService
             content: $this->verdict($tiers),
             hasImages: array_any(
                 $sample,
-                fn (ParsedEntry $e): bool => $this->httpsImageUrl($e->media?->image) !== null,
+                fn (ParsedEntry $e): bool => $this->httpsImageUrl($e->media->image) !== null,
             ),
             items: $items,
         );
@@ -105,7 +105,7 @@ final readonly class FeedPreviewService
 
     private function item(ParsedEntry $entry): FeedPreviewItem
     {
-        $image = $entry->media?->image;
+        $image = $entry->media->image;
         $imageUrl = $this->httpsImageUrl($image);
 
         return new FeedPreviewItem(

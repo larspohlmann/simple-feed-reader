@@ -53,7 +53,7 @@ final class FillMissingImagesTest extends DbTestCase
             null,
             null,
             null,
-            $image === null ? null : new ParsedEntryMedia($image),
+            new ParsedEntryMedia($image),
         );
     }
 

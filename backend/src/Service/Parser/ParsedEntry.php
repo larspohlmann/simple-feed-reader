@@ -14,7 +14,7 @@ final readonly class ParsedEntry
         public ?string $summary,
         public ?string $contentHtml,
         public ?\DateTimeImmutable $publishedAt,
-        public ?ParsedEntryMedia $media = null,
+        public ParsedEntryMedia $media = new ParsedEntryMedia(),
         /** @var list<ParsedCategory> */
         public array $categories = [],
     ) {

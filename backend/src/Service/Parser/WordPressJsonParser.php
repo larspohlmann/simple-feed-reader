@@ -55,7 +55,7 @@ final readonly class WordPressJsonParser
             summary: $this->rendered($post, 'excerpt'),
             contentHtml: $this->rendered($post, 'content'),
             publishedAt: $this->publishedAt($post),
-            media: $image === null ? null : new ParsedEntryMedia($image),
+            media: new ParsedEntryMedia($image),
         );
     }
 

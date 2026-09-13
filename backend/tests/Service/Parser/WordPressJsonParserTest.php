@@ -40,7 +40,7 @@ final class WordPressJsonParserTest extends TestCase
         self::assertSame('<p>Full body.</p>', $entry->contentHtml);
         self::assertSame('<p>Short.</p>', $entry->summary);
         self::assertNull($entry->author);
-        $image = $entry->media?->image;
+        $image = $entry->media->image;
         self::assertNotNull($image);
         self::assertSame('https://site.example/img.jpg', $image->url);
         self::assertNull($image->width);
@@ -66,7 +66,7 @@ final class WordPressJsonParserTest extends TestCase
             ->entries[0];
 
         self::assertNull($entry->author);
-        self::assertNull($entry->media?->image);
+        self::assertNull($entry->media->image);
         self::assertNull($entry->publishedAt);
         self::assertSame('7', $entry->guid);
     }
@@ -76,7 +76,7 @@ final class WordPressJsonParserTest extends TestCase
         $body = '[{"id":8,"link":"https://x.example/8","title":{"rendered":"T"},'
             . '"jetpack_featured_media_url":""}]';
 
-        self::assertNull($this->parse($body)->entries[0]->media?->image);
+        self::assertNull($this->parse($body)->entries[0]->media->image);
     }
 
     public function testFallsBackToTheContentLeadImageWhenNoJetpackImage(): void
@@ -88,7 +88,7 @@ final class WordPressJsonParserTest extends TestCase
             . '"content":{"rendered":"<p>Intro.</p>'
             . '<figure><img src=\"https://x.example/lead.jpg\" alt=\"\"></figure>"}}]';
 
-        $image = $this->parse($body)->entries[0]->media?->image;
+        $image = $this->parse($body)->entries[0]->media->image;
 
         self::assertNotNull($image);
         self::assertSame('https://x.example/lead.jpg', $image->url);
@@ -100,7 +100,7 @@ final class WordPressJsonParserTest extends TestCase
             . '"content":{"rendered":"<p>No picture here.</p>"},'
             . '"excerpt":{"rendered":"<img src=\"https://x.example/teaser.jpg\" alt=\"\">"}}]';
 
-        $image = $this->parse($body)->entries[0]->media?->image;
+        $image = $this->parse($body)->entries[0]->media->image;
 
         self::assertNotNull($image);
         self::assertSame('https://x.example/teaser.jpg', $image->url);
@@ -116,7 +116,7 @@ final class WordPressJsonParserTest extends TestCase
 
         self::assertSame(
             'https://x.example/from-content.jpg',
-            $this->parse($body)->entries[0]->media?->image?->url,
+            $this->parse($body)->entries[0]->media->image?->url,
         );
     }
 
@@ -128,7 +128,7 @@ final class WordPressJsonParserTest extends TestCase
 
         self::assertSame(
             'https://x.example/featured.jpg',
-            $this->parse($body)->entries[0]->media?->image?->url,
+            $this->parse($body)->entries[0]->media->image?->url,
         );
     }
 

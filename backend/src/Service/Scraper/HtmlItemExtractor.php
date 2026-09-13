@@ -146,7 +146,7 @@ final readonly class HtmlItemExtractor
                 ? null
                 : '<p>' . htmlspecialchars($teaser, \ENT_QUOTES) . '</p>',
             publishedAt: $item->publishedAt,
-            media: $item->imageUrl === null ? null : new ParsedEntryMedia(new DeclaredImage($item->imageUrl)),
+            media: new ParsedEntryMedia($item->imageUrl === null ? null : new DeclaredImage($item->imageUrl)),
         );
     }
 }

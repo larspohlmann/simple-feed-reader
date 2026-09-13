@@ -252,7 +252,7 @@ final class EntryIngestorTest extends DbTestCase
             summary: null,
             contentHtml: '<p>body</p>',
             publishedAt: null,
-            media: $image === null ? null : new ParsedEntryMedia($image),
+            media: new ParsedEntryMedia($image),
         );
     }
 
@@ -416,7 +416,7 @@ final class EntryIngestorTest extends DbTestCase
     {
         $feed = $this->feed();
         $parsed = new ParsedFeed('T', null, null, null, [
-            new ParsedEntry('no-image', 'https://x/1', 'One', null, null, '<p>body</p>', null, null),
+            new ParsedEntry('no-image', 'https://x/1', 'One', null, null, '<p>body</p>', null),
         ]);
 
         $this->ingestor->ingest($feed, $parsed, self::context());
