@@ -75,17 +75,26 @@ export class ReadingFocusApplier {
   }
 
   private recompute(): void {
-    const { scroller, blocks, curve, isActive } = this.config;
+    const { blocks, isActive } = this.config;
+    const targets = blocks();
     if (!isActive()) {
-      for (const block of blocks()) block.style.opacity = '';
+      for (const block of targets) block.style.opacity = '';
       return;
     }
+    const opacities = this.measureOpacities(targets);
+    targets.forEach((block, index) => {
+      if (block.style.opacity !== opacities[index]) block.style.opacity = opacities[index];
+    });
+  }
+
+  private measureOpacities(targets: HTMLElement[]): string[] {
+    const { scroller, curve } = this.config;
     const viewport = scroller.clientHeight;
     const scrollerTop = scroller.getBoundingClientRect().top;
-    for (const block of blocks()) {
+    return targets.map((block) => {
       const rect = block.getBoundingClientRect();
       const top = rect.top - scrollerTop;
-      block.style.opacity = String(focusOpacityForSpan(top, top + rect.height, viewport, curve));
-    }
+      return String(focusOpacityForSpan(top, top + rect.height, viewport, curve));
+    });
   }
 }
