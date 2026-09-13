@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Repository;
 
 /**
- * A row's viewed flag and the instant it was set, bundled because
- * `EntryState::markViewed()` always stamps both together: one is never
- * meaningful without the other. Bundled also to keep EntryListRow's
+ * A row's viewed flag and the instant it was set: `EntryState::markViewed()`
+ * always stamps both together, and bundling keeps EntryListRow's
  * constructor under PHPMD's parameter-count gate.
  */
 final readonly class EntryListRowViewState

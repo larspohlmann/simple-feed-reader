@@ -14,10 +14,9 @@ use App\Service\Parser\ParsedEntry;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Resolves the feed-declared categories of newly created entries to globally
- * shared Category rows, then writes the per-entry links. Write-once: called
- * only for entries the ingest just created, never on refresh of an existing
- * entry.
+ * Resolves feed-declared categories of newly created entries to shared
+ * Category rows, then writes the per-entry links. Write-once: only for
+ * entries ingest just created, never on refresh.
  */
 final class EntryCategoryWriter
 {

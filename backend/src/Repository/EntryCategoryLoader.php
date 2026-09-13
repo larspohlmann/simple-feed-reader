@@ -8,10 +8,9 @@ use App\Entity\EntryCategory;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Batch-loads the feed-declared category labels for a page of entry rows in a
- * single query, so the list, single-entry and recommendation responses can
- * carry them without an N+1. Labels come back in the feed-declared order
- * (entry_category.position).
+ * Batch-loads feed-declared category labels for a page of entry rows in one
+ * query, avoiding an N+1 across list, single-entry and recommendation
+ * responses. Labels come back in feed-declared order (entry_category.position).
  */
 final readonly class EntryCategoryLoader
 {

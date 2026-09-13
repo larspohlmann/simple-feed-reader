@@ -229,7 +229,7 @@
         }
         <div #content class="content" [innerHTML]="displayHtml()"></div>
       }
-      @if (e.categories.length) {
+      @if (e.categories?.length) {
         <p class="categories">{{ e.categories.join(', ') }}</p>
       }
     </article>

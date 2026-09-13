@@ -7,10 +7,9 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * The entry↔category link, a promoted many-to-many join so it can carry the
- * feed-declared order and the label this feed used for this entry. No collection
- * lives on Entry (which is at its field ceiling); the link is read by its own
- * query.
+ * The entry↔category link: a promoted many-to-many join carrying the
+ * feed-declared order and label. Entry has no collection for it (field
+ * ceiling); read via its own query.
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'entry_category')]
