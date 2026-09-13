@@ -106,6 +106,39 @@ describe('ClientErrorReporter', () => {
     expect(body.errors[0].kind).toBe('TypeError');
   });
 
+  describe('browser-injected errors', () => {
+    const withStack = <T extends Error>(error: T, stack: string): T =>
+      Object.assign(error, { stack });
+
+    it('drops an error whose stack frames carry no source location (Safari media controls)', () => {
+      const mediaControlsError = withStack(
+        new ReferenceError("Can't find variable: EmptyRanges"),
+        'buffered@\nendTimeForBufferedRangeContainingCurrentTime@\nsyncControl@\nhandleEvent@',
+      );
+
+      setup().report(mediaControlsError);
+
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('reports an error whose stack has a real :line:column location', () => {
+      const appError = withStack(
+        new TypeError('boom'),
+        'TypeError: boom\n    at render (https://lars-pohlmann.de/reader/main-a1b2.js:1:2345)',
+      );
+
+      setup().report(appError);
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports a stackless error, whose origin cannot be judged', () => {
+      setup().report('Script error.');
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('HTTP error serialization', () => {
     it('serializes status, method and stripped url as "HTTP <status> <method> <url>"', () => {
       const reporter = setup();
