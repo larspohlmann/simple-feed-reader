@@ -6,7 +6,10 @@ namespace App\Service\Recommendation;
 
 use App\Http\FeedAnnotationVisibility;
 use App\Http\RecommendationFeedJson;
+use App\Repository\EntryCategoryLoader;
+use App\Repository\EntryListRow;
 use App\Repository\ForYouFeedQuery;
+use App\Repository\RecommendationFeedRow;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
@@ -22,6 +25,7 @@ final readonly class ForYouFeedResponder
     public function __construct(
         private RecommendationFeedPager $pager,
         private RecommendationSettingsResolver $settings,
+        private EntryCategoryLoader $categoryLoader,
     ) {
     }
 
@@ -35,6 +39,32 @@ final readonly class ForYouFeedResponder
             showExplanation: $this->settings->forUser($query->user)->showReasons,
         );
 
-        return RecommendationFeedJson::page($page->rows, $page->nextCursor, $visibility);
+        return RecommendationFeedJson::page($this->withCategories($page->rows), $page->nextCursor, $visibility);
+    }
+
+    /**
+     * @param list<RecommendationFeedRow> $rows
+     *
+     * @return list<RecommendationFeedRow>
+     */
+    private function withCategories(array $rows): array
+    {
+        $entryRows = $this->categoryLoader->loadInto(
+            array_map(static fn (RecommendationFeedRow $row): EntryListRow => $row->row, $rows),
+        );
+
+        return array_map(self::withEntryRow(...), $rows, $entryRows);
+    }
+
+    private static function withEntryRow(RecommendationFeedRow $row, EntryListRow $entryRow): RecommendationFeedRow
+    {
+        return new RecommendationFeedRow(
+            $entryRow,
+            $row->reason,
+            $row->runId,
+            $row->position,
+            $row->score,
+            $row->runGeneratedAt,
+        );
     }
 }
