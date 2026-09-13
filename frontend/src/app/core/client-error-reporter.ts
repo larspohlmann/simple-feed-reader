@@ -51,10 +51,13 @@ export class ClientErrorReporter {
   report(error: unknown): void {
     try {
       const now = Date.now();
+      const item = this.toWireItem(error);
+      if (this.originatesOutsideApplication(item)) {
+        return;
+      }
       if (this.reportedByIdentityWithin(error, now)) {
         return;
       }
-      const item = this.toWireItem(error);
       if (this.isSuppressed(item, now)) {
         return;
       }
@@ -83,6 +86,17 @@ export class ClientErrorReporter {
     if (typeof error === 'object' && error !== null) {
       this.objectLastReportedAt.set(error, now);
     }
+  }
+
+  /** A stack whose frames carry no `:line:column` location is browser-injected
+   *  code (Safari's native media controls, or an extension), not the app bundle.
+   *  A stackless error stays reportable: its origin cannot be judged. */
+  private originatesOutsideApplication(item: ClientErrorItem): boolean {
+    const stack = item.stack?.trim();
+    if (!stack) {
+      return false;
+    }
+    return !/:\d+:\d+/.test(stack);
   }
 
   private toWireItem(error: unknown): ClientErrorItem {
