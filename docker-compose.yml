@@ -199,7 +199,7 @@ services:
       - "127.0.0.1:3100:3100"
 
   grafana:
-    image: grafana/grafana:11.5.2
+    image: grafana/grafana:13.2.1
     environment:
       GF_SECURITY_ADMIN_PASSWORD: "admin"
       GF_AUTH_ANONYMOUS_ENABLED: "false"

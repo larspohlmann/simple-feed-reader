@@ -173,7 +173,7 @@ services:
       - pyroscope-data:/data
 
   grafana:
-    image: grafana/grafana:11.5.2
+    image: grafana/grafana:13.2.1
     profiles: ["grafana"]
     restart: unless-stopped
     environment:
