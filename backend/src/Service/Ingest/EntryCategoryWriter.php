@@ -21,9 +21,6 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 final class EntryCategoryWriter
 {
-    /** @var array<string, Category> */
-    private array $resolvedByIdentity = [];
-
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly CategoryRepository $categories,
@@ -36,9 +33,10 @@ final class EntryCategoryWriter
      */
     public function attach(array $pairs): void
     {
+        $resolvedByIdentity = [];
         $normalizedByEntry = $this->normalizeEach($pairs);
-        $this->resolveCategories($this->distinctCategories($normalizedByEntry));
-        $this->writeLinks($pairs, $normalizedByEntry);
+        $this->resolveCategories($this->distinctCategories($normalizedByEntry), $resolvedByIdentity);
+        $this->writeLinks($pairs, $normalizedByEntry, $resolvedByIdentity);
     }
 
     /**
@@ -73,12 +71,13 @@ final class EntryCategoryWriter
 
     /**
      * @param array<string, NormalizedCategory> $distinct
+     * @param array<string, Category>           $resolvedByIdentity
      */
-    private function resolveCategories(array $distinct): void
+    private function resolveCategories(array $distinct, array &$resolvedByIdentity): void
     {
         $createdAny = false;
         foreach ($distinct as $identity => $category) {
-            $createdAny = $this->resolveOne($identity, $category) || $createdAny;
+            $createdAny = $this->resolveOne($identity, $category, $resolvedByIdentity) || $createdAny;
         }
 
         if ($createdAny) {
@@ -90,19 +89,21 @@ final class EntryCategoryWriter
      * A concurrent refresh of another feed can insert the same identity between
      * the lookup and this flush; the unique index rejects the duplicate and the
      * feed's refresh retries next cycle.
+     *
+     * @param array<string, Category> $resolvedByIdentity
      */
-    private function resolveOne(string $identity, NormalizedCategory $category): bool
+    private function resolveOne(string $identity, NormalizedCategory $category, array &$resolvedByIdentity): bool
     {
         $existing = $this->categories->findOneByIdentity($category->canonicalKey, $category->scheme);
         if ($existing !== null) {
-            $this->resolvedByIdentity[$identity] = $existing;
+            $resolvedByIdentity[$identity] = $existing;
 
             return false;
         }
 
         $created = new Category($category->canonicalKey, $category->scheme);
         $this->entityManager->persist($created);
-        $this->resolvedByIdentity[$identity] = $created;
+        $resolvedByIdentity[$identity] = $created;
 
         return true;
     }
@@ -110,14 +111,15 @@ final class EntryCategoryWriter
     /**
      * @param list<array{0: Entry, 1: ParsedEntry}> $pairs
      * @param list<list<NormalizedCategory>>        $normalizedByEntry
+     * @param array<string, Category>               $resolvedByIdentity
      */
-    private function writeLinks(array $pairs, array $normalizedByEntry): void
+    private function writeLinks(array $pairs, array $normalizedByEntry, array $resolvedByIdentity): void
     {
         foreach ($pairs as $index => [$entry]) {
             foreach ($normalizedByEntry[$index] as $position => $category) {
                 $this->entityManager->persist(new EntryCategory(
                     $entry,
-                    $this->resolvedByIdentity[$category->identity()],
+                    $resolvedByIdentity[$category->identity()],
                     $position,
                     $category->displayLabel,
                 ));
