@@ -24,6 +24,7 @@ const entry: EntryDto = {
   imageHeight: null,
   media: [],
   attachments: [],
+  categories: [],
   publishedAt: null,
   createdAt: 'x',
   subscriptionId: 1,

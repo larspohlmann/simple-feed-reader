@@ -171,6 +171,9 @@ export interface EntryDto {
   /** Playable or downloadable enclosures the feed declared — podcast audio,
    *  video, other files (#906). Always sent by the API, empty when none. */
   attachments: EntryAttachmentDto[];
+  /** Feed-declared category labels, in declared order (#953). Always sent by
+   *  the API, empty when the feed declared none. */
+  categories: string[];
   publishedAt: string | null;
   createdAt: string;
   subscriptionId: number;

@@ -98,6 +98,7 @@ describe('ReaderShellComponent', () => {
     imageHeight: null,
     media: [],
     attachments: [],
+    categories: [],
     publishedAt: '2026-07-22T11:00:00Z',
     createdAt: 'x',
     subscriptionId: 5,

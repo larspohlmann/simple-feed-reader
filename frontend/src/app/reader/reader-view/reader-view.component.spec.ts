@@ -44,6 +44,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   imageHeight: null,
   media: [],
   attachments: [],
+  categories: [],
   publishedAt: '2026-07-22T11:00:00Z',
   createdAt: 'x',
   subscriptionId: 5,
@@ -970,6 +971,20 @@ describe('ReaderViewComponent', () => {
       );
 
       expect(f.debugElement.query(By.css('.listen'))).toBeNull();
+    });
+  });
+
+  describe('feed-declared categories', () => {
+    it('renders the joined categories as a comma-separated footer row', () => {
+      const el = mount(entry({ categories: ['Politics', 'World'] })).nativeElement as HTMLElement;
+
+      expect(el.querySelector('.categories')?.textContent?.trim()).toBe('Politics, World');
+    });
+
+    it('omits the categories row when there are none', () => {
+      const el = mount(entry({ categories: [] })).nativeElement as HTMLElement;
+
+      expect(el.querySelector('.categories')).toBeNull();
     });
   });
 });
