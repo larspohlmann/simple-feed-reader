@@ -1,4 +1,4 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { relativeTime } from '../format';
 import { LanguageService } from '../../core/language.service';
@@ -8,6 +8,7 @@ import { LanguageService } from '../../core/language.service';
  *  block shows none, because the list header's "Last refreshed" already does. */
 @Component({
   selector: 'app-run-header',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslocoPipe],
   templateUrl: './run-header.component.html',
   styleUrl: './run-header.component.scss',

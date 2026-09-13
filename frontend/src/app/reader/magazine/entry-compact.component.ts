@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { EntryKickerLineComponent } from './entry-kicker-line.component';
 import { EntryMetaComponent } from '../entry-meta/entry-meta.component';
 import { EntryActionsComponent } from '../entry-actions/entry-actions.component';
@@ -7,6 +7,7 @@ import { EntryBlockBase } from './entry-block-base';
 
 @Component({
   selector: 'app-entry-compact',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     EntryKickerLineComponent,
     EntryMetaComponent,

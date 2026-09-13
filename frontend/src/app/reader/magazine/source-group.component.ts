@@ -1,4 +1,4 @@
-import { Component, computed, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
@@ -10,6 +10,7 @@ import { selectionQueryParams } from '../query';
 
 @Component({
   selector: 'app-source-group',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     RouterLink,
     FaviconComponent,
