@@ -44,34 +44,44 @@
       }
       <div class="nav">
         <button
+          appListAction
+          class="mobile-icon-only"
           type="button"
           [attr.aria-label]="'reader.favorite' | transloco"
           [class.on]="e.isFavorite"
           [attr.aria-pressed]="e.isFavorite"
           (click)="favorite.emit()"
         >
-          <app-icon name="star" size="md" />
+          <app-icon name="star" size="sm" [fill]="e.isFavorite" />
+          <span class="txt">{{ 'reader.favorite' | transloco }}</span>
         </button>
         <button
+          appListAction
+          class="mobile-icon-only"
           type="button"
           [attr.aria-label]="'reader.keep' | transloco"
           [class.on]="e.isKept"
           [attr.aria-pressed]="e.isKept"
           (click)="keep.emit()"
         >
-          <app-icon name="bookmark" size="md" />
+          <app-icon name="bookmark" size="sm" [fill]="e.isKept" />
+          <span class="txt">{{ 'reader.keep' | transloco }}</span>
         </button>
         @if (mode() === 'reader') {
           <button
+            appListAction
+            class="mobile-icon-only"
             type="button"
             [attr.aria-label]="'reader.refreshArticle' | transloco"
             (click)="refreshArticle()"
           >
-            <app-icon name="refresh" size="md" />
+            <app-icon name="refresh" size="sm" />
+            <span class="txt">{{ 'reader.refreshArticle' | transloco }}</span>
           </button>
         }
         @if (readerMode.canToggle()) {
           <button
+            appListAction
             class="mode"
             type="button"
             [attr.aria-pressed]="mode() === 'reader'"
@@ -80,8 +90,10 @@
             "
             (click)="toggleMode()"
           >
-            <app-icon [name]="mode() === 'reader' ? 'article' : 'feed'" size="md" />
-            {{ (mode() === 'reader' ? 'reader.readerView' : 'reader.original') | transloco }}
+            <app-icon [name]="mode() === 'reader' ? 'chrome_reader_mode' : 'public'" size="sm" />
+            <span class="txt">{{
+              (mode() === 'reader' ? 'reader.readerView' : 'reader.original') | transloco
+            }}</span>
           </button>
         }
       </div>

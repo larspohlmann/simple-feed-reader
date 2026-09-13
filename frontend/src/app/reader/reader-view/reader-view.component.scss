@@ -1,3 +1,5 @@
+@use '../../theme/breakpoints' as bp;
+
 :host {
   display: block;
   height: 100%;
@@ -224,11 +226,25 @@ app-to-top-button {
    them by layout instead of by type metrics. */
 .nav {
   display: flex;
-  gap: var(--space-1);
+  gap: var(--space-3);
   align-items: center;
 }
 
-.bar button,
+/* The .nav actions carry the shared list-action look (see _list-action.scss).
+   On a phone the icon-only ones drop their labels and become bordered icon
+   buttons, sitting tighter than the spaced text links; the mode toggle keeps
+   its label so the current view stays named. */
+@media (width <= bp.$bp-sm) {
+  .nav {
+    gap: var(--space-1);
+  }
+
+  .nav .mobile-icon-only .txt {
+    display: none;
+  }
+}
+
+.close,
 .actions button {
   /* Centre the glyph within the button rather than letting it sit on the
      button's text baseline, where a 20px icon over 15px type hangs low. */
@@ -321,7 +337,6 @@ article {
   margin-bottom: var(--space-4);
 }
 
-.bar button.on,
 .actions button.on {
   color: var(--accent);
 }
@@ -737,17 +752,6 @@ article {
   place-items: center;
   height: 100%;
   color: var(--text-muted);
-}
-
-.mode {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-size: var(--fs-sm);
-}
-
-.mode[aria-pressed='true'] {
-  color: var(--accent);
 }
 
 /* The card chrome (amber ring, surface, padding) lives in app-warning-box; this
