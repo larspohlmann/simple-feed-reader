@@ -39,6 +39,15 @@ final class PaywallSignalsTest extends TestCase
         self::assertTrue($this->isPreview($this->page(self::BODY . self::CTA)));
     }
 
+    public function testAnAbsentDeclarationWithAMembershipCheckoutFlagsAPreview(): void
+    {
+        // psychedelicalpha.com: no declaration, a generic `join` gate class, but a
+        // Memberful checkout link carries the signal (#998).
+        $checkout = '<div class="join"><a href="https://x.memberful.com/checkout?plan=1">Join</a></div>';
+
+        self::assertTrue($this->isPreview($this->page(self::BODY . $checkout)));
+    }
+
     public function testAnAbsentDeclarationWithoutAGateBlockDoesNotFlag(): void
     {
         self::assertFalse($this->isPreview($this->page(self::BODY)));
