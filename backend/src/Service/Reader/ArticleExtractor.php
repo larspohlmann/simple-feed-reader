@@ -19,6 +19,7 @@ use fivefilters\Readability\Article;
 use fivefilters\Readability\Configuration;
 use fivefilters\Readability\ParseException;
 use fivefilters\Readability\Readability;
+use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
  * Turns an article URL into clean, sanitized, distraction-free HTML: fetch
@@ -63,6 +64,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
     ) {
     }
 
+    #[WithSpan]
     public function extract(
         string $url,
         ?string $entryTitle = null,
@@ -163,6 +165,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
      *
      * @param list<ContainerSignature> $slideshowContainers
      */
+    #[WithSpan]
     private function richestArticle(?HTMLDocument $normalized, PageResponse $page, array $slideshowContainers): ?Article
     {
         $collapsed = $this->normalizer->collapseWrapperChains($page->html);

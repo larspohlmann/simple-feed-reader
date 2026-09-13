@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader\Media;
 
 use App\Service\Reader\FeedMedia;
+use OpenTelemetry\API\Instrumentation\WithSpan;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
@@ -26,6 +27,7 @@ final readonly class PageMediaScanner
     ) {
     }
 
+    #[WithSpan]
     public function scan(string $pageHtml, string $pageUrl, ?FeedMedia $feedMedia = null): ArticleMedia
     {
         $feedMedia ??= FeedMedia::none();

@@ -9,6 +9,7 @@ use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\Text;
 use Dom\XPath;
+use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
  * Normalizes a fetched page's HTML before readability parses it. The document
@@ -100,6 +101,7 @@ final readonly class FetchedPageNormalizer
      * The score-neutral document, ready to hand to readability, or null when the
      * page is empty or cannot be parsed — the caller then extracts nothing.
      */
+    #[WithSpan]
     public function normalize(string $html): ?HTMLDocument
     {
         return $this->repair($html);

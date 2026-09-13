@@ -10,6 +10,7 @@ use App\Service\Fetch\LandedResponse;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Html\HtmlTranscoder;
 use App\Service\Reader\Exception\PageFetchException;
+use OpenTelemetry\API\Instrumentation\WithSpan;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -38,6 +39,7 @@ final readonly class HtmlPageFetcher
     ) {
     }
 
+    #[WithSpan]
     public function fetch(string $url): PageResponse
     {
         $remainingHops = self::MAX_REDIRECTS;

@@ -7,6 +7,7 @@ namespace App\Service\Recommendation;
 use App\Http\FeedAnnotationVisibility;
 use App\Http\RecommendationFeedJson;
 use App\Repository\ForYouFeedQuery;
+use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
  * What JSON the for-you feed page returns for a user — paginates their
@@ -25,6 +26,7 @@ final readonly class ForYouFeedResponder
     }
 
     /** @return array<string, mixed> */
+    #[WithSpan]
     public function page(ForYouFeedQuery $query): array
     {
         $page = $this->pager->page($query);

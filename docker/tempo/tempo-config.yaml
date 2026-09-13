@@ -8,6 +8,10 @@ distributor:
         http:
           endpoint: 0.0.0.0:4318
 
+query_frontend:
+  metrics:
+    max_duration: 72h
+
 storage:
   trace:
     backend: local

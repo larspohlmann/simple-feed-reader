@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\Subscription;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
  * @extends ServiceEntityRepository<Subscription>
@@ -36,6 +37,7 @@ class SubscriptionRepository extends ServiceEntityRepository
      *
      * @return list<Subscription>
      */
+    #[WithSpan]
     public function findForUserWithTags(int $userId): array
     {
         /** @var list<Subscription> $rows */

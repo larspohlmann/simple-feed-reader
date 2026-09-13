@@ -30,7 +30,7 @@ Nine services, started with one command from the repository root:
 | Mailpit web inbox | http://localhost:8025 |
 | MySQL 8.4 | 127.0.0.1:33306 (user/password `feedreader`/`feedreader`, root `root`) |
 | Meilisearch — full-content entry search, dashboard and API | http://127.0.0.1:7700 (key `dev-master-key-not-a-secret`) |
-| Grafana — provisioned with "Application logs" and "Application performance" dashboards | http://localhost:3000 (login `admin`/`admin`) |
+| Grafana — provisioned with "Application logs" and "Application performance" (per-route timings, methods, queries, traces, flame graph) dashboards | http://localhost:3000 (login `admin`/`admin`) |
 | Loki — log storage behind Grafana, fed by the app | 127.0.0.1:3100 |
 | Tempo — trace storage behind Grafana, fed by the app's OTel exporter | 127.0.0.1:4318 (OTLP) |
 | Pyroscope — continuous + per-request profiles, off until the admin toggle is on | http://localhost:4040 |
@@ -376,10 +376,24 @@ worker without a restart.
 
 See the profiles two ways:
 
-- The **Application performance** dashboard's "Service profile" flame graph.
+- The **Application performance** dashboard's flame graph, filtered to the route
+  picked at the top (per-request profiles carry a `route` label).
 - From a trace: **Explore → Tempo →** open a request's root span **→ Profiles** —
   the span carries `pyroscope.profile.id`, so the flame graph is that one
   request's hotspots.
 
 `ext-excimer` is only in the Docker image, so profiling is inert on hosts
 without it (the toggle then shows "profiler not available on this host").
+
+## Application performance dashboard
+
+The top row ranks every route seen in the time range four ways: p95 latency,
+average latency, request count, and error count. Click a route in any of those
+tables to load its detail below (or type a route name in the **Route** box). The
+panels below belong to the picked route: one point per request, the `#[WithSpan]`
+methods and the DBAL statements that ran under it (each by average duration), the
+slowest traces, and the flame graph of its sampled requests. Max is avoided in
+the aggregate tables on purpose — a single outlier makes it misleading; p95 and
+average describe the route better. It is built for a site that serves a handful
+of requests per hour, so it shows per-request timings and percentiles, not
+requests-per-second rates.

@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\SavedSearch;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
  * @extends ServiceEntityRepository<SavedSearch>
@@ -21,6 +22,7 @@ class SavedSearchRepository extends ServiceEntityRepository
     /**
      * @return list<SavedSearch> the user's saved searches, newest saved first
      */
+    #[WithSpan]
     public function findForUser(int $userId): array
     {
         /** @var list<SavedSearch> $rows */

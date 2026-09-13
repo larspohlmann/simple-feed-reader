@@ -6,6 +6,7 @@ namespace App\Service\Search;
 
 use App\Entity\SavedSearch;
 use App\Repository\SavedSearchEntryRepository;
+use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
  * The unread matching entry ids behind each saved search's sidebar badge. The
@@ -25,6 +26,7 @@ final readonly class SavedSearchMatchIds
      *
      * @return array<int, list<int>> saved-search id => unread matching entry ids
      */
+    #[WithSpan]
     public function forAll(array $savedSearches, int $userId): array
     {
         return $this->entries->unreadMatchIdsBySavedSearch(

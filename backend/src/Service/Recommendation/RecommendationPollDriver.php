@@ -7,6 +7,7 @@ namespace App\Service\Recommendation;
 use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Worker\WorkerPresence;
+use OpenTelemetry\API\Instrumentation\WithSpan;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -71,6 +72,7 @@ final readonly class RecommendationPollDriver
         return $this->latestReport($user)->inBackground()->waitingForLock();
     }
 
+    #[WithSpan]
     public function current(User $user): RecommendationRunReport
     {
         $report = $this->latestReport($user);

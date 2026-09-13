@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\Subscription;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
+use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
  * The reader's per-caller entry access: the "entry list row" projection
@@ -44,6 +45,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
      *
      * @return list<EntryListRow>
      */
+    #[WithSpan]
     public function listForUser(EntryQuery $query): array
     {
         $sort = EntryListSort::forView($query->view);
@@ -218,6 +220,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
      * The entry only if the caller subscribes to its feed — the IDOR gate for
      * per-entry state writes. Returns a managed Entry (or null → 404).
      */
+    #[WithSpan]
     public function findOneSubscribedByUser(int $entryId, int $userId): ?Entry
     {
         /** @var Entry|null $entry */

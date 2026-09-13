@@ -15,6 +15,7 @@ use App\Service\Reader\Media\Teaser\TeaserPlayerInserter;
 use App\Service\Reader\RecipeFacts\RecipeFactsCleaner;
 use App\Service\Reader\Slideshow\Slideshow;
 use App\Service\Reader\Slideshow\SlideshowInserter;
+use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
  * Cleans readability's article HTML for the reader view through one shared
@@ -66,6 +67,7 @@ final readonly class ReaderBodyCleaner
      * @param list<Slideshow>    $slideshows
      * @param list<TeaserPlayer> $teasers
      */
+    #[WithSpan]
     public function clean(
         string $contentHtml,
         array $titleCandidates,
