@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Entity;
 
 use App\Entity\Category;
+use App\Entity\Entry;
 use App\Entity\EntryCategory;
 use PHPUnit\Framework\TestCase;
 
@@ -22,7 +23,7 @@ final class CategoryTest extends TestCase
     public function testEntryCategoryCarriesPositionAndLabel(): void
     {
         $category = new Category('politics', '');
-        $entry = $this->createStub(\App\Entity\Entry::class);
+        $entry = $this->createStub(Entry::class);
 
         $link = new EntryCategory($entry, $category, 2, 'Politics');
 
