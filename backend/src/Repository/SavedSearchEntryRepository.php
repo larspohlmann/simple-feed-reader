@@ -106,7 +106,8 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
     {
         $idsBySearch = [];
         foreach (array_chunk($savedSearches, self::SEARCHES_PER_SCAN) as $chunk) {
-            $idsBySearch += $this->unreadMatchIdsInOneScan($userId, $chunk);
+            $scan = $this->unreadEntriesQueryBuilder($userId)->select('e.id')->orderBy('e.id');
+            $idsBySearch += $this->matchIdsInOneScan($scan, $chunk);
         }
 
         return $idsBySearch;
@@ -156,9 +157,8 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
      *
      * @return array<int, list<int>>
      */
-    private function unreadMatchIdsInOneScan(int $userId, array $savedSearches): array
+    private function matchIdsInOneScan(QueryBuilder $qb, array $savedSearches): array
     {
-        $qb = $this->unreadEntriesQueryBuilder($userId)->select('e.id')->orderBy('e.id');
         foreach ($savedSearches as $position => $savedSearch) {
             $qb->addSelect($this->matchFlagExpression($qb, $position, $savedSearch));
         }
