@@ -57,3 +57,10 @@
   color: var(--text-muted);
   font-size: var(--fs-xs);
 }
+
+/* The row is the only entry in the popover, so its divider reads as a stray
+   rule at the panel foot; drop it and hold the hover surface at rest. */
+.dup-popover ::ng-deep .row {
+  border-bottom: none;
+  background: var(--surface-0);
+}
