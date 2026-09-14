@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Reader\Repair;
 
+use App\Service\Reader\ImageIdentity;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -15,9 +16,9 @@ use Dom\HTMLDocument;
  * the client unless it is promoted out first (#894). A <noscript> with no
  * image is a no-JS text fallback and is left alone.
  */
-final readonly class NoscriptImageUnwrapper
+final readonly class NoscriptImageUnwrapper implements PageRepair
 {
-    public function unwrapIn(HTMLDocument $document): void
+    public function repairIn(HTMLDocument $document): void
     {
         foreach (iterator_to_array($document->getElementsByTagName('noscript')) as $noscript) {
             $this->promoteImageOutOf($noscript);

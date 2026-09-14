@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Reader\Repair;
 
 use Dom\HTMLDocument;
 
@@ -11,9 +11,9 @@ use Dom\HTMLDocument;
  * The sanitizer drops an unknown element with its content, so unwrapping
  * first (#789) is what lets nature's <sh-background-transition> photos through.
  */
-final readonly class CustomElementUnwrapper
+final readonly class CustomElementUnwrapper implements PageRepair
 {
-    public function unwrapIn(HTMLDocument $document): void
+    public function repairIn(HTMLDocument $document): void
     {
         // Innermost first: an outer element unwrapped later still holds the
         // already-unwrapped children of its former descendants.

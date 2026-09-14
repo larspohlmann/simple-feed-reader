@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Reader\Repair;
 
 use App\Service\Reader\Media\PageFurniture;
 use Dom\Element;
@@ -13,9 +13,9 @@ use Dom\HTMLDocument;
  * with it (#789). A one-image text-less wrapper carries no scoring signal
  * worth keeping; a linked image is a card, so it keeps its classes.
  */
-final readonly class ImageWrapperClassRemover
+final readonly class ImageWrapperClassRemover implements PageRepair
 {
-    public function removeFrom(HTMLDocument $document): void
+    public function repairIn(HTMLDocument $document): void
     {
         foreach ($document->querySelectorAll('img') as $image) {
             if ($image->closest('a') === null && !PageFurniture::holds($image)) {

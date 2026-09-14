@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader;
+namespace App\Tests\Service\Reader\Repair;
 
 use App\Service\Html\HtmlDocumentParser;
-use App\Service\Reader\ShareIntentLinkRemover;
+use App\Service\Reader\Repair\ShareIntentLinkRemover;
 use PHPUnit\Framework\TestCase;
 
 final class ShareIntentLinkRemoverTest extends TestCase
@@ -237,7 +237,7 @@ final class ShareIntentLinkRemoverTest extends TestCase
     {
         $document = HtmlDocumentParser::parseOrNull($html);
         self::assertNotNull($document);
-        $this->remover->removeFrom($document);
+        $this->remover->repairIn($document);
 
         return $document->saveHtml();
     }

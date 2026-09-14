@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader;
+namespace App\Tests\Service\Reader\Repair;
 
-use App\Service\Reader\ImageWrapperClassRemover;
+use App\Service\Reader\Repair\ImageWrapperClassRemover;
 use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
@@ -96,7 +96,7 @@ final class ImageWrapperClassRemoverTest extends TestCase
             '<html lang="en"><body class="page">' . $bodyHtml . '</body></html>',
             LIBXML_NOERROR,
         );
-        $this->remover->removeFrom($document);
+        $this->remover->repairIn($document);
 
         return $document->saveHtml();
     }

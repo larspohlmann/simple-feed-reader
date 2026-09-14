@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader;
+namespace App\Tests\Service\Reader\Repair;
 
 use App\Service\Html\PictureSources;
-use App\Service\Reader\LazyImageSources;
+use App\Service\Reader\Repair\LazyImageSources;
 use PHPUnit\Framework\TestCase;
 
 final class LazyImageSourcesTest extends TestCase
@@ -505,7 +505,7 @@ final class LazyImageSourcesTest extends TestCase
             LIBXML_NOERROR,
         );
 
-        $this->lazyImages->resolveIn($document);
+        $this->lazyImages->repairIn($document);
 
         return $document;
     }

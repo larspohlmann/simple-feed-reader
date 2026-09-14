@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader;
+namespace App\Tests\Service\Reader\Repair;
 
-use App\Service\Reader\ShareWidgetRemover;
+use App\Service\Reader\Repair\ShareWidgetRemover;
 use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
@@ -73,7 +73,7 @@ final class ShareWidgetRemoverTest extends TestCase
             '<!doctype html><html lang="de"><body>' . $bodyHtml . '</body></html>',
             LIBXML_NOERROR,
         );
-        $this->remover->removeFrom($document);
+        $this->remover->repairIn($document);
 
         return $document->saveHtml();
     }

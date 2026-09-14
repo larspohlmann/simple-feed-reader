@@ -5,15 +5,20 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader;
 
 use App\Service\Html\PictureSources;
-use App\Service\Reader\CustomElementUnwrapper;
+use App\Service\Reader\Repair\CustomElementUnwrapper;
 use App\Service\Reader\FetchedPageNormalizer;
-use App\Service\Reader\ImageButtonUnwrapper;
-use App\Service\Reader\ImageWrapperClassRemover;
-use App\Service\Reader\LazyImageSources;
-use App\Service\Reader\NoscriptImageUnwrapper;
-use App\Service\Reader\ShareIntentLinkRemover;
-use App\Service\Reader\ShareWidgetRemover;
-use App\Service\Reader\SubstackGatedVideoPlaceholder;
+use App\Service\Reader\Repair\HeadingClassRemover;
+use App\Service\Reader\Repair\HorizontalRuleUnwrapper;
+use App\Service\Reader\Repair\ImageButtonUnwrapper;
+use App\Service\Reader\Repair\ImageWrapperClassRemover;
+use App\Service\Reader\Repair\LazyImageSources;
+use App\Service\Reader\Repair\NoscriptImageUnwrapper;
+use App\Service\Reader\Repair\OrphanIconGlyphRemover;
+use App\Service\Reader\Repair\PageRepair;
+use App\Service\Reader\Repair\ScreenReaderOnlyElementRemover;
+use App\Service\Reader\Repair\ShareIntentLinkRemover;
+use App\Service\Reader\Repair\ShareWidgetRemover;
+use App\Service\Reader\Repair\SubstackGatedVideoPlaceholder;
 use PHPUnit\Framework\TestCase;
 
 final class FetchedPageNormalizerTest extends TestCase
@@ -22,16 +27,26 @@ final class FetchedPageNormalizerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->normalizer = new FetchedPageNormalizer(
+        $this->normalizer = new FetchedPageNormalizer(self::repairs());
+    }
+
+    /** @return list<PageRepair> the repair pipeline in the order services.yaml wires. */
+    public static function repairs(): array
+    {
+        return [
             new CustomElementUnwrapper(),
-            new ImageButtonUnwrapper(),
             new NoscriptImageUnwrapper(),
             new LazyImageSources(new PictureSources()),
+            new ImageButtonUnwrapper(),
             new ShareWidgetRemover(),
             new ShareIntentLinkRemover(),
             new SubstackGatedVideoPlaceholder(),
+            new ScreenReaderOnlyElementRemover(),
+            new OrphanIconGlyphRemover(),
             new ImageWrapperClassRemover(),
-        );
+            new HeadingClassRemover(),
+            new HorizontalRuleUnwrapper(),
+        ];
     }
 
     public function testCollapsesSingleChildDivChains(): void
@@ -82,11 +97,36 @@ final class FetchedPageNormalizerTest extends TestCase
     public function testHeadingSurvivesWrapperCollapse(): void
     {
         // The fixture is the input under test, so it keeps its `lang`-less
-        // <html> instead of being edited to please the IDE.
+        // <html> instead of being edited to please the IDE. HeadingClassRemover
+        // strips the id, so the heading survives the collapse without it.
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div><div><h2 id="s1">Section</h2></div></div></body></html>';
 
-        self::assertStringContainsString('<h2 id="s1">Section</h2>', $this->collapsed($html));
+        self::assertStringContainsString('<h2>Section</h2>', $this->collapsed($html));
+    }
+
+    public function testStripsAHeadingClassSoReadabilityKeepsIt(): void
+    {
+        // Substack marks every subheading `header-anchor-post`; readability's
+        // unlikely-candidate regex matches "header" and drops the heading.
+        $normalized = $this->normalized(
+            '<html lang="en"><body><article><p>Body text long enough to be real content.</p>'
+            . '<h2 class="header-anchor-post" id="anchor"><strong>Section</strong></h2></article></body></html>'
+        );
+
+        self::assertStringContainsString('<h2><strong>Section</strong></h2>', $normalized);
+        self::assertStringNotContainsString('header-anchor-post', $normalized);
+    }
+
+    public function testPromotesAHorizontalRuleOutOfAnEmptyWrapperDiv(): void
+    {
+        // Substack wraps every section break as <div><hr></div>; readability
+        // reads that div as empty and removes it, rule and all.
+        $normalized = $this->normalized(
+            '<html lang="en"><body><article><p>One.</p><div><hr></div><p>Two.</p></article></body></html>'
+        );
+
+        self::assertStringContainsString('<p>One.</p><hr><p>Two.</p>', $normalized);
     }
 
     public function testCollapseReturnsNullWhenNoWrapperChains(): void

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Reader\Repair;
 
 use App\Service\Html\ClassTokenMatcher;
 use Dom\Element;
@@ -21,7 +21,7 @@ use Dom\XPath;
  * (`sharing-hint`, `myshariff`) is left alone. Removal is position-independent:
  * these plugins print the same bar above and below the article, and both go.
  */
-final readonly class ShareWidgetRemover
+final readonly class ShareWidgetRemover implements PageRepair
 {
     /**
      * Whole class tokens that identify a share-widget container. Each is a
@@ -37,7 +37,7 @@ final readonly class ShareWidgetRemover
         'sharethis-inline-share-buttons',   // ShareThis
     ];
 
-    public function removeFrom(HTMLDocument $document): void
+    public function repairIn(HTMLDocument $document): void
     {
         foreach ($this->elementsWithClass($document) as $element) {
             if ($element->parentNode !== null && $this->isShareWidget($element)) {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Reader\Repair;
 
 use Dom\Element;
 use Dom\HTMLDocument;
@@ -17,7 +17,7 @@ use Dom\HTMLDocument;
  * player and the paywall landmark and puts a poster image that links to the
  * source article in the player's place.
  */
-final readonly class SubstackGatedVideoPlaceholder
+final readonly class SubstackGatedVideoPlaceholder implements PageRepair
 {
     private const string PAYWALL = '[aria-label="Paywall"], [data-testid="paywall"]';
     private const string PLAYER = '.shows-video-player-container';
@@ -27,7 +27,7 @@ final readonly class SubstackGatedVideoPlaceholder
     /** A paragraph this long is prose readability keeps, not chrome or a caption. */
     private const int TEASER_MIN_LENGTH = 80;
 
-    public function replaceIn(HTMLDocument $page): void
+    public function repairIn(HTMLDocument $page): void
     {
         $posterUrl = $this->httpUrlFrom($page, 'meta[property="og:image"]', 'content');
         $sourceUrl = $this->sourceUrl($page);

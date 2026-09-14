@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Reader\Repair;
 
 use App\Service\Html\ImageRendition;
 use App\Service\Html\ImageSourceUrl;
@@ -37,7 +37,7 @@ use Dom\HTMLDocument;
  * after layout, but the reader strips the script, so a surviving <source>
  * would leave the browser on the placeholder (entry 480204).
  */
-final readonly class LazyImageSources
+final readonly class LazyImageSources implements PageRepair
 {
     /** Attributes holding a single URL, in the order publishers prefer them. */
     private const array URL_ATTRIBUTES = ['data-lazy-src', 'data-src', 'data-original'];
@@ -49,7 +49,7 @@ final readonly class LazyImageSources
     {
     }
 
-    public function resolveIn(HTMLDocument $document): void
+    public function repairIn(HTMLDocument $document): void
     {
         foreach (iterator_to_array($document->getElementsByTagName('img')) as $image) {
             $this->resolveImage($image);

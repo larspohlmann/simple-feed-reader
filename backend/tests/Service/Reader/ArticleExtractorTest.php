@@ -13,21 +13,16 @@ use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
-use App\Service\Html\PictureSources;
 use App\Service\Reader\AuthorBio\AuthorBioSeparator;
 use App\Service\Reader\ArticleExtractor;
 use App\Service\Reader\BoilerplateVerdict;
-use App\Service\Reader\CustomElementUnwrapper;
 use App\Service\Reader\DuplicateBlockCollapser;
 use App\Service\Reader\EdgeBoilerplateTrimmer;
 use App\Service\Reader\ExtractionResult;
 use App\Service\Reader\FeedMedia;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
-use App\Service\Reader\ImageButtonUnwrapper;
-use App\Service\Reader\ImageWrapperClassRemover;
 use App\Service\Reader\LandingChallenge;
-use App\Service\Reader\LazyImageSources;
 use App\Service\Reader\LeadingEngagementCleaner;
 use App\Service\Reader\LeadingTitleRemover;
 use App\Service\Reader\Media\BodyMediaResolver;
@@ -57,21 +52,17 @@ use App\Service\Reader\Media\SubstackPosterLink;
 use App\Service\Reader\MetaRefreshTarget;
 use App\Service\Reader\MediaOnlyLede;
 use App\Service\Reader\NavigationChromeTrimmer;
-use App\Service\Reader\NoscriptImageUnwrapper;
 use App\Service\Reader\PlayerChromeCleaner;
 use App\Service\Reader\RecipeFacts\RecipeFactsCleaner;
 use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\ReaderLeadImage;
 use App\Service\Reader\RelatedTeaserGridRemover;
-use App\Service\Reader\ShareIntentLinkRemover;
-use App\Service\Reader\ShareWidgetRemover;
 use App\Service\Reader\Slideshow\MarkupCarouselRecognizer;
 use App\Service\Reader\Slideshow\SlideCaptionResolver;
 use App\Service\Reader\Slideshow\SlideImageResolver;
 use App\Service\Reader\Slideshow\SlideshowInserter;
 use App\Service\Reader\Slideshow\SlideshowMarkup;
 use App\Service\Reader\Slideshow\SlideshowScanner;
-use App\Service\Reader\SubstackGatedVideoPlaceholder;
 use App\Service\Sanitize\EntrySanitizer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -110,16 +101,7 @@ final class ArticleExtractorTest extends TestCase
 
         return new ArticleExtractor(
             new HtmlPageFetcher($redirects, new MetaRefreshTarget(), new LandingChallenge(), 'TestAgent/1.0'),
-            new FetchedPageNormalizer(
-                new CustomElementUnwrapper(),
-                new ImageButtonUnwrapper(),
-                new NoscriptImageUnwrapper(),
-                new LazyImageSources(new PictureSources()),
-                new ShareWidgetRemover(),
-                new ShareIntentLinkRemover(),
-                new SubstackGatedVideoPlaceholder(),
-                new ImageWrapperClassRemover(),
-            ),
+            new FetchedPageNormalizer(FetchedPageNormalizerTest::repairs()),
             $this->bodyCleaner(),
             new EntrySanitizer(),
             $this->mediaScanner(),
@@ -439,16 +421,7 @@ final class ArticleExtractorTest extends TestCase
         $landing = new MediaLanding($redirects, 'TestAgent/1.0');
         $extractor = new ArticleExtractor(
             new HtmlPageFetcher($redirects, new MetaRefreshTarget(), new LandingChallenge(), 'TestAgent/1.0'),
-            new FetchedPageNormalizer(
-                new CustomElementUnwrapper(),
-                new ImageButtonUnwrapper(),
-                new NoscriptImageUnwrapper(),
-                new LazyImageSources(new PictureSources()),
-                new ShareWidgetRemover(),
-                new ShareIntentLinkRemover(),
-                new SubstackGatedVideoPlaceholder(),
-                new ImageWrapperClassRemover(),
-            ),
+            new FetchedPageNormalizer(FetchedPageNormalizerTest::repairs()),
             $this->bodyCleaner(),
             new EntrySanitizer(),
             $this->mediaScanner(),
@@ -754,6 +727,20 @@ final class ArticleExtractorTest extends TestCase
 
         self::assertTrue($result->ok);
         self::assertFalse($result->paywalled);
+    }
+
+    public function testKeepsSubstackCaseHeadingsAndTheirSeparators(): void
+    {
+        // Substack marks each section heading `header-anchor-post` and wraps each
+        // break as <div><hr></div>. Readability drops the headings by the "header"
+        // token and the rules as empty wrappers; the repair pipeline keeps both.
+        $body = (string) $this->extractFixture('article-substack-case-headings.html')->contentHtml;
+
+        self::assertStringContainsString('<h2><strong>Natasha Lechner, 39, Australia, 2019</strong></h2>', $body);
+        self::assertStringContainsString('<h2><strong>Jarrad Antonovich, 46, Australia, 2021</strong></h2>', $body);
+        self::assertStringContainsString('<h3><strong>The Danger Is Part of the Intended Effect</strong></h3>', $body);
+        self::assertStringContainsString('<hr />', $body);
+        self::assertStringNotContainsString('header-anchor-post', $body);
     }
 
     public function testFlagsAPaywallBannerAboveAnUndeclaredArticle(): void
