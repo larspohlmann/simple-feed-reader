@@ -44,7 +44,7 @@ final readonly class ImageIdentity
 
     public static function fromUrl(string $url): self
     {
-        $source = self::unwrapProxy($url);
+        $source = ImageProxyUrl::resolve($url);
         $path = (string) (parse_url($source, PHP_URL_PATH) ?? '');
         $stem = self::stripRenderHash(
             strtolower((string) preg_replace('/\.[a-z0-9]{2,5}$/i', '', basename($path))),
@@ -119,11 +119,15 @@ final readonly class ImageIdentity
     }
 
     /**
-     * A path UUID, when both sides have one, decides the outcome outright and
-     * overrides a stem/id/token match: same UUID is always the same asset,
-     * different UUID never is, even when the stem agrees.
+     * The same source file, at any transform or rendition: a shared path UUID, a
+     * shared explicit image id, or an identical filename stem, never a shared
+     * filename token. Two different stock photos whose filenames share only
+     * their library, a batch date and a "download" suffix are therefore kept
+     * apart (#1032, Utopia/Pixabay), which the token fallback in isSameAsset()
+     * cannot promise. This is the test for a responsive layout that repeats one
+     * image, not the broad asset equality.
      */
-    public function isSameAsset(self $other): bool
+    public function isSameRendition(self $other): bool
     {
         if ($this->pathUuid !== null && $other->pathUuid !== null) {
             return $this->pathUuid === $other->pathUuid;
@@ -131,8 +135,27 @@ final readonly class ImageIdentity
         if ($this->ids !== [] && $other->ids !== []) {
             return array_intersect($this->ids, $other->ids) !== [];
         }
-        if ($this->stem !== '' && $this->stem === $other->stem) {
+
+        return $this->stem !== '' && $this->stem === $other->stem;
+    }
+
+    /**
+     * A path UUID, when both sides have one, decides the outcome outright and
+     * overrides a stem/id/token match: same UUID is always the same asset,
+     * different UUID never is, even when the stem agrees. Beyond that
+     * authoritative rendition identity, a shared photo-specific token still
+     * counts, so a renamed copy of one photo matches its original.
+     */
+    public function isSameAsset(self $other): bool
+    {
+        if ($this->isSameRendition($other)) {
             return true;
+        }
+        if ($this->pathUuid !== null && $other->pathUuid !== null) {
+            return false;
+        }
+        if ($this->ids !== [] && $other->ids !== []) {
+            return false;
         }
 
         return array_intersect($this->tokens, $other->tokens) !== []
@@ -158,51 +181,5 @@ final readonly class ImageIdentity
         }
 
         return is_string($last) && ctype_digit($last) ? $last : null;
-    }
-
-    /** Return an embedded HTTP source URL, or keep the original URL. */
-    private static function unwrapProxy(string $url): string
-    {
-        return self::sourceFromQuery($url)
-            ?? self::sourceFromPath($url)
-            ?? self::sourceFromEncodedPath($url)
-            ?? $url;
-    }
-
-    /** A `?url=` proxy (Politico's dims4, NPR's brightspot) carries the source verbatim. */
-    private static function sourceFromQuery(string $url): ?string
-    {
-        $query = (string) (parse_url($url, PHP_URL_QUERY) ?? '');
-        if ($query === '') {
-            return null;
-        }
-
-        parse_str($query, $parameters);
-        $embedded = $parameters['url'] ?? null;
-
-        return is_string($embedded) && self::isHttpUrl($embedded) ? $embedded : null;
-    }
-
-    /** Decode imgproxy's URL-safe base64 source in the final path segment. */
-    private static function sourceFromPath(string $url): ?string
-    {
-        $segment = basename((string) (parse_url($url, PHP_URL_PATH) ?? ''));
-        $candidate = (string) preg_replace('/\.[a-z0-9]{2,5}$/i', '', $segment);
-        $decoded = base64_decode(strtr($candidate, '-_', '+/'), true);
-
-        return $decoded !== false && self::isHttpUrl($decoded) ? $decoded : null;
-    }
-
-    /** A percent-encoded source as the final path segment (Substack's `/image/fetch/<transforms>/<source>`). */
-    private static function sourceFromEncodedPath(string $url): ?string
-    {
-        $decoded = rawurldecode(basename((string) (parse_url($url, PHP_URL_PATH) ?? '')));
-
-        return self::isHttpUrl($decoded) ? $decoded : null;
-    }
-
-    private static function isHttpUrl(string $value): bool
-    {
-        return preg_match('#^https?://#i', $value) === 1;
     }
 }

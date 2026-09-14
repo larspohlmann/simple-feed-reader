@@ -44,7 +44,7 @@ final readonly class DuplicateBlockCollapser
         $previousAsset = null;
         foreach ($this->images($document) as $image) {
             $asset = ImageIdentity::fromUrl((string) $image->getAttribute('src'));
-            if ($previousAsset !== null && $asset->isSameAsset($previousAsset)) {
+            if ($previousAsset !== null && $asset->isSameRendition($previousAsset)) {
                 $this->removeBlock($image);
                 continue;
             }

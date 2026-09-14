@@ -113,6 +113,21 @@ final class DuplicateBlockCollapserTest extends TestCase
         self::assertSame(2, substr_count($html, '<img'));
     }
 
+    /**
+     * Two different stock photos whose filenames share only provenance words
+     * (the library, a batch date, "download") are distinct images, not a
+     * responsive duplicate — the reader must keep both (#1032, Utopia/Pixabay).
+     */
+    public function testKeepsTwoDistinctStockPhotosThatShareOnlyProvenanceTokens(): void
+    {
+        $html = $this->collapsed(
+            '<figure><img src="https://x.test/wreath-cc0-pixabay-couleur-260905-download.jpg" alt="a"></figure>'
+            . '<figure><img src="https://x.test/leaves-cc0-pixabay-hans-260905-download.jpg" alt="b"></figure>'
+        );
+
+        self::assertSame(2, substr_count($html, '<img'));
+    }
+
     /** The wrapper that only spaced the removed image must go with it, whitespace and all. */
     public function testRemovesAWhitespaceOnlyParagraphLeftByARemovedDuplicateImage(): void
     {
