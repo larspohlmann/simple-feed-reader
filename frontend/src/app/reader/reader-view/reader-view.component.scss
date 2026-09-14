@@ -476,6 +476,17 @@ article {
   margin-bottom: var(--space-4);
 }
 
+/* When the article already carries a real rule between its sections (Substack
+   emits an <hr> before each heading), the synthetic divider would double it, so
+   the <hr> owns the separation and the heading drops its own. */
+.content ::ng-deep hr + h2 {
+  margin-top: 0;
+}
+
+.content ::ng-deep hr + h2::before {
+  content: none;
+}
+
 /* The article's lead paragraph gets a slightly larger size. The class is set
    by the component's post-render pass — pure CSS :first-of-type can't reach
    it through the wrapper elements feeds and readability emit. */

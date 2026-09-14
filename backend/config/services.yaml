@@ -118,6 +118,30 @@ services:
     App\Service\Refresh\RefreshRunnerInterface: '@App\Service\Refresh\RefreshRunner'
     App\Service\Discovery\FeedDiscoveryInterface: '@App\Service\Discovery\FeedDiscovery'
     App\Service\Reader\ArticleExtractorInterface: '@App\Service\Reader\ArticleExtractor'
+
+    # The reader's page repairs run as an ordered pipeline before readability
+    # scores the page. The order is a real dependency, not a tag-collection
+    # accident: the class-reading repairs (share-widget and Substack fingerprints,
+    # the screen-reader and glyph classes) must run before the class-stripping
+    # ones (ImageWrapperClassRemover, HeadingClassRemover), which delete the very
+    # class those readers key on. Declared here as one explicit list so the
+    # sequence is visible in a single place and a new repair joins by adding a
+    # line at the right point — never by growing a constructor.
+    App\Service\Reader\FetchedPageNormalizer:
+        arguments:
+            $repairs:
+                - '@App\Service\Reader\Repair\CustomElementUnwrapper'
+                - '@App\Service\Reader\Repair\NoscriptImageUnwrapper'
+                - '@App\Service\Reader\Repair\LazyImageSources'
+                - '@App\Service\Reader\Repair\ImageButtonUnwrapper'
+                - '@App\Service\Reader\Repair\ShareWidgetRemover'
+                - '@App\Service\Reader\Repair\ShareIntentLinkRemover'
+                - '@App\Service\Reader\Repair\SubstackGatedVideoPlaceholder'
+                - '@App\Service\Reader\Repair\ScreenReaderOnlyElementRemover'
+                - '@App\Service\Reader\Repair\OrphanIconGlyphRemover'
+                - '@App\Service\Reader\Repair\ImageWrapperClassRemover'
+                - '@App\Service\Reader\Repair\HeadingClassRemover'
+                - '@App\Service\Reader\Repair\HorizontalRuleUnwrapper'
     App\Service\Search\EntrySearchInterface: '@App\Service\Search\EntrySearchWithFallback'
     App\Service\Search\SavedSearchEntriesInterface: '@App\Service\Search\SavedSearchEntriesWithFallback'
     App\Service\Search\SavedSearchUnreadMatchSource: '@App\Service\Search\SavedSearchUnreadMatchesWithFallback'

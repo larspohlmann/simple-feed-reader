@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Reader\Repair;
 
 use Dom\Element;
 use Dom\HTMLDocument;
@@ -24,12 +24,12 @@ use Dom\HTMLDocument;
  * Runs after LazyImageSources, which has already resolved every lazy `src` and
  * removed images with no usable source, so a surviving button image is loadable.
  */
-final readonly class ImageButtonUnwrapper
+final readonly class ImageButtonUnwrapper implements PageRepair
 {
     /** An edge at or below this is an icon or a beacon; an article photo clears it. */
     private const int ICON_EDGE_CEILING = 100;
 
-    public function unwrapIn(HTMLDocument $document): void
+    public function repairIn(HTMLDocument $document): void
     {
         // A snapshot, since replaceWith mutates the live tag list mid-walk. A
         // button cannot nest inside a button, so document order needs no reversal.

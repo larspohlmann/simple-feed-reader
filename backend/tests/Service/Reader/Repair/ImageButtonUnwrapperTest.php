@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader;
+namespace App\Tests\Service\Reader\Repair;
 
-use App\Service\Reader\ImageButtonUnwrapper;
+use App\Service\Reader\Repair\ImageButtonUnwrapper;
 use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
@@ -148,7 +148,7 @@ final class ImageButtonUnwrapperTest extends TestCase
             '<html lang="en"><body>' . $bodyHtml . '</body></html>',
             LIBXML_NOERROR,
         );
-        $this->unwrapper->unwrapIn($document);
+        $this->unwrapper->repairIn($document);
 
         return $document->saveHtml();
     }

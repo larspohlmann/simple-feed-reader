@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Reader\Repair;
 
+use App\Service\Reader\ShareLinkMatcher;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -22,7 +23,7 @@ use Dom\HTMLDocument;
  * container that is not itself link-only, so a real sibling paragraph is never
  * swept in, and at <main>/<article>/<body>, so it never reaches real prose.
  */
-final readonly class ShareIntentLinkRemover
+final readonly class ShareIntentLinkRemover implements PageRepair
 {
     /** A cluster's own text (its label) stays under this many characters. */
     private const int CLUSTER_LABEL_LENGTH = 60;
@@ -33,7 +34,7 @@ final readonly class ShareIntentLinkRemover
     /** Pure list structure the climb sees through when looking for a cluster's links. */
     private const array LIST_WRAPPER_TAGS = ['ul', 'ol', 'li'];
 
-    public function removeFrom(HTMLDocument $document): void
+    public function repairIn(HTMLDocument $document): void
     {
         $matcher = ShareLinkMatcher::forPage($document);
         foreach ($this->shareClusters($document, $matcher) as $cluster) {

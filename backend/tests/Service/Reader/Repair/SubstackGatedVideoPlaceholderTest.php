@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader;
+namespace App\Tests\Service\Reader\Repair;
 
 use App\Service\Html\HtmlDocumentParser;
-use App\Service\Reader\SubstackGatedVideoPlaceholder;
+use App\Service\Reader\Repair\SubstackGatedVideoPlaceholder;
 use PHPUnit\Framework\TestCase;
 
 final class SubstackGatedVideoPlaceholderTest extends TestCase
@@ -30,7 +30,7 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
 
     public function testInsertsThePosterImmediatelyBeforeTheTeaser(): void
     {
-        $document = $this->replaceIn(
+        $document = $this->repairIn(
             $this->page(
                 $this->ogHead('https://cdn.test/og.jpg', 'https://x.substack.com/p/a'),
                 $this->gatedArticle(self::PLAYER . self::TEASER . self::PAYWALL),
@@ -60,7 +60,7 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
         $head = '<meta property="og:image" content="https://cdn.test/og.jpg">'
             . '<meta property="og:url" content="https://x.substack.com/p/og">'
             . '<link rel="canonical" href="https://x.substack.com/p/canonical">';
-        $result = $this->replaceIn(
+        $result = $this->repairIn(
             $this->page($head, $this->gatedArticle(self::PLAYER . self::TEASER . self::PAYWALL)),
         )->saveHtml();
 
@@ -72,7 +72,7 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
     {
         $head = '<meta property="og:image" content="https://cdn.test/og.jpg">'
             . '<link rel="canonical" href="https://x.substack.com/p/canonical">';
-        $result = $this->replaceIn(
+        $result = $this->repairIn(
             $this->page($head, $this->gatedArticle(self::PLAYER . self::TEASER . self::PAYWALL)),
         )->saveHtml();
 
@@ -87,7 +87,7 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
         $prose = 'Plants have souls and take part in the wider life of the world, an old idea now.';
         self::assertSame(80, mb_strlen($prose));
 
-        $result = $this->replaceIn(
+        $result = $this->repairIn(
             $this->page(
                 $this->ogHead('https://cdn.test/og.jpg', 'https://x.substack.com/p/a'),
                 $this->gatedArticle(self::PLAYER . '<p>' . $prose . '</p>' . self::PAYWALL),
@@ -101,7 +101,7 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
     public function testRemovesTheChromeButSkipsThePosterWhenNoTeaserIsLongEnough(): void
     {
         $shortParagraph = '<p>Watch below.</p>';
-        $result = $this->replaceIn(
+        $result = $this->repairIn(
             $this->page(
                 $this->ogHead('https://cdn.test/og.jpg', 'https://x.substack.com/p/a'),
                 $this->gatedArticle(self::PLAYER . $shortParagraph . self::PAYWALL),
@@ -116,7 +116,7 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
 
     public function testDoesNothingWhenThereIsNoPaywallLandmark(): void
     {
-        $result = $this->replaceIn(
+        $result = $this->repairIn(
             $this->page(
                 $this->ogHead('https://cdn.test/og.jpg', 'https://x.substack.com/p/a'),
                 $this->gatedArticle(self::PLAYER . self::TEASER),
@@ -132,7 +132,7 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
         $renamedPlayer =
             '<div class="shows-video-player-renamed container-abc">'
             . '<div class="settingsControlsContainer-x"><p>Playback speed</p><p>Preview</p></div></div>';
-        $result = $this->replaceIn(
+        $result = $this->repairIn(
             $this->page(
                 $this->ogHead('https://cdn.test/og.jpg', 'https://x.substack.com/p/a'),
                 $this->gatedArticle($renamedPlayer . self::TEASER . self::PAYWALL),
@@ -148,7 +148,7 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
     {
         $body = '<div class="single-post-container"><article class="post">'
             . self::PLAYER . self::TEASER . self::PAYWALL . '</article></div>';
-        $result = $this->replaceIn(
+        $result = $this->repairIn(
             $this->page($this->ogHead('https://cdn.test/og.jpg', 'https://x.substack.com/p/a'), $body),
         )->saveHtml();
 
@@ -159,7 +159,7 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
     public function testDoesNothingWhenThePosterUrlIsMissing(): void
     {
         $head = '<meta property="og:url" content="https://x.substack.com/p/a">';
-        $result = $this->replaceIn(
+        $result = $this->repairIn(
             $this->page($head, $this->gatedArticle(self::PLAYER . self::TEASER . self::PAYWALL)),
         )->saveHtml();
 
@@ -169,7 +169,7 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
 
     public function testDoesNothingWhenThePosterUrlIsNotHttp(): void
     {
-        $result = $this->replaceIn(
+        $result = $this->repairIn(
             $this->page(
                 $this->ogHead('ftp://cdn.test/og.jpg', 'https://x.substack.com/p/a'),
                 $this->gatedArticle(self::PLAYER . self::TEASER . self::PAYWALL),
@@ -200,11 +200,11 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
         return '<html><head>' . $head . '</head><body>' . $body . '</body></html>';
     }
 
-    private function replaceIn(string $html): \Dom\HTMLDocument
+    private function repairIn(string $html): \Dom\HTMLDocument
     {
         $document = HtmlDocumentParser::parseOrNull($html);
         self::assertNotNull($document);
-        $this->placeholder->replaceIn($document);
+        $this->placeholder->repairIn($document);
 
         return $document;
     }
