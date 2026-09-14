@@ -43,30 +43,6 @@
         </span>
       }
       <div class="nav">
-        <button
-          appListAction
-          class="mobile-icon-only"
-          type="button"
-          [attr.aria-label]="'reader.favorite' | transloco"
-          [class.on]="e.isFavorite"
-          [attr.aria-pressed]="e.isFavorite"
-          (click)="favorite.emit()"
-        >
-          <app-icon name="star" size="sm" [fill]="e.isFavorite" />
-          <span class="txt">{{ 'reader.favorite' | transloco }}</span>
-        </button>
-        <button
-          appListAction
-          class="mobile-icon-only"
-          type="button"
-          [attr.aria-label]="'reader.keep' | transloco"
-          [class.on]="e.isKept"
-          [attr.aria-pressed]="e.isKept"
-          (click)="keep.emit()"
-        >
-          <app-icon name="bookmark" size="sm" [fill]="e.isKept" />
-          <span class="txt">{{ 'reader.keep' | transloco }}</span>
-        </button>
         @if (mode() === 'reader') {
           <button
             appListAction
@@ -96,6 +72,30 @@
             }}</span>
           </button>
         }
+        <button
+          appListAction
+          class="mobile-icon-only"
+          type="button"
+          [attr.aria-label]="'reader.keep' | transloco"
+          [class.on]="e.isKept"
+          [attr.aria-pressed]="e.isKept"
+          (click)="keep.emit()"
+        >
+          <app-icon name="bookmark" size="sm" [fill]="e.isKept" />
+          <span class="txt">{{ 'reader.keep' | transloco }}</span>
+        </button>
+        <button
+          appListAction
+          class="mobile-icon-only"
+          type="button"
+          [attr.aria-label]="'reader.favorite' | transloco"
+          [class.on]="e.isFavorite"
+          [attr.aria-pressed]="e.isFavorite"
+          (click)="favorite.emit()"
+        >
+          <app-icon name="star" size="sm" [fill]="e.isFavorite" />
+          <span class="txt">{{ 'reader.favorite' | transloco }}</span>
+        </button>
       </div>
     </div>
     <article [attr.aria-busy]="loading() ? 'true' : null">
