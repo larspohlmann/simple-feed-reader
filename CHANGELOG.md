@@ -10,6 +10,54 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.0.10] - 2026-09-14
+
+## What's Changed
+* fix(#967): flag Ghost registration-wall previews as paywalled by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/968
+* Restore the last reader location after sign-in, sign-out and settings (#969) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/970
+* fix(#971): saved-search result headers match list actions by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/972
+* feat(#973): rank the combined saved-searches list through Meilisearch by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/974
+* feat(#496): cross-feed duplicate collapse with provenance footer by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/980
+* refactor(#975): unify DuplicateCollapseDql on one semi-join by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/981
+* Reading-focus dim: observe geometry instead of enumerating triggers (#982) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/985
+* feat(#983): Grafana observability — logs to Loki, traces to Tempo by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/986
+* feat(#984): frontend error logging to Grafana Loki by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/987
+* fix(grafana): keep the provisioned dashboard when its bind mount is empty by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/988
+* feat(grafana): full-width frontend and backend error log panels by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/989
+* feat(grafana): tracing on by default, trace-link fix, error-log dashboard tweaks by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/992
+* fix(#994): strip Webtrekk wt_ tracking params in URL normalizer by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/995
+* fix(#996): route reader list errors through the shared banner with retry and dismiss by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/997
+* feat(#993): continuous and per-request profiling with Pyroscope by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1001
+* fix(#1003): SAPI-aware Loki delivery — spool off the request path on cgi-fcgi by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1004
+* fix(#1002): drop related-article teaser grids before readability by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1005
+* Separate the trailing author bio from the article body by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1007
+* fix(#1006): log any client error readably; identity dedupe; no data leak by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1008
+* fix(#999): keep "also published in" popover inside the viewport on mobile by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1009
+* fix: drop browser-injected errors from client-error reporter by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1010
+* feat(#1011): per-route performance dashboard, with method and query spans by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1014
+* fix(#1012): cache the grafana_settings row off the request hot path by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1016
+* chore: run the Docker test leg with OpenTelemetry off by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1015
+* fix(#1013): pin MAILER_FALLBACK_DSN for the Docker/MySQL test leg by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1017
+* feat(#998): flag Memberful-gated articles as paywalled previews by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1018
+* feat(#1019): mirror the list-view action style in the article header by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1020
+* fix(#1021): keep in-flight optimistic state across a list reload by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1022
+* fix(#501): stop a load-more append from stalling the list mid-scroll by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1023
+* fix(#1025): dial fetch concurrency per host and free a crashed tick's lock by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1026
+* feat(#953): persist and display feed-declared entry categories by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1027
+* refactor(#1028): remove $userId tramp-data warning in SavedSearchEntryRepository by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1029
+* fix(#1030): restore reader subheadings and horizontal rules by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1031
+* fix(#1032): keep distinct stock images the collapser dropped as duplicates by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1033
+* refactor(#1034): share the tag picker across the feed dialogs by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1035
+* fix(#1024): update list-scroll-reset settings-trip spec for #969 by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1036
+* fix(#501): drop the resting translateY(0px) from the list scroller by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1037
+* fix(#1038): report only same-origin bundle errors, drop navigation aborts by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1039
+* fix(#1041): make AdminGrafanaControllerTest order-independent by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1043
+* fix(#1040): drive the entry list join from entry for the fan-in views by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1042
+* feat(#1044): compile opentelemetry+excimer only when observability is on by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1045
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.0.9...v1.0.10
+
 ## [v1.0.9] - 2026-09-09
 
 ## What's Changed
