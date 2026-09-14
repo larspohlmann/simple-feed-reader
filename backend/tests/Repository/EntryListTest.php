@@ -14,6 +14,7 @@ use App\Http\EntryCursor;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryQuery;
 use App\Tests\DbTestCase;
+use App\Tests\Support\QueryRecorder;
 
 final class EntryListTest extends DbTestCase
 {
@@ -83,6 +84,41 @@ final class EntryListTest extends DbTestCase
         self::assertInstanceOf(EntryListRepository::class, $repo);
 
         return $repo;
+    }
+
+    /**
+     * The list queries the recorder saw carrying the join-order hint. A result
+     * assertion cannot catch the hint — the rows are identical with or without
+     * it — so this looks at the wire, like the N+1 guard.
+     *
+     * @return list<string>
+     */
+    private function joinPrefixQueries(EntryQuery $query): array
+    {
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        $recorder->reset();
+        $this->repo()->listForUser($query);
+
+        return $recorder->queriesMatching('JOIN_PREFIX');
+    }
+
+    public function testTheChronologicalFanInViewsCarryTheJoinOrderHint(): void
+    {
+        $userId = $this->user->getId() ?? 0;
+
+        self::assertCount(1, $this->joinPrefixQueries(new EntryQuery($userId, 'all')));
+        self::assertCount(1, $this->joinPrefixQueries(new EntryQuery($userId, 'unread')));
+    }
+
+    public function testAScopedOrStateDrivenViewDropsTheJoinOrderHint(): void
+    {
+        $userId = $this->user->getId() ?? 0;
+
+        self::assertSame([], $this->joinPrefixQueries(
+            new EntryQuery($userId, 'all', subscriptionId: $this->sub->getId()),
+        ));
+        self::assertSame([], $this->joinPrefixQueries(new EntryQuery($userId, 'favorites')));
     }
 
     public function testNewestFirstAndCarriesSubscriptionTitle(): void
