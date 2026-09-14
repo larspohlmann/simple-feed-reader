@@ -61,4 +61,21 @@ final readonly class EntryQuery
 
         return $this->view === 'all' || $this->view === 'unread';
     }
+
+    /**
+     * A list that spans many feeds and ranks them by publish date: the two
+     * chronological views ('all', 'unread'), a tag's subset included, but not a
+     * single subscription. Only this shape gains from driving the join from
+     * `entry` and its effective-date index; a single-feed scope and the
+     * state-driven views ('favorites', 'kept', 'viewed') keep the planner's own
+     * order. Unlike hidesExcludedFeeds(), tag scope counts — see #1040.
+     */
+    public function isDateOrderedFanIn(): bool
+    {
+        if ($this->subscriptionId !== null) {
+            return false;
+        }
+
+        return $this->view === 'all' || $this->view === 'unread';
+    }
 }
