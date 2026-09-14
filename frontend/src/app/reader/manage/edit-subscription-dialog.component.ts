@@ -5,7 +5,7 @@ import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
-import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
+import { TagPickerComponent } from '../tag-picker/tag-picker.component';
 import { FieldComponent } from '../../shared/field/field.component';
 import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.component';
 import { ToggleComponent } from '../../shared/toggle/toggle.component';
@@ -21,7 +21,7 @@ import { ButtonComponent } from '../../shared/button/button.component';
     ReactiveFormsModule,
     A11yModule,
     IconComponent,
-    TagGlyphComponent,
+    TagPickerComponent,
     FieldComponent,
     ButtonComponent,
     OverlayPanelComponent,

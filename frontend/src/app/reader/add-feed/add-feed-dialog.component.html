@@ -9,24 +9,11 @@
       </app-field>
       @if (tagsStore.tags().length) {
         <p class="lbl">{{ 'dialog.addFeed.tags' | transloco }}</p>
-        <div class="tags">
-          @for (t of tagsStore.tags(); track t.id) {
-            <button
-              type="button"
-              class="tag-pill"
-              [class.on]="checked().has(t.id)"
-              [attr.aria-pressed]="checked().has(t.id)"
-              (click)="toggleTag(t.id)"
-            >
-              <app-tag-glyph
-                [name]="t.icon"
-                [color]="checked().has(t.id) ? 'var(--on-accent)' : t.color"
-                size="sm"
-              />
-              {{ t.name }}
-            </button>
-          }
-        </div>
+        <app-tag-picker
+          [tags]="tagsStore.tags()"
+          [selected]="checked()"
+          (toggled)="toggleTag($event)"
+        />
       }
       <!-- Discovery reads the page then guesses feed addresses it never mentioned,
            so a search can run for seconds. This is the one live report of that —

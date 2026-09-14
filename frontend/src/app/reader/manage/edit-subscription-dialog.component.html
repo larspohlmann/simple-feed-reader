@@ -31,24 +31,7 @@
       @if (tagsStore.tags().length === 0) {
         <p class="hint">{{ 'dialog.editFeed.noTags' | transloco }}</p>
       }
-      <div class="tags">
-        @for (t of tagsStore.tags(); track t.id) {
-          <button
-            type="button"
-            class="tag-pill"
-            [class.on]="checked().has(t.id)"
-            [attr.aria-pressed]="checked().has(t.id)"
-            (click)="toggle(t.id)"
-          >
-            <app-tag-glyph
-              [name]="t.icon"
-              [color]="checked().has(t.id) ? 'var(--on-accent)' : t.color"
-              size="sm"
-            />
-            {{ t.name }}
-          </button>
-        }
-      </div>
+      <app-tag-picker [tags]="tagsStore.tags()" [selected]="checked()" (toggled)="toggle($event)" />
 
       <div class="switch-row">
         <label class="switch-label" for="edit-feed-all-items">
