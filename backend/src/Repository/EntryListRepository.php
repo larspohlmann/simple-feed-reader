@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Doctrine\EntryListJoinOrderWalker;
 use App\Entity\Entry;
 use App\Entity\Subscription;
+use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use OpenTelemetry\API\Instrumentation\WithSpan;
@@ -59,8 +61,13 @@ class EntryListRepository extends AbstractEntryProjectionRepository
         $this->collapse->apply($qb, $applyScope, $query->userId);
         $this->applyCursor($qb, $query->cursor, $sort);
 
+        $listQuery = $qb->getQuery();
+        if ($query->isDateOrderedFanIn()) {
+            $listQuery->setHint(Query::HINT_CUSTOM_OUTPUT_WALKER, EntryListJoinOrderWalker::class);
+        }
+
         /** @var list<array<array-key, mixed>> $rows */
-        $rows = $qb->getQuery()->getResult();
+        $rows = $listQuery->getResult();
         $survivors = array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
 
         return $this->attachDuplicates($survivors, $applyScope, $query->userId);
