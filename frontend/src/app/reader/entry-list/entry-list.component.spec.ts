@@ -1607,6 +1607,15 @@ describe('EntryListComponent', () => {
       expect(f.componentInstance.revealOffset()).toBe(0);
     });
 
+    it('carries no transform at rest, so a long list is not promoted to its own layer', () => {
+      const f = mount();
+      expect(f.componentInstance.revealTransform()).toBe('none');
+
+      f.componentRef.setInput('refreshing', true);
+      f.detectChanges();
+      expect(f.componentInstance.revealTransform()).toBe(`translateY(${REFRESH_REVEAL}px)`);
+    });
+
     it('opens the reveal from a button refresh with no pull, and labels it', () => {
       // The list-header button and the sidebar button both just flip refreshing();
       // the reveal reads that, not the gesture, so no pull is involved here.

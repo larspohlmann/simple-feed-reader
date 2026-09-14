@@ -345,8 +345,14 @@ export class EntryListComponent implements OnDestroy {
     return this.refreshing() ? REFRESH_REVEAL : 0;
   });
   /** The transform applied to both the scroller and the tray. Extracted so the
-   *  three bindings can't drift apart. */
-  readonly revealTransform = computed(() => `translateY(${this.revealOffset()}px)`);
+   *  three bindings can't drift apart. `none` at rest, never `translateY(0px)`:
+   *  any transform promotes the whole (very tall, far down) scroll content to
+   *  one GPU layer, whose backing store iOS WebKit can fail to paint for a
+   *  frame mid-scroll (#501). */
+  readonly revealTransform = computed(() => {
+    const offset = this.revealOffset();
+    return offset === 0 ? 'none' : `translateY(${offset}px)`;
+  });
 
   /** The reveal only makes sense over the real list scroller — the skeleton and
    *  empty states have no content to slide, so a refresh started from those must
