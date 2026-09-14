@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Admin;
 
+use App\Entity\GrafanaSettings;
 use App\Entity\User;
+use App\Service\Grafana\GrafanaSettingsCache;
 use App\Tests\Support\ApiTestCase;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -25,6 +27,23 @@ final class AdminGrafanaControllerTest extends ApiTestCase
         parent::setUp();
 
         $this->client = self::createClient();
+        $this->resetGrafanaSettings();
+    }
+
+    /**
+     * The settings singleton outlives a single test: its row sits in the
+     * per-process schema and, worse, its resolved snapshot sits in a cache pool
+     * shared across the whole run (#1012). A writer test would leak an override
+     * into whichever test runs next, so clear both and start unconfigured
+     * (#1041).
+     */
+    private function resetGrafanaSettings(): void
+    {
+        $this->em()->createQuery('DELETE FROM ' . GrafanaSettings::class . ' g')->execute();
+
+        /** @var GrafanaSettingsCache $cache */
+        $cache = self::getContainer()->get(GrafanaSettingsCache::class);
+        $cache->forget();
     }
 
     private function tokenFor(User $user): string
