@@ -1,0 +1,16 @@
+@for (t of tags(); track t.id) {
+  <button
+    type="button"
+    class="tag-pill"
+    [class.on]="selected().has(t.id)"
+    [attr.aria-pressed]="selected().has(t.id)"
+    (click)="toggled.emit(t.id)"
+  >
+    <app-tag-glyph
+      [name]="t.icon"
+      [color]="selected().has(t.id) ? 'var(--on-accent)' : t.color"
+      size="sm"
+    />
+    {{ t.name }}
+  </button>
+}

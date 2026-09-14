@@ -64,50 +64,6 @@ form {
   color: var(--accent);
 }
 
-.tags {
-  margin: 0;
-  padding: 0;
-
-  /* Cap the list so a long tag set never pushes the title field out of view;
-     past the cap it scrolls on its own rather than handing the whole dialog to
-     the panel's body scroller. */
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     tuned tag-list cap, not a spacing value. */
-  max-height: 220px;
-  min-height: 0;
-  overflow: auto;
-
-  /* Chaining stays ON, deliberately (#561): the dialog body behind this list
-     still needs its own scroll remainder; containment swallowed exactly that
-     and stranded the last tag. Stopping the gesture is the panel body's job. */
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.tag-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-pill);
-  background: var(--surface-1);
-  color: var(--text-secondary);
-  font-size: var(--fs-sm);
-  cursor: pointer;
-}
-
-.tag-pill:hover {
-  border-color: var(--accent);
-}
-
-.tag-pill.on {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
-}
-
 // Label-left/control-right like other toggle rows, but without settings-row's
 // panel-inset padding: this dialog's `.body` (overlay-panel) already carries
 // it, so re-adding it would indent the switches past the fields above.

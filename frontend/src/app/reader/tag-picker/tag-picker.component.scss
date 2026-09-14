@@ -1,0 +1,33 @@
+// The host is the wrapping row itself, so the caller places it with its own
+// margin. No inner scroller: the dialog's overlay-panel body is the single
+// scroller, so a long tag list runs on and the panel's viewport cap stops it.
+// A nested scroll box was a mobile touch trap — hard to hit, and the outer body
+// stole the gesture (#868, #1034).
+:host {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.tag-pill:hover {
+  border-color: var(--accent);
+}
+
+.tag-pill.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}

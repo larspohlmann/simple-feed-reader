@@ -49,42 +49,10 @@ form {
   color: var(--text-secondary);
 }
 
-.tags {
+app-tag-picker {
   /* Separate the picker from whatever follows — the "found feeds" hint when a
      search has run, or nothing at all before one has. */
   margin: 0 0 var(--space-4);
-  padding: 0;
-
-  /* No own scroller: the panel body is the single scroller (like .candidates
-     below), so the tag list runs on and the panel's viewport cap stops it. A
-     nested 160px scroll box was a mobile touch trap — hard to hit, and the
-     outer body stole the gesture. */
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.tag-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-pill);
-  background: var(--surface-1);
-  color: var(--text-secondary);
-  font-size: var(--fs-sm);
-  cursor: pointer;
-}
-
-.tag-pill:hover {
-  border-color: var(--accent);
-}
-
-.tag-pill.on {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
 }
 
 // The one part of the dialog that grows without bound. It no longer scrolls on

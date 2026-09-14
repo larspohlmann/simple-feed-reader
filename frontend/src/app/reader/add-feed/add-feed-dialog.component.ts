@@ -6,7 +6,7 @@ import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef } from '@angular/cdk/dialog';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
+import { TagPickerComponent } from '../tag-picker/tag-picker.component';
 import { FieldComponent } from '../../shared/field/field.component';
 import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
@@ -29,7 +29,7 @@ type PreviewState =
     ReactiveFormsModule,
     A11yModule,
     RouterLink,
-    TagGlyphComponent,
+    TagPickerComponent,
     FieldComponent,
     ButtonComponent,
     OverlayPanelComponent,
