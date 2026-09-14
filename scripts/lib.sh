@@ -454,6 +454,21 @@ export_build_version_args() {
   export APP_VERSION APP_COMMIT APP_BUILT_AT
 }
 
+# The opentelemetry and excimer extensions serve the observability stack and
+# nothing else, so the prod image compiles them only when the operator runs
+# it. Export the WITH_OBSERVABILITY build arg from the same signal
+# prod_uses_grafana reads; docker compose interpolates it into the php and
+# worker build args. Called before `prod_compose up -d --build`, next to
+# export_build_version_args.
+export_observability_build_arg() {
+  if prod_uses_grafana; then
+    SFR_WITH_OBSERVABILITY=1
+  else
+    SFR_WITH_OBSERVABILITY=0
+  fi
+  export SFR_WITH_OBSERVABILITY
+}
+
 # `docker compose up -d` only STARTS services that are in the active
 # profiles -- it never stops one that has just fallen OUT of them, and
 # nothing else in this flow calls `down` or `rm`. Without this, declining the
@@ -1654,7 +1669,8 @@ configure_grafana() {
   say 'Run a Grafana log dashboard?'
   tell '  A Loki + Grafana container pair collects the app'\''s logs into a'
   tell '  browsable dashboard. Declining leaves logs in the container output'
-  tell '  only (docker compose logs), which needs no extra container.'
+  tell '  only (docker compose logs), which needs no extra container, and skips'
+  tell '  the opentelemetry and excimer extensions when the image is built.'
   choice=$(prompt_with_default 'Enable Grafana? (y/n)' "${default}")
   apply_grafana_choice "${choice}"
 }

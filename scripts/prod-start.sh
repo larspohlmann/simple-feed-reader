@@ -84,6 +84,10 @@ fi
 # sidebar and /api/version report it instead of the 'dev' placeholder (#500).
 export_build_version_args
 
+# Compile the opentelemetry and excimer extensions only when observability is
+# on (#1044); prod-configure.sh's Grafana question toggles them via a rebuild.
+export_observability_build_arg
+
 run_step 'Building and starting the production stack (the first build takes a few minutes)' \
   prod_compose up -d --build
 

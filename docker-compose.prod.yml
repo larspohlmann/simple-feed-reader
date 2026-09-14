@@ -86,6 +86,15 @@ x-app-environment: &app-environment
   APPLE_OAUTH_KEY_ID: ${APPLE_OAUTH_KEY_ID:-}
   APPLE_OAUTH_PRIVATE_KEY: ${APPLE_OAUTH_PRIVATE_KEY:-}
 
+# The release version baked into version.json (SPA) and the backend. All three
+# images share it; scripts/prod-start.sh derives and exports these, empty
+# otherwise, so a bare `compose build` leaves the app on its development-build
+# fallback (issue #500).
+x-version-build-args: &version-build-args
+  APP_VERSION: ${APP_VERSION:-}
+  APP_COMMIT: ${APP_COMMIT:-}
+  APP_BUILT_AT: ${APP_BUILT_AT:-}
+
 services:
   # The bundled database, behind a profile: a SQLite install runs two
   # containers instead of three and never starts this one. prod_compose in
@@ -198,14 +207,12 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile
       target: prod
-      # The release version baked into version.json. scripts/prod-start.sh
-      # derives and exports these; empty otherwise, so a bare `compose build`
-      # leaves the app on its development-build fallback (issue #500). php and
-      # worker share the same three args so both bake the identical image.
-      args: &version-build-args
-        APP_VERSION: ${APP_VERSION:-}
-        APP_COMMIT: ${APP_COMMIT:-}
-        APP_BUILT_AT: ${APP_BUILT_AT:-}
+      # php and worker share these args so both bake the identical image:
+      # WITH_OBSERVABILITY compiles opentelemetry+excimer only when the operator
+      # runs the observability stack (#1044), exported by prod-start.sh.
+      args:
+        <<: *version-build-args
+        WITH_OBSERVABILITY: ${SFR_WITH_OBSERVABILITY:-1}
     restart: unless-stopped
     environment: *app-environment
     extra_hosts:
@@ -233,7 +240,9 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile
       target: prod
-      args: *version-build-args
+      args:
+        <<: *version-build-args
+        WITH_OBSERVABILITY: ${SFR_WITH_OBSERVABILITY:-1}
     # --memory-limit raised from 128M in #437: one recommendation wave reads
     # several answer streams at once, and 128M cut a live run short at 201 MB.
     command: ["php", "bin/console", "messenger:consume", "scheduler_worker", "--time-limit=3600", "--memory-limit=512M"]
