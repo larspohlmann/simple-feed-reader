@@ -226,18 +226,24 @@ test.describe('list scroll position on a list switch', () => {
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
     );
 
+    // Give BOTH lists a remembered place, so the reset below cannot pass merely
+    // because the list it clicks had never been scrolled.
     await showsRowsOf(page, ALL_LIST);
+    await scrollListTo(page, SCROLLED_TO);
     await openList(page, TAG_LIST);
     await scrollListTo(page, SCROLLED_TO);
 
     await page.getByRole('button', { name: 'Account' }).click();
     await page.getByRole('menuitem', { name: 'Settings' }).click();
     await expect(page).toHaveURL(/\/settings/);
+
+    // "Reader" returns to the list the user left, not to All items (#969).
     await page.getByRole('link', { name: 'Reader' }).click();
-    await showsRowsOf(page, ALL_LIST);
+    await showsRowsOf(page, TAG_LIST);
 
-    await openList(page, TAG_LIST);
-
+    // Clicking the other remembered list proves the reset survived the teardown:
+    // it lands at the top, not where it was left.
+    await openList(page, ALL_LIST);
     await expect.poll(() => scrollTop(page)).toBe(0);
   });
 
