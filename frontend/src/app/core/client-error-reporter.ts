@@ -55,6 +55,9 @@ export class ClientErrorReporter {
       if (this.originatesOutsideApplication(item)) {
         return;
       }
+      if (this.isNavigationNoise(error, item)) {
+        return;
+      }
       if (this.reportedByIdentityWithin(error, now)) {
         return;
       }
@@ -88,15 +91,48 @@ export class ClientErrorReporter {
     }
   }
 
-  /** A stack whose frames carry no `:line:column` location is browser-injected
-   *  code (Safari's native media controls, or an extension), not the app bundle.
-   *  A stackless error stays reportable: its origin cannot be judged. */
+  /** Reports only errors that carry a frame in our own bundle: a same-origin
+   *  `.js`/`.mjs` asset. A stack pointing only at the document (an extension's
+   *  inline script, such as a content blocker), at a foreign scheme
+   *  (`chrome-extension://…`), or at native code (no location) is noise from
+   *  code we do not own. A stackless error stays reportable: HTTP failures and
+   *  boot errors carry no stack, and their origin cannot be judged. */
   private originatesOutsideApplication(item: ClientErrorItem): boolean {
     const stack = item.stack?.trim();
     if (!stack) {
       return false;
     }
-    return !/:\d+:\d+/.test(stack);
+    return !this.stackReferencesApplicationBundle(stack);
+  }
+
+  private stackReferencesApplicationBundle(stack: string): boolean {
+    return stack.split('\n').some((frame) => this.frameIsApplicationCode(frame));
+  }
+
+  /** A located frame is ours unless its URL names another owner: a foreign
+   *  scheme (`chrome-extension://…`) is an extension, and a same-origin URL
+   *  that is not a `.js`/`.mjs` asset is a script injected into the document.
+   *  A located frame with no URL at all is our own bundle. */
+  private frameIsApplicationCode(frame: string): boolean {
+    if (!/:\d+:\d+/.test(frame)) {
+      return false;
+    }
+    const url = frame.match(/[a-z][\w+.-]*:\/\/\S+/i)?.[0];
+    if (!url) {
+      return true;
+    }
+    const origin = typeof location !== 'undefined' ? location.origin : '';
+    return url.startsWith(origin) && /\.[mc]?js:\d+:\d+/.test(url);
+  }
+
+  /** A transport abort (`status` 0, no server response) and a cancelled fetch
+   *  (`AbortError`) both mean the user navigated away or lost the connection,
+   *  not that the application broke. Common on mobile, and never actionable. */
+  private isNavigationNoise(error: unknown, item: ClientErrorItem): boolean {
+    if (error instanceof HttpErrorResponse && error.status === 0) {
+      return true;
+    }
+    return item.kind === 'AbortError';
   }
 
   private toWireItem(error: unknown): ClientErrorItem {

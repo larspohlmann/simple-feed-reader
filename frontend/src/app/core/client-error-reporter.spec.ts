@@ -70,21 +70,21 @@ describe('ClientErrorReporter', () => {
 
   it('dedupes the identical object reported twice within the window, even before signature dedupe applies', () => {
     const reporter = setup();
-    const httpError = new HttpErrorResponse({ status: 0, url: '/api/entries' });
+    const httpError = new HttpErrorResponse({ status: 500, url: '/api/entries' });
 
     reporter.report(httpError);
     reporter.report(httpError);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
-    expect(body.errors[0]).toMatchObject({ message: 'HTTP 0 /api/entries', kind: 'HttpError' });
+    expect(body.errors[0]).toMatchObject({ message: 'HTTP 500 /api/entries', kind: 'HttpError' });
   });
 
   it('does not dedupe by identity a different object with the same content', () => {
     const reporter = setup();
 
-    reporter.report(new HttpErrorResponse({ status: 0, url: '/api/entries' }));
-    reporter.report(new HttpErrorResponse({ status: 0, url: '/api/entries' }));
+    reporter.report(new HttpErrorResponse({ status: 500, url: '/api/entries' }));
+    reporter.report(new HttpErrorResponse({ status: 500, url: '/api/entries' }));
 
     // Not deduped by identity (distinct instances), but still collapsed by
     // the existing signature dedupe: same message, same kind.
@@ -121,13 +121,46 @@ describe('ClientErrorReporter', () => {
       expect(fetchMock).not.toHaveBeenCalled();
     });
 
-    it('reports an error whose stack has a real :line:column location', () => {
+    it('reports an error whose stack points at a same-origin application bundle (.js)', () => {
       const appError = withStack(
         new TypeError('boom'),
-        'TypeError: boom\n    at render (https://lars-pohlmann.de/reader/main-a1b2.js:1:2345)',
+        `TypeError: boom\n    at render (${location.origin}/reader/main-a1b2.js:1:2345)`,
       );
 
       setup().report(appError);
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('drops an error thrown from a script injected into the document, not a bundle (Brave cosmetic filter)', () => {
+      const injectedError = withStack(
+        new TypeError("undefined is not an object (evaluating 'n.standardSelectors')"),
+        `@${location.origin}/reader/:17:6324`,
+      );
+
+      setup().report(injectedError);
+
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('drops an error from a browser extension content script, a .js at a foreign scheme', () => {
+      const extensionError = withStack(
+        new TypeError("Cannot read properties of undefined (reading 'x')"),
+        'TypeError\n    at handle (chrome-extension://abcdefghijklmnop/content.js:12:99)',
+      );
+
+      setup().report(extensionError);
+
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('reports a masked cross-origin error that still carries a same-origin bundle frame', () => {
+      const maskedError = withStack(
+        new Error('Script error.'),
+        `r@${location.origin}/reader/chunk-JCSI4LYK.js:4:15845\nrunTask@${location.origin}/reader/polyfills-5CFQRCPP.js:1:2420`,
+      );
+
+      setup().report(maskedError);
 
       expect(fetchMock).toHaveBeenCalledTimes(1);
     });
@@ -136,6 +169,31 @@ describe('ClientErrorReporter', () => {
       setup().report('Script error.');
 
       expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('navigation and transport noise', () => {
+    it('drops an HTTP error with status 0, a transport abort that carries no server response', () => {
+      setup().report(new HttpErrorResponse({ status: 0, url: '/api/subscriptions' }));
+
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('still reports an HTTP error that carries a real server status', () => {
+      setup().report(new HttpErrorResponse({ status: 500, url: '/api/subscriptions' }));
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('drops an AbortError by kind, even when its stack points at the app bundle', () => {
+      const abortError = Object.assign(new Error('The operation was aborted.'), {
+        name: 'AbortError',
+        stack: `Error: The operation was aborted.\n    at fetchEntries (${location.origin}/reader/main-a1b2.js:1:99)`,
+      });
+
+      setup().report(abortError);
+
+      expect(fetchMock).not.toHaveBeenCalled();
     });
   });
 
@@ -154,12 +212,12 @@ describe('ClientErrorReporter', () => {
 
     it('omits the method when none was remembered for the response', () => {
       const reporter = setup();
-      const error = new HttpErrorResponse({ status: 0, url: '/api/entries' });
+      const error = new HttpErrorResponse({ status: 500, url: '/api/entries' });
 
       reporter.report(error);
 
       const body = JSON.parse(fetchMock.mock.calls[0][1].body);
-      expect(body.errors[0].message).toBe('HTTP 0 /api/entries');
+      expect(body.errors[0].message).toBe('HTTP 500 /api/entries');
     });
 
     it('strips the query string, so a search term or cursor never reaches Loki', () => {
