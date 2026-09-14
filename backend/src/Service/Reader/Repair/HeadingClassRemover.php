@@ -15,15 +15,11 @@ use Dom\HTMLDocument;
  */
 final readonly class HeadingClassRemover implements PageRepair
 {
-    private const array HEADING_TAGS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
-
     public function repairIn(HTMLDocument $document): void
     {
-        foreach (self::HEADING_TAGS as $tag) {
-            foreach (iterator_to_array($document->getElementsByTagName($tag)) as $heading) {
-                $heading->removeAttribute('class');
-                $heading->removeAttribute('id');
-            }
+        foreach ($document->querySelectorAll('h1, h2, h3, h4, h5, h6') as $heading) {
+            $heading->removeAttribute('class');
+            $heading->removeAttribute('id');
         }
     }
 }

@@ -18,14 +18,14 @@ final readonly class HorizontalRuleUnwrapper implements PageRepair
     public function repairIn(HTMLDocument $document): void
     {
         foreach (iterator_to_array($document->getElementsByTagName('hr')) as $rule) {
-            $parent = $rule->parentNode;
-            while ($parent instanceof Element && $this->isSoleRuleWrapper($parent)) {
-                $wrapper = $parent->parentNode;
-                if ($wrapper === null) {
+            $wrapper = $rule->parentNode;
+            while ($wrapper instanceof Element && $this->isSoleRuleWrapper($wrapper)) {
+                $host = $wrapper->parentNode;
+                if ($host === null) {
                     break;
                 }
-                $wrapper->replaceChild($rule, $parent);
-                $parent = $rule->parentNode;
+                $host->replaceChild($rule, $wrapper);
+                $wrapper = $host;
             }
         }
     }
