@@ -28,9 +28,14 @@ WORKDIR /app
 FROM php:8.4-fpm-alpine AS prod
 
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
+# opentelemetry and excimer serve the observability stack only, so they are
+# compiled just when it runs (#1044). scripts/prod-start.sh passes 0 when the
+# operator declined it; the default 1 keeps a bare `docker build` complete.
 # su-exec: the entrypoint fixes volume ownership as root, then drops to
 # www-data for the cache warmup so runtime writes stay www-data-owned.
-RUN install-php-extensions pdo_mysql intl opcache zip gd opentelemetry excimer \
+ARG WITH_OBSERVABILITY=1
+RUN install-php-extensions pdo_mysql intl opcache zip gd \
+    && if [ "${WITH_OBSERVABILITY}" = 1 ]; then install-php-extensions opentelemetry excimer; fi \
     && apk add --no-cache su-exec
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer

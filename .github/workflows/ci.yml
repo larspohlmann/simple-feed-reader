@@ -293,6 +293,14 @@ jobs:
       - name: configure_search_engine
         run: scripts/test/configure-search-engine.test.sh
 
+      # The observability build arg (#1044). Declining Grafana must skip
+      # compiling the opentelemetry and excimer extensions into the prod image,
+      # so prod-start.sh exports WITH_OBSERVABILITY from the same signal. A
+      # wrong mapping bakes two unused extensions in or drops them from an
+      # install that wants tracing -- both invisible until a build.
+      - name: observability_build_arg
+        run: scripts/test/observability-build-arg.test.sh
+
       # The mail question, whose default decides whether a new instance can
       # send account mail at all. A wrong answer here is invisible until the
       # first registration nobody receives.
