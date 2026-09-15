@@ -92,6 +92,26 @@ final class SiblingMediaExtenderTest extends TestCase
         self::assertSame(['https://cdn.test/live/reaktion-anschlag-video-100.m3u8', $landing], $this->requested);
     }
 
+    public function testSkipsASiblingAlreadyDeclaredAsASeedWithoutAskingTheNetwork(): void
+    {
+        // The page seeds the same clip twice — its VideoObject and its player
+        // config (#1055) — so the search re-derives a seed already declared. The
+        // extender must skip it before the redirect-follow, making no request.
+        $declared = new ArticleMedia([
+            self::found()->candidates[0],
+            new MediaCandidate(
+                MediaKind::Stream,
+                'https://cdn.test/live/reaktion-anschlag-video-100.m3u8',
+                'https://a.test/assets/reaktion~1920x1080',
+            ),
+        ]);
+
+        $extended = $this->extender([])->extend($declared, $declared, self::PAGE);
+
+        self::assertSame([], $this->requested);
+        self::assertCount(2, $extended->candidates);
+    }
+
     public function testDropsADerivedUrlTheNetworkRefuses(): void
     {
         $extended = $this->extender([new MockResponse('', ['http_code' => 404])])

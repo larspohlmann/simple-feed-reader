@@ -46,9 +46,9 @@ final readonly class ImageIdentity
     {
         $source = ImageProxyUrl::resolve($url);
         $path = (string) (parse_url($source, PHP_URL_PATH) ?? '');
-        $stem = self::stripRenderHash(
+        $stem = self::stripRenderHash(self::stripRenditionSize(
             strtolower((string) preg_replace('/\.[a-z0-9]{2,5}$/i', '', basename($path))),
-        );
+        ));
 
         $ids = [];
         if (preg_match_all('/imageid=(\w+)/i', $source, $matches)) {
@@ -80,6 +80,17 @@ final readonly class ImageIdentity
         return preg_match(self::UUID_PATH_SEGMENT_PATTERN, $path, $matches) === 1
             ? strtolower($matches[1])
             : null;
+    }
+
+    /**
+     * ZDF names a rendition with a trailing `~WxH` (`ki-162~384x216`); the same
+     * photo at another size differs only there, so it never belongs in the stem.
+     * The `~` separator keeps this off the `_`/`-` dimension suffixes #786 must
+     * still tell apart as different uploads.
+     */
+    private static function stripRenditionSize(string $stem): string
+    {
+        return (string) preg_replace('/~\d+x\d+$/', '', $stem);
     }
 
     /**
