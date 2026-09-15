@@ -53,4 +53,12 @@ final class EmbedProvidersWiringTest extends KernelTestCase
             $target->url,
         );
     }
+
+    public function testVimeoResolvesThroughTheTaggedIterator(): void
+    {
+        $target = $this->providers()->resolve('https://vimeo.com/1226652197/');
+
+        self::assertNotNull($target);
+        self::assertSame('https://player.vimeo.com/video/1226652197', $target->url);
+    }
 }
