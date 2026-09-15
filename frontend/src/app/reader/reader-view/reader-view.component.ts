@@ -81,6 +81,14 @@ const ARTICLE_SETTLE_STABLE = 4;
 /** Below this many headings an article is too short to warrant a contents list. */
 const TOC_MIN_HEADINGS = 3;
 
+/** Players whose own horizontal drag (a scrubber, an embed) the back-swipe must yield to (#1057). */
+const MEDIA_CONTROL_SELECTOR = 'audio, video, input[type="range"], .reader-embed';
+
+/** Whether a touch began on a media player's own control rather than the article surface. */
+function startsOnMediaControl(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest(MEDIA_CONTROL_SELECTOR) !== null;
+}
+
 /** One heading in the article's table of contents. */
 interface TocEntry {
   id: string;
@@ -190,6 +198,9 @@ export class ReaderViewComponent {
   private touchDy = 0;
   private axis: 'none' | 'h' | 'v' = 'none';
   private atBottomOnStart = false;
+  // A drag that begins on a player's own control (the scrubber, the embed) is
+  // that control's to handle; the back-swipe must not steal it (#1057).
+  private gestureSuppressed = false;
   private leaveTimer = 0;
 
   protected readonly readerTransform = computed(
@@ -485,6 +496,8 @@ export class ReaderViewComponent {
   onTouchStart(e: TouchEvent): void {
     this.pendingRestore = null; // the user is taking over; stop restoring
     if (!this.fullscreen() || this.leaving() || e.touches.length !== 1) return;
+    this.gestureSuppressed = startsOnMediaControl(e.target);
+    if (this.gestureSuppressed) return;
     const t = e.touches[0];
     this.touchStartX = t.clientX;
     this.touchStartY = t.clientY;
@@ -497,6 +510,7 @@ export class ReaderViewComponent {
   }
 
   onTouchMove(e: TouchEvent): void {
+    if (this.gestureSuppressed) return;
     if (!this.fullscreen() || this.leaving() || e.touches.length !== 1) return;
     const t = e.touches[0];
     const dx = t.clientX - this.touchStartX;
@@ -519,6 +533,10 @@ export class ReaderViewComponent {
   }
 
   onTouchEnd(): void {
+    if (this.gestureSuppressed) {
+      this.gestureSuppressed = false;
+      return;
+    }
     if (!this.fullscreen() || this.leaving()) return;
     const axis = this.axis;
     this.axis = 'none';
