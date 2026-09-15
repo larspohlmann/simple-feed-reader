@@ -22,4 +22,11 @@ interface EmbedProviderInterface
 
     /** Link text used when there is no poster. */
     public function label(): string;
+
+    /**
+     * The anchored regex — delimiter-free, valid in both PCRE and JavaScript — that
+     * matches this host's `normalize()` output. The reader client's allow-list is
+     * generated from every provider's pattern, so the two never drift (#1048).
+     */
+    public function framePattern(): string;
 }

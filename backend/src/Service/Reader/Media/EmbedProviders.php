@@ -30,4 +30,26 @@ final readonly class EmbedProviders
 
         return null;
     }
+
+    /**
+     * Every provider's frame pattern, sorted for a stable dump (#1048).
+     *
+     * @return list<string>
+     */
+    public function framePatterns(): array
+    {
+        $patterns = [];
+        foreach ($this->providers as $provider) {
+            $patterns[] = $provider->framePattern();
+        }
+        sort($patterns);
+
+        return $patterns;
+    }
+
+    /** The frame patterns as the reader client's committed allow-list file. */
+    public function allowlistJson(): string
+    {
+        return json_encode($this->framePatterns(), \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES) . "\n";
+    }
 }

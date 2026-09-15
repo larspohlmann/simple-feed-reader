@@ -42,6 +42,11 @@ final readonly class VimeoEmbedProvider implements EmbedProviderInterface
         return 'Watch on Vimeo';
     }
 
+    public function framePattern(): string
+    {
+        return '^https://' . preg_quote(self::PLAYER_HOST, '#') . '/video/\d+(?:\?h=' . self::HASH . ')?$';
+    }
+
     /** @return array{0: string, 1: ?string}|null the video id and its optional privacy hash */
     private function reference(string $url): ?array
     {

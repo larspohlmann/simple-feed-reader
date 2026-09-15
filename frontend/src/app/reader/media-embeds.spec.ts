@@ -85,4 +85,35 @@ describe('upgradeMediaEmbeds', () => {
 
     expect(el.querySelector('iframe')).toBeNull();
   });
+
+  it('replaces a Vimeo player link with a sandboxed iframe', () => {
+    const el = host('<a href="https://player.vimeo.com/video/1226652197">Watch on Vimeo</a>');
+    const frame = el.querySelector('iframe')!;
+
+    expect(frame).not.toBeNull();
+    expect(frame.getAttribute('src')).toBe('https://player.vimeo.com/video/1226652197');
+    expect(frame.getAttribute('sandbox')).toContain('allow-scripts');
+    expect(el.querySelector('a')).toBeNull();
+  });
+
+  it('replaces an unlisted Vimeo player link that carries a privacy hash', () => {
+    const el = host('<a href="https://player.vimeo.com/video/76979871?h=8272103f6e">x</a>');
+
+    expect(el.querySelector('iframe')!.getAttribute('src')).toBe(
+      'https://player.vimeo.com/video/76979871?h=8272103f6e',
+    );
+  });
+
+  it('leaves a bare vimeo.com page link (not the player URL) alone', () => {
+    const el = host('<a href="https://vimeo.com/1226652197">x</a>');
+
+    expect(el.querySelector('iframe')).toBeNull();
+    expect(el.querySelector('a')).not.toBeNull();
+  });
+
+  it('rejects a Vimeo look-alike host', () => {
+    const el = host('<a href="https://player.vimeo.com.evil.test/video/1226652197">x</a>');
+
+    expect(el.querySelector('iframe')).toBeNull();
+  });
 });
