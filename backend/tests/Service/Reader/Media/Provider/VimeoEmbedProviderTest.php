@@ -32,6 +32,8 @@ final class VimeoEmbedProviderTest extends TestCase
             'https://player.vimeo.com/video/76979871?h=8272103f6e',
             'https://player.vimeo.com/video/76979871?h=8272103f6e',
         ];
+        yield 'uppercase host' => ['https://VIMEO.COM/1226652197', 'https://player.vimeo.com/video/1226652197'];
+        yield 'mixed-case player host' => ['https://Player.Vimeo.com/video/76979871', 'https://player.vimeo.com/video/76979871'];
     }
 
     #[DataProvider('embeddableUrls')]
@@ -49,6 +51,8 @@ final class VimeoEmbedProviderTest extends TestCase
         yield 'player asset' => ['https://player.vimeo.com/api/player.js'];
         yield 'other host' => ['https://example.test/1226652197'];
         yield 'not https' => ['http://vimeo.com/1226652197'];
+        yield 'player path with leading junk' => ['https://player.vimeo.com/embed/video/76979871'];
+        yield 'player path with trailing junk' => ['https://player.vimeo.com/video/76979871/extra'];
     }
 
     #[DataProvider('unembeddableUrls')]

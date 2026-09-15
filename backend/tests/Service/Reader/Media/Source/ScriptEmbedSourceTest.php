@@ -78,4 +78,40 @@ final class ScriptEmbedSourceTest extends TestCase
 
         self::assertSame([], $found);
     }
+
+    public function testEmbedsEverySeparateProviderVideoInOneScript(): void
+    {
+        $found = $this->find(
+            '<p>Content.</p>'
+            . '<script>var vimeo = "https://vimeo.com/1226652197/"; var youtube = "https://www.youtube.com/watch?v=aaaaaaaaaa1";</script>'
+        );
+
+        self::assertCount(2, $found);
+        $urls = array_map(static fn($candidate) => $candidate->url, $found);
+        self::assertContains('https://player.vimeo.com/video/1226652197', $urls);
+        self::assertContains('https://www.youtube-nocookie.com/embed/aaaaaaaaaa1', $urls);
+    }
+
+    public function testContinuesLoopAfterSkippingFurnitureScript(): void
+    {
+        $found = $this->find(
+            '<article><p>Article body.</p></article>'
+            . '<footer><script>var related = "https://vimeo.com/999999999/";</script></footer>'
+            . '<script>var videoData = {"url":"https://vimeo.com/1226652197/"};</script>'
+        );
+
+        self::assertCount(1, $found);
+        self::assertSame('https://player.vimeo.com/video/1226652197', $found[0]->url);
+    }
+
+    public function testContinuesLoopAfterSkippingJsonLdScript(): void
+    {
+        $found = $this->find(
+            '<script type="application/ld+json">{"@type":"VideoObject","embedUrl":"https://example.test/ignore"}</script>'
+            . '<script>var videoData = {"url":"https://vimeo.com/1226652197/"};</script>'
+        );
+
+        self::assertCount(1, $found);
+        self::assertSame('https://player.vimeo.com/video/1226652197', $found[0]->url);
+    }
 }
