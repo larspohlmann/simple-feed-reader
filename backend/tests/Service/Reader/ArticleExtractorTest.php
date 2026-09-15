@@ -143,7 +143,7 @@ final class ArticleExtractorTest extends TestCase
             new RecipeFactsCleaner(),
             new TeaserPlayerInserter(new TeaserPlayerMarkup()),
             new MediaOnlyLede(),
-            new DuplicateBlockCollapser(),
+            new DuplicateBlockCollapser(new EmbedProviders([new YouTubeEmbedProvider()])),
             new AuthorBioSeparator(),
         );
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Reader\Media\EmbedProviders;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -15,11 +16,20 @@ use Dom\HTMLDocument;
  * (#963, measured on The Verge). Only a block that repeats its immediate
  * predecessor is dropped, so a sentence or a photo reused elsewhere survives.
  *
+ * A recovered embed's poster is left out of the image comparison: every YouTube
+ * poster's filename is the fixed quality label `hqdefault.jpg`, so distinct
+ * videos share a rendition fingerprint and would collapse to one (#1051). The
+ * poster is a media anchor the reader just injected, not a responsive duplicate.
+ *
  * Mutates the shared document in place; ReaderBodyCleaner parses and serialises
  * once around it.
  */
 final readonly class DuplicateBlockCollapser
 {
+    public function __construct(private EmbedProviders $embedProviders)
+    {
+    }
+
     public function collapseIn(HTMLDocument $document): void
     {
         $this->collapseParagraphs($document);
@@ -76,12 +86,21 @@ final readonly class DuplicateBlockCollapser
     {
         $images = [];
         foreach ($document->querySelectorAll('img') as $image) {
-            if (trim((string) $image->getAttribute('src')) !== '') {
+            if (trim((string) $image->getAttribute('src')) !== '' && !$this->isEmbedPoster($image)) {
                 $images[] = $image;
             }
         }
 
         return $images;
+    }
+
+    /** True when the image is the poster of a recovered embed link, keyed by the shared provider allow-list. */
+    private function isEmbedPoster(Element $image): bool
+    {
+        $anchor = $image->closest('a');
+
+        return $anchor !== null
+            && $this->embedProviders->resolve((string) $anchor->getAttribute('href')) !== null;
     }
 
     /** Remove the node, then the wrappers it leaves empty, so no blank paragraph or box survives. */
