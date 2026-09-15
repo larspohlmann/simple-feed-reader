@@ -53,7 +53,7 @@ export class ReaderCacheService {
   // whose narration file sits in data-src (#903).
   // v23: v22 records hold a 16px placeholder lead image for a page whose real
   // renditions sit only in the srcset of a bare <img> (#965).
-  private static readonly VERSION = 24;
+  private static readonly VERSION = 25;
 
   private db: Promise<IDBDatabase | null> | null = null;
   /** Strictly monotonic clock so puts within the same millisecond keep insertion order. */

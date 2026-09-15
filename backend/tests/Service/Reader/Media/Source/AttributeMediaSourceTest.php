@@ -220,4 +220,17 @@ final class AttributeMediaSourceTest extends TestCase
         self::assertCount(1, $found);
         self::assertSame('https://x.test/bildung-episode.mp3', $found[0]->url);
     }
+
+    /** NDR (#1058): a related-content teaser hides its clip in a config blob; it is not the article's media. */
+    public function testSkipsAClipInsideARelatedContentTeaser(): void
+    {
+        $html = '<body><article>'
+            . '<div class="teaser" data-config=\'{"url":"https://x.test/related-clip.mp4"}\'></div>'
+            . '<video src="https://x.test/the-article-clip.mp4"></video></article></body>';
+
+        $found = $this->source->find($html, 'https://x.test/story-100.html');
+
+        self::assertCount(1, $found);
+        self::assertSame('https://x.test/the-article-clip.mp4', $found[0]->url);
+    }
 }
