@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { finalize } from 'rxjs';
+import { Observable, finalize } from 'rxjs';
 import { Problem, parseProblem } from '../core/problem';
 import { ReaderApi } from './reader-api';
 import { EntryDto, EntryQuery, EntryStatePatch } from './models';
@@ -124,6 +124,14 @@ export class EntriesStore {
         this.loading.set(false);
       },
     });
+  }
+
+  /** Runs `mutation$` with the loading cue raised from the call, not from its
+   *  response — so a bulk mark-read shows the wait at once. `reload` refreshes
+   *  the list on success (which lowers the cue); a failed mutation lowers it. */
+  runThenReload(mutation$: Observable<unknown>, reload: () => void): void {
+    this.loading.set(true);
+    mutation$.subscribe({ next: () => reload(), error: () => this.loading.set(false) });
   }
 
   loadMore(): void {

@@ -915,12 +915,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private markReadNow(target: MarkReadTarget): void {
     const until = this.entries.loadedAt() || new Date().toISOString();
     if (target.scope === 'search') {
-      this.api.markSearchRead(target.term, until).subscribe({
-        next: () => {
-          this.entries.load(queryFromSelection(this.selection()));
-          this.subs.load();
-          this.savedSearchesStore.load();
-        },
+      this.entries.runThenReload(this.api.markSearchRead(target.term, until), () => {
+        this.entries.load(queryFromSelection(this.selection()));
+        this.subs.load();
+        this.savedSearchesStore.load();
       });
       return;
     }
@@ -928,44 +926,39 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     // backend marks picks by their own entry state (#710, #665 for why a
     // watermark here would be wrong). Both counts beside the list are reloaded.
     if (target.scope === 'for-you') {
-      this.api.markForYouRead(until).subscribe({
-        next: () => {
-          this.entries.load(queryFromSelection(this.selection()));
-          this.subs.load();
-          this.savedSearchesStore.load();
-          // The badge counts unread picks (#724); the marked picks move no
-          // watermark the reloads above would see, so re-read the for-you
-          // summary to drop it to zero.
-          this.recs.refreshStatus();
-        },
+      this.entries.runThenReload(this.api.markForYouRead(until), () => {
+        this.entries.load(queryFromSelection(this.selection()));
+        this.subs.load();
+        this.savedSearchesStore.load();
+        // The badge counts unread picks (#724); the marked picks move no
+        // watermark the reloads above would see, so re-read the for-you
+        // summary to drop it to zero.
+        this.recs.refreshStatus();
       });
       return;
     }
     if (target.scope === 'saved-searches') {
-      this.api.markSavedSearchesRead(until).subscribe({
-        next: () => {
-          this.entries.load(queryFromSelection(this.selection()));
-          this.subs.load();
-          this.savedSearchesStore.load();
-        },
+      this.entries.runThenReload(this.api.markSavedSearchesRead(until), () => {
+        this.entries.load(queryFromSelection(this.selection()));
+        this.subs.load();
+        this.savedSearchesStore.load();
       });
       return;
     }
-    this.api
-      .markRead(target.scope, until, target.scope === 'all' ? undefined : target.id)
-      .subscribe({
-        next: () => {
-          this.subs.zeroUnread(
-            target.scope === 'all'
-              ? 'all'
-              : target.scope === 'tag'
-                ? { tag: target.id }
-                : { subscription: target.id },
-          );
-          this.entries.load(queryFromSelection(this.selection()));
-          this.savedSearchesStore.load();
-        },
-      });
+    this.entries.runThenReload(
+      this.api.markRead(target.scope, until, target.scope === 'all' ? undefined : target.id),
+      () => {
+        this.subs.zeroUnread(
+          target.scope === 'all'
+            ? 'all'
+            : target.scope === 'tag'
+              ? { tag: target.id }
+              : { subscription: target.id },
+        );
+        this.entries.load(queryFromSelection(this.selection()));
+        this.savedSearchesStore.load();
+      },
+    );
   }
 
   // Preserve the underlying list so clearing a direct search returns to it.
