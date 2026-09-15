@@ -10,6 +10,21 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.0.11] - 2026-09-15
+
+## What's Changed
+* fix(#1046): raise the mark-all-read loading cue on confirm by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1047
+* Embed a video the source page injects only with client-side script (#1048) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1049
+* Render Vimeo embeds: generate the reader allow-list from the embed providers (#1048) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1050
+* fix(#1051): keep every in-body embed when their posters share a stem by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1052
+* feat(#1053): render Spotify and Dailymotion embeds through extraction by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1054
+* Render ZDF inline videos seeded from their player configs (#1055) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1056
+* Treat related-content teasers as page chrome (#1058) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1059
+* Let a media control keep its own horizontal drag (#1057) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1060
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.0.10...v1.0.11
+
 ## [v1.0.10] - 2026-09-14
 
 ## What's Changed
