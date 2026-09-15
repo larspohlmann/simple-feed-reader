@@ -875,6 +875,16 @@ describe('ReaderViewComponent', () => {
         },
       }) as unknown as TouchEvent;
 
+    const audioControl = document.createElement('audio');
+    const touchOnControl = (x: number, y: number) =>
+      ({
+        target: audioControl,
+        touches: [{ clientX: x, clientY: y }],
+        preventDefault() {
+          /* test stub */
+        },
+      }) as unknown as TouchEvent;
+
     function fullscreen() {
       const f = mount(entry());
       f.componentRef.setInput('fullscreen', true);
@@ -917,6 +927,29 @@ describe('ReaderViewComponent', () => {
       c.onTouchMove(touch(30, 4));
       c.onTouchEnd();
       expect(c.leaving()).toBe(false);
+    });
+
+    it('yields to a media control: a drag from the audio scrubber does not return to the list', () => {
+      const f = fullscreen();
+      const c = f.componentInstance;
+      c.onTouchStart(touchOnControl(0, 0));
+      c.onTouchMove(touchOnControl(130, 6)); // a decisive rightward drag on the scrubber
+      c.onTouchEnd();
+      expect(c.leaving()).toBe(false);
+      f.destroy();
+    });
+
+    it('still returns to the list on a real swipe right after a suppressed one', () => {
+      const f = fullscreen();
+      const c = f.componentInstance;
+      c.onTouchStart(touchOnControl(0, 0)); // suppressed: began on the scrubber
+      c.onTouchMove(touchOnControl(130, 6));
+      c.onTouchEnd();
+      c.onTouchStart(touch(0, 0)); // a real back-swipe on the article surface
+      c.onTouchMove(touch(130, 6));
+      c.onTouchEnd();
+      expect(c.leaving()).toBe(true);
+      f.destroy();
     });
 
     it('returns to the list on a pull past the article end', () => {
