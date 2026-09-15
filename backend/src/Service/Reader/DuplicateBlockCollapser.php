@@ -16,10 +16,12 @@ use Dom\HTMLDocument;
  * (#963, measured on The Verge). Only a block that repeats its immediate
  * predecessor is dropped, so a sentence or a photo reused elsewhere survives.
  *
- * A recovered embed's poster is left out of the image comparison: every YouTube
- * poster's filename is the fixed quality label `hqdefault.jpg`, so distinct
- * videos share a rendition fingerprint and would collapse to one (#1051). The
- * poster is a media anchor the reader just injected, not a responsive duplicate.
+ * A recovered embed is left out of both comparisons: the reader injects one per
+ * in-body player, so consecutive embeds are distinct media, never a responsive
+ * duplicate. Their fingerprints collide anyway — every YouTube poster's filename
+ * is the quality label `hqdefault.jpg`, and a posterless embed (Vimeo,
+ * SoundCloud, Brightcove) is a bare `<a>` carrying the provider's fixed label —
+ * so without the skip the second of a pair would collapse into the first (#1051).
  *
  * Mutates the shared document in place; ReaderBodyCleaner parses and serialises
  * once around it.
@@ -63,8 +65,9 @@ final readonly class DuplicateBlockCollapser
     }
 
     /**
-     * Paragraphs that carry prose, not a wrapped figure or a blank line: an
-     * empty line never marks a duplicate, and an image is compared as an asset.
+     * Paragraphs that carry prose, not a wrapped figure, a blank line or a
+     * posterless embed: an empty line never marks a duplicate, an image is
+     * compared as an asset, and an embed is media the reader injected.
      *
      * @return list<Element>
      */
@@ -72,10 +75,16 @@ final readonly class DuplicateBlockCollapser
     {
         $paragraphs = [];
         foreach ($document->querySelectorAll('p') as $paragraph) {
-            $carriesText = trim((string) $paragraph->textContent) !== '';
-            if ($carriesText && $paragraph->querySelector('img, picture, video, iframe, audio') === null) {
-                $paragraphs[] = $paragraph;
+            if (trim((string) $paragraph->textContent) === '') {
+                continue;
             }
+            if ($paragraph->querySelector('img, picture, video, iframe, audio') !== null) {
+                continue;
+            }
+            if ($this->isRecoveredEmbedAnchor($paragraph->querySelector('a'))) {
+                continue;
+            }
+            $paragraphs[] = $paragraph;
         }
 
         return $paragraphs;
@@ -86,7 +95,8 @@ final readonly class DuplicateBlockCollapser
     {
         $images = [];
         foreach ($document->querySelectorAll('img') as $image) {
-            if (trim((string) $image->getAttribute('src')) !== '' && !$this->isEmbedPoster($image)) {
+            $hasSource = trim((string) $image->getAttribute('src')) !== '';
+            if ($hasSource && !$this->isRecoveredEmbedAnchor($image->closest('a'))) {
                 $images[] = $image;
             }
         }
@@ -94,11 +104,9 @@ final readonly class DuplicateBlockCollapser
         return $images;
     }
 
-    /** True when the image is the poster of a recovered embed link, keyed by the shared provider allow-list. */
-    private function isEmbedPoster(Element $image): bool
+    /** True when the anchor is a recovered embed link, keyed by the shared provider allow-list. */
+    private function isRecoveredEmbedAnchor(?Element $anchor): bool
     {
-        $anchor = $image->closest('a');
-
         return $anchor !== null
             && $this->embedProviders->resolve((string) $anchor->getAttribute('href')) !== null;
     }

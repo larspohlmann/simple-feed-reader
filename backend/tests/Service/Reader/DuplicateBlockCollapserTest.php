@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\DuplicateBlockCollapser;
 use App\Service\Reader\Media\EmbedProviders;
+use App\Service\Reader\Media\Provider\VimeoEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
 use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
@@ -16,7 +17,9 @@ final class DuplicateBlockCollapserTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->collapser = new DuplicateBlockCollapser(new EmbedProviders([new YouTubeEmbedProvider()]));
+        $this->collapser = new DuplicateBlockCollapser(
+            new EmbedProviders([new YouTubeEmbedProvider(), new VimeoEmbedProvider()]),
+        );
     }
 
     /** A responsive layout emits the dek once per breakpoint; the scraper keeps both copies. */
@@ -148,6 +151,22 @@ final class DuplicateBlockCollapserTest extends TestCase
         self::assertSame(2, substr_count($html, '<img'));
         self::assertStringContainsString('GAq34QMhzEM', $html);
         self::assertStringContainsString('_jW8hlXNQmY', $html);
+    }
+
+    /**
+     * A posterless embed (Vimeo, SoundCloud, Brightcove) recovers as a bare
+     * `<a>` carrying the provider's fixed label, so two in a row read as
+     * identical prose. The paragraph path must spare them too (#1051).
+     */
+    public function testKeepsTwoPosterlessEmbedsThatCarryTheSameLabel(): void
+    {
+        $html = $this->collapsed(
+            '<p><a href="https://player.vimeo.com/video/111111111">Watch on Vimeo</a></p>'
+            . '<p><a href="https://player.vimeo.com/video/222222222">Watch on Vimeo</a></p>'
+        );
+
+        self::assertStringContainsString('111111111', $html);
+        self::assertStringContainsString('222222222', $html);
     }
 
     /** A responsive-duplicate image linked to its own full-size file is still a duplicate; only recovered embeds are spared. */

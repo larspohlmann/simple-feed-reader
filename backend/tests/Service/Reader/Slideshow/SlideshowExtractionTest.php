@@ -129,6 +129,7 @@ final class SlideshowExtractionTest extends TestCase
     private function cleaner(): ReaderBodyCleaner
     {
         $markup = new MediaMarkup();
+        $embedProviders = new EmbedProviders([new YouTubeEmbedProvider()]);
 
         return new ReaderBodyCleaner(
             new NavigationChromeTrimmer(),
@@ -136,7 +137,7 @@ final class SlideshowExtractionTest extends TestCase
             new LeadingEngagementCleaner(),
             new EdgeBoilerplateTrimmer(new BoilerplateVerdict()),
             new ReaderLeadImage(),
-            new InBodyEmbedRewriter(new EmbedProviders([new YouTubeEmbedProvider()]), $markup),
+            new InBodyEmbedRewriter($embedProviders, $markup),
             new SubstackPosterLink(),
             new PlayerChromeCleaner(),
             new PageMediaInserter($markup),
@@ -144,7 +145,7 @@ final class SlideshowExtractionTest extends TestCase
             new RecipeFactsCleaner(),
             new TeaserPlayerInserter(new TeaserPlayerMarkup()),
             new MediaOnlyLede(),
-            new DuplicateBlockCollapser(new EmbedProviders([new YouTubeEmbedProvider()])),
+            new DuplicateBlockCollapser($embedProviders),
             new AuthorBioSeparator(),
         );
     }

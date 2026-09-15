@@ -46,13 +46,14 @@ final class ReaderBodyCleanerTest extends TestCase
     protected function setUp(): void
     {
         $markup = new MediaMarkup();
+        $embedProviders = new EmbedProviders([new YouTubeEmbedProvider()]);
         $this->cleaner = new ReaderBodyCleaner(
             new NavigationChromeTrimmer(),
             new LeadingTitleRemover(),
             new LeadingEngagementCleaner(),
             new EdgeBoilerplateTrimmer(new BoilerplateVerdict()),
             new ReaderLeadImage(),
-            new InBodyEmbedRewriter(new EmbedProviders([new YouTubeEmbedProvider()]), $markup),
+            new InBodyEmbedRewriter($embedProviders, $markup),
             new SubstackPosterLink(),
             new PlayerChromeCleaner(),
             new PageMediaInserter($markup),
@@ -60,7 +61,7 @@ final class ReaderBodyCleanerTest extends TestCase
             new RecipeFactsCleaner(),
             new TeaserPlayerInserter(new TeaserPlayerMarkup()),
             new MediaOnlyLede(),
-            new DuplicateBlockCollapser(new EmbedProviders([new YouTubeEmbedProvider()])),
+            new DuplicateBlockCollapser($embedProviders),
             new AuthorBioSeparator(),
         );
     }
