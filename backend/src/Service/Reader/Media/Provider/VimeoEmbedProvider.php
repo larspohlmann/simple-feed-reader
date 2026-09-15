@@ -44,7 +44,7 @@ final readonly class VimeoEmbedProvider implements EmbedProviderInterface
 
     public function framePattern(): string
     {
-        return '^https://player\.vimeo\.com/video/\d+(?:\?h=' . self::HASH . ')?$';
+        return '^https://' . preg_quote(self::PLAYER_HOST, '#') . '/video/\d+(?:\?h=' . self::HASH . ')?$';
     }
 
     /** @return array{0: string, 1: ?string}|null the video id and its optional privacy hash */

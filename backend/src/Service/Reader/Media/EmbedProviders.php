@@ -32,8 +32,7 @@ final readonly class EmbedProviders
     }
 
     /**
-     * Every provider's frame pattern, sorted for a stable dump. The reader's
-     * client allow-list is generated from this, so it never drifts (#1048).
+     * Every provider's frame pattern, sorted for a stable dump (#1048).
      *
      * @return list<string>
      */
@@ -46,5 +45,11 @@ final readonly class EmbedProviders
         sort($patterns);
 
         return $patterns;
+    }
+
+    /** The frame patterns as the reader client's committed allow-list file. */
+    public function allowlistJson(): string
+    {
+        return json_encode($this->framePatterns(), \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES) . "\n";
     }
 }

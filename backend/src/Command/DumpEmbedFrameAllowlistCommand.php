@@ -38,18 +38,12 @@ final class DumpEmbedFrameAllowlistCommand extends Command
         return \dirname($projectDir) . '/frontend/src/app/reader/embed-frame-allowlist.generated.json';
     }
 
-    public static function render(EmbedProviders $providers): string
-    {
-        return json_encode($providers->framePatterns(), \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES) . "\n";
-    }
-
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $path = self::allowlistPath($this->projectDir);
-        file_put_contents($path, self::render($this->providers));
+        file_put_contents($path, $this->providers->allowlistJson());
 
-        $count = \count($this->providers->framePatterns());
-        (new SymfonyStyle($input, $output))->success(sprintf('Wrote %d embed pattern(s) to %s.', $count, $path));
+        (new SymfonyStyle($input, $output))->success('Wrote the reader embed allow-list to ' . $path . '.');
 
         return Command::SUCCESS;
     }

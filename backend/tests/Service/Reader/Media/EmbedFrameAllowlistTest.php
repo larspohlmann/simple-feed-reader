@@ -32,10 +32,18 @@ final class EmbedFrameAllowlistTest extends KernelTestCase
 
         self::assertFileExists($path);
         self::assertSame(
-            DumpEmbedFrameAllowlistCommand::render($providers),
+            $providers->allowlistJson(),
             (string) file_get_contents($path),
             'The reader client embed allow-list is stale. Run: bin/console app:embed:dump-frame-allowlist',
         );
+    }
+
+    public function testEveryPatternIsFullyAnchored(): void
+    {
+        foreach ($this->providers()->framePatterns() as $pattern) {
+            self::assertStringStartsWith('^', $pattern, $pattern . ' is not anchored at the start.');
+            self::assertStringEndsWith('$', $pattern, $pattern . ' is not anchored at the end.');
+        }
     }
 
     /** @return iterable<string, array{0: string}> one real source URL per embed provider */

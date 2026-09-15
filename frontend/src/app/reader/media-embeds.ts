@@ -13,7 +13,7 @@ import framePatterns from './embed-frame-allowlist.generated.json';
  * `framePattern()`), so a provider is added in exactly one place and the two
  * sides never drift (#1048). Regenerate with `app:embed:dump-frame-allowlist`.
  */
-const ALLOWED = (framePatterns as string[]).map((pattern) => new RegExp(pattern));
+const ALLOWED = framePatterns.map((pattern) => new RegExp(pattern));
 
 /* `allow-same-origin` beside `allow-scripts` is safe only because every allowed
    URL is cross-origin: the frame gets its own origin and cannot reach the

@@ -50,7 +50,7 @@ final readonly class BrightcoveEmbedProvider implements EmbedProviderInterface
 
     public function framePattern(): string
     {
-        return '^https://players\.brightcove\.net/\d+/[A-Za-z0-9_-]+/index\.html\?videoId=\d+$';
+        return '^https://' . preg_quote(self::HOST, '#') . '/\d+/[A-Za-z0-9_-]+/index\.html\?videoId=\d+$';
     }
 
     private function videoId(string $query): ?string
