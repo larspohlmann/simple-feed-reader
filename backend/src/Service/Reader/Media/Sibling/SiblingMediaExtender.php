@@ -27,11 +27,24 @@ final readonly class SiblingMediaExtender
      */
     public function extend(ArticleMedia $declared, ArticleMedia $resolved, string $pageHtml): ArticleMedia
     {
+        // A page can name one clip twice — through its VideoObject and its player
+        // config (#1055) — so the search re-derives a seed already declared. Skip
+        // it before the network round-trip, not after: the derived URL is the
+        // declared template with the id swapped, so it matches a seed byte for byte.
+        $seen = [];
+        foreach ($declared->candidates as $candidate) {
+            $seen[$candidate->url] = true;
+        }
+
         $verified = [];
         foreach ($this->rule->derive($declared, $pageHtml) as $candidate) {
-            $landed = $this->landed($candidate);
-            if ($landed !== null) {
-                $verified[] = $landed;
+            if (isset($seen[$candidate->url])) {
+                continue;
+            }
+            $seen[$candidate->url] = true;
+            $sibling = $this->landed($candidate);
+            if ($sibling !== null) {
+                $verified[] = $sibling;
             }
         }
 

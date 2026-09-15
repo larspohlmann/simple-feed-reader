@@ -12,6 +12,7 @@ use App\Service\Reader\Media\Source\PageEmbedSource;
 use App\Service\Reader\Media\Source\ScriptEmbedSource;
 use App\Service\Reader\Media\Source\SemanticMediaSource;
 use App\Service\Reader\Media\Source\YouTubeIdAttributeSource;
+use App\Service\Reader\Media\Source\ZdfPlayerConfigSource;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class PageMediaScannerWiringTest extends KernelTestCase
@@ -60,6 +61,7 @@ final class PageMediaScannerWiringTest extends KernelTestCase
         self::assertSame([
             JsonLdMediaSource::class,
             MetaMediaSource::class,
+            ZdfPlayerConfigSource::class,
             PageEmbedSource::class,
             SemanticMediaSource::class,
             AttributeMediaSource::class,

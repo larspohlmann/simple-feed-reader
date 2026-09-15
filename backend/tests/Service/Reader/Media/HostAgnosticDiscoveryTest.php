@@ -9,8 +9,10 @@ use App\Service\Reader\Media\PageMediaScanner;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
- * Every measured page, through the real container, with no host-keyed source in
- * the set. This is the test the original design lacked.
+ * Every measured page, through the real container. The generic sources carry the
+ * whole set host-agnostically; ZdfPlayerConfigSource is the one deliberate
+ * host-keyed exception (#1055), for ZDF pages that name a clip but ship no URL to
+ * seed the generic rule.
  */
 final class HostAgnosticDiscoveryTest extends KernelTestCase
 {
@@ -223,14 +225,21 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
         self::assertStringContainsString('sendungsbild-1789662', (string) $videos[0]->posterUrl);
     }
 
-    public function testTheZdfShapeScansToItsOneDeclaredStream(): void
+    /**
+     * The one deliberate host-keyed source (#1055): ZDF names each clip only in a
+     * player config, and a text-led page ships no VideoObject to seed the generic
+     * rule, so ZdfPlayerConfigSource seeds a stream per declared player.
+     */
+    public function testTheZdfPlayerConfigsEachSeedAStream(): void
     {
         $media = $this->scanner()->scan(
             $this->fixture('zdf-sibling-video-configs.html'),
             'https://www.zdfheute.de/politik/deutschland/leipzig-drohne-sabotage-100.html',
         );
 
-        self::assertCount(1, $media->candidates);
-        self::assertSame(MediaKind::Stream, $media->candidates[0]->kind);
+        self::assertCount(4, $media->candidates);
+        foreach ($media->candidates as $candidate) {
+            self::assertSame(MediaKind::Stream, $candidate->kind);
+        }
     }
 }

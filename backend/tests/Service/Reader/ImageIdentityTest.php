@@ -525,6 +525,25 @@ final class ImageIdentityTest extends TestCase
         ));
     }
 
+    public function testMatchesZdfRenditionsThatDifferOnlyInTheirTildeSize(): void
+    {
+        // ZDF (#1055): `<stem>~WxH` is a rendition; a short stem with no
+        // photo-specific word (`ki-162`) would otherwise reach the body as a
+        // duplicate still beside the player that replaced its sibling rendition.
+        self::assertTrue($this->sameImage(
+            'https://www.zdfheute.de/assets/ki-162~1920x1080?cb=1',
+            'https://www.zdfheute.de/assets/ki-162~384x216?cb=2',
+        ));
+    }
+
+    public function testKeepsApartTwoZdfStillsThatShareOnlyATildeSize(): void
+    {
+        self::assertFalse($this->sameImage(
+            'https://www.zdfheute.de/assets/ki-162~1920x1080?cb=1',
+            'https://www.zdfheute.de/assets/nato-eurofighter-100~1920x1080?cb=1',
+        ));
+    }
+
     public function testSameAssetRejectsHeiseHexHashFilenamesThatShareDescriptiveWords(): void
     {
         // heise (#894): two different IFA photos share every descriptive word and
