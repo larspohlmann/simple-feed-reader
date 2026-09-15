@@ -61,4 +61,34 @@ final class EmbedProvidersWiringTest extends KernelTestCase
         self::assertNotNull($target);
         self::assertSame('https://player.vimeo.com/video/1226652197', $target->url);
     }
+
+    public function testSpotifyResolvesThroughTheTaggedIterator(): void
+    {
+        $target = $this->providers()->resolve(
+            'https://open.spotify.com/embed/playlist/27uRYdAHvcKADidfnR8BN4?utm_source=generator'
+        );
+
+        self::assertNotNull($target);
+        self::assertSame('https://open.spotify.com/embed/playlist/27uRYdAHvcKADidfnR8BN4', $target->url);
+    }
+
+    /** Readability keeps an in-body frame only when the generated regex claims its source host (#1053). */
+    public function testTheVideoEmbedRegexKeepsEveryProviderSourceHost(): void
+    {
+        $regex = $this->providers()->videoEmbedRegex();
+        $sources = [
+            'https://www.youtube.com/embed/M1j_uRqKMKI',
+            'https://player.vimeo.com/video/1226652197',
+            'https://w.soundcloud.com/player/?url=x',
+            'https://players.brightcove.net/1/x/index.html?videoId=2',
+            'https://open.spotify.com/embed/playlist/27uRYdAHvcKADidfnR8BN4',
+            'https://www.dailymotion.com/embed/video/x7tgad0',
+        ];
+
+        foreach ($sources as $url) {
+            self::assertSame(1, preg_match($regex, $url), $url . ' is not kept by the embed regex.');
+        }
+
+        self::assertSame(0, preg_match($regex, 'https://www.googletagmanager.com/ns.html?id=GTM-1'));
+    }
 }

@@ -29,4 +29,14 @@ interface EmbedProviderInterface
      * generated from every provider's pattern, so the two never drift (#1048).
      */
     public function framePattern(): string;
+
+    /**
+     * The embed-source hosts this provider claims. Readability's in-body keep-list
+     * is generated from every provider's hosts, so an embed this reader supports
+     * survives extraction in place instead of being stripped as a non-video frame
+     * (#1053).
+     *
+     * @return list<string>
+     */
+    public function sourceHosts(): array;
 }

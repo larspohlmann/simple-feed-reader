@@ -56,6 +56,8 @@ final class EmbedFrameAllowlistTest extends KernelTestCase
         yield 'brightcove' => [
             'https://players.brightcove.net/665003303001/6tKQRAx7lu_default/index.html?videoId=6403736850112',
         ];
+        yield 'spotify' => ['https://open.spotify.com/embed/playlist/27uRYdAHvcKADidfnR8BN4?utm_source=generator'];
+        yield 'dailymotion' => ['https://www.dailymotion.com/video/x7tgad0_some-title-slug'];
     }
 
     #[DataProvider('sourceUrls')]

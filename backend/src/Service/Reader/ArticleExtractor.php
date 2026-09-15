@@ -15,10 +15,6 @@ use App\Service\Reader\Slideshow\Slideshow;
 use App\Service\Reader\Slideshow\SlideshowScanner;
 use App\Service\Sanitize\EntrySanitizer;
 use Dom\HTMLDocument;
-use fivefilters\Readability\Article;
-use fivefilters\Readability\Configuration;
-use fivefilters\Readability\ParseException;
-use fivefilters\Readability\Readability;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
@@ -60,7 +56,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
         private readonly BodyMediaResolver $bodyMedia,
         private readonly SlideshowScanner $slideshowScanner,
         private readonly TeaserPlayerScanner $teaserScanner,
-        private readonly RelatedTeaserGridRemover $teaserGridRemover,
+        private readonly ArticleReadability $readability,
     ) {
     }
 
@@ -86,7 +82,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
         $slideshows = $this->slideshowsIn($normalized);
         $teasers = $this->teasersIn($normalized, $page->finalUrl);
 
-        $article = $this->richestArticle($normalized, $page, $this->slideshowContainers($slideshows));
+        $article = $this->readability->richest($normalized, $page, $this->slideshowContainers($slideshows));
         if ($article === null) {
             return ExtractionResult::failed($url, 'unextractable');
         }
@@ -149,81 +145,5 @@ final class ArticleExtractor implements ArticleExtractorInterface
         return array_values(array_filter(
             array_map(static fn (Slideshow $slideshow): ?ContainerSignature => $slideshow->container, $slideshows),
         ));
-    }
-
-    /**
-     * Keep the richer of two extractions: the passed score-neutral document
-     * (repairs only) and the wrapper-chain-collapsed variant (#235), which
-     * rescues block-component pages but breaks some well-structured ones
-     * (#476) — the longer body wins either way. collapseWrapperChains()
-     * returns null when there is no chain to collapse, skipping the second
-     * extraction.
-     *
-     * The conservative document arrives already normalised because the caller
-     * reads its image inventory before readability consumes (mutates) it
-     * (#684).
-     *
-     * @param list<ContainerSignature> $slideshowContainers
-     */
-    #[WithSpan]
-    private function richestArticle(?HTMLDocument $normalized, PageResponse $page, array $slideshowContainers): ?Article
-    {
-        $collapsed = $this->normalizer->collapseWrapperChains($page->html);
-        $this->removeTeaserGrids($normalized, $slideshowContainers);
-        $this->removeTeaserGrids($collapsed, $slideshowContainers);
-
-        return $this->richer($this->parse($normalized, $page->finalUrl), $this->parse($collapsed, $page->finalUrl));
-    }
-
-    /**
-     * @param list<ContainerSignature> $slideshowContainers
-     */
-    private function removeTeaserGrids(?HTMLDocument $document, array $slideshowContainers): void
-    {
-        if ($document !== null) {
-            $this->teaserGridRemover->removeFrom($document, $slideshowContainers);
-        }
-    }
-
-    private function parse(?HTMLDocument $document, string $finalUrl): ?Article
-    {
-        if ($document === null) {
-            return null;
-        }
-
-        $readability = new Readability(new Configuration(
-            // EdgeBoilerplateTrimmer reads class/id fingerprints on this output
-            // (#582); readability strips classes by default, which would make
-            // that signal a permanent no-op.
-            keepClasses: true,
-            fixRelativeURLs: true,
-            originalURL: $finalUrl,
-        ));
-
-        try {
-            return $readability->parse($document);
-        } catch (ParseException) {
-            return null;
-        }
-    }
-
-    /** Keep the extraction with more readable text; a tie keeps the conservative one. */
-    private function richer(?Article $conservative, ?Article $collapsed): ?Article
-    {
-        if ($conservative === null) {
-            return $collapsed;
-        }
-        if ($collapsed === null) {
-            return $conservative;
-        }
-
-        return $this->textLength($collapsed) > $this->textLength($conservative)
-            ? $collapsed
-            : $conservative;
-    }
-
-    private function textLength(Article $article): int
-    {
-        return mb_strlen(trim((string) $article->textContent));
     }
 }

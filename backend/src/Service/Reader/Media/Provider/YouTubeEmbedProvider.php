@@ -50,6 +50,11 @@ final readonly class YouTubeEmbedProvider implements EmbedProviderInterface
         return '^https://www\.youtube-nocookie\.com/embed/' . self::ID . '$';
     }
 
+    public function sourceHosts(): array
+    {
+        return self::HOSTS;
+    }
+
     private function videoId(string $url): ?string
     {
         $parts = parse_url($url);
