@@ -854,6 +854,13 @@ article {
   border: 0;
 }
 
+/* A Spotify collection player shows a scrollable track list, so it gets a tall
+   fixed box in place of the 16:9 frame a video uses (#1053). */
+.content ::ng-deep .reader-embed--tall {
+  aspect-ratio: auto;
+  height: 31.25rem;
+}
+
 .content ::ng-deep audio,
 .content ::ng-deep video {
   display: block;

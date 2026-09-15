@@ -20,6 +20,11 @@ const ALLOWED = framePatterns.map((pattern) => new RegExp(pattern));
    reader. Never add a same-origin URL to ALLOWED. */
 const SANDBOX = 'allow-scripts allow-same-origin allow-presentation';
 
+/* A Spotify collection (playlist/album/artist/show) renders a scrollable track
+   list, so its player needs a tall fixed box instead of the 16:9 frame a video
+   gets. A single track or episode keeps the default frame. */
+const SPOTIFY_COLLECTION = /^https:\/\/open\.spotify\.com\/embed\/(?:playlist|album|artist|show)\//;
+
 export function upgradeMediaEmbeds(host: HTMLElement): void {
   for (const anchor of Array.from(host.querySelectorAll('a'))) {
     const url = anchor.getAttribute('href') ?? '';
@@ -30,7 +35,7 @@ export function upgradeMediaEmbeds(host: HTMLElement): void {
 
 function embedFrame(url: string, title: string): HTMLElement {
   const box = document.createElement('div');
-  box.className = 'reader-embed';
+  box.className = SPOTIFY_COLLECTION.test(url) ? 'reader-embed reader-embed--tall' : 'reader-embed';
 
   const frame = document.createElement('iframe');
   frame.setAttribute('src', url);

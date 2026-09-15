@@ -156,4 +156,19 @@ describe('upgradeMediaEmbeds', () => {
 
     expect(el.querySelector('iframe')).toBeNull();
   });
+
+  it('gives a Spotify playlist a tall box, not the 16:9 video frame', () => {
+    const el = host(
+      '<a href="https://open.spotify.com/embed/playlist/27uRYdAHvcKADidfnR8BN4">x</a>',
+    );
+
+    expect(el.querySelector('.reader-embed--tall')).not.toBeNull();
+  });
+
+  it('keeps the default frame for a single Spotify track', () => {
+    const el = host('<a href="https://open.spotify.com/embed/track/4cOdK2wGLETKBW3PvgPWqT">x</a>');
+
+    expect(el.querySelector('.reader-embed')).not.toBeNull();
+    expect(el.querySelector('.reader-embed--tall')).toBeNull();
+  });
 });
