@@ -46,13 +46,14 @@ final class ReaderBodyCleanerTest extends TestCase
     protected function setUp(): void
     {
         $markup = new MediaMarkup();
+        $embedProviders = new EmbedProviders([new YouTubeEmbedProvider()]);
         $this->cleaner = new ReaderBodyCleaner(
             new NavigationChromeTrimmer(),
             new LeadingTitleRemover(),
             new LeadingEngagementCleaner(),
             new EdgeBoilerplateTrimmer(new BoilerplateVerdict()),
             new ReaderLeadImage(),
-            new InBodyEmbedRewriter(new EmbedProviders([new YouTubeEmbedProvider()]), $markup),
+            new InBodyEmbedRewriter($embedProviders, $markup),
             new SubstackPosterLink(),
             new PlayerChromeCleaner(),
             new PageMediaInserter($markup),
@@ -60,7 +61,7 @@ final class ReaderBodyCleanerTest extends TestCase
             new RecipeFactsCleaner(),
             new TeaserPlayerInserter(new TeaserPlayerMarkup()),
             new MediaOnlyLede(),
-            new DuplicateBlockCollapser(),
+            new DuplicateBlockCollapser($embedProviders),
             new AuthorBioSeparator(),
         );
     }
@@ -248,6 +249,25 @@ final class ReaderBodyCleanerTest extends TestCase
 
         self::assertStringContainsString('youtube-nocookie.com/embed/aaaaaaaaaaa', $out);
         self::assertStringNotContainsString('<iframe', $out);
+    }
+
+    /**
+     * A page with one video per section recovers a poster per embed, all named
+     * `hqdefault.jpg`; the duplicate collapser must keep every embed, not fold
+     * them to one on the shared poster stem (#1051, Trancentral).
+     */
+    public function testKeepsEveryInBodyEmbedWhenTheirPostersShareAStem(): void
+    {
+        $html = '<h4>One</h4><div><iframe src="https://www.youtube.com/embed/aaaaaaaaaaa"></iframe></div>'
+            . '<h4>Two</h4><div><iframe src="https://www.youtube.com/embed/bbbbbbbbbbb"></iframe></div>'
+            . '<h4>Three</h4><div><iframe src="https://www.youtube.com/embed/ccccccccccc"></iframe></div>'
+            . '<p>' . self::PROSE . '</p>';
+
+        $out = $this->cleaner->clean($html, [null, null], $this->noLead(), ArticleMedia::none());
+
+        self::assertStringContainsString('embed/aaaaaaaaaaa', $out);
+        self::assertStringContainsString('embed/bbbbbbbbbbb', $out);
+        self::assertStringContainsString('embed/ccccccccccc', $out);
     }
 
     /**
