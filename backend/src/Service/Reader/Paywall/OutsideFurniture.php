@@ -11,7 +11,7 @@ use Dom\XPath;
 
 /**
  * Whether the shared document holds an element matching the query that is part of
- * the article, not its chrome: outside page furniture (aside/nav/footer) and not
+ * the article, not its chrome: outside page furniture (see PageFurniture) and not
  * the document root itself. The shared discipline behind every gate signal (#908).
  */
 final readonly class OutsideFurniture

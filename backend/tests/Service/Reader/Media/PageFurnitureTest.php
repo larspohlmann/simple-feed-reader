@@ -40,6 +40,19 @@ final class PageFurnitureTest extends TestCase
         self::assertFalse($this->holds('<body><main><article><div id="x"></div></article></main></body>'));
     }
 
+    /** NDR (#1058): a "Mehr zum Thema" teaser is a plain <div class="teaser">, not a section element. */
+    public function testARelatedContentTeaserIsFurniture(): void
+    {
+        self::assertTrue($this->holds('<article><div class="teaser"><p id="x"></p></div></article>'));
+        self::assertTrue($this->holds('<article><div class="relatedbroadcast"><p id="x"></p></div></article>'));
+    }
+
+    /** NPR plays its own audio from a promo-module, so a `promo` class must never count. */
+    public function testAPromoModuleIsNot(): void
+    {
+        self::assertFalse($this->holds('<article><div class="promo-module"><p id="x"></p></div></article>'));
+    }
+
     /** A hero often sits in the article's own header; only the site's chrome tags count. */
     public function testAnArticleHeaderIsNot(): void
     {
