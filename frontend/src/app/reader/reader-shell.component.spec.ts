@@ -2895,6 +2895,20 @@ describe('ReaderShellComponent', () => {
         forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
       });
     });
+
+    // The lag the user saw was the mark-read round trip: nothing showed the
+    // wait until its response reloaded the list. The cue must rise on confirm.
+    it('raises the list loading cue on confirm, before the mark-read resolves', () => {
+      const f = bootWithForYouSelected();
+      const ref = { closed: of(true) };
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
+      expect(f.componentInstance.entries.loading()).toBe(false);
+
+      f.componentInstance.onMarkAllRead();
+
+      ctrl.expectOne('https://api.test/api/entries/for-you/mark-read');
+      expect(f.componentInstance.entries.loading()).toBe(true);
+    });
   });
 
   describe('titling the combined saved-search list (#769)', () => {
