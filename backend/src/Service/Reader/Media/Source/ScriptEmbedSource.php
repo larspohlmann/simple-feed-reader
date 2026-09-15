@@ -68,10 +68,7 @@ final readonly class ScriptEmbedSource implements MediaCandidateSourceInterface
     /** @return list<EmbedTarget> */
     private function embedTargets(string $scriptText): array
     {
-        // A URL can sit inside a JSON string nested in the script; one decode
-        // turns a stray "&quot;" back into a quote so the pattern stops at it.
-        $decoded = html_entity_decode($scriptText, \ENT_QUOTES | \ENT_HTML5);
-        preg_match_all(self::URL_PATTERN, $decoded, $matches);
+        preg_match_all(self::URL_PATTERN, $scriptText, $matches);
         $targets = [];
         foreach ($matches[0] as $url) {
             $target = $this->providers->resolve($url);

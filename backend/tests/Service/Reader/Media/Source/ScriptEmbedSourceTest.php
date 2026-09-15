@@ -83,7 +83,8 @@ final class ScriptEmbedSourceTest extends TestCase
     {
         $found = $this->find(
             '<p>Content.</p>'
-            . '<script>var vimeo = "https://vimeo.com/1226652197/"; var youtube = "https://www.youtube.com/watch?v=aaaaaaaaaa1";</script>'
+            . '<script>var vimeo = "https://vimeo.com/1226652197/"; '
+            . 'var youtube = "https://www.youtube.com/watch?v=aaaaaaaaaa1";</script>'
         );
 
         self::assertCount(2, $found);
@@ -107,7 +108,8 @@ final class ScriptEmbedSourceTest extends TestCase
     public function testContinuesLoopAfterSkippingJsonLdScript(): void
     {
         $found = $this->find(
-            '<script type="application/ld+json">{"@type":"VideoObject","embedUrl":"https://example.test/ignore"}</script>'
+            '<script type="application/ld+json">'
+            . '{"@type":"VideoObject","embedUrl":"https://example.test/ignore"}</script>'
             . '<script>var videoData = {"url":"https://vimeo.com/1226652197/"};</script>'
         );
 

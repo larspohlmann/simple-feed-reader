@@ -28,12 +28,19 @@ final class VimeoEmbedProviderTest extends TestCase
             'https://player.vimeo.com/video/76979871?h=8272103f6e',
         ];
         yield 'player url' => ['https://player.vimeo.com/video/76979871', 'https://player.vimeo.com/video/76979871'];
+        yield 'player url trailing slash' => [
+            'https://player.vimeo.com/video/76979871/',
+            'https://player.vimeo.com/video/76979871',
+        ];
         yield 'player url with hash' => [
             'https://player.vimeo.com/video/76979871?h=8272103f6e',
             'https://player.vimeo.com/video/76979871?h=8272103f6e',
         ];
         yield 'uppercase host' => ['https://VIMEO.COM/1226652197', 'https://player.vimeo.com/video/1226652197'];
-        yield 'mixed-case player host' => ['https://Player.Vimeo.com/video/76979871', 'https://player.vimeo.com/video/76979871'];
+        yield 'mixed-case player host' => [
+            'https://Player.Vimeo.com/video/76979871',
+            'https://player.vimeo.com/video/76979871',
+        ];
     }
 
     #[DataProvider('embeddableUrls')]

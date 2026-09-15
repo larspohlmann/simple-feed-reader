@@ -60,7 +60,7 @@ final readonly class VimeoEmbedProvider implements EmbedProviderInterface
     /** @return array{0: string, 1: ?string}|null */
     private function fromPlayer(string $path, string $query): ?array
     {
-        if (preg_match('#^/video/(\d+)$#', $path, $matches) !== 1) {
+        if (preg_match('#^/video/(\d+)/?$#', $path, $matches) !== 1) {
             return null;
         }
         parse_str($query, $params);
