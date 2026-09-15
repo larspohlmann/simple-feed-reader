@@ -43,18 +43,6 @@
         </span>
       }
       <div class="nav">
-        @if (mode() === 'reader') {
-          <button
-            appListAction
-            class="mobile-icon-only"
-            type="button"
-            [attr.aria-label]="'reader.refreshArticle' | transloco"
-            (click)="refreshArticle()"
-          >
-            <app-icon name="refresh" size="sm" />
-            <span class="txt">{{ 'reader.refreshArticle' | transloco }}</span>
-          </button>
-        }
         @if (readerMode.canToggle()) {
           <button
             appListAction
@@ -70,6 +58,18 @@
             <span class="txt">{{
               (mode() === 'reader' ? 'reader.readerView' : 'reader.original') | transloco
             }}</span>
+          </button>
+        }
+        @if (mode() === 'reader') {
+          <button
+            appListAction
+            class="mobile-icon-only"
+            type="button"
+            [attr.aria-label]="'reader.refreshArticle' | transloco"
+            (click)="refreshArticle()"
+          >
+            <app-icon name="refresh" size="sm" />
+            <span class="txt">{{ 'reader.refreshArticle' | transloco }}</span>
           </button>
         }
         <button
