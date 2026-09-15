@@ -315,7 +315,7 @@ final class ScriptEmbedSourceTest extends TestCase
     {
         $found = $this->find(
             '<script>var videoData = {"url":"https://vimeo.com/1226652197/"};</script>'
-            . '<script>dataLayer.push({"url":"https:\/\/vimeo.com\/1226652197\/"});</script>'
+            . '<script>var alt = "https://vimeo.com/1226652197";</script>'
         );
 
         self::assertCount(1, $found);
@@ -432,7 +432,7 @@ final readonly class ScriptEmbedSource implements MediaCandidateSourceInterface
 Run: `cd backend && php bin/phpunit tests/Service/Reader/Media/Source/ScriptEmbedSourceTest.php`
 Expected: PASS.
 
-Note on `testCollapsesTheSameVideoNamedByTwoScripts`: the escaped form `https:\/\/vimeo.com\/1226652197\/` is the JSON-escaped spelling. The `#https://...#` pattern matches the un-escaped occurrence in the first script; the second (escaped-slash) occurrence resolves to the same normalized URL after the provider drops the trailing slash, so the `$found[$target->url] ??=` de-dupes. If the escaped-only case ever produces a second candidate, that is a real defect to fix in `embedTargets`, not a test to relax.
+Note on `testCollapsesTheSameVideoNamedByTwoScripts`: two scripts name the same video with different spellings (`vimeo.com/<id>/` and `vimeo.com/<id>`); both normalize to one player URL, so the `$found[$target->url] ??=` keyed merge yields a single candidate. On the real Lion's Roar page the GTM dataLayer names the video with JSON-escaped slashes (`https:\/\/vimeo.com\/...`), which the `https://` pattern does not match — harmless, because the unescaped `videoData` occurrence is matched and produces the one embed.
 
 - [ ] **Step 5: Pin the source order**
 
