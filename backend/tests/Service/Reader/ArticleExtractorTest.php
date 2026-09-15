@@ -40,12 +40,14 @@ use App\Service\Reader\Media\PageMediaInserter;
 use App\Service\Reader\Media\PageMediaScanner;
 use App\Service\Reader\Media\Provider\BrightcoveEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
+use App\Service\Reader\Media\Provider\VimeoEmbedProvider;
 use App\Service\Reader\Media\Sibling\SiblingIdRule;
 use App\Service\Reader\Media\Sibling\SiblingMediaExtender;
 use App\Service\Reader\Media\Source\AttributeMediaSource;
 use App\Service\Reader\Media\Source\JsonLdMediaSource;
 use App\Service\Reader\Media\Source\PageEmbedSource;
 use App\Service\Reader\Media\Source\SemanticMediaSource;
+use App\Service\Reader\Media\Source\ScriptEmbedSource;
 use App\Service\Reader\Media\Source\YouTubeIdAttributeSource;
 use App\Service\Reader\Media\StreamLocationResolver;
 use App\Service\Reader\Media\SubstackPosterLink;
@@ -157,6 +159,7 @@ final class ArticleExtractorTest extends TestCase
             new AttributeMediaSource($urlKind, new MediaRelevance()),
             new YouTubeIdAttributeSource($providers),
             new SemanticMediaSource($urlKind),
+            new ScriptEmbedSource($providers),
         ]);
     }
 
@@ -167,7 +170,11 @@ final class ArticleExtractorTest extends TestCase
 
     private function providers(): EmbedProviders
     {
-        return new EmbedProviders([new YouTubeEmbedProvider(), new BrightcoveEmbedProvider()]);
+        return new EmbedProviders([
+            new YouTubeEmbedProvider(),
+            new BrightcoveEmbedProvider(),
+            new VimeoEmbedProvider(),
+        ]);
     }
 
     public function testExtractsAndAbsolutisesImages(): void
@@ -773,6 +780,17 @@ final class ArticleExtractorTest extends TestCase
         // Under its own section, not above the lead: the first player follows the first section's prose.
         self::assertGreaterThan((int) strpos($html, 'The first remix took'), (int) strpos($html, 'aaaaaaaaaa1'));
         self::assertLessThan((int) strpos($html, 'The second remix dragged'), (int) strpos($html, 'aaaaaaaaaa1'));
+    }
+
+    public function testEmbedsAVideoTheSourcePageInjectsWithScriptOnly(): void
+    {
+        $result = $this->extractFixture('media/lionsroar-vimeo-script.html');
+
+        self::assertTrue($result->ok);
+        $html = (string) $result->contentHtml;
+        self::assertStringContainsString('https://player.vimeo.com/video/1226652197', $html);
+        // The footer's channel link is not a video id, so nothing YouTube is embedded.
+        self::assertStringNotContainsString('youtube', $html);
     }
 
     /** nature.com 495343: lazy pictures on data-srcset, one in a custom element, one in a media-classed wrapper, one in a captioned figure. */
