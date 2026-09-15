@@ -53,9 +53,9 @@ final readonly class BrightcoveEmbedProvider implements EmbedProviderInterface
         return '^https://' . preg_quote(self::HOST, '#') . '/\d+/[A-Za-z0-9_-]+/index\.html\?videoId=\d+$';
     }
 
-    public function sourceHostPattern(): string
+    public function sourceHosts(): array
     {
-        return preg_quote(self::HOST, '#');
+        return [self::HOST];
     }
 
     private function videoId(string $query): ?string

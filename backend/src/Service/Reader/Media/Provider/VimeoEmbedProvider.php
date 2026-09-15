@@ -47,11 +47,9 @@ final readonly class VimeoEmbedProvider implements EmbedProviderInterface
         return '^https://' . preg_quote(self::PLAYER_HOST, '#') . '/video/\d+(?:\?h=' . self::HASH . ')?$';
     }
 
-    public function sourceHostPattern(): string
+    public function sourceHosts(): array
     {
-        $hosts = [self::PLAYER_HOST, ...self::PAGE_HOSTS];
-
-        return implode('|', array_map(static fn (string $host): string => preg_quote($host, '#'), $hosts));
+        return [self::PLAYER_HOST, ...self::PAGE_HOSTS];
     }
 
     /** @return array{0: string, 1: ?string}|null the video id and its optional privacy hash */

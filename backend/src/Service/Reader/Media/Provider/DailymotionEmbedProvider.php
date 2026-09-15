@@ -45,11 +45,9 @@ final readonly class DailymotionEmbedProvider implements EmbedProviderInterface
         return '^https://www\.dailymotion\.com/embed/video/' . self::ID . '$';
     }
 
-    public function sourceHostPattern(): string
+    public function sourceHosts(): array
     {
-        $hosts = [...self::PAGE_HOSTS, self::SHORT_HOST];
-
-        return implode('|', array_map(static fn (string $host): string => preg_quote($host, '#'), $hosts));
+        return [...self::PAGE_HOSTS, self::SHORT_HOST];
     }
 
     private function videoId(string $url): ?string

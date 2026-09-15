@@ -56,16 +56,17 @@ final readonly class EmbedProviders
     /**
      * The delimited, case-insensitive regex that tells readability to keep an
      * in-body frame whose source host any provider claims — assembled from every
-     * provider's `sourceHostPattern()` so the keep-list never drifts from the
-     * hosts the reader actually renders (#1053).
+     * provider's `sourceHosts()` so the keep-list never drifts from the hosts the
+     * reader actually renders (#1053).
      */
     public function videoEmbedRegex(): string
     {
         $hosts = [];
         foreach ($this->providers as $provider) {
-            $hosts[] = $provider->sourceHostPattern();
+            foreach ($provider->sourceHosts() as $host) {
+                $hosts[] = preg_quote($host, '#');
+            }
         }
-        sort($hosts);
 
         return '#//(?:' . implode('|', $hosts) . ')#i';
     }

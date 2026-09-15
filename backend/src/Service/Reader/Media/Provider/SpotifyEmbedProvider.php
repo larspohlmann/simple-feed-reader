@@ -46,9 +46,9 @@ final readonly class SpotifyEmbedProvider implements EmbedProviderInterface
         return '^https://' . preg_quote(self::HOST, '#') . '/embed/(?:' . self::TYPE . ')/' . self::ID . '$';
     }
 
-    public function sourceHostPattern(): string
+    public function sourceHosts(): array
     {
-        return preg_quote(self::HOST, '#');
+        return [self::HOST];
     }
 
     /** @return array{0: string, 1: string}|null the content type and its id */
