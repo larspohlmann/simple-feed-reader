@@ -9,6 +9,7 @@ use App\Service\Reader\Media\Source\AttributeMediaSource;
 use App\Service\Reader\Media\Source\JsonLdMediaSource;
 use App\Service\Reader\Media\Source\MetaMediaSource;
 use App\Service\Reader\Media\Source\PageEmbedSource;
+use App\Service\Reader\Media\Source\ScriptEmbedSource;
 use App\Service\Reader\Media\Source\SemanticMediaSource;
 use App\Service\Reader\Media\Source\YouTubeIdAttributeSource;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -63,6 +64,7 @@ final class PageMediaScannerWiringTest extends KernelTestCase
             SemanticMediaSource::class,
             AttributeMediaSource::class,
             YouTubeIdAttributeSource::class,
+            ScriptEmbedSource::class,
         ], $ordered);
     }
 
