@@ -47,6 +47,11 @@ final readonly class ScriptEmbedSource implements MediaCandidateSourceInterface
             if (PageFurniture::holds($script)) {
                 continue;
             }
+            // JSON-LD scripts are already handled by JsonLdMediaSource, which has
+            // prioritized logic for choosing between contentUrl and embedUrl.
+            if ($script->getAttribute('type') === 'application/ld+json') {
+                continue;
+            }
             foreach ($this->embedTargets($script->textContent ?? '') as $target) {
                 $found[$target->url] ??= new MediaCandidate(
                     MediaKind::Embed,

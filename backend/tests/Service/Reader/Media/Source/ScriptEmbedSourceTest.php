@@ -66,14 +66,16 @@ final class ScriptEmbedSourceTest extends TestCase
         self::assertSame('https://player.vimeo.com/video/1226652197', $found[0]->url);
     }
 
-    public function testResolvesAYouTubeEmbedUrlInsideAJsonLdScript(): void
+    public function testSkipsJsonLdScriptsSinceLdSourceHandlesThem(): void
     {
+        // JSON-LD scripts are processed by JsonLdMediaSource with its own prioritization
+        // logic for choosing between contentUrl and embedUrl. ScriptEmbedSource skips them
+        // to avoid duplicate embeds that violate that priority.
         $found = $this->find(
             '<script type="application/ld+json">{"@type":"VideoObject",'
             . '"embedUrl":"https://www.youtube.com/embed/aaaaaaaaaa1"}</script>'
         );
 
-        self::assertCount(1, $found);
-        self::assertSame('https://www.youtube-nocookie.com/embed/aaaaaaaaaa1', $found[0]->url);
+        self::assertSame([], $found);
     }
 }
