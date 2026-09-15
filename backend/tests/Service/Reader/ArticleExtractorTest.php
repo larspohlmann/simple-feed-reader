@@ -15,6 +15,7 @@ use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\AuthorBio\AuthorBioSeparator;
 use App\Service\Reader\ArticleExtractor;
+use App\Service\Reader\ArticleReadability;
 use App\Service\Reader\BoilerplateVerdict;
 use App\Service\Reader\DuplicateBlockCollapser;
 use App\Service\Reader\EdgeBoilerplateTrimmer;
@@ -39,6 +40,8 @@ use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\PageMediaInserter;
 use App\Service\Reader\Media\PageMediaScanner;
 use App\Service\Reader\Media\Provider\BrightcoveEmbedProvider;
+use App\Service\Reader\Media\Provider\DailymotionEmbedProvider;
+use App\Service\Reader\Media\Provider\SpotifyEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\Provider\VimeoEmbedProvider;
 use App\Service\Reader\Media\Sibling\SiblingIdRule;
@@ -113,7 +116,7 @@ final class ArticleExtractorTest extends TestCase
             ),
             $slideshowScanner ?? new SlideshowScanner([]),
             new TeaserPlayerScanner($this->urlKind()),
-            new RelatedTeaserGridRemover(),
+            $this->articleReadability(),
         );
     }
 
@@ -128,7 +131,7 @@ final class ArticleExtractorTest extends TestCase
     private function bodyCleaner(): ReaderBodyCleaner
     {
         $markup = new MediaMarkup();
-        $embedProviders = new EmbedProviders([new YouTubeEmbedProvider()]);
+        $embedProviders = $this->providers();
 
         return new ReaderBodyCleaner(
             new NavigationChromeTrimmer(),
@@ -169,12 +172,23 @@ final class ArticleExtractorTest extends TestCase
         return new MediaUrlKind(new DurableMediaUrl(), $this->providers());
     }
 
+    private function articleReadability(): ArticleReadability
+    {
+        return new ArticleReadability(
+            new FetchedPageNormalizer(FetchedPageNormalizerTest::repairs()),
+            new RelatedTeaserGridRemover(),
+            $this->providers(),
+        );
+    }
+
     private function providers(): EmbedProviders
     {
         return new EmbedProviders([
             new YouTubeEmbedProvider(),
             new BrightcoveEmbedProvider(),
             new VimeoEmbedProvider(),
+            new SpotifyEmbedProvider(),
+            new DailymotionEmbedProvider(),
         ]);
     }
 
@@ -191,6 +205,31 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringContainsString('https://site.test/img/photo.jpg', (string) $result->contentHtml);
         self::assertStringNotContainsString('About', (string) $result->contentHtml);
         self::assertFalse($result->paywalled);
+    }
+
+    /**
+     * Readability's built-in keep-list has no Spotify or Dailymotion, so it would
+     * strip those frames; the keep-regex generated from the embed providers holds
+     * them in the body, where the rewriter turns each into an embed link (#1053).
+     */
+    public function testKeepsInBodyProviderEmbedsReadabilityWouldStrip(): void
+    {
+        $prose = str_repeat('This is a substantial paragraph of real article text past the length gate. ', 4);
+        $html = '<html><head><title>Playlist Roundup</title></head><body><article>'
+            . '<h1>Playlist Roundup</h1><p>' . $prose . '</p>'
+            . '<div><iframe src="https://www.youtube.com/embed/M1j_uRqKMKI?si=x"></iframe></div>'
+            . '<p>' . $prose . '</p>'
+            . '<div><iframe src="https://open.spotify.com/embed/playlist/27uRYdAHvcKADidfnR8BN4"></iframe></div>'
+            . '<p>' . $prose . '</p>'
+            . '<div><iframe src="https://www.dailymotion.com/embed/video/x7tgad0"></iframe></div>'
+            . '</article></body></html>';
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $contentHtml = (string) $extractor->extract('https://site.test/post')->contentHtml;
+
+        self::assertStringContainsString('youtube-nocookie.com/embed/M1j_uRqKMKI', $contentHtml);
+        self::assertStringContainsString('open.spotify.com/embed/playlist/27uRYdAHvcKADidfnR8BN4', $contentHtml);
+        self::assertStringContainsString('dailymotion.com/embed/video/x7tgad0', $contentHtml);
     }
 
     public function testDropsTheRelatedTeaserGridButKeepsTheStoryAndLeadImage(): void
@@ -439,7 +478,7 @@ final class ArticleExtractorTest extends TestCase
             ),
             new SlideshowScanner([]),
             new TeaserPlayerScanner($this->urlKind()),
-            new RelatedTeaserGridRemover(),
+            $this->articleReadability(),
         );
 
         $result = $extractor->extract('http://169.254.169.254/');

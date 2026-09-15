@@ -116,4 +116,44 @@ describe('upgradeMediaEmbeds', () => {
 
     expect(el.querySelector('iframe')).toBeNull();
   });
+
+  it('replaces a Spotify playlist link with a sandboxed iframe', () => {
+    const el = host(
+      '<a href="https://open.spotify.com/embed/playlist/27uRYdAHvcKADidfnR8BN4">Listen on Spotify</a>',
+    );
+    const frame = el.querySelector('iframe')!;
+
+    expect(frame).not.toBeNull();
+    expect(frame.getAttribute('src')).toBe(
+      'https://open.spotify.com/embed/playlist/27uRYdAHvcKADidfnR8BN4',
+    );
+    expect(frame.getAttribute('sandbox')).toContain('allow-scripts');
+    expect(el.querySelector('a')).toBeNull();
+  });
+
+  it('rejects a Spotify look-alike host', () => {
+    const el = host(
+      '<a href="https://open.spotify.com.evil.test/embed/playlist/27uRYdAHvcKADidfnR8BN4">x</a>',
+    );
+
+    expect(el.querySelector('iframe')).toBeNull();
+  });
+
+  it('replaces a Dailymotion link with a sandboxed iframe', () => {
+    const el = host(
+      '<a href="https://www.dailymotion.com/embed/video/x7tgad0">Watch on Dailymotion</a>',
+    );
+    const frame = el.querySelector('iframe')!;
+
+    expect(frame).not.toBeNull();
+    expect(frame.getAttribute('src')).toBe('https://www.dailymotion.com/embed/video/x7tgad0');
+    expect(frame.getAttribute('sandbox')).toContain('allow-scripts');
+    expect(el.querySelector('a')).toBeNull();
+  });
+
+  it('rejects a Dailymotion look-alike host', () => {
+    const el = host('<a href="https://www.dailymotion.com.evil.test/embed/video/x7tgad0">x</a>');
+
+    expect(el.querySelector('iframe')).toBeNull();
+  });
 });

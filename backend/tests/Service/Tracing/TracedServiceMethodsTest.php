@@ -10,6 +10,7 @@ use App\Repository\SavedSearchRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Service\Reader\ArticleExtractor;
+use App\Service\Reader\ArticleReadability;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\Media\PageMediaScanner;
@@ -41,7 +42,7 @@ final class TracedServiceMethodsTest extends TestCase
         yield 'reader, fetch' => [HtmlPageFetcher::class, 'fetch'];
         yield 'reader, normalise' => [FetchedPageNormalizer::class, 'normalize'];
         yield 'reader, media scan' => [PageMediaScanner::class, 'scan'];
-        yield 'reader, readability' => [ArticleExtractor::class, 'richestArticle'];
+        yield 'reader, readability' => [ArticleReadability::class, 'richest'];
         yield 'reader, body clean' => [ReaderBodyCleaner::class, 'clean'];
         yield 'reader, sanitise' => [EntrySanitizer::class, 'sanitize'];
         yield 'subscriptions list' => [SubscriptionRepository::class, 'findForUserWithTags'];

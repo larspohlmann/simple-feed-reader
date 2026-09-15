@@ -29,4 +29,12 @@ interface EmbedProviderInterface
      * generated from every provider's pattern, so the two never drift (#1048).
      */
     public function framePattern(): string;
+
+    /**
+     * A `host1|host2` fragment — delimiter-free, unanchored — matching this
+     * provider's embed-source hosts. Readability's in-body keep-list is generated
+     * from every provider's fragment, so an embed this reader supports survives
+     * extraction in place instead of being stripped as a non-video frame (#1053).
+     */
+    public function sourceHostPattern(): string;
 }

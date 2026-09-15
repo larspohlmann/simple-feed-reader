@@ -52,4 +52,21 @@ final readonly class EmbedProviders
     {
         return json_encode($this->framePatterns(), \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES) . "\n";
     }
+
+    /**
+     * The delimited, case-insensitive regex that tells readability to keep an
+     * in-body frame whose source host any provider claims — assembled from every
+     * provider's `sourceHostPattern()` so the keep-list never drifts from the
+     * hosts the reader actually renders (#1053).
+     */
+    public function videoEmbedRegex(): string
+    {
+        $hosts = [];
+        foreach ($this->providers as $provider) {
+            $hosts[] = $provider->sourceHostPattern();
+        }
+        sort($hosts);
+
+        return '#//(?:' . implode('|', $hosts) . ')#i';
+    }
 }

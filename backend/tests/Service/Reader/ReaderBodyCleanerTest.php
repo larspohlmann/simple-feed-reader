@@ -20,6 +20,7 @@ use App\Service\Reader\Media\Teaser\TeaserPlayer;
 use App\Service\Reader\Media\Teaser\TeaserPlayerInserter;
 use App\Service\Reader\Media\Teaser\TeaserPlayerMarkup;
 use App\Service\Reader\Media\PageMediaInserter;
+use App\Service\Reader\Media\Provider\SpotifyEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\SubstackPosterLink;
 use App\Service\Reader\MediaOnlyLede;
@@ -46,7 +47,7 @@ final class ReaderBodyCleanerTest extends TestCase
     protected function setUp(): void
     {
         $markup = new MediaMarkup();
-        $embedProviders = new EmbedProviders([new YouTubeEmbedProvider()]);
+        $embedProviders = new EmbedProviders([new YouTubeEmbedProvider(), new SpotifyEmbedProvider()]);
         $this->cleaner = new ReaderBodyCleaner(
             new NavigationChromeTrimmer(),
             new LeadingTitleRemover(),
@@ -268,6 +269,18 @@ final class ReaderBodyCleanerTest extends TestCase
         self::assertStringContainsString('embed/aaaaaaaaaaa', $out);
         self::assertStringContainsString('embed/bbbbbbbbbbb', $out);
         self::assertStringContainsString('embed/ccccccccccc', $out);
+    }
+
+    /** A Spotify player embedded in the body survives as an embed link the client upgrades (#1053). */
+    public function testRewritesAnInBodySpotifyEmbed(): void
+    {
+        $html = '<p>' . self::PROSE . '</p><h3>Playlist</h3>'
+            . '<div><iframe src="https://open.spotify.com/embed/playlist/27uRYdAHvcKADidfnR8BN4"></iframe></div>';
+
+        $out = $this->cleaner->clean($html, [null, null], $this->noLead(), ArticleMedia::none());
+
+        self::assertStringContainsString('open.spotify.com/embed/playlist/27uRYdAHvcKADidfnR8BN4', $out);
+        self::assertStringNotContainsString('<iframe', $out);
     }
 
     /**

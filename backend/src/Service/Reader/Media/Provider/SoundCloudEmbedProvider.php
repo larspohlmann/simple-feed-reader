@@ -49,6 +49,11 @@ final readonly class SoundCloudEmbedProvider implements EmbedProviderInterface
             . '/player/\?url=https%3A%2F%2Fapi\.soundcloud\.com%2Ftracks%2F\d+$';
     }
 
+    public function sourceHostPattern(): string
+    {
+        return preg_quote(self::HOST, '#');
+    }
+
     private function trackId(string $url): ?string
     {
         $parts = parse_url($url);
