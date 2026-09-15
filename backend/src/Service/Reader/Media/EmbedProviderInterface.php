@@ -22,4 +22,14 @@ interface EmbedProviderInterface
 
     /** Link text used when there is no poster. */
     public function label(): string;
+
+    /**
+     * The anchored regular expression, delimiter-free and valid in both PCRE and
+     * JavaScript, that matches exactly this host's `normalize()` output. It is the
+     * one source of truth for the frame the reader upgrades a link to: the
+     * frontend allow-list is generated from every provider's pattern (see
+     * `App\Command\DumpEmbedFrameAllowlistCommand`), so a new provider needs no
+     * second edit on the client and the two can never drift (#1048).
+     */
+    public function framePattern(): string;
 }

@@ -30,4 +30,21 @@ final readonly class EmbedProviders
 
         return null;
     }
+
+    /**
+     * Every provider's frame pattern, sorted for a stable dump. The reader's
+     * client allow-list is generated from this, so it never drifts (#1048).
+     *
+     * @return list<string>
+     */
+    public function framePatterns(): array
+    {
+        $patterns = [];
+        foreach ($this->providers as $provider) {
+            $patterns[] = $provider->framePattern();
+        }
+        sort($patterns);
+
+        return $patterns;
+    }
 }

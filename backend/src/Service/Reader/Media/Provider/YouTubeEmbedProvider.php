@@ -45,6 +45,11 @@ final readonly class YouTubeEmbedProvider implements EmbedProviderInterface
         return 'Watch on YouTube';
     }
 
+    public function framePattern(): string
+    {
+        return '^https://www\.youtube-nocookie\.com/embed/' . self::ID . '$';
+    }
+
     private function videoId(string $url): ?string
     {
         $parts = parse_url($url);

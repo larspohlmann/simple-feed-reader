@@ -43,6 +43,11 @@ final readonly class SoundCloudEmbedProvider implements EmbedProviderInterface
         return 'Listen on SoundCloud';
     }
 
+    public function framePattern(): string
+    {
+        return '^https://w\.soundcloud\.com/player/\?url=https%3A%2F%2Fapi\.soundcloud\.com%2Ftracks%2F\d+$';
+    }
+
     private function trackId(string $url): ?string
     {
         $parts = parse_url($url);

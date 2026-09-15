@@ -48,6 +48,11 @@ final readonly class BrightcoveEmbedProvider implements EmbedProviderInterface
         return 'Watch the video';
     }
 
+    public function framePattern(): string
+    {
+        return '^https://players\.brightcove\.net/\d+/[A-Za-z0-9_-]+/index\.html\?videoId=\d+$';
+    }
+
     private function videoId(string $query): ?string
     {
         parse_str($query, $params);

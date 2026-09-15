@@ -1,3 +1,5 @@
+import framePatterns from './embed-frame-allowlist.generated.json';
+
 /**
  * Turns a recovered media link into a real player. The backend can't ship an
  * `<iframe>` — its sanitizer is shared with feed ingest, and Angular's own
@@ -6,12 +8,12 @@
  * Angular's sanitizer left on. The link is what's cached, so dropping a provider
  * takes effect on already-cached articles. Runs beside `markInsetCards`;
  * idempotent since the anchor is gone after the first pass.
+ *
+ * The allow-list is generated from the backend embed providers (one per
+ * `framePattern()`), so a provider is added in exactly one place and the two
+ * sides never drift (#1048). Regenerate with `app:embed:dump-frame-allowlist`.
  */
-const ALLOWED = [
-  /^https:\/\/www\.youtube-nocookie\.com\/embed\/[A-Za-z0-9_-]{11}$/,
-  /^https:\/\/w\.soundcloud\.com\/player\/\?url=https%3A%2F%2Fapi\.soundcloud\.com%2Ftracks%2F\d+$/,
-  /^https:\/\/players\.brightcove\.net\/\d+\/[A-Za-z0-9_-]+\/index\.html\?videoId=\d+$/,
-];
+const ALLOWED = (framePatterns as string[]).map((pattern) => new RegExp(pattern));
 
 /* `allow-same-origin` beside `allow-scripts` is safe only because every allowed
    URL is cross-origin: the frame gets its own origin and cannot reach the
