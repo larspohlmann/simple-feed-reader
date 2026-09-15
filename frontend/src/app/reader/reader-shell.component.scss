@@ -294,7 +294,10 @@ app-reader-header.hidden {
    LayoutService.isNarrow(), not a media query, so the 720px boundary is
    declared once (#185). `top` is the pre-measurement fallback for the bar. */
 .body.is-narrow .sidebar {
-  position: fixed;
+  /* Anchored to the shell host (in document flow), not the viewport: a
+     `fixed` drawer stays pinned while iOS rubber-bands the page on
+     pull-to-refresh, so it drifts against the header and list. */
+  position: absolute;
   top: var(--bar-h);
   bottom: 0;
   padding-top: 0; /* the fixed `top` above places it; see the column rule */
@@ -315,7 +318,7 @@ app-reader-header.hidden {
 
 .body.is-narrow .backdrop {
   display: block;
-  position: fixed;
+  position: absolute;
   inset: var(--bar-h) 0 0;
   z-index: 15;
   background: rgb(0 0 0 / 40%);
