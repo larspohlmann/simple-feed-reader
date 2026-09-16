@@ -22,6 +22,7 @@ final readonly class RestorePreviewer
     public function __construct(
         private BackupInspector $inspector,
         private BackupFitCheck $fitCheck,
+        private TemporaryBackupStorage $storage,
         private SubscriptionRepository $subscriptions,
         private TagRepository $tags,
         private EntryStateRepository $entryStates,
@@ -29,9 +30,18 @@ final readonly class RestorePreviewer
     ) {
     }
 
-    public function preview(User $user, string $gzipBytes): RestorePreview
+    /** @param resource $uploadStream */
+    public function preview(User $user, mixed $uploadStream): RestorePreview
     {
-        $inventory = $this->inspector->inspect($gzipBytes);
+        return $this->storage->withFile(
+            $uploadStream,
+            fn (TemporaryBackupFile $backup): RestorePreview => $this->previewFile($user, $backup),
+        );
+    }
+
+    private function previewFile(User $user, TemporaryBackupFile $backup): RestorePreview
+    {
+        $inventory = $this->inspector->inspect($backup);
         $this->fitCheck->assertFits($inventory, $user);
 
         $userId = $user->getId() ?? 0;
