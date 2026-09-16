@@ -526,6 +526,26 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         self::assertNull($outcome->retryAfterSeconds());
     }
 
+    public function testA502IsRetryable(): void
+    {
+        $client = $this->clientAnswering(new MockResponse('', ['http_code' => 502]));
+
+        $outcome = $this->soleOutcomeOf($client, $this->request());
+
+        self::assertTrue($outcome->isRetryable());
+        self::assertInstanceOf(RetryableProviderException::class, $outcome->cause());
+    }
+
+    public function testA504IsRetryable(): void
+    {
+        $client = $this->clientAnswering(new MockResponse('', ['http_code' => 504]));
+
+        $outcome = $this->soleOutcomeOf($client, $this->request());
+
+        self::assertTrue($outcome->isRetryable());
+        self::assertInstanceOf(RetryableProviderException::class, $outcome->cause());
+    }
+
     public function testA500IsStillANonRetryableUnreachableFailure(): void
     {
         $client = $this->clientAnswering(new MockResponse('', ['http_code' => 500]));

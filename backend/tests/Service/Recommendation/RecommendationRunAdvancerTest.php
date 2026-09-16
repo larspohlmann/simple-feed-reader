@@ -2235,6 +2235,44 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
+     * The consolidation phase's own copy of the #947 deferral catch, parallel
+     * to distillTick's -- testAPollDistillTickDefersOnA429WithoutStrikingOrCalling
+     * proves that one, but nothing in the suite drove a 429 through
+     * consolidateTick's identical `catch (RecommendationRunRateLimitedException)`
+     * block. A poll tick never blocks: the 429 must defer the run -- record
+     * "retry not before", keep the run RUNNING and still in the consolidation
+     * phase -- rather than burn a transport-failure strike or finalize on the
+     * degraded pool.
+     */
+    public function testAPollConsolidationTickDefersOnA429WithoutStriking(): void
+    {
+        $this->seedMultiBatchFixture();
+        $run = $this->startSnapshotAndDistill();
+        $firstBatch = $run->getCandidateBatches()[0];
+        $secondBatch = $run->getCandidateBatches()[1];
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 80, 'reason' => 'batch one']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $secondBatch[0], 'score' => 95, 'reason' => 'batch two']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+        self::assertTrue($this->activeRun()->progress()->isConsolidationPhase);
+
+        $this->stubChatClient()->queueFailure(new RetryableProviderException(429, 30));
+
+        $report = $this->advancer()->advance($this->user, TickDriver::Poll);
+
+        self::assertSame(RecommendationRun::STATUS_RUNNING, $report->status);
+        $persisted = $this->activeRun();
+        self::assertSame(0, $persisted->getTransportFailures());
+        self::assertNotNull($persisted->getRetryNotBefore());
+        self::assertTrue($persisted->progress()->isConsolidationPhase);
+    }
+
+    /**
      * Both arms of the resolver's transport failure, exactly as the batch wave
      * pair does: a rejected key never produced a reply either, so it must count
      * against the same ceiling and not slip past the catch uncounted. Shared by

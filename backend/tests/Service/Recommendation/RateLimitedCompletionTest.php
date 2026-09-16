@@ -127,6 +127,32 @@ final class RateLimitedCompletionTest extends TestCase
         self::assertSame(0, $this->elapsedSeconds($clock));
     }
 
+    /**
+     * The budget check is `$waited + $wait > budgetSeconds()` with `$waited`
+     * accumulating across retries, not just the latest wait. Three 45 s waits
+     * (each under the 120 s budget alone) cross it only once summed: 45, then
+     * 90, then 135 -- so the third retry must defer instead of sleeping again.
+     * A mutant that replaced the accumulation with a plain assignment would
+     * see 45 + 45 = 90 at that same retry and sleep through to exhaustion
+     * instead, so only the deferral -- not just the elapsed clock -- tells
+     * the two apart.
+     */
+    public function testWorkerBudgetAccumulatesAcrossRetries(): void
+    {
+        $chat = new StubChatClient();
+        for ($i = 0; $i < 4; $i++) {
+            $chat->queueFailure(new RetryableProviderException(429, 45));
+        }
+        $clock = $this->newClock();
+
+        $result = (new RateLimitedCompletion($chat, $clock))
+            ->completeMany($this->connection(), $this->calls(1), RetryPlan::forDriver(TickDriver::Worker));
+
+        self::assertTrue($result->isDeferred());
+        self::assertSame(45.0, $result->deferSeconds);
+        self::assertSame(90, $this->elapsedSeconds($clock));
+    }
+
     public function testWorkerExhaustsRetriesAndKeepsTheRetryableFailure(): void
     {
         $chat = new StubChatClient();
