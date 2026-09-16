@@ -92,13 +92,14 @@ final class RecommendationRunAdvancer
         private readonly RecommendationHistoryLoader $historyLoader,
         private readonly RecommendationPromptBuilder $promptBuilder,
         private readonly EntityManagerInterface $entityManager,
-        private readonly RecommendationTickCheckpoint $checkpoint,
         private readonly RecommendationProfileDistiller $distiller,
         private readonly RecommendationBatchWave $batchWave,
         private readonly RecommendationConsolidationResolver $consolidationResolver,
         private readonly RecommendationRunFinalizer $finalizer,
         private readonly TickLockKeepalive $keepalive,
         private readonly RecommendationRunDeferral $deferral,
+        private readonly RecommendationWaveConcurrency $waveConcurrency,
+        private readonly RecommendationTransportFailureRecorder $transportFailures,
     ) {
     }
 
@@ -253,7 +254,7 @@ final class RecommendationRunAdvancer
             return $this->consolidateTick($run, $user, $settings, $plan);
         }
 
-        return $this->providerTick($run, $user, $settings, $driver);
+        return $this->providerTick($run, $user, $settings, $driver, $plan);
     }
 
     private function failPermanently(RecommendationRun $run, string $message): void
@@ -306,15 +307,35 @@ final class RecommendationRunAdvancer
         User $user,
         AiProviderSettings $settings,
         TickDriver $driver,
+        RetryPlan $plan,
     ): RecommendationRunReport {
         $this->markFirstBatchBeforeCallingProvider($run);
         $userId = $this->requireUserId($user);
         $effectiveSettings = $this->settingsResolver->forUser($user);
         $waveSize = $this->waveSize($run, $settings, $driver);
 
-        $winnersPerBatch = $this->resolveWave($run, $settings, $effectiveSettings, $userId, $waveSize);
+        try {
+            $result = $this->batchWave->resolve($run, $settings, $effectiveSettings, $userId, $waveSize, $plan);
+        } catch (RecommendationRunRateLimitedException $e) {
+            $this->waveConcurrency->halve($run, $settings);
 
-        return $this->pickEndingAfterWave($run, $winnersPerBatch);
+            return $this->deferral->defer($run, $e);
+        } catch (RetryableProviderException $e) {
+            $this->waveConcurrency->halve($run, $settings);
+            $this->transportFailures->record($run, $settings, $e->getMessage());
+
+            throw $e;
+        } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
+            $this->transportFailures->record($run, $settings, $e->getMessage());
+
+            throw $e;
+        }
+
+        if ($result->rateLimitObserved) {
+            $this->waveConcurrency->halve($run, $settings);
+        }
+
+        return $this->pickEndingAfterWave($run, $result->winners);
     }
 
     /** Commit the start signal before the blocking provider request. A status
@@ -327,34 +348,6 @@ final class RecommendationRunAdvancer
 
         $run->markFirstBatchStarted();
         $this->entityManager->flush();
-    }
-
-    /**
-     * Delegates the wave to RecommendationBatchWave and turns its atomic-wave transport
-     * failure into the run's own accounting: one ceiling increment for the whole wave --
-     * it threw once, whatever its size, so a wave of four cannot exhaust a ceiling of
-     * three at once -- failing the run if that increment reached the ceiling, then
-     * re-throwing so the caller's mapping is unchanged and the next tick re-runs the wave
-     * from the unmoved cursor (#344). An unreadable key is not a transport failure -- the
-     * wave settles its log rows and lets it propagate untouched to tick(), which fails
-     * the run permanently.
-     *
-     * @return list<list<array{id: int, score: int, reason: string}>>
-     */
-    private function resolveWave(
-        RecommendationRun $run,
-        AiProviderSettings $settings,
-        EffectiveRecommendationSettings $effectiveSettings,
-        int $userId,
-        int $waveSize,
-    ): array {
-        try {
-            return $this->batchWave->resolve($run, $settings, $effectiveSettings, $userId, $waveSize);
-        } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
-            $this->recordTransportFailure($run, $settings, $e->getMessage());
-
-            throw $e;
-        }
     }
 
     /**
@@ -379,7 +372,11 @@ final class RecommendationRunAdvancer
 
         $batchesRemaining = \count($run->getCandidateBatches()) - $run->progress()->nextBatchIndex;
 
-        return min($this->effectiveCap($settings, $driver), $batchesRemaining);
+        return min(
+            $this->effectiveCap($settings, $driver),
+            $this->waveConcurrency->cap($run, $settings),
+            $batchesRemaining,
+        );
     }
 
     /**
@@ -420,7 +417,7 @@ final class RecommendationRunAdvancer
      * Delegates the distillation phase's single provider call to
      * RecommendationProfileDistiller and writes what it returns. A transport failure
      * throws out of distill(), folded into the run's accounting here (one ceiling
-     * increment, then re-thrown) — the same envelope resolveWave() gives the batch
+     * increment, then re-thrown) — the same envelope providerTick() gives the batch
      * phase. An unusable reply is retried across ticks or degraded to no profile:
      * distillation has no pool to fall back to, unlike consolidation's undeduped list.
      * Either ending records the profile (possibly null) and checkpoints, so the next
@@ -440,7 +437,7 @@ final class RecommendationRunAdvancer
         } catch (RecommendationRunRateLimitedException $e) {
             return $this->deferral->defer($run, $e);
         } catch (ProviderUnreachableException | CredentialsRejectedException | RetryableProviderException $e) {
-            $this->recordTransportFailure($run, $settings, $e->getMessage());
+            $this->transportFailures->record($run, $settings, $e->getMessage());
 
             throw $e;
         }
@@ -473,7 +470,7 @@ final class RecommendationRunAdvancer
      * Delegates the consolidation phase's single provider call to
      * RecommendationConsolidationResolver and writes what it returns. A transport
      * failure throws out of resolve(), folded into the run's accounting here (one
-     * ceiling increment, then re-thrown) — the same envelope resolveWave() gives the
+     * ceiling increment, then re-thrown) — the same envelope providerTick() gives the
      * batch phase. An unusable reply is retried across ticks or degraded to the
      * undeduped, unreasoned batch-score list; a usable one, or an all-pruned pool,
      * finalizes. Every plan reaches this phase now (#493) — no single-batch shortcut.
@@ -500,7 +497,7 @@ final class RecommendationRunAdvancer
         } catch (RecommendationRunRateLimitedException $e) {
             return $this->deferral->defer($run, $e);
         } catch (ProviderUnreachableException | CredentialsRejectedException | RetryableProviderException $e) {
-            $this->recordTransportFailure($run, $settings, $e->getMessage());
+            $this->transportFailures->record($run, $settings, $e->getMessage());
 
             throw $e;
         }
@@ -514,39 +511,6 @@ final class RecommendationRunAdvancer
         }
 
         return $this->finalizer->finalize($run, $outcome->ranked);
-    }
-
-    /**
-     * Guarded like every banking write, for the same reason: the counter and the fail()
-     * the ceiling triggers are the run's own state, and a tick that may no longer write
-     * must write none of it (#439). The entity cannot refuse it --
-     * RecommendationRun::recordTransportFailure() judges the status this tick read before
-     * the call, so a run another process has since completed is failed over it.
-     *
-     * Nothing is swallowed while the lock is held and the run is live: the guard cannot
-     * throw there, and the caller's re-throw carries the provider's error out. When it
-     * does throw, this tick has stopped owning the run, and tick() answers with the
-     * state its real owner wrote.
-     */
-    private function recordTransportFailure(
-        RecommendationRun $run,
-        AiProviderSettings $settings,
-        string $failureDetail,
-    ): void {
-        $this->checkpoint->guard($run);
-
-        $ceilingReached = $run->recordTransportFailure();
-        if ($ceilingReached) {
-            // The real per-call detail, not a hardcoded "could not be reached":
-            // most transport failures are the provider refusing or truncating a
-            // call it received, and one flat unreachable message hid a fixable
-            // 400 behind a network story (#329). Base URL stays: which endpoint failed.
-            $run->fail(
-                sprintf('The AI provider at %s failed: %s', $settings->getBaseUrl(), $failureDetail),
-                $this->clock->now(),
-            );
-        }
-        $this->entityManager->flush();
     }
 
     /**

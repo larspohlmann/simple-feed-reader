@@ -8,6 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Service\Ai\ProviderConnectionFactory;
+use App\Service\Recommendation\Exception\RecommendationRunRateLimitedException;
 
 /**
  * The batch phase's concurrent fan-out (#344): one tick resolves a wave of
@@ -22,12 +23,19 @@ use App\Service\Ai\ProviderConnectionFactory;
  * re-runs next tick, so this class never touches persisted progress -- it
  * only reads the plan and provider and settles the debug rows it opened.
  *
+ * A 429 goes through RateLimitedCompletion instead (#947): the worker's
+ * blocking plan retries in-tick and may still resolve the round, only
+ * flagging rateLimitObserved for the caller to halve concurrency; the poll and
+ * sweep drivers' deferring plan settles the round's rows and throws
+ * RecommendationRunRateLimitedException, which is not the atomic-wave
+ * transport failure -- the caller defers the run rather than striking it.
+ *
  * @SuppressWarnings("PHPMD.ExcessiveParameterList")
  */
 final readonly class RecommendationBatchWave
 {
     public function __construct(
-        private ChatCompletionClient $chat,
+        private RateLimitedCompletion $completion,
         private ProviderConnectionFactory $connections,
         private RecommendationCallRecorder $callRecorder,
         private RecommendationHistoryLoader $historyLoader,
@@ -45,10 +53,10 @@ final readonly class RecommendationBatchWave
      * cursor by the wave size. Returns only once every batch is banked or
      * degraded; a transport failure re-throws instead (recorded calls settled).
      *
-     * @return list<list<array{id: int, score: int, reason: string}>> winners per batch, in plan order
-     *
      * @throws \App\Service\Ai\Exception\ProviderUnreachableException
      * @throws \App\Service\Ai\Exception\CredentialsRejectedException
+     * @throws \App\Service\Ai\Exception\RetryableProviderException
+     * @throws RecommendationRunRateLimitedException
      */
     public function resolve(
         RecommendationRun $run,
@@ -56,16 +64,18 @@ final readonly class RecommendationBatchWave
         EffectiveRecommendationSettings $effectiveSettings,
         int $userId,
         int $waveSize,
-    ): array {
+        RetryPlan $plan,
+    ): BatchWaveResult {
         $waveBatches = $this->waveBatches($run, $userId, $waveSize);
         $poolSummary = $this->candidateLoader->summarize($userId, $this->allCandidateIds($run));
         $history = $this->historyLoader->load($userId, $effectiveSettings);
         $profile = $run->getProfileText();
         $correctiveReply = [];
+        $rateLimitObserved = false;
         [$winners, $pending] = $this->splitByPruned($waveBatches);
 
         for ($round = 1; [] !== $pending; $round++) {
-            $replies = $this->sendRound(
+            $roundResult = $this->sendRound(
                 $run,
                 $settings,
                 $effectiveSettings,
@@ -75,9 +85,11 @@ final readonly class RecommendationBatchWave
                 $pending,
                 $correctiveReply,
                 $poolSummary,
+                $plan,
             );
+            $rateLimitObserved = $rateLimitObserved || $roundResult['observed'];
             $pending = [];
-            foreach ($replies as $position => $reply) {
+            foreach ($roundResult['replies'] as $position => $reply) {
                 $result = $this->parser->parse($reply['content'], $waveBatches[$position]->validIds());
                 $reply['call']->settle($reply['content'], $result->usable);
                 if ($result->usable) {
@@ -95,7 +107,7 @@ final readonly class RecommendationBatchWave
             }
         }
 
-        return $this->degradeUnresolved($winners, $pending);
+        return new BatchWaveResult($this->degradeUnresolved($winners, $pending), $rateLimitObserved);
     }
 
     /**
@@ -189,15 +201,18 @@ final readonly class RecommendationBatchWave
     /**
      * Fires one round: a fresh RecordedCall and request per still-pending batch
      * -- each with its own corrective tail -- read concurrently through
-     * completeMany. A transport failure is the atomic-wave rule (see
-     * guardWaveTransport): settle every call and throw. On success it hands each
-     * reply back keyed by batch position for the caller to parse and settle.
+     * RateLimitedCompletion. A transport failure is the atomic-wave rule (see
+     * guardWaveTransport): settle every call and throw. A deferred result
+     * settles every call as rate-limited and throws
+     * RecommendationRunRateLimitedException instead (#947). On success it
+     * hands each reply back keyed by batch position, alongside whether this
+     * round observed a 429, for the caller to parse, settle and accumulate.
      *
      * @param list<WaveBatch>     $waveBatches
      * @param non-empty-list<int> $pending         positions into $waveBatches still awaiting a usable reply
      * @param array<int, string>  $correctiveReply each position's own last invalid reply
      *
-     * @return array<int, array{content: string, call: RecordedCall}> keyed by batch position
+     * @return array{replies: array<int, array{content: string, call: RecordedCall}>, observed: bool}
      */
     private function sendRound(
         RecommendationRun $run,
@@ -209,6 +224,7 @@ final readonly class RecommendationBatchWave
         array $pending,
         array $correctiveReply,
         ?CandidatePoolSummary $poolSummary,
+        RetryPlan $plan,
     ): array {
         $calls = [];
         $recordedCalls = [];
@@ -241,28 +257,44 @@ final readonly class RecommendationBatchWave
             $recordedCalls[] = $recordedCall;
         }
 
-        $outcomes = $this->completeRound($settings, $calls, $recordedCalls);
+        $result = $this->completeRound($settings, $calls, $recordedCalls, $plan);
+
+        if ($result->isDeferred()) {
+            foreach ($recordedCalls as $recordedCall) {
+                $recordedCall->abortAfterTransportFailure('Provider rate limited; deferring.');
+            }
+
+            throw new RecommendationRunRateLimitedException($result->deferSeconds);
+        }
+
+        $outcomes = $result->outcomes;
         $this->guardWaveTransport($recordedCalls, $outcomes);
 
-        return $this->repliesByPosition($pending, $outcomes, $recordedCalls);
+        return [
+            'replies' => $this->repliesByPosition($pending, $outcomes, $recordedCalls),
+            'observed' => $result->rateLimitObserved,
+        ];
     }
 
     /**
-     * Reads the whole round concurrently. completeMany folds a per-call
-     * transport failure into that call's outcome, so a throw here means no reply
-     * for any call (an unreadable key raised while resolving credentials, say).
-     * That settles every opened row so none is left reading as "still
-     * streaming", then re-throws unchanged (#344).
+     * Reads the whole round concurrently through the run's rate-limit policy.
+     * completeMany folds a per-call transport failure into that call's
+     * outcome, so a throw here means no reply for any call (an unreadable key
+     * raised while resolving credentials, say). That settles every opened row
+     * so none is left reading as "still streaming", then re-throws unchanged
+     * (#344).
      *
      * @param non-empty-list<ConcurrentCompletion> $calls
      * @param list<RecordedCall>                   $recordedCalls
-     *
-     * @return list<CompletionOutcome>
      */
-    private function completeRound(AiProviderSettings $settings, array $calls, array $recordedCalls): array
-    {
+    private function completeRound(
+        AiProviderSettings $settings,
+        array $calls,
+        array $recordedCalls,
+        RetryPlan $plan,
+    ): RateLimitedResult {
         try {
-            return $this->chat->completeMany($this->connections->forSettings($settings), $calls);
+            return $this->completion->completeMany($this->connections->forSettings($settings), $calls, $plan);
         } catch (\Throwable $e) {
             foreach ($recordedCalls as $recordedCall) {
                 $recordedCall->abortAfterTransportFailure($e->getMessage());
