@@ -274,6 +274,34 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame([], $logSpy->getRecords());
     }
 
+    /**
+     * The gate in tickActiveRun(): a run whose retry_not_before is still in
+     * the future must not spend a provider call, and must report as still
+     * running. Written straight to the DB, exactly like the cancellation
+     * race above -- the ticking side holds an entity that predates this
+     * write, which is the only way a cooperative test lands inside the
+     * cross-process window the gate defends.
+     */
+    public function testATickWithinItsRetryWindowMakesNoProviderCall(): void
+    {
+        $this->seedMultiBatchFixture();
+        $run = $this->startSnapshotAndDistill(); // run is RUNNING, ready for the batch phase
+        $runId = $run->getId() ?? 0;
+
+        $this->em->getConnection()->update(
+            'recommendation_run',
+            ['retry_not_before' => '2099-01-01 00:00:00'],
+            ['id' => $runId],
+        );
+        $this->em->clear();
+
+        $callsBefore = \count($this->stubChatClient()->calls());
+        $report = $this->advancer()->advance($this->user, TickDriver::Worker);
+
+        self::assertSame('running', $report->status);
+        self::assertCount($callsBefore, $this->stubChatClient()->calls()); // no new provider call
+    }
+
     private function replaceLoggerWithASpy(): TestHandler
     {
         $logSpy = new TestHandler();

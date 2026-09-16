@@ -236,6 +236,10 @@ final class RecommendationRunAdvancer
             return $this->snapshotTick($run, $user);
         }
 
+        if ($run->mustWaitBeforeRetry($this->clock->now())) {
+            return RecommendationRunReport::fromRun($run);
+        }
+
         if ($run->progress()->distillPending) {
             return $this->distillTick($run, $user, $settings);
         }
