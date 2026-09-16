@@ -1,14 +1,15 @@
 import { expect, test } from '@playwright/test';
 import { stubAuthToken } from './support/auth';
 
-// #561: with many tags defined, the last tag pill in the edit-feed dialog could
-// not be brought fully into view on a phone.
+// #561/#1034: with many tags defined, the last tag pill in the edit-feed dialog
+// must be reachable on a phone.
 //
-// The tag list's own scroll works. The defect is at its boundary: the dialog
-// body still needs a few pixels of its own scroll, and `.tags` carried
-// `overscroll-behavior: contain`, which stops a gesture that reaches the end of
-// the list from handing the remainder over. On a phone the list fills most of
-// the dialog, so nearly every touch starts inside it.
+// #1034 removed the picker's own nested scroller, so the dialog body is now the
+// single scroller. The trap it replaced: the nested list carried
+// `overscroll-behavior: contain`, which stopped a gesture that reached the end
+// of the list from handing the remainder to the body. On a phone the picker
+// fills most of the dialog, so nearly every touch starts inside it — this drives
+// the wheel from inside the picker and checks the body still takes the gesture.
 
 /** Comfortably past the 220px cap, where the dialog's geometry stops changing. */
 const TAG_COUNT = 18;
@@ -75,16 +76,16 @@ test('the last tag stays reachable when many tags are defined', async ({ page })
   await page.goto('/?subscription=1');
   await page.getByRole('button', { name: 'Edit feed' }).first().click();
 
-  const tags = page.locator('app-overlay-panel .tags');
-  const lastPill = tags.locator('.tag-pill').last();
+  const picker = page.locator('app-tag-picker');
+  const lastPill = picker.locator('.tag-pill').last();
 
-  // Drive it the way a thumb does: the gesture starts inside the tag list and
-  // keeps going. Once the list bottoms out the remainder has to reach the
-  // dialog body, or the last row never clears the edge. Chromium latches a
-  // wheel sequence to the scroller it began on, so this must be repeated
-  // events rather than one large delta.
-  await tags.hover();
-  for (let tick = 0; tick < 6; tick++) {
+  // Drive it the way a thumb does: the gesture starts inside the picker and
+  // keeps going. With no nested scroller the dialog body must take the wheel,
+  // or the last row never clears the edge. Chromium latches a wheel sequence to
+  // the scroller it began on, so this must be repeated events rather than one
+  // large delta, and enough of them to reach the body's bottom.
+  await picker.hover();
+  for (let tick = 0; tick < 12; tick++) {
     await page.mouse.wheel(0, 200);
   }
 
