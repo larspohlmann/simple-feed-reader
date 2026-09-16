@@ -14,10 +14,35 @@ use App\Service\Backup\Dto\FeedLine;
 use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Dto\TagLine;
 use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Backup\TemporaryBackupFile;
+use App\Tests\Support\TemporaryBackupFixture;
 use PHPUnit\Framework\TestCase;
 
 final class BackupReaderTest extends TestCase
 {
+    /** @return list<object> */
+    private static function read(string $gzip): array
+    {
+        return TemporaryBackupFixture::withBytes(
+            $gzip,
+            static fn (TemporaryBackupFile $file): array => iterator_to_array(
+                new BackupReader()->read($file),
+                false,
+            ),
+        );
+    }
+
+    private static function consume(string $gzip): void
+    {
+        TemporaryBackupFixture::withBytes(
+            $gzip,
+            static fn (TemporaryBackupFile $file): array => iterator_to_array(
+                new BackupReader()->read($file),
+                false,
+            ),
+        );
+    }
+
     /** @param list<array<string, mixed>> $lines */
     private static function gzipOf(array $lines): string
     {
@@ -67,7 +92,7 @@ final class BackupReaderTest extends TestCase
     {
         $gzip = self::gzipOf([self::header(), self::account(), self::footer()]);
 
-        $objects = iterator_to_array(new BackupReader()->read($gzip), false);
+        $objects = self::read($gzip);
 
         self::assertCount(2, $objects);
         self::assertInstanceOf(BackupHeader::class, $objects[0]);
@@ -102,7 +127,7 @@ final class BackupReaderTest extends TestCase
             self::footer(['tag' => 1, 'feed' => 1, 'subscription' => 1, 'entry' => 1, 'entryState' => 1]),
         ]);
 
-        $objects = iterator_to_array(new BackupReader()->read($gzip), false);
+        $objects = self::read($gzip);
 
         self::assertCount(7, $objects);
         self::assertInstanceOf(TagLine::class, $objects[2]);
@@ -127,7 +152,7 @@ final class BackupReaderTest extends TestCase
         $this->expectException(InvalidBackupException::class);
         $this->expectExceptionMessageMatches('/schema version/i');
 
-        iterator_to_array(new BackupReader()->read($gzip), false);
+        self::consume($gzip);
     }
 
     public function testRefusesWhenTheFirstLineIsNotAHeader(): void
@@ -136,7 +161,7 @@ final class BackupReaderTest extends TestCase
 
         $this->expectException(InvalidBackupException::class);
 
-        iterator_to_array(new BackupReader()->read($gzip), false);
+        self::consume($gzip);
     }
 
     public function testRefusesKindsOutOfOrder(): void
@@ -154,7 +179,7 @@ final class BackupReaderTest extends TestCase
 
         $this->expectException(InvalidBackupException::class);
 
-        iterator_to_array(new BackupReader()->read($gzip), false);
+        self::consume($gzip);
     }
 
     public function testRefusesAFileWithoutAFooter(): void
@@ -165,7 +190,7 @@ final class BackupReaderTest extends TestCase
         $this->expectException(InvalidBackupException::class);
         $this->expectExceptionMessageMatches('/truncated/i');
 
-        iterator_to_array(new BackupReader()->read($gzip), false);
+        self::consume($gzip);
     }
 
     public function testRefusesAFooterWhoseCountsDisagree(): void
@@ -179,7 +204,7 @@ final class BackupReaderTest extends TestCase
 
         $this->expectException(InvalidBackupException::class);
 
-        iterator_to_array(new BackupReader()->read($gzip), false);
+        self::consume($gzip);
     }
 
     /**
@@ -196,7 +221,7 @@ final class BackupReaderTest extends TestCase
             self::footer(['tag' => 1]),
         ]);
 
-        $objects = iterator_to_array(new BackupReader()->read($gzip), false);
+        $objects = self::read($gzip);
 
         self::assertCount(3, $objects);
     }
@@ -218,7 +243,7 @@ final class BackupReaderTest extends TestCase
         $this->expectException(InvalidBackupException::class);
         $this->expectExceptionMessageMatches('/savedSearch/');
 
-        iterator_to_array(new BackupReader()->read($gzip), false);
+        self::consume($gzip);
     }
 
     public function testRefusesLinesAfterTheFooter(): void
@@ -230,7 +255,7 @@ final class BackupReaderTest extends TestCase
 
         $this->expectException(InvalidBackupException::class);
 
-        iterator_to_array(new BackupReader()->read($gzip), false);
+        self::consume($gzip);
     }
 
     public function testRefusesBrokenJsonWithTheLineNumber(): void
@@ -241,7 +266,7 @@ final class BackupReaderTest extends TestCase
         $this->expectException(InvalidBackupException::class);
         $this->expectExceptionMessageMatches('/line 2/');
 
-        iterator_to_array(new BackupReader()->read($gzip), false);
+        self::consume($gzip);
     }
 
     public function testRefusesAMistypedFieldNamingTheKey(): void
@@ -255,7 +280,7 @@ final class BackupReaderTest extends TestCase
         $this->expectException(InvalidBackupException::class);
         $this->expectExceptionMessageMatches('/name/');
 
-        iterator_to_array(new BackupReader()->read($gzip), false);
+        self::consume($gzip);
     }
 
     public function testRefusesAFileMissingItsAccountLine(): void
@@ -265,7 +290,7 @@ final class BackupReaderTest extends TestCase
         $this->expectException(InvalidBackupException::class);
         $this->expectExceptionMessageMatches('/account/i');
 
-        iterator_to_array(new BackupReader()->read($gzip), false);
+        self::consume($gzip);
     }
 
     public function testRefusesAnEmptyDateStringInsteadOfDefaultingToNow(): void
@@ -282,6 +307,6 @@ final class BackupReaderTest extends TestCase
         $this->expectException(InvalidBackupException::class);
         $this->expectExceptionMessageMatches('/createdAt/');
 
-        iterator_to_array(new BackupReader()->read($gzip), false);
+        self::consume($gzip);
     }
 }
