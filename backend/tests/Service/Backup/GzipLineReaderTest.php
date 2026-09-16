@@ -13,17 +13,23 @@ use PHPUnit\Framework\TestCase;
 
 final class GzipLineReaderTest extends TestCase
 {
-    public function testYieldsEachLineWithoutItsNewline(): void
+    /** @return list<string> */
+    private static function read(string $gzip): array
     {
-        $gzip = (string) gzencode("first\nsecond\nthird\n");
-
-        $lines = TemporaryBackupFixture::withBytes(
+        return TemporaryBackupFixture::withBytes(
             $gzip,
             static fn (TemporaryBackupFile $file): array => iterator_to_array(
                 GzipLineReader::lines($file->open()),
                 false,
             ),
         );
+    }
+
+    public function testYieldsEachLineWithoutItsNewline(): void
+    {
+        $gzip = (string) gzencode("first\nsecond\nthird\n");
+
+        $lines = self::read($gzip);
 
         self::assertSame(['first', 'second', 'third'], $lines);
     }
@@ -32,13 +38,7 @@ final class GzipLineReaderTest extends TestCase
     {
         $gzip = (string) gzencode("first\nlast-no-newline");
 
-        $lines = TemporaryBackupFixture::withBytes(
-            $gzip,
-            static fn (TemporaryBackupFile $file): array => iterator_to_array(
-                GzipLineReader::lines($file->open()),
-                false,
-            ),
-        );
+        $lines = self::read($gzip);
 
         self::assertSame(['first', 'last-no-newline'], $lines);
     }
@@ -48,13 +48,7 @@ final class GzipLineReaderTest extends TestCase
         $long = str_repeat('x', 2_000_000);
         $gzip = (string) gzencode($long . "\nshort\n");
 
-        $lines = TemporaryBackupFixture::withBytes(
-            $gzip,
-            static fn (TemporaryBackupFile $file): array => iterator_to_array(
-                GzipLineReader::lines($file->open()),
-                false,
-            ),
-        );
+        $lines = self::read($gzip);
 
         self::assertSame([$long, 'short'], $lines);
     }
@@ -63,13 +57,7 @@ final class GzipLineReaderTest extends TestCase
     {
         $this->expectException(InvalidBackupException::class);
 
-        TemporaryBackupFixture::withBytes(
-            'this is not gzip',
-            static fn (TemporaryBackupFile $file): array => iterator_to_array(
-                GzipLineReader::lines($file->open()),
-                false,
-            ),
-        );
+        self::read('this is not gzip');
     }
 
     /**
@@ -81,25 +69,13 @@ final class GzipLineReaderTest extends TestCase
     {
         $this->expectException(InvalidBackupException::class);
 
-        TemporaryBackupFixture::withBytes(
-            CorruptGzip::bytes(),
-            static fn (TemporaryBackupFile $file): array => iterator_to_array(
-                GzipLineReader::lines($file->open()),
-                false,
-            ),
-        );
+        self::read(CorruptGzip::bytes());
     }
 
     public function testEmptyInputIsRefused(): void
     {
         $this->expectException(InvalidBackupException::class);
 
-        TemporaryBackupFixture::withBytes(
-            '',
-            static fn (TemporaryBackupFile $file): array => iterator_to_array(
-                GzipLineReader::lines($file->open()),
-                false,
-            ),
-        );
+        self::read('');
     }
 }

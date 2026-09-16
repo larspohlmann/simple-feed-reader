@@ -34,13 +34,7 @@ final class BackupReaderTest extends TestCase
 
     private static function consume(string $gzip): void
     {
-        TemporaryBackupFixture::withBytes(
-            $gzip,
-            static fn (TemporaryBackupFile $file): array => iterator_to_array(
-                new BackupReader()->read($file),
-                false,
-            ),
-        );
+        self::read($gzip);
     }
 
     /** @param list<array<string, mixed>> $lines */
