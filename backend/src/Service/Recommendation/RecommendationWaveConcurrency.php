@@ -20,16 +20,11 @@ final readonly class RecommendationWaveConcurrency
 {
     public function halve(RecommendationRun $run, AiProviderSettings $settings): void
     {
-        $run->reduceWaveConcurrency($this->configuredCap($settings));
+        $run->reduceWaveConcurrency($settings->cappedBatchConcurrency());
     }
 
     public function cap(RecommendationRun $run, AiProviderSettings $settings): int
     {
-        return $run->waveConcurrencyCap($this->configuredCap($settings));
-    }
-
-    private function configuredCap(AiProviderSettings $settings): int
-    {
-        return min($settings->batchConcurrency(), AiProviderSettings::MAX_BATCH_CONCURRENCY);
+        return $run->waveConcurrencyCap($settings->cappedBatchConcurrency());
     }
 }

@@ -201,6 +201,12 @@ class AiProviderSettings
         return $this->runTuning->batchConcurrency();
     }
 
+    /** The configured concurrency clamped to the ceiling a direct-DB value could exceed. */
+    public function cappedBatchConcurrency(): int
+    {
+        return min($this->batchConcurrency(), self::MAX_BATCH_CONCURRENCY);
+    }
+
     public function setBatchConcurrency(int $batchConcurrency): void
     {
         $this->runTuning->setBatchConcurrency($batchConcurrency);

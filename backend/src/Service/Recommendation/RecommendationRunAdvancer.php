@@ -388,10 +388,10 @@ final class RecommendationRunAdvancer
     private function effectiveCap(AiProviderSettings $settings, TickDriver $driver): int
     {
         $cap = TickDriver::Worker === $driver
-            ? $settings->batchConcurrency()
+            ? $settings->cappedBatchConcurrency()
             : min($settings->batchConcurrency(), self::POLL_MAX_CONCURRENCY);
 
-        return max(1, min($cap, AiProviderSettings::MAX_BATCH_CONCURRENCY));
+        return max(1, $cap);
     }
 
     /**
