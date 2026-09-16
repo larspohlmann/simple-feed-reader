@@ -97,10 +97,16 @@ that fit inside the budget.
 
 ### 5. Concurrency reduction
 
-Each observed 429 halves the wave concurrency. The floor is 1. The reduced value
-persists on the run for the rest of the run and never climbs back up inside the
-same run. A new run starts at the full concurrency. A resumed run also starts
-fresh (see decision 8). The reduction fires even when the retry then recovers.
+A tick whose batch wave observed a 429 halves the wave concurrency once. The floor
+is 1. The reduced value persists on the run for the rest of the run and never
+climbs back up inside the same run. A new run starts at the full concurrency. A
+resumed run also starts fresh (see decision 8). The reduction fires whether the
+wave then recovered, deferred, or exhausted its retries.
+
+One halve per rate-limited tick, not one per individual 429: a worker retrying a
+call three times inside one tick halves once; a poll deferring across three ticks
+halves on each. Both converge on the floor and both satisfy the acceptance below
+("halves after the first observed 429 and stays reduced").
 
 The reduction applies **only to the batch wave**. The single-call phases
 (distillation, consolidation) send one call and have no wave concurrency to lower.
@@ -108,12 +114,15 @@ The reduction applies **only to the batch wave**. The single-call phases
 ### 6. Strikes
 
 - A retry that succeeds burns no transport strike.
-- The worker exhausting its 3 in-tick attempts marks the outcome as a plain
-  provider failure (`ProviderUnreachableException`, whose message names the last
-  429/5xx status). `guardWaveTransport()` and the advancer's existing
-  transport-strike path then fire unchanged and burn one strike. The existing
-  `MAX_TRANSPORT_FAILURES = 3` limit still fails the run. No new catch is added to
-  the strike path.
+- The worker exhausting its 3 in-tick attempts leaves the last
+  `RetryableProviderException` on the outcome, so `guardWaveTransport()` throws it
+  as the hard failure it is. The advancer catches `RetryableProviderException`
+  alongside `ProviderUnreachableException` on the strike path and burns one strike
+  through the existing `recordTransportFailure()`. Keeping the type (rather than
+  flattening it to `ProviderUnreachableException`) is what lets the advancer tell
+  an observed 429 — which must also halve the concurrency — from a plain
+  unreachable, which must not. The existing `MAX_TRANSPORT_FAILURES = 3` limit
+  still fails the run.
 - The poll and sweep drivers never strike on a rate limit. They defer. On a
   worker-less install a permanently rate-limited run therefore stays `running`
   until the provider recovers or a worker takes over. This is an accepted
@@ -164,9 +173,8 @@ exercised only by CI's migrate-from-empty leg — it needs its own verification.
 - `App\Service\Recommendation\RateLimitedCompletion` — over `ChatCompletionClient`
   and `ClockInterface`. Runs the calls; for a blocking plan it waits and re-fires
   only the still-retryable calls, within the attempt and budget limits. Returns
-  one of: *completed* (final outcomes, plus whether a 429 was observed; a call the
-  worker retried to exhaustion is turned into a plain `ProviderUnreachableException`
-  failure outcome, so nothing downstream needs to know it began as a 429) or
+  one of: *completed* (final outcomes, plus whether any 429 was observed — a call
+  the worker retried to exhaustion keeps its `RetryableProviderException` cause) or
   *deferred* (the wait to apply, when the plan defers or the next wait would cross
   the budget).
 - `App\Service\Recommendation\Exception\RecommendationRunRateLimitedException` —
@@ -191,14 +199,16 @@ exercised only by CI's migrate-from-empty leg — it needs its own verification.
   deferral exception.
 - `RecommendationBatchWave` — route the round through `RateLimitedCompletion` with
   the plan; on a deferred result, settle the round's rows and throw the deferral
-  exception; return whether a 429 was observed alongside the winners; a worker's
-  exhausted call arrives already converted to a `ProviderUnreachableException`
-  outcome and flows through `guardWaveTransport()` as the hard failure it is.
+  exception; return whether a 429 was observed alongside the winners (a
+  `BatchWaveResult`); a worker's exhausted call keeps its `RetryableProviderException`
+  and flows through `guardWaveTransport()` as the hard failure it is.
 - `RecommendationRunAdvancer` — build the plan from the driver; gate at tick start;
-  in the batch phase, halve on any observed 429, catch the deferral to write
-  "retry not before T", and keep the existing strike path for a hard failure; in
-  the single-call phases, catch the deferral (no halving) and keep the strike
-  path; clamp `waveSize()` to the reduced cap.
+  in the batch phase halve the concurrency once for any tick that observed a 429
+  (whether the wave recovered, deferred, or exhausted), catch the deferral to write
+  "retry not before T", and catch `RetryableProviderException` alongside
+  `ProviderUnreachableException` on the strike path; in the single-call phases,
+  catch the deferral (no halving) and catch `RetryableProviderException` on the
+  strike path (no halving); clamp `waveSize()` to the reduced cap.
 - `RecommendationRun` — embed `RunThrottle`; expose the gate, the halve, the
   effective-cap read, and the deferral write; clear the deferral on progress and
   reset the throttle on resume.
@@ -221,9 +231,9 @@ exercised only by CI's migrate-from-empty leg — it needs its own verification.
 4. On recovery: the wave returns the winners with "429 observed" true. The
    advancer halves the run's concurrency, banks the winners, clears any deferral,
    and flushes.
-5. On exhaustion: the outcomes carry a hard failure. `guardWaveTransport()` throws
-   it; the advancer halves, records one strike, and re-throws. Three strikes fail
-   the run.
+5. On exhaustion: an outcome still carries a `RetryableProviderException`.
+   `guardWaveTransport()` throws it; the advancer halves, records one strike, and
+   re-throws. Three strikes fail the run.
 6. On a wait beyond budget: the collaborator returns *deferred*. The wave throws
    the deferral. The advancer halves, writes "retry not before T", and returns the
    running report — no strike.
