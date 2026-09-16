@@ -60,6 +60,21 @@ final class GzipLineReaderTest extends TestCase
         self::read('this is not gzip');
     }
 
+    public function testClosesTheSuppliedHandleWhenReadingFails(): void
+    {
+        $stream = fopen('php://temp', 'w+b');
+        self::assertIsResource($stream);
+        fwrite($stream, 'this is not gzip');
+        rewind($stream);
+
+        try {
+            iterator_to_array(GzipLineReader::lines($stream), false);
+            self::fail('A non-gzip stream was accepted.');
+        } catch (InvalidBackupException) {
+            self::assertFalse(is_resource($stream));
+        }
+    }
+
     /**
      * A partially downloaded file keeps its magic bytes, so the header guard
      * waves it through and zlib only fails deep inside the inflate — the most

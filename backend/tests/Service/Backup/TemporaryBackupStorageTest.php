@@ -84,6 +84,7 @@ final class TemporaryBackupStorageTest extends TestCase
         $this->replaceDirectoryWithFile($this->fallbackDirectory);
 
         $this->expectException(BackupStorageException::class);
+        $this->expectExceptionMessage('The backup upload cannot be stored temporarily.');
         $this->storage()->withFile($this->source('bytes'), static fn (): null => null);
     }
 
@@ -98,6 +99,8 @@ final class TemporaryBackupStorageTest extends TestCase
         }
 
         self::assertInstanceOf(BackupStorageException::class, $failure);
+        self::assertSame('The backup upload cannot be written to temporary storage.', $failure->getMessage());
+        self::assertInstanceOf(\RuntimeException::class, $failure->getPrevious());
         self::assertSame(0, $this->entryCount($this->primaryDirectory));
     }
 
@@ -172,6 +175,7 @@ final class TemporaryBackupStorageTest extends TestCase
 
             $path = $metadata['uri'] ?? null;
             self::assertIsString($path);
+            self::assertMatchesRegularExpression('/^backup-[a-f0-9]{24}\.gz$/', basename($path));
             self::assertSame(0600, fileperms($path) & 0777);
         });
     }
