@@ -1,3 +1,11 @@
+// The template renders nothing without duplicates, so the host must hold no box
+// either: as a plain flex item it still takes a slot, and its parent card's gap
+// then reserves dead space below the meta row (#496 regressed the split card's
+// bottom-flush meta, #1061).
+:host {
+  display: contents;
+}
+
 .also-foot {
   display: flex;
   align-items: center;
