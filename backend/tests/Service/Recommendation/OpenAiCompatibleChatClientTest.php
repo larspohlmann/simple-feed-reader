@@ -7,6 +7,7 @@ namespace App\Tests\Service\Recommendation;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\ProviderConnection;
 use App\Service\Ai\ProviderCredentials;
 use App\Service\Ai\ProviderTimeouts;
@@ -496,6 +497,74 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $this->expectException(CredentialsRejectedException::class);
         $this->expectExceptionMessage('That provider refused the API key.');
         $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+    }
+
+    public function testA429BecomesARetryableOutcomeCarryingRetryAfter(): void
+    {
+        $client = $this->clientAnswering(
+            new MockResponse('{"error":"slow down"}', [
+                'http_code' => 429,
+                'response_headers' => ['retry-after' => '9'],
+            ]),
+        );
+
+        $outcome = $this->soleOutcomeOf($client, $this->request());
+
+        self::assertTrue($outcome->isFailure());
+        self::assertTrue($outcome->isRetryable());
+        self::assertInstanceOf(RetryableProviderException::class, $outcome->cause());
+        self::assertSame(9, $outcome->retryAfterSeconds());
+    }
+
+    public function testA503IsRetryableWithNoRetryAfter(): void
+    {
+        $client = $this->clientAnswering(new MockResponse('', ['http_code' => 503]));
+
+        $outcome = $this->soleOutcomeOf($client, $this->request());
+
+        self::assertTrue($outcome->isRetryable());
+        self::assertNull($outcome->retryAfterSeconds());
+    }
+
+    public function testA502IsRetryable(): void
+    {
+        $client = $this->clientAnswering(new MockResponse('', ['http_code' => 502]));
+
+        $outcome = $this->soleOutcomeOf($client, $this->request());
+
+        self::assertTrue($outcome->isRetryable());
+        self::assertInstanceOf(RetryableProviderException::class, $outcome->cause());
+    }
+
+    public function testA504IsRetryable(): void
+    {
+        $client = $this->clientAnswering(new MockResponse('', ['http_code' => 504]));
+
+        $outcome = $this->soleOutcomeOf($client, $this->request());
+
+        self::assertTrue($outcome->isRetryable());
+        self::assertInstanceOf(RetryableProviderException::class, $outcome->cause());
+    }
+
+    public function testA500IsStillANonRetryableUnreachableFailure(): void
+    {
+        $client = $this->clientAnswering(new MockResponse('', ['http_code' => 500]));
+
+        $outcome = $this->soleOutcomeOf($client, $this->request());
+
+        self::assertTrue($outcome->isFailure());
+        self::assertFalse($outcome->isRetryable());
+        self::assertInstanceOf(ProviderUnreachableException::class, $outcome->cause());
+    }
+
+    public function testANonNumericRetryAfterFallsBackToNoHint(): void
+    {
+        $client = $this->clientAnswering(new MockResponse('', [
+            'http_code' => 429,
+            'response_headers' => ['retry-after' => 'Wed, 21 Oct 2026 07:28:00 GMT'],
+        ]));
+
+        self::assertNull($this->soleOutcomeOf($client, $this->request())->retryAfterSeconds());
     }
 
     /**

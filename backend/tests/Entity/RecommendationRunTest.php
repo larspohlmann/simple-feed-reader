@@ -388,6 +388,104 @@ final class RecommendationRunTest extends TestCase
         self::assertTrue($run->progress()->attemptsExhausted);
     }
 
+    public function testAFreshRunNeitherWaitsNorReducesTheCap(): void
+    {
+        $run = $this->makeRun();
+
+        self::assertFalse($run->mustWaitBeforeRetry(new \DateTimeImmutable('2026-08-07T09:00:00Z')));
+        self::assertSame(8, $run->waveConcurrencyCap(8));
+        self::assertNull($run->getRetryNotBefore());
+    }
+
+    public function testDeferRetryUntilGatesTicksUntilThatTime(): void
+    {
+        $run = $this->runInRunningState();
+        $when = new \DateTimeImmutable('2026-08-07T09:05:00Z');
+
+        $run->deferRetryUntil($when);
+
+        self::assertSame($when, $run->getRetryNotBefore());
+        self::assertTrue($run->mustWaitBeforeRetry(new \DateTimeImmutable('2026-08-07T09:04:00Z')));
+        self::assertFalse($run->mustWaitBeforeRetry($when));
+    }
+
+    public function testDeferRetryUntilBeforeSnapshotThrows(): void
+    {
+        $run = $this->makeRun();
+
+        $this->expectException(\LogicException::class);
+        $run->deferRetryUntil(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+    }
+
+    public function testReduceWaveConcurrencyHalvesTheConfiguredCap(): void
+    {
+        $run = $this->runInRunningState();
+
+        $run->reduceWaveConcurrency(8);
+
+        self::assertSame(4, $run->waveConcurrencyCap(8));
+    }
+
+    public function testReduceWaveConcurrencyBeforeSnapshotThrows(): void
+    {
+        $run = $this->makeRun();
+
+        $this->expectException(\LogicException::class);
+        $run->reduceWaveConcurrency(8);
+    }
+
+    public function testRecordBatchWinnersClearsTheDeferralButKeepsTheReducedCap(): void
+    {
+        $run = $this->makeRun();
+        $run->snapshot([[1], [2]]);
+        $run->reduceWaveConcurrency(8);
+        $run->deferRetryUntil(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+
+        $run->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
+
+        self::assertNull($run->getRetryNotBefore());
+        self::assertSame(4, $run->waveConcurrencyCap(8));
+    }
+
+    public function testRecordProfileClearsTheDeferralButKeepsTheReducedCap(): void
+    {
+        $run = $this->runInRunningState();
+        $run->reduceWaveConcurrency(8);
+        $run->deferRetryUntil(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+
+        $run->recordProfile('Likes Rust.');
+
+        self::assertNull($run->getRetryNotBefore());
+        self::assertSame(4, $run->waveConcurrencyCap(8));
+    }
+
+    public function testCompleteClearsTheDeferralButKeepsTheReducedCap(): void
+    {
+        $run = $this->makeRun();
+        $run->snapshot([[1]]);
+        $run->reduceWaveConcurrency(8);
+        $run->deferRetryUntil(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+
+        $run->complete(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
+
+        self::assertNull($run->getRetryNotBefore());
+        self::assertSame(4, $run->waveConcurrencyCap(8));
+    }
+
+    public function testResumeClearsBothTheDeferralAndTheReducedCap(): void
+    {
+        $run = $this->makeRun();
+        $run->snapshot([[1]]);
+        $run->reduceWaveConcurrency(8);
+        $run->deferRetryUntil(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+        $run->fail('boom', new \DateTimeImmutable('2026-08-07T10:00:00Z'));
+
+        $run->resume();
+
+        self::assertNull($run->getRetryNotBefore());
+        self::assertSame(8, $run->waveConcurrencyCap(8));
+    }
+
     private function makeRun(): RecommendationRun
     {
         $user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));

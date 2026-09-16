@@ -21,6 +21,7 @@ use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\ProviderTimeouts;
 use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\CompletionStreamHeartbeat;
@@ -272,6 +273,34 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         self::assertSame('busy', $second->status);
         self::assertSame([], $logSpy->getRecords());
+    }
+
+    /**
+     * The gate in tickActiveRun(): a run whose retry_not_before is still in
+     * the future must not spend a provider call, and must report as still
+     * running. Written straight to the DB, exactly like the cancellation
+     * race above -- the ticking side holds an entity that predates this
+     * write, which is the only way a cooperative test lands inside the
+     * cross-process window the gate defends.
+     */
+    public function testATickWithinItsRetryWindowMakesNoProviderCall(): void
+    {
+        $this->seedMultiBatchFixture();
+        $run = $this->startSnapshotAndDistill(); // run is RUNNING, ready for the batch phase
+        $runId = $run->getId() ?? 0;
+
+        $this->em->getConnection()->update(
+            'recommendation_run',
+            ['retry_not_before' => '2099-01-01 00:00:00'],
+            ['id' => $runId],
+        );
+        $this->em->clear();
+
+        $callsBefore = \count($this->stubChatClient()->calls());
+        $report = $this->advancer()->advance($this->user, TickDriver::Worker);
+
+        self::assertSame('running', $report->status);
+        self::assertCount($callsBefore, $this->stubChatClient()->calls()); // no new provider call
     }
 
     private function replaceLoggerWithASpy(): TestHandler
@@ -1038,7 +1067,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * resolveWave() classifies both ProviderUnreachableException and
+     * providerTick() classifies both ProviderUnreachableException and
      * CredentialsRejectedException as the wave's transport failure -- a
      * rejected key never produced a reply either, so it must count against
      * the same one-per-wave ceiling, not slip past uncounted (#344 final
@@ -1231,6 +1260,94 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame(4, $thirdTick->batchesDone);
         self::assertCount(5, $this->stubChatClient()->calls()); // distill, warm-up, two, then one
         self::assertTrue($this->activeRun()->progress()->isConsolidationPhase);
+    }
+
+    /**
+     * A 429 met by a poll tick's fan-out wave must defer rather than strike
+     * (#947): the poll driver's plan never blocks, so RateLimitedCompletion
+     * reports the wave as deferred on its first call. The wave settles its
+     * recorded rows and throws RecommendationRunRateLimitedException, the
+     * advancer halves the run's wave concurrency and defers via
+     * RecommendationRunDeferral -- no transport-failure strike, and nothing
+     * from the fan-out wave banks; only the warm-up batch (0) is done.
+     */
+    public function testAPollBatchWaveDefersAndHalvesTheConcurrencyOnA429(): void
+    {
+        $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
+        $this->setBatchConcurrency(4);
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user, TickDriver::Poll); // snapshot
+        $this->queueDistillReply();
+        $this->advancer()->advance($this->user, TickDriver::Poll); // distill
+        $batches = $this->activeRun()->getCandidateBatches();
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[0][0], 'score' => 90, 'reason' => 'warm']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user, TickDriver::Poll); // warm-up wave banks batch 0
+
+        // The poll driver clamps the fan-out wave to POLL_MAX_CONCURRENCY (2 of
+        // the 3 remaining batches), sent as one concurrent round: the first
+        // call meets a 429, the second answers normally but is discarded too
+        // -- a deferral settles every call the round opened, usable or not.
+        $this->stubChatClient()->queueFailure(new RetryableProviderException(429, 20));
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[2][0], 'score' => 92, 'reason' => 'discarded']],
+        ], \JSON_THROW_ON_ERROR));
+
+        $report = $this->advancer()->advance($this->user, TickDriver::Poll);
+
+        self::assertSame('running', $report->status);
+        $run = $this->activeRun();
+        self::assertSame(0, $run->getTransportFailures());     // deferral, not a strike
+        self::assertNotNull($run->getRetryNotBefore());
+        self::assertSame(1, $run->progress()->batchesDone);    // nothing new banked (warm-up only)
+        self::assertSame(2, $run->waveConcurrencyCap(4));      // halved from 4
+    }
+
+    /**
+     * The worker's plan blocks and retries in-tick, so a 429 met mid-wave
+     * still halves the concurrency (rateLimitObserved) but the wave itself
+     * recovers and banks everything -- no strike, no deferral. Only the
+     * limited call is re-fired: RateLimitedCompletion re-sends the subset
+     * still pending, not the whole round, so the queue holds exactly one
+     * reply per call plus the one re-fire (#947). Retry-After 0 keeps the
+     * blocking retry's sleep at zero, so this exercises the real retry path
+     * without any wall-clock cost or clock double.
+     */
+    public function testAWorkerBatchWaveHalvesButStillBanksWhenTheRetryRecovers(): void
+    {
+        $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
+        $this->setBatchConcurrency(4);
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user, TickDriver::Worker);
+        $this->queueDistillReply();
+        $this->advancer()->advance($this->user, TickDriver::Worker);
+        $batches = $this->activeRun()->getCandidateBatches();
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[0][0], 'score' => 90, 'reason' => 'warm']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user, TickDriver::Worker); // warm-up
+
+        // Fan-out over batches 1..3: the call for batch 1 is limited once,
+        // then recovers on the re-fire; batches 2 and 3 answer on the first
+        // pass.
+        $this->stubChatClient()->queueFailure(new RetryableProviderException(429, 0));
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[2][0], 'score' => 92, 'reason' => 'two']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[3][0], 'score' => 93, 'reason' => 'three']],
+        ], \JSON_THROW_ON_ERROR));
+        // Retry re-fires only the limited call (batch 1).
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[1][0], 'score' => 91, 'reason' => 'one']],
+        ], \JSON_THROW_ON_ERROR));
+
+        $report = $this->advancer()->advance($this->user, TickDriver::Worker);
+
+        self::assertSame(4, $report->batchesDone);              // whole wave banked
+        self::assertSame(0, $this->activeRun()->getTransportFailures());
+        self::assertSame(2, $this->activeRun()->waveConcurrencyCap(4)); // halved once
     }
 
     /**
@@ -1950,7 +2067,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
      * catch, had no advancer-level regression guard of its own before this:
      * RecommendationProfileDistillerTest only proves distill() itself throws,
      * never that the advancer's own catch (recordTransportFailure + rethrow)
-     * actually wraps that call the same way resolveWave() and consolidateTick
+     * actually wraps that call the same way providerTick() and consolidateTick
      * do.
      */
     #[DataProvider('transportFailureArms')]
@@ -1980,6 +2097,57 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             'A failed distillation call leaves the phase to retry.',
         );
         self::assertSame([], $this->recommendationItems($persisted));
+    }
+
+    /**
+     * A poll tick never blocks (#947): a 429 during the distillation call must
+     * defer the run -- record "retry not before", leave the profile unwritten,
+     * keep the run RUNNING -- rather than burn a transport-failure strike the
+     * way ProviderUnreachableException does. The strike ceiling exists for a
+     * dead endpoint; a rate limit is a wait, not a failure.
+     */
+    public function testAPollDistillTickDefersOnA429WithoutStrikingOrCalling(): void
+    {
+        $this->seedMultiBatchFixture();
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user, TickDriver::Poll); // snapshot tick
+        $this->stubChatClient()->queueFailure(new RetryableProviderException(429, 30));
+
+        $report = $this->advancer()->advance($this->user, TickDriver::Poll); // distill, rate limited
+
+        self::assertSame(RecommendationRun::STATUS_RUNNING, $report->status);
+        $run = $this->activeRun();
+        self::assertSame(0, $run->getTransportFailures());
+        self::assertNotNull($run->getRetryNotBefore());
+        self::assertFalse($run->isDistilled());
+    }
+
+    /**
+     * A worker tick owns its process, so RetryPlan lets it block and retry a
+     * 429 in place (#947): the same distill call that failed once recovers
+     * within the same tick, writes the profile, and never touches the
+     * transport-failure ceiling -- a retry that recovers is not a failure.
+     *
+     * The queued failure carries a zero-second Retry-After so the in-place
+     * retry costs no real wall-clock time: no test in this suite swaps the
+     * container's functional clock (see services_test.yaml's
+     * PasskeyChallengeStore note and OAuthFlowTest), and RecommendationRunAdvancerTest's
+     * own setUp() flush already resolves the real ClockInterface before any
+     * test body runs, so that swap is not available here either.
+     */
+    public function testAWorkerDistillTickRetriesA429AndRecovers(): void
+    {
+        $this->seedMultiBatchFixture();
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user, TickDriver::Worker); // snapshot tick
+        $this->stubChatClient()->queueFailure(new RetryableProviderException(429, 0));
+        $this->queueDistillReply('a profile');
+
+        $report = $this->advancer()->advance($this->user, TickDriver::Worker); // distill, recovers
+
+        self::assertSame(RecommendationRun::STATUS_RUNNING, $report->status);
+        self::assertTrue($this->activeRun()->isDistilled());
+        self::assertSame(0, $this->activeRun()->getTransportFailures());
     }
 
     /**
@@ -2064,6 +2232,44 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             'A failed consolidation call leaves the phase to retry.',
         );
         self::assertSame([], $this->recommendationItems($persisted));
+    }
+
+    /**
+     * The consolidation phase's own copy of the #947 deferral catch, parallel
+     * to distillTick's -- testAPollDistillTickDefersOnA429WithoutStrikingOrCalling
+     * proves that one, but nothing in the suite drove a 429 through
+     * consolidateTick's identical `catch (RecommendationRunRateLimitedException)`
+     * block. A poll tick never blocks: the 429 must defer the run -- record
+     * "retry not before", keep the run RUNNING and still in the consolidation
+     * phase -- rather than burn a transport-failure strike or finalize on the
+     * degraded pool.
+     */
+    public function testAPollConsolidationTickDefersOnA429WithoutStriking(): void
+    {
+        $this->seedMultiBatchFixture();
+        $run = $this->startSnapshotAndDistill();
+        $firstBatch = $run->getCandidateBatches()[0];
+        $secondBatch = $run->getCandidateBatches()[1];
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 80, 'reason' => 'batch one']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $secondBatch[0], 'score' => 95, 'reason' => 'batch two']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+        self::assertTrue($this->activeRun()->progress()->isConsolidationPhase);
+
+        $this->stubChatClient()->queueFailure(new RetryableProviderException(429, 30));
+
+        $report = $this->advancer()->advance($this->user, TickDriver::Poll);
+
+        self::assertSame(RecommendationRun::STATUS_RUNNING, $report->status);
+        $persisted = $this->activeRun();
+        self::assertSame(0, $persisted->getTransportFailures());
+        self::assertNotNull($persisted->getRetryNotBefore());
+        self::assertTrue($persisted->progress()->isConsolidationPhase);
     }
 
     /**

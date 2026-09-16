@@ -45,6 +45,7 @@ final readonly class RecommendationConsolidationResolver
         int $userId,
         int $picksLimit,
         EffectiveRecommendationSettings $effectiveSettings,
+        RetryPlan $plan,
     ): ConsolidationOutcome {
         $history = $this->historyLoader->load($userId, $effectiveSettings);
         $inputSize = $this->promptBuilder->consolidationInputSize(
@@ -94,6 +95,7 @@ final readonly class RecommendationConsolidationResolver
                 RecommendationResponseSchema::Consolidation,
             ),
             $recordedCall,
+            $plan,
         );
 
         $result = $this->consolidationParser->parse($content, array_column($pool, 'id'));

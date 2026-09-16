@@ -44,6 +44,7 @@ final readonly class RecommendationProfileDistiller
         AiProviderSettings $settings,
         int $userId,
         EffectiveRecommendationSettings $effectiveSettings,
+        RetryPlan $plan,
     ): ProfileDistillationOutcome {
         $history = $this->historyLoader->load($userId, $effectiveSettings);
 
@@ -65,6 +66,7 @@ final readonly class RecommendationProfileDistiller
             $settings,
             $this->requestFactory->create($settings, $messages, 1, RecommendationResponseSchema::Distillation),
             $recordedCall,
+            $plan,
         );
 
         $result = $this->profileParser->parse($content);
