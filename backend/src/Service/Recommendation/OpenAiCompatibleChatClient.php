@@ -8,6 +8,7 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderReplyFailure;
 use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\ProviderConnection;
 use Symfony\Contracts\HttpClient\ChunkInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
@@ -197,7 +198,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
             $response->cancel();
 
             return CompletionOutcome::unusableReply($spoiledReply);
-        } catch (CredentialsRejectedException | ProviderUnreachableException $failure) {
+        } catch (CredentialsRejectedException | ProviderUnreachableException | RetryableProviderException $failure) {
             $response->cancel();
 
             return CompletionOutcome::failure($failure);
@@ -261,6 +262,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
      *
      * @throws CredentialsRejectedException
      * @throws ProviderUnreachableException
+     * @throws RetryableProviderException
      * @throws ExceptionInterface
      */
     private function consumeChunk(ResponseInterface $response, ChunkInterface $chunk, CompletionCallSlot $slot): bool
@@ -287,7 +289,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
         // Headers have arrived: the status is readable here without blocking,
         // which is also the only point the concurrent read can inspect it.
         if ($chunk->isFirst()) {
-            $this->guardStatus($response->getStatusCode());
+            $this->guardStatus($response);
         }
 
         // Symfony's stream() yields content-free framing chunks (isFirst and
@@ -308,15 +310,33 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
         return $chunk->isLast();
     }
 
-    private function guardStatus(int $status): void
+    private function guardStatus(ResponseInterface $response): void
     {
+        $status = $response->getStatusCode();
+
         if (401 === $status || 403 === $status) {
             throw new CredentialsRejectedException('That provider refused the API key.');
+        }
+
+        if (\in_array($status, [429, 502, 503, 504], true)) {
+            throw new RetryableProviderException($status, $this->retryAfterSeconds($response));
         }
 
         if ($status >= 300) {
             throw new ProviderUnreachableException(sprintf('That provider answered with status %d.', $status));
         }
+    }
+
+    /**
+     * Integer seconds only. An HTTP-date form is left to the caller's backoff:
+     * turning a date into a wait needs a clock this driver-agnostic client does
+     * not carry, and the standard rate-limit form is a seconds count anyway.
+     */
+    private function retryAfterSeconds(ResponseInterface $response): ?int
+    {
+        $header = $response->getHeaders(false)['retry-after'][0] ?? null;
+
+        return null !== $header && ctype_digit($header) ? (int) $header : null;
     }
 
     /**

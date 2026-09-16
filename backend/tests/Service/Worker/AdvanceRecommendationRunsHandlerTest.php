@@ -27,11 +27,14 @@ use App\Service\Recommendation\RecommendationHistoryLoader;
 use App\Service\Recommendation\RecommendationProfileDistiller;
 use App\Service\Recommendation\RecommendationPromptBuilder;
 use App\Service\Recommendation\RecommendationRunAdvancer;
+use App\Service\Recommendation\RecommendationRunDeferral;
 use App\Service\Recommendation\RecommendationRunFinalizer;
 use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Recommendation\RecommendationSettingsResolver;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Recommendation\RecommendationTickCheckpoint;
+use App\Service\Recommendation\RecommendationTransportFailureRecorder;
+use App\Service\Recommendation\RecommendationWaveConcurrency;
 use App\Service\Recommendation\TickDriver;
 use App\Service\Recommendation\TickLockKeepalive;
 use App\Service\Worker\Handler\AdvanceRecommendationRunsHandler;
@@ -583,7 +586,6 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             self::getContainer()->get(RecommendationHistoryLoader::class),
             self::getContainer()->get(RecommendationPromptBuilder::class),
             $entityManager,
-            self::getContainer()->get(RecommendationTickCheckpoint::class),
             self::getContainer()->get(RecommendationProfileDistiller::class),
             self::getContainer()->get(RecommendationBatchWave::class),
             self::getContainer()->get(RecommendationConsolidationResolver::class),
@@ -594,6 +596,17 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
                 self::getContainer()->get(ClockInterface::class),
             ),
             self::getContainer()->get(TickLockKeepalive::class),
+            new RecommendationRunDeferral(
+                self::getContainer()->get(RecommendationTickCheckpoint::class),
+                $entityManager,
+                self::getContainer()->get(ClockInterface::class),
+            ),
+            self::getContainer()->get(RecommendationWaveConcurrency::class),
+            new RecommendationTransportFailureRecorder(
+                self::getContainer()->get(RecommendationTickCheckpoint::class),
+                $entityManager,
+                self::getContainer()->get(ClockInterface::class),
+            ),
         );
     }
 

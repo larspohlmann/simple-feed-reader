@@ -15,6 +15,8 @@ use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
 use App\Service\Recommendation\RecommendationProfileDistiller;
 use App\Service\Recommendation\RecommendationSettingsResolver;
+use App\Service\Recommendation\RetryPlan;
+use App\Service\Recommendation\TickDriver;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
@@ -57,6 +59,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
             $this->activeAiSettings(),
             $this->userId(),
             $this->effectiveSettings(),
+            $this->plan(),
         );
 
         self::assertTrue($outcome->usable);
@@ -73,6 +76,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
             $this->activeAiSettings(),
             $this->userId(),
             $this->effectiveSettings(),
+            $this->plan(),
         );
 
         self::assertFalse($outcome->usable);
@@ -102,6 +106,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
             $this->activeAiSettings(),
             $this->userId(),
             $this->effectiveSettings(),
+            $this->plan(),
         );
     }
 
@@ -123,6 +128,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
                 $this->activeAiSettings(),
                 $this->userId(),
                 $this->effectiveSettings(),
+                $this->plan(),
             );
             self::fail('The transport failure must propagate.');
         } catch (\RuntimeException) {
@@ -152,6 +158,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
             $this->activeAiSettings(),
             $this->userId(),
             $this->effectiveSettings(),
+            $this->plan(),
         );
 
         $log = $this->em->getRepository(RecommendationRunLog::class)->findOneBy(['run' => $run]);
@@ -170,6 +177,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
             $this->activeAiSettings(),
             $this->userId(),
             $this->effectiveSettings(),
+            $this->plan(),
         );
 
         $calls = $this->stubChatClient()->calls();
@@ -200,6 +208,11 @@ final class RecommendationProfileDistillerTest extends DbTestCase
         $resolver = self::getContainer()->get(RecommendationSettingsResolver::class);
 
         return $resolver->forUser($this->user);
+    }
+
+    private function plan(): RetryPlan
+    {
+        return RetryPlan::forDriver(TickDriver::Poll);
     }
 
     private function userId(): int
