@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 use App\Service\Ai\Exception\ProviderReplyFailure;
+use App\Service\Ai\Exception\RetryableProviderException;
 
 /**
  * The result of one call in a concurrent wave: a decoded answer or the
@@ -82,5 +83,17 @@ final readonly class CompletionOutcome
         }
 
         return $this->cause;
+    }
+
+    public function isRetryable(): bool
+    {
+        return $this->cause instanceof RetryableProviderException;
+    }
+
+    public function retryAfterSeconds(): ?int
+    {
+        return $this->cause instanceof RetryableProviderException
+            ? $this->cause->retryAfterSeconds()
+            : null;
     }
 }
