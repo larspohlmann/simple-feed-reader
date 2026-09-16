@@ -10,6 +10,17 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.0.12] - 2026-09-16
+
+## What's Changed
+* fix(#1061): repair the three rotted e2e specs by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1062
+* fix(#1063): raise backup upload ceiling to 64M by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1065
+* Handle provider 429 during recommendation runs: wait, retry, throttle (#947) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1067
+* fix(#1064): stream restore uploads through temporary files by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1068
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.0.11...v1.0.12
+
 ## [v1.0.11] - 2026-09-15
 
 ## What's Changed
