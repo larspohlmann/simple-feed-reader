@@ -25,8 +25,9 @@ use Doctrine\ORM\Mapping as ORM;
  * and resume, #409) — none is a duplicate a merge could remove, and none can
  * be renamed to the rule's get/set ignore pattern without lying about what it
  * does. The usage columns already moved off as the ProviderUsage embeddable,
- * and profileText/distilled as RunProfile (#493) — the field-count fix this
- * same finding was pointing at.
+ * profileText/distilled as RunProfile (#493), and attempts/transportFailures/
+ * lastInvalidReply as RunCallAttempts (#947) — the field-count fix this same
+ * finding keeps pointing at.
  *
  * @SuppressWarnings("PHPMD.TooManyPublicMethods")
  */
@@ -109,14 +110,8 @@ class RecommendationRun
     #[ORM\Embedded(class: RunBatchProgress::class, columnPrefix: false)]
     private RunBatchProgress $batchProgress;
 
-    #[ORM\Column(options: ['default' => 0])]
-    private int $attempts = 0;
-
-    #[ORM\Column(options: ['default' => 0])]
-    private int $transportFailures = 0;
-
-    #[ORM\Column(type: Types::TEXT, nullable: true)]
-    private ?string $lastInvalidReply = null;
+    #[ORM\Embedded(class: RunCallAttempts::class, columnPrefix: false)]
+    private RunCallAttempts $callAttempts;
 
     #[ORM\Embedded(class: RunProfile::class, columnPrefix: false)]
     private RunProfile $runProfile;
@@ -135,6 +130,9 @@ class RecommendationRun
     #[ORM\Embedded(class: ProviderUsage::class, columnPrefix: false)]
     private ProviderUsage $providerUsage;
 
+    #[ORM\Embedded(class: RunThrottle::class, columnPrefix: false)]
+    private RunThrottle $throttle;
+
     public function __construct(User $user, \DateTimeImmutable $createdAt)
     {
         $this->user = $user;
@@ -142,6 +140,8 @@ class RecommendationRun
         $this->providerUsage = new ProviderUsage();
         $this->runProfile = new RunProfile();
         $this->batchProgress = new RunBatchProgress();
+        $this->throttle = new RunThrottle();
+        $this->callAttempts = new RunCallAttempts();
     }
 
     public function getId(): ?int
@@ -198,7 +198,7 @@ class RecommendationRun
         return RecommendationRunProgress::forBatchPlan(
             $this->candidateBatches,
             $this->batchProgress->batchesDone(),
-            $this->attempts,
+            $this->callAttempts->attempts(),
             $this->isDistilled(),
         );
     }
@@ -212,9 +212,8 @@ class RecommendationRun
 
         $this->batchWinners[] = $picks;
         $this->batchProgress->recordCompletedBatch();
-        $this->attempts = 0;
-        $this->transportFailures = 0;
-        $this->lastInvalidReply = null;
+        $this->callAttempts->reset();
+        $this->throttle->clearDeferral();
     }
 
     /** Mark this run once its first scored batch starts, before the provider
@@ -258,8 +257,7 @@ class RecommendationRun
     {
         $this->guardStatus(self::STATUS_RUNNING, 'recordInvalidReply');
 
-        $this->attempts++;
-        $this->lastInvalidReply = $reply;
+        $this->callAttempts->recordInvalidReply($reply);
     }
 
     /**
@@ -274,14 +272,12 @@ class RecommendationRun
     {
         $this->guardStatus(self::STATUS_RUNNING, 'recordTransportFailure');
 
-        $this->transportFailures++;
-
-        return $this->transportFailures >= self::MAX_TRANSPORT_FAILURES;
+        return $this->callAttempts->recordTransportFailure() >= self::MAX_TRANSPORT_FAILURES;
     }
 
     public function getLastInvalidReply(): ?string
     {
-        return $this->lastInvalidReply;
+        return $this->callAttempts->lastInvalidReply();
     }
 
     /**
@@ -294,9 +290,8 @@ class RecommendationRun
         $this->guardStatus(self::STATUS_RUNNING, 'recordProfile');
 
         $this->runProfile->record($profileText);
-        $this->attempts = 0;
-        $this->transportFailures = 0;
-        $this->lastInvalidReply = null;
+        $this->callAttempts->reset();
+        $this->throttle->clearDeferral();
     }
 
     public function getProfileText(): ?string
@@ -311,17 +306,44 @@ class RecommendationRun
 
     public function getAttempts(): int
     {
-        return $this->attempts;
+        return $this->callAttempts->attempts();
     }
 
     public function getTransportFailures(): int
     {
-        return $this->transportFailures;
+        return $this->callAttempts->transportFailures();
     }
 
     public function getStreamedChars(): int
     {
         return $this->streamedChars;
+    }
+
+    public function mustWaitBeforeRetry(\DateTimeImmutable $now): bool
+    {
+        return $this->throttle->mustWait($now);
+    }
+
+    public function deferRetryUntil(\DateTimeImmutable $when): void
+    {
+        $this->guardStatus(self::STATUS_RUNNING, 'defer a recommendation run');
+        $this->throttle->deferUntil($when);
+    }
+
+    public function reduceWaveConcurrency(int $configuredCap): void
+    {
+        $this->guardStatus(self::STATUS_RUNNING, 'reduce the wave concurrency of');
+        $this->throttle->reduceConcurrency($configuredCap);
+    }
+
+    public function waveConcurrencyCap(int $configuredCap): int
+    {
+        return $this->throttle->effectiveCap($configuredCap);
+    }
+
+    public function getRetryNotBefore(): ?\DateTimeImmutable
+    {
+        return $this->throttle->retryNotBefore();
     }
 
     /**
@@ -377,7 +399,8 @@ class RecommendationRun
         $this->batchProgress->completeAllBatches(
             $this->progress()->batchesTotal ?? $this->batchProgress->batchesDone(),
         );
-        $this->transportFailures = 0;
+        $this->callAttempts->resetTransportFailures();
+        $this->throttle->clearDeferral();
     }
 
     /**
@@ -419,9 +442,8 @@ class RecommendationRun
 
         $this->status = self::STATUS_RUNNING;
         $this->error = null;
-        $this->attempts = 0;
-        $this->transportFailures = 0;
-        $this->lastInvalidReply = null;
+        $this->callAttempts->reset();
+        $this->throttle->reset();
     }
 
     /**
