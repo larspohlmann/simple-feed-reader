@@ -25,6 +25,15 @@ const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123
 /** A password comfortably over the 12-char minimum the register form enforces. */
 const PASSWORD = 'onboarding-e2e-password-123';
 
+/** Playwright's default 5s expect budget is too tight for the real, backend-heavy
+ *  steps of this flow — sign-in (a login POST plus a client navigation) under CI
+ *  cold-start load, and subscribing a whole picker selection against the
+ *  instrumented dev stack. Both took longer than 5s and failed navigation
+ *  assertions that had nothing to do with the code under test (#1061). The
+ *  assertions still auto-retry, so a wider ceiling only costs time on a real
+ *  failure. */
+const NAV_TIMEOUT = 15_000;
+
 interface MailpitMessage {
   ID: string;
   To: { Address: string }[];
@@ -168,6 +177,14 @@ async function registerAndVerify(page: Page): Promise<void> {
   await page.locator('input[type=email]').fill(email);
   await page.locator('input[type=password]').fill(PASSWORD);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+
+  // This helper's contract is "left signed in", so wait for sign-in to actually
+  // land in the app before returning: the login POST and its client navigation
+  // can dwell on /login for a second or two under load. The target is the reader
+  // (`/`) or, once the catalog resolves, the picker (`/discover`) — either means
+  // signed in — so sign-in latency stops being charged to the caller's
+  // onboarding-redirect assertion (#1061).
+  await page.waitForURL(/\/(discover)?$/, { timeout: NAV_TIMEOUT });
 }
 
 async function dismissPasskeyOffer(page: Page): Promise<void> {
@@ -199,7 +216,7 @@ test('a new user is sent to the picker and lands in a reader with their tags', a
 
   await registerAndVerify(page);
 
-  await expect(page).toHaveURL(/\/discover$/);
+  await expect(page).toHaveURL(/\/discover$/, { timeout: NAV_TIMEOUT });
 
   const technology = page.getByRole('group', { name: 'Technology' });
   await technology.getByRole('button', { name: 'Select all' }).click();
@@ -209,7 +226,7 @@ test('a new user is sent to the picker and lands in a reader with their tags', a
 
   await page.getByTestId('subscribe').click();
 
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/$/, { timeout: NAV_TIMEOUT });
   await dismissPasskeyOffer(page);
   // Scope to the sidebar: once the post-onboarding sweep lands, "Technology" and
   // "Science" also appear as entry tag-pills, and the sidebar link's own name
@@ -224,7 +241,7 @@ test('a new user is sent to the picker and lands in a reader with their tags', a
 
 test('skipping goes to the reader and leaves a way back', async ({ page }) => {
   await registerAndVerify(page);
-  await expect(page).toHaveURL(/\/discover$/);
+  await expect(page).toHaveURL(/\/discover$/, { timeout: NAV_TIMEOUT });
 
   await page.getByRole('button', { name: 'Skip for now' }).click();
 
