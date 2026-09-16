@@ -34,6 +34,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\BackupFieldDeclarations;
 use App\Tests\Support\FullyPopulatedAccount;
+use App\Tests\Support\UploadStream;
 use App\Tests\Support\UserFactory;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
@@ -100,23 +101,12 @@ final class AccountRestorerTest extends DbTestCase
         string $gzip,
         ?string $confirmation,
     ): RestoreResult {
-        $stream = self::uploadStream($gzip);
+        $stream = UploadStream::fromString($gzip);
         try {
             return $restorer->restore($user, $stream, $confirmation);
         } finally {
             fclose($stream);
         }
-    }
-
-    /** @return resource */
-    private static function uploadStream(string $bytes): mixed
-    {
-        $stream = fopen('php://temp', 'w+b');
-        self::assertIsResource($stream);
-        fwrite($stream, $bytes);
-        rewind($stream);
-
-        return $stream;
     }
 
     private function makeFeed(string $url, string $title, string $sourceFormat): Feed

@@ -9,6 +9,7 @@ use App\Service\Backup\AccountRestorer;
 use App\Service\Backup\Exception\InvalidBackupException;
 use App\Service\Backup\RestoreResult;
 use App\Tests\DbTestCase;
+use App\Tests\Support\UploadStream;
 use App\Tests\Support\UserFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -65,23 +66,12 @@ final class GoldenBackupRestoreTest extends DbTestCase
 
     private function restore(User $user, string $gzip): RestoreResult
     {
-        $stream = self::uploadStream($gzip);
+        $stream = UploadStream::fromString($gzip);
         try {
             return $this->restorer()->restore($user, $stream, self::CONFIRMATION);
         } finally {
             fclose($stream);
         }
-    }
-
-    /** @return resource */
-    private static function uploadStream(string $bytes): mixed
-    {
-        $stream = fopen('php://temp', 'w+b');
-        self::assertIsResource($stream);
-        fwrite($stream, $bytes);
-        rewind($stream);
-
-        return $stream;
     }
 
     /**

@@ -7,12 +7,14 @@ namespace App\Tests\Service\Backup;
 use App\Service\Backup\Exception\BackupStorageException;
 use App\Service\Backup\TemporaryBackupFile;
 use App\Service\Backup\TemporaryBackupStorage;
-use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\PartiallyFailingUploadStream;
+use App\Tests\Support\RecordingLogger;
+use App\Tests\Support\UploadStream;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\AbstractLogger;
 use Psr\Log\LoggerInterface;
 use Stringable;
+use Symfony\Component\Filesystem\Filesystem;
 
 final class TemporaryBackupStorageTest extends TestCase
 {
@@ -43,7 +45,7 @@ final class TemporaryBackupStorageTest extends TestCase
             }
         }
 
-        $this->remove($this->directory);
+        (new Filesystem())->remove($this->directory);
     }
 
     public function testCopiesExactBytesIntoThePrimaryDirectory(): void
@@ -278,10 +280,7 @@ final class TemporaryBackupStorageTest extends TestCase
     /** @return resource */
     private function source(string $contents): mixed
     {
-        $sourceStream = fopen('php://temp', 'w+b');
-        self::assertIsResource($sourceStream);
-        fwrite($sourceStream, $contents);
-        rewind($sourceStream);
+        $sourceStream = UploadStream::fromString($contents);
         $this->sourceStreams[] = $sourceStream;
 
         return $sourceStream;
@@ -336,26 +335,5 @@ final class TemporaryBackupStorageTest extends TestCase
         }
 
         return count(array_diff(scandir($directory) ?: [], ['.', '..']));
-    }
-
-    private function remove(string $path): void
-    {
-        if (is_file($path) || is_link($path)) {
-            unlink($path);
-
-            return;
-        }
-
-        if (!is_dir($path)) {
-            return;
-        }
-
-        foreach (scandir($path) ?: [] as $entry) {
-            if ($entry !== '.' && $entry !== '..') {
-                $this->remove($path . '/' . $entry);
-            }
-        }
-
-        rmdir($path);
     }
 }

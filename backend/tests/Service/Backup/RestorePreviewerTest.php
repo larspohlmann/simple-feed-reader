@@ -18,6 +18,7 @@ use App\Service\Backup\Exception\BackupDoesNotFitException;
 use App\Service\Backup\RestorePreview;
 use App\Service\Backup\RestorePreviewer;
 use App\Tests\DbTestCase;
+use App\Tests\Support\UploadStream;
 use App\Tests\Support\UserFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -142,23 +143,12 @@ final class RestorePreviewerTest extends DbTestCase
 
     private function preview(User $user, string $gzip): RestorePreview
     {
-        $stream = self::uploadStream($gzip);
+        $stream = UploadStream::fromString($gzip);
         try {
             return $this->previewer()->preview($user, $stream);
         } finally {
             fclose($stream);
         }
-    }
-
-    /** @return resource */
-    private static function uploadStream(string $bytes): mixed
-    {
-        $stream = fopen('php://temp', 'w+b');
-        self::assertIsResource($stream);
-        fwrite($stream, $bytes);
-        rewind($stream);
-
-        return $stream;
     }
 
     private function makeUser(string $email, ?int $maxSubscriptions = null): User
