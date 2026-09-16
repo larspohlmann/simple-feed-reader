@@ -15,6 +15,7 @@ use App\Service\Backup\BackupFitCheck;
 use App\Service\Backup\BackupInventory;
 use App\Service\Backup\Dto\BackupHeader;
 use App\Service\Backup\Exception\BackupDoesNotFitException;
+use App\Service\Backup\RestorePreview;
 use App\Service\Backup\RestorePreviewer;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -139,6 +140,27 @@ final class RestorePreviewerTest extends DbTestCase
         return $previewer;
     }
 
+    private function preview(User $user, string $gzip): RestorePreview
+    {
+        $stream = self::uploadStream($gzip);
+        try {
+            return $this->previewer()->preview($user, $stream);
+        } finally {
+            fclose($stream);
+        }
+    }
+
+    /** @return resource */
+    private static function uploadStream(string $bytes): mixed
+    {
+        $stream = fopen('php://temp', 'w+b');
+        self::assertIsResource($stream);
+        fwrite($stream, $bytes);
+        rewind($stream);
+
+        return $stream;
+    }
+
     private function makeUser(string $email, ?int $maxSubscriptions = null): User
     {
         return $this->users->create($email, maxSubscriptions: $maxSubscriptions);
@@ -216,7 +238,7 @@ final class RestorePreviewerTest extends DbTestCase
         $this->expectException(BackupDoesNotFitException::class);
         $this->expectExceptionMessageMatches('/allows 1/');
 
-        $this->previewer()->preview($user, $gzip);
+        $this->preview($user, $gzip);
     }
 
     public function testPreviewEchoesTheInventoryAndTheCurrentAccountCounts(): void
@@ -236,7 +258,7 @@ final class RestorePreviewerTest extends DbTestCase
             self::footer(['feed' => 1, 'subscription' => 1]),
         ]);
 
-        $preview = $this->previewer()->preview($user, $gzip);
+        $preview = $this->preview($user, $gzip);
 
         self::assertSame('source@example.com', $preview->header->sourceEmail);
         self::assertSame(1, $preview->toLoad->feeds);
@@ -279,7 +301,7 @@ final class RestorePreviewerTest extends DbTestCase
             self::footer(['feed' => 1, 'subscription' => 1, 'entry' => 3, 'entryState' => 2]),
         ]);
 
-        $preview = $this->previewer()->preview($user, $gzip);
+        $preview = $this->preview($user, $gzip);
 
         self::assertSame(3, $preview->toLoad->entries);
         self::assertSame(2, $preview->toLoad->entryStates);

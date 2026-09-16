@@ -7,6 +7,7 @@ namespace App\Tests\Service\Backup;
 use App\Entity\User;
 use App\Service\Backup\AccountRestorer;
 use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Backup\RestoreResult;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -62,6 +63,27 @@ final class GoldenBackupRestoreTest extends DbTestCase
         return $gzip;
     }
 
+    private function restore(User $user, string $gzip): RestoreResult
+    {
+        $stream = self::uploadStream($gzip);
+        try {
+            return $this->restorer()->restore($user, $stream, self::CONFIRMATION);
+        } finally {
+            fclose($stream);
+        }
+    }
+
+    /** @return resource */
+    private static function uploadStream(string $bytes): mixed
+    {
+        $stream = fopen('php://temp', 'w+b');
+        self::assertIsResource($stream);
+        fwrite($stream, $bytes);
+        rewind($stream);
+
+        return $stream;
+    }
+
     /**
      * @return iterable<string, array{string, int, int}>
      */
@@ -75,7 +97,7 @@ final class GoldenBackupRestoreTest extends DbTestCase
     {
         $user = $this->makeUser('golden-' . $fixture . '@example.com');
 
-        $result = $this->restorer()->restore($user, $this->fixture($fixture), self::CONFIRMATION);
+        $result = $this->restore($user, $this->fixture($fixture));
 
         self::assertSame(1, $result->tags);
         self::assertSame(1, $result->subscriptions);
@@ -98,6 +120,6 @@ final class GoldenBackupRestoreTest extends DbTestCase
         $this->expectException(InvalidBackupException::class);
         $this->expectExceptionMessage('Unsupported schema version 1; this instance reads version 2.');
 
-        $this->restorer()->restore($user, $this->fixture($fixture), self::CONFIRMATION);
+        $this->restore($user, $this->fixture($fixture));
     }
 }

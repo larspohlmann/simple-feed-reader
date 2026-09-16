@@ -40,7 +40,7 @@ final readonly class AccountBackupController
     #[Route('/restore/preview', name: 'api_account_restore_preview', methods: ['POST'])]
     public function preview(#[CurrentUser] User $user, Request $request): JsonResponse
     {
-        return new JsonResponse(RestorePreviewJson::from($this->previewer->preview($user, $request->getContent())));
+        return new JsonResponse(RestorePreviewJson::from($this->previewer->preview($user, $request->getContent(true))));
     }
 
     #[Route('/restore', name: 'api_account_restore', methods: ['POST'])]
@@ -49,7 +49,7 @@ final readonly class AccountBackupController
         $confirmation = $request->query->get('confirm');
         $result = $this->restorer->restore(
             $user,
-            $request->getContent(),
+            $request->getContent(true),
             \is_string($confirmation) ? $confirmation : null,
         );
 
