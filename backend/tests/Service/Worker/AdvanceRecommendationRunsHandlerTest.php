@@ -27,6 +27,7 @@ use App\Service\Recommendation\RecommendationHistoryLoader;
 use App\Service\Recommendation\RecommendationProfileDistiller;
 use App\Service\Recommendation\RecommendationPromptBuilder;
 use App\Service\Recommendation\RecommendationRunAdvancer;
+use App\Service\Recommendation\RecommendationRunDeferral;
 use App\Service\Recommendation\RecommendationRunFinalizer;
 use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Recommendation\RecommendationSettingsResolver;
@@ -594,6 +595,11 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
                 self::getContainer()->get(ClockInterface::class),
             ),
             self::getContainer()->get(TickLockKeepalive::class),
+            new RecommendationRunDeferral(
+                self::getContainer()->get(RecommendationTickCheckpoint::class),
+                $entityManager,
+                self::getContainer()->get(ClockInterface::class),
+            ),
         );
     }
 

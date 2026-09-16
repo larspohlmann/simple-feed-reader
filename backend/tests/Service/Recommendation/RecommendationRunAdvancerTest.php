@@ -21,6 +21,7 @@ use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\ProviderTimeouts;
 use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\CompletionStreamHeartbeat;
@@ -2008,6 +2009,57 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             'A failed distillation call leaves the phase to retry.',
         );
         self::assertSame([], $this->recommendationItems($persisted));
+    }
+
+    /**
+     * A poll tick never blocks (#947): a 429 during the distillation call must
+     * defer the run -- record "retry not before", leave the profile unwritten,
+     * keep the run RUNNING -- rather than burn a transport-failure strike the
+     * way ProviderUnreachableException does. The strike ceiling exists for a
+     * dead endpoint; a rate limit is a wait, not a failure.
+     */
+    public function testAPollDistillTickDefersOnA429WithoutStrikingOrCalling(): void
+    {
+        $this->seedMultiBatchFixture();
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user, TickDriver::Poll); // snapshot tick
+        $this->stubChatClient()->queueFailure(new RetryableProviderException(429, 30));
+
+        $report = $this->advancer()->advance($this->user, TickDriver::Poll); // distill, rate limited
+
+        self::assertSame(RecommendationRun::STATUS_RUNNING, $report->status);
+        $run = $this->activeRun();
+        self::assertSame(0, $run->getTransportFailures());
+        self::assertNotNull($run->getRetryNotBefore());
+        self::assertFalse($run->isDistilled());
+    }
+
+    /**
+     * A worker tick owns its process, so RetryPlan lets it block and retry a
+     * 429 in place (#947): the same distill call that failed once recovers
+     * within the same tick, writes the profile, and never touches the
+     * transport-failure ceiling -- a retry that recovers is not a failure.
+     *
+     * The queued failure carries a zero-second Retry-After so the in-place
+     * retry costs no real wall-clock time: no test in this suite swaps the
+     * container's functional clock (see services_test.yaml's
+     * PasskeyChallengeStore note and OAuthFlowTest), and RecommendationRunAdvancerTest's
+     * own setUp() flush already resolves the real ClockInterface before any
+     * test body runs, so that swap is not available here either.
+     */
+    public function testAWorkerDistillTickRetriesA429AndRecovers(): void
+    {
+        $this->seedMultiBatchFixture();
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user, TickDriver::Worker); // snapshot tick
+        $this->stubChatClient()->queueFailure(new RetryableProviderException(429, 0));
+        $this->queueDistillReply('a profile');
+
+        $report = $this->advancer()->advance($this->user, TickDriver::Worker); // distill, recovers
+
+        self::assertSame(RecommendationRun::STATUS_RUNNING, $report->status);
+        self::assertTrue($this->activeRun()->isDistilled());
+        self::assertSame(0, $this->activeRun()->getTransportFailures());
     }
 
     /**

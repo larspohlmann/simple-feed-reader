@@ -27,7 +27,7 @@ use App\Service\Ai\ProviderConnectionFactory;
 final readonly class RecommendationProviderCall
 {
     public function __construct(
-        private ChatCompletionClient $chat,
+        private RateLimitedCompletion $completion,
         private ProviderConnectionFactory $connections,
     ) {
     }
@@ -36,12 +36,14 @@ final readonly class RecommendationProviderCall
         AiProviderSettings $settings,
         CompletionRequest $request,
         RecordedCall $recordedCall,
+        RetryPlan $plan,
     ): string {
         try {
-            return $this->chat->complete(
+            return $this->completion->complete(
                 $this->connections->forSettings($settings),
                 $request,
                 $recordedCall,
+                $plan,
             );
         } catch (\Throwable $e) {
             $recordedCall->abortAfterTransportFailure($e->getMessage());

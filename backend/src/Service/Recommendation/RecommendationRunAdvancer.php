@@ -13,9 +13,11 @@ use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\ProviderConnectionFactory;
 use App\Service\Ai\ProviderTimeouts;
 use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
+use App\Service\Recommendation\Exception\RecommendationRunRateLimitedException;
 use App\Service\Recommendation\Exception\RecommendationTickLockLostException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
@@ -96,6 +98,7 @@ final class RecommendationRunAdvancer
         private readonly RecommendationConsolidationResolver $consolidationResolver,
         private readonly RecommendationRunFinalizer $finalizer,
         private readonly TickLockKeepalive $keepalive,
+        private readonly RecommendationRunDeferral $deferral,
     ) {
     }
 
@@ -240,12 +243,14 @@ final class RecommendationRunAdvancer
             return RecommendationRunReport::fromRun($run);
         }
 
+        $plan = RetryPlan::forDriver($driver);
+
         if ($run->progress()->distillPending) {
-            return $this->distillTick($run, $user, $settings);
+            return $this->distillTick($run, $user, $settings, $plan);
         }
 
         if ($run->progress()->isConsolidationPhase) {
-            return $this->consolidateTick($run, $user, $settings);
+            return $this->consolidateTick($run, $user, $settings, $plan);
         }
 
         return $this->providerTick($run, $user, $settings, $driver);
@@ -425,13 +430,16 @@ final class RecommendationRunAdvancer
         RecommendationRun $run,
         User $user,
         AiProviderSettings $settings,
+        RetryPlan $plan,
     ): RecommendationRunReport {
         $userId = $this->requireUserId($user);
         $effectiveSettings = $this->settingsResolver->forUser($user);
 
         try {
-            $outcome = $this->distiller->distill($run, $settings, $userId, $effectiveSettings);
-        } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
+            $outcome = $this->distiller->distill($run, $settings, $userId, $effectiveSettings, $plan);
+        } catch (RecommendationRunRateLimitedException $e) {
+            return $this->deferral->defer($run, $e);
+        } catch (ProviderUnreachableException | CredentialsRejectedException | RetryableProviderException $e) {
             $this->recordTransportFailure($run, $settings, $e->getMessage());
 
             throw $e;
@@ -474,6 +482,7 @@ final class RecommendationRunAdvancer
         RecommendationRun $run,
         User $user,
         AiProviderSettings $settings,
+        RetryPlan $plan,
     ): RecommendationRunReport {
         $userId = $this->requireUserId($user);
         $effectiveSettings = $this->settingsResolver->forUser($user);
@@ -486,8 +495,11 @@ final class RecommendationRunAdvancer
                 $userId,
                 $picksLimit,
                 $effectiveSettings,
+                $plan,
             );
-        } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
+        } catch (RecommendationRunRateLimitedException $e) {
+            return $this->deferral->defer($run, $e);
+        } catch (ProviderUnreachableException | CredentialsRejectedException | RetryableProviderException $e) {
             $this->recordTransportFailure($run, $settings, $e->getMessage());
 
             throw $e;

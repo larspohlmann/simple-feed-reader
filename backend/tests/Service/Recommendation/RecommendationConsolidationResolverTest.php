@@ -15,6 +15,8 @@ use App\Service\Recommendation\ConsolidationOutcome;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationConsolidationResolver;
 use App\Service\Recommendation\RecommendationSettingsResolver;
+use App\Service\Recommendation\RetryPlan;
+use App\Service\Recommendation\TickDriver;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
@@ -252,7 +254,14 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
             'duplicates' => [],
         ], \JSON_THROW_ON_ERROR));
 
-        $this->resolver()->resolve($run, $this->activeAiSettings(), $this->userId(), 50, $this->effectiveSettings());
+        $this->resolver()->resolve(
+            $run,
+            $this->activeAiSettings(),
+            $this->userId(),
+            50,
+            $this->effectiveSettings(),
+            $this->plan(),
+        );
 
         $calls = $this->stubChatClient()->calls();
         self::assertCount(1, $calls);
@@ -337,7 +346,13 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
             $this->userId(),
             50,
             $this->effectiveSettings(),
+            $this->plan(),
         );
+    }
+
+    private function plan(): RetryPlan
+    {
+        return RetryPlan::forDriver(TickDriver::Poll);
     }
 
     private function idOf(Entry $entry): int
