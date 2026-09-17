@@ -896,6 +896,62 @@ article {
   margin: var(--space-2) 0 0;
 }
 
+/* Publisher FAQ disclosures (#1071): the reader-faq pass opens each <details>
+   and tags it, replacing the near-invisible default marker with a bordered card,
+   an accent question and a clear accent chevron. */
+.content ::ng-deep details.reader-faq {
+  margin: var(--space-3) 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  overflow: hidden;
+}
+
+.content ::ng-deep details.reader-faq > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  color: var(--accent);
+  font-weight: 650;
+  list-style: none;
+  cursor: pointer;
+}
+
+.content ::ng-deep details.reader-faq > summary::-webkit-details-marker {
+  display: none;
+}
+
+.content ::ng-deep details.reader-faq > summary::after {
+  content: '';
+  flex: none;
+  margin-left: auto;
+  width: 0.5em;
+  height: 0.5em;
+  border-right: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  transform: rotate(45deg);
+  transition: transform 0.2s;
+}
+
+.content ::ng-deep details.reader-faq[open] > summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.content ::ng-deep details.reader-faq[open] > summary::after {
+  transform: rotate(-135deg);
+}
+
+.content ::ng-deep details.reader-faq > :not(summary) {
+  margin: 0;
+  padding: var(--space-3) var(--space-4) 0;
+  color: var(--text-secondary);
+}
+
+.content ::ng-deep details.reader-faq > :last-child {
+  padding-bottom: var(--space-3);
+}
+
 /* Swipeable image carousel (#926): the same figure rhythm as a plain figure
    above, plus its own controls row for the prev/counter/next trio. */
 .content ::ng-deep .reader-slideshow {

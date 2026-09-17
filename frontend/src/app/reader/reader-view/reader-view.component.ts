@@ -58,6 +58,7 @@ import { highlightCodeBlocks } from '../code-highlight';
 import { attachHlsStreams } from '../hls-streams';
 import { upgradeMediaEmbeds } from '../media-embeds';
 import { markNarrationPlayers } from '../reader-narration';
+import { expandFaqDisclosures } from '../reader-faq';
 import { hydrateSlideshows } from '../reader-slideshow';
 import { estimateReadingMinutes } from '../reading-time';
 import { selectionQueryParams } from '../query';
@@ -402,6 +403,7 @@ export class ReaderViewComponent {
         void highlightCodeBlocks(host);
         upgradeMediaEmbeds(host);
         markNarrationPlayers(host, this.i18n.translate('reader.narrationPlayer'));
+        expandFaqDisclosures(host);
         hydrateSlideshows(host, {
           previous: this.i18n.translate('reader.slideshowPrevious'),
           next: this.i18n.translate('reader.slideshowNext'),
