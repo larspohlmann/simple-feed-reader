@@ -34,7 +34,7 @@ final readonly class RestoreLoader
     ) {
     }
 
-    public function load(User $user, TemporaryBackupFile $backup): RestoreResult
+    public function load(User $user, string $gzipBytes): RestoreResult
     {
         $entryLoader = new RestoreEntryLoader(
             $this->em,
@@ -50,6 +50,6 @@ final readonly class RestoreLoader
             $entryLoader,
         );
 
-        return $pass->run($user, $this->reader->read($backup));
+        return $pass->run($user, $this->reader->read($gzipBytes));
     }
 }

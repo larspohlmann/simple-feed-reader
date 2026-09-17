@@ -21,10 +21,10 @@ final readonly class BackupInspector
     {
     }
 
-    public function inspect(TemporaryBackupFile $backup): BackupInventory
+    public function inspect(string $gzipBytes): BackupInventory
     {
         $tally = new BackupTally();
-        foreach ($this->reader->read($backup) as $line) {
+        foreach ($this->reader->read($gzipBytes) as $line) {
             $tally->accept($line);
         }
 

@@ -21,14 +21,6 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class AccountBackupControllerTest extends WebTestCase
 {
-    private function assertNoTemporaryBackupFiles(): void
-    {
-        $projectDirectory = self::getContainer()->getParameter('kernel.project_dir');
-        $files = glob($projectDirectory . '/var/backup-restore/backup-*.gz');
-        self::assertIsArray($files);
-        self::assertSame([], $files);
-    }
-
     /** @return array{0: array<string, string>, 1: User} */
     private function auth(string $email): array
     {
@@ -133,7 +125,6 @@ final class AccountBackupControllerTest extends WebTestCase
     public function testPreviewReportsLoadAndDeleteCounts(): void
     {
         $client = self::createClient();
-        $this->assertNoTemporaryBackupFiles();
         [$headers, $user] = $this->auth('restore-preview@example.com');
         $userId = (int) $user->getId();
         $gzip = $this->seededBackupFor($user);
@@ -162,7 +153,6 @@ final class AccountBackupControllerTest extends WebTestCase
         $subscriptions = self::getContainer()->get(SubscriptionRepository::class);
         self::assertInstanceOf(SubscriptionRepository::class, $subscriptions);
         self::assertSame(1, $subscriptions->countForUser($userId));
-        $this->assertNoTemporaryBackupFiles();
     }
 
     public function testRestoreWithoutConfirmIs422AndDeletesNothing(): void
@@ -195,7 +185,6 @@ final class AccountBackupControllerTest extends WebTestCase
     public function testRestoreRunsEndToEndOverHttp(): void
     {
         $client = self::createClient();
-        $this->assertNoTemporaryBackupFiles();
         [$headers, $user] = $this->auth('restore-end-to-end@example.com');
         $this->seededBackupFor($user);
 
@@ -230,7 +219,6 @@ final class AccountBackupControllerTest extends WebTestCase
         $subscription = $subscriptionsBody['subscriptions'][0];
         self::assertIsArray($subscription);
         self::assertSame('https://restore-fixture.example/feed.xml', $subscription['feedUrl']);
-        $this->assertNoTemporaryBackupFiles();
     }
 
     public function testGarbageBodyIs422InvalidBackup(): void
@@ -273,7 +261,6 @@ final class AccountBackupControllerTest extends WebTestCase
     public function testACorruptGzipBodyIs422InvalidBackupRatherThan500(): void
     {
         $client = self::createClient();
-        $this->assertNoTemporaryBackupFiles();
         [$headers] = $this->auth('restore-corrupt@example.com');
 
         $client->request(
@@ -287,7 +274,6 @@ final class AccountBackupControllerTest extends WebTestCase
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
         self::assertSame('invalid_backup', $body['type']);
-        $this->assertNoTemporaryBackupFiles();
     }
 
     /**
@@ -299,7 +285,6 @@ final class AccountBackupControllerTest extends WebTestCase
     public function testACorruptGzipBodyToTheDestructiveRouteIs422AndDeletesNothing(): void
     {
         $client = self::createClient();
-        $this->assertNoTemporaryBackupFiles();
         [$headers, $user] = $this->auth('restore-corrupt-destructive@example.com');
         $userId = (int) $user->getId();
         $this->seededBackupFor($user);
@@ -317,7 +302,6 @@ final class AccountBackupControllerTest extends WebTestCase
         self::assertSame('invalid_backup', $body['type']);
 
         $this->assertAccountRowsSurvived($userId);
-        $this->assertNoTemporaryBackupFiles();
     }
 
     /**

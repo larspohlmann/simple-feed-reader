@@ -60,7 +60,7 @@ final readonly class BackupReader
     /**
      * @return \Generator<int, object>
      */
-    public function read(TemporaryBackupFile $backup): \Generator
+    public function read(string $gzipBytes): \Generator
     {
         $lineNumber = 0;
         $currentRank = -1;
@@ -68,7 +68,7 @@ final readonly class BackupReader
         $accountSeen = false;
         $footerSeen = false;
 
-        foreach (GzipLineReader::lines($backup->open()) as $line) {
+        foreach (GzipLineReader::lines($gzipBytes) as $line) {
             ++$lineNumber;
             if ('' === $line) {
                 continue;

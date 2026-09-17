@@ -6,41 +6,23 @@ namespace App\Tests\Service\Backup;
 
 use App\Service\Backup\Exception\InvalidBackupException;
 use App\Service\Backup\GzipLineReader;
-use App\Service\Backup\TemporaryBackupFile;
 use App\Tests\Support\CorruptGzip;
-use App\Tests\Support\TemporaryBackupFixture;
 use PHPUnit\Framework\TestCase;
 
 final class GzipLineReaderTest extends TestCase
 {
-    /** @return list<string> */
-    private static function read(string $gzip): array
-    {
-        return TemporaryBackupFixture::withBytes(
-            $gzip,
-            static fn (TemporaryBackupFile $file): array => iterator_to_array(
-                GzipLineReader::lines($file->open()),
-                false,
-            ),
-        );
-    }
-
     public function testYieldsEachLineWithoutItsNewline(): void
     {
         $gzip = (string) gzencode("first\nsecond\nthird\n");
 
-        $lines = self::read($gzip);
-
-        self::assertSame(['first', 'second', 'third'], $lines);
+        self::assertSame(['first', 'second', 'third'], iterator_to_array(GzipLineReader::lines($gzip), false));
     }
 
     public function testAFinalLineWithoutNewlineStillArrives(): void
     {
         $gzip = (string) gzencode("first\nlast-no-newline");
 
-        $lines = self::read($gzip);
-
-        self::assertSame(['first', 'last-no-newline'], $lines);
+        self::assertSame(['first', 'last-no-newline'], iterator_to_array(GzipLineReader::lines($gzip), false));
     }
 
     public function testALineLongerThanAnyInternalBufferSurvivesIntact(): void
@@ -48,7 +30,7 @@ final class GzipLineReaderTest extends TestCase
         $long = str_repeat('x', 2_000_000);
         $gzip = (string) gzencode($long . "\nshort\n");
 
-        $lines = self::read($gzip);
+        $lines = iterator_to_array(GzipLineReader::lines($gzip), false);
 
         self::assertSame([$long, 'short'], $lines);
     }
@@ -57,22 +39,7 @@ final class GzipLineReaderTest extends TestCase
     {
         $this->expectException(InvalidBackupException::class);
 
-        self::read('this is not gzip');
-    }
-
-    public function testClosesTheSuppliedHandleWhenReadingFails(): void
-    {
-        $stream = fopen('php://temp', 'w+b');
-        self::assertIsResource($stream);
-        fwrite($stream, 'this is not gzip');
-        rewind($stream);
-
-        try {
-            iterator_to_array(GzipLineReader::lines($stream), false);
-            self::fail('A non-gzip stream was accepted.');
-        } catch (InvalidBackupException) {
-            self::assertFalse(is_resource($stream));
-        }
+        iterator_to_array(GzipLineReader::lines('this is not gzip'), false);
     }
 
     /**
@@ -84,13 +51,13 @@ final class GzipLineReaderTest extends TestCase
     {
         $this->expectException(InvalidBackupException::class);
 
-        self::read(CorruptGzip::bytes());
+        iterator_to_array(GzipLineReader::lines(CorruptGzip::bytes()), false);
     }
 
     public function testEmptyInputIsRefused(): void
     {
         $this->expectException(InvalidBackupException::class);
 
-        self::read('');
+        iterator_to_array(GzipLineReader::lines(''), false);
     }
 }

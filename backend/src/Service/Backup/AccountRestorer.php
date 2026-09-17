@@ -12,7 +12,7 @@ use Doctrine\ORM\EntityManagerInterface;
 /**
  * The whole restore, in the only safe order: validate and count the real
  * bytes, refuse anything that does not fit, and only then wipe and load.
- * The two passes read the same disk-backed temporary file, so the file that
+ * The two passes read the same in-memory gzip string, so the file that
  * passed the fit check is byte-for-byte the file that loads.
  *
  * Deliberately NOT transactional (spec §8): a crash mid-load leaves a wiped,
@@ -27,33 +27,23 @@ final readonly class AccountRestorer
         private EntityManagerInterface $em,
         private BackupInspector $inspector,
         private BackupFitCheck $fitCheck,
-        private TemporaryBackupStorage $storage,
         private AccountReset $accountReset,
         private RestoreLoader $loader,
     ) {
     }
 
-    /** @param resource $uploadStream */
-    public function restore(User $user, mixed $uploadStream, ?string $confirmation): RestoreResult
+    public function restore(User $user, string $gzipBytes, ?string $confirmation): RestoreResult
     {
         if (self::CONFIRMATION !== $confirmation) {
             throw new ValidationException(['confirm' => ['Type REPLACE to confirm the restore.']]);
         }
 
-        return $this->storage->withFile(
-            $uploadStream,
-            fn (TemporaryBackupFile $backup): RestoreResult => $this->restoreFile($user, $backup),
-        );
-    }
-
-    private function restoreFile(User $user, TemporaryBackupFile $backup): RestoreResult
-    {
-        $inventory = $this->inspector->inspect($backup);
+        $inventory = $this->inspector->inspect($gzipBytes);
         $this->fitCheck->assertFits($inventory, $user);
         $userId = (int) $user->getId();
         $this->accountReset->reset($user);
 
-        return $this->loader->load($this->refreshed($userId), $backup);
+        return $this->loader->load($this->refreshed($userId), $gzipBytes);
     }
 
     /**

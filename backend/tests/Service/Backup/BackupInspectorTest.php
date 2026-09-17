@@ -5,11 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Backup;
 
 use App\Service\Backup\BackupInspector;
-use App\Service\Backup\BackupInventory;
 use App\Service\Backup\BackupReader;
 use App\Service\Backup\Exception\InvalidBackupException;
-use App\Service\Backup\TemporaryBackupFile;
-use App\Tests\Support\TemporaryBackupFixture;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -111,14 +108,6 @@ final class BackupInspectorTest extends TestCase
         return new BackupInspector(new BackupReader());
     }
 
-    private static function inspect(string $gzip): BackupInventory
-    {
-        return TemporaryBackupFixture::withBytes(
-            $gzip,
-            static fn (TemporaryBackupFile $file): BackupInventory => self::inspector()->inspect($file),
-        );
-    }
-
     public function testCountsEveryKind(): void
     {
         $gzip = self::gzipOf([
@@ -129,7 +118,7 @@ final class BackupInspectorTest extends TestCase
             self::footer(['tag' => 2, 'feed' => 1, 'subscription' => 1]),
         ]);
 
-        $inventory = self::inspect($gzip);
+        $inventory = self::inspector()->inspect($gzip);
 
         self::assertSame(2, $inventory->tags);
         self::assertSame(1, $inventory->feeds);
@@ -142,7 +131,7 @@ final class BackupInspectorTest extends TestCase
     {
         $this->expectException(InvalidBackupException::class);
 
-        self::inspect((string) gzencode("{\"kind\":\"header\"}\n"));
+        self::inspector()->inspect((string) gzencode("{\"kind\":\"header\"}\n"));
     }
 
     /**
@@ -206,7 +195,7 @@ final class BackupInspectorTest extends TestCase
 
         $this->expectException(InvalidBackupException::class);
 
-        self::inspect($gzip);
+        self::inspector()->inspect($gzip);
     }
 
     public function testAFullyResolvedFileIsAccepted(): void
@@ -221,7 +210,7 @@ final class BackupInspectorTest extends TestCase
             self::footer(['tag' => 1, 'feed' => 1, 'subscription' => 1, 'entry' => 1, 'entryState' => 1]),
         ]);
 
-        $inventory = self::inspect($gzip);
+        $inventory = self::inspector()->inspect($gzip);
 
         self::assertSame(1, $inventory->entries);
         self::assertSame(1, $inventory->entryStates);

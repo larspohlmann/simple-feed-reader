@@ -7,9 +7,7 @@ namespace App\Tests\Service\Backup;
 use App\Entity\User;
 use App\Service\Backup\AccountRestorer;
 use App\Service\Backup\Exception\InvalidBackupException;
-use App\Service\Backup\RestoreResult;
 use App\Tests\DbTestCase;
-use App\Tests\Support\UploadStream;
 use App\Tests\Support\UserFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -64,16 +62,6 @@ final class GoldenBackupRestoreTest extends DbTestCase
         return $gzip;
     }
 
-    private function restore(User $user, string $gzip): RestoreResult
-    {
-        $stream = UploadStream::fromString($gzip);
-        try {
-            return $this->restorer()->restore($user, $stream, self::CONFIRMATION);
-        } finally {
-            fclose($stream);
-        }
-    }
-
     /**
      * @return iterable<string, array{string, int, int}>
      */
@@ -87,7 +75,7 @@ final class GoldenBackupRestoreTest extends DbTestCase
     {
         $user = $this->makeUser('golden-' . $fixture . '@example.com');
 
-        $result = $this->restore($user, $this->fixture($fixture));
+        $result = $this->restorer()->restore($user, $this->fixture($fixture), self::CONFIRMATION);
 
         self::assertSame(1, $result->tags);
         self::assertSame(1, $result->subscriptions);
@@ -110,6 +98,6 @@ final class GoldenBackupRestoreTest extends DbTestCase
         $this->expectException(InvalidBackupException::class);
         $this->expectExceptionMessage('Unsupported schema version 1; this instance reads version 2.');
 
-        $this->restore($user, $this->fixture($fixture));
+        $this->restorer()->restore($user, $this->fixture($fixture), self::CONFIRMATION);
     }
 }

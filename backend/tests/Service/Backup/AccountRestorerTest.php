@@ -27,14 +27,11 @@ use App\Service\Backup\EntryBatchInserter;
 use App\Service\Backup\Exception\BackupDoesNotFitException;
 use App\Service\Backup\Exception\InvalidBackupException;
 use App\Service\Backup\RestoreLoader;
-use App\Service\Backup\RestoreResult;
-use App\Service\Backup\TemporaryBackupStorage;
 use App\Service\Search\EntryIndexer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\BackupFieldDeclarations;
 use App\Tests\Support\FullyPopulatedAccount;
-use App\Tests\Support\UploadStream;
 use App\Tests\Support\UserFactory;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
@@ -93,20 +90,6 @@ final class AccountRestorerTest extends DbTestCase
         self::assertInstanceOf(AccountRestorer::class, $restorer);
 
         return $restorer;
-    }
-
-    private function restore(
-        AccountRestorer $restorer,
-        User $user,
-        string $gzip,
-        ?string $confirmation,
-    ): RestoreResult {
-        $stream = UploadStream::fromString($gzip);
-        try {
-            return $restorer->restore($user, $stream, $confirmation);
-        } finally {
-            fclose($stream);
-        }
     }
 
     private function makeFeed(string $url, string $title, string $sourceFormat): Feed
@@ -336,7 +319,7 @@ final class AccountRestorerTest extends DbTestCase
         $before = $this->subscriptionShapes($userId);
         $statesBefore = $this->entryStateRows($userId);
 
-        $result = $this->restore($this->restorer(), $this->reloadUser($userId), $gzip, 'REPLACE');
+        $result = $this->restorer()->restore($this->reloadUser($userId), $gzip, 'REPLACE');
 
         self::assertSame(2, $result->tags);
         self::assertSame(2, $result->savedSearches);
@@ -392,7 +375,7 @@ final class AccountRestorerTest extends DbTestCase
         $targetId = (int) $target->getId();
         $this->deleteEveryFeed();
 
-        $this->restore($this->restorer(), $this->reloadUser($targetId), $gzip, 'REPLACE');
+        $this->restorer()->restore($this->reloadUser($targetId), $gzip, 'REPLACE');
         $targetRows = $this->fixtureRowsOf($this->reloadUser($targetId));
 
         $this->assertFieldsRoundTripped(User::class, $sourceRows['user'], $targetRows['user']);
@@ -581,7 +564,7 @@ final class AccountRestorerTest extends DbTestCase
         $statesBefore = $this->entryStateRows($userId);
         $this->deleteEveryFeed();
 
-        $result = $this->restore($this->restorer(), $this->reloadUser($userId), $gzip, 'REPLACE');
+        $result = $this->restorer()->restore($this->reloadUser($userId), $gzip, 'REPLACE');
 
         self::assertSame(2, $result->feeds);
         self::assertSame(3, $result->entries);
@@ -635,7 +618,7 @@ final class AccountRestorerTest extends DbTestCase
         $this->em->persist(new Subscription($stranger, $feed, new \DateTimeImmutable('2026-07-03 10:00:00')));
         $this->em->flush();
 
-        $result = $this->restore($this->restorer(), $this->reloadUser($userId), $gzip, 'REPLACE');
+        $result = $this->restorer()->restore($this->reloadUser($userId), $gzip, 'REPLACE');
 
         // Feed TWO's entries survive untouched (nobody else reads it), so the
         // only entries the file could have created are feed ONE's — and the
@@ -660,7 +643,7 @@ final class AccountRestorerTest extends DbTestCase
         $this->em->persist(new Subscription($stranger, $feed, new \DateTimeImmutable('2026-07-03 10:00:00')));
         $this->em->flush();
 
-        $this->restore($this->restorer(), $this->reloadUser($userId), $gzip, 'REPLACE');
+        $this->restorer()->restore($this->reloadUser($userId), $gzip, 'REPLACE');
 
         $this->em->clear();
         $after = $this->em->find(Feed::class, $feedId);
@@ -677,7 +660,7 @@ final class AccountRestorerTest extends DbTestCase
         $this->em->getConnection()->executeStatement('DELETE FROM feed WHERE url = ?', [self::TWO_URL]);
         $this->em->clear();
 
-        $result = $this->restore($this->restorer(), $this->reloadUser($userId), $gzip, 'REPLACE');
+        $result = $this->restorer()->restore($this->reloadUser($userId), $gzip, 'REPLACE');
 
         self::assertSame(1, $result->feeds);
         self::assertSame(2, $result->subscriptions);
@@ -699,7 +682,7 @@ final class AccountRestorerTest extends DbTestCase
         $targetId = (int) $target->getId();
 
         try {
-            $this->restore($this->restorer(), $this->reloadUser($targetId), $gzip, 'REPLACE');
+            $this->restorer()->restore($this->reloadUser($targetId), $gzip, 'REPLACE');
             self::fail('The restore accepted a backup that does not fit the account.');
         } catch (BackupDoesNotFitException) {
             // Expected — and nothing may have been deleted by now.
@@ -718,7 +701,7 @@ final class AccountRestorerTest extends DbTestCase
         $gzip = $this->backupOf($user);
 
         try {
-            $this->restore($this->restorer(), $this->reloadUser($userId), $gzip, null);
+            $this->restorer()->restore($this->reloadUser($userId), $gzip, null);
             self::fail('The restore ran without the REPLACE confirmation.');
         } catch (ValidationException $e) {
             self::assertArrayHasKey('confirm', $e->errors);
@@ -739,8 +722,8 @@ final class AccountRestorerTest extends DbTestCase
         $statesBefore = $this->entryStateRows($userId);
         $this->deleteEveryFeed();
 
-        $this->restore($this->restorer(), $this->reloadUser($userId), $gzip, 'REPLACE');
-        $second = $this->restore($this->restorer(), $this->reloadUser($userId), $gzip, 'REPLACE');
+        $this->restorer()->restore($this->reloadUser($userId), $gzip, 'REPLACE');
+        $second = $this->restorer()->restore($this->reloadUser($userId), $gzip, 'REPLACE');
 
         // The second run finds every shared row already in place, so it
         // re-creates only what the wipe removed.
@@ -773,7 +756,7 @@ final class AccountRestorerTest extends DbTestCase
         $this->em->getConnection()->executeStatement('DELETE FROM entry WHERE guid = ?', ['guid-a']);
         $this->em->clear();
 
-        $result = $this->restore($this->restorer(), $this->reloadUser($userId), $gzip, 'REPLACE');
+        $result = $this->restorer()->restore($this->reloadUser($userId), $gzip, 'REPLACE');
 
         // guid-b and guid-c survive as shared rows; only guid-a is recreated.
         // Feed ONE's two states land on one new id and one old id.
@@ -792,7 +775,7 @@ final class AccountRestorerTest extends DbTestCase
         $statesBefore = $this->entryStateRows($userId);
         $this->deleteEveryFeed();
 
-        $result = $this->restore($this->restorer(), $this->reloadUser($userId), $gzip, 'REPLACE');
+        $result = $this->restorer()->restore($this->reloadUser($userId), $gzip, 'REPLACE');
 
         self::assertSame(502, $result->entries);
         self::assertSame(3, $result->entryStates);
@@ -829,7 +812,7 @@ final class AccountRestorerTest extends DbTestCase
         $gzip = $this->withoutTheFirstFeedLine($this->backupOf($user));
 
         try {
-            $this->restore($this->restorer(), $this->reloadUser($userId), $gzip, 'REPLACE');
+            $this->restorer()->restore($this->reloadUser($userId), $gzip, 'REPLACE');
             self::fail('The restore accepted a subscription whose feed the file never declares.');
         } catch (InvalidBackupException) {
             // Expected — and nothing may have been deleted by now.
@@ -895,18 +878,7 @@ final class AccountRestorerTest extends DbTestCase
         $this->deleteEveryFeed();
 
         $writer = new RecordingSearchIndexWriter();
-        $primaryDirectory = sys_get_temp_dir() . '/account-restorer-' . bin2hex(random_bytes(8));
-        self::assertTrue(mkdir($primaryDirectory, 0700));
-        try {
-            $result = $this->restore(
-                $this->restorerIndexingInto($writer, $primaryDirectory),
-                $this->reloadUser($userId),
-                $gzip,
-                'REPLACE',
-            );
-        } finally {
-            rmdir($primaryDirectory);
-        }
+        $result = $this->restorerIndexingInto($writer)->restore($this->reloadUser($userId), $gzip, 'REPLACE');
 
         self::assertSame(3, $result->entries);
         $indexed = [];
@@ -933,10 +905,8 @@ final class AccountRestorerTest extends DbTestCase
      * RecordingSearchIndexWriter. Everything else in the graph stays the
      * container's own service.
      */
-    private function restorerIndexingInto(
-        RecordingSearchIndexWriter $writer,
-        string $primaryDirectory,
-    ): AccountRestorer {
+    private function restorerIndexingInto(RecordingSearchIndexWriter $writer): AccountRestorer
+    {
         $entries = $this->em->getRepository(Entry::class);
         self::assertInstanceOf(EntryRepository::class, $entries);
         $feeds = $this->em->getRepository(Feed::class);
@@ -947,12 +917,6 @@ final class AccountRestorerTest extends DbTestCase
         self::assertInstanceOf(BackupFitCheck::class, $fitCheck);
         $reset = self::getContainer()->get(AccountReset::class);
         self::assertInstanceOf(AccountReset::class, $reset);
-        $projectDirectory = self::getContainer()->getParameter('kernel.project_dir');
-        $storage = new TemporaryBackupStorage(
-            $projectDirectory . '/var/backup-restore',
-            new NullLogger(),
-            $primaryDirectory,
-        );
 
         $loader = new RestoreLoader(
             $this->em,
@@ -964,14 +928,7 @@ final class AccountRestorerTest extends DbTestCase
             new MockClock('2026-08-17 12:00:00'),
         );
 
-        return new AccountRestorer(
-            $this->em,
-            new BackupInspector(new BackupReader()),
-            $fitCheck,
-            $storage,
-            $reset,
-            $loader,
-        );
+        return new AccountRestorer($this->em, new BackupInspector(new BackupReader()), $fitCheck, $reset, $loader);
     }
 
     /** One tag, one subscription and one entry state, so the refusal has something to protect. */
