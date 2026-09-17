@@ -124,7 +124,7 @@ function slugify(text: string): string {
     WarningBoxComponent,
   ],
   templateUrl: './reader-view.component.html',
-  styleUrl: './reader-view.component.scss',
+  styleUrls: ['./reader-view.component.scss', './reader-view.component.content.scss'],
 })
 export class ReaderViewComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
