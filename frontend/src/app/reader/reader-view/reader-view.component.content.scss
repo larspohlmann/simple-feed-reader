@@ -1,0 +1,575 @@
+/* Article typography. The body is [innerHTML]-injected, so descendant rules
+   need ::ng-deep (scoped under .content). The sanitizer strips default
+   margins, so h2/p/li/blockquote need an explicit vertical rhythm here. */
+.content {
+  color: var(--text-primary);
+  font-size: var(--fs-read);
+  line-height: 1.75;
+}
+
+.content ::ng-deep p {
+  margin: 0 0 var(--space-4);
+}
+
+.content ::ng-deep :is(h1, h2, h3, h4, h5, h6) {
+  margin: var(--space-6) 0 var(--space-3);
+  line-height: 1.3;
+  font-weight: 650;
+  color: var(--text-primary);
+}
+
+/* An h2 opens a new section, so it carries a divider: extra air plus a short
+   hairline rule above. h3+ are subordinate and keep the plain heading margin. */
+.content ::ng-deep h2 {
+  margin-top: var(--space-7);
+}
+
+.content ::ng-deep h2::before {
+  content: '';
+  display: block;
+  border-top: 1px solid var(--border);
+  margin-bottom: var(--space-4);
+}
+
+/* When the article already carries a real rule between its sections (Substack
+   emits an <hr> before each heading), the synthetic divider would double it, so
+   the <hr> owns the separation and the heading drops its own. */
+.content ::ng-deep hr + h2 {
+  margin-top: 0;
+}
+
+.content ::ng-deep hr + h2::before {
+  content: none;
+}
+
+/* The article's lead paragraph gets a slightly larger size. The class is set
+   by the component's post-render pass — pure CSS :first-of-type can't reach
+   it through the wrapper elements feeds and readability emit. */
+.content ::ng-deep p.lead {
+  font-size: 1.0625em;
+}
+
+/* Headings sized in `em` against `.content`'s type, not the UI type scale:
+   that scale has five steps, and h2/h3 would land on the same one, flattening
+   the hierarchy. Ratios are the long-standing sizes at 16px: 22, 20, 17px. */
+.content ::ng-deep h1 {
+  font-size: 1.375em;
+}
+
+.content ::ng-deep h2 {
+  font-size: 1.25em;
+}
+
+.content ::ng-deep h3 {
+  font-size: 1.0625em;
+}
+
+.content ::ng-deep :is(h4, h5, h6) {
+  font-size: 1em;
+}
+
+.content ::ng-deep :is(ul, ol) {
+  margin: 0 0 var(--space-4);
+  padding-left: 1.5em;
+}
+
+.content ::ng-deep li {
+  margin: var(--space-1) 0;
+}
+
+.content ::ng-deep li::marker {
+  color: var(--text-muted);
+}
+
+/* A quiet card rather than a bare indent: the surface fill and radius set the
+   quote apart from the body without shouting. */
+.content ::ng-deep blockquote {
+  margin: var(--space-5) 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--border-strong);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--surface-1);
+  color: var(--text-secondary);
+}
+
+.content ::ng-deep blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* Publisher inserts (series teaser, support appeal, side note) boxed off from
+   the running text. Detected in the post-render pass (reader-cards.ts) and
+   given the same quiet-card surface as a blockquote, reading as an aside. */
+.content ::ng-deep .reader-card {
+  margin: var(--space-5) 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}
+
+/* The card supplies the outer rhythm; its first and last blocks must not add
+   their own, or the padding looks lopsided. */
+.content ::ng-deep .reader-card > :first-child {
+  margin-top: 0;
+}
+
+.content ::ng-deep .reader-card > :last-child {
+  margin-bottom: 0;
+}
+
+/* Tables arrive unstyled from the sanitizer; give them the article's rhythm
+   and let a wide one scroll inside the column instead of stretching it. */
+.content ::ng-deep table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  margin: var(--space-5) 0;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+
+.content ::ng-deep :is(th, td) {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.content ::ng-deep th {
+  border-bottom-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.content ::ng-deep mark {
+  padding: 0 0.15em;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: inherit;
+}
+
+/* Keep super- and subscripts from opening up the line they sit in. */
+.content ::ng-deep :is(sub, sup) {
+  line-height: 0;
+}
+
+.content ::ng-deep dl {
+  margin: 0 0 var(--space-4);
+}
+
+.content ::ng-deep dt {
+  font-weight: 650;
+  color: var(--text-primary);
+}
+
+.content ::ng-deep dd {
+  margin: 0 0 var(--space-2) var(--space-4);
+}
+
+.content ::ng-deep figure {
+  margin: var(--space-5) 0;
+}
+
+.content ::ng-deep figcaption {
+  margin-top: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.content ::ng-deep :is(img, video, iframe) {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+}
+
+.content ::ng-deep img {
+  width: auto;
+}
+
+/* A content picture at least half the column wide is stretched to fill it, so a
+   feed that serves a small teaser rendition still reads full-bleed; genuinely
+   small images (icons, logos) keep their natural size (#923). The class is set
+   at render time from each image's own intrinsic width, never its URL. */
+.content ::ng-deep img.reader-fill {
+  width: 100%;
+}
+
+/* Substack video placeholders (#627) carry no class — the sanitizer strips
+   class/style/data-*, so alt text is the only stable hook. A play badge
+   marks the poster as video, not a still image. */
+.content ::ng-deep a:has(> img[alt='Video — open the original article to watch']) {
+  position: relative;
+  display: inline-block;
+}
+
+.content ::ng-deep a:has(> img[alt='Video — open the original article to watch'])::after {
+  content: '▶';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  padding-left: 0.25em;
+  place-items: center;
+  transform: translate(-50%, -50%);
+  border-radius: var(--radius-pill);
+  background: rgb(0 0 0 / 55%);
+  color: rgb(255 255 255 / 92%);
+  font-size: var(--fs-xl);
+  line-height: 1;
+  pointer-events: none;
+}
+
+.content ::ng-deep :not(pre) > code {
+  padding: 0.1em 0.35em;
+  background: var(--surface-1);
+  border-radius: var(--radius);
+  font-size: 0.9em;
+}
+
+.content ::ng-deep pre {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
+.content ::ng-deep pre code {
+  padding: 0;
+  background: none;
+}
+
+/* Syntax highlighting (#473). highlight.js emits `.hljs-*` token spans; map them
+   onto the mode-aware --code-* tokens so both themes stay lint-clean (no hex). The
+   highlighted container is a `<code>` or, for code-less `<pre>`, the `<pre>`. */
+.content ::ng-deep .hljs {
+  color: var(--code-fg);
+}
+
+.content ::ng-deep {
+  .hljs-comment,
+  .hljs-quote {
+    color: var(--code-comment);
+    font-style: italic;
+  }
+
+  .hljs-keyword,
+  .hljs-type,
+  .hljs-doctag,
+  .hljs-template-tag,
+  .hljs-variable.language_ {
+    color: var(--code-keyword);
+  }
+
+  .hljs-string,
+  .hljs-regexp,
+  .hljs-char.escape_ {
+    color: var(--code-string);
+  }
+
+  .hljs-number,
+  .hljs-literal,
+  .hljs-attr,
+  .hljs-attribute,
+  .hljs-property,
+  .hljs-selector-attr,
+  .hljs-selector-class,
+  .hljs-selector-id,
+  .hljs-selector-pseudo,
+  .hljs-symbol {
+    color: var(--code-value);
+  }
+
+  .hljs-title,
+  .hljs-title.function_,
+  .hljs-title.class_,
+  .hljs-section {
+    color: var(--code-title);
+  }
+
+  .hljs-built_in {
+    color: var(--code-built-in);
+  }
+
+  .hljs-name,
+  .hljs-selector-tag,
+  .hljs-tag {
+    color: var(--code-tag);
+  }
+
+  .hljs-meta,
+  .hljs-meta-keyword {
+    color: var(--code-meta);
+  }
+}
+
+.content ::ng-deep hr {
+  margin: var(--space-5) 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+/* Only real links (with an href) get the accent colour. Some feeds wrap
+   headings/TOC entries in <a> tags whose href the sanitiser strips; unscoped,
+   this painted every heading teal ("all titles turn green", #21). */
+.content ::ng-deep a[href] {
+  color: var(--accent);
+}
+
+/* Recovered media (#748). The embed box keeps a 16:9 frame at any width; the
+   players stretch to the column so controls stay reachable on a phone. */
+.content ::ng-deep .reader-embed {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin: var(--space-5) 0;
+}
+
+.content ::ng-deep .reader-embed iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* A Spotify collection player shows a scrollable track list, so it gets a tall
+   fixed box in place of the 16:9 frame a video uses (#1053). */
+.content ::ng-deep .reader-embed--tall {
+  aspect-ratio: auto;
+  height: 31.25rem;
+}
+
+.content ::ng-deep audio,
+.content ::ng-deep video {
+  display: block;
+  width: 100%;
+  margin: var(--space-5) 0;
+}
+
+/* A feed video carries no dimensions and, with preload="none", loads no metadata
+   until play, so the browser sizes the box from the poster. A publisher that
+   ships a badly shaped poster (ZDF served a 1140×120 strip for a 16:9 clip, #952)
+   then collapses the player to a sliver. Pin the 16:9 box every .reader-embed
+   iframe already gets, and letterbox whatever the poster or the frames are. */
+.content ::ng-deep video {
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  background: var(--surface-1);
+}
+
+// Machine-generated narration (#903): one muted, collapsed line, no card, so it
+// never reads as editorial audio. A plain <details> stands in for <app-disclosure>,
+// which cannot render inside [innerHTML] (recorded exception in design-language.md).
+.content ::ng-deep .reader-narration-box {
+  margin: var(--space-3) 0;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.content ::ng-deep .reader-narration-box summary {
+  cursor: pointer;
+}
+
+.content ::ng-deep .reader-narration-box[open] audio {
+  margin: var(--space-2) 0 0;
+}
+
+/* Publisher FAQ disclosures (#1071): the reader-faq pass opens each <details>
+   and tags it, replacing the near-invisible default marker with a bordered card,
+   an accent question and a clear accent chevron (inheriting the summary colour). */
+.content ::ng-deep details.reader-faq {
+  margin: var(--space-3) 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}
+
+.content ::ng-deep details.reader-faq summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  color: var(--accent);
+  font-weight: 650;
+  list-style: none;
+  cursor: pointer;
+}
+
+.content ::ng-deep details.reader-faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.content ::ng-deep details.reader-faq summary::after {
+  content: '';
+  flex: none;
+  margin-left: auto;
+  width: 0.5em;
+  height: 0.5em;
+  border-right: 2px solid;
+  border-bottom: 2px solid;
+  transform: rotate(45deg);
+}
+
+.content ::ng-deep details.reader-faq[open] summary {
+  box-shadow: inset 0 -1px var(--border);
+}
+
+.content ::ng-deep details.reader-faq[open] summary::after {
+  transform: rotate(-135deg);
+}
+
+.content ::ng-deep details.reader-faq > :not(summary) {
+  margin: var(--space-3) var(--space-4);
+  color: var(--text-secondary);
+}
+
+/* Swipeable image carousel (#926): the same figure rhythm as a plain figure
+   above, plus its own controls row for the prev/counter/next trio. */
+.content ::ng-deep .reader-slideshow {
+  position: relative;
+  margin: var(--space-5) 0;
+
+  ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  li img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* Each slide keeps the text it carried in the source (a linked headline, a
+     gallery caption). Long teaser text clamps to ten lines (#930). */
+  li > a,
+  li > p {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 10;
+    line-clamp: 10;
+    overflow: hidden;
+    margin: var(--space-2) 0 0;
+    font-size: var(--fs-sm);
+    line-height: var(--lh-normal);
+  }
+
+  li > p {
+    color: var(--text-secondary);
+  }
+}
+
+/* Hydrated only: the figure clips a horizontal row of full-width slides, and the
+   track translates between them. The bare .reader-slideshow above stays a
+   vertical stack — the graceful no-JavaScript fallback. */
+.content ::ng-deep .reader-slideshow--ready {
+  overflow: hidden;
+
+  ol {
+    display: flex;
+    transition: transform 250ms ease-out;
+    will-change: transform;
+  }
+
+  li {
+    flex: 0 0 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .content ::ng-deep .reader-slideshow--ready ol {
+    transition: none;
+  }
+}
+
+.content ::ng-deep .reader-slideshow__controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.content ::ng-deep .reader-slideshow__counter {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.content ::ng-deep .reader-slideshow__prev,
+.content ::ng-deep .reader-slideshow__next {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: var(--fs-xl);
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* Recipe fact block (#932): the publisher's servings/calories/time row loses
+   its layout at the sanitizer, so the reader supplies its own — a wrapping row
+   of cells, each stacking a muted label over its value. */
+.content ::ng-deep .reader-recipe-facts {
+  margin: var(--space-5) 0;
+
+  dl {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3) var(--space-5);
+    margin: 0;
+    padding: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-1);
+  }
+
+  dl > div {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  dt {
+    font-size: var(--fs-sm);
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 650;
+    color: var(--text-primary);
+  }
+}
+
+/* The "about the author" furniture the backend wraps in a marked figure
+   (#1000): a trailing bio, its profile link, an affiliate disclosure. A rule
+   and muted, smaller type set it apart from the article prose it followed. */
+.content ::ng-deep .reader-author-bio {
+  margin: var(--space-6) 0 0;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+
+  p {
+    margin: 0 0 var(--space-3);
+  }
+
+  p:last-child {
+    margin-bottom: 0;
+  }
+}
