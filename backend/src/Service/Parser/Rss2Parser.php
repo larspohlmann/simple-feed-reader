@@ -52,10 +52,7 @@ final class Rss2Parser implements FeedFormatParserInterface
         $description = XmlHelper::childText($item, 'description');
         $contentEncoded = XmlHelper::childText($item, 'encoded', self::CONTENT_NS);
 
-        $image = ItemImageExtractor::fromMedia($item)
-            ?? ItemImageExtractor::fromRssEnclosure($item)
-            ?? ItemImageExtractor::fromCustomImageElement($item)
-            ?? ItemImageExtractor::fromHtml($contentEncoded ?? $description);
+        $image = FeedItemImageSelector::fromRss2($item, $contentEncoded ?? $description);
         $mediaBundle = ItemMediaExtractor::extract($item);
 
         return new ParsedEntry(

@@ -9,8 +9,7 @@ parameters:
         - src
         - tests
     excludePaths:
-        # Fixtures for ThinControllerRuleTest: deliberate rule violations in the
-        # App\Controller namespace, analysed only by the rule's own RuleTestCase.
+        # Deliberate custom-rule violations, analysed only by each rule's RuleTestCase.
         - tests/PhpStan/data/*
     stubFiles:
         # ext-excimer is absent on the native/CI PHP that runs PHPStan.
@@ -19,6 +18,10 @@ parameters:
         containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
 
 services:
+    -
+        class: App\Tests\PhpStan\ChainedNullCoalescingRule
+        tags:
+            - phpstan.rules.rule
     -
         class: App\Tests\PhpStan\ThinControllerRule
         tags:
