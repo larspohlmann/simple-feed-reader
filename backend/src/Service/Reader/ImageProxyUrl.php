@@ -17,10 +17,17 @@ final readonly class ImageProxyUrl
     /** The embedded HTTP source URL, or the original when the URL is not a proxy. */
     public static function resolve(string $url): string
     {
-        return self::sourceFromQuery($url)
-            ?? self::sourceFromPath($url)
-            ?? self::sourceFromEncodedPath($url)
-            ?? $url;
+        $source = self::sourceFromQuery($url);
+        if ($source !== null) {
+            return $source;
+        }
+
+        $source = self::sourceFromPath($url);
+        if ($source !== null) {
+            return $source;
+        }
+
+        return self::sourceFromEncodedPath($url) ?? $url;
     }
 
     /** A `?url=` proxy (Politico's dims4, NPR's brightspot) carries the source verbatim. */

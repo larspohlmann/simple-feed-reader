@@ -90,11 +90,11 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
         }
 
         $contentHtml = $this->elementMarkup($entry, $ns, 'content');
-        $image = ItemImageExtractor::fromMedia($entry)
-            ?? ItemImageExtractor::fromAtomEnclosure($entry, $ns)
-            ?? ItemImageExtractor::fromCustomImageElement($entry)
-            ?? ItemImageExtractor::fromHtml($contentHtml)
-            ?? ItemImageExtractor::fromHtml($this->elementMarkup($entry, $ns, 'summary'));
+        $image = FeedItemImageSelector::fromAtom(
+            $entry,
+            $ns,
+            [$contentHtml, $this->elementMarkup($entry, $ns, 'summary')],
+        );
         $mediaBundle = ItemMediaExtractor::extract($entry);
 
         return new ParsedEntry(
