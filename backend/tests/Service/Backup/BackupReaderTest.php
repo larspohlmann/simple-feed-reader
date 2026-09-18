@@ -45,6 +45,24 @@ final class BackupReaderTest extends TestCase
         ];
     }
 
+    /**
+     * A header carrying only the version-2 fields — no backupId/part/parts/
+     * totals — so a version check must fire on realistic input, not on the
+     * missing version-3 fields a version-3-shaped header would pass.
+     *
+     * @return array<string, mixed>
+     */
+    private static function bareHeader(int $schemaVersion): array
+    {
+        return [
+            'kind' => 'header',
+            'schemaVersion' => $schemaVersion,
+            'createdAt' => '2026-08-17T09:00:00+00:00',
+            'sourceUrl' => 'https://source.example',
+            'sourceEmail' => 'source@example.com',
+        ];
+    }
+
     /** @return array<string, mixed> */
     private static function account(): array
     {
@@ -162,7 +180,7 @@ final class BackupReaderTest extends TestCase
 
     public function testRefusesANewerSchemaVersion(): void
     {
-        $gzip = self::gzipOf([self::header(schemaVersion: 4), self::account(), self::footer()]);
+        $gzip = self::gzipOf([self::bareHeader(4)]);
 
         $this->expectException(InvalidBackupException::class);
         $this->expectExceptionMessageMatches('/schema version/i');
@@ -402,9 +420,7 @@ final class BackupReaderTest extends TestCase
         $this->expectException(InvalidBackupException::class);
         $this->expectExceptionMessage('Unsupported schema version 2; this instance reads version 3.');
 
-        iterator_to_array((new BackupReader())->read(self::gzipOf([
-            self::header(0, 2), self::account(), self::footer(),
-        ])), false);
+        iterator_to_array((new BackupReader())->read(self::gzipOf([self::bareHeader(2)])), false);
     }
 
     public function testAPartOverTheEntryCeilingIsRefusedBeforeTheExtraLineIsYielded(): void
@@ -429,14 +445,43 @@ final class BackupReaderTest extends TestCase
 
     public function testAPartOverTheByteCeilingIsRefused(): void
     {
-        static $hugeContent = null;
-        $hugeContent ??= str_repeat('a', BackupReader::MAX_INFLATED_BYTES);
-
-        $lines = [self::header(1), ['contentHtml' => $hugeContent] + self::entry(), self::footer(['entry' => 1])];
+        // Two lines, each under the single-line cap, that together inflate past
+        // the part ceiling — so the aggregate guard trips, not the per-line one.
+        $entry = ['contentHtml' => str_repeat('a', intdiv(BackupReader::MAX_INFLATED_BYTES, 2))] + self::entry();
+        $lines = [self::header(1), $entry, ['guid' => 'g2', 'guidHash' => hash('sha256', 'g2')] + $entry];
 
         $this->expectException(InvalidBackupException::class);
         $this->expectExceptionMessageMatches('/inflates past/');
 
-        iterator_to_array((new BackupReader())->read(self::gzipOf($lines)), false);
+        self::drain(self::gzipOf($lines));
+    }
+
+    /**
+     * A header plus a gzip of nothing but newlines used to slip past the byte
+     * ceiling: the blank-line skip ran before the byte count, so the bomb
+     * inflated uncounted. Every line's bytes now count before the skip.
+     */
+    public function testBlankLinesCountTowardTheByteCeiling(): void
+    {
+        $header = json_encode(self::header(1), \JSON_THROW_ON_ERROR);
+        $entry = json_encode(
+            ['contentHtml' => str_repeat('a', BackupReader::MAX_INFLATED_BYTES - 300_000)] + self::entry(),
+            \JSON_THROW_ON_ERROR,
+        );
+        $gzip = (string) gzencode($header . "\n" . $entry . "\n" . str_repeat("\n", 400_000));
+
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessageMatches('/inflates past/');
+
+        self::drain($gzip);
+    }
+
+    /** Reads every yielded line without retaining it, so a byte-ceiling test
+     *  never holds a part's worth of hydrated DTOs at once. */
+    private static function drain(string $gzip): void
+    {
+        foreach ((new BackupReader())->read($gzip) as $ignored) {
+            unset($ignored);
+        }
     }
 }

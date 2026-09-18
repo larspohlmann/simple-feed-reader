@@ -8,7 +8,7 @@ use App\Service\Backup\Dto\BackupHeader;
 use App\Service\Backup\Exception\InvalidBackupException;
 
 /**
- * Enforces one part's per-line limits and its kind grammar. A fresh instance
+ * Enforces one part's kind grammar and its entry ceiling. A fresh instance
  * is created per read() call once the header is known, so it never leaks
  * state between backups.
  */
@@ -27,23 +27,10 @@ final class BackupPartGuard
         BackupSchema::KIND_ENTRY_STATE,
     ];
 
-    private int $inflatedBytes = 0;
     private int $entryLines = 0;
 
     public function __construct(private readonly BackupHeader $header)
     {
-    }
-
-    public function seeLine(string $line): void
-    {
-        $this->inflatedBytes += \strlen($line) + 1;
-        if ($this->inflatedBytes > BackupReader::MAX_INFLATED_BYTES) {
-            throw new InvalidBackupException(sprintf(
-                'Part %d inflates past %d bytes.',
-                $this->header->part,
-                BackupReader::MAX_INFLATED_BYTES,
-            ));
-        }
     }
 
     public function seeKind(string $kind, int $lineNumber): void

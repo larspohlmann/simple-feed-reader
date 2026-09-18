@@ -72,9 +72,13 @@ final readonly class BackupReader
         $footerSeen = false;
         $header = null;
         $guard = null;
+        $inflatedBytes = 0;
 
         foreach (GzipLineReader::lines($gzipBytes) as $line) {
             ++$lineNumber;
+            $inflatedBytes += \strlen($line) + 1;
+            $this->assertUnderByteCeiling($inflatedBytes);
+
             if ('' === $line) {
                 continue;
             }
@@ -89,15 +93,14 @@ final readonly class BackupReader
             $currentRank = $this->assertOrdered($kind, -1 === $currentRank, $currentRank, $lineNumber);
 
             if (BackupSchema::KIND_HEADER === $kind) {
-                $header = $this->assertKnownSchemaVersion(BackupHeader::fromLine($decoded));
-                $header = $this->assertCoherentHeader($header);
+                $this->assertKnownSchemaVersion($decoded);
+                $header = $this->assertCoherentHeader(BackupHeader::fromLine($decoded));
                 $guard = new BackupPartGuard($header);
                 yield $header;
                 continue;
             }
 
             $guard = $this->requireGuard($guard);
-            $guard->seeLine($line);
 
             if (BackupSchema::KIND_FOOTER === $kind) {
                 $this->assertAccountSeen($header, $accountSeen);
@@ -128,6 +131,19 @@ final readonly class BackupReader
      * The grammar guarantees a header precedes every other line, so a null
      * guard here means assertOrdered failed to do its job.
      */
+    /**
+     * Counted for every line before the blank-line skip, so a gzip of nothing
+     * but newlines cannot inflate past the ceiling uncounted.
+     */
+    private function assertUnderByteCeiling(int $inflatedBytes): void
+    {
+        if ($inflatedBytes > self::MAX_INFLATED_BYTES) {
+            throw new InvalidBackupException(
+                sprintf('The backup inflates past %d bytes.', self::MAX_INFLATED_BYTES),
+            );
+        }
+    }
+
     private function requireGuard(?BackupPartGuard $guard): BackupPartGuard
     {
         if (null === $guard) {
@@ -259,17 +275,23 @@ final readonly class BackupReader
         };
     }
 
-    private function assertKnownSchemaVersion(BackupHeader $header): BackupHeader
+    /**
+     * Checked from the raw line before BackupHeader::fromLine parses the
+     * version-3-only fields, so a real version-2 file reports its version
+     * rather than a missing "backupId".
+     *
+     * @param array<string, mixed> $decoded
+     */
+    private function assertKnownSchemaVersion(array $decoded): void
     {
-        if (BackupSchema::VERSION !== $header->schemaVersion) {
+        $schemaVersion = LineField::int($decoded, 'schemaVersion');
+        if (BackupSchema::VERSION !== $schemaVersion) {
             throw new InvalidBackupException(sprintf(
                 'Unsupported schema version %d; this instance reads version %d.',
-                $header->schemaVersion,
+                $schemaVersion,
                 BackupSchema::VERSION,
             ));
         }
-
-        return $header;
     }
 
     /**
