@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d88730c3fd331ef2318c90171219edbb",
+    "content-hash": "aac84bc6bae37fd6f8901dff62e97915",
     "packages": [
         {
             "name": "brick/math",
@@ -13383,6 +13383,417 @@
             "time": "2024-10-20T05:08:20+00:00"
         },
         {
+            "name": "symfony/ai-mate",
+            "version": "v0.13.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/ai-mate.git",
+                "reference": "b67c4fe1a4f27452d1a8cb6df4ffceeff1bbfe09"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/ai-mate/zipball/b67c4fe1a4f27452d1a8cb6df4ffceeff1bbfe09",
+                "reference": "b67c4fe1a4f27452d1a8cb6df4ffceeff1bbfe09",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.2",
+                "psr/container": "^1.1|^2.0",
+                "psr/log": "^2.0|^3.0",
+                "symfony/ai-mate-composer-plugin": "^0.13",
+                "symfony/config": "^5.4|^6.4|^7.3|^8.0",
+                "symfony/console": "^5.4|^6.4|^7.3|^8.0",
+                "symfony/dependency-injection": "^5.4|^6.4|^7.3|^8.0",
+                "symfony/filesystem": "^5.4|^6.4|^7.3|^8.0",
+                "symfony/finder": "^5.4|^6.4|^7.3|^8.0",
+                "symfony/process": "^5.4|^6.4|^7.3|^8.0"
+            },
+            "require-dev": {
+                "ext-simplexml": "*",
+                "helgesverre/toon": "^3.2.1",
+                "phpstan/phpstan": "^2.1",
+                "phpstan/phpstan-phpunit": "^2.0",
+                "phpstan/phpstan-strict-rules": "^2.0",
+                "phpunit/phpunit": "^11.5.53",
+                "symfony/dotenv": "^5.4|^6.4|^7.3|^8.0"
+            },
+            "bin": [
+                "bin/mate"
+            ],
+            "type": "library",
+            "extra": {
+                "thanks": {
+                    "url": "https://github.com/symfony/ai",
+                    "name": "symfony/ai"
+                },
+                "ai-mate": {
+                    "skills": [
+                        "skills"
+                    ],
+                    "scan-dirs": [
+                        "src/Capability"
+                    ],
+                    "instructions": "INSTRUCTIONS.md"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Symfony\\AI\\Mate\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Johannes Wachter",
+                    "email": "johannes@sulu.io"
+                },
+                {
+                    "name": "Tobias Nyholm",
+                    "email": "tobias.nyholm@gmail.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "https://symfony.com/contributors"
+                }
+            ],
+            "description": "AI development assistant CLI for Symfony projects",
+            "keywords": [
+                "ai",
+                "cli",
+                "debug",
+                "dev",
+                "development",
+                "symfony"
+            ],
+            "support": {
+                "source": "https://github.com/symfony/ai-mate/tree/v0.13.0"
+            },
+            "funding": [
+                {
+                    "url": "https://symfony.com/sponsor",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/fabpot",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/nicolas-grekas",
+                    "type": "github"
+                },
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
+                    "type": "tidelift"
+                }
+            ],
+            "time": "2026-08-30T01:03:45+00:00"
+        },
+        {
+            "name": "symfony/ai-mate-composer-plugin",
+            "version": "v0.13.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/ai-mate-composer-plugin.git",
+                "reference": "f60efa2657bad3482a036a9081386fe5e5fc22fc"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/ai-mate-composer-plugin/zipball/f60efa2657bad3482a036a9081386fe5e5fc22fc",
+                "reference": "f60efa2657bad3482a036a9081386fe5e5fc22fc",
+                "shasum": ""
+            },
+            "require": {
+                "composer-plugin-api": "^2.1",
+                "php": ">=8.2"
+            },
+            "require-dev": {
+                "composer/composer": "^2.1",
+                "phpstan/phpstan": "^2.1",
+                "phpstan/phpstan-phpunit": "^2.0",
+                "phpstan/phpstan-strict-rules": "^2.0",
+                "phpunit/phpunit": "^11.5.53",
+                "symfony/ai-mate": "^0.13"
+            },
+            "type": "composer-plugin",
+            "extra": {
+                "class": "Symfony\\AI\\Mate\\ComposerPlugin\\MatePlugin",
+                "thanks": {
+                    "url": "https://github.com/symfony/ai",
+                    "name": "symfony/ai"
+                },
+                "plugin-optional": true
+            },
+            "autoload": {
+                "psr-4": {
+                    "Symfony\\AI\\Mate\\ComposerPlugin\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Johannes Wachter",
+                    "email": "johannes@sulu.io"
+                },
+                {
+                    "name": "Tobias Nyholm",
+                    "email": "tobias.nyholm@gmail.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "https://symfony.com/contributors"
+                }
+            ],
+            "description": "Composer plugin that automatically discovers AI Mate extensions on install/update",
+            "keywords": [
+                "ai",
+                "auto-discovery",
+                "composer-plugin",
+                "mate"
+            ],
+            "support": {
+                "source": "https://github.com/symfony/ai-mate-composer-plugin/tree/v0.13.0"
+            },
+            "funding": [
+                {
+                    "url": "https://symfony.com/sponsor",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/fabpot",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/nicolas-grekas",
+                    "type": "github"
+                },
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
+                    "type": "tidelift"
+                }
+            ],
+            "time": "2026-08-30T01:03:45+00:00"
+        },
+        {
+            "name": "symfony/ai-monolog-mate-extension",
+            "version": "v0.13.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/ai-monolog-mate-extension.git",
+                "reference": "63a86c34d0697d89b6952791bff75a9b3e63139c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/ai-monolog-mate-extension/zipball/63a86c34d0697d89b6952791bff75a9b3e63139c",
+                "reference": "63a86c34d0697d89b6952791bff75a9b3e63139c",
+                "shasum": ""
+            },
+            "require": {
+                "monolog/monolog": "^2.0|^3.0",
+                "php": ">=8.2",
+                "symfony/ai-mate": "^0.13"
+            },
+            "require-dev": {
+                "helgesverre/toon": "^3.2.1",
+                "phpstan/phpstan": "^2.1",
+                "phpstan/phpstan-phpunit": "^2.0",
+                "phpstan/phpstan-strict-rules": "^2.0",
+                "phpunit/phpunit": "^11.5.53"
+            },
+            "type": "symfony-ai-mate",
+            "extra": {
+                "thanks": {
+                    "url": "https://github.com/symfony/ai",
+                    "name": "symfony/ai"
+                },
+                "ai-mate": {
+                    "skills": [
+                        "skills"
+                    ],
+                    "includes": [
+                        "config/config.php"
+                    ],
+                    "scan-dirs": [
+                        "Capability"
+                    ],
+                    "instructions": "INSTRUCTIONS.md"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Symfony\\AI\\Mate\\Bridge\\Monolog\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Johannes Wachter",
+                    "email": "johannes@sulu.io"
+                },
+                {
+                    "name": "Tobias Nyholm",
+                    "email": "tobias.nyholm@gmail.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "https://symfony.com/contributors"
+                }
+            ],
+            "description": "Monolog bridge for AI Mate - provides log search and analysis tools",
+            "keywords": [
+                "Bridge",
+                "ai",
+                "dev",
+                "logs",
+                "monolog"
+            ],
+            "support": {
+                "source": "https://github.com/symfony/ai-monolog-mate-extension/tree/v0.13.0"
+            },
+            "funding": [
+                {
+                    "url": "https://symfony.com/sponsor",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/fabpot",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/nicolas-grekas",
+                    "type": "github"
+                },
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
+                    "type": "tidelift"
+                }
+            ],
+            "time": "2026-08-30T01:03:45+00:00"
+        },
+        {
+            "name": "symfony/ai-symfony-mate-extension",
+            "version": "v0.13.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/ai-symfony-mate-extension.git",
+                "reference": "4bf378eae0955a512a0109dac2b3c0d981f3d7ed"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/ai-symfony-mate-extension/zipball/4bf378eae0955a512a0109dac2b3c0d981f3d7ed",
+                "reference": "4bf378eae0955a512a0109dac2b3c0d981f3d7ed",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.2",
+                "symfony/ai-mate": "^0.13",
+                "symfony/dependency-injection": "^7.3|^8.0"
+            },
+            "require-dev": {
+                "doctrine/doctrine-bundle": "^2.13|^3.0",
+                "helgesverre/toon": "^3.2.1",
+                "phpstan/phpstan": "^2.1",
+                "phpstan/phpstan-phpunit": "^2.0",
+                "phpstan/phpstan-strict-rules": "^2.0",
+                "phpunit/phpunit": "^11.5.53",
+                "symfony/http-client": "^7.3|^8.0",
+                "symfony/http-kernel": "^7.3|^8.0",
+                "symfony/mailer": "^7.3|^8.0",
+                "symfony/stopwatch": "^7.3|^8.0",
+                "symfony/translation": "^7.3|^8.0",
+                "symfony/var-dumper": "^7.3|^8.0",
+                "symfony/web-profiler-bundle": "^7.3|^8.0"
+            },
+            "suggest": {
+                "doctrine/doctrine-bundle": "Required for Doctrine database profiler formatter",
+                "symfony/http-kernel": "Required for profiler data access tools",
+                "symfony/mailer": "Required for mailer profiler formatter",
+                "symfony/translation": "Required for translation profiler collector formatter",
+                "symfony/web-profiler-bundle": "Required for profiler data access tools"
+            },
+            "type": "symfony-ai-mate",
+            "extra": {
+                "thanks": {
+                    "url": "https://github.com/symfony/ai",
+                    "name": "symfony/ai"
+                },
+                "ai-mate": {
+                    "skills": [
+                        "skills"
+                    ],
+                    "includes": [
+                        "config/config.php"
+                    ],
+                    "scan-dirs": [
+                        "Capability"
+                    ],
+                    "instructions": "INSTRUCTIONS.md"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Symfony\\AI\\Mate\\Bridge\\Symfony\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Tobias Nyholm",
+                    "email": "tobias.nyholm@gmail.com"
+                },
+                {
+                    "name": "Johannes Wachter",
+                    "email": "johannes@sulu.io"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "https://symfony.com/contributors"
+                }
+            ],
+            "description": "Symfony bridge for AI Mate - provides Symfony container introspection and optional profiler data access tools",
+            "keywords": [
+                "Bridge",
+                "ai",
+                "debug",
+                "dev",
+                "profiler",
+                "symfony"
+            ],
+            "support": {
+                "source": "https://github.com/symfony/ai-symfony-mate-extension/tree/v0.13.0"
+            },
+            "funding": [
+                {
+                    "url": "https://symfony.com/sponsor",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/fabpot",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/nicolas-grekas",
+                    "type": "github"
+                },
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
+                    "type": "tidelift"
+                }
+            ],
+            "time": "2026-08-30T01:03:45+00:00"
+        },
+        {
             "name": "symfony/browser-kit",
             "version": "v7.4.14",
             "source": {
@@ -13591,6 +14002,96 @@
                 }
             ],
             "time": "2026-05-23T16:05:06+00:00"
+        },
+        {
+            "name": "symfony/web-profiler-bundle",
+            "version": "v7.4.19",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/web-profiler-bundle.git",
+                "reference": "f9c5fed39f307b23c47e8a11c431d848390f8a67"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/web-profiler-bundle/zipball/f9c5fed39f307b23c47e8a11c431d848390f8a67",
+                "reference": "f9c5fed39f307b23c47e8a11c431d848390f8a67",
+                "shasum": ""
+            },
+            "require": {
+                "composer-runtime-api": ">=2.1",
+                "php": ">=8.2",
+                "symfony/config": "^7.3|^8.0",
+                "symfony/deprecation-contracts": "^2.5|^3",
+                "symfony/framework-bundle": "^6.4.13|^7.1.6|^8.0",
+                "symfony/http-kernel": "^6.4.13|^7.1.6|^8.0",
+                "symfony/routing": "^6.4|^7.0|^8.0",
+                "symfony/twig-bundle": "^6.4|^7.0|^8.0",
+                "twig/twig": "^3.15|^4.0"
+            },
+            "conflict": {
+                "symfony/form": "<6.4",
+                "symfony/mailer": "<6.4",
+                "symfony/messenger": "<6.4",
+                "symfony/serializer": "<7.2",
+                "symfony/workflow": "<7.3"
+            },
+            "require-dev": {
+                "symfony/browser-kit": "^6.4|^7.0|^8.0",
+                "symfony/console": "^6.4|^7.0|^8.0",
+                "symfony/css-selector": "^6.4|^7.0|^8.0",
+                "symfony/runtime": "^6.4.13|^7.1.6|^8.0",
+                "symfony/stopwatch": "^6.4|^7.0|^8.0"
+            },
+            "type": "symfony-bundle",
+            "autoload": {
+                "psr-4": {
+                    "Symfony\\Bundle\\WebProfilerBundle\\": ""
+                },
+                "exclude-from-classmap": [
+                    "/Tests/"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Fabien Potencier",
+                    "email": "fabien@symfony.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "https://symfony.com/contributors"
+                }
+            ],
+            "description": "Provides a development tool that gives detailed information about the execution of any request",
+            "homepage": "https://symfony.com",
+            "keywords": [
+                "dev"
+            ],
+            "support": {
+                "source": "https://github.com/symfony/web-profiler-bundle/tree/v7.4.19"
+            },
+            "funding": [
+                {
+                    "url": "https://symfony.com/sponsor",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/fabpot",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/nicolas-grekas",
+                    "type": "github"
+                },
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
+                    "type": "tidelift"
+                }
+            ],
+            "time": "2026-09-04T10:11:42+00:00"
         },
         {
             "name": "thecodingmachine/safe",

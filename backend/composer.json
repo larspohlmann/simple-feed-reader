@@ -59,15 +59,19 @@
         "ext-zip": "*",
         "dama/doctrine-test-bundle": "^8.6",
         "infection/infection": "^0.34.1",
-        "phptramp/phptramp": "dev-develop",
         "phpmd/phpmd": "^2.15",
         "phpstan/phpstan": "^2.2.5",
         "phpstan/phpstan-doctrine": "^2.0.28",
         "phpstan/phpstan-symfony": "^2.0.20",
+        "phptramp/phptramp": "dev-develop",
         "phpunit/phpunit": "^12.5.31",
         "squizlabs/php_codesniffer": "^3.13.6",
+        "symfony/ai-mate": "^0.13.0",
+        "symfony/ai-monolog-mate-extension": "^0.13.0",
+        "symfony/ai-symfony-mate-extension": "^0.13.0",
         "symfony/browser-kit": "7.4.*",
-        "symfony/css-selector": "7.4.*"
+        "symfony/css-selector": "7.4.*",
+        "symfony/web-profiler-bundle": "7.4.*"
     },
     "config": {
         "allow-plugins": {
@@ -90,7 +94,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "App\\Tests\\": "tests/"
+            "App\\Tests\\": "tests/",
+            "Mate\\": "mate/src/"
         }
     },
     "replace": {
@@ -120,7 +125,11 @@
         "md": "@php -d error_reporting=\"E_ALL & ~E_DEPRECATED\" vendor/bin/phpmd src text phpmd.xml.dist",
         "tramp": "phptramp",
         "tramp:update": "composer update phptramp/phptramp --no-interaction --no-progress --no-scripts",
-        "check": ["@cs", "@stan", "@tramp"],
+        "check": [
+            "@cs",
+            "@stan",
+            "@tramp"
+        ],
         "test": [
             "@putenv OTEL_PHP_DISABLED_INSTRUMENTATIONS=all",
             "@php bin/phpunit"
@@ -142,6 +151,15 @@
         "symfony": {
             "allow-contrib": false,
             "require": "7.4.*"
+        },
+        "ai-mate": {
+            "extension": false,
+            "scan-dirs": [
+                "mate/src"
+            ],
+            "includes": [
+                "mate/config.php"
+            ]
         }
     }
 }
