@@ -370,6 +370,7 @@ export class ReaderViewComponent {
         blocks: () => readingBlocks(content),
         curve: ARTICLE_FOCUS_CURVE,
         isActive: () => this.readingFocus.enabled() && !this.screen.isWide() && !this.reduceMotion,
+        split: true,
       });
     });
 

@@ -1,4 +1,5 @@
 import { type FocusCurve, focusOpacityForSpan } from './reading-focus';
+import { type FocusUnit, focusUnits } from './reading-sections';
 
 export interface ReadingFocusConfig {
   readonly scroller: HTMLElement;
@@ -7,6 +8,11 @@ export interface ReadingFocusConfig {
   /** enabled && !isWide && !reduceMotion — read live, off the reactive graph. */
   readonly isActive: () => boolean;
   readonly runOutsideZone?: <T>(run: () => T) => T;
+  /** Split a block taller than the phone screen into reading sections (#1077).
+   *  The article view sets it; the entry list keeps one unit per row. */
+  readonly split?: boolean;
+  /** The document language, for sentence splitting. */
+  readonly lang?: () => string;
 }
 
 /**
@@ -20,6 +26,13 @@ export class ReadingFocusApplier {
   private readonly onScroll = (): void => this.schedule();
   private frame = 0;
   private destroyed = false;
+  /** The current grouping; recomputed only when the geometry changes, not on
+   *  scroll (#982). One element per unit unless a tall block was split. */
+  private units: FocusUnit[] = [];
+  private regroupPending = true;
+  /** Every element carrying an opacity we set, so a unit that disappears — a
+   *  block's spans once it is no longer tall — gets cleared, not stranded. */
+  private written = new Set<HTMLElement>();
 
   constructor(private readonly config: ReadingFocusConfig) {
     this.runOutsideZone = config.runOutsideZone ?? ((run) => run());
@@ -27,7 +40,7 @@ export class ReadingFocusApplier {
       config.scroller.addEventListener('scroll', this.onScroll, { passive: true }),
     );
     if (typeof ResizeObserver !== 'undefined') {
-      this.observer = new ResizeObserver(() => this.schedule());
+      this.observer = new ResizeObserver(() => this.scheduleRegroup());
     }
     this.observe();
     this.schedule();
@@ -35,14 +48,14 @@ export class ReadingFocusApplier {
 
   refresh(): void {
     this.observe();
-    this.schedule();
+    this.scheduleRegroup();
   }
 
-  /** Blank every block now and drop a pending pass — a disable must clear the
+  /** Blank every target now and drop a pending pass — a disable must clear the
    *  same tick, not a frame later. */
   clear(): void {
     this.cancel();
-    for (const block of this.config.blocks()) block.style.opacity = '';
+    this.blankAll();
   }
 
   destroy(): void {
@@ -57,6 +70,11 @@ export class ReadingFocusApplier {
     this.observer.disconnect();
     this.observer.observe(this.config.scroller);
     for (const block of this.config.blocks()) this.observer.observe(block);
+  }
+
+  private scheduleRegroup(): void {
+    this.regroupPending = true;
+    this.schedule();
   }
 
   private schedule(): void {
@@ -75,26 +93,57 @@ export class ReadingFocusApplier {
   }
 
   private recompute(): void {
-    const { blocks, isActive } = this.config;
-    const targets = blocks();
-    if (!isActive()) {
-      for (const block of targets) block.style.opacity = '';
+    if (!this.config.isActive()) {
+      this.blankAll();
+      this.regroupPending = true;
       return;
     }
-    const opacities = this.measureOpacities(targets);
-    targets.forEach((block, index) => {
-      if (block.style.opacity !== opacities[index]) block.style.opacity = opacities[index];
-    });
+    if (this.regroupPending) {
+      this.units = this.regroup();
+      this.regroupPending = false;
+    }
+    this.applyOpacities(this.measureOpacities());
   }
 
-  private measureOpacities(targets: HTMLElement[]): string[] {
+  private regroup(): FocusUnit[] {
+    const { scroller, blocks, split, lang } = this.config;
+    if (!split) return blocks().map((block) => [block]);
+    return focusUnits(
+      blocks(),
+      scroller.clientHeight,
+      (element) => element.getBoundingClientRect().height,
+      lang?.() ?? document.documentElement.lang,
+    );
+  }
+
+  private measureOpacities(): string[] {
     const { scroller, curve } = this.config;
     const viewport = scroller.clientHeight;
     const scrollerTop = scroller.getBoundingClientRect().top;
-    return targets.map((block) => {
-      const rect = block.getBoundingClientRect();
-      const top = rect.top - scrollerTop;
-      return String(focusOpacityForSpan(top, top + rect.height, viewport, curve));
+    return this.units.map((unit) => {
+      const first = unit[0].getBoundingClientRect();
+      const last = unit.length === 1 ? first : unit[unit.length - 1].getBoundingClientRect();
+      const top = first.top - scrollerTop;
+      const bottom = last.top + last.height - scrollerTop;
+      return String(focusOpacityForSpan(top, bottom, viewport, curve));
     });
+  }
+
+  private applyOpacities(opacities: string[]): void {
+    const next = new Set<HTMLElement>();
+    this.units.forEach((unit, index) => {
+      for (const element of unit) {
+        if (element.style.opacity !== opacities[index]) element.style.opacity = opacities[index];
+        next.add(element);
+      }
+    });
+    for (const element of this.written) if (!next.has(element)) element.style.opacity = '';
+    this.written = next;
+  }
+
+  private blankAll(): void {
+    for (const element of this.written) element.style.opacity = '';
+    this.written.clear();
+    for (const block of this.config.blocks()) block.style.opacity = '';
   }
 }
