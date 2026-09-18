@@ -74,10 +74,20 @@
       "typeToConfirm": "Type REPLACE to confirm.",
       "restore": "Replace this account",
       "restoring": "Restoring…",
+      "progress": "Part {{done}} of {{total}}",
+      "continue": "Continue",
       "done": "Restore complete: {{subscriptions}} subscriptions, {{entries}} articles created. Feeds and articles this instance already holds are reused, so these numbers can be lower than what the file holds.",
       "failed": "The restore failed and the account may be partly loaded. Run the restore again with the same file — the wipe restarts cleanly.",
       "tooLarge": "This backup file is larger than this server accepts. The server refused it before the app saw it — an operator can raise the upload limit (client_max_body_size and post_max_size).",
-      "emailMismatchNote": "The backup's account email does not need to match this account."
+      "oldFormat": "This backup uses an old format. Make a new export on the source instance.",
+      "invalidArchive": "This file is not a complete backup archive.",
+      "emailMismatchNote": "The backup's account email does not need to match this account.",
+      "toLoad": {
+        "savedSearches": "The file also holds {{savedSearches}} saved searches."
+      },
+      "loaded": {
+        "savedSearches": "{{savedSearches}} saved searches restored."
+      }
     },
     "account": {
       "title": "Account",

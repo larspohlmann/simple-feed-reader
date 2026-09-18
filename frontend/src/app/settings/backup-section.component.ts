@@ -1,23 +1,26 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import {
-  Problem,
-  REQUEST_TOO_LARGE,
-  parseProblem,
-  parseProblemAsync,
-  outcomeIsUnproven,
-} from '../core/problem';
+import { firstValueFrom } from 'rxjs';
+import { Problem, REQUEST_TOO_LARGE, parseProblem, parseProblemAsync } from '../core/problem';
 import { filenameFromContentDisposition, saveAs } from '../core/save-as';
 import { downloadOpmlExport } from '../core/opml-export';
 import { LanguageService } from '../core/language.service';
 import { formatLongDate } from '../reader/format';
-import { RestorePreview, RestoreResult } from '../reader/models';
+import { RestoreCounts, RestorePreview, RestoreResult } from '../reader/models';
 import { ReaderApi } from '../reader/reader-api';
 import { RefreshService } from '../reader/refresh.service';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
+import {
+  BackupArchive,
+  InvalidBackupArchiveError,
+  isOldFormatBackup,
+  openBackupArchive,
+} from './backup-archive';
+import { BackupRestoreRun, RestoreRunOutcome } from './backup-restore-run';
 import { ButtonComponent } from '../shared/button/button.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
+import { ProgressHairlineComponent } from '../shared/progress-hairline/progress-hairline.component';
 import { SettingsGroupComponent } from '../shared/settings/settings-group/settings-group.component';
 
 const CONFIRM_PHRASE = 'REPLACE';
@@ -25,17 +28,23 @@ const CONFIRM_PHRASE = 'REPLACE';
 /** Used only if the server's Content-Disposition header is missing or
  *  unparseable -- normal responses carry the app-slug/version/account/date
  *  name the backend builds (BackupFilename). */
-const FALLBACK_BACKUP_FILENAME = 'account-backup.json.gz';
+const FALLBACK_BACKUP_FILENAME = 'account-backup.zip';
 
-/** The one problem type the backend raises from an already-wiped account
- *  (BackupLoadFailedException). Every other restore failure -- the file does
- *  not fit, the file is invalid, the confirmation is missing, the body is too
- *  large -- is refused before a single row is deleted. */
-const POST_WIPE_PROBLEM = 'backup_load_failed';
+/** Marks a `Problem` this component built itself from a check that never
+ *  reached the server -- an old-format file, or a zip `openBackupArchive`
+ *  rejected. `detail` holds the i18n key to translate, the same trick
+ *  `messageFor()` already plays for `REQUEST_TOO_LARGE`. */
+const CLIENT_CHECK_FAILED = 'client_backup_check_failed';
 
 @Component({
   selector: 'app-backup-section',
-  imports: [ButtonComponent, ErrorBannerComponent, SettingsGroupComponent, TranslocoPipe],
+  imports: [
+    ButtonComponent,
+    ErrorBannerComponent,
+    ProgressHairlineComponent,
+    SettingsGroupComponent,
+    TranslocoPipe,
+  ],
   templateUrl: './backup-section.component.html',
   styleUrl: './backup-section.component.scss',
 })
@@ -45,6 +54,7 @@ export class BackupSectionComponent {
   private readonly refresh = inject(RefreshService);
   private readonly language = inject(LanguageService);
   private readonly transloco = inject(TranslocoService);
+  private readonly restoreRun = inject(BackupRestoreRun);
 
   readonly exporting = signal(false);
   readonly exportError = signal<Problem | null>(null);
@@ -65,6 +75,13 @@ export class BackupSectionComponent {
    *  be half-wiped" alarm is the worst this feature can raise. */
   readonly failedOnce = signal(false);
 
+  readonly progress = this.restoreRun.progress;
+  readonly canContinue = this.restoreRun.canContinue;
+
+  /** The archive `onFile()` verified and previewed -- `restore()` reads the
+   *  same object so it never re-opens or re-verifies the zip. */
+  private archive: BackupArchive | null = null;
+
   readonly canRestore = computed(
     () => this.typed() === CONFIRM_PHRASE && !!this.file() && !this.restoring(),
   );
@@ -80,14 +97,28 @@ export class BackupSectionComponent {
   /** A body the web server refused as oversized never reaches the app, so it
    *  carries no translated detail of its own -- and it is the one failure here
    *  the user can act on, so it gets wording that names the upload limit
-   *  instead of the generic fallback (#458). */
+   *  instead of the generic fallback (#458). A client-side check failure
+   *  carries no server detail either, so its `detail` holds the i18n key to
+   *  translate instead of already-translated text. */
   private messageFor(problem: Problem | null): string | null {
     if (problem === null) return null;
     if (problem.type === REQUEST_TOO_LARGE) {
       return this.transloco.translate('settings.backup.tooLarge');
     }
+    if (problem.type === CLIENT_CHECK_FAILED) {
+      return this.transloco.translate(problem.detail ?? '');
+    }
 
     return problem.detail || problem.title;
+  }
+
+  private clientCheckFailed(detailKey: string): Problem {
+    return {
+      type: CLIENT_CHECK_FAILED,
+      title: 'Backup check failed',
+      status: 0,
+      detail: detailKey,
+    };
   }
 
   createdAt(iso: string): string {
@@ -126,49 +157,81 @@ export class BackupSectionComponent {
   }
 
   onFile(file: File): void {
+    this.restoreRun.reset();
+    this.archive = null;
     this.file.set(file);
     this.result.set(null);
     this.error.set(null);
     this.preview.set(null);
+
+    if (isOldFormatBackup(file.name)) {
+      this.error.set(this.clientCheckFailed('settings.backup.oldFormat'));
+      return;
+    }
+
     this.previewing.set(true);
-    this.api.previewAccountRestore(file).subscribe({
-      next: (p) => {
-        this.previewing.set(false);
-        this.preview.set(p);
-      },
-      error: (e: HttpErrorResponse) => {
-        this.previewing.set(false);
-        this.preview.set(null);
-        this.error.set(parseProblem(e));
-      },
-    });
+    void this.openAndPreview(file);
+  }
+
+  private async openAndPreview(file: File): Promise<void> {
+    try {
+      const archive = await openBackupArchive(file);
+      const preview = await firstValueFrom(
+        this.api.previewAccountRestore(await archive.foundation()),
+      );
+      this.archive = archive;
+      this.previewing.set(false);
+      this.preview.set(preview);
+    } catch (error) {
+      this.previewing.set(false);
+      this.preview.set(null);
+      this.error.set(this.previewFailure(error));
+    }
+  }
+
+  private previewFailure(error: unknown): Problem {
+    if (error instanceof InvalidBackupArchiveError) {
+      return this.clientCheckFailed('settings.backup.invalidArchive');
+    }
+    return parseProblem(error as HttpErrorResponse);
   }
 
   restore(): void {
-    const file = this.file();
-    if (!file || !this.canRestore()) return;
+    const archive = this.archive;
+    if (!archive || !this.canRestore()) return;
     this.restoring.set(true);
     this.error.set(null);
-    this.api.restoreAccount(file).subscribe({
-      next: (r) => {
-        this.restoring.set(false);
-        this.file.set(null);
-        this.typed.set('');
-        this.preview.set(null);
-        this.result.set(r);
-        this.subs.load();
-        // Restored feeds arrive with a virgin schedule and are empty until a
-        // fetch runs -- same reasoning as the OPML import's post-import refresh.
-        this.refresh.run(() => this.subs.load());
-      },
-      error: (e: HttpErrorResponse) => {
-        const problem = parseProblem(e);
-        this.restoring.set(false);
-        this.error.set(problem);
-        if (problem.type === POST_WIPE_PROBLEM || outcomeIsUnproven(problem)) {
-          this.failedOnce.set(true);
-        }
-      },
-    });
+    void this.drive(() => this.restoreRun.run(archive));
+  }
+
+  continueRestore(): void {
+    this.restoring.set(true);
+    this.error.set(null);
+    void this.drive(() => this.restoreRun.continue());
+  }
+
+  private async drive(action: () => Promise<RestoreRunOutcome>): Promise<void> {
+    const outcome = await action();
+    this.restoring.set(false);
+    if (outcome.kind === 'completed') {
+      this.onRestoreCompleted(outcome.loaded);
+      return;
+    }
+    this.error.set(outcome.problem);
+    if (outcome.wiped) {
+      this.failedOnce.set(true);
+    }
+  }
+
+  private onRestoreCompleted(loaded: RestoreCounts): void {
+    this.file.set(null);
+    this.typed.set('');
+    this.preview.set(null);
+    this.archive = null;
+    this.result.set({ loaded });
+    this.subs.load();
+    // Restored feeds arrive with a virgin schedule and are empty until a
+    // fetch runs -- same reasoning as the OPML import's post-import refresh.
+    this.refresh.run(() => this.subs.load());
   }
 }

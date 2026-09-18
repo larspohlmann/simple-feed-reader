@@ -17,6 +17,13 @@ if (typeof window !== 'undefined') {
       dispatchEvent: () => false,
     }),
   });
+
+  // jsdom has no TransformStream; zip.js's ZipReader needs one even for the
+  // read-only path a jsdom-hosted component (backup-section) exercises.
+  if (typeof (globalThis as unknown as { TransformStream?: unknown }).TransformStream === 'undefined') {
+    const { TransformStream } = require('node:stream/web');
+    Object.defineProperty(globalThis, 'TransformStream', { value: TransformStream });
+  }
 }
 
 if (!globalThis.crypto?.subtle) {

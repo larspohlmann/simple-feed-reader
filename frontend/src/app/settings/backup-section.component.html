@@ -13,7 +13,7 @@
     <p class="lead">{{ 'settings.backup.restoreLead' | transloco }}</p>
     <input
       type="file"
-      accept=".gz,application/gzip"
+      accept=".zip"
       [attr.aria-label]="'settings.backup.chooseFile' | transloco"
       (change)="onFileSelected($event)"
     />
@@ -48,6 +48,12 @@
                     entries: p.toLoad.entries,
                     entryStates: p.toLoad.entryStates,
                   }
+          }}
+        </p>
+        <p>
+          {{
+            'settings.backup.toLoad.savedSearches'
+              | transloco: { savedSearches: p.toLoad.savedSearches }
           }}
         </p>
         <p>
@@ -95,8 +101,24 @@
       </div>
     }
 
+    @if (restoring()) {
+      @if (progress(); as p) {
+        <app-progress-hairline [active]="true" [value]="p.done / p.total" />
+        <p class="status">
+          {{ 'settings.backup.progress' | transloco: { done: p.done, total: p.total } }}
+        </p>
+      }
+    }
+
     @if (errorMessage(); as message) {
-      <app-error-banner [message]="message" />
+      <div class="errorRow">
+        <app-error-banner [message]="message" />
+        @if (canContinue()) {
+          <app-button (click)="continueRestore()">
+            {{ 'settings.backup.continue' | transloco }}
+          </app-button>
+        }
+      </div>
     }
     @if (failedOnce()) {
       <app-error-banner [message]="'settings.backup.failed' | transloco" />
@@ -106,6 +128,12 @@
         {{
           'settings.backup.done'
             | transloco: { subscriptions: r.loaded.subscriptions, entries: r.loaded.entries }
+        }}
+      </p>
+      <p class="result">
+        {{
+          'settings.backup.loaded.savedSearches'
+            | transloco: { savedSearches: r.loaded.savedSearches }
         }}
       </p>
     }
