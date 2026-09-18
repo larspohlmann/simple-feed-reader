@@ -404,6 +404,86 @@ final class AccountBackupExporterTest extends DbTestCase
         self::assertSame(['entries' => 0, 'entryStates' => 0], $header['totals']);
     }
 
+    public function testTheFoundationStaysConsistentWithEntryPartsWhenAFeedUrlChangesMidExport(): void
+    {
+        $user = $this->makeUser('mid-export-rewrite@example.com');
+        $feed = new Feed('https://original.example/feed.xml');
+        $this->em->persist($feed);
+        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->em->persist(new Entry(
+            $feed,
+            'g-1',
+            'https://original.example/a',
+            'A',
+            new \DateTimeImmutable('2026-08-01T00:00:00Z'),
+            new \DateTimeImmutable('2026-08-01T00:00:00Z'),
+        ));
+        $this->em->flush();
+        $feedId = (int) $feed->getId();
+
+        $parts = [];
+        $rewritten = false;
+        foreach ($this->exporter()->parts($user, null) as $part) {
+            $parts[] = $this->decodedLinesOf($part);
+            if (!$rewritten) {
+                $this->rewriteFeedUrl($feedId, 'https://rewritten.example/feed.xml');
+                $rewritten = true;
+            }
+        }
+
+        $entryFeedUrls = self::feedUrlsOfKind($parts, 'entry');
+        self::assertNotEmpty($entryFeedUrls);
+        foreach ($entryFeedUrls as $feedUrl) {
+            self::assertContains($feedUrl, self::foundationFeedUrls($parts));
+        }
+    }
+
+    private function rewriteFeedUrl(int $feedId, string $url): void
+    {
+        $feed = $this->em->find(Feed::class, $feedId);
+        self::assertInstanceOf(Feed::class, $feed);
+        $feed->setUrl($url);
+        $this->em->flush();
+    }
+
+    /**
+     * @param list<list<array<string, mixed>>> $parts
+     *
+     * @return list<string>
+     */
+    private static function feedUrlsOfKind(array $parts, string $kind): array
+    {
+        $urls = [];
+        foreach ($parts as $part) {
+            foreach ($part as $line) {
+                if ($kind === $line['kind'] && \is_string($line['feedUrl'])) {
+                    $urls[$line['feedUrl']] = true;
+                }
+            }
+        }
+
+        return array_keys($urls);
+    }
+
+    /**
+     * @param list<list<array<string, mixed>>> $parts
+     *
+     * @return list<string>
+     */
+    private static function foundationFeedUrls(array $parts): array
+    {
+        $urls = [];
+        foreach ($parts as $part) {
+            foreach ($part as $line) {
+                if ('feed' === $line['kind'] && \is_string($line['url'])) {
+                    $urls[] = $line['url'];
+                }
+            }
+        }
+
+        return $urls;
+    }
+
     public function testEveryYieldedPartIsAValidDocumentThatTheReaderAccepts(): void
     {
         $user = (new FullyPopulatedAccount($this->em, $this->hasher()))->create('reader-round-trip@example.com');

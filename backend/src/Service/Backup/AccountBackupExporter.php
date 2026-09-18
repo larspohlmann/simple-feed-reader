@@ -19,8 +19,9 @@ use Psr\Clock\ClockInterface;
 /**
  * One account as gzipped backup parts: every entry part first, the foundation
  * last, because only then are the part count and totals its header declares
- * known. The entry walk clear()s the entity manager, so the foundation
- * re-fetches everything by user id instead of reusing the caller's User.
+ * known. The foundation's record lines are captured up front, before the entry
+ * walk clear()s the entity manager, so the parts and the foundation name the
+ * same subscriptions and feeds even if the account changes mid-export.
  */
 final readonly class AccountBackupExporter
 {
@@ -44,10 +45,11 @@ final readonly class AccountBackupExporter
     {
         $userId = $user->getId() ?? throw new \LogicException('Cannot export an unsaved account.');
         $provenance = $this->provenanceOf($user, $sourceUrl);
+        $foundation = $this->foundationSnapshot($userId);
         $walk = new BackupPartWalk($this->em, $this->entries, $this->entryStates, $this->lines, $provenance, $userId);
 
-        yield from $walk->entryParts($this->feedUrlsByFeedId($userId));
-        yield $this->foundation($userId, $provenance, $walk);
+        yield from $walk->entryParts($foundation->feedUrlsByFeedId);
+        yield $this->foundation($foundation, $provenance, $walk);
     }
 
     private function provenanceOf(User $user, ?string $sourceUrl): BackupProvenance
@@ -60,43 +62,29 @@ final readonly class AccountBackupExporter
         );
     }
 
-    /**
-     * @return array<int, string>
-     */
-    private function feedUrlsByFeedId(int $userId): array
+    private function foundationSnapshot(int $userId): FoundationSnapshot
     {
-        return array_map(
-            static fn (Feed $feed): string => $feed->getUrl(),
-            $this->feedsById($this->subscriptions->findForUserWithTags($userId)),
+        $subscriptions = $this->subscriptions->findForUserWithTags($userId);
+        $feedsById = $this->feedsById($subscriptions);
+
+        return new FoundationSnapshot(
+            $this->lines->accountLine($this->users->getById($userId)),
+            array_map($this->lines->tagLine(...), $this->tags->findForUser($userId)),
+            array_map($this->lines->savedSearchLine(...), $this->savedSearches->findForUser($userId)),
+            array_map($this->lines->feedLine(...), array_values($feedsById)),
+            array_map($this->lines->subscriptionLine(...), $subscriptions),
+            array_map(static fn (Feed $feed): string => $feed->getUrl(), $feedsById),
         );
     }
 
-    private function foundation(int $userId, BackupProvenance $provenance, BackupPartWalk $walk): BackupPart
-    {
-        $subscriptions = $this->subscriptions->findForUserWithTags($userId);
-        $tagLines = array_map($this->lines->tagLine(...), $this->tags->findForUser($userId));
-        $savedSearchLines = array_map($this->lines->savedSearchLine(...), $this->savedSearches->findForUser($userId));
-        $feedLines = array_map($this->lines->feedLine(...), array_values($this->feedsById($subscriptions)));
-        $subscriptionLines = array_map($this->lines->subscriptionLine(...), $subscriptions);
-
+    private function foundation(
+        FoundationSnapshot $snapshot,
+        BackupProvenance $provenance,
+        BackupPartWalk $walk,
+    ): BackupPart {
         $header = $this->lines->foundationHeader($provenance, $walk->partsWritten() + 1, $walk->totals());
-        $footer = $this->lines->footerLine([
-            BackupSchema::KIND_TAG => \count($tagLines),
-            BackupSchema::KIND_SAVED_SEARCH => \count($savedSearchLines),
-            BackupSchema::KIND_FEED => \count($feedLines),
-            BackupSchema::KIND_SUBSCRIPTION => \count($subscriptionLines),
-        ]);
-        $lines = [
-            $header,
-            $this->lines->accountLine($this->users->getById($userId)),
-            ...$tagLines,
-            ...$savedSearchLines,
-            ...$feedLines,
-            ...$subscriptionLines,
-            $footer,
-        ];
 
-        return BackupPart::foundation(BackupPart::gzip(implode("\n", $lines) . "\n"));
+        return $snapshot->part($header, $this->lines->footerLine($snapshot->counts()));
     }
 
     /**
