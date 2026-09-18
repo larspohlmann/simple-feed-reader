@@ -25,11 +25,6 @@ class EntryRepository extends ServiceEntityRepository
      *
      * @return list<string> the subset of hashes that already exist for this feed
      */
-    /**
-     * @param list<string> $guidHashes
-     *
-     * @return list<string> the subset of hashes that already exist for this feed
-     */
     public function existingGuidHashesForFeed(int $feedId, array $guidHashes): array
     {
         if ($guidHashes === []) {
