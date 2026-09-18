@@ -16,7 +16,7 @@ namespace App\Service\Backup;
 final readonly class BackupFilename
 {
     private const string APP_SLUG = 'simplefeedreader';
-    private const string SUFFIX = '.json.gz';
+    private const string SUFFIX = '.zip';
 
     public function __construct(
         private string $accountEmail,

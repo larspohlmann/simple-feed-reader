@@ -20,7 +20,7 @@ final class BackupFilenameTest extends TestCase
         $filename = new BackupFilename('ada.lovelace@fastmail.com', 'v0.6.2', $this->exportedAt());
 
         self::assertSame(
-            'simplefeedreader-0_6_2-ada-lovelace-at-fastmail-20260817.json.gz',
+            'simplefeedreader-0_6_2-ada-lovelace-at-fastmail-20260817.zip',
             $filename->value(),
         );
     }
@@ -29,7 +29,7 @@ final class BackupFilenameTest extends TestCase
     {
         $filename = new BackupFilename('ada.lovelace@fastmail.com', 'v0.6.2', $this->exportedAt());
 
-        self::assertMatchesRegularExpression('/^[a-z0-9_-]+\.json\.gz$/', $filename->value());
+        self::assertMatchesRegularExpression('/^[a-z0-9_-]+\.zip$/', $filename->value());
     }
 
     public function testReducesAPlusTagInTheLocalPartToASeparator(): void
@@ -37,7 +37,7 @@ final class BackupFilenameTest extends TestCase
         $filename = new BackupFilename('ada.lovelace+e2e@fastmail.com', 'v0.6.2', $this->exportedAt());
 
         self::assertSame(
-            'simplefeedreader-0_6_2-ada-lovelace-e2e-at-fastmail-20260817.json.gz',
+            'simplefeedreader-0_6_2-ada-lovelace-e2e-at-fastmail-20260817.zip',
             $filename->value(),
         );
     }
@@ -46,7 +46,7 @@ final class BackupFilenameTest extends TestCase
     {
         $filename = new BackupFilename('reader@mail.example.co.uk', 'v0.6.2', $this->exportedAt());
 
-        self::assertStringContainsString('-at-mail-20260817.json.gz', $filename->value());
+        self::assertStringContainsString('-at-mail-20260817.zip', $filename->value());
     }
 
     public function testUnderscoresDotsInAPreReleaseVersionAndKeepsItsOwnHyphen(): void
@@ -54,7 +54,7 @@ final class BackupFilenameTest extends TestCase
         $filename = new BackupFilename('ada.lovelace@fastmail.com', '0.7.0-dev.3', $this->exportedAt());
 
         self::assertSame(
-            'simplefeedreader-0_7_0-dev_3-ada-lovelace-at-fastmail-20260817.json.gz',
+            'simplefeedreader-0_7_0-dev_3-ada-lovelace-at-fastmail-20260817.zip',
             $filename->value(),
         );
     }
@@ -73,7 +73,7 @@ final class BackupFilenameTest extends TestCase
         );
 
         self::assertSame(
-            'simplefeedreader-dev-ada-lovelace-at-fastmail-20260817.json.gz',
+            'simplefeedreader-dev-ada-lovelace-at-fastmail-20260817.zip',
             $filename->value(),
         );
     }
@@ -82,7 +82,7 @@ final class BackupFilenameTest extends TestCase
     {
         $filename = new BackupFilename('laŭra@fastmail.com', 'v0.6.2', $this->exportedAt());
 
-        self::assertMatchesRegularExpression('/^[a-z0-9_-]+\.json\.gz$/', $filename->value());
+        self::assertMatchesRegularExpression('/^[a-z0-9_-]+\.zip$/', $filename->value());
         self::assertStringContainsString('-l', $filename->value());
     }
 
@@ -98,7 +98,7 @@ final class BackupFilenameTest extends TestCase
         $filename = new BackupFilename('notanemail', 'v0.6.2', $this->exportedAt());
 
         self::assertSame(
-            'simplefeedreader-0_6_2-notanemail-at-20260817.json.gz',
+            'simplefeedreader-0_6_2-notanemail-at-20260817.zip',
             $filename->value(),
         );
     }
@@ -108,7 +108,7 @@ final class BackupFilenameTest extends TestCase
         $filename = new BackupFilename('@fastmail.com', 'v0.6.2', $this->exportedAt());
 
         self::assertSame(
-            'simplefeedreader-0_6_2-at-fastmail-20260817.json.gz',
+            'simplefeedreader-0_6_2-at-fastmail-20260817.zip',
             $filename->value(),
         );
     }
@@ -118,7 +118,7 @@ final class BackupFilenameTest extends TestCase
         $filename = new BackupFilename('user@', 'v0.6.2', $this->exportedAt());
 
         self::assertSame(
-            'simplefeedreader-0_6_2-user-at-20260817.json.gz',
+            'simplefeedreader-0_6_2-user-at-20260817.zip',
             $filename->value(),
         );
     }
@@ -128,7 +128,7 @@ final class BackupFilenameTest extends TestCase
         $filename = new BackupFilename('user@localhost', 'v0.6.2', $this->exportedAt());
 
         self::assertSame(
-            'simplefeedreader-0_6_2-user-at-localhost-20260817.json.gz',
+            'simplefeedreader-0_6_2-user-at-localhost-20260817.zip',
             $filename->value(),
         );
     }
@@ -138,7 +138,7 @@ final class BackupFilenameTest extends TestCase
         $filename = new BackupFilename('@', 'v0.6.2', $this->exportedAt());
 
         self::assertSame(
-            'simplefeedreader-0_6_2-at-20260817.json.gz',
+            'simplefeedreader-0_6_2-at-20260817.zip',
             $filename->value(),
         );
     }
