@@ -10,6 +10,18 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.0.13] - 2026-09-18
+
+## What's Changed
+* feat(#1069): limit null-coalescing chains by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1070
+* Style article FAQ disclosures and expand them by default by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1072
+* feat(#1073): split account backups into parts, restore one part per request by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1074
+* feat(#1075): add Symfony AI Mate for agent runtime inspection by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1076
+* Reading focus: split a screen-tall paragraph into sections (#1077) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1078
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.0.12...v1.0.13
+
 ## [v1.0.12] - 2026-09-16
 
 ## What's Changed
