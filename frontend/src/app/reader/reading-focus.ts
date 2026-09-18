@@ -30,8 +30,8 @@ const WRAPPER_TAGS = new Set(['DIV', 'SECTION', 'ARTICLE', 'MAIN', 'ASIDE', 'HEA
 
 /**
  * Tags that make a wrapper a container of blocks rather than a paragraph itself.
- * Lists, quotes, figures and tables end a descent — each is one visual unit; fading
- * an `<li>` or `<figcaption>` away from its parent reads worse than not fading at all.
+ * Lists, quotes, figures and tables end a descent — each is one visual unit until
+ * it outgrows the screen, which `reading-sections.ts` handles (#1077).
  */
 const BLOCK_TAGS = new Set([
   ...WRAPPER_TAGS,
@@ -57,12 +57,13 @@ const BLOCK_TAGS = new Set([
 /** Depth of generic nesting we will walk down before taking what we have. */
 const MAX_WRAPPER_DEPTH = 12;
 
+export function hasBlockChildren(el: Element): boolean {
+  return Array.from(el.children).some((child) => BLOCK_TAGS.has(child.tagName));
+}
+
 /** Whether an element groups blocks (so we descend) or is one (so we don't). */
 function groupsBlocks(el: Element): boolean {
-  return (
-    WRAPPER_TAGS.has(el.tagName) &&
-    Array.from(el.children).some((child) => BLOCK_TAGS.has(child.tagName))
-  );
+  return WRAPPER_TAGS.has(el.tagName) && hasBlockChildren(el);
 }
 
 /**
