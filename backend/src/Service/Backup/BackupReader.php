@@ -26,6 +26,9 @@ use App\Service\Backup\Exception\InvalidBackupException;
  */
 final readonly class BackupReader
 {
+    public const int MAX_ENTRIES_PER_PART = 5000;
+    public const int MAX_INFLATED_BYTES = 67_108_864;
+
     private const array KIND_RANK = [
         BackupSchema::KIND_HEADER => 0,
         BackupSchema::KIND_ACCOUNT => 1,
@@ -67,6 +70,8 @@ final readonly class BackupReader
         $counts = array_fill_keys(self::COUNTED_KINDS, 0);
         $accountSeen = false;
         $footerSeen = false;
+        $header = null;
+        $guard = null;
 
         foreach (GzipLineReader::lines($gzipBytes) as $line) {
             ++$lineNumber;
@@ -83,12 +88,25 @@ final readonly class BackupReader
 
             $currentRank = $this->assertOrdered($kind, -1 === $currentRank, $currentRank, $lineNumber);
 
+            if (BackupSchema::KIND_HEADER === $kind) {
+                $header = $this->assertKnownSchemaVersion(BackupHeader::fromLine($decoded));
+                $header = $this->assertCoherentHeader($header);
+                $guard = new BackupPartGuard($header);
+                yield $header;
+                continue;
+            }
+
+            $guard = $this->requireGuard($guard);
+            $guard->seeLine($line);
+
             if (BackupSchema::KIND_FOOTER === $kind) {
-                $this->assertAccountSeen($accountSeen);
+                $this->assertAccountSeen($header, $accountSeen);
                 $this->verifyFooter(FooterLine::fromLine($decoded), $counts);
                 $footerSeen = true;
                 continue;
             }
+
+            $guard->seeKind($kind, $lineNumber);
 
             if (BackupSchema::KIND_ACCOUNT === $kind) {
                 $accountSeen = true;
@@ -106,11 +124,62 @@ final readonly class BackupReader
         }
     }
 
-    private function assertAccountSeen(bool $accountSeen): void
+    /**
+     * The grammar guarantees a header precedes every other line, so a null
+     * guard here means assertOrdered failed to do its job.
+     */
+    private function requireGuard(?BackupPartGuard $guard): BackupPartGuard
     {
+        if (null === $guard) {
+            throw new \LogicException('No header was read before this line.');
+        }
+
+        return $guard;
+    }
+
+    private function assertAccountSeen(?BackupHeader $header, bool $accountSeen): void
+    {
+        if (null === $header || !$header->isFoundation()) {
+            return;
+        }
+
         if (!$accountSeen) {
             throw new InvalidBackupException('The backup is missing its account line.');
         }
+    }
+
+    private function assertCoherentHeader(BackupHeader $header): BackupHeader
+    {
+        if ($header->part < 0) {
+            throw new InvalidBackupException(sprintf('Header part %d is negative.', $header->part));
+        }
+
+        if ($header->isFoundation()) {
+            return $this->assertFoundationDeclaresPartsAndTotals($header);
+        }
+
+        return $this->assertEntryPartDeclaresNeither($header);
+    }
+
+    private function assertFoundationDeclaresPartsAndTotals(BackupHeader $header): BackupHeader
+    {
+        if (null === $header->parts || $header->parts < 1 || null === $header->totals) {
+            throw new InvalidBackupException('The foundation must declare its parts count and totals.');
+        }
+
+        return $header;
+    }
+
+    private function assertEntryPartDeclaresNeither(BackupHeader $header): BackupHeader
+    {
+        if (null !== $header->parts || null !== $header->totals) {
+            throw new InvalidBackupException(sprintf(
+                'Entry part %d must not declare parts or totals.',
+                $header->part,
+            ));
+        }
+
+        return $header;
     }
 
     /**
@@ -177,7 +246,6 @@ final readonly class BackupReader
     private function toDto(string $kind, array $decoded): object
     {
         return match ($kind) {
-            BackupSchema::KIND_HEADER => $this->assertKnownSchemaVersion(BackupHeader::fromLine($decoded)),
             BackupSchema::KIND_ACCOUNT => AccountLine::fromLine($decoded),
             BackupSchema::KIND_TAG => TagLine::fromLine($decoded),
             BackupSchema::KIND_SAVED_SEARCH => SavedSearchLine::fromLine($decoded),
@@ -185,9 +253,10 @@ final readonly class BackupReader
             BackupSchema::KIND_SUBSCRIPTION => SubscriptionLine::fromLine($decoded),
             BackupSchema::KIND_ENTRY => EntryLine::fromLine($decoded),
             BackupSchema::KIND_ENTRY_STATE => EntryStateLine::fromLine($decoded),
-            // Unreachable: assertOrdered has already refused every kind absent
-            // from KIND_RANK, and KIND_RANK and this match list the same set.
-            // It stays only so the match is exhaustive over `string`.
+            // Unreachable: read() handles the header and footer kinds itself
+            // before calling toDto, and assertOrdered has already refused
+            // every kind absent from KIND_RANK. It stays only so the match
+            // is exhaustive over `string`.
             default => throw new \LogicException(sprintf('assertOrdered accepted unknown kind "%s".', $kind)),
         };
     }

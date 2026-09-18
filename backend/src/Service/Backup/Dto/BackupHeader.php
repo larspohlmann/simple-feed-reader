@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Backup\Dto;
 
 /**
- * The backup file's first line: format version and provenance, so a restore
- * can refuse a file it does not understand before touching any data.
+ * A backup part's first line: format version, provenance, and where this
+ * part sits among its siblings, so a restore can refuse a file it does not
+ * understand before touching any data.
  */
 final readonly class BackupHeader
 {
@@ -15,7 +16,16 @@ final readonly class BackupHeader
         public \DateTimeImmutable $createdAt,
         public ?string $sourceUrl,
         public ?string $sourceEmail,
+        public string $backupId,
+        public int $part,
+        public ?int $parts,
+        public ?BackupTotals $totals,
     ) {
+    }
+
+    public function isFoundation(): bool
+    {
+        return 0 === $this->part;
     }
 
     /**
@@ -28,6 +38,10 @@ final readonly class BackupHeader
             createdAt: LineField::date($line, 'createdAt'),
             sourceUrl: LineField::stringOrNull($line, 'sourceUrl'),
             sourceEmail: LineField::stringOrNull($line, 'sourceEmail'),
+            backupId: LineField::string($line, 'backupId'),
+            part: LineField::int($line, 'part'),
+            parts: LineField::intOrNull($line, 'parts'),
+            totals: BackupTotals::fromHeaderLine($line),
         );
     }
 }
