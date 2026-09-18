@@ -10,6 +10,7 @@ use App\Http\RestoreResultJson;
 use App\Service\Backup\AccountBackupExporter;
 use App\Service\Backup\AccountRestorer;
 use App\Service\Backup\BackupDownloadResponseFactory;
+use App\Service\Backup\EntryPartRestorer;
 use App\Service\Backup\RestorePreviewer;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -25,6 +26,7 @@ final readonly class AccountBackupController
         private BackupDownloadResponseFactory $downloads,
         private RestorePreviewer $previewer,
         private AccountRestorer $restorer,
+        private EntryPartRestorer $entryPartRestorer,
     ) {
     }
 
@@ -33,7 +35,7 @@ final readonly class AccountBackupController
     {
         return $this->downloads->stream(
             $user->getEmail(),
-            $this->exporter->lines($user, $request->getSchemeAndHttpHost()),
+            $this->exporter->parts($user, $request->getSchemeAndHttpHost()),
         );
     }
 
@@ -43,16 +45,19 @@ final readonly class AccountBackupController
         return new JsonResponse(RestorePreviewJson::from($this->previewer->preview($user, $request->getContent())));
     }
 
-    #[Route('/restore', name: 'api_account_restore', methods: ['POST'])]
-    public function restore(#[CurrentUser] User $user, Request $request): JsonResponse
+    #[Route('/restore/start', name: 'api_account_restore_start', methods: ['POST'])]
+    public function start(#[CurrentUser] User $user, Request $request): JsonResponse
     {
-        $confirmation = $request->query->get('confirm');
-        $result = $this->restorer->restore(
-            $user,
-            $request->getContent(),
-            \is_string($confirmation) ? $confirmation : null,
-        );
+        return new JsonResponse(RestoreResultJson::from(
+            $this->restorer->start($user, $request->getContent(), $request->query->get('confirm')),
+        ));
+    }
 
-        return new JsonResponse(RestoreResultJson::from($result));
+    #[Route('/restore/entries', name: 'api_account_restore_entries', methods: ['POST'])]
+    public function entries(#[CurrentUser] User $user, Request $request): JsonResponse
+    {
+        return new JsonResponse(RestoreResultJson::from(
+            $this->entryPartRestorer->load($user, $request->getContent()),
+        ));
     }
 }

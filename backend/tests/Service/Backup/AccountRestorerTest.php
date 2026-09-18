@@ -18,6 +18,7 @@ use App\Repository\FeedRepository;
 use App\Repository\SubscriptionRepository;
 use App\Service\Backup\AccountBackupExporter;
 use App\Service\Backup\AccountRestorer;
+use App\Service\Backup\EntryPartRestorer;
 use App\Service\Backup\Exception\BackupDoesNotFitException;
 use App\Service\Backup\Exception\InvalidBackupException;
 use App\Tests\DbTestCase;
@@ -71,6 +72,36 @@ final class AccountRestorerTest extends DbTestCase
         }
 
         throw new \LogicException('The exporter produced no foundation part.');
+    }
+
+    /**
+     * Every entry part of a real export, in member-name order — the parts
+     * `start()` never reads and `EntryPartRestorer::load()` loads one at a
+     * time.
+     *
+     * @return list<string>
+     */
+    private function entryPartsOf(User $user): array
+    {
+        $exporter = self::getContainer()->get(AccountBackupExporter::class);
+        self::assertInstanceOf(AccountBackupExporter::class, $exporter);
+        $parts = [];
+        foreach ($exporter->parts($user, 'https://source.example') as $part) {
+            if ('000-foundation.ndjson.gz' !== $part->memberName) {
+                $parts[$part->memberName] = $part->gzipBytes;
+            }
+        }
+        ksort($parts);
+
+        return array_values($parts);
+    }
+
+    private function entryPartRestorer(): EntryPartRestorer
+    {
+        $restorer = self::getContainer()->get(EntryPartRestorer::class);
+        self::assertInstanceOf(EntryPartRestorer::class, $restorer);
+
+        return $restorer;
     }
 
     private function accountWithOneSubscription(): User
@@ -394,26 +425,22 @@ final class AccountRestorerTest extends DbTestCase
      * would be exactly such a row. Comparing against a row this restore
      * merely referenced, rather than one it wrote from the file's fields,
      * would let the bug this test exists to catch pass unnoticed.
-     *
-     * @noinspection PhpUnreachableStatementInspection
-     * @noinspection PhpUndefinedMethodInspection re-homed in Task 6, which
-     *     also renames the `restore()` call below back to `start()`.
      */
     public function testEveryBackedUpFieldSurvivesTheRestoreRoundTrip(): void
     {
-        self::markTestIncomplete('re-homed in Task 6');
-        // Re-homed to Task 6, which removes the guard above; until then
-        // PHPStan sees the rest of this method as unreachable.
-        // @phpstan-ignore deadCode.unreachable
         $source = $this->fullyPopulatedAccount()->create('drift-source@example.com');
-        $gzip = $this->backupOf($source);
+        $foundation = $this->backupOf($source);
+        $entryParts = $this->entryPartsOf($source);
         $sourceRows = $this->fixtureRowsOf($source);
 
         $target = $this->users->create('drift-target@example.com');
         $targetId = (int) $target->getId();
         $this->deleteEveryFeed();
 
-        $this->restorer()->restore($this->reloadUser($targetId), $gzip, 'REPLACE');
+        $this->restorer()->start($this->reloadUser($targetId), $foundation, 'REPLACE');
+        foreach ($entryParts as $entryPart) {
+            $this->entryPartRestorer()->load($this->reloadUser($targetId), $entryPart);
+        }
         $targetRows = $this->fixtureRowsOf($this->reloadUser($targetId));
 
         $this->assertFieldsRoundTripped(User::class, $sourceRows['user'], $targetRows['user']);

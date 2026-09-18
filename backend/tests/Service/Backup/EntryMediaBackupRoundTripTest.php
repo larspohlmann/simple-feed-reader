@@ -86,12 +86,20 @@ final class EntryMediaBackupRoundTripTest extends DbTestCase
         $exporter = self::getContainer()->get(AccountBackupExporter::class);
         self::assertInstanceOf(AccountBackupExporter::class, $exporter);
 
-        foreach ($exporter->lines($user, 'https://source.example') as $raw) {
-            $decoded = json_decode($raw, true, flags: \JSON_THROW_ON_ERROR);
-            self::assertIsArray($decoded);
-            if (($decoded['kind'] ?? null) === 'entry') {
-                /** @var array<string, mixed> $decoded */
-                return $decoded;
+        foreach ($exporter->parts($user, 'https://source.example') as $part) {
+            if ('000-foundation.ndjson.gz' === $part->memberName) {
+                continue;
+            }
+            foreach (explode("\n", (string) gzdecode($part->gzipBytes)) as $line) {
+                if ('' === $line) {
+                    continue;
+                }
+                $decoded = json_decode($line, true, flags: \JSON_THROW_ON_ERROR);
+                self::assertIsArray($decoded);
+                if (($decoded['kind'] ?? null) === 'entry') {
+                    /** @var array<string, mixed> $decoded */
+                    return $decoded;
+                }
             }
         }
 

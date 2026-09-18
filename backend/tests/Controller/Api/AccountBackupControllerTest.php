@@ -12,6 +12,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Repository\SubscriptionRepository;
 use App\Service\Backup\AccountBackupExporter;
+use App\Tests\Support\BackupArchiveReader;
 use App\Tests\Support\CorruptGzip;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -36,11 +37,11 @@ final class AccountBackupControllerTest extends WebTestCase
     }
 
     /**
-     * Seeds one tag, one feed, one subscription and one entry for $user, then
-     * exports the account through the real exporter — so the fixture and the
-     * production export format can never quietly disagree.
+     * Seeds one tag, one feed, one subscription, one entry and a favourited
+     * entry state for $user — the fixture every restore test in this file
+     * restores back into an account and checks for.
      */
-    private function seededBackupFor(User $user): string
+    private function seedSourceAccount(User $user): void
     {
         $em = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $em);
@@ -60,18 +61,44 @@ final class AccountBackupControllerTest extends WebTestCase
         );
         $em->persist($entry);
         $state = new EntryState($user, $entry);
-        $state->setIsHidden(true);
+        $state->setIsFavorite(true);
         $em->persist($state);
         $em->flush();
+    }
 
+    /**
+     * @return array{0: string, 1: list<string>} the foundation part's gzip
+     *                                            bytes, then every entry
+     *                                            part's gzip bytes
+     */
+    private function partsOf(User $user): array
+    {
         $exporter = self::getContainer()->get(AccountBackupExporter::class);
         self::assertInstanceOf(AccountBackupExporter::class, $exporter);
-        $ndjson = '';
-        foreach ($exporter->lines($user, 'https://source.example') as $line) {
-            $ndjson .= $line . "\n";
-        }
 
-        return (string) gzencode($ndjson);
+        $foundation = null;
+        $entryParts = [];
+        foreach ($exporter->parts($user, 'https://source.example') as $part) {
+            if ('000-foundation.ndjson.gz' === $part->memberName) {
+                $foundation = $part->gzipBytes;
+                continue;
+            }
+            $entryParts[] = $part->gzipBytes;
+        }
+        self::assertIsString($foundation, 'the exporter produced no foundation part');
+
+        return [$foundation, $entryParts];
+    }
+
+    /**
+     * The foundation part alone, for tests that only exercise
+     * /restore/preview or /restore/start.
+     */
+    private function seededFoundationFor(User $user): string
+    {
+        $this->seedSourceAccount($user);
+
+        return $this->partsOf($user)[0];
     }
 
     public function testBackupRequiresAuth(): void
@@ -81,45 +108,40 @@ final class AccountBackupControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(401);
     }
 
-    public function testBackupStreamsAGzipNdjsonAttachment(): void
+    public function testBackupStreamsAZipOfGzipPartsAttachment(): void
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('backup-download@example.com');
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $feed = new Feed('https://dl.example/feed.xml');
-        $em->persist($feed);
-        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $em->flush();
+        $this->seedSourceAccount($user);
 
         $client->request('GET', '/api/account/backup', server: $headers);
 
-        // Symfony's BrowserKit captures StreamedResponse's echoed content into the internal response
-        $internalResponse = $client->getInternalResponse();
-        $streamed = $internalResponse->getContent();
+        // Symfony's BrowserKit captures StreamedResponse's echoed content into the internal response.
+        $zipBytes = (string) $client->getInternalResponse()->getContent();
 
         self::assertResponseIsSuccessful();
-        self::assertSame('application/gzip', $client->getResponse()->headers->get('Content-Type'));
-        self::assertNull($client->getResponse()->headers->get('Content-Encoding'));
+        self::assertSame('application/zip', $client->getResponse()->headers->get('Content-Type'));
         // No version.json is deployed in the test environment, so the release
         // version reads as "dev" -- see BackupFilenameTest for the full
         // filename-formatting rule this pins the shape of.
         self::assertMatchesRegularExpression(
-            '/^attachment; filename="simplefeedreader-dev-backup-download-at-example-\d{8}\.json\.gz"$/',
+            '/^attachment; filename="simplefeedreader-dev-backup-download-at-example-\d{8}\.zip"$/',
             (string) $client->getResponse()->headers->get('Content-Disposition'),
         );
 
-        $ndjson = gzdecode($streamed);
-        self::assertIsString($ndjson);
-        $lines = explode("\n", trim($ndjson));
-        $first = json_decode($lines[0], true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($first);
+        $archive = BackupArchiveReader::fromResponseContent($zipBytes);
+        $foundationLines = $this->decodedLinesOf($archive->foundation());
+        $first = $foundationLines[0];
         self::assertSame('header', $first['kind']);
-        $last = json_decode($lines[array_key_last($lines)], true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($last);
+        self::assertSame(0, $first['part']);
+        $lastIndex = array_key_last($foundationLines);
+        self::assertIsInt($lastIndex);
+        $last = $foundationLines[$lastIndex];
         self::assertSame('footer', $last['kind']);
         self::assertIsArray($last['counts']);
         self::assertSame(1, $last['counts']['subscription']);
+
+        self::assertCount(1, $archive->entryParts());
     }
 
     public function testPreviewReportsLoadAndDeleteCounts(): void
@@ -127,7 +149,7 @@ final class AccountBackupControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('restore-preview@example.com');
         $userId = (int) $user->getId();
-        $gzip = $this->seededBackupFor($user);
+        $gzip = $this->seededFoundationFor($user);
 
         $client->request(
             'POST',
@@ -155,16 +177,16 @@ final class AccountBackupControllerTest extends WebTestCase
         self::assertSame(1, $subscriptions->countForUser($userId));
     }
 
-    public function testRestoreWithoutConfirmIs422AndDeletesNothing(): void
+    public function testStartWithoutConfirmIs422AndDeletesNothing(): void
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('restore-no-confirm@example.com');
         $userId = (int) $user->getId();
-        $gzip = $this->seededBackupFor($user);
+        $gzip = $this->seededFoundationFor($user);
 
         $client->request(
             'POST',
-            '/api/account/restore',
+            '/api/account/restore/start',
             server: $headers + ['CONTENT_TYPE' => 'application/gzip'],
             content: $gzip,
         );
@@ -182,43 +204,69 @@ final class AccountBackupControllerTest extends WebTestCase
         self::assertSame(1, $subscriptions->countForUser($userId));
     }
 
-    public function testRestoreRunsEndToEndOverHttp(): void
+    public function testABackupRestoresIntoAnotherAccountOnePartPerRequest(): void
     {
         $client = self::createClient();
-        [$headers, $user] = $this->auth('restore-end-to-end@example.com');
-        $this->seededBackupFor($user);
+        [$sourceHeaders, $sourceUser] = $this->auth('roundtrip-source@example.com');
+        $this->seedSourceAccount($sourceUser);
 
-        $client->request('GET', '/api/account/backup', server: $headers);
-        $exported = $client->getInternalResponse()->getContent();
+        $client->request('GET', '/api/account/backup', server: $sourceHeaders);
         self::assertResponseIsSuccessful();
+        $archive = BackupArchiveReader::fromResponseContent((string) $client->getInternalResponse()->getContent());
+
+        [$targetHeaders] = $this->auth('roundtrip-target@example.com');
+        $gzipHeaders = $targetHeaders + ['CONTENT_TYPE' => 'application/gzip'];
 
         $client->request(
             'POST',
-            '/api/account/restore?confirm=REPLACE',
-            server: $headers + ['CONTENT_TYPE' => 'application/gzip'],
-            content: $exported,
+            '/api/account/restore/start?confirm=REPLACE',
+            server: $gzipHeaders,
+            content: $archive->foundation(),
         );
-
         self::assertResponseIsSuccessful();
-        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($body);
-        self::assertIsArray($body['loaded']);
-        self::assertSame(1, $body['loaded']['tags']);
-        self::assertSame(1, $body['loaded']['subscriptions']);
+        $started = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($started);
+        self::assertIsArray($started['loaded']);
+        self::assertSame(1, $started['loaded']['subscriptions']);
+        self::assertSame(0, $started['loaded']['entries']);
 
-        $client->request('GET', '/api/subscriptions', server: $headers);
+        foreach ($archive->entryParts() as $part) {
+            $client->request('POST', '/api/account/restore/entries', server: $gzipHeaders, content: $part);
+            self::assertResponseIsSuccessful();
+        }
+
+        $client->request('GET', '/api/entries', server: $targetHeaders);
         self::assertResponseIsSuccessful();
-        $subscriptionsBody = json_decode(
-            (string) $client->getResponse()->getContent(),
-            true,
-            flags: \JSON_THROW_ON_ERROR,
+        $entriesBody = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($entriesBody);
+        self::assertIsArray($entriesBody['entries']);
+        self::assertCount(1, $entriesBody['entries']);
+        $entry = $entriesBody['entries'][0];
+        self::assertIsArray($entry);
+        self::assertSame('Entry One', $entry['title']);
+        self::assertTrue($entry['isFavorite']);
+    }
+
+    public function testEntriesEndpointNeedsNoConfirmation(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('restore-entries-no-confirm@example.com');
+        $this->seedSourceAccount($user);
+        [$foundation, $entryParts] = $this->partsOf($user);
+        $gzipHeaders = $headers + ['CONTENT_TYPE' => 'application/gzip'];
+
+        $client->request(
+            'POST',
+            '/api/account/restore/start?confirm=REPLACE',
+            server: $gzipHeaders,
+            content: $foundation,
         );
-        self::assertIsArray($subscriptionsBody);
-        self::assertIsArray($subscriptionsBody['subscriptions']);
-        self::assertCount(1, $subscriptionsBody['subscriptions']);
-        $subscription = $subscriptionsBody['subscriptions'][0];
-        self::assertIsArray($subscription);
-        self::assertSame('https://restore-fixture.example/feed.xml', $subscription['feedUrl']);
+        self::assertResponseIsSuccessful();
+
+        foreach ($entryParts as $part) {
+            $client->request('POST', '/api/account/restore/entries', server: $gzipHeaders, content: $part);
+            self::assertResponseIsSuccessful();
+        }
     }
 
     public function testGarbageBodyIs422InvalidBackup(): void
@@ -239,6 +287,25 @@ final class AccountBackupControllerTest extends WebTestCase
         self::assertSame('invalid_backup', $body['type']);
     }
 
+    public function testAFileWithoutAHeaderLineIsRejected(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('restore-missing-header@example.com');
+        $gzip = (string) gzencode(json_encode(['kind' => 'account'], \JSON_THROW_ON_ERROR) . "\n");
+
+        $client->request(
+            'POST',
+            '/api/account/restore/preview',
+            server: $headers + ['CONTENT_TYPE' => 'application/gzip'],
+            content: $gzip,
+        );
+
+        self::assertResponseStatusCodeSame(422);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('invalid_backup', $body['type']);
+    }
+
     public function testRestorePreviewRequiresAuth(): void
     {
         $client = self::createClient();
@@ -251,11 +318,32 @@ final class AccountBackupControllerTest extends WebTestCase
      * A firewall or route-attribute regression here is the worst one there
      * is, and nothing else in the suite would notice it.
      */
-    public function testRestoreRequiresAuth(): void
+    public function testRestoreStartRequiresAuth(): void
     {
         $client = self::createClient();
-        $client->request('POST', '/api/account/restore?confirm=REPLACE');
+        $client->request('POST', '/api/account/restore/start?confirm=REPLACE');
         self::assertResponseStatusCodeSame(401);
+    }
+
+    public function testRestoreEntriesRequiresAuth(): void
+    {
+        $client = self::createClient();
+        $client->request('POST', '/api/account/restore/entries');
+        self::assertResponseStatusCodeSame(401);
+    }
+
+    public function testTheOldRestoreRouteIsGone(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('restore-old-route-gone@example.com');
+
+        $client->request(
+            'POST',
+            '/api/account/restore?confirm=REPLACE',
+            server: $headers + ['CONTENT_TYPE' => 'application/gzip'],
+        );
+
+        self::assertContains($client->getResponse()->getStatusCode(), [404, 405]);
     }
 
     public function testACorruptGzipBodyIs422InvalidBackupRatherThan500(): void
@@ -287,11 +375,11 @@ final class AccountBackupControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('restore-corrupt-destructive@example.com');
         $userId = (int) $user->getId();
-        $this->seededBackupFor($user);
+        $this->seedSourceAccount($user);
 
         $client->request(
             'POST',
-            '/api/account/restore?confirm=REPLACE',
+            '/api/account/restore/start?confirm=REPLACE',
             server: $headers + ['CONTENT_TYPE' => 'application/gzip'],
             content: CorruptGzip::bytes(),
         );
@@ -314,11 +402,11 @@ final class AccountBackupControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('restore-bad-footer@example.com');
         $userId = (int) $user->getId();
-        $gzip = $this->withAMiscountedFooter($this->seededBackupFor($user));
+        $gzip = $this->withAMiscountedFooter($this->seededFoundationFor($user));
 
         $client->request(
             'POST',
-            '/api/account/restore?confirm=REPLACE',
+            '/api/account/restore/start?confirm=REPLACE',
             server: $headers + ['CONTENT_TYPE' => 'application/gzip'],
             content: $gzip,
         );
@@ -346,11 +434,11 @@ final class AccountBackupControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('restore-duplicate-feed@example.com');
         $userId = (int) $user->getId();
-        $gzip = $this->withANewFeedUrlDeclaredTwice($this->seededBackupFor($user));
+        $gzip = $this->withANewFeedUrlDeclaredTwice($this->seededFoundationFor($user));
 
         $client->request(
             'POST',
-            '/api/account/restore?confirm=REPLACE',
+            '/api/account/restore/start?confirm=REPLACE',
             server: $headers + ['CONTENT_TYPE' => 'application/gzip'],
             content: $gzip,
         );
@@ -377,16 +465,13 @@ final class AccountBackupControllerTest extends WebTestCase
             'title' => null,
             'description' => null,
             'faviconUrl' => null,
+            'imageUrl' => null,
             'sourceFormat' => 'xml',
         ], \JSON_THROW_ON_ERROR);
 
         $lines = [];
-        foreach (explode("\n", (string) gzdecode($gzip)) as $line) {
-            if ('' === $line) {
-                continue;
-            }
-            $decoded = json_decode($line, true, flags: \JSON_THROW_ON_ERROR);
-            self::assertIsArray($decoded);
+        foreach ($this->decodedLinesOf($gzip) as $decoded) {
+            $line = json_encode($decoded, \JSON_THROW_ON_ERROR);
             if ('feed' === ($decoded['kind'] ?? null)) {
                 $lines[] = $line;
                 $lines[] = $newFeedLine;
@@ -436,22 +521,34 @@ final class AccountBackupControllerTest extends WebTestCase
     private function withAMiscountedFooter(string $gzip): string
     {
         $lines = [];
-        foreach (explode("\n", (string) gzdecode($gzip)) as $line) {
-            if ('' === $line) {
-                continue;
-            }
-            $decoded = json_decode($line, true, flags: \JSON_THROW_ON_ERROR);
-            self::assertIsArray($decoded);
+        foreach ($this->decodedLinesOf($gzip) as $decoded) {
             if ('footer' === ($decoded['kind'] ?? null)) {
                 $counts = $decoded['counts'];
                 self::assertIsArray($counts);
-                self::assertIsInt($counts['entry']);
-                $counts['entry'] = $counts['entry'] + 1;
+                self::assertIsInt($counts['tag']);
+                $counts['tag'] = $counts['tag'] + 1;
                 $decoded['counts'] = $counts;
             }
             $lines[] = json_encode($decoded, \JSON_THROW_ON_ERROR);
         }
 
         return (string) gzencode(implode("\n", $lines) . "\n");
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function decodedLinesOf(string $gzip): array
+    {
+        $decodedLines = [];
+        foreach (explode("\n", (string) gzdecode($gzip)) as $line) {
+            if ('' === $line) {
+                continue;
+            }
+            $decoded = json_decode($line, true, flags: \JSON_THROW_ON_ERROR);
+            self::assertIsArray($decoded);
+            /** @var array<string, mixed> $decoded */
+            $decodedLines[] = $decoded;
+        }
+
+        return $decodedLines;
     }
 }

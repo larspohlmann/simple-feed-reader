@@ -1,0 +1,6 @@
+{"kind":"header","schemaVersion":3,"createdAt":"2026-08-20T11:03:57+00:00","sourceUrl":"https://current.example","sourceEmail":"current@example.com","backupId":"golden-current","part":0,"parts":2,"totals":{"entries":1,"entryStates":1}}
+{"kind":"account","locale":"de","scrapeFallbackEnabled":true,"magazineStyle":"boxed"}
+{"kind":"tag","name":"Cartography","color":"#2b6","icon":"map","position":0}
+{"kind":"feed","url":"https://current.example/feed.xml","siteUrl":"https://current.example","title":"Current","description":"A fixture feed.","faviconUrl":null,"imageUrl":null,"sourceFormat":"xml"}
+{"kind":"subscription","feedUrl":"https://current.example/feed.xml","customTitle":null,"position":0,"markedReadUntil":null,"createdAt":"2026-08-20T10:00:00+00:00","tags":[{"name":"Cartography","position":0}],"includeInAllItems":true,"includeInForYou":true}
+{"kind":"footer","counts":{"tag":1,"savedSearch":0,"feed":1,"subscription":1,"entry":0,"entryState":0}}
