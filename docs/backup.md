@@ -182,7 +182,7 @@ addition to the format version and the export date:
 
 | Field | Where it appears | Meaning |
 |---|---|---|
-| `backupId` | Every part | A random identifier. Every part of the same export carries the same one. It is how the browser and the server confirm that a part belongs to this archive. |
+| `backupId` | Every part | A random identifier. Every part of the same export carries the same one. It is how the browser confirms that every part belongs to this archive before the restore begins; the server does not read it. |
 | `part` | Every part | `0` for the foundation part, `1` and up for each entry part, in the order the parts load. |
 | `parts` | The foundation part only | The total number of parts in the archive, foundation included. |
 | `totals` | The foundation part only | The number of articles and the number of article marks across the whole export. |
