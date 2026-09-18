@@ -370,6 +370,33 @@ final class BackupReaderTest extends TestCase
         iterator_to_array((new BackupReader())->read(self::gzipOf([$header, self::account(), self::footer()])), false);
     }
 
+    public function testFoundationWithPartsBelowOneButValidTotalsIsRefused(): void
+    {
+        $header = self::header(0);
+        $header['parts'] = 0;
+        $this->expectException(InvalidBackupException::class);
+
+        iterator_to_array((new BackupReader())->read(self::gzipOf([$header, self::account(), self::footer()])), false);
+    }
+
+    public function testFoundationWithValidPartsButMissingTotalsIsRefused(): void
+    {
+        $header = self::header(0);
+        $header['totals'] = null;
+        $this->expectException(InvalidBackupException::class);
+
+        iterator_to_array((new BackupReader())->read(self::gzipOf([$header, self::account(), self::footer()])), false);
+    }
+
+    public function testAnEntryPartDeclaringOnlyPartsIsRefused(): void
+    {
+        $header = self::header(1);
+        $header['parts'] = 2;
+        $this->expectException(InvalidBackupException::class);
+
+        iterator_to_array((new BackupReader())->read(self::gzipOf([$header, self::footer()])), false);
+    }
+
     public function testVersionTwoIsRefused(): void
     {
         $this->expectException(InvalidBackupException::class);

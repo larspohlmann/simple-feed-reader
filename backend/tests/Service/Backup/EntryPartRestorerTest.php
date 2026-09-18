@@ -214,6 +214,50 @@ final class EntryPartRestorerTest extends DbTestCase
         $this->restorer(accountEntryCeiling: 2)->load($this->reloadUser($userId), $gzip);
     }
 
+    public function testAPartThatExactlyFillsTheAccountEntryCeilingIsAccepted(): void
+    {
+        $user = $this->subscribedUser(self::FEED_URL);
+        $userId = (int) $user->getId();
+        $feed = $this->feedByUrl(self::FEED_URL);
+        $this->makeEntry($feed, 'existing-a', 'A');
+        $this->em->flush();
+
+        $gzip = $this->entryPart([$this->entryLine('new')]);
+
+        $result = $this->restorer(accountEntryCeiling: 2)->load($this->reloadUser($userId), $gzip);
+
+        self::assertSame(1, $result->entries);
+    }
+
+    public function testAnEntryStateFollowingAnAlreadyStatedOneInTheSamePartIsStillCreated(): void
+    {
+        $user = $this->subscribedUser(self::FEED_URL);
+        $userId = (int) $user->getId();
+        $feed = $this->feedByUrl(self::FEED_URL);
+        $entryA = $this->makeEntry($feed, 'a', 'A');
+        $this->makeEntry($feed, 'b', 'B');
+        $this->em->flush();
+        $existingState = new EntryState($user, $entryA);
+        $existingState->setIsFavorite(false);
+        $this->em->persist($existingState);
+        $this->em->flush();
+
+        $gzip = $this->entryPart([
+            $this->entryStateLine('a', isFavorite: true),
+            $this->entryStateLine('b', isFavorite: true),
+        ]);
+
+        $result = $this->restorer()->load($this->reloadUser($userId), $gzip);
+
+        self::assertSame(1, $result->entryStates);
+        $this->em->clear();
+        $entryB = $this->findEntry('b');
+        self::assertNotNull($entryB);
+        $stateB = $this->stateFor($this->reloadUser($userId), $entryB);
+        self::assertNotNull($stateB);
+        self::assertTrue($stateB->isFavorite());
+    }
+
     public function testCreatedEntriesReachTheSearchIndex(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);
