@@ -792,6 +792,50 @@ final class AccountRestorerTest extends DbTestCase
         self::assertSame('de', $this->reloadUser($userId)->getLocale());
     }
 
+    /**
+     * One feed with more entries than a single insert batch, every entry
+     * favourited, so the entry part crosses both RestoreEntryLoader boundaries
+     * at once: the 500-row insert batch (ids read back per batch) and the
+     * 500-row held-state flush. Every batch's ids and every state must survive.
+     */
+    private function seedFeedWiderThanOneBatch(User $user, int $entryCount): void
+    {
+        $feed = $this->makeFeed('https://wide.example/feed.xml', 'Wide', 'xml');
+        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00')));
+        for ($index = 0; $index < $entryCount; ++$index) {
+            $entry = $this->makeEntry($feed, 'wide-guid-' . $index, 'Wide ' . $index, '2026-08-02');
+            $state = new EntryState($user, $entry);
+            $state->setIsFavorite(true);
+            $this->em->persist($state);
+        }
+        $this->em->flush();
+    }
+
+    public function testAnEntryPartWiderThanOneInsertBatchLoadsEveryBatchAndItsStates(): void
+    {
+        $user = $this->users->create('wide-batch@example.com');
+        $this->seedFeedWiderThanOneBatch($user, 502);
+        $userId = (int) $user->getId();
+        $foundation = $this->backupOf($user);
+        $entryParts = $this->entryPartsOf($user);
+        $this->deleteEveryFeed();
+
+        $this->restorer()->start($this->reloadUser($userId), $foundation, 'REPLACE');
+        $entriesCreated = 0;
+        $entryStatesCreated = 0;
+        foreach ($entryParts as $entryPart) {
+            $result = $this->entryPartRestorer()->load($this->reloadUser($userId), $entryPart);
+            $entriesCreated += $result->entries;
+            $entryStatesCreated += $result->entryStates;
+        }
+
+        self::assertSame(502, $entriesCreated);
+        self::assertSame(502, $entryStatesCreated);
+        $this->em->clear();
+        self::assertSame(502, $this->scalarInt('SELECT COUNT(*) FROM entry'));
+        self::assertSame(502, $this->scalarInt('SELECT COUNT(*) FROM entry_state WHERE user_id = ?', [$userId]));
+    }
+
     // No content can reach RestoreLoadPass's flush()-catch(DbalException) branch
     // any more (#412: pass 1 refuses duplicates), so the wrap is proven directly
     // in RestoreLoadPassTest::testADatabaseFailureDuringTheAccountShapeFlushIsAWrappedBackupError.
