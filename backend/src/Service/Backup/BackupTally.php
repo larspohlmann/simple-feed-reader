@@ -78,11 +78,8 @@ final class BackupTally
     }
 
     /**
-     * A foundation carries no entry lines of its own — BackupReader's grammar
-     * forbids it — so its counted entries/entryStates are always zero. What
-     * the account actually holds is instead the header's own claimed totals
-     * across every entry part; the real ceiling is Task 5's, checked against
-     * the parts as they arrive.
+     * A foundation's own counted entries/entryStates are always zero; use the
+     * header's claimed totals instead. An entry part counts its own lines.
      *
      * @return array{int, int}
      */

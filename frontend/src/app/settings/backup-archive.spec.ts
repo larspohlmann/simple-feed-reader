@@ -2,11 +2,8 @@
 import { InvalidBackupArchiveError, isOldFormatBackup, openBackupArchive } from './backup-archive';
 import type { BackupPartHeader, ReadPartHeader } from './backup-part-header';
 
-// zip.js's own ZipWriter deadlocks under zone.js (`zone.js` patches the global
-// Promise in a way that breaks ZipWriter#add's internal watcher bookkeeping —
-// reproducible even outside Jest, with plain `zone.js` loaded). The read side
-// (ZipReader, what openBackupArchive actually uses) is unaffected. This is a
-// minimal store-format zip encoder, used only to build fixtures.
+// Hand-rolled store-zip encoder: zip.js's own ZipWriter throws under zone.js.
+// ZipReader (what openBackupArchive actually uses) is unaffected.
 interface ZipMember {
   readonly name: string;
   readonly data: Uint8Array;

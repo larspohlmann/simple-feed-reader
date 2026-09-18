@@ -253,10 +253,8 @@ final readonly class BackupReader
             BackupSchema::KIND_SUBSCRIPTION => SubscriptionLine::fromLine($decoded),
             BackupSchema::KIND_ENTRY => EntryLine::fromLine($decoded),
             BackupSchema::KIND_ENTRY_STATE => EntryStateLine::fromLine($decoded),
-            // Unreachable: read() handles the header and footer kinds itself
-            // before calling toDto, and assertOrdered has already refused
-            // every kind absent from KIND_RANK. It stays only so the match
-            // is exhaustive over `string`.
+            // Unreachable: read() handles header/footer, and assertOrdered
+            // refuses any other kind. Stays only for match exhaustiveness.
             default => throw new \LogicException(sprintf('assertOrdered accepted unknown kind "%s".', $kind)),
         };
     }
