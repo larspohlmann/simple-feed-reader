@@ -25,7 +25,12 @@ class EntryRepository extends ServiceEntityRepository
      *
      * @return list<string> the subset of hashes that already exist for this feed
      */
-    public function findExistingGuidHashes(Feed $feed, array $guidHashes): array
+    /**
+     * @param list<string> $guidHashes
+     *
+     * @return list<string> the subset of hashes that already exist for this feed
+     */
+    public function existingGuidHashesForFeed(int $feedId, array $guidHashes): array
     {
         if ($guidHashes === []) {
             return [];
@@ -36,7 +41,7 @@ class EntryRepository extends ServiceEntityRepository
             ->select('e.guidHash')
             ->andWhere('e.feed = :feed')
             ->andWhere('e.guidHash IN (:hashes)')
-            ->setParameter('feed', $feed)
+            ->setParameter('feed', $feedId)
             ->setParameter('hashes', $guidHashes)
             ->getQuery()
             ->getSingleColumnResult();

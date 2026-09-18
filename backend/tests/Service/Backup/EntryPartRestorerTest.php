@@ -231,6 +231,41 @@ final class EntryPartRestorerTest extends DbTestCase
         self::assertSame(1, $result->entries);
     }
 
+    public function testAPartReimportingAlreadyPresentEntriesFitsUnderTheCeiling(): void
+    {
+        $user = $this->subscribedUser(self::FEED_URL);
+        $userId = (int) $user->getId();
+        $feed = $this->feedByUrl(self::FEED_URL);
+        $this->makeEntry($feed, 'a', 'A');
+        $this->makeEntry($feed, 'b', 'B');
+        $this->em->flush();
+
+        $gzip = $this->entryPart([$this->entryLine('a'), $this->entryLine('b')]);
+
+        $result = $this->restorer(accountEntryCeiling: 2)->load($this->reloadUser($userId), $gzip);
+
+        self::assertSame(0, $result->entries);
+    }
+
+    public function testTheCeilingCountsOnlyTheGenuinelyNewEntriesOfAPart(): void
+    {
+        $user = $this->subscribedUser(self::FEED_URL);
+        $userId = (int) $user->getId();
+        $feed = $this->feedByUrl(self::FEED_URL);
+        $this->makeEntry($feed, 'a', 'A');
+        $this->em->flush();
+
+        $gzip = $this->entryPart([
+            $this->entryLine('a'),
+            $this->entryLine('b'),
+            $this->entryLine('c'),
+        ]);
+
+        $this->expectException(BackupDoesNotFitException::class);
+
+        $this->restorer(accountEntryCeiling: 2)->load($this->reloadUser($userId), $gzip);
+    }
+
     public function testAnEntryStateFollowingAnAlreadyStatedOneInTheSamePartIsStillCreated(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);

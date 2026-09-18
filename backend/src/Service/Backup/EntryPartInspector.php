@@ -33,20 +33,20 @@ final readonly class EntryPartInspector
      */
     public function inspect(User $user, string $gzipBytes): array
     {
-        [$feedUrls, $entryCount] = $this->scan($gzipBytes);
+        [$feedUrls, $guidHashesByFeedUrl] = $this->scan($gzipBytes);
         $feedIdsByUrl = $this->subscribedFeedIds($user, $feedUrls);
-        $this->assertFits($user, $entryCount);
+        $this->assertFits($user, $this->newEntryCount($guidHashesByFeedUrl, $feedIdsByUrl));
 
         return $feedIdsByUrl;
     }
 
     /**
-     * @return array{array<string, true>, int}
+     * @return array{array<string, true>, array<string, array<string, true>>}
      */
     private function scan(string $gzipBytes): array
     {
         $feedUrls = [];
-        $entryCount = 0;
+        $guidHashesByFeedUrl = [];
         $isFirstLine = true;
         foreach ($this->reader->read($gzipBytes) as $line) {
             if ($isFirstLine) {
@@ -60,11 +60,11 @@ final readonly class EntryPartInspector
             }
 
             if ($line instanceof EntryLine) {
-                ++$entryCount;
+                $guidHashesByFeedUrl[$line->feedUrl][$line->guidHash] = true;
             }
         }
 
-        return [$feedUrls, $entryCount];
+        return [$feedUrls, $guidHashesByFeedUrl];
     }
 
     private function assertEntryPart(object $line): void
@@ -94,14 +94,34 @@ final readonly class EntryPartInspector
         return $feedIdsByUrl;
     }
 
-    private function assertFits(User $user, int $entryCount): void
+    /**
+     * Only entries this part would actually insert count against the ceiling:
+     * a re-import of rows the feed already holds adds nothing (the load dedupes
+     * on the same (feed, guidHash)), so counting the raw lines would refuse an
+     * account near the ceiling from restoring its own export after the wipe.
+     *
+     * @param array<string, array<string, true>> $guidHashesByFeedUrl
+     * @param array<string, int>                  $feedIdsByUrl
+     */
+    private function newEntryCount(array $guidHashesByFeedUrl, array $feedIdsByUrl): int
+    {
+        $newEntryCount = 0;
+        foreach ($guidHashesByFeedUrl as $feedUrl => $guidHashes) {
+            $existing = $this->entries->existingGuidHashesForFeed($feedIdsByUrl[$feedUrl], array_keys($guidHashes));
+            $newEntryCount += \count($guidHashes) - \count($existing);
+        }
+
+        return $newEntryCount;
+    }
+
+    private function assertFits(User $user, int $newEntryCount): void
     {
         $current = $this->entries->countInFeedsSubscribedBy((int) $user->getId());
-        if ($current + $entryCount > $this->accountEntryCeiling) {
+        if ($current + $newEntryCount > $this->accountEntryCeiling) {
             throw new BackupDoesNotFitException(sprintf(
                 'The account holds %d entries; this part would add %d, past the %d ceiling.',
                 $current,
-                $entryCount,
+                $newEntryCount,
                 $this->accountEntryCeiling,
             ));
         }
