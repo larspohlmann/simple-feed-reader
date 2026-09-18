@@ -81,6 +81,41 @@ final class EntryStateRepositoryTest extends DbTestCase
         self::assertSame([(int) $withState->getId()], $result);
     }
 
+    public function testForUserByEntryIdsWithEmptyListReturnsEmptyWithoutQuerying(): void
+    {
+        self::assertSame([], $this->repo()->forUserByEntryIds((int) $this->user->getId(), []));
+    }
+
+    public function testForUserByEntryIdsIsKeyedByEntryIdAndHoldsOnlyTheAskedUsersStates(): void
+    {
+        $otherUser = new User('state-repo-other@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->em->persist($otherUser);
+        $this->em->persist(
+            new Subscription($otherUser, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+        );
+
+        $shared = $this->entry('shared-guid');
+        $withoutState = $this->entry('without-state-guid');
+
+        $mineState = new EntryState($this->user, $shared);
+        $mineState->setIsFavorite(true);
+        $this->em->persist($mineState);
+
+        $theirState = new EntryState($otherUser, $shared);
+        $theirState->setIsKept(true);
+        $this->em->persist($theirState);
+        $this->em->flush();
+
+        $result = $this->repo()->forUserByEntryIds(
+            (int) $this->user->getId(),
+            [(int) $shared->getId(), (int) $withoutState->getId()],
+        );
+
+        self::assertSame([(int) $shared->getId()], array_keys($result));
+        self::assertTrue($result[(int) $shared->getId()]->isFavorite());
+        self::assertFalse($result[(int) $shared->getId()]->isKept());
+    }
+
     public function testEnsureRowIsIdempotentAndLeavesExactlyOneRow(): void
     {
         $entry = $this->entry('ensure-idempotent');

@@ -13,20 +13,28 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Backup\AccountBackupExporter;
+use App\Service\Backup\BackupPart;
+use App\Service\Backup\BackupReader;
 use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Tests\DbTestCase;
+use App\Tests\Support\FullyPopulatedAccount;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class AccountBackupExporterTest extends DbTestCase
 {
-    private function makeUser(string $email): User
+    private function hasher(): UserPasswordHasherInterface
     {
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
 
-        return (new UserFactory($this->em, $hasher))->create($email, locale: 'de');
+        return $hasher;
+    }
+
+    private function makeUser(string $email): User
+    {
+        return (new UserFactory($this->em, $this->hasher()))->create($email, locale: 'de');
     }
 
     private function exporter(): AccountBackupExporter
@@ -37,11 +45,22 @@ final class AccountBackupExporterTest extends DbTestCase
         return $exporter;
     }
 
+    /** @return list<list<array<string, mixed>>> decoded lines per part, in yield order */
+    private function decodedParts(User $user, ?string $sourceUrl = 'https://source.example'): array
+    {
+        $parts = [];
+        foreach ($this->exporter()->parts($user, $sourceUrl) as $part) {
+            $parts[] = $this->decodedLinesOf($part);
+        }
+
+        return $parts;
+    }
+
     /** @return list<array<string, mixed>> */
-    private function decodedLines(User $user): array
+    private function decodedLinesOf(BackupPart $part): array
     {
         $lines = [];
-        foreach ($this->exporter()->lines($user, 'https://source.example') as $line) {
+        foreach (explode("\n", rtrim((string) gzdecode($part->gzipBytes), "\n")) as $line) {
             $decoded = json_decode($line, true, flags: \JSON_THROW_ON_ERROR);
             self::assertIsArray($decoded);
             /** @var array<string, mixed> $decoded */
@@ -49,6 +68,32 @@ final class AccountBackupExporterTest extends DbTestCase
         }
 
         return $lines;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $part
+     *
+     * @return array<string, mixed>
+     */
+    private static function footerOf(array $part): array
+    {
+        $footer = end($part);
+
+        return \is_array($footer) ? $footer : throw new \LogicException('The part has no footer line.');
+    }
+
+    /**
+     * @param array<string, mixed> $line
+     */
+    private static function entryIdentityKey(array $line): string
+    {
+        $feedUrl = $line['feedUrl'];
+        $guidHash = $line['guidHash'];
+        if (!\is_string($feedUrl) || !\is_string($guidHash)) {
+            throw new \LogicException('feedUrl and guidHash must be strings.');
+        }
+
+        return $feedUrl . '|' . $guidHash;
     }
 
     public function testExportsEveryKindInFileOrderWithAClosingFooter(): void
@@ -87,37 +132,45 @@ final class AccountBackupExporterTest extends DbTestCase
         $this->em->persist($state);
         $this->em->flush();
 
-        $lines = $this->decodedLines($user);
+        $parts = $this->decodedParts($user);
+        self::assertCount(2, $parts);
+        [$entriesPart, $foundationPart] = $parts;
 
+        self::assertSame(['header', 'entry', 'entryState', 'footer'], array_column($entriesPart, 'kind'));
         self::assertSame(
-            ['header', 'account', 'tag', 'savedSearch', 'feed', 'subscription', 'entry', 'entryState', 'footer'],
-            array_column($lines, 'kind'),
+            ['header', 'account', 'tag', 'savedSearch', 'feed', 'subscription', 'footer'],
+            array_column($foundationPart, 'kind'),
         );
-        self::assertSame(2, $lines[0]['schemaVersion']);
-        self::assertSame('export-order@example.com', $lines[0]['sourceEmail']);
-        self::assertSame('https://source.example', $lines[0]['sourceUrl']);
-        self::assertSame('de', $lines[1]['locale']);
-        self::assertSame('Tech', $lines[2]['name']);
-        self::assertSame(1, $lines[2]['position']);
-        self::assertSame('savedSearch', $lines[3]['kind']);
-        self::assertSame('climate policy', $lines[3]['term']);
-        self::assertTrue($lines[3]['wholeWord']);
-        self::assertFalse($lines[3]['phrase']);
-        self::assertSame(3, $lines[3]['position']);
-        self::assertSame('https://one.example/feed.xml', $lines[4]['url']);
-        self::assertArrayNotHasKey('etag', $lines[4]);
-        self::assertArrayNotHasKey('status', $lines[4]);
-        self::assertSame('My One', $lines[5]['customTitle']);
-        self::assertSame(4, $lines[5]['position']);
-        self::assertSame([['name' => 'Tech', 'position' => 3]], $lines[5]['tags']);
-        self::assertSame('guid-1', $lines[6]['guid']);
-        self::assertSame(hash('sha256', 'guid-1'), $lines[6]['guidHash']);
-        self::assertSame('<p>body</p>', $lines[6]['contentHtml']);
-        self::assertTrue($lines[7]['isFavorite']);
-        self::assertTrue($lines[7]['isViewed']);
+
+        self::assertSame(3, $entriesPart[0]['schemaVersion']);
+        self::assertSame('export-order@example.com', $entriesPart[0]['sourceEmail']);
+        self::assertSame('https://source.example', $entriesPart[0]['sourceUrl']);
+        self::assertSame('de', $foundationPart[1]['locale']);
+        self::assertSame('Tech', $foundationPart[2]['name']);
+        self::assertSame(1, $foundationPart[2]['position']);
+        self::assertSame('savedSearch', $foundationPart[3]['kind']);
+        self::assertSame('climate policy', $foundationPart[3]['term']);
+        self::assertTrue($foundationPart[3]['wholeWord']);
+        self::assertFalse($foundationPart[3]['phrase']);
+        self::assertSame(3, $foundationPart[3]['position']);
+        self::assertSame('https://one.example/feed.xml', $foundationPart[4]['url']);
+        self::assertArrayNotHasKey('etag', $foundationPart[4]);
+        self::assertArrayNotHasKey('status', $foundationPart[4]);
+        self::assertSame('My One', $foundationPart[5]['customTitle']);
+        self::assertSame(4, $foundationPart[5]['position']);
+        self::assertSame([['name' => 'Tech', 'position' => 3]], $foundationPart[5]['tags']);
+        self::assertSame('guid-1', $entriesPart[1]['guid']);
+        self::assertSame(hash('sha256', 'guid-1'), $entriesPart[1]['guidHash']);
+        self::assertSame('<p>body</p>', $entriesPart[1]['contentHtml']);
+        self::assertTrue($entriesPart[2]['isFavorite']);
+        self::assertTrue($entriesPart[2]['isViewed']);
         self::assertSame(
-            ['tag' => 1, 'savedSearch' => 1, 'feed' => 1, 'subscription' => 1, 'entry' => 1, 'entryState' => 1],
-            $lines[array_key_last($lines)]['counts'],
+            ['tag' => 0, 'savedSearch' => 0, 'feed' => 0, 'subscription' => 0, 'entry' => 1, 'entryState' => 1],
+            self::footerOf($entriesPart)['counts'],
+        );
+        self::assertSame(
+            ['tag' => 1, 'savedSearch' => 1, 'feed' => 1, 'subscription' => 1, 'entry' => 0, 'entryState' => 0],
+            self::footerOf($foundationPart)['counts'],
         );
     }
 
@@ -143,10 +196,10 @@ final class AccountBackupExporterTest extends DbTestCase
         $this->em->persist(new EntryState($other, $entry));
         $this->em->flush();
 
-        $lines = $this->decodedLines($user);
+        $allLines = array_merge(...$this->decodedParts($user));
 
         /** @var list<string> $kindList */
-        $kindList = array_column($lines, 'kind');
+        $kindList = array_column($allLines, 'kind');
         $kinds = array_count_values($kindList);
         self::assertSame(1, $kinds['subscription']);
         self::assertSame(1, $kinds['entry']);
@@ -197,10 +250,11 @@ final class AccountBackupExporterTest extends DbTestCase
 
         $this->em->flush();
 
-        $lines = $this->decodedLines($user);
+        $parts = $this->decodedParts($user);
+        $allLines = array_merge(...$parts);
 
         /** @var list<string> $kindList */
-        $kindList = array_column($lines, 'kind');
+        $kindList = array_column($allLines, 'kind');
         $kinds = array_count_values($kindList);
         self::assertSame(1, $kinds['feed']);
         self::assertSame(1, $kinds['subscription']);
@@ -208,55 +262,13 @@ final class AccountBackupExporterTest extends DbTestCase
         self::assertSame(1, $kinds['entryState']);
 
         $entryStateLines = array_values(
-            array_filter($lines, static fn (array $line): bool => 'entryState' === $line['kind']),
+            array_filter($allLines, static fn (array $line): bool => 'entryState' === $line['kind']),
         );
         self::assertSame(hash('sha256', 'kept-guid'), $entryStateLines[0]['guidHash']);
 
-        $footer = $lines[\count($lines) - 1];
         /** @var array<string, int> $footerCounts */
-        $footerCounts = $footer['counts'];
+        $footerCounts = self::footerOf($parts[0])['counts'];
         self::assertSame(1, $footerCounts['entryState']);
-    }
-
-    public function testEntryReadingStaysBatchedNotBuffered(): void
-    {
-        $user = $this->makeUser('export-streams@example.com');
-        $feed = new Feed('https://big.example/feed.xml');
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        for ($i = 0; $i < 1201; ++$i) {
-            $entry = new Entry(
-                $feed,
-                'guid-' . $i,
-                null,
-                'Entry ' . $i,
-                new \DateTimeImmutable('2026-08-01T00:00:00Z'),
-                new \DateTimeImmutable('2026-08-01T00:00:00Z'),
-            );
-            $this->em->persist($entry);
-            if (0 === $i % 200) {
-                $this->em->flush();
-            }
-        }
-        $this->em->flush();
-        $this->em->clear();
-        $user = $this->em->find(User::class, $user->getId());
-        self::assertInstanceOf(User::class, $user);
-
-        $entryLines = 0;
-        foreach ($this->exporter()->lines($user, null) as $line) {
-            if (!str_contains($line, '"kind":"entry"')) {
-                continue;
-            }
-            ++$entryLines;
-            // The identity map must never hold the whole corpus: a buffered
-            // SELECT hydrates all 1201 entries before the first yield, which
-            // is exactly the 349.6 MiB failure the spec measured.
-            $identityMap = $this->em->getUnitOfWork()->getIdentityMap();
-            $held = \count($identityMap[Entry::class] ?? []);
-            self::assertLessThanOrEqual(500, $held, 'entry hydration is not batched');
-        }
-        self::assertSame(1201, $entryLines);
     }
 
     public function testTheAccountLineCarriesNoRecommendationSettings(): void
@@ -279,8 +291,129 @@ final class AccountBackupExporterTest extends DbTestCase
         $this->em->persist($settings);
         $this->em->flush();
 
-        $accountLine = $this->decodedLines($user)[1];
+        [$foundationPart] = $this->decodedParts($user);
+        $accountLine = $foundationPart[0];
 
         self::assertArrayNotHasKey('recommendationSettings', $accountLine);
+    }
+
+    public function testASmallAccountYieldsEntryPartsThenTheFoundationLast(): void
+    {
+        $user = (new FullyPopulatedAccount($this->em, $this->hasher()))->create('small-account@example.com');
+
+        $memberNames = [];
+        $headers = [];
+        foreach ($this->exporter()->parts($user, 'https://source.example') as $part) {
+            $memberNames[] = $part->memberName;
+            $headers[] = $this->decodedLinesOf($part)[0];
+        }
+
+        self::assertSame(['001-entries.ndjson.gz', '000-foundation.ndjson.gz'], $memberNames);
+        self::assertSame(1, $headers[0]['part']);
+        self::assertNull($headers[0]['parts']);
+        self::assertNull($headers[0]['totals']);
+        self::assertSame(0, $headers[1]['part']);
+        self::assertSame(2, $headers[1]['parts']);
+        self::assertSame(['entries' => 1, 'entryStates' => 1], $headers[1]['totals']);
+        self::assertSame($headers[0]['backupId'], $headers[1]['backupId']);
+        self::assertSame($headers[0]['createdAt'], $headers[1]['createdAt']);
+    }
+
+    public function testEveryEntryStateTravelsInTheSamePartAsItsEntry(): void
+    {
+        $user = (new FullyPopulatedAccount($this->em, $this->hasher()))->create('states-travel@example.com');
+
+        foreach ($this->decodedParts($user) as $part) {
+            $entryKeys = [];
+            foreach ($part as $line) {
+                if ('entry' === $line['kind']) {
+                    $entryKeys[self::entryIdentityKey($line)] = true;
+                }
+            }
+
+            foreach ($part as $line) {
+                if ('entryState' === $line['kind']) {
+                    self::assertArrayHasKey(self::entryIdentityKey($line), $entryKeys);
+                }
+            }
+        }
+    }
+
+    public function testTheEntryBudgetSplitsALargeFeedAcrossPartsWithBoundedEntryHydration(): void
+    {
+        $user = $this->makeUser('export-budget@example.com');
+        $feed = new Feed('https://budget.example/feed.xml');
+        $this->em->persist($feed);
+        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        for ($i = 0; $i < 2001; ++$i) {
+            $entry = new Entry(
+                $feed,
+                'guid-' . $i,
+                null,
+                'Entry ' . $i,
+                new \DateTimeImmutable('2026-08-01T00:00:00Z'),
+                new \DateTimeImmutable('2026-08-01T00:00:00Z'),
+            );
+            $this->em->persist($entry);
+            if (0 === $i % 500) {
+                $this->em->flush();
+            }
+        }
+        $this->em->flush();
+        $this->em->clear();
+        $user = $this->em->find(User::class, $user->getId());
+        self::assertInstanceOf(User::class, $user);
+
+        $entryCountsPerPart = [];
+        $headers = [];
+        foreach ($this->exporter()->parts($user, null) as $part) {
+            $identityMap = $this->em->getUnitOfWork()->getIdentityMap();
+            $held = \count($identityMap[Entry::class] ?? []);
+            self::assertLessThanOrEqual(500, $held, 'entry hydration is not batched');
+
+            $lines = $this->decodedLinesOf($part);
+            $headers[] = $lines[0];
+            $entryCountsPerPart[] = \count(array_filter(
+                $lines,
+                static fn (array $line): bool => 'entry' === $line['kind'],
+            ));
+        }
+
+        self::assertSame([2000, 1, 0], $entryCountsPerPart);
+        self::assertSame(1, $headers[0]['part']);
+        self::assertSame(2, $headers[1]['part']);
+        self::assertSame(0, $headers[2]['part']);
+        self::assertSame(3, $headers[2]['parts']);
+        self::assertSame(['entries' => 2001, 'entryStates' => 0], $headers[2]['totals']);
+    }
+
+    public function testAnAccountWithNoEntriesYieldsOnlyTheFoundation(): void
+    {
+        $user = $this->makeUser('export-no-entries@example.com');
+        $feed = new Feed('https://empty.example/feed.xml');
+        $this->em->persist($feed);
+        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->em->flush();
+
+        $parts = $this->decodedParts($user);
+
+        self::assertCount(1, $parts);
+        $header = $parts[0][0];
+        self::assertSame(0, $header['part']);
+        self::assertSame(1, $header['parts']);
+        self::assertSame(['entries' => 0, 'entryStates' => 0], $header['totals']);
+    }
+
+    public function testEveryYieldedPartIsAValidDocumentThatTheReaderAccepts(): void
+    {
+        $user = (new FullyPopulatedAccount($this->em, $this->hasher()))->create('reader-round-trip@example.com');
+
+        foreach ($this->exporter()->parts($user, 'https://source.example') as $part) {
+            $lineCount = 0;
+            foreach ((new BackupReader())->read($part->gzipBytes) as $line) {
+                ++$lineCount;
+            }
+            self::assertGreaterThan(0, $lineCount);
+        }
     }
 }
