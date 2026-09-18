@@ -13,7 +13,7 @@ namespace App\Service\Backup;
  */
 final readonly class RestoreResult
 {
-    public function __construct(
+    private function __construct(
         public int $tags,
         public int $savedSearches,
         public int $feeds,
@@ -21,5 +21,22 @@ final readonly class RestoreResult
         public int $entries,
         public int $entryStates,
     ) {
+    }
+
+    public static function ofFoundation(int $tags, int $savedSearches, int $feeds, int $subscriptions): self
+    {
+        return new self($tags, $savedSearches, $feeds, $subscriptions, entries: 0, entryStates: 0);
+    }
+
+    public static function ofEntryPart(int $entries, int $entryStates): self
+    {
+        return new self(
+            tags: 0,
+            savedSearches: 0,
+            feeds: 0,
+            subscriptions: 0,
+            entries: $entries,
+            entryStates: $entryStates,
+        );
     }
 }

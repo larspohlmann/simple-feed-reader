@@ -70,8 +70,11 @@ final readonly class BulkEntryReadMarker
     /** @param list<int> $entryIds */
     private function createMissing(int $userId, array $entryIds, \DateTimeImmutable $now): void
     {
-        $withState = $this->states->entryIdsWithStateForUser($userId, $entryIds);
-        $missing = array_values(array_diff($entryIds, $withState));
+        $withState = $this->states->entryIdsWithStateOf($userId, $entryIds);
+        $missing = array_values(array_filter(
+            $entryIds,
+            static fn (int $entryId): bool => !isset($withState[$entryId]),
+        ));
         if ($missing === []) {
             return;
         }

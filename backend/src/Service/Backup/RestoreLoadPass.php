@@ -64,13 +64,11 @@ final class RestoreLoadPass
         $this->resolveHeldFeeds();
         $this->flush();
 
-        return new RestoreResult(
+        return RestoreResult::ofFoundation(
             tags: $this->counts['tags'],
             savedSearches: $this->counts['savedSearches'],
             feeds: $this->counts['feeds'],
             subscriptions: $this->counts['subscriptions'],
-            entries: 0,
-            entryStates: 0,
         );
     }
 

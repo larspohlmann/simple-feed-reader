@@ -6,10 +6,13 @@ namespace App\Tests\Service\Backup;
 
 use App\Entity\User;
 use App\Repository\EntryRepository;
+use App\Repository\EntryStateRepository;
+use App\Repository\FeedRepository;
+use App\Repository\SubscriptionRepository;
 use App\Service\Backup\Dto\EntryLine;
 use App\Service\Backup\EntryBatchInserter;
 use App\Service\Backup\RestoreEntryLoader;
-use App\Service\Backup\RestoreFeedTarget;
+use App\Service\Backup\RestoreFeedTargets;
 use App\Service\Search\EntryIndexer;
 use App\Service\Url\UrlNormalizer;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
@@ -34,14 +37,14 @@ final class RestoreEntryLoaderTest extends TestCase
         $known = $this->line('guid-known');
         $fresh = $this->line('guid-fresh');
         $entries = $this->createMock(EntryRepository::class);
+        $entries->method('guidHashToIdMapForFeed')->with(7)->willReturn([$known->guidHash => 1]);
         $entries->expects(self::once())
             ->method('entryIdsByGuidHash')
             ->with(7, [$fresh->guidHash])
             ->willReturn([$fresh->guidHash => 42]);
         $entries->method('entriesAfterId')->willReturn([]);
-        $entries->expects(self::never())->method('guidHashToIdMapForFeed');
         $loader = $this->loader($entries);
-        $loader->begin([self::FEED_URL => new RestoreFeedTarget(7, true, [$known->guidHash => 1])], $this->user());
+        $loader->begin($this->targets($entries), $this->user());
 
         $loader->bufferEntry($known);
         $loader->bufferEntry($fresh);
@@ -55,8 +58,9 @@ final class RestoreEntryLoaderTest extends TestCase
         $fresh = $this->line('guid-fresh');
         $entries = $this->createStub(EntryRepository::class);
         $entries->method('entryIdsByGuidHash')->willReturn([]);
+        $entries->method('guidHashToIdMapForFeed')->willReturn([]);
         $loader = $this->loader($entries);
-        $loader->begin([self::FEED_URL => new RestoreFeedTarget(7, true, [])], $this->user());
+        $loader->begin($this->targets($entries), $this->user());
 
         $loader->bufferEntry($fresh);
 
@@ -69,10 +73,27 @@ final class RestoreEntryLoaderTest extends TestCase
         return new RestoreEntryLoader(
             $this->createStub(EntityManagerInterface::class),
             $entries,
+            $this->createStub(EntryStateRepository::class),
             new EntryBatchInserter($this->createStub(Connection::class), new UrlNormalizer()),
             new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
             new MockClock('2026-08-01 00:00:00', 'UTC'),
         );
+    }
+
+    /**
+     * A real RestoreFeedTargets over stubbed repositories: this feed url
+     * resolves to feed id 7, unread by any other account, so the target it
+     * lazily builds behaves exactly like the hand-built RestoreFeedTarget this
+     * test used before RestoreFeedTargets existed.
+     */
+    private function targets(EntryRepository $entries): RestoreFeedTargets
+    {
+        $subscriptions = $this->createStub(SubscriptionRepository::class);
+        $subscriptions->method('feedIdsByUrlForUser')->willReturn([self::FEED_URL => 7]);
+        $feeds = $this->createStub(FeedRepository::class);
+        $feeds->method('isReadByAnotherUser')->willReturn(false);
+
+        return new RestoreFeedTargets(1, $subscriptions, $feeds, $entries);
     }
 
     private function user(): User

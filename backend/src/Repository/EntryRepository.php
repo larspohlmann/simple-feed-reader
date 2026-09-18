@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\Subscription;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -237,5 +238,21 @@ class EntryRepository extends ServiceEntityRepository
         }
 
         return $idsByHash;
+    }
+
+    /**
+     * The account's entry ceiling is a property of its subscriptions, not of
+     * one part in isolation — EntryPartInspector adds a part's own count to
+     * this before comparing against the ceiling, so a restore uploaded as many
+     * small parts is judged the same as one large one.
+     */
+    public function countInFeedsSubscribedBy(int $userId): int
+    {
+        return (int) $this->createQueryBuilder('e')
+            ->select('COUNT(e.id)')
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed')
+            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
+            ->getQuery()
+            ->getSingleScalarResult();
     }
 }

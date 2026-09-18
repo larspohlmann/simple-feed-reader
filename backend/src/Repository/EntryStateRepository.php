@@ -222,13 +222,15 @@ class EntryStateRepository extends ServiceEntityRepository
     }
 
     /**
-     * Which of the given entry ids already have a state row for this user.
+     * Which of the given entry ids already have a state row for this user, as
+     * a lookup set — `isset($set[$id])` for each candidate, with no
+     * array_search or array_diff needed at the call site.
      *
      * @param list<int> $entryIds
      *
-     * @return list<int>
+     * @return array<int, true>
      */
-    public function entryIdsWithStateForUser(int $userId, array $entryIds): array
+    public function entryIdsWithStateOf(int $userId, array $entryIds): array
     {
         if ($entryIds === []) {
             return [];
@@ -242,7 +244,12 @@ class EntryStateRepository extends ServiceEntityRepository
             ->getQuery()
             ->getScalarResult();
 
-        return array_map(static fn (array $row): int => (int) $row['entryId'], $rows);
+        $existing = [];
+        foreach ($rows as $row) {
+            $existing[(int) $row['entryId']] = true;
+        }
+
+        return $existing;
     }
 
     /**

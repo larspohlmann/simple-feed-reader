@@ -58,27 +58,27 @@ final class EntryStateRepositoryTest extends DbTestCase
         return $entry;
     }
 
-    public function testEmptyEntryIdListReturnsEmptyWithoutQuerying(): void
+    public function testEntryIdsWithStateOfReturnsASetKeyedByEntryId(): void
     {
-        self::assertSame([], $this->repo()->entryIdsWithStateForUser((int) $this->user->getId(), []));
-    }
-
-    public function testReturnsExactlyTheEntryIdsThatHaveAStateRow(): void
-    {
-        $withState = $this->entry('with-state');
-        $withoutState = $this->entry('without-state');
+        $withState = $this->entry('with-state-set');
+        $withoutState = $this->entry('without-state-set');
 
         $state = new EntryState($this->user, $withState);
-        $state->setIsHidden(true);
+        $state->setIsFavorite(true);
         $this->em->persist($state);
         $this->em->flush();
 
-        $result = $this->repo()->entryIdsWithStateForUser(
+        $result = $this->repo()->entryIdsWithStateOf(
             (int) $this->user->getId(),
             [(int) $withState->getId(), (int) $withoutState->getId()],
         );
 
-        self::assertSame([(int) $withState->getId()], $result);
+        self::assertSame([(int) $withState->getId() => true], $result);
+    }
+
+    public function testEntryIdsWithStateOfWithEmptyListReturnsEmptyWithoutQuerying(): void
+    {
+        self::assertSame([], $this->repo()->entryIdsWithStateOf((int) $this->user->getId(), []));
     }
 
     public function testForUserByEntryIdsWithEmptyListReturnsEmptyWithoutQuerying(): void

@@ -44,6 +44,14 @@ parameters:
 
     app.loki_spool_directory: '%kernel.logs_dir%/loki-spool'
 
+    # Not a tuned limit: the 240 s budget would allow ~2 million entries. An
+    # account above this is corrupt or hostile, not a large one. Mirrors
+    # BackupFitCheck's MAX_ENTRIES, but as a parameter rather than a class
+    # constant: EntryPartRestorerTest builds EntryPartInspector directly with
+    # a tiny ceiling to exercise the guard without seeding hundreds of
+    # thousands of rows.
+    backup_account_entry_ceiling: 500_000
+
 services:
     # default configuration for services in *this* file
     _defaults:
@@ -214,6 +222,10 @@ services:
         arguments:
             $concurrency: '%fetch_concurrency%'
             $hostConcurrency: '%fetch_host_concurrency%'
+
+    App\Service\Backup\EntryPartInspector:
+        arguments:
+            $accountEntryCeiling: '%backup_account_entry_ceiling%'
 
     # Account mail is queued and sent on kernel.terminate, after the response
     # has been flushed — see App\Service\Mail\DeferredMailer for why that is a
