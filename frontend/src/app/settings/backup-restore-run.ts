@@ -5,6 +5,7 @@ import { Problem, outcomeIsUnproven, parseProblem } from '../core/problem';
 import { RestoreCounts, RestoreResult } from '../reader/models';
 import { ReaderApi } from '../reader/reader-api';
 import { BackupArchive } from './backup-archive';
+import { CLIENT_CHECK_FAILED, restoreErrorProblem } from './backup-problem';
 
 export type RestoreRunOutcome =
   | { kind: 'completed'; loaded: RestoreCounts }
@@ -36,6 +37,9 @@ function addCounts(first: RestoreCounts, second: RestoreCounts): RestoreCounts {
 }
 
 function isRetryableProblem(problem: Problem): boolean {
+  // A client-side archive failure would re-throw the same corrupt bytes, so it
+  // never retries -- its status 0 must not read as an unproven server outcome.
+  if (problem.type === CLIENT_CHECK_FAILED) return false;
   return problem.status === 408 || problem.status === 429 || outcomeIsUnproven(problem);
 }
 
@@ -52,7 +56,7 @@ async function withRetry<T>(
     try {
       return { ok: true, value: await action() };
     } catch (error) {
-      const problem = parseProblem(error as HttpErrorResponse);
+      const problem = restoreErrorProblem(error);
       if (!isRetryableProblem(problem) || attempt >= RESTORE_RETRY_DELAYS_MS.length) {
         return { ok: false, problem };
       }
@@ -112,7 +116,12 @@ export class BackupRestoreRun {
       this.progressSignal.set({ done: 1, total: this.total });
       return null;
     } catch (error) {
-      const problem = parseProblem(error as HttpErrorResponse);
+      // A non-HTTP throw here is archive.foundation() failing before the start
+      // request goes out, so the wipe never ran: invalid archive, not wiped.
+      if (!(error instanceof HttpErrorResponse)) {
+        return { kind: 'stopped', problem: restoreErrorProblem(error), wiped: false };
+      }
+      const problem = parseProblem(error);
       const wiped = outcomeIsUnproven(problem) || problem.type === BACKUP_LOAD_FAILED;
       return { kind: 'stopped', problem, wiped };
     }

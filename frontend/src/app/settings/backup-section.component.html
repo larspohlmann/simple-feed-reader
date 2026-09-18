@@ -13,7 +13,8 @@
     <p class="lead">{{ 'settings.backup.restoreLead' | transloco }}</p>
     <input
       type="file"
-      accept=".zip"
+      accept=".zip,.gz"
+      [disabled]="restoring()"
       [attr.aria-label]="'settings.backup.chooseFile' | transloco"
       (change)="onFileSelected($event)"
     />

@@ -118,6 +118,113 @@ describe('BackupSectionComponent', () => {
     expect(first.close).toHaveBeenCalledTimes(1);
   });
 
+  const zeroLoaded = {
+    loaded: { tags: 0, savedSearches: 0, feeds: 0, subscriptions: 0, entries: 0, entryStates: 0 },
+  };
+
+  it('discards a superseded file open and closes its archive, applying only the later pick', async () => {
+    const f = mount();
+    const first = fakeArchive();
+    const second = fakeArchive();
+    let resolveFirst!: (a: BackupArchive) => void;
+    (openBackupArchive as jest.Mock)
+      .mockReturnValueOnce(new Promise<BackupArchive>((resolve) => (resolveFirst = resolve)))
+      .mockResolvedValueOnce(second);
+
+    f.componentInstance.onFile(new File(['a'], 'a.zip', { type: 'application/zip' }));
+    f.componentInstance.onFile(new File(['b'], 'b.zip', { type: 'application/zip' }));
+    await flushPromises();
+
+    // Only the later pick reached the server.
+    ctrl.expectOne('https://api.test/api/account/restore/preview').flush(previewResponse);
+    await flushPromises();
+
+    resolveFirst(first);
+    await flushPromises();
+
+    expect(first.close).toHaveBeenCalledTimes(1);
+    expect(second.close).not.toHaveBeenCalled();
+    expect(first.foundation).not.toHaveBeenCalled();
+  });
+
+  it('ignores a newly chosen file while a restore is running', async () => {
+    const archive = fakeArchive({ entryPartCount: 1 });
+    const f = mount();
+    await chooseFile(f, archive);
+    ctrl.expectOne('https://api.test/api/account/restore/preview').flush(previewResponse);
+    await flushPromises();
+
+    const c = f.componentInstance;
+    c.typed.set('REPLACE');
+    c.restore();
+    await flushPromises();
+    expect(c.restoring()).toBe(true);
+    const chosen = c.file();
+
+    c.onFile(new File(['other'], 'other.zip', { type: 'application/zip' }));
+    expect(c.file()).toBe(chosen);
+    expect(openBackupArchive).toHaveBeenCalledTimes(1);
+
+    ctrl.expectOne('https://api.test/api/account/restore/start?confirm=REPLACE').flush(zeroLoaded);
+    await flushPromises();
+    ctrl.expectOne('https://api.test/api/account/restore/entries').flush(zeroLoaded);
+    await flushPromises();
+  });
+
+  it('clears restoring and surfaces an error when the run throws unexpectedly', async () => {
+    const archive = fakeArchive({ entryPartCount: 1 });
+    const f = mount();
+    await chooseFile(f, archive);
+    ctrl.expectOne('https://api.test/api/account/restore/preview').flush(previewResponse);
+    await flushPromises();
+
+    jest.spyOn(TestBed.inject(BackupRestoreRun), 'run').mockRejectedValue(new Error('boom'));
+    const c = f.componentInstance;
+    c.typed.set('REPLACE');
+    c.restore();
+    await flushPromises();
+    f.detectChanges();
+
+    expect(c.restoring()).toBe(false);
+    const text = (f.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('The restore stopped unexpectedly');
+  });
+
+  it('clears the failedOnce banner once a continued run completes', async () => {
+    const archive = fakeArchive({ entryPartCount: 1 });
+    const f = mount();
+    await chooseFile(f, archive);
+    ctrl.expectOne('https://api.test/api/account/restore/preview').flush(previewResponse);
+    await flushPromises();
+
+    const c = f.componentInstance;
+    c.typed.set('REPLACE');
+    c.restore();
+    await flushPromises();
+    ctrl.expectOne('https://api.test/api/account/restore/start?confirm=REPLACE').flush(zeroLoaded);
+    await flushPromises();
+    ctrl
+      .expectOne('https://api.test/api/account/restore/entries')
+      .flush(
+        { type: 'about:blank', title: 'Unprocessable', status: 422 },
+        { status: 422, statusText: 'Unprocessable Entity' },
+      );
+    await flushPromises();
+    f.detectChanges();
+    expect(c.failedOnce()).toBe(true);
+
+    c.continueRestore();
+    await flushPromises();
+    ctrl.expectOne('https://api.test/api/account/restore/entries').flush(zeroLoaded);
+    await flushPromises();
+    f.detectChanges();
+
+    expect(c.failedOnce()).toBe(false);
+    expect(c.error()).toBeNull();
+    const text = (f.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).not.toContain('Run the restore again with the same file');
+  });
+
   it('shows the old-format message and makes no API call for a .json.gz file', async () => {
     const f = mount();
     const file = new File(['gz'], 'account-backup.json.gz', { type: 'application/gzip' });

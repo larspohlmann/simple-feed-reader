@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
-import { Problem, REQUEST_TOO_LARGE, parseProblem, parseProblemAsync } from '../core/problem';
+import { Problem, REQUEST_TOO_LARGE, parseProblemAsync } from '../core/problem';
 import { filenameFromContentDisposition, saveAs } from '../core/save-as';
 import { downloadOpmlExport } from '../core/opml-export';
 import { LanguageService } from '../core/language.service';
@@ -11,12 +11,8 @@ import { RestoreCounts, RestorePreview, RestoreResult } from '../reader/models';
 import { ReaderApi } from '../reader/reader-api';
 import { RefreshService } from '../reader/refresh.service';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
-import {
-  BackupArchive,
-  InvalidBackupArchiveError,
-  isOldFormatBackup,
-  openBackupArchive,
-} from './backup-archive';
+import { BackupArchive, isOldFormatBackup, openBackupArchive } from './backup-archive';
+import { CLIENT_CHECK_FAILED, clientCheckFailed, restoreErrorProblem } from './backup-problem';
 import { BackupRestoreRun, RestoreRunOutcome } from './backup-restore-run';
 import { ButtonComponent } from '../shared/button/button.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
@@ -29,12 +25,6 @@ const CONFIRM_PHRASE = 'REPLACE';
  *  unparseable -- normal responses carry the app-slug/version/account/date
  *  name the backend builds (BackupFilename). */
 const FALLBACK_BACKUP_FILENAME = 'account-backup.zip';
-
-/** Marks a `Problem` this component built itself from a check that never
- *  reached the server -- an old-format file, or a zip `openBackupArchive`
- *  rejected. `detail` holds the i18n key to translate, the same trick
- *  `messageFor()` already plays for `REQUEST_TOO_LARGE`. */
-const CLIENT_CHECK_FAILED = 'client_backup_check_failed';
 
 @Component({
   selector: 'app-backup-section',
@@ -69,10 +59,10 @@ export class BackupSectionComponent {
   readonly restoring = signal(false);
   readonly result = signal<RestoreResult | null>(null);
   readonly error = signal<Problem | null>(null);
-  /** Set once a restore fails AFTER the wipe, never cleared -- the rows are
-   *  already gone, so the recovery banner stays up even through a retry. A
-   *  refusal that cost the account nothing must never set this: a false "may
-   *  be half-wiped" alarm is the worst this feature can raise. */
+  /** Set once a restore fails AFTER the wipe -- the rows are already gone, so
+   *  the recovery banner stays up through a retry, and is cleared only once a
+   *  run completes. A refusal that cost the account nothing must never set
+   *  this: a false "may be half-wiped" alarm is the worst this feature raises. */
   readonly failedOnce = signal(false);
 
   readonly progress = this.restoreRun.progress;
@@ -81,6 +71,10 @@ export class BackupSectionComponent {
   /** The archive `onFile()` verified and previewed -- `restore()` reads the
    *  same object so it never re-opens or re-verifies the zip. */
   private archive: BackupArchive | null = null;
+
+  /** Bumped on every file pick so a slower open/preview of an earlier file is
+   *  discarded and its archive closed, never applied over a later pick (#1073). */
+  private openGeneration = 0;
 
   readonly canRestore = computed(
     () => this.typed() === CONFIRM_PHRASE && !!this.file() && !this.restoring(),
@@ -110,15 +104,6 @@ export class BackupSectionComponent {
     }
 
     return problem.detail || problem.title;
-  }
-
-  private clientCheckFailed(detailKey: string): Problem {
-    return {
-      type: CLIENT_CHECK_FAILED,
-      title: 'Backup check failed',
-      status: 0,
-      detail: detailKey,
-    };
   }
 
   createdAt(iso: string): string {
@@ -157,48 +142,53 @@ export class BackupSectionComponent {
   }
 
   onFile(file: File): void {
+    // A restore in flight has already wiped or is mid-load; a new pick must not
+    // reset the run and close the archive out from under it.
+    if (this.restoring()) return;
+
     this.restoreRun.reset();
     this.releaseArchive();
+    const generation = ++this.openGeneration;
     this.file.set(file);
     this.result.set(null);
     this.error.set(null);
     this.preview.set(null);
 
     if (isOldFormatBackup(file.name)) {
-      this.error.set(this.clientCheckFailed('settings.backup.oldFormat'));
+      this.error.set(clientCheckFailed('settings.backup.oldFormat'));
       return;
     }
 
     this.previewing.set(true);
-    void this.openAndPreview(file);
+    void this.openAndPreview(file, generation);
   }
 
-  private async openAndPreview(file: File): Promise<void> {
+  private async openAndPreview(file: File, generation: number): Promise<void> {
     try {
-      this.archive = await openBackupArchive(file);
+      const archive = await openBackupArchive(file);
+      if (generation !== this.openGeneration) {
+        void archive.close().catch(() => undefined);
+        return;
+      }
+      this.archive = archive;
       const preview = await firstValueFrom(
-        this.api.previewAccountRestore(await this.archive.foundation()),
+        this.api.previewAccountRestore(await archive.foundation()),
       );
+      if (generation !== this.openGeneration) return;
       this.previewing.set(false);
       this.preview.set(preview);
     } catch (error) {
+      if (generation !== this.openGeneration) return;
       this.releaseArchive();
       this.previewing.set(false);
       this.preview.set(null);
-      this.error.set(this.previewFailure(error));
+      this.error.set(restoreErrorProblem(error));
     }
   }
 
   private releaseArchive(): void {
     void this.archive?.close().catch(() => undefined);
     this.archive = null;
-  }
-
-  private previewFailure(error: unknown): Problem {
-    if (error instanceof InvalidBackupArchiveError) {
-      return this.clientCheckFailed('settings.backup.invalidArchive');
-    }
-    return parseProblem(error as HttpErrorResponse);
   }
 
   restore(): void {
@@ -216,15 +206,22 @@ export class BackupSectionComponent {
   }
 
   private async drive(action: () => Promise<RestoreRunOutcome>): Promise<void> {
-    const outcome = await action();
-    this.restoring.set(false);
-    if (outcome.kind === 'completed') {
-      this.onRestoreCompleted(outcome.loaded);
-      return;
-    }
-    this.error.set(outcome.problem);
-    if (outcome.wiped) {
-      this.failedOnce.set(true);
+    try {
+      const outcome = await action();
+      if (outcome.kind === 'completed') {
+        this.onRestoreCompleted(outcome.loaded);
+        return;
+      }
+      this.error.set(outcome.problem);
+      if (outcome.wiped) {
+        this.failedOnce.set(true);
+      }
+    } catch {
+      // The run catches every expected failure and returns an outcome, so a
+      // throw here is a bug: surface it rather than strand the UI mid-restore.
+      this.error.set(clientCheckFailed('settings.backup.unexpectedError'));
+    } finally {
+      this.restoring.set(false);
     }
   }
 
@@ -232,6 +229,8 @@ export class BackupSectionComponent {
     this.file.set(null);
     this.typed.set('');
     this.preview.set(null);
+    this.error.set(null);
+    this.failedOnce.set(false);
     this.restoreRun.reset();
     this.releaseArchive();
     this.result.set({ loaded });

@@ -175,6 +175,55 @@ describe('BackupRestoreRun', () => {
     expect(api.restoreEntryPart).not.toHaveBeenCalled();
   });
 
+  it('maps a non-HTTP archive failure on start to invalid-archive, without wiping', async () => {
+    const archive = fakeArchive(1);
+    (archive.foundation as jest.Mock).mockRejectedValue(new Error('not a gzip member'));
+
+    const outcome = await run.run(archive);
+
+    expect(outcome).toEqual({
+      kind: 'stopped',
+      problem: expect.objectContaining({
+        type: 'client_backup_check_failed',
+        detail: 'settings.backup.invalidArchive',
+      }),
+      wiped: false,
+    });
+    expect(run.canContinue()).toBe(false);
+    expect(api.startAccountRestore).not.toHaveBeenCalled();
+  });
+
+  it('maps a non-HTTP archive failure on an entry part to invalid-archive and does not retry', async () => {
+    const archive = fakeArchive(1);
+    (archive.entryPart as jest.Mock).mockRejectedValue(new SyntaxError('corrupt member'));
+
+    const outcome = await run.run(archive);
+
+    expect(outcome).toMatchObject({
+      kind: 'stopped',
+      problem: expect.objectContaining({ type: 'client_backup_check_failed' }),
+      wiped: true,
+    });
+    expect(wait).not.toHaveBeenCalled();
+    expect(api.restoreEntryPart).not.toHaveBeenCalled();
+  });
+
+  it('marks a start failure with backup_load_failed as wiped', async () => {
+    api.startAccountRestore.mockImplementation(() =>
+      throwError(() => problemResponse(422, 'backup_load_failed')),
+    );
+
+    const outcome = await run.run(fakeArchive(1));
+
+    expect(outcome).toEqual({
+      kind: 'stopped',
+      problem: expect.objectContaining({ type: 'backup_load_failed' }),
+      wiped: true,
+    });
+    expect(run.canContinue()).toBe(false);
+    expect(api.restoreEntryPart).not.toHaveBeenCalled();
+  });
+
   it('reset() clears the archive, index, counts and progress', async () => {
     api.restoreEntryPart.mockImplementation(() => throwError(() => problemResponse(502)));
     await run.run(fakeArchive(1));

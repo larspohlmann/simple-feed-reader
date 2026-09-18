@@ -1,7 +1,8 @@
 import { BlobReader, BlobWriter, ZipReader, type Entry, type FileEntry } from '@zip.js/zip.js';
+import { InvalidBackupArchiveError } from './backup-archive-error';
 import { readPartHeader, type BackupPartHeader, type ReadPartHeader } from './backup-part-header';
 
-export class InvalidBackupArchiveError extends Error {}
+export { InvalidBackupArchiveError } from './backup-archive-error';
 
 export interface BackupArchive {
   readonly entryPartCount: number;
