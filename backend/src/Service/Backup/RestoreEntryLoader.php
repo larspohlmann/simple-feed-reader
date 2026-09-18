@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\User;
 use App\Repository\EntryRepository;
+use App\Repository\EntryStateRepository;
 use App\Service\Backup\Dto\EntryLine;
 use App\Service\Backup\Dto\EntryStateLine;
 use App\Service\Backup\Exception\BackupLoadFailedException;
@@ -17,23 +18,15 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * The second half of one restore pass: the file's entries and entry states,
- * which together are everything that does not fit in memory at once.
- *
- * Constructed per restore, never shared — every field here is per-run working
- * state. It starts only once the account's shape is written and the entity
- * manager has been cleared, so it holds no entity from the earlier phases:
- * the feed ids, the "may I create entries here?" verdicts and the guid hash ⇒
- * entry id maps all arrive as the scalar RestoreFeedTarget set that survives
- * that clear, and the User arrives as a reference this class re-acquires after
- * every clear of its own.
+ * Loads one entry part's entries and entry states. Constructed per request,
+ * never shared: every field is per-run working state, and the User is a
+ * reference re-acquired after every clear().
  */
 final class RestoreEntryLoader
 {
     private const int BATCH = 500;
 
-    /** @var array<string, RestoreFeedTarget> keyed by feed url */
-    private array $targets = [];
+    private ?RestoreFeedTargets $targets = null;
 
     private ?User $user = null;
 
@@ -41,6 +34,9 @@ final class RestoreEntryLoader
 
     /** @var list<EntryLine> */
     private array $bufferedLines = [];
+
+    /** @var list<array{EntryStateLine, int}> states resolved to an entry id, not yet persisted */
+    private array $heldStates = [];
 
     /** @var array<int, true> ids this restore created, as a set */
     private array $createdEntryIds = [];
@@ -52,16 +48,14 @@ final class RestoreEntryLoader
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly EntryRepository $entries,
+        private readonly EntryStateRepository $entryStates,
         private readonly EntryBatchInserter $inserter,
         private readonly EntryIndexer $indexer,
         private readonly ClockInterface $clock,
     ) {
     }
 
-    /**
-     * @param array<string, RestoreFeedTarget> $targets
-     */
-    public function begin(array $targets, User $user): void
+    public function begin(RestoreFeedTargets $targets, User $user): void
     {
         $this->targets = $targets;
         $this->user = $user;
@@ -93,17 +87,16 @@ final class RestoreEntryLoader
             return;
         }
 
-        $this->em->persist($this->stateFor($line, $entryId));
-        ++$this->entryStatesCreated;
-        if (0 === $this->entryStatesCreated % self::BATCH) {
-            $this->flushStates();
+        $this->heldStates[] = [$line, $entryId];
+        if (\count($this->heldStates) >= self::BATCH) {
+            $this->writeHeldStates();
         }
     }
 
     public function finish(): void
     {
         $this->closeBufferedFeed();
-        $this->flushStates();
+        $this->writeHeldStates();
         $this->indexCreatedEntries();
     }
 
@@ -137,17 +130,14 @@ final class RestoreEntryLoader
         return $state;
     }
 
-    /**
-     * A backstop: BackupInspector refuses rows for an unsubscribed feed in
-     * pass 1, while the account is still whole. Reaching this means the wipe
-     * has already run, so the user must be told the account is empty.
-     */
     private function target(string $feedUrl): RestoreFeedTarget
     {
-        return $this->targets[$feedUrl] ?? throw BackupLoadFailedException::danglingReference(sprintf(
-            'The backup carries rows for feed "%s", which none of its subscriptions names.',
-            $feedUrl,
-        ));
+        return $this->targetsOrThrow()->for($feedUrl);
+    }
+
+    private function targetsOrThrow(): RestoreFeedTargets
+    {
+        return $this->targets ?? throw new \LogicException('begin() must run before entries are loaded.');
     }
 
     private function closeBufferedFeed(): void
@@ -181,7 +171,7 @@ final class RestoreEntryLoader
         try {
             $this->inserter->insert($target->feedId, $fresh);
         } catch (DbalException $e) {
-            throw BackupLoadFailedException::from($e);
+            throw BackupLoadFailedException::duringEntries($e);
         }
 
         $this->entriesCreated += \count($fresh);
@@ -227,12 +217,39 @@ final class RestoreEntryLoader
         }
     }
 
+    /**
+     * An existing state row wins over the file: that keeps a retried part
+     * idempotent and a click made mid-restore intact.
+     */
+    private function writeHeldStates(): void
+    {
+        $held = $this->heldStates;
+        $this->heldStates = [];
+        if ([] === $held) {
+            return;
+        }
+
+        $entryIds = array_map(static fn (array $pair): int => $pair[1], $held);
+        $userId = (int) $this->userReference()->getId();
+        $alreadyStated = array_flip($this->entryStates->entryIdsWithStateForUser($userId, $entryIds));
+        foreach ($held as [$line, $entryId]) {
+            if (isset($alreadyStated[$entryId])) {
+                continue;
+            }
+
+            $this->em->persist($this->stateFor($line, $entryId));
+            ++$this->entryStatesCreated;
+        }
+
+        $this->flushStates();
+    }
+
     private function flushStates(): void
     {
         try {
             $this->em->flush();
         } catch (DbalException $e) {
-            throw BackupLoadFailedException::from($e);
+            throw BackupLoadFailedException::duringEntries($e);
         }
 
         $userId = (int) $this->userReference()->getId();

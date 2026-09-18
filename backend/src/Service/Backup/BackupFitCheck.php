@@ -25,7 +25,7 @@ final readonly class BackupFitCheck
      * Not a tuned limit: the 240 s budget would allow ~2 million entries.
      * A file above this is corrupt or hostile, not a large account.
      */
-    private const int MAX_ENTRIES = 500_000;
+    public const int MAX_ENTRIES = 500_000;
 
     /**
      * A state belongs to at most one entry, so a file carrying more states

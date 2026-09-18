@@ -32,7 +32,7 @@ final readonly class AccountRestorer
     ) {
     }
 
-    public function restore(User $user, string $gzipBytes, ?string $confirmation): RestoreResult
+    public function start(User $user, string $gzipBytes, ?string $confirmation): RestoreResult
     {
         if (self::CONFIRMATION !== $confirmation) {
             throw new ValidationException(['confirm' => ['Type REPLACE to confirm the restore.']]);

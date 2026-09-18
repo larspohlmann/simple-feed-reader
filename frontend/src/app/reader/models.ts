@@ -581,6 +581,7 @@ export interface ReadingActivity {
 
 export interface RestoreCounts {
   tags: number;
+  savedSearches: number;
   feeds: number;
   subscriptions: number;
   entries: number;
@@ -588,7 +589,13 @@ export interface RestoreCounts {
 }
 
 export interface RestorePreview {
-  backup: { createdAt: string; sourceUrl: string | null; sourceEmail: string | null };
+  backup: {
+    backupId: string;
+    parts: number;
+    createdAt: string;
+    sourceUrl: string | null;
+    sourceEmail: string | null;
+  };
   toLoad: RestoreCounts;
   toDelete: {
     tags: number;

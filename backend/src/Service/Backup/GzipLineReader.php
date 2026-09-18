@@ -23,6 +23,20 @@ final readonly class GzipLineReader
     private const string GZIP_MAGIC = "\x1f\x8b";
 
     /**
+     * A single line may not out-grow one whole part's inflated budget, so a
+     * line without a newline this long is a decompression bomb, not data —
+     * bounding the read stops one giant line from reaching memory_limit.
+     */
+    public const int MAX_LINE_BYTES = 67_108_864;
+
+    /**
+     * Read a line one buffer at a time rather than pre-allocating the whole
+     * line ceiling per fgets call, so a normal small line costs one small
+     * buffer and only a genuine bomb ever grows near MAX_LINE_BYTES.
+     */
+    private const int READ_CHUNK_BYTES = 1_048_576;
+
+    /**
      * @return \Generator<int, string> the lines, each without its trailing newline
      *
      * @throws InvalidBackupException
@@ -72,9 +86,36 @@ final readonly class GzipLineReader
         });
 
         try {
-            return fgets($stream);
+            return self::readBoundedLine($stream);
         } finally {
             restore_error_handler();
+        }
+    }
+
+    /**
+     * @param resource $stream
+     *
+     * @throws InvalidBackupException
+     */
+    private static function readBoundedLine($stream): string|false
+    {
+        $line = '';
+        while (true) {
+            $chunk = fgets($stream, self::READ_CHUNK_BYTES);
+            if (false === $chunk) {
+                return '' === $line ? false : $line;
+            }
+
+            $line .= $chunk;
+            if (str_ends_with($chunk, "\n")) {
+                return $line;
+            }
+
+            if (\strlen($line) > self::MAX_LINE_BYTES) {
+                throw new InvalidBackupException(
+                    sprintf('A backup line is larger than %d bytes.', self::MAX_LINE_BYTES),
+                );
+            }
         }
     }
 }

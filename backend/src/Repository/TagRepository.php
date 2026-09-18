@@ -136,7 +136,7 @@ class TagRepository extends ServiceEntityRepository
     /**
      * How many tags each of the given users owns, in ONE query. A user with no
      * tags is absent from the result, not zero-valued — callers default a miss
-     * to 0. See SubscriptionRepository::countsByUserIds() for why this is
+     * to 0. See SubscriptionCountsByUserId::forUserIds() for why this is
      * batched and query-count tested.
      *
      * @param list<int> $userIds

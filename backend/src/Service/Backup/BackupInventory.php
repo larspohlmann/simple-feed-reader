@@ -17,6 +17,7 @@ final readonly class BackupInventory
     public function __construct(
         public BackupHeader $header,
         public int $tags,
+        public int $savedSearches,
         public int $feeds,
         public int $subscriptions,
         public int $entries,

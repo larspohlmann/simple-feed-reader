@@ -19,6 +19,7 @@ final readonly class RestoreResultJson
         return [
             'loaded' => [
                 'tags' => $result->tags,
+                'savedSearches' => $result->savedSearches,
                 'feeds' => $result->feeds,
                 'subscriptions' => $result->subscriptions,
                 'entries' => $result->entries,

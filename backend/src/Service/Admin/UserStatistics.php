@@ -15,8 +15,8 @@ use Psr\Clock\ClockInterface;
  * The figures behind the admin's per-user detail screen.
  *
  * Deliberately one account at a time: it backs a detail page, not a list, so
- * the batched reads the list endpoint needs (SubscriptionRepository::
- * countsByUserIds) would buy nothing here.
+ * the batched reads the list endpoint needs (SubscriptionCountsByUserId)
+ * would buy nothing here.
  */
 final readonly class UserStatistics
 {

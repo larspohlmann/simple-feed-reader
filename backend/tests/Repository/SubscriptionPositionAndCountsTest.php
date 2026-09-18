@@ -10,15 +10,15 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Repository\SubscriptionRepository;
 use App\Tests\DbTestCase;
-use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
  * SubscriptionRepository's positioning seed (nextPositionForUser()) and its
- * per-user counts (countsByUserIds(), findForUserWithTags()) — the queries
- * SubscriptionTagPositions and the admin user list build on. See
- * SubscriptionTagPositionsTest for the in-memory counters these seed.
+ * per-user lookups (findForUserWithTags(), findForUserByTagId()) — the
+ * queries SubscriptionTagPositions and TagController build on. See
+ * SubscriptionTagPositionsTest for the in-memory counters these seed, and
+ * SubscriptionCountsByUserIdTest for the admin list's own batched counts.
  */
 final class SubscriptionPositionAndCountsTest extends DbTestCase
 {
@@ -122,38 +122,6 @@ final class SubscriptionPositionAndCountsTest extends DbTestCase
         self::assertSame(
             [(int) $first->getId(), (int) $second->getId()],
             array_map(static fn (Subscription $s): int => (int) $s->getId(), $rows),
-        );
-    }
-
-    public function testCountsByUserIdsReturnsAnEmptyArrayWithoutQueryingForAnEmptyIdList(): void
-    {
-        /** @var QueryRecorder $recorder */
-        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
-        $recorder->reset();
-
-        self::assertSame([], $this->repository->countsByUserIds([]));
-
-        self::assertSame(
-            [],
-            $recorder->queriesMatching('subscription'),
-            'an empty id list must short-circuit before any query runs — an empty IN () is a syntax error.',
-        );
-    }
-
-    public function testCountsByUserIdsCountsEachUsersOwnSubscriptions(): void
-    {
-        $first = $this->user('counts-first@example.com');
-        $second = $this->user('counts-second@example.com');
-        $this->subscribe($first, $this->feed('https://a.example/feed.xml'));
-        $this->subscribe($first, $this->feed('https://b.example/feed.xml'));
-        $this->subscribe($second, $this->feed('https://c.example/feed.xml'));
-        $this->em->flush();
-
-        $counts = $this->repository->countsByUserIds([(int) $first->getId(), (int) $second->getId()]);
-
-        self::assertSame(
-            [(int) $first->getId() => 2, (int) $second->getId() => 1],
-            $counts,
         );
     }
 }

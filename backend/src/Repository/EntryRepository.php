@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\Subscription;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -24,7 +25,7 @@ class EntryRepository extends ServiceEntityRepository
      *
      * @return list<string> the subset of hashes that already exist for this feed
      */
-    public function findExistingGuidHashes(Feed $feed, array $guidHashes): array
+    public function existingGuidHashesForFeed(int $feedId, array $guidHashes): array
     {
         if ($guidHashes === []) {
             return [];
@@ -35,7 +36,7 @@ class EntryRepository extends ServiceEntityRepository
             ->select('e.guidHash')
             ->andWhere('e.feed = :feed')
             ->andWhere('e.guidHash IN (:hashes)')
-            ->setParameter('feed', $feed)
+            ->setParameter('feed', $feedId)
             ->setParameter('hashes', $guidHashes)
             ->getQuery()
             ->getSingleColumnResult();
@@ -237,5 +238,15 @@ class EntryRepository extends ServiceEntityRepository
         }
 
         return $idsByHash;
+    }
+
+    public function countInFeedsSubscribedBy(int $userId): int
+    {
+        return (int) $this->createQueryBuilder('e')
+            ->select('COUNT(e.id)')
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed')
+            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
+            ->getQuery()
+            ->getSingleScalarResult();
     }
 }

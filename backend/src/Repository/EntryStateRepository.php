@@ -85,37 +85,42 @@ class EntryStateRepository extends ServiceEntityRepository
     }
 
     /**
-     * One user's states in ascending entry-id slices — the backup's keyset walk.
-     * Entry and feed ride along eagerly: the serialiser needs guidHash and the
-     * feed URL per row, and a lazy load would cost two queries per state.
+     * One page of entries' states, keyed by entry id — the backup's per-batch
+     * join between an already-fetched page of entries and their states. Entry
+     * rides along eagerly since entryStateLine's guidHash comes from it; the
+     * feed url is not selected here because the caller already knows it from
+     * the same entry page.
      *
-     * Scoped to feeds the user still subscribes to, the same gate
-     * stateCountsForUser() applies. A state an unsubscribe left behind
-     * (SubscriptionService::unsubscribe drops the subscription but not
-     * entry_state) names a feed/entry the export's feed and entry lines never
-     * emit, so including it would leave the restore an orphaned line and a
-     * footer count higher than what is restorable.
+     * @param list<int> $entryIds
      *
-     * @return list<EntryState>
+     * @return array<int, EntryState>
      */
-    public function forUserAfterEntryId(int $userId, int $afterEntryId, int $limit): array
+    public function forUserByEntryIds(int $userId, array $entryIds): array
     {
+        if ($entryIds === []) {
+            return [];
+        }
+
         /** @var list<EntryState> $states */
         $states = $this->createQueryBuilder('s')
-            ->addSelect('e', 'f')
+            ->addSelect('e')
             ->join('s.entry', 'e')
-            ->join('e.feed', 'f')
-            ->join(Subscription::class, 'sub', 'ON', 'sub.feed = e.feed AND sub.user = :userId')
             ->andWhere('s.user = :userId')
-            ->andWhere('e.id > :afterEntryId')
+            ->andWhere('s.entry IN (:entryIds)')
             ->setParameter('userId', $userId)
-            ->setParameter('afterEntryId', $afterEntryId)
-            ->orderBy('e.id', 'ASC')
-            ->setMaxResults($limit)
+            ->setParameter('entryIds', $entryIds)
             ->getQuery()
             ->getResult();
 
-        return $states;
+        $statesByEntryId = [];
+        foreach ($states as $state) {
+            $entryId = $state->getEntry()->getId();
+            if (null !== $entryId) {
+                $statesByEntryId[$entryId] = $state;
+            }
+        }
+
+        return $statesByEntryId;
     }
 
     /**

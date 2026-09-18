@@ -576,6 +576,18 @@ services:
         autowire: true
         public: true
 
+    # AccountRestorerTest and GoldenBackupRestoreTest drive load() directly
+    # against the real inspector/loader-factory graph, the same way
+    # AccountRestorer above is fetched for start() — a foundation-only restore
+    # is only half the round trip they prove. It has a production caller
+    # (AccountBackupController) and would survive compilation on its own —
+    # `public: true` here is only so `self::getContainer()->get(...)` can
+    # fetch it, which the container refuses on a private service. Same
+    # `autowire` caveat as the entries above.
+    App\Service\Backup\EntryPartRestorer:
+        autowire: true
+        public: true
+
     # PasskeyRegistrationTest seeds a registration challenge with a known
     # value (the exact one a synthetic attestation fixture was signed
     # against) and, for one case, an already-past `expires_at`. Same

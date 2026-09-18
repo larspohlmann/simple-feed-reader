@@ -1,19 +1,30 @@
 // jest-global-mocks.ts
 // jsdom lacks matchMedia (ThemeService) and, in some Node versions, an
 // exposed crypto.subtle (ALTCHA solver). Provide both for tests.
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: (query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addEventListener: () => undefined,
-    removeEventListener: () => undefined,
-    addListener: () => undefined,
-    removeListener: () => undefined,
-    dispatchEvent: () => false,
-  }),
-});
+// A `@jest-environment node` spec (zip.js needs TransformStream, which jsdom
+// lacks) has no `window` at all, so this block is skipped there.
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    }),
+  });
+
+  // jsdom has no TransformStream; zip.js's ZipReader needs one even for the
+  // read-only path a jsdom-hosted component (backup-section) exercises.
+  if (typeof (globalThis as unknown as { TransformStream?: unknown }).TransformStream === 'undefined') {
+    const { TransformStream } = require('node:stream/web');
+    Object.defineProperty(globalThis, 'TransformStream', { value: TransformStream });
+  }
+}
 
 if (!globalThis.crypto?.subtle) {
   // Node's WebCrypto, exposed under the same API the browser uses.

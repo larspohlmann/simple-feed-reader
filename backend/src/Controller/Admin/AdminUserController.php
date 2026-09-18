@@ -9,6 +9,7 @@ use App\Entity\User;
 use App\Enum\UserStatus;
 use App\Exception\ValidationException;
 use App\Http\AdminUserJson;
+use App\Repository\SubscriptionCountsByUserId;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Repository\UserIdentityRepository;
@@ -34,6 +35,7 @@ final readonly class AdminUserController
     public function __construct(
         private UserRepository $users,
         private SubscriptionRepository $subscriptions,
+        private SubscriptionCountsByUserId $subscriptionCounts,
         private TagRepository $tags,
         private UserIdentityRepository $identities,
         private UserStatistics $statistics,
@@ -68,7 +70,7 @@ final readonly class AdminUserController
             'users' => AdminUserJson::listRows(
                 $users,
                 $this->identities->providersByUserId($users),
-                $this->subscriptions->countsByUserIds($userIds),
+                $this->subscriptionCounts->forUserIds($userIds),
                 $this->tags->countsByUserIds($userIds),
             ),
         ]);

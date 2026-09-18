@@ -30,7 +30,29 @@ final class BackupReaderTest extends TestCase
     }
 
     /** @return array<string, mixed> */
-    private static function header(int $schemaVersion = 2): array
+    private static function header(int $part = 0, int $schemaVersion = 3): array
+    {
+        return [
+            'kind' => 'header',
+            'schemaVersion' => $schemaVersion,
+            'createdAt' => '2026-08-17T09:00:00+00:00',
+            'sourceUrl' => 'https://source.example',
+            'sourceEmail' => 'source@example.com',
+            'backupId' => 'b4c1d2e3f4a5b6c7',
+            'part' => $part,
+            'parts' => 0 === $part ? 2 : null,
+            'totals' => 0 === $part ? ['entries' => 1, 'entryStates' => 1] : null,
+        ];
+    }
+
+    /**
+     * A header carrying only the version-2 fields — no backupId/part/parts/
+     * totals — so a version check must fire on realistic input, not on the
+     * missing version-3 fields a version-3-shaped header would pass.
+     *
+     * @return array<string, mixed>
+     */
+    private static function bareHeader(int $schemaVersion): array
     {
         return [
             'kind' => 'header',
@@ -48,6 +70,38 @@ final class BackupReaderTest extends TestCase
             'kind' => 'account',
             'locale' => 'de',
             'scrapeFallbackEnabled' => true,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private static function feed(): array
+    {
+        return [
+            'kind' => 'feed', 'url' => 'https://f.example/feed.xml', 'siteUrl' => null, 'title' => 'F',
+            'description' => null, 'faviconUrl' => null, 'sourceFormat' => 'xml',
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private static function entry(): array
+    {
+        return [
+            'kind' => 'entry', 'feedUrl' => 'https://f.example/feed.xml', 'guid' => 'g1',
+            'guidHash' => hash('sha256', 'g1'), 'url' => null, 'title' => 'One', 'author' => null,
+            'summary' => null, 'contentHtml' => '<p>x</p>', 'imageUrl' => null, 'imageWidth' => null,
+            'imageHeight' => null, 'publishedAt' => null, 'createdAt' => '2026-08-01T00:00:00+00:00',
+            'effectiveDate' => '2026-08-01T00:00:00+00:00',
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private static function entryState(): array
+    {
+        return [
+            'kind' => 'entryState', 'feedUrl' => 'https://f.example/feed.xml',
+            'guidHash' => hash('sha256', 'g1'), 'isHidden' => true, 'isFavorite' => false,
+            'isKept' => false, 'hiddenAt' => '2026-08-02T00:00:00+00:00', 'isViewed' => false,
+            'viewedAt' => null,
         ];
     }
 
@@ -71,7 +125,7 @@ final class BackupReaderTest extends TestCase
 
         self::assertCount(2, $objects);
         self::assertInstanceOf(BackupHeader::class, $objects[0]);
-        self::assertSame(2, $objects[0]->schemaVersion);
+        self::assertSame(3, $objects[0]->schemaVersion);
         self::assertSame('source@example.com', $objects[0]->sourceEmail);
         self::assertInstanceOf(AccountLine::class, $objects[1]);
         self::assertSame('de', $objects[1]->locale);
@@ -79,32 +133,22 @@ final class BackupReaderTest extends TestCase
         self::assertSame(MagazineStyle::Boxed, $objects[1]->magazineStyle);
     }
 
-    public function testReadsEveryKindInOrderAndNormalisesDatesToUtc(): void
+    public function testReadsEveryFoundationKindInOrderAndNormalisesDatesToUtc(): void
     {
         $gzip = self::gzipOf([
             self::header(),
             self::account(),
             ['kind' => 'tag', 'name' => 'Tech', 'color' => '#aabbcc', 'icon' => 'bolt', 'position' => 2],
-            ['kind' => 'feed', 'url' => 'https://f.example/feed.xml', 'siteUrl' => null, 'title' => 'F',
-                'description' => null, 'faviconUrl' => null, 'sourceFormat' => 'xml'],
+            self::feed(),
             ['kind' => 'subscription', 'feedUrl' => 'https://f.example/feed.xml', 'customTitle' => null,
                 'position' => 0, 'markedReadUntil' => null, 'createdAt' => '2026-07-01T02:00:00+02:00',
                 'tags' => [['name' => 'Tech', 'position' => 1]]],
-            ['kind' => 'entry', 'feedUrl' => 'https://f.example/feed.xml', 'guid' => 'g1',
-                'guidHash' => hash('sha256', 'g1'), 'url' => null, 'title' => 'One', 'author' => null,
-                'summary' => null, 'contentHtml' => '<p>x</p>', 'imageUrl' => null, 'imageWidth' => null,
-                'imageHeight' => null, 'publishedAt' => null, 'createdAt' => '2026-08-01T00:00:00+00:00',
-                'effectiveDate' => '2026-08-01T00:00:00+00:00'],
-            ['kind' => 'entryState', 'feedUrl' => 'https://f.example/feed.xml',
-                'guidHash' => hash('sha256', 'g1'), 'isHidden' => true, 'isFavorite' => false,
-                'isKept' => false, 'hiddenAt' => '2026-08-02T00:00:00+00:00', 'isViewed' => false,
-                'viewedAt' => null],
-            self::footer(['tag' => 1, 'feed' => 1, 'subscription' => 1, 'entry' => 1, 'entryState' => 1]),
+            self::footer(['tag' => 1, 'feed' => 1, 'subscription' => 1]),
         ]);
 
         $objects = iterator_to_array(new BackupReader()->read($gzip), false);
 
-        self::assertCount(7, $objects);
+        self::assertCount(5, $objects);
         self::assertInstanceOf(TagLine::class, $objects[2]);
         self::assertInstanceOf(FeedLine::class, $objects[3]);
         $subscription = $objects[4];
@@ -116,13 +160,27 @@ final class BackupReaderTest extends TestCase
         // so both must default to true (an older backup predates #688).
         self::assertTrue($subscription->includeInAllItems);
         self::assertTrue($subscription->includeInForYou);
-        self::assertInstanceOf(EntryLine::class, $objects[5]);
-        self::assertInstanceOf(EntryStateLine::class, $objects[6]);
+    }
+
+    public function testReadsAnEntryPartInOrder(): void
+    {
+        $gzip = self::gzipOf([
+            self::header(1),
+            self::entry(),
+            self::entryState(),
+            self::footer(['entry' => 1, 'entryState' => 1]),
+        ]);
+
+        $objects = iterator_to_array(new BackupReader()->read($gzip), false);
+
+        self::assertCount(3, $objects);
+        self::assertInstanceOf(EntryLine::class, $objects[1]);
+        self::assertInstanceOf(EntryStateLine::class, $objects[2]);
     }
 
     public function testRefusesANewerSchemaVersion(): void
     {
-        $gzip = self::gzipOf([self::header(schemaVersion: 3), self::account(), self::footer()]);
+        $gzip = self::gzipOf([self::bareHeader(4)]);
 
         $this->expectException(InvalidBackupException::class);
         $this->expectExceptionMessageMatches('/schema version/i');
@@ -283,5 +341,147 @@ final class BackupReaderTest extends TestCase
         $this->expectExceptionMessageMatches('/createdAt/');
 
         iterator_to_array(new BackupReader()->read($gzip), false);
+    }
+
+    public function testAnEntryPartNeedsNoAccountLine(): void
+    {
+        $lines = iterator_to_array((new BackupReader())->read(self::gzipOf([
+            self::header(1),
+            self::entry(),
+            self::entryState(),
+            self::footer(['entry' => 1, 'entryState' => 1]),
+        ])), false);
+
+        self::assertInstanceOf(BackupHeader::class, $lines[0]);
+        self::assertSame(1, $lines[0]->part);
+        self::assertFalse($lines[0]->isFoundation());
+        self::assertInstanceOf(EntryLine::class, $lines[1]);
+        self::assertInstanceOf(EntryStateLine::class, $lines[2]);
+    }
+
+    public function testTheFoundationRefusesAnEntryLine(): void
+    {
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessage('Line 3 of kind "entry" does not belong in part 0.');
+
+        iterator_to_array((new BackupReader())->read(self::gzipOf([
+            self::header(0), self::account(), self::entry(), self::footer(['entry' => 1]),
+        ])), false);
+    }
+
+    public function testAnEntryPartRefusesAFeedLine(): void
+    {
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessage('Line 2 of kind "feed" does not belong in part 1.');
+
+        iterator_to_array((new BackupReader())->read(self::gzipOf([
+            self::header(1), self::feed(), self::footer(['feed' => 1]),
+        ])), false);
+    }
+
+    public function testTheFoundationMustDeclareItsPartsAndTotals(): void
+    {
+        $header = self::header(0);
+        $header['parts'] = null;
+        $this->expectException(InvalidBackupException::class);
+
+        iterator_to_array((new BackupReader())->read(self::gzipOf([$header, self::account(), self::footer()])), false);
+    }
+
+    public function testFoundationWithPartsBelowOneButValidTotalsIsRefused(): void
+    {
+        $header = self::header(0);
+        $header['parts'] = 0;
+        $this->expectException(InvalidBackupException::class);
+
+        iterator_to_array((new BackupReader())->read(self::gzipOf([$header, self::account(), self::footer()])), false);
+    }
+
+    public function testFoundationWithValidPartsButMissingTotalsIsRefused(): void
+    {
+        $header = self::header(0);
+        $header['totals'] = null;
+        $this->expectException(InvalidBackupException::class);
+
+        iterator_to_array((new BackupReader())->read(self::gzipOf([$header, self::account(), self::footer()])), false);
+    }
+
+    public function testAnEntryPartDeclaringOnlyPartsIsRefused(): void
+    {
+        $header = self::header(1);
+        $header['parts'] = 2;
+        $this->expectException(InvalidBackupException::class);
+
+        iterator_to_array((new BackupReader())->read(self::gzipOf([$header, self::footer()])), false);
+    }
+
+    public function testVersionTwoIsRefused(): void
+    {
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessage('Unsupported schema version 2; this instance reads version 3.');
+
+        iterator_to_array((new BackupReader())->read(self::gzipOf([self::bareHeader(2)])), false);
+    }
+
+    public function testAPartOverTheEntryCeilingIsRefusedBeforeTheExtraLineIsYielded(): void
+    {
+        $lines = [self::header(1)];
+        for ($i = 0; $i <= BackupReader::MAX_ENTRIES_PER_PART; ++$i) {
+            $lines[] = ['guid' => "g-$i", 'guidHash' => hash('sha256', "g-$i")] + self::entry();
+        }
+        $yielded = 0;
+
+        try {
+            foreach ((new BackupReader())->read(self::gzipOf($lines)) as $line) {
+                $yielded += $line instanceof EntryLine ? 1 : 0;
+            }
+            self::fail('The ceiling did not trip.');
+        } catch (InvalidBackupException $e) {
+            self::assertStringContainsString('more than 5000 entries', $e->getMessage());
+        }
+
+        self::assertSame(BackupReader::MAX_ENTRIES_PER_PART, $yielded);
+    }
+
+    public function testAPartOverTheByteCeilingIsRefused(): void
+    {
+        // Two lines, each under the single-line cap, that together inflate past
+        // the part ceiling — so the aggregate guard trips, not the per-line one.
+        $entry = ['contentHtml' => str_repeat('a', intdiv(BackupReader::MAX_INFLATED_BYTES, 2))] + self::entry();
+        $lines = [self::header(1), $entry, ['guid' => 'g2', 'guidHash' => hash('sha256', 'g2')] + $entry];
+
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessageMatches('/inflates past/');
+
+        self::drain(self::gzipOf($lines));
+    }
+
+    /**
+     * A header plus a gzip of nothing but newlines used to slip past the byte
+     * ceiling: the blank-line skip ran before the byte count, so the bomb
+     * inflated uncounted. Every line's bytes now count before the skip.
+     */
+    public function testBlankLinesCountTowardTheByteCeiling(): void
+    {
+        $header = json_encode(self::header(1), \JSON_THROW_ON_ERROR);
+        $entry = json_encode(
+            ['contentHtml' => str_repeat('a', BackupReader::MAX_INFLATED_BYTES - 300_000)] + self::entry(),
+            \JSON_THROW_ON_ERROR,
+        );
+        $gzip = (string) gzencode($header . "\n" . $entry . "\n" . str_repeat("\n", 400_000));
+
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessageMatches('/inflates past/');
+
+        self::drain($gzip);
+    }
+
+    /** Reads every yielded line without retaining it, so a byte-ceiling test
+     *  never holds a part's worth of hydrated DTOs at once. */
+    private static function drain(string $gzip): void
+    {
+        foreach ((new BackupReader())->read($gzip) as $ignored) {
+            unset($ignored);
+        }
     }
 }

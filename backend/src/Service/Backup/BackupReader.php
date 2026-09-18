@@ -26,6 +26,9 @@ use App\Service\Backup\Exception\InvalidBackupException;
  */
 final readonly class BackupReader
 {
+    public const int MAX_ENTRIES_PER_PART = 5000;
+    public const int MAX_INFLATED_BYTES = 67_108_864;
+
     private const array KIND_RANK = [
         BackupSchema::KIND_HEADER => 0,
         BackupSchema::KIND_ACCOUNT => 1,
@@ -67,9 +70,15 @@ final readonly class BackupReader
         $counts = array_fill_keys(self::COUNTED_KINDS, 0);
         $accountSeen = false;
         $footerSeen = false;
+        $header = null;
+        $guard = null;
+        $inflatedBytes = 0;
 
         foreach (GzipLineReader::lines($gzipBytes) as $line) {
             ++$lineNumber;
+            $inflatedBytes += \strlen($line) + 1;
+            $this->assertUnderByteCeiling($inflatedBytes);
+
             if ('' === $line) {
                 continue;
             }
@@ -83,12 +92,24 @@ final readonly class BackupReader
 
             $currentRank = $this->assertOrdered($kind, -1 === $currentRank, $currentRank, $lineNumber);
 
+            if (BackupSchema::KIND_HEADER === $kind) {
+                $this->assertKnownSchemaVersion($decoded);
+                $header = $this->assertCoherentHeader(BackupHeader::fromLine($decoded));
+                $guard = new BackupPartGuard($header);
+                yield $header;
+                continue;
+            }
+
+            $guard = $this->requireGuard($guard);
+
             if (BackupSchema::KIND_FOOTER === $kind) {
-                $this->assertAccountSeen($accountSeen);
+                $this->assertAccountSeen($header, $accountSeen);
                 $this->verifyFooter(FooterLine::fromLine($decoded), $counts);
                 $footerSeen = true;
                 continue;
             }
+
+            $guard->seeKind($kind, $lineNumber);
 
             if (BackupSchema::KIND_ACCOUNT === $kind) {
                 $accountSeen = true;
@@ -106,11 +127,75 @@ final readonly class BackupReader
         }
     }
 
-    private function assertAccountSeen(bool $accountSeen): void
+    /**
+     * The grammar guarantees a header precedes every other line, so a null
+     * guard here means assertOrdered failed to do its job.
+     */
+    /**
+     * Counted for every line before the blank-line skip, so a gzip of nothing
+     * but newlines cannot inflate past the ceiling uncounted.
+     */
+    private function assertUnderByteCeiling(int $inflatedBytes): void
     {
+        if ($inflatedBytes > self::MAX_INFLATED_BYTES) {
+            throw new InvalidBackupException(
+                sprintf('The backup inflates past %d bytes.', self::MAX_INFLATED_BYTES),
+            );
+        }
+    }
+
+    private function requireGuard(?BackupPartGuard $guard): BackupPartGuard
+    {
+        if (null === $guard) {
+            throw new \LogicException('No header was read before this line.');
+        }
+
+        return $guard;
+    }
+
+    private function assertAccountSeen(?BackupHeader $header, bool $accountSeen): void
+    {
+        if (null === $header || !$header->isFoundation()) {
+            return;
+        }
+
         if (!$accountSeen) {
             throw new InvalidBackupException('The backup is missing its account line.');
         }
+    }
+
+    private function assertCoherentHeader(BackupHeader $header): BackupHeader
+    {
+        if ($header->part < 0) {
+            throw new InvalidBackupException(sprintf('Header part %d is negative.', $header->part));
+        }
+
+        if ($header->isFoundation()) {
+            return $this->assertFoundationDeclaresPartsAndTotals($header);
+        }
+
+        return $this->assertEntryPartDeclaresNeither($header);
+    }
+
+    private function assertFoundationDeclaresPartsAndTotals(BackupHeader $header): BackupHeader
+    {
+        if (null === $header->parts || $header->parts < 1 || null === $header->totals) {
+            throw new InvalidBackupException('The foundation must declare its parts count and totals.');
+        }
+
+        return $header;
+    }
+
+    private function assertEntryPartDeclaresNeither(BackupHeader $header): BackupHeader
+    {
+        if (null !== $header->parts || null !== $header->totals) {
+            throw new InvalidBackupException(sprintf(
+                'Entry part %d must not declare parts or totals.',
+                $header->part,
+            ));
+        }
+
+        return $header;
     }
 
     /**
@@ -177,7 +262,6 @@ final readonly class BackupReader
     private function toDto(string $kind, array $decoded): object
     {
         return match ($kind) {
-            BackupSchema::KIND_HEADER => $this->assertKnownSchemaVersion(BackupHeader::fromLine($decoded)),
             BackupSchema::KIND_ACCOUNT => AccountLine::fromLine($decoded),
             BackupSchema::KIND_TAG => TagLine::fromLine($decoded),
             BackupSchema::KIND_SAVED_SEARCH => SavedSearchLine::fromLine($decoded),
@@ -185,24 +269,29 @@ final readonly class BackupReader
             BackupSchema::KIND_SUBSCRIPTION => SubscriptionLine::fromLine($decoded),
             BackupSchema::KIND_ENTRY => EntryLine::fromLine($decoded),
             BackupSchema::KIND_ENTRY_STATE => EntryStateLine::fromLine($decoded),
-            // Unreachable: assertOrdered has already refused every kind absent
-            // from KIND_RANK, and KIND_RANK and this match list the same set.
-            // It stays only so the match is exhaustive over `string`.
+            // Unreachable: read() handles header/footer, and assertOrdered
+            // refuses any other kind. Stays only for match exhaustiveness.
             default => throw new \LogicException(sprintf('assertOrdered accepted unknown kind "%s".', $kind)),
         };
     }
 
-    private function assertKnownSchemaVersion(BackupHeader $header): BackupHeader
+    /**
+     * Checked from the raw line before BackupHeader::fromLine parses the
+     * version-3-only fields, so a real version-2 file reports its version
+     * rather than a missing "backupId".
+     *
+     * @param array<string, mixed> $decoded
+     */
+    private function assertKnownSchemaVersion(array $decoded): void
     {
-        if (BackupSchema::VERSION !== $header->schemaVersion) {
+        $schemaVersion = LineField::int($decoded, 'schemaVersion');
+        if (BackupSchema::VERSION !== $schemaVersion) {
             throw new InvalidBackupException(sprintf(
                 'Unsupported schema version %d; this instance reads version %d.',
-                $header->schemaVersion,
+                $schemaVersion,
                 BackupSchema::VERSION,
             ));
         }
-
-        return $header;
     }
 
     /**

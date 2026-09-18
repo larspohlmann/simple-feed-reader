@@ -20,13 +20,17 @@ merge.
 
 ## 1. What a backup is
 
-A backup is one file. The file holds the reading data of one account: the tags,
-the saved searches, the feeds, the subscriptions, the articles, the read marks
-and the settings.
+A backup is one zip archive. The archive holds the reading data of one
+account: the tags, the saved searches, the feeds, the subscriptions, the
+articles, the read marks and the settings.
 
-The file is gzip-compressed NDJSON. Each line is one JSON object. Each object
-has a `kind` field that tells you what the line is: `header`, `account`, `tag`,
-`savedSearch`, `feed`, `subscription`, `entry`, `entryState` or `footer`.
+The archive holds one or more parts. Each part is a gzip-compressed NDJSON
+document. Each line of a part is one JSON object. Each object has a `kind`
+field that tells you what the line is: `header`, `account`, `tag`,
+`savedSearch`, `feed`, `subscription`, `entry`, `entryState` or `footer`. One
+part carries the account, the tags, the saved searches, the feeds and the
+subscriptions. The other parts carry the articles and the read marks, split
+across as many parts as the account needs.
 
 A backup holds no database identifiers. A restore makes new identifiers.
 Therefore you can restore a backup into a different account, and into a
@@ -42,7 +46,7 @@ behind, and why.
 3. Click **Download backup**.
 
 The browser downloads a file with a name such as
-`simplefeedreader-0_7_0-ada-at-example-20260823.json.gz`. The name holds the
+`simplefeedreader-0_7_0-ada-at-example-20260823.zip`. The name holds the
 application version, the account address and the export date.
 
 A client can also request the file directly:
@@ -59,29 +63,38 @@ marked.
 
 ## 3. What a restore does
 
-A restore is destructive. The restore does these steps, in this order:
+A restore is destructive. It runs in your browser, part by part, and sends one
+request per part. The browser does these steps, in this order:
 
-1. It reads the whole file and counts the lines.
-2. It refuses the file if the file is not a valid backup.
-3. It refuses the file if the file is too large for the account.
-4. It deletes the account's tags, saved searches, subscriptions, read marks,
-   "For you" runs and "For you" settings, and it sets the scrape fallback
-   preference back to off.
-5. It loads the file into the account.
+1. It opens the archive and checks it, without sending anything to the server:
+   the foundation part is present, the entry parts are named in order with no
+   gap, every part passes its checksum, and every part's header names the same
+   backup and matches its own place in the sequence. The browser refuses the
+   archive on the first check it fails.
+2. It sends the foundation part to the server for a preview. The server
+   refuses the part if the part is not a valid backup, or if the part is too
+   large for the account. The application shows what a restore would delete
+   and what the file holds.
+3. You type `REPLACE` in the confirmation field and click **Replace this
+   account**. The confirmation word is mandatory. The application starts no
+   restore without it.
+4. The browser sends the foundation part again, this time to start the
+   restore. The server deletes the account's tags, saved searches,
+   subscriptions, read marks, "For you" runs and "For you" settings, sets the
+   scrape fallback preference back to off, and loads the foundation part.
+5. The browser sends each entry part in turn, one request at a time, and adds
+   up what each request loaded. Section 4 tells you what happens when one of
+   these requests fails.
 
 To start a restore:
 
 1. Open **Settings**.
 2. Go to **Account backup**.
-3. Choose the backup file. The application shows what it will delete and what
-   the file holds.
+3. Choose the backup file.
 4. Download the OPML safety net if you want a copy of the current
    subscriptions.
 5. Type `REPLACE` in the confirmation field.
 6. Click **Replace this account**.
-
-The confirmation word is mandatory. The application starts no restore without
-it.
 
 The account address of the backup does not have to agree with the address of
 the account you are signed in to. You can restore your own file into a new
@@ -90,50 +103,71 @@ account on another instance.
 An old backup file loses articles. The first refresh after a restore prunes the
 articles that are older than the retention window.
 
+A file with the old, single-file format (`.json.gz`) is not readable. Version 2
+backups cannot be restored. Export the account again to get a file this
+version can read.
+
 ## 4. When a restore fails
 
 There are three failure groups. The difference between them is important,
 because the three groups leave the account in different states.
 
-**The web server refuses the upload. Nothing is deleted.** A file larger than
-the server's own upload limit never reaches the application. The server
-answers with a raw HTTP 413 status. The response has no `problem+json` body,
-because the application never runs. The app shows its own message instead, so
-you still get a plain reason. This failure costs the account nothing: the
-account is unchanged. Ask an operator to raise the server's upload limit, or
-export a smaller account.
+**The browser refuses the archive. Nothing is sent, nothing is deleted.** The
+check in step 1 of section 3 fails: a part is missing, the entry parts are not
+in order, a part fails its checksum, or a part's header does not match its
+place in the archive. The application shows a plain reason and sends no
+request. Export the account again, or check that the file is a whole,
+unmodified download.
 
-**The restore refuses the file. Nothing is deleted.** The application answers
-with `invalid_backup` or with `backup_does_not_fit`. The first answer means the
-bytes are not an acceptable backup: not gzip, not NDJSON, a missing line, a line
-in the wrong order, a format version this instance cannot read, a repeated tag
-name, or a reference to a row the same file never declares. The second answer
-means the file holds more subscriptions than the account allows, or more lines
-of one kind than the format permits. Both answers come from the first pass, and
-the first pass runs before the deletion. **A refused file costs the account
-nothing.** The account is unchanged. You can correct the file and try again.
+**The server refuses the preview or the start. Nothing is deleted.** This is
+the foundation part, checked before the account is touched. The server answers
+with `invalid_backup` or with `backup_does_not_fit`. The first answer means
+the part is not an acceptable backup: not gzip, not NDJSON, a missing line, a
+line in the wrong order, a format version this instance cannot read, a
+repeated tag name, or a reference to a row the same part never declares. The
+second answer means the file holds more subscriptions than the account
+allows, more lines of one kind than the format permits, or the file's own
+totals already exceed the account's article ceiling. **A refused foundation
+part costs the account nothing.** Correct the export and try again.
 
-**The restore fails after the deletion. The account is empty.** The application
-answers with `backup_load_failed`. Two causes give this answer. Usually the
-database refuses a value that the format accepts — a title that is longer than
-the column, a number that is too wide for its type, a duplicate key. More
-rarely, the file points at a row that the same file never declares. The first
-pass must already refuse such a file, so this second cause is a backstop. It
-stays because a partial load that keeps quiet is much worse than a load that
-stops and reports. The message of this answer says that the account is now
-empty, because that is the fact you must know. Correct the file, or export it
-again, then run the restore again with the same file. The deletion is
-repeatable, so a second attempt starts from the same clean state.
+**A request fails after the account was replaced. The account holds part of
+the file, or none of it yet.** Once the server accepts the start request, the
+account's old data is gone before that same request returns.
 
-The restore is not one transaction. This is deliberate. If the load stops in the
-middle, the account holds a part of the file. The remedy is the same: run the
-restore again with the same file.
+If the start request itself fails, even after it has deleted the old data —
+for example with `backup_load_failed`, because it could not load the
+foundation it had just deleted for — the run stops with no **Continue**
+button, because no entry part has loaded yet. Choose the file again and run
+the whole restore again from the start.
+
+If a later entry part fails, the browser first retries it, up to three times
+with a growing wait, but only when the failure looks temporary: the network
+dropped, or the server answered "too many requests" or "took too long". A
+part the server refuses outright — `invalid_backup` (for example, a reference
+to a feed the account does not subscribe to), `backup_does_not_fit` (the
+account's article count would go past its ceiling), or `backup_load_failed`
+(the database rejected a value, or the file refers to a row it never
+declares) — is not retried, because sending the same bytes again would fail
+the same way. Either way, once an entry part cannot be loaded, the run stops
+and the application shows a **Continue** button. Continue resumes at the part
+that failed, using the same open file, and does not resend the parts that
+already loaded: entry parts are additive, so a resend of an already-loaded
+part adds nothing a second time. If you reload the page before pressing
+Continue, the application forgets where the run stopped; choose the file
+again and run the whole restore again from the start. Loading the same parts
+again is safe for the same reason: an entry or a read mark the account
+already holds is never duplicated.
+
+The restore is not one transaction. This is deliberate. If the load stops
+partway through the entry parts, the account holds the parts that loaded
+before the failure. The remedy is Continue, or a full re-run with the same
+file.
 
 ## 5. What a backup carries
 
 | Line | What the line holds |
 |---|---|
-| `header` | The format version, the export date, the address of the instance the file came from, and the account address the file came from. |
+| `header` | The format version, the export date, the address of the instance the file came from, and the account address the file came from. See the header field table below. |
 | `account` | Your language (`locale`), the scrape fallback setting (`scrapeFallbackEnabled`), and the magazine style (`magazineStyle`). |
 | `tag` | Each tag: `name`, `color`, `icon` and `position`. |
 | `savedSearch` | Each saved search: `term`, `wholeWord`, `phrase` and `position`. |
@@ -141,7 +175,17 @@ restore again with the same file.
 | `subscription` | Each subscription: `customTitle`, `position`, `markedReadUntil`, `createdAt` (the date the subscription started), and the tags on the subscription with their order. |
 | `entry` | Each article, with the address of the feed it came from: `guid`, `url`, `title`, `author`, `summary`, `contentHtml`, the image (`imageUrl`, `imageWidth`, `imageHeight`), `publishedAt`, `createdAt` (the date this instance first saw the article) and `effectiveDate`. |
 | `entryState` | Each article mark: `isHidden`, `isViewed`, `isFavorite`, `isKept`, `hiddenAt` and `viewedAt`. Each mark names its article by feed and by article identifier. |
-| `footer` | The number of lines of each kind. The restore uses these numbers to show you what the file holds. |
+| `footer` | The number of lines of each kind, counting the lines of that part only. The restore uses these numbers to show you what the part holds. |
+
+Every part carries its own `header` line. The header holds these fields in
+addition to the format version and the export date:
+
+| Field | Where it appears | Meaning |
+|---|---|---|
+| `backupId` | Every part | A random identifier. Every part of the same export carries the same one. It is how the browser confirms that every part belongs to this archive before the restore begins; the server does not read it. |
+| `part` | Every part | `0` for the foundation part, `1` and up for each entry part, in the order the parts load. |
+| `parts` | The foundation part only | The total number of parts in the archive, foundation included. |
+| `totals` | The foundation part only | The number of articles and the number of article marks across the whole export. |
 
 ## 6. What a backup does not carry
 
@@ -263,8 +307,73 @@ change them.
 
 ## 8. For developers: the format and its guards
 
-Four tests hold this format together. Read them before you change a backed-up
-entity.
+### 8.1 The container
+
+The download is a zip archive, built with the **store** method: no member is
+compressed by the zip layer itself. Each member is already a gzip-compressed
+NDJSON document, so the client posts a member's bytes to the restore
+endpoints exactly as they sit in the archive.
+
+Members:
+
+- `000-foundation.ndjson.gz` — the account, the tags, the saved searches, the
+  feeds and the subscriptions. Written **last** by the exporter, because the
+  exporter streams the entry parts first and only then knows the total part
+  count and the entry totals that the foundation's header carries (section 5).
+- `001-entries.ndjson.gz` … `NNN-entries.ndjson.gz` — the articles and their
+  marks, in export order. Written first. The zip's own member order carries
+  no meaning; a reader finds the foundation by name, not by position.
+
+Two budgets bound a part, on the write side:
+
+- An entry part closes once it holds 2,000 `entry` lines, or 8 MiB of
+  inflated line bytes, whichever comes first.
+- `POST /api/account/restore/entries` (section 8.2) enforces its own,
+  looser ceiling on the read side, independent of how the part was written:
+  at most 5,000 `entry` lines and 64 MiB of inflated bytes per part
+  (`BackupReader::MAX_ENTRIES_PER_PART`, `BackupReader::MAX_INFLATED_BYTES`).
+  A part that fails this ceiling is refused before any row is written.
+
+### 8.2 The endpoints
+
+All four routes sit under `/api/account`, take the account's bearer token, and
+answer JSON, with `application/problem+json` on failure.
+
+| Route | Body | What it does |
+|---|---|---|
+| `GET /backup` | — | Streams the zip archive. |
+| `POST /restore/preview` | The foundation part | Validates the part and checks it fits the account. Deletes nothing. Returns the file's provenance and what a restore would load and delete. |
+| `POST /restore/start?confirm=REPLACE` | The foundation part | Validates and fit-checks the part again, wipes the account, and loads the foundation. |
+| `POST /restore/entries` | One entry part | Loads the part additively. No confirmation phrase. |
+
+There is no restore session on the server and no finish call: each request
+carries everything the server needs, and the server keeps nothing between
+requests. The version 2 single-file format's `POST /restore` route is gone
+(section 3).
+
+`POST /restore/entries` runs two passes over its part, and every rule below is
+a guard test:
+
+- **Inspect, writing nothing:** the part's grammar and footer must check out;
+  its header must name a part number of 1 or higher (a part 0 is refused);
+  every `feedUrl` it names must be a feed the account subscribes to, checked
+  against the database; and the account's current entry count across its
+  subscribed feeds, plus this part's entries, must not pass 500,000.
+- **Load:** an entry whose `(feed, guidHash)` already exists is skipped —
+  this is what makes a retried part safe, and it also covers the refresh
+  worker fetching the same feed while the restore is still running. A feed
+  another account also subscribes to, with new entries switched off for this
+  one, gets none of the part's entries. An article mark attaches to its
+  article whether this request created the article or found it already
+  there; if the account already holds a mark for that article, the file's
+  mark is dropped and the existing one is left as is — a retried part, or a
+  mark you set while the restore was running, is never overwritten. Every
+  article this request creates reaches the search index before the request
+  ends.
+
+### 8.3 The guard tests
+
+Read these before you change a backed-up entity or the restore endpoints.
 
 - `backend/tests/Service/Backup/BackupSchemaCoverageTest.php` reads the ORM
   mapping and demands a decision for each persisted field of each backed-up
@@ -275,17 +384,30 @@ entity.
   as null, so a field cannot pass this test merely because its test fixture
   left it empty.
 - `backend/tests/Service/Backup/AccountRestorerTest.php::testEveryBackedUpFieldSurvivesTheRestoreRoundTrip`
-  guards the other direction. `BackupSchemaCoverageTest` proves that the
-  exporter writes each backed-up field. It does not prove that the restore
-  reads that field back. A field can pass the write-direction test and still
-  get lost: the exporter writes it, but no Line DTO reads it back on restore.
-  This test closes that gap. Both tests read the same field list, from
+  guards the other direction. It exports a fully populated account to parts,
+  restores the foundation part with `AccountRestorer::start`, restores each
+  entry part with `EntryPartRestorer::load`, and then compares source and
+  target row by row. `BackupSchemaCoverageTest` proves that the exporter
+  writes each backed-up field; it does not prove that a restore reads that
+  field back. A field can pass the write-direction test and still get lost:
+  the exporter writes it, but no Line DTO reads it back on restore. This test
+  closes that gap. Both tests read the same field list, from
   `backend/tests/Support/BackupFieldDeclarations.php`. A field added to that
   list gets both tests for free.
 - `backend/tests/Service/Backup/AccountBackupExporterTest.php` guards what the
   exporter writes.
-- `backend/tests/Service/Backup/GoldenBackupRestoreTest.php` restores two frozen
-  files on each run. They guard what the reader still accepts.
+- `backend/tests/Service/Backup/GoldenBackupRestoreTest.php` restores two
+  frozen fixture directories on each run, `backend/tests/Fixtures/backup/current/`
+  and `backend/tests/Fixtures/backup/oldest-supported/`, each holding a
+  `000-foundation.ndjson` and a `001-entries.ndjson`. They guard what the
+  reader still accepts. `oldest-supported/` is frozen the moment it is
+  created; only `current/` moves when the format changes, and an additive
+  field adds nothing to either fixture.
+- `backend/tests/Service/Backup/EntryPartRestorerTest.php` guards the rules in
+  section 8.2 directly, including
+  `testARetriedPartCreatesNothingAndFailsNothing` (a resent part is a no-op)
+  and `testAnExistingStateRowIsLeftUntouched` (a mark set during the restore
+  always wins over the file).
 
 Section 5 is different: no test couples it to the code. A field that stays
 `BACKED_UP` never has to change section 5, so nothing forces a red test when a
@@ -293,10 +415,11 @@ new carried field is missing its row there. Keep it accurate by hand when you
 add a row under "Where a new decision goes" below.
 
 **The rule for an additive field.** When you add a field to the format, add
-nothing to the golden corpus in `backend/tests/Fixtures/backup/`. The file
-`oldest-supported.ndjson` does not hold the new field already, and that absence
-is the test: it proves that an older backup still restores. Add a third file
-only when support for something is dropped for the first time.
+nothing to the golden corpus in `backend/tests/Fixtures/backup/`. The
+`oldest-supported/` directory does not hold the new field already, and that
+absence is the test: it proves that an older backup still restores. Add a
+third directory only when support for something is dropped for the first
+time.
 
 **Where a new decision goes.** Put a new field in one of these lists in
 `BackupSchemaCoverageTest`:

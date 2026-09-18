@@ -25,8 +25,12 @@ final class BackupInspectorTest extends TestCase
         return (string) gzencode($ndjson);
     }
 
-    /** @return array<string, mixed> */
-    private static function header(int $schemaVersion = 2): array
+    /**
+     * @param array{entries?: int, entryStates?: int} $totals
+     *
+     * @return array<string, mixed>
+     */
+    private static function foundationHeader(int $schemaVersion = 3, array $totals = []): array
     {
         return [
             'kind' => 'header',
@@ -34,6 +38,26 @@ final class BackupInspectorTest extends TestCase
             'createdAt' => '2026-08-17T09:00:00+00:00',
             'sourceUrl' => 'https://source.example',
             'sourceEmail' => 'source@example.com',
+            'backupId' => 'backup-1',
+            'part' => 0,
+            'parts' => 1,
+            'totals' => ['entries' => $totals['entries'] ?? 0, 'entryStates' => $totals['entryStates'] ?? 0],
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private static function entryPartHeader(int $part = 1): array
+    {
+        return [
+            'kind' => 'header',
+            'schemaVersion' => 3,
+            'createdAt' => '2026-08-17T09:00:00+00:00',
+            'sourceUrl' => 'https://source.example',
+            'sourceEmail' => 'source@example.com',
+            'backupId' => 'backup-1',
+            'part' => $part,
+            'parts' => null,
+            'totals' => null,
         ];
     }
 
@@ -55,10 +79,16 @@ final class BackupInspectorTest extends TestCase
     }
 
     /** @return array<string, mixed> */
+    private static function savedSearch(string $term): array
+    {
+        return ['kind' => 'savedSearch', 'term' => $term, 'wholeWord' => false, 'phrase' => false, 'position' => 0];
+    }
+
+    /** @return array<string, mixed> */
     private static function feed(string $url): array
     {
         return ['kind' => 'feed', 'url' => $url, 'siteUrl' => null, 'title' => null,
-            'description' => null, 'faviconUrl' => null, 'sourceFormat' => 'xml'];
+            'description' => null, 'faviconUrl' => null, 'imageUrl' => null, 'sourceFormat' => 'xml'];
     }
 
     /**
@@ -70,13 +100,13 @@ final class BackupInspectorTest extends TestCase
     {
         return ['kind' => 'subscription', 'feedUrl' => $feedUrl, 'customTitle' => null,
             'position' => 0, 'markedReadUntil' => null, 'createdAt' => '2026-07-01T00:00:00+00:00',
-            'tags' => $tags];
+            'tags' => $tags, 'includeInAllItems' => true, 'includeInForYou' => true];
     }
 
     /** @return array<string, mixed> */
-    private static function entry(string $feedUrl): array
+    private static function entry(string $feedUrl, string $guidHash = 'h'): array
     {
-        return ['kind' => 'entry', 'feedUrl' => $feedUrl, 'guid' => 'g', 'guidHash' => 'h',
+        return ['kind' => 'entry', 'feedUrl' => $feedUrl, 'guid' => 'g-' . $guidHash, 'guidHash' => $guidHash,
             'url' => null, 'title' => 'One', 'author' => null, 'summary' => null,
             'contentHtml' => null, 'imageUrl' => null, 'imageWidth' => null, 'imageHeight' => null,
             'publishedAt' => null, 'createdAt' => '2026-08-01T00:00:00+00:00',
@@ -84,9 +114,9 @@ final class BackupInspectorTest extends TestCase
     }
 
     /** @return array<string, mixed> */
-    private static function entryState(string $feedUrl): array
+    private static function entryState(string $feedUrl, string $guidHash = 'h'): array
     {
-        return ['kind' => 'entryState', 'feedUrl' => $feedUrl, 'guidHash' => 'h', 'isHidden' => true,
+        return ['kind' => 'entryState', 'feedUrl' => $feedUrl, 'guidHash' => $guidHash, 'isHidden' => true,
             'isFavorite' => false, 'isKept' => false, 'hiddenAt' => null, 'isViewed' => false,
             'viewedAt' => null];
     }
@@ -99,7 +129,7 @@ final class BackupInspectorTest extends TestCase
     private static function footer(array $counts = []): array
     {
         return ['kind' => 'footer', 'counts' => $counts + [
-            'tag' => 0, 'feed' => 0, 'subscription' => 0, 'entry' => 0, 'entryState' => 0,
+            'tag' => 0, 'savedSearch' => 0, 'feed' => 0, 'subscription' => 0, 'entry' => 0, 'entryState' => 0,
         ]];
     }
 
@@ -111,16 +141,18 @@ final class BackupInspectorTest extends TestCase
     public function testCountsEveryKind(): void
     {
         $gzip = self::gzipOf([
-            self::header(), self::account(),
+            self::foundationHeader(), self::account(),
             self::tag('A'), self::tag('B'),
+            self::savedSearch('term'),
             self::feed(self::FEED_URL),
             self::subscription(self::FEED_URL),
-            self::footer(['tag' => 2, 'feed' => 1, 'subscription' => 1]),
+            self::footer(['tag' => 2, 'savedSearch' => 1, 'feed' => 1, 'subscription' => 1]),
         ]);
 
         $inventory = self::inspector()->inspect($gzip);
 
         self::assertSame(2, $inventory->tags);
+        self::assertSame(1, $inventory->savedSearches);
         self::assertSame(1, $inventory->feeds);
         self::assertSame(1, $inventory->subscriptions);
         self::assertSame(0, $inventory->entries);
@@ -135,9 +167,9 @@ final class BackupInspectorTest extends TestCase
     }
 
     /**
-     * Every cross-reference a backup makes must resolve inside the same file,
-     * and pass 1 is the only place that verdict is worth anything — pass 2
-     * runs after the wipe, where the same refusal costs the account
+     * Every cross-reference a foundation makes must resolve inside the same
+     * file, and pass 1 is the only place that verdict is worth anything —
+     * pass 2 runs after the wipe, where the same refusal costs the account
      * everything it held.
      *
      * @return iterable<string, array{list<array<string, mixed>>, array<string, int>}>
@@ -152,16 +184,6 @@ final class BackupInspectorTest extends TestCase
         yield 'a subscription naming an undeclared tag' => [
             [self::feed(self::FEED_URL), self::subscription(self::FEED_URL, [['name' => 'Ghost', 'position' => 0]])],
             ['feed' => 1, 'subscription' => 1],
-        ];
-
-        yield 'an entry for a feed no subscription names' => [
-            [self::feed(self::FEED_URL), self::entry(self::FEED_URL)],
-            ['feed' => 1, 'entry' => 1],
-        ];
-
-        yield 'an entry state for a feed no subscription names' => [
-            [self::feed(self::FEED_URL), self::entryState(self::FEED_URL)],
-            ['feed' => 1, 'entryState' => 1],
         ];
 
         yield 'the same tag name twice' => [
@@ -191,7 +213,7 @@ final class BackupInspectorTest extends TestCase
     #[DataProvider('danglingReferences')]
     public function testAReferenceTheFileNeverDeclaresIsRefusedInPassOne(array $body, array $counts): void
     {
-        $gzip = self::gzipOf([self::header(), self::account(), ...$body, self::footer($counts)]);
+        $gzip = self::gzipOf([self::foundationHeader(), self::account(), ...$body, self::footer($counts)]);
 
         $this->expectException(InvalidBackupException::class);
 
@@ -201,18 +223,45 @@ final class BackupInspectorTest extends TestCase
     public function testAFullyResolvedFileIsAccepted(): void
     {
         $gzip = self::gzipOf([
-            self::header(), self::account(),
+            self::foundationHeader(), self::account(),
             self::tag('A'),
             self::feed(self::FEED_URL),
             self::subscription(self::FEED_URL, [['name' => 'A', 'position' => 0]]),
-            self::entry(self::FEED_URL),
-            self::entryState(self::FEED_URL),
-            self::footer(['tag' => 1, 'feed' => 1, 'subscription' => 1, 'entry' => 1, 'entryState' => 1]),
+            self::footer(['tag' => 1, 'feed' => 1, 'subscription' => 1]),
         ]);
 
         $inventory = self::inspector()->inspect($gzip);
 
-        self::assertSame(1, $inventory->entries);
-        self::assertSame(1, $inventory->entryStates);
+        self::assertSame(1, $inventory->tags);
+        self::assertSame(1, $inventory->feeds);
+        self::assertSame(1, $inventory->subscriptions);
+    }
+
+    public function testAFoundationReportsItsClaimedTotalsAsEntryCounts(): void
+    {
+        $gzip = self::gzipOf([
+            self::foundationHeader(totals: ['entries' => 3, 'entryStates' => 2]), self::account(),
+            self::footer(),
+        ]);
+
+        $inventory = self::inspector()->inspect($gzip);
+
+        self::assertSame(3, $inventory->entries);
+        self::assertSame(2, $inventory->entryStates);
+    }
+
+    public function testAnEntryPartIsRefused(): void
+    {
+        $gzip = self::gzipOf([
+            self::entryPartHeader(),
+            self::entry(self::FEED_URL, 'a'),
+            self::entryState(self::FEED_URL, 'a'),
+            self::footer(['entry' => 1, 'entryState' => 1]),
+        ]);
+
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessage('The restore starts with part 0, the foundation.');
+
+        self::inspector()->inspect($gzip);
     }
 }

@@ -35,6 +35,18 @@ final class GzipLineReaderTest extends TestCase
         self::assertSame([$long, 'short'], $lines);
     }
 
+    public function testASingleLineLargerThanTheCapIsRefused(): void
+    {
+        $gzip = (string) gzencode(str_repeat('x', GzipLineReader::MAX_LINE_BYTES + 2_000_000) . "\nshort\n");
+
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessageMatches('/larger than/');
+
+        foreach (GzipLineReader::lines($gzip) as $ignored) {
+            unset($ignored);
+        }
+    }
+
     public function testBytesThatAreNotGzipAreRefused(): void
     {
         $this->expectException(InvalidBackupException::class);

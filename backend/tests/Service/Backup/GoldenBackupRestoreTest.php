@@ -6,6 +6,7 @@ namespace App\Tests\Service\Backup;
 
 use App\Entity\User;
 use App\Service\Backup\AccountRestorer;
+use App\Service\Backup\EntryPartRestorer;
 use App\Service\Backup\Exception\InvalidBackupException;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -13,26 +14,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * Committed backup files, restored on every run. Task 4 (AccountBackupExporterTest)
- * guards what the exporter writes; this guards what the reader still accepts. A
- * field made required tomorrow would reject every file written before today, and
- * only a frozen file — one nothing here ever regenerates — can catch that (#556).
- *
- * The two fixtures under tests/Fixtures/backup/ are committed as plain NDJSON, not
- * gzip: the tests gzip them on read, and a committed .gz would be unreviewable in a
- * diff. They are hand-written, never produced by running today's exporter — a
- * fixture regenerated from today's code could not test yesterday's format, which is
- * the only reason this corpus exists.
- *
- * The two version-1 fixtures stay frozen as rejection evidence after the format
- * moves to version 2. version-2.ndjson names the new supported contract.
- *
- * Standing rule: when a PR adds an additive field, it adds NOTHING to this corpus.
- * oldest-supported already lacks the field, and that absence IS the test. A third
- * fixture appears only when support for something is first DROPPED. NDJSON has no
- * comment syntax, so this rule lives here rather than inside the fixture files
- * themselves — inventing a comment line there would make BackupReader reject the
- * file.
+ * Standing rule: an additive field adds NOTHING to this corpus.
+ * `oldest-supported/` is frozen forever the moment it is created; only
+ * `current/` moves when the format changes.
  */
 final class GoldenBackupRestoreTest extends DbTestCase
 {
@@ -54,50 +38,87 @@ final class GoldenBackupRestoreTest extends DbTestCase
         return $restorer;
     }
 
-    private function fixture(string $name): string
+    private function entryPartRestorer(): EntryPartRestorer
     {
-        $gzip = gzencode((string) file_get_contents(__DIR__ . '/../../Fixtures/backup/' . $name));
+        $restorer = self::getContainer()->get(EntryPartRestorer::class);
+        self::assertInstanceOf(EntryPartRestorer::class, $restorer);
+
+        return $restorer;
+    }
+
+    /**
+     * AccountRestorer::start() ends with AccountReset's clear(), which
+     * detaches the caller's User — the entries endpoint needs a managed one.
+     */
+    private function reloadUser(int $userId): User
+    {
+        $this->em->clear();
+        $user = $this->em->find(User::class, $userId);
+        self::assertInstanceOf(User::class, $user);
+
+        return $user;
+    }
+
+    private function gzipOfFixture(string $directory, string $file): string
+    {
+        $path = __DIR__ . '/../../Fixtures/backup/' . $directory . '/' . $file;
+        $gzip = gzencode((string) file_get_contents($path));
         self::assertIsString($gzip);
 
         return $gzip;
     }
 
-    /**
-     * @return iterable<string, array{string, int, int}>
-     */
+    /** @return iterable<string, array{string}> */
     public static function supportedCorpus(): iterable
     {
-        yield 'the current version-2 contract' => ['version-2.ndjson', 1, 1];
+        yield 'the current contract' => ['current'];
+        yield 'the oldest supported contract' => ['oldest-supported'];
     }
 
     #[DataProvider('supportedCorpus')]
-    public function testRestoresACommittedBackup(string $fixture, int $entries, int $states): void
+    public function testRestoresACommittedBackupDirectory(string $directory): void
     {
-        $user = $this->makeUser('golden-' . $fixture . '@example.com');
+        $user = $this->makeUser('golden-' . $directory . '@example.com');
+        $userId = (int) $user->getId();
 
-        $result = $this->restorer()->restore($user, $this->fixture($fixture), self::CONFIRMATION);
+        $started = $this->restorer()->start(
+            $user,
+            $this->gzipOfFixture($directory, '000-foundation.ndjson'),
+            self::CONFIRMATION,
+        );
 
-        self::assertSame(1, $result->tags);
-        self::assertSame(1, $result->subscriptions);
-        self::assertSame($entries, $result->entries);
-        self::assertSame($states, $result->entryStates);
+        self::assertSame(1, $started->tags);
+        self::assertSame(1, $started->subscriptions);
+
+        $entriesResult = $this->entryPartRestorer()->load(
+            $this->reloadUser($userId),
+            $this->gzipOfFixture($directory, '001-entries.ndjson'),
+        );
+
+        self::assertSame(1, $entriesResult->entries);
+        self::assertSame(1, $entriesResult->entryStates);
     }
 
-    /** @return iterable<string, array{string}> */
-    public static function unsupportedCorpus(): iterable
+    public function testAVersionTwoHeaderIsRejected(): void
     {
-        yield 'the oldest version-1 fixture' => ['oldest-supported.ndjson'];
-        yield 'the current version-1 fixture' => ['current.ndjson'];
-    }
-
-    #[DataProvider('unsupportedCorpus')]
-    public function testVersionOneFixturesFailOnlyBecauseTheirSchemaVersionIsUnsupported(string $fixture): void
-    {
-        $user = $this->makeUser('golden-rejected-' . $fixture . '@example.com');
+        $user = $this->makeUser('golden-rejected-version-2@example.com');
+        $line = json_encode([
+            'kind' => 'header',
+            'schemaVersion' => 2,
+            'createdAt' => '2026-08-20T11:03:57+00:00',
+            'sourceUrl' => 'https://old.example',
+            'sourceEmail' => 'old@example.com',
+            'backupId' => 'golden-version-2',
+            'part' => 0,
+            'parts' => 1,
+            'totals' => ['entries' => 0, 'entryStates' => 0],
+        ], \JSON_THROW_ON_ERROR);
+        $gzip = gzencode($line . "\n");
+        self::assertIsString($gzip);
 
         $this->expectException(InvalidBackupException::class);
-        $this->expectExceptionMessage('Unsupported schema version 1; this instance reads version 2.');
+        $this->expectExceptionMessage('Unsupported schema version 2');
 
-        $this->restorer()->restore($user, $this->fixture($fixture), self::CONFIRMATION);
+        $this->restorer()->start($user, $gzip, self::CONFIRMATION);
     }
 }

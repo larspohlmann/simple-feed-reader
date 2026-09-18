@@ -90,7 +90,10 @@ final class BackupSchemaCoverageTest extends DbTestCase
      * `createdAt` must not license a `createdAt` appearing on some other line.
      */
     private const array FILE_SCAFFOLDING = [
-        BackupSchema::KIND_HEADER => ['schemaVersion', 'createdAt', 'sourceUrl', 'sourceEmail'],
+        BackupSchema::KIND_HEADER => [
+            'schemaVersion', 'createdAt', 'sourceUrl', 'sourceEmail', 'backupId', 'part', 'parts',
+            'totals', 'totals.entries', 'totals.entryStates',
+        ],
         BackupSchema::KIND_FOOTER => [
             'counts', 'counts.tag', 'counts.savedSearch', 'counts.feed', 'counts.subscription',
             'counts.entry', 'counts.entryState',
@@ -668,7 +671,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
         $user = $this->fullyPopulatedAccount()->create($email);
 
         $valuesByKind = [];
-        foreach ($this->exporter()->lines($user, 'https://coverage.example') as $line) {
+        foreach ($this->rawLinesOf($user) as $line) {
             $decoded = json_decode($line, true, flags: \JSON_THROW_ON_ERROR);
             self::assertIsArray($decoded);
             /** @var array<string, mixed> $decoded */
@@ -680,6 +683,24 @@ final class BackupSchemaCoverageTest extends DbTestCase
         }
 
         return $valuesByKind;
+    }
+
+    /**
+     * Every NDJSON line the exporter writes for $user, across every gzip
+     * part — the parts themselves are a download-time split, not a schema
+     * distinction the coverage proof needs to keep separate.
+     *
+     * @return iterable<string>
+     */
+    private function rawLinesOf(User $user): iterable
+    {
+        foreach ($this->exporter()->parts($user, 'https://coverage.example') as $part) {
+            foreach (explode("\n", (string) gzdecode($part->gzipBytes)) as $line) {
+                if ('' !== $line) {
+                    yield $line;
+                }
+            }
+        }
     }
 
     /**

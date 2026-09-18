@@ -7,14 +7,12 @@ namespace App\Service\Backup;
 use App\Service\Version\ReleaseVersionReader;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use ZipStream\CompressionMethod;
+use ZipStream\ZipStream;
 
 /**
- * Wraps the exporter's line stream in a gzip download. Compression is
- * incremental (deflate_add per line): the uncompressed document is never
- * materialised, which is what keeps the export at the appendix's 7 MiB peak
- * instead of the corpus size. Content-Encoding stays unset on purpose — the
- * browser must save the .json.gz bytes as they are, not inflate them in
- * flight and hand the user a misnamed plain-text file.
+ * Streams the exporter's backup parts as a stored zip: each member is
+ * already gzip-compressed, so Content-Encoding stays unset on purpose.
  */
 final readonly class BackupDownloadResponseFactory
 {
@@ -24,8 +22,8 @@ final readonly class BackupDownloadResponseFactory
     ) {
     }
 
-    /** @param \Generator<int, string> $lines */
-    public function stream(string $accountEmail, \Generator $lines): StreamedResponse
+    /** @param \Generator<int, BackupPart> $parts */
+    public function stream(string $accountEmail, \Generator $parts): StreamedResponse
     {
         $filename = (new BackupFilename(
             $accountEmail,
@@ -34,18 +32,19 @@ final readonly class BackupDownloadResponseFactory
         ))->value();
 
         return new StreamedResponse(
-            static function () use ($lines): void {
-                $gzip = deflate_init(\ZLIB_ENCODING_GZIP);
-                if (false === $gzip) {
-                    throw new \RuntimeException('Cannot initialise gzip compression.');
+            static function () use ($parts): void {
+                $zip = new ZipStream(
+                    sendHttpHeaders: false,
+                    defaultCompressionMethod: CompressionMethod::STORE,
+                    defaultEnableZeroHeader: false,
+                );
+                foreach ($parts as $part) {
+                    $zip->addFile(fileName: $part->memberName, data: $part->gzipBytes);
                 }
-                foreach ($lines as $line) {
-                    echo deflate_add($gzip, $line . "\n", \ZLIB_NO_FLUSH);
-                }
-                echo deflate_add($gzip, '', \ZLIB_FINISH);
+                $zip->finish();
             },
             headers: [
-                'Content-Type' => 'application/gzip',
+                'Content-Type' => 'application/zip',
                 'Content-Disposition' => sprintf('attachment; filename="%s"', $filename),
             ],
         );

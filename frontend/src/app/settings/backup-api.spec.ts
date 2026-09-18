@@ -48,8 +48,21 @@ describe('ReaderApi account backup/restore', () => {
     expect(req.request.headers.get('Content-Type')).toBe('application/gzip');
 
     const preview: RestorePreview = {
-      backup: { createdAt: '2026-08-17T10:00:00Z', sourceUrl: null, sourceEmail: null },
-      toLoad: { tags: 1, feeds: 2, subscriptions: 2, entries: 10, entryStates: 10 },
+      backup: {
+        backupId: 'a1b2c3',
+        parts: 3,
+        createdAt: '2026-08-17T10:00:00Z',
+        sourceUrl: null,
+        sourceEmail: null,
+      },
+      toLoad: {
+        tags: 1,
+        savedSearches: 1,
+        feeds: 2,
+        subscriptions: 2,
+        entries: 10,
+        entryStates: 10,
+      },
       toDelete: { tags: 0, subscriptions: 0, entryStates: 0, recommendationRuns: 0 },
     };
     req.flush(preview);
@@ -57,18 +70,50 @@ describe('ReaderApi account backup/restore', () => {
     expect(received).toEqual(preview);
   });
 
-  it('POSTs a gzip body to confirm a restore', () => {
-    const backup = new Blob(['gzipped'], { type: 'application/gzip' });
+  it('POSTs a gzip body to start a restore', () => {
+    const foundation = new Blob(['gzipped'], { type: 'application/gzip' });
     let received: RestoreResult | undefined;
-    api.restoreAccount(backup).subscribe((r) => (received = r));
+    api.startAccountRestore(foundation).subscribe((r) => (received = r));
 
-    const req = ctrl.expectOne('https://api.test/api/account/restore?confirm=REPLACE');
+    const req = ctrl.expectOne('https://api.test/api/account/restore/start?confirm=REPLACE');
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toBe(backup);
+    expect(req.request.body).toBe(foundation);
     expect(req.request.headers.get('Content-Type')).toBe('application/gzip');
 
     const result: RestoreResult = {
-      loaded: { tags: 1, feeds: 2, subscriptions: 2, entries: 10, entryStates: 10 },
+      loaded: {
+        tags: 1,
+        savedSearches: 1,
+        feeds: 2,
+        subscriptions: 2,
+        entries: 0,
+        entryStates: 0,
+      },
+    };
+    req.flush(result);
+
+    expect(received).toEqual(result);
+  });
+
+  it('POSTs a gzip body to restore one entry part', () => {
+    const part = new Blob(['gzipped'], { type: 'application/gzip' });
+    let received: RestoreResult | undefined;
+    api.restoreEntryPart(part).subscribe((r) => (received = r));
+
+    const req = ctrl.expectOne('https://api.test/api/account/restore/entries');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toBe(part);
+    expect(req.request.headers.get('Content-Type')).toBe('application/gzip');
+
+    const result: RestoreResult = {
+      loaded: {
+        tags: 0,
+        savedSearches: 0,
+        feeds: 0,
+        subscriptions: 0,
+        entries: 10,
+        entryStates: 10,
+      },
     };
     req.flush(result);
 
