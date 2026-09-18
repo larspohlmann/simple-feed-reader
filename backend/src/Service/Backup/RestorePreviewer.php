@@ -9,6 +9,8 @@ use App\Repository\EntryStateRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
+use App\Service\Backup\Dto\BackupHeader;
+use App\Service\Backup\Exception\InvalidBackupException;
 
 /**
  * Assembles a restore preview: inspect the file, refuse it if it does not
@@ -32,6 +34,7 @@ final readonly class RestorePreviewer
     public function preview(User $user, string $gzipBytes): RestorePreview
     {
         $inventory = $this->inspector->inspect($gzipBytes);
+        $this->assertFoundation($inventory->header);
         $this->fitCheck->assertFits($inventory, $user);
 
         $userId = $user->getId() ?? 0;
@@ -44,5 +47,12 @@ final readonly class RestorePreviewer
             currentEntryStates: $this->entryStates->countForUser($userId),
             currentRecommendationRuns: $this->recommendationRuns->countForUser($userId),
         );
+    }
+
+    private function assertFoundation(BackupHeader $header): void
+    {
+        if (!$header->isFoundation()) {
+            throw new InvalidBackupException('The restore starts with part 0, the foundation.');
+        }
     }
 }

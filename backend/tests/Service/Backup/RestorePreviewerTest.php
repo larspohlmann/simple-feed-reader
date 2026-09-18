@@ -14,7 +14,9 @@ use App\Entity\User;
 use App\Service\Backup\BackupFitCheck;
 use App\Service\Backup\BackupInventory;
 use App\Service\Backup\Dto\BackupHeader;
+use App\Service\Backup\Dto\BackupTotals;
 use App\Service\Backup\Exception\BackupDoesNotFitException;
+use App\Service\Backup\Exception\InvalidBackupException;
 use App\Service\Backup\RestorePreviewer;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -45,15 +47,39 @@ final class RestorePreviewerTest extends DbTestCase
         return (string) gzencode($ndjson);
     }
 
-    /** @return array<string, mixed> */
-    private static function header(): array
+    /**
+     * @param array{entries?: int, entryStates?: int} $totals
+     *
+     * @return array<string, mixed>
+     */
+    private static function header(array $totals = []): array
     {
         return [
             'kind' => 'header',
-            'schemaVersion' => 2,
+            'schemaVersion' => 3,
             'createdAt' => '2026-08-17T09:00:00+00:00',
             'sourceUrl' => 'https://source.example',
             'sourceEmail' => 'source@example.com',
+            'backupId' => 'backup-1',
+            'part' => 0,
+            'parts' => 1,
+            'totals' => ['entries' => $totals['entries'] ?? 0, 'entryStates' => $totals['entryStates'] ?? 0],
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private static function entryPartHeader(): array
+    {
+        return [
+            'kind' => 'header',
+            'schemaVersion' => 3,
+            'createdAt' => '2026-08-17T09:00:00+00:00',
+            'sourceUrl' => 'https://source.example',
+            'sourceEmail' => 'source@example.com',
+            'backupId' => 'backup-1',
+            'part' => 1,
+            'parts' => null,
+            'totals' => null,
         ];
     }
 
@@ -86,14 +112,6 @@ final class RestorePreviewerTest extends DbTestCase
     }
 
     /** @return array<string, mixed> */
-    private static function entryState(string $feedUrl, string $guidHash): array
-    {
-        return ['kind' => 'entryState', 'feedUrl' => $feedUrl, 'guidHash' => $guidHash,
-            'isHidden' => true, 'isFavorite' => false, 'isKept' => false, 'hiddenAt' => null,
-            'isViewed' => false, 'viewedAt' => null];
-    }
-
-    /** @return array<string, mixed> */
     private static function subscription(string $feedUrl): array
     {
         return ['kind' => 'subscription', 'feedUrl' => $feedUrl, 'customTitle' => null,
@@ -116,10 +134,14 @@ final class RestorePreviewerTest extends DbTestCase
     private static function someHeader(): BackupHeader
     {
         return new BackupHeader(
-            schemaVersion: 2,
+            schemaVersion: 3,
             createdAt: new \DateTimeImmutable('2026-08-17T09:00:00+00:00'),
             sourceUrl: null,
             sourceEmail: null,
+            backupId: 'backup-1',
+            part: 0,
+            parts: 1,
+            totals: new BackupTotals(0, 0),
         );
     }
 
@@ -156,6 +178,7 @@ final class RestorePreviewerTest extends DbTestCase
         return new BackupInventory(
             header: self::someHeader(),
             tags: $counts['tags'] ?? 0,
+            savedSearches: $counts['savedSearches'] ?? 0,
             feeds: $counts['feeds'] ?? 1,
             subscriptions: $counts['subscriptions'] ?? 1,
             entries: $counts['entries'] ?? 0,
@@ -248,41 +271,48 @@ final class RestorePreviewerTest extends DbTestCase
     }
 
     /**
-     * The four numbers the user reads immediately before an irreversible wipe.
-     * Every other case here leaves entries and states at zero, which a broken
-     * count would satisfy just as well — COUNT(s.entry) over EntryState's
-     * composite key in particular has no scalar id to fall back on.
+     * The foundation carries no entry lines of its own, so what the preview
+     * shows for entries/entryStates is the header's own claimed totals across
+     * every entry part — not a count this file's lines could satisfy on their
+     * own. Task 5 checks the parts as they actually arrive.
      */
-    public function testTheEntryAndStateCountsAreReportedNonZero(): void
+    public function testToLoadEntriesEqualsTheHeadersClaimedTotals(): void
     {
-        $user = $this->makeUser('non-zero-counts@example.com');
+        $user = $this->makeUser('claimed-totals@example.com');
         $feed = new Feed('https://counted.example/feed.xml');
         $this->em->persist($feed);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00')));
         $when = new \DateTimeImmutable('2026-08-01 00:00:00');
-        foreach (['counted-a', 'counted-b'] as $guid) {
-            $entry = new Entry($feed, $guid, 'https://counted.example/' . $guid, $guid, $when, $when);
-            $this->em->persist($entry);
-            $this->em->persist(new EntryState($user, $entry));
-        }
+        $entry = new Entry($feed, 'counted-a', 'https://counted.example/counted-a', 'counted-a', $when, $when);
+        $this->em->persist($entry);
+        $this->em->persist(new EntryState($user, $entry));
         $this->em->flush();
 
         $gzip = self::gzipOf([
-            self::header(), self::account(),
+            self::header(totals: ['entries' => 3, 'entryStates' => 2]), self::account(),
             self::feed('https://a.example/feed.xml'),
             self::subscription('https://a.example/feed.xml'),
-            self::entry('https://a.example/feed.xml', 'hash-a'),
-            self::entry('https://a.example/feed.xml', 'hash-b'),
-            self::entry('https://a.example/feed.xml', 'hash-c'),
-            self::entryState('https://a.example/feed.xml', 'hash-a'),
-            self::entryState('https://a.example/feed.xml', 'hash-b'),
-            self::footer(['feed' => 1, 'subscription' => 1, 'entry' => 3, 'entryState' => 2]),
+            self::footer(['feed' => 1, 'subscription' => 1]),
         ]);
 
         $preview = $this->previewer()->preview($user, $gzip);
 
         self::assertSame(3, $preview->toLoad->entries);
         self::assertSame(2, $preview->toLoad->entryStates);
-        self::assertSame(2, $preview->currentEntryStates);
+        self::assertSame(1, $preview->currentEntryStates);
+    }
+
+    public function testPreviewRefusesAnEntryPart(): void
+    {
+        $user = $this->makeUser('preview-entry-part@example.com');
+        $gzip = self::gzipOf([
+            self::entryPartHeader(),
+            self::entry('https://a.example/feed.xml', 'hash-a'),
+            self::footer(['entry' => 1]),
+        ]);
+
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessage('The restore starts with part 0, the foundation.');
+
+        $this->previewer()->preview($user, $gzip);
     }
 }

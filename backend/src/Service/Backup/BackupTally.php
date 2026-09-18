@@ -8,20 +8,20 @@ use App\Service\Backup\Dto\BackupHeader;
 use App\Service\Backup\Dto\EntryLine;
 use App\Service\Backup\Dto\EntryStateLine;
 use App\Service\Backup\Dto\FeedLine;
+use App\Service\Backup\Dto\SavedSearchLine;
 use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Dto\TagLine;
 use App\Service\Backup\Exception\InvalidBackupException;
 
 /**
  * One inspection's working state: the header, a count per repeatable line
- * kind, and the three name sets that make the file's cross-references
+ * kind, and the two name sets that make the foundation's own cross-references
  * checkable while it streams past. Built per inspect() call and thrown away
  * with it, which is why it does not live on the shared BackupInspector.
  *
- * The sets hold strings and nothing else — never a retained DTO — so a
- * half-million-entry file costs this pass no more than the tag names, feed
- * urls and subscribed feed urls it declares, all of them bounded by the fit
- * check's own ceilings.
+ * Entry and entry-state lines are counted only — an entry part carries no
+ * subscriptions to check them against, so that verification is Task 5's, run
+ * against the account's actual rows rather than the file's own claims.
  */
 final class BackupTally
 {
@@ -39,6 +39,7 @@ final class BackupTally
     /** @var array<string, int> */
     private array $counts = [
         'tags' => 0,
+        'savedSearches' => 0,
         'feeds' => 0,
         'subscriptions' => 0,
         'entries' => 0,
@@ -50,10 +51,11 @@ final class BackupTally
         match (true) {
             $line instanceof BackupHeader => $this->header = $line,
             $line instanceof TagLine => $this->acceptTag($line),
+            $line instanceof SavedSearchLine => ++$this->counts['savedSearches'],
             $line instanceof FeedLine => $this->acceptFeed($line),
             $line instanceof SubscriptionLine => $this->acceptSubscription($line),
-            $line instanceof EntryLine => $this->acceptEntryFor($line->feedUrl),
-            $line instanceof EntryStateLine => $this->acceptEntryStateFor($line->feedUrl),
+            $line instanceof EntryLine => ++$this->counts['entries'],
+            $line instanceof EntryStateLine => ++$this->counts['entryStates'],
             // The account line is validated by its own dto and loaded in pass 2.
             default => null,
         };
@@ -61,14 +63,40 @@ final class BackupTally
 
     public function inventory(): BackupInventory
     {
+        $header = $this->header ?? throw new InvalidBackupException('The backup is missing its header line.');
+        [$entries, $entryStates] = $this->entryCounts($header);
+
         return new BackupInventory(
-            header: $this->header ?? throw new InvalidBackupException('The backup is missing its header line.'),
+            header: $header,
             tags: $this->counts['tags'],
+            savedSearches: $this->counts['savedSearches'],
             feeds: $this->counts['feeds'],
             subscriptions: $this->counts['subscriptions'],
-            entries: $this->counts['entries'],
-            entryStates: $this->counts['entryStates'],
+            entries: $entries,
+            entryStates: $entryStates,
         );
+    }
+
+    /**
+     * A foundation carries no entry lines of its own — BackupReader's grammar
+     * forbids it — so its counted entries/entryStates are always zero. What
+     * the account actually holds is instead the header's own claimed totals
+     * across every entry part; the real ceiling is Task 5's, checked against
+     * the parts as they arrive.
+     *
+     * @return array{int, int}
+     */
+    private function entryCounts(BackupHeader $header): array
+    {
+        if (!$header->isFoundation()) {
+            return [$this->counts['entries'], $this->counts['entryStates']];
+        }
+
+        $totals = $header->totals ?? throw new \LogicException(
+            'BackupReader must refuse a foundation with no totals before it reaches the tally.',
+        );
+
+        return [$totals->entries, $totals->entryStates];
     }
 
     /**
@@ -130,29 +158,5 @@ final class BackupTally
 
         $this->subscribedFeedUrls[$line->feedUrl] = true;
         ++$this->counts['subscriptions'];
-    }
-
-    private function acceptEntryFor(string $feedUrl): void
-    {
-        $this->assertSubscribed($feedUrl);
-        ++$this->counts['entries'];
-    }
-
-    private function acceptEntryStateFor(string $feedUrl): void
-    {
-        $this->assertSubscribed($feedUrl);
-        ++$this->counts['entryStates'];
-    }
-
-    private function assertSubscribed(string $feedUrl): void
-    {
-        if (isset($this->subscribedFeedUrls[$feedUrl])) {
-            return;
-        }
-
-        throw new InvalidBackupException(sprintf(
-            'The backup carries rows for feed "%s", which none of its subscriptions names.',
-            $feedUrl,
-        ));
     }
 }

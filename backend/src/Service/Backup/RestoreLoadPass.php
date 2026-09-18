@@ -9,11 +9,8 @@ use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Repository\EntryRepository;
 use App\Repository\FeedRepository;
 use App\Service\Backup\Dto\AccountLine;
-use App\Service\Backup\Dto\EntryLine;
-use App\Service\Backup\Dto\EntryStateLine;
 use App\Service\Backup\Dto\FeedLine;
 use App\Service\Backup\Dto\SavedSearchLine;
 use App\Service\Backup\Dto\SubscriptionLine;
@@ -23,14 +20,15 @@ use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * One restore's account-shaped half — settings, tags, feeds and subscriptions
- * — plus the dispatch over the whole line stream. Constructed per restore and
- * thrown away with it: the name ⇒ Tag and url ⇒ Feed maps it holds are
- * working state, which is exactly why they do not live on the autowired
- * RestoreLoader.
+ * The foundation's own load: settings, tags, saved searches, feeds and
+ * subscriptions, plus the dispatch over the line stream. Constructed per
+ * restore and thrown away with it: the name ⇒ Tag and url ⇒ Feed maps it
+ * holds are working state, which is exactly why they do not live on the
+ * autowired RestoreLoader.
  *
  * The account is assumed to be freshly reset. Nothing here reads or updates a
- * row the wipe left behind.
+ * row the wipe left behind. Entries and entry states arrive through a
+ * separate part and a separate loader (Task 5); this pass never sees them.
  */
 final class RestoreLoadPass
 {
@@ -43,22 +41,14 @@ final class RestoreLoadPass
     /** @var list<FeedLine> held back until one lookup resolves them all (#455) */
     private array $heldFeedLines = [];
 
-    /** @var array<string, Feed> the subset this restore actually subscribed to */
-    private array $subscribedFeedsByUrl = [];
-
     /** @var array{tags: int, savedSearches: int, feeds: int, subscriptions: int} */
     private array $counts = ['tags' => 0, 'savedSearches' => 0, 'feeds' => 0, 'subscriptions' => 0];
 
-    private bool $entryPhaseStarted = false;
-
-    /** The account being loaded, re-acquired after the mid-pass clear(). */
     private User $user;
 
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly FeedRepository $feeds,
-        private readonly EntryRepository $entries,
-        private readonly RestoreEntryLoader $entryLoader,
     ) {
     }
 
@@ -71,19 +61,16 @@ final class RestoreLoadPass
         foreach ($lines as $line) {
             $this->accept($line);
         }
-
-        // A backup with no entries and no states still has to reach the entry
-        // phase, so the account's own rows are flushed exactly once.
-        $this->startEntryPhase();
-        $this->entryLoader->finish();
+        $this->resolveHeldFeeds();
+        $this->flush();
 
         return new RestoreResult(
             tags: $this->counts['tags'],
             savedSearches: $this->counts['savedSearches'],
             feeds: $this->counts['feeds'],
             subscriptions: $this->counts['subscriptions'],
-            entries: $this->entryLoader->entriesCreated(),
-            entryStates: $this->entryLoader->entryStatesCreated(),
+            entries: 0,
+            entryStates: 0,
         );
     }
 
@@ -95,8 +82,6 @@ final class RestoreLoadPass
             $line instanceof SavedSearchLine => $this->loadSavedSearch($line),
             $line instanceof FeedLine => $this->holdFeed($line),
             $line instanceof SubscriptionLine => $this->loadSubscription($line),
-            $line instanceof EntryLine => $this->acceptEntry($line),
-            $line instanceof EntryStateLine => $this->acceptEntryState($line),
             // The header carries provenance for the preview, nothing to load.
             default => null,
         };
@@ -193,7 +178,6 @@ final class RestoreLoadPass
         }
 
         $this->em->persist($subscription);
-        $this->subscribedFeedsByUrl[$line->feedUrl] = $feed;
         ++$this->counts['subscriptions'];
     }
 
@@ -210,63 +194,12 @@ final class RestoreLoadPass
         ));
     }
 
-    private function acceptEntry(EntryLine $line): void
+    private function flush(): void
     {
-        $this->startEntryPhase();
-        $this->entryLoader->bufferEntry($line);
-    }
-
-    private function acceptEntryState(EntryStateLine $line): void
-    {
-        $this->startEntryPhase();
-        $this->entryLoader->loadState($line);
-    }
-
-    /**
-     * The hand-over, and the one place the entity manager is cleared between
-     * the two halves. Everything the entry phase needs is read HERE, while the
-     * feeds are still managed and their ids already assigned — after the
-     * clear() there is no entity left to read an id from, including the User
-     * this pass was built with.
-     */
-    private function startEntryPhase(): void
-    {
-        if ($this->entryPhaseStarted) {
-            return;
-        }
-        $this->entryPhaseStarted = true;
-        $this->resolveHeldFeeds();
-
         try {
             $this->em->flush();
         } catch (DbalException $e) {
             throw BackupLoadFailedException::from($e);
         }
-
-        $targets = $this->feedTargets();
-        $userId = (int) $this->user->getId();
-        $this->em->clear();
-        $this->user = $this->em->getReference(User::class, $userId)
-            ?? throw new \LogicException('The account disappeared during its own restore.');
-        $this->entryLoader->begin($targets, $this->user);
-    }
-
-    /**
-     * @return array<string, RestoreFeedTarget>
-     */
-    private function feedTargets(): array
-    {
-        $userId = (int) $this->user->getId();
-        $targets = [];
-        foreach ($this->subscribedFeedsByUrl as $url => $feed) {
-            $feedId = (int) $feed->getId();
-            $targets[$url] = new RestoreFeedTarget(
-                $feedId,
-                !$this->feeds->isReadByAnotherUser($feedId, $userId),
-                $this->entries->guidHashToIdMapForFeed($feedId),
-            );
-        }
-
-        return $targets;
     }
 }

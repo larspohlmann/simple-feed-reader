@@ -7,6 +7,8 @@ namespace App\Service\Backup;
 use App\Entity\User;
 use App\Exception\ValidationException;
 use App\Service\Account\AccountReset;
+use App\Service\Backup\Dto\BackupHeader;
+use App\Service\Backup\Exception\InvalidBackupException;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -32,18 +34,32 @@ final readonly class AccountRestorer
     ) {
     }
 
-    public function restore(User $user, string $gzipBytes, ?string $confirmation): RestoreResult
+    /**
+     * Only the foundation part (part 0) is accepted here: it is the account's
+     * whole shape, and the only part a fresh restore can reason about without
+     * the entries that follow it. The entries endpoint (Task 5) loads the
+     * remaining parts against this call's already-restored account.
+     */
+    public function start(User $user, string $gzipBytes, ?string $confirmation): RestoreResult
     {
         if (self::CONFIRMATION !== $confirmation) {
             throw new ValidationException(['confirm' => ['Type REPLACE to confirm the restore.']]);
         }
 
         $inventory = $this->inspector->inspect($gzipBytes);
+        $this->assertFoundation($inventory->header);
         $this->fitCheck->assertFits($inventory, $user);
         $userId = (int) $user->getId();
         $this->accountReset->reset($user);
 
         return $this->loader->load($this->refreshed($userId), $gzipBytes);
+    }
+
+    private function assertFoundation(BackupHeader $header): void
+    {
+        if (!$header->isFoundation()) {
+            throw new InvalidBackupException('The restore starts with part 0, the foundation.');
+        }
     }
 
     /**
