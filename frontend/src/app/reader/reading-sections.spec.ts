@@ -233,4 +233,20 @@ describe('focusUnits', () => {
     expect(atoms.slice(1).every((el) => el.classList.contains('reading-sentence'))).toBe(true);
     expect(atoms).toHaveLength(5);
   });
+
+  it('reaches the paragraphs of a tall blockquote through a wrapper', () => {
+    const quote = document.createElement('blockquote');
+    quote.innerHTML = '<div><p>First quoted line.</p><p>Second quoted line.</p></div>';
+    const units = focusUnits([quote], SCROLLER, measureBy({ BLOCKQUOTE: 400, P: 200 }), 'en');
+    expect(units.flat().map((el) => el.tagName)).toEqual(['P', 'P']);
+  });
+
+  it('never wraps block children of a tall list item into a sentence span', () => {
+    const list = document.createElement('ul');
+    list.innerHTML = `<li>${FOUR_SENTENCES}<ul><li>Nested item.</li></ul></li><li>Short.</li>`;
+    const measure = measureBy({ UL: 500, LI: 100 });
+    (list.firstElementChild as HTMLElement).dataset['h'] = '400';
+    focusUnits([list], SCROLLER, measure, 'en');
+    expect(list.querySelector('span')).toBeNull();
+  });
 });

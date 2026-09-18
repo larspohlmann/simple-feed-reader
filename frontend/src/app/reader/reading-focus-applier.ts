@@ -1,5 +1,5 @@
 import { type FocusCurve, focusOpacityForSpan } from './reading-focus';
-import { type FocusUnit, focusUnits } from './reading-sections';
+import type { FocusUnit, UnitStrategy } from './reading-sections';
 
 export interface ReadingFocusConfig {
   readonly scroller: HTMLElement;
@@ -8,11 +8,8 @@ export interface ReadingFocusConfig {
   /** enabled && !isWide && !reduceMotion — read live, off the reactive graph. */
   readonly isActive: () => boolean;
   readonly runOutsideZone?: <T>(run: () => T) => T;
-  /** Split a block taller than the phone screen into reading sections (#1077).
-   *  The article view sets it; the entry list keeps one unit per row. */
-  readonly split?: boolean;
-  /** The document language, for sentence splitting. */
-  readonly lang?: () => string;
+  /** Divides the blocks into focus units; without one, each block is its own. */
+  readonly units?: UnitStrategy;
 }
 
 /**
@@ -26,13 +23,8 @@ export class ReadingFocusApplier {
   private readonly onScroll = (): void => this.schedule();
   private frame = 0;
   private destroyed = false;
-  /** The current grouping; recomputed only when the geometry changes, not on
-   *  scroll (#982). One element per unit unless a tall block was split. */
   private units: FocusUnit[] = [];
   private regroupPending = true;
-  /** Every element carrying an opacity we set, so a unit that disappears — a
-   *  block's spans once it is no longer tall — gets cleared, not stranded. */
-  private written = new Set<HTMLElement>();
 
   constructor(private readonly config: ReadingFocusConfig) {
     this.runOutsideZone = config.runOutsideZone ?? ((run) => run());
@@ -95,25 +87,30 @@ export class ReadingFocusApplier {
   private recompute(): void {
     if (!this.config.isActive()) {
       this.blankAll();
-      this.regroupPending = true;
       return;
     }
-    if (this.regroupPending) {
-      this.units = this.regroup();
-      this.regroupPending = false;
-    }
+    const dropped = this.regroup();
     this.applyOpacities(this.measureOpacities());
+    for (const element of dropped) element.style.opacity = '';
   }
 
-  private regroup(): FocusUnit[] {
-    const { scroller, blocks, split, lang } = this.config;
-    if (!split) return blocks().map((block) => [block]);
-    return focusUnits(
-      blocks(),
-      scroller.clientHeight,
-      (element) => element.getBoundingClientRect().height,
-      lang?.() ?? document.documentElement.lang,
-    );
+  /**
+   * Returns the elements that left the grouping. A unit strategy reruns only on
+   * a geometry change, never on scroll (#982); bare blocks are reread every
+   * pass, so a row revealed between two refreshes still gets its opacity.
+   */
+  private regroup(): HTMLElement[] {
+    const { scroller, blocks, units } = this.config;
+    if (!units) {
+      this.units = blocks().map((block) => [block]);
+      return [];
+    }
+    if (!this.regroupPending) return [];
+    const previous = this.units.flat();
+    this.units = units(blocks(), scroller.clientHeight);
+    this.regroupPending = false;
+    const kept = new Set(this.units.flat());
+    return previous.filter((element) => !kept.has(element));
   }
 
   private measureOpacities(): string[] {
@@ -130,20 +127,17 @@ export class ReadingFocusApplier {
   }
 
   private applyOpacities(opacities: string[]): void {
-    const next = new Set<HTMLElement>();
     this.units.forEach((unit, index) => {
       for (const element of unit) {
         if (element.style.opacity !== opacities[index]) element.style.opacity = opacities[index];
-        next.add(element);
       }
     });
-    for (const element of this.written) if (!next.has(element)) element.style.opacity = '';
-    this.written = next;
   }
 
   private blankAll(): void {
-    for (const element of this.written) element.style.opacity = '';
-    this.written.clear();
+    for (const element of this.units.flat()) element.style.opacity = '';
+    this.units = [];
+    this.regroupPending = true;
     for (const block of this.config.blocks()) block.style.opacity = '';
   }
 }

@@ -42,6 +42,7 @@ import { ListScrollMemory } from '../list-scroll-memory';
 import { nextHeaderHidden } from '../header-scroll';
 import { ARTICLE_FOCUS_CURVE, needsReadingTail, readingBlocks } from '../reading-focus';
 import { ReadingFocusApplier } from '../reading-focus-applier';
+import { sectionedUnits } from '../reading-sections';
 import { articleOverflowsViewport, readingProgress } from '../reading-progress';
 import {
   AXIS_LOCK_MIN,
@@ -370,7 +371,7 @@ export class ReaderViewComponent {
         blocks: () => readingBlocks(content),
         curve: ARTICLE_FOCUS_CURVE,
         isActive: () => this.readingFocus.enabled() && !this.screen.isWide() && !this.reduceMotion,
-        split: true,
+        units: sectionedUnits(() => this.language.lang()),
       });
     });
 

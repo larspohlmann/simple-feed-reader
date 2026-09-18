@@ -1,5 +1,6 @@
 import { ReadingFocusApplier } from './reading-focus-applier';
 import { ARTICLE_FOCUS_CURVE, LIST_FOCUS_CURVE } from './reading-focus';
+import { SENTENCE_CLASS, sectionedUnits } from './reading-sections';
 
 class MockResizeObserver {
   static instances: MockResizeObserver[] = [];
@@ -146,6 +147,23 @@ it('refresh() re-observes newly added blocks', async () => {
   applier.destroy();
 });
 
+it('picks up a row revealed between two refreshes on the next scroll', async () => {
+  const { scroller, blocks } = scrollerWith(2);
+  const applier = new ReadingFocusApplier({
+    scroller,
+    blocks,
+    curve: LIST_FOCUS_CURVE,
+    isActive: () => true,
+  });
+  await frames();
+  const revealed = document.createElement('article');
+  scroller.appendChild(revealed);
+  scroller.dispatchEvent(new Event('scroll'));
+  await frames();
+  expect(revealed.style.opacity).not.toBe('');
+  applier.destroy();
+});
+
 it('stops recomputing after destroy()', async () => {
   const { scroller, blocks } = scrollerWith(3);
   const applier = new ReadingFocusApplier({
@@ -194,8 +212,7 @@ describe('splitting a tall block into sections', () => {
       blocks,
       curve: ARTICLE_FOCUS_CURVE,
       isActive: () => true,
-      split: true,
-      lang: () => 'en',
+      units: sectionedUnits(() => 'en'),
     });
   }
 
@@ -204,7 +221,7 @@ describe('splitting a tall block into sections', () => {
     const applier = articleApplier(scroller, blocks);
     await frames();
 
-    const spans = Array.from(block.querySelectorAll<HTMLElement>('span.reading-sentence'));
+    const spans = Array.from(block.querySelectorAll<HTMLElement>(`span.${SENTENCE_CLASS}`));
     expect(spans).toHaveLength(4);
     spans.forEach((span, i) => stubRect(span, i * 100, 100)); // stacked down the scroller
     observer().fire();
@@ -220,7 +237,7 @@ describe('splitting a tall block into sections', () => {
     const { scroller, block, blocks } = tallArticle();
     const applier = articleApplier(scroller, blocks);
     await frames();
-    const spans = Array.from(block.querySelectorAll<HTMLElement>('span.reading-sentence'));
+    const spans = Array.from(block.querySelectorAll<HTMLElement>(`span.${SENTENCE_CLASS}`));
     spans.forEach((span, i) => stubRect(span, i * 100, 100));
     observer().fire();
     await frames();
@@ -238,7 +255,7 @@ describe('splitting a tall block into sections', () => {
     const { scroller, block, blocks } = tallArticle();
     const applier = articleApplier(scroller, blocks);
     await frames();
-    const spans = Array.from(block.querySelectorAll<HTMLElement>('span.reading-sentence'));
+    const spans = Array.from(block.querySelectorAll<HTMLElement>(`span.${SENTENCE_CLASS}`));
     spans.forEach((span, i) => stubRect(span, i * 100, 100));
     observer().fire();
     await frames();

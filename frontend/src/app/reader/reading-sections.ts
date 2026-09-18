@@ -1,13 +1,13 @@
-// Splitting a paragraph that fills the phone screen into reading sections, so
-// the article focus effect keeps pointing the eye at a block of text rather
-// than lighting the whole screen (#1077). The maths here is pure and testable;
-// `ReadingFocusApplier` supplies the live measurements.
+// Dividing a block that fills the phone screen into reading sections, so the
+// article focus effect keeps pointing the eye at a block of text rather than
+// lighting the whole screen (#1077).
+
+import { hasBlockChildren, readingBlocks } from './reading-focus';
 
 /** A "sentence" shorter than this many characters joins the following one, so
  *  an abbreviation ("z. B.", "Dr.") never becomes its own section. */
 export const MIN_SENTENCE_LENGTH = 20;
 
-/** Marks a span this module wrapped around one sentence of a tall paragraph. */
 export const SENTENCE_CLASS = 'reading-sentence';
 
 /** A block counts as "tall" once it fills more than this fraction of the
@@ -17,32 +17,35 @@ export const TALL_BLOCK_FRACTION = 0.5;
 /** Each section of a tall block aims for this fraction of the scroller. */
 export const SECTION_TARGET_FRACTION = 0.25;
 
-/** A list of elements that share one focus opacity. A short paragraph is a
- *  one-element unit; a section of a tall block holds several. */
+/** Elements that share one focus opacity: a short block alone, or the sentence
+ *  spans or list items that make up one section of a tall block. */
 export type FocusUnit = HTMLElement[];
 
-/** How tall an element is, in the scroller's own pixels. */
 export type MeasureHeight = (element: HTMLElement) => number;
 
-const MAX_SPLIT_DEPTH = 4;
-const UNSPLITTABLE_TAGS = new Set(['PRE', 'FIGURE', 'VIDEO', 'IFRAME', 'IMG']);
+export type UnitStrategy = (blocks: HTMLElement[], scrollerHeight: number) => FocusUnit[];
 
-/**
- * The sentences of `text` in the document's language. A fragment shorter than
- * `MIN_SENTENCE_LENGTH` merges into the sentence that follows it — a trailing
- * fragment merges into the one before. Without `Intl.Segmenter` the text stays
- * whole, so the block keeps today's single-unit behaviour.
- */
+const MAX_SPLIT_DEPTH = 4;
+
+const segmenters = new Map<string, Intl.Segmenter>();
+const sentencesOf = new WeakMap<HTMLElement, HTMLElement[]>();
+
+/** Without `Intl.Segmenter` the text stays whole, so its block stays one unit. */
 export function sentenceSegments(text: string, lang: string): string[] {
-  const segmenter = createSentenceSegmenter(lang);
+  const segmenter = sentenceSegmenter(lang);
   if (!segmenter) return [text];
   const raw = Array.from(segmenter.segment(text), (piece) => piece.segment);
   return mergeShortFragments(raw);
 }
 
-function createSentenceSegmenter(lang: string): Intl.Segmenter | undefined {
+function sentenceSegmenter(lang: string): Intl.Segmenter | undefined {
   if (typeof Intl.Segmenter === 'undefined') return undefined;
-  return new Intl.Segmenter(lang || undefined, { granularity: 'sentence' });
+  let segmenter = segmenters.get(lang);
+  if (!segmenter) {
+    segmenter = new Intl.Segmenter(lang || undefined, { granularity: 'sentence' });
+    segmenters.set(lang, segmenter);
+  }
+  return segmenter;
 }
 
 function mergeShortFragments(segments: string[]): string[] {
@@ -69,26 +72,25 @@ interface SplitPoint {
 }
 
 /**
- * Wraps each sentence of an inline-content block in its own inline span and
- * returns the spans. Splits only at sentence boundaries that fall in text nodes
- * directly under the block, so a boundary inside `<em>`/`<a>` is ignored and
- * that inline element stays whole in one span. Wraps once — a second call
- * returns the spans already present. Returns an empty list when the block does
- * not divide (one sentence, no top-level boundary, or no `Intl.Segmenter`).
+ * Wraps each sentence of an inline-content block in a span, once, and returns
+ * the spans — none when the block does not divide. A boundary inside inline
+ * markup (`<em>`, `<a>`) is skipped, so that element stays whole in one span.
  */
 export function wrapSentences(block: HTMLElement, lang: string): HTMLElement[] {
-  const alreadyWrapped = sentenceSpans(block);
-  if (alreadyWrapped.length > 0) return alreadyWrapped;
+  let spans = sentencesOf.get(block);
+  if (!spans) {
+    spans = wrapOnce(block, lang);
+    sentencesOf.set(block, spans);
+  }
+  return spans;
+}
+
+function wrapOnce(block: HTMLElement, lang: string): HTMLElement[] {
   const segments = sentenceSegments(block.textContent ?? '', lang);
   if (segments.length <= 1) return [];
   const points = topLevelSplitPoints(block, sentenceStartOffsets(segments));
   if (points.length === 0) return [];
-  wrapRuns(block, runStartNodes(points));
-  return sentenceSpans(block);
-}
-
-function sentenceSpans(block: HTMLElement): HTMLElement[] {
-  return Array.from(block.querySelectorAll<HTMLElement>(`:scope > span.${SENTENCE_CLASS}`));
+  return wrapRuns(block, runStartNodes(points));
 }
 
 function sentenceStartOffsets(segments: string[]): number[] {
@@ -120,6 +122,7 @@ function topLevelSplitPoints(block: HTMLElement, offsets: number[]): SplitPoint[
   return points;
 }
 
+// Last point first: `splitText` shifts every offset behind it in the same node.
 function runStartNodes(points: SplitPoint[]): Set<Node> {
   const starts = new Set<Node>();
   for (const point of [...points].reverse()) {
@@ -128,31 +131,25 @@ function runStartNodes(points: SplitPoint[]): Set<Node> {
   return starts;
 }
 
-function wrapRuns(block: HTMLElement, runStarts: Set<Node>): void {
-  const runs: Node[][] = [];
-  let current: Node[] = [];
+function wrapRuns(block: HTMLElement, runStarts: Set<Node>): HTMLElement[] {
+  const spans: HTMLElement[] = [];
+  let span: HTMLElement | undefined;
   for (const child of Array.from(block.childNodes)) {
-    if (runStarts.has(child) && current.length > 0) {
-      runs.push(current);
-      current = [];
+    if (!span || runStarts.has(child)) {
+      span = block.ownerDocument.createElement('span');
+      span.className = SENTENCE_CLASS;
+      block.insertBefore(span, child);
+      spans.push(span);
     }
-    current.push(child);
+    span.appendChild(child);
   }
-  if (current.length > 0) runs.push(current);
-  for (const run of runs) {
-    const span = block.ownerDocument.createElement('span');
-    span.className = SENTENCE_CLASS;
-    block.insertBefore(span, run[0]);
-    for (const node of run) span.appendChild(node);
-  }
+  return spans;
 }
 
 /**
- * Groups adjacent units into sections by cumulative height. The section count
- * is `ceil(total / targetHeight)`, capped at the number of units, so a single
- * unit taller than the target stays one section. Each section holds a
- * contiguous run of unit indices, divided as evenly as the unit boundaries
- * allow — no cutting mid-unit, no tiny remainder section.
+ * Contiguous runs of unit indices, `ceil(total / targetHeight)` of them, divided
+ * as evenly as the unit boundaries allow: no cut inside a unit, no tiny
+ * remainder section, and a unit taller than the target stays one section.
  */
 export function groupIntoSections(unitHeights: number[], targetHeight: number): number[][] {
   if (unitHeights.length === 0) return [];
@@ -162,56 +159,34 @@ export function groupIntoSections(unitHeights: number[], targetHeight: number): 
   const groups: number[][] = [];
   let current: number[] = [];
   let runningHeight = 0;
+  const closesSection = (index: number): boolean => {
+    const sectionsLeft = sectionCount - 1 - groups.length;
+    if (sectionsLeft <= 0) return false;
+    const idealHeight = ((groups.length + 1) * total) / sectionCount;
+    return runningHeight >= idealHeight || unitHeights.length - 1 - index <= sectionsLeft;
+  };
   unitHeights.forEach((height, index) => {
     current.push(index);
     runningHeight += height;
-    if (
-      shouldCloseSection(
-        groups.length,
-        sectionCount,
-        index,
-        unitHeights.length,
-        runningHeight,
-        total,
-      )
-    ) {
-      groups.push(current);
-      current = [];
-    }
+    if (!closesSection(index)) return;
+    groups.push(current);
+    current = [];
   });
   if (current.length > 0) groups.push(current);
   return groups;
 }
 
-function shouldCloseSection(
-  sectionsClosed: number,
-  sectionCount: number,
-  unitIndex: number,
-  unitCount: number,
-  runningHeight: number,
-  total: number,
-): boolean {
-  if (sectionsClosed >= sectionCount - 1) return false;
-  const unitsLeft = unitCount - 1 - unitIndex;
-  const sectionsLeft = sectionCount - sectionsClosed - 1;
-  const idealHeight = ((sectionsClosed + 1) * total) / sectionCount;
-  return runningHeight >= idealHeight || unitsLeft <= sectionsLeft;
-}
-
-/**
- * The focus units for a run of reading blocks. A block shorter than the tall
- * threshold is one unit. A tall block is replaced by its natural units — a
- * paragraph by its sentences, a list by its items, a blockquote by its child
- * blocks — grouped into sections that each aim for `SECTION_TARGET_FRACTION` of
- * the scroller. Media and `<pre>` stay whole. Grouping follows the live layout
- * `measure` reports, so a rotation or font change regroups without re-wrapping.
- */
 interface SplitContext {
   readonly tallThreshold: number;
   readonly measure: MeasureHeight;
   readonly lang: string;
 }
 
+/**
+ * One unit per block, except that a tall block gives way to sections of its
+ * natural units. Wraps the sentences of a tall paragraph the first time it sees
+ * one; the grouping itself follows `measure`, so a rotation only regroups.
+ */
 export function focusUnits(
   blocks: HTMLElement[],
   scrollerHeight: number,
@@ -220,40 +195,52 @@ export function focusUnits(
 ): FocusUnit[] {
   const context: SplitContext = {
     tallThreshold: scrollerHeight * TALL_BLOCK_FRACTION,
-    measure,
+    measure: measuringOnce(measure),
     lang,
   };
   const sectionTarget = scrollerHeight * SECTION_TARGET_FRACTION;
-  const units: FocusUnit[] = [];
-  for (const block of blocks) {
-    if (measure(block) <= context.tallThreshold) {
-      units.push([block]);
-      continue;
-    }
+  return blocks.flatMap((block) => {
+    if (context.measure(block) <= context.tallThreshold) return [[block]];
     const atoms = atomicUnits(block, context, 0);
-    if (atoms.length <= 1) {
-      units.push([block]);
-      continue;
+    const sections = groupIntoSections(atoms.map(context.measure), sectionTarget);
+    return sections.map((section) => section.map((index) => atoms[index]));
+  });
+}
+
+/** The article view's strategy: `focusUnits` over the live layout. */
+export function sectionedUnits(lang: () => string): UnitStrategy {
+  return (blocks, scrollerHeight) =>
+    focusUnits(blocks, scrollerHeight, (element) => element.getBoundingClientRect().height, lang());
+}
+
+function measuringOnce(measure: MeasureHeight): MeasureHeight {
+  const heights = new Map<HTMLElement, number>();
+  return (element) => {
+    let height = heights.get(element);
+    if (height === undefined) {
+      height = measure(element);
+      heights.set(element, height);
     }
-    const groups = groupIntoSections(atoms.map(measure), sectionTarget);
-    for (const group of groups) units.push(group.map((index) => atoms[index]));
-  }
-  return units;
+    return height;
+  };
 }
 
 function atomicUnits(block: HTMLElement, context: SplitContext, depth: number): HTMLElement[] {
-  const children = depth < MAX_SPLIT_DEPTH ? naturalChildren(block, context.lang) : [];
-  if (children.length <= 1) return [block];
-  return children.flatMap((child) =>
-    context.measure(child) > context.tallThreshold
-      ? atomicUnits(child, context, depth + 1)
-      : [child],
+  const parts = depth < MAX_SPLIT_DEPTH ? divide(block, context.lang) : [];
+  if (parts.length <= 1) return [block];
+  return parts.flatMap((part) =>
+    context.measure(part) > context.tallThreshold ? atomicUnits(part, context, depth + 1) : [part],
   );
 }
 
-function naturalChildren(block: HTMLElement, lang: string): HTMLElement[] {
-  if (UNSPLITTABLE_TAGS.has(block.tagName)) return [];
+function divide(block: HTMLElement, lang: string): HTMLElement[] {
   switch (block.tagName) {
+    case 'PRE':
+    case 'FIGURE':
+    case 'VIDEO':
+    case 'IFRAME':
+    case 'IMG':
+      return [];
     case 'UL':
     case 'OL':
       return childElements(block, 'li');
@@ -261,10 +248,8 @@ function naturalChildren(block: HTMLElement, lang: string): HTMLElement[] {
       return childElements(block, 'dt, dd');
     case 'TABLE':
       return Array.from(block.querySelectorAll<HTMLElement>('tr'));
-    case 'BLOCKQUOTE':
-      return Array.from(block.children) as HTMLElement[];
     default:
-      return wrapSentences(block, lang);
+      return hasBlockChildren(block) ? readingBlocks(block) : wrapSentences(block, lang);
   }
 }
 
