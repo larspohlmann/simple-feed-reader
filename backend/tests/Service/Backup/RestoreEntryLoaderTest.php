@@ -8,7 +8,6 @@ use App\Entity\User;
 use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\FeedRepository;
-use App\Repository\SubscriptionRepository;
 use App\Service\Backup\Dto\EntryLine;
 use App\Service\Backup\EntryBatchInserter;
 use App\Service\Backup\RestoreEntryLoader;
@@ -80,20 +79,12 @@ final class RestoreEntryLoaderTest extends TestCase
         );
     }
 
-    /**
-     * A real RestoreFeedTargets over stubbed repositories: this feed url
-     * resolves to feed id 7, unread by any other account, so the target it
-     * lazily builds behaves exactly like the hand-built RestoreFeedTarget this
-     * test used before RestoreFeedTargets existed.
-     */
     private function targets(EntryRepository $entries): RestoreFeedTargets
     {
-        $subscriptions = $this->createStub(SubscriptionRepository::class);
-        $subscriptions->method('feedIdsByUrlForUser')->willReturn([self::FEED_URL => 7]);
         $feeds = $this->createStub(FeedRepository::class);
         $feeds->method('isReadByAnotherUser')->willReturn(false);
 
-        return new RestoreFeedTargets(1, $subscriptions, $feeds, $entries);
+        return new RestoreFeedTargets(1, [self::FEED_URL => 7], $feeds, $entries);
     }
 
     private function user(): User

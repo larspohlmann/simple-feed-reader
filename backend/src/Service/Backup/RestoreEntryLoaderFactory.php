@@ -8,16 +8,13 @@ use App\Entity\User;
 use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\FeedRepository;
-use App\Repository\SubscriptionRepository;
 use App\Service\Search\EntryIndexer;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * Bundles the collaborators a fresh RestoreEntryLoader needs — six for the
- * loader itself, two more to build its RestoreFeedTargets — behind one
- * autowired service, so EntryPartRestorer's own constructor stays a handful
- * of parameters instead of carrying every one of these itself.
+ * Builds the per-request RestoreEntryLoader, so EntryPartRestorer does not
+ * carry the loader's collaborators itself.
  */
 final readonly class RestoreEntryLoaderFactory
 {
@@ -28,12 +25,14 @@ final readonly class RestoreEntryLoaderFactory
         private EntryBatchInserter $inserter,
         private EntryIndexer $indexer,
         private ClockInterface $clock,
-        private SubscriptionRepository $subscriptions,
         private FeedRepository $feeds,
     ) {
     }
 
-    public function create(User $user): RestoreEntryLoader
+    /**
+     * @param array<string, int> $feedIdsByUrl
+     */
+    public function create(User $user, array $feedIdsByUrl): RestoreEntryLoader
     {
         $loader = new RestoreEntryLoader(
             $this->em,
@@ -44,7 +43,7 @@ final readonly class RestoreEntryLoaderFactory
             $this->clock,
         );
         $loader->begin(
-            new RestoreFeedTargets((int) $user->getId(), $this->subscriptions, $this->feeds, $this->entries),
+            new RestoreFeedTargets((int) $user->getId(), $feedIdsByUrl, $this->feeds, $this->entries),
             $user,
         );
 

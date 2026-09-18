@@ -18,24 +18,9 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * The second half of one restore pass: the file's entries and entry states,
- * which together are everything that does not fit in memory at once.
- *
- * Constructed per restore, never shared — every field here is per-run working
- * state. It starts only once the account's shape is written and the entity
- * manager has been cleared, so it holds no entity from the earlier phases:
- * the feed ids, the "may I create entries here?" verdicts and the guid hash ⇒
- * entry id maps are resolved lazily through the RestoreFeedTargets set it is
- * given, and the User arrives as a reference this class re-acquires after
- * every clear of its own.
- *
- * State idempotency (spec §6, deviation D2): a state line is held rather than
- * persisted as it is read. At each batch boundary, writeHeldStates() asks in
- * one query which of the held entries already carry a state row for this
- * user, and persists only the ones that do not — an existing row is left
- * exactly as it is, even if the file disagrees with its flags. This is what
- * makes a retried part, and a mid-restore click the user made themselves,
- * idempotent instead of a data race.
+ * Loads one entry part's entries and entry states. Constructed per request,
+ * never shared: every field is per-run working state, and the User is a
+ * reference re-acquired after every clear().
  */
 final class RestoreEntryLoader
 {
@@ -233,10 +218,8 @@ final class RestoreEntryLoader
     }
 
     /**
-     * The idempotency check (spec §6, deviation D2): one query for every held
-     * entry id, then persist only the ones without a state row already — an
-     * existing row wins over the file, on a retried part and on a state the
-     * user changed mid-restore alike.
+     * An existing state row wins over the file: that keeps a retried part
+     * idempotent and a click made mid-restore intact.
      */
     private function writeHeldStates(): void
     {
@@ -247,7 +230,8 @@ final class RestoreEntryLoader
         }
 
         $entryIds = array_map(static fn (array $pair): int => $pair[1], $held);
-        $alreadyStated = $this->entryStates->entryIdsWithStateOf((int) $this->userReference()->getId(), $entryIds);
+        $userId = (int) $this->userReference()->getId();
+        $alreadyStated = array_flip($this->entryStates->entryIdsWithStateForUser($userId, $entryIds));
         foreach ($held as [$line, $entryId]) {
             if (isset($alreadyStated[$entryId])) {
                 continue;

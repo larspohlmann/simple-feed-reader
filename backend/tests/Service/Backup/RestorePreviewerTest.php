@@ -270,12 +270,6 @@ final class RestorePreviewerTest extends DbTestCase
         self::assertSame(1, $preview->currentRecommendationRuns);
     }
 
-    /**
-     * The foundation carries no entry lines of its own, so what the preview
-     * shows for entries/entryStates is the header's own claimed totals across
-     * every entry part — not a count this file's lines could satisfy on their
-     * own. Task 5 checks the parts as they actually arrive.
-     */
     public function testToLoadEntriesEqualsTheHeadersClaimedTotals(): void
     {
         $user = $this->makeUser('claimed-totals@example.com');

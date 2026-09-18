@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Backup;
 
 use App\Service\Backup\Dto\BackupHeader;
-use App\Service\Backup\Dto\EntryLine;
-use App\Service\Backup\Dto\EntryStateLine;
 use App\Service\Backup\Dto\FeedLine;
 use App\Service\Backup\Dto\SavedSearchLine;
 use App\Service\Backup\Dto\SubscriptionLine;
@@ -14,14 +12,9 @@ use App\Service\Backup\Dto\TagLine;
 use App\Service\Backup\Exception\InvalidBackupException;
 
 /**
- * One inspection's working state: the header, a count per repeatable line
- * kind, and the two name sets that make the foundation's own cross-references
- * checkable while it streams past. Built per inspect() call and thrown away
- * with it, which is why it does not live on the shared BackupInspector.
- *
- * Entry and entry-state lines are counted only — an entry part carries no
- * subscriptions to check them against, so that verification is Task 5's, run
- * against the account's actual rows rather than the file's own claims.
+ * One foundation inspection's working state: the header, a count per line
+ * kind, and the name sets that make its cross-references checkable while it
+ * streams past. Built per inspect() call and thrown away with it.
  */
 final class BackupTally
 {
@@ -42,8 +35,6 @@ final class BackupTally
         'savedSearches' => 0,
         'feeds' => 0,
         'subscriptions' => 0,
-        'entries' => 0,
-        'entryStates' => 0,
     ];
 
     public function accept(object $line): void
@@ -54,17 +45,19 @@ final class BackupTally
             $line instanceof SavedSearchLine => ++$this->counts['savedSearches'],
             $line instanceof FeedLine => $this->acceptFeed($line),
             $line instanceof SubscriptionLine => $this->acceptSubscription($line),
-            $line instanceof EntryLine => ++$this->counts['entries'],
-            $line instanceof EntryStateLine => ++$this->counts['entryStates'],
             // The account line is validated by its own dto and loaded in pass 2.
             default => null,
         };
     }
 
+    /**
+     * A foundation holds no entry lines, so the entry counts are its header's claimed totals.
+     */
     public function inventory(): BackupInventory
     {
         $header = $this->header ?? throw new InvalidBackupException('The backup is missing its header line.');
-        [$entries, $entryStates] = $this->entryCounts($header);
+        $totals = $header->totals
+            ?? throw new InvalidBackupException('The restore starts with part 0, the foundation.');
 
         return new BackupInventory(
             header: $header,
@@ -72,28 +65,9 @@ final class BackupTally
             savedSearches: $this->counts['savedSearches'],
             feeds: $this->counts['feeds'],
             subscriptions: $this->counts['subscriptions'],
-            entries: $entries,
-            entryStates: $entryStates,
+            entries: $totals->entries,
+            entryStates: $totals->entryStates,
         );
-    }
-
-    /**
-     * A foundation's own counted entries/entryStates are always zero; use the
-     * header's claimed totals instead. An entry part counts its own lines.
-     *
-     * @return array{int, int}
-     */
-    private function entryCounts(BackupHeader $header): array
-    {
-        if (!$header->isFoundation()) {
-            return [$this->counts['entries'], $this->counts['entryStates']];
-        }
-
-        $totals = $header->totals ?? throw new \LogicException(
-            'BackupReader must refuse a foundation with no totals before it reaches the tally.',
-        );
-
-        return [$totals->entries, $totals->entryStates];
     }
 
     /**

@@ -171,11 +171,7 @@ class SubscriptionRepository extends ServiceEntityRepository
     }
 
     /**
-     * The subset of the given feed urls this user actually subscribes to,
-     * keyed by url. An entry part names its feeds by url (it carries no feed
-     * lines of its own), so this is what turns those urls into the feed ids
-     * the entry and entry-state phases key their work by — a url absent from
-     * the result names a feed this user does not subscribe to.
+     * The subset of the given feed urls this user subscribes to, keyed by url.
      *
      * @param list<string> $feedUrls
      *

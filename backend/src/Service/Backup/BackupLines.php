@@ -25,6 +25,15 @@ use App\Service\Backup\Dto\BackupTotals;
  */
 final readonly class BackupLines
 {
+    private const array NO_COUNTS = [
+        BackupSchema::KIND_TAG => 0,
+        BackupSchema::KIND_SAVED_SEARCH => 0,
+        BackupSchema::KIND_FEED => 0,
+        BackupSchema::KIND_SUBSCRIPTION => 0,
+        BackupSchema::KIND_ENTRY => 0,
+        BackupSchema::KIND_ENTRY_STATE => 0,
+    ];
+
     public function foundationHeader(BackupProvenance $provenance, int $parts, BackupTotals $totals): string
     {
         return $this->encode([
@@ -183,9 +192,20 @@ final readonly class BackupLines
     }
 
     /**
+     * @param array<string, int> $counts keyed by BackupSchema::KIND_*; an absent kind counts zero
+     */
+    public function footerLine(array $counts): string
+    {
+        return $this->encode([
+            'kind' => BackupSchema::KIND_FOOTER,
+            'counts' => array_replace(self::NO_COUNTS, $counts),
+        ]);
+    }
+
+    /**
      * @param array<string, mixed> $line
      */
-    public function encode(array $line): string
+    private function encode(array $line): string
     {
         return json_encode($line, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE);
     }

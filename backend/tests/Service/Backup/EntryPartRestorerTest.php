@@ -13,6 +13,7 @@ use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\FeedRepository;
 use App\Repository\SubscriptionRepository;
+use App\Service\Backup\BackupFitCheck;
 use App\Service\Backup\BackupReader;
 use App\Service\Backup\EntryBatchInserter;
 use App\Service\Backup\EntryPartInspector;
@@ -28,18 +29,6 @@ use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-/**
- * The entries endpoint's service, spec §6: additive and idempotent, unlike
- * AccountRestorer's start() — no confirmation phrase, no wipe. Every case
- * here is a guard from the spec, not incidental behaviour:
- *
- * - a retried part (the client resent the same upload) creates nothing twice;
- * - an entry the scheduler fetched independently, mid-restore, is kept as is;
- * - an existing state row always wins over the file (deviation D2), so a
- *   change the user made mid-restore is never clobbered by a retry;
- * - a shared feed's entries are never pushed into a stranger's unread list;
- * - a dangling feed reference is refused before the first row is written.
- */
 final class EntryPartRestorerTest extends DbTestCase
 {
     private const string FEED_URL = 'https://entry-part.example/feed.xml';
@@ -189,6 +178,19 @@ final class EntryPartRestorerTest extends DbTestCase
         self::assertSame(0, $this->scalarInt('SELECT COUNT(*) FROM entry'));
     }
 
+    public function testAStateNamingAnUnsubscribedFeedIsRefused(): void
+    {
+        $user = $this->subscribedUser(self::FEED_URL);
+        $gzip = $this->entryPart([
+            $this->entryLine('a'),
+            $this->entryStateLine('b', feedUrl: 'https://foreign.example/feed.xml'),
+        ]);
+
+        $this->expectException(InvalidBackupException::class);
+
+        $this->restorer()->load($user, $gzip);
+    }
+
     public function testTheFoundationIsRefused(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);
@@ -280,7 +282,7 @@ final class EntryPartRestorerTest extends DbTestCase
         self::assertSame($createdIds, $indexedIds);
     }
 
-    private function restorer(int $accountEntryCeiling = 500_000): EntryPartRestorer
+    private function restorer(int $accountEntryCeiling = BackupFitCheck::MAX_ENTRIES): EntryPartRestorer
     {
         /** @var BackupReader $reader */
         $reader = self::getContainer()->get(BackupReader::class);
@@ -303,7 +305,6 @@ final class EntryPartRestorerTest extends DbTestCase
             $inserter,
             new EntryIndexer($this->indexWriter, new NullLogger()),
             new MockClock('2026-08-20 00:00:00', 'UTC'),
-            $subscriptions,
             $feeds,
         );
 

@@ -116,8 +116,12 @@ final class BackupPartWalk
     {
         ++$this->partsWritten;
         $header = $this->lines->entryPartHeader($this->provenance, $this->partsWritten);
+        $footer = $this->lines->footerLine([
+            BackupSchema::KIND_ENTRY => $this->buffer->entryCount(),
+            BackupSchema::KIND_ENTRY_STATE => $this->buffer->entryStateCount(),
+        ]);
 
-        return BackupPart::entries($this->partsWritten, $this->buffer->drain($header));
+        return BackupPart::entries($this->partsWritten, $this->buffer->drain($header, $footer));
     }
 
     /**

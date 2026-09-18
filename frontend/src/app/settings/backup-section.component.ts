@@ -158,7 +158,7 @@ export class BackupSectionComponent {
 
   onFile(file: File): void {
     this.restoreRun.reset();
-    this.archive = null;
+    this.releaseArchive();
     this.file.set(file);
     this.result.set(null);
     this.error.set(null);
@@ -175,18 +175,23 @@ export class BackupSectionComponent {
 
   private async openAndPreview(file: File): Promise<void> {
     try {
-      const archive = await openBackupArchive(file);
+      this.archive = await openBackupArchive(file);
       const preview = await firstValueFrom(
-        this.api.previewAccountRestore(await archive.foundation()),
+        this.api.previewAccountRestore(await this.archive.foundation()),
       );
-      this.archive = archive;
       this.previewing.set(false);
       this.preview.set(preview);
     } catch (error) {
+      this.releaseArchive();
       this.previewing.set(false);
       this.preview.set(null);
       this.error.set(this.previewFailure(error));
     }
+  }
+
+  private releaseArchive(): void {
+    void this.archive?.close().catch(() => undefined);
+    this.archive = null;
   }
 
   private previewFailure(error: unknown): Problem {
@@ -227,7 +232,8 @@ export class BackupSectionComponent {
     this.file.set(null);
     this.typed.set('');
     this.preview.set(null);
-    this.archive = null;
+    this.restoreRun.reset();
+    this.releaseArchive();
     this.result.set({ loaded });
     this.subs.load();
     // Restored feeds arrive with a virgin schedule and are empty until a

@@ -105,6 +105,19 @@ describe('BackupSectionComponent', () => {
     expect(text).toContain('5');
   });
 
+  it('closes the previous archive when another file is chosen', async () => {
+    const f = mount();
+    const { archive: first } = await chooseFile(f);
+    ctrl.expectOne('https://api.test/api/account/restore/preview').flush(previewResponse);
+    await flushPromises();
+
+    await chooseFile(f);
+    ctrl.expectOne('https://api.test/api/account/restore/preview').flush(previewResponse);
+    await flushPromises();
+
+    expect(first.close).toHaveBeenCalledTimes(1);
+  });
+
   it('shows the old-format message and makes no API call for a .json.gz file', async () => {
     const f = mount();
     const file = new File(['gz'], 'account-backup.json.gz', { type: 'application/gzip' });
@@ -183,6 +196,7 @@ describe('BackupSectionComponent', () => {
     await flushPromises();
     f.detectChanges();
 
+    expect(archive.close).toHaveBeenCalledTimes(1);
     expect(c.result()?.loaded).toEqual({
       tags: 1,
       savedSearches: 2,

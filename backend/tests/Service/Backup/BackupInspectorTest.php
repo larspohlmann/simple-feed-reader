@@ -237,11 +237,6 @@ final class BackupInspectorTest extends TestCase
         self::assertSame(1, $inventory->subscriptions);
     }
 
-    /**
-     * A foundation carries no entry lines of its own, so its entries/
-     * entryStates come from the header's own claimed totals — a genuine
-     * completeness check waits for the entry parts themselves (Task 5).
-     */
     public function testAFoundationReportsItsClaimedTotalsAsEntryCounts(): void
     {
         $gzip = self::gzipOf([
@@ -255,25 +250,18 @@ final class BackupInspectorTest extends TestCase
         self::assertSame(2, $inventory->entryStates);
     }
 
-    /**
-     * An entry part carries no subscriptions to check its rows against, so
-     * its entries/entryStates are simply the lines it actually holds.
-     */
-    public function testAnEntryPartReportsItsCountedLines(): void
+    public function testAnEntryPartIsRefused(): void
     {
         $gzip = self::gzipOf([
             self::entryPartHeader(),
             self::entry(self::FEED_URL, 'a'),
-            self::entry(self::FEED_URL, 'b'),
             self::entryState(self::FEED_URL, 'a'),
-            self::footer(['entry' => 2, 'entryState' => 1]),
+            self::footer(['entry' => 1, 'entryState' => 1]),
         ]);
 
-        $inventory = self::inspector()->inspect($gzip);
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessage('The restore starts with part 0, the foundation.');
 
-        self::assertSame(2, $inventory->entries);
-        self::assertSame(1, $inventory->entryStates);
-        self::assertSame(1, $inventory->header->part);
-        self::assertFalse($inventory->header->isFoundation());
+        self::inspector()->inspect($gzip);
     }
 }

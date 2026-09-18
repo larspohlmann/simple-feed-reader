@@ -27,8 +27,8 @@ use Doctrine\ORM\EntityManagerInterface;
  * autowired RestoreLoader.
  *
  * The account is assumed to be freshly reset. Nothing here reads or updates a
- * row the wipe left behind. Entries and entry states arrive through a
- * separate part and a separate loader (Task 5); this pass never sees them.
+ * row the wipe left behind. Entries and entry states belong to
+ * EntryPartRestorer; this pass never sees them.
  */
 final class RestoreLoadPass
 {

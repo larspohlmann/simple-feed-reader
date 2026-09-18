@@ -54,31 +54,13 @@ final class BackupPartBuffer
         return \count($this->entryStateLines);
     }
 
-    public function drain(string $headerLine): string
+    public function drain(string $headerLine, string $footerLine): string
     {
-        $lines = [$headerLine, ...$this->entryLines, ...$this->entryStateLines, $this->footerLine()];
+        $lines = [$headerLine, ...$this->entryLines, ...$this->entryStateLines, $footerLine];
         $gzipBytes = BackupPart::gzip(implode("\n", $lines) . "\n");
         $this->reset();
 
         return $gzipBytes;
-    }
-
-    private function footerLine(): string
-    {
-        return json_encode(
-            [
-                'kind' => BackupSchema::KIND_FOOTER,
-                'counts' => [
-                    'tag' => 0,
-                    'savedSearch' => 0,
-                    'feed' => 0,
-                    'subscription' => 0,
-                    'entry' => $this->entryCount(),
-                    'entryState' => $this->entryStateCount(),
-                ],
-            ],
-            \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE,
-        );
     }
 
     private function reset(): void

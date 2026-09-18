@@ -240,12 +240,6 @@ class EntryRepository extends ServiceEntityRepository
         return $idsByHash;
     }
 
-    /**
-     * The account's entry ceiling is a property of its subscriptions, not of
-     * one part in isolation — EntryPartInspector adds a part's own count to
-     * this before comparing against the ceiling, so a restore uploaded as many
-     * small parts is judged the same as one large one.
-     */
     public function countInFeedsSubscribedBy(int $userId): int
     {
         return (int) $this->createQueryBuilder('e')

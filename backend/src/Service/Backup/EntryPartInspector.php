@@ -9,18 +9,14 @@ use App\Repository\EntryRepository;
 use App\Repository\SubscriptionRepository;
 use App\Service\Backup\Dto\BackupHeader;
 use App\Service\Backup\Dto\EntryLine;
+use App\Service\Backup\Dto\EntryStateLine;
 use App\Service\Backup\Exception\BackupDoesNotFitException;
 use App\Service\Backup\Exception\InvalidBackupException;
 
 /**
- * Pass 1 of an entry-part restore: reads the part through BackupReader (whose
- * grammar and per-part ceilings already apply), then checks the three things
- * only the database can answer — writing nothing, so a refusal here costs the
- * account nothing:
- *
- * 1. the part is an entry part, not the foundation;
- * 2. every feed it names is one this user actually subscribes to;
- * 3. loading it would not push the account's entry count past its ceiling.
+ * Pass 1 of an entry-part restore, writing nothing: the part is an entry part,
+ * every feed it names is one this user subscribes to, and loading it keeps
+ * the account under its entry ceiling.
  */
 final readonly class EntryPartInspector
 {
@@ -28,15 +24,20 @@ final readonly class EntryPartInspector
         private BackupReader $reader,
         private SubscriptionRepository $subscriptions,
         private EntryRepository $entries,
-        private int $accountEntryCeiling = 500_000,
+        private int $accountEntryCeiling = BackupFitCheck::MAX_ENTRIES,
     ) {
     }
 
-    public function inspect(User $user, string $gzipBytes): void
+    /**
+     * @return array<string, int> the id of every feed the part names, by feed url
+     */
+    public function inspect(User $user, string $gzipBytes): array
     {
         [$feedUrls, $entryCount] = $this->scan($gzipBytes);
-        $this->assertEverySubscribed($user, $feedUrls);
+        $feedIdsByUrl = $this->subscribedFeedIds($user, $feedUrls);
         $this->assertFits($user, $entryCount);
+
+        return $feedIdsByUrl;
     }
 
     /**
@@ -54,8 +55,11 @@ final readonly class EntryPartInspector
                 continue;
             }
 
-            if ($line instanceof EntryLine) {
+            if ($line instanceof EntryLine || $line instanceof EntryStateLine) {
                 $feedUrls[$line->feedUrl] = true;
+            }
+
+            if ($line instanceof EntryLine) {
                 ++$entryCount;
             }
         }
@@ -72,18 +76,22 @@ final readonly class EntryPartInspector
 
     /**
      * @param array<string, true> $feedUrls
+     *
+     * @return array<string, int>
      */
-    private function assertEverySubscribed(User $user, array $feedUrls): void
+    private function subscribedFeedIds(User $user, array $feedUrls): array
     {
-        $feedIds = $this->subscriptions->feedIdsByUrlForUser((int) $user->getId(), array_keys($feedUrls));
+        $feedIdsByUrl = $this->subscriptions->feedIdsByUrlForUser((int) $user->getId(), array_keys($feedUrls));
         foreach (array_keys($feedUrls) as $feedUrl) {
-            if (!isset($feedIds[$feedUrl])) {
+            if (!isset($feedIdsByUrl[$feedUrl])) {
                 throw new InvalidBackupException(sprintf(
                     'The backup carries rows for feed "%s", which none of its subscriptions names.',
                     $feedUrl,
                 ));
             }
         }
+
+        return $feedIdsByUrl;
     }
 
     private function assertFits(User $user, int $entryCount): void

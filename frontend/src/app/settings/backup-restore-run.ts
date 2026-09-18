@@ -75,13 +75,11 @@ export class BackupRestoreRun {
   readonly canContinue: Signal<boolean> = this.canContinueSignal;
 
   private archive: BackupArchive | null = null;
-  private total = 0;
   private nextIndex = 1;
   private counts: RestoreCounts = zeroCounts();
 
   async run(archive: BackupArchive): Promise<RestoreRunOutcome> {
     this.archive = archive;
-    this.total = archive.entryPartCount + 1;
     this.counts = zeroCounts();
     this.canContinueSignal.set(false);
     this.progressSignal.set({ done: 0, total: this.total });
@@ -100,7 +98,6 @@ export class BackupRestoreRun {
 
   reset(): void {
     this.archive = null;
-    this.total = 0;
     this.nextIndex = 1;
     this.counts = zeroCounts();
     this.progressSignal.set(null);
@@ -145,6 +142,10 @@ export class BackupRestoreRun {
     const archive = this.requireArchive();
     const part = await archive.entryPart(index);
     return firstValueFrom(this.api.restoreEntryPart(part));
+  }
+
+  private get total(): number {
+    return this.requireArchive().entryPartCount + 1;
   }
 
   private requireArchive(): BackupArchive {

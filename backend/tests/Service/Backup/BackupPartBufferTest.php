@@ -9,20 +9,24 @@ use PHPUnit\Framework\TestCase;
 
 final class BackupPartBufferTest extends TestCase
 {
-    public function testDrainWritesHeaderEntriesThenStatesThenAFooterWithThisPartsCounts(): void
+    public function testDrainWritesHeaderEntriesThenStatesThenTheFooter(): void
     {
         $buffer = new BackupPartBuffer();
         $buffer->add('{"kind":"entry","n":1}', '{"kind":"entryState","n":1}');
         $buffer->add('{"kind":"entry","n":2}', null);
 
-        $lines = explode("\n", rtrim((string) gzdecode($buffer->drain('{"kind":"header"}')), "\n"));
+        self::assertSame(2, $buffer->entryCount());
+        self::assertSame(1, $buffer->entryStateCount());
+
+        $gzipBytes = $buffer->drain('{"kind":"header"}', '{"kind":"footer"}');
+        $lines = explode("\n", rtrim((string) gzdecode($gzipBytes), "\n"));
 
         self::assertSame([
             '{"kind":"header"}',
             '{"kind":"entry","n":1}',
             '{"kind":"entry","n":2}',
             '{"kind":"entryState","n":1}',
-            '{"kind":"footer","counts":{"tag":0,"savedSearch":0,"feed":0,"subscription":0,"entry":2,"entryState":1}}',
+            '{"kind":"footer"}',
         ], $lines);
         self::assertTrue($buffer->isEmpty());
     }
