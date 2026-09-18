@@ -266,6 +266,43 @@ final class EntryPartRestorerTest extends DbTestCase
         $this->restorer(accountEntryCeiling: 2)->load($this->reloadUser($userId), $gzip);
     }
 
+    public function testTheCeilingSumsTheNewEntriesOfEveryFeedThePartNames(): void
+    {
+        $secondFeedUrl = 'https://second.example/feed.xml';
+        $user = $this->subscribedUser(self::FEED_URL);
+        $userId = (int) $user->getId();
+        $this->subscribeTo($user, $secondFeedUrl);
+
+        $gzip = $this->entryPart([
+            $this->entryLine('a'),
+            $this->entryLine('b', feedUrl: $secondFeedUrl),
+        ]);
+
+        $this->expectException(BackupDoesNotFitException::class);
+
+        $this->restorer(accountEntryCeiling: 1)->load($this->reloadUser($userId), $gzip);
+    }
+
+    public function testItLoadsTheEntriesOfEveryFeedThePartNames(): void
+    {
+        $secondFeedUrl = 'https://second.example/feed.xml';
+        $user = $this->subscribedUser(self::FEED_URL);
+        $userId = (int) $user->getId();
+        $this->subscribeTo($user, $secondFeedUrl);
+
+        $gzip = $this->entryPart([
+            $this->entryLine('a'),
+            $this->entryLine('b', feedUrl: $secondFeedUrl),
+        ]);
+
+        $result = $this->restorer()->load($this->reloadUser($userId), $gzip);
+
+        self::assertSame(2, $result->entries);
+        $this->em->clear();
+        self::assertNotNull($this->findEntry('a'));
+        self::assertNotNull($this->findEntry('b'));
+    }
+
     public function testAnEntryStateFollowingAnAlreadyStatedOneInTheSamePartIsStillCreated(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);
@@ -355,6 +392,14 @@ final class EntryPartRestorerTest extends DbTestCase
         $this->em->flush();
 
         return $user;
+    }
+
+    private function subscribeTo(User $user, string $feedUrl): void
+    {
+        $feed = new Feed($feedUrl);
+        $this->em->persist($feed);
+        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00')));
+        $this->em->flush();
     }
 
     private function nextEmail(): string
