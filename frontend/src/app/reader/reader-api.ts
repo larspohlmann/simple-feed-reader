@@ -268,12 +268,18 @@ export class ReaderApi {
     });
   }
 
-  restoreAccount(backup: Blob): Observable<RestoreResult> {
+  startAccountRestore(foundation: Blob): Observable<RestoreResult> {
     return this.http.post<RestoreResult>(
-      `${this.base}/api/account/restore?confirm=REPLACE`,
-      backup,
+      `${this.base}/api/account/restore/start?confirm=REPLACE`,
+      foundation,
       { headers: { 'Content-Type': 'application/gzip' } },
     );
+  }
+
+  restoreEntryPart(part: Blob): Observable<RestoreResult> {
+    return this.http.post<RestoreResult>(`${this.base}/api/account/restore/entries`, part, {
+      headers: { 'Content-Type': 'application/gzip' },
+    });
   }
 
   /** Preview a candidate feed's contents before subscribing. */
