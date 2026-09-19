@@ -18,6 +18,10 @@ use PHPUnit\Framework\TestCase;
 
 final class BackupReaderTest extends TestCase
 {
+    /** The production ceiling is 64 MiB; a fixture that size costs hundreds of
+     *  MB per test and ran Infection's single-process initial run out of memory (#1083). */
+    private const int SMALL_CEILING = 8_192;
+
     /** @param list<array<string, mixed>> $lines */
     private static function gzipOf(array $lines): string
     {
@@ -445,15 +449,15 @@ final class BackupReaderTest extends TestCase
 
     public function testAPartOverTheByteCeilingIsRefused(): void
     {
-        // Two lines, each under the single-line cap, that together inflate past
-        // the part ceiling — so the aggregate guard trips, not the per-line one.
-        $entry = ['contentHtml' => str_repeat('a', intdiv(BackupReader::MAX_INFLATED_BYTES, 2))] + self::entry();
+        // Two lines, each under the ceiling, that together inflate past it — so
+        // the aggregate guard trips, not the per-line one.
+        $entry = ['contentHtml' => str_repeat('a', intdiv(self::SMALL_CEILING, 2))] + self::entry();
         $lines = [self::header(1), $entry, ['guid' => 'g2', 'guidHash' => hash('sha256', 'g2')] + $entry];
 
         $this->expectException(InvalidBackupException::class);
-        $this->expectExceptionMessageMatches('/inflates past/');
+        $this->expectExceptionMessage('The backup inflates past 8192 bytes.');
 
-        self::drain(self::gzipOf($lines));
+        self::drain(self::gzipOf($lines), self::SMALL_CEILING);
     }
 
     /**
@@ -463,25 +467,48 @@ final class BackupReaderTest extends TestCase
      */
     public function testBlankLinesCountTowardTheByteCeiling(): void
     {
-        $header = json_encode(self::header(1), \JSON_THROW_ON_ERROR);
-        $entry = json_encode(
-            ['contentHtml' => str_repeat('a', BackupReader::MAX_INFLATED_BYTES - 300_000)] + self::entry(),
-            \JSON_THROW_ON_ERROR,
-        );
-        $gzip = (string) gzencode($header . "\n" . $entry . "\n" . str_repeat("\n", 400_000));
+        $data = json_encode(self::header(1), \JSON_THROW_ON_ERROR) . "\n"
+            . json_encode(self::entry(), \JSON_THROW_ON_ERROR) . "\n";
+        self::assertLessThan(self::SMALL_CEILING, \strlen($data), 'Only the blank lines may cross the ceiling.');
+        $gzip = (string) gzencode($data . str_repeat("\n", self::SMALL_CEILING));
 
         $this->expectException(InvalidBackupException::class);
         $this->expectExceptionMessageMatches('/inflates past/');
 
-        self::drain($gzip);
+        self::drain($gzip, self::SMALL_CEILING);
     }
 
-    /** Reads every yielded line without retaining it, so a byte-ceiling test
-     *  never holds a part's worth of hydrated DTOs at once. */
-    private static function drain(string $gzip): void
+    public function testAPartInflatingToExactlyTheCeilingIsAccepted(): void
     {
-        foreach ((new BackupReader())->read($gzip) as $ignored) {
+        $gzip = self::gzipOf([self::header(1), self::entry(), self::footer(['entry' => 1])]);
+
+        self::assertSame(2, self::drain($gzip, self::inflatedBytesOf($gzip)));
+    }
+
+    public function testAPartInflatingOneByteOverTheCeilingIsRefused(): void
+    {
+        $gzip = self::gzipOf([self::header(1), self::entry(), self::footer(['entry' => 1])]);
+
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessageMatches('/inflates past/');
+
+        self::drain($gzip, self::inflatedBytesOf($gzip) - 1);
+    }
+
+    private static function inflatedBytesOf(string $gzip): int
+    {
+        return \strlen((string) gzdecode($gzip));
+    }
+
+    /** @return int how many lines the reader yielded */
+    private static function drain(string $gzip, int $maxInflatedBytes): int
+    {
+        $yielded = 0;
+        foreach ((new BackupReader($maxInflatedBytes))->read($gzip) as $ignored) {
             unset($ignored);
+            ++$yielded;
         }
+
+        return $yielded;
     }
 }

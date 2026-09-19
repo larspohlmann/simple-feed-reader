@@ -23,25 +23,21 @@ final readonly class GzipLineReader
     private const string GZIP_MAGIC = "\x1f\x8b";
 
     /**
-     * A single line may not out-grow one whole part's inflated budget, so a
-     * line without a newline this long is a decompression bomb, not data —
-     * bounding the read stops one giant line from reaching memory_limit.
-     */
-    public const int MAX_LINE_BYTES = 67_108_864;
-
-    /**
      * Read a line one buffer at a time rather than pre-allocating the whole
-     * line ceiling per fgets call, so a normal small line costs one small
-     * buffer and only a genuine bomb ever grows near MAX_LINE_BYTES.
+     * line bound per fgets call, so a normal small line costs one small
+     * buffer and only a genuine bomb ever grows near the bound.
      */
-    private const int READ_CHUNK_BYTES = 1_048_576;
+    public const int READ_CHUNK_BYTES = 1_048_576;
 
     /**
+     * @param int $maxLineBytes a line still without its newline past this is a
+     *                          decompression bomb, not data: refusing it keeps one giant line off memory_limit
+     *
      * @return \Generator<int, string> the lines, each without its trailing newline
      *
      * @throws InvalidBackupException
      */
-    public static function lines(string $gzipBytes): \Generator
+    public static function lines(string $gzipBytes, int $maxLineBytes): \Generator
     {
         if (!str_starts_with($gzipBytes, self::GZIP_MAGIC)) {
             throw new InvalidBackupException('The file is not gzip-compressed.');
@@ -58,7 +54,7 @@ final readonly class GzipLineReader
             // window 15+32: accept a gzip (or zlib) header, matching gzdecode().
             stream_filter_append($stream, 'zlib.inflate', \STREAM_FILTER_READ, ['window' => 15 + 32]);
 
-            while (false !== ($line = self::readLine($stream))) {
+            while (false !== ($line = self::readLine($stream, $maxLineBytes))) {
                 yield rtrim($line, "\n");
             }
         } finally {
@@ -79,14 +75,14 @@ final readonly class GzipLineReader
      *
      * @throws InvalidBackupException
      */
-    private static function readLine($stream): string|false
+    private static function readLine($stream, int $maxLineBytes): string|false
     {
         set_error_handler(static function (): never {
             throw new InvalidBackupException('The file is not readable as gzip — it is corrupt or truncated.');
         });
 
         try {
-            return self::readBoundedLine($stream);
+            return self::readBoundedLine($stream, $maxLineBytes);
         } finally {
             restore_error_handler();
         }
@@ -97,7 +93,7 @@ final readonly class GzipLineReader
      *
      * @throws InvalidBackupException
      */
-    private static function readBoundedLine($stream): string|false
+    private static function readBoundedLine($stream, int $maxLineBytes): string|false
     {
         $line = '';
         while (true) {
@@ -111,9 +107,9 @@ final readonly class GzipLineReader
                 return $line;
             }
 
-            if (\strlen($line) > self::MAX_LINE_BYTES) {
+            if (\strlen($line) > $maxLineBytes) {
                 throw new InvalidBackupException(
-                    sprintf('A backup line is larger than %d bytes.', self::MAX_LINE_BYTES),
+                    sprintf('A backup line is larger than %d bytes.', $maxLineBytes),
                 );
             }
         }

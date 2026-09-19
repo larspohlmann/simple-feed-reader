@@ -11,18 +11,23 @@ use PHPUnit\Framework\TestCase;
 
 final class GzipLineReaderTest extends TestCase
 {
+    private const int ROOMY_BOUND = 4_194_304;
+
+    /** The most one fgets() read returns; the bound is only checked between reads. */
+    private const int FULL_READ = GzipLineReader::READ_CHUNK_BYTES - 1;
+
     public function testYieldsEachLineWithoutItsNewline(): void
     {
         $gzip = (string) gzencode("first\nsecond\nthird\n");
 
-        self::assertSame(['first', 'second', 'third'], iterator_to_array(GzipLineReader::lines($gzip), false));
+        self::assertSame(['first', 'second', 'third'], self::linesOf($gzip, self::ROOMY_BOUND));
     }
 
     public function testAFinalLineWithoutNewlineStillArrives(): void
     {
         $gzip = (string) gzencode("first\nlast-no-newline");
 
-        self::assertSame(['first', 'last-no-newline'], iterator_to_array(GzipLineReader::lines($gzip), false));
+        self::assertSame(['first', 'last-no-newline'], self::linesOf($gzip, self::ROOMY_BOUND));
     }
 
     public function testALineLongerThanAnyInternalBufferSurvivesIntact(): void
@@ -30,28 +35,32 @@ final class GzipLineReaderTest extends TestCase
         $long = str_repeat('x', 2_000_000);
         $gzip = (string) gzencode($long . "\nshort\n");
 
-        $lines = iterator_to_array(GzipLineReader::lines($gzip), false);
-
-        self::assertSame([$long, 'short'], $lines);
+        self::assertSame([$long, 'short'], self::linesOf($gzip, self::ROOMY_BOUND));
     }
 
-    public function testASingleLineLargerThanTheCapIsRefused(): void
+    public function testALineThatOutgrowsTheBoundIsRefused(): void
     {
-        $gzip = (string) gzencode(str_repeat('x', GzipLineReader::MAX_LINE_BYTES + 2_000_000) . "\nshort\n");
+        $gzip = (string) gzencode(str_repeat('x', 3 * self::FULL_READ) . "\nshort\n");
 
         $this->expectException(InvalidBackupException::class);
-        $this->expectExceptionMessageMatches('/larger than/');
+        $this->expectExceptionMessage('A backup line is larger than 1500000 bytes.');
 
-        foreach (GzipLineReader::lines($gzip) as $ignored) {
-            unset($ignored);
-        }
+        self::linesOf($gzip, 1_500_000);
+    }
+
+    public function testALineExactlyAtTheBoundIsAccepted(): void
+    {
+        $atTheBound = str_repeat('x', self::FULL_READ);
+        $gzip = (string) gzencode($atTheBound . "\nshort\n");
+
+        self::assertSame([$atTheBound, 'short'], self::linesOf($gzip, self::FULL_READ));
     }
 
     public function testBytesThatAreNotGzipAreRefused(): void
     {
         $this->expectException(InvalidBackupException::class);
 
-        iterator_to_array(GzipLineReader::lines('this is not gzip'), false);
+        self::linesOf('this is not gzip', self::ROOMY_BOUND);
     }
 
     /**
@@ -63,13 +72,19 @@ final class GzipLineReaderTest extends TestCase
     {
         $this->expectException(InvalidBackupException::class);
 
-        iterator_to_array(GzipLineReader::lines(CorruptGzip::bytes()), false);
+        self::linesOf(CorruptGzip::bytes(), self::ROOMY_BOUND);
     }
 
     public function testEmptyInputIsRefused(): void
     {
         $this->expectException(InvalidBackupException::class);
 
-        iterator_to_array(GzipLineReader::lines(''), false);
+        self::linesOf('', self::ROOMY_BOUND);
+    }
+
+    /** @return list<string> */
+    private static function linesOf(string $gzip, int $maxLineBytes): array
+    {
+        return iterator_to_array(GzipLineReader::lines($gzip, $maxLineBytes), false);
     }
 }
