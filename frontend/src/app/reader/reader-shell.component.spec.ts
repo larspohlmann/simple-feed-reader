@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Dialog } from '@angular/cdk/dialog';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
   TestRequest,
@@ -17,7 +17,7 @@ import {
   provideRouter,
 } from '@angular/router';
 import { By, Title } from '@angular/platform-browser';
-import { BehaviorSubject, Subject, of } from 'rxjs';
+import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { WritableSignal, signal } from '@angular/core';
 import { API_BASE_URL } from '../core/api';
 import { AuthService } from '../core/auth.service';
@@ -3044,6 +3044,24 @@ describe('ReaderShellComponent', () => {
 
       expect(api.markEntriesRead).toHaveBeenCalledWith([5, 6]);
       expect(markHiddenLocally).toHaveBeenCalledWith([5, 6]);
+      expect(load).not.toHaveBeenCalled();
+    });
+
+    it('surfaces a failed request on the entries error banner, on an all-items view', () => {
+      const f = boot();
+      const api = TestBed.inject(ReaderApi);
+      const problem = { type: 'x', title: 'Failed', status: 500 };
+      jest
+        .spyOn(api, 'markEntriesRead')
+        .mockReturnValue(throwError(() => new HttpErrorResponse({ error: problem, status: 500 })));
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
+      const markHiddenLocally = jest.spyOn(f.componentInstance.entries, 'markHiddenLocally');
+      const load = jest.spyOn(f.componentInstance.entries, 'load');
+
+      f.componentInstance.onMarkAboveRead([5, 6]);
+
+      expect(f.componentInstance.entries.error()).toEqual(expect.objectContaining(problem));
+      expect(markHiddenLocally).not.toHaveBeenCalled();
       expect(load).not.toHaveBeenCalled();
     });
 

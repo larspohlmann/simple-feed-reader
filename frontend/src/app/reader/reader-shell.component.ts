@@ -13,6 +13,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink, convertToParamMap } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { HttpErrorResponse } from '@angular/common/http';
 import { catchError, of } from 'rxjs';
 import { Dialog } from '@angular/cdk/dialog';
 import { AuthService } from '../core/auth.service';
@@ -933,19 +934,28 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *  the top of what remains (#1080). All-items view: the rows stay, so they
    *  are restyled in place with no re-fetch and no scroll change. */
   private markAboveReadNow(ids: number[]): void {
-    const request = this.api.markEntriesRead(ids);
     if (this.selection().unread) {
-      this.entries.runThenReload(request, () => {
+      this.entries.runThenReload(this.api.markEntriesRead(ids), () => {
         this.entries.load(queryFromSelection(this.selection()));
         this.refreshCountsAfterMarkRead();
         this.list()?.scrollToTop();
       });
       return;
     }
-    request.subscribe({
+    this.markAboveReadInPlace(ids);
+  }
+
+  /** All-items view: restyles the marked rows in place, with no re-fetch and
+   *  no scroll change (#1080). A failed request surfaces on the same error
+   *  banner a list load or a state PATCH would use, instead of going unhandled. */
+  private markAboveReadInPlace(ids: number[]): void {
+    this.api.markEntriesRead(ids).subscribe({
       next: () => {
         this.entries.markHiddenLocally(ids);
         this.refreshCountsAfterMarkRead();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.entries.reportMutationFailure(error, () => this.markAboveReadInPlace(ids));
       },
     });
   }

@@ -211,6 +211,14 @@ export class EntriesStore {
     );
   }
 
+  /** Surfaces a mutation a caller ran outside the store on the same error
+   *  banner `load`/`setState` use — for a batch with no single row to revert.
+   *  `retry` resubmits exactly that mutation. */
+  reportMutationFailure(error: HttpErrorResponse, retry: () => void): void {
+    this.error.set(parseProblem(error));
+    this.failedOperation = retry;
+  }
+
   /** Replays the request that set the current error, clearing the banner first
    *  so a fresh attempt reads as progress. A no-op when nothing has failed. */
   retry(): void {
