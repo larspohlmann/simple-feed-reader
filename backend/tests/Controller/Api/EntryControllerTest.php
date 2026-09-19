@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Repository\EntryStateRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Reader\MarkEntriesReadService;
 use App\Tests\Support\RecommendationRunFixtures;
@@ -1131,7 +1133,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(EntityManagerInterface::class, $em);
         $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()]);
         self::assertInstanceOf(Entry::class, $entry);
-        $id = $entry->getId();
+        $id = (int) $entry->getId();
         $missingId = 99999999;
         self::assertNull($em->getRepository(Entry::class)->find($missingId));
 
@@ -1145,6 +1147,17 @@ final class EntryControllerTest extends WebTestCase
 
         $client->request('GET', '/api/entries?view=unread', server: $headers);
         self::assertCount(0, $this->entriesOf($client), 'The existing id is marked read; the missing one is ignored.');
+
+        // Proves `findExistingIds()` itself filtered the missing id, rather
+        // than the assertions above passing only because something else
+        // (e.g. a dialect's FK enforcement) happened to reject it too.
+        $states = self::getContainer()->get(EntryStateRepository::class);
+        self::assertInstanceOf(EntryStateRepository::class, $states);
+        $userId = (int) $user->getId();
+        self::assertNull($states->findOneForUserEntry($userId, $missingId));
+        $existingState = $states->findOneForUserEntry($userId, $id);
+        self::assertInstanceOf(EntryState::class, $existingState);
+        self::assertTrue($existingState->isHidden());
     }
 
     public function testMarkReadBatchRejectsEmptyIds(): void
