@@ -1,12 +1,25 @@
 <nav class="sidebar" [attr.aria-label]="'reader.feeds' | transloco" cdkDropListGroup>
   @if (!organising()) {
     @if (!screen.isNarrow()) {
-      <app-search-field
-        [term]="selection().term ?? ''"
-        [populateTerm]="selection().searchOrigin !== 'saved'"
-        [loading]="searchLoading()"
-        (search)="search.emit($event)"
-      />
+      <div class="search-row">
+        <app-search-field
+          [term]="selection().term ?? ''"
+          [populateTerm]="selection().searchOrigin !== 'saved'"
+          [loading]="searchLoading()"
+          (search)="search.emit($event)"
+        />
+        <button
+          #collapseButton
+          appIconButton
+          class="collapse boxed"
+          type="button"
+          [attr.aria-label]="'reader.hideSidebar' | transloco"
+          [attr.title]="'reader.hideSidebar' | transloco"
+          (click)="visibility.hide()"
+        >
+          <app-icon name="left_panel_close" size="md" />
+        </button>
+      </div>
     }
     <div class="actions">
       <button

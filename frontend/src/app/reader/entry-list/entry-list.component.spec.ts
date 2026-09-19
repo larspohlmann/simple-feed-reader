@@ -326,6 +326,18 @@ describe('EntryListComponent', () => {
     });
   });
 
+  describe('titleLeading', () => {
+    it('renders the projected content before the title', () => {
+      const el = mount({ titleLeading: topBlockTemplate() }).nativeElement as HTMLElement;
+      expect(el.querySelector('.title-row .top-marker')).not.toBeNull();
+    });
+
+    it('renders nothing before the title when no titleLeading is provided', () => {
+      const el = mount().nativeElement as HTMLElement;
+      expect(el.querySelector('.title-row .top-marker')).toBeNull();
+    });
+  });
+
   it('renders a row per entry and the header title', () => {
     const el = mount().nativeElement as HTMLElement;
     expect(el.querySelector('.list-header')!.textContent).toContain('All items');

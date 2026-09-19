@@ -20,7 +20,7 @@
         [attr.aria-label]="'reader.toggleSidebar' | transloco"
         (click)="toggleSidebar.emit()"
       >
-        <app-icon name="menu" size="md" />
+        <app-icon [name]="drawerOpen() ? 'left_panel_close' : 'left_panel_open'" size="md" />
       </button>
       @if (screen.isNarrow()) {
         <button

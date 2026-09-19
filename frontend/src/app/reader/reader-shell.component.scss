@@ -67,6 +67,15 @@ app-reader-header.hidden {
   padding-top: var(--app-bar-h, var(--bar-h));
 }
 
+/* The user hid the sidebar on a wide layout. Class-driven like the narrow
+   drawer below (#185): `sidebarCollapsed()` is already false under the drawer
+   breakpoint, so the `:not(.is-narrow)` guard only documents that the drawer,
+   not this, governs there. The "Show sidebar" button in the list header is the
+   way back. */
+.body.sidebar-hidden:not(.is-narrow) .sidebar {
+  display: none;
+}
+
 .main {
   flex: 1;
   min-width: 0;

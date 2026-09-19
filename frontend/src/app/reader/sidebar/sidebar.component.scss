@@ -7,6 +7,20 @@
   height: 100%;
 }
 
+/* Top-aligned, not centred: the search field carries a bottom margin below its
+   input row, so centring would drop the button below the input it sits beside.
+   Both boxes are `--control-h` tall and start together at the top. */
+.search-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.search-row app-search-field {
+  flex: 1;
+  min-width: 0;
+}
+
 .actions {
   display: flex;
   gap: var(--space-2);

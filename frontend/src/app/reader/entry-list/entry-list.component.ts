@@ -216,6 +216,10 @@ export class EntryListComponent implements OnDestroy {
    *  ones. Same arrangement as `headerActions`, at the other end of the row:
    *  what belongs there is the shell's business, where it sits is this list's. */
   readonly leadingActions = input<TemplateRef<unknown> | null>(null);
+  /** Rendered before the title, at the very start of the heading row. The shell
+   *  puts its "Show sidebar" button here when the sidebar is collapsed; the list
+   *  only owns the slot, not what fills it. */
+  readonly titleLeading = input<TemplateRef<unknown> | null>(null);
   /** The words the search engine actually matched, from
    *  `EntriesStore.matchedWords`. Empty outside a search, and also empty when
    *  the LIKE fallback (no engine installed) answered instead. */
