@@ -60,6 +60,11 @@ final readonly class BackupReader
         BackupSchema::KIND_ENTRY_STATE,
     ];
 
+    public function __construct(
+        private int $maxInflatedBytes = self::MAX_INFLATED_BYTES,
+    ) {
+    }
+
     /**
      * @return \Generator<int, object>
      */
@@ -74,7 +79,8 @@ final readonly class BackupReader
         $guard = null;
         $inflatedBytes = 0;
 
-        foreach (GzipLineReader::lines($gzipBytes) as $line) {
+        // One line may not out-grow the whole part's budget, so the part ceiling bounds the line too.
+        foreach (GzipLineReader::lines($gzipBytes, $this->maxInflatedBytes) as $line) {
             ++$lineNumber;
             $inflatedBytes += \strlen($line) + 1;
             $this->assertUnderByteCeiling($inflatedBytes);
@@ -128,22 +134,22 @@ final readonly class BackupReader
     }
 
     /**
-     * The grammar guarantees a header precedes every other line, so a null
-     * guard here means assertOrdered failed to do its job.
-     */
-    /**
      * Counted for every line before the blank-line skip, so a gzip of nothing
      * but newlines cannot inflate past the ceiling uncounted.
      */
     private function assertUnderByteCeiling(int $inflatedBytes): void
     {
-        if ($inflatedBytes > self::MAX_INFLATED_BYTES) {
+        if ($inflatedBytes > $this->maxInflatedBytes) {
             throw new InvalidBackupException(
-                sprintf('The backup inflates past %d bytes.', self::MAX_INFLATED_BYTES),
+                sprintf('The backup inflates past %d bytes.', $this->maxInflatedBytes),
             );
         }
     }
 
+    /**
+     * The grammar guarantees a header precedes every other line, so a null
+     * guard here means assertOrdered failed to do its job.
+     */
     private function requireGuard(?BackupPartGuard $guard): BackupPartGuard
     {
         if (null === $guard) {
