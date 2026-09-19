@@ -23,6 +23,17 @@
   color: var(--danger);
 }
 
+/* A bordered box the height of a form control, for an icon button that sits
+   beside a field or title and must read as its peer, not a bare glyph. Hover
+   comes from the `.ib` rule below (transparent -> surface-0 over this box). */
+.ib.boxed {
+  width: var(--control-h);
+  height: var(--control-h);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}
+
 /* Guarded by (hover: hover): on a touch device the tap that presses this
    button also fires :hover, and with no separate release event the hover
    style sticks until something else is tapped (#704). */

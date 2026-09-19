@@ -15,6 +15,7 @@ import { Selection } from '../query';
 import { SavedSearchDto, SubscriptionDto, TagDto } from '../models';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { LayoutService } from '../layout.service';
+import { SidebarVisibilityService } from '../sidebar-visibility.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { of } from 'rxjs';
 import { By } from '@angular/platform-browser';
@@ -1688,5 +1689,32 @@ describe('organise mode', () => {
     expect(el.querySelector('.tag .chevzone')).not.toBeNull();
     expect(el.querySelector('.handle')).toBeNull();
     expect(el.querySelector('.rowmenu .dots')).not.toBeNull();
+  });
+
+  describe('collapse button', () => {
+    beforeEach(() => localStorage.clear());
+
+    it('shows a collapse button on a wide layout', () => {
+      const el = mount().nativeElement as HTMLElement;
+      expect(el.querySelector('.collapse[aria-label="Hide sidebar"]')).not.toBeNull();
+    });
+
+    it('omits the collapse button on a narrow layout', () => {
+      const el = mount({ narrow: true }).nativeElement as HTMLElement;
+      expect(el.querySelector('.collapse')).toBeNull();
+    });
+
+    it('omits the collapse button while organising', () => {
+      // Organise mode only holds on a coarse pointer; a fine pointer resets it.
+      const el = mount({ organising: true, coarse: true }).nativeElement as HTMLElement;
+      expect(el.querySelector('.collapse')).toBeNull();
+    });
+
+    it('hides the sidebar when the collapse button is clicked', () => {
+      const f = mount();
+      const el = f.nativeElement as HTMLElement;
+      (el.querySelector('.collapse') as HTMLButtonElement).click();
+      expect(TestBed.inject(SidebarVisibilityService).hidden()).toBe(true);
+    });
   });
 });

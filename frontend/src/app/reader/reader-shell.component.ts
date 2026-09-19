@@ -4,6 +4,7 @@ import {
   ElementRef,
   OnDestroy,
   OnInit,
+  afterRenderEffect,
   computed,
   effect,
   inject,
@@ -33,6 +34,7 @@ import { DigestService } from '../core/digest.service';
 import { VersionService } from '../core/version.service';
 import { ReadingLayoutService } from './reading-layout.service';
 import { LayoutService } from './layout.service';
+import { SidebarVisibilityService } from './sidebar-visibility.service';
 import {
   RefreshScope,
   Selection,
@@ -77,6 +79,7 @@ import { CatalogStore } from '../discover/catalog.store';
 import { OnboardingSkip } from '../discover/onboarding-skip';
 import { SetupService } from '../setup/setup.service';
 import { IconComponent } from '../shared/icon/icon.component';
+import { IconButtonDirective } from '../shared/icon-button/icon-button.directive';
 import { ListActionDirective } from '../shared/list-action/list-action.directive';
 import { ButtonComponent } from '../shared/button/button.component';
 import { FeedIntroComponent } from './feed-intro/feed-intro.component';
@@ -95,6 +98,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
     DrawerSwipeDirective,
     PaneResizeDirective,
     IconComponent,
+    IconButtonDirective,
     ListActionDirective,
     ButtonComponent,
     FeedIntroComponent,
@@ -131,6 +135,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly versions = inject(VersionService);
   readonly layout = inject(ReadingLayoutService);
   readonly screen = inject(LayoutService);
+  readonly sidebarVisibility = inject(SidebarVisibilityService);
   private readonly skip = inject(OnboardingSkip);
   private readonly catalog = inject(CatalogStore);
   private readonly pageTitle = inject(PageTitleService);
@@ -375,6 +380,34 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Mirror of the sidebar's Organise model. Owned here so closing the drawer
    *  can reset it, and so the close-swipe pauses while a drag is possible. */
   readonly sidebarOrganising = signal(false);
+
+  /** The wide-layout sidebar is collapsed: the user hid it, and the layout is
+   *  not the narrow drawer, where `sidebarOpen` governs instead. Drives both the
+   *  `.body` class the stylesheet keys the column's `display` to, and the "Show
+   *  sidebar" button the list header offers as the way back. */
+  readonly sidebarCollapsed = computed(
+    () => this.sidebarVisibility.hidden() && !this.screen.isNarrow(),
+  );
+
+  private readonly showSidebarButton =
+    viewChild<ElementRef<HTMLButtonElement>>('showSidebarButton');
+  /** Armed while the sidebar is visible, so the very first render does not pull
+   *  focus onto the (absent) show button. */
+  private sidebarWasVisible = false;
+
+  /** When the sidebar collapses, focus the "Show sidebar" button so a keyboard
+   *  user who clicked "Hide sidebar" is not dropped to `<body>`. The sidebar's
+   *  own collapse button focuses itself the same way when the sidebar returns.
+   *  `afterRenderEffect` because the button must be in the DOM already. */
+  private readonly focusShowSidebarButton = afterRenderEffect(() => {
+    if (!this.sidebarCollapsed()) {
+      this.sidebarWasVisible = true;
+      return;
+    }
+    if (!this.sidebarWasVisible) return;
+    this.sidebarWasVisible = false;
+    this.showSidebarButton()?.nativeElement.focus();
+  });
 
   /** The tag the list is scoped to, or null for every other selection. The list
    *  header renders its glyph beside the name; the name itself comes from here

@@ -42,6 +42,7 @@
 <div
   class="body"
   [class.is-narrow]="screen.isNarrow()"
+  [class.sidebar-hidden]="sidebarCollapsed()"
   appDrawerSwipe
   [appDrawerSwipeOpen]="sidebarOpen()"
   [appDrawerSwipeDisabled]="!screen.isNarrow() || articleFullscreen() || sidebarOrganising()"
@@ -127,6 +128,7 @@
           [headerActions]="headerActions"
           [leadingActions]="listEditAction"
           [topBlock]="feedIntro"
+          [titleLeading]="sidebarShow"
           (loadMore)="entries.loadMore()"
           (retry)="entries.retry()"
           (dismiss)="entries.dismissError()"
@@ -191,6 +193,7 @@
           [headerActions]="headerActions"
           [leadingActions]="listEditAction"
           [topBlock]="feedIntro"
+          [titleLeading]="sidebarShow"
           (loadMore)="entries.loadMore()"
           (retry)="entries.retry()"
           (dismiss)="entries.dismissError()"
@@ -273,6 +276,25 @@
       [faviconUrl]="sub.faviconUrl"
       [siteUrl]="sub.siteUrl"
     />
+  }
+</ng-template>
+
+<!-- The way back from a hidden sidebar, rendered into the list header's leading
+     slot. Guarded here, not in the list, so the list stays unaware of the
+     sidebar; the button focuses itself on appear (see the shell's effect). -->
+<ng-template #sidebarShow>
+  @if (sidebarCollapsed()) {
+    <button
+      #showSidebarButton
+      appIconButton
+      class="sidebar-show boxed"
+      type="button"
+      [attr.aria-label]="'reader.showSidebar' | transloco"
+      [attr.title]="'reader.showSidebar' | transloco"
+      (click)="sidebarVisibility.show()"
+    >
+      <app-icon name="left_panel_open" size="md" />
+    </button>
   }
 </ng-template>
 

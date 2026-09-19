@@ -1,6 +1,8 @@
 import {
   Component,
   DestroyRef,
+  ElementRef,
+  afterRenderEffect,
   computed,
   effect,
   inject,
@@ -9,6 +11,7 @@ import {
   output,
   signal,
   untracked,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
@@ -27,6 +30,7 @@ import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { SearchFieldComponent } from '../search-field/search-field.component';
 import { SidebarFootComponent } from './sidebar-foot.component';
 import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
+import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
 import { TagNode } from '../subscriptions.store';
 import { Selection, savedSearchParams, selectionQueryParams } from '../query';
 import { SavedSearchDto, SubscriptionDto, TagDto, isSubscriptionDrag } from '../models';
@@ -34,6 +38,7 @@ import { RefreshService } from '../refresh.service';
 import { RecommendationsService } from '../recommendations.service';
 import { AiAvailabilityService } from '../../core/ai-availability.service';
 import { LayoutService } from '../layout.service';
+import { SidebarVisibilityService } from '../sidebar-visibility.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 
 /** What a sidebar drop source or target represents: a tag, or the untagged bucket. */
@@ -75,6 +80,7 @@ const sameIds = (current: readonly number[], frozen: readonly number[]): boolean
     CdkDrag,
     CdkDragHandle,
     DismissOnOutsideDirective,
+    IconButtonDirective,
   ],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss',
@@ -158,7 +164,29 @@ export class SidebarComponent {
   readonly ai = inject(AiAvailabilityService);
   readonly recs = inject(RecommendationsService);
   readonly screen = inject(LayoutService);
+  readonly visibility = inject(SidebarVisibilityService);
   readonly organising = model(false);
+
+  private readonly collapseButton = viewChild<ElementRef<HTMLButtonElement>>('collapseButton');
+  /** Skips the mount run so a page load does not pull focus onto the collapse
+   *  button before the user has asked for anything. */
+  private returningFromHidden = false;
+
+  /** When the sidebar comes back from hidden, focus its collapse button so a
+   *  keyboard user who clicked "Show sidebar" is not dropped to `<body>`. Its
+   *  counterpart, the shell's "Show sidebar" button, focuses itself the same
+   *  way when the sidebar hides. `afterRenderEffect` because the button must be
+   *  in the DOM already — a plain effect fires while the column is still hidden. */
+  private readonly focusOnReturn = afterRenderEffect(() => {
+    const hidden = this.visibility.hidden();
+    if (hidden) {
+      this.returningFromHidden = true;
+      return;
+    }
+    if (!this.returningFromHidden) return;
+    this.returningFromHidden = false;
+    this.collapseButton()?.nativeElement.focus();
+  });
 
   /** A convertible losing its coarse pointer (docked keyboard, DevTools
    *  emulation off) must not strand Organise mode — its exit switch only

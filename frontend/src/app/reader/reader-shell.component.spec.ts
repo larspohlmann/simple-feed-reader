@@ -36,6 +36,7 @@ import { Selection } from './query';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { RefreshService } from './refresh.service';
 import { LayoutService } from './layout.service';
+import { SidebarVisibilityService } from './sidebar-visibility.service';
 import { ReadingLayout } from './reading-layout.service';
 import { ManageActions } from './manage/manage-actions.service';
 import { TagsStore } from './tags.store';
@@ -272,6 +273,45 @@ describe('ReaderShellComponent', () => {
           'app-entry-kicker, app-entry-thumb, app-entry-compact',
       ),
     ).not.toBeNull();
+  });
+
+  describe('manual sidebar visibility (wide layout)', () => {
+    it('marks the body hidden and offers the show button when the sidebar is hidden', () => {
+      const f = boot();
+      const el = f.nativeElement as HTMLElement;
+      expect(el.querySelector('.body')!.classList).not.toContain('sidebar-hidden');
+      expect(el.querySelector('[aria-label="Show sidebar"]')).toBeNull();
+
+      TestBed.inject(SidebarVisibilityService).hide();
+      f.detectChanges();
+
+      expect(el.querySelector('.body')!.classList).toContain('sidebar-hidden');
+      expect(el.querySelector('.title-row [aria-label="Show sidebar"]')).not.toBeNull();
+    });
+
+    it('shows the sidebar again when the show button is clicked', () => {
+      const f = boot();
+      const el = f.nativeElement as HTMLElement;
+      TestBed.inject(SidebarVisibilityService).hide();
+      f.detectChanges();
+
+      (el.querySelector('[aria-label="Show sidebar"]') as HTMLButtonElement).click();
+      f.detectChanges();
+
+      expect(TestBed.inject(SidebarVisibilityService).hidden()).toBe(false);
+      expect(el.querySelector('.body')!.classList).not.toContain('sidebar-hidden');
+    });
+
+    it('never hides the body column on a narrow layout, where the drawer rules', () => {
+      screen.isNarrow.set(true);
+      const f = boot();
+      const el = f.nativeElement as HTMLElement;
+      TestBed.inject(SidebarVisibilityService).hide();
+      f.detectChanges();
+
+      expect(el.querySelector('.body')!.classList).not.toContain('sidebar-hidden');
+      expect(el.querySelector('[aria-label="Show sidebar"]')).toBeNull();
+    });
   });
 
   // #87: the header used to be pulled out of view with a negative margin-top,
