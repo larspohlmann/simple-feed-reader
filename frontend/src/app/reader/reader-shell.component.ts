@@ -930,38 +930,20 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  /** Unread view: the marked rows leave the list, so the list hides them and
-   *  lands the boundary at the top without a re-fetch — re-fetching would let
-   *  the magazine planner re-run and reorder newer-but-lower posts above the
-   *  boundary (#1080). All-items view: the rows stay, so they are restyled in
-   *  place with no re-fetch and no scroll change. */
+  /** Never a re-fetch: a reload lets the magazine planner re-run and lift
+   *  newer-but-lower posts above the boundary (#1080). The unread view drops the
+   *  marked blocks from its render; the all-items view restyles them in place. */
   private markAboveReadNow(ids: number[]): void {
-    if (this.selection().unread) {
-      this.api.markEntriesRead(ids).subscribe({
-        next: () => {
-          this.list()?.hideAboveMarked(ids);
-          this.refreshCountsAfterMarkRead();
-        },
-        error: (error: HttpErrorResponse) => {
-          this.entries.reportMutationFailure(error, () => this.markAboveReadNow(ids));
-        },
-      });
-      return;
-    }
-    this.markAboveReadInPlace(ids);
-  }
-
-  /** All-items view: restyles the marked rows in place, with no re-fetch and
-   *  no scroll change (#1080). A failed request surfaces on the same error
-   *  banner a list load or a state PATCH would use, instead of going unhandled. */
-  private markAboveReadInPlace(ids: number[]): void {
+    const hideLocally = this.selection().unread
+      ? () => this.list()?.hideAboveMarked(ids)
+      : () => this.entries.markHiddenLocally(ids);
     this.api.markEntriesRead(ids).subscribe({
       next: () => {
-        this.entries.markHiddenLocally(ids);
+        hideLocally();
         this.refreshCountsAfterMarkRead();
       },
       error: (error: HttpErrorResponse) => {
-        this.entries.reportMutationFailure(error, () => this.markAboveReadInPlace(ids));
+        this.entries.reportMutationFailure(error, () => this.markAboveReadNow(ids));
       },
     });
   }

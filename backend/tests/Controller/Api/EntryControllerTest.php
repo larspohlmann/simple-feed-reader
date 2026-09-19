@@ -13,7 +13,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryStateRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Reader\MarkEntriesReadService;
+use App\Dto\Entry\MarkEntriesReadRequest;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -1087,14 +1087,9 @@ final class EntryControllerTest extends WebTestCase
         $em = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $em);
         $entries = $em->getRepository(Entry::class)->findBy(['feed' => $sub->getFeed()], ['guid' => 'ASC']);
-        $markIds = [$entries[0]->getId(), $entries[1]->getId()];
+        $markIds = [(int) $entries[0]->getId(), (int) $entries[1]->getId()];
 
-        $client->request(
-            'POST',
-            '/api/entries/mark-read-batch',
-            server: $headers + ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode(['ids' => $markIds], \JSON_THROW_ON_ERROR),
-        );
+        $this->postMarkReadBatch($client, $headers, $markIds);
         self::assertResponseStatusCodeSame(204);
 
         $client->request('GET', '/api/entries?view=unread', server: $headers);
@@ -1110,14 +1105,9 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(EntityManagerInterface::class, $em);
         $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()]);
         self::assertInstanceOf(Entry::class, $entry);
-        $id = $entry->getId();
+        $id = (int) $entry->getId();
 
-        $client->request(
-            'POST',
-            '/api/entries/mark-read-batch',
-            server: $headers + ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode(['ids' => [$id, $id]], \JSON_THROW_ON_ERROR),
-        );
+        $this->postMarkReadBatch($client, $headers, [$id, $id]);
         self::assertResponseStatusCodeSame(204);
 
         $client->request('GET', '/api/entries?view=unread', server: $headers);
@@ -1137,20 +1127,13 @@ final class EntryControllerTest extends WebTestCase
         $missingId = 99999999;
         self::assertNull($em->getRepository(Entry::class)->find($missingId));
 
-        $client->request(
-            'POST',
-            '/api/entries/mark-read-batch',
-            server: $headers + ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode(['ids' => [$id, $missingId]], \JSON_THROW_ON_ERROR),
-        );
+        $this->postMarkReadBatch($client, $headers, [$id, $missingId]);
         self::assertResponseStatusCodeSame(204);
 
         $client->request('GET', '/api/entries?view=unread', server: $headers);
         self::assertCount(0, $this->entriesOf($client), 'The existing id is marked read; the missing one is ignored.');
 
-        // Proves `findExistingIds()` itself filtered the missing id, rather
-        // than the assertions above passing only because something else
-        // (e.g. a dialect's FK enforcement) happened to reject it too.
+        // No state row at all: `findExistingIds()` dropped the id, not a dialect's FK check.
         $states = self::getContainer()->get(EntryStateRepository::class);
         self::assertInstanceOf(EntryStateRepository::class, $states);
         $userId = (int) $user->getId();
@@ -1165,12 +1148,7 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers] = $this->auth('e-markbatch-empty@example.com');
 
-        $client->request(
-            'POST',
-            '/api/entries/mark-read-batch',
-            server: $headers + ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode(['ids' => []], \JSON_THROW_ON_ERROR),
-        );
+        $this->postMarkReadBatch($client, $headers, []);
         self::assertResponseStatusCodeSame(422);
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
@@ -1182,12 +1160,7 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers] = $this->auth('e-markbatch-neg@example.com');
 
-        $client->request(
-            'POST',
-            '/api/entries/mark-read-batch',
-            server: $headers + ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode(['ids' => [0, -5]], \JSON_THROW_ON_ERROR),
-        );
+        $this->postMarkReadBatch($client, $headers, [0, -5]);
         self::assertResponseStatusCodeSame(422);
     }
 
@@ -1195,14 +1168,8 @@ final class EntryControllerTest extends WebTestCase
     {
         $client = self::createClient();
         [$headers] = $this->auth('e-markbatch-cap@example.com');
-        $ids = range(1, MarkEntriesReadService::MAX_IDS + 1);
 
-        $client->request(
-            'POST',
-            '/api/entries/mark-read-batch',
-            server: $headers + ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode(['ids' => $ids], \JSON_THROW_ON_ERROR),
-        );
+        $this->postMarkReadBatch($client, $headers, range(1, MarkEntriesReadRequest::MAX_IDS + 1));
         self::assertResponseStatusCodeSame(422);
     }
 
@@ -1210,12 +1177,21 @@ final class EntryControllerTest extends WebTestCase
     {
         $client = self::createClient();
 
+        $this->postMarkReadBatch($client, [], [1]);
+        self::assertResponseStatusCodeSame(401);
+    }
+
+    /**
+     * @param array<string, string> $headers
+     * @param list<int> $ids
+     */
+    private function postMarkReadBatch(KernelBrowser $client, array $headers, array $ids): void
+    {
         $client->request(
             'POST',
             '/api/entries/mark-read-batch',
-            server: ['CONTENT_TYPE' => 'application/json'],
-            content: json_encode(['ids' => [1]], \JSON_THROW_ON_ERROR),
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['ids' => $ids], \JSON_THROW_ON_ERROR),
         );
-        self::assertResponseStatusCodeSame(401);
     }
 }

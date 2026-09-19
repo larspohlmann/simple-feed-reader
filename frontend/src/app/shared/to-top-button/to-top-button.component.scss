@@ -1,4 +1,4 @@
-@use '../styles/corner-circle-button' as circle;
+@use '../../theme/corner-circle-button' as circle;
 
 /* Out of flow by default so it can hang in a corner; the consumer supplies
    offsets, stacking order, and whether it pins to the viewport. That override

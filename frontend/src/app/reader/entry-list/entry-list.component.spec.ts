@@ -64,6 +64,19 @@ const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   ...over,
 });
 
+/** A run mixed enough to collapse: a same-source run folds into a group widget
+ *  only once the view has at least 3 distinct active sources. */
+const MIXED_SOURCE_RUN_AT = '2026-07-22T11:00:00Z';
+const MIXED_SOURCE_RUN: EntryDto[] = [
+  ...Array.from({ length: 8 }, (_, i) =>
+    entry(i + 1, { subscriptionId: 1, source: 'a', publishedAt: MIXED_SOURCE_RUN_AT }),
+  ),
+  entry(9, { subscriptionId: 2, source: 'b', publishedAt: MIXED_SOURCE_RUN_AT }),
+  entry(10, { subscriptionId: 2, source: 'b', publishedAt: MIXED_SOURCE_RUN_AT }),
+  entry(11, { subscriptionId: 3, source: 'c', publishedAt: MIXED_SOURCE_RUN_AT }),
+  entry(12, { subscriptionId: 3, source: 'c', publishedAt: MIXED_SOURCE_RUN_AT }),
+];
+
 function mount(over: Record<string, unknown> = {}) {
   memory.save.mockClear();
   memory.read.mockClear().mockReturnValue(0);
@@ -1678,17 +1691,8 @@ describe('EntryListComponent', () => {
     // the widget was scrolled past as a unit, so its tail goes with it —
     // otherwise hiding the preview surfaces the tail above the boundary.
     it('marks the folded tail of a group whose whole preview sits above the fold', () => {
-      const now = '2026-07-22T11:00:00Z';
       const f = mount({
-        entries: [
-          ...Array.from({ length: 8 }, (_, i) =>
-            entry(i + 1, { subscriptionId: 1, source: 'a', publishedAt: now }),
-          ),
-          entry(9, { subscriptionId: 2, source: 'b', publishedAt: now }),
-          entry(10, { subscriptionId: 2, source: 'b', publishedAt: now }),
-          entry(11, { subscriptionId: 3, source: 'c', publishedAt: now }),
-          entry(12, { subscriptionId: 3, source: 'c', publishedAt: now }),
-        ],
+        entries: MIXED_SOURCE_RUN,
         selection: { kind: 'all', id: null, unread: true },
         layout: 'magazine',
       });
@@ -1712,17 +1716,8 @@ describe('EntryListComponent', () => {
     });
 
     it('keeps the folded tail of a group while one of its preview rows straddles the fold', () => {
-      const now = '2026-07-22T11:00:00Z';
       const f = mount({
-        entries: [
-          ...Array.from({ length: 8 }, (_, i) =>
-            entry(i + 1, { subscriptionId: 1, source: 'a', publishedAt: now }),
-          ),
-          entry(9, { subscriptionId: 2, source: 'b', publishedAt: now }),
-          entry(10, { subscriptionId: 2, source: 'b', publishedAt: now }),
-          entry(11, { subscriptionId: 3, source: 'c', publishedAt: now }),
-          entry(12, { subscriptionId: 3, source: 'c', publishedAt: now }),
-        ],
+        entries: MIXED_SOURCE_RUN,
         selection: { kind: 'all', id: null, unread: true },
         layout: 'magazine',
       });
@@ -1765,6 +1760,15 @@ describe('EntryListComponent', () => {
       f.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
 
       expect(f.componentInstance.hasAboveFold()).toBe(true);
+    });
+
+    it('leaves hasAboveFold false below the back-to-top threshold, without measuring', () => {
+      const f = mount();
+      stubGeometry(f, 0, 100, [measuredEntry('1', 40)]);
+
+      f.componentInstance.onRowsScroll({ target: { scrollTop: 100 } } as unknown as Event);
+
+      expect(f.componentInstance.hasAboveFold()).toBe(false);
     });
 
     it('leaves hasAboveFold false while the boundary entry has not cleared the fold', () => {
@@ -2137,23 +2141,9 @@ describe('EntryListComponent', () => {
       ).toBe(false);
     });
 
-    // A same-source run collapses only once the view is genuinely mixed (at
-    // least 3 distinct active sources) — mirrors the fixture in the
-    // "for-you grouping" describe block above.
-    const now = '2026-07-22T11:00:00Z';
-    const mixedSourceRun = [
-      ...Array.from({ length: 8 }, (_, i) =>
-        entry(i + 1, { subscriptionId: 1, source: 'a', publishedAt: now }),
-      ),
-      entry(9, { subscriptionId: 2, source: 'b', publishedAt: now }),
-      entry(10, { subscriptionId: 2, source: 'b', publishedAt: now }),
-      entry(11, { subscriptionId: 3, source: 'c', publishedAt: now }),
-      entry(12, { subscriptionId: 3, source: 'c', publishedAt: now }),
-    ];
-
     it('shrinks a group block to its remaining entries instead of dropping it', () => {
       const f = mount({
-        entries: mixedSourceRun,
+        entries: MIXED_SOURCE_RUN,
         selection: { kind: 'all', id: null, unread: false },
         layout: 'magazine',
       });
@@ -2176,7 +2166,7 @@ describe('EntryListComponent', () => {
 
     it('drops a group block entirely once every one of its entries is hidden', () => {
       const f = mount({
-        entries: mixedSourceRun,
+        entries: MIXED_SOURCE_RUN,
         selection: { kind: 'all', id: null, unread: false },
         layout: 'magazine',
       });
@@ -2190,7 +2180,7 @@ describe('EntryListComponent', () => {
       expect(f.componentInstance.visibleBlocks().some((b) => b.kind === 'group')).toBe(false);
     });
 
-    it('adds the given ids to hiddenAboveIds and scrolls the boundary to the top', () => {
+    it('adds the given ids to hiddenAboveIds and scrolls the boundary to the top', async () => {
       const f = mount({ entries: [entry(1), entry(2), entry(3)] });
       const scroller = fakeScroller(f, 400);
 
@@ -2198,7 +2188,54 @@ describe('EntryListComponent', () => {
 
       expect(f.componentInstance.hiddenAboveIds()).toEqual(new Set([1, 2]));
       expect(memory.save).toHaveBeenCalledWith(f.componentInstance.selection(), 0);
-      expect(scroller.scrollTop).toBe(400); // the rAF scroll write hasn't run yet
+      await frames();
+      expect(scroller.scrollTop).toBe(0);
+    });
+
+    it('lowers both corner buttons: nothing is above the fold once the boundary is at the top', () => {
+      const f = mount({ entries: [entry(1), entry(2)] });
+      f.componentInstance.showToTop.set(true);
+      f.componentInstance.hasAboveFold.set(true);
+
+      f.componentInstance.hideAboveMarked([1]);
+
+      expect(f.componentInstance.showToTop()).toBe(false);
+      expect(f.componentInstance.hasAboveFold()).toBe(false);
+    });
+
+    it('drops the divider of a run whose blocks are all hidden (magazine)', () => {
+      const f = mount({
+        entries: [
+          entry(1, { runId: 9, runGeneratedAt: '2026-08-09T10:00:00+00:00' }),
+          entry(2, { runId: 7, runGeneratedAt: '2026-08-07T09:05:00+00:00' }),
+        ],
+        selection: { kind: 'for-you', id: null, unread: true },
+        newestRunId: 9,
+        layout: 'magazine',
+      });
+      expect((f.nativeElement as HTMLElement).querySelectorAll('app-run-header').length).toBe(1);
+
+      f.componentInstance.hideAboveMarked([2]);
+      f.detectChanges();
+
+      expect((f.nativeElement as HTMLElement).querySelector('app-run-header')).toBeNull();
+    });
+
+    it('keeps hiddenAboveIds across a layout toggle — the overlay is keyed by id', () => {
+      const f = mount({ entries: [entry(1), entry(2)] });
+      f.componentInstance.hideAboveMarked([1]);
+
+      f.componentRef.setInput('layout', 'magazine');
+      f.detectChanges();
+
+      expect(f.componentInstance.hiddenAboveIds()).toEqual(new Set([1]));
+    });
+
+    it('counts the hidden rows out of visibleEntryCount', () => {
+      const f = mount({ entries: [entry(1), entry(2)] });
+      f.componentInstance.hideAboveMarked([1, 2]);
+
+      expect(f.componentInstance.visibleEntryCount()).toBe(0);
     });
 
     it('resets hiddenAboveIds when the selection changes', () => {

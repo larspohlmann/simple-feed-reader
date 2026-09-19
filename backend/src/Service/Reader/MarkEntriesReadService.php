@@ -9,8 +9,6 @@ use App\Repository\EntryRepository;
 
 final readonly class MarkEntriesReadService
 {
-    public const int MAX_IDS = 5000;
-
     public function __construct(
         private BulkEntryReadMarker $readMarker,
         private EntryRepository $entries,

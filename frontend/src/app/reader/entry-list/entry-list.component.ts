@@ -71,6 +71,7 @@ import { ReadingFocusService } from '../../core/reading-focus.service';
 import { MagazineStyleService } from '../../core/magazine-style.service';
 import { ReadingFocusApplier } from '../reading-focus-applier';
 import { entriesAboveFold, foldedGroupTailsAbove, MeasuredEntry } from './above-fold';
+import { blocksWithout, ListBlock, runGroupsWithout } from './hidden-overlay';
 
 // Scroll-restore settle window: re-assert the target for at most this many frames,
 // stopping early once the content height has held steady for this many in a row.
@@ -101,17 +102,6 @@ const FIXED_VIEW_ICON: Partial<Record<Selection['kind'], string>> = {
   'saved-searches': 'saved_search',
   search: 'search',
 };
-
-/** A for-you run-boundary divider — a rendering-only block the entry list
- *  interleaves between per-run magazine block groups (#348). Kept out of
- *  MagazineBlock so the planner, which never emits it, stays unaware. */
-interface RunHeaderBlock {
-  kind: 'run-header';
-  generatedAt: string;
-}
-
-/** What the magazine branch actually renders: planner blocks plus run dividers. */
-type ListBlock = MagazineBlock | RunHeaderBlock;
 
 /** How much the list holds, and what that number counts — travel together since
  *  the pill needs the value and the heading's accessible name needs what it
@@ -184,11 +174,13 @@ export class EntryListComponent implements OnDestroy {
    *  in `entries` so the magazine plan keeps its shape; a reload clears it. */
   readonly leavingIds = input<ReadonlySet<number>>(new Set());
 
-  /** Rows the user can still see — loaded set minus the collapsed ones. The
-   *  empty state keys on this, not `entries().length`, so collapsing the last
-   *  row shows "nothing here" immediately, though it lingers until reload. */
+  /** Rows the user can still see — loaded set minus the collapsed and the
+   *  mark-above-hidden ones. The empty state keys on this, not `entries().length`,
+   *  so removing the last row shows "nothing here" immediately. */
   readonly visibleEntryCount = computed(
-    () => this.entries().filter((e) => !this.leavingIds().has(e.id)).length,
+    () =>
+      this.entries().filter((e) => !this.leavingIds().has(e.id) && !this.hiddenAboveIds().has(e.id))
+        .length,
   );
   readonly loading = input.required<boolean>();
   readonly loadingMore = input.required<boolean>();
@@ -461,30 +453,17 @@ export class EntryListComponent implements OnDestroy {
    *  not re-run and every block below the boundary keeps its position (#1080). */
   readonly hiddenAboveIds = signal<ReadonlySet<number>>(new Set());
 
-  /** `blocks()` with the hidden ids removed. Filters the planner's OUTPUT, not
-   *  its input entries: hiding a group member shrinks that group's own
-   *  `entries` instead of dropping the whole widget. */
-  readonly visibleBlocks = computed<ListBlock[]>(() => {
-    const hidden = this.hiddenAboveIds();
-    if (hidden.size === 0) return this.blocks();
-    return this.blocks().flatMap((block): ListBlock[] => {
-      if (block.kind === 'run-header') return [block];
-      if (block.kind !== 'group') return hidden.has(block.entry.id) ? [] : [block];
-      const entries = block.entries.filter((e) => !hidden.has(e.id));
-      if (entries.length === 0) return [];
-      return entries.length === block.entries.length ? [block] : [{ ...block, entries }];
-    });
+  /** Keyed by id, not geometry, so a breakpoint or layout swap keeps the overlay;
+   *  only a new selection drops it (the reload edge is `_restoreScroll`'s). */
+  private readonly _resetHiddenAbove = effect(() => {
+    this.selection();
+    this.hiddenAboveIds.set(new Set());
   });
 
-  /** `runGroups()` with the hidden ids removed — the list layout's counterpart
-   *  to `visibleBlocks`. */
-  readonly visibleRunGroups = computed<RunGroup[]>(() => {
-    const hidden = this.hiddenAboveIds();
-    if (hidden.size === 0) return this.runGroups();
-    return this.runGroups()
-      .map((group) => ({ ...group, entries: group.entries.filter((e) => !hidden.has(e.id)) }))
-      .filter((group) => group.entries.length > 0);
-  });
+  readonly visibleBlocks = computed(() => blocksWithout(this.blocks(), this.hiddenAboveIds()));
+  readonly visibleRunGroups = computed(() =>
+    runGroupsWithout(this.runGroups(), this.hiddenAboveIds()),
+  );
 
   private readonly screen = inject(LayoutService);
   private readonly readingFocus = inject(ReadingFocusService);
@@ -588,7 +567,6 @@ export class EntryListComponent implements OnDestroy {
     this.collapsed.set(false);
     this.showToTop.set(false);
     this.hasAboveFold.set(false);
-    this.hiddenAboveIds.set(new Set());
     this.lastScrollTop = 0;
   });
 
@@ -638,9 +616,10 @@ export class EntryListComponent implements OnDestroy {
       nextHeaderHidden(this.collapsed(), this.lastScrollTop, top, this.screen.isWide()),
     );
     this.lastScrollTop = top;
-    this.showToTop.set(top > BACK_TO_TOP_AFTER_PX);
+    const pastTop = top > BACK_TO_TOP_AFTER_PX;
+    this.showToTop.set(pastTop);
     const scroller = this.rows()?.nativeElement;
-    if (scroller) this.hasAboveFold.set(this.hasEntryAboveFold(scroller));
+    this.hasAboveFold.set(pastTop && !!scroller && this.hasEntryAboveFold(scroller));
     // Remember where the user is so a browser resume-reload (iOS/Brave discard the
     // tab and reload it) can drop them back here rather than at the top.
     if (this.rowsBelongToSelection()) this.scroll.save(this.selection(), top);
@@ -699,16 +678,9 @@ export class EntryListComponent implements OnDestroy {
     if (!scroller) return [];
     const measured = this.measuredEntries(scroller);
     const above = entriesAboveFold(measured, this.foldTop(scroller));
-    return [...above, ...this.foldedGroupTailsAbove(above, measured)];
-  }
-
-  /** A collapsed group widget renders only its preview rows, so its folded tail
-   *  has nothing to measure; once the whole preview is above the fold the tail
-   *  goes with it — hiding the preview alone would surface the tail above the
-   *  boundary. */
-  private foldedGroupTailsAbove(above: number[], measured: MeasuredEntry[]): number[] {
     const groups = this.visibleBlocks().filter((block) => block.kind === 'group');
-    return foldedGroupTailsAbove(new Set(above), new Set(measured.map((m) => m.id)), groups);
+    const rendered = new Set(measured.map((m) => m.id));
+    return [...above, ...foldedGroupTailsAbove(new Set(above), rendered, groups)];
   }
 
   private hasEntryAboveFold(scroller: HTMLElement): boolean {
@@ -740,6 +712,9 @@ export class EntryListComponent implements OnDestroy {
   hideAboveMarked(ids: number[]): void {
     this.cancelSettle();
     this.hiddenAboveIds.update((current) => new Set([...current, ...ids]));
+    this.collapsed.set(false);
+    this.showToTop.set(false);
+    this.hasAboveFold.set(false);
     const el = this.rows()?.nativeElement;
     if (!el) return;
     this.scroll.save(this.selection(), 0);
