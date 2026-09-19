@@ -1669,50 +1669,36 @@ describe('EntryListComponent', () => {
       expect(btn.querySelector('app-icon[name="done_all"]')).not.toBeNull();
     });
 
-    it('flags hasAboveFold from a real scroll event once the first entry clears the fold', () => {
+    // The scroll path resolves the scroller from the `#rows` viewChild — the
+    // same source `collectAboveFoldIds`/`foldTop` use for the click path — not
+    // from the scroll event's own target, so the probe is driven the same way
+    // `stubGeometry` drives the click-time collection above.
+    it('flags hasAboveFold from a scroll event once the first entry clears the fold', () => {
       const f = mount();
-      jest
-        .spyOn(f.componentInstance as unknown as { listHdr: () => unknown }, 'listHdr')
-        .mockReturnValue({
-          nativeElement: { getBoundingClientRect: () => ({ bottom: 100 }) } as unknown,
-        });
-      const target = {
-        scrollTop: 900,
-        getBoundingClientRect: () => ({ top: 0 }),
-        querySelector: () => measuredEntry('1', 40),
-      };
+      stubGeometry(f, 0, 100, [measuredEntry('1', 40)]);
 
-      f.componentInstance.onRowsScroll({ target } as unknown as Event);
+      f.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
 
       expect(f.componentInstance.hasAboveFold()).toBe(true);
     });
 
     it('leaves hasAboveFold false while the boundary entry has not cleared the fold', () => {
       const f = mount();
-      jest
-        .spyOn(f.componentInstance as unknown as { listHdr: () => unknown }, 'listHdr')
-        .mockReturnValue({
-          nativeElement: { getBoundingClientRect: () => ({ bottom: 100 }) } as unknown,
-        });
-      const target = {
-        scrollTop: 900,
-        getBoundingClientRect: () => ({ top: 0 }),
-        querySelector: () => measuredEntry('1', 150),
-      };
+      stubGeometry(f, 0, 100, [measuredEntry('1', 150)]);
 
-      f.componentInstance.onRowsScroll({ target } as unknown as Event);
+      f.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
 
       expect(f.componentInstance.hasAboveFold()).toBe(false);
     });
 
-    it('does not probe geometry when the scroll target is not a real element', () => {
-      // Several existing scroll tests drive onRowsScroll with a bare
-      // {scrollTop} object; the probe must not throw against it.
+    it('does not throw for a scroll event carrying only scrollTop', () => {
+      // Several pre-existing scroll tests drive onRowsScroll with a bare
+      // {scrollTop} object as the event target; resolving the scroller from
+      // the viewChild instead of that target must tolerate it.
       const f = mount();
       expect(() =>
         f.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event),
       ).not.toThrow();
-      expect(f.componentInstance.hasAboveFold()).toBe(false);
     });
 
     it('resets hasAboveFold when the selection changes', () => {

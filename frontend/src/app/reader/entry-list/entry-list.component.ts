@@ -608,9 +608,8 @@ export class EntryListComponent implements OnDestroy {
     );
     this.lastScrollTop = top;
     this.showToTop.set(top > BACK_TO_TOP_AFTER_PX);
-    // Real scroll events always carry a queryable Element; the guard only
-    // protects handler-invocation tests that pass a bare {scrollTop} stub.
-    if (typeof el.querySelector === 'function') this.hasAboveFold.set(this.hasEntryAboveFold(el));
+    const scroller = this.rows()?.nativeElement;
+    if (scroller) this.hasAboveFold.set(this.hasEntryAboveFold(scroller));
     // Remember where the user is so a browser resume-reload (iOS/Brave discard the
     // tab and reload it) can drop them back here rather than at the top.
     if (this.rowsBelongToSelection()) this.scroll.save(this.selection(), top);
