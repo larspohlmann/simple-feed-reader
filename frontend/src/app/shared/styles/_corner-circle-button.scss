@@ -1,0 +1,31 @@
+@mixin corner-circle-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  border: none;
+  border-radius: 50%;
+
+  /* A mild frost, not a full-glass panel: the button keeps its accent
+     identity, so it can only thin so far. 65% is where the accent still
+     looks like itself while the blur gives a gentle frost behind rows. */
+  background: var(--accent);
+  background: color-mix(in srgb, var(--accent) 65%, transparent);
+  backdrop-filter: blur(12px) saturate(1.4);
+  color: var(--on-accent);
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 25%);
+  animation: corner-circle-in 0.15s ease-out;
+
+  @keyframes corner-circle-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
