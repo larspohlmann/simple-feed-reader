@@ -912,6 +912,50 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  onMarkAboveRead(ids: number[]): void {
+    if (ids.length === 0) return;
+    const data: ConfirmData = {
+      title: this.i18n.translate('reader.markAboveReadConfirm'),
+      message: this.i18n.translate('reader.markAboveReadConfirmMessage', { count: ids.length }),
+      confirmLabel: this.i18n.translate('reader.markAboveRead'),
+    };
+    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
+      data,
+      role: 'alertdialog',
+      panelClass: 'app-dialog',
+    });
+    ref.closed.subscribe((confirmed) => {
+      if (confirmed) this.markAboveReadNow(ids);
+    });
+  }
+
+  /** Unread view: the marked rows leave the list, so re-fetch and land back at
+   *  the top of what remains (#1080). All-items view: the rows stay, so they
+   *  are restyled in place with no re-fetch and no scroll change. */
+  private markAboveReadNow(ids: number[]): void {
+    const request = this.api.markEntriesRead(ids);
+    if (this.selection().unread) {
+      this.entries.runThenReload(request, () => {
+        this.entries.load(queryFromSelection(this.selection()));
+        this.refreshCountsAfterMarkRead();
+        this.list()?.scrollToTop();
+      });
+      return;
+    }
+    request.subscribe({
+      next: () => {
+        this.entries.markHiddenLocally(ids);
+        this.refreshCountsAfterMarkRead();
+      },
+    });
+  }
+
+  private refreshCountsAfterMarkRead(): void {
+    this.subs.load();
+    this.savedSearchesStore.load();
+    this.recs.refreshStatus();
+  }
+
   private markReadNow(target: MarkReadTarget): void {
     const until = this.entries.loadedAt() || new Date().toISOString();
     if (target.scope === 'search') {

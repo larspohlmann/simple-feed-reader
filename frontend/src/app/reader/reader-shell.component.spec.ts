@@ -31,6 +31,7 @@ import { EntryDto, SavedSearchDto, SavedSearchWire } from './models';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
 import { SubscriptionsStore } from './subscriptions.store';
 import { EntriesStore } from './entries.store';
+import { ReaderApi } from './reader-api';
 import { Selection } from './query';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { RefreshService } from './refresh.service';
@@ -2996,6 +2997,74 @@ describe('ReaderShellComponent', () => {
       f.componentInstance.onMarkAllRead();
 
       ctrl.expectNone('https://api.test/api/entries/saved-searches/mark-read');
+    });
+  });
+
+  describe('marking everything above the fold as read (#1080)', () => {
+    function bootUnreadView() {
+      const f = boot();
+      qp.next(convertToParamMap({ unread: '1' }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({ entries: [], nextCursor: null });
+      f.detectChanges();
+      return f;
+    }
+
+    it('re-fetches and returns to the top after marking, on an unread view', () => {
+      const f = bootUnreadView();
+      const api = TestBed.inject(ReaderApi);
+      jest.spyOn(api, 'markEntriesRead').mockReturnValue(of(undefined));
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
+      const runThenReload = jest.spyOn(f.componentInstance.entries, 'runThenReload');
+      const list = f.debugElement.query(By.directive(EntryListComponent))
+        .componentInstance as EntryListComponent;
+      const scrollToTop = jest.spyOn(list, 'scrollToTop').mockImplementation(() => undefined);
+
+      f.componentInstance.onMarkAboveRead([1, 2]);
+      // runThenReload's real implementation runs the reload callback once the
+      // mutation observable completes; the spy replaces it, so the callback is
+      // invoked here to exercise it directly.
+      runThenReload.mock.calls[0][1]();
+
+      expect(api.markEntriesRead).toHaveBeenCalledWith([1, 2]);
+      expect(scrollToTop).toHaveBeenCalled();
+    });
+
+    it('restyles in place without a re-fetch, on an all-items view', () => {
+      const f = boot();
+      const api = TestBed.inject(ReaderApi);
+      jest.spyOn(api, 'markEntriesRead').mockReturnValue(of(undefined));
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
+      const markHiddenLocally = jest.spyOn(f.componentInstance.entries, 'markHiddenLocally');
+      const load = jest.spyOn(f.componentInstance.entries, 'load');
+
+      f.componentInstance.onMarkAboveRead([5, 6]);
+
+      expect(api.markEntriesRead).toHaveBeenCalledWith([5, 6]);
+      expect(markHiddenLocally).toHaveBeenCalledWith([5, 6]);
+      expect(load).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when the dialog is cancelled', () => {
+      const f = boot();
+      const api = TestBed.inject(ReaderApi);
+      jest.spyOn(api, 'markEntriesRead').mockReturnValue(of(undefined));
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(false) } as never);
+
+      f.componentInstance.onMarkAboveRead([1, 2]);
+
+      expect(api.markEntriesRead).not.toHaveBeenCalled();
+    });
+
+    it('does nothing for an empty selection, without opening the dialog', () => {
+      const f = boot();
+      const dialogOpen = jest.spyOn(TestBed.inject(Dialog), 'open');
+
+      f.componentInstance.onMarkAboveRead([]);
+
+      expect(dialogOpen).not.toHaveBeenCalled();
     });
   });
 
