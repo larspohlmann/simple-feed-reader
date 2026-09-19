@@ -70,6 +70,7 @@ import { REVEAL_STEP, isAppendedPage, prefetchMargin } from '../paging';
 import { ReadingFocusService } from '../../core/reading-focus.service';
 import { MagazineStyleService } from '../../core/magazine-style.service';
 import { ReadingFocusApplier } from '../reading-focus-applier';
+import { entriesAboveFold, MeasuredEntry } from './above-fold';
 
 // Scroll-restore settle window: re-assert the target for at most this many frames,
 // stopping early once the content height has held steady for this many in a row.
@@ -235,6 +236,9 @@ export class EntryListComponent implements OnDestroy {
   /** The error banner's dismiss: clears the banner without a request. */
   readonly dismiss = output<void>();
   readonly markAllRead = output<void>();
+  /** The above-fold ids captured at click — a snapshot, so scrolling or a
+   *  background refresh while the confirm dialog is open cannot change the set. */
+  readonly markAboveRead = output<number[]>();
   readonly refresh = output<void>();
   readonly favorite = output<EntryDto>();
   readonly keep = output<EntryDto>();
@@ -496,6 +500,11 @@ export class EntryListComponent implements OnDestroy {
   /** Drives the corner back-to-top button; set from the scroll handler. */
   readonly showToTop = signal(false);
 
+  /** Whether at least one entry is fully scrolled past the fold — gates the
+   *  lower-left button so it never offers a no-op. Set cheaply from the scroll
+   *  handler; the click-time collection does the real, full-list work. */
+  readonly hasAboveFold = signal(false);
+
   /**
    * Whether this list carries the wait cue for its own reload (dim, then veil).
    * A search excludes this: it reloads on every keystroke, and the search field
@@ -548,6 +557,7 @@ export class EntryListComponent implements OnDestroy {
     this.layout();
     this.collapsed.set(false);
     this.showToTop.set(false);
+    this.hasAboveFold.set(false);
     this.lastScrollTop = 0;
   });
 
@@ -598,6 +608,9 @@ export class EntryListComponent implements OnDestroy {
     );
     this.lastScrollTop = top;
     this.showToTop.set(top > BACK_TO_TOP_AFTER_PX);
+    // Real scroll events always carry a queryable Element; the guard only
+    // protects handler-invocation tests that pass a bare {scrollTop} stub.
+    if (typeof el.querySelector === 'function') this.hasAboveFold.set(this.hasEntryAboveFold(el));
     // Remember where the user is so a browser resume-reload (iOS/Brave discard the
     // tab and reload it) can drop them back here rather than at the top.
     if (this.rowsBelongToSelection()) this.scroll.save(this.selection(), top);
@@ -637,6 +650,34 @@ export class EntryListComponent implements OnDestroy {
     // finishes: `onRowsScroll` overwrites this every frame, so it's a floor for
     // the reduced-motion/interrupted cases, not a guarantee 0 gets remembered.
     this.scroll.save(this.selection(), 0);
+  }
+
+  private foldTop(scroller: HTMLElement): number {
+    const header = this.listHdr()?.nativeElement.getBoundingClientRect().bottom ?? 0;
+    return Math.max(scroller.getBoundingClientRect().top, header);
+  }
+
+  private measuredEntries(scroller: HTMLElement): MeasuredEntry[] {
+    return Array.from(scroller.querySelectorAll('[data-entry-id]')).map((node) => ({
+      id: Number(node.getAttribute('data-entry-id')),
+      bottom: node.getBoundingClientRect().bottom,
+    }));
+  }
+
+  private collectAboveFoldIds(): number[] {
+    const scroller = this.rows()?.nativeElement;
+    if (!scroller) return [];
+    return entriesAboveFold(this.measuredEntries(scroller), this.foldTop(scroller));
+  }
+
+  private hasEntryAboveFold(scroller: HTMLElement): boolean {
+    const first = scroller.querySelector('[data-entry-id]');
+    return !!first && first.getBoundingClientRect().bottom <= this.foldTop(scroller);
+  }
+
+  onMarkAboveRead(): void {
+    const ids = this.collectAboveFoldIds();
+    if (ids.length > 0) this.markAboveRead.emit(ids);
   }
 
   tagsFor(subscriptionId: number): SubscriptionTagDto[] {

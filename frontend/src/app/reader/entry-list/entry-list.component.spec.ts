@@ -1560,6 +1560,170 @@ describe('EntryListComponent', () => {
     });
   });
 
+  // #1080: the lower-left "mark everything above as read" button. jsdom lays
+  // nothing out, so geometry is driven through fakes standing in for the
+  // `#rows`/`#listHdr` viewChild signals, exactly like the real elements they
+  // replace (getBoundingClientRect, querySelector/All, getAttribute).
+  describe('mark-above-read button (#1080)', () => {
+    const measuredEntry = (id: string, bottom: number): HTMLElement =>
+      ({
+        getAttribute: () => id,
+        getBoundingClientRect: () => ({ bottom }),
+      }) as unknown as HTMLElement;
+
+    /** Stubs the component's `rows`/`listHdr` viewChild signals with fakes whose
+     *  geometry is scripted: `scrollerTop`/`headerBottom` place the fold line,
+     *  `entries` become the tagged rows `querySelector(All)` finds. */
+    function stubGeometry(
+      f: ReturnType<typeof mount>,
+      scrollerTop: number,
+      headerBottom: number,
+      entries: HTMLElement[],
+    ): void {
+      const scroller = {
+        getBoundingClientRect: () => ({ top: scrollerTop }),
+        querySelector: () => entries[0] ?? null,
+        querySelectorAll: () => entries as unknown as NodeListOf<Element>,
+      } as unknown as HTMLElement;
+      const header = {
+        getBoundingClientRect: () => ({ bottom: headerBottom }),
+      } as unknown as HTMLElement;
+
+      jest
+        .spyOn(f.componentInstance as unknown as { rows: () => unknown }, 'rows')
+        .mockReturnValue({ nativeElement: scroller });
+      jest
+        .spyOn(f.componentInstance as unknown as { listHdr: () => unknown }, 'listHdr')
+        .mockReturnValue({ nativeElement: header });
+    }
+
+    it('collects ids of entries fully above the fold at click', () => {
+      const f = mount();
+      // fold line = max(scroller.top=0, listHdr.bottom=100) = 100
+      stubGeometry(f, 0, 100, [
+        measuredEntry('1', 40),
+        measuredEntry('2', 90),
+        measuredEntry('3', 150),
+      ]);
+
+      const emitted: number[][] = [];
+      f.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
+      f.componentInstance.onMarkAboveRead();
+
+      expect(emitted).toEqual([[1, 2]]);
+    });
+
+    it('emits nothing when no entry has cleared the fold', () => {
+      const f = mount();
+      stubGeometry(f, 0, 100, [measuredEntry('1', 150)]);
+
+      const emitted: number[][] = [];
+      f.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
+      f.componentInstance.onMarkAboveRead();
+
+      expect(emitted).toEqual([]);
+    });
+
+    it('shows the button only once scrolled down and an entry sits above the fold', () => {
+      const f = mount();
+      const el = f.nativeElement as HTMLElement;
+      expect(el.querySelector('.mark-above')).toBeNull();
+
+      f.componentInstance.showToTop.set(true);
+      f.detectChanges();
+      expect(el.querySelector('.mark-above')).toBeNull();
+
+      f.componentInstance.hasAboveFold.set(true);
+      f.detectChanges();
+      expect(el.querySelector('.mark-above')).not.toBeNull();
+    });
+
+    it('hides the button once scrolled back up, even with entries above the fold', () => {
+      const f = mount();
+      f.componentInstance.hasAboveFold.set(true);
+      f.detectChanges();
+      expect((f.nativeElement as HTMLElement).querySelector('.mark-above')).toBeNull();
+    });
+
+    it('emits the collected ids when the rendered button is clicked', () => {
+      const f = mount();
+      stubGeometry(f, 0, 100, [measuredEntry('7', 40)]);
+      f.componentInstance.showToTop.set(true);
+      f.componentInstance.hasAboveFold.set(true);
+      f.detectChanges();
+
+      const emitted: number[][] = [];
+      f.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
+      (f.nativeElement.querySelector('.mark-above') as HTMLButtonElement).click();
+
+      expect(emitted).toEqual([[7]]);
+    });
+
+    it('labels the button with the done_all icon', () => {
+      const f = mount();
+      f.componentInstance.showToTop.set(true);
+      f.componentInstance.hasAboveFold.set(true);
+      f.detectChanges();
+
+      const btn = (f.nativeElement as HTMLElement).querySelector('.mark-above')!;
+      expect(btn.querySelector('app-icon[name="done_all"]')).not.toBeNull();
+    });
+
+    it('flags hasAboveFold from a real scroll event once the first entry clears the fold', () => {
+      const f = mount();
+      jest
+        .spyOn(f.componentInstance as unknown as { listHdr: () => unknown }, 'listHdr')
+        .mockReturnValue({
+          nativeElement: { getBoundingClientRect: () => ({ bottom: 100 }) } as unknown,
+        });
+      const target = {
+        scrollTop: 900,
+        getBoundingClientRect: () => ({ top: 0 }),
+        querySelector: () => measuredEntry('1', 40),
+      };
+
+      f.componentInstance.onRowsScroll({ target } as unknown as Event);
+
+      expect(f.componentInstance.hasAboveFold()).toBe(true);
+    });
+
+    it('leaves hasAboveFold false while the boundary entry has not cleared the fold', () => {
+      const f = mount();
+      jest
+        .spyOn(f.componentInstance as unknown as { listHdr: () => unknown }, 'listHdr')
+        .mockReturnValue({
+          nativeElement: { getBoundingClientRect: () => ({ bottom: 100 }) } as unknown,
+        });
+      const target = {
+        scrollTop: 900,
+        getBoundingClientRect: () => ({ top: 0 }),
+        querySelector: () => measuredEntry('1', 150),
+      };
+
+      f.componentInstance.onRowsScroll({ target } as unknown as Event);
+
+      expect(f.componentInstance.hasAboveFold()).toBe(false);
+    });
+
+    it('does not probe geometry when the scroll target is not a real element', () => {
+      // Several existing scroll tests drive onRowsScroll with a bare
+      // {scrollTop} object; the probe must not throw against it.
+      const f = mount();
+      expect(() =>
+        f.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event),
+      ).not.toThrow();
+      expect(f.componentInstance.hasAboveFold()).toBe(false);
+    });
+
+    it('resets hasAboveFold when the selection changes', () => {
+      const f = mount();
+      f.componentInstance.hasAboveFold.set(true);
+      f.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
+      f.detectChanges();
+      expect(f.componentInstance.hasAboveFold()).toBe(false);
+    });
+  });
+
   describe('back to top under prefers-reduced-motion', () => {
     const realMatchMedia = window.matchMedia;
 

@@ -444,3 +444,15 @@
 @if (showToTop()) {
   <app-to-top-button (activate)="scrollToTop()" />
 }
+
+@if (showToTop() && hasAboveFold()) {
+  <button
+    type="button"
+    class="mark-above"
+    (click)="onMarkAboveRead()"
+    [attr.aria-label]="'reader.markAboveRead' | transloco"
+    [attr.title]="'reader.markAboveRead' | transloco"
+  >
+    <app-icon name="done_all" size="md" />
+  </button>
+}
