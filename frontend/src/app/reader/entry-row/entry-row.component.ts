@@ -22,6 +22,7 @@ import { relativeTime } from '../format';
 @Component({
   selector: 'app-entry-row',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[attr.data-entry-id]': 'entry().id' },
   // forwardRef, not a direct reference: entry-duplicates renders entry-row for
   // its popover card, so a plain reference here would resolve
   // EntryDuplicatesComponent mid-import-cycle and read as undefined.

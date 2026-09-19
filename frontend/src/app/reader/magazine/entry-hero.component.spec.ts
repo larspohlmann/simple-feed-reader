@@ -113,6 +113,11 @@ describe('EntryHeroComponent', () => {
     expect(read).toHaveBeenCalled();
   });
 
+  it('exposes its entry id on the host element', () => {
+    const f = mount(entry({ id: 77 }));
+    expect(f.nativeElement.getAttribute('data-entry-id')).toBe('77');
+  });
+
   it('bubbles open for a duplicate copy through the footer', () => {
     const dup = entry({ id: 9, source: 'NDR SH' });
     const f = mount(entry({ duplicates: [dup] }));
