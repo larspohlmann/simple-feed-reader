@@ -1673,6 +1673,77 @@ describe('EntryListComponent', () => {
       expect(emitted).toEqual([[7]]);
     });
 
+    // A collapsed source-group widget renders only its preview rows; the folded
+    // tail has no DOM node to measure. Once the whole preview is above the fold
+    // the widget was scrolled past as a unit, so its tail goes with it —
+    // otherwise hiding the preview surfaces the tail above the boundary.
+    it('marks the folded tail of a group whose whole preview sits above the fold', () => {
+      const now = '2026-07-22T11:00:00Z';
+      const f = mount({
+        entries: [
+          ...Array.from({ length: 8 }, (_, i) =>
+            entry(i + 1, { subscriptionId: 1, source: 'a', publishedAt: now }),
+          ),
+          entry(9, { subscriptionId: 2, source: 'b', publishedAt: now }),
+          entry(10, { subscriptionId: 2, source: 'b', publishedAt: now }),
+          entry(11, { subscriptionId: 3, source: 'c', publishedAt: now }),
+          entry(12, { subscriptionId: 3, source: 'c', publishedAt: now }),
+        ],
+        selection: { kind: 'all', id: null, unread: true },
+        layout: 'magazine',
+      });
+      const group = f.componentInstance.visibleBlocks().find((b) => b.kind === 'group') as Extract<
+        MagazineBlock,
+        { kind: 'group' }
+      >;
+      const preview = group.entries.slice(0, group.previewCount).map((e) => e.id);
+      const tail = group.entries.slice(group.previewCount).map((e) => e.id);
+      expect(tail.length).toBeGreaterThan(0);
+      stubGeometry(f, 0, 100, [
+        ...preview.map((id) => measuredEntry(String(id), 40)),
+        measuredEntry('9', 150),
+      ]);
+
+      const emitted: number[][] = [];
+      f.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
+      f.componentInstance.onMarkAboveRead();
+
+      expect(emitted).toEqual([[...preview, ...tail]]);
+    });
+
+    it('keeps the folded tail of a group while one of its preview rows straddles the fold', () => {
+      const now = '2026-07-22T11:00:00Z';
+      const f = mount({
+        entries: [
+          ...Array.from({ length: 8 }, (_, i) =>
+            entry(i + 1, { subscriptionId: 1, source: 'a', publishedAt: now }),
+          ),
+          entry(9, { subscriptionId: 2, source: 'b', publishedAt: now }),
+          entry(10, { subscriptionId: 2, source: 'b', publishedAt: now }),
+          entry(11, { subscriptionId: 3, source: 'c', publishedAt: now }),
+          entry(12, { subscriptionId: 3, source: 'c', publishedAt: now }),
+        ],
+        selection: { kind: 'all', id: null, unread: true },
+        layout: 'magazine',
+      });
+      const group = f.componentInstance.visibleBlocks().find((b) => b.kind === 'group') as Extract<
+        MagazineBlock,
+        { kind: 'group' }
+      >;
+      const preview = group.entries.slice(0, group.previewCount).map((e) => e.id);
+      const [last, ...above] = [...preview].reverse();
+      stubGeometry(f, 0, 100, [
+        ...above.reverse().map((id) => measuredEntry(String(id), 40)),
+        measuredEntry(String(last), 150),
+      ]);
+
+      const emitted: number[][] = [];
+      f.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
+      f.componentInstance.onMarkAboveRead();
+
+      expect(emitted).toEqual([above]);
+    });
+
     it('labels the button with the done_all icon', () => {
       const f = mount();
       f.componentInstance.showToTop.set(true);

@@ -70,7 +70,7 @@ import { REVEAL_STEP, isAppendedPage, prefetchMargin } from '../paging';
 import { ReadingFocusService } from '../../core/reading-focus.service';
 import { MagazineStyleService } from '../../core/magazine-style.service';
 import { ReadingFocusApplier } from '../reading-focus-applier';
-import { entriesAboveFold, MeasuredEntry } from './above-fold';
+import { entriesAboveFold, foldedGroupTailsAbove, MeasuredEntry } from './above-fold';
 
 // Scroll-restore settle window: re-assert the target for at most this many frames,
 // stopping early once the content height has held steady for this many in a row.
@@ -697,7 +697,18 @@ export class EntryListComponent implements OnDestroy {
   private collectAboveFoldIds(): number[] {
     const scroller = this.rows()?.nativeElement;
     if (!scroller) return [];
-    return entriesAboveFold(this.measuredEntries(scroller), this.foldTop(scroller));
+    const measured = this.measuredEntries(scroller);
+    const above = entriesAboveFold(measured, this.foldTop(scroller));
+    return [...above, ...this.foldedGroupTailsAbove(above, measured)];
+  }
+
+  /** A collapsed group widget renders only its preview rows, so its folded tail
+   *  has nothing to measure; once the whole preview is above the fold the tail
+   *  goes with it — hiding the preview alone would surface the tail above the
+   *  boundary. */
+  private foldedGroupTailsAbove(above: number[], measured: MeasuredEntry[]): number[] {
+    const groups = this.visibleBlocks().filter((block) => block.kind === 'group');
+    return foldedGroupTailsAbove(new Set(above), new Set(measured.map((m) => m.id)), groups);
   }
 
   private hasEntryAboveFold(scroller: HTMLElement): boolean {
