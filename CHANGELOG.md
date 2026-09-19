@@ -10,6 +10,17 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.0.14] - 2026-09-19
+
+## What's Changed
+* feat(#1080): mark everything above the scroll position as read by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1082
+* fix(#1083): inject the backup byte ceiling so its tests stop building 64 MB fixtures by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1084
+* Manual sidebar hide/show toggle for wide layouts by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1086
+* fix(#1081): restore the reader hero above a leading decorative icon by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1087
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.0.13...v1.0.14
+
 ## [v1.0.13] - 2026-09-18
 
 ## What's Changed
