@@ -456,6 +456,36 @@ export class EntryListComponent implements OnDestroy {
     return out;
   });
 
+  /** Ids hidden from the render after a mark-above-read on an unread view — a
+   *  post-plan overlay, never fed back into `entries()`, so the planner does
+   *  not re-run and every block below the boundary keeps its position (#1080). */
+  readonly hiddenAboveIds = signal<ReadonlySet<number>>(new Set());
+
+  /** `blocks()` with the hidden ids removed. Filters the planner's OUTPUT, not
+   *  its input entries: hiding a group member shrinks that group's own
+   *  `entries` instead of dropping the whole widget. */
+  readonly visibleBlocks = computed<ListBlock[]>(() => {
+    const hidden = this.hiddenAboveIds();
+    if (hidden.size === 0) return this.blocks();
+    return this.blocks().flatMap((block): ListBlock[] => {
+      if (block.kind === 'run-header') return [block];
+      if (block.kind !== 'group') return hidden.has(block.entry.id) ? [] : [block];
+      const entries = block.entries.filter((e) => !hidden.has(e.id));
+      if (entries.length === 0) return [];
+      return entries.length === block.entries.length ? [block] : [{ ...block, entries }];
+    });
+  });
+
+  /** `runGroups()` with the hidden ids removed — the list layout's counterpart
+   *  to `visibleBlocks`. */
+  readonly visibleRunGroups = computed<RunGroup[]>(() => {
+    const hidden = this.hiddenAboveIds();
+    if (hidden.size === 0) return this.runGroups();
+    return this.runGroups()
+      .map((group) => ({ ...group, entries: group.entries.filter((e) => !hidden.has(e.id)) }))
+      .filter((group) => group.entries.length > 0);
+  });
+
   private readonly screen = inject(LayoutService);
   private readonly readingFocus = inject(ReadingFocusService);
   private readonly zone = inject(NgZone);
@@ -558,6 +588,7 @@ export class EntryListComponent implements OnDestroy {
     this.collapsed.set(false);
     this.showToTop.set(false);
     this.hasAboveFold.set(false);
+    this.hiddenAboveIds.set(new Set());
     this.lastScrollTop = 0;
   });
 
@@ -676,7 +707,37 @@ export class EntryListComponent implements OnDestroy {
 
   onMarkAboveRead(): void {
     const ids = this.collectAboveFoldIds();
-    if (ids.length > 0) this.markAboveRead.emit(ids);
+    if (ids.length === 0) return;
+    this.markAboveRead.emit(this.withHiddenDuplicates(ids));
+  }
+
+  /** Above-fold ids plus the hidden duplicate copies folded under each row
+   *  (EntryDto.duplicates), which share the row but carry their own state. */
+  private withHiddenDuplicates(ids: number[]): number[] {
+    const byId = new Map(this.entries().map((e) => [e.id, e]));
+    const out: number[] = [];
+    for (const id of ids) {
+      out.push(id);
+      for (const duplicate of byId.get(id)?.duplicates ?? []) out.push(duplicate.id);
+    }
+    return out;
+  }
+
+  /** Freeze & remove: hide the just-marked blocks from the render without
+   *  re-planning, and land the boundary at the top. entries() is untouched, so
+   *  the planner does not re-run and the blocks below keep their positions. */
+  hideAboveMarked(ids: number[]): void {
+    this.cancelSettle();
+    this.hiddenAboveIds.update((current) => new Set([...current, ...ids]));
+    const el = this.rows()?.nativeElement;
+    if (!el) return;
+    this.scroll.save(this.selection(), 0);
+    this.zone.runOutsideAngular(() =>
+      requestAnimationFrame(() => {
+        el.scrollTop = 0;
+        this.lastScrollTop = 0;
+      }),
+    );
   }
 
   tagsFor(subscriptionId: number): SubscriptionTagDto[] {
@@ -827,6 +888,7 @@ export class EntryListComponent implements OnDestroy {
     // then land the user back where they were before the page was reloaded.
     if (this.wasLoading && el) {
       this.wasLoading = false;
+      this.hiddenAboveIds.set(new Set());
       this.renderedSelection = this.selection();
       this.applyScroll(el, this.scroll.read(this.selection()));
     }

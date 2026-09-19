@@ -3012,24 +3012,41 @@ describe('ReaderShellComponent', () => {
       return f;
     }
 
-    it('re-fetches and returns to the top after marking, on an unread view', () => {
+    it('hides the marked posts in place and lands the boundary at the top, on an unread view', () => {
       const f = bootUnreadView();
       const api = TestBed.inject(ReaderApi);
       jest.spyOn(api, 'markEntriesRead').mockReturnValue(of(undefined));
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
-      const runThenReload = jest.spyOn(f.componentInstance.entries, 'runThenReload');
+      const load = jest.spyOn(f.componentInstance.entries, 'load');
       const list = f.debugElement.query(By.directive(EntryListComponent))
         .componentInstance as EntryListComponent;
-      const scrollToTop = jest.spyOn(list, 'scrollToTop').mockImplementation(() => undefined);
+      const hideAboveMarked = jest
+        .spyOn(list, 'hideAboveMarked')
+        .mockImplementation(() => undefined);
 
       f.componentInstance.onMarkAboveRead([1, 2]);
-      // runThenReload's real implementation runs the reload callback once the
-      // mutation observable completes; the spy replaces it, so the callback is
-      // invoked here to exercise it directly.
-      runThenReload.mock.calls[0][1]();
 
       expect(api.markEntriesRead).toHaveBeenCalledWith([1, 2]);
-      expect(scrollToTop).toHaveBeenCalled();
+      expect(hideAboveMarked).toHaveBeenCalledWith([1, 2]);
+      expect(load).not.toHaveBeenCalled();
+    });
+
+    it('surfaces a failed request on the entries error banner, on an unread view', () => {
+      const f = bootUnreadView();
+      const api = TestBed.inject(ReaderApi);
+      const problem = { type: 'x', title: 'Failed', status: 500 };
+      jest
+        .spyOn(api, 'markEntriesRead')
+        .mockReturnValue(throwError(() => new HttpErrorResponse({ error: problem, status: 500 })));
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
+      const list = f.debugElement.query(By.directive(EntryListComponent))
+        .componentInstance as EntryListComponent;
+      const hideAboveMarked = jest.spyOn(list, 'hideAboveMarked');
+
+      f.componentInstance.onMarkAboveRead([1, 2]);
+
+      expect(f.componentInstance.entries.error()).toEqual(expect.objectContaining(problem));
+      expect(hideAboveMarked).not.toHaveBeenCalled();
     });
 
     it('restyles in place without a re-fetch, on an all-items view', () => {

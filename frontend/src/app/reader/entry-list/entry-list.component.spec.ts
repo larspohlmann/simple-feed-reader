@@ -9,6 +9,7 @@ import { ListScrollMemory } from '../list-scroll-memory';
 import { CatalogStore } from '../../discover/catalog.store';
 import { REVEAL_STEP, prefetchMargin } from '../paging';
 import { EntryDto } from '../models';
+import { MagazineBlock } from '../magazine/magazine-block';
 import { ReadingFocusService } from '../../core/reading-focus.service';
 import { MagazineStyleService } from '../../core/magazine-style.service';
 import { MAGAZINE_STYLE_WRITER } from '../../core/magazine-style-writer';
@@ -1613,6 +1614,19 @@ describe('EntryListComponent', () => {
       expect(emitted).toEqual([[1, 2]]);
     });
 
+    it('expands an above-fold entry with its hidden duplicate copies (#1080)', () => {
+      const f = mount({
+        entries: [entry(1, { duplicates: [entry(101), entry(102)] }), entry(2)],
+      });
+      stubGeometry(f, 0, 100, [measuredEntry('1', 40)]);
+
+      const emitted: number[][] = [];
+      f.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
+      f.componentInstance.onMarkAboveRead();
+
+      expect(emitted).toEqual([[1, 101, 102]]);
+    });
+
     it('emits nothing when no entry has cleared the fold', () => {
       const f = mount();
       stubGeometry(f, 0, 100, [measuredEntry('1', 150)]);
@@ -2026,6 +2040,119 @@ describe('EntryListComponent', () => {
       await settle(f);
       expect(rowOpacities(f)).toHaveLength(3 + REVEAL_STEP * 2);
       expect(rowOpacities(f)).not.toContain('');
+    });
+  });
+
+  describe('freeze & remove after mark-above-read (#1080)', () => {
+    it('drops a hidden id from visibleRunGroups while keeping the rest, in order', () => {
+      const f = mount({ entries: [entry(1), entry(2), entry(3)] });
+
+      f.componentInstance.hiddenAboveIds.set(new Set([2]));
+
+      expect(f.componentInstance.visibleRunGroups()[0].entries.map((e) => e.id)).toEqual([1, 3]);
+    });
+
+    it('drops a hidden single-entry magazine block entirely', () => {
+      const f = mount({ entries: [entry(1), entry(2), entry(3)], layout: 'magazine' });
+      const before = f.componentInstance.blocks();
+      const targetId = (before[0] as Extract<MagazineBlock, { entry: EntryDto }>).entry.id;
+
+      f.componentInstance.hiddenAboveIds.set(new Set([targetId]));
+      const after = f.componentInstance.visibleBlocks();
+
+      expect(after.length).toBe(before.length - 1);
+      expect(
+        after.some((b) => b.kind !== 'group' && b.kind !== 'run-header' && b.entry.id === targetId),
+      ).toBe(false);
+    });
+
+    // A same-source run collapses only once the view is genuinely mixed (at
+    // least 3 distinct active sources) — mirrors the fixture in the
+    // "for-you grouping" describe block above.
+    const now = '2026-07-22T11:00:00Z';
+    const mixedSourceRun = [
+      ...Array.from({ length: 8 }, (_, i) =>
+        entry(i + 1, { subscriptionId: 1, source: 'a', publishedAt: now }),
+      ),
+      entry(9, { subscriptionId: 2, source: 'b', publishedAt: now }),
+      entry(10, { subscriptionId: 2, source: 'b', publishedAt: now }),
+      entry(11, { subscriptionId: 3, source: 'c', publishedAt: now }),
+      entry(12, { subscriptionId: 3, source: 'c', publishedAt: now }),
+    ];
+
+    it('shrinks a group block to its remaining entries instead of dropping it', () => {
+      const f = mount({
+        entries: mixedSourceRun,
+        selection: { kind: 'all', id: null, unread: false },
+        layout: 'magazine',
+      });
+      const groupBefore = f.componentInstance.blocks().find((b) => b.kind === 'group') as Extract<
+        MagazineBlock,
+        { kind: 'group' }
+      >;
+      expect(groupBefore).toBeDefined();
+      const hiddenId = groupBefore.entries[0].id;
+
+      f.componentInstance.hiddenAboveIds.set(new Set([hiddenId]));
+      const groupAfter = f.componentInstance
+        .visibleBlocks()
+        .find((b) => b.kind === 'group') as Extract<MagazineBlock, { kind: 'group' }>;
+
+      expect(groupAfter).toBeDefined();
+      expect(groupAfter.entries.map((e) => e.id)).not.toContain(hiddenId);
+      expect(groupAfter.entries.length).toBe(groupBefore.entries.length - 1);
+    });
+
+    it('drops a group block entirely once every one of its entries is hidden', () => {
+      const f = mount({
+        entries: mixedSourceRun,
+        selection: { kind: 'all', id: null, unread: false },
+        layout: 'magazine',
+      });
+      const groupBefore = f.componentInstance.blocks().find((b) => b.kind === 'group') as Extract<
+        MagazineBlock,
+        { kind: 'group' }
+      >;
+
+      f.componentInstance.hiddenAboveIds.set(new Set(groupBefore.entries.map((e) => e.id)));
+
+      expect(f.componentInstance.visibleBlocks().some((b) => b.kind === 'group')).toBe(false);
+    });
+
+    it('adds the given ids to hiddenAboveIds and scrolls the boundary to the top', () => {
+      const f = mount({ entries: [entry(1), entry(2), entry(3)] });
+      const scroller = fakeScroller(f, 400);
+
+      f.componentInstance.hideAboveMarked([1, 2]);
+
+      expect(f.componentInstance.hiddenAboveIds()).toEqual(new Set([1, 2]));
+      expect(memory.save).toHaveBeenCalledWith(f.componentInstance.selection(), 0);
+      expect(scroller.scrollTop).toBe(400); // the rAF scroll write hasn't run yet
+    });
+
+    it('resets hiddenAboveIds when the selection changes', () => {
+      const f = mount({ entries: [entry(1), entry(2)] });
+      f.componentInstance.hideAboveMarked([1]);
+      expect(f.componentInstance.hiddenAboveIds().size).toBe(1);
+
+      f.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
+      f.detectChanges();
+
+      expect(f.componentInstance.hiddenAboveIds().size).toBe(0);
+    });
+
+    it('resets hiddenAboveIds on a genuine reload', () => {
+      const f = mount({ entries: [entry(1), entry(2)] });
+      f.componentInstance.hideAboveMarked([1]);
+      expect(f.componentInstance.hiddenAboveIds().size).toBe(1);
+
+      f.componentRef.setInput('loading', true);
+      f.detectChanges();
+      f.componentRef.setInput('entries', [entry(3), entry(4)]);
+      f.componentRef.setInput('loading', false);
+      f.detectChanges();
+
+      expect(f.componentInstance.hiddenAboveIds().size).toBe(0);
     });
   });
 });

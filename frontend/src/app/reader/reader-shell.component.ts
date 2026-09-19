@@ -930,15 +930,21 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  /** Unread view: the marked rows leave the list, so re-fetch and land back at
-   *  the top of what remains (#1080). All-items view: the rows stay, so they
-   *  are restyled in place with no re-fetch and no scroll change. */
+  /** Unread view: the marked rows leave the list, so the list hides them and
+   *  lands the boundary at the top without a re-fetch — re-fetching would let
+   *  the magazine planner re-run and reorder newer-but-lower posts above the
+   *  boundary (#1080). All-items view: the rows stay, so they are restyled in
+   *  place with no re-fetch and no scroll change. */
   private markAboveReadNow(ids: number[]): void {
     if (this.selection().unread) {
-      this.entries.runThenReload(this.api.markEntriesRead(ids), () => {
-        this.entries.load(queryFromSelection(this.selection()));
-        this.refreshCountsAfterMarkRead();
-        this.list()?.scrollToTop();
+      this.api.markEntriesRead(ids).subscribe({
+        next: () => {
+          this.list()?.hideAboveMarked(ids);
+          this.refreshCountsAfterMarkRead();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.entries.reportMutationFailure(error, () => this.markAboveReadNow(ids));
+        },
       });
       return;
     }
