@@ -161,6 +161,80 @@ final class ReaderLeadImageTest extends TestCase
         );
     }
 
+    public function testRestoresTheHeroAboveALeadingDecorativeIcon(): void
+    {
+        // semafor #1081: the body opens with a 20x16 "Title icon" before the
+        // first heading. A leading icon is not a lead visual, so the drawn hero
+        // still belongs above it.
+        $lead = 'https://img.semafor.com/cb54167-3280x2192.jpg';
+        $body = '<div><p><span><img src="https://img.semafor.com/reporterstake@2x.png"'
+            . ' alt="Title icon" width="20" height="16"></span></p><h3>Reed\'s view</h3>'
+            . '<p>Story.</p></div>';
+
+        $result = $this->restoredBody($body, $this->pageDrawing($lead), $lead);
+
+        self::assertStringContainsString('3280x2192.jpg', $result);
+        self::assertLessThan(
+            strpos($result, 'reporterstake@2x.png'),
+            strpos($result, '3280x2192.jpg'),
+            'the hero must lead the decorative icon',
+        );
+    }
+
+    public function testSuppressesTheHeroWhenAGenuineLeadFollowsADecorativeIcon(): void
+    {
+        // The icon is passed over, but the real lead image right behind it still
+        // opens the body; a second hero must not stack above it.
+        $lead = 'https://img.semafor.com/hero-3280x2192.jpg';
+        $body = '<div><p><span><img src="https://img.semafor.com/reporterstake@2x.png"'
+            . ' alt="Title icon" width="20" height="16"></span></p>'
+            . '<figure><img src="https://img.semafor.com/real-lead.jpg" width="1200" height="800" alt="">'
+            . '</figure><p>Story.</p></div>';
+
+        self::assertSame(
+            $this->unchangedBody($body),
+            $this->restoredBody($body, $this->pageDrawing($lead), $lead),
+        );
+    }
+
+    public function testTreatsAnEdgeAtTheIconCeilingAsDecorative(): void
+    {
+        // The ceiling is inclusive: a 100x100 leading badge is still decoration,
+        // so the hero is restored above it.
+        $lead = 'https://cdn.test/hero-photo.jpg';
+        $body = '<p><img src="https://cdn.test/badge.png" width="100" height="100" alt=""></p><p>Story.</p>';
+
+        $result = $this->restoredBody($body, $this->pageDrawing($lead), $lead);
+
+        self::assertStringContainsString('hero-photo.jpg', $result);
+    }
+
+    public function testTreatsAFullWidthLeadingImageAsALeadNotAnIcon(): void
+    {
+        // A responsive lead declares width="100%", not a pixel edge; it must not
+        // read as a 100px icon, so the body still opens with it and takes no hero.
+        $lead = 'https://cdn.test/hero-photo.jpg';
+        $body = '<p><img src="https://cdn.test/full.jpg" width="100%" height="100%" alt=""></p><p>Story.</p>';
+
+        self::assertSame(
+            $this->unchangedBody($body),
+            $this->restoredBody($body, $this->pageDrawing($lead), $lead),
+        );
+    }
+
+    public function testKeepsAnImageWithOnlyOneDeclaredEdgeAsALead(): void
+    {
+        // Only one edge is known, so the image cannot be confirmed as an icon; the
+        // safe reading is that the body opens with a lead and takes no second hero.
+        $lead = 'https://cdn.test/hero-photo.jpg';
+        $body = '<p><img src="https://cdn.test/leading.jpg" height="16" alt=""></p><p>Story.</p>';
+
+        self::assertSame(
+            $this->unchangedBody($body),
+            $this->restoredBody($body, $this->pageDrawing($lead), $lead),
+        );
+    }
+
     public function testLeavesTheBodyWhenTheLeadIsNotDrawnOnThePage(): void
     {
         // beat.de: the og:image is a meta-only share-render, never drawn in the

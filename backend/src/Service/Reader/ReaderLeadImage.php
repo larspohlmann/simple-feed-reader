@@ -16,6 +16,9 @@ use Dom\HTMLDocument;
  */
 final readonly class ReaderLeadImage
 {
+    /** Both declared edges at or below this mark an icon or a beacon, never a lead. */
+    private const int ICON_EDGE_CEILING = 100;
+
     /** @return ?Element the restored hero figure, so a top-placed player can be seated below it (#907) */
     public function restore(HTMLDocument $document, LeadImageCandidate $lead, bool $topPlacesLeadVisual): ?Element
     {
@@ -71,13 +74,21 @@ final readonly class ReaderLeadImage
         return false;
     }
 
-    /** True when the first content in document order is an image, not text. */
+    /**
+     * True when the first content in document order is a lead image, not text.
+     * A leading decorative icon is passed over: it is not a lead, so a hero
+     * still belongs above it (#1081).
+     */
     private function opensWithImage(Element $body): bool
     {
         $pending = iterator_to_array($body->childNodes);
         while ($pending !== []) {
             $node = array_shift($pending);
             if ($node instanceof Element && $node->localName === 'img') {
+                if ($this->isDecorativeIcon($node)) {
+                    continue;
+                }
+
                 return true;
             }
             if ($node->nodeType === \XML_TEXT_NODE && trim((string) $node->textContent) !== '') {
@@ -89,6 +100,21 @@ final readonly class ReaderLeadImage
         }
 
         return false;
+    }
+
+    private function isDecorativeIcon(Element $image): bool
+    {
+        $width = $this->declaredPixels($image->getAttribute('width'));
+        $height = $this->declaredPixels($image->getAttribute('height'));
+
+        return $width !== null && $width <= self::ICON_EDGE_CEILING
+            && $height !== null && $height <= self::ICON_EDGE_CEILING;
+    }
+
+    /** A pixel edge only when the attribute is a plain integer; a "100%" width is not one. */
+    private function declaredPixels(?string $value): ?int
+    {
+        return $value !== null && preg_match('/^\d+$/', $value) === 1 ? (int) $value : null;
     }
 
     private function figure(HTMLDocument $document, string $leadUrl, ?string $caption): Element
