@@ -210,6 +210,14 @@ describe('ReaderApi', () => {
     req.flush(null);
   });
 
+  it('posts the id list to mark-read-batch', () => {
+    api.markEntriesRead([11, 22, 33]).subscribe();
+    const req = ctrl.expectOne((r) => r.url.endsWith('/api/entries/mark-read-batch'));
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ ids: [11, 22, 33] });
+    req.flush(null);
+  });
+
   it('sends no unread flag for a feed that shows everything', () => {
     api.entries({ view: 'all' }).subscribe();
     const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
