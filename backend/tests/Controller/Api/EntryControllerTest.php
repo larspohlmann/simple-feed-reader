@@ -1099,6 +1099,54 @@ final class EntryControllerTest extends WebTestCase
         self::assertCount(1, $this->entriesOf($client), 'The unmarked entry stays unread.');
     }
 
+    public function testMarkReadBatchToleratesDuplicateIds(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-markbatch-dup@example.com');
+        $sub = $this->seedFeedWithEntries($user, 1);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()]);
+        self::assertInstanceOf(Entry::class, $entry);
+        $id = $entry->getId();
+
+        $client->request(
+            'POST',
+            '/api/entries/mark-read-batch',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['ids' => [$id, $id]], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(204);
+
+        $client->request('GET', '/api/entries?view=unread', server: $headers);
+        self::assertCount(0, $this->entriesOf($client), 'The duplicated id is marked read exactly once.');
+    }
+
+    public function testMarkReadBatchIgnoresNonexistentIds(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-markbatch-missing@example.com');
+        $sub = $this->seedFeedWithEntries($user, 1);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()]);
+        self::assertInstanceOf(Entry::class, $entry);
+        $id = $entry->getId();
+        $missingId = 99999999;
+        self::assertNull($em->getRepository(Entry::class)->find($missingId));
+
+        $client->request(
+            'POST',
+            '/api/entries/mark-read-batch',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['ids' => [$id, $missingId]], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(204);
+
+        $client->request('GET', '/api/entries?view=unread', server: $headers);
+        self::assertCount(0, $this->entriesOf($client), 'The existing id is marked read; the missing one is ignored.');
+    }
+
     public function testMarkReadBatchRejectsEmptyIds(): void
     {
         $client = self::createClient();
