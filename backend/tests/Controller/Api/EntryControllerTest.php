@@ -11,6 +11,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Reader\MarkEntriesReadService;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -1074,5 +1075,86 @@ final class EntryControllerTest extends WebTestCase
         self::assertSame('validation_error', $body['type']);
         self::assertIsArray($body['errors']);
         self::assertArrayHasKey('id', $body['errors']);
+    }
+
+    public function testMarkReadBatchMarksOnlyTheGivenEntries(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-markbatch@example.com');
+        $sub = $this->seedFeedWithEntries($user, 3);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entries = $em->getRepository(Entry::class)->findBy(['feed' => $sub->getFeed()], ['guid' => 'ASC']);
+        $markIds = [$entries[0]->getId(), $entries[1]->getId()];
+
+        $client->request(
+            'POST',
+            '/api/entries/mark-read-batch',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['ids' => $markIds], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(204);
+
+        $client->request('GET', '/api/entries?view=unread', server: $headers);
+        self::assertCount(1, $this->entriesOf($client), 'The unmarked entry stays unread.');
+    }
+
+    public function testMarkReadBatchRejectsEmptyIds(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('e-markbatch-empty@example.com');
+
+        $client->request(
+            'POST',
+            '/api/entries/mark-read-batch',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['ids' => []], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(422);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('validation_error', $body['type']);
+    }
+
+    public function testMarkReadBatchRejectsNonPositiveIds(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('e-markbatch-neg@example.com');
+
+        $client->request(
+            'POST',
+            '/api/entries/mark-read-batch',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['ids' => [0, -5]], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(422);
+    }
+
+    public function testMarkReadBatchRejectsOverTheCap(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('e-markbatch-cap@example.com');
+        $ids = range(1, MarkEntriesReadService::MAX_IDS + 1);
+
+        $client->request(
+            'POST',
+            '/api/entries/mark-read-batch',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['ids' => $ids], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(422);
+    }
+
+    public function testMarkReadBatchRejectsAnonymous(): void
+    {
+        $client = self::createClient();
+
+        $client->request(
+            'POST',
+            '/api/entries/mark-read-batch',
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['ids' => [1]], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(401);
     }
 }

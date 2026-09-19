@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Dto\Entry\MarkEntriesReadRequest;
 use App\Dto\Entry\MarkForYouReadRequest;
 use App\Dto\Entry\MarkReadRequest;
 use App\Dto\Entry\UpdateEntryStateRequest;
@@ -19,6 +20,7 @@ use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
 use App\Repository\ForYouFeedQuery;
 use App\Service\Reader\EntryStateUpdater;
+use App\Service\Reader\MarkEntriesReadService;
 use App\Service\Reader\MarkReadService;
 use App\Service\Recommendation\ForYouFeedResponder;
 use App\Service\Recommendation\ForYouMarkReadService;
@@ -40,6 +42,7 @@ final readonly class EntryController
         private MarkReadService $markRead,
         private ForYouFeedResponder $forYouFeed,
         private ForYouMarkReadService $forYouMarkRead,
+        private MarkEntriesReadService $markEntriesRead,
     ) {
     }
 
@@ -129,6 +132,16 @@ final readonly class EntryController
         #[MapRequestPayload] MarkForYouReadRequest $request,
     ): JsonResponse {
         $this->forYouMarkRead->mark($user, $request->until);
+
+        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+    }
+
+    #[Route('/mark-read-batch', name: 'api_entries_mark_read_batch', methods: ['POST'])]
+    public function markReadBatch(
+        #[CurrentUser] User $user,
+        #[MapRequestPayload] MarkEntriesReadRequest $request,
+    ): JsonResponse {
+        $this->markEntriesRead->mark($user, $request->ids);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
