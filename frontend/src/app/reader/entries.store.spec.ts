@@ -546,7 +546,7 @@ describe('EntriesStore', () => {
     expect(byId.get(1)).toBe(true);
     expect(byId.get(2)).toBe(false);
     expect(byId.get(3)).toBe(true);
-    ctrl.expectNone((r) => r.url.includes('/state'));
+    ctrl.expectNone(() => true);
   });
 
   it('invokes the onError callback on a failed state PATCH', () => {
