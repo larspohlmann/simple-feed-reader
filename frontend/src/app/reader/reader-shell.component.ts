@@ -13,6 +13,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink, convertToParamMap } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { HttpErrorResponse } from '@angular/common/http';
 import { catchError, of } from 'rxjs';
 import { Dialog } from '@angular/cdk/dialog';
 import { AuthService } from '../core/auth.service';
@@ -910,6 +911,47 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     ref.closed.subscribe((confirmed) => {
       if (confirmed) this.markReadNow(target);
     });
+  }
+
+  onMarkAboveRead(ids: number[]): void {
+    if (ids.length === 0) return;
+    const data: ConfirmData = {
+      title: this.i18n.translate('reader.markAboveReadConfirm'),
+      message: this.i18n.translate('reader.markAboveReadConfirmMessage', { count: ids.length }),
+      confirmLabel: this.i18n.translate('reader.markAboveRead'),
+    };
+    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
+      data,
+      role: 'alertdialog',
+      panelClass: 'app-dialog',
+    });
+    ref.closed.subscribe((confirmed) => {
+      if (confirmed) this.markAboveReadNow(ids);
+    });
+  }
+
+  /** Never a re-fetch: a reload lets the magazine planner re-run and lift
+   *  newer-but-lower posts above the boundary (#1080). The unread view drops the
+   *  marked blocks from its render; the all-items view restyles them in place. */
+  private markAboveReadNow(ids: number[]): void {
+    const hideLocally = this.selection().unread
+      ? () => this.list()?.hideAboveMarked(ids)
+      : () => this.entries.markHiddenLocally(ids);
+    this.api.markEntriesRead(ids).subscribe({
+      next: () => {
+        hideLocally();
+        this.refreshCountsAfterMarkRead();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.entries.reportMutationFailure(error, () => this.markAboveReadNow(ids));
+      },
+    });
+  }
+
+  private refreshCountsAfterMarkRead(): void {
+    this.subs.load();
+    this.savedSearchesStore.load();
+    this.recs.refreshStatus();
   }
 
   private markReadNow(target: MarkReadTarget): void {

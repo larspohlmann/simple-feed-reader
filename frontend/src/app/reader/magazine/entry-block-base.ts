@@ -8,7 +8,9 @@ import { LanguageService } from '../../core/language.service';
  *  renders an image. The `@Directive()` decorator is required — without it
  *  Angular's compiler does not emit input/output metadata for the base class,
  *  so a `@Component` extending it silently loses `entry`/`tags`/`open`. */
-@Directive()
+@Directive({
+  host: { '[attr.data-entry-id]': 'entry().id' },
+})
 export abstract class EntryBlockBase {
   readonly entry = input.required<EntryDto>();
   readonly tags = input<SubscriptionTagDto[]>([]);

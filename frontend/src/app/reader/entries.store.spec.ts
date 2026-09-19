@@ -534,6 +534,21 @@ describe('EntriesStore', () => {
     });
   });
 
+  it('marks the given entries hidden in place without an HTTP call', () => {
+    store.load({ view: 'all' });
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [entry(1), entry(2), entry(3)], nextCursor: null });
+
+    store.markHiddenLocally([1, 3]);
+
+    const byId = new Map(store.entries().map((e) => [e.id, e.isHidden]));
+    expect(byId.get(1)).toBe(true);
+    expect(byId.get(2)).toBe(false);
+    expect(byId.get(3)).toBe(true);
+    ctrl.expectNone(() => true);
+  });
+
   it('invokes the onError callback on a failed state PATCH', () => {
     store.load({ view: 'all' });
     ctrl

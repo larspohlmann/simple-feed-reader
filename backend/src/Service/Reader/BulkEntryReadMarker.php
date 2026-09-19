@@ -35,7 +35,8 @@ final readonly class BulkEntryReadMarker
     ) {
     }
 
-    /** @param list<int> $entryIds */
+    /** @param list<int> $entryIds Distinct ids of existing entries: a missing state row
+     *  is persisted by reference, so a pruned or repeated id fails the insert. */
     public function markRead(int $userId, array $entryIds): void
     {
         if ($entryIds === []) {

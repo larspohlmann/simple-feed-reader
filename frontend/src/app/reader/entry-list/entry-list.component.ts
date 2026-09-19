@@ -70,6 +70,8 @@ import { REVEAL_STEP, isAppendedPage, prefetchMargin } from '../paging';
 import { ReadingFocusService } from '../../core/reading-focus.service';
 import { MagazineStyleService } from '../../core/magazine-style.service';
 import { ReadingFocusApplier } from '../reading-focus-applier';
+import { entriesAboveFold, foldedGroupTailsAbove, MeasuredEntry } from './above-fold';
+import { blocksWithout, ListBlock, runGroupsWithout } from './hidden-overlay';
 
 // Scroll-restore settle window: re-assert the target for at most this many frames,
 // stopping early once the content height has held steady for this many in a row.
@@ -100,17 +102,6 @@ const FIXED_VIEW_ICON: Partial<Record<Selection['kind'], string>> = {
   'saved-searches': 'saved_search',
   search: 'search',
 };
-
-/** A for-you run-boundary divider — a rendering-only block the entry list
- *  interleaves between per-run magazine block groups (#348). Kept out of
- *  MagazineBlock so the planner, which never emits it, stays unaware. */
-interface RunHeaderBlock {
-  kind: 'run-header';
-  generatedAt: string;
-}
-
-/** What the magazine branch actually renders: planner blocks plus run dividers. */
-type ListBlock = MagazineBlock | RunHeaderBlock;
 
 /** How much the list holds, and what that number counts — travel together since
  *  the pill needs the value and the heading's accessible name needs what it
@@ -183,11 +174,13 @@ export class EntryListComponent implements OnDestroy {
    *  in `entries` so the magazine plan keeps its shape; a reload clears it. */
   readonly leavingIds = input<ReadonlySet<number>>(new Set());
 
-  /** Rows the user can still see — loaded set minus the collapsed ones. The
-   *  empty state keys on this, not `entries().length`, so collapsing the last
-   *  row shows "nothing here" immediately, though it lingers until reload. */
+  /** Rows the user can still see — loaded set minus the collapsed and the
+   *  mark-above-hidden ones. The empty state keys on this, not `entries().length`,
+   *  so removing the last row shows "nothing here" immediately. */
   readonly visibleEntryCount = computed(
-    () => this.entries().filter((e) => !this.leavingIds().has(e.id)).length,
+    () =>
+      this.entries().filter((e) => !this.leavingIds().has(e.id) && !this.hiddenAboveIds().has(e.id))
+        .length,
   );
   readonly loading = input.required<boolean>();
   readonly loadingMore = input.required<boolean>();
@@ -235,6 +228,9 @@ export class EntryListComponent implements OnDestroy {
   /** The error banner's dismiss: clears the banner without a request. */
   readonly dismiss = output<void>();
   readonly markAllRead = output<void>();
+  /** The above-fold ids captured at click — a snapshot, so scrolling or a
+   *  background refresh while the confirm dialog is open cannot change the set. */
+  readonly markAboveRead = output<number[]>();
   readonly refresh = output<void>();
   readonly favorite = output<EntryDto>();
   readonly keep = output<EntryDto>();
@@ -452,6 +448,23 @@ export class EntryListComponent implements OnDestroy {
     return out;
   });
 
+  /** Ids hidden from the render after a mark-above-read on an unread view — a
+   *  post-plan overlay, never fed back into `entries()`, so the planner does
+   *  not re-run and every block below the boundary keeps its position (#1080). */
+  readonly hiddenAboveIds = signal<ReadonlySet<number>>(new Set());
+
+  /** Keyed by id, not geometry, so a breakpoint or layout swap keeps the overlay;
+   *  only a new selection drops it (the reload edge is `_restoreScroll`'s). */
+  private readonly _resetHiddenAbove = effect(() => {
+    this.selection();
+    this.hiddenAboveIds.set(new Set());
+  });
+
+  readonly visibleBlocks = computed(() => blocksWithout(this.blocks(), this.hiddenAboveIds()));
+  readonly visibleRunGroups = computed(() =>
+    runGroupsWithout(this.runGroups(), this.hiddenAboveIds()),
+  );
+
   private readonly screen = inject(LayoutService);
   private readonly readingFocus = inject(ReadingFocusService);
   private readonly zone = inject(NgZone);
@@ -495,6 +508,11 @@ export class EntryListComponent implements OnDestroy {
 
   /** Drives the corner back-to-top button; set from the scroll handler. */
   readonly showToTop = signal(false);
+
+  /** Whether at least one entry is fully scrolled past the fold — gates the
+   *  lower-left button so it never offers a no-op. Set cheaply from the scroll
+   *  handler; the click-time collection does the real, full-list work. */
+  readonly hasAboveFold = signal(false);
 
   /**
    * Whether this list carries the wait cue for its own reload (dim, then veil).
@@ -548,6 +566,7 @@ export class EntryListComponent implements OnDestroy {
     this.layout();
     this.collapsed.set(false);
     this.showToTop.set(false);
+    this.hasAboveFold.set(false);
     this.lastScrollTop = 0;
   });
 
@@ -597,7 +616,10 @@ export class EntryListComponent implements OnDestroy {
       nextHeaderHidden(this.collapsed(), this.lastScrollTop, top, this.screen.isWide()),
     );
     this.lastScrollTop = top;
-    this.showToTop.set(top > BACK_TO_TOP_AFTER_PX);
+    const pastTop = top > BACK_TO_TOP_AFTER_PX;
+    this.showToTop.set(pastTop);
+    const scroller = this.rows()?.nativeElement;
+    this.hasAboveFold.set(pastTop && !!scroller && this.hasEntryAboveFold(scroller));
     // Remember where the user is so a browser resume-reload (iOS/Brave discard the
     // tab and reload it) can drop them back here rather than at the top.
     if (this.rowsBelongToSelection()) this.scroll.save(this.selection(), top);
@@ -637,6 +659,71 @@ export class EntryListComponent implements OnDestroy {
     // finishes: `onRowsScroll` overwrites this every frame, so it's a floor for
     // the reduced-motion/interrupted cases, not a guarantee 0 gets remembered.
     this.scroll.save(this.selection(), 0);
+  }
+
+  private foldTop(scroller: HTMLElement): number {
+    const header = this.listHdr()?.nativeElement.getBoundingClientRect().bottom ?? 0;
+    return Math.max(scroller.getBoundingClientRect().top, header);
+  }
+
+  private measuredEntries(scroller: HTMLElement): MeasuredEntry[] {
+    return Array.from(scroller.querySelectorAll('[data-entry-id]')).map((node) => ({
+      id: Number(node.getAttribute('data-entry-id')),
+      bottom: node.getBoundingClientRect().bottom,
+    }));
+  }
+
+  private collectAboveFoldIds(): number[] {
+    const scroller = this.rows()?.nativeElement;
+    if (!scroller) return [];
+    const measured = this.measuredEntries(scroller);
+    const above = entriesAboveFold(measured, this.foldTop(scroller));
+    const groups = this.visibleBlocks().filter((block) => block.kind === 'group');
+    const rendered = new Set(measured.map((m) => m.id));
+    return [...above, ...foldedGroupTailsAbove(new Set(above), rendered, groups)];
+  }
+
+  private hasEntryAboveFold(scroller: HTMLElement): boolean {
+    const first = scroller.querySelector('[data-entry-id]');
+    return !!first && first.getBoundingClientRect().bottom <= this.foldTop(scroller);
+  }
+
+  onMarkAboveRead(): void {
+    const ids = this.collectAboveFoldIds();
+    if (ids.length === 0) return;
+    this.markAboveRead.emit(this.withHiddenDuplicates(ids));
+  }
+
+  /** Above-fold ids plus the hidden duplicate copies folded under each row
+   *  (EntryDto.duplicates), which share the row but carry their own state. */
+  private withHiddenDuplicates(ids: number[]): number[] {
+    const byId = new Map(this.entries().map((e) => [e.id, e]));
+    const out: number[] = [];
+    for (const id of ids) {
+      out.push(id);
+      for (const duplicate of byId.get(id)?.duplicates ?? []) out.push(duplicate.id);
+    }
+    return out;
+  }
+
+  /** Freeze & remove: hide the just-marked blocks from the render without
+   *  re-planning, and land the boundary at the top. entries() is untouched, so
+   *  the planner does not re-run and the blocks below keep their positions. */
+  hideAboveMarked(ids: number[]): void {
+    this.cancelSettle();
+    this.hiddenAboveIds.update((current) => new Set([...current, ...ids]));
+    this.collapsed.set(false);
+    this.showToTop.set(false);
+    this.hasAboveFold.set(false);
+    const el = this.rows()?.nativeElement;
+    if (!el) return;
+    this.scroll.save(this.selection(), 0);
+    this.zone.runOutsideAngular(() =>
+      requestAnimationFrame(() => {
+        el.scrollTop = 0;
+        this.lastScrollTop = 0;
+      }),
+    );
   }
 
   tagsFor(subscriptionId: number): SubscriptionTagDto[] {
@@ -787,6 +874,7 @@ export class EntryListComponent implements OnDestroy {
     // then land the user back where they were before the page was reloaded.
     if (this.wasLoading && el) {
       this.wasLoading = false;
+      this.hiddenAboveIds.set(new Set());
       this.renderedSelection = this.selection();
       this.applyScroll(el, this.scroll.read(this.selection()));
     }

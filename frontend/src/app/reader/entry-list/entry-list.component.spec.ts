@@ -9,6 +9,7 @@ import { ListScrollMemory } from '../list-scroll-memory';
 import { CatalogStore } from '../../discover/catalog.store';
 import { REVEAL_STEP, prefetchMargin } from '../paging';
 import { EntryDto } from '../models';
+import { MagazineBlock } from '../magazine/magazine-block';
 import { ReadingFocusService } from '../../core/reading-focus.service';
 import { MagazineStyleService } from '../../core/magazine-style.service';
 import { MAGAZINE_STYLE_WRITER } from '../../core/magazine-style-writer';
@@ -62,6 +63,19 @@ const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   isViewed: false,
   ...over,
 });
+
+/** A run mixed enough to collapse: a same-source run folds into a group widget
+ *  only once the view has at least 3 distinct active sources. */
+const MIXED_SOURCE_RUN_AT = '2026-07-22T11:00:00Z';
+const MIXED_SOURCE_RUN: EntryDto[] = [
+  ...Array.from({ length: 8 }, (_, i) =>
+    entry(i + 1, { subscriptionId: 1, source: 'a', publishedAt: MIXED_SOURCE_RUN_AT }),
+  ),
+  entry(9, { subscriptionId: 2, source: 'b', publishedAt: MIXED_SOURCE_RUN_AT }),
+  entry(10, { subscriptionId: 2, source: 'b', publishedAt: MIXED_SOURCE_RUN_AT }),
+  entry(11, { subscriptionId: 3, source: 'c', publishedAt: MIXED_SOURCE_RUN_AT }),
+  entry(12, { subscriptionId: 3, source: 'c', publishedAt: MIXED_SOURCE_RUN_AT }),
+];
 
 function mount(over: Record<string, unknown> = {}) {
   memory.save.mockClear();
@@ -1560,6 +1574,231 @@ describe('EntryListComponent', () => {
     });
   });
 
+  // #1080: the lower-left "mark everything above as read" button. jsdom lays
+  // nothing out, so geometry is driven through fakes standing in for the
+  // `#rows`/`#listHdr` viewChild signals, exactly like the real elements they
+  // replace (getBoundingClientRect, querySelector/All, getAttribute).
+  describe('mark-above-read button (#1080)', () => {
+    const measuredEntry = (id: string, bottom: number): HTMLElement =>
+      ({
+        getAttribute: () => id,
+        getBoundingClientRect: () => ({ bottom }),
+      }) as unknown as HTMLElement;
+
+    /** Stubs the component's `rows`/`listHdr` viewChild signals with fakes whose
+     *  geometry is scripted: `scrollerTop`/`headerBottom` place the fold line,
+     *  `entries` become the tagged rows `querySelector(All)` finds. */
+    function stubGeometry(
+      f: ReturnType<typeof mount>,
+      scrollerTop: number,
+      headerBottom: number,
+      entries: HTMLElement[],
+    ): void {
+      const scroller = {
+        getBoundingClientRect: () => ({ top: scrollerTop }),
+        querySelector: () => entries[0] ?? null,
+        querySelectorAll: () => entries as unknown as NodeListOf<Element>,
+      } as unknown as HTMLElement;
+      const header = {
+        getBoundingClientRect: () => ({ bottom: headerBottom }),
+      } as unknown as HTMLElement;
+
+      jest
+        .spyOn(f.componentInstance as unknown as { rows: () => unknown }, 'rows')
+        .mockReturnValue({ nativeElement: scroller });
+      jest
+        .spyOn(f.componentInstance as unknown as { listHdr: () => unknown }, 'listHdr')
+        .mockReturnValue({ nativeElement: header });
+    }
+
+    it('collects ids of entries fully above the fold at click', () => {
+      const f = mount();
+      // fold line = max(scroller.top=0, listHdr.bottom=100) = 100
+      stubGeometry(f, 0, 100, [
+        measuredEntry('1', 40),
+        measuredEntry('2', 90),
+        measuredEntry('3', 150),
+      ]);
+
+      const emitted: number[][] = [];
+      f.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
+      f.componentInstance.onMarkAboveRead();
+
+      expect(emitted).toEqual([[1, 2]]);
+    });
+
+    it('expands an above-fold entry with its hidden duplicate copies (#1080)', () => {
+      const f = mount({
+        entries: [entry(1, { duplicates: [entry(101), entry(102)] }), entry(2)],
+      });
+      stubGeometry(f, 0, 100, [measuredEntry('1', 40)]);
+
+      const emitted: number[][] = [];
+      f.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
+      f.componentInstance.onMarkAboveRead();
+
+      expect(emitted).toEqual([[1, 101, 102]]);
+    });
+
+    it('emits nothing when no entry has cleared the fold', () => {
+      const f = mount();
+      stubGeometry(f, 0, 100, [measuredEntry('1', 150)]);
+
+      const emitted: number[][] = [];
+      f.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
+      f.componentInstance.onMarkAboveRead();
+
+      expect(emitted).toEqual([]);
+    });
+
+    it('shows the button only once scrolled down and an entry sits above the fold', () => {
+      const f = mount();
+      const el = f.nativeElement as HTMLElement;
+      expect(el.querySelector('.mark-above')).toBeNull();
+
+      f.componentInstance.showToTop.set(true);
+      f.detectChanges();
+      expect(el.querySelector('.mark-above')).toBeNull();
+
+      f.componentInstance.hasAboveFold.set(true);
+      f.detectChanges();
+      expect(el.querySelector('.mark-above')).not.toBeNull();
+    });
+
+    it('hides the button once scrolled back up, even with entries above the fold', () => {
+      const f = mount();
+      f.componentInstance.hasAboveFold.set(true);
+      f.detectChanges();
+      expect((f.nativeElement as HTMLElement).querySelector('.mark-above')).toBeNull();
+    });
+
+    it('emits the collected ids when the rendered button is clicked', () => {
+      const f = mount();
+      stubGeometry(f, 0, 100, [measuredEntry('7', 40)]);
+      f.componentInstance.showToTop.set(true);
+      f.componentInstance.hasAboveFold.set(true);
+      f.detectChanges();
+
+      const emitted: number[][] = [];
+      f.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
+      (f.nativeElement.querySelector('.mark-above') as HTMLButtonElement).click();
+
+      expect(emitted).toEqual([[7]]);
+    });
+
+    // A collapsed source-group widget renders only its preview rows; the folded
+    // tail has no DOM node to measure. Once the whole preview is above the fold
+    // the widget was scrolled past as a unit, so its tail goes with it —
+    // otherwise hiding the preview surfaces the tail above the boundary.
+    it('marks the folded tail of a group whose whole preview sits above the fold', () => {
+      const f = mount({
+        entries: MIXED_SOURCE_RUN,
+        selection: { kind: 'all', id: null, unread: true },
+        layout: 'magazine',
+      });
+      const group = f.componentInstance.visibleBlocks().find((b) => b.kind === 'group') as Extract<
+        MagazineBlock,
+        { kind: 'group' }
+      >;
+      const preview = group.entries.slice(0, group.previewCount).map((e) => e.id);
+      const tail = group.entries.slice(group.previewCount).map((e) => e.id);
+      expect(tail.length).toBeGreaterThan(0);
+      stubGeometry(f, 0, 100, [
+        ...preview.map((id) => measuredEntry(String(id), 40)),
+        measuredEntry('9', 150),
+      ]);
+
+      const emitted: number[][] = [];
+      f.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
+      f.componentInstance.onMarkAboveRead();
+
+      expect(emitted).toEqual([[...preview, ...tail]]);
+    });
+
+    it('keeps the folded tail of a group while one of its preview rows straddles the fold', () => {
+      const f = mount({
+        entries: MIXED_SOURCE_RUN,
+        selection: { kind: 'all', id: null, unread: true },
+        layout: 'magazine',
+      });
+      const group = f.componentInstance.visibleBlocks().find((b) => b.kind === 'group') as Extract<
+        MagazineBlock,
+        { kind: 'group' }
+      >;
+      const preview = group.entries.slice(0, group.previewCount).map((e) => e.id);
+      const [last, ...above] = [...preview].reverse();
+      stubGeometry(f, 0, 100, [
+        ...above.reverse().map((id) => measuredEntry(String(id), 40)),
+        measuredEntry(String(last), 150),
+      ]);
+
+      const emitted: number[][] = [];
+      f.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
+      f.componentInstance.onMarkAboveRead();
+
+      expect(emitted).toEqual([above]);
+    });
+
+    it('labels the button with the done_all icon', () => {
+      const f = mount();
+      f.componentInstance.showToTop.set(true);
+      f.componentInstance.hasAboveFold.set(true);
+      f.detectChanges();
+
+      const btn = (f.nativeElement as HTMLElement).querySelector('.mark-above')!;
+      expect(btn.querySelector('app-icon[name="done_all"]')).not.toBeNull();
+    });
+
+    // The scroll path resolves the scroller from the `#rows` viewChild — the
+    // same source `collectAboveFoldIds`/`foldTop` use for the click path — not
+    // from the scroll event's own target, so the probe is driven the same way
+    // `stubGeometry` drives the click-time collection above.
+    it('flags hasAboveFold from a scroll event once the first entry clears the fold', () => {
+      const f = mount();
+      stubGeometry(f, 0, 100, [measuredEntry('1', 40)]);
+
+      f.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
+
+      expect(f.componentInstance.hasAboveFold()).toBe(true);
+    });
+
+    it('leaves hasAboveFold false below the back-to-top threshold, without measuring', () => {
+      const f = mount();
+      stubGeometry(f, 0, 100, [measuredEntry('1', 40)]);
+
+      f.componentInstance.onRowsScroll({ target: { scrollTop: 100 } } as unknown as Event);
+
+      expect(f.componentInstance.hasAboveFold()).toBe(false);
+    });
+
+    it('leaves hasAboveFold false while the boundary entry has not cleared the fold', () => {
+      const f = mount();
+      stubGeometry(f, 0, 100, [measuredEntry('1', 150)]);
+
+      f.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
+
+      expect(f.componentInstance.hasAboveFold()).toBe(false);
+    });
+
+    it('does not throw for a scroll event carrying only scrollTop', () => {
+      // Several pre-existing scroll tests drive onRowsScroll with a bare
+      // {scrollTop} object as the event target; resolving the scroller from
+      // the viewChild instead of that target must tolerate it.
+      const f = mount();
+      expect(() =>
+        f.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event),
+      ).not.toThrow();
+    });
+
+    it('resets hasAboveFold when the selection changes', () => {
+      const f = mount();
+      f.componentInstance.hasAboveFold.set(true);
+      f.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
+      f.detectChanges();
+      expect(f.componentInstance.hasAboveFold()).toBe(false);
+    });
+  });
+
   describe('back to top under prefers-reduced-motion', () => {
     const realMatchMedia = window.matchMedia;
 
@@ -1876,6 +2115,152 @@ describe('EntryListComponent', () => {
       await settle(f);
       expect(rowOpacities(f)).toHaveLength(3 + REVEAL_STEP * 2);
       expect(rowOpacities(f)).not.toContain('');
+    });
+  });
+
+  describe('freeze & remove after mark-above-read (#1080)', () => {
+    it('drops a hidden id from visibleRunGroups while keeping the rest, in order', () => {
+      const f = mount({ entries: [entry(1), entry(2), entry(3)] });
+
+      f.componentInstance.hiddenAboveIds.set(new Set([2]));
+
+      expect(f.componentInstance.visibleRunGroups()[0].entries.map((e) => e.id)).toEqual([1, 3]);
+    });
+
+    it('drops a hidden single-entry magazine block entirely', () => {
+      const f = mount({ entries: [entry(1), entry(2), entry(3)], layout: 'magazine' });
+      const before = f.componentInstance.blocks();
+      const targetId = (before[0] as Extract<MagazineBlock, { entry: EntryDto }>).entry.id;
+
+      f.componentInstance.hiddenAboveIds.set(new Set([targetId]));
+      const after = f.componentInstance.visibleBlocks();
+
+      expect(after.length).toBe(before.length - 1);
+      expect(
+        after.some((b) => b.kind !== 'group' && b.kind !== 'run-header' && b.entry.id === targetId),
+      ).toBe(false);
+    });
+
+    it('shrinks a group block to its remaining entries instead of dropping it', () => {
+      const f = mount({
+        entries: MIXED_SOURCE_RUN,
+        selection: { kind: 'all', id: null, unread: false },
+        layout: 'magazine',
+      });
+      const groupBefore = f.componentInstance.blocks().find((b) => b.kind === 'group') as Extract<
+        MagazineBlock,
+        { kind: 'group' }
+      >;
+      expect(groupBefore).toBeDefined();
+      const hiddenId = groupBefore.entries[0].id;
+
+      f.componentInstance.hiddenAboveIds.set(new Set([hiddenId]));
+      const groupAfter = f.componentInstance
+        .visibleBlocks()
+        .find((b) => b.kind === 'group') as Extract<MagazineBlock, { kind: 'group' }>;
+
+      expect(groupAfter).toBeDefined();
+      expect(groupAfter.entries.map((e) => e.id)).not.toContain(hiddenId);
+      expect(groupAfter.entries.length).toBe(groupBefore.entries.length - 1);
+    });
+
+    it('drops a group block entirely once every one of its entries is hidden', () => {
+      const f = mount({
+        entries: MIXED_SOURCE_RUN,
+        selection: { kind: 'all', id: null, unread: false },
+        layout: 'magazine',
+      });
+      const groupBefore = f.componentInstance.blocks().find((b) => b.kind === 'group') as Extract<
+        MagazineBlock,
+        { kind: 'group' }
+      >;
+
+      f.componentInstance.hiddenAboveIds.set(new Set(groupBefore.entries.map((e) => e.id)));
+
+      expect(f.componentInstance.visibleBlocks().some((b) => b.kind === 'group')).toBe(false);
+    });
+
+    it('adds the given ids to hiddenAboveIds and scrolls the boundary to the top', async () => {
+      const f = mount({ entries: [entry(1), entry(2), entry(3)] });
+      const scroller = fakeScroller(f, 400);
+
+      f.componentInstance.hideAboveMarked([1, 2]);
+
+      expect(f.componentInstance.hiddenAboveIds()).toEqual(new Set([1, 2]));
+      expect(memory.save).toHaveBeenCalledWith(f.componentInstance.selection(), 0);
+      await frames();
+      expect(scroller.scrollTop).toBe(0);
+    });
+
+    it('lowers both corner buttons: nothing is above the fold once the boundary is at the top', () => {
+      const f = mount({ entries: [entry(1), entry(2)] });
+      f.componentInstance.showToTop.set(true);
+      f.componentInstance.hasAboveFold.set(true);
+
+      f.componentInstance.hideAboveMarked([1]);
+
+      expect(f.componentInstance.showToTop()).toBe(false);
+      expect(f.componentInstance.hasAboveFold()).toBe(false);
+    });
+
+    it('drops the divider of a run whose blocks are all hidden (magazine)', () => {
+      const f = mount({
+        entries: [
+          entry(1, { runId: 9, runGeneratedAt: '2026-08-09T10:00:00+00:00' }),
+          entry(2, { runId: 7, runGeneratedAt: '2026-08-07T09:05:00+00:00' }),
+        ],
+        selection: { kind: 'for-you', id: null, unread: true },
+        newestRunId: 9,
+        layout: 'magazine',
+      });
+      expect((f.nativeElement as HTMLElement).querySelectorAll('app-run-header').length).toBe(1);
+
+      f.componentInstance.hideAboveMarked([2]);
+      f.detectChanges();
+
+      expect((f.nativeElement as HTMLElement).querySelector('app-run-header')).toBeNull();
+    });
+
+    it('keeps hiddenAboveIds across a layout toggle — the overlay is keyed by id', () => {
+      const f = mount({ entries: [entry(1), entry(2)] });
+      f.componentInstance.hideAboveMarked([1]);
+
+      f.componentRef.setInput('layout', 'magazine');
+      f.detectChanges();
+
+      expect(f.componentInstance.hiddenAboveIds()).toEqual(new Set([1]));
+    });
+
+    it('counts the hidden rows out of visibleEntryCount', () => {
+      const f = mount({ entries: [entry(1), entry(2)] });
+      f.componentInstance.hideAboveMarked([1, 2]);
+
+      expect(f.componentInstance.visibleEntryCount()).toBe(0);
+    });
+
+    it('resets hiddenAboveIds when the selection changes', () => {
+      const f = mount({ entries: [entry(1), entry(2)] });
+      f.componentInstance.hideAboveMarked([1]);
+      expect(f.componentInstance.hiddenAboveIds().size).toBe(1);
+
+      f.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
+      f.detectChanges();
+
+      expect(f.componentInstance.hiddenAboveIds().size).toBe(0);
+    });
+
+    it('resets hiddenAboveIds on a genuine reload', () => {
+      const f = mount({ entries: [entry(1), entry(2)] });
+      f.componentInstance.hideAboveMarked([1]);
+      expect(f.componentInstance.hiddenAboveIds().size).toBe(1);
+
+      f.componentRef.setInput('loading', true);
+      f.detectChanges();
+      f.componentRef.setInput('entries', [entry(3), entry(4)]);
+      f.componentRef.setInput('loading', false);
+      f.detectChanges();
+
+      expect(f.componentInstance.hiddenAboveIds().size).toBe(0);
     });
   });
 });

@@ -163,6 +163,11 @@ describe('EntryRowComponent', () => {
     expect(el.querySelector('.saved-search-pill')).toBeNull();
   });
 
+  it('exposes its entry id on the host element', () => {
+    const f = mount(entry({ id: 4242 }));
+    expect(f.nativeElement.getAttribute('data-entry-id')).toBe('4242');
+  });
+
   it('bubbles open for a duplicate copy through the footer', () => {
     const dup = entry({ id: 9, source: 'NDR SH' });
     const f = mount(entry({ duplicates: [dup] }));

@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Repository\EntryStateRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Dto\Entry\MarkEntriesReadRequest;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -1074,5 +1077,121 @@ final class EntryControllerTest extends WebTestCase
         self::assertSame('validation_error', $body['type']);
         self::assertIsArray($body['errors']);
         self::assertArrayHasKey('id', $body['errors']);
+    }
+
+    public function testMarkReadBatchMarksOnlyTheGivenEntries(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-markbatch@example.com');
+        $sub = $this->seedFeedWithEntries($user, 3);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entries = $em->getRepository(Entry::class)->findBy(['feed' => $sub->getFeed()], ['guid' => 'ASC']);
+        $markIds = [(int) $entries[0]->getId(), (int) $entries[1]->getId()];
+
+        $this->postMarkReadBatch($client, $headers, $markIds);
+        self::assertResponseStatusCodeSame(204);
+
+        $client->request('GET', '/api/entries?view=unread', server: $headers);
+        self::assertCount(1, $this->entriesOf($client), 'The unmarked entry stays unread.');
+    }
+
+    public function testMarkReadBatchToleratesDuplicateIds(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-markbatch-dup@example.com');
+        $sub = $this->seedFeedWithEntries($user, 1);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()]);
+        self::assertInstanceOf(Entry::class, $entry);
+        $id = (int) $entry->getId();
+
+        $this->postMarkReadBatch($client, $headers, [$id, $id]);
+        self::assertResponseStatusCodeSame(204);
+
+        $client->request('GET', '/api/entries?view=unread', server: $headers);
+        self::assertCount(0, $this->entriesOf($client), 'The duplicated id is marked read exactly once.');
+    }
+
+    public function testMarkReadBatchIgnoresNonexistentIds(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-markbatch-missing@example.com');
+        $sub = $this->seedFeedWithEntries($user, 1);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()]);
+        self::assertInstanceOf(Entry::class, $entry);
+        $id = (int) $entry->getId();
+        $missingId = 99999999;
+        self::assertNull($em->getRepository(Entry::class)->find($missingId));
+
+        $this->postMarkReadBatch($client, $headers, [$id, $missingId]);
+        self::assertResponseStatusCodeSame(204);
+
+        $client->request('GET', '/api/entries?view=unread', server: $headers);
+        self::assertCount(0, $this->entriesOf($client), 'The existing id is marked read; the missing one is ignored.');
+
+        // No state row at all: `findExistingIds()` dropped the id, not a dialect's FK check.
+        $states = self::getContainer()->get(EntryStateRepository::class);
+        self::assertInstanceOf(EntryStateRepository::class, $states);
+        $userId = (int) $user->getId();
+        self::assertNull($states->findOneForUserEntry($userId, $missingId));
+        $existingState = $states->findOneForUserEntry($userId, $id);
+        self::assertInstanceOf(EntryState::class, $existingState);
+        self::assertTrue($existingState->isHidden());
+    }
+
+    public function testMarkReadBatchRejectsEmptyIds(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('e-markbatch-empty@example.com');
+
+        $this->postMarkReadBatch($client, $headers, []);
+        self::assertResponseStatusCodeSame(422);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('validation_error', $body['type']);
+    }
+
+    public function testMarkReadBatchRejectsNonPositiveIds(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('e-markbatch-neg@example.com');
+
+        $this->postMarkReadBatch($client, $headers, [0, -5]);
+        self::assertResponseStatusCodeSame(422);
+    }
+
+    public function testMarkReadBatchRejectsOverTheCap(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('e-markbatch-cap@example.com');
+
+        $this->postMarkReadBatch($client, $headers, range(1, MarkEntriesReadRequest::MAX_IDS + 1));
+        self::assertResponseStatusCodeSame(422);
+    }
+
+    public function testMarkReadBatchRejectsAnonymous(): void
+    {
+        $client = self::createClient();
+
+        $this->postMarkReadBatch($client, [], [1]);
+        self::assertResponseStatusCodeSame(401);
+    }
+
+    /**
+     * @param array<string, string> $headers
+     * @param list<int> $ids
+     */
+    private function postMarkReadBatch(KernelBrowser $client, array $headers, array $ids): void
+    {
+        $client->request(
+            'POST',
+            '/api/entries/mark-read-batch',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['ids' => $ids], \JSON_THROW_ON_ERROR),
+        );
     }
 }

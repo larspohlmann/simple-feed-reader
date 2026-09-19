@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Dialog } from '@angular/cdk/dialog';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
   TestRequest,
@@ -17,7 +17,7 @@ import {
   provideRouter,
 } from '@angular/router';
 import { By, Title } from '@angular/platform-browser';
-import { BehaviorSubject, Subject, of } from 'rxjs';
+import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { WritableSignal, signal } from '@angular/core';
 import { API_BASE_URL } from '../core/api';
 import { AuthService } from '../core/auth.service';
@@ -31,6 +31,7 @@ import { EntryDto, SavedSearchDto, SavedSearchWire } from './models';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
 import { SubscriptionsStore } from './subscriptions.store';
 import { EntriesStore } from './entries.store';
+import { ReaderApi } from './reader-api';
 import { Selection } from './query';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { RefreshService } from './refresh.service';
@@ -2996,6 +2997,109 @@ describe('ReaderShellComponent', () => {
       f.componentInstance.onMarkAllRead();
 
       ctrl.expectNone('https://api.test/api/entries/saved-searches/mark-read');
+    });
+  });
+
+  describe('marking everything above the fold as read (#1080)', () => {
+    function bootUnreadView() {
+      const f = boot();
+      qp.next(convertToParamMap({ unread: '1' }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({ entries: [], nextCursor: null });
+      f.detectChanges();
+      return f;
+    }
+
+    it('hides the marked posts in place and lands the boundary at the top, on an unread view', () => {
+      const f = bootUnreadView();
+      const api = TestBed.inject(ReaderApi);
+      jest.spyOn(api, 'markEntriesRead').mockReturnValue(of(undefined));
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
+      const load = jest.spyOn(f.componentInstance.entries, 'load');
+      const list = f.debugElement.query(By.directive(EntryListComponent))
+        .componentInstance as EntryListComponent;
+      const hideAboveMarked = jest
+        .spyOn(list, 'hideAboveMarked')
+        .mockImplementation(() => undefined);
+
+      f.componentInstance.onMarkAboveRead([1, 2]);
+
+      expect(api.markEntriesRead).toHaveBeenCalledWith([1, 2]);
+      expect(hideAboveMarked).toHaveBeenCalledWith([1, 2]);
+      expect(load).not.toHaveBeenCalled();
+    });
+
+    it('surfaces a failed request on the entries error banner, on an unread view', () => {
+      const f = bootUnreadView();
+      const api = TestBed.inject(ReaderApi);
+      const problem = { type: 'x', title: 'Failed', status: 500 };
+      jest
+        .spyOn(api, 'markEntriesRead')
+        .mockReturnValue(throwError(() => new HttpErrorResponse({ error: problem, status: 500 })));
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
+      const list = f.debugElement.query(By.directive(EntryListComponent))
+        .componentInstance as EntryListComponent;
+      const hideAboveMarked = jest.spyOn(list, 'hideAboveMarked');
+
+      f.componentInstance.onMarkAboveRead([1, 2]);
+
+      expect(f.componentInstance.entries.error()).toEqual(expect.objectContaining(problem));
+      expect(hideAboveMarked).not.toHaveBeenCalled();
+    });
+
+    it('restyles in place without a re-fetch, on an all-items view', () => {
+      const f = boot();
+      const api = TestBed.inject(ReaderApi);
+      jest.spyOn(api, 'markEntriesRead').mockReturnValue(of(undefined));
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
+      const markHiddenLocally = jest.spyOn(f.componentInstance.entries, 'markHiddenLocally');
+      const load = jest.spyOn(f.componentInstance.entries, 'load');
+
+      f.componentInstance.onMarkAboveRead([5, 6]);
+
+      expect(api.markEntriesRead).toHaveBeenCalledWith([5, 6]);
+      expect(markHiddenLocally).toHaveBeenCalledWith([5, 6]);
+      expect(load).not.toHaveBeenCalled();
+    });
+
+    it('surfaces a failed request on the entries error banner, on an all-items view', () => {
+      const f = boot();
+      const api = TestBed.inject(ReaderApi);
+      const problem = { type: 'x', title: 'Failed', status: 500 };
+      jest
+        .spyOn(api, 'markEntriesRead')
+        .mockReturnValue(throwError(() => new HttpErrorResponse({ error: problem, status: 500 })));
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
+      const markHiddenLocally = jest.spyOn(f.componentInstance.entries, 'markHiddenLocally');
+      const load = jest.spyOn(f.componentInstance.entries, 'load');
+
+      f.componentInstance.onMarkAboveRead([5, 6]);
+
+      expect(f.componentInstance.entries.error()).toEqual(expect.objectContaining(problem));
+      expect(markHiddenLocally).not.toHaveBeenCalled();
+      expect(load).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when the dialog is cancelled', () => {
+      const f = boot();
+      const api = TestBed.inject(ReaderApi);
+      jest.spyOn(api, 'markEntriesRead').mockReturnValue(of(undefined));
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(false) } as never);
+
+      f.componentInstance.onMarkAboveRead([1, 2]);
+
+      expect(api.markEntriesRead).not.toHaveBeenCalled();
+    });
+
+    it('does nothing for an empty selection, without opening the dialog', () => {
+      const f = boot();
+      const dialogOpen = jest.spyOn(TestBed.inject(Dialog), 'open');
+
+      f.componentInstance.onMarkAboveRead([]);
+
+      expect(dialogOpen).not.toHaveBeenCalled();
     });
   });
 

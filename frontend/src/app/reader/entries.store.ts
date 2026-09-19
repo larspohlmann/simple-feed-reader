@@ -201,6 +201,24 @@ export class EntriesStore {
       });
   }
 
+  /** Restyle entries as read in place — no request. The caller marks them read
+   *  on the server first (mark-read-batch); this only reflects it in an
+   *  all-items list, where the rows stay visible. */
+  markHiddenLocally(ids: number[]): void {
+    const marked = new Set(ids);
+    this.rawEntries.update((cur) =>
+      cur.map((e) => (marked.has(e.id) ? { ...e, isHidden: true } : e)),
+    );
+  }
+
+  /** Surfaces a mutation a caller ran outside the store on the same error
+   *  banner `load`/`setState` use — for a batch with no single row to revert.
+   *  `retry` resubmits exactly that mutation. */
+  reportMutationFailure(error: HttpErrorResponse, retry: () => void): void {
+    this.error.set(parseProblem(error));
+    this.failedOperation = retry;
+  }
+
   /** Replays the request that set the current error, clearing the banner first
    *  so a fresh attempt reads as progress. A no-op when nothing has failed. */
   retry(): void {

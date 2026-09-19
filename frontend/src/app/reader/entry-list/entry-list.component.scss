@@ -1,4 +1,5 @@
 @use '../../theme/breakpoints' as bp;
+@use '../../theme/corner-circle-button' as circle;
 
 /* What every scroller/overlay branch below reserves before its own content:
    app bar + list header + gap. Was 4 independent copies of this calc
@@ -619,10 +620,20 @@ app-to-top-button {
   z-index: 4;
 }
 
-/* The narrow-layout run pill is a bottom toast that buries this corner (#641).
+.mark-above {
+  position: absolute;
+  left: var(--space-5);
+  bottom: var(--space-5);
+  z-index: 4;
+
+  @include circle.corner-circle-button;
+}
+
+/* The narrow-layout run pill is a bottom toast that buries both corners (#641).
    `--app-toast-height` is the live toast's measured height, published by
-   ToastService; its fallback is zero so the button keeps its base offset. */
-:host-context(.is-narrow) app-to-top-button {
+   ToastService; its fallback is zero so the buttons keep their base offset. */
+:host-context(.is-narrow) app-to-top-button,
+:host-context(.is-narrow) .mark-above {
   bottom: calc(
     var(--space-5) + var(--space-3) + var(--app-toast-height, calc(-1 * var(--space-3)))
   );

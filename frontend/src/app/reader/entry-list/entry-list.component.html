@@ -261,7 +261,7 @@
         <ng-container [ngTemplateOutlet]="block" />
       </div>
     }
-    @for (b of blocks(); track blockKey(b)) {
+    @for (b of visibleBlocks(); track blockKey(b)) {
       @if (b.kind === 'run-header') {
         <app-run-header [generatedAt]="b.generatedAt" />
       } @else {
@@ -393,7 +393,7 @@
         <ng-container [ngTemplateOutlet]="block" />
       </div>
     }
-    @for (group of runGroups(); track group.runId) {
+    @for (group of visibleRunGroups(); track group.runId) {
       @if (showRunHeader(group)) {
         <app-run-header [generatedAt]="group.generatedAt!" />
       }
@@ -443,4 +443,16 @@
 
 @if (showToTop()) {
   <app-to-top-button (activate)="scrollToTop()" />
+}
+
+@if (showToTop() && hasAboveFold()) {
+  <button
+    type="button"
+    class="mark-above"
+    (click)="onMarkAboveRead()"
+    [attr.aria-label]="'reader.markAboveRead' | transloco"
+    [attr.title]="'reader.markAboveRead' | transloco"
+  >
+    <app-icon name="done_all" size="md" />
+  </button>
 }
