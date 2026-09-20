@@ -631,10 +631,8 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       });
     });
 
-    // Warm the body store for the entries beside the one just opened (#1100):
-    // no j/k or swipe navigation exists yet, but a reopened neighbour still
-    // reads instantly once one lands. Keyed on the id alone, so an unrelated
-    // list reload (e.g. a refresh landing) doesn't re-issue the prefetch.
+    // Warm the body store for the entries beside the one just opened. Keyed on
+    // the id alone, so an unrelated list reload doesn't re-issue the prefetch.
     effect(() => {
       const id = this.openEntryId();
       if (id === null) return;

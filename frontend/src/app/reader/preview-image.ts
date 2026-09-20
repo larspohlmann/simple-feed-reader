@@ -10,20 +10,8 @@ export function entrySnippet(entry: EntryDto): string {
  *  Null width/height mean the feed did not say. */
 export type EntryImage = HeroImageDto;
 
-const images = new WeakMap<EntryDto, EntryImage | null>();
-
-/** The entry's persisted image, or null. Memoized per entry object for a
- *  stable reference across repeated reads (the planner asks for every loaded
- *  entry on every plan, #501). */
+/** The entry's persisted image, or null. */
 export function entryImage(entry: EntryDto): EntryImage | null {
-  const known = images.get(entry);
-  if (known !== undefined) return known;
-  const image = resolveEntryImage(entry);
-  images.set(entry, image);
-  return image;
-}
-
-function resolveEntryImage(entry: EntryDto): EntryImage | null {
   if (!entry.imageUrl) return null;
   return { url: entry.imageUrl, width: entry.imageWidth, height: entry.imageHeight };
 }

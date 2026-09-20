@@ -10,13 +10,9 @@ export type EntryBodyState =
   { status: 'loading' } | { status: 'ok'; html: string | null } | { status: 'error' };
 
 /**
- * The reader's in-memory body cache: the feed-mode view shows the list row's
- * summary at once, then swaps in the full body once this fetches it
- * (#1100 — list responses no longer carry it). A `Map`, not `reader-cache.service`'s
- * IndexedDB store: bodies are cheap to refetch and never need to survive a reload.
- *
- * Insertion order doubles as recency: `touch` moves a hit to the end, and
- * eviction drops the oldest entry once the cache grows past `CACHE_CAP`.
+ * The reader's in-memory body cache — a `Map`, not `reader-cache.service`'s
+ * IndexedDB store: bodies are cheap to refetch. Insertion order doubles as
+ * recency: `touch` moves a hit to the end, evicting the oldest past `CACHE_CAP`.
  */
 @Injectable({ providedIn: 'root' })
 export class EntryBodyService {
@@ -44,10 +40,9 @@ export class EntryBodyService {
     this.stateFor(id);
   }
 
-  /** Seed the cache directly from a detail response already in hand (a deep
-   *  link's own `/api/entries/{id}` fetch), skipping a redundant request.
-   *  Writes the existing signal in place, so a view already reading it for
-   *  this id sees the update rather than going stale against a replaced one. */
+  /** Seed the cache from a detail response already in hand (a deep link's own
+   *  fetch), skipping a redundant request. Writes the existing signal in
+   *  place so a view already reading it for this id sees the update. */
   seed(id: number, html: string | null): void {
     const state = this.cache.get(id) ?? signal<EntryBodyState>({ status: 'loading' });
     state.set({ status: 'ok', html });

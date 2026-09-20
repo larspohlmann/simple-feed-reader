@@ -46,11 +46,4 @@ describe('entryImage', () => {
   it('returns null when the entry has no image', () => {
     expect(entryImage(entry())).toBeNull();
   });
-
-  it('memoizes per entry object, returning the same reference', () => {
-    const e = entry({ imageUrl: 'https://i/a.jpg' });
-    const first = entryImage(e);
-    expect(entryImage(e)).toBe(first);
-    expect(entryImage({ ...e })).not.toBe(first); // a replaced object is judged afresh
-  });
 });

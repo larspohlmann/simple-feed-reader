@@ -35,6 +35,11 @@ final class EntrySnippetTest extends TestCase
         self::assertNull(EntrySnippet::from('<a href="https://x"><img src="https://i/a.jpg" alt=""/></a> None'));
     }
 
+    public function testReturnsNullForTheLiteralUndefinedArtifact(): void
+    {
+        self::assertNull(EntrySnippet::from('undefined'));
+    }
+
     public function testKeepsNoneWhenItIsPartOfARealSentence(): void
     {
         self::assertSame(
@@ -51,6 +56,13 @@ final class EntrySnippetTest extends TestCase
     public function testCollapsesWhitespace(): void
     {
         self::assertSame('a b c', EntrySnippet::from("a\n  b\t\tc"));
+    }
+
+    public function testTruncationIsMultibyteSafe(): void
+    {
+        $body = str_repeat('é', 600);
+
+        self::assertSame(str_repeat('é', 500), EntrySnippet::from($body));
     }
 
     /**

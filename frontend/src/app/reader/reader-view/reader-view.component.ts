@@ -319,10 +319,9 @@ export class ReaderViewComponent {
   /** Estimated minutes to read the displayed text; null hides the meta chip. */
   readonly readingMinutes = computed(() => estimateReadingMinutes(this.displayHtml()));
 
-  /** The feed body for the open entry, fetched from the store on demand — list
-   *  responses no longer carry it (#1100). Read unconditionally (not just in
-   *  original mode) so the request starts the moment the entry opens, not only
-   *  once the reader toggle falls back to it. */
+  /** The feed body for the open entry, fetched from the store on demand. Read
+   *  unconditionally (not just in original mode) so the request starts the
+   *  moment the entry opens, not only once the reader toggle falls back to it. */
   private readonly feedBody = computed(() => {
     const e = this.entry();
     return e ? this.bodyService.body(e.id)() : null;

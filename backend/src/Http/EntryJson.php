@@ -9,12 +9,8 @@ use App\Repository\EntryListRow;
 use App\Service\Text\EntryExcerpt;
 
 /**
- * Two shapes off the same row. listRow() is what every entry list, search
- * result and for-you feed emits: no `contentHtml`, a plain-text `excerpt`
- * instead, and `duplicates` nested through this same list shape — a
- * duplicate is shown collapsed, never read in full. detail() is the single
- * `GET /api/entries/{id}` shape: the list shape plus `contentHtml`, for the
- * one place the reader renders a body.
+ * Two shapes off one row: listRow() drops contentHtml for a plain-text
+ * excerpt; detail() adds contentHtml back for the single body-rendering page.
  */
 final class EntryJson
 {
