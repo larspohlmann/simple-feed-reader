@@ -16,8 +16,9 @@ final readonly class Slideshow
     }
 
     /**
-     * The two-slide floor lives here so every recognizer inherits it: a lone
-     * image is not a slideshow.
+     * The floor lives here so every recognizer inherits it: fewer than two
+     * distinct images is not a slideshow. A lone image is a single picture, and
+     * a row that repeats one image is a placeholder carousel, not a gallery (#1091).
      *
      * @param list<Slide> $slides
      */
@@ -27,10 +28,16 @@ final readonly class Slideshow
         ?string $precedingText,
         ?ContainerSignature $container,
     ): ?self {
-        if (count($slides) < 2) {
+        if (self::distinctImageCount($slides) < 2) {
             return null;
         }
 
         return new self($slides, $title, $precedingText, $container);
+    }
+
+    /** @param list<Slide> $slides */
+    private static function distinctImageCount(array $slides): int
+    {
+        return count(array_unique(array_map(static fn (Slide $slide): string => $slide->imageUrl, $slides)));
     }
 }

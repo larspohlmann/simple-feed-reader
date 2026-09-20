@@ -118,6 +118,36 @@ final class SlideshowExtractionTest extends TestCase
         self::assertLessThan(strpos($clean, 'reader-slideshow'), strpos($clean, 'passionierter Segler'));
     }
 
+    public function testDropsTheTeaserCarouselsOfIdenticalPlaceholderImages(): void
+    {
+        $raw = file_get_contents(__DIR__ . '/../../../Fixtures/Slideshow/toi-placeholder-carousel.html');
+        self::assertIsString($raw);
+        $rawDocument = HtmlDocumentParser::parseOrNull($raw);
+        self::assertNotNull($rawDocument);
+
+        self::assertSame([], $this->scanner()->scan($rawDocument));
+    }
+
+    public function testRecoversRealImagesBehindARepeatedRemotePlaceholderSrc(): void
+    {
+        $raw = file_get_contents(__DIR__ . '/../../../Fixtures/Slideshow/lazy-placeholder-gallery.html');
+        self::assertIsString($raw);
+        $rawDocument = HtmlDocumentParser::parseOrNull($raw);
+        self::assertNotNull($rawDocument);
+
+        $slideshows = $this->scanner()->scan($rawDocument);
+
+        self::assertCount(1, $slideshows);
+        self::assertSame(
+            [
+                'https://cdn.example.com/photo/first-1600.jpg',
+                'https://cdn.example.com/photo/second-1600.jpg',
+                'https://cdn.example.com/photo/third-1600.jpg',
+            ],
+            array_map(static fn ($slide): string => $slide->imageUrl, $slideshows[0]->slides),
+        );
+    }
+
     private function scanner(): SlideshowScanner
     {
         return new SlideshowScanner([

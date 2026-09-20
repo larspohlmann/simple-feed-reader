@@ -161,4 +161,38 @@ final class MarkupCarouselRecognizerTest extends TestCase
             . '</div></div></body>',
         ));
     }
+
+    public function testDropsACarouselWhereEverySlideIsTheSamePlaceholderImage(): void
+    {
+        $placeholder = 'https://static.toiimg.com/photo/83033472.cms';
+
+        self::assertSame([], $this->recognize(
+            '<body><p>An intro paragraph long enough to anchor the gallery below.</p>'
+            . '<div class="slick-slider">'
+            . '<div class="slick-slide"><a href="https://site.test/videoshow/1.cms">'
+            . '<img alt="One" src="' . $placeholder . '"></a></div>'
+            . '<div class="slick-slide"><a href="https://site.test/videoshow/2.cms">'
+            . '<img alt="Two" src="' . $placeholder . '"></a></div>'
+            . '<div class="slick-slide"><a href="https://site.test/videoshow/3.cms">'
+            . '<img alt="Three" src="' . $placeholder . '"></a></div>'
+            . '</div></body>',
+        ));
+    }
+
+    public function testRecoversRealImagesBehindARepeatedRemotePlaceholderSrc(): void
+    {
+        $placeholder = 'https://static.toiimg.com/photo/83033472.cms';
+        $shows = $this->recognize(
+            '<body><p>An intro paragraph long enough to anchor the gallery below.</p>'
+            . '<div class="slick-slider">'
+            . '<div class="slick-slide"><img src="' . $placeholder . '" data-src="https://img/real-a.jpg" alt="A"></div>'
+            . '<div class="slick-slide"><img src="' . $placeholder . '" data-src="https://img/real-b.jpg" alt="B"></div>'
+            . '</div></body>',
+        );
+
+        self::assertCount(1, $shows);
+        self::assertCount(2, $shows[0]->slides);
+        self::assertSame('https://img/real-a.jpg', $shows[0]->slides[0]->imageUrl);
+        self::assertSame('https://img/real-b.jpg', $shows[0]->slides[1]->imageUrl);
+    }
 }

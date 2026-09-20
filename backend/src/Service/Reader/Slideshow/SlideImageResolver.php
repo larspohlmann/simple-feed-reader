@@ -10,6 +10,10 @@ use Dom\Element;
  * Finds the image URL a slide points at. Real galleries carry it as a plain <img>,
  * a lazy attribute (Swiper/Owl/Flickity data-src etc), or lightbox <a href> —
  * probed over real pages (#926). First hit wins; unresolved slides don't count.
+ *
+ * A carousel whose slides all resolve to one URL is a row of placeholders; the
+ * recognizer re-resolves each slide through `resolveExcluding` to reach the real
+ * image the lazy attribute or lightbox link still holds (#1091).
  */
 final readonly class SlideImageResolver
 {
@@ -22,47 +26,61 @@ final readonly class SlideImageResolver
 
     public function resolve(Element $slide): ?string
     {
-        return $this->fromImg($slide)
-            ?? $this->fromLazyAttribute($slide)
-            ?? $this->fromAnchorHref($slide);
+        return $this->resolveExcluding($slide, null);
     }
 
-    private function fromImg(Element $slide): ?string
+    public function resolveExcluding(Element $slide, ?string $placeholder): ?string
     {
-        foreach ($slide->getElementsByTagName('img') as $image) {
-            $source = $image->getAttribute('src') ?? '';
-            if ($this->isRemote($source)) {
-                return $source;
+        foreach ($this->candidates($slide) as $candidate) {
+            if ($candidate !== $placeholder) {
+                return $candidate;
             }
         }
 
         return null;
     }
 
-    private function fromLazyAttribute(Element $slide): ?string
+    /** @return iterable<string> */
+    private function candidates(Element $slide): iterable
+    {
+        yield from $this->imgSources($slide);
+        yield from $this->lazySources($slide);
+        yield from $this->anchorSources($slide);
+    }
+
+    /** @return iterable<string> */
+    private function imgSources(Element $slide): iterable
+    {
+        foreach ($slide->getElementsByTagName('img') as $image) {
+            $source = $image->getAttribute('src') ?? '';
+            if ($this->isRemote($source)) {
+                yield $source;
+            }
+        }
+    }
+
+    /** @return iterable<string> */
+    private function lazySources(Element $slide): iterable
     {
         foreach ($this->selfAndDescendants($slide) as $element) {
             foreach (self::LAZY_ATTRIBUTES as $attribute) {
                 $value = $element->getAttribute($attribute) ?? '';
                 if ($this->isRemote($value)) {
-                    return $value;
+                    yield $value;
                 }
             }
         }
-
-        return null;
     }
 
-    private function fromAnchorHref(Element $slide): ?string
+    /** @return iterable<string> */
+    private function anchorSources(Element $slide): iterable
     {
         foreach ($slide->getElementsByTagName('a') as $anchor) {
             $href = $anchor->getAttribute('href') ?? '';
             if ($this->isRemote($href) && preg_match(self::IMAGE_FILE, $href) === 1) {
-                return $href;
+                yield $href;
             }
         }
-
-        return null;
     }
 
     /** @return iterable<Element> */

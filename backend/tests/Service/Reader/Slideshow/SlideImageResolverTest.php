@@ -43,4 +43,20 @@ final class SlideImageResolverTest extends TestCase
     {
         self::assertNull((new SlideImageResolver())->resolve($this->slide('<p>only text</p>')));
     }
+
+    public function testResolveExcludingSkipsThePlaceholderSrcForTheLazyUrl(): void
+    {
+        $slide = $this->slide('<img alt="A" src="https://cdn/placeholder.cms" data-src="https://img/real.jpg">');
+
+        $url = (new SlideImageResolver())->resolveExcluding($slide, 'https://cdn/placeholder.cms');
+
+        self::assertSame('https://img/real.jpg', $url);
+    }
+
+    public function testResolveExcludingReturnsNullWhenOnlyThePlaceholderExists(): void
+    {
+        $slide = $this->slide('<a href="https://site.test/videoshow/1.cms"><img alt="P" src="https://cdn/ph.cms"></a>');
+
+        self::assertNull((new SlideImageResolver())->resolveExcluding($slide, 'https://cdn/ph.cms'));
+    }
 }

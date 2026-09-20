@@ -35,4 +35,16 @@ final class SlideshowTest extends TestCase
     {
         self::assertNull(Slideshow::fromSlides([], null, null, null));
     }
+
+    public function testSlidesSharingOneImageAreRejected(): void
+    {
+        $placeholder = 'https://static.toiimg.com/photo/83033472.cms';
+
+        self::assertNull(Slideshow::fromSlides(
+            [new Slide($placeholder, 'one'), new Slide($placeholder, 'two'), new Slide($placeholder, 'three')],
+            null,
+            null,
+            null,
+        ));
+    }
 }
