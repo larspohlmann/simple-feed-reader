@@ -10,6 +10,7 @@ use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Provider\SoundCloudEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
+use App\Service\Reader\Media\RawPage;
 use App\Service\Reader\Media\Source\MetaMediaSource;
 use PHPUnit\Framework\TestCase;
 
@@ -27,11 +28,17 @@ final class MetaMediaSourceTest extends TestCase
         );
     }
 
+    /** @return list<\App\Service\Reader\Media\MediaCandidate> */
+    private function find(string $html, string $url): array
+    {
+        return $this->source->find(RawPage::parse($html, $url));
+    }
+
     public function testTakesOgAudioWhenItIsAFile(): void
     {
         $html = '<html><head><meta property="og:audio" content="https://x.test/a.mp3"></head></html>';
 
-        $found = $this->source->find($html, 'https://x.test/a.html');
+        $found = $this->find($html, 'https://x.test/a.html');
 
         self::assertCount(1, $found);
         self::assertSame(MediaKind::Audio, $found[0]->kind);
@@ -43,7 +50,7 @@ final class MetaMediaSourceTest extends TestCase
         $html = '<html><head><meta property="og:video" '
             . 'content="https://www.tagesschau.de/video/video-1640158~player.html"></head></html>';
 
-        self::assertSame([], $this->source->find($html, 'https://www.tagesschau.de/x.html'));
+        self::assertSame([], $this->find($html, 'https://www.tagesschau.de/x.html'));
     }
 
     public function testRefusesTheCapturedArdPageThroughThisLayer(): void
@@ -51,6 +58,6 @@ final class MetaMediaSourceTest extends TestCase
         $html = file_get_contents(__DIR__ . '/../../../../Fixtures/reader/media/ard-video.html');
         self::assertIsString($html);
 
-        self::assertSame([], $this->source->find($html, 'https://www.tagesschau.de/x.html'));
+        self::assertSame([], $this->find($html, 'https://www.tagesschau.de/x.html'));
     }
 }

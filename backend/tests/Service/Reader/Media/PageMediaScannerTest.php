@@ -13,6 +13,8 @@ use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaCandidateSourceInterface;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\PageMediaScanner;
+use App\Service\Reader\Media\RawPage;
+use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class PageMediaScannerTest extends TestCase
@@ -45,11 +47,42 @@ final class PageMediaScannerTest extends TestCase
             {
             }
 
-            public function find(string $pageHtml, string $pageUrl): array
+            public function find(RawPage $page): array
             {
                 return $this->candidates;
             }
         };
+    }
+
+    /** @return MediaCandidateSourceInterface&object{found: bool, document: ?HTMLDocument} */
+    private function recordingSource(): MediaCandidateSourceInterface
+    {
+        return new class implements MediaCandidateSourceInterface {
+            public bool $found = false;
+            public ?HTMLDocument $document = null;
+
+            public function find(RawPage $page): array
+            {
+                $this->found = true;
+                $this->document = $page->document;
+
+                return [];
+            }
+        };
+    }
+
+    public function testParsesThePageOnceAndSharesOneDocumentWithEverySource(): void
+    {
+        $first = $this->recordingSource();
+        $second = $this->recordingSource();
+
+        $scanner = new PageMediaScanner([$first, $second]);
+        $scanner->scan('<html><body><p>Prose.</p></body></html>', 'https://x.test/a');
+
+        self::assertTrue($first->found);
+        self::assertTrue($second->found);
+        self::assertInstanceOf(HTMLDocument::class, $first->document);
+        self::assertSame($first->document, $second->document);
     }
 
     public function testRescuesAPosterlessVideoWithTheFallbackPoster(): void

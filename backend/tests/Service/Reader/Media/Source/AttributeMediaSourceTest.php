@@ -11,6 +11,7 @@ use App\Service\Reader\Media\MediaRelevance;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Provider\SoundCloudEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
+use App\Service\Reader\Media\RawPage;
 use App\Service\Reader\Media\Source\AttributeMediaSource;
 use PHPUnit\Framework\TestCase;
 
@@ -30,12 +31,18 @@ final class AttributeMediaSourceTest extends TestCase
         );
     }
 
+    /** @return list<\App\Service\Reader\Media\MediaCandidate> */
+    private function find(string $html, string $url): array
+    {
+        return $this->source->find(RawPage::parse($html, $url));
+    }
+
     /** Deutschlandradio's data-audio-src, reached without naming Deutschlandradio. */
     public function testFindsAMediaUrlInAnyAttribute(): void
     {
         $html = '<body><div data-audio-src="https://x.test/bildung-episode.mp3"></div></body>';
 
-        $found = $this->source->find($html, 'https://x.test/bildung-100.html');
+        $found = $this->find($html, 'https://x.test/bildung-100.html');
 
         self::assertCount(1, $found);
         self::assertSame(MediaKind::Audio, $found[0]->kind);
@@ -47,7 +54,7 @@ final class AttributeMediaSourceTest extends TestCase
         $html = '<body><div data-audio-type="tts">'
             . '<audio data-src="https://zon-speechbert-production.test/a/full.mp3"></audio></div></body>';
 
-        $found = $this->source->find($html, 'https://x.test/a.html');
+        $found = $this->find($html, 'https://x.test/a.html');
 
         self::assertCount(1, $found);
         self::assertTrue($found[0]->narrated);
@@ -57,7 +64,7 @@ final class AttributeMediaSourceTest extends TestCase
     {
         $html = '<body><div data-audio-src="https://x.test/bildung-episode.mp3"></div></body>';
 
-        $found = $this->source->find($html, 'https://x.test/bildung-100.html');
+        $found = $this->find($html, 'https://x.test/bildung-100.html');
 
         self::assertCount(1, $found);
         self::assertFalse($found[0]->narrated);
@@ -69,7 +76,7 @@ final class AttributeMediaSourceTest extends TestCase
         $html = '<html><head><meta property="og:image" content="https://x.test/p.jpg"></head>'
             . '<body><div data-v="https://x.test/webxxl.mp4"></div></body></html>';
 
-        $found = $this->source->find($html, 'https://x.test/a.html');
+        $found = $this->find($html, 'https://x.test/a.html');
 
         self::assertCount(1, $found);
         self::assertSame('https://x.test/p.jpg', $found[0]->posterUrl);
@@ -80,7 +87,7 @@ final class AttributeMediaSourceTest extends TestCase
     {
         $html = '<body><div data-v="https://x.test/clip.mp4"></div></body>';
 
-        $found = $this->source->find($html, 'https://x.test/a.html');
+        $found = $this->find($html, 'https://x.test/a.html');
 
         self::assertCount(1, $found);
         self::assertSame(MediaKind::Video, $found[0]->kind);
@@ -93,7 +100,7 @@ final class AttributeMediaSourceTest extends TestCase
         $html = '<body><div class="wrapper"><picture><img src="https://x.test/sendungsbild.jpg"></picture>'
             . '<div data-v="https://x.test/clip.mp4"></div></div></body>';
 
-        $found = $this->source->find($html, 'https://x.test/a.html');
+        $found = $this->find($html, 'https://x.test/a.html');
 
         self::assertCount(1, $found);
         self::assertSame(MediaKind::Video, $found[0]->kind);
@@ -106,7 +113,7 @@ final class AttributeMediaSourceTest extends TestCase
             . '<body><div><img src="https://x.test/still.jpg"><div data-v="https://x.test/clip.mp4"></div></div>'
             . '</body></html>';
 
-        $found = $this->source->find($html, 'https://x.test/a.html');
+        $found = $this->find($html, 'https://x.test/a.html');
 
         self::assertSame('https://x.test/share.jpg', $found[0]->posterUrl);
     }
@@ -117,7 +124,7 @@ final class AttributeMediaSourceTest extends TestCase
         $html = '<body><div data-x="https://st01.sslstream.dlf.de/dlf/01/128/mp3/stream.mp3"></div>'
             . '<div data-y="https://x.test/bildung-episode.mp3"></div></body>';
 
-        $found = $this->source->find($html, 'https://x.test/bildung-100.html');
+        $found = $this->find($html, 'https://x.test/bildung-100.html');
 
         self::assertCount(1, $found);
         self::assertStringContainsString('bildung-episode', $found[0]->url);
@@ -129,7 +136,7 @@ final class AttributeMediaSourceTest extends TestCase
         $html = '<body><div data-a="https://x.test/teaser-other.mp3"></div>'
             . '<div data-b="https://x.test/bildung-episode.mp3"></div></body>';
 
-        $found = $this->source->find($html, 'https://x.test/bildung-100.html');
+        $found = $this->find($html, 'https://x.test/bildung-100.html');
 
         self::assertStringContainsString('bildung-episode', $found[0]->url);
     }
@@ -139,7 +146,7 @@ final class AttributeMediaSourceTest extends TestCase
     {
         $html = '<body><div data-audio-src="https://x.test/bildung-episode.mp3?utm=x"></div></body>';
 
-        $found = $this->source->find($html, 'https://x.test/bildung-100.html');
+        $found = $this->find($html, 'https://x.test/bildung-100.html');
 
         self::assertCount(1, $found);
         self::assertStringNotContainsString('?', $found[0]->url);
@@ -151,7 +158,7 @@ final class AttributeMediaSourceTest extends TestCase
         $html = file_get_contents(__DIR__ . '/../../../../Fixtures/reader/media/deutschlandradio-audio.html');
         self::assertIsString($html);
 
-        $found = $this->source->find($html, 'https://www.deutschlandfunkkultur.de/bildung-100.html');
+        $found = $this->find($html, 'https://www.deutschlandfunkkultur.de/bildung-100.html');
 
         self::assertNotSame([], $found);
         self::assertStringContainsString('.mp3', $found[0]->url);
@@ -164,7 +171,7 @@ final class AttributeMediaSourceTest extends TestCase
         $html = file_get_contents(__DIR__ . '/../../../../Fixtures/reader/media/ard-video.html');
         self::assertIsString($html);
 
-        $found = $this->source->find($html, 'https://www.tagesschau.de/ausland/beispiel-100.html');
+        $found = $this->find($html, 'https://www.tagesschau.de/ausland/beispiel-100.html');
 
         self::assertNotSame([], $found);
         self::assertStringContainsString('.mp4', $found[0]->url);
@@ -179,7 +186,7 @@ final class AttributeMediaSourceTest extends TestCase
             . '<p>' . self::PROSE . '</p>'
             . '<div data-audio-src="https://x.test/bildung-episode.mp3"></div></body>';
 
-        $found = $this->source->find($html, 'https://x.test/bildung-100.html');
+        $found = $this->find($html, 'https://x.test/bildung-100.html');
 
         self::assertCount(1, $found);
         self::assertSame('https://x.test/bildung-episode.mp3', $found[0]->url);
@@ -194,7 +201,7 @@ final class AttributeMediaSourceTest extends TestCase
             . '<p>A download menu paragraph, long enough to be a prose block of its own.</p>'
             . '<a data-download="https://x.test/bildung-episode.mp3">Download</a></body>';
 
-        $found = $this->source->find($html, 'https://x.test/bildung-100.html');
+        $found = $this->find($html, 'https://x.test/bildung-100.html');
 
         self::assertSame(self::PROSE, $found[0]->precedingText);
     }
@@ -205,7 +212,7 @@ final class AttributeMediaSourceTest extends TestCase
             . '<body><div data-audio-src="https://x.test/bildung-episode.mp3"></div>'
             . '<div data-v="https://x.test/bildung-episode.mp4"></div></body></html>';
 
-        $found = $this->source->find($html, 'https://x.test/bildung-100.html');
+        $found = $this->find($html, 'https://x.test/bildung-100.html');
 
         self::assertCount(2, $found);
     }
@@ -215,7 +222,7 @@ final class AttributeMediaSourceTest extends TestCase
         $html = '<body><aside><div data-audio-src="https://x.test/teaser-episode.mp3"></div></aside>'
             . '<div data-audio-src="https://x.test/bildung-episode.mp3"></div></body>';
 
-        $found = $this->source->find($html, 'https://x.test/bildung-100.html');
+        $found = $this->find($html, 'https://x.test/bildung-100.html');
 
         self::assertCount(1, $found);
         self::assertSame('https://x.test/bildung-episode.mp3', $found[0]->url);
@@ -228,7 +235,7 @@ final class AttributeMediaSourceTest extends TestCase
             . '<div class="teaser" data-config=\'{"url":"https://x.test/related-clip.mp4"}\'></div>'
             . '<video src="https://x.test/the-article-clip.mp4"></video></article></body>';
 
-        $found = $this->source->find($html, 'https://x.test/story-100.html');
+        $found = $this->find($html, 'https://x.test/story-100.html');
 
         self::assertCount(1, $found);
         self::assertSame('https://x.test/the-article-clip.mp4', $found[0]->url);

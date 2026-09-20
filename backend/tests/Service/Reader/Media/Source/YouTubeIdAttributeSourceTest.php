@@ -7,6 +7,7 @@ namespace App\Tests\Service\Reader\Media\Source;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
+use App\Service\Reader\Media\RawPage;
 use App\Service\Reader\Media\Source\YouTubeIdAttributeSource;
 use PHPUnit\Framework\TestCase;
 
@@ -22,13 +23,19 @@ final class YouTubeIdAttributeSourceTest extends TestCase
         $this->source = new YouTubeIdAttributeSource(new EmbedProviders([new YouTubeEmbedProvider()]));
     }
 
+    /** @return list<\App\Service\Reader\Media\MediaCandidate> */
+    private function find(string $html, string $url): array
+    {
+        return $this->source->find(RawPage::parse($html, $url));
+    }
+
     /** The Guardian's youtube-atom, reached without naming the Guardian. */
     public function testAnElementNamingYouTubeWithAnIdYieldsTheEmbed(): void
     {
         $html = '<body><div data-component="youtube-atom" data-atom-id="8052ac31" '
             . 'data-video-id="pz8VRrI0p0U"></div></body>';
 
-        $found = $this->source->find($html, 'https://x.test/whales-video');
+        $found = $this->find($html, 'https://x.test/whales-video');
 
         self::assertCount(1, $found);
         self::assertSame(MediaKind::Embed, $found[0]->kind);
@@ -42,7 +49,7 @@ final class YouTubeIdAttributeSourceTest extends TestCase
     {
         $html = '<body><div id="yt-JSrAQkrp1JI0" data-video-id="JSrAQkrp1JI"></div></body>';
 
-        $found = $this->source->find($html, 'https://x.test/a');
+        $found = $this->find($html, 'https://x.test/a');
 
         self::assertCount(1, $found);
         self::assertSame('https://www.youtube-nocookie.com/embed/JSrAQkrp1JI', $found[0]->url);
@@ -52,7 +59,7 @@ final class YouTubeIdAttributeSourceTest extends TestCase
     {
         $html = '<body><youtube-player data-video-id="M1j_uRqKMKI"></youtube-player></body>';
 
-        self::assertCount(1, $this->source->find($html, 'https://x.test/a'));
+        self::assertCount(1, $this->find($html, 'https://x.test/a'));
     }
 
     /** Brightcove's in-page embed uses the same attribute with a numeric id. */
@@ -61,28 +68,28 @@ final class YouTubeIdAttributeSourceTest extends TestCase
         $html = '<body><video-js data-account="665003303001" data-player="6tKQRAx7lu" '
             . 'data-video-id="6404487520112"></video-js></body>';
 
-        self::assertSame([], $this->source->find($html, 'https://x.test/a'));
+        self::assertSame([], $this->find($html, 'https://x.test/a'));
     }
 
     public function testAnIdOnAnElementThatDoesNotNameYouTubeYieldsNothing(): void
     {
         $html = '<body><div class="player" data-video-id="pz8VRrI0p0U"></div></body>';
 
-        self::assertSame([], $this->source->find($html, 'https://x.test/a'));
+        self::assertSame([], $this->find($html, 'https://x.test/a'));
     }
 
     public function testATenCharacterIdYieldsNothing(): void
     {
         $html = '<body><div data-component="youtube-atom" data-video-id="pz8VRrI0p0"></div></body>';
 
-        self::assertSame([], $this->source->find($html, 'https://x.test/a'));
+        self::assertSame([], $this->find($html, 'https://x.test/a'));
     }
 
     public function testAnOccurrenceInsideFurnitureYieldsNothing(): void
     {
         $html = '<body><aside><div data-component="youtube-atom" data-video-id="pz8VRrI0p0U"></div></aside></body>';
 
-        self::assertSame([], $this->source->find($html, 'https://x.test/a'));
+        self::assertSame([], $this->find($html, 'https://x.test/a'));
     }
 
     public function testARepeatedIdYieldsOneCandidateAnchoredWhereItFirstAppears(): void
@@ -92,7 +99,7 @@ final class YouTubeIdAttributeSourceTest extends TestCase
             . '<p>Later prose, also long enough to count as a block of the article.</p>'
             . '<div class="embed--youtube" data-video-id="pz8VRrI0p0U"></div></body>';
 
-        $found = $this->source->find($html, 'https://x.test/a');
+        $found = $this->find($html, 'https://x.test/a');
 
         self::assertCount(1, $found);
         self::assertSame(self::PROSE, $found[0]->precedingText);
@@ -100,6 +107,6 @@ final class YouTubeIdAttributeSourceTest extends TestCase
 
     public function testIgnoresUnparseableHtml(): void
     {
-        self::assertSame([], $this->source->find('', 'https://x.test/a'));
+        self::assertSame([], $this->find('', 'https://x.test/a'));
     }
 }

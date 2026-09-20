@@ -11,6 +11,7 @@ use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Provider\BrightcoveEmbedProvider;
 use App\Service\Reader\Media\Provider\SoundCloudEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
+use App\Service\Reader\Media\RawPage;
 use App\Service\Reader\Media\Source\JsonLdMediaSource;
 use PHPUnit\Framework\TestCase;
 
@@ -30,13 +31,19 @@ final class JsonLdMediaSourceTest extends TestCase
         );
     }
 
+    /** @return list<\App\Service\Reader\Media\MediaCandidate> */
+    private function find(string $html, string $url): array
+    {
+        return $this->source->find(RawPage::parse($html, $url));
+    }
+
     public function testTakesContentUrlFromAVideoObject(): void
     {
         $html = '<html><body><script type="application/ld+json">'
             . '{"@type":"VideoObject","contentUrl":"https:\\/\\/www.youtube.com\\/watch?v=M1j_uRqKMKI"}'
             . '</script></body></html>';
 
-        $found = $this->source->find($html, 'https://www.heise.de/news/x.html');
+        $found = $this->find($html, 'https://www.heise.de/news/x.html');
 
         self::assertCount(1, $found);
         self::assertSame(MediaKind::Embed, $found[0]->kind);
@@ -50,7 +57,7 @@ final class JsonLdMediaSourceTest extends TestCase
             . '"contentUrl":"https://x.test/v.mp4","thumbnailUrl":"https://x.test/poster.jpg"}}'
             . '</script></body></html>';
 
-        $found = $this->source->find($html, 'https://x.test/a.html');
+        $found = $this->find($html, 'https://x.test/a.html');
 
         self::assertCount(1, $found);
         self::assertSame(MediaKind::Video, $found[0]->kind);
@@ -64,7 +71,7 @@ final class JsonLdMediaSourceTest extends TestCase
             . '{"@type":"VideoObject","contentUrl":"https://x.test/v.mp4"}'
             . '</script></body></html>';
 
-        $found = $this->source->find($html, 'https://x.test/a.html');
+        $found = $this->find($html, 'https://x.test/a.html');
 
         self::assertCount(1, $found);
         self::assertSame('https://x.test/v.mp4', $found[0]->url);
@@ -79,7 +86,7 @@ final class JsonLdMediaSourceTest extends TestCase
             . '"thumbnailUrl":"https://x.test/logo.jpg"}'
             . '</script></body></html>';
 
-        $found = $this->source->find($html, 'https://x.test/a.html');
+        $found = $this->find($html, 'https://x.test/a.html');
 
         self::assertCount(1, $found);
         self::assertSame(MediaKind::Audio, $found[0]->kind);
@@ -93,14 +100,14 @@ final class JsonLdMediaSourceTest extends TestCase
             . '{"@type":"ImageObject","contentUrl":"https://5mag.net/wp-content/uploads/x.jpg"}'
             . '</script></body></html>';
 
-        self::assertSame([], $this->source->find($html, 'https://5mag.net/audio/x/'));
+        self::assertSame([], $this->find($html, 'https://5mag.net/audio/x/'));
     }
 
     public function testIgnoresMalformedJson(): void
     {
         $html = '<html><body><script type="application/ld+json">{not json</script></body></html>';
 
-        self::assertSame([], $this->source->find($html, 'https://x.test/a.html'));
+        self::assertSame([], $this->find($html, 'https://x.test/a.html'));
     }
 
     public function testFindsTheCompanionVideoInTheCapturedHeisePage(): void
@@ -108,7 +115,7 @@ final class JsonLdMediaSourceTest extends TestCase
         $html = file_get_contents(__DIR__ . '/../../../../Fixtures/reader/media/heise-video.html');
         self::assertIsString($html);
 
-        $found = $this->source->find($html, 'https://www.heise.de/news/x.html');
+        $found = $this->find($html, 'https://www.heise.de/news/x.html');
 
         self::assertNotSame([], $found);
         self::assertStringContainsString('M1j_uRqKMKI', $found[0]->url);
@@ -121,7 +128,7 @@ final class JsonLdMediaSourceTest extends TestCase
             . '"contentUrl":"https://x.test/v.mp4","thumbnailUrl":"https://x.test/poster.jpg"}</script>'
             . '</div></body></html>';
 
-        $found = $this->source->find($html, 'https://x.test/a.html');
+        $found = $this->find($html, 'https://x.test/a.html');
 
         self::assertSame(self::PROSE, $found[0]->precedingText);
     }
@@ -135,7 +142,7 @@ final class JsonLdMediaSourceTest extends TestCase
             . '<p>A related-videos paragraph, long enough to be a prose block of its own.</p>'
             . '<div><script type="application/ld+json">' . $video . '</script></div></body></html>';
 
-        $found = $this->source->find($html, 'https://x.test/a.html');
+        $found = $this->find($html, 'https://x.test/a.html');
 
         self::assertCount(1, $found);
         self::assertSame(self::PROSE, $found[0]->precedingText);
@@ -149,7 +156,7 @@ final class JsonLdMediaSourceTest extends TestCase
             . '{"@type":"VideoObject","contentUrl":"https://x.test/v.mp4","thumbnailUrl":"https://x.test/poster.jpg"}'
             . '</script></body></html>';
 
-        $found = $this->source->find($html, 'https://x.test/a.html');
+        $found = $this->find($html, 'https://x.test/a.html');
 
         self::assertCount(1, $found);
         self::assertSame('https://x.test/v.mp4', $found[0]->url);
@@ -167,7 +174,7 @@ final class JsonLdMediaSourceTest extends TestCase
             . '?videoId=6403736850112","thumbnailUrl":"' . $thumbnail . '"}'
             . '</script></head><body></body></html>';
 
-        $found = $this->source->find($html, 'https://www.aljazeera.com/video/x');
+        $found = $this->find($html, 'https://www.aljazeera.com/video/x');
 
         self::assertCount(1, $found);
         self::assertSame(MediaKind::Embed, $found[0]->kind);
@@ -184,7 +191,7 @@ final class JsonLdMediaSourceTest extends TestCase
             . '"embedUrl":"https://ngp.zdf.de/miniplayer/embed/?mediaID=/zdf/nachrichten/istaf-100"}'
             . '</script></head><body></body></html>';
 
-        $found = $this->source->find($html, 'https://www.zdfheute.de/video/x.html');
+        $found = $this->find($html, 'https://www.zdfheute.de/video/x.html');
 
         self::assertCount(1, $found);
         self::assertSame(MediaKind::Stream, $found[0]->kind);
@@ -201,7 +208,7 @@ final class JsonLdMediaSourceTest extends TestCase
             . '?videoId=6404485067112","thumbnailUrl":"https://x.test/poster.jpg"}'
             . '</script></body></html>';
 
-        $found = $this->source->find($html, 'https://x.test/a.html');
+        $found = $this->find($html, 'https://x.test/a.html');
 
         self::assertCount(1, $found);
         self::assertSame(MediaKind::Video, $found[0]->kind);
@@ -215,7 +222,7 @@ final class JsonLdMediaSourceTest extends TestCase
             . '{"@type":"VideoObject","contentUrl":"https://x.test/second.mp4",'
             . '"thumbnailUrl":"https://x.test/second.jpg"}]</script></body></html>';
 
-        $found = $this->source->find($html, 'https://x.test/a.html');
+        $found = $this->find($html, 'https://x.test/a.html');
 
         self::assertCount(2, $found);
         self::assertSame('https://x.test/first.mp4', $found[0]->url);
@@ -229,7 +236,7 @@ final class JsonLdMediaSourceTest extends TestCase
             . '"embedUrl":"https://www.youtube.com/watch?v=M1j_uRqKMKI"}'
             . '</script></body></html>';
 
-        $found = $this->source->find($html, 'https://x.test/a.html');
+        $found = $this->find($html, 'https://x.test/a.html');
 
         self::assertCount(1, $found, 'the poster-less file is refused (D5); the player page is the fallback');
         self::assertSame(MediaKind::Embed, $found[0]->kind);

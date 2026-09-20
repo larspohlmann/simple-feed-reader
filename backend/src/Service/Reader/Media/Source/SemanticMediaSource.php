@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\Source;
 
-use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaCandidateSourceInterface;
 use App\Service\Reader\Media\NarrationSignals;
 use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\PageTextBlocks;
+use App\Service\Reader\Media\RawPage;
 use App\Service\Reader\Media\ResolvedMediaUrl;
 use Dom\Element;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
@@ -30,14 +29,14 @@ final readonly class SemanticMediaSource implements MediaCandidateSourceInterfac
     {
     }
 
-    public function find(string $pageHtml, string $pageUrl): array
+    public function find(RawPage $page): array
     {
-        $document = HtmlDocumentParser::parseOrNull($pageHtml);
+        $document = $page->document;
         if ($document === null) {
             return [];
         }
 
-        $blocks = PageTextBlocks::fromDocument($document);
+        $blocks = $page->blocks;
         $found = [];
         foreach ($document->querySelectorAll('audio, video') as $element) {
             if (PageFurniture::holds($element)) {

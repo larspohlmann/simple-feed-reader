@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\Source;
 
-use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\EmbedTarget;
 use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaCandidateSourceInterface;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\PageFurniture;
+use App\Service\Reader\Media\RawPage;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
@@ -35,9 +35,9 @@ final readonly class ScriptEmbedSource implements MediaCandidateSourceInterface
     {
     }
 
-    public function find(string $pageHtml, string $pageUrl): array
+    public function find(RawPage $page): array
     {
-        $document = HtmlDocumentParser::parseOrNull($pageHtml);
+        $document = $page->document;
         if ($document === null) {
             return [];
         }

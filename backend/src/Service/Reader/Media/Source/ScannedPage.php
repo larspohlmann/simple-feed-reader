@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader\Media\Source;
 
 use App\Service\Reader\Media\PageTextBlocks;
+use App\Service\Reader\Media\RawPage;
 use Dom\HTMLDocument;
 
 /**
@@ -23,14 +24,14 @@ final readonly class ScannedPage
     ) {
     }
 
-    public static function from(HTMLDocument $document, string $pageUrl): self
+    public static function from(RawPage $page): self
     {
-        return new self(PageTextBlocks::fromDocument($document), $pageUrl, self::ogImage($document));
+        return new self($page->blocks, $page->url, self::ogImage($page->document));
     }
 
-    private static function ogImage(HTMLDocument $document): ?string
+    private static function ogImage(?HTMLDocument $document): ?string
     {
-        $content = $document->querySelector(self::OG_IMAGE)?->getAttribute('content');
+        $content = $document?->querySelector(self::OG_IMAGE)?->getAttribute('content');
 
         return $content !== null && preg_match('#^https://#i', $content) === 1 ? $content : null;
     }

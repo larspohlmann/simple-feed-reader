@@ -8,6 +8,7 @@ use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaCandidateSourceInterface;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaUrlKind;
+use App\Service\Reader\Media\RawPage;
 use App\Service\Reader\Media\Sibling\NearbyPoster;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
@@ -36,17 +37,17 @@ final readonly class ZdfPlayerConfigSource implements MediaCandidateSourceInterf
     {
     }
 
-    public function find(string $pageHtml, string $pageUrl): array
+    public function find(RawPage $page): array
     {
-        $host = parse_url($pageUrl, \PHP_URL_HOST);
+        $host = parse_url($page->url, \PHP_URL_HOST);
         if (!\is_string($host) || preg_match(self::ZDF_HOST, $host) !== 1) {
             return [];
         }
 
-        preg_match_all(self::PLAYER_CONFIG, $pageHtml, $matches, \PREG_OFFSET_CAPTURE);
+        preg_match_all(self::PLAYER_CONFIG, $page->html, $matches, \PREG_OFFSET_CAPTURE);
         $found = [];
         foreach ($matches[1] as [$id, $position]) {
-            $candidate = $this->candidateFor($host, $id, $position, $pageHtml);
+            $candidate = $this->candidateFor($host, $id, $position, $page->html);
             if ($candidate !== null) {
                 $found[$candidate->url] ??= $candidate;
             }

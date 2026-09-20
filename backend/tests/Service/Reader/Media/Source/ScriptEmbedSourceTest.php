@@ -8,6 +8,7 @@ use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\Provider\VimeoEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
+use App\Service\Reader\Media\RawPage;
 use App\Service\Reader\Media\Source\ScriptEmbedSource;
 use PHPUnit\Framework\TestCase;
 
@@ -21,7 +22,9 @@ final class ScriptEmbedSourceTest extends TestCase
     /** @return list<\App\Service\Reader\Media\MediaCandidate> */
     private function find(string $body): array
     {
-        return $this->source()->find('<html lang="en"><body>' . $body . '</body></html>', 'https://site.test/a');
+        return $this->source()->find(
+            RawPage::parse('<html lang="en"><body>' . $body . '</body></html>', 'https://site.test/a'),
+        );
     }
 
     public function testEmbedsAVimeoUrlAScriptVariableCarries(): void

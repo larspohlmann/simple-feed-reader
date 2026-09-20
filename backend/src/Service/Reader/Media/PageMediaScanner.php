@@ -32,8 +32,9 @@ final readonly class PageMediaScanner
     {
         $feedMedia ??= FeedMedia::none();
         $byUrl = [];
+        $rawPage = RawPage::parse($pageHtml, $pageUrl);
         foreach ($this->sources as $source) {
-            $this->mergeSource($source->find($pageHtml, $pageUrl), $byUrl);
+            $this->mergeSource($source->find($rawPage), $byUrl);
         }
 
         $reconciled = $this->reconciledWithFeed(array_values($byUrl), $feedMedia);
