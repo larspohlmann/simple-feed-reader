@@ -88,6 +88,28 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         self::assertSame(['Climate report', 'Rocket launch'], $titles);
     }
 
+    public function testMatchingEntryCarriesAnExcerptButNoContentHtml(): void
+    {
+        $client = self::createClient();
+        $user = $this->factory()->create('saved-search-excerpt@example.com');
+        $headers = $this->authHeaderFor($user);
+        $feed = $this->seedSubscribedFeed($user);
+        $entry = $this->seedEntry($feed, 'Climate report', new \DateTimeImmutable('2026-07-02T00:00:00Z'));
+        $entry->setContentHtml('<p>Climate body text.</p>');
+        $this->em()->persist(new SavedSearch($user, 'climate', false));
+        $this->em()->flush();
+
+        $client->request('GET', '/api/entries/saved-searches', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload($client);
+        self::assertIsArray($body['entries']);
+        $first = $body['entries'][0];
+        self::assertIsArray($first);
+        self::assertArrayNotHasKey('contentHtml', $first);
+        self::assertSame('Climate body text.', $first['excerpt']);
+    }
+
     public function testMatchingEntryCarriesItsFeedDeclaredCategories(): void
     {
         $client = self::createClient();

@@ -71,7 +71,7 @@ final readonly class EntryPage
         $nextCursor = $matchCount >= $limit ? self::cursorFromRow($resumeAfter, $sort) : null;
 
         return [
-            'entries' => array_map(static fn ($r) => EntryJson::one($r), $rows),
+            'entries' => array_map(static fn ($r) => EntryJson::listRow($r), $rows),
             'nextCursor' => $nextCursor,
         ];
     }

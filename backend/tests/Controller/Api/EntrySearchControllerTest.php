@@ -99,6 +99,28 @@ final class EntrySearchControllerTest extends ApiTestCase
         self::assertSame([], $body['matchedWords']);
     }
 
+    public function testMatchingEntryCarriesAnExcerptButNoContentHtml(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('s-excerpt@example.com');
+        $this->seedSubscribedFeedWithEntries($user, 'Angular', 1);
+        $em = $this->em();
+        $entry = $em->getRepository(Entry::class)->findOneBy(['title' => 'Angular Post 1']);
+        self::assertInstanceOf(Entry::class, $entry);
+        $entry->setContentHtml('<p>Angular body text.</p>');
+        $em->flush();
+
+        $client->request('GET', '/api/entries/search?q=angular', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload($client);
+        self::assertIsArray($body['entries']);
+        $first = $body['entries'][0];
+        self::assertIsArray($first);
+        self::assertArrayNotHasKey('contentHtml', $first);
+        self::assertSame('Angular body text.', $first['excerpt']);
+    }
+
     public function testMatchingEntryCarriesItsFeedDeclaredCategories(): void
     {
         $client = self::createClient();
