@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Search;
 
 use App\Entity\SavedSearch;
-use App\Repository\SavedSearchEntryRepository;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
@@ -17,7 +16,7 @@ use OpenTelemetry\API\Instrumentation\WithSpan;
  */
 final readonly class SavedSearchMatchIds
 {
-    public function __construct(private SavedSearchEntryRepository $entries)
+    public function __construct(private SavedSearchBadgeSource $badges)
     {
     }
 
@@ -29,7 +28,7 @@ final readonly class SavedSearchMatchIds
     #[WithSpan]
     public function forAll(array $savedSearches, int $userId): array
     {
-        return $this->entries->unreadMatchIdsBySavedSearch(
+        return $this->badges->unreadMatchIdsBySavedSearch(
             $userId,
             array_map(SavedSearchTerms::termOf(...), $savedSearches),
         );
