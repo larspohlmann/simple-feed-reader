@@ -66,10 +66,8 @@ class EntryListRepository extends AbstractEntryProjectionRepository
             return $qb;
         };
         $windowProbe = function () use ($query): QueryBuilder {
-            $qb = $this->createQueryBuilder('e')
-                ->select('e.effectiveDate')
-                ->orderBy('e.effectiveDate', 'DESC')
-                ->addOrderBy('e.id', 'DESC');
+            $probe = $this->createQueryBuilder('e')->select('e.effectiveDate');
+            $qb = $this->orderedBy($probe, EntryListSort::PublishedDate);
             $this->applyCursor($qb, $query->cursor, EntryListSort::PublishedDate);
 
             return $qb;

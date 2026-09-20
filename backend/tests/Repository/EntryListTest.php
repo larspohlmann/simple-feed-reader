@@ -14,6 +14,7 @@ use App\Http\EntryCursor;
 use App\Repository\DateOrderedPage;
 use App\Repository\DuplicateCollapseDql;
 use App\Repository\EntryListRepository;
+use App\Repository\EntryListRow;
 use App\Repository\EntryListRowHydrator;
 use App\Repository\EntryQuery;
 use App\Repository\EntryScopePredicates;
@@ -68,10 +69,10 @@ final class EntryListTest extends DbTestCase
      * fetch time — the shape the effective-date sort and its keyset actually
      * key on.
      */
-    private function entryAt(string $guid, string $createdAt, string $effectiveDate): Entry
+    private function entryAt(string $guid, string $createdAt, string $effectiveDate, ?Feed $feed = null): Entry
     {
         $e = new Entry(
-            $this->feed,
+            $feed ?? $this->feed,
             $guid,
             'https://example.com/' . $guid,
             'Title ' . $guid,
@@ -122,20 +123,21 @@ final class EntryListTest extends DbTestCase
     }
 
     /**
-     * Every query a listForUser() call issued, in order — the shape the
-     * probe/window/fallback decision must be verified against, since the
-     * result rows are identical across every branch (#1099).
+     * The rows a listForUser() call returned and every query it issued, in
+     * order — the probe/window/fallback decision is verified against the query
+     * shape, since the rows are identical across every branch (#1099). One call,
+     * so the assertions never re-run the page.
      *
-     * @return list<string>
+     * @return array{rows: list<EntryListRow>, queries: list<string>}
      */
-    private function queriesFor(EntryListRepository $repo, EntryQuery $query): array
+    private function recordedList(EntryListRepository $repo, EntryQuery $query): array
     {
         /** @var QueryRecorder $recorder */
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
         $recorder->reset();
-        $repo->listForUser($query);
+        $rows = $repo->listForUser($query);
 
-        return $recorder->queries();
+        return ['rows' => $rows, 'queries' => $recorder->queries()];
     }
 
     /**
@@ -157,12 +159,7 @@ final class EntryListTest extends DbTestCase
 
     private function entryIn(Feed $feed, string $guid, string $effectiveDate): Entry
     {
-        $at = new \DateTimeImmutable($effectiveDate);
-        $e = new Entry($feed, $guid, 'https://tagged.example.com/' . $guid, 'Title ' . $guid, $at, $at);
-        $this->em->persist($e);
-        $this->em->flush();
-
-        return $e;
+        return $this->entryAt($guid, $effectiveDate, $effectiveDate, $feed);
     }
 
     /**
@@ -188,12 +185,10 @@ final class EntryListTest extends DbTestCase
      */
     private function joinPrefixQueries(EntryQuery $query): array
     {
-        /** @var QueryRecorder $recorder */
-        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
-        $recorder->reset();
-        $this->repo()->listForUser($query);
-
-        return $recorder->queriesMatching('JOIN_PREFIX');
+        return array_values(array_filter(
+            $this->recordedList($this->repo(), $query)['queries'],
+            static fn (string $sql): bool => str_contains($sql, 'JOIN_PREFIX'),
+        ));
     }
 
     public function testTheChronologicalFanInViewsCarryTheJoinOrderHint(): void
@@ -689,7 +684,7 @@ final class EntryListTest extends DbTestCase
     {
         $this->entry('a', '2026-07-05T00:00:00Z');
 
-        $queries = $this->queriesFor($this->repo(), new EntryQuery($this->user->getId() ?? 0, 'all'));
+        $queries = $this->recordedList($this->repo(), new EntryQuery($this->user->getId() ?? 0, 'all'))['queries'];
 
         self::assertCount(1, $queries, 'a dense fan-in view must run the page query alone, no probe');
         self::assertStringContainsString('JOIN_PREFIX', $queries[0]);
@@ -704,15 +699,15 @@ final class EntryListTest extends DbTestCase
         $repo = $this->repoWithWindow(5);
         $query = new EntryQuery($this->user->getId() ?? 0, tagId: $tag->getId(), limit: 10);
 
-        $queries = $this->queriesFor($repo, $query);
+        $recorded = $this->recordedList($repo, $query);
+        $queries = $recorded['queries'];
         self::assertCount(2, $queries, 'a null probe must still run exactly one hinted page query');
         self::assertStringNotContainsString('JOIN_PREFIX', $queries[0], 'the probe itself is never hinted');
         self::assertStringContainsString('JOIN_PREFIX', $queries[1]);
 
-        $rows = $repo->listForUser($query);
         self::assertSame([$t1->getGuid(), $t2->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
-            $rows,
+            $recorded['rows'],
         ));
     }
 
@@ -726,14 +721,14 @@ final class EntryListTest extends DbTestCase
         $repo = $this->repoWithWindow(2);
         $query = new EntryQuery($this->user->getId() ?? 0, tagId: $tag->getId(), limit: 2);
 
-        $queries = $this->queriesFor($repo, $query);
+        $recorded = $this->recordedList($repo, $query);
+        $queries = $recorded['queries'];
         self::assertCount(2, $queries, 'a full windowed page must never fall back');
         self::assertStringContainsString('JOIN_PREFIX', $queries[1]);
 
-        $rows = $repo->listForUser($query);
         self::assertSame([$t1->getGuid(), $t2->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
-            $rows,
+            $recorded['rows'],
         ));
     }
 
@@ -750,14 +745,14 @@ final class EntryListTest extends DbTestCase
         $repo = $this->repoWithWindow(2);
         $query = new EntryQuery($this->user->getId() ?? 0, tagId: $tag->getId(), limit: 2);
 
-        $queries = $this->queriesFor($repo, $query);
+        $recorded = $this->recordedList($repo, $query);
+        $queries = $recorded['queries'];
         self::assertCount(3, $queries, 'a short windowed page must fall back to a third, plain query');
         self::assertStringNotContainsString('JOIN_PREFIX', $queries[2], 'the fallback is deliberately unhinted');
 
-        $rows = $repo->listForUser($query);
         self::assertSame([$t1->getGuid(), $t2->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
-            $rows,
+            $recorded['rows'],
         ));
     }
 
@@ -788,13 +783,16 @@ final class EntryListTest extends DbTestCase
         $repo = $this->repoWithWindow(2);
         $query = new EntryQuery($this->user->getId() ?? 0, tagId: $tag->getId(), limit: 3);
 
-        $queries = $this->queriesFor($repo, $query);
-        self::assertCount(2, $queries, 'an inclusive >= window bound must keep the tie in one windowed attempt');
+        $recorded = $this->recordedList($repo, $query);
+        self::assertCount(
+            2,
+            $recorded['queries'],
+            'an inclusive >= window bound must keep the tie in one windowed attempt',
+        );
 
-        $rows = $repo->listForUser($query);
         self::assertSame([$t1->getGuid(), $t3->getGuid(), $t2->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
-            $rows,
+            $recorded['rows'],
         ));
     }
 
@@ -824,16 +822,11 @@ final class EntryListTest extends DbTestCase
 
         // A probe without the cursor predicate still falls back to a correct
         // page (just via a 3rd query), so only the query count catches it.
-        self::assertCount(
-            2,
-            $this->queriesFor($repo, $query),
-            'the cursor must keep this page windowed, not fall back',
-        );
-
-        $page2 = $repo->listForUser($query);
+        $recorded = $this->recordedList($repo, $query);
+        self::assertCount(2, $recorded['queries'], 'the cursor must keep this page windowed, not fall back');
         self::assertSame([$t3->getGuid(), $t4->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
-            $page2,
+            $recorded['rows'],
         ));
     }
 
@@ -863,13 +856,11 @@ final class EntryListTest extends DbTestCase
         );
         $query = new EntryQuery($userId, tagId: $tag->getId(), cursor: $cursor, limit: 2);
 
-        $queries = $this->queriesFor($repo, $query);
-        self::assertCount(3, $queries, 'the second page must independently fall back');
-
-        $page2 = $repo->listForUser($query);
+        $recorded = $this->recordedList($repo, $query);
+        self::assertCount(3, $recorded['queries'], 'the second page must independently fall back');
         self::assertSame([$t3->getGuid(), $t4->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
-            $page2,
+            $recorded['rows'],
         ));
     }
 
@@ -887,10 +878,14 @@ final class EntryListTest extends DbTestCase
         $repo = $this->repoWithWindow(2);
         $query = new EntryQuery($this->user->getId() ?? 0, view: 'unread', tagId: $tag->getId(), limit: 2);
 
-        $queries = $this->queriesFor($repo, $query);
-        self::assertCount(3, $queries, 'the windowed rows the pivot admits are all read, so it must fall back');
+        $recorded = $this->recordedList($repo, $query);
+        self::assertCount(
+            3,
+            $recorded['queries'],
+            'the windowed rows the pivot admits are all read, so it must fall back',
+        );
 
-        $rows = $repo->listForUser($query);
+        $rows = $recorded['rows'];
         self::assertSame([$t3->getGuid(), $t4->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
             $rows,
