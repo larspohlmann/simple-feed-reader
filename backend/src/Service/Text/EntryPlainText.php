@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Text;
 
 /**
- * Strips <img> (see EntrySnippet for why), reduces to plain text, and rejects
- * a body that is nothing but a single junk token. Untruncated: callers cut to
- * their own length after this.
+ * Reduces HTML to plain text, rejecting a body that is only a junk token. <img>
+ * is replaced with a space first, so an inline image between two words becomes a
+ * boundary, not a merge; untruncated — callers cut to their own length.
  */
 final class EntryPlainText
 {
