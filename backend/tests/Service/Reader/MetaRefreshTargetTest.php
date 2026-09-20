@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\MetaRefreshTarget;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class MetaRefreshTargetTest extends TestCase
@@ -64,5 +65,57 @@ final class MetaRefreshTargetTest extends TestCase
             'https://example.com/real',
             (new MetaRefreshTarget())->within($html, 'https://example.com/wall'),
         );
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function refreshMarkupForms(): iterable
+    {
+        $target = 'content="0; url=https://example.com/real"';
+        yield 'single-quoted' => ["<meta http-equiv='refresh' $target>"];
+        yield 'unquoted' => ["<meta http-equiv=refresh $target>"];
+        yield 'whitespace around equals' => ["<meta http-equiv = \"refresh\" $target>"];
+        yield 'uppercase attribute name' => ["<meta HTTP-EQUIV=\"refresh\" $target>"];
+        yield 'content before http-equiv' => ["<meta $target http-equiv=\"refresh\">"];
+    }
+
+    #[DataProvider('refreshMarkupForms')]
+    public function testFollowsEveryRefreshAttributeForm(string $metaTag): void
+    {
+        $html = "<html><head>$metaTag</head><body>x</body></html>";
+
+        self::assertSame(
+            'https://example.com/real',
+            (new MetaRefreshTarget())->within($html, 'https://example.com/wall'),
+        );
+    }
+
+    public function testIgnoresNonRefreshHttpEquivMetas(): void
+    {
+        $html = '<html><head><meta http-equiv="X-UA-Compatible" content="IE=edge">'
+            . '<meta http-equiv="Content-Type" content="text/html; charset=utf-8"></head><body>x</body></html>';
+
+        self::assertNull((new MetaRefreshTarget())->within($html, 'https://example.com/wall'));
+    }
+
+    public function testDoesNotTrimTheHttpEquivValue(): void
+    {
+        // The HTML parser keeps the leading space, so " refresh" is not "refresh".
+        // This has always returned null; the narrowed guard does not change it.
+        $html = '<html><head><meta http-equiv=" refresh" content="0; url=https://example.com/real">'
+            . '</head><body>x</body></html>';
+
+        self::assertNull((new MetaRefreshTarget())->within($html, 'https://example.com/wall'));
+    }
+
+    public function testDoesNotFollowAnEntityEncodedRefreshValue(): void
+    {
+        // An HTML parser decodes "&#82;efresh" to "Refresh"; the pre-check regex does not.
+        // The guard deliberately skips this: no real page encodes the http-equiv value.
+        $html = '<html><head><meta http-equiv="&#82;efresh" content="0; url=https://example.com/real">'
+            . '</head><body>x</body></html>';
+
+        self::assertNull((new MetaRefreshTarget())->within($html, 'https://example.com/wall'));
     }
 }
