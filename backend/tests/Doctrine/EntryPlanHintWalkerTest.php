@@ -32,8 +32,24 @@ final class EntryPlanHintWalkerTest extends DbTestCase
         yield 'duplicate lookup' => [EntryPlanHint::DuplicateLookup];
     }
 
-    #[DataProvider('planHints')]
-    public function testHintPrefixesTheOuterSelectWithTheEntryAlias(EntryPlanHint $planHint): void
+    /**
+     * The expected optimizer comment is spelled out here, not derived from
+     * optimizerHint(): a test that renders its own expectation from the code
+     * under test cannot catch a mutation of that code. %1$s is the entry alias.
+     *
+     * @return iterable<string, array{EntryPlanHint, string}>
+     */
+    public static function planHintComments(): iterable
+    {
+        yield 'date-ordered walk' => [EntryPlanHint::DateOrderedWalk, 'JOIN_PREFIX(%1$s)'];
+        yield 'duplicate lookup' => [
+            EntryPlanHint::DuplicateLookup,
+            'JOIN_PREFIX(%1$s) INDEX(%1$s idx_entry_url_hash)',
+        ];
+    }
+
+    #[DataProvider('planHintComments')]
+    public function testHintPrefixesTheOuterSelectWithTheEntryAlias(EntryPlanHint $planHint, string $expectedComment): void
     {
         $sql = $this->hintedCollapseQuery($planHint)->getSQL();
         self::assertIsString($sql);
@@ -42,7 +58,7 @@ final class EntryPlanHintWalkerTest extends DbTestCase
             self::fail('no entry table alias in ' . $sql);
         }
         self::assertStringStartsWith(
-            'SELECT /*+ ' . $planHint->optimizerHint($match[1]) . ' */ ',
+            'SELECT /*+ ' . \sprintf($expectedComment, $match[1]) . ' */ ',
             $sql,
         );
     }
@@ -79,6 +95,14 @@ final class EntryPlanHintWalkerTest extends DbTestCase
         $this->collapseQuery()
             ->setHint(Query::HINT_CUSTOM_OUTPUT_WALKER, EntryPlanHintWalker::class)
             ->getSQL();
+    }
+
+    public function testTheMissingHintMessageNamesTheWalkerAndTheHint(): void
+    {
+        self::assertSame(
+            EntryPlanHintWalker::class . ' requires a valid ' . EntryPlanHint::class . ' hint.',
+            (new MissingEntryPlanHintException())->getMessage(),
+        );
     }
 
     public function testTheUrlHashIndexNameMatchesEntrysOrmMetadata(): void
