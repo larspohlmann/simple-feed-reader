@@ -33,6 +33,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
         private readonly SearchTermsPredicateBuilder $termsPredicateBuilder,
         private readonly EntryScopePredicates $scope,
         private readonly DuplicateCollapseDql $collapse,
+        private readonly DateOrderedPage $dateOrderedPage,
     ) {
         parent::__construct($registry, Entry::class);
     }
@@ -55,19 +56,24 @@ class EntryListRepository extends AbstractEntryProjectionRepository
             $this->scope->applyList($qb, $aliases, $query);
         };
 
-        $qb = $this->orderedBy($this->rowQueryBuilder($query->userId), $sort)
-            ->setMaxResults($query->limit);
-        $applyScope($qb, EntryAliases::primary());
-        $this->collapse->apply($qb, $applyScope, $query->userId);
-        $this->applyCursor($qb, $query->cursor, $sort);
+        $pageQuery = function () use ($query, $sort, $applyScope): QueryBuilder {
+            $qb = $this->orderedBy($this->rowQueryBuilder($query->userId), $sort)
+                ->setMaxResults($query->limit);
+            $applyScope($qb, EntryAliases::primary());
+            $this->collapse->apply($qb, $applyScope, $query->userId);
+            $this->applyCursor($qb, $query->cursor, $sort);
 
-        $listQuery = $qb->getQuery();
-        if ($query->isDateOrderedFanIn()) {
-            EntryPlanHintWalker::apply($listQuery, EntryPlanHint::DateOrderedWalk);
-        }
+            return $qb;
+        };
+        $windowProbe = function () use ($query): QueryBuilder {
+            $probe = $this->createQueryBuilder('e')->select('e.effectiveDate');
+            $qb = $this->orderedBy($probe, EntryListSort::PublishedDate);
+            $this->applyCursor($qb, $query->cursor, EntryListSort::PublishedDate);
 
-        /** @var list<array<array-key, mixed>> $rows */
-        $rows = $listQuery->getResult();
+            return $qb;
+        };
+
+        $rows = $this->dateOrderedPage->rows($query, $pageQuery, $windowProbe);
         $survivors = array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
 
         return $this->attachDuplicates($survivors, $applyScope, $query->userId);
