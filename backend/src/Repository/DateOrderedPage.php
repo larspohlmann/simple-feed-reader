@@ -10,11 +10,9 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 
 /**
- * Decides how a fan-in page runs: unhinted for a single scope, always hinted
- * for the dense views (all/unread), and for a tag scope — the one that can be
- * sparse — probed, windowed, and falls back unhinted if the window is short
- * (#1099). Touches only the QueryBuilders it is handed, so applyCursor stays
- * the single keyset-predicate speller.
+ * Runs a fan-in page: unhinted for a single scope, hinted for the dense all/unread
+ * views, and for a possibly-sparse tag scope probed, windowed, with an unhinted
+ * fallback when the window is short (#1099).
  */
 final readonly class DateOrderedPage
 {
