@@ -350,6 +350,29 @@ final class ArticleExtractorTest extends TestCase
         self::assertSame(1, substr_count($content, 'site.test/b.jpg'));
     }
 
+    public function testDropsTeaserCarouselsThatAreRowsOfIdenticalPlaceholderImages(): void
+    {
+        // Times of India (#1091): the "Videos" and "Photostories" teaser
+        // carousels after the author bio are slick-slider markup whose every
+        // slide carries the same remote placeholder src; no real thumbnail is in
+        // the HTML, so they resolve to one image and must not become a slideshow.
+        $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-toi-placeholder-carousel.html');
+        $extractor = $this->extractor(
+            [new MockResponse($html, ['http_code' => 200])],
+            slideshowScanner: new SlideshowScanner(
+                [new MarkupCarouselRecognizer(new SlideImageResolver(), new SlideCaptionResolver())],
+            ),
+        );
+
+        $result = $extractor->extract('https://site.test/post');
+        $content = (string) $result->contentHtml;
+
+        self::assertTrue($result->ok);
+        self::assertStringContainsString('California tea importer spent 53 years', $content);
+        self::assertStringNotContainsString('reader-slideshow', $content);
+        self::assertStringNotContainsString('static.toiimg.com/photo/83033472.cms', $content);
+    }
+
     public function testRestoresLazyLoadedImagesInsteadOfLeavingEmptyFrames(): void
     {
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-lazy-images.html');

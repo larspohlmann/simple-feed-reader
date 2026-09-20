@@ -105,9 +105,25 @@ final readonly class MarkupCarouselRecognizer implements SlideshowRecognizerInte
     /** @param list<Element> $slideElements */
     private function slideshow(Element $container, array $slideElements, PageTextBlocks $textBlocks): ?Slideshow
     {
+        return Slideshow::fromSlides(
+            $this->slides($slideElements),
+            null,
+            $textBlocks->before($container),
+            ContainerSignature::fromElement($container),
+        );
+    }
+
+    /**
+     * @param list<Element> $slideElements
+     *
+     * @return list<Slide>
+     */
+    private function slides(array $slideElements): array
+    {
+        $urls = $this->images->resolveAll($slideElements);
         $slides = [];
-        foreach ($slideElements as $element) {
-            $url = $this->images->resolve($element);
+        foreach ($slideElements as $index => $element) {
+            $url = $urls[$index];
             if ($url !== null) {
                 $slides[] = new Slide(
                     $url,
@@ -117,12 +133,7 @@ final readonly class MarkupCarouselRecognizer implements SlideshowRecognizerInte
             }
         }
 
-        return Slideshow::fromSlides(
-            $slides,
-            null,
-            $textBlocks->before($container),
-            ContainerSignature::fromElement($container),
-        );
+        return $slides;
     }
 
     private function altOf(Element $slide): string
