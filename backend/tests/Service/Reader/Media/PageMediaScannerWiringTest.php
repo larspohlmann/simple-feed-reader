@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Media;
 
 use App\Service\Reader\Media\PageMediaScanner;
+use App\Service\Reader\Media\RawPage;
 use App\Service\Reader\Media\Source\AttributeMediaSource;
 use App\Service\Reader\Media\Source\JsonLdMediaSource;
 use App\Service\Reader\Media\Source\MetaMediaSource;
@@ -13,23 +14,17 @@ use App\Service\Reader\Media\Source\ScriptEmbedSource;
 use App\Service\Reader\Media\Source\SemanticMediaSource;
 use App\Service\Reader\Media\Source\YouTubeIdAttributeSource;
 use App\Service\Reader\Media\Source\ZdfPlayerConfigSource;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class PageMediaScannerWiringTest extends KernelTestCase
 {
-    private function scanner(): PageMediaScanner
-    {
-        self::bootKernel();
-        $scanner = self::getContainer()->get(PageMediaScanner::class);
-        self::assertInstanceOf(PageMediaScanner::class, $scanner);
-
-        return $scanner;
-    }
+    use ScansWithTheWiredSources;
 
     public function testTheTaggedSourcesAreCollected(): void
     {
         $html = '<html lang="en"><body><iframe src="https://www.youtube.com/embed/M1j_uRqKMKI"></iframe></body></html>';
-        $media = $this->scanner()->scan($html, 'https://example.test/article');
+        $media = $this->scan($html, 'https://example.test/article');
 
         self::assertFalse($media->isEmpty());
         self::assertSame('https://www.youtube-nocookie.com/embed/M1j_uRqKMKI', $media->candidates[0]->url);
@@ -39,9 +34,34 @@ final class PageMediaScannerWiringTest extends KernelTestCase
     {
         $html = '<html lang="en"><body><div data-component="youtube-atom" data-video-id="M1j_uRqKMKI"></div>'
             . '</body></html>';
-        $media = $this->scanner()->scan($html, 'https://example.test/article');
+        $media = $this->scan($html, 'https://example.test/article');
 
         self::assertSame('https://www.youtube-nocookie.com/embed/M1j_uRqKMKI', $media->candidates[0]->url);
+    }
+
+    public function testABlankPageYieldsNoMedia(): void
+    {
+        self::assertTrue($this->scan('', 'https://example.test/article')->isEmpty());
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function mediaFixtureProvider(): iterable
+    {
+        foreach (glob(__DIR__ . '/../../../Fixtures/reader/media/*.html') ?: [] as $path) {
+            yield basename($path) => [$path];
+        }
+    }
+
+    /** The sources share one document, so a source that mutates it changes what every later source sees. */
+    #[DataProvider('mediaFixtureProvider')]
+    public function testNoSourceChangesTheSharedDocument(string $fixturePath): void
+    {
+        $page = RawPage::parse((string) file_get_contents($fixturePath), 'https://www.zdfheute.de/article-100.html');
+        $before = $page->document->saveHtml();
+
+        $this->scanner()->scan($page);
+
+        self::assertSame($before, $page->document->saveHtml());
     }
 
     /**
@@ -82,7 +102,7 @@ final class PageMediaScannerWiringTest extends KernelTestCase
             . '<video poster="https://x.test/second-still.jpg" src="https://x.test/second.mp4"></video>'
             . '</body></html>';
 
-        $media = $this->scanner()->scan($html, 'https://x.test/article');
+        $media = $this->scan($html, 'https://x.test/article');
 
         $posters = [];
         foreach ($media->candidates as $candidate) {

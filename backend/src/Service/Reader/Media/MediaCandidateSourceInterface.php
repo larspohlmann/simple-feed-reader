@@ -22,5 +22,5 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 interface MediaCandidateSourceInterface
 {
     /** @return list<MediaCandidate> */
-    public function find(string $pageHtml, string $pageUrl): array;
+    public function find(RawPage $page): array;
 }

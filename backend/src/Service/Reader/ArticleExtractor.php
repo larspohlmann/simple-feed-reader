@@ -7,6 +7,7 @@ namespace App\Service\Reader;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\Media\BodyMediaResolver;
 use App\Service\Reader\Media\PageMediaScanner;
+use App\Service\Reader\Media\RawPage;
 use App\Service\Reader\Media\Teaser\TeaserPlayer;
 use App\Service\Reader\Media\Teaser\TeaserPlayerScanner;
 use App\Service\Reader\Paywall\PaywallSignals;
@@ -78,7 +79,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
         $pageImages = PageImageInventory::fromDocument($normalized);
         $leadCaptions = LeadFigureCaptions::fromDocument($normalized);
         $paywalled = PaywallSignals::isPreview($page->html, $normalized);
-        $media = $this->mediaScanner->scan($page->html, $page->finalUrl, $feedMedia);
+        $media = $this->mediaScanner->scan(RawPage::parse($page->html, $page->finalUrl), $feedMedia);
         $slideshows = $this->slideshowsIn($normalized);
         $teasers = $this->teasersIn($normalized, $page->finalUrl);
 

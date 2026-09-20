@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\Source;
 
-use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\EmbedTarget;
 use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaCandidateSourceInterface;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\PageFurniture;
-use App\Service\Reader\Media\PageTextBlocks;
+use App\Service\Reader\Media\RawPage;
 use Dom\Element;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
@@ -31,16 +30,10 @@ final readonly class YouTubeIdAttributeSource implements MediaCandidateSourceInt
     {
     }
 
-    public function find(string $pageHtml, string $pageUrl): array
+    public function find(RawPage $page): array
     {
-        $document = HtmlDocumentParser::parseOrNull($pageHtml);
-        if ($document === null) {
-            return [];
-        }
-
-        $blocks = PageTextBlocks::fromDocument($document);
         $found = [];
-        foreach ($document->querySelectorAll('[' . self::VIDEO_ID_ATTRIBUTE . ']') as $element) {
+        foreach ($page->document->querySelectorAll('[' . self::VIDEO_ID_ATTRIBUTE . ']') as $element) {
             $target = $this->targetOf($element);
             if ($target !== null) {
                 $found[$target->url] ??= new MediaCandidate(
@@ -48,7 +41,7 @@ final readonly class YouTubeIdAttributeSource implements MediaCandidateSourceInt
                     $target->url,
                     $target->posterUrl,
                     $target->label,
-                    $blocks->before($element),
+                    $page->blocks->before($element),
                 );
             }
         }

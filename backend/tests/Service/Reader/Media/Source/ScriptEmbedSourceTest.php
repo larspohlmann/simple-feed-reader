@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Media\Source;
 
 use App\Service\Reader\Media\EmbedProviders;
+use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\Provider\VimeoEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
@@ -13,20 +14,24 @@ use PHPUnit\Framework\TestCase;
 
 final class ScriptEmbedSourceTest extends TestCase
 {
+    use FindsMediaInRawPage;
+
     private function source(): ScriptEmbedSource
     {
         return new ScriptEmbedSource(new EmbedProviders([new YouTubeEmbedProvider(), new VimeoEmbedProvider()]));
     }
 
-    /** @return list<\App\Service\Reader\Media\MediaCandidate> */
-    private function find(string $body): array
+    /** @return list<MediaCandidate> */
+    private function findInBody(string $body): array
     {
-        return $this->source()->find('<html lang="en"><body>' . $body . '</body></html>', 'https://site.test/a');
+        return $this->find('<html lang="en"><body>' . $body . '</body></html>', 'https://site.test/a');
     }
 
     public function testEmbedsAVimeoUrlAScriptVariableCarries(): void
     {
-        $found = $this->find('<p>Text.</p><script>var videoData = {"url":"https://vimeo.com/1226652197/"};</script>');
+        $found = $this->findInBody(
+            '<p>Text.</p><script>var videoData = {"url":"https://vimeo.com/1226652197/"};</script>',
+        );
 
         self::assertCount(1, $found);
         self::assertSame(MediaKind::Embed, $found[0]->kind);
@@ -37,7 +42,7 @@ final class ScriptEmbedSourceTest extends TestCase
 
     public function testIgnoresProviderAssetAndPageUrlsThatAreNotVideos(): void
     {
-        $found = $this->find(
+        $found = $this->findInBody(
             '<script>var api = "https://player.vimeo.com/api/player.js";'
             . 'var channel = "https://www.youtube.com/lionsroaronline";</script>'
         );
@@ -47,7 +52,7 @@ final class ScriptEmbedSourceTest extends TestCase
 
     public function testSkipsScriptsInsidePageChrome(): void
     {
-        $found = $this->find(
+        $found = $this->findInBody(
             '<article><p>Body.</p></article>'
             . '<footer><script>var videoData = {"url":"https://vimeo.com/1226652197/"};</script></footer>'
         );
@@ -57,7 +62,7 @@ final class ScriptEmbedSourceTest extends TestCase
 
     public function testCollapsesTheSameVideoNamedByTwoScripts(): void
     {
-        $found = $this->find(
+        $found = $this->findInBody(
             '<script>var videoData = {"url":"https://vimeo.com/1226652197/"};</script>'
             . '<script>var alt = "https://vimeo.com/1226652197";</script>'
         );
@@ -71,7 +76,7 @@ final class ScriptEmbedSourceTest extends TestCase
         // JSON-LD scripts are processed by JsonLdMediaSource with its own prioritization
         // logic for choosing between contentUrl and embedUrl. ScriptEmbedSource skips them
         // to avoid duplicate embeds that violate that priority.
-        $found = $this->find(
+        $found = $this->findInBody(
             '<script type="application/ld+json">{"@type":"VideoObject",'
             . '"embedUrl":"https://www.youtube.com/embed/aaaaaaaaaa1"}</script>'
         );
@@ -81,7 +86,7 @@ final class ScriptEmbedSourceTest extends TestCase
 
     public function testEmbedsEverySeparateProviderVideoInOneScript(): void
     {
-        $found = $this->find(
+        $found = $this->findInBody(
             '<p>Content.</p>'
             . '<script>var vimeo = "https://vimeo.com/1226652197/"; '
             . 'var youtube = "https://www.youtube.com/watch?v=aaaaaaaaaa1";</script>'
@@ -95,7 +100,7 @@ final class ScriptEmbedSourceTest extends TestCase
 
     public function testContinuesLoopAfterSkippingFurnitureScript(): void
     {
-        $found = $this->find(
+        $found = $this->findInBody(
             '<article><p>Article body.</p></article>'
             . '<footer><script>var related = "https://vimeo.com/999999999/";</script></footer>'
             . '<script>var videoData = {"url":"https://vimeo.com/1226652197/"};</script>'
@@ -107,7 +112,7 @@ final class ScriptEmbedSourceTest extends TestCase
 
     public function testContinuesLoopAfterSkippingJsonLdScript(): void
     {
-        $found = $this->find(
+        $found = $this->findInBody(
             '<script type="application/ld+json">'
             . '{"@type":"VideoObject","embedUrl":"https://example.test/ignore"}</script>'
             . '<script>var videoData = {"url":"https://vimeo.com/1226652197/"};</script>'

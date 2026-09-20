@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\Source;
 
-use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaCandidateSourceInterface;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\PageTextBlocks;
+use App\Service\Reader\Media\RawPage;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
@@ -37,21 +36,15 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
     ) {
     }
 
-    public function find(string $pageHtml, string $pageUrl): array
+    public function find(RawPage $page): array
     {
-        $document = HtmlDocumentParser::parseOrNull($pageHtml);
-        if ($document === null) {
-            return [];
-        }
-
-        $blocks = PageTextBlocks::fromDocument($document);
         $found = [];
-        foreach ($document->querySelectorAll('script[type="application/ld+json"]') as $script) {
+        foreach ($page->document->querySelectorAll('script[type="application/ld+json"]') as $script) {
             if (PageFurniture::holds($script)) {
                 continue;
             }
             foreach ($this->declarationsIn($script->textContent ?? '') as $declaration) {
-                $candidate = $this->firstPlayable($declaration, $blocks->before($script));
+                $candidate = $this->firstPlayable($declaration, $page->blocks->before($script));
                 if ($candidate !== null) {
                     $found[$candidate->url] ??= $candidate;
                 }

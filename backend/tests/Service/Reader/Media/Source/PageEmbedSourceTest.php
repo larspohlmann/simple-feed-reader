@@ -13,14 +13,14 @@ use PHPUnit\Framework\TestCase;
 
 final class PageEmbedSourceTest extends TestCase
 {
+    use FindsMediaInRawPage;
+
     private const string PROSE =
         'The paragraph the player followed on the source page, long enough to be prose.';
 
-    private PageEmbedSource $source;
-
-    protected function setUp(): void
+    private function source(): PageEmbedSource
     {
-        $this->source = new PageEmbedSource(
+        return new PageEmbedSource(
             new EmbedProviders([new YouTubeEmbedProvider(), new SoundCloudEmbedProvider()])
         );
     }
@@ -31,7 +31,7 @@ final class PageEmbedSourceTest extends TestCase
         $html = '<html><body><iframe src="https://w.soundcloud.com/player/'
             . '?url=https%3A//api.soundcloud.com/tracks/2370150908&amp;auto_play=true"></iframe></body></html>';
 
-        $found = $this->source->find($html, 'https://5mag.net/audio/dj-set/');
+        $found = $this->find($html, 'https://5mag.net/audio/dj-set/');
 
         self::assertCount(1, $found);
         self::assertSame(MediaKind::Embed, $found[0]->kind);
@@ -43,7 +43,7 @@ final class PageEmbedSourceTest extends TestCase
     {
         $html = '<html><body><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-1"></iframe></body></html>';
 
-        self::assertSame([], $this->source->find($html, 'https://example.test/x'));
+        self::assertSame([], $this->find($html, 'https://example.test/x'));
     }
 
     public function testKeepsSourceOrderAndDeduplicates(): void
@@ -54,7 +54,7 @@ final class PageEmbedSourceTest extends TestCase
             . '<iframe src="https://www.youtube-nocookie.com/embed/aaaaaaaaaaa"></iframe>'
             . '</body></html>';
 
-        $found = $this->source->find($html, 'https://example.test/x');
+        $found = $this->find($html, 'https://example.test/x');
 
         self::assertCount(2, $found);
         self::assertStringEndsWith('aaaaaaaaaaa', $found[0]->url);
@@ -65,7 +65,7 @@ final class PageEmbedSourceTest extends TestCase
     {
         $html = '<html><body><a-iframe src="https://www.youtube.com/embed/ccccccccccc"></a-iframe></body></html>';
 
-        $found = $this->source->find($html, 'https://heise.de/x');
+        $found = $this->find($html, 'https://heise.de/x');
 
         self::assertCount(1, $found);
         self::assertStringEndsWith('ccccccccccc', $found[0]->url);
@@ -75,7 +75,7 @@ final class PageEmbedSourceTest extends TestCase
     {
         $html = '<html><body><iframe src="//www.youtube-nocookie.com/embed/M1j_uRqKMKI"></iframe></body></html>';
 
-        $found = $this->source->find($html, 'https://heise.de/x');
+        $found = $this->find($html, 'https://heise.de/x');
 
         self::assertCount(1, $found);
         self::assertSame('https://www.youtube-nocookie.com/embed/M1j_uRqKMKI', $found[0]->url);
@@ -87,7 +87,7 @@ final class PageEmbedSourceTest extends TestCase
         self::assertIsString($html);
 
         $pageUrl = 'https://www.heise.de/hintergrund/Was-ich-ueber-lokale-KI-gelernt-habe.html';
-        $found = $this->source->find($html, $pageUrl);
+        $found = $this->find($html, $pageUrl);
 
         $youtube = array_values(array_filter(
             $found,
@@ -103,7 +103,7 @@ final class PageEmbedSourceTest extends TestCase
         $html = '<body><p>' . self::PROSE . '</p>'
             . '<iframe src="https://www.youtube.com/embed/aaaaaaaaaaa"></iframe></body>';
 
-        $found = $this->source->find($html, 'https://example.test/x');
+        $found = $this->find($html, 'https://example.test/x');
 
         self::assertSame(self::PROSE, $found[0]->precedingText);
     }
@@ -115,7 +115,7 @@ final class PageEmbedSourceTest extends TestCase
             . '<p>A related-videos paragraph, long enough to be a prose block of its own.</p>'
             . '<iframe src="https://www.youtube-nocookie.com/embed/aaaaaaaaaaa"></iframe></body>';
 
-        $found = $this->source->find($html, 'https://example.test/x');
+        $found = $this->find($html, 'https://example.test/x');
 
         self::assertCount(1, $found);
         self::assertSame(self::PROSE, $found[0]->precedingText);
@@ -126,7 +126,7 @@ final class PageEmbedSourceTest extends TestCase
         $html = '<body><aside><iframe src="https://www.youtube.com/embed/aaaaaaaaaaa"></iframe></aside>'
             . '<iframe src="https://www.youtube.com/embed/bbbbbbbbbbb"></iframe></body>';
 
-        $found = $this->source->find($html, 'https://example.test/x');
+        $found = $this->find($html, 'https://example.test/x');
 
         self::assertCount(1, $found);
         self::assertStringContainsString('bbbbbbbbbbb', $found[0]->url);

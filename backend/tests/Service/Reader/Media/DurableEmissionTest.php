@@ -11,6 +11,7 @@ use App\Service\Reader\Media\MediaRelevance;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Provider\SoundCloudEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
+use App\Service\Reader\Media\RawPage;
 use App\Service\Reader\Media\Source\AttributeMediaSource;
 use App\Service\Reader\Media\Source\JsonLdMediaSource;
 use App\Service\Reader\Media\Source\MetaMediaSource;
@@ -71,7 +72,7 @@ final class DurableEmissionTest extends TestCase
     {
         $source = $this->sourceFor($layer);
 
-        $found = $source->find($html, $pageUrl);
+        $found = $source->find(RawPage::parse($html, $pageUrl));
 
         self::assertNotSame([], $found);
         self::assertStringNotContainsString('?', $found[0]->url);

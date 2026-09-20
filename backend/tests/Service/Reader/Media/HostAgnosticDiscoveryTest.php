@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Media;
 
 use App\Service\Reader\Media\MediaKind;
-use App\Service\Reader\Media\PageMediaScanner;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
@@ -16,14 +15,7 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  */
 final class HostAgnosticDiscoveryTest extends KernelTestCase
 {
-    private function scanner(): PageMediaScanner
-    {
-        self::bootKernel();
-        $scanner = self::getContainer()->get(PageMediaScanner::class);
-        self::assertInstanceOf(PageMediaScanner::class, $scanner);
-
-        return $scanner;
-    }
+    use ScansWithTheWiredSources;
 
     private function fixture(string $name): string
     {
@@ -35,7 +27,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
 
     public function testDeutschlandradioYieldsItsEpisode(): void
     {
-        $media = $this->scanner()->scan(
+        $media = $this->scan(
             $this->fixture('deutschlandradio-audio.html'),
             'https://www.deutschlandfunkkultur.de/bildung-100.html',
         );
@@ -47,7 +39,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
 
     public function testNprYieldsItsSegment(): void
     {
-        $media = $this->scanner()->scan(
+        $media = $this->scan(
             $this->fixture('npr-audio.html'),
             'https://www.npr.org/2026/08/30/nx-s1-5948814/launch-nancy-grace-roman-space-telescope-nasa',
         );
@@ -58,7 +50,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
 
     public function testArdYieldsAVideoWithAPoster(): void
     {
-        $media = $this->scanner()->scan(
+        $media = $this->scan(
             $this->fixture('ard-video.html'),
             'https://www.tagesschau.de/ausland/beispiel-100.html',
         );
@@ -74,21 +66,21 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
 
     public function testHeiseYieldsItsCompanionVideo(): void
     {
-        $media = $this->scanner()->scan($this->fixture('heise-video.html'), 'https://www.heise.de/news/x.html');
+        $media = $this->scan($this->fixture('heise-video.html'), 'https://www.heise.de/news/x.html');
 
         self::assertStringContainsString('M1j_uRqKMKI', $media->candidates[0]->url);
     }
 
     public function testFiveMagazineYieldsItsTrack(): void
     {
-        $media = $this->scanner()->scan($this->fixture('soundcloud-page.html'), 'https://5mag.net/audio/dj-set/');
+        $media = $this->scan($this->fixture('soundcloud-page.html'), 'https://5mag.net/audio/dj-set/');
 
         self::assertStringContainsString('soundcloud', $media->candidates[0]->url);
     }
 
     public function testAnUnseenPublisherYieldsItsMediaWithNoNewCode(): void
     {
-        $media = $this->scanner()->scan(
+        $media = $this->scan(
             $this->fixture('unseen-publisher.html'),
             'https://9to5mac.com/2026/08/27/happy-hour-605/',
         );
@@ -101,7 +93,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
     /** tagesschau 494183: the related-content sidebar's podcast is not this article's audio. */
     public function testASidebarTeaserDoesNotBecomeTheArticlesMedia(): void
     {
-        $media = $this->scanner()->scan(
+        $media = $this->scan(
             $this->fixture('sidebar-teaser.html'),
             'https://www.tagesschau.de/inland/innenpolitik/merz-linke-sachsen-anhalt-100.html',
         );
@@ -113,7 +105,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
     /** vice 495401: JSON-LD declares one of four videos; the other three exist only as page embeds inside <noscript>. */
     public function testAPageThatDeclaresOneOfFourVideosYieldsAllFourInPageOrder(): void
     {
-        $media = $this->scanner()->scan(
+        $media = $this->scan(
             $this->fixture('multi-embed-page.html'),
             'https://www.vice.com/en/article/4-remixes-from-the-2000s/',
         );
@@ -133,7 +125,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
     /** Al Jazeera 469835: the VideoObject offers nothing but a Brightcove player page. */
     public function testAlJazeeraYieldsItsBrightcovePlayerWithTheDeclaredPoster(): void
     {
-        $media = $this->scanner()->scan(
+        $media = $this->scan(
             $this->fixture('aljazeera-brightcove.html'),
             'https://www.aljazeera.com/video/newsfeed/2026/8/20/harry-kane-scores-goal',
         );
@@ -150,7 +142,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
     /** ZDF 491430: contentUrl is an HLS playlist, embedUrl a first-party miniplayer nobody frames. */
     public function testZdfYieldsItsStreamWithTheDeclaredPoster(): void
     {
-        $media = $this->scanner()->scan(
+        $media = $this->scan(
             $this->fixture('zdf-hls-video.html'),
             'https://www.zdfheute.de/video/zdf-morgenmagazin/istaf-berlin-em-stars-100.html',
         );
@@ -166,7 +158,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
 
     public function testAnUnseenPublisherYieldsItsStreamAndItsBrightcovePlayerWithNoNewCode(): void
     {
-        $media = $this->scanner()->scan(
+        $media = $this->scan(
             $this->fixture('unseen-hls-and-brightcove.html'),
             'https://unseen.test/two-ways',
         );
@@ -185,7 +177,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
     /** ardmediathek: the HLS master sits beside progressive mp4s; the file is the one player. */
     public function testAFileBesideAStreamYieldsTheFileOnly(): void
     {
-        $media = $this->scanner()->scan(
+        $media = $this->scan(
             $this->fixture('file-beside-stream.html'),
             'https://www.mediathek.test/video/tv-2031',
         );
@@ -196,7 +188,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
 
     public function testTheGuardianYieldsItsYouTubeAtomAndNotTheSidebarOne(): void
     {
-        $media = $this->scanner()->scan(
+        $media = $this->scan(
             $this->fixture('guardian-youtube-atom.html'),
             'https://www.theguardian.com/science/video/2026/sep/01/could-humans-ever-communicate-with-whales-video',
         );
@@ -209,7 +201,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
     /** tagesschau 496523: a broadcast page has no og:image; the still beside the player is the poster. */
     public function testABroadcastPageWithoutOgImageYieldsItsVideoWithThePlayersStillAndItsAudio(): void
     {
-        $media = $this->scanner()->scan(
+        $media = $this->scan(
             $this->fixture('ard-broadcast-no-og-image.html'),
             'https://www.tagesschau.de/tagesschau_in_einfacher_sprache/tse-1410.html',
         );
@@ -232,7 +224,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
      */
     public function testTheZdfPlayerConfigsEachSeedAStream(): void
     {
-        $media = $this->scanner()->scan(
+        $media = $this->scan(
             $this->fixture('zdf-sibling-video-configs.html'),
             'https://www.zdfheute.de/politik/deutschland/leipzig-drohne-sabotage-100.html',
         );
