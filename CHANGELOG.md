@@ -10,6 +10,23 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.0.15] - 2026-09-20
+
+## What's Changed
+* fix(#1088): drop the fragile image side of DuplicateBlockCollapser by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1089
+* fix(#1091): drop placeholder-only teaser carousels, recover lazy galleries by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1092
+* refactor(#1090): share one raw-page parse across the media sources by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1093
+* fix(#1094): mount the reader directory read-only into the php container by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1095
+* perf(#1096): narrow the MetaRefreshTarget pre-check to refresh metas by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1097
+* perf(#1098): drive attachDuplicates from idx_entry_url_hash via a generalized plan-hint walker by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1103
+* perf(#1099): bound the sparse-tag list walk with an unhinted fallback by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1104
+* perf(#1101): gzip both Docker stacks, cache-header the prod bundles by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1105
+* perf(#1102): engine-backed saved-search badges with a database fallback by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1106
+* perf(#1100): drop contentHtml from list responses; server excerpt + body on open by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1107
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.0.14...v1.0.15
+
 ## [v1.0.14] - 2026-09-19
 
 ## What's Changed
