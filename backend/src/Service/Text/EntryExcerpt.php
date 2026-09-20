@@ -26,12 +26,26 @@ final class EntryExcerpt
 
     private static function plainText(?string $html): ?string
     {
-        $text = PlainText::fromHtmlBlocks($html);
+        $text = PlainText::fromHtmlBlocks(self::withoutImages($html));
         if ($text === null || \in_array(mb_strtolower($text), self::JUNK, true)) {
             return null;
         }
 
         return self::cutAtWordBoundary($text);
+    }
+
+    /**
+     * An <img> is not a block boundary, so PlainText::fromHtmlBlocks() would
+     * otherwise merge the words on either side of it into one, the same
+     * reason EntrySnippet::from() strips images before that call.
+     */
+    private static function withoutImages(?string $html): ?string
+    {
+        if ($html === null) {
+            return null;
+        }
+
+        return preg_replace('/<img\b[^>]*>/i', ' ', $html) ?? $html;
     }
 
     private static function cutAtWordBoundary(string $text): string

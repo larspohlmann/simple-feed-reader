@@ -118,4 +118,34 @@ final class EntryExcerptTest extends TestCase
 
         self::assertSame($body, EntryExcerpt::of(null, $body));
     }
+
+    /**
+     * With no space anywhere in the first 500 characters, cutAtWordBoundary()
+     * has no word boundary to back off to: it must fall back to the hard
+     * 500-character cut rather than returning '' or the full 600 characters.
+     * The expected value is `str_repeat`, never the excerpt's own output fed
+     * back at it.
+     */
+    public function testFallsBackToAHardCutWhenThereIsNoSpaceToBreakOn(): void
+    {
+        $expected = str_repeat('a', 500);
+
+        self::assertSame($expected, EntryExcerpt::of(null, str_repeat('a', 600)));
+    }
+
+    public function testFallsBackToAHardCutWhenTheBodyIsHtmlWithNoSpaceInTheFirst500Characters(): void
+    {
+        $expected = str_repeat('a', 500);
+        $body = '<p>' . str_repeat('a', 600) . ' with a trailing word</p>';
+
+        self::assertSame($expected, EntryExcerpt::of(null, $body));
+    }
+
+    public function testAnInlineImageBecomesAWordBoundary(): void
+    {
+        self::assertSame(
+            'text more',
+            EntryExcerpt::of(null, 'text<img src="https://i/a.jpg" alt=""/>more'),
+        );
+    }
 }
