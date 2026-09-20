@@ -17,8 +17,8 @@ final readonly class MetaRefreshTarget
     public function within(string $html, string $baseUrl): ?string
     {
         // Almost every landed page is an ordinary article with no refresh meta;
-        // skip the DOM parse unless the markup can carry one.
-        if (stripos($html, 'http-equiv') === false) {
+        // skip the DOM parse unless a refresh meta can be present.
+        if (preg_match('~http-equiv\s*=\s*["\']?\s*refresh~i', $html) !== 1) {
             return null;
         }
 
