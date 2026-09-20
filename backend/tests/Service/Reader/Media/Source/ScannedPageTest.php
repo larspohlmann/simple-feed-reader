@@ -30,4 +30,39 @@ final class ScannedPageTest extends TestCase
 
         self::assertSame('https://example.test/poster.jpg', $page->posterUrl);
     }
+
+    public function testFromRejectsANonHttpsOgImage(): void
+    {
+        $html = <<<'HTML'
+            <html><head>
+                <meta property="og:image" content="http://example.test/poster.jpg">
+            </head><body></body></html>
+            HTML;
+
+        $page = ScannedPage::from(RawPage::parse($html, 'https://example.test/article'));
+
+        self::assertNull($page->posterUrl);
+    }
+
+    public function testFromRejectsAProtocolRelativeOgImage(): void
+    {
+        $html = <<<'HTML'
+            <html><head>
+                <meta property="og:image" content="//example.test/poster.jpg">
+            </head><body></body></html>
+            HTML;
+
+        $page = ScannedPage::from(RawPage::parse($html, 'https://example.test/article'));
+
+        self::assertNull($page->posterUrl);
+    }
+
+    public function testFromReadsNoPosterWhenTheParsedPageHasNoOgImageTag(): void
+    {
+        $html = '<html><head><title>No poster here</title></head><body></body></html>';
+
+        $page = ScannedPage::from(RawPage::parse($html, 'https://example.test/article'));
+
+        self::assertNull($page->posterUrl);
+    }
 }
