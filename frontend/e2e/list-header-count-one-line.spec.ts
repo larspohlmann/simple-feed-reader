@@ -46,7 +46,7 @@ function entry(id: number) {
     url: `https://fixtures.invalid/e/${id}`,
     author: null,
     summary: 'A short fixture summary.',
-    contentHtml: '<p>Fixture body.</p>',
+    excerpt: 'Fixture body.',
     imageUrl: null,
     imageWidth: null,
     imageHeight: null,

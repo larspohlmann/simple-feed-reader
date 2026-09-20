@@ -1,50 +1,8 @@
 import { EntryDto, HeroImageDto } from './models';
 
-/** Parse HTML inertly and return the first absolute https image src, or null.
- *  http/relative/data srcs are rejected: the app is https, so http images are
- *  mixed-content-blocked, and relative srcs can't be resolved without a base. */
-export function firstPreviewImage(
-  contentHtml: string | null,
-  summary: string | null = null,
-): string | null {
-  return pickImage(contentHtml) ?? pickImage(summary);
-}
-
-function pickImage(html: string | null): string | null {
-  if (!html) return null;
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  for (const img of Array.from(doc.querySelectorAll('img'))) {
-    const src = img.getAttribute('src') ?? '';
-    if (src.startsWith('https://')) return src;
-  }
-  return null;
-}
-
-/** A body that is nothing but a serialised null. Python feed generators emit
- *  "None" for an absent field, JS ones "null"/"undefined"; Die Zeit ships the
- *  first after its image. Such a body carries no copy, so a preview treats it as
- *  empty and falls back to title-only. */
-const NULL_LEAK = /^(none|null|undefined)$/i;
-
-/** Plain-text snippet from HTML, whitespace-collapsed. */
-export function textSnippet(html: string | null): string {
-  if (!html) return '';
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  const text = (doc.body.textContent ?? '').replace(/\s+/g, ' ').trim();
-  return NULL_LEAK.test(text) ? '' : text;
-}
-
-const snippets = new WeakMap<EntryDto, string>();
-const images = new WeakMap<EntryDto, EntryImage | null>();
-
-/** The entry's dek: its summary's text, else its body's. Parsed once per entry
- *  object — the planner asks for every loaded entry on every plan (#501). */
+/** The entry's dek: the server's own plain-text excerpt. */
 export function entrySnippet(entry: EntryDto): string {
-  const known = snippets.get(entry);
-  if (known !== undefined) return known;
-  const snippet = textSnippet(entry.summary || entry.contentHtml);
-  snippets.set(entry, snippet);
-  return snippet;
+  return entry.excerpt;
 }
 
 /** Same shape as the API's HeroImageDto — one declaration, so a picture the
@@ -52,10 +10,11 @@ export function entrySnippet(entry: EntryDto): string {
  *  Null width/height mean the feed did not say. */
 export type EntryImage = HeroImageDto;
 
-/** The entry's image: the persisted field when present, else an inline <img>.
- *  The fallback exists for rows ingested before the image column landed — a
- *  refresh only backfills what the feed still serves, so the deep archive keeps
- *  depending on inline markup indefinitely. */
+const images = new WeakMap<EntryDto, EntryImage | null>();
+
+/** The entry's persisted image, or null. Memoized per entry object for a
+ *  stable reference across repeated reads (the planner asks for every loaded
+ *  entry on every plan, #501). */
 export function entryImage(entry: EntryDto): EntryImage | null {
   const known = images.get(entry);
   if (known !== undefined) return known;
@@ -65,9 +24,6 @@ export function entryImage(entry: EntryDto): EntryImage | null {
 }
 
 function resolveEntryImage(entry: EntryDto): EntryImage | null {
-  if (entry.imageUrl) {
-    return { url: entry.imageUrl, width: entry.imageWidth, height: entry.imageHeight };
-  }
-  const inline = firstPreviewImage(entry.contentHtml, entry.summary);
-  return inline === null ? null : { url: inline, width: null, height: null };
+  if (!entry.imageUrl) return null;
+  return { url: entry.imageUrl, width: entry.imageWidth, height: entry.imageHeight };
 }

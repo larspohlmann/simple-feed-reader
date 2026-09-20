@@ -9,7 +9,7 @@ import {
   DebugLogDetail,
   DebugLogPayload,
   EntriesPage,
-  EntryDto,
+  EntryDetailDto,
   EntryQuery,
   EntryStatePatch,
   FeedPreview,
@@ -64,9 +64,10 @@ export class ReaderApi {
     return this.http.post<SubscribeResult>(`${this.base}/api/subscriptions`, body);
   }
 
-  /** A single entry by id — lets a deep link open an entry not in the loaded page. */
-  entry(id: number): Observable<{ entry: EntryDto }> {
-    return this.http.get<{ entry: EntryDto }>(`${this.base}/api/entries/${id}`);
+  /** A single entry by id, full body included — lets a deep link open an entry
+   *  not in the loaded page, and backs the reader body store. */
+  entry(id: number): Observable<{ entry: EntryDetailDto }> {
+    return this.http.get<{ entry: EntryDetailDto }>(`${this.base}/api/entries/${id}`);
   }
 
   entries(query: EntryQuery, cursor?: string | null): Observable<EntriesPage> {

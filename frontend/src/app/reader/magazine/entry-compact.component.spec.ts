@@ -18,7 +18,7 @@ const entry: EntryDto = {
   url: null,
   author: null,
   summary: null,
-  contentHtml: null,
+  excerpt: '',
   imageUrl: null,
   imageWidth: null,
   imageHeight: null,
@@ -60,7 +60,7 @@ describe('EntryCompactComponent', () => {
       providers: [provideRouter([])],
     });
     const f = TestBed.createComponent(EntryCompactComponent);
-    f.componentRef.setInput('entry', { ...entry, summary: 'A short description.' });
+    f.componentRef.setInput('entry', { ...entry, excerpt: 'A short description.' });
     f.detectChanges();
     const dek = (f.nativeElement as HTMLElement).querySelector('.dek');
     expect(dek).not.toBeNull();
@@ -68,8 +68,8 @@ describe('EntryCompactComponent', () => {
   });
 
   it('stays title-only for a headline-only entry — no empty dek (#515)', () => {
-    // The fixture carries summary: null and contentHtml: null, so snippet() is
-    // empty and the @if must render no dek element at all.
+    // The fixture carries excerpt: '', so snippet() is empty and the @if must
+    // render no dek element at all.
     const el = mount().nativeElement as HTMLElement;
     expect(el.querySelector('.dek')).toBeNull();
   });

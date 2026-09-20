@@ -22,6 +22,7 @@ import { PageTitleService } from '../core/page-title.service';
 import { isPasskeySupported } from '../core/webauthn';
 import { LanguageService } from '../core/language.service';
 import { ReaderApi } from './reader-api';
+import { EntryBodyService } from './entry-body.service';
 import { SubscriptionsStore } from './subscriptions.store';
 import { TagsStore } from './tags.store';
 import { EntriesStore, localStatePatch } from './entries.store';
@@ -120,6 +121,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);
   private readonly api = inject(ReaderApi);
+  private readonly bodyService = inject(EntryBodyService);
   protected readonly auth = inject(AuthService);
   private readonly hostRef = inject(ElementRef<HTMLElement>);
 
@@ -616,12 +618,34 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
         // entry now open.
         this.api.entry(id).subscribe({
           next: (r) => {
-            if (this.entryId() === id) this.fetchedEntry.set(r.entry);
+            if (this.entryId() !== id) return;
+            this.fetchedEntry.set(r.entry);
+            // The detail fetch already carries the body — seed the store with
+            // it rather than let the reader view issue a redundant request.
+            this.bodyService.seed(r.entry.id, r.entry.contentHtml);
           },
           error: () => {
             if (this.entryId() === id) this.fetchedEntry.set(null);
           },
         });
+      });
+    });
+
+    // Warm the body store for the entries beside the one just opened (#1100):
+    // no j/k or swipe navigation exists yet, but a reopened neighbour still
+    // reads instantly once one lands. Keyed on the id alone, so an unrelated
+    // list reload (e.g. a refresh landing) doesn't re-issue the prefetch.
+    effect(() => {
+      const id = this.openEntryId();
+      if (id === null) return;
+      untracked(() => {
+        const list = this.entries.entries();
+        const index = list.findIndex((e) => e.id === id);
+        if (index === -1) return;
+        const prev = list[index - 1];
+        const next = list[index + 1];
+        if (prev) this.bodyService.prefetch(prev.id);
+        if (next) this.bodyService.prefetch(next.id);
       });
     });
 

@@ -211,6 +211,14 @@
             </div>
           </app-warning-box>
         }
+        @if (feedBodyFailed()) {
+          <app-error-banner
+            class="body-error"
+            [message]="'reader.bodyLoadFailed' | transloco"
+            [actionLabel]="'reader.retry' | transloco"
+            (action)="retryBody()"
+          />
+        }
         @if (hero(); as image) {
           <!-- The original-feed view's lead picture (the reader view carries its own
                inside contentHtml, #681). Width/height carry the aspect ratio so the

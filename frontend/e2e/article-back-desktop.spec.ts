@@ -23,7 +23,7 @@ const ENTRIES = Array.from({ length: 10 }, (_, i) => ({
   url: `https://example.invalid/${i + 1}`,
   author: null,
   summary: 'A summary long enough to give the row some height. '.repeat(3),
-  contentHtml: BODY_HTML,
+  excerpt: 'A summary long enough to give the row some height. '.repeat(3),
   publishedAt: '2026-07-25T10:00:00Z',
   createdAt: '2026-07-25T10:00:00Z',
   subscriptionId: 5,
@@ -53,11 +53,20 @@ async function signInAsAdmin(page: Page, layout: 'magazine' | 'pane'): Promise<b
 }
 
 async function stubEntries(page: Page): Promise<void> {
-  // Force extraction to fail so the view stays in 'original' mode (the entry's
-  // own contentHtml) instead of depending on a real outbound fetch of the
-  // stubbed URL — the same reason header-scroll-mobile.spec.ts stubs it.
+  // Force extraction to fail so the view stays in 'original' mode (the feed
+  // body, from the body store's own fetch below) instead of depending on a
+  // real outbound fetch of the stubbed URL — the same reason
+  // header-scroll-mobile.spec.ts stubs it.
   await page.route('**/api/entries/*/reader', async (route) => {
     await route.fulfill({ status: 200, json: readerFailedJson('unextractable') });
+  });
+  // The body store's own fetch (#1100): only entry 1 is ever opened here.
+  await page.route('**/api/entries/1', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({
+      status: 200,
+      json: { entry: { ...ENTRIES[0], contentHtml: BODY_HTML } },
+    });
   });
   await page.route('**/api/entries/*/state', async (route) => {
     await route.fulfill({

@@ -18,7 +18,7 @@ const e = (id: number): EntryDto => ({
   url: null,
   author: null,
   summary: null,
-  contentHtml: null,
+  excerpt: '',
   imageUrl: null,
   imageWidth: null,
   imageHeight: null,

@@ -63,7 +63,7 @@ function entry(id: number, withImage: boolean) {
     url: `https://fixtures.invalid/${id}`,
     author: null,
     summary: `${PROSE}${LONG_TOKEN}`,
-    contentHtml: CONTENT_HTML,
+    excerpt: `${PROSE}${LONG_TOKEN}`,
     imageUrl: withImage ? `https://fixtures.invalid/${id}.jpg` : null,
     imageWidth: withImage ? 1200 : null,
     imageHeight: withImage ? 800 : null,
@@ -96,11 +96,16 @@ async function stubEntries(page: Page): Promise<void> {
       await route.fulfill({ status: 200, json: { entries: ENTRIES, nextCursor: null } });
     },
   );
+  // The body store's own fetch (#1100): reader mode always succeeds here, so
+  // this body never actually renders, but the fixture stays contract-shaped.
   await page.route(
     (url) => /^\/api\/entries\/\d+$/.test(url.pathname),
     async (route) => {
       if (route.request().method() !== 'GET') return route.fallback();
-      await route.fulfill({ status: 200, json: { entry: ENTRIES[0] } });
+      await route.fulfill({
+        status: 200,
+        json: { entry: { ...ENTRIES[0], contentHtml: CONTENT_HTML } },
+      });
     },
   );
   await page.route(

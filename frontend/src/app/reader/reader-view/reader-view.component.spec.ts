@@ -1,3 +1,4 @@
+import { Signal, WritableSignal, signal } from '@angular/core';
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
@@ -6,11 +7,60 @@ import { of, Subject, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ReaderViewComponent } from './reader-view.component';
 import { ReaderContentService } from '../reader-content.service';
+import { EntryBodyService, EntryBodyState } from '../entry-body.service';
 import { entryScrollKey } from '../list-scroll-memory';
 import { EntryDto, ReaderArticle, ReaderContent, ReaderFailure } from '../models';
 import { ReaderModeService } from '../reader-mode.service';
 import { ReadingFocusService } from '../../core/reading-focus.service';
 import { AudioPlayerService } from '../audio-player.service';
+
+/** A controllable double for the real, HTTP-backed store: `entry-body.service.spec.ts`
+ *  covers caching/dedup/eviction; this file only needs to drive what the view renders. */
+class FakeEntryBodyService {
+  private readonly states = new Map<number, WritableSignal<EntryBodyState>>();
+  private readonly defaults = new Map<number, string | null>();
+  readonly retriedIds: number[] = [];
+
+  body(id: number): Signal<EntryBodyState> {
+    return this.stateFor(id).asReadonly();
+  }
+
+  prefetch(id: number): void {
+    this.stateFor(id);
+  }
+
+  seed(id: number, html: string | null): void {
+    this.stateFor(id).set({ status: 'ok', html });
+  }
+
+  retry(id: number): void {
+    this.retriedIds.push(id);
+    this.stateFor(id).set({ status: 'ok', html: 'RETRIED' });
+  }
+
+  /** What `body(id)` answers before anything else sets it — the stand-in for
+   *  the real store's first fetch landing. */
+  setDefault(id: number, html: string | null): void {
+    this.defaults.set(id, html);
+  }
+
+  setLoading(id: number): void {
+    this.stateFor(id).set({ status: 'loading' });
+  }
+
+  setError(id: number): void {
+    this.stateFor(id).set({ status: 'error' });
+  }
+
+  private stateFor(id: number): WritableSignal<EntryBodyState> {
+    let state = this.states.get(id);
+    if (!state) {
+      state = signal<EntryBodyState>({ status: 'ok', html: this.defaults.get(id) ?? null });
+      this.states.set(id, state);
+    }
+    return state;
+  }
+}
 
 class MockResizeObserver {
   static instances: MockResizeObserver[] = [];
@@ -32,13 +82,18 @@ class MockResizeObserver {
   }
 }
 
+/** The feed body previously carried as `entry.contentHtml`; now what the body
+ *  store answers for entry 1 by default (see `beforeEach` below), so the bulk
+ *  of these presentational tests need no body-store setup of their own. */
+const DEFAULT_BODY = '<p>Body</p><a href="https://ext.test/z">link</a>';
+
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
   title: 'Deep dive',
   url: 'https://x/1',
   author: 'Ada',
   summary: null,
-  contentHtml: '<p>Body</p><a href="https://ext.test/z">link</a>',
+  excerpt: '',
   imageUrl: null,
   imageWidth: null,
   imageHeight: null,
@@ -57,8 +112,17 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   ...over,
 });
 
+/** An entry whose feed body is `html`, for tests that care what the original
+ *  view renders — the feed-mode analogue of passing `contentHtml` directly. */
+function entryWithBody(html: string | null, over: Partial<EntryDto> = {}): EntryDto {
+  const e = entry(over);
+  fakeBody.setDefault(e.id, html);
+  return e;
+}
+
 let loadMock: jest.Mock;
 let reloadMock: jest.Mock;
+let fakeBody: FakeEntryBodyService;
 
 function mount(e: EntryDto | null) {
   const f = TestBed.createComponent(ReaderViewComponent);
@@ -99,18 +163,21 @@ describe('ReaderViewComponent', () => {
     // asserting against the feed's own content. Reader-specific tests override.
     loadMock = jest.fn(() => of<ReaderContent>(failedContent()));
     reloadMock = jest.fn(() => of<ReaderContent>(okContent()));
+    fakeBody = new FakeEntryBodyService();
+    fakeBody.setDefault(1, DEFAULT_BODY);
     TestBed.configureTestingModule({
       imports: [ReaderViewComponent, provideTranslocoTesting()],
       providers: [
         provideRouter([]),
         { provide: ReaderContentService, useValue: { load: loadMock, reload: reloadMock } },
+        { provide: EntryBodyService, useValue: fakeBody },
       ],
     });
   });
 
   describe('reading focus setting', () => {
     it('clears dimming from the open article when disabled', async () => {
-      const f = mount(entry({ contentHtml: '<p>First</p><p>Second</p>' }));
+      const f = mount(entryWithBody('<p>First</p><p>Second</p>'));
       await Promise.resolve();
       f.detectChanges();
       const blocks = Array.from(
@@ -127,7 +194,7 @@ describe('ReaderViewComponent', () => {
     it('restores dimming in the open article when enabled again', async () => {
       const readingFocus = TestBed.inject(ReadingFocusService);
       readingFocus.setEnabled(false);
-      const f = mount(entry({ contentHtml: '<p>First</p><p>Second</p>' }));
+      const f = mount(entryWithBody('<p>First</p><p>Second</p>'));
       await Promise.resolve();
       f.detectChanges();
       const blocks = Array.from(
@@ -156,7 +223,7 @@ describe('ReaderViewComponent', () => {
 
   it('leaves in-page fragment anchors undecorated', async () => {
     const el = mount(
-      entry({ contentHtml: '<a href="#footnote">jump</a><a href="https://ext.test/z">ext</a>' }),
+      entryWithBody('<a href="#footnote">jump</a><a href="https://ext.test/z">ext</a>'),
     ).nativeElement as HTMLElement;
     await Promise.resolve(); // link decoration runs in a microtask
     const anchors = el.querySelectorAll('.content a');
@@ -168,13 +235,13 @@ describe('ReaderViewComponent', () => {
     const longBody = `<p>${Array.from({ length: 660 }, (_, i) => `w${i}`).join(' ')}</p>`;
 
     it('shows the estimate for a long article', () => {
-      const f = mount(entry({ contentHtml: longBody }));
+      const f = mount(entryWithBody(longBody));
 
       expect(f.nativeElement.querySelector('.meta')?.textContent).toContain('≈ 3 min');
     });
 
     it('hides the estimate for a short article', () => {
-      const f = mount(entry({ contentHtml: '<p>Tiny.</p>' }));
+      const f = mount(entryWithBody('<p>Tiny.</p>'));
 
       expect(f.nativeElement.querySelector('.meta')?.textContent).not.toContain('≈');
     });
@@ -184,7 +251,7 @@ describe('ReaderViewComponent', () => {
     const threeHeadings = '<h2>Alpha</h2><p>a</p><h2>Beta</h2><p>b</p><h3>Gamma</h3>';
 
     it('shows a table of contents, collapsed by default, for articles with several headings', async () => {
-      const f = mount(entry({ contentHtml: threeHeadings }));
+      const f = mount(entryWithBody(threeHeadings));
       await Promise.resolve(); // content-processing microtask builds the TOC
       f.detectChanges();
       const el = f.nativeElement as HTMLElement;
@@ -201,7 +268,7 @@ describe('ReaderViewComponent', () => {
     });
 
     it('gives the headings unique ids so the TOC can jump to them', async () => {
-      const f = mount(entry({ contentHtml: '<h2>Same</h2><h2>Same</h2><h2>Same</h2>' }));
+      const f = mount(entryWithBody('<h2>Same</h2><h2>Same</h2><h2>Same</h2>'));
       await Promise.resolve();
       f.detectChanges();
       const ids = [...(f.nativeElement as HTMLElement).querySelectorAll('.content h2')].map(
@@ -212,7 +279,7 @@ describe('ReaderViewComponent', () => {
     });
 
     it('omits the TOC for short articles', async () => {
-      const f = mount(entry({ contentHtml: '<h2>Only one</h2><p>x</p>' }));
+      const f = mount(entryWithBody('<h2>Only one</h2><p>x</p>'));
       await Promise.resolve();
       f.detectChanges();
       expect((f.nativeElement as HTMLElement).querySelector('.toc')).toBeNull();
@@ -861,7 +928,7 @@ describe('ReaderViewComponent', () => {
 
   it('falls back to the feed summary when contentHtml is null on failure', () => {
     loadMock.mockReturnValue(of<ReaderContent>(failedContent()));
-    const el = mount(entry({ contentHtml: null, summary: 'Just a summary' }))
+    const el = mount(entryWithBody(null, { summary: 'Just a summary' }))
       .nativeElement as HTMLElement;
     expect(el.querySelector('.content')!.innerHTML).toContain('Just a summary');
   });
@@ -1018,6 +1085,56 @@ describe('ReaderViewComponent', () => {
       const el = mount(entry({ categories: [] })).nativeElement as HTMLElement;
 
       expect(el.querySelector('.categories')).toBeNull();
+    });
+  });
+
+  describe('feed body from the store (#1100)', () => {
+    it('shows the summary at once, before the body arrives, with no spinner over it', () => {
+      fakeBody.setLoading(1);
+      const el = mount(entry({ summary: 'The summary text' })).nativeElement as HTMLElement;
+
+      expect(el.querySelector('.content')!.textContent).toContain('The summary text');
+      expect(el.querySelector('app-loading-overlay.shown')).toBeNull();
+    });
+
+    it('replaces the summary with the body once it arrives', () => {
+      fakeBody.setLoading(1);
+      const f = mount(entry({ summary: 'The summary text' }));
+      const el = f.nativeElement as HTMLElement;
+      expect(el.querySelector('.content')!.textContent).toContain('The summary text');
+
+      fakeBody.seed(1, '<p>The full body</p>');
+      f.detectChanges();
+
+      expect(el.querySelector('.content')!.innerHTML).toContain('The full body');
+      expect(el.querySelector('.content')!.textContent).not.toContain('The summary text');
+    });
+
+    it('keeps the summary and shows an inline error when the body fails to load', () => {
+      fakeBody.setError(1);
+      const el = mount(entry({ summary: 'The summary text' })).nativeElement as HTMLElement;
+
+      expect(el.querySelector('.content')!.textContent).toContain('The summary text');
+      expect(el.querySelector('.body-error')).not.toBeNull();
+    });
+
+    it('retries the failed body fetch from the inline error action', () => {
+      fakeBody.setError(1);
+      const f = mount(entry());
+      const el = f.nativeElement as HTMLElement;
+
+      (el.querySelector('.body-error .action') as HTMLButtonElement).click();
+
+      expect(fakeBody.retriedIds).toEqual([1]);
+    });
+
+    it('suppresses the inline body error once reader mode has extracted content', () => {
+      loadMock.mockReturnValue(of<ReaderContent>(okContent()));
+      fakeBody.setError(1);
+
+      const el = mount(entry()).nativeElement as HTMLElement;
+
+      expect(el.querySelector('.body-error')).toBeNull();
     });
   });
 });

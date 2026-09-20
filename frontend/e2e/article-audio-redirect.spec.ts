@@ -29,7 +29,7 @@ const ENTRY = {
   url: 'https://fixtures.invalid/p/audio-version',
   author: null,
   summary: 'summary',
-  contentHtml: '<p>Feed body.</p>',
+  excerpt: 'summary',
   imageUrl: null,
   imageWidth: null,
   imageHeight: null,

@@ -14,7 +14,7 @@ const ENTRY = {
   url: 'https://fixtures.invalid/article',
   author: null,
   summary: 'A fixture for saved-search reading layouts.',
-  contentHtml: '<p>Fixture article body.</p>',
+  excerpt: 'Fixture article body.',
   imageUrl: null,
   imageWidth: null,
   imageHeight: null,

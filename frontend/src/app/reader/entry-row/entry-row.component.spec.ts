@@ -12,8 +12,8 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   url: 'https://x/1',
   author: null,
   summary: '<p>Summary text</p>',
-  contentHtml: '<img src="https://cdn.test/a.jpg"><p>Body</p>',
-  imageUrl: null,
+  excerpt: 'Summary text',
+  imageUrl: 'https://cdn.test/a.jpg',
   imageWidth: null,
   imageHeight: null,
   media: [],
@@ -72,30 +72,13 @@ describe('EntryRowComponent', () => {
     expect(el.querySelector('img.thumb')!.getAttribute('src')).toBe('https://cdn.test/a.jpg');
   });
 
-  it('omits the thumbnail when no https image exists', () => {
-    const el = mount(entry({ contentHtml: '<p>no image</p>', summary: '<p>x</p>' }))
-      .nativeElement as HTMLElement;
+  it('omits the thumbnail when the entry has no persisted image', () => {
+    const el = mount(entry({ imageUrl: null })).nativeElement as HTMLElement;
     expect(el.querySelector('img.thumb')).toBeNull();
   });
 
-  it('shows the persisted imageUrl when the body has no inline image', () => {
-    const el = mount(
-      entry({
-        contentHtml: '<p>no image</p>',
-        summary: '<p>x</p>',
-        imageUrl: 'https://cdn.test/hero.jpg',
-      }),
-    ).nativeElement as HTMLElement;
-    expect(el.querySelector('img.thumb')!.getAttribute('src')).toBe('https://cdn.test/hero.jpg');
-  });
-
-  it('prefers the persisted imageUrl over a differing inline image', () => {
-    const el = mount(
-      entry({
-        contentHtml: '<img src="https://cdn.test/inline.jpg"><p>Body</p>',
-        imageUrl: 'https://cdn.test/hero.jpg',
-      }),
-    ).nativeElement as HTMLElement;
+  it('shows the persisted imageUrl', () => {
+    const el = mount(entry({ imageUrl: 'https://cdn.test/hero.jpg' })).nativeElement as HTMLElement;
     expect(el.querySelector('img.thumb')!.getAttribute('src')).toBe('https://cdn.test/hero.jpg');
   });
 

@@ -7,7 +7,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   url: null,
   author: null,
   summary: null,
-  contentHtml: null,
+  excerpt: '',
   imageUrl: 'https://x.test/cover.jpg',
   imageWidth: null,
   imageHeight: null,

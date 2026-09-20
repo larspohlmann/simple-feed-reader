@@ -158,7 +158,9 @@ export interface EntryDto {
   url: string | null;
   author: string | null;
   summary: string | null;
-  contentHtml: string | null;
+  /** Plain-text dek the server derives from the summary or the body — never
+   *  null, unlike them (#1100). */
+  excerpt: string;
   /** Absolute image URL the feed supplied, or null. Persisted server-side. */
   imageUrl: string | null;
   /** Dimensions AS DECLARED by the feed. Null means unknown, not square. */
@@ -203,6 +205,12 @@ export interface EntryDto {
   /** Other copies of this article the reader also subscribes to, in this
    *  list's scope. Set by the API's collapse; empty for a non-duplicated row. */
   duplicates?: EntryDto[];
+}
+
+/** The `/api/entries/{id}` detail shape: every list field plus the full body,
+ *  which the list endpoints omit to keep pages small (#1100). */
+export interface EntryDetailDto extends EntryDto {
+  contentHtml: string | null;
 }
 
 export interface EntriesPage {

@@ -32,6 +32,7 @@ import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
 import { SubscriptionsStore } from './subscriptions.store';
 import { EntriesStore } from './entries.store';
 import { ReaderApi } from './reader-api';
+import { EntryBodyService } from './entry-body.service';
 import { Selection } from './query';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { RefreshService } from './refresh.service';
@@ -94,7 +95,7 @@ describe('ReaderShellComponent', () => {
     url: null,
     author: null,
     summary: 's',
-    contentHtml: '<p>b</p>',
+    excerpt: 's',
     imageUrl: null,
     imageWidth: null,
     imageHeight: null,
@@ -112,7 +113,18 @@ describe('ReaderShellComponent', () => {
     isViewed: false,
   };
 
+  // A jest.fn() double, not the real HTTP-backed service: this suite asserts
+  // the shell CALLS prefetch/seed correctly, not the store's own caching —
+  // that belongs to entry-body.service.spec.ts.
+  let bodyStore: { prefetch: jest.Mock; seed: jest.Mock; body: jest.Mock; retry: jest.Mock };
+
   beforeEach(() => {
+    bodyStore = {
+      prefetch: jest.fn(),
+      seed: jest.fn(),
+      body: jest.fn(() => signal({ status: 'ok', html: null })),
+      retry: jest.fn(),
+    };
     sessionStorage.clear(); // OnboardingSkip persists here; don't leak across tests
     localStorage.clear(); // LanguageService caches the lang; a de test must not leak into the next
     auth.isAdmin.mockReturnValue(false); // default non-admin; a test opting in overrides it
@@ -137,6 +149,7 @@ describe('ReaderShellComponent', () => {
         { provide: ActivatedRoute, useValue: { queryParamMap: qp.asObservable() } },
         { provide: AuthService, useValue: auth },
         { provide: LayoutService, useValue: screen },
+        { provide: EntryBodyService, useValue: bodyStore },
         // Defaults to "available", matching every test in this file written before
         // #624 follow-up's instance-wide toggle existed. The "first-login passkey
         // offer" describe block below overrides this per test to cover false/null.
@@ -1030,12 +1043,73 @@ describe('ReaderShellComponent', () => {
     expect(req.request.method).toBe('GET');
     // isHidden:true, isViewed:true so the on-open effect fires no state PATCH.
     req.flush({
-      entry: { ...entry, id: 514, title: 'Deep linked story', isHidden: true, isViewed: true },
+      entry: {
+        ...entry,
+        id: 514,
+        title: 'Deep linked story',
+        contentHtml: '<p>Deep linked body</p>',
+        isHidden: true,
+        isViewed: true,
+      },
     });
     f.detectChanges();
 
     expect(f.nativeElement.querySelector('app-reader-view')).not.toBeNull();
+    // The detail response already carries the body — seed the store with it
+    // rather than let the reader view issue a redundant fetch of its own.
+    expect(bodyStore.seed).toHaveBeenCalledWith(514, '<p>Deep linked body</p>');
     ctrl.verify();
+  });
+
+  describe('neighbour prefetch on open (#1100)', () => {
+    it('warms the body store for the previous and next entries in list order', () => {
+      const f = TestBed.createComponent(ReaderShellComponent);
+      f.detectChanges();
+      ctrl.match('https://api.test/api/subscriptions').forEach((r) => r.flush(subsBody));
+      ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({
+          entries: [
+            { ...entry, id: 1 },
+            // Already viewed/hidden, so opening it fires no on-open state PATCH.
+            { ...entry, id: 2, isHidden: true, isViewed: true },
+            { ...entry, id: 3 },
+          ],
+          nextCursor: null,
+        });
+      ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
+        status: 'none',
+        batchesTotal: null,
+        batchesDone: 0,
+        error: null,
+        background: false,
+        streamedChars: 0,
+        forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+      });
+      ctrl.expectOne('https://api.test/api/version').flush({
+        version: 'dev',
+        commit: 'local',
+        builtAt: '',
+        latest: null,
+      });
+
+      qp.next(convertToParamMap({ entry: '2' }));
+      f.detectChanges();
+
+      expect(bodyStore.prefetch).toHaveBeenCalledWith(1);
+      expect(bodyStore.prefetch).toHaveBeenCalledWith(3);
+      ctrl.verify();
+    });
+
+    it('prefetches only the side with a neighbour, for an edge entry', () => {
+      const f = boot(); // a single-entry list — no neighbour on either side
+      qp.next(convertToParamMap({ entry: '1' }));
+      f.detectChanges();
+
+      expect(bodyStore.prefetch).not.toHaveBeenCalled();
+    });
   });
 
   it('ignores a stale cold-entry fetch that resolves after navigating to another', () => {
@@ -1049,9 +1123,13 @@ describe('ReaderShellComponent', () => {
     const reqB = ctrl.expectOne('https://api.test/api/entries/600');
 
     // B resolves first (now open), then A resolves LATE — A must not clobber B.
-    reqB.flush({ entry: { ...entry, id: 600, title: 'Entry B', isHidden: true } });
+    reqB.flush({
+      entry: { ...entry, id: 600, title: 'Entry B', contentHtml: '<p>B</p>', isHidden: true },
+    });
     f.detectChanges();
-    reqA.flush({ entry: { ...entry, id: 514, title: 'Entry A', isHidden: true } });
+    reqA.flush({
+      entry: { ...entry, id: 514, title: 'Entry A', contentHtml: '<p>A</p>', isHidden: true },
+    });
     f.detectChanges();
 
     // The list stays mounted beneath the article overlay, so scope to the reader.
@@ -1375,7 +1453,7 @@ describe('ReaderShellComponent', () => {
     f.detectChanges();
     ctrl
       .expectOne((r) => r.url === 'https://api.test/api/entries/514')
-      .flush({ entry: { ...entry, id: 514, title: headline } });
+      .flush({ entry: { ...entry, id: 514, title: headline, contentHtml: '<p>b</p>' } });
     f.detectChanges();
 
     expect(TestBed.inject(Title).getTitle()).toBe(`${headline.slice(0, 60)}… | simple feed reader`);
