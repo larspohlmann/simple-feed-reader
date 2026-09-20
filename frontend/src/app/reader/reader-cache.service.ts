@@ -17,43 +17,7 @@ export class ReaderCacheService {
   static readonly MAX_ENTRIES = 100;
   private static readonly DB = 'sfr-reader';
   private static readonly STORE = 'articles';
-  // v5: v4 records carry a `readerHero` field and a contentHtml with no lead
-  // picture in it (#681); an already-read article would come back missing its
-  // lead until refetched.
-  // v6: v5 records hold image URLs that a comma-splitting srcset reader cut
-  // short (#706); an already-read article would keep its broken pictures.
-  // v7: v6 records hold reader extractions with Substack player chrome and
-  // un-stripped share buttons (#627); an already-read article would keep them.
-  // v8: v7 records were extracted before media recovery (#748); an
-  // already-read article would keep its dropped embeds as plain links.
-  // v9: v8 records were extracted before recovered media was reconciled into
-  // the body in place (#755); an already-read article would keep a video's
-  // poster duplicated as a header image and its players stranded at the top.
-  // v10: v9 records hold trailing teaser carousels (#779).
-  // v11: v10 records carry no `paywalled` flag (#785); an already-read
-  // preview would never show the paywall note.
-  // v12: v11 records were extracted while a declared embed hid the page's
-  // other embeds (#788); an already-read article would keep one player where
-  // the page has several.
-  // v13: v12 records lost every photo held in a lazy <picture>, a custom
-  // element or a media-classed wrapper (#789); an already-read gallery would
-  // keep its empty figures.
-  // v14: v13 records hold no player for a page whose only playable form is
-  // an HLS playlist or a Brightcove player (#782).
-  // v15: v14 records hold an HLS stream at the URL the page declared, which a
-  // cross-origin fetch cannot follow through its redirect, and two players for
-  // a schema.org node that names both its file and its player page (#782).
-  // v16: v15 records hold no player for a page that declares its YouTube video
-  // only as an id in a data attribute (#795).
-  // v17: v16 records hold only the audio of a broadcast page whose video had
-  // no og:image poster (#796).
-  // v18: v17 records hold one player for a page whose other videos are named
-  // only by a sibling id in a script payload (#800).
-  // v21: v20 records hold a dead second player and no narration mark for a page
-  // whose narration file sits in data-src (#903).
-  // v23: v22 records hold a 16px placeholder lead image for a page whose real
-  // renditions sit only in the srcset of a bare <img> (#965).
-  private static readonly VERSION = 25;
+  private static readonly VERSION = 26;
 
   private db: Promise<IDBDatabase | null> | null = null;
   /** Strictly monotonic clock so puts within the same millisecond keep insertion order. */
