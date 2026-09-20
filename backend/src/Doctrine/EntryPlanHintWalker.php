@@ -5,26 +5,29 @@ declare(strict_types=1);
 namespace App\Doctrine;
 
 use App\Doctrine\Exception\MissingEntryPlanHintException;
+use Doctrine\ORM\Query;
 use Doctrine\ORM\Query\AST\SelectClause;
 use Doctrine\ORM\Query\SqlWalker;
 
 /**
- * Prefixes an entry query's outer SELECT with the MySQL optimizer-hint comment
- * for the EntryPlanHint the caller chose — a JOIN_PREFIX to drive the join from
- * `entry`, optionally with an INDEX hint too (#1040, #1098). SQLite reads an
- * optimizer-hint comment as a plain comment, so one SQL string serves both
- * engines.
- *
- * Attach it per query through Query::HINT_CUSTOM_OUTPUT_WALKER, paired with
- * self::HINT carrying the chosen EntryPlanHint — the repository decides both,
- * this walker only renders. The duplicate-collapse subselect renders through
- * walkSimpleSelectClause, so it stays unhinted.
+ * Renders the EntryPlanHint that apply() paired onto the query as an optimizer-hint
+ * comment on the entry's outer SELECT. SQLite reads the comment as a comment, so one
+ * SQL string serves both engines (#1040, #1098).
  */
 final class EntryPlanHintWalker extends SqlWalker
 {
     public const string HINT = self::class . '.planHint';
 
     private const string ENTRY_DQL_ALIAS = 'e';
+
+    /**
+     * @param Query<mixed, mixed> $query
+     */
+    public static function apply(Query $query, EntryPlanHint $planHint): void
+    {
+        $query->setHint(Query::HINT_CUSTOM_OUTPUT_WALKER, self::class);
+        $query->setHint(self::HINT, $planHint);
+    }
 
     public function walkSelectClause(SelectClause $selectClause): string
     {

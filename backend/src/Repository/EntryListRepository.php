@@ -8,7 +8,6 @@ use App\Doctrine\EntryPlanHint;
 use App\Doctrine\EntryPlanHintWalker;
 use App\Entity\Entry;
 use App\Entity\Subscription;
-use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use OpenTelemetry\API\Instrumentation\WithSpan;
@@ -64,8 +63,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
 
         $listQuery = $qb->getQuery();
         if ($query->isDateOrderedFanIn()) {
-            $listQuery->setHint(Query::HINT_CUSTOM_OUTPUT_WALKER, EntryPlanHintWalker::class);
-            $listQuery->setHint(EntryPlanHintWalker::HINT, EntryPlanHint::DateOrderedWalk);
+            EntryPlanHintWalker::apply($listQuery, EntryPlanHint::DateOrderedWalk);
         }
 
         /** @var list<array<array-key, mixed>> $rows */
@@ -285,8 +283,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
             ->setParameter('survivorIds', $survivorIds);
 
         $duplicatesQuery = $qb->getQuery();
-        $duplicatesQuery->setHint(Query::HINT_CUSTOM_OUTPUT_WALKER, EntryPlanHintWalker::class);
-        $duplicatesQuery->setHint(EntryPlanHintWalker::HINT, EntryPlanHint::DuplicateLookup);
+        EntryPlanHintWalker::apply($duplicatesQuery, EntryPlanHint::DuplicateLookup);
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $duplicatesQuery->getResult();
