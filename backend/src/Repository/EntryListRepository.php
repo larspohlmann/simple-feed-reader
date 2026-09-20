@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Doctrine\EntryListJoinOrderWalker;
+use App\Doctrine\EntryPlanHint;
+use App\Doctrine\EntryPlanHintWalker;
 use App\Entity\Entry;
 use App\Entity\Subscription;
-use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use OpenTelemetry\API\Instrumentation\WithSpan;
@@ -63,7 +63,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
 
         $listQuery = $qb->getQuery();
         if ($query->isDateOrderedFanIn()) {
-            $listQuery->setHint(Query::HINT_CUSTOM_OUTPUT_WALKER, EntryListJoinOrderWalker::class);
+            EntryPlanHintWalker::apply($listQuery, EntryPlanHint::DateOrderedWalk);
         }
 
         /** @var list<array<array-key, mixed>> $rows */
@@ -282,8 +282,11 @@ class EntryListRepository extends AbstractEntryProjectionRepository
             ->setParameter('dupHashes', array_keys($hashes))
             ->setParameter('survivorIds', $survivorIds);
 
+        $duplicatesQuery = $qb->getQuery();
+        EntryPlanHintWalker::apply($duplicatesQuery, EntryPlanHint::DuplicateLookup);
+
         /** @var list<array<array-key, mixed>> $rows */
-        $rows = $qb->getQuery()->getResult();
+        $rows = $duplicatesQuery->getResult();
         $byHash = [];
         foreach ($rows as $raw) {
             $sibling = $this->rowHydrator->hydrate($raw);
