@@ -49,8 +49,10 @@ final class EntryPlanHintWalkerTest extends DbTestCase
     }
 
     #[DataProvider('planHintComments')]
-    public function testHintPrefixesTheOuterSelectWithTheEntryAlias(EntryPlanHint $planHint, string $expectedComment): void
-    {
+    public function testHintPrefixesTheOuterSelectWithTheEntryAlias(
+        EntryPlanHint $planHint,
+        string $expectedComment,
+    ): void {
         $sql = $this->hintedCollapseQuery($planHint)->getSQL();
         self::assertIsString($sql);
 
