@@ -20,7 +20,7 @@ function entry(id: number) {
     url: `https://fixtures.invalid/${id}`,
     author: null,
     summary: null,
-    contentHtml: '<p>Fixture body.</p>',
+    excerpt: 'Fixture body.',
     imageUrl: null,
     imageWidth: null,
     imageHeight: null,

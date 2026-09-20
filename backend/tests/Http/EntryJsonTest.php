@@ -32,7 +32,7 @@ final class EntryJsonTest extends TestCase
             [new EntryAttachment('https://cdn/ep.mp3', 'audio/mpeg', 3723)],
         );
 
-        $json = EntryJson::one($this->row($entry));
+        $json = EntryJson::listRow($this->row($entry));
 
         self::assertSame(
             [['url' => 'https://i/lead.jpg', 'kind' => 'image', 'width' => 800, 'height' => 600]],
@@ -55,7 +55,7 @@ final class EntryJsonTest extends TestCase
             new \DateTimeImmutable('2026-09-07T00:00:00Z'),
         );
 
-        $json = EntryJson::one($this->row($entry));
+        $json = EntryJson::listRow($this->row($entry));
 
         self::assertSame([], $json['media']);
         self::assertSame([], $json['attachments']);
@@ -81,12 +81,59 @@ final class EntryJsonTest extends TestCase
         );
         $row = $this->row($entry)->withDuplicates([$this->row($sibling)]);
 
-        $json = EntryJson::one($row);
+        $json = EntryJson::listRow($row);
 
         self::assertCount(1, $json['duplicates']);
         self::assertSame($sibling->getId(), $json['duplicates'][0]['id']);
         self::assertSame('Sibling', $json['duplicates'][0]['title']);
         self::assertSame([], $json['duplicates'][0]['duplicates']);
+    }
+
+    public function testListRowHasNoContentHtmlAndCarriesAnExcerpt(): void
+    {
+        $entry = new Entry(
+            new Feed('https://example.com/feed'),
+            'guid',
+            'https://example.com/a',
+            'Article',
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+        );
+        $entry->setContentHtml('<p>Full body.</p>');
+        $entry->setSummary('A short summary.');
+
+        $json = EntryJson::listRow($this->row($entry));
+
+        self::assertArrayNotHasKey('contentHtml', $json);
+        self::assertSame('A short summary.', $json['excerpt']);
+    }
+
+    public function testDetailHasContentHtmlAndListShapedDuplicates(): void
+    {
+        $sibling = new Entry(
+            new Feed('https://example.com/other-feed'),
+            'sibling-guid',
+            'https://example.com/dup',
+            'Sibling',
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+        );
+        $sibling->setContentHtml('<p>Sibling body.</p>');
+        $entry = new Entry(
+            new Feed('https://example.com/feed'),
+            'guid',
+            'https://example.com/dup',
+            'Survivor',
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+        );
+        $entry->setContentHtml('<p>Full body.</p>');
+        $row = $this->row($entry)->withDuplicates([$this->row($sibling)]);
+
+        $json = EntryJson::detail($row);
+
+        self::assertSame('<p>Full body.</p>', $json['contentHtml']);
+        self::assertArrayNotHasKey('contentHtml', $json['duplicates'][0]);
     }
 
     private function row(Entry $entry): EntryListRow

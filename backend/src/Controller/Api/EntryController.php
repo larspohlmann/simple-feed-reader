@@ -107,7 +107,7 @@ final readonly class EntryController
             ?? throw new NotFoundHttpException('No such entry.');
         $row = $this->categoryLoader->loadInto([$row])[0];
 
-        return new JsonResponse(['entry' => EntryJson::one($row)]);
+        return new JsonResponse(['entry' => EntryJson::detail($row)]);
     }
 
     #[Route('/mark-read', name: 'api_entries_mark_read', methods: ['POST'])]

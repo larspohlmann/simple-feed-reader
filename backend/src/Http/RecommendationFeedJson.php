@@ -40,7 +40,7 @@ final class RecommendationFeedJson
             // run's identity and generation time on every row. The ATOM format
             // matches the run report's forYou.generatedAt, so the client can tell
             // the newest run's picks from the rest by their generation instant (#348).
-            $entry = EntryJson::one($row->row) + [
+            $entry = EntryJson::listRow($row->row) + [
                 'runId' => $row->runId,
                 'runGeneratedAt' => $row->runGeneratedAt?->format(\DateTimeInterface::ATOM),
             ];

@@ -18,7 +18,7 @@ function entry(id: number, source: string, subscriptionId: number) {
     url: `https://fixtures.invalid/${id}`,
     author: null,
     summary: null,
-    contentHtml: '<p>Fixture body.</p>',
+    excerpt: 'Fixture body.',
     imageUrl: null,
     imageWidth: null,
     imageHeight: null,
@@ -34,7 +34,7 @@ function entry(id: number, source: string, subscriptionId: number) {
 }
 
 /**
- * No images anywhere and a contentHtml stub well short of the planner's
+ * No images anywhere and an excerpt stub well short of the planner's
  * quote-worthy length, so `isImageRich`/`isTextRich` both read false and the
  * IMAGE family is used, not the text one. That family authors no `compact`
  * slot directly — but every slot it does author (`hero`/`wide`/`split`/
@@ -207,7 +207,7 @@ function splitEntry(id: number) {
     url: `https://fixtures.invalid/${id}`,
     author: null,
     summary: null,
-    contentHtml: '<p>Fixture body.</p>',
+    excerpt: 'Fixture body.',
     imageUrl: `https://fixtures.invalid/${id}.jpg`,
     imageWidth: 600,
     imageHeight: 800,

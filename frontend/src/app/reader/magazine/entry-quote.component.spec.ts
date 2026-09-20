@@ -9,8 +9,8 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   title: 'A medium headline',
   url: null,
   author: null,
-  summary: 'First sentence here. Second sentence follows on.',
-  contentHtml: null,
+  summary: null,
+  excerpt: 'First sentence here. Second sentence follows on.',
   imageUrl: 'https://i/a.jpg',
   imageWidth: 700,
   imageHeight: 400,
@@ -49,7 +49,7 @@ describe('EntryQuoteComponent', () => {
   });
 
   it('falls back to the whole snippet when there is no sentence break', () => {
-    const el = mount(entry({ summary: 'One long clause with no terminator' }))
+    const el = mount(entry({ excerpt: 'One long clause with no terminator' }))
       .nativeElement as HTMLElement;
     expect(el.querySelector('.pull')!.textContent).toContain('One long clause with no terminator');
   });

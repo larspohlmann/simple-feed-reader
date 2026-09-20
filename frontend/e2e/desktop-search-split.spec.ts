@@ -13,7 +13,7 @@ function entry(id: number, title: string) {
     url: `https://fixtures.invalid/${id}`,
     author: null,
     summary: 'A fixture summary.',
-    contentHtml: '<p>Fixture body.</p>',
+    excerpt: 'A fixture summary.',
     imageUrl: null,
     imageWidth: null,
     imageHeight: null,
@@ -87,6 +87,20 @@ async function stubReaderData(page: Page): Promise<void> {
   await page.route('**/api/entries/*/reader', async (route) => {
     await route.fulfill({ status: 200, json: readerFailedJson('unextractable') });
   });
+  // The body store's own fetch (#1100): the opened entry's id decides which
+  // fixture answers, so either the magazine or the search result works.
+  await page.route(
+    (url) => /^\/api\/entries\/\d+$/.test(url.pathname),
+    async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      const id = Number(new URL(route.request().url()).pathname.split('/').pop());
+      const entry = [MAGAZINE_ENTRY, SEARCH_ENTRY].find((e) => e.id === id) ?? SEARCH_ENTRY;
+      await route.fulfill({
+        status: 200,
+        json: { entry: { ...entry, contentHtml: '<p>Fixture body.</p>' } },
+      });
+    },
+  );
   await stubGet(page, '/api/subscriptions', SUBSCRIPTIONS);
   await stubGet(page, '/api/tags', { tags: [] });
   await stubGet(page, '/api/saved-searches', { savedSearches: [] });

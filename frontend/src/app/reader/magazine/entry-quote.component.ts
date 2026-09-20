@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, computed } from '@angular/core';
-import { textSnippet } from '../preview-image';
 import { EntryKickerLineComponent } from './entry-kicker-line.component';
 import { EntryMetaComponent } from '../entry-meta/entry-meta.component';
 import { EntryDuplicatesComponent } from './entry-duplicates.component';
@@ -19,7 +18,7 @@ export class EntryQuoteComponent extends EntryBlockBase {
   // because the regex stops at the first period-plus-space — not worth the
   // complexity of an abbreviation-aware sentence splitter.
   readonly lead = computed(() => {
-    const text = textSnippet(this.entry().summary || this.entry().contentHtml);
+    const text = this.entry().excerpt;
     const stop = text.search(/[.!?](\s|$)/);
     return stop === -1 ? text : text.slice(0, stop + 1);
   });

@@ -16,13 +16,13 @@ const LONG_PARAGRAPH = `<p>${Array.from(
     `across a couple of lines on a narrow phone screen.`,
 ).join(' ')}</p>`;
 
-const entry = (contentHtml: string) => ({
+const entry = () => ({
   id: 1,
   title: 'One long paragraph',
   url: 'https://example.invalid/1',
   author: null,
   summary: 'summary',
-  contentHtml,
+  excerpt: 'summary',
   publishedAt: '2026-07-25T10:00:00Z',
   createdAt: '2026-07-25T10:00:00Z',
   subscriptionId: 5,
@@ -47,17 +47,25 @@ async function signInAsAdmin(page: Page): Promise<boolean> {
   return sidebar.isVisible();
 }
 
-// This spec owns its data (#96): the entry list and the reader failure are both
-// stubbed, so the one long paragraph is exactly what renders.
+// This spec owns its data (#96): the entry list, the entry detail (the body
+// store's own fetch) and the reader failure are all stubbed, so the one long
+// paragraph is exactly what renders.
 async function stubArticle(page: Page): Promise<void> {
   await page.route('**/api/entries/*/reader', async (route) =>
     route.fulfill({ status: 200, json: readerFailedJson() }),
   );
+  await page.route('**/api/entries/1', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({
+      status: 200,
+      json: { entry: { ...entry(), contentHtml: LONG_PARAGRAPH } },
+    });
+  });
   await page.route('**/api/entries*', async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
     await route.fulfill({
       status: 200,
-      json: { entries: [entry(LONG_PARAGRAPH)], nextCursor: null },
+      json: { entries: [entry()], nextCursor: null },
     });
   });
 }

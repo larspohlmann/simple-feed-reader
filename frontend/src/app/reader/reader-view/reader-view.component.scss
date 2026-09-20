@@ -473,6 +473,10 @@ article {
   margin: 0;
 }
 
+.body-error {
+  margin: 0 0 var(--space-3);
+}
+
 /* A text link, not a button: the retry sits inside the note and must read as
    part of the sentence, so it borrows the note's size and drops all button
    chrome. Amber to match the warning box it lives in. */

@@ -18,13 +18,13 @@ const LONG_BODY = Array.from(
 ).join('');
 const SHORT_BODY = '<p>One short paragraph, nowhere near a screenful.</p>';
 
-const entry = (id: number, contentHtml: string) => ({
+const entry = (id: number) => ({
   id,
   title: `Article ${id}`,
   url: `https://example.invalid/${id}`,
   author: null,
   summary: 'summary',
-  contentHtml,
+  excerpt: 'summary',
   publishedAt: '2026-07-25T10:00:00Z',
   createdAt: '2026-07-25T10:00:00Z',
   subscriptionId: 5,
@@ -53,9 +53,14 @@ async function stubArticle(page: Page, body: string): Promise<void> {
   await page.route('**/api/entries/*/reader', async (route) =>
     route.fulfill({ status: 200, json: readerFailedJson() }),
   );
+  // The body store's own fetch (#1100): list rows carry no body of their own.
+  await page.route('**/api/entries/1', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({ status: 200, json: { entry: { ...entry(1), contentHtml: body } } });
+  });
   await page.route('**/api/entries*', async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
-    await route.fulfill({ status: 200, json: { entries: [entry(1, body)], nextCursor: null } });
+    await route.fulfill({ status: 200, json: { entries: [entry(1)], nextCursor: null } });
   });
 }
 

@@ -8,13 +8,17 @@ const NOW = '2026-07-29T12:00:00.000Z';
 const at = (hoursAgo: number): string =>
   new Date(Date.parse(NOW) - hoursAgo * 3600_000).toISOString();
 
+const DEFAULT_SUMMARY = 'A snippet long enough to fill a quote slot when one is asked for.';
+
 const e = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   id,
   title: 'A headline of reasonable length',
   url: null,
   author: null,
-  summary: 'A snippet long enough to fill a quote slot when one is asked for.',
-  contentHtml: null,
+  summary: DEFAULT_SUMMARY,
+  // Mirrors `summary` unless the caller names its own excerpt: entrySnippet()
+  // reads excerpt, and most fixtures here only ever set summary (#1100).
+  excerpt: over.summary !== undefined ? (over.summary ?? '') : DEFAULT_SUMMARY,
   imageUrl: null,
   imageWidth: null,
   imageHeight: null,
@@ -238,10 +242,8 @@ describe('planMagazine', () => {
     expect(kinds(full).slice(0, first.length)).toEqual(kinds(first));
   });
 
-  it('never fills a wide or split block from an untrusted inline thumbnail', () => {
-    const entries = many(40, (i) =>
-      e(i, { subscriptionId: (i % 6) + 1, contentHtml: '<img src="https://i/thumb.jpg">' }),
-    );
+  it('never fills a wide or split block for image-less entries', () => {
+    const entries = many(40, (i) => e(i, { subscriptionId: (i % 6) + 1 }));
     const blocks = planMagazine({ entries, grouping: true, complete: true });
     expect(kinds(blocks)).not.toContain('wide');
     expect(kinds(blocks)).not.toContain('split');
@@ -492,9 +494,7 @@ describe('planMagazine', () => {
     // The floor lift is gated on HAVING a summary: an entry with neither an image
     // nor any copy has nothing to put in a dek, so it stays a title-only compact
     // rather than an empty kicker.
-    const entries = many(80, (i) =>
-      e(i, { subscriptionId: (i % 6) + 1, summary: null, contentHtml: null }),
-    );
+    const entries = many(80, (i) => e(i, { subscriptionId: (i % 6) + 1, summary: null }));
     const ks = kinds(planMagazine({ entries, grouping: true, complete: true }));
     expect(ks).toContain('compact');
   });
@@ -503,9 +503,7 @@ describe('planMagazine', () => {
     // A `kicker` shows a title AND a dek; with no summary the dek is empty, so a
     // bare entry has no business in one. Every block collapses to `compact`, even
     // from a quote/kicker slot that would otherwise demote to a dek-less kicker.
-    const entries = many(80, (i) =>
-      e(i, { subscriptionId: (i % 6) + 1, summary: null, contentHtml: null }),
-    );
+    const entries = many(80, (i) => e(i, { subscriptionId: (i % 6) + 1, summary: null }));
     const ks = kinds(planMagazine({ entries, grouping: true, complete: true }));
     expect(ks.every((k) => k === 'compact')).toBe(true);
   });

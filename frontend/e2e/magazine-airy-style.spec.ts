@@ -24,7 +24,7 @@ function entry(id: number, source: string) {
     url: `https://fixtures.invalid/${id}`,
     author: null,
     summary: 'A summary long enough that the planner has a dek to place.',
-    contentHtml: '<p>Fixture body.</p>',
+    excerpt: 'Fixture body.',
     imageUrl: null,
     imageWidth: null,
     imageHeight: null,

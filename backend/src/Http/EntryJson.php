@@ -6,13 +6,18 @@ namespace App\Http;
 
 use App\Entity\EntryMedia;
 use App\Repository\EntryListRow;
+use App\Service\Text\EntryExcerpt;
 
+/**
+ * Two shapes off one row: listRow() drops contentHtml for a plain-text
+ * excerpt; detail() adds contentHtml back for the single body-rendering page.
+ */
 final class EntryJson
 {
     /**
      * @return array{
      *   id: int|null, title: string, url: string|null, author: string|null,
-     *   summary: string|null, contentHtml: string|null,
+     *   summary: string|null, excerpt: string,
      *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null,
      *   media: list<array<string, string|int>>,
      *   attachments: list<array<string, string|int>>,
@@ -23,7 +28,47 @@ final class EntryJson
      *   duplicates: list<array<string, mixed>>
      * }
      */
-    public static function one(EntryListRow $row): array
+    public static function listRow(EntryListRow $row): array
+    {
+        return self::commonFields($row) + [
+            'excerpt' => EntryExcerpt::of($row->entry->getSummary(), $row->entry->getContentHtml()),
+            'duplicates' => array_map(self::listRow(...), $row->duplicates),
+        ];
+    }
+
+    /**
+     * @return array{
+     *   id: int|null, title: string, url: string|null, author: string|null,
+     *   summary: string|null, excerpt: string, contentHtml: string|null,
+     *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null,
+     *   media: list<array<string, string|int>>,
+     *   attachments: list<array<string, string|int>>,
+     *   categories: list<string>,
+     *   publishedAt: string|null,
+     *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
+     *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool,
+     *   duplicates: list<array<string, mixed>>
+     * }
+     */
+    public static function detail(EntryListRow $row): array
+    {
+        return self::listRow($row) + ['contentHtml' => $row->entry->getContentHtml()];
+    }
+
+    /**
+     * @return array{
+     *   id: int|null, title: string, url: string|null, author: string|null,
+     *   summary: string|null,
+     *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null,
+     *   media: list<array<string, string|int>>,
+     *   attachments: list<array<string, string|int>>,
+     *   categories: list<string>,
+     *   publishedAt: string|null,
+     *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
+     *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool,
+     * }
+     */
+    private static function commonFields(EntryListRow $row): array
     {
         $e = $row->entry;
 
@@ -33,7 +78,6 @@ final class EntryJson
             'url' => $e->getUrl(),
             'author' => $e->getAuthor(),
             'summary' => $e->getSummary(),
-            'contentHtml' => $e->getContentHtml(),
             'imageUrl' => $e->getImageUrl(),
             'imageWidth' => $e->getImageWidth(),
             'imageHeight' => $e->getImageHeight(),
@@ -50,7 +94,6 @@ final class EntryJson
             'isFavorite' => $row->isFavorite,
             'isKept' => $row->isKept,
             'isViewed' => $row->isViewed,
-            'duplicates' => array_map(self::one(...), $row->duplicates),
         ];
     }
 }

@@ -45,7 +45,7 @@ const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   url: null,
   author: null,
   summary: 's',
-  contentHtml: null,
+  excerpt: '',
   imageUrl: null,
   imageWidth: null,
   imageHeight: null,

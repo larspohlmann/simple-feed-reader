@@ -19,7 +19,7 @@ const ENTRIES = Array.from({ length: 30 }, (_, i) => ({
   url: `https://example.invalid/${i + 1}`,
   author: null,
   summary: 'A summary long enough to give the row some height. '.repeat(3),
-  contentHtml: '<p>body</p>',
+  excerpt: 'A summary long enough to give the row some height. '.repeat(3),
   publishedAt: '2026-07-25T10:00:00Z',
   createdAt: '2026-07-25T10:00:00Z',
   subscriptionId: 5,
@@ -57,6 +57,20 @@ async function stubEntries(page: Page): Promise<void> {
       },
     });
   });
+  // The body store's own fetch (#1100): whichever row a test opens, its detail
+  // comes from here, matched by the id parsed off the path.
+  await page.route(
+    (url) => /^\/api\/entries\/\d+$/.test(url.pathname),
+    async (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      const id = Number(new URL(route.request().url()).pathname.split('/').pop());
+      const match = ENTRIES.find((e) => e.id === id) ?? ENTRIES[0];
+      await route.fulfill({
+        status: 200,
+        json: { entry: { ...match, contentHtml: '<p>body</p>' } },
+      });
+    },
+  );
   await page.route('**/api/entries*', async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
     await route.fulfill({ status: 200, json: { entries: ENTRIES, nextCursor: null } });
@@ -348,7 +362,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
 
     await stubEntries(page);
     // Force extraction to fail so the view is deterministically in 'original'
-    // mode (the entry's own contentHtml/summary — see displayHtml()), rather
+    // mode (the feed body, from the body store's own fetch below), rather
     // than depending on the real backend's attempt to fetch the seeded entry's
     // actual URL failing on its own. Left unstubbed, a day this extraction
     // starts succeeding flips the view to 'reader' mode, "Paragraph 0" never
@@ -361,21 +375,17 @@ test.describe('Hide-on-scroll header on a phone', () => {
     // back-to-top threshold. Overriding after stubEntries() means this route
     // wins (Playwright tries the most-recently-registered matching handler
     // first).
-    await page.route('**/api/entries*', async (route) => {
+    const TALL_BODY = Array.from(
+      { length: 20 },
+      (_, i) =>
+        `<p>Paragraph ${i} of filler text, long enough to give the article real height so it can scroll well past the back-to-top threshold.</p>`,
+    ).join('');
+    await page.route('**/api/entries/1', async (route) => {
       if (route.request().method() !== 'GET') return route.fallback();
-      const tallEntries = ENTRIES.map((e) =>
-        e.id === 1
-          ? {
-              ...e,
-              contentHtml: Array.from(
-                { length: 20 },
-                (_, i) =>
-                  `<p>Paragraph ${i} of filler text, long enough to give the article real height so it can scroll well past the back-to-top threshold.</p>`,
-              ).join(''),
-            }
-          : e,
-      );
-      await route.fulfill({ status: 200, json: { entries: tallEntries, nextCursor: null } });
+      await route.fulfill({
+        status: 200,
+        json: { entry: { ...ENTRIES[0], contentHtml: TALL_BODY } },
+      });
     });
     await page.reload();
     await expect(page.locator(ROWS)).toBeVisible();

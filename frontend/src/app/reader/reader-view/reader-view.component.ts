@@ -26,6 +26,7 @@ import {
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
 import { PaywallNoticeComponent } from '../paywall-notice/paywall-notice.component';
 import { WarningBoxComponent } from '../../shared/warning-box/warning-box.component';
+import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
 import {
   EntryDto,
   ReaderArticle,
@@ -33,6 +34,7 @@ import {
   ReaderFailure,
   SubscriptionTagDto,
 } from '../models';
+import { EntryBodyService } from '../entry-body.service';
 import { ReaderContentService } from '../reader-content.service';
 import { describeLoadError } from '../reader-load-error';
 import { ReaderModeService } from '../reader-mode.service';
@@ -123,6 +125,7 @@ function slugify(text: string): string {
     TranslocoPipe,
     PaywallNoticeComponent,
     WarningBoxComponent,
+    ErrorBannerComponent,
   ],
   templateUrl: './reader-view.component.html',
   styleUrls: ['./reader-view.component.scss', './reader-view.component.content.scss'],
@@ -150,6 +153,7 @@ export class ReaderViewComponent {
   private readonly titleHeading = viewChild<ElementRef<HTMLElement>>('titleHeading');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly reader = inject(ReaderContentService);
+  private readonly bodyService = inject(EntryBodyService);
   private readonly i18n = inject(TranslocoService);
   protected readonly readerMode = inject(ReaderModeService);
   private readonly language = inject(LanguageService);
@@ -315,15 +319,38 @@ export class ReaderViewComponent {
   /** Estimated minutes to read the displayed text; null hides the meta chip. */
   readonly readingMinutes = computed(() => estimateReadingMinutes(this.displayHtml()));
 
+  /** The feed body for the open entry, fetched from the store on demand. Read
+   *  unconditionally (not just in original mode) so the request starts the
+   *  moment the entry opens, not only once the reader toggle falls back to it. */
+  private readonly feedBody = computed(() => {
+    const e = this.entry();
+    return e ? this.bodyService.body(e.id)() : null;
+  });
+
+  /** Whether the feed body failed to load and reader mode has no extracted
+   *  article to show instead — the one case with nothing already on screen to
+   *  fall back to beyond the summary. */
+  readonly feedBodyFailed = computed(() => {
+    if (this.mode() === 'reader' && this.article()) return false;
+    return this.feedBody()?.status === 'error';
+  });
+
   readonly displayHtml = computed(() => {
     const e = this.entry();
     if (!e) return '';
     const a = this.article();
-    // Original mode falls back through summary: many feeds populate only one of
-    // contentHtml/summary, so preferring contentHtml then summary avoids a blank
-    // pane under the "showing the feed's summary" note.
-    return this.mode() === 'reader' && a ? a.contentHtml : (e.contentHtml ?? e.summary ?? '');
+    if (this.mode() === 'reader' && a) return a.contentHtml;
+    // The summary renders at once; the body (once the store fetches it)
+    // replaces it in place, and a failed fetch leaves the summary standing.
+    const body = this.feedBody();
+    return body?.status === 'ok' && body.html !== null ? body.html : (e.summary ?? '');
   });
+
+  /** The inline error's retry action — refetches the open entry's body. */
+  retryBody(): void {
+    const e = this.entry();
+    if (e) this.bodyService.retry(e.id);
+  }
 
   constructor() {
     effect(() => {

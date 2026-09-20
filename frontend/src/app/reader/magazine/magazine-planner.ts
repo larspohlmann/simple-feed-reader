@@ -371,8 +371,7 @@ function demoteUntilFit(kind: EntryKind, entry: EntryDto): EntryKind {
 }
 
 /** An entry with no image but a usable summary — the case the `compact` floor
- *  would strip of its copy. `entryImage` covers both the persisted field and an
- *  inline `<img>`, so an entry that can fill any image block is excluded. */
+ *  would strip of its copy. An entry that can fill any image block is excluded. */
 function hasSummaryButNoImage(entry: EntryDto): boolean {
   return entryImage(entry) === null && hasSummary(entry);
 }
@@ -389,14 +388,12 @@ function fits(kind: EntryKind, entry: EntryDto): boolean {
   const width = image?.width ?? 0;
   switch (kind) {
     case 'hero':
-      // An unknown width is trusted at hero size only for the persisted field —
-      // an inline <img> from an archive row is often a 148px thumbnail, which
-      // produced picture-less heroes. Portraits are refused, demoting to `split`.
+      // An unknown width is trusted at hero size only alongside the persisted
+      // field. Portraits are refused, demoting to `split`.
       return !!image && !isPortrait(image) && (width >= 500 || (width === 0 && !!entry.imageUrl));
     case 'wide':
-      // Same untrusted-inline-thumbnail and portrait guards as hero: a 148px
-      // archive image otherwise fills a full-width band meant for a real photo,
-      // and a portrait one cannot fill a 3:1 band at all.
+      // Same unknown-width and portrait guards as hero: a portrait image
+      // cannot fill a 3:1 band at all.
       return !!image && !isPortrait(image) && (width >= 400 || (width === 0 && !!entry.imageUrl));
     case 'split':
       return !!image && (width >= 300 || (width === 0 && !!entry.imageUrl));

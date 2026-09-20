@@ -14,7 +14,7 @@ const ENTRIES = Array.from({ length: 10 }, (_, i) => ({
   url: `https://example.invalid/${i + 1}`,
   author: null,
   summary: 'A summary long enough to give the row some height. '.repeat(3),
-  contentHtml: '<p>body</p>',
+  excerpt: 'A summary long enough to give the row some height. '.repeat(3),
   publishedAt: '2026-07-25T10:00:00Z',
   createdAt: '2026-07-25T10:00:00Z',
   subscriptionId: 5,

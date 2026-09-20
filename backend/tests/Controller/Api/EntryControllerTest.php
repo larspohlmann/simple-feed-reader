@@ -152,6 +152,34 @@ final class EntryControllerTest extends WebTestCase
         self::assertNull($body['nextCursor']);
     }
 
+    public function testListEntriesCarryAnExcerptButNoContentHtml(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-excerpt-list@example.com');
+
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $feed = new Feed('https://example.com/excerpt-feed.xml');
+        $feed->setTitle('Seeded');
+        $em->persist($feed);
+        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $july1 = new \DateTimeImmutable('2026-07-01T00:00:00Z');
+        $entry = new Entry($feed, 'excerpt-1', 'https://example.com/1', 'Post', $july1, $july1);
+        $entry->setContentHtml('<p>The full body of the article.</p>');
+        $em->persist($entry);
+        $em->flush();
+
+        $client->request('GET', '/api/entries', server: $headers);
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entries']);
+        $first = $body['entries'][0];
+        self::assertIsArray($first);
+        self::assertArrayNotHasKey('contentHtml', $first);
+        self::assertSame('The full body of the article.', $first['excerpt']);
+    }
+
     public function testExposesThePersistedImageOnEachEntry(): void
     {
         $client = self::createClient();
@@ -211,6 +239,8 @@ final class EntryControllerTest extends WebTestCase
         $duplicate = $entry['duplicates'][0];
         self::assertIsArray($duplicate);
         self::assertSame('Feed B', $duplicate['source']);
+        self::assertArrayNotHasKey('contentHtml', $duplicate);
+        self::assertArrayHasKey('excerpt', $duplicate);
     }
 
     public function testPaginatesWithCursor(): void
@@ -369,6 +399,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(EntityManagerInterface::class, $em);
         $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed(), 'guid' => 'g1']);
         self::assertInstanceOf(Entry::class, $entry);
+        $entry->setContentHtml('<p>For-you body text.</p>');
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
         $run->snapshot([[1]]);
@@ -386,6 +417,8 @@ final class EntryControllerTest extends WebTestCase
         $first = $body['entries'][0];
         self::assertIsArray($first);
         self::assertSame('Post 1', $first['title']);
+        self::assertArrayNotHasKey('contentHtml', $first);
+        self::assertSame('For-you body text.', $first['excerpt']);
         // Debug off hides both the score and the reason (#342): the reason used
         // to show with the score suppressed, which read as inconsistent.
         self::assertArrayNotHasKey('recommendationReason', $first);
@@ -997,6 +1030,35 @@ final class EntryControllerTest extends WebTestCase
         self::assertSame('Post 1', $body['entry']['title']);
         self::assertSame('Seeded', $body['entry']['source']);
         self::assertFalse($body['entry']['isHidden']);
+    }
+
+    public function testGetReturnsContentHtmlOnTheDetailShape(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-get-detail@example.com');
+
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $feed = new Feed('https://example.com/detail-feed.xml');
+        $feed->setTitle('Seeded');
+        $em->persist($feed);
+        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $july1 = new \DateTimeImmutable('2026-07-01T00:00:00Z');
+        $entry = new Entry($feed, 'detail-1', 'https://example.com/1', 'Post', $july1, $july1);
+        $entry->setContentHtml('<p>The full body of the article.</p>');
+        $em->persist($entry);
+        $em->flush();
+        $entryId = $entry->getId();
+        self::assertNotNull($entryId);
+
+        $client->request('GET', "/api/entries/$entryId", server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entry']);
+        self::assertSame('<p>The full body of the article.</p>', $body['entry']['contentHtml']);
+        self::assertSame('The full body of the article.', $body['entry']['excerpt']);
     }
 
     public function testGetUnsubscribedEntryIs404(): void
