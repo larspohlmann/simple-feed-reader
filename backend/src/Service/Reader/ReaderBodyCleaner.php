@@ -109,9 +109,8 @@ final readonly class ReaderBodyCleaner
         // reader's own row-of-cells marker before media planning sees the body.
         $this->recipeFactsCleaner->cleanIn($document);
 
-        // Before planning: drop the dek and lead image a responsive page ships
-        // twice (one copy hidden by CSS the scraper never runs), so the planner
-        // sees one image, not a phantom second lead visual (#963).
+        // Drop the dek a responsive page ships twice, one copy hidden by CSS the
+        // scraper never runs (#963; the fragile image half was removed in #1088).
         $this->duplicateCollapser->collapseIn($document);
 
         // plan() only classifies, so restore() still sees every body image and

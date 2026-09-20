@@ -9,19 +9,23 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Removes a paragraph or image that repeats the one just before it. A responsive
- * publisher emits the dek and the lead figure once per breakpoint and hides all
- * but one with CSS; the scraper keeps every copy because it never runs the page
- * styles, so the reader would show the same words and the same photo twice
- * (#963, measured on The Verge). Only a block that repeats its immediate
- * predecessor is dropped, so a sentence or a photo reused elsewhere survives.
+ * Removes a paragraph that repeats the one just before it. A responsive
+ * publisher emits the dek once per breakpoint and hides all but one with CSS;
+ * the scraper keeps every copy because it never runs the page styles, so the
+ * reader would show the same words twice (#963, measured on The Verge). Only a
+ * paragraph that repeats its immediate predecessor is dropped, so a sentence
+ * reused elsewhere survives.
  *
- * A recovered embed is left out of both comparisons: the reader injects one per
- * in-body player, so consecutive embeds are distinct media, never a responsive
- * duplicate. Their fingerprints collide anyway — every YouTube poster's filename
- * is the quality label `hqdefault.jpg`, and a posterless embed (Vimeo,
- * SoundCloud, Brightcove) is a bare `<a>` carrying the provider's fixed label —
- * so without the skip the second of a pair would collapse into the first (#1051).
+ * Images are deliberately not de-duplicated. Deciding "same photo?" from URL
+ * fingerprints repeatedly deleted distinct photos that shared only a generic
+ * filename (#1032 Pixabay, #1051 YouTube posters, #1088 CBC `default.jpg`);
+ * showing a responsive duplicate twice is a lesser harm than dropping the wrong
+ * one, so a doubled image is left for the reader.
+ *
+ * A recovered embed is left out of the comparison: the reader injects a bare
+ * `<a>` per in-body player, and a posterless embed (Vimeo, SoundCloud,
+ * Brightcove) carries the provider's fixed label, so two in a row read as
+ * identical prose that must not collapse (#1051).
  *
  * Mutates the shared document in place; ReaderBodyCleaner parses and serialises
  * once around it.
@@ -34,12 +38,6 @@ final readonly class DuplicateBlockCollapser
 
     public function collapseIn(HTMLDocument $document): void
     {
-        $this->collapseParagraphs($document);
-        $this->collapseImages($document);
-    }
-
-    private function collapseParagraphs(HTMLDocument $document): void
-    {
         $previousText = null;
         foreach ($this->prose($document) as $paragraph) {
             $text = $this->normalize((string) $paragraph->textContent);
@@ -51,23 +49,11 @@ final readonly class DuplicateBlockCollapser
         }
     }
 
-    private function collapseImages(HTMLDocument $document): void
-    {
-        $previousAsset = null;
-        foreach ($this->images($document) as $image) {
-            $asset = ImageIdentity::fromUrl((string) $image->getAttribute('src'));
-            if ($previousAsset !== null && $asset->isSameRendition($previousAsset)) {
-                $this->removeBlock($image);
-                continue;
-            }
-            $previousAsset = $asset;
-        }
-    }
-
     /**
-     * Paragraphs that carry prose, not a wrapped figure, a blank line or a
-     * posterless embed: an empty line never marks a duplicate, an image is
-     * compared as an asset, and an embed is media the reader injected.
+     * Paragraphs that carry prose, not a wrapped image, a blank line or a
+     * posterless embed: an empty line never marks a duplicate, an image block
+     * is not compared by its caption text, and an embed is media the reader
+     * injected.
      *
      * @return list<Element>
      */
@@ -88,20 +74,6 @@ final readonly class DuplicateBlockCollapser
         }
 
         return $paragraphs;
-    }
-
-    /** @return list<Element> */
-    private function images(HTMLDocument $document): array
-    {
-        $images = [];
-        foreach ($document->querySelectorAll('img') as $image) {
-            $hasSource = trim((string) $image->getAttribute('src')) !== '';
-            if ($hasSource && !$this->isRecoveredEmbedAnchor($image->closest('a'))) {
-                $images[] = $image;
-            }
-        }
-
-        return $images;
     }
 
     /** True when the anchor is a recovered embed link, keyed by the shared provider allow-list. */

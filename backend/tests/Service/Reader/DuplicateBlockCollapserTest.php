@@ -33,45 +33,12 @@ final class DuplicateBlockCollapserTest extends TestCase
         self::assertSame(1, substr_count($html, 'Apple might recycle the name.'));
     }
 
-    /** The desktop and mobile <img> point at different renditions of one photo. */
-    public function testRemovesAnImageThatRepeatsThePrecedingImageOfTheSameAsset(): void
-    {
-        $html = $this->collapsed(
-            '<p><img src="https://x.test/stk071-apple-b.jpg?w=2400" alt="Apple event"></p>'
-            . '<p><img src="https://x.test/stk071-apple-b.jpg?w=828" alt="Apple event"></p>'
-        );
-
-        self::assertSame(1, substr_count($html, '<img'));
-        self::assertStringContainsString('w=2400', $html);
-    }
-
-    /** The paragraph wrapping the removed duplicate image must go with it, not linger empty. */
-    public function testRemovesTheEmptyParagraphLeftByARemovedDuplicateImage(): void
-    {
-        $html = $this->collapsed(
-            '<div><p><img src="https://x.test/stk071-apple-b.jpg?w=2400" alt="Apple event"></p>'
-            . '<p><img src="https://x.test/stk071-apple-b.jpg?w=828" alt="Apple event"></p></div>'
-        );
-
-        self::assertSame(1, substr_count($html, '<p'));
-    }
-
     public function testKeepsTwoDifferentConsecutiveParagraphs(): void
     {
         $html = $this->collapsed('<p>First sentence.</p><p>Second sentence.</p>');
 
         self::assertStringContainsString('First sentence.', $html);
         self::assertStringContainsString('Second sentence.', $html);
-    }
-
-    public function testKeepsTwoDifferentConsecutiveImages(): void
-    {
-        $html = $this->collapsed(
-            '<p><img src="https://x.test/photo-alpha-12345.jpg" alt="Alpha"></p>'
-            . '<p><img src="https://x.test/photo-bravo-67890.jpg" alt="Bravo"></p>'
-        );
-
-        self::assertSame(2, substr_count($html, '<img'));
     }
 
     /** A different paragraph between two equal ones breaks the chain, so neither is a duplicate of its predecessor. */
@@ -82,8 +49,8 @@ final class DuplicateBlockCollapserTest extends TestCase
         self::assertSame(2, substr_count($html, 'Same line.'));
     }
 
-    /** The real shape: the source repeats both the dek and the lead image; each must survive once. */
-    public function testCollapsesAResponsiveLeadThatRepeatsBothDekAndImage(): void
+    /** The dek repeats once per breakpoint; only the dek is collapsed now, the lead image is kept (#1088). */
+    public function testCollapsesTheResponsiveDuplicateDek(): void
     {
         $html = $this->collapsed(
             '<div><div><p>Apple might recycle the name.</p></div>'
@@ -94,20 +61,27 @@ final class DuplicateBlockCollapserTest extends TestCase
         );
 
         self::assertSame(1, substr_count($html, 'Apple might recycle the name.'));
-        self::assertSame(1, substr_count($html, '<img'));
         self::assertStringContainsString('Cath Virginia', $html);
     }
 
-    /** A blank line is spacing, not content; two of them are not a duplicate to collapse. */
-    public function testKeepsConsecutiveBlankParagraphs(): void
+    /**
+     * Image de-duplication was removed as too URL-fingerprint-fragile: it deleted
+     * distinct photos that shared only a generic filename (#1032 Pixabay, #1051
+     * YouTube posters, #1088 CBC). A responsive duplicate image is now kept, not
+     * collapsed — showing one twice beats deleting the wrong one.
+     */
+    public function testKeepsAResponsiveDuplicateImage(): void
     {
-        $html = $this->collapsed('<p> </p><p> </p>');
+        $html = $this->collapsed(
+            '<p><img src="https://x.test/stk071-apple-b.jpg?w=2400" alt="Apple event"></p>'
+            . '<p><img src="https://x.test/stk071-apple-b.jpg?w=828" alt="Apple event"></p>'
+        );
 
-        self::assertSame(2, substr_count($html, '<p'));
+        self::assertSame(2, substr_count($html, '<img'));
     }
 
-    /** A paragraph that wraps a distinct image is compared as an image, never by its shared caption text. */
-    public function testKeepsTwoParagraphsThatWrapDifferentImagesUnderTheSameText(): void
+    /** A paragraph that wraps an image is never collapsed by its text: image blocks are out of the prose comparison. */
+    public function testKeepsTwoParagraphsThatWrapImagesUnderTheSameText(): void
     {
         $html = $this->collapsed(
             '<p>Gallery <img src="https://x.test/pic-alpha-11111.jpg" alt="a"></p>'
@@ -118,45 +92,18 @@ final class DuplicateBlockCollapserTest extends TestCase
         self::assertSame(2, substr_count($html, '<img'));
     }
 
-    /**
-     * Two different stock photos whose filenames share only provenance words
-     * (the library, a batch date, "download") are distinct images, not a
-     * responsive duplicate — the reader must keep both (#1032, Utopia/Pixabay).
-     */
-    public function testKeepsTwoDistinctStockPhotosThatShareOnlyProvenanceTokens(): void
+    /** A blank line is spacing, not content; two of them are not a duplicate to collapse. */
+    public function testKeepsConsecutiveBlankParagraphs(): void
     {
-        $html = $this->collapsed(
-            '<figure><img src="https://x.test/wreath-cc0-pixabay-couleur-260905-download.jpg" alt="a"></figure>'
-            . '<figure><img src="https://x.test/leaves-cc0-pixabay-hans-260905-download.jpg" alt="b"></figure>'
-        );
+        $html = $this->collapsed('<p> </p><p> </p>');
 
-        self::assertSame(2, substr_count($html, '<img'));
-    }
-
-    /**
-     * The reader recovers each in-body video as an embed link with a poster; every
-     * YouTube poster's filename is the fixed quality label `hqdefault.jpg`, so the
-     * posters share a stem though the videos differ. They are distinct media
-     * anchors, not a responsive-duplicate image, and both must survive (#1051).
-     */
-    public function testKeepsThePostersOfTwoDistinctRecoveredEmbeds(): void
-    {
-        $html = $this->collapsed(
-            '<p><a href="https://www.youtube-nocookie.com/embed/GAq34QMhzEM">'
-            . '<img src="https://i.ytimg.com/vi/GAq34QMhzEM/hqdefault.jpg" alt="Watch on YouTube"></a></p>'
-            . '<p><a href="https://www.youtube-nocookie.com/embed/_jW8hlXNQmY">'
-            . '<img src="https://i.ytimg.com/vi/_jW8hlXNQmY/hqdefault.jpg" alt="Watch on YouTube"></a></p>'
-        );
-
-        self::assertSame(2, substr_count($html, '<img'));
-        self::assertStringContainsString('GAq34QMhzEM', $html);
-        self::assertStringContainsString('_jW8hlXNQmY', $html);
+        self::assertSame(2, substr_count($html, '<p'));
     }
 
     /**
      * A posterless embed (Vimeo, SoundCloud, Brightcove) recovers as a bare
      * `<a>` carrying the provider's fixed label, so two in a row read as
-     * identical prose. The paragraph path must spare them too (#1051).
+     * identical prose. The paragraph path must spare them (#1051).
      */
     public function testKeepsTwoPosterlessEmbedsThatCarryTheSameLabel(): void
     {
@@ -167,30 +114,6 @@ final class DuplicateBlockCollapserTest extends TestCase
 
         self::assertStringContainsString('111111111', $html);
         self::assertStringContainsString('222222222', $html);
-    }
-
-    /** A responsive-duplicate image linked to its own full-size file is still a duplicate; only recovered embeds are spared. */
-    public function testStillCollapsesADuplicateImageLinkedToItsOwnFullSizeFile(): void
-    {
-        $html = $this->collapsed(
-            '<p><a href="https://x.test/stk071-apple-b.jpg">'
-            . '<img src="https://x.test/stk071-apple-b.jpg?w=2400" alt="e"></a></p>'
-            . '<p><a href="https://x.test/stk071-apple-b.jpg">'
-            . '<img src="https://x.test/stk071-apple-b.jpg?w=828" alt="e"></a></p>'
-        );
-
-        self::assertSame(1, substr_count($html, '<img'));
-    }
-
-    /** The wrapper that only spaced the removed image must go with it, whitespace and all. */
-    public function testRemovesAWhitespaceOnlyParagraphLeftByARemovedDuplicateImage(): void
-    {
-        $html = $this->collapsed(
-            '<div><p> <img src="https://x.test/stk071-apple-b.jpg?w=2400" alt="e"> </p>'
-            . '<p> <img src="https://x.test/stk071-apple-b.jpg?w=828" alt="e"> </p></div>'
-        );
-
-        self::assertSame(1, substr_count($html, '<p'));
     }
 
     /** Surrounding whitespace is not a difference: the dek repeats and one copy goes. */
