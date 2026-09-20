@@ -44,6 +44,11 @@ final readonly class PageTextBlocks
         return new self(array_values($prose));
     }
 
+    public static function none(): self
+    {
+        return new self([]);
+    }
+
     /** The text of the nearest prose block before the element, never one that contains it. */
     public function before(Element $element): ?string
     {
