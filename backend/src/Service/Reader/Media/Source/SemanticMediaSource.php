@@ -31,18 +31,12 @@ final readonly class SemanticMediaSource implements MediaCandidateSourceInterfac
 
     public function find(RawPage $page): array
     {
-        $document = $page->document;
-        if ($document === null) {
-            return [];
-        }
-
-        $blocks = $page->blocks;
         $found = [];
-        foreach ($document->querySelectorAll('audio, video') as $element) {
+        foreach ($page->document->querySelectorAll('audio, video') as $element) {
             if (PageFurniture::holds($element)) {
                 continue;
             }
-            $candidate = $this->candidateFor($element, $blocks->before($element));
+            $candidate = $this->candidateFor($element, $page->blocks->before($element));
             if ($candidate !== null) {
                 $found[] = $candidate;
             }

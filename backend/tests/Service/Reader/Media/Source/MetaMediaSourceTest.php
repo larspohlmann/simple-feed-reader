@@ -10,28 +10,21 @@ use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Provider\SoundCloudEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
-use App\Service\Reader\Media\RawPage;
 use App\Service\Reader\Media\Source\MetaMediaSource;
 use PHPUnit\Framework\TestCase;
 
 final class MetaMediaSourceTest extends TestCase
 {
-    private MetaMediaSource $source;
+    use FindsMediaInRawPage;
 
-    protected function setUp(): void
+    private function source(): MetaMediaSource
     {
-        $this->source = new MetaMediaSource(
+        return new MetaMediaSource(
             new MediaUrlKind(
                 new DurableMediaUrl(),
                 new EmbedProviders([new YouTubeEmbedProvider(), new SoundCloudEmbedProvider()]),
             ),
         );
-    }
-
-    /** @return list<\App\Service\Reader\Media\MediaCandidate> */
-    private function find(string $html, string $url): array
-    {
-        return $this->source->find(RawPage::parse($html, $url));
     }
 
     public function testTakesOgAudioWhenItIsAFile(): void

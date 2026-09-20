@@ -32,14 +32,8 @@ final readonly class YouTubeIdAttributeSource implements MediaCandidateSourceInt
 
     public function find(RawPage $page): array
     {
-        $document = $page->document;
-        if ($document === null) {
-            return [];
-        }
-
-        $blocks = $page->blocks;
         $found = [];
-        foreach ($document->querySelectorAll('[' . self::VIDEO_ID_ATTRIBUTE . ']') as $element) {
+        foreach ($page->document->querySelectorAll('[' . self::VIDEO_ID_ATTRIBUTE . ']') as $element) {
             $target = $this->targetOf($element);
             if ($target !== null) {
                 $found[$target->url] ??= new MediaCandidate(
@@ -47,7 +41,7 @@ final readonly class YouTubeIdAttributeSource implements MediaCandidateSourceInt
                     $target->url,
                     $target->posterUrl,
                     $target->label,
-                    $blocks->before($element),
+                    $page->blocks->before($element),
                 );
             }
         }

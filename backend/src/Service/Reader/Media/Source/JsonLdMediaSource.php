@@ -38,19 +38,13 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
 
     public function find(RawPage $page): array
     {
-        $document = $page->document;
-        if ($document === null) {
-            return [];
-        }
-
-        $blocks = $page->blocks;
         $found = [];
-        foreach ($document->querySelectorAll('script[type="application/ld+json"]') as $script) {
+        foreach ($page->document->querySelectorAll('script[type="application/ld+json"]') as $script) {
             if (PageFurniture::holds($script)) {
                 continue;
             }
             foreach ($this->declarationsIn($script->textContent ?? '') as $declaration) {
-                $candidate = $this->firstPlayable($declaration, $blocks->before($script));
+                $candidate = $this->firstPlayable($declaration, $page->blocks->before($script));
                 if ($candidate !== null) {
                     $found[$candidate->url] ??= $candidate;
                 }

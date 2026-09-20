@@ -11,30 +11,24 @@ use App\Service\Reader\Media\MediaRelevance;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Provider\SoundCloudEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
-use App\Service\Reader\Media\RawPage;
 use App\Service\Reader\Media\Source\AttributeMediaSource;
 use PHPUnit\Framework\TestCase;
 
 final class AttributeMediaSourceTest extends TestCase
 {
+    use FindsMediaInRawPage;
+
     private const string PROSE =
         'The paragraph the player followed on the source page, long enough to be prose.';
 
-    private AttributeMediaSource $source;
-
-    protected function setUp(): void
+    private function source(): AttributeMediaSource
     {
         $providers = new EmbedProviders([new YouTubeEmbedProvider(), new SoundCloudEmbedProvider()]);
-        $this->source = new AttributeMediaSource(
+
+        return new AttributeMediaSource(
             new MediaUrlKind(new DurableMediaUrl(), $providers),
             new MediaRelevance(),
         );
-    }
-
-    /** @return list<\App\Service\Reader\Media\MediaCandidate> */
-    private function find(string $html, string $url): array
-    {
-        return $this->source->find(RawPage::parse($html, $url));
     }
 
     /** Deutschlandradio's data-audio-src, reached without naming Deutschlandradio. */

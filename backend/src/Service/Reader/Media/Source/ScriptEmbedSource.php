@@ -37,13 +37,8 @@ final readonly class ScriptEmbedSource implements MediaCandidateSourceInterface
 
     public function find(RawPage $page): array
     {
-        $document = $page->document;
-        if ($document === null) {
-            return [];
-        }
-
         $found = [];
-        foreach ($document->querySelectorAll('script') as $script) {
+        foreach ($page->document->querySelectorAll('script') as $script) {
             if (PageFurniture::holds($script)) {
                 continue;
             }

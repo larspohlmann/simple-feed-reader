@@ -8,28 +8,21 @@ use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\Provider\SoundCloudEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
-use App\Service\Reader\Media\RawPage;
 use App\Service\Reader\Media\Source\PageEmbedSource;
 use PHPUnit\Framework\TestCase;
 
 final class PageEmbedSourceTest extends TestCase
 {
+    use FindsMediaInRawPage;
+
     private const string PROSE =
         'The paragraph the player followed on the source page, long enough to be prose.';
 
-    private PageEmbedSource $source;
-
-    protected function setUp(): void
+    private function source(): PageEmbedSource
     {
-        $this->source = new PageEmbedSource(
+        return new PageEmbedSource(
             new EmbedProviders([new YouTubeEmbedProvider(), new SoundCloudEmbedProvider()])
         );
-    }
-
-    /** @return list<\App\Service\Reader\Media\MediaCandidate> */
-    private function find(string $html, string $url): array
-    {
-        return $this->source->find(RawPage::parse($html, $url));
     }
 
     /** 5 Magazine: readability removes this iframe before the body cleaner runs. */

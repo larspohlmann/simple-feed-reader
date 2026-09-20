@@ -8,25 +8,18 @@ use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\RawPage;
 use App\Service\Reader\Media\Source\ZdfPlayerConfigSource;
 use PHPUnit\Framework\TestCase;
 
 final class ZdfPlayerConfigSourceTest extends TestCase
 {
+    use FindsMediaInRawPage;
+
     private const string PAGE_URL = 'https://www.zdfheute.de/politik/ausland/trump-ki-risiken-schwindel-100.html';
 
-    private ZdfPlayerConfigSource $source;
-
-    protected function setUp(): void
+    private function source(): ZdfPlayerConfigSource
     {
-        $this->source = new ZdfPlayerConfigSource(new MediaUrlKind(new DurableMediaUrl(), new EmbedProviders([])));
-    }
-
-    /** @return list<\App\Service\Reader\Media\MediaCandidate> */
-    private function find(string $html, string $url): array
-    {
-        return $this->source->find(RawPage::parse($html, $url));
+        return new ZdfPlayerConfigSource(new MediaUrlKind(new DurableMediaUrl(), new EmbedProviders([])));
     }
 
     /** The page names each clip in a player config, escaped as it ships in the Next.js payload. */

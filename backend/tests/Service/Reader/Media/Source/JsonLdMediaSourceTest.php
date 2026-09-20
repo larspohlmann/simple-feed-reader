@@ -11,30 +11,24 @@ use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Provider\BrightcoveEmbedProvider;
 use App\Service\Reader\Media\Provider\SoundCloudEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
-use App\Service\Reader\Media\RawPage;
 use App\Service\Reader\Media\Source\JsonLdMediaSource;
 use PHPUnit\Framework\TestCase;
 
 final class JsonLdMediaSourceTest extends TestCase
 {
+    use FindsMediaInRawPage;
+
     private const string PROSE =
         'The paragraph the player followed on the source page, long enough to be prose.';
 
-    private JsonLdMediaSource $source;
-
-    protected function setUp(): void
+    private function source(): JsonLdMediaSource
     {
         $providers = [new YouTubeEmbedProvider(), new SoundCloudEmbedProvider(), new BrightcoveEmbedProvider()];
-        $this->source = new JsonLdMediaSource(
+
+        return new JsonLdMediaSource(
             new MediaUrlKind(new DurableMediaUrl(), new EmbedProviders($providers)),
             new EmbedProviders($providers),
         );
-    }
-
-    /** @return list<\App\Service\Reader\Media\MediaCandidate> */
-    private function find(string $html, string $url): array
-    {
-        return $this->source->find(RawPage::parse($html, $url));
     }
 
     public function testTakesContentUrlFromAVideoObject(): void

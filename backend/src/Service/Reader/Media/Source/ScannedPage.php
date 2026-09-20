@@ -29,9 +29,9 @@ final readonly class ScannedPage
         return new self($page->blocks, $page->url, self::ogImage($page->document));
     }
 
-    private static function ogImage(?HTMLDocument $document): ?string
+    private static function ogImage(HTMLDocument $document): ?string
     {
-        $content = $document?->querySelector(self::OG_IMAGE)?->getAttribute('content');
+        $content = $document->querySelector(self::OG_IMAGE)?->getAttribute('content');
 
         return $content !== null && preg_match('#^https://#i', $content) === 1 ? $content : null;
     }

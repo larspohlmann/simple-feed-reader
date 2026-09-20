@@ -7,26 +7,19 @@ namespace App\Tests\Service\Reader\Media\Source;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
-use App\Service\Reader\Media\RawPage;
 use App\Service\Reader\Media\Source\YouTubeIdAttributeSource;
 use PHPUnit\Framework\TestCase;
 
 final class YouTubeIdAttributeSourceTest extends TestCase
 {
+    use FindsMediaInRawPage;
+
     private const string PROSE =
         'The paragraph the player followed on the source page, long enough to be prose.';
 
-    private YouTubeIdAttributeSource $source;
-
-    protected function setUp(): void
+    private function source(): YouTubeIdAttributeSource
     {
-        $this->source = new YouTubeIdAttributeSource(new EmbedProviders([new YouTubeEmbedProvider()]));
-    }
-
-    /** @return list<\App\Service\Reader\Media\MediaCandidate> */
-    private function find(string $html, string $url): array
-    {
-        return $this->source->find(RawPage::parse($html, $url));
+        return new YouTubeIdAttributeSource(new EmbedProviders([new YouTubeEmbedProvider()]));
     }
 
     /** The Guardian's youtube-atom, reached without naming the Guardian. */

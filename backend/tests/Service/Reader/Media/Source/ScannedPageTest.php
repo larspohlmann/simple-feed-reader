@@ -6,63 +6,33 @@ namespace App\Tests\Service\Reader\Media\Source;
 
 use App\Service\Reader\Media\RawPage;
 use App\Service\Reader\Media\Source\ScannedPage;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class ScannedPageTest extends TestCase
 {
-    public function testFromReadsNoPosterWhenThePageFailedToParse(): void
-    {
-        $page = ScannedPage::from(RawPage::parse('', 'https://example.test/article'));
+    private const string PAGE_URL = 'https://example.test/article';
 
-        self::assertNull($page->posterUrl);
-        self::assertSame('https://example.test/article', $page->url);
+    /** @return iterable<string, array{string, ?string}> */
+    public static function ogImageProvider(): iterable
+    {
+        yield 'https og:image' => [
+            '<meta property="og:image" content="https://example.test/poster.jpg">',
+            'https://example.test/poster.jpg',
+        ];
+        yield 'http og:image' => ['<meta property="og:image" content="http://example.test/poster.jpg">', null];
+        yield 'protocol-relative og:image' => ['<meta property="og:image" content="//example.test/poster.jpg">', null];
+        yield 'no og:image' => ['<title>No poster here</title>', null];
     }
 
-    public function testFromReadsTheOgImageAsThePoster(): void
+    #[DataProvider('ogImageProvider')]
+    public function testFromReadsOnlyAnHttpsOgImageAsThePoster(string $head, ?string $expectedPoster): void
     {
-        $html = <<<'HTML'
-            <html><head>
-                <meta property="og:image" content="https://example.test/poster.jpg">
-            </head><body></body></html>
-            HTML;
+        $html = '<html><head>' . $head . '</head><body></body></html>';
 
-        $page = ScannedPage::from(RawPage::parse($html, 'https://example.test/article'));
+        $page = ScannedPage::from(RawPage::parse($html, self::PAGE_URL));
 
-        self::assertSame('https://example.test/poster.jpg', $page->posterUrl);
-    }
-
-    public function testFromRejectsANonHttpsOgImage(): void
-    {
-        $html = <<<'HTML'
-            <html><head>
-                <meta property="og:image" content="http://example.test/poster.jpg">
-            </head><body></body></html>
-            HTML;
-
-        $page = ScannedPage::from(RawPage::parse($html, 'https://example.test/article'));
-
-        self::assertNull($page->posterUrl);
-    }
-
-    public function testFromRejectsAProtocolRelativeOgImage(): void
-    {
-        $html = <<<'HTML'
-            <html><head>
-                <meta property="og:image" content="//example.test/poster.jpg">
-            </head><body></body></html>
-            HTML;
-
-        $page = ScannedPage::from(RawPage::parse($html, 'https://example.test/article'));
-
-        self::assertNull($page->posterUrl);
-    }
-
-    public function testFromReadsNoPosterWhenTheParsedPageHasNoOgImageTag(): void
-    {
-        $html = '<html><head><title>No poster here</title></head><body></body></html>';
-
-        $page = ScannedPage::from(RawPage::parse($html, 'https://example.test/article'));
-
-        self::assertNull($page->posterUrl);
+        self::assertSame($expectedPoster, $page->posterUrl);
+        self::assertSame(self::PAGE_URL, $page->url);
     }
 }

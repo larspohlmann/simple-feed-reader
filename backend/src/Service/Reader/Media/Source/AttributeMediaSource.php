@@ -40,12 +40,7 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
 
     public function find(RawPage $page): array
     {
-        $document = $page->document;
-        if ($document === null) {
-            return [];
-        }
-
-        return $this->candidates($this->originsByKind($document), ScannedPage::from($page));
+        return $this->candidates($this->originsByKind($page->document), ScannedPage::from($page));
     }
 
     /**

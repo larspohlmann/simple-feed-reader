@@ -33,14 +33,9 @@ final readonly class MetaMediaSource implements MediaCandidateSourceInterface
 
     public function find(RawPage $page): array
     {
-        $document = $page->document;
-        if ($document === null) {
-            return [];
-        }
-
         $found = [];
         foreach (self::PROPERTIES as $property) {
-            $candidate = $this->candidateFor($document, $property);
+            $candidate = $this->candidateFor($page->document, $property);
             if ($candidate !== null) {
                 $found[$candidate->url] = $candidate;
             }

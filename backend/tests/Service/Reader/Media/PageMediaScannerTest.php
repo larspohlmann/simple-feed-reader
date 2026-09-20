@@ -14,7 +14,6 @@ use App\Service\Reader\Media\MediaCandidateSourceInterface;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\PageMediaScanner;
 use App\Service\Reader\Media\RawPage;
-use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class PageMediaScannerTest extends TestCase
@@ -54,35 +53,36 @@ final class PageMediaScannerTest extends TestCase
         };
     }
 
-    /** @return MediaCandidateSourceInterface&object{found: bool, document: ?HTMLDocument} */
+    private function page(): RawPage
+    {
+        return RawPage::parse('<html></html>', 'https://x.test/a');
+    }
+
+    /** @return MediaCandidateSourceInterface&object{page: ?RawPage} */
     private function recordingSource(): MediaCandidateSourceInterface
     {
         return new class implements MediaCandidateSourceInterface {
-            public bool $found = false;
-            public ?HTMLDocument $document = null;
+            public ?RawPage $page = null;
 
             public function find(RawPage $page): array
             {
-                $this->found = true;
-                $this->document = $page->document;
+                $this->page = $page;
 
                 return [];
             }
         };
     }
 
-    public function testParsesThePageOnceAndSharesOneDocumentWithEverySource(): void
+    public function testHandsEverySourceTheSamePage(): void
     {
         $first = $this->recordingSource();
         $second = $this->recordingSource();
+        $page = $this->page();
 
-        $scanner = new PageMediaScanner([$first, $second]);
-        $scanner->scan('<html><body><p>Prose.</p></body></html>', 'https://x.test/a');
+        new PageMediaScanner([$first, $second])->scan($page);
 
-        self::assertTrue($first->found);
-        self::assertTrue($second->found);
-        self::assertInstanceOf(HTMLDocument::class, $first->document);
-        self::assertSame($first->document, $second->document);
+        self::assertSame($page, $first->page);
+        self::assertSame($page, $second->page);
     }
 
     public function testRescuesAPosterlessVideoWithTheFallbackPoster(): void
@@ -91,7 +91,7 @@ final class PageMediaScannerTest extends TestCase
             $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', null, null, 'Prose.')]),
         ]);
 
-        $media = $scanner->scan('<html></html>', 'https://x.test/a', $this->feed('https://feed.test/poster.jpg'));
+        $media = $scanner->scan($this->page(), $this->feed('https://feed.test/poster.jpg'));
 
         self::assertCount(1, $media->candidates);
         self::assertSame('https://feed.test/poster.jpg', $media->candidates[0]->posterUrl);
@@ -103,7 +103,7 @@ final class PageMediaScannerTest extends TestCase
             $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', null, null, 'Prose.')]),
         ]);
 
-        $media = $scanner->scan('<html></html>', 'https://x.test/a');
+        $media = $scanner->scan($this->page());
 
         self::assertSame([], $media->candidates);
     }
@@ -116,7 +116,7 @@ final class PageMediaScannerTest extends TestCase
             $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', 'https://x.test/og.jpg')]),
         ]);
 
-        $media = $scanner->scan('<html></html>', 'https://x.test/a', $this->feed('https://feed.test/poster.jpg'));
+        $media = $scanner->scan($this->page(), $this->feed('https://feed.test/poster.jpg'));
 
         self::assertSame('https://x.test/og.jpg', $media->candidates[0]->posterUrl);
     }
@@ -128,7 +128,7 @@ final class PageMediaScannerTest extends TestCase
         ]);
         $feed = $this->feed(null, [new EntryAttachment('https://cdn.test/clip.mp4', 'video/mp4')]);
 
-        $media = $scanner->scan('<html></html>', 'https://x.test/a', $feed);
+        $media = $scanner->scan($this->page(), $feed);
 
         self::assertSame('video/mp4', $media->candidates[0]->mimeType);
     }
@@ -140,7 +140,7 @@ final class PageMediaScannerTest extends TestCase
         ]);
         $feed = $this->feed(null, [new EntryAttachment('https://cdn.test/clip.mp4', 'video/mp4')]);
 
-        $media = $scanner->scan('<html></html>', 'https://x.test/a', $feed);
+        $media = $scanner->scan($this->page(), $feed);
 
         self::assertNull($media->candidates[0]->mimeType);
     }
@@ -157,7 +157,7 @@ final class PageMediaScannerTest extends TestCase
             ]),
         ]);
 
-        $media = $scanner->scan('<html></html>', 'https://x.test/a');
+        $media = $scanner->scan($this->page());
 
         self::assertCount(1, $media->candidates);
         self::assertSame('https://x.test/declared.jpg', $media->candidates[0]->posterUrl);
@@ -176,7 +176,7 @@ final class PageMediaScannerTest extends TestCase
             ]),
         ]);
 
-        $media = $scanner->scan('<html></html>', 'https://x.test/a');
+        $media = $scanner->scan($this->page());
 
         self::assertCount(1, $media->candidates);
         self::assertSame('The section the player follows.', $media->candidates[0]->precedingText);
@@ -197,7 +197,7 @@ final class PageMediaScannerTest extends TestCase
 
         $urls = array_map(
             static fn (MediaCandidate $c): string => $c->url,
-            $scanner->scan('<html></html>', 'https://x.test/a')->candidates,
+            $scanner->scan($this->page())->candidates,
         );
 
         self::assertSame([
@@ -217,7 +217,7 @@ final class PageMediaScannerTest extends TestCase
             $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/scanned.webs.mp4', $poster)]),
         ]);
 
-        $media = $scanner->scan('<html></html>', 'https://x.test/a');
+        $media = $scanner->scan($this->page());
 
         self::assertCount(1, $media->candidates);
         self::assertStringContainsString('declared', $media->candidates[0]->url);
@@ -235,7 +235,7 @@ final class PageMediaScannerTest extends TestCase
 
         $scanner = new PageMediaScanner([$this->source($first), $this->source($second)]);
 
-        self::assertCount(ArticleMedia::MAX_ITEMS, $scanner->scan('<html></html>', 'https://x.test/a')->candidates);
+        self::assertCount(ArticleMedia::MAX_ITEMS, $scanner->scan($this->page())->candidates);
     }
 
     /** Kinds are independent, so NPR keeps both its video embed and its audio. */
@@ -246,7 +246,7 @@ final class PageMediaScannerTest extends TestCase
             $this->source([new MediaCandidate(MediaKind::Audio, 'https://x.test/companion.mp3')]),
         ]);
 
-        $media = $scanner->scan('<html></html>', 'https://x.test/a');
+        $media = $scanner->scan($this->page());
 
         self::assertCount(2, $media->candidates);
     }
@@ -261,7 +261,7 @@ final class PageMediaScannerTest extends TestCase
             ]),
         ]);
 
-        self::assertCount(2, $scanner->scan('<html></html>', 'https://x.test/a')->candidates);
+        self::assertCount(2, $scanner->scan($this->page())->candidates);
     }
 
     public function testTheCapStillApplies(): void
@@ -273,7 +273,7 @@ final class PageMediaScannerTest extends TestCase
 
         $scanner = new PageMediaScanner([$this->source($many)]);
 
-        self::assertCount(ArticleMedia::MAX_ITEMS, $scanner->scan('<html></html>', 'https://x.test/a')->candidates);
+        self::assertCount(ArticleMedia::MAX_ITEMS, $scanner->scan($this->page())->candidates);
     }
 
     /** The guard is per-source: a new URL from a source that re-confirms nothing is dropped even when a still-later source re-confirms the kind (#788). */
@@ -287,7 +287,7 @@ final class PageMediaScannerTest extends TestCase
 
         $urls = array_map(
             static fn (MediaCandidate $candidate): string => $candidate->url,
-            $scanner->scan('<html></html>', 'https://x.test/a')->candidates,
+            $scanner->scan($this->page())->candidates,
         );
 
         self::assertSame(['https://x.test/a'], $urls);
@@ -305,7 +305,7 @@ final class PageMediaScannerTest extends TestCase
             ]),
         ]);
 
-        $media = $scanner->scan('<html></html>', 'https://x.test/a');
+        $media = $scanner->scan($this->page());
 
         self::assertCount(1, $media->candidates);
         self::assertSame(MediaKind::Video, $media->candidates[0]->kind);

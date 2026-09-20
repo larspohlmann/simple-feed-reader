@@ -32,14 +32,8 @@ final readonly class PageEmbedSource implements MediaCandidateSourceInterface
 
     public function find(RawPage $page): array
     {
-        $document = $page->document;
-        if ($document === null) {
-            return [];
-        }
-
-        $blocks = $page->blocks;
         $found = [];
-        foreach ($document->querySelectorAll('[src]') as $element) {
+        foreach ($page->document->querySelectorAll('[src]') as $element) {
             if (PageFurniture::holds($element)) {
                 continue;
             }
@@ -50,7 +44,7 @@ final readonly class PageEmbedSource implements MediaCandidateSourceInterface
                     $target->url,
                     $target->posterUrl,
                     $target->label,
-                    $blocks->before($element),
+                    $page->blocks->before($element),
                 );
             }
         }

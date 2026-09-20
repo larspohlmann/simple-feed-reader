@@ -10,29 +10,22 @@ use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Provider\SoundCloudEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
-use App\Service\Reader\Media\RawPage;
 use App\Service\Reader\Media\Source\SemanticMediaSource;
 use PHPUnit\Framework\TestCase;
 
 final class SemanticMediaSourceTest extends TestCase
 {
+    use FindsMediaInRawPage;
+
     private const string PROSE =
         'The paragraph the player followed on the source page, long enough to be prose.';
 
-    private SemanticMediaSource $source;
-
-    protected function setUp(): void
+    private function source(): SemanticMediaSource
     {
-        $this->source = new SemanticMediaSource(new MediaUrlKind(
+        return new SemanticMediaSource(new MediaUrlKind(
             new DurableMediaUrl(),
             new EmbedProviders([new YouTubeEmbedProvider(), new SoundCloudEmbedProvider()]),
         ));
-    }
-
-    /** @return list<\App\Service\Reader\Media\MediaCandidate> */
-    private function find(string $html, string $url): array
-    {
-        return $this->source->find(RawPage::parse($html, $url));
     }
 
     public function testFindsAnAudioElement(): void
