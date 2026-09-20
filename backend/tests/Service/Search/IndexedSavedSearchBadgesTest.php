@@ -121,7 +121,7 @@ final class IndexedSavedSearchBadgesTest extends DbTestCase
             [$this->term(1)],
         );
 
-        self::assertSame([], $result);
+        self::assertSame([1 => []], $result);
         self::assertSame([], $reader->receivedRounds);
     }
 
@@ -184,17 +184,23 @@ final class IndexedSavedSearchBadgesTest extends DbTestCase
 
         $reader = new FakeMultiSearchReader([[new IndexMatches([$foreign->getId() ?? 0], [])]]);
 
-        self::assertSame([], $this->badgesFor($reader, [$this->term(10)]));
+        self::assertSame([10 => []], $this->badgesFor($reader, [$this->term(10)]));
     }
 
-    public function testASearchWithZeroUnreadMatchesIsOmitted(): void
+    /**
+     * Matches the shape SavedSearchEntryRepository::unreadMatchIdsBySavedSearch
+     * answers: every requested search keeps its key, with an empty list when
+     * it has no unread matches — never an omitted key. That parity is what
+     * lets SavedSearchBadgesWithFallback swap the two paths transparently.
+     */
+    public function testASearchWithZeroUnreadMatchesKeepsItsKeyWithAnEmptyList(): void
     {
         $read = $this->entry('a');
         $this->markRead($read);
 
         $reader = new FakeMultiSearchReader([[new IndexMatches([$read->getId() ?? 0], [])]]);
 
-        self::assertSame([], $this->badgesFor($reader, [$this->term(10)]));
+        self::assertSame([10 => []], $this->badgesFor($reader, [$this->term(10)]));
     }
 
     public function testASearchNeedingThreeRoundsWhileAnEarlierOneExhaustsAfterOne(): void
@@ -277,7 +283,10 @@ final class IndexedSavedSearchBadgesTest extends DbTestCase
             [new IndexMatches([$read->getId() ?? 0], []), new IndexMatches([$unread->getId() ?? 0], [])],
         ]);
 
-        self::assertSame([20 => [$unread->getId()]], $this->badgesFor($reader, [$this->term(10), $this->term(20)]));
+        self::assertSame(
+            [10 => [], 20 => [$unread->getId()]],
+            $this->badgesFor($reader, [$this->term(10), $this->term(20)]),
+        );
     }
 
     public function testTheSecondRoundsCursorCarriesTheFirstRoundsLastIdAndItsEffectiveDate(): void
@@ -306,7 +315,9 @@ final class IndexedSavedSearchBadgesTest extends DbTestCase
      * SavedSearchBadgeCandidateRepository query the database path's own
      * unread scan reduces to. Here that is proven by feeding the engine path
      * every entry id a plain-title LIKE match would also find, and asserting
-     * the two answers agree.
+     * the two answers agree — INCLUDING a search with zero matches, so a
+     * shape mismatch (an omitted vs. an empty-list key) cannot hide behind
+     * assertSame comparing only the non-empty entries.
      */
     public function testParityWithTheDatabasePathForAPlainSearch(): void
     {
@@ -315,18 +326,17 @@ final class IndexedSavedSearchBadgesTest extends DbTestCase
         $this->markRead($read);
 
         $reader = new FakeMultiSearchReader([
-            [new IndexMatches([$unread->getId() ?? 0, $read->getId() ?? 0], [])],
+            [new IndexMatches([$unread->getId() ?? 0, $read->getId() ?? 0], []), new IndexMatches([], [])],
         ]);
 
-        $engineResult = $this->badgesFor($reader, [$this->term(10)]);
+        $searches = [$this->term(10), $this->term(20, 'zeppelin')];
+        $engineResult = $this->badgesFor($reader, $searches);
 
         $databaseRepository = self::getContainer()->get(SavedSearchEntryRepository::class);
         self::assertInstanceOf(SavedSearchEntryRepository::class, $databaseRepository);
-        $databaseResult = $databaseRepository->unreadMatchIdsBySavedSearch(
-            $this->user->getId() ?? 0,
-            [$this->term(10)],
-        );
+        $databaseResult = $databaseRepository->unreadMatchIdsBySavedSearch($this->user->getId() ?? 0, $searches);
 
+        self::assertSame([10 => [$unread->getId()], 20 => []], $engineResult);
         self::assertSame($databaseResult, $engineResult);
     }
 

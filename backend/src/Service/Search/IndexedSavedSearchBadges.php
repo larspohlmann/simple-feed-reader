@@ -43,7 +43,7 @@ final readonly class IndexedSavedSearchBadges implements SavedSearchBadgeSource
 
         $feedIds = $this->feeds->idsSubscribedByUser($userId);
         if ($feedIds === []) {
-            return [];
+            return $this->emptyResultFor($searches);
         }
 
         $candidatesBySearch = $this->enumerateCandidates($searches, $feedIds);
@@ -63,7 +63,7 @@ final readonly class IndexedSavedSearchBadges implements SavedSearchBadgeSource
      */
     private function enumerateCandidates(array $searches, array $feedIds): array
     {
-        $candidates = array_fill_keys(array_map(static fn (SavedSearchTerm $s): int => $s->id, $searches), []);
+        $candidates = $this->emptyResultFor($searches);
         $cursorBySearchId = [];
         $active = $searches;
 
@@ -166,6 +166,21 @@ final readonly class IndexedSavedSearchBadges implements SavedSearchBadgeSource
     }
 
     /**
+     * Every requested search, keyed by its id, with an empty match list — the
+     * DB method's own array_fill_keys shape (SavedSearchEntryRepository::matchIdsInOneScan),
+     * kept as one definition so every early-return path in this class agrees
+     * with it.
+     *
+     * @param list<SavedSearchTerm> $searches
+     *
+     * @return array<int, list<int>>
+     */
+    private function emptyResultFor(array $searches): array
+    {
+        return array_fill_keys(array_map(static fn (SavedSearchTerm $s): int => $s->id, $searches), []);
+    }
+
+    /**
      * @param array<int, list<int>> $candidatesBySearch
      *
      * @return list<int>
@@ -181,8 +196,10 @@ final readonly class IndexedSavedSearchBadges implements SavedSearchBadgeSource
     }
 
     /**
-     * Omits a search whose candidates are all read, matching the shape the
-     * database method answers — no empty-list key.
+     * Every requested search keeps its key, `[]` when it has no unread
+     * matches — the exact shape SavedSearchEntryRepository::unreadMatchIdsBySavedSearch
+     * answers, so SavedSearchBadgesWithFallback can swap the two paths
+     * transparently.
      *
      * @param array<int, list<int>> $candidatesBySearch
      * @param array<int, true>      $unreadSet
@@ -193,14 +210,10 @@ final readonly class IndexedSavedSearchBadges implements SavedSearchBadgeSource
     {
         $matches = [];
         foreach ($candidatesBySearch as $searchId => $candidateIds) {
-            $unread = array_values(array_filter(
+            $matches[$searchId] = array_values(array_filter(
                 $candidateIds,
                 static fn (int $id): bool => isset($unreadSet[$id]),
             ));
-            if ($unread === []) {
-                continue;
-            }
-            $matches[$searchId] = $unread;
         }
 
         return $matches;
