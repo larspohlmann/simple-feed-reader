@@ -120,11 +120,8 @@ final class EntryExcerptTest extends TestCase
     }
 
     /**
-     * With no space anywhere in the first 500 characters, cutAtWordBoundary()
-     * has no word boundary to back off to: it must fall back to the hard
-     * 500-character cut rather than returning '' or the full 600 characters.
-     * The expected value is `str_repeat`, never the excerpt's own output fed
-     * back at it.
+     * No space in the first 500 chars: the hard cut must win, not '' or the
+     * full 600.
      */
     public function testFallsBackToAHardCutWhenThereIsNoSpaceToBreakOn(): void
     {
