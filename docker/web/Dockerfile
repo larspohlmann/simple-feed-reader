@@ -36,6 +36,8 @@ COPY --from=build /app/dist/frontend/browser /usr/share/nginx/html
 # Both server configs ship in the image; the entrypoint drop-in picks one.
 COPY docker/web/tls.conf /etc/nginx/available/tls.conf
 COPY docker/web/http.conf /etc/nginx/available/http.conf
+# Shared gzip snippet, one source for both Docker stacks (see docker/nginx/gzip.conf).
+COPY docker/nginx/gzip.conf /etc/nginx/snippets/gzip.conf
 COPY docker/web/10-select-mode.sh /docker-entrypoint.d/10-select-mode.sh
 # nginx's entrypoint silently skips non-executable drop-ins, which would
 # serve the stock welcome page instead of selecting HTTP/TLS mode.
