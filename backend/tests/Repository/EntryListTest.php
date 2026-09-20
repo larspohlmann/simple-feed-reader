@@ -489,4 +489,106 @@ final class EntryListTest extends DbTestCase
         self::assertFalse($rows[0]->isHidden, 'must not inherit the stranger\'s read flag');
         self::assertFalse($rows[0]->isFavorite, 'must not inherit the stranger\'s favorite flag');
     }
+
+    public function testASurvivorNeverListsItselfAndAnInScopeHiddenCopyAppearsAsADuplicate(): void
+    {
+        $survivor = new Entry(
+            $this->feed,
+            'survivor',
+            'https://example.com/survivor',
+            'Survivor',
+            new \DateTimeImmutable('2026-07-05T00:00:00Z'),
+            new \DateTimeImmutable('2026-07-05T00:00:00Z'),
+            'shared-url-hash',
+        );
+        $this->em->persist($survivor);
+        $hiddenCopy = new Entry(
+            $this->feed,
+            'hidden-copy',
+            'https://example.com/hidden-copy',
+            'Hidden copy',
+            new \DateTimeImmutable('2026-07-06T00:00:00Z'),
+            new \DateTimeImmutable('2026-07-06T00:00:00Z'),
+            'shared-url-hash',
+        );
+        $this->em->persist($hiddenCopy);
+        $this->em->flush();
+
+        $rows = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0));
+
+        self::assertCount(1, $rows);
+        self::assertSame('survivor', $rows[0]->entry->getGuid());
+        self::assertSame(
+            ['hidden-copy'],
+            array_map(static fn ($duplicate) => $duplicate->entry->getGuid(), $rows[0]->duplicates),
+        );
+    }
+
+    public function testACopyOutsideTheQueryScopeIsNotListedAsADuplicate(): void
+    {
+        $otherFeed = new Feed('https://other.example.com/feed.xml');
+        $this->em->persist($otherFeed);
+        $otherSub = new Subscription($this->user, $otherFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $tag = new Tag($this->user, 'news');
+        $this->em->persist($tag);
+        $otherSub->addTag($tag);
+        $this->em->persist($otherSub);
+
+        $outOfScopeCopy = new Entry(
+            $this->feed,
+            'out-of-scope-copy',
+            'https://example.com/out-of-scope-copy',
+            'Out of scope copy',
+            new \DateTimeImmutable('2026-07-05T00:00:00Z'),
+            new \DateTimeImmutable('2026-07-05T00:00:00Z'),
+            'shared-url-hash',
+        );
+        $this->em->persist($outOfScopeCopy);
+        $taggedEntry = new Entry(
+            $otherFeed,
+            'tagged',
+            'https://other.example.com/tagged',
+            'Tagged',
+            new \DateTimeImmutable('2026-07-06T00:00:00Z'),
+            new \DateTimeImmutable('2026-07-06T00:00:00Z'),
+            'shared-url-hash',
+        );
+        $this->em->persist($taggedEntry);
+        $this->em->flush();
+
+        $rows = $this->repo()->listForUser(new EntryQuery($this->user->getId() ?? 0, tagId: $tag->getId()));
+
+        self::assertCount(1, $rows);
+        self::assertSame('tagged', $rows[0]->entry->getGuid());
+        self::assertSame([], $rows[0]->duplicates);
+    }
+
+    public function testAttachDuplicatesCarriesTheDuplicateLookupHint(): void
+    {
+        $survivor = new Entry(
+            $this->feed,
+            'survivor',
+            'https://example.com/survivor',
+            'Survivor',
+            new \DateTimeImmutable('2026-07-05T00:00:00Z'),
+            new \DateTimeImmutable('2026-07-05T00:00:00Z'),
+            'shared-url-hash',
+        );
+        $this->em->persist($survivor);
+        $this->em->persist($this->favorited($survivor));
+        $this->em->flush();
+
+        // The favorites view drops the chronological-fan-in hint entirely
+        // (testAScopedOrStateDrivenViewDropsTheJoinOrderHint), so a JOIN_PREFIX
+        // here can only come from attachDuplicates's own, unconditional hint.
+        self::assertCount(1, $this->joinPrefixQueries(new EntryQuery($this->user->getId() ?? 0, view: 'favorites')));
+    }
+
+    private function favorited(Entry $entry): EntryState
+    {
+        $state = new EntryState($this->user, $entry);
+        $state->setIsFavorite(true);
+
+        return $state;
+    }
 }
