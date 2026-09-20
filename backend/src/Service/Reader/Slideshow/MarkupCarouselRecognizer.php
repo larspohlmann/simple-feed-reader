@@ -106,7 +106,7 @@ final readonly class MarkupCarouselRecognizer implements SlideshowRecognizerInte
     private function slideshow(Element $container, array $slideElements, PageTextBlocks $textBlocks): ?Slideshow
     {
         return Slideshow::fromSlides(
-            $this->recoveredSlides($slideElements),
+            $this->slides($slideElements),
             null,
             $textBlocks->before($container),
             ContainerSignature::fromElement($container),
@@ -114,35 +114,16 @@ final readonly class MarkupCarouselRecognizer implements SlideshowRecognizerInte
     }
 
     /**
-     * Slides that all resolve to one URL are lazy placeholders (TOI teasers ship
-     * a remote stub in `src`); re-resolve each past that URL to reach the real
-     * image its lazy attribute or lightbox link still holds (#1091).
-     *
      * @param list<Element> $slideElements
      *
      * @return list<Slide>
      */
-    private function recoveredSlides(array $slideElements): array
+    private function slides(array $slideElements): array
     {
-        $slides = $this->slides($slideElements, null);
-        $placeholder = $this->sharedImageUrl($slides);
-        if ($placeholder === null) {
-            return $slides;
-        }
-
-        return $this->slides($slideElements, $placeholder);
-    }
-
-    /**
-     * @param list<Element> $slideElements
-     *
-     * @return list<Slide>
-     */
-    private function slides(array $slideElements, ?string $placeholder): array
-    {
+        $urls = $this->images->resolveAll($slideElements);
         $slides = [];
-        foreach ($slideElements as $element) {
-            $url = $this->images->resolveExcluding($element, $placeholder);
+        foreach ($slideElements as $index => $element) {
+            $url = $urls[$index];
             if ($url !== null) {
                 $slides[] = new Slide(
                     $url,
@@ -153,18 +134,6 @@ final readonly class MarkupCarouselRecognizer implements SlideshowRecognizerInte
         }
 
         return $slides;
-    }
-
-    /** @param list<Slide> $slides */
-    private function sharedImageUrl(array $slides): ?string
-    {
-        if (count($slides) < 2) {
-            return null;
-        }
-
-        $urls = array_unique(array_map(static fn (Slide $slide): string => $slide->imageUrl, $slides));
-
-        return count($urls) === 1 ? $slides[0]->imageUrl : null;
     }
 
     private function altOf(Element $slide): string

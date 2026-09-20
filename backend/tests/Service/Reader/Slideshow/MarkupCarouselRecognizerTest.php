@@ -185,14 +185,14 @@ final class MarkupCarouselRecognizerTest extends TestCase
         $shows = $this->recognize(
             '<body><p>An intro paragraph long enough to anchor the gallery below.</p>'
             . '<div class="slick-slider">'
-            . '<div class="slick-slide"><img src="' . $placeholder . '" data-src="https://img/real-a.jpg" alt="A"></div>'
-            . '<div class="slick-slide"><img src="' . $placeholder . '" data-src="https://img/real-b.jpg" alt="B"></div>'
+            . '<div class="slick-slide"><img alt="A" src="' . $placeholder . '" data-src="https://img/a.jpg"></div>'
+            . '<div class="slick-slide"><img alt="B" src="' . $placeholder . '" data-src="https://img/b.jpg"></div>'
             . '</div></body>',
         );
 
         self::assertCount(1, $shows);
         self::assertCount(2, $shows[0]->slides);
-        self::assertSame('https://img/real-a.jpg', $shows[0]->slides[0]->imageUrl);
-        self::assertSame('https://img/real-b.jpg', $shows[0]->slides[1]->imageUrl);
+        self::assertSame('https://img/a.jpg', $shows[0]->slides[0]->imageUrl);
+        self::assertSame('https://img/b.jpg', $shows[0]->slides[1]->imageUrl);
     }
 }
