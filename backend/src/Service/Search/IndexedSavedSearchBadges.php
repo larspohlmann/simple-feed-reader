@@ -12,16 +12,9 @@ use App\Service\Search\Index\IndexSearch;
 use App\Service\Search\Index\SearchIndexReader;
 
 /**
- * The engine-consistent badge set: every search keyset-paged to exhaustion
- * against the engine, unioned once through a single unread/collapse/subscribed
- * database pass, then intersected back per search. No cap — a search with
- * thousands of matches is still exact — and the engine's own matching decides
- * candidacy, so a badge agrees with what the saved-search list shows.
- *
- * Depends on the RAW SearchIndexReader, not any fallback: a mid-enumeration
- * failure must surface as SearchEngineUnavailableException so
- * SavedSearchBadgesWithFallback recomputes the whole set from the database,
- * rather than silently mixing an engine prefix with a database tail.
+ * The engine-consistent badge set: every search keyset-paged to exhaustion, unioned
+ * through one unread/collapse/subscribed DB pass, intersected back per search (no cap).
+ * Depends on the RAW reader so a mid-walk failure reaches SavedSearchBadgesWithFallback.
  */
 final readonly class IndexedSavedSearchBadges implements SavedSearchBadgeSource
 {
@@ -70,14 +63,11 @@ final readonly class IndexedSavedSearchBadges implements SavedSearchBadgeSource
         while ($active !== []) {
             $results = $this->index->findMany($this->roundOf($active, $feedIds, $cursorBySearchId));
             foreach ($active as $position => $search) {
-                $candidates[$search->id] = [...$candidates[$search->id], ...$results[$position]->entryIds];
+                array_push($candidates[$search->id], ...$results[$position]->entryIds);
             }
 
             $boundaries = $this->roundBoundaries($active, $results);
-            // Keyed by search id, not a list: array union, not spread, or the
-            // integer keys collapse to a fresh 0-based sequence and every
-            // cursor lookup below misses.
-            $cursorBySearchId = $this->nextCursors($boundaries) + $cursorBySearchId;
+            $cursorBySearchId = $this->nextCursors($boundaries);
             $active = $this->stillActive($active, $boundaries);
         }
 
@@ -166,10 +156,9 @@ final readonly class IndexedSavedSearchBadges implements SavedSearchBadgeSource
     }
 
     /**
-     * Every requested search, keyed by its id, with an empty match list — the
-     * DB method's own array_fill_keys shape (SavedSearchEntryRepository::matchIdsInOneScan),
-     * kept as one definition so every early-return path in this class agrees
-     * with it.
+     * Every requested search keyed by id with an empty list — the DB method's
+     * array_fill_keys shape, kept as one definition so every early-return path
+     * in this class agrees with it.
      *
      * @param list<SavedSearchTerm> $searches
      *
@@ -187,19 +176,13 @@ final readonly class IndexedSavedSearchBadges implements SavedSearchBadgeSource
      */
     private function distinctIds(array $candidatesBySearch): array
     {
-        $ids = [];
-        foreach ($candidatesBySearch as $candidateIds) {
-            $ids = [...$ids, ...$candidateIds];
-        }
-
-        return array_values(array_unique($ids));
+        return array_values(array_unique(array_merge(...array_values($candidatesBySearch))));
     }
 
     /**
-     * Every requested search keeps its key, `[]` when it has no unread
-     * matches — the exact shape SavedSearchEntryRepository::unreadMatchIdsBySavedSearch
-     * answers, so SavedSearchBadgesWithFallback can swap the two paths
-     * transparently.
+     * Every requested search keeps its key (`[]` when it has no unread matches),
+     * the exact shape SavedSearchEntryRepository::unreadMatchIdsBySavedSearch
+     * answers, so SavedSearchBadgesWithFallback swaps the two paths transparently.
      *
      * @param array<int, list<int>> $candidatesBySearch
      * @param array<int, true>      $unreadSet

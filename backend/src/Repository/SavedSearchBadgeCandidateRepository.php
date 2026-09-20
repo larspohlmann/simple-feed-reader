@@ -84,7 +84,7 @@ final class SavedSearchBadgeCandidateRepository extends AbstractEntryProjectionR
     {
         $ids = [];
         foreach (array_chunk($entryIds, $this->idFilterChunk) as $chunk) {
-            $ids = [...$ids, ...$this->unreadCollapsedSubscribedIdsChunk($chunk, $userId)];
+            array_push($ids, ...$this->unreadCollapsedSubscribedIdsChunk($chunk, $userId));
         }
 
         return $ids;
