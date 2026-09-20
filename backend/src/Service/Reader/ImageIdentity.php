@@ -138,7 +138,7 @@ final readonly class ImageIdentity
      * cannot promise. This is the test for a responsive layout that repeats one
      * image, not the broad asset equality.
      */
-    public function isSameRendition(self $other): bool
+    private function isSameRendition(self $other): bool
     {
         if ($this->pathUuid !== null && $other->pathUuid !== null) {
             return $this->pathUuid === $other->pathUuid;
