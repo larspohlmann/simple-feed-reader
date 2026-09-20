@@ -11,10 +11,16 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Http\EntryCursor;
+use App\Repository\DateOrderedPage;
+use App\Repository\DuplicateCollapseDql;
 use App\Repository\EntryListRepository;
+use App\Repository\EntryListRowHydrator;
 use App\Repository\EntryQuery;
+use App\Repository\EntryScopePredicates;
+use App\Repository\SearchTermsPredicateBuilder;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
+use Doctrine\Persistence\ManagerRegistry;
 
 final class EntryListTest extends DbTestCase
 {
@@ -84,6 +90,93 @@ final class EntryListTest extends DbTestCase
         self::assertInstanceOf(EntryListRepository::class, $repo);
 
         return $repo;
+    }
+
+    /**
+     * A repository wired with a small window, so the tag-scoped probe/window
+     * branch (#1099) can be forced through a handful of fixture rows instead
+     * of DateOrderedPage::DEFAULT_WINDOW_SIZE.
+     */
+    private function repoWithWindow(int $windowSize): EntryListRepository
+    {
+        $container = self::getContainer();
+        /** @var ManagerRegistry $registry */
+        $registry = $container->get(ManagerRegistry::class);
+        /** @var EntryListRowHydrator $hydrator */
+        $hydrator = $container->get(EntryListRowHydrator::class);
+        /** @var SearchTermsPredicateBuilder $termsPredicateBuilder */
+        $termsPredicateBuilder = $container->get(SearchTermsPredicateBuilder::class);
+        /** @var EntryScopePredicates $scope */
+        $scope = $container->get(EntryScopePredicates::class);
+        /** @var DuplicateCollapseDql $collapse */
+        $collapse = $container->get(DuplicateCollapseDql::class);
+
+        return new EntryListRepository(
+            $registry,
+            $hydrator,
+            $termsPredicateBuilder,
+            $scope,
+            $collapse,
+            new DateOrderedPage($windowSize),
+        );
+    }
+
+    /**
+     * Every query a listForUser() call issued, in order — the shape the
+     * probe/window/fallback decision must be verified against, since the
+     * result rows are identical across every branch (#1099).
+     *
+     * @return list<string>
+     */
+    private function queriesFor(EntryListRepository $repo, EntryQuery $query): array
+    {
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        $recorder->reset();
+        $repo->listForUser($query);
+
+        return $recorder->queries();
+    }
+
+    /**
+     * @return array{0: Feed, 1: Tag}
+     */
+    private function taggedFeedAndSubscription(): array
+    {
+        $feed = new Feed('https://tagged.example.com/feed.xml');
+        $this->em->persist($feed);
+        $sub = new Subscription($this->user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $tag = new Tag($this->user, 'news');
+        $this->em->persist($tag);
+        $sub->addTag($tag);
+        $this->em->persist($sub);
+        $this->em->flush();
+
+        return [$feed, $tag];
+    }
+
+    private function entryIn(Feed $feed, string $guid, string $effectiveDate): Entry
+    {
+        $at = new \DateTimeImmutable($effectiveDate);
+        $e = new Entry($feed, $guid, 'https://tagged.example.com/' . $guid, 'Title ' . $guid, $at, $at);
+        $this->em->persist($e);
+        $this->em->flush();
+
+        return $e;
+    }
+
+    /**
+     * A feed nobody subscribes to. The window probe scans the whole `entry`
+     * table regardless of subscription, so a filler row here still counts
+     * toward the K-th-newest-entry cutoff without ever matching a scope.
+     */
+    private function fillerFeed(): Feed
+    {
+        $feed = new Feed('https://filler.example.com/feed.xml');
+        $this->em->persist($feed);
+        $this->em->flush();
+
+        return $feed;
     }
 
     /**
@@ -588,6 +681,228 @@ final class EntryListTest extends DbTestCase
     {
         $state = new EntryState($this->user, $entry);
         $state->setIsFavorite(true);
+
+        return $state;
+    }
+
+    public function testAllItemsScopeIssuesNoProbe(): void
+    {
+        $this->entry('a', '2026-07-05T00:00:00Z');
+
+        $queries = $this->queriesFor($this->repo(), new EntryQuery($this->user->getId() ?? 0, 'all'));
+
+        self::assertCount(1, $queries, 'a dense fan-in view must run the page query alone, no probe');
+        self::assertStringContainsString('JOIN_PREFIX', $queries[0]);
+    }
+
+    public function testFewerThanWindowSizeRowsBeyondCursorRunsASingleHintedQuery(): void
+    {
+        [$feed, $tag] = $this->taggedFeedAndSubscription();
+        $t1 = $this->entryIn($feed, 't1', '2026-07-10T00:00:00Z');
+        $t2 = $this->entryIn($feed, 't2', '2026-07-09T00:00:00Z');
+
+        $repo = $this->repoWithWindow(5);
+        $query = new EntryQuery($this->user->getId() ?? 0, tagId: $tag->getId(), limit: 10);
+
+        $queries = $this->queriesFor($repo, $query);
+        self::assertCount(2, $queries, 'a null probe must still run exactly one hinted page query');
+        self::assertStringNotContainsString('JOIN_PREFIX', $queries[0], 'the probe itself is never hinted');
+        self::assertStringContainsString('JOIN_PREFIX', $queries[1]);
+
+        $rows = $repo->listForUser($query);
+        self::assertSame([$t1->getGuid(), $t2->getGuid()], array_map(
+            static fn ($row) => $row->entry->getGuid(),
+            $rows,
+        ));
+    }
+
+    public function testDenseTagWindowedAttemptEqualsThePlainQuerysPage(): void
+    {
+        [$feed, $tag] = $this->taggedFeedAndSubscription();
+        $t1 = $this->entryIn($feed, 't1', '2026-07-10T00:00:00Z');
+        $t2 = $this->entryIn($feed, 't2', '2026-07-09T00:00:00Z');
+        $this->entryIn($this->fillerFeed(), 'filler', '2026-07-08T00:00:00Z');
+
+        $repo = $this->repoWithWindow(2);
+        $query = new EntryQuery($this->user->getId() ?? 0, tagId: $tag->getId(), limit: 2);
+
+        $queries = $this->queriesFor($repo, $query);
+        self::assertCount(2, $queries, 'a full windowed page must never fall back');
+        self::assertStringContainsString('JOIN_PREFIX', $queries[1]);
+
+        $rows = $repo->listForUser($query);
+        self::assertSame([$t1->getGuid(), $t2->getGuid()], array_map(
+            static fn ($row) => $row->entry->getGuid(),
+            $rows,
+        ));
+    }
+
+    public function testSparseTagFallsBackToThePlainUnhintedQuery(): void
+    {
+        [$feed, $tag] = $this->taggedFeedAndSubscription();
+        $filler = $this->fillerFeed();
+        $this->entryIn($filler, 'f1', '2026-07-10T00:00:00Z');
+        $this->entryIn($filler, 'f2', '2026-07-09T00:00:00Z');
+        $this->entryIn($filler, 'f3', '2026-07-08T00:00:00Z');
+        $t1 = $this->entryIn($feed, 't1', '2026-07-05T00:00:00Z');
+        $t2 = $this->entryIn($feed, 't2', '2026-07-04T00:00:00Z');
+
+        $repo = $this->repoWithWindow(2);
+        $query = new EntryQuery($this->user->getId() ?? 0, tagId: $tag->getId(), limit: 2);
+
+        $queries = $this->queriesFor($repo, $query);
+        self::assertCount(3, $queries, 'a short windowed page must fall back to a third, plain query');
+        self::assertStringNotContainsString('JOIN_PREFIX', $queries[2], 'the fallback is deliberately unhinted');
+
+        $rows = $repo->listForUser($query);
+        self::assertSame([$t1->getGuid(), $t2->getGuid()], array_map(
+            static fn ($row) => $row->entry->getGuid(),
+            $rows,
+        ));
+    }
+
+    public function testScopeWithFewerRowsThanTheLimitReturnsAShortPageWithoutLossOrDuplication(): void
+    {
+        [$feed, $tag] = $this->taggedFeedAndSubscription();
+        $filler = $this->fillerFeed();
+        $this->entryIn($filler, 'f1', '2026-07-10T00:00:00Z');
+        $this->entryIn($filler, 'f2', '2026-07-09T00:00:00Z');
+        $this->entryIn($filler, 'f3', '2026-07-08T00:00:00Z');
+        $t1 = $this->entryIn($feed, 't1', '2026-07-05T00:00:00Z');
+
+        $repo = $this->repoWithWindow(2);
+        $rows = $repo->listForUser(new EntryQuery($this->user->getId() ?? 0, tagId: $tag->getId(), limit: 5));
+
+        self::assertSame([$t1->getGuid()], array_map(static fn ($row) => $row->entry->getGuid(), $rows));
+    }
+
+    public function testATiedWindowBoundaryIsIncludedWholeAndNeverTriggersAnUnnecessaryFallback(): void
+    {
+        [$feed, $tag] = $this->taggedFeedAndSubscription();
+        $t1 = $this->entryIn($feed, 't1', '2026-07-10T00:00:00Z');
+        // t2 and t3 share an effectiveDate and straddle the window pivot; t3 is
+        // created second so it sorts first on the id DESC tiebreak.
+        $t2 = $this->entryIn($feed, 't2', '2026-07-05T00:00:00Z');
+        $t3 = $this->entryIn($feed, 't3', '2026-07-05T00:00:00Z');
+
+        $repo = $this->repoWithWindow(2);
+        $query = new EntryQuery($this->user->getId() ?? 0, tagId: $tag->getId(), limit: 3);
+
+        $queries = $this->queriesFor($repo, $query);
+        self::assertCount(2, $queries, 'an inclusive >= window bound must keep the tie in one windowed attempt');
+
+        $rows = $repo->listForUser($query);
+        self::assertSame([$t1->getGuid(), $t3->getGuid(), $t2->getGuid()], array_map(
+            static fn ($row) => $row->entry->getGuid(),
+            $rows,
+        ));
+    }
+
+    public function testCursorContinuesAWindowedPageWithoutGapOrOverlap(): void
+    {
+        [$feed, $tag] = $this->taggedFeedAndSubscription();
+        $t1 = $this->entryIn($feed, 't1', '2026-07-14T00:00:00Z');
+        $t2 = $this->entryIn($feed, 't2', '2026-07-13T00:00:00Z');
+        $t3 = $this->entryIn($feed, 't3', '2026-07-12T00:00:00Z');
+        $t4 = $this->entryIn($feed, 't4', '2026-07-11T00:00:00Z');
+        $this->entryIn($feed, 't5', '2026-07-10T00:00:00Z');
+
+        $repo = $this->repoWithWindow(2);
+        $userId = $this->user->getId() ?? 0;
+
+        $page1 = $repo->listForUser(new EntryQuery($userId, tagId: $tag->getId(), limit: 2));
+        self::assertSame([$t1->getGuid(), $t2->getGuid()], array_map(
+            static fn ($row) => $row->entry->getGuid(),
+            $page1,
+        ));
+
+        $cursor = new EntryCursor(
+            $page1[1]->entry->getEffectiveDate(),
+            $page1[1]->entry->getId() ?? throw new \LogicException('A persisted entry must have an id.'),
+        );
+        $query = new EntryQuery($userId, tagId: $tag->getId(), cursor: $cursor, limit: 2);
+
+        // A probe without the cursor predicate still falls back to a correct
+        // page (just via a 3rd query), so only the query count catches it.
+        self::assertCount(
+            2,
+            $this->queriesFor($repo, $query),
+            'the cursor must keep this page windowed, not fall back',
+        );
+
+        $page2 = $repo->listForUser($query);
+        self::assertSame([$t3->getGuid(), $t4->getGuid()], array_map(
+            static fn ($row) => $row->entry->getGuid(),
+            $page2,
+        ));
+    }
+
+    public function testCursorContinuesAFallbackPageWithoutGapOrOverlap(): void
+    {
+        [$feed, $tag] = $this->taggedFeedAndSubscription();
+        $t1 = $this->entryIn($feed, 't1', '2026-07-10T00:00:00Z');
+        $t2 = $this->entryIn($feed, 't2', '2026-07-09T00:00:00Z');
+        $t3 = $this->entryIn($feed, 't3', '2026-07-08T00:00:00Z');
+        $t4 = $this->entryIn($feed, 't4', '2026-07-07T00:00:00Z');
+        $filler = $this->fillerFeed();
+        $this->entryIn($filler, 'g1', '2026-07-08T18:00:00Z');
+        $this->entryIn($filler, 'g2', '2026-07-08T12:00:00Z');
+
+        $repo = $this->repoWithWindow(2);
+        $userId = $this->user->getId() ?? 0;
+
+        $page1 = $repo->listForUser(new EntryQuery($userId, tagId: $tag->getId(), limit: 2));
+        self::assertSame([$t1->getGuid(), $t2->getGuid()], array_map(
+            static fn ($row) => $row->entry->getGuid(),
+            $page1,
+        ));
+
+        $cursor = new EntryCursor(
+            $page1[1]->entry->getEffectiveDate(),
+            $page1[1]->entry->getId() ?? throw new \LogicException('A persisted entry must have an id.'),
+        );
+        $query = new EntryQuery($userId, tagId: $tag->getId(), cursor: $cursor, limit: 2);
+
+        $queries = $this->queriesFor($repo, $query);
+        self::assertCount(3, $queries, 'the second page must independently fall back');
+
+        $page2 = $repo->listForUser($query);
+        self::assertSame([$t3->getGuid(), $t4->getGuid()], array_map(
+            static fn ($row) => $row->entry->getGuid(),
+            $page2,
+        ));
+    }
+
+    public function testUnreadViewOnADenseTagWhoseNewestEntriesAreAllReadFallsBack(): void
+    {
+        [$feed, $tag] = $this->taggedFeedAndSubscription();
+        $t1 = $this->entryIn($feed, 't1', '2026-07-10T00:00:00Z');
+        $t2 = $this->entryIn($feed, 't2', '2026-07-09T00:00:00Z');
+        $t3 = $this->entryIn($feed, 't3', '2026-07-08T00:00:00Z');
+        $t4 = $this->entryIn($feed, 't4', '2026-07-07T00:00:00Z');
+        $this->em->persist($this->hidden($t1));
+        $this->em->persist($this->hidden($t2));
+        $this->em->flush();
+
+        $repo = $this->repoWithWindow(2);
+        $query = new EntryQuery($this->user->getId() ?? 0, view: 'unread', tagId: $tag->getId(), limit: 2);
+
+        $queries = $this->queriesFor($repo, $query);
+        self::assertCount(3, $queries, 'the windowed rows the pivot admits are all read, so it must fall back');
+
+        $rows = $repo->listForUser($query);
+        self::assertSame([$t3->getGuid(), $t4->getGuid()], array_map(
+            static fn ($row) => $row->entry->getGuid(),
+            $rows,
+        ));
+        self::assertFalse($rows[0]->isHidden);
+        self::assertFalse($rows[1]->isHidden);
+    }
+
+    private function hidden(Entry $entry): EntryState
+    {
+        $state = new EntryState($this->user, $entry);
+        $state->setIsHidden(true);
 
         return $state;
     }

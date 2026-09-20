@@ -78,4 +78,13 @@ final readonly class EntryQuery
 
         return $this->view === 'all' || $this->view === 'unread';
     }
+
+    /**
+     * A fan-in list narrowed to one tag — the shape that can be sparse enough
+     * to make the join-order hint a loss rather than a win (#1099).
+     */
+    public function isTagScopedFanIn(): bool
+    {
+        return $this->isDateOrderedFanIn() && $this->tagId !== null;
+    }
 }
