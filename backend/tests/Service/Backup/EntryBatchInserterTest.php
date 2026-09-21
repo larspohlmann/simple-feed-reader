@@ -61,6 +61,14 @@ final class EntryBatchInserterTest extends DbTestCase
         return $inserter;
     }
 
+    private function pendingImageVerificationRepository(): PendingImageVerificationRepository
+    {
+        $repository = self::getContainer()->get(PendingImageVerificationRepository::class);
+        self::assertInstanceOf(PendingImageVerificationRepository::class, $repository);
+
+        return $repository;
+    }
+
     public function testInsertsMoreRowsThanOneStatementHolds(): void
     {
         $feedId = $this->createFeed('https://batch.example/feed.xml');
@@ -115,14 +123,6 @@ final class EntryBatchInserterTest extends DbTestCase
         ]);
 
         self::assertSame([], $this->pendingImageVerificationRepository()->findPendingImageVerification(10));
-    }
-
-    private function pendingImageVerificationRepository(): PendingImageVerificationRepository
-    {
-        $repository = self::getContainer()->get(PendingImageVerificationRepository::class);
-        self::assertInstanceOf(PendingImageVerificationRepository::class, $repository);
-
-        return $repository;
     }
 
     public function testRecomputesTheStableUrlHashForEveryInsertedRow(): void

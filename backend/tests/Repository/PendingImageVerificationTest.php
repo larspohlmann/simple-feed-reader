@@ -49,6 +49,8 @@ final class PendingImageVerificationTest extends DbTestCase
     {
         $feed = $this->feed();
         $this->entry($feed, 'restored');
+        $pending = $this->entry($feed, 'pending-sibling');
+        $pending->getImage()->storePending('https://i/pending-sibling.jpg', null, null);
         $this->em->flush();
         $this->em->getConnection()->executeStatement(
             'UPDATE entry SET image_url = ? WHERE guid = ?',
@@ -60,6 +62,7 @@ final class PendingImageVerificationTest extends DbTestCase
 
         $guids = array_map(static fn (Entry $entry): string => $entry->getGuid(), $found);
         self::assertNotContains('restored', $guids);
+        self::assertContains('pending-sibling', $guids);
     }
 
     public function testReturnsFreshImagesBeforeRetriedOnes(): void
