@@ -100,6 +100,26 @@ final class ImageVerificationSweepTest extends DbTestCase
         self::assertNull($gone->getImage()->getCheckedAt());
     }
 
+    public function testAQueuedRowWithoutAUrlIsSettledNotReturnedForever(): void
+    {
+        $feed = new Feed('https://example.test/feed.xml');
+        $this->em->persist($feed);
+        $this->pendingEntry($feed, 'poison', 'https://i/poison.png');
+        $this->em->flush();
+        $this->em->getConnection()->executeStatement(
+            'UPDATE entry SET image_url = NULL WHERE guid = ?',
+            ['poison'],
+        );
+        $this->em->clear();
+
+        $report = $this->sweep(new StubFaviconFetcher())->verifyDue()->toArray();
+
+        self::assertSame(1, $report['dropped']);
+        /** @var PendingImageVerificationRepository $repository */
+        $repository = self::getContainer()->get(PendingImageVerificationRepository::class);
+        self::assertCount(0, $repository->findPendingImageVerification(50));
+    }
+
     public function testAVerifiedImageLeavesTheQueue(): void
     {
         $feed = new Feed('https://example.test/feed.xml');

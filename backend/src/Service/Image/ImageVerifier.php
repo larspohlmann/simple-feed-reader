@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Image;
 
-use App\Entity\EntryImage;
+use App\Entity\Entry;
 use App\Service\Catalog\CatalogFaviconFetcherInterface;
 use App\Service\Catalog\Exception\FaviconRejectedException;
 use App\Service\Catalog\Exception\FaviconUnavailableException;
@@ -12,11 +12,8 @@ use App\Service\Clock\NaiveUtcClock;
 
 /**
  * Verifies one pending image via the SSRF-guarded fetcher, retrying a bounded
- * number of times before dropping it, so a transient network failure never
- * nulls a good image. A host or policy refusal the fetcher cannot recover
- * from (an access-controlled status, a disallowed type, an over-size body)
- * keeps the image unmeasured rather than dropping it — a browser may still
- * render what this verifier could not judge.
+ * number of times before dropping it. A refusal the fetcher cannot recover
+ * from keeps the image unmeasured instead — a browser may still render it.
  */
 final readonly class ImageVerifier
 {
@@ -28,47 +25,50 @@ final readonly class ImageVerifier
     ) {
     }
 
-    public function verify(EntryImage $image): ImageVerifyOutcome
+    public function verify(Entry $entry): ImageVerifyOutcome
     {
-        $url = $image->getUrl();
+        $url = $entry->getImage()->getUrl();
         if ($url === null) {
+            $entry->dropImage($this->clock->now());
+
             return ImageVerifyOutcome::Dropped;
         }
 
         try {
             $bytes = $this->fetcher->download($url)->bytes;
         } catch (FaviconRejectedException) {
-            $image->keepUnmeasured($this->clock->now());
+            $entry->getImage()->keepUnmeasured($this->clock->now());
 
             return ImageVerifyOutcome::Kept;
         } catch (FaviconUnavailableException) {
-            return $this->recordFailure($image);
+            return $this->recordFailure($entry);
         }
 
-        return $this->judge($image, $bytes);
+        return $this->judge($entry, $bytes);
     }
 
-    private function judge(EntryImage $image, string $bytes): ImageVerifyOutcome
+    private function judge(Entry $entry, string $bytes): ImageVerifyOutcome
     {
         $dimensions = ImageDimensions::fromBytes($bytes);
         if ($dimensions === null) {
-            return $this->recordFailure($image);
+            return $this->recordFailure($entry);
         }
         if ($dimensions->isBeacon()) {
-            $image->drop($this->clock->now());
+            $entry->dropImage($this->clock->now());
 
             return ImageVerifyOutcome::Dropped;
         }
 
-        $image->recordMeasurement($dimensions->width, $dimensions->height, $this->clock->now());
+        $entry->getImage()->recordMeasurement($dimensions->width, $dimensions->height, $this->clock->now());
 
         return ImageVerifyOutcome::Measured;
     }
 
-    private function recordFailure(EntryImage $image): ImageVerifyOutcome
+    private function recordFailure(Entry $entry): ImageVerifyOutcome
     {
+        $image = $entry->getImage();
         if ($image->getVerifyAttempts() + 1 >= self::MAX_ATTEMPTS) {
-            $image->drop($this->clock->now());
+            $entry->dropImage($this->clock->now());
 
             return ImageVerifyOutcome::Dropped;
         }

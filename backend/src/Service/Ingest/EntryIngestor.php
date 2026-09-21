@@ -199,10 +199,7 @@ final class EntryIngestor
             && HttpsImageUrl::isNativeHttps($image->url);
     }
 
-    /**
-     * The lead image leads the visual list, so the same gate runs over it here
-     * and in applyImage — media[0] stays the persisted lead.
-     */
+    /** The lead passes the same https-upgrading gate applyImage uses, so media[0] stays the persisted lead. */
     private function applyMedia(Entry $entry, ParsedEntry $parsedEntry): void
     {
         $bundle = $parsedEntry->media->mediaBundle ?? new ParsedMediaBundle();

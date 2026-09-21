@@ -193,6 +193,16 @@ class Entry
         return $this->image;
     }
 
+    /** Drops the image and removes it from media[], leaving other media untouched. */
+    public function dropImage(\DateTimeImmutable $checkedAt): void
+    {
+        $url = $this->image->getUrl();
+        if ($url !== null) {
+            $this->mediaSet->removeUrl($url);
+        }
+        $this->image->drop($checkedAt);
+    }
+
     /** @return list<EntryMedium> */
     public function getMedia(): array
     {

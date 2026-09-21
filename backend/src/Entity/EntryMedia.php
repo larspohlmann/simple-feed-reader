@@ -40,6 +40,20 @@ class EntryMedia
         $this->attachments = self::encode($attachments);
     }
 
+    /** Removes every medium whose url matches, re-indexed; attachments are untouched. */
+    public function removeUrl(string $url): void
+    {
+        if ($this->media === null) {
+            return;
+        }
+
+        $remaining = array_values(array_filter(
+            $this->media,
+            static fn (array $medium): bool => ($medium['url'] ?? null) !== $url,
+        ));
+        $this->media = $remaining === [] ? null : $remaining;
+    }
+
     /** @return list<EntryMedium> */
     public function getMedia(): array
     {

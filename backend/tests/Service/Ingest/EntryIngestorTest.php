@@ -99,6 +99,60 @@ final class EntryIngestorTest extends DbTestCase
         self::assertSame(3723, $attachments[0]->durationInSeconds);
     }
 
+    public function testAnHttpLeadIsUpgradedInMediaJustLikeTheStoredImage(): void
+    {
+        $feed = $this->feed();
+        $parsed = new ParsedEntry(
+            guid: 'g-http-lead',
+            url: 'https://example.com/http-lead',
+            title: 'Title',
+            author: null,
+            summary: null,
+            contentHtml: '<p>body</p>',
+            publishedAt: null,
+            media: new ParsedEntryMedia(new DeclaredImage('http://files.example/lead.jpg', 800, 600)),
+        );
+
+        $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, null, [$parsed]), self::context());
+        $this->em->flush();
+        $this->em->clear();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        self::assertInstanceOf(Entry::class, $entry);
+        $media = $entry->getMedia();
+        self::assertCount(1, $media);
+        self::assertSame('https://files.example/lead.jpg', $media[0]->url);
+        self::assertSame($entry->getImageUrl(), $media[0]->url);
+    }
+
+    public function testAnHttpNonLeadMediumIsLeftOutOfMedia(): void
+    {
+        $feed = $this->feed();
+        $parsed = new ParsedEntry(
+            guid: 'g-http-medium',
+            url: 'https://example.com/http-medium',
+            title: 'Title',
+            author: null,
+            summary: null,
+            contentHtml: '<p>body</p>',
+            publishedAt: null,
+            media: new ParsedEntryMedia(
+                new DeclaredImage('https://i/lead.jpg', 800, 600),
+                new ParsedMediaBundle([new ParsedMedium('http://i/extra.jpg', VisualMediaKind::Image)]),
+            ),
+        );
+
+        $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, null, [$parsed]), self::context());
+        $this->em->flush();
+        $this->em->clear();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        self::assertInstanceOf(Entry::class, $entry);
+        $media = $entry->getMedia();
+        self::assertCount(1, $media);
+        self::assertSame('https://i/lead.jpg', $media[0]->url);
+    }
+
     /**
      * BBC appends a revision counter to its GUID (`…#0`, `…#1`, …) while the
      * article URL stays stable, so a re-fetch of the same article carries a new

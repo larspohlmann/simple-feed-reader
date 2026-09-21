@@ -85,10 +85,22 @@ final class EntryMediaAssemblerTest extends TestCase
         self::assertSame('Ep 1', $assembled->attachments[0]->title);
     }
 
+    public function testAnHttpLeadIsUpgradedRatherThanDropped(): void
+    {
+        $assembled = EntryMediaAssembler::assemble(
+            new DeclaredImage('http://i/lead.jpg'),
+            [],
+            [],
+        );
+
+        self::assertCount(1, $assembled->media);
+        self::assertSame('https://i/lead.jpg', $assembled->media[0]->url);
+    }
+
     public function testWhenTheLeadFailsTheGateTheNextImageLeads(): void
     {
         $assembled = EntryMediaAssembler::assemble(
-            new DeclaredImage('http://i/insecure-lead.jpg'),
+            new DeclaredImage('/img/site-relative-lead.jpg'),
             [new ParsedMedium('https://i/ok.jpg', VisualMediaKind::Image)],
             [],
         );

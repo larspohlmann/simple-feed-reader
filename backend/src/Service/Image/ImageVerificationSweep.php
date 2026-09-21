@@ -36,7 +36,7 @@ final readonly class ImageVerificationSweep
             if (microtime(true) >= $deadline) {
                 break;
             }
-            match ($this->imageVerifier->verify($entry->getImage())) {
+            match ($this->imageVerifier->verify($entry)) {
                 ImageVerifyOutcome::Measured => $measured++,
                 ImageVerifyOutcome::Kept => $kept++,
                 ImageVerifyOutcome::Dropped => $dropped++,
