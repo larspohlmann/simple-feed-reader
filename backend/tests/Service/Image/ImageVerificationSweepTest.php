@@ -7,6 +7,7 @@ namespace App\Tests\Service\Image;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Repository\PendingImageVerificationRepository;
+use App\Service\Catalog\Exception\FaviconRejectedException;
 use App\Service\Catalog\Exception\FaviconUnavailableException;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Image\ImageVerificationSweep;
@@ -47,15 +48,18 @@ final class ImageVerificationSweepTest extends DbTestCase
         $this->em->persist($feed);
         $this->pendingEntry($feed, 'good', 'https://i/good.png');
         $this->pendingEntry($feed, 'beacon', 'https://i/beacon.png');
+        $this->pendingEntry($feed, 'rejected', 'https://i/rejected.png');
         $this->em->flush();
 
         $fetcher = new StubFaviconFetcher();
         $fetcher->willReturnBytes('https://i/good.png', PngImageFactory::bytes(600, 400));
         $fetcher->willReturnBytes('https://i/beacon.png', PngImageFactory::bytes(1, 1));
+        $fetcher->willFail('https://i/rejected.png', new FaviconRejectedException('Icon responded 403.'));
 
         $report = $this->sweep($fetcher)->verifyDue()->toArray();
 
         self::assertSame(1, $report['measured']);
+        self::assertSame(1, $report['kept']);
         self::assertSame(1, $report['dropped']);
         self::assertSame(0, $report['retried']);
 
@@ -67,6 +71,10 @@ final class ImageVerificationSweepTest extends DbTestCase
         $beacon = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'beacon']);
         self::assertNotNull($beacon);
         self::assertNull($beacon->getImageUrl());
+        $rejected = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'rejected']);
+        self::assertNotNull($rejected);
+        self::assertSame('https://i/rejected.png', $rejected->getImageUrl());
+        self::assertNotNull($rejected->getImage()->getCheckedAt());
     }
 
     public function testCountsARetriedImageAndLeavesItPending(): void

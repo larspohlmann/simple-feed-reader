@@ -9,6 +9,6 @@ namespace App\Service\Catalog\Exception;
  * faviconFailedAt and moves on — a missing icon degrades to the monogram, so
  * this is never fatal to anything.
  */
-final class FaviconUnavailableException extends \RuntimeException
+class FaviconUnavailableException extends \RuntimeException
 {
 }

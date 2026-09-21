@@ -102,10 +102,10 @@ final readonly class MaintenanceTick
     }
 
     /**
-     * @return array{measured: int, dropped: int, retried: int, skipped: string}
+     * @return array{measured: int, kept: int, dropped: int, retried: int, skipped: string}
      */
     private function skippedImageVerification(): array
     {
-        return (new ImageVerificationReport(0, 0, 0))->toArray() + ['skipped' => self::ABORTED_REASON];
+        return (new ImageVerificationReport(0, 0, 0, 0))->toArray() + ['skipped' => self::ABORTED_REASON];
     }
 }

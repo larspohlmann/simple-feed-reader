@@ -68,6 +68,13 @@ class EntryImage
         $this->verifyAttempts = null;
     }
 
+    /** The host or this fetcher's policy refused the image; a browser may still render it, so it is kept as-is. */
+    public function keepUnmeasured(\DateTimeImmutable $checkedAt): void
+    {
+        $this->checkedAt = $checkedAt;
+        $this->verifyAttempts = null;
+    }
+
     public function recordFailedProbe(): void
     {
         $this->verifyAttempts = ($this->verifyAttempts ?? 0) + 1;

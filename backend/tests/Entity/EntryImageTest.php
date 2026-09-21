@@ -54,6 +54,22 @@ final class EntryImageTest extends TestCase
         self::assertFalse($image->isMissing());
     }
 
+    public function testKeepingUnmeasuredSettlesWithoutTouchingTheDimensions(): void
+    {
+        $image = new EntryImage();
+        $image->storePending('https://i/a.jpg', 640, 360);
+        $image->recordFailedProbe();
+        $at = new \DateTimeImmutable('2026-09-21 12:00:00');
+
+        $image->keepUnmeasured($at);
+
+        self::assertSame('https://i/a.jpg', $image->getUrl());
+        self::assertSame(640, $image->getWidth());
+        self::assertSame(360, $image->getHeight());
+        self::assertEquals($at, $image->getCheckedAt());
+        self::assertSame(0, $image->getVerifyAttempts());
+    }
+
     public function testAMeasurementClearsTheRetryCounter(): void
     {
         $image = new EntryImage();

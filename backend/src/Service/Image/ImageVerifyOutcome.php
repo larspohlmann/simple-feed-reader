@@ -7,6 +7,7 @@ namespace App\Service\Image;
 enum ImageVerifyOutcome
 {
     case Measured;
+    case Kept;
     case Dropped;
     case Retried;
 }

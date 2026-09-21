@@ -27,6 +27,7 @@ final readonly class ImageVerificationSweep
     {
         $deadline = microtime(true) + self::BUDGET_SECONDS;
         $measured = 0;
+        $kept = 0;
         $dropped = 0;
         $retried = 0;
         $processed = 0;
@@ -37,6 +38,7 @@ final readonly class ImageVerificationSweep
             }
             match ($this->imageVerifier->verify($entry->getImage())) {
                 ImageVerifyOutcome::Measured => $measured++,
+                ImageVerifyOutcome::Kept => $kept++,
                 ImageVerifyOutcome::Dropped => $dropped++,
                 ImageVerifyOutcome::Retried => $retried++,
             };
@@ -47,6 +49,6 @@ final readonly class ImageVerificationSweep
             $this->em->flush();
         }
 
-        return new ImageVerificationReport($measured, $dropped, $retried);
+        return new ImageVerificationReport($measured, $kept, $dropped, $retried);
     }
 }

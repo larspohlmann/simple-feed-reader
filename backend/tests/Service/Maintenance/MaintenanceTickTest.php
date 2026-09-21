@@ -80,6 +80,7 @@ final class MaintenanceTickTest extends DbTestCase
         self::assertIsInt($report['logShipping']['shipped']);
         self::assertIsInt($report['logShipping']['failed']);
         self::assertIsInt($report['imageVerification']['measured']);
+        self::assertIsInt($report['imageVerification']['kept']);
         self::assertIsInt($report['imageVerification']['dropped']);
         self::assertIsInt($report['imageVerification']['retried']);
         self::assertArrayNotHasKey('skipped', $report['imageVerification']);
@@ -251,6 +252,7 @@ final class MaintenanceTickTest extends DbTestCase
         self::assertSame(
             [
                 'measured' => 0,
+                'kept' => 0,
                 'dropped' => 0,
                 'retried' => 0,
                 'skipped' => 'refresh aborted: the shared EntityManager is unusable this tick',

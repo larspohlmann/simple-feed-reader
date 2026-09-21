@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Image;
 
 use App\Entity\EntryImage;
+use App\Service\Catalog\Exception\FaviconRejectedException;
 use App\Service\Catalog\Exception\FaviconUnavailableException;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Image\ImageVerifier;
@@ -97,6 +98,38 @@ final class ImageVerifierTest extends TestCase
         self::assertSame(ImageVerifyOutcome::Dropped, $outcome);
         self::assertNull($image->getUrl());
         self::assertEquals(new \DateTimeImmutable('2026-09-21 12:00:00'), $image->getCheckedAt());
+    }
+
+    public function testKeepsAnImageTheFetcherRejected(): void
+    {
+        $fetcher = new StubFaviconFetcher();
+        $fetcher->willFail('https://i/rejected.png', new FaviconRejectedException('Icon responded 403.'));
+        $image = new EntryImage();
+        $image->storePending('https://i/rejected.png', 640, 360);
+
+        $outcome = $this->verifier($fetcher)->verify($image);
+
+        self::assertSame(ImageVerifyOutcome::Kept, $outcome);
+        self::assertSame('https://i/rejected.png', $image->getUrl());
+        self::assertSame(640, $image->getWidth());
+        self::assertEquals(new \DateTimeImmutable('2026-09-21 12:00:00'), $image->getCheckedAt());
+        self::assertSame(0, $image->getVerifyAttempts());
+    }
+
+    public function testARejectionAfterFailedProbesStillKeepsTheImage(): void
+    {
+        $fetcher = new StubFaviconFetcher();
+        $fetcher->willFail('https://i/gone.png', new FaviconUnavailableException('timeout'));
+        $image = $this->pendingImage('https://i/gone.png');
+        $verifier = $this->verifier($fetcher);
+
+        self::assertSame(ImageVerifyOutcome::Retried, $verifier->verify($image));
+        self::assertSame(ImageVerifyOutcome::Retried, $verifier->verify($image));
+
+        $fetcher->willFail('https://i/gone.png', new FaviconRejectedException('Icon responded 403.'));
+        $outcome = $verifier->verify($image);
+
+        self::assertSame(ImageVerifyOutcome::Kept, $outcome);
     }
 
     public function testTreatsUndecodableBytesAsAFailedProbe(): void

@@ -6,12 +6,17 @@ namespace App\Service\Image;
 
 use App\Entity\EntryImage;
 use App\Service\Catalog\CatalogFaviconFetcherInterface;
+use App\Service\Catalog\Exception\FaviconRejectedException;
 use App\Service\Catalog\Exception\FaviconUnavailableException;
 use App\Service\Clock\NaiveUtcClock;
 
 /**
  * Verifies one pending image via the SSRF-guarded fetcher, retrying a bounded
- * number of times before dropping it, so a transient network failure never nulls a good image.
+ * number of times before dropping it, so a transient network failure never
+ * nulls a good image. A host or policy refusal the fetcher cannot recover
+ * from (an access-controlled status, a disallowed type, an over-size body)
+ * keeps the image unmeasured rather than dropping it — a browser may still
+ * render what this verifier could not judge.
  */
 final readonly class ImageVerifier
 {
@@ -32,10 +37,19 @@ final readonly class ImageVerifier
 
         try {
             $bytes = $this->fetcher->download($url)->bytes;
+        } catch (FaviconRejectedException) {
+            $image->keepUnmeasured($this->clock->now());
+
+            return ImageVerifyOutcome::Kept;
         } catch (FaviconUnavailableException) {
             return $this->recordFailure($image);
         }
 
+        return $this->judge($image, $bytes);
+    }
+
+    private function judge(EntryImage $image, string $bytes): ImageVerifyOutcome
+    {
         $dimensions = ImageDimensions::fromBytes($bytes);
         if ($dimensions === null) {
             return $this->recordFailure($image);
