@@ -19,6 +19,9 @@ namespace App\Service\Url;
  * - Length: a URL over the column's limit is NOT truncated — cutting it at
  *   that many characters produces a different, broken URL that 404s in the
  *   reader, not a shortened valid one.
+ *
+ * {@see orNullUpgrading} is the card-image variant: it upgrades http:// to
+ * https:// instead of rejecting it.
  */
 final class HttpsImageUrl
 {
@@ -38,5 +41,39 @@ final class HttpsImageUrl
         }
 
         return mb_strlen($absolute) > self::MAX_LENGTH ? null : $absolute;
+    }
+
+    /**
+     * The card-image variant of {@see orNull}: an http:// URL is rewritten to
+     * https:// rather than rejected, because the same asset is very often
+     * reachable over https; the background verify then confirms it.
+     */
+    public static function orNullUpgrading(?string $url): ?string
+    {
+        if ($url === null) {
+            return null;
+        }
+
+        $upgraded = self::toHttps($url);
+        if ($upgraded === null) {
+            return null;
+        }
+
+        return mb_strlen($upgraded) > self::MAX_LENGTH ? null : $upgraded;
+    }
+
+    private static function toHttps(string $url): ?string
+    {
+        if (str_starts_with($url, '//')) {
+            return 'https:' . $url;
+        }
+        if (str_starts_with($url, 'https://')) {
+            return $url;
+        }
+        if (str_starts_with($url, 'http://')) {
+            return 'https://' . substr($url, 7);
+        }
+
+        return null;
     }
 }
