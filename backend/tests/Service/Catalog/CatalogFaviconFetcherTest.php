@@ -122,12 +122,26 @@ final class CatalogFaviconFetcherTest extends TestCase
         $this->fetcher($client)->download(self::ICON_URL);
     }
 
-    public function testPropagatesTheSsrfGuardAsAnUnavailableIcon(): void
+    public function testPropagatesTheSsrfGuardAsAnUnavailableIconNotARejectedOne(): void
     {
         $client = new MockHttpClient(new MockResponse('BINARY'));
 
-        $this->expectException(FaviconUnavailableException::class);
-        $this->fetcher($client, ['www.theverge.com' => ['127.0.0.1']])->download(self::ICON_URL);
+        try {
+            $this->fetcher($client, ['www.theverge.com' => ['127.0.0.1']])->download(self::ICON_URL);
+            self::fail('Expected a FaviconUnavailableException.');
+        } catch (FaviconUnavailableException $caught) {
+            self::assertNotInstanceOf(FaviconRejectedException::class, $caught);
+        }
+    }
+
+    public function testAWireCapTripIsRejectedNotMerelyUnavailable(): void
+    {
+        $client = new MockHttpClient(new MockResponse(str_repeat('x', 5_000_001), [
+            'response_headers' => ['content-type' => ['image/png']],
+        ]));
+
+        $this->expectException(FaviconRejectedException::class);
+        $this->fetcher($client)->download(self::ICON_URL);
     }
 
     public function testRejectsAnEmptyBody(): void
@@ -192,6 +206,26 @@ final class CatalogFaviconFetcherTest extends TestCase
         $this->fetcher($client)->download(self::ICON_URL);
     }
 
+    public function testA400IsRejectedAtTheLowerBoundaryWithItsStatusInTheMessage(): void
+    {
+        $client = new MockHttpClient(new MockResponse('', ['http_code' => 400]));
+
+        try {
+            $this->fetcher($client)->download(self::ICON_URL);
+            self::fail('Expected a FaviconRejectedException.');
+        } catch (FaviconRejectedException $caught) {
+            self::assertSame('Icon responded 400.', $caught->getMessage());
+        }
+    }
+
+    public function testA499IsRejectedAtTheUpperBoundary(): void
+    {
+        $client = new MockHttpClient(new MockResponse('', ['http_code' => 499]));
+
+        $this->expectException(FaviconRejectedException::class);
+        $this->fetcher($client)->download(self::ICON_URL);
+    }
+
     public function testA429IsRejected(): void
     {
         $client = new MockHttpClient(new MockResponse('', ['http_code' => 429]));
@@ -221,6 +255,7 @@ final class CatalogFaviconFetcherTest extends TestCase
             self::fail('Expected a FaviconUnavailableException.');
         } catch (FaviconUnavailableException $caught) {
             self::assertNotInstanceOf(FaviconRejectedException::class, $caught);
+            self::assertSame('Icon responded 500.', $caught->getMessage());
         }
     }
 
@@ -255,8 +290,12 @@ final class CatalogFaviconFetcherTest extends TestCase
             ['response_headers' => ['content-type' => ['image/png']]],
         ));
 
-        $this->expectException(FaviconRejectedException::class);
-        $this->fetcher($client)->download(self::ICON_URL);
+        try {
+            $this->fetcher($client)->download(self::ICON_URL);
+            self::fail('Expected a FaviconRejectedException.');
+        } catch (FaviconRejectedException $caught) {
+            self::assertSame('Icon exceeded 3145728 bytes.', $caught->getMessage());
+        }
     }
 
     public function testPinsTheConnectionToTheGuardValidatedIp(): void

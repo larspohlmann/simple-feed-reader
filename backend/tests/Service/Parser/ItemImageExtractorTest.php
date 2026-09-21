@@ -166,6 +166,19 @@ final class ItemImageExtractorTest extends TestCase
         self::assertNull($image->width);
     }
 
+    public function testTrimsSurroundingWhitespaceFromAnInlineImgSrc(): void
+    {
+        $image = ItemImageExtractor::fromHtml('<img src="  https://i/inline.jpg  ">');
+
+        self::assertNotNull($image);
+        self::assertSame('https://i/inline.jpg', $image->url);
+    }
+
+    public function testAWhitespaceOnlyInlineImgSrcIsTreatedAsMissing(): void
+    {
+        self::assertNull(ItemImageExtractor::fromHtml('<img src="   ">'));
+    }
+
     public function testReadsACustomImageElementWithItsDeclaredDimensions(): void
     {
         $image = ItemImageExtractor::fromCustomImageElement($this->item(
