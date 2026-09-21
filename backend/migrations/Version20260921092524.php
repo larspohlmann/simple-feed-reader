@@ -10,11 +10,9 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Add the image verification columns (#1109): image_checked_at (this
- * instance's judgement stamp) and image_verify_attempts (the queue marker
- * and retry counter). PLATFORM-AWARE DDL — tests build schema from ORM
- * metadata and never run a migration, so a dialect error here is caught only
- * by CI's migrate-from-empty leg.
+ * Add the image verification columns (#1109). PLATFORM-AWARE DDL — tests
+ * build schema from ORM metadata and never run a migration, so a dialect
+ * error here is caught only by CI's migrate-from-empty leg.
  */
 final class Version20260921092524 extends AbstractMigration
 {
