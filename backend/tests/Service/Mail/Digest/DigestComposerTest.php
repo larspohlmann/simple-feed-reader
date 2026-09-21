@@ -169,7 +169,7 @@ final class DigestComposerTest extends TestCase
         // and this test builds the row by hand without booting the kernel.
         new \ReflectionProperty(Entry::class, 'id')->setValue($entry, $id);
         $entry->setPublishedAt(new \DateTimeImmutable('2026-08-15T09:48:00Z'));
-        $entry->setImage('https://cdn.example.com/' . $id . '.jpg', 1200, 900);
+        $entry->getImage()->storePending('https://cdn.example.com/' . $id . '.jpg', 1200, 900);
         $entry->getFeed()->setFaviconUrl('https://example.com/favicon.ico');
 
         return new EntryListRow(

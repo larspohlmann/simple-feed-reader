@@ -121,7 +121,7 @@ final readonly class FullyPopulatedAccount
         $entry->setAuthor('A. Author');
         $entry->setSummary('A summary of the article.');
         $entry->setContentHtml('<p>The body of the article.</p>');
-        $entry->setImage('https://populated.example/lead.jpg', 1200, 630);
+        $entry->getImage()->storePending('https://populated.example/lead.jpg', 1200, 630);
         $entry->setMedia(
             [
                 new EntryMedium('https://populated.example/lead.jpg', 'image', 1200, 630),

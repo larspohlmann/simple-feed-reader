@@ -66,7 +66,7 @@ final class EntryReaderControllerTest extends WebTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
         $entry->setContentHtml('<p>The feed body.</p>');
-        $entry->setImage('https://example.com/feed.jpg', 800, 450);
+        $entry->getImage()->storePending('https://example.com/feed.jpg', 800, 450);
         $em->persist($entry);
         $em->flush();
 

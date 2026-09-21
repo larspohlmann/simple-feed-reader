@@ -30,7 +30,7 @@ final class PageMediaScannerTest extends TestCase
             new \DateTimeImmutable('2026-09-07T10:00:00Z'),
         );
         if ($leadPoster !== null) {
-            $entry->setImage($leadPoster, 1200, 630);
+            $entry->getImage()->storePending($leadPoster, 1200, 630);
         }
         $entry->setMedia([], $attachments);
 
