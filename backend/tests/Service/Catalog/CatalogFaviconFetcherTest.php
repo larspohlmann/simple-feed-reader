@@ -11,8 +11,10 @@ use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\ProxyEgressResolver;
+use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\UrlGuard;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -111,6 +113,18 @@ final class CatalogFaviconFetcherTest extends TestCase
         ));
 
         $this->expectException(FaviconUnavailableException::class);
+        $this->fetcher($client)->download(self::ICON_URL);
+    }
+
+    public function testAWireCapTripNestedTwoLevelsDeepIsRejectedNotMerelyUnavailable(): void
+    {
+        $client = new MockHttpClient(static function (): never {
+            $capTripped = new ResponseTooLargeException('cap tripped');
+            $wrappedTwice = new TransportException('wrapped twice', previous: $capTripped);
+            throw new TransportException('wrapped once', previous: $wrappedTwice);
+        });
+
+        $this->expectException(FaviconRejectedException::class);
         $this->fetcher($client)->download(self::ICON_URL);
     }
 

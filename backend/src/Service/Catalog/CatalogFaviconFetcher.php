@@ -73,7 +73,7 @@ final readonly class CatalogFaviconFetcher implements CatalogFaviconFetcherInter
             RedirectionExceptionInterface |
             ServerExceptionInterface $e
         ) {
-            throw $this->unavailable($e);
+            throw $this->asFetchFailure($e);
         }
 
         $this->assertNotEmpty($bytes);
@@ -83,13 +83,24 @@ final readonly class CatalogFaviconFetcher implements CatalogFaviconFetcherInter
     }
 
     /** A wire- or buffer-cap trip is a policy rejection, not a dead host. */
-    private function unavailable(\Throwable $e): FaviconUnavailableException
+    private function asFetchFailure(\Throwable $e): FaviconUnavailableException
     {
-        if ($e instanceof ResponseTooLargeException || $e->getPrevious() instanceof ResponseTooLargeException) {
+        if ($this->causedByOversizedResponse($e)) {
             return new FaviconRejectedException($e->getMessage(), 0, $e);
         }
 
         return new FaviconUnavailableException($e->getMessage(), 0, $e);
+    }
+
+    private function causedByOversizedResponse(\Throwable $e): bool
+    {
+        for ($current = $e; $current !== null; $current = $current->getPrevious()) {
+            if ($current instanceof ResponseTooLargeException) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
