@@ -5,55 +5,38 @@ declare(strict_types=1);
 namespace App\Service\Parser;
 
 use App\Service\Image\DeclaredImage;
-use App\Service\Url\HttpsImageUrl;
 
-/**
- * Picks one image per feed item across its sources in precedence order; a
- * native-https source wins over an earlier http one (optimistic upgrades may be
- * unreachable), with the first http candidate as the fallback.
- */
 final class FeedItemImageSelector
 {
     public static function fromRss2(\DOMElement $item, ?string $bodyHtml): ?DeclaredImage
     {
-        return self::preferNativeHttps([
-            static fn (): ?DeclaredImage => ItemImageExtractor::fromMedia($item),
-            static fn (): ?DeclaredImage => ItemImageExtractor::fromRssEnclosure($item),
-            static fn (): ?DeclaredImage => ItemImageExtractor::fromCustomImageElement($item),
-            static fn (): ?DeclaredImage => ItemImageExtractor::fromHtml($bodyHtml),
-        ]);
+        $image = ItemImageExtractor::fromMedia($item) ?? ItemImageExtractor::fromRssEnclosure($item);
+
+        return $image
+            ?? ItemImageExtractor::fromCustomImageElement($item)
+            ?? ItemImageExtractor::fromHtml($bodyHtml);
     }
 
     /** @param list<?string> $bodyHtmlCandidates */
     public static function fromAtom(\DOMElement $entry, string $namespace, array $bodyHtmlCandidates): ?DeclaredImage
     {
-        $sources = [
-            static fn (): ?DeclaredImage => ItemImageExtractor::fromMedia($entry),
-            static fn (): ?DeclaredImage => ItemImageExtractor::fromAtomEnclosure($entry, $namespace),
-            static fn (): ?DeclaredImage => ItemImageExtractor::fromCustomImageElement($entry),
-        ];
-        foreach ($bodyHtmlCandidates as $bodyHtml) {
-            $sources[] = static fn (): ?DeclaredImage => ItemImageExtractor::fromHtml($bodyHtml);
-        }
+        $image = ItemImageExtractor::fromMedia($entry) ?? ItemImageExtractor::fromAtomEnclosure($entry, $namespace);
 
-        return self::preferNativeHttps($sources);
+        return $image
+            ?? ItemImageExtractor::fromCustomImageElement($entry)
+            ?? self::firstBodyImage($bodyHtmlCandidates);
     }
 
-    /** @param list<callable(): ?DeclaredImage> $sources */
-    private static function preferNativeHttps(array $sources): ?DeclaredImage
+    /** @param list<?string> $bodyHtmlCandidates */
+    private static function firstBodyImage(array $bodyHtmlCandidates): ?DeclaredImage
     {
-        $upgradeCandidate = null;
-        foreach ($sources as $source) {
-            $image = $source();
-            if ($image === null) {
-                continue;
-            }
-            if (HttpsImageUrl::isNativeHttps($image->url)) {
+        foreach ($bodyHtmlCandidates as $bodyHtml) {
+            $image = ItemImageExtractor::fromHtml($bodyHtml);
+            if ($image !== null) {
                 return $image;
             }
-            $upgradeCandidate ??= $image;
         }
 
-        return $upgradeCandidate;
+        return null;
     }
 }

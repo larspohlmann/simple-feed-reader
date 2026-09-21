@@ -6,6 +6,7 @@ namespace App\Service\Parser;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Image\DeclaredImage;
+use Dom\Element;
 
 /**
  * Finds the best image attached to a feed item. Callers combine the sources in
@@ -97,7 +98,7 @@ final class ItemImageExtractor
             ?? self::widest(self::customImageCandidates($item, 'image'));
     }
 
-    /** First <img src="…"> in a fragment of HTML, with the dimensions it declares. */
+    /** First non-beacon <img src="…"> in a fragment of HTML, with the dimensions it declares. */
     public static function fromHtml(?string $html): ?DeclaredImage
     {
         if ($html === null || $html === '') {
@@ -107,18 +108,28 @@ final class ItemImageExtractor
         if ($document === null) {
             return null;
         }
-        foreach ($document->getElementsByTagName('img') as $image) {
-            $src = trim($image->getAttribute('src') ?? '');
-            if ($src !== '') {
-                return new DeclaredImage(
-                    $src,
-                    self::positiveInt($image->getAttribute('width') ?? ''),
-                    self::positiveInt($image->getAttribute('height') ?? ''),
-                );
+        foreach ($document->getElementsByTagName('img') as $element) {
+            $image = self::inlineImage($element);
+            if ($image !== null && !$image->declaresBeacon()) {
+                return $image;
             }
         }
 
         return null;
+    }
+
+    private static function inlineImage(Element $element): ?DeclaredImage
+    {
+        $src = trim($element->getAttribute('src') ?? '');
+        if ($src === '') {
+            return null;
+        }
+
+        return new DeclaredImage(
+            $src,
+            self::positiveInt($element->getAttribute('width') ?? ''),
+            self::positiveInt($element->getAttribute('height') ?? ''),
+        );
     }
 
     /** @return list<DeclaredImage> */

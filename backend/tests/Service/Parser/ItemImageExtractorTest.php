@@ -294,4 +294,34 @@ final class ItemImageExtractorTest extends TestCase
     {
         self::assertNull(ItemImageExtractor::fromHtml('<p>just words</p>'));
     }
+
+    public function testSkipsADeclaredBeaconAndTakesTheNextImage(): void
+    {
+        $image = ItemImageExtractor::fromHtml(
+            '<img src="https://pixel.wp.com/b.gif" width="1" height="1">'
+            . '<img src="https://i/real.jpg" width="800" height="450">',
+        );
+
+        self::assertNotNull($image);
+        self::assertSame('https://i/real.jpg', $image->url);
+        self::assertSame(800, $image->width);
+        self::assertSame(450, $image->height);
+    }
+
+    public function testADeclaredBeaconAloneYieldsNoImage(): void
+    {
+        self::assertNull(ItemImageExtractor::fromHtml(
+            '<img src="https://pixel.wp.com/b.gif" width="1" height="1">',
+        ));
+    }
+
+    public function testAnImageWithOneSmallDeclaredEdgeIsKept(): void
+    {
+        $image = ItemImageExtractor::fromHtml(
+            '<img src="http://www.techmeme.com/x/i1.jpg" width="134" height="76">',
+        );
+
+        self::assertNotNull($image);
+        self::assertSame('http://www.techmeme.com/x/i1.jpg', $image->url);
+    }
 }

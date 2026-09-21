@@ -22,16 +22,39 @@ final class FeedItemImageSelectorTest extends TestCase
         return $item;
     }
 
-    public function testPrefersAnHttpsBodyImageOverAnHttpEnclosure(): void
+    private function atomEntry(string $innerXml): \DOMElement
     {
-        $item = $this->rss2Item('<enclosure url="http://files.example/e.jpg" type="image/jpeg" length="0"/>');
-        $body = '<p>x</p><img src="https://files.example/e.jpg" width="900" height="600">';
+        $doc = new \DOMDocument();
+        $atom = '<entry xmlns="http://www.w3.org/2005/Atom">' . $innerXml . '</entry>';
+        $doc->loadXML($atom);
+        $entry = $doc->documentElement;
+        self::assertInstanceOf(\DOMElement::class, $entry);
+
+        return $entry;
+    }
+
+    public function testAnHttpEnclosureKeepsItsPrecedenceOverAnHttpsBodyImage(): void
+    {
+        $item = $this->rss2Item('<enclosure url="http://files.example/lead.jpg" type="image/jpeg" length="0"/>');
+        $body = '<p>x</p><img src="https://files.example/diagram.jpg" width="900" height="600">';
 
         $image = FeedItemImageSelector::fromRss2($item, $body);
 
         self::assertNotNull($image);
-        self::assertSame('https://files.example/e.jpg', $image->url);
-        self::assertSame(900, $image->width);
+        self::assertSame('http://files.example/lead.jpg', $image->url);
+    }
+
+    public function testAnHttpsEmojiInTheBodyNeverDisplacesTheFeedsLeadImage(): void
+    {
+        $item = $this->rss2Item(
+            '<media:content url="http://site.example/lead-1200.jpg" medium="image" width="1200"/>',
+        );
+        $body = '<p>Hi <img src="https://s.w.org/images/core/emoji/15/72x72/1f642.png" class="wp-smiley"></p>';
+
+        $image = FeedItemImageSelector::fromRss2($item, $body);
+
+        self::assertNotNull($image);
+        self::assertSame('http://site.example/lead-1200.jpg', $image->url);
     }
 
     public function testFallsBackToTheHttpEnclosureWhenNoHttpsCandidateExists(): void
@@ -63,17 +86,6 @@ final class FeedItemImageSelectorTest extends TestCase
         ));
     }
 
-    public function testFallsBackToTheFirstHttpCandidateNotTheLast(): void
-    {
-        $item = $this->rss2Item('<enclosure url="http://files.example/first.jpg" type="image/jpeg" length="0"/>');
-        $body = '<img src="http://files.example/second.jpg">';
-
-        $image = FeedItemImageSelector::fromRss2($item, $body);
-
-        self::assertNotNull($image);
-        self::assertSame('http://files.example/first.jpg', $image->url);
-    }
-
     public function testKeepsNativeHttpsMediaImmediately(): void
     {
         $item = $this->rss2Item('<media:content url="https://i/big.jpg" medium="image" width="700"/>');
@@ -82,5 +94,19 @@ final class FeedItemImageSelectorTest extends TestCase
 
         self::assertNotNull($image);
         self::assertSame('https://i/big.jpg', $image->url);
+    }
+
+    public function testAtomTriesEveryBodyCandidateInOrder(): void
+    {
+        $entry = $this->atomEntry('<title>No media here</title>');
+
+        $image = FeedItemImageSelector::fromAtom($entry, 'http://www.w3.org/2005/Atom', [
+            null,
+            '<p>none</p>',
+            '<img src="https://i/second.jpg">',
+        ]);
+
+        self::assertNotNull($image);
+        self::assertSame('https://i/second.jpg', $image->url);
     }
 }
