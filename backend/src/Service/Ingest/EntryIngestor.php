@@ -116,7 +116,7 @@ final class EntryIngestor
      * Fill in the image on entries ingested before the feed's image was
      * persisted (#148), matching by guid hash against a fresh parse.
      *
-     * Only entries whose image is currently NULL are touched — a feed that
+     * Only entries that never had a judged image are touched — a feed that
      * later drops or downgrades its images must never erase what we have. The
      * archive this can reach is bounded by what the feed still serves (15–50
      * items against thousands stored), so this is opportunistic repair, not a
@@ -138,7 +138,7 @@ final class EntryIngestor
                 continue;
             }
             $entry = $existing[self::guidHash($parsedEntry->guid)] ?? null;
-            if ($entry === null || $entry->getImageUrl() !== null) {
+            if ($entry === null || !$entry->getImage()->isMissing()) {
                 continue;
             }
             if ($this->storeImage($entry, $image)) {
@@ -195,6 +195,7 @@ final class EntryIngestor
     {
         return $image->width !== null
             && $image->height !== null
+            && !$image->declaresBeacon()
             && HttpsImageUrl::isNativeHttps($image->url);
     }
 

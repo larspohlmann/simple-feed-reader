@@ -143,6 +143,27 @@ final class FillMissingImagesTest extends DbTestCase
         self::assertNull($entry->getImageUrl());
     }
 
+    public function testNeverRestoresADroppedImage(): void
+    {
+        $feed = $this->feed();
+        $withImage = new ParsedFeed('T', null, null, null, [
+            $this->parsedEntry('g-dropped', new DeclaredImage('https://i/pixel.gif')),
+        ]);
+        $this->ingestor()->ingest($feed, $withImage, self::context());
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'g-dropped']);
+        self::assertNotNull($entry);
+        $entry->getImage()->drop(new \DateTimeImmutable('2026-09-21 12:00:00'));
+        $this->em->flush();
+
+        $filled = $this->ingestor()->fillMissingImages($feed, $withImage);
+        $this->em->flush();
+
+        self::assertSame(0, $filled);
+        self::assertNull($entry->getImageUrl());
+    }
+
     public function testAnHttpReplacementImageUrlIsUpgradedAndFilledIn(): void
     {
         $feed = $this->feed();
