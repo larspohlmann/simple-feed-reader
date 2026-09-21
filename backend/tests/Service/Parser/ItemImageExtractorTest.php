@@ -253,4 +253,45 @@ final class ItemImageExtractorTest extends TestCase
         self::assertSame('https://i/wide.jpg', $image->url);
         self::assertSame(800, $image->width);
     }
+
+    public function testReadsAnInlineImgWithAnUnquotedSrc(): void
+    {
+        $image = ItemImageExtractor::fromHtml('<p>x</p><img width=287 height=107 src=https://i/webp.webp>');
+
+        self::assertNotNull($image);
+        self::assertSame('https://i/webp.webp', $image->url);
+        self::assertSame(287, $image->width);
+        self::assertSame(107, $image->height);
+    }
+
+    public function testCapturesDeclaredDimensionsFromAnInlineImg(): void
+    {
+        $image = ItemImageExtractor::fromHtml('<img src="https://i/a.jpg" width="640" height="360">');
+
+        self::assertNotNull($image);
+        self::assertSame(640, $image->width);
+        self::assertSame(360, $image->height);
+    }
+
+    public function testIgnoresNonIntegerDimensionAttributes(): void
+    {
+        $image = ItemImageExtractor::fromHtml('<img src="https://i/a.jpg" width="100%" height="auto">');
+
+        self::assertNotNull($image);
+        self::assertNull($image->width);
+        self::assertNull($image->height);
+    }
+
+    public function testSkipsALeadingImgWithoutASrcAndTakesTheNext(): void
+    {
+        $image = ItemImageExtractor::fromHtml('<img alt="spacer"><img src="https://i/real.jpg">');
+
+        self::assertNotNull($image);
+        self::assertSame('https://i/real.jpg', $image->url);
+    }
+
+    public function testReturnsNullWhenTheHtmlHasNoImg(): void
+    {
+        self::assertNull(ItemImageExtractor::fromHtml('<p>just words</p>'));
+    }
 }

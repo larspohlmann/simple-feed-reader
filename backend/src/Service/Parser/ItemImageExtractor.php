@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Parser;
 
+use App\Service\Html\HtmlDocumentParser;
 use App\Service\Image\DeclaredImage;
 
 /**
@@ -96,18 +97,28 @@ final class ItemImageExtractor
             ?? self::widest(self::customImageCandidates($item, 'image'));
     }
 
-    /** First <img src="…"> in a fragment of HTML. Dimensions are never trusted here. */
+    /** First <img src="…"> in a fragment of HTML, with the dimensions it declares. */
     public static function fromHtml(?string $html): ?DeclaredImage
     {
         if ($html === null || $html === '') {
             return null;
         }
-        if (preg_match('/<img\b[^>]*?\bsrc\s*=\s*(["\'])(.*?)\1/i', $html, $matches) !== 1) {
+        $document = HtmlDocumentParser::parseOrNull($html);
+        if ($document === null) {
             return null;
         }
-        $src = trim(html_entity_decode($matches[2], ENT_QUOTES | ENT_HTML5));
+        foreach ($document->getElementsByTagName('img') as $image) {
+            $src = trim($image->getAttribute('src') ?? '');
+            if ($src !== '') {
+                return new DeclaredImage(
+                    $src,
+                    self::positiveInt($image->getAttribute('width') ?? ''),
+                    self::positiveInt($image->getAttribute('height') ?? ''),
+                );
+            }
+        }
 
-        return $src === '' ? null : new DeclaredImage($src);
+        return null;
     }
 
     /** @return list<DeclaredImage> */
