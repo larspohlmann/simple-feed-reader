@@ -23,8 +23,7 @@ use Dom\Element;
  * unrelated CDN files defeats URL identity, so that matching was dropped.
  *
  * The candidate is guarded to http(s) so a javascript:/data: URL from the
- * feed can never reach the client's <img src>. A known width below
- * MIN_HERO_WIDTH is rejected so a small picture never upscales into the hero.
+ * feed can never reach the client's <img src>.
  */
 final class HeroImageSelector
 {

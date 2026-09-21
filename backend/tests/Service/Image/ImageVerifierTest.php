@@ -9,26 +9,13 @@ use App\Service\Catalog\Exception\FaviconUnavailableException;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Image\ImageVerifier;
 use App\Service\Image\ImageVerifyOutcome;
+use App\Tests\Support\PngImageFactory;
 use App\Tests\Support\StubFaviconFetcher;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 
 final class ImageVerifierTest extends TestCase
 {
-    private function pngBytes(int $width, int $height): string
-    {
-        if ($width < 1 || $height < 1) {
-            self::fail('pngBytes requires positive dimensions');
-        }
-
-        $image = imagecreatetruecolor($width, $height);
-        ob_start();
-        imagepng($image);
-        imagedestroy($image);
-
-        return (string) ob_get_clean();
-    }
-
     private function pendingImage(string $url): EntryImage
     {
         $image = new EntryImage();
@@ -45,7 +32,7 @@ final class ImageVerifierTest extends TestCase
     public function testMeasuresAndStampsAReachableImage(): void
     {
         $fetcher = new StubFaviconFetcher();
-        $fetcher->willReturnBytes('https://i/ok.png', $this->pngBytes(600, 400));
+        $fetcher->willReturnBytes('https://i/ok.png', PngImageFactory::bytes(600, 400));
         $image = $this->pendingImage('https://i/ok.png');
 
         $outcome = $this->verifier($fetcher)->verify($image);
@@ -59,7 +46,7 @@ final class ImageVerifierTest extends TestCase
     public function testDropsABeacon(): void
     {
         $fetcher = new StubFaviconFetcher();
-        $fetcher->willReturnBytes('https://i/pixel.png', $this->pngBytes(1, 1));
+        $fetcher->willReturnBytes('https://i/pixel.png', PngImageFactory::bytes(1, 1));
         $image = $this->pendingImage('https://i/pixel.png');
 
         $outcome = $this->verifier($fetcher)->verify($image);
@@ -71,7 +58,7 @@ final class ImageVerifierTest extends TestCase
     public function testKeepsAThumbnailWithOneEdgeOverTheCeiling(): void
     {
         $fetcher = new StubFaviconFetcher();
-        $fetcher->willReturnBytes('https://i/thumb.png', $this->pngBytes(134, 76));
+        $fetcher->willReturnBytes('https://i/thumb.png', PngImageFactory::bytes(134, 76));
         $image = $this->pendingImage('https://i/thumb.png');
 
         $outcome = $this->verifier($fetcher)->verify($image);

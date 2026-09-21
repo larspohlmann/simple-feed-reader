@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Parser;
 
 use App\Service\Image\DeclaredImage;
+use App\Service\Url\HttpsImageUrl;
 
 /**
  * Picks one image per feed item across its sources in precedence order; a
@@ -47,17 +48,12 @@ final class FeedItemImageSelector
             if ($image === null) {
                 continue;
             }
-            if (self::isNativeHttps($image->url)) {
+            if (HttpsImageUrl::isNativeHttps($image->url)) {
                 return $image;
             }
             $upgradeCandidate ??= $image;
         }
 
         return $upgradeCandidate;
-    }
-
-    private static function isNativeHttps(string $url): bool
-    {
-        return str_starts_with($url, 'https://') || str_starts_with($url, '//');
     }
 }

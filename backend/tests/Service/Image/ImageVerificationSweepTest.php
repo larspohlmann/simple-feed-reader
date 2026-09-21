@@ -12,25 +12,12 @@ use App\Service\Clock\NaiveUtcClock;
 use App\Service\Image\ImageVerificationSweep;
 use App\Service\Image\ImageVerifier;
 use App\Tests\DbTestCase;
+use App\Tests\Support\PngImageFactory;
 use App\Tests\Support\StubFaviconFetcher;
 use Symfony\Component\Clock\MockClock;
 
 final class ImageVerificationSweepTest extends DbTestCase
 {
-    private function pngBytes(int $width, int $height): string
-    {
-        if ($width < 1 || $height < 1) {
-            self::fail('pngBytes requires positive dimensions');
-        }
-
-        $image = imagecreatetruecolor($width, $height);
-        ob_start();
-        imagepng($image);
-        imagedestroy($image);
-
-        return (string) ob_get_clean();
-    }
-
     private function sweep(StubFaviconFetcher $fetcher): ImageVerificationSweep
     {
         /** @var PendingImageVerificationRepository $repository */
@@ -63,8 +50,8 @@ final class ImageVerificationSweepTest extends DbTestCase
         $this->em->flush();
 
         $fetcher = new StubFaviconFetcher();
-        $fetcher->willReturnBytes('https://i/good.png', $this->pngBytes(600, 400));
-        $fetcher->willReturnBytes('https://i/beacon.png', $this->pngBytes(1, 1));
+        $fetcher->willReturnBytes('https://i/good.png', PngImageFactory::bytes(600, 400));
+        $fetcher->willReturnBytes('https://i/beacon.png', PngImageFactory::bytes(1, 1));
 
         $report = $this->sweep($fetcher)->verifyDue()->toArray();
 
@@ -113,7 +100,7 @@ final class ImageVerificationSweepTest extends DbTestCase
         $this->em->flush();
 
         $fetcher = new StubFaviconFetcher();
-        $fetcher->willAlwaysReturn($this->pngBytes(600, 400));
+        $fetcher->willAlwaysReturn(PngImageFactory::bytes(600, 400));
         $this->sweep($fetcher)->verifyDue();
         $this->em->clear();
 

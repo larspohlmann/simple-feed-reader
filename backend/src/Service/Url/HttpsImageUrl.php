@@ -28,6 +28,12 @@ final class HttpsImageUrl
     /** Matches the length of every column one of these is persisted into. */
     public const int MAX_LENGTH = 2048;
 
+    /** Already https, so no optimistic upgrade is needed before it is trusted. */
+    public static function isNativeHttps(string $url): bool
+    {
+        return str_starts_with($url, 'https://') || str_starts_with($url, '//');
+    }
+
     public static function orNull(?string $url): ?string
     {
         if ($url === null) {

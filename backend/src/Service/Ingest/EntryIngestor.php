@@ -195,7 +195,7 @@ final class EntryIngestor
     {
         return $image->width !== null
             && $image->height !== null
-            && (str_starts_with($image->url, 'https://') || str_starts_with($image->url, '//'));
+            && HttpsImageUrl::isNativeHttps($image->url);
     }
 
     /**
