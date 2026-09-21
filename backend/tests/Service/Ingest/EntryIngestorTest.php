@@ -498,6 +498,20 @@ final class EntryIngestorTest extends DbTestCase
         self::assertNull($entry->getImage()->getCheckedAt());
     }
 
+    public function testAProtocolRelativeImageWithDimensionsStaysPending(): void
+    {
+        $feed = $this->feed();
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, null, [
+            $this->parsedEntryWithImage('protocol-relative-pending', new DeclaredImage('//i/x.jpg', 800, 450)),
+        ]), self::context());
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'protocol-relative-pending']);
+        self::assertNotNull($entry);
+        self::assertSame('https://i/x.jpg', $entry->getImageUrl());
+        self::assertNull($entry->getImage()->getCheckedAt());
+    }
+
     public function testANativeHttpsImageWithDeclaredDimensionsIsTrustedAtIngest(): void
     {
         $feed = $this->feed();

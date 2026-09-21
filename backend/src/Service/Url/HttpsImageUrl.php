@@ -28,25 +28,15 @@ final class HttpsImageUrl
     /** Matches the length of every column one of these is persisted into. */
     public const int MAX_LENGTH = 2048;
 
-    /** Already https, so no optimistic upgrade is needed before it is trusted. */
+    /** A //host URL is not native: its https is as unproven as an upgraded http one. */
     public static function isNativeHttps(string $url): bool
     {
-        return str_starts_with($url, 'https://') || str_starts_with($url, '//');
+        return self::withoutPrefix($url, 'https://') !== null;
     }
 
     public static function orNull(?string $url): ?string
     {
-        if ($url === null) {
-            return null;
-        }
-
-        $absolute = str_starts_with($url, '//') ? 'https:' . $url : $url;
-
-        if (!str_starts_with($absolute, 'https://')) {
-            return null;
-        }
-
-        return mb_strlen($absolute) > self::MAX_LENGTH ? null : $absolute;
+        return self::withinColumn(self::secure($url ?? ''));
     }
 
     /**
@@ -56,30 +46,30 @@ final class HttpsImageUrl
      */
     public static function orNullUpgrading(?string $url): ?string
     {
-        if ($url === null) {
-            return null;
-        }
-
-        $upgraded = self::toHttps($url);
-        if ($upgraded === null) {
-            return null;
-        }
-
-        return mb_strlen($upgraded) > self::MAX_LENGTH ? null : $upgraded;
+        return self::withinColumn(self::secure($url ?? '') ?? self::upgraded($url ?? ''));
     }
 
-    private static function toHttps(string $url): ?string
+    private static function secure(string $url): ?string
     {
-        if (str_starts_with($url, '//')) {
-            return 'https:' . $url;
-        }
-        if (str_starts_with($url, 'https://')) {
-            return $url;
-        }
-        if (str_starts_with($url, 'http://')) {
-            return 'https://' . substr($url, 7);
-        }
+        $rest = self::withoutPrefix($url, 'https://') ?? self::withoutPrefix($url, '//');
 
-        return null;
+        return $rest === null ? null : 'https://' . $rest;
+    }
+
+    private static function upgraded(string $url): ?string
+    {
+        $rest = self::withoutPrefix($url, 'http://');
+
+        return $rest === null ? null : 'https://' . $rest;
+    }
+
+    private static function withoutPrefix(string $url, string $prefix): ?string
+    {
+        return strncasecmp($url, $prefix, \strlen($prefix)) === 0 ? substr($url, \strlen($prefix)) : null;
+    }
+
+    private static function withinColumn(?string $url): ?string
+    {
+        return $url === null || mb_strlen($url) > self::MAX_LENGTH ? null : $url;
     }
 }
