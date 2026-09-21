@@ -21,9 +21,11 @@ use App\Service\Parser\ParsedAttachment;
 use App\Service\Parser\ParsedMedium;
 use App\Service\Parser\ParsedMediaBundle;
 use App\Service\Parser\VisualMediaKind;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
+use Symfony\Component\Clock\MockClock;
 
 final class EntryIngestorTest extends DbTestCase
 {
@@ -42,6 +44,7 @@ final class EntryIngestorTest extends DbTestCase
             new EntrySanitizer(),
             new UrlNormalizer(),
             new EntryCategoryWriter($this->em, $categoryRepository, new CategoryNormalizer()),
+            new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')),
         );
     }
 
@@ -469,7 +472,7 @@ final class EntryIngestorTest extends DbTestCase
         self::assertSame('https://i.example.com/img.jpg', $entry->getImageUrl());
     }
 
-    public function testHttpImageUrlIsDroppedAsMixedContent(): void
+    public function testHttpImageUrlIsUpgradedToHttpsAndKept(): void
     {
         $feed = $this->feed();
         $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, null, [
@@ -479,7 +482,46 @@ final class EntryIngestorTest extends DbTestCase
 
         $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'http-image']);
         self::assertNotNull($entry);
-        self::assertNull($entry->getImageUrl());
+        self::assertSame('https://i.example.com/img.jpg', $entry->getImageUrl());
+    }
+
+    public function testAnHttpUpgradedImageIsLeftPendingVerification(): void
+    {
+        $feed = $this->feed();
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, null, [
+            $this->parsedEntryWithImage('http-pending', new DeclaredImage('http://i/x.jpg', 400, 300)),
+        ]), self::context());
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'http-pending']);
+        self::assertNotNull($entry);
+        self::assertNull($entry->getImage()->getCheckedAt());
+    }
+
+    public function testANativeHttpsImageWithDeclaredDimensionsIsTrustedAtIngest(): void
+    {
+        $feed = $this->feed();
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, null, [
+            $this->parsedEntryWithImage('https-trusted', new DeclaredImage('https://i/x.jpg', 400, 300)),
+        ]), self::context());
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'https-trusted']);
+        self::assertNotNull($entry);
+        self::assertNotNull($entry->getImage()->getCheckedAt());
+    }
+
+    public function testANativeHttpsImageWithoutDimensionsStaysPending(): void
+    {
+        $feed = $this->feed();
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, null, [
+            $this->parsedEntryWithImage('https-nodims', new DeclaredImage('https://i/x.jpg', null, null)),
+        ]), self::context());
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'https-nodims']);
+        self::assertNotNull($entry);
+        self::assertNull($entry->getImage()->getCheckedAt());
     }
 
     public function testDataUriImageIsDropped(): void

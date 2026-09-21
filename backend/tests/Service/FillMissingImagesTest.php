@@ -143,7 +143,7 @@ final class FillMissingImagesTest extends DbTestCase
         self::assertNull($entry->getImageUrl());
     }
 
-    public function testAnHttpReplacementImageUrlIsNotFilledIn(): void
+    public function testAnHttpReplacementImageUrlIsUpgradedAndFilledIn(): void
     {
         $feed = $this->feed();
         $g7 = new ParsedFeed('T', null, null, null, [$this->parsedEntry('g7', null)]);
@@ -154,9 +154,9 @@ final class FillMissingImagesTest extends DbTestCase
             $this->parsedEntry('g7', new DeclaredImage('http://i/7.jpg', 100, 100)),
         ]));
 
-        self::assertSame(0, $filled);
+        self::assertSame(1, $filled);
         $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'g7']);
         self::assertNotNull($entry);
-        self::assertNull($entry->getImageUrl());
+        self::assertSame('https://i/7.jpg', $entry->getImageUrl());
     }
 }

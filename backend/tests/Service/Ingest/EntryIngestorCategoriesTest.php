@@ -10,6 +10,7 @@ use App\Entity\Feed;
 use App\Repository\CategoryRepository;
 use App\Repository\EntryRepository;
 use App\Service\Category\CategoryNormalizer;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\FeedIngestContext;
@@ -19,6 +20,7 @@ use App\Service\Parser\ParsedFeed;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
+use Symfony\Component\Clock\MockClock;
 
 final class EntryIngestorCategoriesTest extends DbTestCase
 {
@@ -38,6 +40,7 @@ final class EntryIngestorCategoriesTest extends DbTestCase
             new EntrySanitizer(),
             new UrlNormalizer(),
             new EntryCategoryWriter($this->em, $categoryRepository, new CategoryNormalizer()),
+            new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')),
         );
 
         $this->feed = new Feed('https://example.com/feed');

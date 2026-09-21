@@ -10,6 +10,7 @@ use App\Repository\EntryRepository;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
 use App\Service\Parser\ParsedMediaBundle;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Image\DeclaredImage;
 use App\Service\Url\HttpsImageUrl;
 use App\Service\Sanitize\EntrySanitizer;
@@ -45,6 +46,7 @@ final class EntryIngestor
         private readonly EntrySanitizer $sanitizer,
         private readonly UrlNormalizer $urlNormalizer,
         private readonly EntryCategoryWriter $categoryWriter,
+        private readonly NaiveUtcClock $clock,
     ) {
     }
 
@@ -139,12 +141,9 @@ final class EntryIngestor
             if ($entry === null || $entry->getImageUrl() !== null) {
                 continue;
             }
-            $url = $this->persistableImageUrl($image);
-            if ($url === null) {
-                continue;
+            if ($this->storeImage($entry, $image)) {
+                $updated++;
             }
-            $entry->setImage($url, $image->width, $image->height);
-            $updated++;
         }
 
         return $updated;
@@ -170,30 +169,33 @@ final class EntryIngestor
         }
     }
 
-    /**
-     * Sets all three image columns together so a rejected image (null, an
-     * unusable scheme, or a URL over the column limit) never leaves a stale
-     * width/height behind. DeclaredImage already treats a missing image as a
-     * first-class case the layout falls back from, so losing the image here
-     * is preferable to persisting something guaranteed to render broken
-     * forever.
-     */
     private function applyImage(Entry $entry, ?DeclaredImage $image): void
     {
-        if ($image === null) {
-            $entry->setImage(null, null, null);
-
-            return;
+        if ($image === null || !$this->storeImage($entry, $image)) {
+            $entry->getImage()->storePending(null, null, null);
         }
+    }
 
-        $url = $this->persistableImageUrl($image);
+    private function storeImage(Entry $entry, DeclaredImage $image): bool
+    {
+        $url = HttpsImageUrl::orNullUpgrading($image->url);
         if ($url === null) {
-            $entry->setImage(null, null, null);
-
-            return;
+            return false;
+        }
+        if (self::trustedAtIngest($image)) {
+            $entry->getImage()->storeVerified($url, $image->width, $image->height, $this->clock->now());
+        } else {
+            $entry->getImage()->storePending($url, $image->width, $image->height);
         }
 
-        $entry->setImage($url, $image->width, $image->height);
+        return true;
+    }
+
+    private static function trustedAtIngest(DeclaredImage $image): bool
+    {
+        return $image->width !== null
+            && $image->height !== null
+            && (str_starts_with($image->url, 'https://') || str_starts_with($image->url, '//'));
     }
 
     /**
@@ -205,15 +207,6 @@ final class EntryIngestor
         $bundle = $parsedEntry->media->mediaBundle ?? new ParsedMediaBundle();
         $assembled = EntryMediaAssembler::assemble($parsedEntry->media->image, $bundle->media, $bundle->attachments);
         $entry->setMedia($assembled->media, $assembled->attachments);
-    }
-
-    /**
-     * HttpsImageUrl owns the rule; this keeps the DeclaredImage-shaped call the
-     * ingest path reads better with.
-     */
-    private function persistableImageUrl(DeclaredImage $image): ?string
-    {
-        return HttpsImageUrl::orNull($image->url);
     }
 
     /**

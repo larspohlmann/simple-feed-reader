@@ -13,6 +13,7 @@ use App\Repository\EntryRepository;
 use App\Repository\FeedRepository;
 use App\Repository\PreferencesRepository;
 use App\Service\Category\CategoryNormalizer;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\FeedScheduler;
 use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\FetchResponse;
@@ -156,6 +157,7 @@ final class MaintenanceTickTest extends DbTestCase
                     $this->em->getRepository(Category::class),
                     new CategoryNormalizer(),
                 ),
+                new NaiveUtcClock($clock),
             ),
             new FaviconResolver($fetcher, new NullLogger()),
             new FeedScheduler($clock),

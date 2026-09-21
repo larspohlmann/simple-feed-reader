@@ -15,6 +15,7 @@ use App\Enum\SourceFormat;
 use App\Exception\AlreadySubscribedException;
 use App\Exception\SubscriptionLimitReachedException;
 use App\Service\Category\CategoryNormalizer;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Discovery\DiscoveredFeed;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
 use App\Service\Discovery\FeedCandidate;
@@ -111,6 +112,7 @@ final class SubscriptionServiceTest extends DbTestCase
                         $this->em->getRepository(Category::class),
                         new CategoryNormalizer(),
                     ),
+                    new NaiveUtcClock($clock),
                 ),
                 new FeedScheduler($clock),
                 $this->em,
