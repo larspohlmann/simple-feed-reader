@@ -45,6 +45,39 @@ final class PendingImageVerificationTest extends DbTestCase
         self::assertCount(2, $this->repository()->findPendingImageVerification(2));
     }
 
+    public function testSkipsAnUnjudgedImageThatWasNeverQueued(): void
+    {
+        $feed = $this->feed();
+        $this->entry($feed, 'restored');
+        $this->em->flush();
+        $this->em->getConnection()->executeStatement(
+            'UPDATE entry SET image_url = ? WHERE guid = ?',
+            ['https://i/restored.jpg', 'restored'],
+        );
+        $this->em->clear();
+
+        $found = $this->repository()->findPendingImageVerification(50);
+
+        $guids = array_map(static fn (Entry $entry): string => $entry->getGuid(), $found);
+        self::assertNotContains('restored', $guids);
+    }
+
+    public function testReturnsFreshImagesBeforeRetriedOnes(): void
+    {
+        $feed = $this->feed();
+        $retried = $this->entry($feed, 'retried');
+        $retried->getImage()->storePending('https://i/retried.jpg', null, null);
+        $retried->getImage()->recordFailedProbe();
+        $fresh = $this->entry($feed, 'fresh');
+        $fresh->getImage()->storePending('https://i/fresh.jpg', null, null);
+        $this->em->flush();
+
+        $found = $this->repository()->findPendingImageVerification(50);
+
+        $guids = array_map(static fn (Entry $entry): string => $entry->getGuid(), $found);
+        self::assertSame(['fresh', 'retried'], $guids);
+    }
+
     private function feed(): Feed
     {
         $feed = new Feed('https://example.test/feed.xml');

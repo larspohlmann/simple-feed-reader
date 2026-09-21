@@ -15,7 +15,6 @@ use App\Service\Clock\NaiveUtcClock;
  */
 final readonly class ImageVerifier
 {
-    private const int BEACON_EDGE_CEILING = 100;
     private const int MAX_ATTEMPTS = 3;
 
     public function __construct(
@@ -41,8 +40,8 @@ final readonly class ImageVerifier
         if ($dimensions === null) {
             return $this->recordFailure($image);
         }
-        if ($dimensions->bothEdgesAtMost(self::BEACON_EDGE_CEILING)) {
-            $image->drop();
+        if ($dimensions->isBeacon()) {
+            $image->drop($this->clock->now());
 
             return ImageVerifyOutcome::Dropped;
         }
@@ -55,7 +54,7 @@ final readonly class ImageVerifier
     private function recordFailure(EntryImage $image): ImageVerifyOutcome
     {
         if ($image->getVerifyAttempts() + 1 >= self::MAX_ATTEMPTS) {
-            $image->drop();
+            $image->drop($this->clock->now());
 
             return ImageVerifyOutcome::Dropped;
         }

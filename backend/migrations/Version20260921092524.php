@@ -10,21 +10,17 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Add the image verification columns (#1109): image_checked_at (null =
- * awaiting the background verify) and image_verify_attempts (transient-failure
- * retry counter). Existing images are stamped with a sentinel checked_at so
- * only images written after this deploy enter the verification queue — the
- * shipped behavior is forward-only. PLATFORM-AWARE DDL — tests build schema
- * from ORM metadata and never run a migration, so a dialect error here is
- * caught only by CI's migrate-from-empty leg.
+ * Add the image verification columns (#1109): image_checked_at (this
+ * instance's judgement stamp) and image_verify_attempts (the queue marker
+ * and retry counter). PLATFORM-AWARE DDL — tests build schema from ORM
+ * metadata and never run a migration, so a dialect error here is caught only
+ * by CI's migrate-from-empty leg.
  */
 final class Version20260921092524 extends AbstractMigration
 {
-    private const string GRANDFATHER_SENTINEL = '1970-01-01 00:00:00';
-
     public function getDescription(): string
     {
-        return 'Add entry image verification columns and grandfather existing images (#1109).';
+        return 'Add entry image verification columns (#1109).';
     }
 
     public function up(Schema $schema): void
@@ -37,11 +33,6 @@ final class Version20260921092524 extends AbstractMigration
             $this->addSql('ALTER TABLE entry ADD COLUMN image_checked_at DATETIME DEFAULT NULL');
             $this->addSql('ALTER TABLE entry ADD COLUMN image_verify_attempts INTEGER DEFAULT NULL');
         }
-
-        $this->addSql(
-            'UPDATE entry SET image_checked_at = :sentinel WHERE image_url IS NOT NULL',
-            ['sentinel' => self::GRANDFATHER_SENTINEL],
-        );
     }
 
     public function down(Schema $schema): void

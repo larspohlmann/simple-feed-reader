@@ -259,13 +259,12 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'urlHash' => 'Derived: sha256 of UrlNormalizer::normalize(url), which the file '
                 . 'already carries. EntryBatchInserter recomputes it on restore, so it is '
                 . 'never stale and never has to be dropped from the format later.',
-            'image.checkedAt' => 'The verification bookkeeping of this instance\'s background '
-                . 'image probe (#1109), like a feed\'s etag: null means pending. A restored '
-                . 'entry\'s image has never been probed by the new instance, so it must re-enter '
-                . 'the verification queue rather than inherit a stamp from elsewhere.',
-            'image.verifyAttempts' => 'The retry counter behind that same probe. Carrying it over '
-                . 'would apply another instance\'s failure streak to an image the new instance has '
-                . 'never tried.',
+            'image.checkedAt' => 'The time at which this instance judged the image (#1109). A '
+                . 'restored image was not judged here, so the field stays empty. An empty field '
+                . 'does not put the image into the check queue.',
+            'image.verifyAttempts' => 'The queue marker and failure count of this instance\'s '
+                . 'check. A restored image is not put into the queue. The instance shows it as '
+                . 'the old instance did.',
         ],
         EntryState::class => [
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,

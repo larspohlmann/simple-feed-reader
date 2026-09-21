@@ -280,8 +280,8 @@ article mark all hold one pointer to their owner.
 | Field | Why the file leaves it out |
 |---|---|
 | `urlHash` | A value the application calculates from the article address, which the file already carries. The restore calculates it again for each article. Therefore it is never old, and the format never has to drop it later. |
-| `image.checkedAt` | The state of this instance's background check of the article's image (#1109), like a feed's `etag`: empty means the check has not run yet. A restored article's image has not been checked by the new instance, so it must join the check queue again rather than inherit a date from elsewhere. |
-| `image.verifyAttempts` | The count of failed attempts behind that same check. If it were carried, the new instance would apply another instance's run of failures to an image it has never tried. |
+| `image.checkedAt` | The time at which this instance judged the image (#1109). A restored image was not judged here, so the field stays empty. An empty field does not put the image into the check queue. |
+| `image.verifyAttempts` | The queue marker and failure count of this instance's check. A restored image is not put into the queue. The instance shows it as the old instance did. |
 
 ## 7. Fields a restore must never write
 

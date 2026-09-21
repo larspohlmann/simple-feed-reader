@@ -6,6 +6,7 @@ namespace App\Tests\Service\Backup;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Repository\PendingImageVerificationRepository;
 use App\Service\Backup\Dto\EntryLine;
 use App\Service\Backup\EntryBatchInserter;
 use App\Tests\DbTestCase;
@@ -28,8 +29,12 @@ final class EntryBatchInserterTest extends DbTestCase
         return (int) $feed->getId();
     }
 
-    private function entryLine(string $guid, string $title = 'Entry', ?string $url = self::GENERATED_URL): EntryLine
-    {
+    private function entryLine(
+        string $guid,
+        string $title = 'Entry',
+        ?string $url = self::GENERATED_URL,
+        ?string $imageUrl = null,
+    ): EntryLine {
         return new EntryLine(
             feedUrl: 'https://batch.example/feed.xml',
             guid: $guid,
@@ -39,7 +44,7 @@ final class EntryBatchInserterTest extends DbTestCase
             author: 'Ann Author',
             summary: 'sum',
             contentHtml: '<p>body</p>',
-            imageUrl: null,
+            imageUrl: $imageUrl,
             imageWidth: 640,
             imageHeight: null,
             publishedAt: new \DateTimeImmutable('2026-08-01T10:00:00+00:00'),
@@ -99,6 +104,25 @@ final class EntryBatchInserterTest extends DbTestCase
         $this->inserter()->insert(999, []);
 
         $this->addToAssertionCount(1);
+    }
+
+    public function testARestoredImageIsNotQueuedForVerification(): void
+    {
+        $feedId = $this->createFeed('https://batch.example/feed.xml');
+
+        $this->inserter()->insert($feedId, [
+            $this->entryLine('with-image', imageUrl: 'https://batch.example/image.jpg'),
+        ]);
+
+        self::assertSame([], $this->pendingImageVerificationRepository()->findPendingImageVerification(10));
+    }
+
+    private function pendingImageVerificationRepository(): PendingImageVerificationRepository
+    {
+        $repository = self::getContainer()->get(PendingImageVerificationRepository::class);
+        self::assertInstanceOf(PendingImageVerificationRepository::class, $repository);
+
+        return $repository;
     }
 
     public function testRecomputesTheStableUrlHashForEveryInsertedRow(): void

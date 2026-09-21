@@ -9,9 +9,7 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * The background image verify's work queue: entries whose image was stored
- * optimistically and not yet confirmed. A focused repository so EntryRepository
- * stays within its method-count budget.
+ * The background image verify's work queue: entries whose image is pending verification.
  *
  * @extends ServiceEntityRepository<Entry>
  */
@@ -29,9 +27,9 @@ final class PendingImageVerificationRepository extends ServiceEntityRepository
     {
         /** @var list<Entry> $entries */
         $entries = $this->createQueryBuilder('e')
-            ->andWhere('e.image.url IS NOT NULL')
-            ->andWhere('e.image.checkedAt IS NULL')
-            ->orderBy('e.id', 'ASC')
+            ->andWhere('e.image.verifyAttempts IS NOT NULL')
+            ->orderBy('e.image.verifyAttempts', 'ASC')
+            ->addOrderBy('e.id', 'ASC')
             ->setMaxResults($limit)
             ->getQuery()
             ->getResult();

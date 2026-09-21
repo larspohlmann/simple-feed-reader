@@ -24,27 +24,35 @@ final class ImageDimensionsTest extends TestCase
         self::assertNull(ImageDimensions::fromBytes('this is not an image'));
     }
 
-    public function testBothEdgesAtMostIsTrueForABeacon(): void
+    public function testIsBeaconIsTrueForABeacon(): void
     {
         $dimensions = ImageDimensions::fromBytes(PngImageFactory::bytes(1, 1));
 
         self::assertNotNull($dimensions);
-        self::assertTrue($dimensions->bothEdgesAtMost(100));
+        self::assertTrue($dimensions->isBeacon());
     }
 
-    public function testBothEdgesAtMostIsFalseWhenOneEdgeExceeds(): void
+    public function testIsBeaconIsFalseWhenOnlyWidthExceedsTheCeiling(): void
     {
-        $dimensions = ImageDimensions::fromBytes(PngImageFactory::bytes(134, 76));
+        $dimensions = ImageDimensions::fromBytes(PngImageFactory::bytes(101, 100));
 
         self::assertNotNull($dimensions);
-        self::assertFalse($dimensions->bothEdgesAtMost(100));
+        self::assertFalse($dimensions->isBeacon());
     }
 
-    public function testBothEdgesAtMostIsTrueWhenBothEdgesEqualTheEdge(): void
+    public function testIsBeaconIsTrueWhenBothEdgesEqualTheCeiling(): void
     {
         $dimensions = ImageDimensions::fromBytes(PngImageFactory::bytes(100, 100));
 
         self::assertNotNull($dimensions);
-        self::assertTrue($dimensions->bothEdgesAtMost(100));
+        self::assertTrue($dimensions->isBeacon());
+    }
+
+    public function testIsBeaconIsFalseWhenOnlyHeightExceedsTheCeiling(): void
+    {
+        $dimensions = ImageDimensions::fromBytes(PngImageFactory::bytes(100, 101));
+
+        self::assertNotNull($dimensions);
+        self::assertFalse($dimensions->isBeacon());
     }
 }

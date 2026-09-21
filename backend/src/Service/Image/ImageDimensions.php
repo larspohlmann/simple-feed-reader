@@ -10,6 +10,8 @@ namespace App\Service\Image;
  */
 final readonly class ImageDimensions
 {
+    private const int BEACON_EDGE_CEILING = 100;
+
     public function __construct(
         public int $width,
         public int $height,
@@ -26,8 +28,8 @@ final readonly class ImageDimensions
         return new self($size[0], $size[1]);
     }
 
-    public function bothEdgesAtMost(int $edge): bool
+    public function isBeacon(): bool
     {
-        return $this->width <= $edge && $this->height <= $edge;
+        return $this->width <= self::BEACON_EDGE_CEILING && $this->height <= self::BEACON_EDGE_CEILING;
     }
 }

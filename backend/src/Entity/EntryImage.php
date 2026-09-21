@@ -9,13 +9,8 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * An entry's lead image: the URL, the dimensions, and its verification state.
- *
- * Embedded into Entry rather than three of its own scalar columns — these
- * values are stamped and read together and mean nothing apart. The image is
- * stored optimistically at ingest (checkedAt null = pending); a bounded
- * background step then downloads it, records the measured dimensions and
- * stamps checkedAt, or drops an unreachable/beacon image. The column names are
- * unprefixed and stated explicitly, so the table is unchanged.
+ * Embedded rather than three scalar columns — these values are stamped and
+ * read together and mean nothing apart.
  */
 #[ORM\Embeddable]
 class EntryImage
@@ -29,10 +24,11 @@ class EntryImage
     #[ORM\Column(name: 'image_height', nullable: true)]
     private ?int $height = null;
 
-    /** Null marks an image awaiting background verification; a value marks it settled. */
+    /** When this instance judged the image; null = never judged. */
     #[ORM\Column(name: 'image_checked_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $checkedAt = null;
 
+    /** Non-null marks the image pending verification; every settled state resets it to null. */
     #[ORM\Column(name: 'image_verify_attempts', nullable: true)]
     private ?int $verifyAttempts = null;
 
@@ -42,7 +38,7 @@ class EntryImage
         $this->width = $width;
         $this->height = $height;
         $this->checkedAt = null;
-        $this->verifyAttempts = null;
+        $this->verifyAttempts = $url === null ? null : 0;
     }
 
     public function storeVerified(?string $url, ?int $width, ?int $height, \DateTimeImmutable $checkedAt): void
@@ -59,18 +55,27 @@ class EntryImage
         $this->width = $width;
         $this->height = $height;
         $this->checkedAt = $checkedAt;
+        $this->verifyAttempts = null;
     }
 
-    public function drop(): void
+    /** The checkedAt stays behind as a tombstone, so a refresh never restores a rejected image. */
+    public function drop(\DateTimeImmutable $checkedAt): void
     {
         $this->url = null;
         $this->width = null;
         $this->height = null;
+        $this->checkedAt = $checkedAt;
+        $this->verifyAttempts = null;
     }
 
     public function recordFailedProbe(): void
     {
         $this->verifyAttempts = ($this->verifyAttempts ?? 0) + 1;
+    }
+
+    public function isMissing(): bool
+    {
+        return $this->url === null && $this->checkedAt === null;
     }
 
     public function getUrl(): ?string
