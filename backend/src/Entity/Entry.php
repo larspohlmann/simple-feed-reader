@@ -189,7 +189,12 @@ class Entry
 
     public function setImage(?string $url, ?int $width, ?int $height): void
     {
-        $this->image->set($url, $width, $height);
+        $this->image->storePending($url, $width, $height);
+    }
+
+    public function getImage(): EntryImage
+    {
+        return $this->image;
     }
 
     /** @return list<EntryMedium> */

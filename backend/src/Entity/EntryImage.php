@@ -4,19 +4,18 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * An entry's lead image: the URL and the dimensions the feed declared for it.
+ * An entry's lead image: the URL, the dimensions, and its verification state.
  *
- * Embedded into Entry rather than left as three of its own scalar columns —
- * PHPMD's field-count ceiling on Entry is a proxy for a real seam: these three
- * values are stamped and read together (EntryIngestor::applyImage sets all
- * three at once, EntryJson emits all three at once) and mean nothing apart. An
- * embeddable keeps them together without the join or lifecycle a separate
- * entity would add; the column names are unprefixed and stated explicitly, so
- * the table itself is unchanged (see ProviderUsage for the same move on
- * RecommendationRun).
+ * Embedded into Entry rather than three of its own scalar columns — these
+ * values are stamped and read together and mean nothing apart. The image is
+ * stored optimistically at ingest (checkedAt null = pending); a bounded
+ * background step then downloads it, records the measured dimensions and
+ * stamps checkedAt, or drops an unreachable/beacon image. The column names are
+ * unprefixed and stated explicitly, so the table is unchanged.
  */
 #[ORM\Embeddable]
 class EntryImage
@@ -24,23 +23,54 @@ class EntryImage
     #[ORM\Column(name: 'image_url', length: 2048, nullable: true)]
     private ?string $url = null;
 
-    /** As DECLARED by the feed. Null means unknown, not "no image". */
     #[ORM\Column(name: 'image_width', nullable: true)]
     private ?int $width = null;
 
     #[ORM\Column(name: 'image_height', nullable: true)]
     private ?int $height = null;
 
-    /**
-     * Sets all three values together so a rejected image never leaves a stale
-     * dimension behind — the invariant the single call site (Entry::setImage)
-     * relies on.
-     */
-    public function set(?string $url, ?int $width, ?int $height): void
+    /** Null marks an image awaiting background verification; a value marks it settled. */
+    #[ORM\Column(name: 'image_checked_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $checkedAt = null;
+
+    #[ORM\Column(name: 'image_verify_attempts', nullable: true)]
+    private ?int $verifyAttempts = null;
+
+    public function storePending(?string $url, ?int $width, ?int $height): void
     {
         $this->url = $url;
         $this->width = $width;
         $this->height = $height;
+        $this->checkedAt = null;
+        $this->verifyAttempts = null;
+    }
+
+    public function storeVerified(?string $url, ?int $width, ?int $height, \DateTimeImmutable $checkedAt): void
+    {
+        $this->url = $url;
+        $this->width = $width;
+        $this->height = $height;
+        $this->checkedAt = $checkedAt;
+        $this->verifyAttempts = null;
+    }
+
+    public function recordMeasurement(int $width, int $height, \DateTimeImmutable $checkedAt): void
+    {
+        $this->width = $width;
+        $this->height = $height;
+        $this->checkedAt = $checkedAt;
+    }
+
+    public function drop(): void
+    {
+        $this->url = null;
+        $this->width = null;
+        $this->height = null;
+    }
+
+    public function recordFailedProbe(): void
+    {
+        $this->verifyAttempts = ($this->verifyAttempts ?? 0) + 1;
     }
 
     public function getUrl(): ?string
@@ -56,5 +86,15 @@ class EntryImage
     public function getHeight(): ?int
     {
         return $this->height;
+    }
+
+    public function getCheckedAt(): ?\DateTimeImmutable
+    {
+        return $this->checkedAt;
+    }
+
+    public function getVerifyAttempts(): int
+    {
+        return $this->verifyAttempts ?? 0;
     }
 }
