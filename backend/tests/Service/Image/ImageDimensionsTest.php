@@ -52,4 +52,12 @@ final class ImageDimensionsTest extends TestCase
         self::assertNotNull($dimensions);
         self::assertFalse($dimensions->bothEdgesAtMost(100));
     }
+
+    public function testBothEdgesAtMostIsTrueWhenBothEdgesEqualTheEdge(): void
+    {
+        $dimensions = ImageDimensions::fromBytes($this->pngBytes(100, 100));
+
+        self::assertNotNull($dimensions);
+        self::assertTrue($dimensions->bothEdgesAtMost(100));
+    }
 }

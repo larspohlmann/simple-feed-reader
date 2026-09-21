@@ -7,6 +7,7 @@ namespace App\Tests\Service\Image;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Repository\PendingImageVerificationRepository;
+use App\Service\Catalog\Exception\FaviconUnavailableException;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Image\ImageVerificationSweep;
 use App\Service\Image\ImageVerifier;
@@ -79,6 +80,29 @@ final class ImageVerificationSweepTest extends DbTestCase
         $beacon = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'beacon']);
         self::assertNotNull($beacon);
         self::assertNull($beacon->getImageUrl());
+    }
+
+    public function testCountsARetriedImageAndLeavesItPending(): void
+    {
+        $feed = new Feed('https://example.test/feed.xml');
+        $this->em->persist($feed);
+        $this->pendingEntry($feed, 'gone', 'https://i/gone.png');
+        $this->em->flush();
+
+        $fetcher = new StubFaviconFetcher();
+        $fetcher->willFail('https://i/gone.png', new FaviconUnavailableException('timeout'));
+
+        $report = $this->sweep($fetcher)->verifyDue()->toArray();
+
+        self::assertSame(0, $report['measured']);
+        self::assertSame(0, $report['dropped']);
+        self::assertSame(1, $report['retried']);
+
+        $this->em->clear();
+        $gone = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'gone']);
+        self::assertNotNull($gone);
+        self::assertSame('https://i/gone.png', $gone->getImageUrl());
+        self::assertNull($gone->getImage()->getCheckedAt());
     }
 
     public function testAVerifiedImageLeavesTheQueue(): void

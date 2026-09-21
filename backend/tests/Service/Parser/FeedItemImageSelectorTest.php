@@ -63,6 +63,17 @@ final class FeedItemImageSelectorTest extends TestCase
         ));
     }
 
+    public function testFallsBackToTheFirstHttpCandidateNotTheLast(): void
+    {
+        $item = $this->rss2Item('<enclosure url="http://files.example/first.jpg" type="image/jpeg" length="0"/>');
+        $body = '<img src="http://files.example/second.jpg">';
+
+        $image = FeedItemImageSelector::fromRss2($item, $body);
+
+        self::assertNotNull($image);
+        self::assertSame('http://files.example/first.jpg', $image->url);
+    }
+
     public function testKeepsNativeHttpsMediaImmediately(): void
     {
         $item = $this->rss2Item('<media:content url="https://i/big.jpg" medium="image" width="700"/>');

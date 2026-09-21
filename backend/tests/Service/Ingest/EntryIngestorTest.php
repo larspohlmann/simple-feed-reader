@@ -511,6 +511,19 @@ final class EntryIngestorTest extends DbTestCase
         self::assertNotNull($entry->getImage()->getCheckedAt());
     }
 
+    public function testANativeHttpsImageMissingOneDimensionStaysPending(): void
+    {
+        $feed = $this->feed();
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, null, [
+            $this->parsedEntryWithImage('https-halfdims', new DeclaredImage('https://i/x.jpg', 400, null)),
+        ]), self::context());
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'https-halfdims']);
+        self::assertNotNull($entry);
+        self::assertNull($entry->getImage()->getCheckedAt());
+    }
+
     public function testANativeHttpsImageWithoutDimensionsStaysPending(): void
     {
         $feed = $this->feed();
