@@ -7,11 +7,9 @@ namespace App\Service\Parser;
 use App\Service\Image\DeclaredImage;
 
 /**
- * Chooses one image for a feed item across its sources, in precedence order
- * (Media RSS, format enclosure, custom <image>, inline body <img>). A source
- * that is already https wins over an earlier http one, because the http URL is
- * only upgraded optimistically and may not be reachable; the first http
- * candidate is the fallback when nothing native-https is found.
+ * Picks one image per feed item across its sources in precedence order; a
+ * native-https source wins over an earlier http one (optimistic upgrades may be
+ * unreachable), with the first http candidate as the fallback.
  */
 final class FeedItemImageSelector
 {
