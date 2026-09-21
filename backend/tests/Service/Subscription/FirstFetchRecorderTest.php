@@ -8,6 +8,7 @@ use App\Entity\Category;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Service\Category\CategoryNormalizer;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Discovery\DiscoveredFeed;
 use App\Service\FeedScheduler;
 use App\Service\Ingest\EntryCategoryWriter;
@@ -45,6 +46,7 @@ final class FirstFetchRecorderTest extends DbTestCase
                     $this->em->getRepository(Category::class),
                     new CategoryNormalizer(),
                 ),
+                new NaiveUtcClock($clock),
             ),
             new FeedScheduler($clock),
             $this->em,

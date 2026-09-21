@@ -237,7 +237,7 @@ final class AccountRestorerTest extends DbTestCase
         $entry->setAuthor('An Author');
         $entry->setSummary('Summary of ' . $title);
         $entry->setContentHtml('<p>Body of ' . $title . '</p>');
-        $entry->setImage('https://example.test/' . $guid . '.png', 640, 480);
+        $entry->getImage()->storePending('https://example.test/' . $guid . '.png', 640, 480);
         $entry->setPublishedAt(new \DateTimeImmutable($day . ' 04:00:00'));
         $this->em->persist($entry);
 

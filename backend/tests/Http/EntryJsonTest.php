@@ -26,7 +26,7 @@ final class EntryJsonTest extends TestCase
             new \DateTimeImmutable('2026-09-07T00:00:00Z'),
             new \DateTimeImmutable('2026-09-07T00:00:00Z'),
         );
-        $entry->setImage('https://i/lead.jpg', 800, 600);
+        $entry->getImage()->storePending('https://i/lead.jpg', 800, 600);
         $entry->setMedia(
             [new EntryMedium('https://i/lead.jpg', 'image', 800, 600)],
             [new EntryAttachment('https://cdn/ep.mp3', 'audio/mpeg', 3723)],

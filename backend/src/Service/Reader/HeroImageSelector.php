@@ -27,9 +27,20 @@ use Dom\Element;
  */
 final class HeroImageSelector
 {
+    /**
+     * Below this a known width only upscales into the hero band; an inline
+     * image's width is the publisher's display width, which is the honest
+     * bound.
+     */
+    private const int MIN_HERO_WIDTH = 480;
+
     public function select(?DeclaredImage $candidate, string $bodyHtml): ?DeclaredImage
     {
         if ($candidate === null || preg_match('#^https?://#i', $candidate->url) !== 1) {
+            return null;
+        }
+
+        if ($candidate->width !== null && $candidate->width < self::MIN_HERO_WIDTH) {
             return null;
         }
 

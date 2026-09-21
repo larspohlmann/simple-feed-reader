@@ -22,7 +22,7 @@ final class OriginalHeroResolverTest extends TestCase
     public function testTheFeedImageLeadsWhenTheFeedBodyHasNoImage(): void
     {
         $entry = $this->entry('<p>Feed body.</p>');
-        $entry->setImage('https://cdn.test/feed.jpg', 800, 450);
+        $entry->getImage()->storePending('https://cdn.test/feed.jpg', 800, 450);
 
         self::assertSame('https://cdn.test/feed.jpg', $this->resolver->resolve($entry)?->url);
     }
@@ -30,7 +30,7 @@ final class OriginalHeroResolverTest extends TestCase
     public function testTheFeedImageDoesNotLeadWhenTheFeedBodyHasAnImage(): void
     {
         $entry = $this->entry('<p>Intro.</p><img src="https://cdn.test/body.jpg" alt="">');
-        $entry->setImage('https://cdn.test/feed.jpg', 800, 450);
+        $entry->getImage()->storePending('https://cdn.test/feed.jpg', 800, 450);
 
         self::assertNull($this->resolver->resolve($entry));
     }
@@ -38,7 +38,7 @@ final class OriginalHeroResolverTest extends TestCase
     public function testUsesTheSummaryWhenTheEntryHasNoContent(): void
     {
         $entry = $this->entry(null, '<p>Intro.</p><img src="https://cdn.test/body.jpg" alt="">');
-        $entry->setImage('https://cdn.test/feed.jpg', 800, 450);
+        $entry->getImage()->storePending('https://cdn.test/feed.jpg', 800, 450);
 
         self::assertNull($this->resolver->resolve($entry));
     }
@@ -51,7 +51,7 @@ final class OriginalHeroResolverTest extends TestCase
     public function testRejectsANonHttpFeedImage(): void
     {
         $entry = $this->entry('<p>Feed body.</p>');
-        $entry->setImage('javascript:alert(1)', null, null);
+        $entry->getImage()->storePending('javascript:alert(1)', null, null);
 
         self::assertNull($this->resolver->resolve($entry));
     }

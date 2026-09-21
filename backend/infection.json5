@@ -78,6 +78,11 @@
             ],
         },
         Throw_: { ignore: ['App\\Service\\Reader\\HtmlPageFetcher::options'] },
+        // TrueValue on EntryMediaAssembler::visualMedia()'s $seen[...] = true:
+        // $seen is read only through isset(), which is indifferent to true vs
+        // false — only key absence or an explicit null flips it. Equivalent
+        // mutant; a real mutant in the same method still fails the build.
+        TrueValue: { ignore: ['App\\Service\\Ingest\\EntryMediaAssembler::visualMedia'] },
     },
     phpUnit: {
         configDir: '.',

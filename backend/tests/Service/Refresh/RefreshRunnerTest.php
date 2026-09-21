@@ -14,6 +14,7 @@ use App\Enum\FeedStatus;
 use App\Repository\EntryRepository;
 use App\Repository\FeedRepository;
 use App\Service\Category\CategoryNormalizer;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\FeedScheduler;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
@@ -112,6 +113,7 @@ final class RefreshRunnerTest extends DbTestCase
                     $this->em->getRepository(Category::class),
                     new CategoryNormalizer(),
                 ),
+                new NaiveUtcClock($this->clock),
             ),
             new FaviconResolver($this->faviconFetcher, new NullLogger()),
             new FeedScheduler($this->clock),

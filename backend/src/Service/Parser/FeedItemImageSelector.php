@@ -10,45 +10,26 @@ final class FeedItemImageSelector
 {
     public static function fromRss2(\DOMElement $item, ?string $bodyHtml): ?DeclaredImage
     {
-        $image = ItemImageExtractor::fromMedia($item);
-        if ($image !== null) {
-            return $image;
-        }
+        $image = ItemImageExtractor::fromMedia($item) ?? ItemImageExtractor::fromRssEnclosure($item);
 
-        $image = ItemImageExtractor::fromRssEnclosure($item);
-        if ($image !== null) {
-            return $image;
-        }
-
-        $image = ItemImageExtractor::fromCustomImageElement($item);
-        if ($image !== null) {
-            return $image;
-        }
-
-        return ItemImageExtractor::fromHtml($bodyHtml);
+        return $image
+            ?? ItemImageExtractor::fromCustomImageElement($item)
+            ?? ItemImageExtractor::fromHtml($bodyHtml);
     }
 
     /** @param list<?string> $bodyHtmlCandidates */
-    public static function fromAtom(
-        \DOMElement $entry,
-        string $namespace,
-        array $bodyHtmlCandidates,
-    ): ?DeclaredImage {
-        $image = ItemImageExtractor::fromMedia($entry);
-        if ($image !== null) {
-            return $image;
-        }
+    public static function fromAtom(\DOMElement $entry, string $namespace, array $bodyHtmlCandidates): ?DeclaredImage
+    {
+        $image = ItemImageExtractor::fromMedia($entry) ?? ItemImageExtractor::fromAtomEnclosure($entry, $namespace);
 
-        $image = ItemImageExtractor::fromAtomEnclosure($entry, $namespace);
-        if ($image !== null) {
-            return $image;
-        }
+        return $image
+            ?? ItemImageExtractor::fromCustomImageElement($entry)
+            ?? self::firstBodyImage($bodyHtmlCandidates);
+    }
 
-        $image = ItemImageExtractor::fromCustomImageElement($entry);
-        if ($image !== null) {
-            return $image;
-        }
-
+    /** @param list<?string> $bodyHtmlCandidates */
+    private static function firstBodyImage(array $bodyHtmlCandidates): ?DeclaredImage
+    {
         foreach ($bodyHtmlCandidates as $bodyHtml) {
             $image = ItemImageExtractor::fromHtml($bodyHtml);
             if ($image !== null) {

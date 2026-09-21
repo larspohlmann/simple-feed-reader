@@ -14,16 +14,8 @@ use App\Service\Url\HttpsImageUrl;
 
 /**
  * Turns the feed's parsed media into the entity's two stored lists. The lead
- * image leads the visual list, so `media[0]` stays the persisted lead and equals
- * getImageUrl(); every URL passes the same https/length gate the lead image
- * uses, and a visual whose URL matches one already kept is dropped rather than
- * repeated.
- *
- * Storing the lead both here (as media[0]) and in the EntryImage columns is a
- * deliberate denormalization: media[] is a self-contained visual list a native
- * client renders alone. The `media[0].url === getImageUrl()` invariant it relies
- * on is held by running the one gate over the same lead, and is guarded by
- * EntryIngestorTest.
+ * passes the same https-upgrading gate `EntryIngestor::storeImage` uses, so
+ * `media[0]` stays equal to `getImageUrl()` — guarded by EntryIngestorTest.
  */
 final class EntryMediaAssembler
 {
@@ -48,7 +40,14 @@ final class EntryMediaAssembler
     {
         $kept = [];
         $seen = [];
-        foreach (self::withLeadFirst($lead, $media) as $medium) {
+
+        $leadMedium = self::leadMedium($lead);
+        if ($leadMedium !== null) {
+            $kept[] = $leadMedium;
+            $seen[$leadMedium->url] = true;
+        }
+
+        foreach ($media as $medium) {
             $url = HttpsImageUrl::orNull($medium->url);
             if ($url === null || isset($seen[$url])) {
                 continue;
@@ -66,20 +65,18 @@ final class EntryMediaAssembler
         return $kept;
     }
 
-    /**
-     * @param list<ParsedMedium> $media
-     *
-     * @return list<ParsedMedium>
-     */
-    private static function withLeadFirst(?DeclaredImage $lead, array $media): array
+    /** The lead is not yet verified, so it is upgraded rather than merely accepted — the same gate storeImage uses. */
+    private static function leadMedium(?DeclaredImage $lead): ?EntryMedium
     {
         if ($lead === null) {
-            return $media;
+            return null;
+        }
+        $url = HttpsImageUrl::orNullUpgrading($lead->url);
+        if ($url === null) {
+            return null;
         }
 
-        $leadMedium = new ParsedMedium($lead->url, VisualMediaKind::Image, $lead->width, $lead->height);
-
-        return [$leadMedium, ...$media];
+        return new EntryMedium($url, VisualMediaKind::Image->value, $lead->width, $lead->height);
     }
 
     /**

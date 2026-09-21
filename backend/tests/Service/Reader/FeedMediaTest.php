@@ -28,7 +28,7 @@ final class FeedMediaTest extends TestCase
             new \DateTimeImmutable('2026-09-07T10:00:00Z'),
         );
         if ($leadUrl !== null) {
-            $entry->setImage($leadUrl, 1200, 630);
+            $entry->getImage()->storePending($leadUrl, 1200, 630);
         }
         $entry->setMedia($media, $attachments);
 

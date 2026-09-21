@@ -22,4 +22,11 @@ final readonly class DeclaredImage
         public ?int $height = null,
     ) {
     }
+
+    public function declaresBeacon(): bool
+    {
+        return $this->width !== null
+            && $this->height !== null
+            && (new ImageDimensions($this->width, $this->height))->isBeacon();
+    }
 }

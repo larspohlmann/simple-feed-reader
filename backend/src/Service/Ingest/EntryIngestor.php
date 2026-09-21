@@ -10,6 +10,7 @@ use App\Repository\EntryRepository;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
 use App\Service\Parser\ParsedMediaBundle;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Image\DeclaredImage;
 use App\Service\Url\HttpsImageUrl;
 use App\Service\Sanitize\EntrySanitizer;
@@ -45,6 +46,7 @@ final class EntryIngestor
         private readonly EntrySanitizer $sanitizer,
         private readonly UrlNormalizer $urlNormalizer,
         private readonly EntryCategoryWriter $categoryWriter,
+        private readonly NaiveUtcClock $clock,
     ) {
     }
 
@@ -114,7 +116,7 @@ final class EntryIngestor
      * Fill in the image on entries ingested before the feed's image was
      * persisted (#148), matching by guid hash against a fresh parse.
      *
-     * Only entries whose image is currently NULL are touched — a feed that
+     * Only entries that never had a judged image are touched — a feed that
      * later drops or downgrades its images must never erase what we have. The
      * archive this can reach is bounded by what the feed still serves (15–50
      * items against thousands stored), so this is opportunistic repair, not a
@@ -136,15 +138,12 @@ final class EntryIngestor
                 continue;
             }
             $entry = $existing[self::guidHash($parsedEntry->guid)] ?? null;
-            if ($entry === null || $entry->getImageUrl() !== null) {
+            if ($entry === null || !$entry->getImage()->isMissing()) {
                 continue;
             }
-            $url = $this->persistableImageUrl($image);
-            if ($url === null) {
-                continue;
+            if ($this->storeImage($entry, $image)) {
+                $updated++;
             }
-            $entry->setImage($url, $image->width, $image->height);
-            $updated++;
         }
 
         return $updated;
@@ -170,50 +169,42 @@ final class EntryIngestor
         }
     }
 
-    /**
-     * Sets all three image columns together so a rejected image (null, an
-     * unusable scheme, or a URL over the column limit) never leaves a stale
-     * width/height behind. DeclaredImage already treats a missing image as a
-     * first-class case the layout falls back from, so losing the image here
-     * is preferable to persisting something guaranteed to render broken
-     * forever.
-     */
     private function applyImage(Entry $entry, ?DeclaredImage $image): void
     {
-        if ($image === null) {
-            $entry->setImage(null, null, null);
-
-            return;
+        if ($image === null || !$this->storeImage($entry, $image)) {
+            $entry->getImage()->storePending(null, null, null);
         }
-
-        $url = $this->persistableImageUrl($image);
-        if ($url === null) {
-            $entry->setImage(null, null, null);
-
-            return;
-        }
-
-        $entry->setImage($url, $image->width, $image->height);
     }
 
-    /**
-     * The lead image leads the visual list, so the same gate runs over it here
-     * and in applyImage — media[0] stays the persisted lead.
-     */
+    private function storeImage(Entry $entry, DeclaredImage $image): bool
+    {
+        $url = HttpsImageUrl::orNullUpgrading($image->url);
+        if ($url === null) {
+            return false;
+        }
+        if (self::trustedAtIngest($image)) {
+            $entry->getImage()->storeVerified($url, $image->width, $image->height, $this->clock->now());
+        } else {
+            $entry->getImage()->storePending($url, $image->width, $image->height);
+        }
+
+        return true;
+    }
+
+    private static function trustedAtIngest(DeclaredImage $image): bool
+    {
+        return $image->width !== null
+            && $image->height !== null
+            && !$image->declaresBeacon()
+            && HttpsImageUrl::isNativeHttps($image->url);
+    }
+
+    /** The lead passes the same https-upgrading gate applyImage uses, so media[0] stays the persisted lead. */
     private function applyMedia(Entry $entry, ParsedEntry $parsedEntry): void
     {
         $bundle = $parsedEntry->media->mediaBundle ?? new ParsedMediaBundle();
         $assembled = EntryMediaAssembler::assemble($parsedEntry->media->image, $bundle->media, $bundle->attachments);
         $entry->setMedia($assembled->media, $assembled->attachments);
-    }
-
-    /**
-     * HttpsImageUrl owns the rule; this keeps the DeclaredImage-shaped call the
-     * ingest path reads better with.
-     */
-    private function persistableImageUrl(DeclaredImage $image): ?string
-    {
-        return HttpsImageUrl::orNull($image->url);
     }
 
     /**

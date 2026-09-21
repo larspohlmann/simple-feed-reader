@@ -11,11 +11,15 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryRepository;
 use App\Repository\FeedRepository;
+use App\Repository\PendingImageVerificationRepository;
 use App\Repository\PreferencesRepository;
 use App\Service\Category\CategoryNormalizer;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\FeedScheduler;
 use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\FetchResponse;
+use App\Service\Image\ImageVerificationSweep;
+use App\Service\Image\ImageVerifier;
 use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Logging\Loki\LokiClient;
@@ -37,6 +41,7 @@ use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\InMemoryMailFailureRecorder;
+use App\Tests\Support\StubFaviconFetcher;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\RecordingContentChangeMarker;
 use App\Tests\Support\StubLokiEndpoint;
@@ -74,6 +79,11 @@ final class MaintenanceTickTest extends DbTestCase
         self::assertArrayNotHasKey('skipped', $report['digests']);
         self::assertIsInt($report['logShipping']['shipped']);
         self::assertIsInt($report['logShipping']['failed']);
+        self::assertIsInt($report['imageVerification']['measured']);
+        self::assertIsInt($report['imageVerification']['kept']);
+        self::assertIsInt($report['imageVerification']['dropped']);
+        self::assertIsInt($report['imageVerification']['retried']);
+        self::assertArrayNotHasKey('skipped', $report['imageVerification']);
     }
 
     /**
@@ -156,6 +166,7 @@ final class MaintenanceTickTest extends DbTestCase
                     $this->em->getRepository(Category::class),
                     new CategoryNormalizer(),
                 ),
+                new NaiveUtcClock($clock),
             ),
             new FaviconResolver($fetcher, new NullLogger()),
             new FeedScheduler($clock),
@@ -201,7 +212,21 @@ final class MaintenanceTickTest extends DbTestCase
         $lokiClient = new LokiClient(new MockHttpClient(), new StubLokiEndpoint());
         $logSpoolShipper = new LokiSpoolShipper($lokiClient, $spoolDirectory);
 
-        $tick = new MaintenanceTick($refreshRunner, $forYouSweep, $sendDueDigests, $logSpoolShipper);
+        $pendingImageVerificationRepository = self::getContainer()->get(PendingImageVerificationRepository::class);
+        self::assertInstanceOf(PendingImageVerificationRepository::class, $pendingImageVerificationRepository);
+        $imageVerificationSweep = new ImageVerificationSweep(
+            $pendingImageVerificationRepository,
+            new ImageVerifier(new StubFaviconFetcher(), new NaiveUtcClock($clock)),
+            $this->em,
+        );
+
+        $tick = new MaintenanceTick(
+            $refreshRunner,
+            $forYouSweep,
+            $sendDueDigests,
+            $imageVerificationSweep,
+            $logSpoolShipper,
+        );
 
         $report = $tick->run()->toArray();
 
@@ -223,6 +248,16 @@ final class MaintenanceTickTest extends DbTestCase
                 'skipped' => 'refresh aborted: the shared EntityManager is unusable this tick',
             ],
             $report['digests'],
+        );
+        self::assertSame(
+            [
+                'measured' => 0,
+                'kept' => 0,
+                'dropped' => 0,
+                'retried' => 0,
+                'skipped' => 'refresh aborted: the shared EntityManager is unusable this tick',
+            ],
+            $report['imageVerification'],
         );
         self::assertSame(['shipped' => 0, 'failed' => 0], $report['logShipping']);
     }

@@ -44,6 +44,35 @@ final class EntryMediaTest extends TestCase
         self::assertSame('Chapter two', $attachments[0]->title);
     }
 
+    public function testRemovingAUrlDropsOnlyTheMatchingMediumAndReindexes(): void
+    {
+        $media = new EntryMedia();
+        $media->set(
+            [
+                new EntryMedium('https://i/one.jpg', 'image'),
+                new EntryMedium('https://i/two.jpg', 'image'),
+            ],
+            [new EntryAttachment('https://cdn/ep.mp3', 'audio/mpeg')],
+        );
+
+        $media->removeUrl('https://i/one.jpg');
+
+        $visuals = $media->getMedia();
+        self::assertSame([0], array_keys($visuals));
+        self::assertSame('https://i/two.jpg', $visuals[0]->url);
+        self::assertCount(1, $media->getAttachments());
+    }
+
+    public function testRemovingAnAbsentUrlLeavesTheListUntouched(): void
+    {
+        $media = new EntryMedia();
+        $media->set([new EntryMedium('https://i/one.jpg', 'image')], []);
+
+        $media->removeUrl('https://i/missing.jpg');
+
+        self::assertCount(1, $media->getMedia());
+    }
+
     public function testMediumJsonOmitsUnknownFields(): void
     {
         self::assertSame(

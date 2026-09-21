@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Catalog;
 
+use App\Service\Catalog\Exception\FaviconRejectedException;
 use App\Service\Catalog\Exception\FaviconUnavailableException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
@@ -40,6 +41,9 @@ final readonly class CatalogFaviconFetcher implements CatalogFaviconFetcherInter
     private const int MAX_REDIRECTS = 3;
     private const array REDIRECT_STATUSES = [301, 302, 303, 307, 308];
 
+    /** Gone for good: retried and then dropped, unlike a merely-refused status. */
+    private const array GONE_STATUSES = [404, 410];
+
     /** Formats a browser will render in an <img>. SVG is excluded deliberately:
      *  it is a script-carrying document format, and we serve these bytes back
      *  from our own origin. */
@@ -69,13 +73,34 @@ final readonly class CatalogFaviconFetcher implements CatalogFaviconFetcherInter
             RedirectionExceptionInterface |
             ServerExceptionInterface $e
         ) {
-            throw new FaviconUnavailableException($e->getMessage(), 0, $e);
+            throw $this->asFetchFailure($e);
         }
 
         $this->assertNotEmpty($bytes);
         $this->assertWithinSizeCap($bytes);
 
         return new FetchedFavicon($iconUrl, $bytes, $contentType);
+    }
+
+    /** A wire- or buffer-cap trip is a policy rejection, not a dead host. */
+    private function asFetchFailure(\Throwable $e): FaviconUnavailableException
+    {
+        if ($this->causedByOversizedResponse($e)) {
+            return new FaviconRejectedException($e->getMessage(), 0, $e);
+        }
+
+        return new FaviconUnavailableException($e->getMessage(), 0, $e);
+    }
+
+    private function causedByOversizedResponse(\Throwable $e): bool
+    {
+        for ($current = $e; $current !== null; $current = $current->getPrevious()) {
+            if ($current instanceof ResponseTooLargeException) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -159,13 +184,23 @@ final readonly class CatalogFaviconFetcher implements CatalogFaviconFetcherInter
      */
     private function readSuccessfulResponse(ResponseInterface $response, int $status): array
     {
-        if (200 !== $status) {
-            throw new FaviconUnavailableException('Icon responded ' . $status . '.');
-        }
+        $this->assertOk($status);
 
         $contentType = $this->assertAllowedType($response->getHeaders(false));
 
         return [$response->getContent(), $contentType];
+    }
+
+    private function assertOk(int $status): void
+    {
+        if (200 === $status) {
+            return;
+        }
+        if ($status >= 400 && $status <= 499 && !\in_array($status, self::GONE_STATUSES, true)) {
+            throw new FaviconRejectedException('Icon responded ' . $status . '.');
+        }
+
+        throw new FaviconUnavailableException('Icon responded ' . $status . '.');
     }
 
     private function assertNotEmpty(string $bytes): void
@@ -178,7 +213,7 @@ final readonly class CatalogFaviconFetcher implements CatalogFaviconFetcherInter
     private function assertWithinSizeCap(string $bytes): void
     {
         if (\strlen($bytes) > self::MAX_BYTES) {
-            throw new FaviconUnavailableException('Icon exceeded ' . self::MAX_BYTES . ' bytes.');
+            throw new FaviconRejectedException('Icon exceeded ' . self::MAX_BYTES . ' bytes.');
         }
     }
 
@@ -191,7 +226,11 @@ final readonly class CatalogFaviconFetcher implements CatalogFaviconFetcherInter
         $type = mb_strtolower(trim(explode(';', $raw)[0]));
 
         if (!\in_array($type, self::ALLOWED_TYPES, true)) {
-            throw new FaviconUnavailableException(\sprintf('Content type "%s" is not an allowed image type.', $type));
+            $message = \sprintf('Content type "%s" is not an allowed image type.', $type);
+
+            throw str_starts_with($type, 'image/')
+                ? new FaviconRejectedException($message)
+                : new FaviconUnavailableException($message);
         }
 
         return $type;

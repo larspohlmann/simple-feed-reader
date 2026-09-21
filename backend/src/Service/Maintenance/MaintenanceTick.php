@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Maintenance;
 
+use App\Service\Image\ImageVerificationReport;
+use App\Service\Image\ImageVerificationSweep;
 use App\Service\Logging\Loki\LokiSpoolShipper;
 use App\Service\Mail\Digest\DigestSweepReport;
 use App\Service\Mail\Digest\SendDueDigests;
@@ -34,6 +36,9 @@ use App\Service\Refresh\RefreshRunner;
  * flushes through the default EntityManager, so it is skipped on the same
  * aborted-refresh tick.
  *
+ * The image-verification sweep (#1109) runs alongside the digests sweep,
+ * under the same guard: it also flushes through the default EntityManager.
+ *
  * The tick drains the Loki spool (#1003) last, after refresh and the sweep,
  * independent of the EM guard: the shipper touches no EntityManager.
  */
@@ -47,6 +52,7 @@ final readonly class MaintenanceTick
         private RefreshRunner $refreshRunner,
         private ForYouSweep $forYouSweep,
         private SendDueDigests $sendDueDigests,
+        private ImageVerificationSweep $imageVerificationSweep,
         private LokiSpoolShipper $logSpoolShipper,
     ) {
     }
@@ -57,13 +63,21 @@ final readonly class MaintenanceTick
         if ($refresh->isAborted()) {
             $recommendations = $this->skippedRecommendations();
             $digests = $this->skippedDigests();
+            $imageVerification = $this->skippedImageVerification();
         } else {
             $recommendations = $this->forYouSweep->sweepOnce()->toArray();
             $digests = $this->sendDueDigests->run()->toArray();
+            $imageVerification = $this->imageVerificationSweep->verifyDue()->toArray();
         }
         $logShipping = $this->logSpoolShipper->ship()->toArray();
 
-        return new MaintenanceTickReport($refresh->toArray(), $recommendations, $digests, $logShipping);
+        return new MaintenanceTickReport(
+            $refresh->toArray(),
+            $recommendations,
+            $digests,
+            $imageVerification,
+            $logShipping,
+        );
     }
 
     /**
@@ -85,5 +99,13 @@ final readonly class MaintenanceTick
     private function skippedDigests(): array
     {
         return (new DigestSweepReport(0, 0, 0))->toArray() + ['skipped' => self::ABORTED_REASON];
+    }
+
+    /**
+     * @return array{measured: int, kept: int, dropped: int, retried: int, skipped: string}
+     */
+    private function skippedImageVerification(): array
+    {
+        return (new ImageVerificationReport(0, 0, 0, 0))->toArray() + ['skipped' => self::ABORTED_REASON];
     }
 }

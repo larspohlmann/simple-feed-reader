@@ -19,24 +19,57 @@ namespace App\Service\Url;
  * - Length: a URL over the column's limit is NOT truncated — cutting it at
  *   that many characters produces a different, broken URL that 404s in the
  *   reader, not a shortened valid one.
+ *
+ * {@see orNullUpgrading} is the card-image variant: it upgrades http:// to
+ * https:// instead of rejecting it.
  */
 final class HttpsImageUrl
 {
     /** Matches the length of every column one of these is persisted into. */
     public const int MAX_LENGTH = 2048;
 
+    /** A //host URL is not native: its https is as unproven as an upgraded http one. */
+    public static function isNativeHttps(string $url): bool
+    {
+        return self::withoutPrefix($url, 'https://') !== null;
+    }
+
     public static function orNull(?string $url): ?string
     {
-        if ($url === null) {
-            return null;
-        }
+        return self::withinColumn(self::secure($url ?? ''));
+    }
 
-        $absolute = str_starts_with($url, '//') ? 'https:' . $url : $url;
+    /**
+     * The card-image variant of {@see orNull}: an http:// URL is rewritten to
+     * https:// rather than rejected, because the same asset is very often
+     * reachable over https; the background verify then confirms it.
+     */
+    public static function orNullUpgrading(?string $url): ?string
+    {
+        return self::withinColumn(self::secure($url ?? '') ?? self::upgraded($url ?? ''));
+    }
 
-        if (!str_starts_with($absolute, 'https://')) {
-            return null;
-        }
+    private static function secure(string $url): ?string
+    {
+        $rest = self::withoutPrefix($url, 'https://') ?? self::withoutPrefix($url, '//');
 
-        return mb_strlen($absolute) > self::MAX_LENGTH ? null : $absolute;
+        return $rest === null ? null : 'https://' . $rest;
+    }
+
+    private static function upgraded(string $url): ?string
+    {
+        $rest = self::withoutPrefix($url, 'http://');
+
+        return $rest === null ? null : 'https://' . $rest;
+    }
+
+    private static function withoutPrefix(string $url, string $prefix): ?string
+    {
+        return strncasecmp($url, $prefix, \strlen($prefix)) === 0 ? substr($url, \strlen($prefix)) : null;
+    }
+
+    private static function withinColumn(?string $url): ?string
+    {
+        return $url === null || mb_strlen($url) > self::MAX_LENGTH ? null : $url;
     }
 }

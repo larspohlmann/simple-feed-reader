@@ -21,9 +21,11 @@ use App\Service\Parser\ParsedAttachment;
 use App\Service\Parser\ParsedMedium;
 use App\Service\Parser\ParsedMediaBundle;
 use App\Service\Parser\VisualMediaKind;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
+use Symfony\Component\Clock\MockClock;
 
 final class EntryIngestorTest extends DbTestCase
 {
@@ -42,6 +44,7 @@ final class EntryIngestorTest extends DbTestCase
             new EntrySanitizer(),
             new UrlNormalizer(),
             new EntryCategoryWriter($this->em, $categoryRepository, new CategoryNormalizer()),
+            new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')),
         );
     }
 
@@ -94,6 +97,60 @@ final class EntryIngestorTest extends DbTestCase
         self::assertCount(1, $attachments);
         self::assertSame('https://cdn/ep.mp3', $attachments[0]->url);
         self::assertSame(3723, $attachments[0]->durationInSeconds);
+    }
+
+    public function testAnHttpLeadIsUpgradedInMediaJustLikeTheStoredImage(): void
+    {
+        $feed = $this->feed();
+        $parsed = new ParsedEntry(
+            guid: 'g-http-lead',
+            url: 'https://example.com/http-lead',
+            title: 'Title',
+            author: null,
+            summary: null,
+            contentHtml: '<p>body</p>',
+            publishedAt: null,
+            media: new ParsedEntryMedia(new DeclaredImage('http://files.example/lead.jpg', 800, 600)),
+        );
+
+        $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, null, [$parsed]), self::context());
+        $this->em->flush();
+        $this->em->clear();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        self::assertInstanceOf(Entry::class, $entry);
+        $media = $entry->getMedia();
+        self::assertCount(1, $media);
+        self::assertSame('https://files.example/lead.jpg', $media[0]->url);
+        self::assertSame($entry->getImageUrl(), $media[0]->url);
+    }
+
+    public function testAnHttpNonLeadMediumIsLeftOutOfMedia(): void
+    {
+        $feed = $this->feed();
+        $parsed = new ParsedEntry(
+            guid: 'g-http-medium',
+            url: 'https://example.com/http-medium',
+            title: 'Title',
+            author: null,
+            summary: null,
+            contentHtml: '<p>body</p>',
+            publishedAt: null,
+            media: new ParsedEntryMedia(
+                new DeclaredImage('https://i/lead.jpg', 800, 600),
+                new ParsedMediaBundle([new ParsedMedium('http://i/extra.jpg', VisualMediaKind::Image)]),
+            ),
+        );
+
+        $this->ingestor->ingest($feed, new ParsedFeed(null, null, null, null, [$parsed]), self::context());
+        $this->em->flush();
+        $this->em->clear();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        self::assertInstanceOf(Entry::class, $entry);
+        $media = $entry->getMedia();
+        self::assertCount(1, $media);
+        self::assertSame('https://i/lead.jpg', $media[0]->url);
     }
 
     /**
@@ -469,7 +526,7 @@ final class EntryIngestorTest extends DbTestCase
         self::assertSame('https://i.example.com/img.jpg', $entry->getImageUrl());
     }
 
-    public function testHttpImageUrlIsDroppedAsMixedContent(): void
+    public function testHttpImageUrlIsUpgradedToHttpsAndKept(): void
     {
         $feed = $this->feed();
         $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, null, [
@@ -479,7 +536,86 @@ final class EntryIngestorTest extends DbTestCase
 
         $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'http-image']);
         self::assertNotNull($entry);
-        self::assertNull($entry->getImageUrl());
+        self::assertSame('https://i.example.com/img.jpg', $entry->getImageUrl());
+    }
+
+    public function testAnHttpUpgradedImageIsLeftPendingVerification(): void
+    {
+        $feed = $this->feed();
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, null, [
+            $this->parsedEntryWithImage('http-pending', new DeclaredImage('http://i/x.jpg', 400, 300)),
+        ]), self::context());
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'http-pending']);
+        self::assertNotNull($entry);
+        self::assertNull($entry->getImage()->getCheckedAt());
+    }
+
+    public function testAProtocolRelativeImageWithDimensionsStaysPending(): void
+    {
+        $feed = $this->feed();
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, null, [
+            $this->parsedEntryWithImage('protocol-relative-pending', new DeclaredImage('//i/x.jpg', 800, 450)),
+        ]), self::context());
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'protocol-relative-pending']);
+        self::assertNotNull($entry);
+        self::assertSame('https://i/x.jpg', $entry->getImageUrl());
+        self::assertNull($entry->getImage()->getCheckedAt());
+    }
+
+    public function testANativeHttpsImageWithDeclaredDimensionsIsTrustedAtIngest(): void
+    {
+        $feed = $this->feed();
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, null, [
+            $this->parsedEntryWithImage('https-trusted', new DeclaredImage('https://i/x.jpg', 400, 300)),
+        ]), self::context());
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'https-trusted']);
+        self::assertNotNull($entry);
+        self::assertNotNull($entry->getImage()->getCheckedAt());
+    }
+
+    public function testANativeHttpsDeclaredBeaconStaysPending(): void
+    {
+        $feed = $this->feed();
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, null, [
+            $this->parsedEntryWithImage('https-beacon', new DeclaredImage('https://i/pixel.gif', 1, 1)),
+        ]), self::context());
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'https-beacon']);
+        self::assertNotNull($entry);
+        self::assertNull($entry->getImage()->getCheckedAt());
+    }
+
+    public function testANativeHttpsImageMissingOneDimensionStaysPending(): void
+    {
+        $feed = $this->feed();
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, null, [
+            $this->parsedEntryWithImage('https-halfdims', new DeclaredImage('https://i/x.jpg', 400, null)),
+        ]), self::context());
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'https-halfdims']);
+        self::assertNotNull($entry);
+        self::assertNull($entry->getImage()->getCheckedAt());
+    }
+
+    public function testANativeHttpsImageWithoutDimensionsStaysPending(): void
+    {
+        $feed = $this->feed();
+        $this->ingestor->ingest($feed, new ParsedFeed('T', null, null, null, [
+            $this->parsedEntryWithImage('https-nodims', new DeclaredImage('https://i/x.jpg', null, null)),
+        ]), self::context());
+        $this->em->flush();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'https-nodims']);
+        self::assertNotNull($entry);
+        self::assertNull($entry->getImage()->getCheckedAt());
     }
 
     public function testDataUriImageIsDropped(): void

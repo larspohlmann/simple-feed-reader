@@ -15,6 +15,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_entry_feed_effective', columns: ['feed_id', 'effective_date'])]
 #[ORM\Index(name: 'idx_entry_feed_created', columns: ['feed_id', 'created_at', 'id'])]
 #[ORM\Index(name: 'idx_entry_url_hash', columns: ['url_hash', 'id'])]
+#[ORM\Index(name: 'idx_entry_image_verify', columns: ['image_verify_attempts', 'id'])]
 class Entry
 {
     #[ORM\Id]
@@ -187,9 +188,19 @@ class Entry
         return $this->image->getHeight();
     }
 
-    public function setImage(?string $url, ?int $width, ?int $height): void
+    public function getImage(): EntryImage
     {
-        $this->image->set($url, $width, $height);
+        return $this->image;
+    }
+
+    /** Drops the image and removes it from media[], leaving other media untouched. */
+    public function dropImage(\DateTimeImmutable $checkedAt): void
+    {
+        $url = $this->image->getUrl();
+        if ($url !== null) {
+            $this->mediaSet->removeUrl($url);
+        }
+        $this->image->drop($checkedAt);
     }
 
     /** @return list<EntryMedium> */
