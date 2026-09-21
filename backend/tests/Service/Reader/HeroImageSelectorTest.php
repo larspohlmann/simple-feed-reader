@@ -121,4 +121,25 @@ final class HeroImageSelectorTest extends TestCase
         self::assertSame(800, $selected->width);
         self::assertSame(450, $selected->height);
     }
+
+    public function testRejectsAHeroNarrowerThanTheMinimum(): void
+    {
+        $hero = new DeclaredImage('https://cdn.test/small.jpg', 300, 200);
+
+        self::assertNull($this->selector->select($hero, '<p>Just words.</p>'));
+    }
+
+    public function testKeepsAHeroAtTheMinimumWidth(): void
+    {
+        $hero = new DeclaredImage('https://cdn.test/wide.jpg', 480, 300);
+
+        self::assertSame($hero, $this->selector->select($hero, '<p>Just words.</p>'));
+    }
+
+    public function testKeepsAHeroWithUnknownWidth(): void
+    {
+        $hero = new DeclaredImage('https://cdn.test/unknown.jpg');
+
+        self::assertSame($hero, $this->selector->select($hero, '<p>Just words.</p>'));
+    }
 }

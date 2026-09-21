@@ -23,13 +23,21 @@ use Dom\Element;
  * unrelated CDN files defeats URL identity, so that matching was dropped.
  *
  * The candidate is guarded to http(s) so a javascript:/data: URL from the
- * feed can never reach the client's <img src>.
+ * feed can never reach the client's <img src>. A known width below
+ * MIN_HERO_WIDTH is rejected so a small picture never upscales into the hero.
  */
 final class HeroImageSelector
 {
+    /** A known width below this would only upscale into the hero band. */
+    private const int MIN_HERO_WIDTH = 480;
+
     public function select(?DeclaredImage $candidate, string $bodyHtml): ?DeclaredImage
     {
         if ($candidate === null || preg_match('#^https?://#i', $candidate->url) !== 1) {
+            return null;
+        }
+
+        if ($candidate->width !== null && $candidate->width < self::MIN_HERO_WIDTH) {
             return null;
         }
 
