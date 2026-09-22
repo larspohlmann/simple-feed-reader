@@ -131,7 +131,7 @@ final class RestoreLoadPass
         }
 
         foreach ($this->loadedSavedSearches as $savedSearch) {
-            $savedSearch->setSlug($this->slug->build((int) $savedSearch->getId(), $savedSearch->getTerm()));
+            $this->slug->assignTo($savedSearch);
         }
         $this->flush();
     }

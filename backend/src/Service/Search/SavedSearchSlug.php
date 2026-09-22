@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Search;
 
+use App\Entity\SavedSearch;
 use Symfony\Component\String\Slugger\SluggerInterface;
 
 /**
@@ -21,5 +22,10 @@ final readonly class SavedSearchSlug
         $readable = $this->slugger->slug($term)->lower()->toString();
 
         return $readable === '' ? (string) $id : $id . '-' . $readable;
+    }
+
+    public function assignTo(SavedSearch $savedSearch): void
+    {
+        $savedSearch->setSlug($this->build((int) $savedSearch->getId(), $savedSearch->getTerm()));
     }
 }

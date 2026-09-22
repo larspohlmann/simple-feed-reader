@@ -71,7 +71,7 @@ final readonly class SavedSearchController
             $savedSearch = new SavedSearch($user, $request->term, $request->wholeWord, $request->phrase);
             $this->em->persist($savedSearch);
             $this->em->flush();
-            $savedSearch->setSlug($this->slug->build((int) $savedSearch->getId(), $savedSearch->getTerm()));
+            $this->slug->assignTo($savedSearch);
             $this->em->flush();
             $this->sweep->sweepOne($savedSearch, SweepBudget::seconds(self::CREATE_SWEEP_BUDGET_SECONDS));
         }
