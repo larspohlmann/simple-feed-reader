@@ -112,9 +112,12 @@ export class SavedSearchesStore {
     });
   }
 
-  removeSavedSearch(id: number): void {
+  removeSavedSearch(id: number, onSuccess?: () => void): void {
     this.api.deleteSavedSearch(id).subscribe({
-      next: () => this.loaded.update((rows) => rows.filter((row) => row.id !== id)),
+      next: () => {
+        this.loaded.update((rows) => rows.filter((row) => row.id !== id));
+        onSuccess?.();
+      },
     });
   }
 

@@ -106,6 +106,18 @@ describe('SavedSearchesStore', () => {
     expect(store.savedSearches().map((s) => s.id)).toEqual([1]);
   });
 
+  it('removeSavedSearch() runs the success callback once the delete resolves', () => {
+    const deleteSavedSearch = jest.fn(() => of(undefined));
+    const savedSearches = jest.fn(() => of({ savedSearches: rows }));
+    const store = setup({ deleteSavedSearch, savedSearches });
+    store.load();
+    const onSuccess = jest.fn();
+
+    store.removeSavedSearch(2, onSuccess);
+
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+  });
+
   it('markEntryRead() drops a matching entry from its count and is a no-op otherwise', () => {
     const store = setup({ savedSearches: () => of({ savedSearches: rows }) });
     store.load();
