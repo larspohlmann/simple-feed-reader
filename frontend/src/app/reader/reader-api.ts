@@ -71,6 +71,9 @@ export class ReaderApi {
   }
 
   entries(query: EntryQuery, cursor?: string | null): Observable<EntriesPage> {
+    if (query.savedSearchId != null) {
+      return this.singleSavedSearchEntries(query.savedSearchId, query.unread, cursor);
+    }
     if (query.q) return this.searchEntries(query.q, query.unread, cursor);
     if (query.view === 'saved-searches') return this.savedSearchEntries(query.unread, cursor);
     let params = new HttpParams().set('view', query.view).set('limit', PAGE_SIZE);
@@ -105,6 +108,21 @@ export class ReaderApi {
     if (unread) params = params.set('unread', '1');
     if (cursor) params = params.set('cursor', cursor);
     return this.http.get<EntriesPage>(`${this.base}/api/entries/saved-searches`, { params });
+  }
+
+  /** One saved search's members, from the membership table, by id. Carries only
+   *  the page and the unread refinement, exactly like the combined list. */
+  private singleSavedSearchEntries(
+    id: number,
+    unread: boolean | undefined,
+    cursor?: string | null,
+  ): Observable<EntriesPage> {
+    let params = new HttpParams().set('limit', PAGE_SIZE);
+    if (unread) params = params.set('unread', '1');
+    if (cursor) params = params.set('cursor', cursor);
+    return this.http.get<EntriesPage>(`${this.base}/api/entries/saved-searches/${id}`, {
+      params,
+    });
   }
 
   updateState(id: number, patch: EntryStatePatch): Observable<{ state: EntryStateDto }> {

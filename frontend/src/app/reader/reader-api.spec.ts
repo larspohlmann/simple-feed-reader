@@ -202,6 +202,13 @@ describe('ReaderApi', () => {
     req.flush({ entries: [], nextCursor: null });
   });
 
+  it('fetches a single saved search by id from its membership endpoint', () => {
+    api.entries({ view: 'all', savedSearchId: 42 }).subscribe();
+    const req = ctrl.expectOne((r) => r.url.endsWith('/api/entries/saved-searches/42'));
+    expect(req.request.method).toBe('GET');
+    req.flush({ entries: [], nextCursor: null });
+  });
+
   it('marks the combined saved-search list read with only a watermark', () => {
     api.markSavedSearchesRead('2026-09-01T10:00:00.000Z').subscribe();
     const req = ctrl.expectOne((r) => r.url.endsWith('/api/entries/saved-searches/mark-read'));
