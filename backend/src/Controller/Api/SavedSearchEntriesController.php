@@ -18,6 +18,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -48,6 +49,33 @@ final readonly class SavedSearchEntriesController
         $query = new SavedSearchListQuery(
             userId: $userId,
             savedSearchIds: $this->savedSearches->idsForUser($userId),
+            onlyUnread: $unread,
+            cursor: EntryCursor::fromRequestValue($cursor),
+            limit: $limit,
+        );
+        $result = $this->entries->list($query);
+
+        return new JsonResponse(SavedSearchPage::of(
+            $result->withRows($this->categoryLoader->loadInto($result->rows)),
+            $query->limit,
+        ));
+    }
+
+    #[Route('/{id}', name: 'api_entries_saved_search_one', methods: ['GET'], requirements: ['id' => '\d+'])]
+    public function one(
+        int $id,
+        #[CurrentUser] User $user,
+        #[MapQueryParameter] ?string $cursor = null,
+        #[MapQueryParameter] int $limit = EntryQuery::DEFAULT_LIMIT,
+        #[MapQueryParameter] bool $unread = false,
+    ): JsonResponse {
+        $userId = (int) $user->getId();
+        $this->savedSearches->findOneOwnedBy($id, $userId)
+            ?? throw new NotFoundHttpException('No such saved search.');
+
+        $query = new SavedSearchListQuery(
+            userId: $userId,
+            savedSearchIds: [$id],
             onlyUnread: $unread,
             cursor: EntryCursor::fromRequestValue($cursor),
             limit: $limit,
