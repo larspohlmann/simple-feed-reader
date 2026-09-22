@@ -285,6 +285,12 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     equal: sameSelection,
   });
   readonly viewingSavedSearch = computed(() => this.selection().kind === 'saved-search');
+  /** Whether the header offers its Save/Remove control: a direct search can be
+   *  saved, a saved search removed. Named so a third search-like kind can't slip
+   *  the gate the way #1118 dropped this one. */
+  readonly canToggleSavedSearch = computed(
+    () => isDirectSearch(this.selection()) || this.viewingSavedSearch(),
+  );
   readonly entryId = computed(() => this.parsed().entryId);
 
   /** The single saved search the list is showing, by id, or null. Read straight
@@ -1034,11 +1040,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private markReadNow(target: MarkReadTarget): void {
     const until = this.entries.loadedAt() || new Date().toISOString();
     if (target.scope === 'search') {
-      this.entries.runThenReload(this.api.markSearchRead(target.term, until), () => {
-        this.entries.load(queryFromSelection(this.selection()));
-        this.subs.load();
-        this.savedSearchesStore.load();
-      });
+      this.entries.runThenReload(this.api.markSearchRead(target.term, until), () =>
+        this.reloadListAndCounts(),
+      );
       return;
     }
     // The ranked feed has no scope to name and no watermark to move: the
@@ -1046,30 +1050,23 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     // watermark here would be wrong). Both counts beside the list are reloaded.
     if (target.scope === 'for-you') {
       this.entries.runThenReload(this.api.markForYouRead(until), () => {
-        this.entries.load(queryFromSelection(this.selection()));
-        this.subs.load();
-        this.savedSearchesStore.load();
+        this.reloadListAndCounts();
         // The badge counts unread picks (#724); the marked picks move no
-        // watermark the reloads above would see, so re-read the for-you
-        // summary to drop it to zero.
+        // watermark the reload sees, so re-read the for-you summary to zero it.
         this.recs.refreshStatus();
       });
       return;
     }
     if (target.scope === 'saved-searches') {
-      this.entries.runThenReload(this.api.markSavedSearchesRead(until), () => {
-        this.entries.load(queryFromSelection(this.selection()));
-        this.subs.load();
-        this.savedSearchesStore.load();
-      });
+      this.entries.runThenReload(this.api.markSavedSearchesRead(until), () =>
+        this.reloadListAndCounts(),
+      );
       return;
     }
     if (target.scope === 'saved-search') {
-      this.entries.runThenReload(this.api.markSingleSavedSearchRead(target.id, until), () => {
-        this.entries.load(queryFromSelection(this.selection()));
-        this.subs.load();
-        this.savedSearchesStore.load();
-      });
+      this.entries.runThenReload(this.api.markSingleSavedSearchRead(target.id, until), () =>
+        this.reloadListAndCounts(),
+      );
       return;
     }
     this.entries.runThenReload(
@@ -1086,6 +1083,14 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
         this.savedSearchesStore.load();
       },
     );
+  }
+
+  /** Reload the list, the sidebar subscription counts, and the saved-search
+   *  badges — the state a scoped mark-read invalidates in one pass. */
+  private reloadListAndCounts(): void {
+    this.entries.load(queryFromSelection(this.selection()));
+    this.subs.load();
+    this.savedSearchesStore.load();
   }
 
   // Preserve the underlying list so clearing a direct search returns to it.
@@ -1186,10 +1191,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       // Removing the search you are viewing by its slug path leaves that path
       // pointing at nothing, so fall back to the combined list; an unsaved
       // `?q=` search stays put and simply flips its button back to Save.
-      const returnToCombined =
-        this.selection().kind === 'saved-search'
-          ? () => void this.router.navigate(['/searches/saved/all'])
-          : undefined;
+      const returnToCombined = this.viewingSavedSearch()
+        ? () => void this.router.navigate(['/searches/saved/all'])
+        : undefined;
       this.savedSearchesStore.removeSavedSearch(id, returnToCombined);
     });
   }

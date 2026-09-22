@@ -5,7 +5,7 @@
   [allItemsActive]="allItemsActive()"
   [searchLoading]="searching()"
   [searchTerm]="selection().term ?? ''"
-  [populateSearchTerm]="selection().kind !== 'saved-search'"
+  [populateSearchTerm]="!viewingSavedSearch()"
   [drawerOpen]="sidebarOpen()"
   [class.hidden]="headerHidden()"
   (toggleSidebar)="setSidebarOpen(!sidebarOpen())"
@@ -299,7 +299,7 @@
 </ng-template>
 
 <ng-template #headerActions>
-  @if (selection().kind === 'search' || selection().kind === 'saved-search') {
+  @if (canToggleSavedSearch()) {
     <!-- Save/unsave the search being looked at. It lives here, beside the For You
          control, because both are per-selection commands over a domain object
          the list itself knows nothing about — the list only owns the slot (#581). -->
