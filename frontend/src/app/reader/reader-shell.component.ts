@@ -47,10 +47,10 @@ import {
   markReadTarget,
   queryFromSelection,
   sameSelection,
-  selectionFromParams,
   selectionQueryParams,
   visibleSearchTerm,
 } from './query';
+import { selectionFromRoute } from './reader-matcher';
 import { ListScrollReset } from './list-scroll-reset';
 import { entryParam } from './slug';
 import {
@@ -274,7 +274,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly params = toSignal(this.route.queryParamMap, {
     initialValue: convertToParamMap({}),
   });
-  private readonly parsed = computed(() => selectionFromParams(this.params()));
+  private readonly pathParams = toSignal(this.route.paramMap, {
+    initialValue: convertToParamMap({}),
+  });
+  private readonly parsed = computed(() => selectionFromRoute(this.pathParams(), this.params()));
   // Structural equality so an entry-only URL change doesn't produce a new
   // selection reference -- delegates to `sameSelection` rather than
   // re-listing fields here, which once fell out of step when `term` was
@@ -284,6 +287,22 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   });
   readonly savedSearchResult = computed(() => isSavedSearchResult(this.selection()));
   readonly entryId = computed(() => this.parsed().entryId);
+
+  /** The single saved search the list is showing, by id, or null. Read straight
+   *  off the selection now that a saved search is addressed by id in the path,
+   *  not re-matched by term the way `currentSavedSearch` does for a search result. */
+  readonly activeSavedSearchId = computed(() => {
+    const s = this.selection();
+    return s.kind === 'saved-search' ? s.id : null;
+  });
+
+  /** That saved search resolved against the store, for the list title. Null
+   *  until the store has the row, so the title falls back to the combined label. */
+  readonly activeSavedSearch = computed(() => {
+    const id = this.activeSavedSearchId();
+    if (id === null) return null;
+    return this.savedSearchesStore.savedSearches().find((s) => s.id === id) ?? null;
+  });
 
   // A deep-linked entry the current list page doesn't contain, fetched by id.
   private readonly fetchedEntry = signal<EntryDto | null>(null);
@@ -464,6 +483,8 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
         return this.i18n.translate('reader.forYou');
       case 'saved-searches':
         return this.i18n.translate('reader.savedSearches');
+      case 'saved-search':
+        return this.activeSavedSearch()?.term ?? this.i18n.translate('reader.savedSearches');
       case 'all':
         return this.i18n.translate('reader.allItems');
       case 'tag':
@@ -502,6 +523,8 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
         return unread(this.recs.forYouCount());
       case 'saved-searches':
         return unread(this.savedSearchesUnread());
+      case 'saved-search':
+        return unread(this.activeSavedSearch()?.unreadCount ?? 0);
       case 'search':
         return items(0);
     }
