@@ -1,3 +1,12 @@
+/** One saved search an entry belongs to, as embedded on the entry itself
+ *  (#1118). Carries its own `slug` and `term` so a pill needs no lookup
+ *  against the sidebar's saved-search list to render or link. */
+export interface SavedSearchMembershipDto {
+  id: number;
+  slug: string;
+  term: string;
+}
+
 export interface TagDto {
   id: number;
   name: string;
