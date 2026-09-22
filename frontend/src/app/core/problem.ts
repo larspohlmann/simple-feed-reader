@@ -32,11 +32,8 @@ export function outcomeIsUnproven(problem: Problem): boolean {
   return problem.status === 0 || problem.status >= 500;
 }
 
-/** An oversized request body, refused by the web server before the app ran.
- *  nginx answers a raw 413 with an HTML page, so there is no problem+json to
- *  read and the generic fallback would call it "Something went wrong" -- which
- *  tells the user nothing about the one thing they can act on. Features that
- *  upload a file match on this to offer their own wording (#458). */
+/** An oversized request body, refused by the web server before the app ran;
+ *  features that upload a file match on this to offer their own wording (#458). */
 export const REQUEST_TOO_LARGE = 'request_too_large';
 
 /** Map any HttpErrorResponse to the backend's problem+json contract, with a
@@ -107,7 +104,9 @@ function fallbackProblem(err: HttpErrorResponse, text: string): Problem {
 
 function unexpectedReplyTitle(err: HttpErrorResponse, text: string): string {
   const pageTitle = htmlPageTitle(text);
-  if (pageTitle === null) return 'Something went wrong';
+  if (pageTitle === null) {
+    return `The server answered with an unexpected reply (HTTP ${err.status}).`;
+  }
 
   return `The web server answered "${pageTitle}" instead of the app. Try again in a minute.`;
 }

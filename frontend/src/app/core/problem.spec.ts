@@ -93,7 +93,7 @@ describe('parseProblem', () => {
 
     await expect(parseProblemAsync(err)).resolves.toEqual({
       type: 'about:blank',
-      title: 'Something went wrong',
+      title: 'The server answered with an unexpected reply (HTTP 500).',
       status: 500,
     });
   });
@@ -141,5 +141,32 @@ describe('parseProblem', () => {
         'The web server answered "504 Gateway Time-out" instead of the app. Try again in a minute.',
       status: 504,
     });
+  });
+
+  it('carries the HTTP status when a non-HTML body is not a problem document', () => {
+    const err = new HttpErrorResponse({ status: 502, error: 'upstream connect error' });
+
+    expect(parseProblem(err)).toEqual({
+      type: 'about:blank',
+      title: 'The server answered with an unexpected reply (HTTP 502).',
+      status: 502,
+    });
+  });
+
+  it('carries the HTTP status when an HTML body has no title', () => {
+    const err = new HttpErrorResponse({
+      status: 200,
+      error: { text: '<html><body>x</body></html>' },
+    });
+
+    expect(parseProblem(err).title).toBe(
+      'The server answered with an unexpected reply (HTTP 200).',
+    );
+  });
+
+  it('keeps "Could not reach the server" for a dropped connection', () => {
+    const err = new HttpErrorResponse({ status: 0, error: '<html><title>x</title></html>' });
+
+    expect(parseProblem(err).title).toBe('Could not reach the server');
   });
 });
