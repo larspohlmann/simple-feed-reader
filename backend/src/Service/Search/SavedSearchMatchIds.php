@@ -5,32 +5,32 @@ declare(strict_types=1);
 namespace App\Service\Search;
 
 use App\Entity\SavedSearch;
+use App\Repository\SavedSearchEntryRepository;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
  * The unread matching entry ids behind each saved search's sidebar badge. The
  * client counts them, and drops one the moment the user reads it, so the badge
- * falls without another scan. Matched through the search's own term matching,
- * so the set is exactly what opening the search would list — and read for
- * every search in one scan, not one scan per search (#584).
+ * falls without another scan. Read from the membership table (#1116), so the
+ * set is exactly what opening the search lists — every search in one query.
  */
 final readonly class SavedSearchMatchIds
 {
-    public function __construct(private SavedSearchBadgeSource $badges)
+    public function __construct(private SavedSearchEntryRepository $entries)
     {
     }
 
     /**
      * @param list<SavedSearch> $savedSearches
      *
-     * @return array<int, list<int>> saved-search id => unread matching entry ids
+     * @return array<int, list<int>> saved-search id => unread member entry ids
      */
     #[WithSpan]
     public function forAll(array $savedSearches, int $userId): array
     {
-        return $this->badges->unreadMatchIdsBySavedSearch(
+        return $this->entries->unreadMemberIdsBySavedSearch(
             $userId,
-            array_map(SavedSearchTerms::termOf(...), $savedSearches),
+            array_map(static fn (SavedSearch $s): int => (int) $s->getId(), $savedSearches),
         );
     }
 

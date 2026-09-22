@@ -10,6 +10,8 @@ use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Http\SavedSearchJson;
 use App\Repository\SavedSearchRepository;
+use App\Service\Search\Membership\SavedSearchMembershipSweep;
+use App\Service\Search\Membership\SweepBudget;
 use App\Service\Search\SavedSearchMatchIds;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -22,9 +24,12 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 #[Route('/api/saved-searches')]
 final readonly class SavedSearchController
 {
+    private const int CREATE_SWEEP_BUDGET_SECONDS = 8;
+
     public function __construct(
         private SavedSearchRepository $savedSearches,
         private SavedSearchMatchIds $matches,
+        private SavedSearchMembershipSweep $sweep,
         private EntityManagerInterface $em,
     ) {
     }
@@ -64,6 +69,7 @@ final readonly class SavedSearchController
             $savedSearch = new SavedSearch($user, $request->term, $request->wholeWord, $request->phrase);
             $this->em->persist($savedSearch);
             $this->em->flush();
+            $this->sweep->sweepOne($savedSearch, SweepBudget::seconds(self::CREATE_SWEEP_BUDGET_SECONDS));
         }
 
         return new JsonResponse(
