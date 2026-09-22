@@ -43,7 +43,7 @@
     <a
       class="nav all"
       [class.active]="selection().kind === 'all'"
-      [routerLink]="[]"
+      [routerLink]="['/']"
       [queryParams]="selectionQueryParams({})"
       queryParamsHandling="merge"
     >
@@ -55,7 +55,7 @@
     <a
       class="nav"
       [class.active]="selection().kind === 'favorites'"
-      [routerLink]="[]"
+      [routerLink]="['/']"
       [queryParams]="selectionQueryParams({ view: 'favorites' })"
       queryParamsHandling="merge"
     >
@@ -67,7 +67,7 @@
     <a
       class="nav"
       [class.active]="selection().kind === 'kept'"
-      [routerLink]="[]"
+      [routerLink]="['/']"
       [queryParams]="selectionQueryParams({ view: 'kept' })"
       queryParamsHandling="merge"
     >
@@ -79,7 +79,7 @@
     <a
       class="nav"
       [class.active]="selection().kind === 'viewed'"
-      [routerLink]="[]"
+      [routerLink]="['/']"
       [queryParams]="selectionQueryParams({ view: 'viewed' })"
       queryParamsHandling="merge"
     >
@@ -92,7 +92,7 @@
       <a
         class="nav for-you"
         [class.active]="selection().kind === 'for-you'"
-        [routerLink]="[]"
+        [routerLink]="['/']"
         [queryParams]="selectionQueryParams({ view: 'for-you' })"
         queryParamsHandling="merge"
       >
@@ -294,7 +294,7 @@
                 <a
                   class="nav grow"
                   [class.active]="selection().kind === 'tag' && selection().id === node.tag.id"
-                  [routerLink]="[]"
+                  [routerLink]="['/']"
                   [queryParams]="selectionQueryParams({ tag: node.tag.id })"
                   queryParamsHandling="merge"
                 >
@@ -391,7 +391,7 @@
                       [class.active]="
                         selection().kind === 'subscription' && selection().id === s.id
                       "
-                      [routerLink]="[]"
+                      [routerLink]="['/']"
                       [queryParams]="selectionQueryParams({ subscription: s.id })"
                       queryParamsHandling="merge"
                     >
@@ -523,7 +523,7 @@
             <a
               class="nav"
               [class.active]="selection().kind === 'subscription' && selection().id === s.id"
-              [routerLink]="[]"
+              [routerLink]="['/']"
               [queryParams]="selectionQueryParams({ subscription: s.id })"
               queryParamsHandling="merge"
             >

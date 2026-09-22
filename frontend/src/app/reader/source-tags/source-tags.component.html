@@ -3,7 +3,7 @@
     @for (t of tags(); track t.id) {
       <a
         class="pill"
-        [routerLink]="[]"
+        [routerLink]="['/']"
         [queryParams]="selectionQueryParams({ tag: t.id })"
         queryParamsHandling="merge"
         [attr.title]="'reader.filterByTag' | transloco: { name: t.name }"

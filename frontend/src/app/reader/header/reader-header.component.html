@@ -3,7 +3,7 @@
     <div class="left">
       <a
         class="brand"
-        [routerLink]="[]"
+        [routerLink]="['/']"
         [queryParams]="selectionQueryParams({})"
         queryParamsHandling="merge"
       >
@@ -111,7 +111,7 @@
     <a
       class="chip all"
       [class.active]="allItemsActive()"
-      [routerLink]="[]"
+      [routerLink]="['/']"
       [queryParams]="selectionQueryParams({})"
       queryParamsHandling="merge"
     >
@@ -121,7 +121,7 @@
       <a
         class="chip"
         [class.active]="t.id === activeTagId()"
-        [routerLink]="[]"
+        [routerLink]="['/']"
         [queryParams]="selectionQueryParams({ tag: t.id })"
         queryParamsHandling="merge"
       >

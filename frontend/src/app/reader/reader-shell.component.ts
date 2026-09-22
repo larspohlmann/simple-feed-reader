@@ -1083,8 +1083,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // Preserve the underlying list so clearing a direct search returns to it.
   onSearch(term: string): void {
-    void this.router.navigate([], {
-      relativeTo: this.route,
+    void this.router.navigate(['/'], {
       queryParams: { q: term || null, entry: null, searchOrigin: null },
       queryParamsHandling: 'merge',
     });
@@ -1297,8 +1296,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       if (!sub) return;
       this.subs.load();
       this.savedSearchesStore.load();
-      void this.router.navigate([], {
-        relativeTo: this.route,
+      void this.router.navigate(['/'], {
         queryParams: selectionQueryParams({ subscription: sub.id }),
         queryParamsHandling: 'merge',
       });

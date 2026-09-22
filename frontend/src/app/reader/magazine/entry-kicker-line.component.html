@@ -3,7 +3,7 @@
     <app-favicon [url]="entry().faviconUrl" [size]="faviconSize()" />
     <a
       class="source"
-      [routerLink]="[]"
+      [routerLink]="['/']"
       [queryParams]="selectionQueryParams({ subscription: entry().subscriptionId })"
       queryParamsHandling="merge"
       (click)="$event.stopPropagation()"

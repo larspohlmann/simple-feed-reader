@@ -1698,7 +1698,7 @@ describe('ReaderShellComponent', () => {
       ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
 
       expect(nav).toHaveBeenCalledWith(
-        [],
+        ['/'],
         expect.objectContaining({
           queryParams: {
             view: null,
@@ -1720,7 +1720,7 @@ describe('ReaderShellComponent', () => {
       f.componentInstance.onSearch('angular');
 
       expect(nav).toHaveBeenCalledWith(
-        [],
+        ['/'],
         expect.objectContaining({
           queryParams: { q: 'angular', entry: null, searchOrigin: null },
           queryParamsHandling: 'merge',
@@ -1735,7 +1735,7 @@ describe('ReaderShellComponent', () => {
       f.componentInstance.onSearch('');
 
       expect(nav).toHaveBeenCalledWith(
-        [],
+        ['/'],
         expect.objectContaining({
           queryParams: { q: null, entry: null, searchOrigin: null },
           queryParamsHandling: 'merge',
