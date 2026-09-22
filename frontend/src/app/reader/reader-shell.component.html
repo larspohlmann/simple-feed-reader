@@ -299,14 +299,14 @@
 </ng-template>
 
 <ng-template #headerActions>
-  @if (selection().kind === 'search') {
+  @if (selection().kind === 'search' || selection().kind === 'saved-search') {
     <!-- Save/unsave the search being looked at. It lives here, beside the For You
          control, because both are per-selection commands over a domain object
          the list itself knows nothing about — the list only owns the slot (#581). -->
     <button
       appListAction
       class="save-search"
-      [class.mobile-icon-only]="savedSearchResult()"
+      [class.mobile-icon-only]="viewingSavedSearch()"
       type="button"
       [attr.aria-label]="savedSearchActionLabel() | transloco"
       [attr.title]="savedSearchActionLabel() | transloco"

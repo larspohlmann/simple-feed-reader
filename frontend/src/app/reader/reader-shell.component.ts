@@ -286,6 +286,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     equal: sameSelection,
   });
   readonly savedSearchResult = computed(() => isSavedSearchResult(this.selection()));
+  readonly viewingSavedSearch = computed(
+    () => this.savedSearchResult() || this.selection().kind === 'saved-search',
+  );
   readonly entryId = computed(() => this.parsed().entryId);
 
   /** The single saved search the list is showing, by id, or null. Read straight
@@ -1065,6 +1068,14 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       });
       return;
     }
+    if (target.scope === 'saved-search') {
+      this.entries.runThenReload(this.api.markSingleSavedSearchRead(target.id, until), () => {
+        this.entries.load(queryFromSelection(this.selection()));
+        this.subs.load();
+        this.savedSearchesStore.load();
+      });
+      return;
+    }
     this.entries.runThenReload(
       this.api.markRead(target.scope, until, target.scope === 'all' ? undefined : target.id),
       () => {
@@ -1109,6 +1120,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *  identity is its visible term plus its mode — the whole-word and phrase
    *  flags — so all three must match. */
   readonly currentSavedSearch = computed(() => {
+    if (this.selection().kind === 'saved-search') return this.activeSavedSearch();
     const current = this.searchedTermAndMode();
     if (current === null) return null;
 
@@ -1174,7 +1186,15 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       panelClass: 'app-dialog',
     });
     ref.closed.subscribe((confirmed) => {
-      if (confirmed) this.savedSearchesStore.removeSavedSearch(id);
+      if (!confirmed) return;
+      // Removing the search you are viewing by its slug path leaves that path
+      // pointing at nothing, so fall back to the combined list; an unsaved
+      // `?q=` search stays put and simply flips its button back to Save.
+      const returnToCombined =
+        this.selection().kind === 'saved-search'
+          ? () => void this.router.navigate(['/searches/saved/all'])
+          : undefined;
+      this.savedSearchesStore.removeSavedSearch(id, returnToCombined);
     });
   }
 

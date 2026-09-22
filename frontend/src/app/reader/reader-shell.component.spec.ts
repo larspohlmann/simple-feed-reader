@@ -3136,6 +3136,43 @@ describe('ReaderShellComponent', () => {
       expect(f.componentInstance.title()).toBe('climate');
       expect(f.componentInstance.titleCount()).toEqual({ value: 3, counts: 'unread' });
     });
+
+    it('turns on Mark all read and the unread filter', () => {
+      const f = bootSingleSavedSearch();
+
+      expect(f.componentInstance.canMarkAllRead()).toBe(true);
+      const list = f.debugElement.query(By.directive(EntryListComponent))
+        .componentInstance as EntryListComponent;
+      expect(list.hasUnreadFilter()).toBe(true);
+    });
+
+    it('marks it read via its by-id endpoint, then reloads entries, subscriptions and saved searches', () => {
+      const f = bootSingleSavedSearch();
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
+
+      f.componentInstance.onMarkAllRead();
+
+      const req = ctrl.expectOne('https://api.test/api/entries/saved-searches/4/mark-read');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ until: expect.any(String) });
+      req.flush(null);
+
+      ctrl.expectOne((r) => r.url === 'https://api.test/api/entries/saved-searches/4');
+      ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
+      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+    });
+
+    it('offers a Remove that deletes the search and returns to the combined list', () => {
+      const f = bootSingleSavedSearch();
+      jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+      expect(f.componentInstance.currentSavedSearch()?.id).toBe(4);
+      f.componentInstance.onToggleSavedSearch();
+
+      ctrl.expectOne('https://api.test/api/saved-searches/4').flush(null);
+      expect(nav).toHaveBeenCalledWith(['/searches/saved/all']);
+    });
   });
 
   describe('mark all read for the combined saved-searches view (#769)', () => {
