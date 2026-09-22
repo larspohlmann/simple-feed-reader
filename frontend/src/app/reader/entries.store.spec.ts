@@ -425,6 +425,7 @@ describe('EntriesStore', () => {
 
     const savedSearch = (over: Partial<SavedSearchDto> = {}): SavedSearchDto => ({
       id: 7,
+      slug: '7-climate',
       term: 'climate',
       wholeWord: false,
       phrase: false,

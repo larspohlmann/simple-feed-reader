@@ -9,6 +9,7 @@ describe('SavedSearchesStore', () => {
   const rows: SavedSearchWire[] = [
     {
       id: 2,
+      slug: '2-rust-lang',
       term: 'rust lang',
       wholeWord: true,
       phrase: false,
@@ -18,6 +19,7 @@ describe('SavedSearchesStore', () => {
     },
     {
       id: 1,
+      slug: '1-climate',
       term: 'climate',
       wholeWord: false,
       phrase: false,
@@ -29,8 +31,8 @@ describe('SavedSearchesStore', () => {
 
   /** The sidebar view the store derives from a wire row. */
   function view(wire: SavedSearchWire, unreadCount = wire.unreadEntryIds.length): SavedSearchDto {
-    const { id, term, wholeWord, phrase, position, includeInDigest } = wire;
-    return { id, term, wholeWord, phrase, position, unreadCount, includeInDigest };
+    const { id, slug, term, wholeWord, phrase, position, includeInDigest } = wire;
+    return { id, slug, term, wholeWord, phrase, position, unreadCount, includeInDigest };
   }
 
   function setup(api: Partial<ReaderApi>): SavedSearchesStore {

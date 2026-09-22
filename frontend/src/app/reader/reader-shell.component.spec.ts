@@ -3247,6 +3247,7 @@ describe('ReaderShellComponent', () => {
 
     const savedClimate: SavedSearchWire = {
       id: 4,
+      slug: '4-climate',
       term: 'climate',
       wholeWord: true,
       phrase: false,
@@ -3257,6 +3258,7 @@ describe('ReaderShellComponent', () => {
     // The sidebar view the store derives from that wire row.
     const savedClimateView: SavedSearchDto = {
       id: 4,
+      slug: '4-climate',
       term: 'climate',
       wholeWord: true,
       phrase: false,

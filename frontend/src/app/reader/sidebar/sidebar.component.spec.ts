@@ -986,6 +986,7 @@ describe('SidebarComponent', () => {
       );
     const saved = (id: number, term: string, unreadCount: number): SavedSearchDto => ({
       id,
+      slug: `${id}-saved`,
       term,
       wholeWord: false,
       phrase: false,
