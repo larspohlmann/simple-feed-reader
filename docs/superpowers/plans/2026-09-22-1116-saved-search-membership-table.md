@@ -3367,3 +3367,14 @@ PR title: `Persist saved-search membership in a table, filled by an incremental 
 - §4.1 ceiling/settle, groups, chunks, budget, lowest mark first → Task 6 (`ceiling()`, `groupedByMark`, `walkGroup`, deadline; `findBelowMark` ordering in Task 3). §4.2 transaction and idempotent insert → Task 6 `wrapInTransaction` + Task 3 `insertMissing`. §4.3 no fallback → Tasks 4 and 6. §4.4 scheduling → Task 11 and Task 9 (`create()`). §4.5 report → Task 2.
 - §5 matcher → Tasks 4, 5. §6 readers 1–4 → Tasks 7–10. §7 deletions → Task 12. §8 API unchanged; `backfillPending` left out per §13 default. §9 migration and rollout → Task 1, Task 13. §10 tests → each task; e2e replaced by Task 11 Step 4 (deviation recorded in Global Constraints). §11 style → enforced by gates per task. §12 follow-ups untouched.
 - Type consistency checked: `SavedSearchMatcher::matchingIds(array $searches, array $candidateEntryIds)` everywhere; `SweepBudget::seconds()` / `deadlineFrom()`; `SavedSearchListQuery` fields; repository method names `listMembers`, `unreadMemberIdsBySavedSearch`, `unreadMemberIdsUpTo`, `unreadMemberIdsSince`, `firstMatchingSavedSearchIds`; `MaintenanceTick` argument order (sweep before shipper) matches `MaintenanceTickTest` and `MaintenanceTickReport` argument order (memberships before logShipping).
+
+---
+
+## Recorded at execution: where the code diverged from this plan
+
+Both handled in PR #1117; recorded so the plan the repo keeps matches what was built.
+
+1. **`settledCeilingId()` / `idsBetween()` do not live on `EntryRepository`** (Tasks 3, 6, 11). Adding them tripped PHPMD `TooManyPublicMethods` (`EntryRepository` already carried nine), and the threshold is not to be tuned. They live on a new `EntryMembershipSweepRepository`, the same split `EntryListRepository` is. `SavedSearchMembershipSweep` injects that repository, and the sweep-construction tests fetch it from the container.
+2. **The atomicity double in Task 6 needed the real `ManagerRegistry`**, not the `EntityManager`: `ServiceEntityRepository`'s constructor takes a registry. The anonymous subclass is built over the container's registry so `parent::insertMissing()` runs the real `INSERT` — otherwise the rollback test proves nothing. `SavedSearchEntryMembershipRepository` lost `final` for it, as the task's note anticipated.
+
+Smaller, within scope: the `DigestEntryFinder` constructor change (Task 10) reached six digest tests whose collaborators are `final`; they now use real fixtures through a shared `SavedSearchMatchFixture` helper. `docs/backup.md` gained a row for the new entity.
