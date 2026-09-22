@@ -7,6 +7,7 @@ namespace App\Tests\Controller\Api;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\SavedSearch;
+use App\Entity\SavedSearchEntry;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
@@ -45,9 +46,11 @@ final class MeDigestTestControllerTest extends ApiTestCase
     }
 
     /**
-     * A verified user with one includeInDigest saved search that matches an
-     * entry inside the requested window. Mirrors the fixture shape
-     * EntryListRepositoryDigestTest and DigestComposerTest already rely on.
+     * A verified user with one includeInDigest saved search that already has
+     * one unread member inside the requested window. The digest now reads the
+     * membership table (#1116) rather than matching terms live, so the entry
+     * is persisted as a SavedSearchEntry directly, standing in for the sweep
+     * a real create would trigger.
      */
     private function verifiedUserWithAMatchingDigestSearch(string $email): User
     {
@@ -74,6 +77,7 @@ final class MeDigestTestControllerTest extends ApiTestCase
         $search = new SavedSearch($user, 'rust', false);
         $search->setIncludeInDigest(true);
         $em->persist($search);
+        $em->persist(new SavedSearchEntry($search, $entry, new \DateTimeImmutable('-1 day')));
 
         $em->flush();
 
