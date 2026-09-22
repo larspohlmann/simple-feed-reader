@@ -83,6 +83,43 @@ final class SavedSearchSlugRoutingTest extends ApiTestCase
         self::assertSame(['Climate report'], array_column($body['entries'], 'title'));
     }
 
+    public function testSingleSavedSearchListCarriesSavedSearchMembership(): void
+    {
+        $client = self::createClient();
+        $user = $this->factory()->create('single-search-membership@example.com');
+        $headers = $this->authHeaderFor($user);
+        $feed = new Feed('https://example.com/single-search-membership-feed.xml');
+        $this->em()->persist($feed);
+        $this->em()->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $entry = new Entry(
+            $feed,
+            'single-search-membership-guid',
+            'https://example.com/single-search-membership-entry',
+            'Climate report',
+            new \DateTimeImmutable('2026-07-02T00:00:00Z'),
+            new \DateTimeImmutable('2026-07-02T00:00:00Z'),
+        );
+        $this->em()->persist($entry);
+        $search = new SavedSearch($user, 'climate', false);
+        $this->em()->persist($search);
+        $this->em()->flush();
+        $search->setSlug($search->getId() . '-climate');
+        $this->em()->persist(new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00')));
+        $this->em()->flush();
+
+        $client->request('GET', '/api/entries/saved-searches/' . $search->getId(), server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload($client);
+        self::assertIsArray($body['entries']);
+        $first = $body['entries'][0];
+        self::assertIsArray($first);
+        self::assertSame(
+            [['id' => $search->getId(), 'slug' => $search->getSlug(), 'term' => $search->getTerm()]],
+            $first['savedSearches'],
+        );
+    }
+
     public function testSingleSavedSearchIsNotFoundForAnotherUsersSearch(): void
     {
         $client = self::createClient();

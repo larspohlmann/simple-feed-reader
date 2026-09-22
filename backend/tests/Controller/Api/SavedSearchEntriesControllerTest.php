@@ -123,6 +123,32 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         self::assertSame('Climate body text.', $first['excerpt']);
     }
 
+    public function testMatchingEntryCarriesSavedSearchMembership(): void
+    {
+        $client = self::createClient();
+        $user = $this->factory()->create('saved-search-membership@example.com');
+        $headers = $this->authHeaderFor($user);
+        $feed = $this->seedSubscribedFeed($user);
+        $entry = $this->seedEntry($feed, 'Climate report', new \DateTimeImmutable('2026-07-02T00:00:00Z'));
+        $search = new SavedSearch($user, 'climate', false);
+        $this->em()->persist($search);
+        $this->em()->flush();
+        $search->setSlug($search->getId() . '-climate');
+        $this->member($search, $entry);
+
+        $client->request('GET', '/api/entries/saved-searches', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload($client);
+        self::assertIsArray($body['entries']);
+        $first = $body['entries'][0];
+        self::assertIsArray($first);
+        self::assertSame(
+            [['id' => $search->getId(), 'slug' => $search->getSlug(), 'term' => $search->getTerm()]],
+            $first['savedSearches'],
+        );
+    }
+
     public function testMatchingEntryCarriesItsFeedDeclaredCategories(): void
     {
         $client = self::createClient();

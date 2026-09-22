@@ -11,6 +11,7 @@ use App\Http\SavedSearchPage;
 use App\Repository\EntryCategoryLoader;
 use App\Repository\EntryQuery;
 use App\Repository\SavedSearchListQuery;
+use App\Repository\SavedSearchMembershipLoader;
 use App\Repository\SavedSearchRepository;
 use App\Service\Reader\SavedSearchMarkReadService;
 use App\Service\Search\SavedSearchEntries;
@@ -34,6 +35,7 @@ final readonly class SavedSearchEntriesController
         private SavedSearchRepository $savedSearches,
         private SavedSearchEntries $entries,
         private EntryCategoryLoader $categoryLoader,
+        private SavedSearchMembershipLoader $savedSearchLoader,
         private SavedSearchMarkReadService $markRead,
     ) {
     }
@@ -54,11 +56,12 @@ final readonly class SavedSearchEntriesController
             limit: $limit,
         );
         $result = $this->entries->list($query);
+        $rows = $this->savedSearchLoader->loadInto(
+            $this->categoryLoader->loadInto($result->rows),
+            $userId,
+        );
 
-        return new JsonResponse(SavedSearchPage::of(
-            $result->withRows($this->categoryLoader->loadInto($result->rows)),
-            $query->limit,
-        ));
+        return new JsonResponse(SavedSearchPage::of($result->withRows($rows), $query->limit));
     }
 
     #[Route('/{id}', name: 'api_entries_saved_search_one', methods: ['GET'], requirements: ['id' => '\d+'])]
@@ -81,11 +84,12 @@ final readonly class SavedSearchEntriesController
             limit: $limit,
         );
         $result = $this->entries->list($query);
+        $rows = $this->savedSearchLoader->loadInto(
+            $this->categoryLoader->loadInto($result->rows),
+            $userId,
+        );
 
-        return new JsonResponse(SavedSearchPage::of(
-            $result->withRows($this->categoryLoader->loadInto($result->rows)),
-            $query->limit,
-        ));
+        return new JsonResponse(SavedSearchPage::of($result->withRows($rows), $query->limit));
     }
 
     #[Route('/mark-read', name: 'api_entries_saved_searches_mark_read', methods: ['POST'])]
