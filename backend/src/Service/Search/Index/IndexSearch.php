@@ -21,14 +21,28 @@ use App\Service\Search\SearchTerms;
 final readonly class IndexSearch
 {
     /**
-     * @param list<int> $feedIds the feeds the caller may see; never asked
-     *                           of the engine when empty
+     * @param list<int>      $feedIds  the feeds the caller may see; never asked
+     *                                 of the engine when empty
+     * @param list<int>|null $entryIds when set, only these entries are candidates
      */
     public function __construct(
         public SearchTerms $terms,
         public array $feedIds,
         public ?EntryCursor $cursor,
         public int $limit,
+        public ?array $entryIds = null,
     ) {
+    }
+
+    /**
+     * A membership probe (#1116): which of exactly these entries match, on
+     * every feed — the sweep matches globally and gates by subscription at
+     * read time.
+     *
+     * @param list<int> $entryIds
+     */
+    public static function amongEntries(SearchTerms $terms, array $entryIds, int $limit): self
+    {
+        return new self($terms, [], null, $limit, $entryIds);
     }
 }

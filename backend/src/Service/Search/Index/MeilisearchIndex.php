@@ -229,21 +229,26 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
 
     private function filterFor(IndexSearch $search): string
     {
-        $filter = sprintf('feedId IN [%s]', implode(',', $search->feedIds));
-
-        if (null === $search->cursor) {
-            return $filter;
+        $clauses = [];
+        if ($search->feedIds !== []) {
+            $clauses[] = sprintf('feedId IN [%s]', implode(',', $search->feedIds));
+        }
+        if ($search->entryIds !== null) {
+            $clauses[] = sprintf('id IN [%s]', implode(',', $search->entryIds));
+        }
+        if ($search->cursor !== null) {
+            // Keyset pagination on (effectiveDate, id) descending: everything
+            // strictly before the cursor's date, plus same-date rows with a
+            // smaller id — the compound predicate the probe confirmed Meilisearch
+            // accepts verbatim as a plain filter string.
+            $clauses[] = sprintf(
+                '(effectiveDate < %1$d OR (effectiveDate = %1$d AND id < %2$d))',
+                $search->cursor->sortInstant->getTimestamp(),
+                $search->cursor->id,
+            );
         }
 
-        // Keyset pagination on (effectiveDate, id) descending: everything
-        // strictly before the cursor's date, plus same-date rows with a
-        // smaller id — the compound predicate the probe confirmed Meilisearch
-        // accepts verbatim as a plain filter string.
-        return $filter . sprintf(
-            ' AND (effectiveDate < %1$d OR (effectiveDate = %1$d AND id < %2$d))',
-            $search->cursor->sortInstant->getTimestamp(),
-            $search->cursor->id,
-        );
+        return implode(' AND ', $clauses);
     }
 
     private function matchesFromResponse(string $body): IndexMatches

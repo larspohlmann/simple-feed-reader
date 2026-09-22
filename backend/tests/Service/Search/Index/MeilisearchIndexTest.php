@@ -189,6 +189,24 @@ final class MeilisearchIndexTest extends TestCase
         self::assertStringNotContainsString('effectiveDate', $filter);
     }
 
+    public function testASearchAmongEntriesFiltersByIdAloneAndSendsTheirCountAsTheLimit(): void
+    {
+        $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));
+        $this->index($client)->find(IndexSearch::amongEntries(SearchTerms::fromInput('widgets'), [5, 9, 12], 3));
+
+        $query = $this->capturedJsonObject();
+        self::assertSame('id IN [5,9,12]', $query['filter']);
+        self::assertSame(3, $query['limit']);
+    }
+
+    public function testAnEntryIdFilterJoinsTheFeedFilterWithAnd(): void
+    {
+        $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));
+        $this->index($client)->find(new IndexSearch(SearchTerms::fromInput('widgets'), [3], null, 20, [5, 9]));
+
+        self::assertSame('feedId IN [3] AND id IN [5,9]', $this->capturedJsonObject()['filter']);
+    }
+
     public function testFindSortsByEffectiveDateThenIdBothDescending(): void
     {
         $this->index($this->clientCapturing(new MockResponse('{"hits":[]}')))->find($this->search());
