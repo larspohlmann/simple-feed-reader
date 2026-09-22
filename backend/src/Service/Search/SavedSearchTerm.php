@@ -15,4 +15,14 @@ final readonly class SavedSearchTerm
         public SearchTerms $terms,
     ) {
     }
+
+    /**
+     * @param list<self> $searches
+     *
+     * @return list<int>
+     */
+    public static function idsOf(array $searches): array
+    {
+        return array_map(static fn (self $search): int => $search->id, $searches);
+    }
 }

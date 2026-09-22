@@ -8,20 +8,18 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\SavedSearch;
 use App\Entity\User;
-use App\Repository\EntryMembershipSweepRepository;
 use App\Repository\SavedSearchEntryMembershipRepository;
-use App\Repository\SavedSearchRepository;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Search\Membership\SavedSearchMatcher;
 use App\Service\Search\Membership\SavedSearchMembershipSweep;
 use App\Service\Search\Membership\SweepBudget;
 use App\Tests\DbTestCase;
+use App\Tests\Support\MembershipSweepFactory;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\RecordingSavedSearchMatcher;
 use App\Tests\Support\TickingClock;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Clock\ClockInterface;
-use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 
 final class SavedSearchMembershipSweepTest extends DbTestCase
@@ -214,9 +212,9 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         /** @var ManagerRegistry $registry */
         $registry = self::getContainer()->get(ManagerRegistry::class);
         $memberships = new class ($registry) extends SavedSearchEntryMembershipRepository {
-            public function insertMissing(int $savedSearchId, array $entryIds, \DateTimeImmutable $matchedAt): int
+            public function insertMissing(array $entryIdsBySavedSearchId, \DateTimeImmutable $matchedAt): int
             {
-                parent::insertMissing($savedSearchId, $entryIds, $matchedAt);
+                parent::insertMissing($entryIdsBySavedSearchId, $matchedAt);
 
                 throw new \RuntimeException('simulated failure after the insert');
             }
@@ -278,21 +276,13 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         ?SavedSearchEntryMembershipRepository $memberships = null,
         ?RecordingLogger $logger = null,
     ): SavedSearchMembershipSweep {
-        $searches = self::getContainer()->get(SavedSearchRepository::class);
-        self::assertInstanceOf(SavedSearchRepository::class, $searches);
-        $entries = self::getContainer()->get(EntryMembershipSweepRepository::class);
-        self::assertInstanceOf(EntryMembershipSweepRepository::class, $entries);
-        $membershipRepository = $memberships ?? self::getContainer()->get(SavedSearchEntryMembershipRepository::class);
-        self::assertInstanceOf(SavedSearchEntryMembershipRepository::class, $membershipRepository);
-
-        return new SavedSearchMembershipSweep(
-            $searches,
-            $entries,
-            $membershipRepository,
-            $matcher,
+        return MembershipSweepFactory::fromContainer(
+            self::getContainer(),
             $this->em,
+            $matcher,
             $clock ?? new MockClock(self::NOW),
-            $logger ?? new NullLogger(),
+            $logger,
+            $memberships,
         );
     }
 

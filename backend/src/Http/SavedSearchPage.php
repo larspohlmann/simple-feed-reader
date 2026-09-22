@@ -24,13 +24,7 @@ final readonly class SavedSearchPage
     public static function of(SavedSearchEntriesResult $result, int $limit): array
     {
         return [
-            ...EntryPage::withMatchCount(
-                $result->rows,
-                $limit,
-                $result->matchCount,
-                EntryListSort::PublishedDate,
-                $result->continuationRow,
-            ),
+            ...EntryPage::of($result->rows, $limit, EntryListSort::PublishedDate),
             // Cast, not a bare array: an empty map must encode as `{}`, not `[]`.
             'savedSearchIds' => (object) $result->savedSearchIds,
         ];

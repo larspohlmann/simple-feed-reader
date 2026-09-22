@@ -25,10 +25,9 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
     }
 
     /**
-     * The combined list over the membership table: every member of any of the
-     * caller's searches, newest first, keyset-paged, the unread test inside
-     * the same statement as the LIMIT. EXISTS rather than a join, so an entry
-     * in several searches is one row without a DISTINCT.
+     * Every member of any of the caller's searches, newest first, keyset-paged,
+     * the unread test in the same statement as the LIMIT. EXISTS rather than a
+     * join, so an entry in several searches is one row without a DISTINCT.
      *
      * @return list<EntryListRow>
      */
@@ -38,14 +37,8 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
             return [];
         }
 
-        $qb = $this->newestFirst($this->rowQueryBuilder($query->userId))
-            ->setMaxResults($query->limit)
-            ->setParameter('searchIds', $query->savedSearchIds);
-        $applyMembership = static function (QueryBuilder $qb, EntryAliases $aliases): void {
-            $qb->andWhere(self::memberOfAnySearch($aliases));
-        };
-        $applyMembership($qb, EntryAliases::primary());
-        $this->collapse->apply($qb, $applyMembership, $query->userId);
+        $qb = $this->newestFirst($this->rowQueryBuilder($query->userId))->setMaxResults($query->limit);
+        $this->restrictToMembers($qb, $query->savedSearchIds, $query->userId);
 
         if ($query->onlyUnread) {
             $qb->andWhere(UnreadDql::predicate())->setParameter('notHidden', false, Types::BOOLEAN);
@@ -74,6 +67,8 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
             return $idsBySearch;
         }
 
+        // A join, not restrictToMembers(): this read projects the search id per
+        // row, so only the collapse subquery takes the EXISTS scope.
         $qb = $this->unreadEntriesQueryBuilder($userId)
             ->select('e.id AS id', 'ss.id AS searchId')
             ->join(SavedSearchEntry::class, 'sse', 'ON', 'sse.entry = e')
@@ -82,9 +77,7 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
             ->andWhere('ss.user = :user')
             ->setParameter('searchIds', $savedSearchIds)
             ->orderBy('e.id', 'ASC');
-        $this->collapse->apply($qb, static function (QueryBuilder $qb, EntryAliases $aliases): void {
-            $qb->andWhere(self::memberOfAnySearch($aliases));
-        }, $userId);
+        $this->collapse->apply($qb, self::applyMembership(...), $userId);
 
         /** @var list<array{id: int, searchId: int}> $rows */
         $rows = $qb->getQuery()->getScalarResult();
@@ -112,13 +105,8 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
         $qb = $this->unreadEntriesQueryBuilder($userId)
             ->select('e.id')
             ->andWhere('e.effectiveDate <= :until')
-            ->setParameter('until', $until)
-            ->setParameter('searchIds', $savedSearchIds);
-        $applyMembership = static function (QueryBuilder $qb, EntryAliases $aliases): void {
-            $qb->andWhere(self::memberOfAnySearch($aliases));
-        };
-        $applyMembership($qb, EntryAliases::primary());
-        $this->collapse->apply($qb, $applyMembership, $userId);
+            ->setParameter('until', $until);
+        $this->restrictToMembers($qb, $savedSearchIds, $userId);
 
         return $this->scalarIds($qb);
     }
@@ -134,13 +122,8 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
         $qb = $this->unreadEntriesQueryBuilder($userId)
             ->select('e.id')
             ->andWhere('e.effectiveDate > :since')
-            ->setParameter('since', $since)
-            ->setParameter('searchIds', [$savedSearchId]);
-        $applyMembership = static function (QueryBuilder $qb, EntryAliases $aliases): void {
-            $qb->andWhere(self::memberOfAnySearch($aliases));
-        };
-        $applyMembership($qb, EntryAliases::primary());
-        $this->collapse->apply($qb, $applyMembership, $userId);
+            ->setParameter('since', $since);
+        $this->restrictToMembers($qb, [$savedSearchId], $userId);
 
         return $this->scalarIds($this->newestFirst($qb));
     }
@@ -185,10 +168,28 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
     }
 
     /**
-     * "This entry is a member of one of :searchIds, and that search belongs
-     * to :user." Alias-parameterised so the collapse subquery can apply the
-     * same scope to its own entry alias; both parameters are bound once on
-     * the outer builder, which the subquery shares.
+     * Keeps only members of the given searches, on the primary alias and inside
+     * the collapse subquery alike — the two scopes must agree, or a collapsed
+     * copy punches a hole in the page (see DuplicateCollapseDql).
+     *
+     * @param non-empty-list<int> $savedSearchIds
+     */
+    private function restrictToMembers(QueryBuilder $qb, array $savedSearchIds, int $userId): void
+    {
+        $qb->setParameter('searchIds', $savedSearchIds);
+        self::applyMembership($qb, EntryAliases::primary());
+        $this->collapse->apply($qb, self::applyMembership(...), $userId);
+    }
+
+    private static function applyMembership(QueryBuilder $qb, EntryAliases $aliases): void
+    {
+        $qb->andWhere(self::memberOfAnySearch($aliases));
+    }
+
+    /**
+     * "A member of one of :searchIds, and that search belongs to :user", for
+     * any entry alias; both parameters are bound once on the outer builder,
+     * which the collapse subquery shares.
      */
     private static function memberOfAnySearch(EntryAliases $aliases): string
     {

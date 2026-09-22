@@ -230,7 +230,7 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
     private function filterFor(IndexSearch $search): string
     {
         $clauses = [];
-        if ($search->feedIds !== []) {
+        if ($search->feedIds !== null) {
             $clauses[] = sprintf('feedId IN [%s]', implode(',', $search->feedIds));
         }
         if ($search->entryIds !== null) {

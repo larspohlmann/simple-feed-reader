@@ -9,11 +9,8 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * The two entry-side reads the saved-search membership sweep needs (#1116):
- * the settled ceiling it must not walk past, and the ascending id walk
- * between a search's mark and that ceiling. Split out of EntryRepository so
- * that class's existence/lookup/keyset-walk surface stays readable rather
- * than growing a fourth, unrelated responsibility (PHPMD TooManyPublicMethods).
+ * The membership sweep's two entry-side reads (#1116): the settled ceiling it
+ * must not walk past, and the ascending id walk up to it.
  *
  * @extends ServiceEntityRepository<Entry>
  */
@@ -25,20 +22,24 @@ final class EntryMembershipSweepRepository extends ServiceEntityRepository
     }
 
     /**
-     * The highest entry id created no later than $createdNoLaterThan — the
-     * membership sweep's ceiling, so entries the engine may not have indexed
-     * yet wait for the next run (#1116).
+     * The highest entry id created no later than $createdNoLaterThan, so
+     * entries an engine may not have indexed yet wait for the next run.
+     * Read backwards along the primary key rather than as MAX(): no index
+     * leads on created_at, and the settled rows are all but the newest few.
      */
     public function settledCeilingId(\DateTimeImmutable $createdNoLaterThan): int
     {
-        $ceiling = $this->createQueryBuilder('e')
-            ->select('MAX(e.id)')
+        /** @var list<array{id: int}> $rows */
+        $rows = $this->createQueryBuilder('e')
+            ->select('e.id')
             ->andWhere('e.createdAt <= :createdNoLaterThan')
             ->setParameter('createdNoLaterThan', $createdNoLaterThan)
+            ->orderBy('e.id', 'DESC')
+            ->setMaxResults(1)
             ->getQuery()
-            ->getSingleScalarResult();
+            ->getScalarResult();
 
-        return (int) $ceiling;
+        return (int) ($rows[0]['id'] ?? 0);
     }
 
     /**

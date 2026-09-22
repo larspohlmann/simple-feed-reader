@@ -33,7 +33,7 @@ final class IndexedSavedSearchMatcherTest extends TestCase
         self::assertCount(2, $round);
         self::assertInstanceOf(IndexSearch::class, $round[0]);
         self::assertSame([5, 9, 12], $round[0]->entryIds);
-        self::assertSame([], $round[0]->feedIds);
+        self::assertNull($round[0]->feedIds);
         self::assertSame(3, $round[0]->limit);
         self::assertSame('rocket', $round[1]->terms->terms[0]);
     }

@@ -11,10 +11,9 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 
 /**
- * The LIKE matcher: one statement per chunk answers every search at once —
- * the WHERE keeps the candidates any search matches, a CASE per search flags
- * which. Title and summary only, exact terms; the recall the database host
- * has always had.
+ * The LIKE matcher: one statement per chunk answers every search at once — the
+ * WHERE keeps the candidates any search matches, a CASE per search flags which.
+ * Title and summary only, exact terms — the database host's recall.
  */
 final readonly class DatabaseSavedSearchMatcher implements SavedSearchMatcher
 {
@@ -32,13 +31,13 @@ final readonly class DatabaseSavedSearchMatcher implements SavedSearchMatcher
 
     public function matchingIds(array $searches, array $candidateEntryIds): array
     {
-        $matches = self::nothingFor($searches);
         if ($candidateEntryIds === []) {
-            return $matches;
+            return array_fill_keys(SavedSearchTerm::idsOf($searches), []);
         }
 
+        $matches = [];
         foreach (array_chunk($searches, self::SEARCHES_PER_STATEMENT) as $chunk) {
-            $matches = $this->matchesInOneStatement($chunk, $candidateEntryIds) + $matches;
+            $matches += $this->matchesInOneStatement($chunk, $candidateEntryIds);
         }
 
         return $matches;
@@ -80,7 +79,7 @@ final readonly class DatabaseSavedSearchMatcher implements SavedSearchMatcher
      */
     private function collect(array $searches, QueryBuilder $qb): array
     {
-        $matches = self::nothingFor($searches);
+        $matches = array_fill_keys(SavedSearchTerm::idsOf($searches), []);
         // Doctrine types the mapped id; a CASE is raw, and MySQL hands it back as a string.
         /** @var list<array{id: int, ...<string, int|string>}> $rows */
         $rows = $qb->getQuery()->getScalarResult();
@@ -93,15 +92,5 @@ final readonly class DatabaseSavedSearchMatcher implements SavedSearchMatcher
         }
 
         return $matches;
-    }
-
-    /**
-     * @param list<SavedSearchTerm> $searches
-     *
-     * @return array<int, list<int>>
-     */
-    private static function nothingFor(array $searches): array
-    {
-        return array_fill_keys(array_map(static fn (SavedSearchTerm $s): int => $s->id, $searches), []);
     }
 }

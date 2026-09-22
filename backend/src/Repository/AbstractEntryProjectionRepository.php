@@ -106,7 +106,7 @@ abstract class AbstractEntryProjectionRepository extends ServiceEntityRepository
 
     /**
      * The distinct entry ids a match query selects, as a plain int list. The
-     * shared tail of the unreadMatch* readers: they differ only in their filter
+     * shared tail of the unreadMember* readers: they differ only in their filter
      * and ordering, never in reducing `e.id` rows to ints.
      *
      * @return list<int>

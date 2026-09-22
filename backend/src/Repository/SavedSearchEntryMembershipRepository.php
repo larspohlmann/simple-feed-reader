@@ -6,8 +6,6 @@ namespace App\Repository;
 
 use App\Entity\SavedSearchEntry;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\DBAL\ArrayParameterType;
-use Doctrine\DBAL\ParameterType;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -27,54 +25,81 @@ class SavedSearchEntryMembershipRepository extends ServiceEntityRepository
     }
 
     /**
-     * Inserts the (search, entry) pairs that do not exist yet and answers how
-     * many it added. A re-run over the same chunk therefore adds nothing,
-     * which is what makes the sweep's per-chunk transaction restartable.
+     * Inserts the (search, entry) pairs that do not exist yet — one existence
+     * read and one INSERT for the whole map — and answers how many it added,
+     * so a re-run over the same chunk adds nothing and the sweep's per-chunk
+     * transaction is restartable.
      *
-     * @param list<int> $entryIds
+     * @param array<int, list<int>> $entryIdsBySavedSearchId
      */
-    public function insertMissing(int $savedSearchId, array $entryIds, \DateTimeImmutable $matchedAt): int
+    public function insertMissing(array $entryIdsBySavedSearchId, \DateTimeImmutable $matchedAt): int
     {
-        if ($entryIds === []) {
+        $wanted = self::pairs($entryIdsBySavedSearchId);
+        if ($wanted === []) {
             return 0;
         }
 
-        $missing = array_values(array_diff($entryIds, $this->existingEntryIds($savedSearchId, $entryIds)));
+        $missing = array_values(array_diff_key($wanted, $this->existingPairs($wanted)));
         foreach (array_chunk($missing, self::INSERT_ROWS) as $rows) {
-            $this->insertRows($savedSearchId, $rows, $matchedAt);
+            $this->insertRows($rows, $matchedAt);
         }
 
         return \count($missing);
     }
 
     /**
-     * @param list<int> $entryIds
+     * @param array<int, list<int>> $entryIdsBySavedSearchId
      *
-     * @return list<int>
+     * @return array<string, array{int, int}> "search:entry" => [savedSearchId, entryId]
      */
-    private function existingEntryIds(int $savedSearchId, array $entryIds): array
+    private static function pairs(array $entryIdsBySavedSearchId): array
     {
-        /** @var list<int|string> $existing */
-        $existing = $this->getEntityManager()->getConnection()->fetchFirstColumn(
-            'SELECT entry_id FROM saved_search_entry WHERE saved_search_id = ? AND entry_id IN (?)',
-            [$savedSearchId, $entryIds],
-            [ParameterType::INTEGER, ArrayParameterType::INTEGER],
-        );
+        $pairs = [];
+        foreach ($entryIdsBySavedSearchId as $savedSearchId => $entryIds) {
+            foreach ($entryIds as $entryId) {
+                $pairs[$savedSearchId . ':' . $entryId] = [$savedSearchId, $entryId];
+            }
+        }
 
-        return array_map(intval(...), $existing);
+        return $pairs;
     }
 
-    /** @param list<int> $entryIds */
-    private function insertRows(int $savedSearchId, array $entryIds, \DateTimeImmutable $matchedAt): void
+    /**
+     * @param non-empty-array<string, array{int, int}> $wanted
+     *
+     * @return array<string, true> the "search:entry" keys already stored
+     */
+    private function existingPairs(array $wanted): array
+    {
+        /** @var list<array{searchId: int|string, entryId: int|string}> $rows */
+        $rows = $this->createQueryBuilder('sse')
+            ->select('IDENTITY(sse.savedSearch) AS searchId', 'IDENTITY(sse.entry) AS entryId')
+            ->andWhere('sse.savedSearch IN (:searchIds)')
+            ->andWhere('sse.entry IN (:entryIds)')
+            ->setParameter('searchIds', array_values(array_unique(array_column($wanted, 0))))
+            ->setParameter('entryIds', array_values(array_unique(array_column($wanted, 1))))
+            ->getQuery()
+            ->getScalarResult();
+
+        $existing = [];
+        foreach ($rows as $row) {
+            $existing[(int) $row['searchId'] . ':' . (int) $row['entryId']] = true;
+        }
+
+        return $existing;
+    }
+
+    /** @param list<array{int, int}> $pairs */
+    private function insertRows(array $pairs, \DateTimeImmutable $matchedAt): void
     {
         $parameters = [];
-        foreach ($entryIds as $entryId) {
+        foreach ($pairs as [$savedSearchId, $entryId]) {
             array_push($parameters, $savedSearchId, $entryId, $matchedAt->format('Y-m-d H:i:s'));
         }
 
         $this->getEntityManager()->getConnection()->executeStatement(
             'INSERT INTO saved_search_entry (saved_search_id, entry_id, matched_at) VALUES '
-            . implode(', ', array_fill(0, \count($entryIds), '(?, ?, ?)')),
+            . implode(', ', array_fill(0, \count($pairs), '(?, ?, ?)')),
             $parameters,
         );
     }

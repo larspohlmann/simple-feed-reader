@@ -3378,3 +3378,35 @@ Both handled in PR #1117; recorded so the plan the repo keeps matches what was b
 2. **The atomicity double in Task 6 needed the real `ManagerRegistry`**, not the `EntityManager`: `ServiceEntityRepository`'s constructor takes a registry. The anonymous subclass is built over the container's registry so `parent::insertMissing()` runs the real `INSERT` — otherwise the rollback test proves nothing. `SavedSearchEntryMembershipRepository` lost `final` for it, as the task's note anticipated.
 
 Smaller, within scope: the `DigestEntryFinder` constructor change (Task 10) reached six digest tests whose collaborators are `final`; they now use real fixtures through a shared `SavedSearchMatchFixture` helper. `docs/backup.md` gained a row for the new entity.
+
+Two spec-to-plan choices the plan made silently, recorded here: spec §5 says
+`services.yaml` picks the matcher, but the capability is an env value, so the
+plan's runtime chooser (`EngineOrDatabaseSavedSearchMatcher`, the
+`EntrySearchWithFallback` shape) is the correct reading; and spec §4.2's
+"insert where not exists" became one existence read plus one multi-row
+`INSERT` per chunk, inside the same transaction, which gives the same
+restartability.
+
+## Recorded at cleanup (`/simplify` after the PR opened)
+
+- `SavedSearchEntryRepository`: the membership scope (primary alias + collapse
+  subquery) is one `restrictToMembers()` instead of four copied closures.
+- `SavedSearchEntryMembershipRepository::insertMissing()` takes the whole mark
+  group (`array<searchId, list<entryId>>`): one existence read and one
+  `INSERT` per chunk instead of two statements per search; the sweep no longer
+  flushes twice per chunk.
+- `EntryMembershipSweepRepository::settledCeilingId()` walks the primary key
+  backwards with `LIMIT 1` instead of `MAX()` over an unindexed `created_at`
+  (11 ms → 0.01 ms on 58k entries).
+- `IndexSearch::$feedIds` is `null` for "every feed" and refuses `[]`, so a
+  membership probe no longer overloads the empty list that every other caller
+  must guard against; `amongEntries()` derives its limit from the candidates.
+- `SavedSearchEntriesResult` lost `matchCount`/`continuationRow` (always
+  `count($rows)`/`null` now); `SavedSearchPage` calls `EntryPage::of()`.
+- `SweepTally::toReport(bool)` became `caughtUp()`/`stoppedShort()`;
+  `MaintenanceTick` has one `skipped()` helper instead of four copies;
+  `SavedSearchRepository::idsForUser()` replaces two entity loads that only
+  read ids; `SavedSearchTerm::idsOf()` replaces three copies of the same map;
+  dead `SavedSearchTerms::forUser()` and its repository dependency are gone.
+- Tests: `MembershipSweepFactory` builds the sweep for the three tests that
+  assembled it by hand.

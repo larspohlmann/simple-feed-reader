@@ -28,10 +28,7 @@ final class RecordingSavedSearchMatcher implements SavedSearchMatcher
 
     public function matchingIds(array $searches, array $candidateEntryIds): array
     {
-        $this->calls[] = [
-            'searchIds' => array_map(static fn (SavedSearchTerm $s): int => $s->id, $searches),
-            'candidates' => $candidateEntryIds,
-        ];
+        $this->calls[] = ['searchIds' => SavedSearchTerm::idsOf($searches), 'candidates' => $candidateEntryIds];
         if ($this->failure !== null) {
             throw $this->failure;
         }

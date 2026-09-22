@@ -15,12 +15,9 @@ use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 
 /**
- * Fills saved_search_entry incrementally (#1116): every search carries a
- * high-water mark, the run walks entry ids above it up to a settled ceiling
- * in chunks, asks the matcher which ids match, inserts the rows and advances
- * the mark. Searches at the same mark walk together, so once caught up a run
- * is one matcher call per chunk for all of them. Budget-bounded; the mark is
- * where the next run continues.
+ * Fills saved_search_entry incrementally (#1116): each search carries a
+ * high-water mark; a run walks entry ids above it to a settled ceiling in
+ * chunks, inserts the matches and advances the mark, within a budget.
  */
 final readonly class SavedSearchMembershipSweep
 {
@@ -72,14 +69,17 @@ final readonly class SavedSearchMembershipSweep
         foreach (self::groupedByMark($due) as $group) {
             $tally->searchesSwept += \count($group);
             if (!$this->walkGroup($group, $ceiling, $deadline, $tally)) {
-                return $tally->toReport(false);
+                return $tally->stoppedShort();
             }
         }
 
-        return $tally->toReport(true);
+        return $tally->caughtUp();
     }
 
     /**
+     * Searches at the same mark walk together, so once caught up a run is one
+     * matcher call per chunk for all of them.
+     *
      * @param list<SavedSearch> $due already ordered by mark, then id
      *
      * @return list<non-empty-list<SavedSearch>>
@@ -110,6 +110,7 @@ final readonly class SavedSearchMembershipSweep
             $chunk = $this->entries->idsBetween($mark, $ceiling, self::CHUNK);
             if ($chunk === []) {
                 $this->advance($group, $ceiling);
+                $this->em->flush();
 
                 return true;
             }
@@ -143,14 +144,7 @@ final readonly class SavedSearchMembershipSweep
         // Insert and mark advance share one transaction: a run that dies here
         // leaves neither half-inserted rows nor a skipped chunk.
         $this->em->wrapInTransaction(function () use ($group, $matches, $now, $lastId, $tally): void {
-            foreach ($group as $search) {
-                $searchId = (int) $search->getId();
-                $tally->matchesInserted += $this->memberships->insertMissing(
-                    $searchId,
-                    $matches[$searchId] ?? [],
-                    $now,
-                );
-            }
+            $tally->matchesInserted += $this->memberships->insertMissing($matches, $now);
             $this->advance($group, $lastId);
         });
         $tally->entriesScanned += \count($chunk);
@@ -164,6 +158,5 @@ final readonly class SavedSearchMembershipSweep
         foreach ($group as $search) {
             $search->advanceMatchedUpTo($entryId);
         }
-        $this->em->flush();
     }
 }

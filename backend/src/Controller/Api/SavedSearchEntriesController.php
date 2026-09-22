@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Dto\Entry\MarkSavedSearchesReadRequest;
-use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Http\EntryCursor;
 use App\Http\SavedSearchPage;
@@ -48,10 +47,7 @@ final readonly class SavedSearchEntriesController
         $userId = (int) $user->getId();
         $query = new SavedSearchListQuery(
             userId: $userId,
-            savedSearchIds: array_map(
-                static fn (SavedSearch $s): int => (int) $s->getId(),
-                $this->savedSearches->findForUser($userId),
-            ),
+            savedSearchIds: $this->savedSearches->idsForUser($userId),
             onlyUnread: $unread,
             cursor: EntryCursor::fromRequestValue($cursor),
             limit: $limit,

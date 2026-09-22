@@ -41,6 +41,25 @@ final class SavedSearchRepositoryTest extends DbTestCase
         self::assertSame('climate', $rows[1]->getTerm());
     }
 
+    public function testIdsForUserAnswersNewestFirstAndScopesToUser(): void
+    {
+        $owner = new User('ids-owner@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $stranger = new User('ids-stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->em->persist($owner);
+        $this->em->persist($stranger);
+        $first = new SavedSearch($owner, 'climate', false);
+        $second = new SavedSearch($owner, 'rocket', false);
+        $this->em->persist($first);
+        $this->em->persist($second);
+        $this->em->persist(new SavedSearch($stranger, 'not mine', false));
+        $this->em->flush();
+
+        self::assertSame(
+            [$second->getId(), $first->getId()],
+            $this->repo()->idsForUser((int) $owner->getId()),
+        );
+    }
+
     public function testFindOneForUserByTermDistinguishesWholeWord(): void
     {
         $user = new User('u@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));

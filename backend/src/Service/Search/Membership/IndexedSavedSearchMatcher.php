@@ -11,7 +11,7 @@ use App\Service\Search\SavedSearchTerm;
 /**
  * The engine matcher: one multi-search per chunk, one query per search, each
  * filtered to exactly the candidate ids. Content and typo matches included —
- * the recall the engine host has always had.
+ * the engine host's recall.
  */
 final readonly class IndexedSavedSearchMatcher implements SavedSearchMatcher
 {
@@ -22,14 +22,13 @@ final readonly class IndexedSavedSearchMatcher implements SavedSearchMatcher
     public function matchingIds(array $searches, array $candidateEntryIds): array
     {
         if ($searches === [] || $candidateEntryIds === []) {
-            return array_fill_keys(array_map(static fn (SavedSearchTerm $s): int => $s->id, $searches), []);
+            return array_fill_keys(SavedSearchTerm::idsOf($searches), []);
         }
 
         $results = $this->index->findMany(array_map(
             static fn (SavedSearchTerm $search): IndexSearch => IndexSearch::amongEntries(
                 $search->terms,
                 $candidateEntryIds,
-                \count($candidateEntryIds),
             ),
             $searches,
         ));

@@ -8,8 +8,7 @@ use App\Http\EntryCursor;
 
 /**
  * Everything one combined saved-search read needs (#1116): the caller, the
- * searches by id — membership is a table now, so the read needs no terms —
- * and the page.
+ * searches by id, and the page.
  */
 final readonly class SavedSearchListQuery
 {

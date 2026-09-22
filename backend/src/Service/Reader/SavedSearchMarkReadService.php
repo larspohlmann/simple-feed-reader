@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
-use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Repository\SavedSearchEntryRepository;
 use App\Repository\SavedSearchRepository;
@@ -27,10 +26,7 @@ final readonly class SavedSearchMarkReadService
     public function mark(User $user, \DateTimeImmutable $until): void
     {
         $userId = (int) $user->getId();
-        $searchIds = array_map(
-            static fn (SavedSearch $s): int => (int) $s->getId(),
-            $this->savedSearches->findForUser($userId),
-        );
+        $searchIds = $this->savedSearches->idsForUser($userId);
 
         $this->readMarker->markRead($userId, $this->entries->unreadMemberIdsUpTo($userId, $searchIds, $until));
     }

@@ -192,7 +192,7 @@ final class MeilisearchIndexTest extends TestCase
     public function testASearchAmongEntriesFiltersByIdAloneAndSendsTheirCountAsTheLimit(): void
     {
         $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));
-        $this->index($client)->find(IndexSearch::amongEntries(SearchTerms::fromInput('widgets'), [5, 9, 12], 3));
+        $this->index($client)->find(IndexSearch::amongEntries(SearchTerms::fromInput('widgets'), [5, 9, 12]));
 
         $query = $this->capturedJsonObject();
         self::assertSame('id IN [5,9,12]', $query['filter']);

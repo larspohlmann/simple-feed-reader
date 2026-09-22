@@ -11,7 +11,17 @@ final class SweepTally
     public int $entriesScanned = 0;
     public int $matchesInserted = 0;
 
-    public function toReport(bool $caughtUp): SavedSearchMembershipSweepReport
+    public function caughtUp(): SavedSearchMembershipSweepReport
+    {
+        return $this->report(true);
+    }
+
+    public function stoppedShort(): SavedSearchMembershipSweepReport
+    {
+        return $this->report(false);
+    }
+
+    private function report(bool $caughtUp): SavedSearchMembershipSweepReport
     {
         return new SavedSearchMembershipSweepReport(
             $this->searchesSwept,

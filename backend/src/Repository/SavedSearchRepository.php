@@ -35,6 +35,22 @@ class SavedSearchRepository extends ServiceEntityRepository
         return $rows;
     }
 
+    /**
+     * @return list<int> the user's saved-search ids, newest saved first
+     */
+    public function idsForUser(int $userId): array
+    {
+        /** @var list<array{id: int}> $rows */
+        $rows = $this->createQueryBuilder('savedSearch')
+            ->select('savedSearch.id AS id')
+            ->andWhere('savedSearch.user = :userId')->setParameter('userId', $userId)
+            ->orderBy('savedSearch.id', 'DESC')
+            ->getQuery()
+            ->getScalarResult();
+
+        return array_map(static fn (array $row): int => (int) $row['id'], $rows);
+    }
+
     public function findOneOwnedBy(int $id, int $userId): ?SavedSearch
     {
         /** @var SavedSearch|null $row */

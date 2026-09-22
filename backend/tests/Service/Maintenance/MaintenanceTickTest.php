@@ -9,13 +9,10 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Repository\EntryMembershipSweepRepository;
 use App\Repository\EntryRepository;
 use App\Repository\FeedRepository;
 use App\Repository\PendingImageVerificationRepository;
 use App\Repository\PreferencesRepository;
-use App\Repository\SavedSearchEntryMembershipRepository;
-use App\Repository\SavedSearchRepository;
 use App\Service\Category\CategoryNormalizer;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\FeedScheduler;
@@ -40,7 +37,6 @@ use App\Service\Refresh\RefreshRunner;
 use App\Service\Retention\EntryPruner;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Search\EntryIndexer;
-use App\Service\Search\Membership\SavedSearchMembershipSweep;
 use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
@@ -48,6 +44,7 @@ use App\Tests\Support\InMemoryMailFailureRecorder;
 use App\Tests\Support\StubFaviconFetcher;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\RecordingContentChangeMarker;
+use App\Tests\Support\MembershipSweepFactory;
 use App\Tests\Support\RecordingSavedSearchMatcher;
 use App\Tests\Support\StubLokiEndpoint;
 use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
@@ -228,20 +225,11 @@ final class MaintenanceTickTest extends DbTestCase
             $this->em,
         );
 
-        $savedSearches = self::getContainer()->get(SavedSearchRepository::class);
-        self::assertInstanceOf(SavedSearchRepository::class, $savedSearches);
-        $membershipEntries = self::getContainer()->get(EntryMembershipSweepRepository::class);
-        self::assertInstanceOf(EntryMembershipSweepRepository::class, $membershipEntries);
-        $memberships = self::getContainer()->get(SavedSearchEntryMembershipRepository::class);
-        self::assertInstanceOf(SavedSearchEntryMembershipRepository::class, $memberships);
-        $membershipSweep = new SavedSearchMembershipSweep(
-            $savedSearches,
-            $membershipEntries,
-            $memberships,
-            new RecordingSavedSearchMatcher(),
+        $membershipSweep = MembershipSweepFactory::fromContainer(
+            self::getContainer(),
             $this->em,
+            new RecordingSavedSearchMatcher(),
             $clock,
-            new NullLogger(),
         );
 
         $tick = new MaintenanceTick(

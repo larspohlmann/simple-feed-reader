@@ -52,6 +52,5 @@ final class SavedSearchEntriesTest extends DbTestCase
         self::assertCount(1, $result->rows);
         self::assertSame($entry->getId(), $result->rows[0]->entry->getId());
         self::assertSame([(int) $entry->getId() => (int) $rocket->getId()], $result->savedSearchIds);
-        self::assertSame(1, $result->matchCount);
     }
 }

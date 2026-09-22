@@ -85,10 +85,9 @@ final class SavedSearchMembershipSweepRepositoriesTest extends DbTestCase
         $this->em->flush();
         $matchedAt = new \DateTimeImmutable('2026-09-22T10:00:00');
 
-        $first = $this->memberships()->insertMissing((int) $search->getId(), [(int) $one->getId()], $matchedAt);
+        $first = $this->memberships()->insertMissing([(int) $search->getId() => [(int) $one->getId()]], $matchedAt);
         $second = $this->memberships()->insertMissing(
-            (int) $search->getId(),
-            [(int) $one->getId(), (int) $two->getId()],
+            [(int) $search->getId() => [(int) $one->getId(), (int) $two->getId()]],
             $matchedAt,
         );
 
@@ -97,12 +96,35 @@ final class SavedSearchMembershipSweepRepositoriesTest extends DbTestCase
         self::assertSame(2, $this->memberships()->count(['savedSearch' => $search]));
     }
 
+    public function testInsertMissingTakesAWholeGroupInOneCall(): void
+    {
+        $climate = $this->search('climate');
+        $rocket = $this->search('rocket');
+        $entry = $this->entry('a');
+        $this->em->flush();
+
+        $inserted = $this->memberships()->insertMissing(
+            [
+                (int) $climate->getId() => [(int) $entry->getId()],
+                (int) $rocket->getId() => [(int) $entry->getId()],
+            ],
+            new \DateTimeImmutable('2026-09-22T10:00:00'),
+        );
+
+        self::assertSame(2, $inserted);
+        self::assertSame(1, $this->memberships()->count(['savedSearch' => $climate]));
+        self::assertSame(1, $this->memberships()->count(['savedSearch' => $rocket]));
+    }
+
     public function testInsertMissingWithNoIdsInsertsNothing(): void
     {
         $search = $this->search('climate');
         $this->em->flush();
 
-        self::assertSame(0, $this->memberships()->insertMissing((int) $search->getId(), [], new \DateTimeImmutable()));
+        $now = new \DateTimeImmutable();
+
+        self::assertSame(0, $this->memberships()->insertMissing([(int) $search->getId() => []], $now));
+        self::assertSame(0, $this->memberships()->insertMissing([], $now));
     }
 
     private function entry(string $guid, string $createdAt = '2026-07-01T00:00:00Z'): Entry

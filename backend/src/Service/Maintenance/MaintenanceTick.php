@@ -39,11 +39,9 @@ use App\Service\Search\Membership\SweepBudget;
  * flushes through the default EntityManager, so it is skipped on the same
  * aborted-refresh tick.
  *
- * The image-verification sweep (#1109) runs alongside the digests sweep,
- * under the same guard: it also flushes through the default EntityManager.
- *
- * The membership sweep (#1116) runs under the same guard, after the image
- * sweep.
+ * The image-verification sweep (#1109) and the membership sweep (#1116) run
+ * alongside the digests sweep, under the same guard: they also flush through
+ * the default EntityManager.
  *
  * The tick drains the Loki spool (#1003) last, after refresh and the sweep,
  * independent of the EM guard: the shipper touches no EntityManager.
@@ -71,10 +69,10 @@ final readonly class MaintenanceTick
     {
         $refresh = $this->refreshRunner->run(RefreshRequest::allDue(self::REFRESH_BUDGET_SECONDS));
         if ($refresh->isAborted()) {
-            $recommendations = $this->skippedRecommendations();
-            $digests = $this->skippedDigests();
-            $imageVerification = $this->skippedImageVerification();
-            $memberships = $this->skippedMemberships();
+            $recommendations = self::skipped(['startedRuns' => 0, 'advancedRuns' => 0, 'activeRuns' => 0]);
+            $digests = self::skipped((new DigestSweepReport(0, 0, 0))->toArray());
+            $imageVerification = self::skipped((new ImageVerificationReport(0, 0, 0, 0))->toArray());
+            $memberships = self::skipped((new SavedSearchMembershipSweepReport(0, 0, 0, false))->toArray());
         } else {
             $recommendations = $this->forYouSweep->sweepOnce()->toArray();
             $digests = $this->sendDueDigests->run()->toArray();
@@ -95,39 +93,12 @@ final readonly class MaintenanceTick
     }
 
     /**
-     * @return array{startedRuns: int, advancedRuns: int, activeRuns: int, skipped: string}
+     * @param array<string, mixed> $emptyReport
+     *
+     * @return array<string, mixed>
      */
-    private function skippedRecommendations(): array
+    private static function skipped(array $emptyReport): array
     {
-        return [
-            'startedRuns' => 0,
-            'advancedRuns' => 0,
-            'activeRuns' => 0,
-            'skipped' => self::ABORTED_REASON,
-        ];
-    }
-
-    /**
-     * @return array{considered: int, sent: int, skippedEmpty: int, skipped: string}
-     */
-    private function skippedDigests(): array
-    {
-        return (new DigestSweepReport(0, 0, 0))->toArray() + ['skipped' => self::ABORTED_REASON];
-    }
-
-    /**
-     * @return array{measured: int, kept: int, dropped: int, retried: int, skipped: string}
-     */
-    private function skippedImageVerification(): array
-    {
-        return (new ImageVerificationReport(0, 0, 0, 0))->toArray() + ['skipped' => self::ABORTED_REASON];
-    }
-
-    /**
-     * @return array{searchesSwept: int, entriesScanned: int, matchesInserted: int, caughtUp: bool, skipped: string}
-     */
-    private function skippedMemberships(): array
-    {
-        return (new SavedSearchMembershipSweepReport(0, 0, 0, false))->toArray() + ['skipped' => self::ABORTED_REASON];
+        return $emptyReport + ['skipped' => self::ABORTED_REASON];
     }
 }
