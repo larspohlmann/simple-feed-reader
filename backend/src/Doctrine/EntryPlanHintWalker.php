@@ -7,14 +7,14 @@ namespace App\Doctrine;
 use App\Doctrine\Exception\MissingEntryPlanHintException;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\Query\AST\SelectClause;
-use Doctrine\ORM\Query\SqlWalker;
+use Doctrine\ORM\Query\SqlOutputWalker;
 
 /**
  * Renders the EntryPlanHint that apply() paired onto the query as an optimizer-hint
  * comment on the entry's outer SELECT. SQLite reads the comment as a comment, so one
  * SQL string serves both engines (#1040, #1098).
  */
-final class EntryPlanHintWalker extends SqlWalker
+final class EntryPlanHintWalker extends SqlOutputWalker
 {
     public const string HINT = self::class . '.planHint';
 
