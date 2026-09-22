@@ -222,6 +222,7 @@ These rows belong to your account. A backup drops each of them completely.
 | `RecommendationRunLog` | The diagnostic log of one run. It has no meaning without the run, and the run is not restored. |
 | `RecommendationItem` | The picks of one run. They have no meaning without the run, and the run is not restored. |
 | `UserPasskey` | Your passkeys. A passkey is tied to one device and to this instance's identity. A credential restored onto another account, or onto another device, could never sign you in. Carrying credential ids and keys in the file would only make a stolen backup more dangerous. |
+| `SavedSearchEntry` | Which articles match one of your saved searches (#1116). A derived row: the sweep that matches searches against articles rebuilds it, so a restore leaves it to be rebuilt rather than carrying it. |
 
 Your "For you" **settings** and **results** are both dropped. A restore leaves
 the settings at their defaults; set them again once, and run the engine.
@@ -253,6 +254,7 @@ article mark all hold one pointer to their owner.
 |---|---|
 | `user` | The pointer to the account that owns the row. A restore writes into the account you are signed in to, so no line names an owner. It could not: an owner read from the file would be an owner you chose for yourself. |
 | `includeInDigest` | Whether a saved search feeds the email digest (#636). Added ahead of the backup format's support for it; a later task carries it. |
+| `matchedUpToEntryId` | The membership sweep's high-water mark for a saved search (#1116): the id of the last article checked against its terms. A restored search starts at 0 and is checked against every article again. |
 
 **On a feed.**
 
