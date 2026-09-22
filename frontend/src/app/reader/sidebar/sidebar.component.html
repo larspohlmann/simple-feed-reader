@@ -4,7 +4,7 @@
       <div class="search-row">
         <app-search-field
           [term]="selection().term ?? ''"
-          [populateTerm]="selection().searchOrigin !== 'saved'"
+          [populateTerm]="selection().kind !== 'saved-search'"
           [loading]="searchLoading()"
           (search)="search.emit($event)"
         />

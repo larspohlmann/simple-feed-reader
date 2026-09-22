@@ -925,55 +925,78 @@ describe('ReaderShellComponent', () => {
   });
 
   describe('wide desktop searches (#607)', () => {
+    const savedAngular: SavedSearchWire = {
+      id: 9,
+      slug: '9-angular',
+      term: 'angular',
+      wholeWord: false,
+      phrase: false,
+      position: 0,
+      unreadEntryIds: [],
+      includeInDigest: false,
+    };
+
+    function selectSavedAngular(f: ReturnType<typeof boot>) {
+      f.componentInstance.savedSearchesStore.load();
+      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [savedAngular] });
+      pp.next(convertToParamMap({ savedSearch: '9-angular' }));
+      f.detectChanges();
+    }
+
     it.each(['magazine', 'list', 'pane'] as const)(
-      'uses the selected %s layout for a saved-search link',
+      'uses the selected %s layout for a single saved search',
       (layout) => {
         const f = boot();
         screen.isWide.set(true);
         f.componentInstance.layout.set(layout);
 
-        qp.next(convertToParamMap({ q: 'angular', searchOrigin: 'saved' }));
-        f.detectChanges();
+        selectSavedAngular(f);
         ctrl
-          .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+          .expectOne((r) => r.url === 'https://api.test/api/entries/saved-searches/9')
           .flush({ entries: [{ ...entry, isHidden: true, isViewed: true }], nextCursor: null });
         f.detectChanges();
 
+        // A saved search is not a direct search, so it never opens the search
+        // pane: it uses the selected layout and only splits under a pane layout.
         expect(f.componentInstance.splitView()).toBe(layout === 'pane');
         expect(f.nativeElement.querySelector('app-sidebar input').value).toBe('');
         expect(f.nativeElement.querySelector('.rows.magazine') !== null).toBe(
           layout === 'magazine',
         );
 
-        qp.next(convertToParamMap({ q: 'angular', searchOrigin: 'saved', entry: '1' }));
+        qp.next(convertToParamMap({ entry: '1' }));
         f.detectChanges();
         expect(f.componentInstance.articleFullscreen()).toBe(layout !== 'pane');
         ctrl.verify();
       },
     );
 
-    it('switches between saved and direct search with the same term', () => {
+    it('switches between a saved search and a direct search of the same term', () => {
       const f = boot();
       screen.isWide.set(true);
       f.componentInstance.layout.set('magazine');
 
-      for (const searchOrigin of ['saved', null, 'saved']) {
-        qp.next(convertToParamMap({ q: 'angular', searchOrigin }));
-        f.detectChanges();
-        ctrl
-          .match((r) => r.url === 'https://api.test/api/entries/search')
-          .forEach((r) => r.flush({ entries: [entry], nextCursor: null }));
-        f.detectChanges();
+      selectSavedAngular(f);
+      ctrl
+        .match((r) => r.url === 'https://api.test/api/entries/saved-searches/9')
+        .forEach((r) => r.flush({ entries: [entry], nextCursor: null }));
+      f.detectChanges();
+      expect(f.componentInstance.splitView()).toBe(false);
+      expect(f.nativeElement.querySelector('app-sidebar input').value).toBe('');
+      expect(f.nativeElement.querySelector('.rows.magazine') !== null).toBe(true);
+      expect(f.componentInstance.layout.mode()).toBe('magazine');
 
-        expect(f.componentInstance.splitView()).toBe(searchOrigin === null);
-        expect(f.nativeElement.querySelector('app-sidebar input').value).toBe(
-          searchOrigin === null ? 'angular' : '',
-        );
-        expect(f.nativeElement.querySelector('.rows.magazine') !== null).toBe(
-          searchOrigin === 'saved',
-        );
-        expect(f.componentInstance.layout.mode()).toBe('magazine');
-      }
+      pp.next(convertToParamMap({}));
+      qp.next(convertToParamMap({ q: 'angular' }));
+      f.detectChanges();
+      ctrl
+        .match((r) => r.url === 'https://api.test/api/entries/search')
+        .forEach((r) => r.flush({ entries: [entry], nextCursor: null }));
+      f.detectChanges();
+      expect(f.componentInstance.splitView()).toBe(true);
+      expect(f.nativeElement.querySelector('app-sidebar input').value).toBe('angular');
+      expect(f.nativeElement.querySelector('.rows.magazine') !== null).toBe(false);
+      expect(f.componentInstance.layout.mode()).toBe('magazine');
       ctrl.verify();
     });
 
@@ -1706,7 +1729,6 @@ describe('ReaderShellComponent', () => {
             subscription: 9,
             entry: null,
             q: null,
-            searchOrigin: null,
           },
         }),
       );
@@ -1722,7 +1744,7 @@ describe('ReaderShellComponent', () => {
       expect(nav).toHaveBeenCalledWith(
         ['/'],
         expect.objectContaining({
-          queryParams: { q: 'angular', entry: null, searchOrigin: null },
+          queryParams: { q: 'angular', entry: null },
           queryParamsHandling: 'merge',
         }),
       );
@@ -1737,7 +1759,7 @@ describe('ReaderShellComponent', () => {
       expect(nav).toHaveBeenCalledWith(
         ['/'],
         expect.objectContaining({
-          queryParams: { q: null, entry: null, searchOrigin: null },
+          queryParams: { q: null, entry: null },
           queryParamsHandling: 'merge',
         }),
       );
@@ -3327,18 +3349,27 @@ describe('ReaderShellComponent', () => {
     // boot() drained the shell's own initial saved-searches load with an empty
     // set, so seed through a second real load() — the store maps the wire (ids)
     // to the view the button reads, exactly as production does.
-    function bootWithSearchSelected(
-      saved: SavedSearchWire[],
-      q = 'climate ',
-      searchOrigin?: 'saved',
-    ) {
+    function bootWithSearchSelected(saved: SavedSearchWire[], q = 'climate ') {
       const f = boot();
       f.componentInstance.savedSearchesStore.load();
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: saved });
-      qp.next(convertToParamMap({ q, searchOrigin }));
+      qp.next(convertToParamMap({ q }));
       f.detectChanges();
       ctrl
         .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .flush({ entries: [], nextCursor: null });
+      f.detectChanges();
+      return f;
+    }
+
+    function bootWithSingleSavedSearchSelected(saved: SavedSearchWire) {
+      const f = boot();
+      f.componentInstance.savedSearchesStore.load();
+      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [saved] });
+      pp.next(convertToParamMap({ savedSearch: saved.slug }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === `https://api.test/api/entries/saved-searches/${saved.id}`)
         .flush({ entries: [], nextCursor: null });
       f.detectChanges();
       return f;
@@ -3493,8 +3524,8 @@ describe('ReaderShellComponent', () => {
       expect(button.querySelector('.txt-short')?.textContent).toBe('Remove');
     });
 
-    it('marks the saved-search result action as icon-only on mobile', () => {
-      const f = bootWithSearchSelected([savedClimate], 'climate ', 'saved');
+    it('marks the single saved-search action as icon-only on mobile', () => {
+      const f = bootWithSingleSavedSearchSelected(savedClimate);
       const button = (f.nativeElement as HTMLElement).querySelector('.save-search')!;
 
       expect(button.classList.contains('mobile-icon-only')).toBe(true);

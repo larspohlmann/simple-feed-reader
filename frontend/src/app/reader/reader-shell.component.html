@@ -5,7 +5,7 @@
   [allItemsActive]="allItemsActive()"
   [searchLoading]="searching()"
   [searchTerm]="selection().term ?? ''"
-  [populateSearchTerm]="selection().searchOrigin !== 'saved'"
+  [populateSearchTerm]="selection().kind !== 'saved-search'"
   [drawerOpen]="sidebarOpen()"
   [class.hidden]="headerHidden()"
   (toggleSidebar)="setSidebarOpen(!sidebarOpen())"

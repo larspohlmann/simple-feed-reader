@@ -998,13 +998,7 @@ describe('EntryListComponent', () => {
 
     it('shows the switch for an individual saved-search result', () => {
       const el = mount({
-        selection: {
-          kind: 'search',
-          id: null,
-          unread: false,
-          term: 'climate',
-          searchOrigin: 'saved',
-        },
+        selection: { kind: 'saved-search', id: 7, unread: false },
       }).nativeElement as HTMLElement;
 
       expect(el.querySelector('.unread-switch')).not.toBeNull();
@@ -1035,13 +1029,7 @@ describe('EntryListComponent', () => {
 
   it('marks saved-search result actions as icon-only on mobile', () => {
     const el = mount({
-      selection: {
-        kind: 'search',
-        id: null,
-        unread: false,
-        term: 'climate',
-        searchOrigin: 'saved',
-      },
+      selection: { kind: 'saved-search', id: 7, unread: false },
     }).nativeElement as HTMLElement;
 
     expect(el.querySelector('.mark-all')?.classList.contains('mobile-icon-only')).toBe(true);

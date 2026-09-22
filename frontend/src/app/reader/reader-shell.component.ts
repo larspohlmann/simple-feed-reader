@@ -40,7 +40,6 @@ import {
   RefreshScope,
   Selection,
   isDirectSearch,
-  isSavedSearchResult,
   isWholeWordTerm,
   isPhraseTerm,
   MarkReadTarget,
@@ -285,10 +284,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly selection = computed(() => this.parsed().selection, {
     equal: sameSelection,
   });
-  readonly savedSearchResult = computed(() => isSavedSearchResult(this.selection()));
-  readonly viewingSavedSearch = computed(
-    () => this.savedSearchResult() || this.selection().kind === 'saved-search',
-  );
+  readonly viewingSavedSearch = computed(() => this.selection().kind === 'saved-search');
   readonly entryId = computed(() => this.parsed().entryId);
 
   /** The single saved search the list is showing, by id, or null. Read straight
@@ -1095,7 +1091,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   // Preserve the underlying list so clearing a direct search returns to it.
   onSearch(term: string): void {
     void this.router.navigate(['/'], {
-      queryParams: { q: term || null, entry: null, searchOrigin: null },
+      queryParams: { q: term || null, entry: null },
       queryParamsHandling: 'merge',
     });
   }

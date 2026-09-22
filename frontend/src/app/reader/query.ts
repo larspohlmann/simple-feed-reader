@@ -19,7 +19,6 @@ export interface Selection {
   /** Only a search carries one. Part of the list's identity, so it belongs to
    *  the selection rather than to a service beside it. */
   term?: string;
-  searchOrigin?: 'saved';
 }
 
 /** The shortest term the backend will accept. A shorter one is not an error
@@ -120,17 +119,12 @@ export function sameSelection(a: Selection, b: Selection): boolean {
     a.kind === b.kind &&
     a.id === b.id &&
     a.unread === b.unread &&
-    a.term === b.term &&
-    a.searchOrigin === b.searchOrigin
+    a.term === b.term
   );
 }
 
 export function isDirectSearch(selection: Selection): boolean {
-  return selection.kind === 'search' && selection.searchOrigin !== 'saved';
-}
-
-export function isSavedSearchResult(selection: Selection): boolean {
-  return selection.kind === 'search' && selection.searchOrigin === 'saved';
+  return selection.kind === 'search';
 }
 
 /** `Selection.term` with the trailing whole-word-match space stripped for
@@ -145,15 +139,14 @@ export function visibleSearchTerm(term: string): string {
 }
 
 /** Whether the list offers the "All posts / only unread" switch. A direct
- *  search is temporary, but a saved-search result is a standing list and takes
- *  the same refinement as the combined saved-search view (#710, #769, #971). */
+ *  search is temporary, but a saved search is a standing list and takes the
+ *  same refinement as the combined saved-search view (#710, #769, #971). */
 export function hasUnreadFilter(s: Selection): boolean {
   return (
     canScopedRefresh(s) ||
     s.kind === 'for-you' ||
     s.kind === 'saved-searches' ||
-    s.kind === 'saved-search' ||
-    isSavedSearchResult(s)
+    s.kind === 'saved-search'
   );
 }
 
@@ -173,14 +166,7 @@ export function isSingleStreamView(s: Selection): boolean {
 /** Every query parameter that names which list is on screen. A navigation that
  *  changes the list must clear all of them — `selectionFromParams` gives `q`
  *  priority, so a leftover `q` the caller forgot to null strands the user (#408). */
-const SELECTION_PARAM_NAMES = [
-  'view',
-  'tag',
-  'subscription',
-  'entry',
-  'q',
-  'searchOrigin',
-] as const;
+const SELECTION_PARAM_NAMES = ['view', 'tag', 'subscription', 'entry', 'q'] as const;
 
 // Unread refines the selected list, so navigation does not clear it.
 type SelectionParamName = (typeof SELECTION_PARAM_NAMES)[number];
@@ -225,28 +211,6 @@ export function selectionQueryParams(set: Partial<SelectionParams>): SelectionPa
   return params;
 }
 
-/** The raw `q` a saved search navigates to: rebuilds the mode signal the term's
- *  bare storage form stripped out — wrapping quotes for a phrase (#702), a
- *  trailing space for whole-word (#408 follow-up). Mutually exclusive, phrase first. */
-export function savedSearchTerm(term: string, wholeWord: boolean, phrase: boolean): string {
-  if (phrase) return `"${term}"`;
-  return wholeWord ? `${term} ` : term;
-}
-
-export function savedSearchParams(
-  term: string,
-  wholeWord: boolean,
-  phrase: boolean,
-): SelectionParams & { unread: null } {
-  return {
-    ...selectionQueryParams({
-      q: savedSearchTerm(term, wholeWord, phrase),
-      searchOrigin: 'saved',
-    }),
-    unread: null,
-  };
-}
-
 export function selectionFromParams(p: ParamMap): {
   selection: Selection;
   entryId: number | null;
@@ -266,12 +230,11 @@ export function selectionFromParams(p: ParamMap): {
   // whitespace — leading, and collapsed runs between terms — is removed here.
   const term = normalizeSearchInput(selectionParam(p, 'q') ?? '');
   if (isSearchableTerm(term)) {
-    // A search is its own view over every subscription, so a tag or feed
-    // parameter left in the URL by hand is ignored rather than combined.
-    const savedOrigin = selectionParam(p, 'searchOrigin') === 'saved';
-    const selection: Selection = { kind: 'search', id: null, unread: savedOrigin && unread, term };
-    if (savedOrigin) selection.searchOrigin = 'saved';
-    return { selection, entryId };
+    // A `?q=` search is its own view over every subscription, so a tag or feed
+    // parameter left in the URL by hand is ignored rather than combined. It is
+    // always a direct, unsaved search: a saved search is reached by its slug
+    // path instead, so it never carries the unread refinement here.
+    return { selection: { kind: 'search', id: null, unread: false, term }, entryId };
   }
 
   let selection: Selection;
