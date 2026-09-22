@@ -2,6 +2,7 @@
 import { Routes } from '@angular/router';
 import { authGuard, guestGuard } from './core/auth.guard';
 import { DYNAMIC_TITLE } from './core/translated-title.strategy';
+import { readerMatcher } from './reader/reader-matcher';
 import { requireSetupGuard, setupRedirectGuard } from './setup/setup.guard';
 
 export const routes: Routes = [
@@ -68,10 +69,11 @@ export const routes: Routes = [
     loadComponent: () => import('./discover/discover.component').then((m) => m.DiscoverComponent),
   },
   {
-    // The reader names the tab after the open article or the selected list,
-    // and keeps doing so across the query-parameter navigations that switch
-    // between them.
-    path: '',
+    // The reader owns the root URL and the saved-search paths (searches/saved/:slug,
+    // and searches/saved/all) through one config, so moving between a list and a
+    // saved search never tears the shell down. It names the tab after the open
+    // article or the selected list across those navigations.
+    matcher: readerMatcher,
     title: DYNAMIC_TITLE,
     canActivate: [authGuard],
     loadComponent: () =>
