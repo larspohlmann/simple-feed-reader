@@ -9,6 +9,7 @@ use App\Entity\Entry;
 use App\Entity\EntryCategory;
 use App\Entity\Feed;
 use App\Entity\SavedSearch;
+use App\Entity\SavedSearchEntry;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
@@ -58,6 +59,12 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         return $entry;
     }
 
+    private function member(SavedSearch $search, Entry $entry): void
+    {
+        $this->em()->persist(new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00')));
+        $this->em()->flush();
+    }
+
     public function testListsMatchesOfEverySavedSearch(): void
     {
         $client = self::createClient();
@@ -65,11 +72,15 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         $headers = $this->authHeaderFor($user);
         $feed = $this->seedSubscribedFeed($user);
         $climate = $this->seedEntry($feed, 'Climate report', new \DateTimeImmutable('2026-07-02T00:00:00Z'));
-        $this->seedEntry($feed, 'Rocket launch', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $rocket = $this->seedEntry($feed, 'Rocket launch', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->seedEntry($feed, 'Nothing to see', new \DateTimeImmutable('2026-07-03T00:00:00Z'));
-        $this->em()->persist(new SavedSearch($user, 'climate', false));
-        $this->em()->persist(new SavedSearch($user, 'rocket', false));
+        $climateSearch = new SavedSearch($user, 'climate', false);
+        $rocketSearch = new SavedSearch($user, 'rocket', false);
+        $this->em()->persist($climateSearch);
+        $this->em()->persist($rocketSearch);
         $this->em()->flush();
+        $this->member($climateSearch, $climate);
+        $this->member($rocketSearch, $rocket);
 
         $client->request(
             'PATCH',
@@ -96,8 +107,10 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         $feed = $this->seedSubscribedFeed($user);
         $entry = $this->seedEntry($feed, 'Climate report', new \DateTimeImmutable('2026-07-02T00:00:00Z'));
         $entry->setContentHtml('<p>Climate body text.</p>');
-        $this->em()->persist(new SavedSearch($user, 'climate', false));
+        $search = new SavedSearch($user, 'climate', false);
+        $this->em()->persist($search);
         $this->em()->flush();
+        $this->member($search, $entry);
 
         $client->request('GET', '/api/entries/saved-searches', server: $headers);
 
@@ -120,8 +133,10 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         $category = new Category('world', '');
         $this->em()->persist($category);
         $this->em()->persist(new EntryCategory($entry, $category, 0, 'World'));
-        $this->em()->persist(new SavedSearch($user, 'climate', false));
+        $search = new SavedSearch($user, 'climate', false);
+        $this->em()->persist($search);
         $this->em()->flush();
+        $this->member($search, $entry);
 
         $client->request('GET', '/api/entries/saved-searches', server: $headers);
 
@@ -139,15 +154,19 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         $user = $this->factory()->create('matched-search@example.com');
         $headers = $this->authHeaderFor($user);
         $feed = $this->seedSubscribedFeed($user);
-        $this->seedEntry($feed, 'Climate report', new \DateTimeImmutable('2026-07-02T00:00:00Z'));
-        $this->seedEntry($feed, 'Rocket launch', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->seedEntry($feed, 'Climate rocket', new \DateTimeImmutable('2026-07-03T00:00:00Z'));
+        $climateReport = $this->seedEntry($feed, 'Climate report', new \DateTimeImmutable('2026-07-02T00:00:00Z'));
+        $rocketLaunch = $this->seedEntry($feed, 'Rocket launch', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $climateRocket = $this->seedEntry($feed, 'Climate rocket', new \DateTimeImmutable('2026-07-03T00:00:00Z'));
         $climateSearch = new SavedSearch($user, 'climate', false);
         $this->em()->persist($climateSearch);
         $this->em()->flush();
         $rocketSearch = new SavedSearch($user, 'rocket', false);
         $this->em()->persist($rocketSearch);
         $this->em()->flush();
+        $this->member($climateSearch, $climateReport);
+        $this->member($rocketSearch, $rocketLaunch);
+        $this->member($climateSearch, $climateRocket);
+        $this->member($rocketSearch, $climateRocket);
 
         $client->request('GET', '/api/entries/saved-searches', server: $headers);
 
@@ -187,9 +206,12 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         $headers = $this->authHeaderFor($user);
         $feed = $this->seedSubscribedFeed($user);
         $read = $this->seedEntry($feed, 'Climate read', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->seedEntry($feed, 'Climate unread', new \DateTimeImmutable('2026-07-02T00:00:00Z'));
-        $this->em()->persist(new SavedSearch($user, 'climate', false));
+        $unread = $this->seedEntry($feed, 'Climate unread', new \DateTimeImmutable('2026-07-02T00:00:00Z'));
+        $search = new SavedSearch($user, 'climate', false);
+        $this->em()->persist($search);
         $this->em()->flush();
+        $this->member($search, $read);
+        $this->member($search, $unread);
 
         $client->request(
             'PATCH',
@@ -235,10 +257,13 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         $user = $this->factory()->create('mark-read-watermark@example.com');
         $headers = $this->authHeaderFor($user);
         $feed = $this->seedSubscribedFeed($user);
-        $this->seedEntry($feed, 'Climate old', new \DateTimeImmutable('2026-07-05T00:00:00Z'));
-        $this->seedEntry($feed, 'Climate new', new \DateTimeImmutable('2026-07-15T00:00:00Z'));
-        $this->em()->persist(new SavedSearch($user, 'climate', false));
+        $old = $this->seedEntry($feed, 'Climate old', new \DateTimeImmutable('2026-07-05T00:00:00Z'));
+        $new = $this->seedEntry($feed, 'Climate new', new \DateTimeImmutable('2026-07-15T00:00:00Z'));
+        $search = new SavedSearch($user, 'climate', false);
+        $this->em()->persist($search);
         $this->em()->flush();
+        $this->member($search, $old);
+        $this->member($search, $new);
 
         $client->request(
             'POST',
