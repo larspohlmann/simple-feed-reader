@@ -622,4 +622,20 @@ describe('selectionFromRoute', () => {
     const { selection } = selectionFromRoute(noQuery, convertToParamMap({ tag: '7' }));
     expect(selection).toEqual({ kind: 'tag', id: 7, unread: false });
   });
+
+  it('carries the entry overlay onto a single saved-search path', () => {
+    const { entryId } = selectionFromRoute(
+      convertToParamMap({ savedSearch: '42-climate' }),
+      convertToParamMap({ entry: '99' }),
+    );
+    expect(entryId).toBe(99);
+  });
+
+  it('carries the entry overlay onto the combined saved-search path', () => {
+    const { entryId } = selectionFromRoute(
+      convertToParamMap({ savedSearch: 'all' }),
+      convertToParamMap({ entry: '99' }),
+    );
+    expect(entryId).toBe(99);
+  });
 });

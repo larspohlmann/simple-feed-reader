@@ -33,7 +33,9 @@ export function selectionFromRoute(
   }
 
   const unread = queryParams.get('unread') === '1';
-  const entryId = null;
+  // The entry overlay composes on top of a saved-search path, so a merged
+  // `?entry=` must still open the article rather than being dropped here.
+  const { entryId } = selectionFromParams(queryParams);
   if (savedSearch === 'all') {
     return { selection: { kind: 'saved-searches', id: null, unread }, entryId };
   }
