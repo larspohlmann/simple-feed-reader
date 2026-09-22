@@ -60,6 +60,37 @@ final class SavedSearchMembershipLoaderTest extends DbTestCase
         self::assertSame([], $byEntry);
     }
 
+    public function testLoadIntoWithNoRowsReturnsEmptyList(): void
+    {
+        $loader = self::getContainer()->get(SavedSearchMembershipLoader::class);
+        self::assertInstanceOf(SavedSearchMembershipLoader::class, $loader);
+
+        self::assertSame([], $loader->loadInto([], (int) $this->user('empty-loader@example.com')->getId()));
+    }
+
+    public function testDuplicateRowsAreEnrichedWithTheirOwnMembership(): void
+    {
+        $user = $this->user('duplicate-loader@example.com');
+        $feed = $this->feed();
+        $primary = $this->entry($feed);
+        $duplicate = $this->entry($feed, '-duplicate');
+        $primarySearch = $this->savedSearchWithMember($user, 'climate', $primary);
+        $duplicateSearch = $this->savedSearchWithMember($user, 'rocket', $duplicate);
+
+        $duplicateRow = $this->row($duplicate);
+        $primaryRow = $this->row($primary, [$duplicateRow]);
+
+        $loader = self::getContainer()->get(SavedSearchMembershipLoader::class);
+        self::assertInstanceOf(SavedSearchMembershipLoader::class, $loader);
+        $enriched = $loader->loadInto([$primaryRow], (int) $user->getId());
+
+        self::assertSame([(int) $primarySearch->getId()], array_column($enriched[0]->savedSearches, 'id'));
+        self::assertSame(
+            [(int) $duplicateSearch->getId()],
+            array_column($enriched[0]->duplicates[0]->savedSearches, 'id'),
+        );
+    }
+
     private function repository(): SavedSearchEntryRepository
     {
         $repository = self::getContainer()->get(SavedSearchEntryRepository::class);
@@ -86,12 +117,12 @@ final class SavedSearchMembershipLoaderTest extends DbTestCase
         return $feed;
     }
 
-    private function entry(Feed $feed): Entry
+    private function entry(Feed $feed, string $guidSuffix = ''): Entry
     {
         $entry = new Entry(
             $feed,
-            'membership-loader-guid',
-            'https://example.com/membership-loader-entry',
+            'membership-loader-guid' . $guidSuffix,
+            'https://example.com/membership-loader-entry' . $guidSuffix,
             'Climate report',
             new \DateTimeImmutable('2026-07-02T00:00:00Z'),
             new \DateTimeImmutable('2026-07-02T00:00:00Z'),
@@ -114,7 +145,8 @@ final class SavedSearchMembershipLoaderTest extends DbTestCase
         return $search;
     }
 
-    private function row(Entry $entry): EntryListRow
+    /** @param list<EntryListRow> $duplicates */
+    private function row(Entry $entry, array $duplicates = []): EntryListRow
     {
         return new EntryListRow(
             $entry,
@@ -124,6 +156,7 @@ final class SavedSearchMembershipLoaderTest extends DbTestCase
             false,
             new EntryListRowViewState(false, null),
             null,
+            $duplicates,
         );
     }
 }

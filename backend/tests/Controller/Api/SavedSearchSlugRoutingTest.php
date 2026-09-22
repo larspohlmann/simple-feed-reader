@@ -12,6 +12,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 final class SavedSearchSlugRoutingTest extends ApiTestCase
 {
@@ -49,6 +50,35 @@ final class SavedSearchSlugRoutingTest extends ApiTestCase
         $savedId = $created['savedSearch']['id'];
         self::assertIsInt($savedId);
         self::assertSame($savedId . '-climate-news', $created['savedSearch']['slug']);
+    }
+
+    public function testCreatePersistsTheIdPrefixedSlugToTheDatabase(): void
+    {
+        $client = self::createClient();
+        $em = $this->em();
+        $headers = $this->authHeaderFor($this->factory()->create('slug-persist@example.com'));
+
+        $client->request(
+            'POST',
+            '/api/saved-searches',
+            server: $headers,
+            content: json_encode([
+                'term' => 'Climate News',
+                'wholeWord' => false,
+                'phrase' => false,
+            ], \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseStatusCodeSame(201);
+        $created = $this->payload($client);
+        self::assertIsArray($created['savedSearch']);
+        $savedId = $created['savedSearch']['id'];
+        self::assertIsInt($savedId);
+
+        $em->clear();
+        $persisted = $em->find(SavedSearch::class, $savedId);
+        self::assertInstanceOf(SavedSearch::class, $persisted);
+        self::assertSame($savedId . '-climate-news', $persisted->getSlug());
     }
 
     public function testSingleSavedSearchListsOnlyItsMembers(): void
@@ -118,6 +148,82 @@ final class SavedSearchSlugRoutingTest extends ApiTestCase
             [['id' => $search->getId(), 'slug' => $search->getSlug(), 'term' => $search->getTerm()]],
             $first['savedSearches'],
         );
+    }
+
+    public function testSingleSavedSearchDefaultsToListingBothReadAndUnreadMembers(): void
+    {
+        $client = self::createClient();
+        [, $headers, $search, $read] = $this->seedReadAndUnreadMember('single-search-default-unread@example.com');
+        $this->markRead($client, $headers, $read);
+
+        $client->request('GET', '/api/entries/saved-searches/' . $search->getId(), server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload($client);
+        self::assertIsArray($body['entries']);
+        self::assertSame(['Climate unread', 'Climate read'], array_column($body['entries'], 'title'));
+    }
+
+    public function testSingleSavedSearchUnreadFlagNarrowsToUnreadMembersOnly(): void
+    {
+        $client = self::createClient();
+        [, $headers, $search, $read] = $this->seedReadAndUnreadMember('single-search-unread-narrows@example.com');
+        $this->markRead($client, $headers, $read);
+
+        $client->request('GET', '/api/entries/saved-searches/' . $search->getId() . '?unread=1', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload($client);
+        self::assertIsArray($body['entries']);
+        self::assertSame(['Climate unread'], array_column($body['entries'], 'title'));
+    }
+
+    /** @return array{0: User, 1: array<string, string>, 2: SavedSearch, 3: Entry, 4: Entry} */
+    private function seedReadAndUnreadMember(string $email): array
+    {
+        $user = $this->factory()->create($email);
+        $headers = $this->authHeaderFor($user);
+        $feed = new Feed('https://example.com/' . $email . '-feed.xml');
+        $this->em()->persist($feed);
+        $this->em()->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $read = new Entry(
+            $feed,
+            $email . '-read-guid',
+            'https://example.com/' . $email . '-read',
+            'Climate read',
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+        );
+        $unread = new Entry(
+            $feed,
+            $email . '-unread-guid',
+            'https://example.com/' . $email . '-unread',
+            'Climate unread',
+            new \DateTimeImmutable('2026-07-02T00:00:00Z'),
+            new \DateTimeImmutable('2026-07-02T00:00:00Z'),
+        );
+        $this->em()->persist($read);
+        $this->em()->persist($unread);
+        $search = new SavedSearch($user, 'climate', false);
+        $this->em()->persist($search);
+        $this->em()->flush();
+        $this->em()->persist(new SavedSearchEntry($search, $read, new \DateTimeImmutable('2026-09-22T10:00:00')));
+        $this->em()->persist(new SavedSearchEntry($search, $unread, new \DateTimeImmutable('2026-09-22T10:00:00')));
+        $this->em()->flush();
+
+        return [$user, $headers, $search, $read, $unread];
+    }
+
+    /** @param array<string, string> $headers */
+    private function markRead(KernelBrowser $client, array $headers, Entry $entry): void
+    {
+        $client->request(
+            'PATCH',
+            '/api/entries/' . $entry->getId() . '/state',
+            server: $headers,
+            content: json_encode(['isHidden' => true], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseIsSuccessful();
     }
 
     public function testSingleSavedSearchIsNotFoundForAnotherUsersSearch(): void
