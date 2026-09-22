@@ -25,4 +25,11 @@ final class SweepBudgetTest extends TestCase
 
         SweepBudget::seconds(-1);
     }
+
+    public function testAZeroBudgetIsAllowed(): void
+    {
+        $start = new \DateTimeImmutable('2026-09-22T10:00:00');
+
+        self::assertEquals($start, SweepBudget::seconds(0)->deadlineFrom($start));
+    }
 }

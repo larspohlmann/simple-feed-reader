@@ -97,10 +97,11 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $this->em->flush();
         $matcher = new RecordingSavedSearchMatcher();
 
-        $this->sweep($matcher)->sweep(SweepBudget::seconds(10));
+        $report = $this->sweep($matcher)->sweep(SweepBudget::seconds(10));
 
         self::assertSame([$behind->getId()], $matcher->calls[0]['searchIds']);
         self::assertSame([$ahead->getId()], $matcher->calls[1]['searchIds']);
+        self::assertSame(2, $report->searchesSwept);
     }
 
     public function testASpentBudgetStopsBetweenChunksAndTheNextRunResumesAtTheMark(): void
@@ -126,6 +127,57 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         self::assertTrue($second->caughtUp);
         self::assertSame(1, $second->entriesScanned);
         self::assertSame(end($ids), $this->reload($search)->matchedUpToEntryId());
+    }
+
+    public function testEntriesScannedSumsAcrossEveryChunkInOneRun(): void
+    {
+        $this->search('climate');
+        for ($i = 0; $i < SavedSearchMembershipSweep::CHUNK + 1; $i++) {
+            $this->entry('e' . $i);
+        }
+        $matcher = new RecordingSavedSearchMatcher();
+
+        $report = $this->sweep($matcher)->sweep(SweepBudget::seconds(1000));
+
+        self::assertTrue($report->caughtUp);
+        self::assertCount(2, $matcher->calls);
+        self::assertSame(SavedSearchMembershipSweep::CHUNK + 1, $report->entriesScanned);
+    }
+
+    public function testMatchesInsertedSumsAcrossEveryMemberOfTheGroup(): void
+    {
+        $first = $this->search('climate');
+        $second = $this->search('rocket');
+        $hitForFirst = $this->entry('a');
+        $firstHitForSecond = $this->entry('b');
+        $secondHitForSecond = $this->entry('c');
+        $matcher = new RecordingSavedSearchMatcher([
+            (int) $first->getId() => [(int) $hitForFirst->getId()],
+            (int) $second->getId() => [(int) $firstHitForSecond->getId(), (int) $secondHitForSecond->getId()],
+        ]);
+
+        $report = $this->sweep($matcher)->sweep(SweepBudget::seconds(10));
+
+        self::assertSame(3, $report->matchesInserted);
+    }
+
+    public function testABudgetExhaustedExactlyAtTheDeadlineStopsBeforeTheChunk(): void
+    {
+        $search = $this->search('climate');
+        $this->entry('a');
+        $this->entry('b');
+        // The ceiling read (elapsed 0s) and the deadline read (elapsed 6s) set
+        // the deadline at start+12s; the first in-loop reading (elapsed 12s)
+        // lands exactly on it, so a 6 s budget must stop before any chunk runs.
+        $clock = new TickingClock(new \DateTimeImmutable(self::NOW), 6);
+        $matcher = new RecordingSavedSearchMatcher();
+
+        $report = $this->sweep($matcher, $clock)->sweep(SweepBudget::seconds(6));
+
+        self::assertFalse($report->caughtUp);
+        self::assertSame([], $matcher->calls);
+        self::assertSame(0, $report->entriesScanned);
+        self::assertSame(0, $this->reload($search)->matchedUpToEntryId());
     }
 
     public function testAnUnavailableEngineLeavesTheMarkAloneInsertsNothingAndWarnsOnce(): void
@@ -192,6 +244,22 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         self::assertSame(1, $report->searchesSwept);
         self::assertSame([[$only->getId()]], array_column($matcher->calls, 'searchIds'));
         self::assertSame(0, $this->reload($other)->matchedUpToEntryId());
+    }
+
+    public function testSweepOneAlreadyAtTheCeilingDoesNothing(): void
+    {
+        $search = $this->search('climate');
+        $entry = $this->entry('a');
+        $search->advanceMatchedUpTo((int) $entry->getId());
+        $this->em->flush();
+        $matcher = new RecordingSavedSearchMatcher();
+
+        $report = $this->sweep($matcher)->sweepOne($search, SweepBudget::seconds(8));
+
+        self::assertSame(0, $report->searchesSwept);
+        self::assertSame([], $matcher->calls);
+        self::assertTrue($report->caughtUp);
+        self::assertSame($entry->getId(), $this->reload($search)->matchedUpToEntryId());
     }
 
     public function testNothingToDoIsOneQueryAndACaughtUpReport(): void
