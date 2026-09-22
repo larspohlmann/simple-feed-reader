@@ -214,6 +214,9 @@ export interface EntryDto {
   /** The saved search this entry came from, for the kicker's pill. Set by the
    *  store from the combined list's own provenance map, and by nothing else. */
   savedSearchTerm?: string;
+  /** Owned saved searches this entry is a member of, in sidebar order. Always
+   *  sent by the API; empty when the entry matches none. Drives the pills. */
+  savedSearches?: SavedSearchMembershipDto[];
   /** Other copies of this article the reader also subscribes to, in this
    *  list's scope. Set by the API's collapse; empty for a non-duplicated row. */
   duplicates?: EntryDto[];

@@ -1,4 +1,5 @@
 <app-source-tags [tags]="tags()" />
+<app-saved-search-pills [memberships]="entry().savedSearches ?? []" />
 <app-entry-actions
   [entry]="entry()"
   (favorite)="favorite.emit($event)"
