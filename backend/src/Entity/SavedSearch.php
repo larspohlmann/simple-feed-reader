@@ -13,6 +13,10 @@ use Doctrine\ORM\Mapping as ORM;
     name: 'uniq_saved_search_user_term_mode',
     columns: ['user_id', 'term', 'whole_word', 'phrase'],
 )]
+#[ORM\UniqueConstraint(
+    name: 'uniq_saved_search_user_slug',
+    columns: ['user_id', 'slug'],
+)]
 class SavedSearch
 {
     #[ORM\Id]
@@ -26,6 +30,15 @@ class SavedSearch
 
     #[ORM\Column(length: 100)]
     private string $term;
+
+    /**
+     * The stable URL slug, "<id>-<slug of term>". Null only in the instant
+     * between persisting the row (which assigns the id) and setting the slug
+     * from it; every stored row has one. Immutable once set — the term never
+     * changes, so the slug never does.
+     */
+    #[ORM\Column(length: 130, nullable: true)]
+    private ?string $slug = null;
 
     /** True when the search matches whole words only (a trailing space in the raw query). */
     #[ORM\Column(name: 'whole_word', options: ['default' => false])]
@@ -71,6 +84,16 @@ class SavedSearch
     public function getTerm(): string
     {
         return $this->term;
+    }
+
+    public function getSlug(): ?string
+    {
+        return $this->slug;
+    }
+
+    public function setSlug(string $slug): void
+    {
+        $this->slug = $slug;
     }
 
     public function isWholeWord(): bool
