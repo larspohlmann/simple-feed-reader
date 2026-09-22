@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Repository\EntryRepository;
+use App\Repository\SavedSearchRepository;
 use App\Service\Search\EntryIndexer;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Search\Index\SearchIndexWriter;
@@ -58,6 +59,7 @@ final class SearchReindexCommand extends Command
         private readonly EntryRepository $entries,
         private readonly EntityManagerInterface $em,
         private readonly SearchEngineCapability $capability,
+        private readonly SavedSearchRepository $savedSearches,
         private readonly int $batchSize = self::BATCH_SIZE,
     ) {
         parent::__construct();
@@ -96,6 +98,11 @@ final class SearchReindexCommand extends Command
         $indexed = $this->indexEveryBatch($io);
 
         $io->success(\sprintf('Reindexed %d entries.', $indexed));
+        $io->note(\sprintf(
+            '%d saved-search membership marks reset; the sweep re-matches them against the rebuilt index. '
+            . 'If the engine is still indexing when it runs, run app:saved-search:rematch once it has settled.',
+            $this->savedSearches->resetAllMarks(),
+        ));
         $io->note(
             'Meilisearch indexes asynchronously: this only confirms every batch was '
             . 'accepted, not that the engine has finished indexing it. GET /indexes/entries/stats '

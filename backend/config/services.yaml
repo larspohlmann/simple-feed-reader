@@ -143,13 +143,12 @@ services:
                 - '@App\Service\Reader\Repair\HeadingClassRemover'
                 - '@App\Service\Reader\Repair\HorizontalRuleUnwrapper'
     App\Service\Search\EntrySearchInterface: '@App\Service\Search\EntrySearchWithFallback'
-    App\Service\Search\SavedSearchEntriesInterface: '@App\Service\Search\SavedSearchEntriesWithFallback'
-    App\Service\Search\SavedSearchUnreadMatchSource: '@App\Service\Search\SavedSearchUnreadMatchesWithFallback'
-    App\Service\Search\SavedSearchBadgeSource: '@App\Service\Search\SavedSearchBadgesWithFallback'
     # Both interfaces resolve to the one adapter that knows Meilisearch's wire
     # format (#432, see MeilisearchIndex).
     App\Service\Search\Index\SearchIndexReader: '@App\Service\Search\Index\MeilisearchIndex'
     App\Service\Search\Index\SearchIndexWriter: '@App\Service\Search\Index\MeilisearchIndex'
+    App\Service\Search\Membership\SavedSearchMatcher: '@App\Service\Search\Membership\EngineOrDatabaseSavedSearchMatcher'
+    App\Service\Search\Membership\SavedSearchMembershipWriter: '@App\Repository\SavedSearchEntryMembershipRepository'
     App\Service\Version\ReleaseVersionReader: '@App\Service\Version\FileReleaseVersionReader'
     App\Service\Version\LatestReleaseReader: '@App\Service\Version\GitHubLatestReleaseReader'
     App\Service\Logging\TraceContext: '@App\Service\Logging\OtelTraceContext'

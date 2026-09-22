@@ -8,65 +8,59 @@ use App\Tests\Support\FixedPublicBaseUrl;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\SavedSearch;
+use App\Entity\SavedSearchEntry;
+use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
-use App\Repository\EntryListRow;
-use App\Repository\EntryListRowSubscription;
-use App\Repository\EntryListRowViewState;
-use App\Repository\EntrySearchQuery;
+use App\Repository\SavedSearchEntryRepository;
 use App\Repository\SavedSearchRepository;
 use App\Service\Mail\Digest\DigestComposer;
 use App\Service\Mail\Digest\DigestEntryFinder;
 use App\Service\Mail\Digest\DigestLinkBuilder;
+use App\Tests\DbTestCase;
 use PHPUnit\Framework\MockObject\Stub;
-use PHPUnit\Framework\TestCase;
 
 /**
  * DigestComposer turns a user's includeInDigest saved searches into the
  * DigestModel an email renders (#636) — a search with no matches contributes
  * no group, and a user with nothing to report gets no digest at all.
  *
- * DigestEntryFinder is `final readonly`, so it cannot be doubled: these tests
- * run the real finder against a mocked EntryListRepository instead, exactly
- * as DigestEntryFinderTest does. That also exercises DigestComposer against
- * the finder's real capping behaviour (DigestEntryFinder::PER_SEARCH).
+ * DigestEntryFinder now reads the membership table through
+ * SavedSearchEntryRepository, which is `final` and cannot be doubled, so
+ * these tests run the real finder and hydrator over persisted rows (#1116) —
+ * which also exercises DigestComposer against the finder's real capping
+ * behaviour (DigestEntryFinder::PER_SEARCH).
  */
-final class DigestComposerTest extends TestCase
+final class DigestComposerTest extends DbTestCase
 {
     private SavedSearchRepository&Stub $savedSearches;
-    private EntryListRepository&Stub $entries;
     private User $user;
     private \DateTimeImmutable $since;
 
     protected function setUp(): void
     {
+        parent::setUp();
         $this->savedSearches = $this->createStub(SavedSearchRepository::class);
-        $this->entries = $this->createStub(EntryListRepository::class);
 
         $this->user = new User('digest@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        new \ReflectionProperty(User::class, 'id')->setValue($this->user, 42);
+        $this->em->persist($this->user);
+        $this->em->flush();
 
         $this->since = new \DateTimeImmutable('2026-08-01T00:00:00Z');
     }
 
     public function testOneMatchingSearchAndOneEmptySearchYieldsOneCappedGroup(): void
     {
-        $rust = new SavedSearch($this->user, 'rust', false);
-        $golang = new SavedSearch($this->user, 'golang', false);
+        $rust = $this->search('rust');
+        $golang = $this->search('golang');
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$rust, $golang]);
 
-        $ids = range(1, 12);
-        $rows = array_map(fn (int $id): EntryListRow => $this->row($id, 'Entry ' . $id, 'Feed ' . $id), $ids);
-
-        $this->entries->method('unreadMatchIdsSince')->willReturnCallback(
-            fn (EntrySearchQuery $query): array => $query->terms->terms === ['rust'] ? $ids : [],
-        );
-        // Hydration returns one row per id it is asked for (the rows are already
-        // in id order), so the finder's cap to the newest PER_SEARCH is visible
-        // here rather than hidden behind a stub that returns the whole set.
-        $this->entries->method('rowsByIdsForUser')->willReturnCallback(
-            static fn (array $entryIds): array => \array_slice($rows, 0, \count($entryIds)),
-        );
+        $newestId = null;
+        for ($i = 1; $i <= 12; ++$i) {
+            $effectiveDate = new \DateTimeImmutable('2026-08-15T12:00:00Z');
+            $entry = $this->member($rust, 'Entry ' . $i, 'Feed ' . $i, $effectiveDate->modify('-' . $i . ' minutes'));
+            $newestId ??= $entry->getId();
+        }
 
         $model = $this->composer()->compose($this->user, $this->since);
 
@@ -83,19 +77,16 @@ final class DigestComposerTest extends TestCase
 
         self::assertSame('Entry 1', $group->entries[0]->title);
         self::assertSame('Feed 1', $group->entries[0]->feedName);
-        self::assertStringEndsWith('?entry=1', $group->entries[0]->url);
+        self::assertStringEndsWith('?entry=' . $newestId, $group->entries[0]->url);
     }
 
     public function testShortDescriptionStripsTagsAndCapsLength(): void
     {
-        $rust = new SavedSearch($this->user, 'rust', false);
+        $rust = $this->search('rust');
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$rust]);
-
-        $row = $this->row(1, 'Title', 'Feed A');
-        $row->entry->setSummary('<p>' . str_repeat('word ', 60) . '</p>');
-
-        $this->entries->method('unreadMatchIdsSince')->willReturn([1]);
-        $this->entries->method('rowsByIdsForUser')->willReturn([$row]);
+        $entry = $this->member($rust, 'Title', 'Feed A', new \DateTimeImmutable('2026-08-15T00:00:00Z'));
+        $entry->setSummary('<p>' . str_repeat('word ', 60) . '</p>');
+        $this->em->flush();
 
         $model = $this->composer()->compose($this->user, $this->since);
 
@@ -108,9 +99,8 @@ final class DigestComposerTest extends TestCase
 
     public function testAllSearchesEmptyReturnsNull(): void
     {
-        $rust = new SavedSearch($this->user, 'rust', false);
+        $rust = $this->search('rust');
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$rust]);
-        $this->entries->method('unreadMatchIdsSince')->willReturn([]);
 
         self::assertNull($this->composer()->compose($this->user, $this->since));
     }
@@ -118,68 +108,86 @@ final class DigestComposerTest extends TestCase
     public function testUserWithNoIncludedSearchesReturnsNull(): void
     {
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([]);
-        $entries = $this->createMock(EntryListRepository::class);
-        $entries->expects(self::never())->method('unreadMatchIdsSince');
 
-        $composer = new DigestComposer(
-            $this->savedSearches,
-            new DigestEntryFinder($entries),
-            new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example')),
-        );
-
-        self::assertNull($composer->compose($this->user, $this->since));
+        self::assertNull($this->composer()->compose($this->user, $this->since));
     }
 
     public function testEntryCarriesImagePublishedDateAndFavicon(): void
     {
-        $rust = new SavedSearch($this->user, 'rust', false);
+        $rust = $this->search('rust');
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$rust]);
-        $this->entries->method('unreadMatchIdsSince')->willReturn([1]);
-        $this->entries->method('rowsByIdsForUser')->willReturn([$this->row(1, 'Title', 'Feed A')]);
+        $entry = $this->member($rust, 'Title', 'Feed A', new \DateTimeImmutable('2026-08-15T00:00:00Z'));
+        $entry->setPublishedAt(new \DateTimeImmutable('2026-08-15T09:48:00Z'));
+        $entry->getImage()->storePending('https://cdn.example.com/1.jpg', 1200, 900);
+        $entry->getFeed()->setFaviconUrl('https://example.com/favicon.ico');
+        $this->em->flush();
 
         $model = $this->composer()->compose($this->user, $this->since);
 
         self::assertNotNull($model);
-        $entry = $model->groups[0]->entries[0];
-        self::assertSame('https://cdn.example.com/1.jpg', $entry->imageUrl);
-        self::assertSame('https://example.com/favicon.ico', $entry->faviconUrl);
-        self::assertEquals(new \DateTimeImmutable('2026-08-15T09:48:00Z'), $entry->publishedAt);
+        $entryModel = $model->groups[0]->entries[0];
+        self::assertSame('https://cdn.example.com/1.jpg', $entryModel->imageUrl);
+        self::assertSame('https://example.com/favicon.ico', $entryModel->faviconUrl);
+        self::assertEquals(new \DateTimeImmutable('2026-08-15T09:48:00Z'), $entryModel->publishedAt);
+    }
+
+    private function search(string $term): SavedSearch
+    {
+        $search = new SavedSearch($this->user, $term, false);
+        $this->em->persist($search);
+        $this->em->flush();
+
+        return $search;
+    }
+
+    private function member(
+        SavedSearch $search,
+        string $title,
+        string $feedTitle,
+        \DateTimeImmutable $effectiveDate,
+    ): Entry {
+        $feed = new Feed('https://example.com/feed-' . uniqid('', true) . '.xml');
+        $feed->setTitle($feedTitle);
+        $this->em->persist($feed);
+        $this->em->persist(new Subscription($this->user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+
+        $entry = new Entry(
+            $feed,
+            'guid-' . uniqid('', true),
+            'https://example.com/' . uniqid('', true),
+            $title,
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+            $effectiveDate,
+        );
+        $this->em->persist($entry);
+        $this->em->persist(new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00Z')));
+        $this->em->flush();
+
+        return $entry;
     }
 
     private function composer(): DigestComposer
     {
         return new DigestComposer(
             $this->savedSearches,
-            new DigestEntryFinder($this->entries),
+            new DigestEntryFinder($this->members(), $this->entryListRepository()),
             new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example')),
         );
     }
 
-    private function row(int $id, string $title, string $feedName): EntryListRow
+    private function members(): SavedSearchEntryRepository
     {
-        $entry = new Entry(
-            new Feed('https://example.com/feed.xml'),
-            'guid-' . $id,
-            'https://example.com/' . $id,
-            $title,
-            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
-            new \DateTimeImmutable('2026-07-10T00:00:00Z'),
-        );
-        // Entry has no id setter: the id only exists once Doctrine assigns it,
-        // and this test builds the row by hand without booting the kernel.
-        new \ReflectionProperty(Entry::class, 'id')->setValue($entry, $id);
-        $entry->setPublishedAt(new \DateTimeImmutable('2026-08-15T09:48:00Z'));
-        $entry->getImage()->storePending('https://cdn.example.com/' . $id . '.jpg', 1200, 900);
-        $entry->getFeed()->setFaviconUrl('https://example.com/favicon.ico');
+        $repo = self::getContainer()->get(SavedSearchEntryRepository::class);
+        self::assertInstanceOf(SavedSearchEntryRepository::class, $repo);
 
-        return new EntryListRow(
-            entry: $entry,
-            subscription: new EntryListRowSubscription(1, $feedName),
-            isHidden: false,
-            isFavorite: false,
-            isKept: false,
-            viewState: new EntryListRowViewState(isViewed: false, viewedAt: null),
-            markedReadUntil: null,
-        );
+        return $repo;
+    }
+
+    private function entryListRepository(): EntryListRepository
+    {
+        $repo = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repo);
+
+        return $repo;
     }
 }

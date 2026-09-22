@@ -24,6 +24,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\RecommendationSettings;
 use App\Entity\SavedSearch;
+use App\Entity\SavedSearchEntry;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
@@ -161,6 +162,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'credential restored into another account or onto another device could never '
             . 'authenticate. Exporting credential ids and public keys would widen the blast '
             . 'radius of a leaked backup file for no gain.',
+        SavedSearchEntry::class => 'A derived saved-search membership row (#1116); rebuilt by the sweep, '
+            . 'so a restore carries none.',
     ];
 
     /**
@@ -223,6 +226,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
         SavedSearch::class => [
             'user' => self::OWNER_IS_THE_RESTORING_ACCOUNT,
             'includeInDigest' => self::DIGEST_BACKUP_NOT_YET_WIRED,
+            'matchedUpToEntryId' => 'The membership sweep\'s high-water mark (#1116); a restored search '
+                . 'starts at 0 and is re-swept.',
         ],
         Feed::class => [
             'status' => 'Live fetch state, not the user\'s data. A restored feed starts clean.',

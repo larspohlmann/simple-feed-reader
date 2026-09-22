@@ -43,6 +43,13 @@ class SavedSearch
     #[ORM\Column(name: 'include_in_digest', options: ['default' => false])]
     private bool $includeInDigest = false;
 
+    /**
+     * The membership sweep's high-water mark: every entry with an id up to
+     * this one has been checked against this search's terms (#1116).
+     */
+    #[ORM\Column(name: 'matched_up_to_entry_id', options: ['default' => 0])]
+    private int $matchedUpToEntryId = 0;
+
     public function __construct(User $user, string $term, bool $wholeWord, bool $phrase = false)
     {
         $this->user = $user;
@@ -94,5 +101,15 @@ class SavedSearch
     public function setIncludeInDigest(bool $includeInDigest): void
     {
         $this->includeInDigest = $includeInDigest;
+    }
+
+    public function matchedUpToEntryId(): int
+    {
+        return $this->matchedUpToEntryId;
+    }
+
+    public function advanceMatchedUpTo(int $entryId): void
+    {
+        $this->matchedUpToEntryId = max($this->matchedUpToEntryId, $entryId);
     }
 }

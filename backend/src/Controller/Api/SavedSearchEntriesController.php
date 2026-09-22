@@ -10,10 +10,10 @@ use App\Http\EntryCursor;
 use App\Http\SavedSearchPage;
 use App\Repository\EntryCategoryLoader;
 use App\Repository\EntryQuery;
-use App\Repository\SavedSearchEntryQuery;
+use App\Repository\SavedSearchListQuery;
+use App\Repository\SavedSearchRepository;
 use App\Service\Reader\SavedSearchMarkReadService;
-use App\Service\Search\SavedSearchEntriesInterface;
-use App\Service\Search\SavedSearchTerms;
+use App\Service\Search\SavedSearchEntries;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
@@ -30,8 +30,8 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 final readonly class SavedSearchEntriesController
 {
     public function __construct(
-        private SavedSearchTerms $terms,
-        private SavedSearchEntriesInterface $entries,
+        private SavedSearchRepository $savedSearches,
+        private SavedSearchEntries $entries,
         private EntryCategoryLoader $categoryLoader,
         private SavedSearchMarkReadService $markRead,
     ) {
@@ -45,14 +45,13 @@ final readonly class SavedSearchEntriesController
         #[MapQueryParameter] bool $unread = false,
     ): JsonResponse {
         $userId = (int) $user->getId();
-        $query = new SavedSearchEntryQuery(
+        $query = new SavedSearchListQuery(
             userId: $userId,
-            savedSearches: $this->terms->forUser($userId),
+            savedSearchIds: $this->savedSearches->idsForUser($userId),
             onlyUnread: $unread,
             cursor: EntryCursor::fromRequestValue($cursor),
             limit: $limit,
         );
-
         $result = $this->entries->list($query);
 
         return new JsonResponse(SavedSearchPage::of(

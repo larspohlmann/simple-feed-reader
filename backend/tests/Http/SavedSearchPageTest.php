@@ -16,22 +16,28 @@ use PHPUnit\Framework\TestCase;
 
 final class SavedSearchPageTest extends TestCase
 {
-    public function testTheContinuationRowDecidesTheCursor(): void
+    public function testAFullPageAdvancesTheCursorPastItsLastRow(): void
     {
-        $result = new SavedSearchEntriesResult([], [], matchCount: 1, continuationRow: $this->row(4));
+        $result = new SavedSearchEntriesResult([$this->row(4)], [4 => 1]);
 
         $page = SavedSearchPage::of($result, 1);
 
-        self::assertSame([], $page['entries']);
-        self::assertNotNull($page['nextCursor'], 'A fully-read page must still advance the cursor.');
+        self::assertNotNull($page['nextCursor']);
         $cursor = EntryCursor::decode($page['nextCursor']);
         self::assertNotNull($cursor);
         self::assertSame(4, $cursor->id);
     }
 
+    public function testAShortPageEndsTheList(): void
+    {
+        $result = new SavedSearchEntriesResult([$this->row(4)], [4 => 1]);
+
+        self::assertNull(SavedSearchPage::of($result, 50)['nextCursor']);
+    }
+
     public function testAnEmptyBadgeMapEncodesAsAnObject(): void
     {
-        $result = new SavedSearchEntriesResult([], [], matchCount: 0);
+        $result = new SavedSearchEntriesResult([], []);
 
         $page = SavedSearchPage::of($result, 50);
 
@@ -41,7 +47,7 @@ final class SavedSearchPageTest extends TestCase
     public function testTheBadgeMapIsCarriedThrough(): void
     {
         $row = $this->row(7);
-        $result = new SavedSearchEntriesResult([$row], [7 => 3], matchCount: 1);
+        $result = new SavedSearchEntriesResult([$row], [7 => 3]);
 
         $page = SavedSearchPage::of($result, 50);
 

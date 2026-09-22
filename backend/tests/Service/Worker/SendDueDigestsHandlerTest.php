@@ -5,16 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Service\Worker;
 
 use App\Tests\Support\FixedPublicBaseUrl;
-use App\Entity\Entry;
-use App\Entity\Feed;
 use App\Entity\Preferences;
-use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
-use App\Repository\EntryListRow;
-use App\Repository\EntryListRowSubscription;
-use App\Repository\EntryListRowViewState;
 use App\Repository\PreferencesRepository;
+use App\Repository\SavedSearchEntryRepository;
 use App\Repository\SavedSearchRepository;
 use App\Service\Mail\Digest\DigestCadence;
 use App\Service\Mail\Digest\DigestComposer;
@@ -28,10 +23,11 @@ use App\Service\Mail\MailCapability;
 use App\Service\Mail\Settings\MailSettings;
 use App\Service\Worker\Handler\SendDueDigestsHandler;
 use App\Service\Worker\Message\SendDueDigests;
+use App\Tests\DbTestCase;
 use App\Tests\Support\InMemoryMailFailureRecorder;
+use App\Tests\Support\SavedSearchMatchFixture;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\Stub;
-use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 
@@ -44,8 +40,12 @@ use Symfony\Component\Clock\MockClock;
  * handler is responsible for: that firing it reaches the mailer. That is
  * an honest proof of the wiring, not a re-encoding of the service's own
  * branch coverage (already pinned by SendDueDigestsTest).
+ *
+ * DigestEntryFinder now reads the membership table through
+ * SavedSearchEntryRepository, which is `final` and cannot be doubled, so a
+ * due account's match is a real persisted saved-search member (#1116).
  */
-final class SendDueDigestsHandlerTest extends TestCase
+final class SendDueDigestsHandlerTest extends DbTestCase
 {
     private const string NOW = '2026-08-28T09:30:00Z';
 
@@ -65,33 +65,29 @@ final class SendDueDigestsHandlerTest extends TestCase
     {
         $user = $this->user();
         $prefs = $this->duePreferences($user);
+        $search = (new SavedSearchMatchFixture($this->em))
+            ->oneMatch($user, 'rust', new \DateTimeImmutable('2026-08-28T08:30:00Z'));
         $savedSearches = $this->createStub(SavedSearchRepository::class);
-        $savedSearches->method('findIncludedInDigestForUser')->willReturn([
-            new SavedSearch(new User('search-owner@example.com', new \DateTimeImmutable()), 'rust', false),
-        ]);
-        $entries = $this->createStub(EntryListRepository::class);
-        $entries->method('unreadMatchIdsSince')->willReturn([1]);
-        $entries->method('rowsByIdsForUser')->willReturn([$this->row(1)]);
+        $savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
         $preferences = $this->createStub(PreferencesRepository::class);
         $preferences->method('findWithDigestEnabled')->willReturn([$prefs]);
         $mailer = $this->createMock(DigestMailerInterface::class);
         $mailer->expects(self::once())->method('send')->with($user, self::isInstanceOf(DigestModel::class));
 
-        $this->handler($preferences, $mailer, $savedSearches, $entries)->__invoke(new SendDueDigests());
+        $this->handler($preferences, $mailer, $savedSearches)->__invoke(new SendDueDigests());
     }
 
     private function handler(
         PreferencesRepository&Stub $preferences,
         DigestMailerInterface $mailer,
         ?SavedSearchRepository $savedSearches = null,
-        ?EntryListRepository $entries = null,
     ): SendDueDigestsHandler {
         $service = new SendDueDigestsService(
             $preferences,
             new DigestSchedule('UTC'),
             new DigestComposer(
                 $savedSearches ?? $this->createStub(SavedSearchRepository::class),
-                new DigestEntryFinder($entries ?? $this->createStub(EntryListRepository::class)),
+                new DigestEntryFinder($this->members(), $this->entries()),
                 new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example')),
             ),
             $mailer,
@@ -115,8 +111,10 @@ final class SendDueDigestsHandlerTest extends TestCase
 
     private function user(): User
     {
-        $user = new User('digest@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        new \ReflectionProperty(User::class, 'id')->setValue($user, 1);
+        $email = 'digest-' . uniqid('', true) . '@example.com';
+        $user = new User($email, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->em->persist($user);
+        $this->em->flush();
         $user->markEmailVerified(new \DateTimeImmutable('2026-07-02T00:00:00Z'));
 
         return $user;
@@ -134,27 +132,19 @@ final class SendDueDigestsHandlerTest extends TestCase
         return $prefs;
     }
 
-    private function row(int $id): EntryListRow
+    private function members(): SavedSearchEntryRepository
     {
-        $feed = new Feed('https://example.com/feed.xml');
-        $entry = new Entry(
-            $feed,
-            'guid-' . $id,
-            'https://example.com/' . $id,
-            'Title ' . $id,
-            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
-            new \DateTimeImmutable('2026-08-27T00:00:00Z'),
-        );
-        new \ReflectionProperty(Entry::class, 'id')->setValue($entry, $id);
+        $repo = self::getContainer()->get(SavedSearchEntryRepository::class);
+        self::assertInstanceOf(SavedSearchEntryRepository::class, $repo);
 
-        return new EntryListRow(
-            entry: $entry,
-            subscription: new EntryListRowSubscription(1, 'Feed'),
-            isHidden: false,
-            isFavorite: false,
-            isKept: false,
-            viewState: new EntryListRowViewState(isViewed: false, viewedAt: null),
-            markedReadUntil: null,
-        );
+        return $repo;
+    }
+
+    private function entries(): EntryListRepository
+    {
+        $repo = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repo);
+
+        return $repo;
     }
 }

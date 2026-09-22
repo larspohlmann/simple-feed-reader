@@ -5,49 +5,40 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Entry;
-use App\Service\Search\SavedSearchTerm;
+use App\Entity\SavedSearchEntry;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * The combined saved-search list (#769): every entry matching ANY of the
- * caller's saved searches, as one paged stream.
+ * The combined saved-search list (#769) and every other saved-search read,
+ * over the membership table (#1116).
  */
 final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
 {
-    /**
-     * Searches per badge scan. Each search binds up to four parameters per
-     * term twice (the WHERE and its CASE), so this keeps one statement well
-     * under the smallest placeholder limit in play, SQLite's historical 999.
-     */
-    public const int SEARCHES_PER_SCAN = 25;
-
     public function __construct(
         ManagerRegistry $registry,
         private readonly EntryListRowHydrator $rowHydrator,
-        private readonly SearchTermsPredicateBuilder $termsPredicateBuilder,
+        private readonly DuplicateCollapseDql $collapse,
     ) {
         parent::__construct($registry, Entry::class);
     }
 
     /**
-     * Every entry matching ANY of the caller's saved searches, newest first and
-     * keyset-paginated like the entry list. No join here multiplies a row, so an
-     * entry matching several searches is returned once without a DISTINCT.
+     * Every member of any of the caller's searches, newest first, keyset-paged,
+     * the unread test in the same statement as the LIMIT. EXISTS rather than a
+     * join, so an entry in several searches is one row without a DISTINCT.
      *
      * @return list<EntryListRow>
      */
-    public function listForSavedSearches(SavedSearchEntryQuery $query): array
+    public function listMembers(SavedSearchListQuery $query): array
     {
-        // An empty predicate list would OR to nothing and match every entry.
-        if ($query->savedSearches === []) {
+        if ($query->savedSearchIds === []) {
             return [];
         }
 
-        $qb = $this->newestFirst($this->rowQueryBuilder($query->userId))
-            ->setMaxResults($query->limit);
-        $qb->andWhere($this->anySearchMatches($qb, $query->savedSearches));
+        $qb = $this->newestFirst($this->rowQueryBuilder($query->userId))->setMaxResults($query->limit);
+        $this->restrictToMembers($qb, $query->savedSearchIds, $query->userId);
 
         if ($query->onlyUnread) {
             $qb->andWhere(UnreadDql::predicate())->setParameter('notHidden', false, Types::BOOLEAN);
@@ -62,177 +53,160 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
     }
 
     /**
-     * The ids of every unread entry no newer than $until that matches any saved
-     * search — the set the combined mark-read flips. Matched through the same
-     * predicate the list uses, so it marks exactly what it shows.
+     * Saved-search id => the ids of its unread members the caller may see —
+     * one query for every badge. Every requested id keeps its key.
      *
-     * @param list<SavedSearchTerm> $savedSearches
+     * @param list<int> $savedSearchIds
+     *
+     * @return array<int, list<int>>
+     */
+    public function unreadMemberIdsBySavedSearch(int $userId, array $savedSearchIds): array
+    {
+        $idsBySearch = array_fill_keys($savedSearchIds, []);
+        if ($savedSearchIds === []) {
+            return $idsBySearch;
+        }
+
+        // A join, not restrictToMembers(): this read projects the search id per
+        // row, so only the collapse subquery takes the EXISTS scope.
+        $qb = $this->unreadEntriesQueryBuilder($userId)
+            ->select('e.id AS id', 'ss.id AS searchId')
+            ->join(SavedSearchEntry::class, 'sse', 'ON', 'sse.entry = e')
+            ->join('sse.savedSearch', 'ss')
+            ->andWhere('ss.id IN (:searchIds)')
+            ->andWhere('ss.user = :user')
+            ->setParameter('searchIds', $savedSearchIds)
+            ->orderBy('e.id', 'ASC');
+        $this->collapse->apply($qb, self::applyMembership(...), $userId);
+
+        /** @var list<array{id: int, searchId: int}> $rows */
+        $rows = $qb->getQuery()->getScalarResult();
+        foreach ($rows as $row) {
+            $idsBySearch[(int) $row['searchId']][] = (int) $row['id'];
+        }
+
+        return $idsBySearch;
+    }
+
+    /**
+     * The ids the combined mark-read flips: every unread member of any of the
+     * given searches no newer than $until, subscription-gated and collapsed.
+     *
+     * @param list<int> $savedSearchIds
      *
      * @return list<int>
      */
-    public function unreadMatchIdsForSavedSearches(
-        int $userId,
-        array $savedSearches,
-        \DateTimeImmutable $until,
-    ): array {
-        if ($savedSearches === []) {
+    public function unreadMemberIdsUpTo(int $userId, array $savedSearchIds, \DateTimeImmutable $until): array
+    {
+        if ($savedSearchIds === []) {
             return [];
         }
 
-        $qb = $this->unreadEntriesQueryBuilder($userId);
+        $qb = $this->unreadEntriesQueryBuilder($userId)
+            ->select('e.id')
+            ->andWhere('e.effectiveDate <= :until')
+            ->setParameter('until', $until);
+        $this->restrictToMembers($qb, $savedSearchIds, $userId);
 
-        return $this->scalarIds(
-            $qb->select('e.id')
-                ->distinct()
-                ->andWhere($this->anySearchMatches($qb, $savedSearches))
-                ->andWhere('e.effectiveDate <= :until')
-                ->setParameter('until', $until),
-        );
+        return $this->scalarIds($qb);
     }
 
     /**
-     * Saved-search id => the ids of every unread entry that search matches, for
-     * all searches in one scan per chunk (#584): the WHERE keeps the rows any
-     * search matches, a CASE per search flags which of them. Both come from the
-     * predicate the list runs on, so a badge tracks exactly what opening the
-     * search lists. Deliberately engine-independent: read state is per-user and
-     * lives only in the database, never in the search index.
+     * One search's unread members newer than $since, newest first — the
+     * digest's window (#636).
      *
-     * @param list<SavedSearchTerm> $savedSearches
-     *
-     * @return array<int, list<int>>
+     * @return list<int>
      */
-    public function unreadMatchIdsBySavedSearch(int $userId, array $savedSearches): array
+    public function unreadMemberIdsSince(int $savedSearchId, int $userId, \DateTimeImmutable $since): array
     {
-        $idsBySearch = [];
-        foreach (array_chunk($savedSearches, self::SEARCHES_PER_SCAN) as $chunk) {
-            $scan = $this->unreadEntriesQueryBuilder($userId)->select('e.id')->orderBy('e.id');
-            $idsBySearch += $this->matchIdsInOneScan($scan, $chunk);
-        }
+        $qb = $this->unreadEntriesQueryBuilder($userId)
+            ->select('e.id')
+            ->andWhere('e.effectiveDate > :since')
+            ->setParameter('since', $since);
+        $this->restrictToMembers($qb, [$savedSearchId], $userId);
 
-        return $idsBySearch;
+        return $this->scalarIds($this->newestFirst($qb));
     }
 
     /**
-     * Entry id => the id of the first saved search matching it, in the order
-     * given — the sidebar's, so the row names the search the reader would look
-     * for first. Takes the searches alone, not a SavedSearchEntryQuery: this
-     * read restricts by id, not by owner or unread state.
+     * Entry id => the first of the given searches (in the order given — the
+     * sidebar's) that it is a member of. Entries in none are absent.
      *
-     * @param list<int>             $entryIds
-     * @param list<SavedSearchTerm> $savedSearches
+     * @param list<int> $entryIds
+     * @param list<int> $savedSearchIdsInSidebarOrder
      *
      * @return array<int, int>
      */
-    public function matchedSavedSearchIds(array $entryIds, array $savedSearches): array
+    public function firstMatchingSavedSearchIds(array $entryIds, array $savedSearchIdsInSidebarOrder): array
     {
-        if ($entryIds === [] || $savedSearches === []) {
+        if ($entryIds === [] || $savedSearchIdsInSidebarOrder === []) {
             return [];
         }
 
-        $qb = $this->createQueryBuilder('e')
-            ->andWhere('e.id IN (:ids)')
-            ->setParameter('ids', $entryIds);
-
-        /** @var list<array{id: int, matchedId: int}> $rows */
-        $rows = $qb
-            ->select('e.id', $this->firstMatchExpression($qb, $savedSearches))
+        /** @var list<array{entryId: int, searchId: int}> $rows */
+        $rows = $this->getEntityManager()->createQueryBuilder()
+            ->select('IDENTITY(sse.entry) AS entryId', 'IDENTITY(sse.savedSearch) AS searchId')
+            ->from(SavedSearchEntry::class, 'sse')
+            ->andWhere('sse.entry IN (:entryIds)')
+            ->andWhere('sse.savedSearch IN (:searchIds)')
+            ->setParameter('entryIds', $entryIds)
+            ->setParameter('searchIds', $savedSearchIdsInSidebarOrder)
             ->getQuery()
             ->getScalarResult();
 
-        $matched = [];
+        $rank = array_flip($savedSearchIdsInSidebarOrder);
+        $first = [];
         foreach ($rows as $row) {
-            if ((int) $row['matchedId'] === 0) {
-                continue;
+            $entryId = (int) $row['entryId'];
+            $searchId = (int) $row['searchId'];
+            if (!isset($first[$entryId]) || $rank[$searchId] < $rank[$first[$entryId]]) {
+                $first[$entryId] = $searchId;
             }
-
-            $matched[(int) $row['id']] = (int) $row['matchedId'];
         }
 
-        return $matched;
+        return $first;
     }
 
     /**
-     * @param list<SavedSearchTerm> $savedSearches
+     * Keeps only members of the given searches, on the primary alias and inside
+     * the collapse subquery alike — the two scopes must agree, or a collapsed
+     * copy punches a hole in the page (see DuplicateCollapseDql).
      *
-     * @return array<int, list<int>>
+     * @param non-empty-list<int> $savedSearchIds
      */
-    private function matchIdsInOneScan(QueryBuilder $qb, array $savedSearches): array
+    private function restrictToMembers(QueryBuilder $qb, array $savedSearchIds, int $userId): void
     {
-        foreach ($savedSearches as $position => $savedSearch) {
-            $qb->addSelect($this->matchFlagExpression($qb, $position, $savedSearch));
-        }
-        $qb->andWhere($this->anySearchMatches($qb, $savedSearches));
-
-        $idsBySearch = array_fill_keys(
-            array_map(static fn (SavedSearchTerm $savedSearch): int => $savedSearch->id, $savedSearches),
-            [],
-        );
-        // Doctrine types the mapped id; a CASE is raw, and MySQL hands it back as a string.
-        /** @var list<array{id: int, ...<string, int|string>}> $rows */
-        $rows = $qb->getQuery()->getScalarResult();
-        foreach ($rows as $row) {
-            foreach ($savedSearches as $position => $savedSearch) {
-                if ((int) $row['match' . $position] === 1) {
-                    $idsBySearch[$savedSearch->id][] = $row['id'];
-                }
-            }
-        }
-
-        return $idsBySearch;
+        $qb->setParameter('searchIds', $savedSearchIds);
+        self::applyMembership($qb, EntryAliases::primary());
+        $this->collapse->apply($qb, self::applyMembership(...), $userId);
     }
 
-    private function matchFlagExpression(QueryBuilder $qb, int $position, SavedSearchTerm $savedSearch): string
+    private static function applyMembership(QueryBuilder $qb, EntryAliases $aliases): void
     {
+        $qb->andWhere(self::memberOfAnySearch($aliases));
+    }
+
+    /**
+     * "A member of one of :searchIds, and that search belongs to :user", for
+     * any entry alias; both parameters are bound once on the outer builder,
+     * which the collapse subquery shares.
+     */
+    private static function memberOfAnySearch(EntryAliases $aliases): string
+    {
+        $member = 'member' . ucfirst($aliases->entry);
+        $search = 'search' . ucfirst($aliases->entry);
+
         return \sprintf(
-            'CASE WHEN %s THEN 1 ELSE 0 END AS match%d',
-            $this->termsPredicateBuilder->build($qb, $savedSearch->terms, 'flag' . $position . 'term'),
-            $position,
+            'EXISTS (SELECT 1 FROM %s %s JOIN %s.savedSearch %s '
+            . 'WHERE %s.entry = %s AND %s.id IN (:searchIds) AND %s.user = :user)',
+            SavedSearchEntry::class,
+            $member,
+            $member,
+            $search,
+            $member,
+            $aliases->entry,
+            $search,
+            $search,
         );
-    }
-
-    /**
-     * One predicate for "matches any of these searches" — each search's own
-     * terms still ANDed inside it, the searches ORed between them.
-     *
-     * @param list<SavedSearchTerm> $savedSearches
-     */
-    private function anySearchMatches(QueryBuilder $qb, array $savedSearches): string
-    {
-        $predicates = [];
-        foreach ($savedSearches as $position => $savedSearch) {
-            $predicates[] = $this->termsPredicateBuilder->build(
-                $qb,
-                $savedSearch->terms,
-                'saved' . $position . 'term',
-            );
-        }
-
-        return '(' . implode(' OR ', $predicates) . ')';
-    }
-
-    /**
-     * A CASE that answers the first matching search's id, so "first" is decided
-     * by the same predicates the list itself matched on rather than by a second
-     * implementation of the matching rules.
-     *
-     * @param list<SavedSearchTerm> $savedSearches
-     */
-    private function firstMatchExpression(QueryBuilder $qb, array $savedSearches): string
-    {
-        $branches = '';
-        foreach ($savedSearches as $position => $savedSearch) {
-            $branches .= \sprintf(
-                ' WHEN %s THEN %d',
-                $this->termsPredicateBuilder->build(
-                    $qb,
-                    $savedSearch->terms,
-                    'match' . $position . 'term',
-                ),
-                $savedSearch->id,
-            );
-        }
-
-        return 'CASE' . $branches . ' ELSE 0 END AS matchedId';
     }
 }

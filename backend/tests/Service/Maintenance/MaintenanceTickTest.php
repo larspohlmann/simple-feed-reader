@@ -44,6 +44,8 @@ use App\Tests\Support\InMemoryMailFailureRecorder;
 use App\Tests\Support\StubFaviconFetcher;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\RecordingContentChangeMarker;
+use App\Tests\Support\MembershipSweepFactory;
+use App\Tests\Support\RecordingSavedSearchMatcher;
 use App\Tests\Support\StubLokiEndpoint;
 use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
@@ -84,6 +86,9 @@ final class MaintenanceTickTest extends DbTestCase
         self::assertIsInt($report['imageVerification']['dropped']);
         self::assertIsInt($report['imageVerification']['retried']);
         self::assertArrayNotHasKey('skipped', $report['imageVerification']);
+        self::assertIsInt($report['savedSearchMemberships']['entriesScanned']);
+        self::assertIsBool($report['savedSearchMemberships']['caughtUp']);
+        self::assertArrayNotHasKey('skipped', $report['savedSearchMemberships']);
     }
 
     /**
@@ -220,12 +225,21 @@ final class MaintenanceTickTest extends DbTestCase
             $this->em,
         );
 
+        $membershipSweep = MembershipSweepFactory::fromContainer(
+            self::getContainer(),
+            $this->em,
+            new RecordingSavedSearchMatcher(),
+            $clock,
+        );
+
         $tick = new MaintenanceTick(
             $refreshRunner,
             $forYouSweep,
             $sendDueDigests,
             $imageVerificationSweep,
+            $membershipSweep,
             $logSpoolShipper,
+            $clock,
         );
 
         $report = $tick->run()->toArray();
@@ -258,6 +272,16 @@ final class MaintenanceTickTest extends DbTestCase
                 'skipped' => 'refresh aborted: the shared EntityManager is unusable this tick',
             ],
             $report['imageVerification'],
+        );
+        self::assertSame(
+            [
+                'searchesSwept' => 0,
+                'entriesScanned' => 0,
+                'matchesInserted' => 0,
+                'caughtUp' => false,
+                'skipped' => 'refresh aborted: the shared EntityManager is unusable this tick',
+            ],
+            $report['savedSearchMemberships'],
         );
         self::assertSame(['shipped' => 0, 'failed' => 0], $report['logShipping']);
     }

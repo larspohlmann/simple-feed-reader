@@ -5,15 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Service\Mail\Digest;
 
 use App\Tests\Support\FixedPublicBaseUrl;
-use App\Entity\Entry;
-use App\Entity\Feed;
 use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
-use App\Repository\EntryListRow;
-use App\Repository\EntryListRowSubscription;
-use App\Repository\EntryListRowViewState;
-use App\Repository\EntrySearchQuery;
+use App\Repository\SavedSearchEntryRepository;
 use App\Repository\SavedSearchRepository;
 use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestComposer;
@@ -31,11 +26,12 @@ use App\Service\Mail\Digest\DigestModel;
 use App\Service\Mail\Digest\DigestPageBuilder;
 use App\Service\Mail\Digest\DigestTextRenderer;
 use App\Service\Mail\Digest\SendTestDigest;
+use App\Tests\DbTestCase;
+use App\Tests\Support\SavedSearchMatchFixture;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
 use App\Service\Mail\Settings\MailIdentity;
 use App\Service\Mail\Settings\MailSettings;
-use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
@@ -48,11 +44,14 @@ use Symfony\Component\Translation\Translator;
  * something to report, and never touch digestLastSentAt — that watermark is
  * DigestEnablement's and the real scheduled send's job, not a preview
  * button's.
+ *
+ * DigestEntryFinder now reads the membership table through
+ * SavedSearchEntryRepository, which is `final` and cannot be doubled, so a
+ * match here is a real persisted saved-search member (#1116).
  */
-final class SendTestDigestTest extends TestCase
+final class SendTestDigestTest extends DbTestCase
 {
     private SavedSearchRepository&Stub $savedSearches;
-    private EntryListRepository&Stub $entries;
     private DigestMailerInterface&Stub $mailer;
     private User $user;
 
@@ -61,13 +60,14 @@ final class SendTestDigestTest extends TestCase
 
     protected function setUp(): void
     {
+        parent::setUp();
         $this->sentEmails = [];
         $this->savedSearches = $this->createStub(SavedSearchRepository::class);
-        $this->entries = $this->createStub(EntryListRepository::class);
         $this->mailer = $this->createStub(DigestMailerInterface::class);
 
         $this->user = new User('digest-test@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        new \ReflectionProperty(User::class, 'id')->setValue($this->user, 7);
+        $this->em->persist($this->user);
+        $this->em->flush();
     }
 
     private function sendTestDigest(MockClock $clock, ?DigestMailerInterface $mailer = null): SendTestDigest
@@ -75,7 +75,7 @@ final class SendTestDigestTest extends TestCase
         return new SendTestDigest(
             new DigestComposer(
                 $this->savedSearches,
-                new DigestEntryFinder($this->entries),
+                new DigestEntryFinder($this->members(), $this->entries()),
                 new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example')),
             ),
             $mailer ?? $this->mailer,
@@ -98,10 +98,7 @@ final class SendTestDigestTest extends TestCase
 
     public function testAMatchIsSentAndReturnsTrue(): void
     {
-        $search = new SavedSearch($this->user, 'rust', false);
-        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
-        $this->entries->method('unreadMatchIdsSince')->willReturn([1]);
-        $this->entries->method('rowsByIdsForUser')->willReturn([$this->row(1)]);
+        $this->givenOneMatch(new \DateTimeImmutable('2026-08-27T00:00:00Z'));
 
         /** @var DigestMailerInterface&MockObject $mailer */
         $mailer = $this->createMock(DigestMailerInterface::class);
@@ -118,27 +115,29 @@ final class SendTestDigestTest extends TestCase
     /**
      * The window is measured from the clock, not from digestLastSentAt: a test
      * send previews "the last N days", independent of when the real schedule
-     * last ran.
+     * last ran. An entry just inside that window is matched; one just outside
+     * it is not.
      */
-    public function testTheSinceCutoffPassedToTheFinderIsDaysBeforeNow(): void
+    public function testTheSinceCutoffPassedToTheFinderIsDaysBeforeNowAndIsExclusive(): void
     {
-        $search = new SavedSearch($this->user, 'rust', false);
-        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
+        $fixture = new SavedSearchMatchFixture($this->em);
+        // now(2026-08-28T12:00:00Z) - 3 days = 2026-08-25T12:00:00Z, exclusive.
+        $justInside = $fixture->oneMatch($this->user, 'rust-inside', new \DateTimeImmutable('2026-08-25T12:00:01Z'));
+        $justOutside = $fixture->oneMatch($this->user, 'rust-outside', new \DateTimeImmutable('2026-08-25T11:59:59Z'));
 
-        $capturedSince = null;
-        $captureSince = function (
-            EntrySearchQuery $query,
-            \DateTimeImmutable $since,
-        ) use (&$capturedSince): array {
-            $capturedSince = $since;
+        $active = $justInside;
+        $this->savedSearches->method('findIncludedInDigestForUser')->willReturnCallback(
+            function () use (&$active): array {
+                return [$active];
+            },
+        );
 
-            return [];
-        };
-        $this->entries->method('unreadMatchIdsSince')->willReturnCallback($captureSince);
+        $result = $this->sendTestDigest(new MockClock('2026-08-28T12:00:00Z'))->send($this->user, 3);
+        self::assertTrue($result, 'An entry one second inside the window must be matched.');
 
-        $this->sendTestDigest(new MockClock('2026-08-28T12:00:00Z'))->send($this->user, 3);
-
-        self::assertEquals(new \DateTimeImmutable('2026-08-25T12:00:00Z'), $capturedSince);
+        $active = $justOutside;
+        $result = $this->sendTestDigest(new MockClock('2026-08-28T12:00:00Z'))->send($this->user, 3);
+        self::assertFalse($result, 'An entry one second outside the window must not be matched.');
     }
 
     /**
@@ -176,17 +175,9 @@ final class SendTestDigestTest extends TestCase
         return new DigestMailer($transport, $builder);
     }
 
-    private function stubAMatchToCompose(): void
-    {
-        $search = new SavedSearch($this->user, 'rust', false);
-        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
-        $this->entries->method('unreadMatchIdsSince')->willReturn([1]);
-        $this->entries->method('rowsByIdsForUser')->willReturn([$this->row(1)]);
-    }
-
     public function testHtmlFormatUserGetsAnHtmlBodyThroughTheRealMailer(): void
     {
-        $this->stubAMatchToCompose();
+        $this->givenOneMatch(new \DateTimeImmutable('2026-08-27T00:00:00Z'));
         $this->user->getPreferences()->setDigestFormat(DigestFormat::Html);
 
         $result = $this->sendTestDigest(new MockClock('2026-08-28T12:00:00Z'), $this->realMailer())
@@ -200,7 +191,7 @@ final class SendTestDigestTest extends TestCase
 
     public function testTextFormatUserGetsNoHtmlBodyThroughTheRealMailer(): void
     {
-        $this->stubAMatchToCompose();
+        $this->givenOneMatch(new \DateTimeImmutable('2026-08-27T00:00:00Z'));
         $this->user->getPreferences()->setDigestFormat(DigestFormat::Text);
 
         $result = $this->sendTestDigest(new MockClock('2026-08-28T12:00:00Z'), $this->realMailer())
@@ -212,35 +203,36 @@ final class SendTestDigestTest extends TestCase
         self::assertNotNull($this->sentEmails[0]->getTextBody());
     }
 
-    private function row(int $id): EntryListRow
-    {
-        $feed = new Feed('https://example.com/feed.xml');
-        $entry = new Entry(
-            $feed,
-            'guid-' . $id,
-            'https://example.com/' . $id,
-            'Title ' . $id,
-            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
-            new \DateTimeImmutable('2026-08-27T00:00:00Z'),
-        );
-        new \ReflectionProperty(Entry::class, 'id')->setValue($entry, $id);
-
-        return new EntryListRow(
-            entry: $entry,
-            subscription: new EntryListRowSubscription(1, 'Feed'),
-            isHidden: false,
-            isFavorite: false,
-            isKept: false,
-            viewState: new EntryListRowViewState(isViewed: false, viewedAt: null),
-            markedReadUntil: null,
-        );
-    }
-
     private function mailIdentity(string $address, string $name): MailSettings
     {
         $settings = $this->createStub(MailSettings::class);
         $settings->method('identity')->willReturn(new MailIdentity($address, $name));
 
         return $settings;
+    }
+
+    private function givenOneMatch(\DateTimeImmutable $effectiveDate): SavedSearch
+    {
+        $term = 'rust-' . uniqid('', true);
+        $search = (new SavedSearchMatchFixture($this->em))->oneMatch($this->user, $term, $effectiveDate);
+        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
+
+        return $search;
+    }
+
+    private function members(): SavedSearchEntryRepository
+    {
+        $repo = self::getContainer()->get(SavedSearchEntryRepository::class);
+        self::assertInstanceOf(SavedSearchEntryRepository::class, $repo);
+
+        return $repo;
+    }
+
+    private function entries(): EntryListRepository
+    {
+        $repo = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repo);
+
+        return $repo;
     }
 }

@@ -21,14 +21,30 @@ use App\Service\Search\SearchTerms;
 final readonly class IndexSearch
 {
     /**
-     * @param list<int> $feedIds the feeds the caller may see; never asked
-     *                           of the engine when empty
+     * @param list<int>|null $feedIds  the feeds the caller may see; null for every feed.
+     *                                 Never empty: a caller with no feeds answers empty itself
+     * @param list<int>|null $entryIds when set, only these entries are candidates
      */
     public function __construct(
         public SearchTerms $terms,
-        public array $feedIds,
+        public ?array $feedIds,
         public ?EntryCursor $cursor,
         public int $limit,
+        public ?array $entryIds = null,
     ) {
+        if ($feedIds === []) {
+            throw new \InvalidArgumentException('A search over no feeds must not reach the engine.');
+        }
+    }
+
+    /**
+     * A membership probe (#1116): which of exactly these entries match, on every
+     * feed. The limit is the candidate count, so no member is dropped.
+     *
+     * @param non-empty-list<int> $entryIds
+     */
+    public static function amongEntries(SearchTerms $terms, array $entryIds): self
+    {
+        return new self($terms, null, null, \count($entryIds), $entryIds);
     }
 }
