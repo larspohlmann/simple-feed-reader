@@ -112,9 +112,7 @@
         <a
           class="nav grow savedsearch-toggle"
           [class.active]="selection().kind === 'saved-searches'"
-          [routerLink]="[]"
-          [queryParams]="selectionQueryParams({ view: 'saved-searches' })"
-          queryParamsHandling="merge"
+          [routerLink]="['/searches/saved/all']"
         >
           <span class="lead"><app-icon name="saved_search" size="sm" /></span>
           <span>{{ 'reader.savedSearches' | transloco }}</span>
@@ -141,9 +139,7 @@
               class="nav savedsearch-item"
               [class.active]="saved.id === activeSavedSearchId()"
               [class.with-digest]="showDigestToggles()"
-              [routerLink]="[]"
-              [queryParams]="saved.params"
-              queryParamsHandling="merge"
+              [routerLink]="['/searches/saved', saved.slug]"
             >
               <app-icon name="search" size="sm" />
               <!-- Term + "W" pill travel together as one left group so the pill

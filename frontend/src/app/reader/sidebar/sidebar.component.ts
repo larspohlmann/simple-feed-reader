@@ -32,7 +32,7 @@ import { SidebarFootComponent } from './sidebar-foot.component';
 import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
 import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
 import { TagNode } from '../subscriptions.store';
-import { Selection, savedSearchParams, selectionQueryParams } from '../query';
+import { Selection, selectionQueryParams } from '../query';
 import { SavedSearchDto, SubscriptionDto, TagDto, isSubscriptionDrag } from '../models';
 import { RefreshService } from '../refresh.service';
 import { RecommendationsService } from '../recommendations.service';
@@ -200,18 +200,7 @@ export class SidebarComponent {
 
   /** Whether the "Saved searches" group is expanded. In-memory only, default
    *  collapsed — mirrors the tags' expand behaviour (state resets on reload). */
-  /** The saved-search rows with their link params resolved once per list
-   *  change. `savedSearchParams` is the one `selectionQueryParams` call site
-   *  that cannot use its identity cache — an unbounded `q` must not be allowed
-   *  to grow it — so calling it from the template would build a fresh object
-   *  per row on every change-detection pass and re-run RouterLink's href for
-   *  each one. */
-  protected readonly savedSearchLinks = computed(() =>
-    this.savedSearches().map((saved) => ({
-      ...saved,
-      params: savedSearchParams(saved.term, saved.wholeWord, saved.phrase),
-    })),
-  );
+  protected readonly savedSearchLinks = computed(() => this.savedSearches());
 
   readonly savedSearchesExpanded = signal(false);
 
