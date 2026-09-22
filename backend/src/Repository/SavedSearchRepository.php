@@ -78,4 +78,25 @@ class SavedSearchRepository extends ServiceEntityRepository
 
         return $row;
     }
+
+    /**
+     * Every search that has not yet checked every entry up to $ceiling, the
+     * furthest-behind first so a new search's backfill is served before
+     * steady-state work (#1116).
+     *
+     * @return list<SavedSearch>
+     */
+    public function findBelowMark(int $ceiling): array
+    {
+        /** @var list<SavedSearch> $searches */
+        $searches = $this->createQueryBuilder('s')
+            ->andWhere('s.matchedUpToEntryId < :ceiling')
+            ->setParameter('ceiling', $ceiling)
+            ->orderBy('s.matchedUpToEntryId', 'ASC')
+            ->addOrderBy('s.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $searches;
+    }
 }
