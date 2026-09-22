@@ -255,6 +255,7 @@ article mark all hold one pointer to their owner.
 | `user` | The pointer to the account that owns the row. A restore writes into the account you are signed in to, so no line names an owner. It could not: an owner read from the file would be an owner you chose for yourself. |
 | `includeInDigest` | Whether a saved search feeds the email digest (#636). Added ahead of the backup format's support for it; a later task carries it. |
 | `matchedUpToEntryId` | The membership sweep's high-water mark for a saved search (#1116): the id of the last article checked against its terms. A restored search starts at 0 and is checked against every article again. |
+| `slug` | The web address of a saved search: its id, then a short form of its search term. A restore gives the search a new id, so the application builds a new slug from it. |
 
 **On a feed.**
 

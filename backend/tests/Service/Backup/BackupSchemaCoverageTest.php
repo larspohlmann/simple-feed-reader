@@ -228,6 +228,9 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'includeInDigest' => self::DIGEST_BACKUP_NOT_YET_WIRED,
             'matchedUpToEntryId' => 'The membership sweep\'s high-water mark (#1116); a restored search '
                 . 'starts at 0 and is re-swept.',
+            'slug' => 'Derived: deterministically "<id>-<slug of term>" (SavedSearchSlug). A restored '
+                . 'search gets a new id, so the old slug would not even match; the id assignment on '
+                . 'restore regenerates it.',
         ],
         Feed::class => [
             'status' => 'Live fetch state, not the user\'s data. A restored feed starts clean.',
