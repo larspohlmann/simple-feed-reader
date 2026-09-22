@@ -610,6 +610,14 @@ describe('selectionFromRoute', () => {
     expect(selection).toEqual({ kind: 'saved-search', id: 42, unread: false });
   });
 
+  it('falls back to the combined view for a slug with no leading id', () => {
+    const { selection } = selectionFromRoute(
+      convertToParamMap({ savedSearch: 'climate' }),
+      convertToParamMap({ unread: '1' }),
+    );
+    expect(selection).toEqual({ kind: 'saved-searches', id: null, unread: true });
+  });
+
   it('carries unread=1 from the query params onto a path selection', () => {
     const { selection } = selectionFromRoute(
       convertToParamMap({ savedSearch: '42-climate' }),

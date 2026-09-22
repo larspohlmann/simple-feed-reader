@@ -2,10 +2,8 @@ import { ParamMap, UrlMatchResult, UrlSegment } from '@angular/router';
 import { Selection, selectionFromParams } from './query';
 
 /**
- * The reader shell owns the root URL and the saved-search paths alike, through
- * one route config so the component is never torn down when the user moves
- * between a list and a saved search. `searches/saved/:slug` (slug may be the
- * literal "all") is the only path it consumes; everything else is query params.
+ * Owns the root URL and the saved-search paths through one route config, so the
+ * shell is never torn down moving between a list and a saved search.
  */
 export function readerMatcher(segments: UrlSegment[]): UrlMatchResult | null {
   if (segments.length === 0) {
@@ -36,8 +34,11 @@ export function selectionFromRoute(
   // The entry overlay composes on top of a saved-search path, so a merged
   // `?entry=` must still open the article rather than being dropped here.
   const { entryId } = selectionFromParams(queryParams);
-  if (savedSearch === 'all') {
+  const id = idFromSlug(savedSearch);
+  // A slug with no leading id (hand-edited URL) has no single search to open,
+  // so fall back to the combined view rather than fetching the plain list.
+  if (savedSearch === 'all' || id === null) {
     return { selection: { kind: 'saved-searches', id: null, unread }, entryId };
   }
-  return { selection: { kind: 'saved-search', id: idFromSlug(savedSearch), unread }, entryId };
+  return { selection: { kind: 'saved-search', id, unread }, entryId };
 }
