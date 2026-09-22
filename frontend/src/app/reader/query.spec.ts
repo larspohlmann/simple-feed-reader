@@ -343,6 +343,13 @@ describe('markReadTarget', () => {
     });
     expect(markReadTarget({ kind: 'search', id: null, unread: false, term: '' })).toBeNull();
   });
+  it('marks a single saved search read by its id', () => {
+    expect(markReadTarget({ kind: 'saved-search', id: 42, unread: false })).toEqual({
+      scope: 'saved-search',
+      id: 42,
+    });
+    expect(markReadTarget({ kind: 'saved-search', id: null, unread: false })).toBeNull();
+  });
 });
 
 describe('hasUnreadFilter', () => {
@@ -351,6 +358,7 @@ describe('hasUnreadFilter', () => {
     expect(hasUnreadFilter({ kind: 'tag', id: 3, unread: true })).toBe(true);
     expect(hasUnreadFilter({ kind: 'subscription', id: 7, unread: true })).toBe(true);
     expect(hasUnreadFilter({ kind: 'for-you', id: null, unread: true })).toBe(true);
+    expect(hasUnreadFilter({ kind: 'saved-search', id: 42, unread: false })).toBe(true);
   });
   it('leaves the saved views and a search alone — each is already a filter', () => {
     expect(hasUnreadFilter({ kind: 'favorites', id: null, unread: false })).toBe(false);

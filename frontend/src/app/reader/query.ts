@@ -152,6 +152,7 @@ export function hasUnreadFilter(s: Selection): boolean {
     canScopedRefresh(s) ||
     s.kind === 'for-you' ||
     s.kind === 'saved-searches' ||
+    s.kind === 'saved-search' ||
     isSavedSearchResult(s)
   );
 }
@@ -347,7 +348,8 @@ export type MarkReadTarget =
   | { scope: Exclude<MarkReadScope, 'all'>; id: number }
   | { scope: 'search'; term: string }
   | { scope: 'for-you' }
-  | { scope: 'saved-searches' };
+  | { scope: 'saved-searches' }
+  | { scope: 'saved-search'; id: number };
 
 export function markReadTarget(s: Selection): MarkReadTarget | null {
   switch (s.kind) {
@@ -366,6 +368,8 @@ export function markReadTarget(s: Selection): MarkReadTarget | null {
     case 'saved-searches':
       // No id and no term: the endpoint needs nothing beyond who is asking.
       return { scope: 'saved-searches' };
+    case 'saved-search':
+      return s.id != null ? { scope: 'saved-search', id: s.id } : null;
     default:
       return null;
   }
