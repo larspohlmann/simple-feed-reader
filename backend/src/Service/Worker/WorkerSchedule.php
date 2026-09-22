@@ -9,6 +9,7 @@ use App\Service\Worker\Message\PurgeFailedMessages;
 use App\Service\Worker\Message\RefreshDueFeeds;
 use App\Service\Worker\Message\SendDueDigests;
 use App\Service\Worker\Message\StartDueRecommendationRuns;
+use App\Service\Worker\Message\SweepSavedSearchMemberships;
 use Symfony\Component\Scheduler\Attribute\AsSchedule;
 use Symfony\Component\Scheduler\RecurringMessage;
 use Symfony\Component\Scheduler\Schedule;
@@ -17,13 +18,14 @@ use Symfony\Contracts\Cache\CacheInterface;
 
 /**
  * The worker container's whole job description (#311): consume this schedule
- * with `messenger:consume scheduler_worker`. Five entries by decision: the
+ * with `messenger:consume scheduler_worker`. Six entries by decision: the
  * recommendation sweep is two of them — the ten-second advance sweep and the
  * five-minute start-due sweep (#333) — plus the feed refresh sweep (2026-08-07
  * decision bringing scheduled refresh to worker-equipped installs; poll-only
  * installs stay manual), the hourly digest sweep (#636, finds every account
  * whose scheduled digest occurrence has passed since it last sent and mails
- * it), and failure-transport housekeeping.
+ * it), failure-transport housekeeping, and the one-minute saved-search
+ * membership sweep (#1116).
  *
  * The recommendation START sweep (#333) supersedes #308's "manual button
  * only" as an opt-in: it starts a run only for an account that chose a
@@ -58,7 +60,7 @@ final readonly class WorkerSchedule implements ScheduleProviderInterface
      * `processOnlyLastMissedRun()` is the necessary companion: a persisted
      * checkpoint means a consumer that was down replays every occurrence it
      * missed, and an hour of downtime owes the ten-second entry 360 firings.
-     * All five messages are SWEEPS — each does whatever is outstanding at the
+     * All six messages are SWEEPS — each does whatever is outstanding at the
      * moment it runs — so catching up means running once, now.
      */
     public function getSchedule(): Schedule
@@ -69,6 +71,7 @@ final readonly class WorkerSchedule implements ScheduleProviderInterface
             ->add(RecurringMessage::every('5 minutes', new RefreshDueFeeds()))
             ->add(RecurringMessage::every('1 day', new PurgeFailedMessages()))
             ->add(RecurringMessage::every('1 hour', new SendDueDigests()))
+            ->add(RecurringMessage::every('1 minute', new SweepSavedSearchMemberships()))
             ->stateful($this->schedulerStateCache)
             ->processOnlyLastMissedRun(true);
     }

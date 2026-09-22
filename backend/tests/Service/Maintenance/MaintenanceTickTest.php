@@ -9,10 +9,13 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Repository\EntryMembershipSweepRepository;
 use App\Repository\EntryRepository;
 use App\Repository\FeedRepository;
 use App\Repository\PendingImageVerificationRepository;
 use App\Repository\PreferencesRepository;
+use App\Repository\SavedSearchEntryMembershipRepository;
+use App\Repository\SavedSearchRepository;
 use App\Service\Category\CategoryNormalizer;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\FeedScheduler;
@@ -37,6 +40,7 @@ use App\Service\Refresh\RefreshRunner;
 use App\Service\Retention\EntryPruner;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Search\EntryIndexer;
+use App\Service\Search\Membership\SavedSearchMembershipSweep;
 use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
@@ -44,6 +48,7 @@ use App\Tests\Support\InMemoryMailFailureRecorder;
 use App\Tests\Support\StubFaviconFetcher;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\RecordingContentChangeMarker;
+use App\Tests\Support\RecordingSavedSearchMatcher;
 use App\Tests\Support\StubLokiEndpoint;
 use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
@@ -84,6 +89,9 @@ final class MaintenanceTickTest extends DbTestCase
         self::assertIsInt($report['imageVerification']['dropped']);
         self::assertIsInt($report['imageVerification']['retried']);
         self::assertArrayNotHasKey('skipped', $report['imageVerification']);
+        self::assertIsInt($report['savedSearchMemberships']['entriesScanned']);
+        self::assertIsBool($report['savedSearchMemberships']['caughtUp']);
+        self::assertArrayNotHasKey('skipped', $report['savedSearchMemberships']);
     }
 
     /**
@@ -220,11 +228,28 @@ final class MaintenanceTickTest extends DbTestCase
             $this->em,
         );
 
+        $savedSearches = self::getContainer()->get(SavedSearchRepository::class);
+        self::assertInstanceOf(SavedSearchRepository::class, $savedSearches);
+        $membershipEntries = self::getContainer()->get(EntryMembershipSweepRepository::class);
+        self::assertInstanceOf(EntryMembershipSweepRepository::class, $membershipEntries);
+        $memberships = self::getContainer()->get(SavedSearchEntryMembershipRepository::class);
+        self::assertInstanceOf(SavedSearchEntryMembershipRepository::class, $memberships);
+        $membershipSweep = new SavedSearchMembershipSweep(
+            $savedSearches,
+            $membershipEntries,
+            $memberships,
+            new RecordingSavedSearchMatcher(),
+            $this->em,
+            $clock,
+            new NullLogger(),
+        );
+
         $tick = new MaintenanceTick(
             $refreshRunner,
             $forYouSweep,
             $sendDueDigests,
             $imageVerificationSweep,
+            $membershipSweep,
             $logSpoolShipper,
         );
 
@@ -258,6 +283,16 @@ final class MaintenanceTickTest extends DbTestCase
                 'skipped' => 'refresh aborted: the shared EntityManager is unusable this tick',
             ],
             $report['imageVerification'],
+        );
+        self::assertSame(
+            [
+                'searchesSwept' => 0,
+                'entriesScanned' => 0,
+                'matchesInserted' => 0,
+                'caughtUp' => false,
+                'skipped' => 'refresh aborted: the shared EntityManager is unusable this tick',
+            ],
+            $report['savedSearchMemberships'],
         );
         self::assertSame(['shipped' => 0, 'failed' => 0], $report['logShipping']);
     }

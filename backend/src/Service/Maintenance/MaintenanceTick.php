@@ -12,6 +12,9 @@ use App\Service\Mail\Digest\SendDueDigests;
 use App\Service\Recommendation\ForYouSweep;
 use App\Service\Refresh\RefreshRequest;
 use App\Service\Refresh\RefreshRunner;
+use App\Service\Search\Membership\SavedSearchMembershipSweep;
+use App\Service\Search\Membership\SavedSearchMembershipSweepReport;
+use App\Service\Search\Membership\SweepBudget;
 
 /**
  * One maintenance tick (#346): refresh all due feeds, then start due
@@ -39,12 +42,18 @@ use App\Service\Refresh\RefreshRunner;
  * The image-verification sweep (#1109) runs alongside the digests sweep,
  * under the same guard: it also flushes through the default EntityManager.
  *
+ * The membership sweep (#1116) runs under the same guard, after the image
+ * sweep.
+ *
  * The tick drains the Loki spool (#1003) last, after refresh and the sweep,
  * independent of the EM guard: the shipper touches no EntityManager.
  */
 final readonly class MaintenanceTick
 {
     public const int REFRESH_BUDGET_SECONDS = 20;
+
+    /** Inside the 20 s tick, after the refresh: enough for ~50 chunks on Strato. */
+    private const int MEMBERSHIP_BUDGET_SECONDS = 10;
 
     private const string ABORTED_REASON = 'refresh aborted: the shared EntityManager is unusable this tick';
 
@@ -53,6 +62,7 @@ final readonly class MaintenanceTick
         private ForYouSweep $forYouSweep,
         private SendDueDigests $sendDueDigests,
         private ImageVerificationSweep $imageVerificationSweep,
+        private SavedSearchMembershipSweep $membershipSweep,
         private LokiSpoolShipper $logSpoolShipper,
     ) {
     }
@@ -64,10 +74,13 @@ final readonly class MaintenanceTick
             $recommendations = $this->skippedRecommendations();
             $digests = $this->skippedDigests();
             $imageVerification = $this->skippedImageVerification();
+            $memberships = $this->skippedMemberships();
         } else {
             $recommendations = $this->forYouSweep->sweepOnce()->toArray();
             $digests = $this->sendDueDigests->run()->toArray();
             $imageVerification = $this->imageVerificationSweep->verifyDue()->toArray();
+            $budget = SweepBudget::seconds(self::MEMBERSHIP_BUDGET_SECONDS);
+            $memberships = $this->membershipSweep->sweep($budget)->toArray();
         }
         $logShipping = $this->logSpoolShipper->ship()->toArray();
 
@@ -76,6 +89,7 @@ final readonly class MaintenanceTick
             $recommendations,
             $digests,
             $imageVerification,
+            $memberships,
             $logShipping,
         );
     }
@@ -107,5 +121,13 @@ final readonly class MaintenanceTick
     private function skippedImageVerification(): array
     {
         return (new ImageVerificationReport(0, 0, 0, 0))->toArray() + ['skipped' => self::ABORTED_REASON];
+    }
+
+    /**
+     * @return array{searchesSwept: int, entriesScanned: int, matchesInserted: int, caughtUp: bool, skipped: string}
+     */
+    private function skippedMemberships(): array
+    {
+        return (new SavedSearchMembershipSweepReport(0, 0, 0, false))->toArray() + ['skipped' => self::ABORTED_REASON];
     }
 }
