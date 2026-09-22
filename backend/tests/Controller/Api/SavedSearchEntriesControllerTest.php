@@ -202,8 +202,8 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         self::assertSame([$climateSearch->getId()], $this->savedSearchIdsByTitle($body, 'Climate report'));
         self::assertSame([$rocketSearch->getId()], $this->savedSearchIdsByTitle($body, 'Rocket launch'));
         // Matches both searches: they must both be listed, newest-saved first
-        // (findForUser orders id DESC — the sidebar's own order), proving the
-        // pill order follows that order and not insertion.
+        // (findForUser's stable id-DESC order — not the sidebar's unread-first
+        // re-ranking), proving the pill order follows that order and not insertion.
         self::assertSame(
             [$rocketSearch->getId(), $climateSearch->getId()],
             $this->savedSearchIdsByTitle($body, 'Climate rocket'),
