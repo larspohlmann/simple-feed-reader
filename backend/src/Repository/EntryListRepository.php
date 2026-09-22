@@ -22,8 +22,6 @@ use OpenTelemetry\API\Instrumentation\WithSpan;
  * surface (ingestion, dedup, search reindex/backup batch walks) stays
  * readable — EntryController and the search services depend on this one
  * instead.
- *
- * Shares row hydration and term matching with SavedSearchEntryRepository.
  */
 class EntryListRepository extends AbstractEntryProjectionRepository
 {
@@ -127,29 +125,6 @@ class EntryListRepository extends AbstractEntryProjectionRepository
     }
 
     /**
-     * Unread entries matching this search, newer than $since — the digest's
-     * "new since last send" window (#636); mirrors
-     * unreadMatchingEntryIdsForUser's `<=`. Newest-first so a caller can
-     * slice the most recent handful (the digest's per-section cap) without
-     * hydrating the whole set. `effectiveDate` rides in the SELECT because
-     * DISTINCT forbids ordering by an unprojected column.
-     *
-     * @return list<int>
-     */
-    public function unreadMatchIdsSince(EntrySearchQuery $query, \DateTimeImmutable $since): array
-    {
-        return $this->scalarIds(
-            $this->unreadMatchQueryBuilder($query)
-                ->select('e.id', 'e.effectiveDate')
-                ->distinct()
-                ->andWhere('e.effectiveDate > :since')
-                ->setParameter('since', $since)
-                ->orderBy('e.effectiveDate', 'DESC')
-                ->addOrderBy('e.id', 'DESC'),
-        );
-    }
-
-    /**
      * The given entry ids hydrated through the same list-row projection every
      * other list uses. Ordered like the entry list, never in the id order
      * asked for — a search engine's own ordering owes nothing to it.
@@ -159,10 +134,10 @@ class EntryListRepository extends AbstractEntryProjectionRepository
      * index whose filter was wrong or stale.
      *
      * $limit caps the hydration in SQL for a caller that unions several id sets
-     * but only shows the newest $limit of them (IndexedSavedSearchEntries): the
-     * rows already come back newest-first, so the tail past $limit need never be
-     * fetched or hydrated. Null hydrates every given id, as the single-search
-     * and digest callers need.
+     * but only shows the newest $limit of them (the digest and the
+     * recommender): the rows already come back newest-first, so the tail past
+     * $limit need never be fetched or hydrated. Null hydrates every given id,
+     * as the single-search and digest callers need.
      *
      * @param list<int> $entryIds
      *

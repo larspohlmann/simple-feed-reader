@@ -143,9 +143,6 @@ services:
                 - '@App\Service\Reader\Repair\HeadingClassRemover'
                 - '@App\Service\Reader\Repair\HorizontalRuleUnwrapper'
     App\Service\Search\EntrySearchInterface: '@App\Service\Search\EntrySearchWithFallback'
-    App\Service\Search\SavedSearchEntriesInterface: '@App\Service\Search\SavedSearchEntriesWithFallback'
-    App\Service\Search\SavedSearchUnreadMatchSource: '@App\Service\Search\SavedSearchUnreadMatchesWithFallback'
-    App\Service\Search\SavedSearchBadgeSource: '@App\Service\Search\SavedSearchBadgesWithFallback'
     # Both interfaces resolve to the one adapter that knows Meilisearch's wire
     # format (#432, see MeilisearchIndex).
     App\Service\Search\Index\SearchIndexReader: '@App\Service\Search\Index\MeilisearchIndex'

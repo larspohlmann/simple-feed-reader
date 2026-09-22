@@ -16,11 +16,9 @@ use App\Repository\EntryListRow;
 final readonly class SavedSearchEntriesResult
 {
     /**
-     * The read's own frontier before hydration drops ghost ids and the unread
-     * filter drops read rows, so EntryPage::withMatchCount can tell a full page
-     * from a short one. Defaults to count($rows) — correct for the database
-     * path, where the rows are the match set; the indexed path passes its union
-     * size explicitly, since its row count and match count can differ.
+     * The read's own frontier before hydration; equals count($rows) now that
+     * the list is the match set, kept so EntryPage::withMatchCount has one
+     * shape.
      */
     public int $matchCount;
 
