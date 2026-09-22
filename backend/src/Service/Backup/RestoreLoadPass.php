@@ -16,6 +16,7 @@ use App\Service\Backup\Dto\SavedSearchLine;
 use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Dto\TagLine;
 use App\Service\Backup\Exception\BackupLoadFailedException;
+use App\Service\Search\SavedSearchSlug;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -41,6 +42,9 @@ final class RestoreLoadPass
     /** @var list<FeedLine> held back until one lookup resolves them all (#455) */
     private array $heldFeedLines = [];
 
+    /** @var list<SavedSearch> held back until the flush that assigns their id (#1118) */
+    private array $loadedSavedSearches = [];
+
     /** @var array{tags: int, savedSearches: int, feeds: int, subscriptions: int} */
     private array $counts = ['tags' => 0, 'savedSearches' => 0, 'feeds' => 0, 'subscriptions' => 0];
 
@@ -49,6 +53,7 @@ final class RestoreLoadPass
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly FeedRepository $feeds,
+        private readonly SavedSearchSlug $slug,
     ) {
     }
 
@@ -63,6 +68,7 @@ final class RestoreLoadPass
         }
         $this->resolveHeldFeeds();
         $this->flush();
+        $this->regenerateSavedSearchSlugs();
 
         return RestoreResult::ofFoundation(
             tags: $this->counts['tags'],
@@ -108,7 +114,26 @@ final class RestoreLoadPass
         $savedSearch = new SavedSearch($this->user, $line->term, $line->wholeWord, $line->phrase);
         $savedSearch->setPosition($line->position);
         $this->em->persist($savedSearch);
+        $this->loadedSavedSearches[] = $savedSearch;
         ++$this->counts['savedSearches'];
+    }
+
+    /**
+     * The slug embeds the row's id, which does not exist until the flush
+     * above assigns it — so it cannot be built alongside the rest of
+     * loadSavedSearch(), and restoring the file's own (now-stale) id is not
+     * an option: RestoreLoadPass never restores an id at all.
+     */
+    private function regenerateSavedSearchSlugs(): void
+    {
+        if ([] === $this->loadedSavedSearches) {
+            return;
+        }
+
+        foreach ($this->loadedSavedSearches as $savedSearch) {
+            $savedSearch->setSlug($this->slug->build((int) $savedSearch->getId(), $savedSearch->getTerm()));
+        }
+        $this->flush();
     }
 
     private function holdFeed(FeedLine $line): void
