@@ -12,6 +12,7 @@ export interface Selection {
     | 'viewed'
     | 'for-you'
     | 'saved-searches'
+    | 'saved-search'
     | 'search';
   id: number | null;
   unread: boolean;
@@ -325,6 +326,12 @@ export function queryFromSelection(s: Selection): EntryQuery {
       // Its own endpoint, so the filter rides beside the view exactly as for
       // you's does rather than becoming a view of its own.
       return s.unread ? { view: 'saved-searches', unread: true } : { view: 'saved-searches' };
+    case 'saved-search':
+      // A single saved search reads the membership table by id, not a live
+      // query, so it carries the id and takes the unread refinement like any list.
+      return s.unread
+        ? { view: 'all', savedSearchId: s.id ?? undefined, unread: true }
+        : { view: 'all', savedSearchId: s.id ?? undefined };
     case 'search':
       // Only a saved-search result ever carries unread (selectionFromParams
       // forces a direct search to false), so the flag alone decides here.

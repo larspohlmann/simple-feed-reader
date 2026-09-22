@@ -12,6 +12,8 @@ export interface TagDto {
  *  read, so the count falls without another round-trip (#645). */
 export interface SavedSearchDto {
   id: number;
+  /** Stable URL slug ("<id>-<term slug>"); the reader routes to this search by it. */
+  slug: string;
   /** The bare search term — no trailing whole-word space, no wrapping phrase quotes. */
   term: string;
   /** True when the saved search matches whole words only. */
@@ -31,6 +33,7 @@ export interface SavedSearchDto {
  *  reconcile the whole set on the next load() (#645). */
 export interface SavedSearchWire {
   id: number;
+  slug: string;
   term: string;
   wholeWord: boolean;
   phrase: boolean;
@@ -316,6 +319,8 @@ export interface EntryQuery {
   unread?: boolean;
   /** Presence selects the search endpoint instead of the main list. */
   q?: string;
+  /** Set only for a single saved search: fetch its members from the membership table. */
+  savedSearchId?: number;
 }
 
 /** The scopes `POST /api/entries/mark-read` accepts, each identified by an

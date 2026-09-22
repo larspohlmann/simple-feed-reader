@@ -296,6 +296,19 @@ describe('queryFromSelection', () => {
       q: 'punk ',
     });
   });
+  it('routes a single saved-search selection to its id', () => {
+    expect(queryFromSelection({ kind: 'saved-search', id: 42, unread: false })).toEqual({
+      view: 'all',
+      savedSearchId: 42,
+    });
+  });
+  it('carries unread on a single saved-search selection', () => {
+    expect(queryFromSelection({ kind: 'saved-search', id: 42, unread: true })).toEqual({
+      view: 'all',
+      savedSearchId: 42,
+      unread: true,
+    });
+  });
 });
 
 describe('markReadTarget', () => {
