@@ -32,61 +32,86 @@ export function outcomeIsUnproven(problem: Problem): boolean {
   return problem.status === 0 || problem.status >= 500;
 }
 
-/** An oversized request body, refused by the web server before the app ran.
- *  nginx answers a raw 413 with an HTML page, so there is no problem+json to
- *  read and the generic fallback would call it "Something went wrong" -- which
- *  tells the user nothing about the one thing they can act on. Features that
- *  upload a file match on this to offer their own wording (#458). */
+/** An oversized request body, refused by the web server before the app ran;
+ *  features that upload a file match on this to offer their own wording (#458). */
 export const REQUEST_TOO_LARGE = 'request_too_large';
 
 /** Map any HttpErrorResponse to the backend's problem+json contract, with a
- *  safe fallback when the body is missing or not JSON (network errors, gateways). */
+ *  fallback that names what the response contained when the body is missing
+ *  or not problem+json (network errors, gateways, web-server pages). */
 export function parseProblem(err: HttpErrorResponse): Problem {
-  return parseProblemBody(err.error, err.status);
+  return problemFromBody(err.error, err.status) ?? fallbackProblem(err, responseText(err.error));
 }
 
 /** Read an error body that Angular delivered as a Blob before mapping it. */
 export async function parseProblemAsync(err: HttpErrorResponse): Promise<Problem> {
   if (!(err.error instanceof Blob)) return parseProblem(err);
 
+  const text = await err.error.text().catch(() => '');
+  return problemFromBody(parseJsonOrNull(text), err.status) ?? fallbackProblem(err, text);
+}
+
+function problemFromBody(body: unknown, status: number): Problem | null {
+  if (!body || body instanceof Blob || typeof body !== 'object' || !('type' in body)) return null;
+
+  const b = body as Record<string, unknown>;
+  return {
+    type: String(b['type'] ?? 'about:blank'),
+    title: String(b['title'] ?? 'Request failed'),
+    status: typeof b['status'] === 'number' ? (b['status'] as number) : status,
+    detail: typeof b['detail'] === 'string' ? (b['detail'] as string) : undefined,
+    errors: (b['errors'] as Record<string, string[]> | undefined) ?? undefined,
+    accountStatus:
+      typeof b['accountStatus'] === 'string' ? (b['accountStatus'] as string) : undefined,
+    invalidatedPasskeyCount:
+      typeof b['invalidatedPasskeyCount'] === 'number'
+        ? (b['invalidatedPasskeyCount'] as number)
+        : undefined,
+  };
+}
+
+function parseJsonOrNull(text: string): unknown {
   try {
-    return parseProblemBody(JSON.parse(await err.error.text()), err.status);
+    return JSON.parse(text);
   } catch {
-    return fallbackProblem(err.status);
+    return null;
   }
 }
 
-function parseProblemBody(body: unknown, status: number): Problem {
-  if (body && !(body instanceof Blob) && typeof body === 'object' && 'type' in body) {
-    const b = body as Record<string, unknown>;
-    return {
-      type: String(b['type'] ?? 'about:blank'),
-      title: String(b['title'] ?? 'Request failed'),
-      status: typeof b['status'] === 'number' ? (b['status'] as number) : status,
-      detail: typeof b['detail'] === 'string' ? (b['detail'] as string) : undefined,
-      errors: (b['errors'] as Record<string, string[]> | undefined) ?? undefined,
-      accountStatus:
-        typeof b['accountStatus'] === 'string' ? (b['accountStatus'] as string) : undefined,
-      invalidatedPasskeyCount:
-        typeof b['invalidatedPasskeyCount'] === 'number'
-          ? (b['invalidatedPasskeyCount'] as number)
-          : undefined,
-    };
+/** A 2xx body that failed JSON.parse arrives as Angular's `{ error, text }`;
+ *  a non-2xx body it could not parse stays a plain string. */
+function responseText(body: unknown): string {
+  if (typeof body === 'string') return body;
+  if (body && typeof body === 'object' && 'text' in body && typeof body.text === 'string') {
+    return body.text;
   }
-  return fallbackProblem(status);
+  return '';
 }
 
-function fallbackProblem(status: number): Problem {
-  if (status === 413) {
+function fallbackProblem(err: HttpErrorResponse, text: string): Problem {
+  if (err.status === 413) {
     return {
       type: REQUEST_TOO_LARGE,
       title: 'The file is too large for this server to accept',
-      status,
+      status: err.status,
     };
   }
-  return {
-    type: 'about:blank',
-    title: status === 0 ? 'Could not reach the server' : 'Something went wrong',
-    status,
-  };
+  if (err.status === 0) {
+    return { type: 'about:blank', title: 'Could not reach the server', status: err.status };
+  }
+  return { type: 'about:blank', title: unexpectedReplyTitle(err, text), status: err.status };
+}
+
+function unexpectedReplyTitle(err: HttpErrorResponse, text: string): string {
+  const pageTitle = htmlPageTitle(text);
+  if (pageTitle === null) {
+    return `The server answered with an unexpected reply (HTTP ${err.status}).`;
+  }
+
+  return `The web server answered "${pageTitle}" instead of the app. Try again in a minute.`;
+}
+
+function htmlPageTitle(text: string): string | null {
+  const title = /<title[^>]*>([^<]*)<\/title>/i.exec(text)?.[1]?.replace(/\s+/g, ' ').trim();
+  return title ? title : null;
 }

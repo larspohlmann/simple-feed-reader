@@ -93,8 +93,80 @@ describe('parseProblem', () => {
 
     await expect(parseProblemAsync(err)).resolves.toEqual({
       type: 'about:blank',
-      title: 'Something went wrong',
+      title: 'The server answered with an unexpected reply (HTTP 500).',
       status: 500,
     });
+  });
+
+  // Strato's bot protection answers with its Apache 503 page under HTTP 200, so
+  // Angular fails JSON.parse and hands the body over as { error, text } (#1112).
+  it('names the web server page title when a 2xx body is an HTML page', () => {
+    const err = new HttpErrorResponse({
+      status: 200,
+      error: {
+        error: new SyntaxError('Unexpected token <'),
+        text: '<html><head>\n<title>503 Service Unavailable</title>\n</head><body></body></html>',
+      },
+    });
+
+    expect(parseProblem(err)).toEqual({
+      type: 'about:blank',
+      title:
+        'The web server answered "503 Service Unavailable" instead of the app. Try again in a minute.',
+      status: 200,
+    });
+  });
+
+  it('names the web server page title when a non-2xx body is an HTML page', () => {
+    const err = new HttpErrorResponse({
+      status: 502,
+      error: '<html><head><title>  502   Bad\nGateway </title></head></html>',
+    });
+
+    expect(parseProblem(err).title).toBe(
+      'The web server answered "502 Bad Gateway" instead of the app. Try again in a minute.',
+    );
+  });
+
+  it('names the web server page title when a Blob body is an HTML page', async () => {
+    const body = new Blob([], { type: 'text/html' });
+    body.text = jest
+      .fn()
+      .mockResolvedValue('<html><head><title>504 Gateway Time-out</title></head></html>');
+    const err = new HttpErrorResponse({ status: 504, error: body });
+
+    await expect(parseProblemAsync(err)).resolves.toEqual({
+      type: 'about:blank',
+      title:
+        'The web server answered "504 Gateway Time-out" instead of the app. Try again in a minute.',
+      status: 504,
+    });
+  });
+
+  it('carries the HTTP status when a non-HTML body is not a problem document', () => {
+    const err = new HttpErrorResponse({ status: 502, error: 'upstream connect error' });
+
+    expect(parseProblem(err)).toEqual({
+      type: 'about:blank',
+      title: 'The server answered with an unexpected reply (HTTP 502).',
+      status: 502,
+    });
+  });
+
+  it('carries the HTTP status when an HTML body has no title', () => {
+    const err = new HttpErrorResponse({
+      status: 200,
+      error: { text: '<html><body>x</body></html>' },
+    });
+
+    expect(parseProblem(err).title).toBe(
+      'The server answered with an unexpected reply (HTTP 200).',
+    );
+  });
+
+  it('keeps "Could not reach the server" for a dropped connection', () => {
+    const err = new HttpErrorResponse({ status: 0, error: '<html><title>x</title></html>' });
+
+    expect(parseProblem(err).title).toBe('Could not reach the server');
   });
 });
