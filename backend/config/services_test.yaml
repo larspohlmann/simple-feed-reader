@@ -616,3 +616,14 @@ services:
     test.cache.refresh_run:
         alias: refresh.run.cache
         public: true
+
+    # SavedSearchMembershipLoaderTest drives loadInto() directly against the
+    # real repository/entity-manager graph. Its only production caller (the
+    # entry-list response) arrives in a later #1118 task, so until then the
+    # compiler would remove it as unused and the test container could not
+    # fetch it. Same `autowire` caveat as the entries above: naming a class
+    # here replaces the definition rather than amending it, and this file has
+    # no `_defaults`.
+    App\Repository\SavedSearchMembershipLoader:
+        autowire: true
+        public: true
