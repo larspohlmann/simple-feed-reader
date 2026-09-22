@@ -331,4 +331,59 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         $body = $this->payload($client);
         self::assertSame([], $body['entries']);
     }
+
+    public function testMarkOneReadFlipsOnlyThatSearchesMembersUpToTheWatermark(): void
+    {
+        $client = self::createClient();
+        $user = $this->factory()->create('mark-one-watermark@example.com');
+        $headers = $this->authHeaderFor($user);
+        $feed = $this->seedSubscribedFeed($user);
+        $old = $this->seedEntry($feed, 'Climate old', new \DateTimeImmutable('2026-07-05T00:00:00Z'));
+        $new = $this->seedEntry($feed, 'Climate new', new \DateTimeImmutable('2026-07-15T00:00:00Z'));
+        $other = $this->seedEntry($feed, 'Rocket now', new \DateTimeImmutable('2026-07-06T00:00:00Z'));
+        $climate = new SavedSearch($user, 'climate', false);
+        $rocket = new SavedSearch($user, 'rocket', false);
+        $this->em()->persist($climate);
+        $this->em()->persist($rocket);
+        $this->em()->flush();
+        $this->member($climate, $old);
+        $this->member($climate, $new);
+        $this->member($rocket, $other);
+
+        $client->request(
+            'POST',
+            '/api/entries/saved-searches/' . $climate->getId() . '/mark-read',
+            server: $headers,
+            content: json_encode(['until' => '2026-07-10T00:00:00+00:00'], \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseStatusCodeSame(204);
+
+        $client->request('GET', '/api/entries/saved-searches?unread=1', server: $headers);
+        $body = $this->payload($client);
+        self::assertIsArray($body['entries']);
+        $titles = array_column($body['entries'], 'title');
+        sort($titles);
+        self::assertSame(['Climate new', 'Rocket now'], $titles);
+    }
+
+    public function testMarkOneReadIsNotFoundForAnotherUsersSearch(): void
+    {
+        $client = self::createClient();
+        $user = $this->factory()->create('mark-one-idor-victim@example.com');
+        $stranger = $this->factory()->create('mark-one-idor-stranger@example.com');
+        $headers = $this->authHeaderFor($user);
+        $strangerSearch = new SavedSearch($stranger, 'climate', false);
+        $this->em()->persist($strangerSearch);
+        $this->em()->flush();
+
+        $client->request(
+            'POST',
+            '/api/entries/saved-searches/' . $strangerSearch->getId() . '/mark-read',
+            server: $headers,
+            content: json_encode(['until' => '2026-07-10T00:00:00+00:00'], \JSON_THROW_ON_ERROR),
+        );
+
+        self::assertResponseStatusCodeSame(404);
+    }
 }

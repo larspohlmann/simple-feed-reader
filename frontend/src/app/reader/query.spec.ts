@@ -157,7 +157,7 @@ describe('listSelectionFrom (#579)', () => {
 describe('selectionQueryParams', () => {
   it('pins the selection vocabulary — this must not shrink silently', () => {
     expect(Object.keys(selectionQueryParams({})).sort()).toEqual(
-      ['entry', 'q', 'searchOrigin', 'subscription', 'tag', 'view'].sort(),
+      ['entry', 'q', 'subscription', 'tag', 'view'].sort(),
     );
   });
   it('nulls every selection parameter the caller did not set', () => {
@@ -167,7 +167,6 @@ describe('selectionQueryParams', () => {
       subscription: null,
       entry: null,
       q: null,
-      searchOrigin: null,
     });
   });
   it('keeps only the params the caller set, nulling the rest', () => {
@@ -177,7 +176,6 @@ describe('selectionQueryParams', () => {
       subscription: null,
       entry: null,
       q: null,
-      searchOrigin: null,
     });
     expect(selectionQueryParams({ subscription: 7 })).toEqual({
       view: null,
@@ -185,7 +183,6 @@ describe('selectionQueryParams', () => {
       subscription: 7,
       entry: null,
       q: null,
-      searchOrigin: null,
     });
     expect(selectionQueryParams({ view: 'favorites' })).toEqual({
       view: 'favorites',
@@ -193,7 +190,6 @@ describe('selectionQueryParams', () => {
       subscription: null,
       entry: null,
       q: null,
-      searchOrigin: null,
     });
   });
   it('clears q along with everything else when nothing is set', () => {
@@ -203,7 +199,6 @@ describe('selectionQueryParams', () => {
       subscription: null,
       entry: null,
       q: null,
-      searchOrigin: null,
     });
   });
   // The results are cached so that a [queryParams] binding — one per sidebar
@@ -239,7 +234,6 @@ describe('selectionQueryParams', () => {
         subscription: null,
         entry: null,
         q: null,
-        searchOrigin: null,
       });
     });
   });
@@ -251,7 +245,6 @@ describe('selectionQueryParams', () => {
       subscription: null,
       entry: null,
       q: 'angular',
-      searchOrigin: null,
     });
   });
 });
@@ -343,6 +336,13 @@ describe('markReadTarget', () => {
     });
     expect(markReadTarget({ kind: 'search', id: null, unread: false, term: '' })).toBeNull();
   });
+  it('marks a single saved search read by its id', () => {
+    expect(markReadTarget({ kind: 'saved-search', id: 42, unread: false })).toEqual({
+      scope: 'saved-search',
+      id: 42,
+    });
+    expect(markReadTarget({ kind: 'saved-search', id: null, unread: false })).toBeNull();
+  });
 });
 
 describe('hasUnreadFilter', () => {
@@ -351,6 +351,7 @@ describe('hasUnreadFilter', () => {
     expect(hasUnreadFilter({ kind: 'tag', id: 3, unread: true })).toBe(true);
     expect(hasUnreadFilter({ kind: 'subscription', id: 7, unread: true })).toBe(true);
     expect(hasUnreadFilter({ kind: 'for-you', id: null, unread: true })).toBe(true);
+    expect(hasUnreadFilter({ kind: 'saved-search', id: 42, unread: false })).toBe(true);
   });
   it('leaves the saved views and a search alone — each is already a filter', () => {
     expect(hasUnreadFilter({ kind: 'favorites', id: null, unread: false })).toBe(false);

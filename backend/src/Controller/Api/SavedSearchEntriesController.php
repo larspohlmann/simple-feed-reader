@@ -101,4 +101,23 @@ final readonly class SavedSearchEntriesController
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
+
+    #[Route(
+        '/{id}/mark-read',
+        name: 'api_entries_saved_search_one_mark_read',
+        methods: ['POST'],
+        requirements: ['id' => '\d+'],
+    )]
+    public function markOneRead(
+        int $id,
+        #[CurrentUser] User $user,
+        #[MapRequestPayload] MarkSavedSearchesReadRequest $request,
+    ): JsonResponse {
+        $userId = (int) $user->getId();
+        $this->savedSearches->findOneOwnedBy($id, $userId)
+            ?? throw new NotFoundHttpException('No such saved search.');
+        $this->markRead->markOne($user, $id, $request->until);
+
+        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+    }
 }

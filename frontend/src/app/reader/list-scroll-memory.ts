@@ -6,8 +6,7 @@ import { Selection } from './query';
  * unread-vs-all so every list remembers its own place independently.
  */
 export function scrollKey(s: Selection): string {
-  const kind = s.searchOrigin === 'saved' ? 'saved-search' : s.kind;
-  return `feed-reader:list-scroll:${kind}:${s.id ?? ''}:${s.unread ? 'u' : 'a'}:${s.term ?? ''}`;
+  return `feed-reader:list-scroll:${s.kind}:${s.id ?? ''}:${s.unread ? 'u' : 'a'}:${s.term ?? ''}`;
 }
 
 /** Storage key for an open article's own scroll offset, keyed by entry id. */

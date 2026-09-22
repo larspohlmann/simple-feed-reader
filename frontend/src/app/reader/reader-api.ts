@@ -151,6 +151,12 @@ export class ReaderApi {
     return this.http.post<void>(`${this.base}/api/entries/saved-searches/mark-read`, { until });
   }
 
+  markSingleSavedSearchRead(id: number, until: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/api/entries/saved-searches/${id}/mark-read`, {
+      until,
+    });
+  }
+
   /** Mark an explicit set of entries read. Context-agnostic: the id list is
    *  self-describing, so it serves every list including the ranked ones. */
   markEntriesRead(ids: number[]): Observable<void> {

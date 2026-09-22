@@ -39,7 +39,7 @@ export function savedSearchesJson(...savedSearches: SavedSearchWire[]) {
 /** One saved search, contract-true, with the fields a spec cares about
  *  overridable. `unreadEntryIds` drives the sidebar badge. */
 export function savedSearchWire(overrides: Partial<SavedSearchWire> = {}): SavedSearchWire {
-  return {
+  const merged = {
     id: 1,
     term: 'number',
     wholeWord: false,
@@ -49,4 +49,5 @@ export function savedSearchWire(overrides: Partial<SavedSearchWire> = {}): Saved
     includeInDigest: false,
     ...overrides,
   };
+  return { ...merged, slug: overrides.slug ?? `${merged.id}-${merged.term}` };
 }

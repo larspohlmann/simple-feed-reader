@@ -67,8 +67,8 @@ async function stubReader(page: Page): Promise<void> {
     }
     if (path.endsWith('/tags')) return json({ tags: [] });
     if (path.endsWith('/api/saved-searches')) return json(savedSearchesJson(SAVED_SEARCH));
-    if (path.endsWith('/entries/saved-searches')) {
-      return json({ entries: [ENTRY], nextCursor: null, savedSearchIds: { '1': 501 } });
+    if (path.includes('/entries/saved-searches')) {
+      return json({ entries: [ENTRY], nextCursor: null });
     }
     if (path.endsWith('/entries/search') || path.endsWith('/entries')) {
       return json({ entries: [ENTRY], nextCursor: null });
@@ -110,7 +110,7 @@ test.describe('saved-search reading layout', () => {
 
     await page.locator('.savedsearch-head .chevzone').click();
     await page.locator('a.savedsearch-item').click();
-    await expect(page).toHaveURL(/searchOrigin=saved/);
+    await expect(page).toHaveURL(/searches\/saved\/501-climate/);
     await expect(page.locator('app-sidebar input')).toHaveValue('');
     await expect(page.locator('.rows.magazine article')).toHaveCount(1);
     await expect(page.locator('.main.split')).toHaveCount(0);
@@ -152,7 +152,7 @@ test.describe('saved-search reading layout on a phone', () => {
     page,
   }) => {
     await stubReader(page);
-    await page.goto('/reader?q=climate&searchOrigin=saved');
+    await page.goto('/searches/saved/501-climate');
     await expect(page.locator('.rows.magazine article')).toHaveCount(1);
     await expect(page.locator('.main.split')).toHaveCount(0);
 

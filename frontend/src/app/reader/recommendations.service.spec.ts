@@ -134,7 +134,6 @@ describe('RecommendationsService', () => {
         subscription: null,
         entry: null,
         q: null,
-        searchOrigin: null,
       },
     });
   });

@@ -1,5 +1,7 @@
 import { expect, Page, test } from '@playwright/test';
 import { stubAuthToken } from './support/auth';
+import { savedSearchesJson, savedSearchWire } from './support/reader';
+import { SavedSearchWire } from '../src/app/reader/models';
 
 const PHONE = { width: 375, height: 667 };
 
@@ -30,6 +32,14 @@ const SUBSCRIPTIONS = {
 };
 
 async function openReader(page: Page, query: string): Promise<void> {
+  await openReaderAt(page, `/?${query}`);
+}
+
+async function openReaderAt(
+  page: Page,
+  url: string,
+  savedSearches: SavedSearchWire[] = [],
+): Promise<void> {
   await stubAuthToken(page);
   const json = (body: unknown) => (route: { fulfill: (response: { json: unknown }) => unknown }) =>
     route.fulfill({ json: body });
@@ -40,9 +50,9 @@ async function openReader(page: Page, query: string): Promise<void> {
   await page.route('**/api/me**', json({ id: 1, email: '', roles: [], preferences: {} }));
   await page.route('**/api/version**', json({ version: 'dev' }));
   await page.route('**/api/recommendations/**', json({ run: null }));
-  await page.route('**/api/saved-searches**', json({ savedSearches: [] }));
+  await page.route('**/api/saved-searches**', json(savedSearchesJson(...savedSearches)));
 
-  await page.goto(`/?${query}`);
+  await page.goto(url);
   await expect(page.locator('.list-header')).toBeVisible();
 }
 
@@ -101,7 +111,9 @@ test.describe('list-header actions on a phone', () => {
   test('an individual saved-search result uses icon-only actions and offers the unread switch', async ({
     page,
   }) => {
-    await openReader(page, 'q=design&searchOrigin=saved');
+    await openReaderAt(page, '/searches/saved/1-design', [
+      savedSearchWire({ id: 1, term: 'design', slug: '1-design' }),
+    ]);
 
     const actions = page.locator('.list-header :is(.save-search, .unread-switch, .mark-all)');
     await expect(actions).toHaveCount(3);
