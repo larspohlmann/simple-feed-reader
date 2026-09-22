@@ -115,12 +115,7 @@ export interface RefreshScope {
 /** Whether two selections name the same list. Selections are rebuilt from the
  *  route on every navigation, so they are never reference-equal. */
 export function sameSelection(a: Selection, b: Selection): boolean {
-  return (
-    a.kind === b.kind &&
-    a.id === b.id &&
-    a.unread === b.unread &&
-    a.term === b.term
-  );
+  return a.kind === b.kind && a.id === b.id && a.unread === b.unread && a.term === b.term;
 }
 
 export function isDirectSearch(selection: Selection): boolean {

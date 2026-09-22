@@ -938,7 +938,9 @@ describe('ReaderShellComponent', () => {
 
     function selectSavedAngular(f: ReturnType<typeof boot>) {
       f.componentInstance.savedSearchesStore.load();
-      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [savedAngular] });
+      ctrl
+        .expectOne('https://api.test/api/saved-searches')
+        .flush({ savedSearches: [savedAngular] });
       pp.next(convertToParamMap({ savedSearch: '9-angular' }));
       f.detectChanges();
     }

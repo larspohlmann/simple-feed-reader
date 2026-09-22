@@ -152,7 +152,9 @@ export class ReaderApi {
   }
 
   markSingleSavedSearchRead(id: number, until: string): Observable<void> {
-    return this.http.post<void>(`${this.base}/api/entries/saved-searches/${id}/mark-read`, { until });
+    return this.http.post<void>(`${this.base}/api/entries/saved-searches/${id}/mark-read`, {
+      until,
+    });
   }
 
   /** Mark an explicit set of entries read. Context-agnostic: the id list is
