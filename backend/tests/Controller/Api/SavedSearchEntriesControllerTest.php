@@ -174,7 +174,7 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         self::assertSame(['World'], $first['categories']);
     }
 
-    public function testTheListSaysWhichSavedSearchMatchedEachEntry(): void
+    public function testTheListShowsEverySavedSearchEachEntryBelongsTo(): void
     {
         $client = self::createClient();
         $user = $this->factory()->create('matched-search@example.com');
@@ -199,26 +199,36 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
         $body = $this->payload($client);
         self::assertIsArray($body['entries']);
-        self::assertIsArray($body['savedSearchIds']);
-        $savedSearchIds = $body['savedSearchIds'];
-        self::assertSame($climateSearch->getId(), $savedSearchIds[$this->entryIdByTitle($body, 'Climate report')]);
-        self::assertSame($rocketSearch->getId(), $savedSearchIds[$this->entryIdByTitle($body, 'Rocket launch')]);
-        // Matches both searches: the pill must name rocketSearch, the search
-        // saved LAST (findForUser orders id DESC — the sidebar's own order),
-        // proving the CASE branch order follows that order and not insertion.
-        self::assertSame($rocketSearch->getId(), $savedSearchIds[$this->entryIdByTitle($body, 'Climate rocket')]);
+        self::assertSame([$climateSearch->getId()], $this->savedSearchIdsByTitle($body, 'Climate report'));
+        self::assertSame([$rocketSearch->getId()], $this->savedSearchIdsByTitle($body, 'Rocket launch'));
+        // Matches both searches: they must both be listed, newest-saved first
+        // (findForUser orders id DESC — the sidebar's own order), proving the
+        // pill order follows that order and not insertion.
+        self::assertSame(
+            [$rocketSearch->getId(), $climateSearch->getId()],
+            $this->savedSearchIdsByTitle($body, 'Climate rocket'),
+        );
     }
 
-    /** @param array<string, mixed> $body */
-    private function entryIdByTitle(array $body, string $title): int
+    /**
+     * @param array<string, mixed> $body
+     *
+     * @return list<int>
+     */
+    private function savedSearchIdsByTitle(array $body, string $title): array
     {
         self::assertIsArray($body['entries']);
         foreach ($body['entries'] as $entry) {
             self::assertIsArray($entry);
             if ($entry['title'] === $title) {
-                self::assertIsInt($entry['id']);
+                self::assertIsArray($entry['savedSearches']);
 
-                return $entry['id'];
+                return array_values(array_map(static function (mixed $savedSearch): int {
+                    self::assertIsArray($savedSearch);
+                    self::assertIsInt($savedSearch['id']);
+
+                    return $savedSearch['id'];
+                }, $entry['savedSearches']));
             }
         }
 
@@ -272,9 +282,6 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
         $body = $this->payload($client);
         self::assertSame([], $body['entries']);
-        // Must serialize as a JSON object even when empty: a bare `[]` is not
-        // the {entryId: searchId} map a client decodes.
-        self::assertStringContainsString('"savedSearchIds":{}', (string) $client->getResponse()->getContent());
     }
 
     public function testMarkReadFlipsMatchesUpToTheWatermarkOnly(): void

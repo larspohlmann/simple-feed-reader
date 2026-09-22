@@ -129,45 +129,6 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
     }
 
     /**
-     * Entry id => the first of the given searches (in the order given — the
-     * sidebar's) that it is a member of. Entries in none are absent.
-     *
-     * @param list<int> $entryIds
-     * @param list<int> $savedSearchIdsInSidebarOrder
-     *
-     * @return array<int, int>
-     */
-    public function firstMatchingSavedSearchIds(array $entryIds, array $savedSearchIdsInSidebarOrder): array
-    {
-        if ($entryIds === [] || $savedSearchIdsInSidebarOrder === []) {
-            return [];
-        }
-
-        /** @var list<array{entryId: int, searchId: int}> $rows */
-        $rows = $this->getEntityManager()->createQueryBuilder()
-            ->select('IDENTITY(sse.entry) AS entryId', 'IDENTITY(sse.savedSearch) AS searchId')
-            ->from(SavedSearchEntry::class, 'sse')
-            ->andWhere('sse.entry IN (:entryIds)')
-            ->andWhere('sse.savedSearch IN (:searchIds)')
-            ->setParameter('entryIds', $entryIds)
-            ->setParameter('searchIds', $savedSearchIdsInSidebarOrder)
-            ->getQuery()
-            ->getScalarResult();
-
-        $rank = array_flip($savedSearchIdsInSidebarOrder);
-        $first = [];
-        foreach ($rows as $row) {
-            $entryId = (int) $row['entryId'];
-            $searchId = (int) $row['searchId'];
-            if (!isset($first[$entryId]) || $rank[$searchId] < $rank[$first[$entryId]]) {
-                $first[$entryId] = $searchId;
-            }
-        }
-
-        return $first;
-    }
-
-    /**
      * Entry id => every owned saved search it is a member of, in sidebar order
      * (search id DESC), each as {id, slug, term} — the pills a card shows. One
      * query for a page; entries in no search are absent.

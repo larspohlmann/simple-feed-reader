@@ -16,7 +16,7 @@ use App\Tests\DbTestCase;
 
 final class SavedSearchEntriesTest extends DbTestCase
 {
-    public function testAnswersTheRowsAndTheFirstMatchingSearchPerRow(): void
+    public function testAnswersEveryRowAnyOfTheGivenSearchesMatches(): void
     {
         $user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $feed = new Feed('https://example.com/feed.xml');
@@ -51,6 +51,5 @@ final class SavedSearchEntriesTest extends DbTestCase
 
         self::assertCount(1, $result->rows);
         self::assertSame($entry->getId(), $result->rows[0]->entry->getId());
-        self::assertSame([(int) $entry->getId() => (int) $rocket->getId()], $result->savedSearchIds);
     }
 }

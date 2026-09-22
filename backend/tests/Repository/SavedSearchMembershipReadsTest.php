@@ -221,28 +221,6 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         self::assertSame([$newest->getId(), $inWindow->getId()], $ids);
     }
 
-    public function testThePerCardBadgeIsTheFirstMatchingSearchInSidebarOrder(): void
-    {
-        $climate = $this->search('climate');
-        $rocket = $this->search('rocket');
-        $both = $this->entry('a', '2026-07-10T00:00:00Z');
-        $rocketOnly = $this->entry('b', '2026-07-09T00:00:00Z');
-        $none = $this->entry('c', '2026-07-08T00:00:00Z');
-        $this->member($climate, $both);
-        $this->member($rocket, $both);
-        $this->member($rocket, $rocketOnly);
-
-        $badges = $this->repo()->firstMatchingSavedSearchIds(
-            [(int) $both->getId(), (int) $rocketOnly->getId(), (int) $none->getId()],
-            [(int) $rocket->getId(), (int) $climate->getId()],
-        );
-
-        self::assertSame([
-            (int) $both->getId() => (int) $rocket->getId(),
-            (int) $rocketOnly->getId() => (int) $rocket->getId(),
-        ], $badges);
-    }
-
     /** @param list<SavedSearch> $searches */
     private function query(
         array $searches,
