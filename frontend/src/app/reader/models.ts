@@ -211,9 +211,6 @@ export interface EntryDto {
   /** When that run generated (ISO, RFC 3339); set only on for-you results. Drives
    *  the run-boundary divider's "Generated ..." label (#348). */
   runGeneratedAt?: string;
-  /** The saved search this entry came from, for the kicker's pill. Set by the
-   *  store from the combined list's own provenance map, and by nothing else. */
-  savedSearchTerm?: string;
   /** Owned saved searches this entry is a member of, in sidebar order. Always
    *  sent by the API; empty when the entry matches none. Drives the pills. */
   savedSearches?: SavedSearchMembershipDto[];
@@ -236,9 +233,6 @@ export interface EntriesPage {
    *  unreachable). The typo-tolerant engine can match rows the literal term never
    *  appears in, so highlighting must prefer this over splitting the typed term. */
   matchedWords?: string[];
-  /** Entry id => the saved search that matched it. Only the combined
-   *  saved-search list reports it; keys arrive as strings on the wire. */
-  savedSearchIds?: Record<string, number>;
 }
 
 export interface EntryStateDto {
