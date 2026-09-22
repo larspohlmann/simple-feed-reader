@@ -16,7 +16,7 @@ use Doctrine\Persistence\ManagerRegistry;
  *
  * @extends ServiceEntityRepository<SavedSearchEntry>
  */
-final class SavedSearchEntryMembershipRepository extends ServiceEntityRepository
+class SavedSearchEntryMembershipRepository extends ServiceEntityRepository
 {
     /** Rows per INSERT: 3 placeholders each, kept under SQLite's historical 999. */
     private const int INSERT_ROWS = 300;
