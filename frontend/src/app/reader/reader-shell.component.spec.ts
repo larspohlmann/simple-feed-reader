@@ -3054,6 +3054,7 @@ describe('ReaderShellComponent', () => {
       const f = bootWithSavedSearches([
         {
           id: 1,
+          slug: '1-a',
           term: 'a',
           wholeWord: false,
           phrase: false,
@@ -3063,6 +3064,7 @@ describe('ReaderShellComponent', () => {
         },
         {
           id: 2,
+          slug: '2-b',
           term: 'b',
           wholeWord: false,
           phrase: false,

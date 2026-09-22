@@ -617,6 +617,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: false,
             phrase: false,
@@ -626,6 +627,7 @@ describe('SidebarComponent', () => {
           },
           {
             id: 2,
+            slug: '2-space',
             term: 'space',
             wholeWord: false,
             phrase: false,
@@ -648,6 +650,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: false,
             phrase: false,
@@ -657,6 +660,7 @@ describe('SidebarComponent', () => {
           },
           {
             id: 2,
+            slug: '2-space',
             term: 'space',
             wholeWord: false,
             phrase: false,
@@ -688,6 +692,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: false,
             phrase: false,
@@ -711,6 +716,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: false,
             phrase: false,
@@ -739,6 +745,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: false,
             phrase: false,
@@ -758,6 +765,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: false,
             phrase: false,
@@ -787,6 +795,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: false,
             phrase: false,
@@ -809,6 +818,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: false,
             phrase: false,
@@ -835,6 +845,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: true,
             phrase: false,
@@ -844,6 +855,7 @@ describe('SidebarComponent', () => {
           },
           {
             id: 2,
+            slug: '2-space',
             term: 'space',
             wholeWord: false,
             phrase: false,
@@ -871,6 +883,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate-change',
             term: 'climate change',
             wholeWord: false,
             phrase: true,
@@ -900,6 +913,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: true,
             phrase: false,
@@ -909,6 +923,7 @@ describe('SidebarComponent', () => {
           },
           {
             id: 2,
+            slug: '2-space',
             term: 'space',
             wholeWord: false,
             phrase: false,
@@ -933,6 +948,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: true,
             phrase: false,
@@ -957,6 +973,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: true,
             phrase: false,
@@ -1146,6 +1163,7 @@ describe('SidebarComponent', () => {
   describe('per-search digest toggle', () => {
     const climate: SavedSearchDto = {
       id: 1,
+      slug: '1-climate',
       term: 'climate',
       wholeWord: false,
       phrase: false,
@@ -1155,6 +1173,7 @@ describe('SidebarComponent', () => {
     };
     const space: SavedSearchDto = {
       id: 2,
+      slug: '2-space',
       term: 'space',
       wholeWord: false,
       phrase: false,
