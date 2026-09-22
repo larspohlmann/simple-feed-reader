@@ -1,5 +1,6 @@
 import { ParamMap, UrlMatchResult, UrlSegment } from '@angular/router';
 import { Selection, selectionFromParams } from './query';
+import { entryIdFromParam } from './slug';
 
 /**
  * Owns the root URL and the saved-search paths through one route config, so the
@@ -15,12 +16,6 @@ export function readerMatcher(segments: UrlSegment[]): UrlMatchResult | null {
   return null;
 }
 
-/** The leading integer of a slug ("42-climate" -> 42); null if absent. */
-function idFromSlug(slug: string): number | null {
-  const id = Number.parseInt(slug, 10);
-  return Number.isNaN(id) ? null : id;
-}
-
 export function selectionFromRoute(
   pathParams: ParamMap,
   queryParams: ParamMap,
@@ -33,8 +28,8 @@ export function selectionFromRoute(
   const unread = queryParams.get('unread') === '1';
   // The entry overlay composes on top of a saved-search path, so a merged
   // `?entry=` must still open the article rather than being dropped here.
-  const { entryId } = selectionFromParams(queryParams);
-  const id = idFromSlug(savedSearch);
+  const entryId = entryIdFromParam(queryParams.get('entry'));
+  const id = entryIdFromParam(savedSearch);
   // A slug with no leading id (hand-edited URL) has no single search to open,
   // so fall back to the combined view rather than fetching the plain list.
   if (savedSearch === 'all' || id === null) {

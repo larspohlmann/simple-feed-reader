@@ -618,6 +618,13 @@ describe('selectionFromRoute', () => {
     expect(selection).toEqual({ kind: 'saved-searches', id: null, unread: true });
   });
 
+  it('falls back to the combined view for a slug whose leading digits are not anchored (#1118)', () => {
+    // "42x" is not a valid leading id: entryIdFromParam's anchored regex
+    // requires the digits to end the slug or be followed by a hyphen.
+    const { selection } = selectionFromRoute(convertToParamMap({ savedSearch: '42x' }), noQuery);
+    expect(selection).toEqual({ kind: 'saved-searches', id: null, unread: false });
+  });
+
   it('carries unread=1 from the query params onto a path selection', () => {
     const { selection } = selectionFromRoute(
       convertToParamMap({ savedSearch: '42-climate' }),
