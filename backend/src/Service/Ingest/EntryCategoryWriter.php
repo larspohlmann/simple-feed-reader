@@ -68,10 +68,6 @@ final class EntryCategoryWriter
     }
 
     /**
-     * A concurrent refresh of another feed can insert the same identity between
-     * the batch lookup and this flush; the unique index rejects the duplicate
-     * and the feed's refresh retries next cycle.
-     *
      * @param array<string, NormalizedCategory> $distinct
      *
      * @return array<string, Category>
