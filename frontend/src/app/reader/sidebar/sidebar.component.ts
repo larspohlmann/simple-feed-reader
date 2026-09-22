@@ -198,8 +198,6 @@ export class SidebarComponent {
   readonly expanded = signal<Set<number>>(new Set());
   readonly menuFor = signal<string | null>(null);
 
-  protected readonly savedSearchLinks = computed(() => this.savedSearches());
-
   /** Whether the "Saved searches" group is expanded. In-memory only, default
    *  collapsed — mirrors the tags' expand behaviour (state resets on reload). */
   readonly savedSearchesExpanded = signal(false);
@@ -227,7 +225,7 @@ export class SidebarComponent {
 
   /** The saved searches in frozen order, each with live params and count. */
   protected readonly orderedSavedSearches = computed(() => {
-    const byId = new Map(this.savedSearchLinks().map((row) => [row.id, row]));
+    const byId = new Map(this.savedSearches().map((row) => [row.id, row]));
     return this.frozenSavedSearchOrder()
       .map((id) => byId.get(id))
       .filter((row): row is NonNullable<typeof row> => row !== undefined);
