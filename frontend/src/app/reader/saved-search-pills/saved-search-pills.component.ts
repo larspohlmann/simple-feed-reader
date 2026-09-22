@@ -4,10 +4,8 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { SavedSearchMembershipDto } from '../models';
 
 /**
- * The pills a card shows for the saved searches an entry belongs to — a
- * neutral, search-glyphed sibling of the feed tag pills, each linking to that
- * saved search. Clicks stop propagating so a pill inside a clickable card opens
- * the search, not the entry. Renders nothing when the entry matches none.
+ * Pills linking to the saved searches an entry belongs to. Clicks stop
+ * propagating so a pill inside a clickable card opens the search, not the entry.
  */
 @Component({
   selector: 'app-saved-search-pills',

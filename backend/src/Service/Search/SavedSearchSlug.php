@@ -8,8 +8,7 @@ use Symfony\Component\String\Slugger\SluggerInterface;
 
 /**
  * A saved search's stable URL slug: its id, then a readable slug of its term.
- * The id prefix makes the slug unique; the term half is cosmetic, so an
- * operator-only term that slugifies to nothing leaves just the id.
+ * A term that slugifies to nothing (operator-only) leaves just the id.
  */
 final readonly class SavedSearchSlug
 {

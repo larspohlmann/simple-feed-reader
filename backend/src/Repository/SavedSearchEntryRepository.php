@@ -129,7 +129,7 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
     }
 
     /**
-     * Entry id => every owned saved search it is a member of, in sidebar order
+     * Entry id => every owned saved search it is a member of, newest-saved first
      * (search id DESC), each as {id, slug, term} — the pills a card shows. One
      * query for a page; entries in no search are absent.
      *

@@ -198,10 +198,10 @@ export class SidebarComponent {
   readonly expanded = signal<Set<number>>(new Set());
   readonly menuFor = signal<string | null>(null);
 
-  /** Whether the "Saved searches" group is expanded. In-memory only, default
-   *  collapsed — mirrors the tags' expand behaviour (state resets on reload). */
   protected readonly savedSearchLinks = computed(() => this.savedSearches());
 
+  /** Whether the "Saved searches" group is expanded. In-memory only, default
+   *  collapsed — mirrors the tags' expand behaviour (state resets on reload). */
   readonly savedSearchesExpanded = signal(false);
 
   /** The frozen display order (saved-search ids). Recomputed only when the

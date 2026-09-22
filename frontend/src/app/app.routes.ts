@@ -69,10 +69,8 @@ export const routes: Routes = [
     loadComponent: () => import('./discover/discover.component').then((m) => m.DiscoverComponent),
   },
   {
-    // The reader owns the root URL and the saved-search paths (searches/saved/:slug,
-    // and searches/saved/all) through one config, so moving between a list and a
-    // saved search never tears the shell down. It names the tab after the open
-    // article or the selected list across those navigations.
+    // The reader owns the root URL and the saved-search paths through one config,
+    // so moving between a list and a saved search never tears the shell down.
     matcher: readerMatcher,
     title: DYNAMIC_TITLE,
     canActivate: [authGuard],
