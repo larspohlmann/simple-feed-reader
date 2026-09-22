@@ -16,6 +16,7 @@ import {
   selectionQueryParams,
   visibleSearchTerm,
 } from './query';
+import { selectionFromRoute } from './reader-matcher';
 
 const pm = (o: Record<string, string>) => convertToParamMap(o);
 
@@ -590,5 +591,35 @@ describe('the combined saved-searches view', () => {
     );
 
     expect(selection.kind).toBe('search');
+  });
+});
+
+describe('selectionFromRoute', () => {
+  const noQuery = convertToParamMap({});
+
+  it('maps the "all" path segment to the combined saved-searches selection', () => {
+    const { selection } = selectionFromRoute(convertToParamMap({ savedSearch: 'all' }), noQuery);
+    expect(selection).toEqual({ kind: 'saved-searches', id: null, unread: false });
+  });
+
+  it('maps a slug to a single saved-search selection by its leading id', () => {
+    const { selection } = selectionFromRoute(
+      convertToParamMap({ savedSearch: '42-climate' }),
+      noQuery,
+    );
+    expect(selection).toEqual({ kind: 'saved-search', id: 42, unread: false });
+  });
+
+  it('carries unread=1 from the query params onto a path selection', () => {
+    const { selection } = selectionFromRoute(
+      convertToParamMap({ savedSearch: '42-climate' }),
+      convertToParamMap({ unread: '1' }),
+    );
+    expect(selection.unread).toBe(true);
+  });
+
+  it('falls back to query-param selection when no saved-search segment is present', () => {
+    const { selection } = selectionFromRoute(noQuery, convertToParamMap({ tag: '7' }));
+    expect(selection).toEqual({ kind: 'tag', id: 7, unread: false });
   });
 });
