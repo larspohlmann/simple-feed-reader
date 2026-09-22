@@ -13,6 +13,7 @@ use App\Repository\SavedSearchRepository;
 use App\Service\Search\Membership\SavedSearchMembershipSweep;
 use App\Service\Search\Membership\SweepBudget;
 use App\Service\Search\SavedSearchMatchIds;
+use App\Service\Search\SavedSearchSlug;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -31,6 +32,7 @@ final readonly class SavedSearchController
         private SavedSearchMatchIds $matches,
         private SavedSearchMembershipSweep $sweep,
         private EntityManagerInterface $em,
+        private SavedSearchSlug $slug,
     ) {
     }
 
@@ -68,6 +70,8 @@ final readonly class SavedSearchController
         if ($savedSearch === null) {
             $savedSearch = new SavedSearch($user, $request->term, $request->wholeWord, $request->phrase);
             $this->em->persist($savedSearch);
+            $this->em->flush();
+            $savedSearch->setSlug($this->slug->build((int) $savedSearch->getId(), $savedSearch->getTerm()));
             $this->em->flush();
             $this->sweep->sweepOne($savedSearch, SweepBudget::seconds(self::CREATE_SWEEP_BUDGET_SECONDS));
         }
