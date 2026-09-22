@@ -10,6 +10,8 @@ $light: (
   // raised card
   surface-read: #f5f5f4,
   // reading canvas: article body + airy magazine sheet
+  surface-sunken: #f2f2f0,
+  // recessed panel content: an expanded tag's feed list in the sidebar
   border: #e4e4e2,
   border-strong: #d4d4d1,
   text-primary: #2a2a2a,
@@ -36,6 +38,7 @@ $dark: (
   // Lifts the article and the airy sheet off the near-black page. The two
   // share it so they read as one surface.
   surface-read: #1e1e1e,
+  surface-sunken: #171717,
   border: #2a2a2a,
   border-strong: #383836,
   text-primary: #c2c2c0,

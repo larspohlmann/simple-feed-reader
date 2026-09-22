@@ -135,84 +135,87 @@
         </button>
       </div>
       @if (savedSearchesExpanded()) {
-        @for (saved of visibleSavedSearches(); track saved.id) {
-          <a
-            class="nav savedsearch-item"
-            [class.active]="saved.id === activeSavedSearchId()"
-            [class.with-digest]="showDigestToggles()"
-            [routerLink]="[]"
-            [queryParams]="saved.params"
-            queryParamsHandling="merge"
-          >
-            <app-icon name="search" size="sm" />
-            <!-- Term + "W" pill travel together as one left group so the pill
+        <div class="savedsearch-list">
+          @for (saved of visibleSavedSearches(); track saved.id) {
+            <a
+              class="nav savedsearch-item"
+              [class.active]="saved.id === activeSavedSearchId()"
+              [class.with-digest]="showDigestToggles()"
+              [routerLink]="[]"
+              [queryParams]="saved.params"
+              queryParamsHandling="merge"
+            >
+              <app-icon name="search" size="sm" />
+              <!-- Term + "W" pill travel together as one left group so the pill
                  sits directly after the word; the count and mail button anchor
                  to the right edge past this group's trailing slack (#636). -->
-            <span class="saved-term-group">
-              <span class="saved-term">{{ saved.term }}</span>
-              @if (saved.wholeWord) {
-                <!-- Compact "W" pill for the sidebar's narrow row; the full word
+              <span class="saved-term-group">
+                <span class="saved-term">{{ saved.term }}</span>
+                @if (saved.wholeWord) {
+                  <!-- Compact "W" pill for the sidebar's narrow row; the full word
                      still reaches screen readers via the sr-only span, mirroring
                      the results-header badge (#408 follow-up). -->
-                <span class="sr-only">{{ 'reader.searchWholeWord' | transloco }}</span>
-                <span
-                  class="whole-word-badge"
-                  aria-hidden="true"
-                  [attr.title]="'reader.searchWholeWordHint' | transloco"
-                >
-                  {{ 'reader.searchWholeWordShort' | transloco }}
-                </span>
-              }
-              @if (saved.phrase) {
-                <!-- Compact "P" pill, the phrase-mode analog of the "W" pill
+                  <span class="sr-only">{{ 'reader.searchWholeWord' | transloco }}</span>
+                  <span
+                    class="whole-word-badge"
+                    aria-hidden="true"
+                    [attr.title]="'reader.searchWholeWordHint' | transloco"
+                  >
+                    {{ 'reader.searchWholeWordShort' | transloco }}
+                  </span>
+                }
+                @if (saved.phrase) {
+                  <!-- Compact "P" pill, the phrase-mode analog of the "W" pill
                      above; the term itself is stored bare, so no quotes show in
                      the sidebar (#702). -->
-                <span class="sr-only">{{ 'reader.searchPhrase' | transloco }}</span>
-                <span
-                  class="phrase-badge"
-                  aria-hidden="true"
-                  [attr.title]="'reader.searchPhraseHint' | transloco"
-                >
-                  {{ 'reader.searchPhraseShort' | transloco }}
-                </span>
+                  <span class="sr-only">{{ 'reader.searchPhrase' | transloco }}</span>
+                  <span
+                    class="phrase-badge"
+                    aria-hidden="true"
+                    [attr.title]="'reader.searchPhraseHint' | transloco"
+                  >
+                    {{ 'reader.searchPhraseShort' | transloco }}
+                  </span>
+                }
+              </span>
+              @if (saved.unreadCount > 0) {
+                <span class="count">{{ saved.unreadCount }}</span>
               }
-            </span>
-            @if (saved.unreadCount > 0) {
-              <span class="count">{{ saved.unreadCount }}</span>
-            }
-            @if (showDigestToggles()) {
-              <button
-                class="digest-toggle"
-                type="button"
-                [attr.aria-pressed]="saved.includeInDigest"
-                [attr.aria-label]="'reader.digest.toggleAria' | transloco: { term: saved.term }"
-                (click)="
-                  toggleDigest.emit(saved); $event.stopPropagation(); $event.preventDefault()
-                "
-              >
-                <app-icon name="mail" size="sm" [class.muted]="!saved.includeInDigest" />
-              </button>
-            }
-          </a>
-        }
-        @if (savedSearchListExpanded() || hiddenSavedSearchCount() > 0) {
-          <button
-            class="savedsearch-more"
-            type="button"
-            [attr.aria-expanded]="savedSearchListExpanded()"
-            (click)="toggleSavedSearchList()"
-          >
-            <span>{{
-              savedSearchListExpanded()
-                ? ('reader.showLess' | transloco)
-                : ('reader.showMoreSavedSearches' | transloco: { count: hiddenSavedSearchCount() })
-            }}</span>
-            <app-icon
-              [name]="savedSearchListExpanded() ? 'expand_less' : 'expand_more'"
-              size="sm"
-            />
-          </button>
-        }
+              @if (showDigestToggles()) {
+                <button
+                  class="digest-toggle"
+                  type="button"
+                  [attr.aria-pressed]="saved.includeInDigest"
+                  [attr.aria-label]="'reader.digest.toggleAria' | transloco: { term: saved.term }"
+                  (click)="
+                    toggleDigest.emit(saved); $event.stopPropagation(); $event.preventDefault()
+                  "
+                >
+                  <app-icon name="mail" size="sm" [class.muted]="!saved.includeInDigest" />
+                </button>
+              }
+            </a>
+          }
+          @if (savedSearchListExpanded() || hiddenSavedSearchCount() > 0) {
+            <button
+              class="savedsearch-more"
+              type="button"
+              [attr.aria-expanded]="savedSearchListExpanded()"
+              (click)="toggleSavedSearchList()"
+            >
+              <span>{{
+                savedSearchListExpanded()
+                  ? ('reader.showLess' | transloco)
+                  : ('reader.showMoreSavedSearches'
+                    | transloco: { count: hiddenSavedSearchCount() })
+              }}</span>
+              <app-icon
+                [name]="savedSearchListExpanded() ? 'expand_less' : 'expand_more'"
+                size="sm"
+              />
+            </button>
+          }
+        </div>
       }
     </div>
   }

@@ -444,6 +444,24 @@
   border-radius: var(--radius);
 }
 
+/* An expanded tag's feeds and an expanded saved-search list sit on a recessed
+   surface, so each group reads as nested under its header (#1114). The negative
+   inline margin with matching padding bleeds the band to the sidebar edges. */
+.tagfeeds,
+.savedsearch-list {
+  background: var(--surface-sunken);
+  margin-inline: calc(var(--space-2) * -1);
+  padding-inline: var(--space-2);
+  border-radius: 0;
+}
+
+/* Inside a recessed band the row hover lifts to the sidebar surface, since the
+   default hover (--surface-0) is barely visible against the sunken band (#1114). */
+.tagfeeds .nav:hover:not(.active),
+.savedsearch-list .nav:hover:not(.active) {
+  background: var(--surface-1);
+}
+
 .taghead {
   position: relative;
 }
